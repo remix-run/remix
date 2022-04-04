@@ -1,6 +1,5 @@
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { AppFixture } from "./helpers/create-fixture";
-import { disableJavaScript } from "./helpers/utils";
 
 describe("loader in an app", () => {
   let app: AppFixture;
@@ -10,23 +9,32 @@ describe("loader in an app", () => {
       await createFixture({
         files: {
           "app/root.jsx": js`
-            import { Scripts, Form, Link } from "@remix-run/react";
+            import { Scripts, Outlet } from "@remix-run/react";
 
             export default function Root() {
               return (
                 <html>
                   <body>
-                    <Link to="/redirect">Redirect</Link>
-                    <Form action="/redirect-to" method="post">
-                      <input name="destination" defaultValue="/redirect-destination" />
-                      <button type="submit">Redirect</button>
-                    </Form>
-                    <Link reloadDocument to="/data.json">Data</Link>
+                    <Outlet />
                     <Scripts />
                   </body>
                 </html>
               );
             }
+          `,
+          "app/routes/index.jsx": js`
+            import { Form, Link } from "@remix-run/react";
+
+            export default () => (
+              <>
+                <Link to="/redirect">Redirect</Link>
+                <Form action="/redirect-to" method="post">
+                  <input name="destination" defaultValue="/redirect-destination" />
+                  <button type="submit">Redirect</button>
+                </Form>
+                <Link reloadDocument to="/data.json">Data</Link>
+              </>
+            )
           `,
           "app/routes/redirected.jsx": js`
             export default () => <div data-testid="redirected">You were redirected</div>;
@@ -34,7 +42,7 @@ describe("loader in an app", () => {
           "app/routes/redirect.jsx": js`
             import { redirect } from "@remix-run/node";
 
-            export let loader = () => redirect("/");
+            export let loader = () => redirect("/redirected");
           `,
           "app/routes/redirect-to.jsx": js`
             import { redirect } from "@remix-run/node";
@@ -65,8 +73,12 @@ describe("loader in an app", () => {
   });
 
   describe("without JavaScript", () => {
+    let restore: Awaited<ReturnType<typeof app.disableJavaScript>>;
     beforeEach(async () => {
-      await disableJavaScript(app.page);
+      restore = await app.disableJavaScript();
+    });
+    afterEach(async () => {
+      await restore();
     });
 
     runTests();
@@ -89,7 +101,7 @@ describe("loader in an app", () => {
 
     it("should handle reloadDocument to resource route", async () => {
       await app.page.click("a[href='/data.json']");
-      expect(await app.page.content()).toBe('{"hello":"world"}');
+      expect(await app.page.content()).toContain('{"hello":"world"}');
     });
   }
 });

@@ -53,15 +53,3 @@ export function collectDataResponses(page: Page, routeId?: string) {
 export function reactIsHydrated(page: Page) {
   return page.waitForFunction("window.reactIsHydrated === true");
 }
-
-export async function disableJavaScript(
-  page: Page,
-  extra?: (req: Request) => void
-) {
-  await page.setRequestInterception(true);
-  page.on("request", (request: Request) => {
-    if (request.resourceType() === "script") request.abort();
-    else if (extra) extra(request);
-    else request.continue();
-  });
-}
