@@ -5,6 +5,22 @@ order: 1
 
 # Server / Runtimes / Common
 
+Utilities common to all supported Javascript server runtimes.
+
+You will need to replace `@remix-run/{runtime}` with the server runtime package for your project (`@remix-run/node` or `@remix-run/cloudflare`).
+
+For example, if you are using Node, replace:
+
+```ts
+import { json } from "@remix-run/{runtime}";
+```
+
+with:
+
+```ts
+import { json } from "@remix-run/node";
+```
+
 ## HTTP Helpers
 
 ### `json`
