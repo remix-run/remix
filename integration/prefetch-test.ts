@@ -112,14 +112,17 @@ test.describe("prefetch=render", () => {
     await app.goto(page, "/");
     // Both data and asset fetch for /with-loader
     await page.waitForSelector(
-      "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']"
+      "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']",
+      { state: "hidden" }
     );
     await page.waitForSelector(
-      "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']"
+      "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']",
+      { state: "hidden" }
     );
     // Only asset fetch for /without-loader
     await page.waitForSelector(
-      "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']"
+      "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']",
+      { state: "hidden" }
     );
 
     // Ensure no other links in the #nav element
@@ -154,17 +157,20 @@ test.describe("prefetch=intent (hover)", () => {
   test("adds prefetch tags on hover", async ({ page }) => {
     await page.hover("a[href='/with-loader']");
     await page.waitForSelector(
-      "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']"
+      "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']",
+      { state: "hidden" }
     );
     // Check href prefix due to hashed filenames
     await page.waitForSelector(
-      "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']"
+      "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']",
+      { state: "hidden" }
     );
     expect((await page.$$("#nav link")).length).toBe(2);
 
     await page.hover("a[href='/without-loader']");
     await page.waitForSelector(
-      "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']"
+      "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']",
+      { state: "hidden" }
     );
     expect((await page.$$("#nav link")).length).toBe(3);
   });
@@ -200,17 +206,20 @@ test.describe("prefetch=intent (focus)", () => {
     await page.click("body");
     await page.focus("a[href='/with-loader']");
     await page.waitForSelector(
-      "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']"
+      "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']",
+      { state: "hidden" }
     );
     // Check href prefix due to hashed filenames
     await page.waitForSelector(
-      "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']"
+      "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']",
+      { state: "hidden" }
     );
     expect((await page.$$("#nav link")).length).toBe(2);
 
     await page.focus("a[href='/without-loader']");
     await page.waitForSelector(
-      "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']"
+      "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']",
+      { state: "hidden" }
     );
     expect((await page.$$("#nav link")).length).toBe(3);
   });
