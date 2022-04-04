@@ -29,6 +29,7 @@ declare module "*.jpg" {
 declare module "*.md" {
   import type { ComponentType as MdComponentType } from "react";
   export let attributes: any;
+  export let data: any;
   export let filename: string;
   let Component: MdComponentType;
   export default Component;
@@ -36,6 +37,7 @@ declare module "*.md" {
 declare module "*.mdx" {
   import type { ComponentType as MdxComponentType } from "react";
   export let attributes: any;
+  export let data: any;
   export let filename: string;
   let Component: MdxComponentType;
   export default Component;
