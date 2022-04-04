@@ -1,6 +1,6 @@
 ---
 title: "@remix-run/serve"
-order: 3
+order: 2
 ---
 
 # Remix App Server
