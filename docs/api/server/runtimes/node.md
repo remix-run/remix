@@ -1,12 +1,13 @@
 ---
 title: Node
+order: 2
 ---
 
 # @remix-run/node
 
-This contains utilities and polyfills for Node.js.
+This package contains all the [common server runtime](./common.md) utilities, implemented for Node.js.
 
-<docs-info>Most of the time you will never be importing from this package directly as it's used internally by adapters such as `@remix-run/express`.</docs-info>
+It also contains utilities and polyfills for Node.js.
 
 ## Polyfills
 
