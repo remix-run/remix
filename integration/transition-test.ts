@@ -17,7 +17,7 @@ describe("rendering", () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { Links, Meta, Outlet, Scripts } from "remix";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export default function Root() {
             return (
@@ -38,7 +38,7 @@ describe("rendering", () => {
         `,
 
         "app/routes/index.jsx": js`
-          import { Link } from "remix";
+          import { Link } from "@remix-run/react";
           export default function() {
             return (
               <div>
@@ -51,7 +51,7 @@ describe("rendering", () => {
         `,
 
         [`app/routes/${PAGE}.jsx`]: js`
-          import { Outlet, useLoaderData } from "remix";
+          import { Outlet, useLoaderData } from "@remix-run/react";
 
           export function loader() {
             return "${PAGE_TEXT}"
@@ -69,7 +69,7 @@ describe("rendering", () => {
         `,
 
         [`app/routes/${PAGE}/index.jsx`]: js`
-          import { useLoaderData, Link } from "remix";
+          import { useLoaderData, Link } from "@remix-run/react";
 
           export function loader() {
             return "${PAGE_INDEX_TEXT}"
@@ -87,7 +87,7 @@ describe("rendering", () => {
         `,
 
         [`app/routes/${PAGE}/${CHILD}.jsx`]: js`
-          import { useLoaderData } from "remix";
+          import { useLoaderData } from "@remix-run/react";
 
           export function loader() {
             return "${CHILD_TEXT}"
@@ -100,7 +100,7 @@ describe("rendering", () => {
         `,
 
         [`app/routes/${REDIRECT}.jsx`]: js`
-          import { redirect } from "remix";
+          import { redirect } from "@remix-run/node";
           export function loader() {
             return redirect("/${REDIRECT_TARGET}")
           }
@@ -110,7 +110,8 @@ describe("rendering", () => {
         `,
 
         "app/routes/gh-1691.jsx": js`
-          import { Form, redirect, useFetcher, useTransition} from "remix";
+          import { redirect } from "@remix-run/node";
+          import { Form, useFetcher, useTransition} from "@remix-run/react";
 
           export const action = async ({ request }) => {
             return redirect("/gh-1691");

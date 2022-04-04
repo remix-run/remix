@@ -5,7 +5,10 @@ import { pathToFileURL } from "url";
 import stripAnsi from "strip-ansi";
 
 import { run } from "../cli/run";
-import "./msw";
+import { server } from "./msw";
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterAll(() => server.close());
 
 // keep the console clear
 jest.mock("ora", () => {
