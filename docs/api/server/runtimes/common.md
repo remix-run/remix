@@ -12,8 +12,8 @@ order: 1
 This is a shortcut for creating `application/json` responses. It assumes you are using `utf-8` encoding.
 
 ```ts lines=[2,6]
-import type { LoaderFunction } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/{runtime}";
+import { json } from "@remix-run/{runtime}";
 
 export const loader: LoaderFunction = async () => {
   // So you can write this:
@@ -49,8 +49,8 @@ export const loader: LoaderFunction = async () => {
 This is shortcut for sending 30x responses.
 
 ```ts lines=[2,8]
-import type { ActionFunction } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
+import type { ActionFunction } from "@remix-run/{runtime}";
+import { redirect } from "@remix-run/{runtime}";
 
 export const action: ActionFunction = async () => {
   const userSession = await getUserSessionOrWhatever();
@@ -232,7 +232,7 @@ Most of the time, you'll probably want to proxy the file stream to a file host.
 **Example:**
 
 ```tsx
-import type { UploadHandler } from "@remix-run/node";
+import type { UploadHandler } from "@remix-run/{runtime}";
 import type {
   UploadApiErrorResponse,
   UploadApiOptions,
@@ -320,8 +320,8 @@ Your job is to do whatever you need with the `stream` and return a value that's 
 We have the built-in `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler, here's a theoretical example:
 
 ```tsx
-import type { UploadHandler } from "@remix-run/node";
-import { unstable_createFileUploadHandler } from "@remix-run/node";
+import type { UploadHandler } from "@remix-run/{runtime}";
+import { unstable_createFileUploadHandler } from "@remix-run/{runtime}";
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
 export const fileUploadHandler =
@@ -362,7 +362,7 @@ Let's say you have a banner on your e-commerce site that prompts users to check 
 First, create a cookie:
 
 ```js filename=app/cookies.js
-import { createCookie } from "@remix-run/node";
+import { createCookie } from "@remix-run/{runtime}";
 
 export const userPrefs = createCookie("user-prefs", {
   maxAge: 604_800, // one week
@@ -374,7 +374,7 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
 ```tsx filename=app/routes/index.tsx lines=[4,8-9,15-16,20]
-import { json, redirect } from "@remix-run/node";
+import { json, redirect } from "@remix-run/{runtime}";
 import { useLoaderData } from "@remix-run/react";
 
 import { userPrefs } from "~/cookies";
@@ -494,7 +494,7 @@ export async function loader({ request }) {
 Creates a logical container for managing a browser cookie from the server.
 
 ```ts
-import { createCookie } from "@remix-run/node";
+import { createCookie } from "@remix-run/{runtime}";
 
 const cookie = createCookie("cookie-name", {
   // all of these are optional defaults that can be overridden at runtime
@@ -516,7 +516,7 @@ To learn more about each attribute, please see the [MDN Set-Cookie docs](https:/
 Returns `true` if an object is a Remix cookie container.
 
 ```ts
-import { isCookie } from "@remix-run/node";
+import { isCookie } from "@remix-run/{runtime}";
 const cookie = createCookie("user-prefs");
 console.log(isCookie(cookie));
 // true
@@ -608,7 +608,7 @@ This is an example of a cookie session storage:
 
 ```js filename=app/sessions.js
 // app/sessions.js
-import { createCookieSessionStorage } from "@remix-run/node";
+import { createCookieSessionStorage } from "@remix-run/{runtime}";
 
 const { getSession, commitSession, destroySession } =
   createCookieSessionStorage({
@@ -640,7 +640,7 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 A login form might look something like this:
 
 ```tsx filename=app/routes/login.js lines=[3,6-8,10,15,19,25-27,38,43,48,53]
-import { json, redirect } from "@remix-run/node";
+import { json, redirect } from "@remix-run/{runtime}";
 import { useLoaderData } from "@remix-run/react";
 
 import { getSession, commitSession } from "../sessions";
@@ -767,7 +767,7 @@ TODO:
 Returns `true` if an object is a Remix session.
 
 ```js
-import { isSession } from "@remix-run/node";
+import { isSession } from "@remix-run/{runtime}";
 
 const sessionData = { foo: "bar" };
 const session = createSession(sessionData, "remix-session");
@@ -782,7 +782,7 @@ Remix makes it easy to store sessions in your own database if needed. The `creat
 The following example shows how you could do this using a generic database client:
 
 ```js
-import { createSessionStorage } from "@remix-run/node";
+import { createSessionStorage } from "@remix-run/{runtime}";
 
 function createDatabaseSessionStorage({
   cookie,
@@ -839,7 +839,7 @@ The main advantage of cookie session storage is that you don't need any addition
 The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be committed. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strategies you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
 
 ```js
-import { createCookieSessionStorage } from "@remix-run/node";
+import { createCookieSessionStorage } from "@remix-run/{runtime}";
 
 const { getSession, commitSession, destroySession } =
   createCookieSessionStorage({
@@ -862,7 +862,7 @@ This storage keeps all the cookie information in your server's memory.
 import {
   createCookie,
   createMemorySessionStorage,
-} from "@remix-run/node";
+} from "@remix-run/{runtime}";
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
@@ -949,7 +949,7 @@ sessions
 ```
 
 ```js filename=app/sessions.server.js
-import { createCookie } from "@remix-run/node";
+import { createCookie } from "@remix-run/{runtime}";
 import { createArcTableSessionStorage } from "@remix-run/architect";
 
 // In this example the Cookie is created separately.
@@ -1037,7 +1037,7 @@ Now we can read the message in a loader.
 <docs-info>You must commit the session whenever you read a `flash`. This is different than you might be used to where some type of middleware automatically sets the cookie header for you.</docs-info>
 
 ```jsx
-import { json } from "@remix-run/node";
+import { json } from "@remix-run/{runtime}";
 import {
   Meta,
   Links,

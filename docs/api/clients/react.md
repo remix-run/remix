@@ -15,7 +15,7 @@ These components are to be used once inside of your root route (`root.tsx`). The
 import type {
   LinksFunction,
   MetaFunction,
-} from "@remix-run/node";
+} from "@remix-run/{runtime}";
 import {
   Links,
   LiveReload,
@@ -304,7 +304,7 @@ In order to avoid (usually) the client-side routing "scroll flash" on refresh or
 This hook returns the JSON parsed data from your route loader function.
 
 ```tsx lines=[2,9]
-import { json } from "@remix-run/node";
+import { json } from "@remix-run/{runtime}";
 import { useLoaderData } from "@remix-run/react";
 
 export async function loader() {
@@ -322,7 +322,7 @@ export default function Invoices() {
 This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
 ```tsx lines=[2,11,20]
-import { json } from "@remix-run/node";
+import { json } from "@remix-run/{runtime}";
 import { useActionData, Form } from "@remix-run/react";
 
 export async function action({ request }) {
@@ -350,7 +350,7 @@ export default function Invoices() {
 The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
 
 ```tsx lines=[22, 31, 39-41, 45-47]
-import { redirect, json } from "@remix-run/node";
+import { redirect, json } from "@remix-run/{runtime}";
 import { Form, useActionData } from "@remix-run/react";
 
 export async function action({ request }) {
@@ -495,7 +495,7 @@ Returns the function that may be used to submit a `<form>` (or some raw `FormDat
 This is useful whenever you need to programmatically submit a form. For example, you may wish to save a user preferences form whenever any field changes.
 
 ```tsx filename=app/routes/prefs.tsx lines=[2,14,18]
-import { json } from "@remix-run/node";
+import { json } from "@remix-run/{runtime}";
 import { useSubmit, useTransition } from "@remix-run/react";
 
 export async function loader() {
@@ -1381,7 +1381,7 @@ This component is a wrapper around React Router's Outlet with the ability to pas
 Here's a practical example of when you may want to use this feature. Let's say you've got a list of companies that have invoices and you want to display those companies in an accordion. We'll render our outlet in that accordion, but we want the invoice sorting to be controlled by the parent (so changing companies preserves the invoice sorting). This is a perfect use case for `<Outlet context>`.
 
 ```tsx filename=app/routes/companies.tsx lines=[5,28-31,36-44,53-57,68]
-import { json } from "@remix-run/node";
+import { json } from "@remix-run/{runtime}";
 import {
   useLoaderData,
   useParams,
@@ -1466,8 +1466,8 @@ This hook returns the context from the `<Outlet />` that rendered you.
 Continuing from the `<Outlet context />` example above, here's what the child route could do to use the sort order.
 
 ```tsx filename=app/routes/companies/$companyId.tsx lines=[5,8,25,27-30]
-import type { LoaderFunction } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/{runtime}";
+import { json } from "@remix-run/{runtime}";
 import {
   useLoaderData,
   useOutletContext,
