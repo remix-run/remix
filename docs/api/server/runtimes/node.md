@@ -1,6 +1,6 @@
 ---
 title: Node
-order: 2
+order: 3
 ---
 
 # @remix-run/node
