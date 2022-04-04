@@ -308,6 +308,8 @@ export async function createAppFixture(fixture: Fixture) {
        */
       collectDataResponses: () => collectDataResponses(page),
 
+      collectResponses: (filter?: UrlFilter) => collectResponses(page, filter),
+
       /**
        * Disables JavaScript for the page, make sure to enable it again by
        * calling and awaiting the returned function!
@@ -521,7 +523,6 @@ export function collectResponses(
   filter?: UrlFilter
 ): HTTPResponse[] {
   let responses: HTTPResponse[] = [];
-
   page.on("response", (res) => {
     if (!filter || filter(new URL(res.url()))) {
       responses.push(res);

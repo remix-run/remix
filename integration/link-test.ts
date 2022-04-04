@@ -1,4 +1,3 @@
-import { collectResponses, collectDataResponses } from "./helpers/utils";
 import {
   css,
   js,
@@ -215,121 +214,103 @@ describe("route module link export", () => {
           }
         `,
 
-        //     "app/routes/links.jsx": js`
-        //       import type { LinksFunction, LoaderFunction } from "remix";
-        //       import { useLoaderData, Link } from "remix";
-
-        //       import redTextHref from "~/redText.css";
-        //       import blueTextHref from "~/blueText.css";
-        //       import guitar from "~/guitar.jpg";
-
-        //       export async function loader() {
-        //         return [
-        //           { name: "Michael Jackson", id: "mjackson" },
-        //           { name: "Ryan Florence", id: "ryanflorence" },
-        //         ];
-        //       }
-
-        //       export function links()  {
-        //         // this blocks on transitions automatically
-        //         let styleLink = { rel: "stylesheet", href: redTextHref };
-        //         let nonMatching = {
-        //           rel: "stylesheet",
-        //           href: blueTextHref,
-        //           media: "(prefers-color-scheme: beef)",
-        //         };
-
-        //         let fails = { rel: "stylesheet", href: "/fails.css" };
-
-        //         // preload another page
-        //         let pageLink = { page: \`/gists/mjackson\` };
-
-        //         let preloadGuitar = { rel: "preload", as: "image", href: guitar };
-
-        //         return [styleLink, nonMatching, fails, pageLink, preloadGuitar];
-        //       }
-
-        //       export default function LinksPage() {
-        //         let users = useLoaderData();
-        //         return (
-        //           <div data-test-id="/links">
-        //             <h2>Links Page</h2>
-        //             {users.map((user) => (
-        //               <li key={user.id}>
-        //                 <Link to={\`/gists/$\{user.id\}\`} prefetch="none">
-        //                   {user.name}
-        //                 </Link>
-        //               </li>
-        //             ))}
-
-        //             <hr />
-        //             <p>
-        //               <img alt="a guitar" src={guitar} data-test-id="blocked" /> Prefetched
-        //               because it's a preload.
-        //             </p>
-        //           </div>
-        //         );
-        //       }
-        //     `,
+        "app/routes/links.jsx": js`
+          import { useLoaderData, Link } from "remix";
+          import redTextHref from "~/redText.css";
+          import blueTextHref from "~/blueText.css";
+          import guitar from "~/guitar.jpg";
+          export async function loader() {
+            return [
+              { name: "Michael Jackson", id: "mjackson" },
+              { name: "Ryan Florence", id: "ryanflorence" },
+            ];
+          }
+          export function links()  {
+            return [
+              { rel: "stylesheet", href: redTextHref },
+              {
+                rel: "stylesheet",
+                href: blueTextHref,
+                media: "(prefers-color-scheme: beef)",
+              },
+              {
+                rel: "preload",
+                as: "image",
+                href: guitar,
+              },
+            ];
+          }
+          export default function LinksPage() {
+            let users = useLoaderData();
+            return (
+              <div data-test-id="/links">
+                <h2>Links Page</h2>
+                {users.map((user) => (
+                  <li key={user.id}>
+                    <Link to={"/gists/" + user.id} prefetch="none">
+                      {user.name}
+                    </Link>
+                  </li>
+                ))}
+                <hr />
+                <p>
+                  <img alt="a guitar" src={guitar} data-test-id="blocked" /> Prefetched
+                  because it's a preload.
+                </p>
+              </div>
+            );
+          }
+        `,
 
         "app/routes/gists.jsx": js`
-              import { json, Link, Outlet, useLoaderData, useTransition } from "remix";
-
-              import stylesHref from "~/gists.css";
-
-              export function links() {
-                return [{ rel: "stylesheet", href: stylesHref }];
-              }
-
-              export async function loader() {
-                let data = {
-                  users: [
-                    { id: "ryanflorence", name: "Ryan Florence" },
-                    { id: "mjackson", name: "Michael Jackson" },
-                  ],
-                };
-
-                return json(data, {
-                  headers: {
-                    "Cache-Control": "public, max-age=60",
-                  },
-                });
-              }
-
-              export function headers({ loaderHeaders }) {
-                return {
-                  "Cache-Control": loaderHeaders.get("Cache-Control"),
-                };
-              }
-
-              export let handle = {
-                breadcrumb: () => <Link to="/gists">Gists</Link>,
-              };
-
-              export default function Gists() {
-                let locationPending = useTransition().location;
-                let { users } = useLoaderData();
-
-                return (
-                  <div data-test-id="/gists">
-                    <header>
-                      <h1>Gists</h1>
-                      <ul>
-                        {users.map((user) => (
-                          <li key={user.id}>
-                            <Link to={user.id}>
-                              {user.name} {locationPending ? "..." : null}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    </header>
-                    <Outlet />
-                  </div>
-                );
-              }
-
-            `,
+          import { json, Link, Outlet, useLoaderData, useTransition } from "remix";
+          import stylesHref from "~/gists.css";
+          export function links() {
+            return [{ rel: "stylesheet", href: stylesHref }];
+          }
+          export async function loader() {
+            let data = {
+              users: [
+                { id: "ryanflorence", name: "Ryan Florence" },
+                { id: "mjackson", name: "Michael Jackson" },
+              ],
+            };
+            return json(data, {
+              headers: {
+                "Cache-Control": "public, max-age=60",
+              },
+            });
+          }
+          export function headers({ loaderHeaders }) {
+            return {
+              "Cache-Control": loaderHeaders.get("Cache-Control"),
+            };
+          }
+          export let handle = {
+            breadcrumb: () => <Link to="/gists">Gists</Link>,
+          };
+          export default function Gists() {
+            let locationPending = useTransition().location;
+            let { users } = useLoaderData();
+            return (
+              <div data-test-id="/gists">
+                <header>
+                  <h1>Gists</h1>
+                  <ul>
+                    {users.map((user) => (
+                      <li key={user.id}>
+                        <Link to={user.id}>
+                          {user.name} {locationPending ? "..." : null}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </header>
+                <Outlet />
+              </div>
+            );
+          }
+        `,
 
         //     "app/routes/gists/$username.jsx": js`
         //       import { Link, json, redirect, useLoaderData, useParams } from "remix";
@@ -396,133 +377,60 @@ describe("route module link export", () => {
         //     `,
 
         "app/routes/gists/index.jsx": js`
-              import { useLoaderData } from "remix";
+          import { useLoaderData } from "remix";
+          export async function loader() {
+            return Promise.resolve(${JSON.stringify(fakeGists)});
+          }
+          export function headers() {
+            return {
+              "Cache-Control": "public, max-age=60",
+            };
+          }
+          export function meta() {
+            return {
+              title: "Public Gists",
+              description: "View the latest gists from the public",
+            };
+          }
+          export let handle = {
+            breadcrumb: () => <span>Public</span>,
+          };
+          export default function GistsIndex() {
+            let data = useLoaderData();
+            return (
+              <div data-test-id="/gists/index">
+                <h2>Public Gists</h2>
+                <ul>
+                  {data.map((gist) => (
+                    <li key={gist.id} style={{ display: "flex", alignItems: "center" }}>
+                      <img
+                        src={gist.owner.avatar_url}
+                        style={{ height: 36, margin: "0.25rem 0.5rem 0.25rem 0" }}
+                        alt="avatar"
+                      />
+                      <a href={gist.html_url}>{Object.keys(gist.files)[0]}</a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          }
+        `,
 
-              export async function loader() {
-                return Promise.resolve(${JSON.stringify(fakeGists)});
+        "app/routes/resources/theme-css.jsx": js`
+          import { redirect } from "remix";
+          export async function loader({ request }) {
+            return new Response(":root { --nc-tx-1: #ffffff; --nc-tx-2: #eeeeee; }",
+              {
+                headers: {
+                  "Content-Type": "text/css; charset=UTF-8",
+                  "x-has-custom": "yes",
+                },
               }
+            );
+          }
 
-              export function headers() {
-                return {
-                  "Cache-Control": "public, max-age=60",
-                };
-              }
-
-              export function meta() {
-                return {
-                  title: "Public Gists",
-                  description: "View the latest gists from the public",
-                };
-              }
-
-              export let handle = {
-                breadcrumb: () => <span>Public</span>,
-              };
-
-              export default function GistsIndex() {
-                let data = useLoaderData();
-
-                return (
-                  <div data-test-id="/gists/index">
-                    <h2>Public Gists</h2>
-                    <ul>
-                      {data.map((gist) => (
-                        <li key={gist.id} style={{ display: "flex", alignItems: "center" }}>
-                          <img
-                            src={gist.owner.avatar_url}
-                            style={{ height: 36, margin: "0.25rem 0.5rem 0.25rem 0" }}
-                            alt="avatar"
-                          />
-                          <a href={gist.html_url}>{Object.keys(gist.files)[0]}</a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              }
-            `,
-
-        //     "app/routes/resources/theme-css.jsx": js`
-        //       import { redirect } from "remix";
-        //       import { defaultStyles, sessionStorage } from "~/themes.server";
-
-        //       export async function action({ request }) {
-        //         let formData = new URLSearchParams(await request.text());
-        //         let session = await sessionStorage.getSession(request.headers.get("Cookie"));
-        //         let custom = session.get("custom") || {};
-
-        //         if (formData.get("event") === "reset") {
-        //           return redirect("/resources/settings", {
-        //             headers: {
-        //               "Set-Cookie": await sessionStorage.destroySession(session),
-        //             },
-        //           });
-        //         }
-
-        //         for (let [key, value] of formData) {
-        //           if (key in defaultStyles) {
-        //             custom[key] = value || defaultStyles[key];
-        //           }
-        //         }
-
-        //         session.set("custom", custom);
-
-        //         return redirect("/resources/settings", {
-        //           headers: {
-        //             "Set-Cookie": await sessionStorage.commitSession(session),
-        //           },
-        //         });
-        //       };
-
-        //       export async function loader({ request }) {
-        //         let session = await sessionStorage.getSession(request.headers.get("Cookie"));
-        //         let custom = session.get("custom") || {};
-        //         let entries = Object.entries(custom);
-
-        //         return new Response(
-        //           \`/* this css was generated via a loader in a remix resource route */
-        //       :root {
-        //         $\{entries
-        //           .map(([key, value]) =>
-        //             defaultStyles[key] && value ? \`$\{key\}: $\{value\};\` : false
-        //           )
-        //           .filter((s) => s)
-        //           .join("\n  ")}
-        //       }
-        //         \`,
-        //           {
-        //             headers: {
-        //               "Content-Type": "text/css; charset=UTF-8",
-        //               "x-has-custom": entries.length > 0 ? "yes" : "no",
-        //             },
-        //           }
-        //         );
-        //       };
-        //     `,
-
-        //     "app/themes.server.js": js`
-        //         import { createCookieSessionStorage } from "remix";
-
-        //         export let sessionStorage = createCookieSessionStorage({
-        //           cookie: {
-        //             name: "theme-css",
-        //             secrets: ["fjdlafjdkla"],
-        //           },
-        //         });
-
-        //         export let defaultStyles = {
-        //           "--nc-tx-1": "#ffffff",
-        //           "--nc-tx-2": "#eeeeee",
-        //           "--nc-bg-1": "#000000",
-        //           "--nc-bg-2": "#111111",
-        //           "--nc-bg-3": "#222222",
-        //           "--nc-lk-1": "#3291FF",
-        //           "--nc-lk-2": "#0070F3",
-        //           "--nc-lk-tx": "#FFFFFF",
-        //           "--nc-ac-1": "#7928CA",
-        //           "--nc-ac-tx": "#FFFFFF",
-        //         };
-        //       `,
+        `,
       },
     });
     app = await createAppFixture(fixture);
@@ -535,7 +443,7 @@ describe("route module link export", () => {
   it("waits for new styles to load before transitioning", async () => {
     await app.goto("/");
 
-    let cssResponses = collectResponses(app.page, (url) =>
+    let cssResponses = app.collectResponses((url) =>
       url.pathname.endsWith(".css")
     );
 
@@ -553,16 +461,31 @@ describe("route module link export", () => {
   it.only("adds links to the document", async () => {
     await app.disableJavaScript();
     await app.goto("/links");
-    let cssResponses = collectResponses(app.page, (url) =>
-      url.pathname.endsWith(".css")
+    await app.page.waitForSelector('[data-test-id="/links"]');
+
+    // calling app.getElement with "html" or "head" doesn't work for some
+    // reason, so this is a workaround.
+    let html = (await app.getElement('[data-test-id="/links"]')).parentsUntil(
+      "html"
     );
-    expect(cssResponses.length).toEqual(5);
+    let sdfg = await app.getHtml();
+    let head = html.children("head");
+    let links = html.children("link");
+    let responses =
+      app.collectResponses(/* (url) =>
+      url.pathname.endsWith(".css")
+    */);
+    console.log({ sdfg, responses });
+    // console.log(html.children("link"));
+
+    // //expect(cssResponses.length).toEqual(3);
+    expect(true).toBe(true);
   });
 
   it("preloads assets for other pages and serves from browser cache on navigation", async () => {
     await app.goto("/links", { waitUntil: "networkidle0" });
 
-    let jsResponses = collectResponses(app.page, (url) =>
+    let jsResponses = app.collectResponses((url) =>
       url.pathname.endsWith(".js")
     );
 
@@ -573,7 +496,7 @@ describe("route module link export", () => {
   });
 
   it("preloads data for other pages and serves from browser cache on navigation", async () => {
-    let dataResponses = collectDataResponses(app.page);
+    let dataResponses = app.collectDataResponses();
     await app.goto("/links", { waitUntil: "networkidle0" });
 
     expect(dataResponses.length).toBe(2);
