@@ -1404,7 +1404,7 @@ export const LiveReload =
         port?: number;
         nonce?: string;
       }) {
-        let setupLiveReload = ((port: number) => {
+        let setupLiveReload = (() => {
           let protocol = location.protocol === "https:" ? "wss:" : "ws:";
           let host = location.hostname;
           let socketPath = `${protocol}//${host}:${port}/socket`;
@@ -1431,7 +1431,7 @@ export const LiveReload =
             nonce={nonce}
             suppressHydrationWarning
             dangerouslySetInnerHTML={{
-              __html: `(${setupLiveReload})(${JSON.stringify(port)})`,
+              __html: `(${setupLiveReload})()`,
             }}
           />
         );

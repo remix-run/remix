@@ -5,7 +5,7 @@ order: 1
 
 # Conventions
 
-A lot of Remix APIs aren't imported from the `"remix"` package, but are instead conventions and exports from _your_ application modules. When you `import from "remix"`, _you are calling Remix_, but these APIs are when _Remix calls your code_.
+A lot of Remix APIs aren't imported from the `"@remix-run/*"` packages, but are instead conventions and exports from _your_ application modules. When you `import from "@remix-run/*"`, _you are calling Remix_, but these APIs are when _Remix calls your code_.
 
 ## remix.config.js
 
@@ -259,8 +259,11 @@ For example: `app/routes/blog/$postId.tsx` will match the following URLs:
 On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId` [view example app](https://github.com/remix-run/remix/tree/main/examples/multiple-params)) and all parameters can be accessed within components via [`useParams`](https://reactrouter.com/docs/en/v6/api#useparams) and within loaders/actions via the argument's [`params`](#loader-params) property:
 
 ```tsx filename=app/routes/blog/$postId.tsx
-import { useParams } from "remix";
-import type { LoaderFunction, ActionFunction } from "remix";
+import { useParams } from "@remix-run/react";
+import type {
+  LoaderFunction,
+  ActionFunction,
+} from "@remix-run/node";
 
 export const loader: LoaderFunction = async ({
   params,
@@ -419,8 +422,11 @@ Files that are named `$.tsx` are called "splat" (or "catch-all") routes. These r
 Similar to dynamic route parameters, you can access the value of the matched path on the splat route's `params` with the `"*"` key.
 
 ```tsx filename=app/routes/$.tsx
-import { useParams } from "remix";
-import type { LoaderFunction, ActionFunction } from "remix";
+import { useParams } from "@remix-run/react";
+import type {
+  LoaderFunction,
+  ActionFunction,
+} from "@remix-run/node";
 
 export const loader: LoaderFunction = async ({
   params,
@@ -460,7 +466,7 @@ Here's a basic example:
 
 ```tsx
 import { hydrate } from "react-dom";
-import { RemixBrowser } from "remix";
+import { RemixBrowser } from "@remix-run/react";
 
 hydrate(<RemixBrowser />, document);
 ```
@@ -482,8 +488,8 @@ import ReactDOMServer from "react-dom/server";
 import type {
   EntryContext,
   HandleDataRequestFunction,
-} from "remix";
-import { RemixServer } from "remix";
+} from "@remix-run/node";
+import { RemixServer } from "@remix-run/react";
 
 export default function handleRequest(
   request: Request,
@@ -543,7 +549,7 @@ export default function SomeRouteComponent() {
 Each route can define a "loader" function that will be called on the server before rendering to provide data to the route.
 
 ```js
-import { json } from "remix";
+import { json } from "@remix-run/node";
 
 export const loader = async () => {
   // The `json` function converts a serializable object into a JSON response
@@ -554,8 +560,8 @@ export const loader = async () => {
 
 ```ts
 // Typescript
-import { json } from "remix";
-import type { LoaderFunction } from "remix";
+import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 
 export const loader: LoaderFunction = async () => {
   return json({ ok: true });
@@ -566,8 +572,9 @@ This function is only ever run on the server. On the initial server render it wi
 
 Using the database ORM Prisma as an example:
 
-```tsx lines=[1,5-7,10]
-import { json, useLoaderData } from "remix";
+```tsx lines=[1-2,6-8,11]
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 import { prisma } from "../db";
 
@@ -677,7 +684,7 @@ export const loader: LoaderFunction = async () => {
 Using the `json` helper simplifies this so you don't have to construct them yourself, but these two examples are effectively the same!
 
 ```tsx
-import { json } from "remix";
+import { json } from "@remix-run/node";
 
 export const loader: LoaderFunction = async () => {
   const users = await fakeDb.users.findMany();
@@ -688,7 +695,7 @@ export const loader: LoaderFunction = async () => {
 You can see how `json` just does a little of the work to make your loader a lot cleaner. You can also use the `json` helper to add headers or a status code to your response:
 
 ```tsx
-import { json } from "remix";
+import { json } from "@remix-run/node";
 
 export const loader: LoaderFunction = async ({
   params,
@@ -717,8 +724,8 @@ Along with returning responses, you can also throw Response objects from your lo
 Here is a full example showing how you can create utility functions that throw responses to stop code execution in the loader and move over to an alternative UI.
 
 ```ts filename=app/db.ts
-import { json } from "remix";
-import type { ThrownResponse } from "remix";
+import { json } from "@remix-run/node";
+import type { ThrownResponse } from "@remix-run/react";
 
 export type InvoiceNotFoundResponse = ThrownResponse<
   404,
@@ -735,7 +742,7 @@ export function getInvoice(id, user) {
 ```
 
 ```ts filename=app/http.ts
-import { redirect } from "remix";
+import { redirect } from "@remix-run/node";
 
 import { getSession } from "./session";
 
@@ -753,8 +760,8 @@ export async function requireUserSession(request) {
 ```
 
 ```tsx filename=app/routes/invoice/$invoiceId.tsx
-import { useCatch, useLoaderData } from "remix";
-import type { ThrownResponse } from "remix";
+import { useCatch, useLoaderData } from "@remix-run/react";
+import type { ThrownResponse } from "@remix-run/react";
 
 import { requireUserSession } from "~/http";
 import { getInvoice } from "~/db";
@@ -831,7 +838,8 @@ Actions have the same API as loaders, the only difference is when they are calle
 This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
 ```tsx
-import { json, redirect, Form } from "remix";
+import { json, redirect } from "@remix-run/node";
+import { Form } from "@remix-run/react";
 
 import { fakeGetTodos, fakeCreateTodo } from "~/utils/db";
 import { TodoList } from "~/components/TodoList";
@@ -961,8 +969,8 @@ Note that you can also add headers in your `entry.server` file for things that s
 
 ```tsx lines=[16]
 import { renderToString } from "react-dom/server";
-import { RemixServer } from "remix";
-import type { EntryContext } from "remix";
+import { RemixServer } from "@remix-run/react";
+import type { EntryContext } from "@remix-run/node";
 
 export default function handleRequest(
   request: Request,
@@ -991,7 +999,7 @@ Just keep in mind that doing this will apply to _all_ document requests, but doe
 The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route besides layout routes (their index route will set the meta).
 
 ```tsx
-import type { MetaFunction } from "remix";
+import type { MetaFunction } from "@remix-run/node";
 
 export const meta: MetaFunction = () => {
   return {
@@ -1021,7 +1029,7 @@ As a last option, you can also pass an object of attribute/value pairs as the va
 Examples:
 
 ```tsx
-import type { MetaFunction } from "remix";
+import type { MetaFunction } from "@remix-run/node";
 
 export const meta: MetaFunction = () => ({
   // Special cases
@@ -1072,7 +1080,7 @@ export const meta: MetaFunction = ({ data, params }) => {
 The links function defines which `<link>` elements to add to the page when the user visits a route.
 
 ```tsx
-import type { LinksFunction } from "remix";
+import type { LinksFunction } from "@remix-run/node";
 
 export const links: LinksFunction = () => {
   return [
@@ -1106,7 +1114,7 @@ The `links` export from a route should return an array of `HtmlLinkDescriptor` o
 Examples:
 
 ```tsx
-import type { LinksFunction } from "remix";
+import type { LinksFunction } from "@remix-run/node";
 
 import stylesHref from "../styles/something.css";
 
@@ -1175,7 +1183,7 @@ A Remix `CatchBoundary` component works just like a route component, but instead
 A `CatchBoundary` component has access to the status code and thrown response data through `useCatch`.
 
 ```tsx
-import { useCatch } from "remix";
+import { useCatch } from "@remix-run/react";
 
 export function CatchBoundary() {
   const caught = useCatch();
@@ -1236,7 +1244,7 @@ This is almost always used on conjunction with `useMatches`. To see what kinds o
 This function lets apps optimize which routes should be reloaded on some client-side transitions.
 
 ```ts
-import type { ShouldReloadFunction } from "remix";
+import type { ShouldReloadFunction } from "@remix-run/react";
 
 export const unstable_shouldReload: ShouldReloadFunction =
   ({
@@ -1383,7 +1391,7 @@ Any files inside the `app` folder can be imported into your modules. Remix will:
 It's most common for stylesheets, but can used for anything.
 
 ```tsx filename=app/routes/root.tsx
-import type { LinksFunction } from "remix";
+import type { LinksFunction } from "@remix-run/node";
 
 import styles from "./styles/app.css";
 import banner from "./images/banner.jpg";
