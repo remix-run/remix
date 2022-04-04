@@ -319,6 +319,14 @@ async function createBrowserBuild(
   // this is really just making sure we don't accidentally have any dependencies
   // on node built-ins in browser bundles.
   let dependencies = Object.keys(getAppDependencies(config));
+  if (dependencies.includes("remix")) {
+    console.warn(
+      "Importing from `remix` is deprecated. Import from `@remix-run/*` packages instead."
+    );
+    console.log(
+      "HINT: To migrate from `remix` imports, run `npx @remix-run/dev migrate --migration replace-remix-imports <remix project directory>`."
+    );
+  }
   let externals = nodeBuiltins.filter((mod) => !dependencies.includes(mod));
   let fakeBuiltins = nodeBuiltins.filter((mod) => dependencies.includes(mod));
 
@@ -396,6 +404,14 @@ function createServerBuild(
   assetsManifestPromiseRef: AssetsManifestPromiseRef
 ): Promise<esbuild.BuildResult> {
   let dependencies = getAppDependencies(config);
+  if (Object.keys(dependencies).includes("remix")) {
+    console.warn(
+      "Importing from `remix` is deprecated. Import from `@remix-run/*` packages instead."
+    );
+    console.log(
+      "HINT: To migrate from `remix` imports, run `npx @remix-run/dev migrate --migration replace-remix-imports <remix project directory>`."
+    );
+  }
 
   let stdin: esbuild.StdinOptions | undefined;
   let entryPoints: string[] | undefined;
