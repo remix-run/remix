@@ -1,14 +1,16 @@
+import { test, expect } from "@playwright/test";
+
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
-describe("useFetcher", () => {
+test.describe("useFetcher", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
   let CHEESESTEAK = "CHEESESTEAK";
   let LUNCH = "LUNCH";
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/routes/resource-route.jsx": js`
@@ -54,43 +56,49 @@ describe("useFetcher", () => {
     app = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
+  test.afterAll(async () => {
     await app.close();
   });
 
-  test("Form can hit a loader", async () => {
-    let enableJavaScript = await app.disableJavaScript();
-    await app.goto("/");
-    await app.clickSubmitButton("/resource-route", {
-      wait: false,
-      method: "get",
+  test.describe("No JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("Form can hit a loader", async ({ page }) => {
+      await app.goto(page, "/");
+
+      await Promise.all([
+        page.waitForNavigation(),
+        app.clickSubmitButton(page, "/resource-route", {
+          wait: false,
+          method: "get",
+        }),
+      ]);
+
+      expect(await app.getHtml(page, "pre")).toMatch(LUNCH);
     });
-    await app.page.waitForNavigation();
-    expect(await app.getHtml("pre")).toMatch(LUNCH);
-    await enableJavaScript();
-  });
 
-  test("Form can hit an action", async () => {
-    let enableJavaScript = await app.disableJavaScript();
-    await app.goto("/");
-    await app.clickSubmitButton("/resource-route", {
-      wait: false,
-      method: "post",
+    test("Form can hit an action", async ({ page }) => {
+      await app.goto(page, "/");
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: "load" }),
+        app.clickSubmitButton(page, "/resource-route", {
+          wait: false,
+          method: "post",
+        }),
+      ]);
+      expect(await app.getHtml(page, "pre")).toMatch(CHEESESTEAK);
     });
-    await app.page.waitForNavigation();
-    expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
-    await enableJavaScript();
   });
 
-  test("load can hit a loader", async () => {
-    await app.goto("/");
-    await app.clickElement("#fetcher-load");
-    expect(await app.getHtml("pre")).toMatch(LUNCH);
+  test("load can hit a loader", async ({ page }) => {
+    await app.goto(page, "/");
+    await app.clickElement(page, "#fetcher-load");
+    expect(await app.getHtml(page, "pre")).toMatch(LUNCH);
   });
 
-  test("submit can hit an action", async () => {
-    await app.goto("/");
-    await app.clickElement("#fetcher-submit");
-    expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
+  test("submit can hit an action", async ({ page }) => {
+    await app.goto(page, "/");
+    await app.clickElement(page, "#fetcher-submit");
+    expect(await app.getHtml(page, "pre")).toMatch(CHEESESTEAK);
   });
 });

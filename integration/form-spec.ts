@@ -269,22 +269,25 @@ test.describe("Forms", () => {
     await app.close();
   });
 
-  test("posts to a loader without JavaScript", async ({ page }) => {
-    let enableJavaScript = await app.disableJavaScript(page);
-    await app.goto(page, "/get-submission");
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: "networkidle" }),
-      app.clickSubmitButton(page, "/get-submission", { wait: false }),
-    ]);
-    expect(await app.getHtml(page, "pre")).toMatch(CHEESESTEAK);
-    await enableJavaScript();
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+    test("posts to a loader", async ({ page }) => {
+      await app.goto(page, "/get-submission");
+      await Promise.all([
+        page.waitForNavigation(),
+        app.clickSubmitButton(page, "/get-submission", { wait: false }),
+      ]);
+      expect(await app.getHtml(page, "pre")).toMatch(CHEESESTEAK);
+    });
   });
 
-  test("posts to a loader", async ({ page }) => {
-    // this indirectly tests that clicking SVG children in buttons works
-    await app.goto(page, "/get-submission");
-    await app.clickSubmitButton(page, "/get-submission");
-    expect(await app.getHtml(page, "pre")).toMatch(CHEESESTEAK);
+  test.describe("with JavaScript", () => {
+    test("posts to a loader", async ({ page }) => {
+      // this indirectly tests that clicking SVG children in buttons works
+      await app.goto(page, "/get-submission");
+      await app.clickSubmitButton(page, "/get-submission");
+      expect(await app.getHtml(page, "pre")).toMatch(CHEESESTEAK);
+    });
   });
 
   test("posts to a loader with an <input name='action' />", async ({
@@ -292,20 +295,24 @@ test.describe("Forms", () => {
   }) => {
     await app.goto(page, "/get-submission");
     await app.clickElement(page, `#${FORM_WITH_ACTION_INPUT} button`);
+    await page.waitForLoadState("load");
     expect(await app.getHtml(page, "pre")).toMatch(EAT);
   });
 
   test("posts to a loader with button data with click", async ({ page }) => {
     await app.goto(page, "/get-submission");
-    await app.clickElement(page, "#buttonWithValue");
+    await Promise.all([
+      page.waitForNavigation(),
+      app.clickElement(page, "#buttonWithValue"),
+    ]);
     expect(await app.getHtml(page, "pre")).toMatch(LAKSA);
   });
 
   test("posts to a loader with button data with keyboard", async ({ page }) => {
     await app.goto(page, "/get-submission");
     await app.waitForNetworkAfter(page, async () => {
-      await app.page.focus(`#${KEYBOARD_INPUT}`);
-      await app.page.keyboard.press("Enter");
+      await page.focus(`#${KEYBOARD_INPUT}`);
+      await page.keyboard.press("Enter");
     });
     expect(await app.getHtml(page, "pre")).toMatch(LAKSA);
   });

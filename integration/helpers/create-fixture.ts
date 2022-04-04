@@ -9,6 +9,7 @@ import type {
   Response as HTTPResponse,
   Request as HTTPRequest,
 } from "@playwright/test";
+import { test } from "@playwright/test";
 import express from "express";
 import cheerio from "cheerio";
 import prettier from "prettier";
@@ -139,28 +140,7 @@ export async function createAppFixture(fixture: Fixture) {
     let serverUrl = `http://localhost:${port}`;
 
     return {
-      /**
-       * The playwright "page" instance. You will probably need to interact with
-       * this quite a bit in your tests, but our hope is that we can identify
-       * the most common things we do in our tests and make them helpers on the
-       * FixtureApp interface instead. Maybe one day we'll want to use cypress,
-       * would be nice to have an abstraction around our headless browser.
-       *
-       * For example, our `fixture.goto` wraps the normal `page.goto` but waits
-       * for hydration. As a rule of thumb, if you do the same handful of
-       * operations on the `page` three or more times, it's probably a good
-       * candidate to be a helper on `FixtureApp`.
-       *
-       * @see https://pptr.dev/#?product=Puppeteer&version=v13.1.3&show=api-class-page
-       */
-      page: undefined,
-
-      /**
-       * The puppeteer browser instance, seems unlikely we'll need it in tests,
-       * but maybe we will, so here it is.
-       */
-      browser: undefined,
-
+      serverUrl,
       /**
        * Shuts down the fixture app, **you need to call this
        * at the end of a test** or `afterAll` if the fixture is initialized in a
@@ -241,7 +221,7 @@ export async function createAppFixture(fixture: Fixture) {
       clickSubmitButton: async (
         page: Page,
         action: string,
-        options: { wait: boolean; method?: string } = { wait: true }
+        options: { wait?: boolean; method?: string } = { wait: true }
       ) => {
         let selector: string;
         if (options.method) {
@@ -314,29 +294,6 @@ export async function createAppFixture(fixture: Fixture) {
       collectDataResponses: (page: Page) => collectDataResponses(page),
 
       /**
-       * Disables JavaScript for the page, make sure to enable it again by
-       * calling and awaiting the returned function!
-       *
-       * ```js
-       * let enable = await app.disableJavaScript();
-       * // tests
-       * await enable();
-       * ```
-       */
-      disableJavaScript: async (page: Page) => {
-        let handler = () =>
-          page.route("**/*", (route) => {
-            return route.request().resourceType() === "script"
-              ? route.abort()
-              : route.continue();
-          });
-
-        page.on("request", handler);
-
-        return async () => page.off("request", handler);
-      },
-
-      /**
        * Get HTML from the page. Useful for asserting something rendered that
        * you expected.
        *
@@ -363,7 +320,7 @@ export async function createAppFixture(fixture: Fixture) {
        */
       poke: async (seconds: number = 10, href: string = "/") => {
         let ms = seconds * 1000;
-        jest.setTimeout(ms);
+        test.setTimeout(ms);
         console.log(`🙈 Poke around for ${seconds} seconds 👉 ${serverUrl}`);
         cp.exec(`open ${serverUrl}${href}`);
         return new Promise((res) => setTimeout(res, ms));
