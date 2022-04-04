@@ -1,6 +1,8 @@
 ---
-title: "@remix-run/node"
+title: Node
 ---
+
+# @remix-run/node
 
 This contains utilities and polyfills for Node.js.
 
