@@ -1,6 +1,6 @@
 ---
 title: React
-order: 1
+order: 2
 ---
 
 # `@remix-run/react`
