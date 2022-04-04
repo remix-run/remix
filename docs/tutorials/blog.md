@@ -132,8 +132,9 @@ So let's get to it and provide some data to our component.
 
 💿 Make the posts route "loader"
 
-```tsx filename=app/routes/posts/index.tsx lines=[1,3-16,19-20]
-import { json, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/index.tsx lines=[1-2,4-17,20-21]
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 export const loader = async () => {
   return json({
@@ -165,8 +166,9 @@ Loaders are the backend "API" for their component and it's already wired up for 
 
 💿 Render links to our posts
 
-```tsx filename=app/routes/posts/index.tsx lines=[1,9-20] nocopy
-import { Link, json, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/index.tsx lines=[2,10-21] nocopy
+import { json } from "@remix-run/node";
+import { Link, useLoaderData } from "@remix-run/react";
 
 // ...
 export default function Posts() {
@@ -195,8 +197,9 @@ TypeScript is mad, so let's help it out:
 
 💿 Add the Post type and generic for `useLoaderData`
 
-```tsx filename=app/routes/posts/index.tsx lines=[3-6,8-10,13,28]
-import { Link, json, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/index.tsx lines=[4-7,9-11,14,29]
+import { json } from "@remix-run/node";
+import { Link, useLoaderData } from "@remix-run/react";
 
 type Post = {
   slug: string;
@@ -283,7 +286,8 @@ Note that we're making the `getPosts` function `async` because even though it's 
 💿 Update the posts route to use our new posts module:
 
 ```tsx filename=app/routes/posts/index.tsx nocopy
-import { json, Link, useLoaderData } from "remix";
+import { json } from "@remix-run/node";
+import { Link, useLoaderData } from "@remix-run/react";
 
 import { getPosts } from "~/models/post.server";
 
@@ -440,8 +444,9 @@ You can click one of your posts and should see the new page.
 
 💿 Add a loader to access the params
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[1,3-5,8,12]
-import { useLoaderData, json } from "remix";
+```tsx filename=app/routes/posts/$slug.tsx lines=[1-2,4-6,9,13]
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 export const loader = async ({ params }) => {
   return json({ slug: params.slug });
@@ -463,9 +468,10 @@ The part of the filename attached to the `$` becomes a named key on the `params`
 
 💿 Let's get some help from TypeScript for the loader function signature.
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[1,4]
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/$slug.tsx lines=[1,5]
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 export const loader: LoaderFunction = async ({
   params,
@@ -496,9 +502,10 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[4,9-10,14,18]
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/$slug.tsx lines=[5,10-11,15,19]
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 import { getPost } from "~/models/post.server";
 
@@ -525,9 +532,10 @@ Check that out! We're now pulling our posts from a data source instead of includ
 
 Let's make TypeScript happy with our code:
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[3,5,8,13,16,18,22]
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/$slug.tsx lines=[4,6,9,14,17,19,23]
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
 
 import type { Post } from "~/models/post.server";
@@ -572,10 +580,11 @@ npm add marked
 npm add @types/marked -D
 ```
 
-```tsx filename=app/routes/post/$slug.ts lines=[1,9,19-20,24,30]
+```tsx filename=app/routes/post/$slug.ts lines=[1,10,20-21,25,31]
 import { marked } from "marked";
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
 
 import type { Post } from "~/models/post.server";
@@ -637,8 +646,9 @@ touch app/routes/posts/admin.tsx
 ```
 
 ```tsx filename=app/routes/posts/admin.tsx
-import type { LoaderFunction } from "remix";
-import { Link, useLoaderData, json } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Link, useLoaderData } from "@remix-run/react";
 
 import { getPosts } from "~/models/post.server";
 
@@ -696,7 +706,7 @@ touch app/routes/posts/admin/index.tsx
 ```
 
 ```tsx filename=app/routes/posts/admin/index.tsx
-import { Link } from "remix";
+import { Link } from "@remix-run/react";
 
 export default function AdminIndex() {
   return (
@@ -713,9 +723,14 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 
 💿 Add an outlet to the admin page
 
-```tsx filename=app/routes/posts/admin.tsx lines=[2,37]
-import type { LoaderFunction } from "remix";
-import { Link, Outlet, useLoaderData, json } from "remix";
+```tsx filename=app/routes/posts/admin.tsx lines=[5,42]
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import {
+  Link,
+  Outlet,
+  useLoaderData,
+} from "@remix-run/react";
 
 import { getPosts } from "~/models/post.server";
 
@@ -783,7 +798,7 @@ We're gonna get serious now. Let's build a form to create a new post in our new 
 💿 Add a form to the new route
 
 ```tsx filename=app/routes/posts/admin/new.tsx
-import { Form } from "remix";
+import { Form } from "@remix-run/react";
 
 const inputClassName = `w-full rounded border border-gray-500 px-2 py-1 text-lg`;
 
@@ -851,7 +866,8 @@ export async function createPost(post) {
 💿 Call `createPost` from the new post route's action
 
 ```tsx filename=app/routes/posts/admin/new.tsx
-import { Form, redirect } from "remix";
+import { redirect } from "@remix-run/node";
+import { Form } from "@remix-run/react";
 
 import { createPost } from "~/models/post.server";
 
@@ -892,9 +908,10 @@ export async function createPost(
 }
 ```
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[1,6]
-import type { ActionFunction } from "remix";
-import { Form, redirect } from "remix";
+```tsx filename=app/routes/posts/admin/new.tsx lines=[1,7]
+import type { ActionFunction } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
+import { Form } from "@remix-run/react";
 
 import { createPost } from "~/models/post.server";
 
@@ -964,9 +981,10 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[2,9,16-18,25-27,34-38]
-import type { ActionFunction } from "remix";
-import { Form, redirect, json, useActionData } from "remix";
+```tsx filename=app/routes/posts/admin/new.tsx lines=[3,10,17-19,26-28,35-39]
+import type { ActionFunction } from "@remix-run/node";
+import { redirect, json } from "@remix-run/node";
+import { Form, useActionData } from "@remix-run/react";
 
 // ...
 
@@ -1078,14 +1096,13 @@ export const action: ActionFunction = async ({
 
 💿 Add some pending UI with `useTransition`
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[6,14-15,24,26]
+```tsx filename=app/routes/posts/admin/new.tsx lines=[5,13-14,23,25]
+import { json, redirect } from "@remix-run/node";
 import {
   Form,
-  redirect,
-  json,
   useActionData,
   useTransition,
-} from "remix";
+} from "@remix-run/react";
 
 // ..
 
