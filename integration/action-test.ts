@@ -51,7 +51,8 @@ describe("actions", () => {
         `,
 
         [`app/routes/${THROWS_REDIRECT}.jsx`]: js`
-          import { Form, redirect } from "@remix-run/react";
+          import { redirect } from "@remix-run/node";
+          import { Form } from "@remix-run/react";
 
           export function action() {
             throw redirect("/${REDIRECT_TARGET}")
