@@ -24,4 +24,4 @@ let miscHandlers: Array<RequestHandler> = [
 ];
 
 let server = setupServer(...githubHandlers, ...miscHandlers);
-server.listen({ onUnhandledRequest: "error" });
+export { server };
