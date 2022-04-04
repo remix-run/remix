@@ -8,20 +8,6 @@ describe("loader in an app", () => {
     app = await createAppFixture(
       await createFixture({
         files: {
-          "app/root.jsx": js`
-            import { Scripts, Outlet } from "@remix-run/react";
-
-            export default function Root() {
-              return (
-                <html>
-                  <body>
-                    <Outlet />
-                    <Scripts />
-                  </body>
-                </html>
-              );
-            }
-          `,
           "app/routes/index.jsx": js`
             import { Form, Link } from "@remix-run/react";
 
