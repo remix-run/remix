@@ -736,7 +736,7 @@ export default function RouteComp() {
 [cloudflare-kv]: https://developers.cloudflare.com/workers/learning/how-kv-works
 [error-boundary]: ../api/conventions#errorboundary
 [fauna]: https://fauna.com
-[fetcher-submit]: ../api/remix#fetchersubmit
+[fetcher-submit]: ../api/react#fetchersubmit
 [loader]: ../api/conventions#loader
 [prisma]: https://prisma.io
 [request]: https://developer.mozilla.org/en-US/docs/Web/API/Request
@@ -745,5 +745,5 @@ export default function RouteComp() {
 [should-reload]: ../api/conventions#unstable_shouldreload
 [url-search-params]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [url]: https://developer.mozilla.org/en-US/docs/Web/API/URL
-[use-submit]: ../api/remix#usesubmit
-[useloaderdata]: ../api/remix#useloaderdata
+[use-submit]: ../api/react#usesubmit
+[useloaderdata]: ../api/react#useloaderdata

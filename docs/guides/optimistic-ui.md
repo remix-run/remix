@@ -259,12 +259,12 @@ For this to work best, you'll want a bit of client-side validation so that form 
 </Form>
 ```
 
-[use-fetcher]: ../api/remix#usefetcher
-[fetcher-submit]: ../api/remix#fethersubmit
-[fetcher-submission]: ../api/remix#fetchersubmission
-[use-transition]: ../api/remix#usetransition
-[transition-submission]: ../api/remix#transitionsubmission
-[use-submit]: ../api/remix#usesubmit
+[use-fetcher]: ../api/react#usefetcher
+[fetcher-submit]: ../api/react#fethersubmit
+[fetcher-submission]: ../api/react#fetchersubmission
+[use-transition]: ../api/react#usetransition
+[transition-submission]: ../api/react#transitionsubmission
+[use-submit]: ../api/react#usesubmit
 [error-boundary]: ../api/conventions#errorboundary
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [html-input]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/text#additional_attributes

@@ -516,9 +516,9 @@ From your components perspective, all that happened was the `useTransition` hook
 
 ## See also
 
-- [Form](../api/remix#form)
-- [useTransition](../api/remix#usetransition)
+- [Form](../api/react#form)
+- [useTransition](../api/react#usetransition)
 - [Actions](../api/conventions#action)
 - [Loaders](../api/conventions#loader)
-- [`useSubmit()`](../api/remix#usesubmit)
-- [`useFetcher()`](../api/remix#usefetcher)
+- [`useSubmit()`](../api/react#usesubmit)
+- [`useFetcher()`](../api/react#usefetcher)

@@ -27,8 +27,8 @@ Rather than pick a server-side API, Remix adopts the Web Fetch API for all http 
 
 While you can use these APIs directly in Remix, you'll typically use response helpers instead:
 
-- [json](../api/remix#json)
-- [redirect](../api/remix#redirect)
+- [json](../api/server/runtimes/common#json)
+- [redirect](../api/server/runtimes/common#redirect)
 
 ## Globally Available
 

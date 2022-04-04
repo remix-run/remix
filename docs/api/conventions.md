@@ -1415,8 +1415,8 @@ export default function Page() {
 [response]: https://developer.mozilla.org/en-US/docs/Web/API/Response
 [headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
 [urlsearchparams]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
-[form]: ./remix#form
-[form action]: ./remix#form-action
+[form]: ./react#form
+[form action]: ./react#form-action
 [link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
 [minimatch]: https://www.npmjs.com/package/minimatch
 [handledatarequest]: #entryservertsx

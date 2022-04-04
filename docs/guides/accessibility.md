@@ -27,7 +27,7 @@ When the client scripts in Remix are loaded, React Router takes control of routi
 
 In 2019, [Marcy Sutton led and published findings from user research](https://www.gatsbyjs.com/blog/2019-07-11-user-testing-accessible-client-routing/) to help developers build accessible client-side routing experiences. We encourage you to read the article in detail. We are actively investigating and testing internal solutions as well as new APIs to simplify this process.
 
-[link]: ../api/remix#link
-[navlink]: ../api/remix#navlink
-[scripts]: ../api/remix#meta-links-scripts
+[link]: ../api/react#link
+[navlink]: ../api/react#navlink
+[scripts]: ../api/react#meta-links-scripts
 [wcag]: https://www.w3.org/WAI/standards-guidelines/wcag/
