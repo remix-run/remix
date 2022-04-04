@@ -26,7 +26,7 @@ describe("actions", () => {
     fixture = await createFixture({
       files: {
         "app/routes/urlencoded.jsx": js`
-          import { Form, useActionData } from "remix";
+          import { Form, useActionData } from "@remix-run/react";
 
           export let action = async ({ request }) => {
             let formData = await request.formData();
@@ -51,7 +51,7 @@ describe("actions", () => {
         `,
 
         [`app/routes/${THROWS_REDIRECT}.jsx`]: js`
-          import { Form, redirect } from "remix";
+          import { Form, redirect } from "@remix-run/react";
 
           export function action() {
             throw redirect("/${REDIRECT_TARGET}")
@@ -74,13 +74,11 @@ describe("actions", () => {
 
         [`app/routes/${HAS_FILE_ACTIONS}.jsx`]: js`
           import {
-            Form,
             json,
             unstable_parseMultipartFormData as parseMultipartFormData,
             unstable_createFileUploadHandler as createFileUploadHandler,
-            useActionData,
-            useLoaderData,
-          } from "remix";
+          } from "@remix-run/node";
+          import { Form, useActionData, useLoaderData } from "@remix-run/react";
 
           const uploadHandler = createFileUploadHandler({
             directory: ".tmp/uploads",

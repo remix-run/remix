@@ -11,7 +11,8 @@ describe("loader", () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { json, Links, Meta, Outlet, Scripts } from "remix";
+        import { json } from "@remix-run/node";
+        import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export const loader = () => json("${ROOT_DATA}");
 
@@ -32,7 +33,7 @@ describe("loader", () => {
         `,
 
         "app/routes/index.jsx": js`
-          import { json } from "remix";
+          import { json } from "@remix-run/node";
 
           export function loader() {
             return "${INDEX_DATA}"
@@ -82,7 +83,7 @@ describe("loader in an app", () => {
             }
           `,
           "app/routes/redirect.jsx": js`
-            import { redirect } from "remix";
+            import { redirect } from "@remix-run/node";
       
             export const loader = () => redirect("/");
             export default () => <div>Yo</div>
