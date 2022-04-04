@@ -43,6 +43,14 @@ We're using [the Indie stack](https://github.com/remix-run/indie-stack), which i
 
 💿 Now, open the project that was generated in your preferred editor and check the instructions in the `README.md` file. Feel free to read over this. We'll get to the deployment bit later in the tutorial.
 
+💿 Setup Remix for development
+
+```sh
+remix setup
+```
+
+You should see a message that says "Successfully setup Remix for Node". You only need to do this once, though may need to run it again after you upgrade Remix versions later. Note that in a future version this will no longer be required.
+
 💿 Let's start the dev server:
 
 ```sh
