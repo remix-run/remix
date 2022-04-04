@@ -2,18 +2,15 @@ import path from "path";
 import fs from "fs/promises";
 import fse from "fs-extra";
 import cp from "child_process";
-import { sync as spawnSync } from "cross-spawn";
 import puppeteer from "puppeteer";
 import type { Page, HTTPResponse } from "puppeteer";
 import express from "express";
 import cheerio from "cheerio";
 import prettier from "prettier";
 import getPort from "get-port";
+import chalk from "chalk";
 
-import type {
-  ServerBuild,
-  ServerPlatform,
-} from "../../packages/remix-server-runtime";
+import type { ServerBuild } from "../../packages/remix-server-runtime";
 import { createRequestHandler } from "../../packages/remix-server-runtime";
 import { createRequestHandler as createExpressHandler } from "../../packages/remix-express";
 import { TMP_DIR } from "./global-setup";
@@ -29,9 +26,18 @@ export const js = String.raw;
 
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
-  let app: ServerBuild = await import(path.resolve(projectDir, "build"));
-  let platform: ServerPlatform = {};
-  let handler = createRequestHandler(app, platform);
+  let buildPath = path.resolve(projectDir, "build");
+  if (!fse.existsSync(buildPath)) {
+    throw new Error(
+      chalk.red(
+        `Expected build directory to exist at ${chalk.dim(
+          buildPath
+        )}. The build probably failed. Did you maybe have a syntax error in your test code strings?`
+      )
+    );
+  }
+  let app: ServerBuild = await import(buildPath);
+  let handler = createRequestHandler(app, "production");
 
   let requestDocument = async (href: string, init?: RequestInit) => {
     let url = new URL(href, "test://test");

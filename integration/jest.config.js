@@ -7,4 +7,5 @@ module.exports = {
   globalTeardown: "<rootDir>/helpers/global-teardown.ts",
   setupFilesAfterEnv: ["<rootDir>/helpers/setupAfterEnv.ts"],
   setupFiles: [],
+  testPathIgnorePatterns: ["gists-app"],
 };
