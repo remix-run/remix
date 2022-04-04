@@ -47,5 +47,15 @@ jobs:
       - name: Build
         run: yarn build
 
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+
       - name: Test
         run: yarn test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: playwright-results
+          path: test-results
