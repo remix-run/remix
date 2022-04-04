@@ -1,14 +1,15 @@
 import * as fs from "fs/promises";
 import * as path from "path";
+import { test, expect } from "@playwright/test";
 
 import { createFixture, createAppFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
-describe("file-uploads", () => {
+test.describe("file-uploads", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/fileUploadHandler.js": js`
@@ -64,11 +65,11 @@ describe("file-uploads", () => {
     app = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
+  test.afterAll(async () => {
     await app.close();
   });
 
-  it("handles files under upload size limit", async () => {
+  test("handles files under upload size limit", async ({ page }) => {
     let uploadFile = path.join(
       fixture.projectDir,
       "toUpload",
@@ -80,17 +81,10 @@ describe("file-uploads", () => {
       .catch(() => {});
     await fs.writeFile(uploadFile, uploadData, "utf8");
 
-    await app.goto("/file-upload");
-    await app.uploadFile("#file", uploadFile);
-    await app.clickSubmitButton("/file-upload");
-    expect(await app.getHtml("pre")).toMatchInlineSnapshot(`
-      "<pre>
-      {
-        \\"name\\": \\"underLimit.txt\\",
-        \\"size\\": 1000000
-      }</pre
-      >"
-    `);
+    await app.goto(page, "/file-upload");
+    await app.uploadFile(page, "#file", uploadFile);
+    await app.clickSubmitButton(page, "/file-upload");
+    expect(await app.getHtml(page, "pre")).toMatchSnapshot();
 
     let written = await fs.readFile(
       path.join(fixture.projectDir, "uploads/underLimit.txt"),
@@ -99,7 +93,7 @@ describe("file-uploads", () => {
     expect(written).toBe(uploadData);
   });
 
-  it("rejects files over upload size limit", async () => {
+  test("rejects files over upload size limit", async ({ page }) => {
     let uploadFile = path.join(fixture.projectDir, "toUpload", "overLimit.txt");
     let uploadData = Array(3000001).fill("a").join(""); // 3.000001MB
     await fs
@@ -107,15 +101,9 @@ describe("file-uploads", () => {
       .catch(() => {});
     await fs.writeFile(uploadFile, uploadData, "utf8");
 
-    await app.goto("/file-upload");
-    await app.uploadFile("#file", uploadFile);
-    await app.clickSubmitButton("/file-upload");
-    expect(await app.getHtml("pre")).toMatchInlineSnapshot(`
-      "<pre>
-      {
-        \\"errorMessage\\": \\"Field \\\\\\"file\\\\\\" exceeded upload size of 3000000 bytes.\\"
-      }</pre
-      >"
-    `);
+    await app.goto(page, "/file-upload");
+    await app.uploadFile(page, "#file", uploadFile);
+    await app.clickSubmitButton(page, "/file-upload");
+    expect(await app.getHtml(page, "pre")).toMatchSnapshot();
   });
 });
