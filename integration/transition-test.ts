@@ -112,7 +112,7 @@ describe("rendering", () => {
         `,
 
         [`app/routes/${REDIRECT_HASH}.jsx`]: js`
-          import { redirect } from "remix";
+          import { redirect } from "@remix-run/node";
           export function loader() {
             return redirect("/${REDIRECT_TARGET}#my-hash")
           }

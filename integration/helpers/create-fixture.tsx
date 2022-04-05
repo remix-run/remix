@@ -2,6 +2,7 @@ import path from "path";
 import fs from "fs/promises";
 import fse from "fs-extra";
 import cp from "child_process";
+import { sync as spawnSync } from "cross-spawn";
 import type { Writable } from "stream";
 import puppeteer from "puppeteer";
 import type { Page, HTTPResponse } from "puppeteer";
@@ -21,6 +22,7 @@ interface FixtureInit {
   buildStdio?: Writable;
   sourcemap?: boolean;
   files: { [filename: string]: string };
+  template?: "cf-template" | "node-template";
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
@@ -363,17 +365,38 @@ export async function createAppFixture(fixture: Fixture) {
 
 ////////////////////////////////////////////////////////////////////////////////
 export async function createFixtureProject(init: FixtureInit): Promise<string> {
-  let integrationTemplateDir = path.join(__dirname, "integration-template");
-  let projectName = `remix-integration-${Math.random().toString(32).slice(2)}`;
+  let template = init.template ?? "node-template";
+  let integrationTemplateDir = path.join(__dirname, template);
+  let projectName = `remix-${template}-${Math.random().toString(32).slice(2)}`;
   let projectDir = path.join(TMP_DIR, projectName);
 
   await fse.ensureDir(projectDir);
   await fse.copy(integrationTemplateDir, projectDir);
+  await fse.copy(
+    path.join(__dirname, "../../build/node_modules"),
+    path.join(projectDir, "node_modules"),
+    { overwrite: true }
+  );
   await renamePkgJsonApp(projectDir);
   await writeTestFiles(init, projectDir);
-  cp.execSync("npm run build", { cwd: projectDir });
+  build(projectDir, init.buildStdio, init.sourcemap);
 
   return projectDir;
+}
+
+function build(projectDir: string, buildStdio?: Writable, sourcemap?: boolean) {
+  let buildArgs = ["node_modules/@remix-run/dev/cli.js", "build"];
+  if (sourcemap) {
+    buildArgs.push("--sourcemap");
+  }
+  let buildSpawn = spawnSync("node", buildArgs, {
+    cwd: projectDir,
+  });
+  if (buildStdio) {
+    buildStdio.write(buildSpawn.stdout.toString("utf-8"));
+    buildStdio.write(buildSpawn.stderr.toString("utf-8"));
+    buildStdio.end();
+  }
 }
 
 async function writeTestFiles(init: FixtureInit, dir: string) {
