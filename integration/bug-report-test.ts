@@ -37,7 +37,8 @@ beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/index.jsx": js`
-        import { json, useLoaderData, Link } from "remix";
+        import { json } from "@remix-run/node";
+        import { Link, useLoaderData } from "@remix-run/react";
 
         export function loader() {
           return json("pizza");

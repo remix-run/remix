@@ -29,8 +29,8 @@ describe("compiler", () => {
           }
         `,
         "app/routes/built-ins.jsx": js`
-          import { useLoaderData } from "remix";
           import * as path from "path";
+          import { useLoaderData } from "@remix-run/react";
 
           export let loader = () => {
             return path.join("test", "file.txt");
@@ -41,8 +41,8 @@ describe("compiler", () => {
           }
         `,
         "app/routes/built-ins-polyfill.jsx": js`
-          import { useLoaderData } from "remix";
           import * as path from "path";
+          import { useLoaderData } from "@remix-run/react";
 
           export default function BuiltIns() {
             return <div id="built-ins-polyfill">{path.join("test", "file.txt")}</div>;

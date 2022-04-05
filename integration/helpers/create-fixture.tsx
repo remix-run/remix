@@ -401,11 +401,6 @@ function build(
   buildStdio?: Writable,
   sourcemap?: boolean
 ) {
-  // TODO: log errors (like syntax errors in the fixture file strings)
-  spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "setup", platform], {
-    cwd: projectDir,
-  });
-
   let buildArgs = ["node_modules/@remix-run/dev/cli.js", "build"];
   if (sourcemap) {
     buildArgs.push("--sourcemap");

@@ -21,7 +21,7 @@ describe("actions", () => {
     fixture = await createFixture({
       files: {
         "app/routes/urlencoded.jsx": js`
-          import { Form, useActionData } from "remix";
+          import { Form, useActionData } from "@remix-run/react";
 
           export let action = async ({ request }) => {
             let formData = await request.formData();
@@ -46,7 +46,8 @@ describe("actions", () => {
         `,
 
         [`app/routes/${THROWS_REDIRECT}.jsx`]: js`
-          import { Form, redirect } from "remix";
+          import { redirect } from "@remix-run/node";
+          import { Form } from "@remix-run/react";
 
           export function action() {
             throw redirect("/${REDIRECT_TARGET}")

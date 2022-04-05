@@ -8,9 +8,10 @@ beforeAll(async () => {
   fixture = await createFixture({
     files: {
       "app/routes/layout-action.jsx": js`
-        import { json, Outlet, useFetcher, useFormAction } from "remix";
+        import { json } from "@remix-run/node";
+        import { Outlet, useFetcher, useFormAction } from "@remix-run/react";
 
-        export let action = ({ params }) => json("layout action data");
+        export let action = () => json("layout action data");
 
         export default function ActionLayout() {
           let fetcher = useFetcher();
@@ -32,7 +33,8 @@ beforeAll(async () => {
       `,
 
       "app/routes/layout-action/index.jsx": js`
-        import { json, useFetcher, useFormAction, useLoaderData } from "remix";
+        import { json } from "@remix-run/node";
+        import { useFetcher, useFormAction, useLoaderData } from "@remix-run/react";
 
         export let loader = ({ params }) => json("index data");
 
@@ -58,11 +60,12 @@ beforeAll(async () => {
       `,
 
       "app/routes/layout-action/$param.jsx": js`
-        import { json, useFetcher, useFormAction, useLoaderData } from "remix";
+        import { json } from "@remix-run/node";
+        import { useFetcher, useFormAction, useLoaderData } from "@remix-run/react";
 
         export let loader = ({ params }) => json(params.param);
 
-        export let action = ({ params }) => json("param action data");
+        export let action = () => json("param action data");
 
         export default function ActionLayoutChild() {
           let data = useLoaderData();
@@ -84,7 +87,8 @@ beforeAll(async () => {
       `,
 
       "app/routes/layout-loader.jsx": js`
-        import { json, Outlet, useFetcher, useFormAction } from "remix";
+        import { json } from "@remix-run/node";
+        import { Outlet, useFetcher, useFormAction } from "@remix-run/react";
 
         export let loader = () => json("layout loader data");
 
@@ -108,9 +112,10 @@ beforeAll(async () => {
       `,
 
       "app/routes/layout-loader/index.jsx": js`
-        import { json, useFetcher, useFormAction, useLoaderData } from "remix";
+        import { json } from "@remix-run/node";
+        import { useFetcher, useFormAction, useLoaderData } from "@remix-run/react";
 
-        export let loader = ({ params }) => json("index data");
+        export let loader = () => json("index data");
 
         export default function ActionLayoutIndex() {
           let fetcher = useFetcher();
@@ -130,7 +135,8 @@ beforeAll(async () => {
       `,
 
       "app/routes/layout-loader/$param.jsx": js`
-        import { json, useFetcher, useFormAction, useLoaderData } from "remix";
+        import { json } from "@remix-run/node";
+        import { useFetcher, useFormAction, useLoaderData } from "@remix-run/react";
 
         export let loader = ({ params }) => json(params.param);
 
