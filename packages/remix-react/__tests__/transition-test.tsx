@@ -566,7 +566,6 @@ describe("errors on navigation", () => {
       Object {
         "a": "LOADER A",
         "b": "LOADER B",
-        "c": [Error: Kaboom!],
       }
     `);
   });
