@@ -18,7 +18,6 @@ import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
 import { createApp } from "./create";
-import type { TemplateType } from "./create";
 import { loadEnv } from "../env";
 import { log } from "../logging";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
@@ -32,7 +31,6 @@ export async function create({
   installDeps,
   useTypeScript,
   githubToken,
-  templateType,
 }: {
   appTemplate: string;
   projectDir: string;
@@ -40,7 +38,6 @@ export async function create({
   installDeps: boolean;
   useTypeScript: boolean;
   githubToken?: string;
-  templateType: TemplateType;
 }) {
   let spinner = ora("Creating your app…").start();
   await createApp({
@@ -104,7 +101,9 @@ export async function init(projectDir: string) {
       await initFn({ rootDirectory: projectDir });
     } catch (error) {
       if (error instanceof Error) {
-        error.message = colors.error("🚨 Oops, remix.init failed");
+        error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
+          error.message
+        }`;
       }
       throw error;
     }

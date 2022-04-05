@@ -65,6 +65,9 @@
     "@types/lodash.debounce": "^4.0.6",
     "@types/tar-fs": "^2.0.1",
     "@types/ws": "^7.4.1",
-    "type-fest": "^2.12.2"
+    "esbuild-register": "^3.3.2",
+    "msw": "^0.39.2",
+    "type-fest": "^2.12.2",
+    "tiny-invariant": "^1.2.0"
   }
 }
