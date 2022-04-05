@@ -1,5 +1,7 @@
 import { sync as execaSync } from "execa";
 
+import type { Flags } from "./flags";
+
 const jscodeshiftExecutable = require.resolve(".bin/jscodeshift");
 
 type Options = Record<string, unknown>;
@@ -14,7 +16,7 @@ const toFlags = (options: Options = {}) =>
 type Args<TransformOptions> = {
   transformPath: string;
   files: string[];
-  flags: { dry?: boolean; print?: boolean; runInBand?: boolean };
+  flags: Flags;
   transformOptions?: TransformOptions;
 };
 export const run = <TransformOptions>({
