@@ -22,7 +22,7 @@ type Args<TransformOptions> = {
 export const run = <TransformOptions>({
   transformPath,
   files,
-  flags: { dry, print, runInBand },
+  flags: { debug, dry, print, runInBand },
   transformOptions,
 }: Args<TransformOptions>) => {
   let args = [
@@ -40,11 +40,13 @@ export const run = <TransformOptions>({
     ...toFlags(transformOptions || {}),
   ];
 
-  console.log(
-    `Executing command: jscodeshift ${args
-      .filter((arg) => arg !== "")
-      .join(" ")}`
-  );
+  if (debug) {
+    console.log(
+      `Executing command: jscodeshift ${args
+        .filter((arg) => arg !== "")
+        .join(" ")}`
+    );
+  }
 
   let result = execaSync(jscodeshiftExecutable, args, {
     stdio: "inherit",
