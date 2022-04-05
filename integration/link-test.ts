@@ -80,7 +80,7 @@ describe("route module link export", () => {
             Outlet,
             Scripts,
             useCatch,
-          } from "remix";
+          } from "@remix-run/react";
           import resetHref from "./reset.css";
           import stylesHref from "./app.css";
           import favicon from "./favicon.ico";
@@ -185,7 +185,7 @@ describe("route module link export", () => {
 
         "app/routes/index.jsx": js`
           import { useEffect } from "react";
-          import { Link } from "remix";
+          import { Link } from "@remix-run/react";
 
           export default function Index() {
             return (
@@ -215,7 +215,7 @@ describe("route module link export", () => {
         `,
 
         "app/routes/links.jsx": js`
-          import { useLoaderData, Link } from "remix";
+          import { useLoaderData, Link } from "@remix-run/react";
           import redTextHref from "~/redText.css";
           import blueTextHref from "~/blueText.css";
           import guitar from "~/guitar.jpg";
@@ -263,7 +263,8 @@ describe("route module link export", () => {
         `,
 
         "app/routes/gists.jsx": js`
-          import { json, Link, Outlet, useLoaderData, useTransition } from "remix";
+          import { json } from "@remix-run/node";
+          import { Link, Outlet, useLoaderData, useTransition } from "@remix-run/react";
           import stylesHref from "~/gists.css";
           export function links() {
             return [{ rel: "stylesheet", href: stylesHref }];
@@ -377,7 +378,7 @@ describe("route module link export", () => {
         //     `,
 
         "app/routes/gists/index.jsx": js`
-          import { useLoaderData } from "remix";
+          import { useLoaderData } from "@remix-run/react";
           export async function loader() {
             return Promise.resolve(${JSON.stringify(fakeGists)});
           }
@@ -418,7 +419,7 @@ describe("route module link export", () => {
         `,
 
         "app/routes/resources/theme-css.jsx": js`
-          import { redirect } from "remix";
+          import { redirect } from "@remix-run/node";
           export async function loader({ request }) {
             return new Response(":root { --nc-tx-1: #ffffff; --nc-tx-2: #eeeeee; }",
               {
@@ -460,26 +461,20 @@ describe("route module link export", () => {
 
   it.only("adds links to the document", async () => {
     await app.disableJavaScript();
+    let responses = app.collectResponses((url) =>
+      url.pathname.endsWith(".css")
+    );
+
     await app.goto("/links");
     await app.page.waitForSelector('[data-test-id="/links"]');
 
-    // calling app.getElement with "html" or "head" doesn't work for some
-    // reason, so this is a workaround.
-    let html = (await app.getElement('[data-test-id="/links"]')).parentsUntil(
-      "html"
-    );
-    let sdfg = await app.getHtml();
-    let head = html.children("head");
-    let links = html.children("link");
-    let responses =
-      app.collectResponses(/* (url) =>
-      url.pathname.endsWith(".css")
-    */);
-    console.log({ sdfg, responses });
-    // console.log(html.children("link"));
-
-    // //expect(cssResponses.length).toEqual(3);
-    expect(true).toBe(true);
+    // `/root`
+    //   - { rel: "stylesheet", href: "./reset.css" }
+    //   - { rel: "stylesheet", href: "./app.css" }
+    // `/routes/links`
+    //   - { rel: "stylesheet", href: "~/redText.css" }
+    //   - { rel: "stylesheet", href: "~/blueText.css" }
+    expect(responses.length).toEqual(4);
   });
 
   it("preloads assets for other pages and serves from browser cache on navigation", async () => {
