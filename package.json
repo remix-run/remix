@@ -109,6 +109,7 @@
     "simple-git": "^3.2.4",
     "sort-package-json": "^1.54.0",
     "strip-ansi": "^6.0.1",
+    "strip-indent": "^3.0.0",
     "type-fest": "^2.11.1",
     "typescript": "^4.5.5",
     "unified": "^9.2.0"

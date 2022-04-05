@@ -21,6 +21,7 @@ ${colors.heading("Usage")}:
   $ remix dev [${colors.arg("projectDir")}]
   $ remix routes [${colors.arg("projectDir")}]
   $ remix setup [${colors.arg("remixPlatform")}]
+  $ remix migrate [-m ${colors.arg("migration")}] [${colors.arg("projectDir")}]
 
 ${colors.heading("Options")}:
   --help, -h          Print this help message and exit
@@ -37,11 +38,18 @@ ${colors.heading("Options")}:
   --debug             Attach Node.js inspector
 \`routes\` Options:
   --json              Print the routes as JSON
+\`migrate\` Options:
+  --dry               Dry run (no changes are made to files)
+  --force             Bypass Git safety checks and forcibly run migration
+  --migration, -m     Name of the migration to run
 
 ${colors.heading("Values")}:
   - ${colors.arg("projectDir")}        The Remix project directory
   - ${colors.arg("template")}          The project template to use
-  - ${colors.arg("remixPlatform")}     node or cloudflare
+  - ${colors.arg("remixPlatform")}     \`node\` or \`cloudflare\`
+  - ${colors.arg(
+    "migration"
+  )}         One of the choices from https://github.com/remix-run/remix/tree/main/packages/remix-dev/cli/migrate/migration-options
 
 ${colors.heading("Creating a new project")}:
 
@@ -100,14 +108,17 @@ ${colors.heading("Show all routes in your app")}:
  */
 export async function run(argv: string[] = process.argv.slice(2)) {
   let { flags, input, showHelp, showVersion } = meow(helpText, {
-    argv: argv,
-    description: false,
+    argv,
     booleanDefault: undefined,
+    description: false,
     flags: {
       debug: { type: "boolean" },
+      dry: { type: "boolean" },
+      force: { type: "boolean" },
       help: { type: "boolean", alias: "h" },
       install: { type: "boolean" },
       json: { type: "boolean" },
+      migration: { type: "string", alias: "m" },
       remixVersion: { type: "string" },
       sourcemap: { type: "boolean" },
       template: { type: "string" },
@@ -303,6 +314,14 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     case "setup":
       await commands.setup(input[1]);
       break;
+    case "migrate": {
+      let { migrationId, projectDir } = await commands.migrate.resolveInput({
+        migrationId: flags.migration,
+        projectDir: input[1],
+      });
+      await commands.migrate.run({ migrationId, projectDir, flags });
+      break;
+    }
     case "dev":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
       if (flags.debug) inspector.open();

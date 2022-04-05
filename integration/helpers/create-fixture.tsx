@@ -3,12 +3,14 @@ import fs from "fs/promises";
 import fse from "fs-extra";
 import cp from "child_process";
 import { sync as spawnSync } from "cross-spawn";
+import type { Writable } from "stream";
 import puppeteer from "puppeteer";
 import type { Page, HTTPResponse } from "puppeteer";
 import express from "express";
 import cheerio from "cheerio";
 import prettier from "prettier";
 import getPort from "get-port";
+import stripIndent from "strip-indent";
 
 import type {
   ServerBuild,
@@ -16,12 +18,15 @@ import type {
 } from "../../packages/remix-server-runtime";
 import { createRequestHandler } from "../../packages/remix-server-runtime";
 import { createApp } from "../../packages/remix-dev";
+import { SetupPlatform } from "../../packages/remix-dev/cli/setup";
 import { createRequestHandler as createExpressHandler } from "../../packages/remix-express";
 import { TMP_DIR } from "./global-setup";
 
 const REMIX_SOURCE_BUILD_DIR = path.join(process.cwd(), "build");
 
 interface FixtureInit {
+  buildStdio?: Writable;
+  sourcemap?: boolean;
   files: { [filename: string]: string };
   template?:
     | "arc"
@@ -39,6 +44,8 @@ export type Fixture = Awaited<ReturnType<typeof createFixture>>;
 export type AppFixture = Awaited<ReturnType<typeof createAppFixture>>;
 
 export const js = String.raw;
+export const json = String.raw;
+export const mdx = String.raw;
 
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
@@ -362,6 +369,9 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     init.template ? init.template : "remix"
   );
   let projectDir = path.join(TMP_DIR, Math.random().toString(32).slice(2));
+  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
+    init.template
+  );
 
   await createApp({
     appTemplate,
@@ -374,19 +384,41 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     writeTestFiles(init, projectDir),
     installRemix(projectDir),
   ]);
-  build(projectDir);
+
+  build(
+    projectDir,
+    isCloudflareRuntime ? SetupPlatform.Cloudflare : SetupPlatform.Node,
+    init.buildStdio,
+    init.sourcemap
+  );
 
   return projectDir;
 }
 
-function build(projectDir: string) {
+function build(
+  projectDir: string,
+  platform: SetupPlatform,
+  buildStdio?: Writable,
+  sourcemap?: boolean
+) {
   // TODO: log errors (like syntax errors in the fixture file strings)
-  spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "setup"], {
+  spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "setup", platform], {
     cwd: projectDir,
   });
-  spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "build"], {
+
+  let buildArgs = ["node_modules/@remix-run/dev/cli.js", "build"];
+  if (sourcemap) {
+    buildArgs.push("--sourcemap");
+  }
+  let buildSpawn = spawnSync("node", buildArgs, {
     cwd: projectDir,
   });
+
+  if (buildStdio) {
+    buildStdio.write(buildSpawn.stdout.toString("utf-8"));
+    buildStdio.write(buildSpawn.stderr.toString("utf-8"));
+    buildStdio.end();
+  }
 }
 
 async function installRemix(projectDir: string) {
@@ -403,7 +435,7 @@ async function writeTestFiles(init: FixtureInit, dir: string) {
     Object.keys(init.files).map(async (filename) => {
       let filePath = path.join(dir, filename);
       await fse.ensureDir(path.dirname(filePath));
-      await fs.writeFile(filePath, init.files[filename]);
+      await fs.writeFile(filePath, stripIndent(init.files[filename]));
     })
   );
   await renamePkgJsonApp(dir);

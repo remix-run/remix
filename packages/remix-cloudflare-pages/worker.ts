@@ -1,9 +1,22 @@
-import type { ServerBuild, AppLoadContext } from "@remix-run/server-runtime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import type { AppLoadContext, ServerBuild } from "@remix-run/cloudflare";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cloudflare";
+
+/**
+ * A function that returns the value to use as `context` in route `loader` and
+ * `action` functions.
+ *
+ * You can think of this as an escape hatch that allows you to pass
+ * environment/platform-specific values through to your loader/action.
+ */
+export type GetLoadContextFunction<Env = any> = (
+  context: EventContext<Env, any, any>
+) => AppLoadContext;
+
+export type RequestHandler<Env = any> = PagesFunction<Env>;
 
 export interface createPagesFunctionHandlerParams<Env = any> {
   build: ServerBuild;
-  getLoadContext?: (context: EventContext<Env, any, any>) => AppLoadContext;
+  getLoadContext?: GetLoadContextFunction<Env>;
   mode?: string;
 }
 
@@ -11,7 +24,7 @@ export function createRequestHandler<Env = any>({
   build,
   getLoadContext,
   mode,
-}: createPagesFunctionHandlerParams<Env>): PagesFunction<Env> {
+}: createPagesFunctionHandlerParams<Env>): RequestHandler<Env> {
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return (context) => {

@@ -21,9 +21,10 @@ One of the primary features of Remix is simplifying interactions with the server
 
 Each [route module][route-module] can export a component and a [`loader`][loader]. [`useLoaderData`][useloaderdata] will provide the loader's data to your component:
 
-```tsx filename=app/routes/products.tsx lines=[1,2,4-6,9]
-import { json, useLoaderData } from "remix";
-import type { LoaderFunction } from "remix";
+```tsx filename=app/routes/products.tsx lines=[1-3,5-10,13]
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 export const loader: LoaderFunction = async () => {
   return json([
@@ -54,7 +55,7 @@ If your server side modules end up in client bundles, move the imports for those
 When you name a file with `$` like `routes/users/$userId.tsx` and `routes/users/$userId/projects/$projectId.tsx` the dynamic segments (the ones starting with `$`) will be parsed from the URL and passed to your loader on a `params` object.
 
 ```tsx filename=routes/users/$userId/projects/$projectId.tsx
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
 
 export const loader: LoaderFunction = async ({
   params,
@@ -74,8 +75,8 @@ Given the following URLs, the params would be parsed as follows:
 These params are most useful for looking up data:
 
 ```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[8,9]
-import { json } from "remix";
-import type { LoaderFunction } from "remix";
+import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 
 export const loader: LoaderFunction = async ({
   params,
@@ -95,9 +96,9 @@ export const loader: LoaderFunction = async ({
 
 Because these params come from the URL and not your source code, you can't know for sure if they will be defined. That's why the types on the param's keys are `string | undefined`. It's good practice to validate before using them, especially in TypeScript to get type safety. Using `invariant` makes it easy.
 
-```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[1,5-6]
+```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[1,7-8]
 import invariant from "tiny-invariant";
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
 
 export const loader: LoaderFunction = async ({
   params,
@@ -115,8 +116,9 @@ While you may be uncomfortable throwing errors like this with `invariant` when i
 
 Remix polyfills the `fetch` API on your server so it's very easy to fetch data from existing JSON APIs. Instead of managing state, errors, race conditions, and more yourself, you can do the fetch from your loader (on the server) and let Remix handle the rest.
 
-```tsx filename=app/routes/gists.jsx lines=[4]
-import { json, useLoaderData } from "remix";
+```tsx filename=app/routes/gists.jsx lines=[5]
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 export async function loader() {
   const res = await fetch("https://api.github.com/gists");
@@ -152,8 +154,9 @@ export { db };
 And then your routes can import it and make queries against it:
 
 ```tsx filename=app/routes/products/$categoryId.tsx
-import { json, useLoaderData } from "remix";
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 import { db } from "~/db.server";
 
@@ -183,7 +186,8 @@ export default function ProductCategory() {
 If you are using TypeScript, you can use type inference to use Prisma Client generated types on when calling `useLoaderData`. This allowes better type safety and intellisense when writing your code that uses the loaded data.
 
 ```tsx filename=tsx filename=app/routes/products/$productId.tsx
-import { useLoaderData, json } from "remix";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 import { db } from "~/db.server";
 
@@ -220,8 +224,9 @@ export default function Product() {
 If you picked Cloudflare Workers as your environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource. You'll need to [do some configuration][cloudflare-kv-setup] but then you can access the data from your loaders:
 
 ```tsx filename=app/routes/products/$productId.tsx
-import { json, useLoaderData } from "remix";
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 export const loader: LoaderFunction = async ({
   params,
@@ -277,8 +282,8 @@ export const loader: LoaderFunction = async ({
 URL Search Params are the portion of the URL after a `?`. Other names for this are "query string", "search string", or "location search". You can access the values by creating a URL out of the `request.url`:
 
 ```tsx filename=routes/products.tsx lines=[7,8]
-import { json } from "remix";
-import type { LoaderFunction } from "remix";
+import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 
 export const loader: LoaderFunction = async ({
   request,
@@ -358,7 +363,7 @@ Then the url will be: `/products/shoes?brand=nike&brand=adidas`
 Note that `brand` is repeated in the URL search string since both checkboxes were named `"brand"`. In your loader you can get access to all of those values with [`searchParams.getAll`][search-params-getall]
 
 ```tsx lines=[5]
-import { json } from "remix";
+import { json } from "@remix-run/node";
 
 export async function loader({ request }) {
   const url = new URL(request.url);
@@ -379,8 +384,8 @@ As the developer, you can control the search params by linking to URLs with sear
 
 In addition to reading search params in loaders, you often need access to them in components, too:
 
-```tsx lines=[1,4,5,15,24]
-import { useSearchParams } from "remix";
+```tsx lines=[1,4-5,15,24]
+import { useSearchParams } from "@remix-run/react";
 
 export default function ProductFilters() {
   const [searchParams] = useSearchParams();
@@ -414,8 +419,11 @@ export default function ProductFilters() {
 
 You might want to auto submit the form on any field change, for that there is [`useSubmit`][use-submit]:
 
-```tsx lines=[1,4,11]
-import { useSubmit, useSearchParams } from "remix";
+```tsx lines=[2,7,14]
+import {
+  useSubmit,
+  useSearchParams,
+} from "@remix-run/react";
 
 export default function ProductFilters() {
   const submit = useSubmit();
@@ -438,7 +446,7 @@ export default function ProductFilters() {
 While uncommon, you can also set searchParams imperatively at any time for any reason. The use cases here are slim, so slim we couldn't even come up with a good one, but here's a silly example:
 
 ```tsx
-import { useSearchParams } from "remix";
+import { useSearchParams } from "@remix-run/react";
 
 export default function ProductFilters() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -461,7 +469,7 @@ Often you want to keep some inputs, like checkboxes, in sync with the search par
 This is only needed if the search params can be set in two ways and we want the inputs to stay in sync with the search params. For example, both the `<input type="checkbox">` and the `Link` can change the brand in this component:
 
 ```tsx bad lines=[11-18]
-import { useSearchParams } from "remix";
+import { useSearchParams } from "@remix-run/react";
 
 export default function ProductFilters() {
   const [searchParams] = useSearchParams();
@@ -507,8 +515,11 @@ You have two choices, and what you pick depends on the user experience you want.
 
 **First Choice**: The simplest thing is to auto-submit the form when the user clicks the checkbox:
 
-```tsx lines=[1,4,17]
-import { useSubmit, useSearchParams } from "remix";
+```tsx lines=[2,7,20]
+import {
+  useSubmit,
+  useSearchParams,
+} from "@remix-run/react";
 
 export default function ProductFilters() {
   const submit = useSubmit();
@@ -544,8 +555,11 @@ export default function ProductFilters() {
 - Update the state when the user clicks the checkbox so the box changes to "checked"
 - Update the state when the search params change (the user submitted the form or clicked the link) to reflect what's in the url search params
 
-```tsx lines=[8-11,13-17,28-32]
-import { useSubmit, useSearchParams } from "remix";
+```tsx lines=[11-14,16-20,31-35]
+import {
+  useSubmit,
+  useSearchParams,
+} from "@remix-run/react";
 
 export default function ProductFilters() {
   const submit = useSubmit();
