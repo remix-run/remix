@@ -130,15 +130,15 @@ Here's the tree structure. Hopefully what you've got looks a bit like this:
 remix-jokes
 ├── README.md
 ├── app
-│   ├── entry.client.tsx
-│   ├── entry.server.tsx
-│   ├── root.tsx
-│   └── routes
-│       └── index.tsx
+│   ├── entry.client.tsx
+│   ├── entry.server.tsx
+│   ├── root.tsx
+│   └── routes
+│       └── index.tsx
 ├── package-lock.json
 ├── package.json
 ├── public
-│   └── favicon.ico
+│   └── favicon.ico
 ├── remix.config.js
 ├── remix.env.d.ts
 └── tsconfig.json

@@ -65,14 +65,14 @@ app
     ├── index.jsx
     ├── reports.jsx
     ├── sales
-    │   ├── customers.jsx
-    │   ├── deposits.jsx
-    │   ├── index.jsx
-    │   ├── invoices
-    │   │   ├── $invoiceId.jsx
-    │   │   └── index.jsx
-    │   ├── invoices.jsx
-    │   └── subscriptions.jsx
+    │   ├── customers.jsx
+    │   ├── deposits.jsx
+    │   ├── index.jsx
+    │   ├── invoices
+    │   │   ├── $invoiceId.jsx
+    │   │   └── index.jsx
+    │   ├── invoices.jsx
+    │   └── subscriptions.jsx
     └── sales.jsx
 ```
 
@@ -108,9 +108,9 @@ app
 ├── root.jsx
 └── routes
     ├── sales
-    │   ├── invoices
-    │   │   └── $invoiceId.jsx
-    │   └── invoices.jsx
+    │   ├── invoices
+    │   │   └── $invoiceId.jsx
+    │   └── invoices.jsx
     └── sales.jsx
 ```
 
@@ -207,9 +207,9 @@ So, if we want a flat UI hierarchy, we create a flat filename--we use `"."` to c
     ├── root.jsx
     └── routes
         ├── sales
-        │   ├── invoices
-        │   │   └── $invoiceId.jsx
-        │   └── invoices.jsx
+        │   ├── invoices
+        │   │   └── $invoiceId.jsx
+        │   └── invoices.jsx
         ├── sales.invoices.$invoiceId.edit.jsx 👈 not nested
         └── sales.jsx
 ```
@@ -260,9 +260,9 @@ app
 ├── root.jsx
 └── routes
     ├── auth
-    │   ├── login.jsx
-    │   ├── logout.jsx
-    │   └── signup.jsx
+    │   ├── login.jsx
+    │   ├── logout.jsx
+    │   └── signup.jsx
     └── auth.jsx
 ```
 
@@ -275,9 +275,9 @@ app
 ├── root.jsx
 └── routes
     ├── __auth
-    │   ├── login.jsx
-    │   ├── logout.jsx
-    │   └── signup.jsx
+    │   ├── login.jsx
+    │   ├── logout.jsx
+    │   └── signup.jsx
     └── __auth.jsx
 ```
 
@@ -313,9 +313,9 @@ app
 ├── root.jsx
 └── routes
     ├── projects
-    │   ├── $projectId
-    │   │   └── $taskId.jsx
-    │   └── $projectId.jsx
+    │   ├── $projectId
+    │   │   └── $taskId.jsx
+    │   └── $projectId.jsx
     └── projects.jsx
 ```
 
@@ -337,9 +337,9 @@ app
 ├── root.jsx
 └── routes
     ├── files
-    │   ├── $.jsx
-    │   ├── mine.jsx
-    │   └── recent.jsx
+    │   ├── $.jsx
+    │   ├── mine.jsx
+    │   └── recent.jsx
     └── files.jsx
 ```
 
