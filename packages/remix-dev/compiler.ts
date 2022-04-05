@@ -320,7 +320,7 @@ async function createBrowserBuild(
   // on node built-ins in browser bundles.
   let dependencies = Object.keys(getAppDependencies(config));
   if (dependencies.includes("remix")) {
-    console.warn(
+    warnOnce(
       "Importing from `remix` is deprecated. Import from `@remix-run/*` packages instead."
     );
   }
@@ -402,7 +402,7 @@ function createServerBuild(
 ): Promise<esbuild.BuildResult> {
   let dependencies = getAppDependencies(config);
   if (Object.keys(dependencies).includes("remix")) {
-    console.warn(
+    warnOnce(
       "Importing from `remix` is deprecated. Import from `@remix-run/*` packages instead."
     );
   }
