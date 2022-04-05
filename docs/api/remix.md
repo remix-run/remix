@@ -8,10 +8,12 @@ order: 2
 React: `@remix-run/react`
 
 Server runtimes:
+
 - `@remix-run/cloudflare`
 - `@remix-run/node`
 
 Server adapters:
+
 - `@remix-run/architect`
 - `@remix-run/cloudflare-pages`
 - `@remix-run/cloudflare-workers`
@@ -28,7 +30,10 @@ These package provides all the components, hooks, and [Web Fetch API](https://de
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
 ```tsx
-import type { LinksFunction, MetaFunction } from "@remix-run/{runtime}";
+import type {
+  LinksFunction,
+  MetaFunction,
+} from "@remix-run/{runtime}";
 import {
   Links,
   LiveReload,
@@ -2426,7 +2431,12 @@ Now we can read the message in a loader.
 
 ```jsx
 import { json } from "@remix-run/{runtime}";
-import { Meta, Links, Scripts, Outlet } from "@remix-run/react";
+import {
+  Meta,
+  Links,
+  Scripts,
+  Outlet,
+} from "@remix-run/react";
 
 import { getSession, commitSession } from "./sessions";
 
