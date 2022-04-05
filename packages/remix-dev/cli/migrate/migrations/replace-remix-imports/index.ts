@@ -8,6 +8,7 @@ import { cleanupPackageJson } from "./cleanupPackageJson";
 import { getTransformOptions } from "./getTransformOptions";
 import type { Options } from "./transform";
 import type { MigrationFunction } from "../../types";
+import { readConfig } from "../../../../config";
 
 const transformPath = join(__dirname, "transform");
 
@@ -27,8 +28,10 @@ export const replaceRemixImports: MigrationFunction = async ({
     runtime: transformOptions.runtime,
   });
 
+  // find all Javascript and Typescript files within Remix app directory
+  let config = await readConfig(projectDir);
   let files = glob.sync("**/*.+(js|jsx|ts|tsx)", {
-    cwd: projectDir,
+    cwd: config.appDirectory,
     absolute: true,
   });
 
