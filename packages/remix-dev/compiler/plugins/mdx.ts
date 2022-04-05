@@ -82,7 +82,7 @@ export const filename = ${JSON.stringify(path.basename(args.path))};
 export const headers = typeof attributes !== "undefined" && attributes.headers;
 export const meta = typeof attributes !== "undefined" && attributes.meta;
 export const links = undefined;
-export const data = ${JSON.stringify(compiled.data)})};
+export const data = ${JSON.stringify(compiled.data)};
 `;
 
           let errors: esbuild.PartialMessage[] = [];
