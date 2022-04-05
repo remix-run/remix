@@ -9,7 +9,7 @@ if (Number.isNaN(port)) {
   port = 3000;
 }
 
-let buildPathArg = process.argv[2];
+const buildPathArg = process.argv[2];
 
 if (!buildPathArg) {
   console.error(`
@@ -17,10 +17,10 @@ if (!buildPathArg) {
   process.exit(1);
 }
 
-let buildPath = path.resolve(process.cwd(), buildPathArg);
+const buildPath = path.resolve(process.cwd(), buildPathArg);
 
-let onListen = () => {
-  let address =
+const onListen = () => {
+  const address =
     process.env.HOST ||
     Object.values(os.networkInterfaces())
       .flat()
@@ -35,7 +35,7 @@ let onListen = () => {
   }
 };
 
-let app = createApp(buildPath);
+const app = createApp(buildPath);
 
 if (process.env.HOST) {
   app.listen(port, process.env.HOST, onListen);

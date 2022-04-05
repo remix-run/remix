@@ -85,7 +85,7 @@ export const createCookieFactory =
     unsign: UnsignFunction;
   }): CreateCookieFunction =>
   (name, cookieOptions = {}) => {
-    let { secrets, ...options } = {
+    const { secrets, ...options } = {
       secrets: [],
       path: "/",
       ...cookieOptions,
@@ -106,7 +106,7 @@ export const createCookieFactory =
       },
       async parse(cookieHeader, parseOptions) {
         if (!cookieHeader) return null;
-        let cookies = parse(cookieHeader, { ...options, ...parseOptions });
+        const cookies = parse(cookieHeader, { ...options, ...parseOptions });
         return name in cookies
           ? cookies[name] === ""
             ? ""
@@ -163,8 +163,8 @@ async function decodeCookieValue(
   secrets: string[]
 ): Promise<any> {
   if (secrets.length > 0) {
-    for (let secret of secrets) {
-      let unsignedValue = await unsign(value, secret);
+    for (const secret of secrets) {
+      const unsignedValue = await unsign(value, secret);
       if (unsignedValue !== false) {
         return decodeData(unsignedValue);
       }
@@ -183,7 +183,7 @@ function encodeData(value: any): string {
 function decodeData(value: string): any {
   try {
     return JSON.parse(atob(value));
-  } catch (error) {
+  } catch (_error) {
     return {};
   }
 }

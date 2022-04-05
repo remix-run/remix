@@ -25,13 +25,13 @@ export interface RemixBrowserProps {}
  * that was received from the server.
  */
 export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
-  let historyRef = React.useRef<BrowserHistory>();
+  const historyRef = React.useRef<BrowserHistory>();
   if (historyRef.current == null) {
     historyRef.current = createBrowserHistory({ window });
   }
 
-  let history = historyRef.current;
-  let [state, dispatch] = React.useReducer(
+  const history = historyRef.current;
+  const [state, dispatch] = React.useReducer(
     (_: Update, update: Update) => update,
     {
       action: history.action,
@@ -41,7 +41,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
 
   React.useLayoutEffect(() => history.listen(dispatch), [history]);
 
-  let entryContext = window.__remixContext;
+  const entryContext = window.__remixContext;
   entryContext.manifest = window.__remixManifest;
   entryContext.routeModules = window.__remixRouteModules;
   // In the browser, we don't need this because a) in the case of loader

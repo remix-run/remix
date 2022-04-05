@@ -74,7 +74,7 @@ export function isCatchResponse(response: Response) {
 }
 
 export function extractData(response: Response): Promise<unknown> {
-  let contentType = response.headers.get("Content-Type");
+  const contentType = response.headers.get("Content-Type");
 
   if (contentType && /\bapplication\/json\b/.test(contentType)) {
     return response.json();

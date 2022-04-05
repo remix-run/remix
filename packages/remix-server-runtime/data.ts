@@ -51,7 +51,7 @@ export async function callRouteAction({
   if (result === undefined) {
     throw new Error(
       `You defined an action for route "${match.route.id}" but didn't return ` +
-        `anything from your \`action\` function. Please return a value or \`null\`.`
+      `anything from your \`action\` function. Please return a value or \`null\`.`
     );
   }
 
@@ -67,13 +67,13 @@ export async function callRouteLoader({
   match: RouteMatch<ServerRoute>;
   loadContext: unknown;
 }) {
-  let loader = match.route.module.loader;
+  const loader = match.route.module.loader;
 
   if (!loader) {
     throw new Error(
       `You made a ${request.method} request to ${request.url} but did not provide ` +
-        `a \`loader\` for route "${match.route.id}", so there is no way to handle the ` +
-        `request.`
+      `a \`loader\` for route "${match.route.id}", so there is no way to handle the ` +
+      `request.`
     );
   }
 
@@ -98,7 +98,7 @@ export async function callRouteLoader({
   if (result === undefined) {
     throw new Error(
       `You defined a loader for route "${match.route.id}" but didn't return ` +
-        `anything from your \`loader\` function. Please return a value or \`null\`.`
+      `anything from your \`loader\` function. Please return a value or \`null\`.`
     );
   }
 
@@ -106,16 +106,16 @@ export async function callRouteLoader({
 }
 
 function stripIndexParam(request: Request) {
-  let url = new URL(request.url);
-  let indexValues = url.searchParams.getAll("index");
+  const url = new URL(request.url);
+  const indexValues = url.searchParams.getAll("index");
   url.searchParams.delete("index");
-  let indexValuesToKeep = [];
-  for (let indexValue of indexValues) {
+  const indexValuesToKeep = [];
+  for (const indexValue of indexValues) {
     if (indexValue) {
       indexValuesToKeep.push(indexValue);
     }
   }
-  for (let toKeep of indexValuesToKeep) {
+  for (const toKeep of indexValuesToKeep) {
     url.searchParams.append("index", toKeep);
   }
 
@@ -123,13 +123,13 @@ function stripIndexParam(request: Request) {
 }
 
 function stripDataParam(request: Request) {
-  let url = new URL(request.url);
+  const url = new URL(request.url);
   url.searchParams.delete("_data");
   return new Request(url.href, request);
 }
 
 export function extractData(response: Response): Promise<unknown> {
-  let contentType = response.headers.get("Content-Type");
+  const contentType = response.headers.get("Content-Type");
 
   if (contentType && /\bapplication\/json\b/.test(contentType)) {
     return response.json();

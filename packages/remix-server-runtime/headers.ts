@@ -10,14 +10,14 @@ export function getDocumentHeaders(
   routeLoaderResponses: Record<string, Response>,
   actionResponse?: Response
 ): Headers {
-  return matches.reduce((parentHeaders, match, index) => {
-    let routeModule = build.routes[match.route.id].module;
-    let routeLoaderResponse = routeLoaderResponses[match.route.id];
-    let loaderHeaders = routeLoaderResponse
+  return matches.reduce((parentHeaders, match, _index) => {
+    const routeModule = build.routes[match.route.id].module;
+    const routeLoaderResponse = routeLoaderResponses[match.route.id];
+    const loaderHeaders = routeLoaderResponse
       ? routeLoaderResponse.headers
       : new Headers();
-    let actionHeaders = actionResponse ? actionResponse.headers : new Headers();
-    let headers = new Headers(
+    const actionHeaders = actionResponse ? actionResponse.headers : new Headers();
+    const headers = new Headers(
       routeModule.headers
         ? typeof routeModule.headers === "function"
           ? routeModule.headers({ loaderHeaders, parentHeaders, actionHeaders })
@@ -36,11 +36,11 @@ export function getDocumentHeaders(
 }
 
 function prependCookies(parentHeaders: Headers, childHeaders: Headers): void {
-  let parentSetCookieString = parentHeaders.get("Set-Cookie");
+  const parentSetCookieString = parentHeaders.get("Set-Cookie");
 
   if (parentSetCookieString) {
-    let cookies = splitCookiesString(parentSetCookieString);
-    cookies.forEach((cookie) => {
+    const cookies = splitCookiesString(parentSetCookieString);
+    cookies.forEach((cookie: any) => {
       childHeaders.append("Set-Cookie", cookie);
     });
   }

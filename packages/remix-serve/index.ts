@@ -4,7 +4,7 @@ import morgan from "morgan";
 import { createRequestHandler } from "@remix-run/express";
 
 export function createApp(buildPath: string, mode = "production") {
-  let app = express();
+  const app = express();
 
   app.disable("x-powered-by");
 
@@ -24,7 +24,7 @@ export function createApp(buildPath: string, mode = "production") {
       ? createRequestHandler({ build: require(buildPath), mode })
       : (req, res, next) => {
           // require cache is purged in @remix-run/dev where the file watcher is
-          let build = require(buildPath);
+          const build = require(buildPath);
           return createRequestHandler({ build, mode })(req, res, next);
         }
   );

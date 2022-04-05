@@ -29,7 +29,7 @@ export type CreateCookieSessionStorageFunction = (
 export const createCookieSessionStorageFactory =
   (createCookie: CreateCookieFunction): CreateCookieSessionStorageFunction =>
   ({ cookie: cookieArg } = {}) => {
-    let cookie = isCookie(cookieArg)
+    const cookie = isCookie(cookieArg)
       ? cookieArg
       : createCookie(cookieArg?.name || "__session", cookieArg);
 
@@ -42,7 +42,7 @@ export const createCookieSessionStorageFactory =
         );
       },
       async commitSession(session, options) {
-        let serializedCookie = await cookie.serialize(session.data, options);
+        const serializedCookie = await cookie.serialize(session.data, options);
         if (serializedCookie.length > 4096) {
           throw new Error(
             "Cookie length will exceed browser maximum. Length: " +

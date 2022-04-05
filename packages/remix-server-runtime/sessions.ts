@@ -227,7 +227,7 @@ export type CreateSessionStorageFunction = (
 export const createSessionStorageFactory =
   (createCookie: CreateCookieFunction): CreateSessionStorageFunction =>
   ({ cookie: cookieArg, createData, readData, updateData, deleteData }) => {
-    let cookie = isCookie(cookieArg)
+    const cookie = isCookie(cookieArg)
       ? cookieArg
       : createCookie(cookieArg?.name || "__session", cookieArg);
 
@@ -235,8 +235,8 @@ export const createSessionStorageFactory =
 
     return {
       async getSession(cookieHeader, options) {
-        let id = cookieHeader && (await cookie.parse(cookieHeader, options));
-        let data = id && (await readData(id));
+        const id = cookieHeader && (await cookie.parse(cookieHeader, options));
+        const data = id && (await readData(id));
         return createSession(data || {}, id || "");
       },
       async commitSession(session, options) {
