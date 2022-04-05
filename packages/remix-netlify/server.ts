@@ -83,13 +83,12 @@ export function createRemixRequest(
     signal: abortController?.signal,
   };
 
-  let isFormData = event.headers["content-type"]?.includes(
-    "multipart/form-data"
-  );
-
   if (event.httpMethod !== "GET" && event.httpMethod !== "HEAD" && event.body) {
+    let isFormData = event.headers["content-type"]?.includes(
+      "multipart/form-data"
+    );
     init.body =
-      event.body && event.isBase64Encoded
+      event.isBase64Encoded
         ? isFormData
           ? Buffer.from(event.body, "base64")
           : Buffer.from(event.body, "base64").toString()
