@@ -86,7 +86,6 @@ test.describe("loader in an app", () => {
           `,
           "app/routes/redirect.jsx": js`
             import { redirect } from "@remix-run/node";
-
             export const loader = () => redirect("/");
             export default () => <div>Yo</div>
           `,

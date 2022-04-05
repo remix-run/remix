@@ -353,4 +353,118 @@ test.describe("actions", () => {
       expect(logs[0]).toMatch(/error running.*action.*routes\/file-actions/i);
     });
   });
+
+  test("can upload file with JavaScript", async ({ page }) => {
+    await app.goto(page, `/${HAS_FILE_ACTIONS}`);
+
+    let html = await app.getHtml(page, "#action-text");
+    expect(html).toMatch(WAITING_VALUE);
+
+    await app.uploadFile(
+      page,
+      "#file",
+      path.resolve(__dirname, "assets/toupload.txt")
+    );
+
+    await page.click("button[type=submit]");
+    await page.waitForSelector("#action-data");
+
+    html = await app.getHtml(page, "#action-text");
+    expect(html).toMatch(ACTION_DATA_VALUE + " stuff");
+  });
+
+  // TODO: figure out what the heck is wrong with this test...
+  // For some reason the error message is "Unexpect Server Error" in the test
+  // but if you try the app in the browser it works as expected.
+  test.skip("rejects too big of an upload with JavaScript", async ({
+    page,
+  }) => {
+    let logs: string[] = [];
+    page.on("console", (msg) => {
+      logs.push(msg.text());
+    });
+
+    await app.goto(page, `/${HAS_FILE_ACTIONS}`);
+
+    let html = await app.getHtml(page, "#action-text");
+    expect(html).toMatch(WAITING_VALUE);
+
+    await app.uploadFile(
+      page,
+      "#file",
+      path.resolve(__dirname, "assets/touploadtoobig.txt")
+    );
+
+    await page.click("button[type=submit]");
+    await page.waitForSelector("#actions-error-boundary");
+
+    let text = await app.getHtml(page, "#actions-error-text");
+    expect(text).toMatch(
+      `Field "file" exceeded upload size of ${MAX_FILE_UPLOAD_SIZE} bytes`
+    );
+
+    expect(logs).toHaveLength(1);
+    // let errorObject = expect.objectContaining({
+    //   message: expect.stringMatching(/exceeded upload size/i),
+    // });
+    expect(logs[0]).toMatch(/exceeded upload size/i);
+  });
+
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("can upload file", async ({ page }) => {
+      await app.goto(page, `/${HAS_FILE_ACTIONS}`);
+
+      let html = await app.getHtml(page, "#action-text");
+      expect(html).toMatch(WAITING_VALUE);
+
+      await app.uploadFile(
+        page,
+        "#file",
+        path.resolve(__dirname, "assets/toupload.txt")
+      );
+
+      let [response] = await Promise.all([
+        page.waitForNavigation(),
+        page.click("#submit"),
+      ]);
+
+      expect(response!.status()).toBe(200);
+      expect(response!.headers()["x-test"]).toBe("works");
+
+      html = await app.getHtml(page, "#action-text");
+      expect(html).toMatch(ACTION_DATA_VALUE + " stuff");
+    });
+
+    test("rejects too big of an upload", async ({ page }) => {
+      let logs: string[] = [];
+      page.on("console", (msg) => {
+        logs.push(msg.text());
+      });
+
+      await app.goto(page, `/${HAS_FILE_ACTIONS}`);
+
+      let html = await app.getHtml(page, "#action-text");
+      expect(html).toMatch(WAITING_VALUE);
+
+      await app.uploadFile(
+        page,
+        "#file",
+        path.resolve(__dirname, "assets/touploadtoobig.txt")
+      );
+
+      let [response] = await Promise.all([
+        page.waitForNavigation(),
+        page.click("#submit"),
+      ]);
+      expect(response!.status()).toBe(500);
+      let text = await app.getHtml(page, "#actions-error-text");
+      let errorMessage = `Field "file" exceeded upload size of ${MAX_FILE_UPLOAD_SIZE} bytes`;
+      expect(text).toMatch(errorMessage);
+
+      expect(logs).toHaveLength(1);
+      expect(logs[0]).toMatch(/error running.*action.*routes\/file-actions/i);
+    });
+  });
 });

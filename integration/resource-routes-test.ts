@@ -20,7 +20,6 @@ test.describe("loader in an app", () => {
                   <input name="destination" defaultValue="/redirect-destination" />
                   <button type="submit">Redirect</button>
                 </Form>
-                <Link reloadDocument to="/data.json">Data</Link>
               </>
             )
           `,
@@ -53,7 +52,7 @@ test.describe("loader in an app", () => {
   });
 
   test.afterAll(async () => {
-    await app?.close();
+    await app.close();
   });
 
   test.describe("with JavaScript", () => {
@@ -66,22 +65,20 @@ test.describe("loader in an app", () => {
   });
 
   function runTests() {
-    test.beforeEach(async ({ page }) => {
-      await app.goto(page, "/");
-    });
-
     test("should redirect to redirected", async ({ page }) => {
+      await app.goto(page, "/");
       await page.click("a[href='/redirect']");
       await page.waitForSelector("[data-testid='redirected']");
     });
 
     test("should handle post to destination", async ({ page }) => {
+      await app.goto(page, "/");
       await page.click("button[type='submit']");
       await page.waitForSelector("[data-testid='redirect-destination']");
     });
 
     test("should handle reloadDocument to resource route", async ({ page }) => {
-      await page.click("a[href='/data.json']");
+      await app.goto(page, "/data.json");
       expect(await page.content()).toContain('{"hello":"world"}');
     });
   }

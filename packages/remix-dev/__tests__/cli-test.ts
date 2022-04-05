@@ -182,14 +182,7 @@ describe("remix CLI", () => {
         { question: /JavaScript/i, answer: /javascript/i },
         { question: /install/i, type: ["n", ENTER] },
       ]);
-
-      expect(
-        fse.existsSync(path.join(projectDir, "package.json"))
-      ).toBeTruthy();
-      expect(
-        fse.existsSync(path.join(projectDir, "app/root.jsx"))
-      ).toBeTruthy();
-    }, 7_000);
+    });
   });
 });
 

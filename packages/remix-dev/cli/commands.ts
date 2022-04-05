@@ -12,14 +12,14 @@ import type { createApp as createAppType } from "@remix-run/serve";
 import getPort from "get-port";
 
 import { BuildMode, isBuildMode } from "../build";
-import * as colors from "./colors";
+import * as colors from "../colors";
 import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
 import { createApp } from "./create";
 import { loadEnv } from "../env";
-import { log } from "./logging";
+import { log } from "../logging";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 
 export * as migrate from "./migrate";
