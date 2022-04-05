@@ -1,7 +1,7 @@
 import * as path from "path";
 import * as fse from "fs-extra";
 
-import * as logging from "./logging";
+import * as logging from "../logging";
 
 export enum SetupPlatform {
   Cloudflare = "cloudflare",
