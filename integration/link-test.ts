@@ -233,6 +233,7 @@ describe("route module link export", () => {
                 href: blueTextHref,
                 media: "(prefers-color-scheme: beef)",
               },
+              { page: "/gists/mjackson" },
               {
                 rel: "preload",
                 as: "image",
@@ -313,74 +314,66 @@ describe("route module link export", () => {
           }
         `,
 
-        //     "app/routes/gists/$username.jsx": js`
-        //       import { Link, json, redirect, useLoaderData, useParams } from "remix";
-
-        //       export async function loader({ params }) {
-        //         let { username } = params;
-
-        //         if (username === "mjijackson") {
-        //           return redirect("/gists/mjackson", 302);
-        //         }
-
-        //         if (username === "_why") {
-        //           return json(null, { status: 404 });
-        //         }
-
-        //         return ${JSON.stringify(fakeGists)};
-        //       }
-
-        //       export function headers() {
-        //         return {
-        //           "Cache-Control": "public, max-age=300",
-        //         };
-        //       }
-
-        //       export function meta({ data, params }) {
-        //         let { username } = params;
-        //         return {
-        //           title: data
-        //             ? \`$\{data.length\} gists from $\{username\}\`
-        //             : \`User $\{username\} not found\`,
-        //           description: \`View all of the gists from $\{username\}\`,
-        //         };
-        //       }
-
-        //       export let handle = {
-        //         breadcrumb: ({ params }) => (
-        //           <Link to={\`gists/$\{params.username\}\`}>{params.username}</Link>
-        //         ),
-        //       };
-
-        //       export default function UserGists() {
-        //         let { username } = useParams();
-        //         let data = useLoaderData();
-
-        //         return (
-        //           <div data-test-id="/gists/$username">
-        //             {data ? (
-        //               <>
-        //                 <h2>All gists from {username}</h2>
-        //                 <ul>
-        //                   {data.map((gist) => (
-        //                     <li key={gist.id}>
-        //                       <a href={gist.html_url}>{Object.keys(gist.files)[0]}</a>
-        //                     </li>
-        //                   ))}
-        //                 </ul>
-        //               </>
-        //             ) : (
-        //               <h2>No gists for {username}</h2>
-        //             )}
-        //           </div>
-        //         );
-        //       }
-        //     `,
+        "app/routes/gists/$username.jsx": js`
+          import { json, redirect } from "@remix-run/node";
+          import { Link, useLoaderData, useParams } from "@remix-run/react";
+          export async function loader({ params }) {
+            let { username } = params;
+            if (username === "mjijackson") {
+              return redirect("/gists/mjackson", 302);
+            }
+            if (username === "_why") {
+              return json(null, { status: 404 });
+            }
+            return ${JSON.stringify(fakeGists)};
+          }
+          export function headers() {
+            return {
+              "Cache-Control": "public, max-age=300",
+            };
+          }
+          export function meta({ data, params }) {
+            let { username } = params;
+            return {
+              title: data
+                ? data.length + " gists from " + username
+                : "User " + username + " not found",
+              description: "View all of the gists from " + username,
+            };
+          }
+          export let handle = {
+            breadcrumb: ({ params }) => (
+              <Link to={"gists/" + params.username}>{params.username}</Link>
+            ),
+          };
+          export default function UserGists() {
+            let { username } = useParams();
+            let data = useLoaderData();
+            return (
+              <div data-test-id="/gists/$username">
+                {data ? (
+                  <>
+                    <h2>All gists from {username}</h2>
+                    <ul>
+                      {data.map((gist) => (
+                        <li key={gist.id}>
+                          <a href={gist.html_url}>{Object.keys(gist.files)[0]}</a>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <h2>No gists for {username}</h2>
+                )}
+              </div>
+            );
+          }
+        `,
 
         "app/routes/gists/index.jsx": js`
           import { useLoaderData } from "@remix-run/react";
           export async function loader() {
-            return Promise.resolve(${JSON.stringify(fakeGists)});
+            return ${JSON.stringify(fakeGists)};
           }
           export function headers() {
             return {
@@ -459,27 +452,21 @@ describe("route module link export", () => {
     expect(stylesheetResponses.length).toEqual(1);
   });
 
-  it.only("adds links to the document", async () => {
-    await app.disableJavaScript();
+  it("adds links to the document", async () => {
+    let restoreJavaScript = await app.disableJavaScript();
     let responses = app.collectResponses((url) =>
       url.pathname.endsWith(".css")
     );
 
     await app.goto("/links");
     await app.page.waitForSelector('[data-test-id="/links"]');
-
-    // `/root`
-    //   - { rel: "stylesheet", href: "./reset.css" }
-    //   - { rel: "stylesheet", href: "./app.css" }
-    // `/routes/links`
-    //   - { rel: "stylesheet", href: "~/redText.css" }
-    //   - { rel: "stylesheet", href: "~/blueText.css" }
     expect(responses.length).toEqual(4);
+
+    await restoreJavaScript();
   });
 
   it("preloads assets for other pages and serves from browser cache on navigation", async () => {
     await app.goto("/links", { waitUntil: "networkidle0" });
-
     let jsResponses = app.collectResponses((url) =>
       url.pathname.endsWith(".js")
     );
