@@ -14,7 +14,7 @@ test.describe("file-uploads", () => {
       files: {
         "app/fileUploadHandler.js": js`
           import * as path from "path";
-          import { unstable_createFileUploadHandler as createFileUploadHandler } from "remix";
+          import { unstable_createFileUploadHandler as createFileUploadHandler } from "@remix-run/node";
 
           export let uploadHandler = createFileUploadHandler({
             directory: path.resolve(__dirname, "..", "uploads"),
@@ -27,7 +27,10 @@ test.describe("file-uploads", () => {
           });
         `,
         "app/routes/file-upload.jsx": js`
-          import { Form, unstable_parseMultipartFormData as parseMultipartFormData, useActionData } from "remix";
+          import {
+            unstable_parseMultipartFormData as parseMultipartFormData,
+          } from "@remix-run/node";
+          import { Form, useActionData } from "@remix-run/react";
           import { uploadHandler } from "~/fileUploadHandler";
 
           export let action = async ({ request }) => {

@@ -12,7 +12,8 @@ test.beforeAll(async () => {
     sourcemap: true,
     files: {
       "app/routes/index.jsx": js`
-        import { json, useLoaderData } from "remix";
+        import { json } from "@remix-run/node";
+        import { useLoaderData } from "@remix-run/react";
 
         export function loader() {
           try {

@@ -9,7 +9,7 @@ test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
       "app/routes/index.jsx": js`
-        import { json } from "remix";
+        import { json } from "@remix-run/node";
 
         export async function action({ request }) {
           try {

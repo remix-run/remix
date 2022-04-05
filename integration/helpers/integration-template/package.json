@@ -1,0 +1,21 @@
+{
+  "name": "remix-template-remix",
+  "private": true,
+  "description": "",
+  "license": "",
+  "sideEffects": false,
+  "scripts": {
+    "build": "remix build",
+    "dev": "remix dev",
+    "start": "remix-serve build"
+  },
+  "//": "Notice the lack of react and react-dom, this is because we want those to be resolved to the node_modules in the root of the project just like our built remix packages so we resolve to the same react(-dom) version.",
+  "dependencies": {
+    "@remix-run/node": "file:../../../build/node_modules/@remix-run/node",
+    "@remix-run/react": "file:../../../build/node_modules/@remix-run/react",
+    "@remix-run/serve": "file:../../../build/node_modules/@remix-run/serve"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "file:../../../build/node_modules/@remix-run/dev"
+  }
+}

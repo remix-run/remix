@@ -12,7 +12,8 @@ test.beforeAll(async () => {
     buildStdio,
     files: {
       "app/routes/index.jsx": js`
-        import { json, useLoaderData, Link } from "remix";
+        import { json } from "@remix-run/node";
+        import { Link, useLoaderData } from "@remix-run/react";
         import a from "esm-only-no-exports";
         import b from "esm-only-exports";
         import c from "esm-only-sub-exports";
@@ -32,25 +33,29 @@ test.beforeAll(async () => {
           return null;
         }
       `,
-      "node_modules/esm-only-no-exports/package.json": `{
-  "name": "esm-only",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "index.js"
-}`,
+      "node_modules/esm-only-no-exports/package.json": json`
+        {
+          "name": "esm-only",
+          "version": "1.0.0",
+          "type": "module",
+          "main": "index.js"
+        }
+      `,
       "node_modules/esm-only-no-exports/index.js": js`
         export default () => "esm-only-no-exports";
       `,
-      "node_modules/esm-only-exports/package.json": `{
-  "name": "esm-only",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "index.js",
-  "exports": {
-    ".": "./index.js",
-    "./package.json": "./package.json"
-  }
-}`,
+      "node_modules/esm-only-exports/package.json": json`
+        {
+          "name": "esm-only",
+          "version": "1.0.0",
+          "type": "module",
+          "main": "index.js",
+          "exports": {
+            ".": "./index.js",
+            "./package.json": "./package.json"
+          }
+        }
+      `,
       "node_modules/esm-only-exports/index.js": js`
         export default () => "esm-only-no-exports";
       `,

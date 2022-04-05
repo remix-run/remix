@@ -15,7 +15,8 @@ test.describe("headers export", () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { json, Links, Meta, Outlet, Scripts } from "remix";
+          import { json } from "@remix-run/node";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export const loader = () => json({});
 
@@ -36,7 +37,7 @@ test.describe("headers export", () => {
         `,
 
         "app/routes/index.jsx": js`
-          import { json } from "remix";
+          import { json } from "@remix-run/node";
 
           export function loader() {
             return json(null, {
@@ -58,7 +59,7 @@ test.describe("headers export", () => {
         `,
 
         "app/routes/action.jsx": js`
-          import { json } from "remix";
+          import { json } from "@remix-run/node";
 
           export function action() {
             return json(null, {
@@ -97,7 +98,7 @@ test.describe("headers export", () => {
     let fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { Links, Meta, Outlet, Scripts } from "remix";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export default function Root() {
             return (
@@ -116,7 +117,7 @@ test.describe("headers export", () => {
         `,
 
         "app/routes/index.jsx": js`
-          import { json } from "remix";
+          import { json } from "@remix-run/node";
 
           export function loader() {
             return json(null, {

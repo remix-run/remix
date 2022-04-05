@@ -3,7 +3,7 @@ import path from "path";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 
-const remixRoot = path.resolve(__dirname, "../../../fixtures/gists-app");
+const remixRoot = path.resolve(__dirname, "../../../integration/gists-app");
 
 describe("readConfig", () => {
   let config: RemixConfig;

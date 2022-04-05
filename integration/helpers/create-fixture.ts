@@ -1,8 +1,6 @@
 import path from "path";
-import fs from "fs/promises";
 import fse from "fs-extra";
 import cp from "child_process";
-import { sync as spawnSync } from "cross-spawn";
 import type { Writable } from "stream";
 import type {
   Page,
@@ -15,31 +13,17 @@ import cheerio from "cheerio";
 import prettier from "prettier";
 import getPort from "get-port";
 import stripIndent from "strip-indent";
+import chalk from "chalk";
 
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
-import { createApp } from "../../build/node_modules/@remix-run/dev";
-import { SetupPlatform } from "../../build/node_modules/@remix-run/dev/cli/setup";
 import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express";
 import { TMP_DIR } from "./global-setup";
-import type { ServerPlatform } from "../../build/node_modules/@remix-run/dev/config";
-
-const REMIX_SOURCE_BUILD_DIR = path.join(process.cwd(), "build");
 
 interface FixtureInit {
   buildStdio?: Writable;
   sourcemap?: boolean;
   files: { [filename: string]: string };
-  template?:
-    | "arc"
-    | "cloudflare-pages"
-    | "cloudflare-workers"
-    | "deno"
-    | "express"
-    | "fly"
-    | "netlify"
-    | "remix"
-    | "vercel";
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
@@ -51,15 +35,18 @@ export const mdx = String.raw;
 
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
-  let app: ServerBuild = await import(path.resolve(projectDir, "build"));
-  let platform: ServerPlatform = [
-    "cloudflare-pages",
-    "cloudflare-workers",
-    "deno",
-  ].includes(init.template)
-    ? "neutral"
-    : "node";
-  let handler = createRequestHandler(app, platform);
+  let buildPath = path.resolve(projectDir, "build");
+  if (!fse.existsSync(buildPath)) {
+    throw new Error(
+      chalk.red(
+        `Expected build directory to exist at ${chalk.dim(
+          buildPath
+        )}. The build probably failed. Did you maybe have a syntax error in your test code strings?`
+      )
+    );
+  }
+  let app: ServerBuild = await import(buildPath);
+  let handler = createRequestHandler(app, "production");
 
   let requestDocument = async (href: string, init?: RequestInit) => {
     let url = new URL(href, "test://test");
@@ -92,7 +79,7 @@ export async function createFixture(init: FixtureInit) {
   };
 
   let getBrowserAsset = async (asset: string) => {
-    return fs.readFile(
+    return fse.readFile(
       path.join(projectDir, "public", asset.replace(/^\//, "")),
       "utf8"
     );
@@ -333,71 +320,20 @@ export async function createAppFixture(fixture: Fixture) {
 
 ////////////////////////////////////////////////////////////////////////////////
 export async function createFixtureProject(init: FixtureInit): Promise<string> {
-  let appTemplate = path.join(
-    process.cwd(),
-    "templates",
-    init.template ? init.template : "remix"
-  );
-  let projectDir = path.join(TMP_DIR, Math.random().toString(32).slice(2));
-  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
-    init.template
-  );
+  let integrationTemplateDir = path.join(__dirname, "integration-template");
+  let projectName = `remix-integration-${Math.random().toString(32).slice(2)}`;
+  let projectDir = path.join(TMP_DIR, projectName);
 
-  await createApp({
-    appTemplate,
-    projectDir,
-    installDeps: false,
-    useTypeScript: false,
-  });
-  // TODO: init if necessary?
-  await Promise.all([
-    writeTestFiles(init, projectDir),
-    installRemix(projectDir),
-  ]);
-
-  build(
-    projectDir,
-    isCloudflareRuntime ? SetupPlatform.Cloudflare : SetupPlatform.Node,
-    init.buildStdio,
-    init.sourcemap
-  );
+  await fse.ensureDir(projectDir);
+  await fse.copy(integrationTemplateDir, projectDir);
+  await writeTestFiles(init, projectDir);
+  if (init.sourcemap) {
+    cp.execSync(`npm run build -- --sourcemap`, { cwd: projectDir });
+  } else {
+    cp.execSync(`npm run build`, { cwd: projectDir });
+  }
 
   return projectDir;
-}
-
-function build(
-  projectDir: string,
-  platform: SetupPlatform,
-  buildStdio?: Writable,
-  sourcemap?: boolean
-) {
-  // TODO: log errors (like syntax errors in the fixture file strings)
-  spawnSync("node", ["node_modules/@remix-run/dev/cli.js", "setup", platform], {
-    cwd: projectDir,
-  });
-
-  let buildArgs = ["node_modules/@remix-run/dev/cli.js", "build"];
-  if (sourcemap) {
-    buildArgs.push("--sourcemap");
-  }
-  let buildSpawn = spawnSync("node", buildArgs, {
-    cwd: projectDir,
-  });
-
-  if (buildStdio) {
-    buildStdio.write(buildSpawn.stdout.toString("utf-8"));
-    buildStdio.write(buildSpawn.stderr.toString("utf-8"));
-    buildStdio.end();
-  }
-}
-
-async function installRemix(projectDir: string) {
-  let buildDir = path.resolve(REMIX_SOURCE_BUILD_DIR, "node_modules");
-  let installDir = path.resolve(projectDir, "node_modules");
-
-  // Install all remix packages
-  await fse.ensureDir(installDir);
-  await fse.copy(buildDir, installDir);
 }
 
 async function writeTestFiles(init: FixtureInit, dir: string) {
@@ -405,28 +341,9 @@ async function writeTestFiles(init: FixtureInit, dir: string) {
     Object.keys(init.files).map(async (filename) => {
       let filePath = path.join(dir, filename);
       await fse.ensureDir(path.dirname(filePath));
-      await fs.writeFile(filePath, stripIndent(init.files[filename]));
+      await fse.writeFile(filePath, stripIndent(init.files[filename]));
     })
   );
-  await renamePkgJsonApp(dir);
-}
-
-/**
- * This prevents the console for spitting out a bunch of junk like this for
- * every fixture:
- *
- *    jest-haste-map: Haste module naming collision: remix-app-template-js
- *
- * I found some github issues that says that `modulePathIgnorePatterns` should
- * help, so I added it to our `jest.config.js`, but it doesn't seem to help, so
- * I brute-forced it here.
- */
-async function renamePkgJsonApp(dir: string) {
-  let pkgPath = path.join(dir, "package.json");
-  let pkg = await fs.readFile(pkgPath);
-  let obj = JSON.parse(pkg.toString());
-  obj.name = path.basename(dir);
-  await fs.writeFile(pkgPath, JSON.stringify(obj, null, 2) + "\n");
 }
 
 export async function getHtml(page: Page, selector?: string) {
@@ -502,7 +419,7 @@ async function doAndWait(
   page.on("requestfinished", onRequestDone);
   page.on("requestfailed", onRequestDone);
 
-  let timeoutId;
+  let timeoutId: NodeJS.Timer;
   process.env.DEBUG &&
     (timeoutId = setInterval(() => {
       console.log(`${requestCounter} requests pending:`);

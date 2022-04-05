@@ -13,6 +13,7 @@ import { devices } from "@playwright/test";
 const config: PlaywrightTestConfig = {
   testDir: "./integration",
   testMatch: ["**/*-test.ts"],
+  testIgnore: ["**/gists-app/**"],
   /* Maximum time one test can run for. */
   timeout: 30_000,
   expect: {

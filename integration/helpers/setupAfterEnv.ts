@@ -1,1 +1,2 @@
-jest.setTimeout(10000);
+import { installGlobals } from "@remix-run/node";
+installGlobals();
