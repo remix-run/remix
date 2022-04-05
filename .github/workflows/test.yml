@@ -24,14 +24,10 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: 🥏 get node in .nvmrc
-        run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "yarn"
 
       - name: 📥 Download deps
@@ -52,14 +48,10 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: 🥏 get node in .nvmrc
-        run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "yarn"
 
       - name: 📥 Download deps
@@ -80,14 +72,10 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: 🥏 get node in .nvmrc
-        run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "yarn"
 
       - name: 📥 Download deps
