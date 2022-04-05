@@ -32,6 +32,7 @@ export type AppFixture = Awaited<ReturnType<typeof createAppFixture>>;
 export const js = String.raw;
 export const json = String.raw;
 export const mdx = String.raw;
+export const css = String.raw;
 
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
@@ -279,6 +280,14 @@ export async function createAppFixture(fixture: Fixture) {
        * were called (or not).
        */
       collectDataResponses: (page: Page) => collectDataResponses(page),
+
+      /**
+       * Collects all responses from the network, usually after a link click or
+       * form submission. A filter can be provided to only collect responses
+       * that meet a certain criteria.
+       */
+      collectResponses: (page: Page, filter?: UrlFilter) =>
+        collectResponses(page, filter),
 
       /**
        * Get HTML from the page. Useful for asserting something rendered that
