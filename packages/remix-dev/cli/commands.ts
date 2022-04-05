@@ -12,7 +12,7 @@ import type { createApp as createAppType } from "@remix-run/serve";
 import getPort from "get-port";
 
 import { BuildMode, isBuildMode } from "../build";
-import * as colors from "./colors";
+import * as colors from "../colors";
 import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
