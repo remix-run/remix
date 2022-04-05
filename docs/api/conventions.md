@@ -1310,18 +1310,18 @@ Consider these routes:
 And lets say the UI looks something like this:
 
 ```
-┌──────────────────────────────┐
-│    Project: Design Revamp    │
-├────────┬─────────┬───────────┤
-│  Tasks │ Collabs │ >ACTIVITY │
-├────────┴─────────┴───────────┤
-│  Search: _____________       │
-│                              │
-│  - Ryan added an image       │
-│                              │
-│  - Michael commented         │
-│                              │
-└──────────────────────────────┘
++------------------------------+
+|    Project: Design Revamp    |
++------------------------------+
+|  Tasks | Collabs | >ACTIVITY |
++------------------------------+
+|  Search: _____________       |
+|                              |
+|  - Ryan added an image       |
+|                              |
+|  - Michael commented         |
+|                              |
++------------------------------+
 ```
 
 The `activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:

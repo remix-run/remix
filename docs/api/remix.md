@@ -1132,19 +1132,19 @@ This is useful for components throughout the app that didn't create the fetchers
 For example, imagine a UI where the sidebar lists projects, and the main view displays a list of checkboxes for the current project. The sidebar could display the number of completed and total tasks for each project.
 
 ```
-┌─────────────────┬────────────────────────────┐
-│                 │                            │
-│   Soccer  (8/9) │ [x] Do the dishes          │
-│                 │                            │
-│ > Home    (2/4) │ [x] Fold laundry           │
-│                 │                            │
-│                 │ [ ] Replace battery in the │
-│                 │     smoke alarm            │
-│                 │                            │
-│                 │ [ ] Change lights in kids  │
-│                 │     bathroom               │
-│                 │                            │
-└─────────────────┴────────────────────────────┘
++-----------------+----------------------------+
+|                 |                            |
+|   Soccer  (8/9) | [x] Do the dishes          |
+|                 |                            |
+| > Home    (2/4) | [x] Fold laundry           |
+|                 |                            |
+|                 | [ ] Replace battery in the |
+|                 |     smoke alarm            |
+|                 |                            |
+|                 | [ ] Change lights in kids  |
+|                 |     bathroom               |
+|                 |                            |
++-----------------+----------------------------┘
 ```
 
 When the user clicks a checkbox, the submission goes to the action to change the state of the task. Instead of creating a "loading state" we want to create an "optimistic UI" that will **immediately** update the checkbox to appear checked even though the server hasn't processed it yet. In the checkbox component, we can use `fetcher.submission`:
@@ -1179,19 +1179,19 @@ function Task({ task }) {
 This awesome for the checkbox, but the sidebar will say 2/4 while the checkboxes show 3/4 when the user clicks on of them!
 
 ```
-┌─────────────────┬────────────────────────────┐
-│                 │                            │
-│   Soccer  (8/9) │ [x] Do the dishes          │
-│                 │                            │
-│ > Home    (2/4) │ [x] Fold laundry           │
-│                 │                            │
-│          CLICK!-->[x] Replace battery in the │
-│                 │     smoke alarm            │
-│                 │                            │
-│                 │ [ ] Change lights in kids  │
-│                 │     bathroom               │
-│                 │                            │
-└─────────────────┴────────────────────────────┘
++-----------------+----------------------------+
+|                 |                            |
+|   Soccer  (8/9) | [x] Do the dishes          |
+|                 |                            |
+| > Home    (2/4) | [x] Fold laundry           |
+|                 |                            |
+|          CLICK!-->[x] Replace battery in the |
+|                 |     smoke alarm            |
+|                 |                            |
+|                 | [ ] Change lights in kids  |
+|                 |     bathroom               |
+|                 |                            |
++-----------------+----------------------------┘
 ```
 
 Because Remix will automatically reload the routes, the sidebar will quickly update and be correct. But for a moment, it's gonna feel a little funny.
