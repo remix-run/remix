@@ -131,9 +131,9 @@ test.describe("useFetcher", () => {
     expect(await app.getHtml(page, "pre")).toMatch(CHEESESTEAK);
   });
 
-  test("submit can hit an action only route", async () => {
-    await app.goto("/fetcher-action-only-call");
-    await app.clickElement("#fetcher-submit");
-    expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
+  test("submit can hit an action only route", async ({ page }) => {
+    await app.goto(page, "/fetcher-action-only-call");
+    await app.clickElement(page, "#fetcher-submit");
+    expect(await app.getHtml(page, "pre")).toMatch(CHEESESTEAK);
   });
 });

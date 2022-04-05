@@ -1,12 +1,13 @@
-import type { HTTPResponse } from "puppeteer";
+import { test, expect } from "@playwright/test";
+import type { Response } from "@playwright/test";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { AppFixture } from "./helpers/create-fixture";
 
-describe("pathless layout routes", () => {
+test.describe("pathless layout routes", () => {
   let app: AppFixture;
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     app = await createAppFixture(
       await createFixture({
         files: {
@@ -46,44 +47,25 @@ describe("pathless layout routes", () => {
     );
   });
 
-  afterAll(async () => {
-    await app?.close();
+  test.afterAll(async () => {
+    await app.close();
   });
 
-  let responses: Array<HTTPResponse>;
-
-  beforeAll(() => {
-    responses = app.collectResponses((url) => url.pathname === "/");
-  });
-
-  let clearResponses = () => responses.splice(0, responses.length);
-
-  beforeEach(() => {
-    clearResponses();
-  });
-
-  it("should get multiple cookies from the loader", async () => {
-    await app.goto("/");
-    expect(responses[0].headers()["set-cookie"]).toBe(
-      `
-foo=bar
-bar=baz
-      `.trim()
-    );
+  test("should get multiple cookies from the loader", async ({ page }) => {
+    let responses = app.collectResponses(page, (url) => url.pathname === "/");
+    await app.goto(page, "/");
+    let setCookies = await responses[0].headerValues("set-cookie");
+    expect(setCookies).toEqual(["foo=bar", "bar=baz"]);
     expect(responses).toHaveLength(1);
   });
 
-  it("should get multiple cookies from the action", async () => {
-    await app.goto("/");
-    clearResponses();
-    await app.page.click("button[type=submit]");
-    await app.page.waitForSelector(`[data-testid="action-success"]`);
-    expect(responses[0].headers()["set-cookie"]).toBe(
-      `
-another=one
-how-about=two
-      `.trim()
-    );
+  test("should get multiple cookies from the action", async ({ page }) => {
+    let responses = app.collectResponses(page, (url) => url.pathname === "/");
+    await app.goto(page, "/");
+    await page.click("button[type=submit]");
+    await page.waitForSelector(`[data-testid="action-success"]`);
+    let setCookies = await responses[0].headerValues("set-cookie");
+    expect(setCookies).toEqual(["foo=bar", "bar=baz"]);
     // one for the POST and one for the GET
     expect(responses).toHaveLength(2);
   });
