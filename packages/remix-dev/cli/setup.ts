@@ -1,6 +1,8 @@
 import * as path from "path";
 import * as fse from "fs-extra";
 
+import * as logging from "./logging";
+
 export enum SetupPlatform {
   Cloudflare = "cloudflare",
   Node = "node",
@@ -11,11 +13,11 @@ export function isSetupPlatform(platform: any): platform is SetupPlatform {
 }
 
 export async function setupRemix(platform: SetupPlatform): Promise<void> {
-  console.warn(
+  logging.deprecation(
     "Calling `remix setup` and importing from `remix` are deprecated."
   );
-  console.log(
-    "HINT: Remove `remix setup` from your `package.json`'s `postinstall` script."
+  logging.hint(
+    "Remove `remix setup` from your `package.json`'s `postinstall` script."
   );
   let remixPkgJsonFile: string;
   try {
