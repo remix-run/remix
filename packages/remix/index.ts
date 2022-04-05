@@ -2,7 +2,7 @@
 export class RemixNotSetupError extends Error {
   constructor() {
     console.warn(
-      "Importing from `remix` is deprecated. Import from `@remix-run/*` packages instead."
+      "DEPRECATION: Importing from `remix` is deprecated. Import from `@remix-run/*` packages instead."
     );
     super("Did you forget to run `remix setup` for your platform?");
   }
