@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+  json,
+} from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
 let fixture: Fixture;
@@ -9,11 +14,13 @@ let app: AppFixture;
 test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
-      "node_modules/has-side-effects/package.json": `{
-        "name": "has-side-effects",
-        "version": "1.0.0",
-        "main": "index.js"
-      }`,
+      "node_modules/has-side-effects/package.json": json`
+        {
+          "name": "has-side-effects",
+          "version": "1.0.0",
+          "main": "index.js"
+        }
+      `,
       "node_modules/has-side-effects/index.js": js`
         let message;
         (() => { message = process.env.___SOMETHING___ || "hello, world"; })();
@@ -45,7 +52,7 @@ test.beforeAll(async () => {
 
 test.afterAll(() => app.close());
 
-test("should log relevant error message", async ({ page }) => {
+test.skip("should log relevant error message", async ({ page }) => {
   await app.goto(page, "/");
   expect(await app.getHtml(page)).toMatch(
     "https://remix.run/pages/gotchas#server-code-in-client-bundles"
