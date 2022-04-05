@@ -36,7 +36,7 @@ interface BuildConfig {
 }
 
 function defaultWarningHandler(message: string, key: string) {
-  warnOnce(false, message, key);
+  warnOnce(message, key);
 }
 
 function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
