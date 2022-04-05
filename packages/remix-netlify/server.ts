@@ -84,9 +84,15 @@ export function createRemixRequest(
   };
 
   if (event.httpMethod !== "GET" && event.httpMethod !== "HEAD" && event.body) {
-    init.body = event.isBase64Encoded
-      ? Buffer.from(event.body, "base64").toString()
-      : event.body;
+    let isFormData = event.headers["content-type"]?.includes(
+      "multipart/form-data"
+    );
+    init.body =
+      event.isBase64Encoded
+        ? isFormData
+          ? Buffer.from(event.body, "base64")
+          : Buffer.from(event.body, "base64").toString()
+        : event.body;
   }
 
   return new NodeRequest(url.href, init);
