@@ -4,9 +4,6 @@ export class RemixNotSetupError extends Error {
     console.warn(
       "Importing from `remix` is deprecated. Import from `@remix-run/*` packages instead."
     );
-    console.log(
-      "HINT: To migrate from `remix` imports, run `npx @remix-run/dev migrate --migration replace-remix-imports <remix project directory>`."
-    );
     super("Did you forget to run `remix setup` for your platform?");
   }
 }

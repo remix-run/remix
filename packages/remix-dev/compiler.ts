@@ -323,9 +323,6 @@ async function createBrowserBuild(
     console.warn(
       "Importing from `remix` is deprecated. Import from `@remix-run/*` packages instead."
     );
-    console.log(
-      "HINT: To migrate from `remix` imports, run `npx @remix-run/dev migrate --migration replace-remix-imports <remix project directory>`."
-    );
   }
   let externals = nodeBuiltins.filter((mod) => !dependencies.includes(mod));
   let fakeBuiltins = nodeBuiltins.filter((mod) => dependencies.includes(mod));
@@ -407,9 +404,6 @@ function createServerBuild(
   if (Object.keys(dependencies).includes("remix")) {
     console.warn(
       "Importing from `remix` is deprecated. Import from `@remix-run/*` packages instead."
-    );
-    console.log(
-      "HINT: To migrate from `remix` imports, run `npx @remix-run/dev migrate --migration replace-remix-imports <remix project directory>`."
     );
   }
 

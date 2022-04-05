@@ -17,9 +17,6 @@ export async function setupRemix(platform: SetupPlatform): Promise<void> {
   console.log(
     "HINT: Remove `remix setup` from your `package.json`'s `postinstall` script."
   );
-  console.log(
-    "HINT: To migrate from `remix` imports, run `npx @remix-run/dev migrate --migration replace-remix-imports <remix project directory>`."
-  );
   let remixPkgJsonFile: string;
   try {
     remixPkgJsonFile = resolvePackageJsonFile("remix");
