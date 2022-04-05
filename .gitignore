@@ -16,3 +16,5 @@ yarn-error.log
 /scripts/deployment-test/apps
 
 /.idea/
+
+/integration/helpers/integration-template/package-lock.json
