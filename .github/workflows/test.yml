@@ -15,37 +15,97 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          # TODO: Fix cross-env issues in Jest before enabling
-          # - windows-latest
+    name: ⚙️ Build
+    runs-on: ubuntu-latest
     steps:
-      # https://github.com/actions/virtual-environments/issues/1187
-      - name: prep windows network
-        run: Disable-NetAdapterChecksumOffload -Name * -TcpIPv4 -UdpIPv4 -TcpIPv6 -UdpIPv6
-        if: ${{ matrix.settings.host == 'windows-latest' }}
-      - uses: actions/checkout@v2
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Setup node
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "yarn"
 
-      - name: Install dependencies
-        run: yarn --frozen-lockfile --network-timeout 1000000
+      - name: 📥 Download deps
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
 
-      - name: Lint
-        run: yarn lint
-
-      - name: Build
+      - name: ⚙️ Build
         run: yarn build
 
-      - name: Test
-        run: yarn test
+  lint:
+    name: ⬣ Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+
+      - name: 📥 Download deps
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
+
+      - name: 🔬 Lint
+        run: yarn lint
+
+  test:
+    name: 🧪 Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+
+      - name: 📥 Download deps
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
+
+      - name: 🧪 Run Primary Tests
+        run: "yarn test:primary"
+
+  integration:
+    name: 👀 Integration Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+
+      - name: 📥 Download deps
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
+
+      - name: 👀 Run Integration Tests
+        run: "yarn test:integration"
