@@ -28,7 +28,6 @@ const transform: Transform = (file, api, options) => {
 
   let normalizedImports = normalizeImports(remixImports);
   let mappedNormalizedImports = mapNormalizedImports({
-    client: "react",
     adapter: options.adapter,
     normalizedImports,
     runtime: options.runtime,
