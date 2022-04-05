@@ -4,13 +4,12 @@ import path from "path";
 
 import { createFixtureProject, js, json } from "./helpers/create-fixture";
 
-// our createFixtureProject no longer lets you choose which template to use
-test.skip("cloudflare compiler", () => {
+test.describe("cloudflare compiler", () => {
   let projectDir: string;
 
   test.beforeAll(async () => {
     projectDir = await createFixtureProject({
-      // template: "cf-template",
+      template: "cf-template",
       files: {
         "package.json": json`
           {

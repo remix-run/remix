@@ -19,7 +19,8 @@ import { sync as spawnSync } from "cross-spawn";
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express";
-import { TMP_DIR } from "./global-setup";
+
+const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 
 interface FixtureInit {
   buildStdio?: Writable;
