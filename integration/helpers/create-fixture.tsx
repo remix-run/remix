@@ -167,23 +167,10 @@ export async function createAppFixture(fixture: Fixture) {
        * @param waitForHydration Will wait for the network to be idle, so
        * everything should be loaded and ready to go
        */
-      goto: (async (href: string, opts?: any) => {
-        opts =
-          typeof opts === "object"
-            ? opts
-            : { waitUntil: opts ? "networkidle0" : undefined };
-        return page.goto(`${serverUrl}${href}`, opts);
-      }) as {
-        (
-          href: string,
-          waitForHydration?: true
-        ): Promise<puppeteer.HTTPResponse>;
-        (
-          href: string,
-          options?: puppeteer.WaitForOptions & {
-            referer?: string;
-          }
-        ): Promise<puppeteer.HTTPResponse>;
+      goto: async (href: string, waitForHydration?: true) => {
+        return page.goto(`${serverUrl}${href}`, {
+          waitUntil: waitForHydration ? "networkidle0" : undefined,
+        });
       },
 
       /**
@@ -301,6 +288,11 @@ export async function createAppFixture(fixture: Fixture) {
        */
       collectDataResponses: () => collectDataResponses(page),
 
+      /**
+       * Collects all responses from the network, usually after a link click or
+       * form submission. A filter can be provided to only collect responses
+       * that meet a certain criteria.
+       */
       collectResponses: (filter?: UrlFilter) => collectResponses(page, filter),
 
       /**
@@ -486,6 +478,7 @@ export function collectResponses(
   filter?: UrlFilter
 ): HTTPResponse[] {
   let responses: HTTPResponse[] = [];
+
   page.on("response", (res) => {
     if (!filter || filter(new URL(res.url()))) {
       responses.push(res);

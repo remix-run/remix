@@ -466,7 +466,7 @@ describe("route module link export", () => {
   });
 
   it("preloads assets for other pages and serves from browser cache on navigation", async () => {
-    await app.goto("/links", { waitUntil: "networkidle0" });
+    await app.goto("/links", true);
     let jsResponses = app.collectResponses((url) =>
       url.pathname.endsWith(".js")
     );
@@ -479,7 +479,7 @@ describe("route module link export", () => {
 
   it("preloads data for other pages and serves from browser cache on navigation", async () => {
     let dataResponses = app.collectDataResponses();
-    await app.goto("/links", { waitUntil: "networkidle0" });
+    await app.goto("/links", true);
 
     expect(dataResponses.length).toBe(2);
     let [prefetchGists, prefetchUser] = dataResponses;
