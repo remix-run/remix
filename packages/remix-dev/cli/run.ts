@@ -11,6 +11,7 @@ import * as colors from "../colors";
 import * as commands from "./commands";
 import { convertTemplateToJavaScript } from "./convert-to-javascript";
 import { validateNewProjectPath, validateTemplate } from "./create";
+import { checkGitStatus } from "./checkGitStatus";
 
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
@@ -406,10 +407,13 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       await commands.setup(input[1]);
       break;
     case "migrate": {
-      let { migrationId, projectDir } = await commands.migrate.resolveInput({
-        migrationId: flags.migration,
-        projectDir: input[1],
-      });
+      let projectDir = commands.migrate.resolveProjectDir(input[1]);
+      if (!flags.dry) {
+        checkGitStatus(projectDir, { force: flags.force });
+      }
+      let migrationId = await commands.migrate.resolveMigrationId(
+        flags.migration
+      );
       await commands.migrate.run({ migrationId, projectDir, flags });
       break;
     }
