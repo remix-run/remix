@@ -12,10 +12,18 @@ export const adapters = [
   "vercel",
 ] as const;
 export type Adapter = typeof adapters[number];
+export const isAdapter = (adapter: string): adapter is Adapter => {
+  return (adapters as readonly string[]).includes(adapter);
+};
+
 const clients = ["react"] as const;
 export type Client = typeof clients[number];
+
 export const runtimes = ["cloudflare", "node"] as const;
 export type Runtime = typeof runtimes[number];
+export const isRuntime = (runtime: string): runtime is Runtime => {
+  return (runtimes as readonly string[]).includes(runtime);
+};
 
 const packages = [...adapters, ...clients, ...runtimes] as const;
 export type Package = typeof packages[number];
