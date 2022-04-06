@@ -20,3 +20,4 @@ yarn-error.log
 /.idea/
 /playground
 /scripts/playground/template.local
+/scripts/playground/template/build
