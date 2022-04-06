@@ -34,6 +34,7 @@ jobs:
           fi
 
       - name: ⎔ Setup node
+        if: steps.nightly.ouputs.RELEASE == true
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
