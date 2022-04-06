@@ -13,7 +13,7 @@
     "test": "run-p \"test:*\"",
     "test:primary": "jest",
     "test:integration": "jest --forceExit --runInBand --config ./integration/jest.config.js",
-    "pretest:integration": "yarn build",
+    "pretest:integration": "rollup -c",
     "bug-report-test": "yarn jest --config ./integration/jest.config.js integration/bug-report-test.ts",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",

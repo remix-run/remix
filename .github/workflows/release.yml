@@ -1,4 +1,4 @@
-name: release
+name: 🕊 Release
 
 on:
   release:
@@ -8,18 +8,21 @@ on:
 
 jobs:
   nightly:
-    name: Nightly Release
+    name: 🌒 Nightly Release
     if: github.repository == 'remix-run/remix' && github.event_name == 'schedule'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
         with:
           ref: dev
           token: ${{ secrets.NIGHTLY_PAT }}
 
-      - name: Check for commits
+      - name: 👀 Check for commits
         id: nightly
         run: |
           count=$(git rev-list $GITHUB_SHA..HEAD --count)
@@ -30,39 +33,24 @@ jobs:
             echo "::set-output name=release::false"
           fi
 
-      - name: Get Node Version
-        if: steps.nightly.ouputs.RELEASE == true
-        run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
-      - name: Setup node
+      - name: ⎔ Setup node
         if: steps.nightly.ouputs.RELEASE == true
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
+      - name: 📥 Install deps
         if: steps.nightly.ouputs.RELEASE == true
-        id: yarn-cache
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
 
-      - name: Restore dependency cache
-        if: steps.nightly.ouputs.RELEASE == true
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
-
-      - name: Install dependencies
-        if: steps.nightly.ouputs.RELEASE == true
-        run: yarn --frozen-lockfile
-
-      - name: Build
+      - name: 🏗 Build
         if: steps.nightly.ouputs.RELEASE == true
         run: yarn build
 
-      - name: Update Version
+      - name: ⤴️ Update Version
         if: steps.nightly.ouputs.RELEASE == true
         id: version
         run: |
@@ -76,17 +64,17 @@ jobs:
 
           git push origin --tags
 
-      - name: Setup npm auth
+      - name: 🔐 Setup npm auth
         if: steps.nightly.ouputs.RELEASE == true
         run: |
           echo "registry=https://registry.npmjs.org" >> ~/.npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
-      - name: Publish
+      - name: 🚀 Publish
         if: steps.nightly.ouputs.RELEASE == true
         run: npm run publish
 
-      - name: Create GitHub release
+      - name: 🐱 Create GitHub release
         if: steps.nightly.ouputs.RELEASE == true
         uses: actions/create-release@v1
         with:
@@ -103,39 +91,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Setup node
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
-        id: yarn-cache
+      - name: 📥 Install deps
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
 
-      - name: Restore dependency cache
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
-
-      - name: Install dependencies
-        run: yarn --frozen-lockfile
-
-      - name: Build
+      - name: 🏗 Build
         run: yarn build
 
-      - name: Setup npm auth
+      - name: 🔐 Setup npm auth
         run: |
           echo "registry=https://registry.npmjs.org" >> ~/.npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
-      - name: Publish
+      - name: 🚀 Publish
         run: npm run publish
 
   arc_deploy:
@@ -144,26 +125,32 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Setup node
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "npm"
+          cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
-      - name: Install dependencies
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: Install latest version of npm
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
+      - name: 📦 Install latest version of npm
         run: npm install -g npm@latest
         working-directory: ./scripts/deployment-test
 
-      - name: Deploy to Arc
+      - name: 📥 Install deployment-test deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ./scripts/deployment-test
+
+      - name: 🚀 Deploy to Arc
         run: node ./arc.mjs
         working-directory: ./scripts/deployment-test
         env:
@@ -177,26 +164,32 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Setup node
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "npm"
+          cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
-      - name: Install dependencies
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: Install latest version of npm
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
+      - name: 📦 Install latest version of npm
         run: npm install -g npm@latest
         working-directory: ./scripts/deployment-test
 
-      - name: Deploy to Cloudflare Pages
+      - name: 📥 Install deployment-test deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ./scripts/deployment-test
+
+      - name: 🚀 Deploy to Cloudflare Pages
         run: node ./cf-pages.mjs
         working-directory: ./scripts/deployment-test
         env:
@@ -211,26 +204,32 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Setup node
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "npm"
+          cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
-      - name: Install dependencies
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: Install latest version of npm
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
+      - name: 📦 Install latest version of npm
         run: npm install -g npm@latest
         working-directory: ./scripts/deployment-test
 
-      - name: Deploy to Cloudflare Workers
+      - name: 📥 Install deployment-test deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ./scripts/deployment-test
+
+      - name: 🚀 Deploy to Cloudflare Workers
         run: node ./cf-workers.mjs
         working-directory: ./scripts/deployment-test
         env:
@@ -243,29 +242,35 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Setup node
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "npm"
+          cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
-      - name: Install dependencies
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: Install latest version of npm
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
+      - name: 📦 Install latest version of npm
         run: npm install -g npm@latest
         working-directory: ./scripts/deployment-test
 
-      - name: Install the Fly CLI
+      - name: 📥 Install deployment-test deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ./scripts/deployment-test
+
+      - name: 🎈 Install the Fly CLI
         run: curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/usr/local sh
 
-      - name: Deploy to Fly
+      - name: 🚀 Deploy to Fly
         run: node ./fly.mjs
         working-directory: ./scripts/deployment-test
         env:
@@ -277,26 +282,32 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Setup node
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "npm"
+          cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
-      - name: Install dependencies
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: Install latest version of npm
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
+      - name: 📦 Install latest version of npm
         run: npm install -g npm@latest
         working-directory: ./scripts/deployment-test
 
-      - name: Deploy to Netlify
+      - name: 📥 Install deployment-test deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ./scripts/deployment-test
+
+      - name: 🚀 Deploy to Netlify
         run: node ./netlify.mjs
         working-directory: ./scripts/deployment-test
         env:
@@ -308,26 +319,32 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Setup node
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
           cache: "npm"
+          cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
-      - name: Install dependencies
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: Install latest version of npm
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
+      - name: 📦 Install latest version of npm
         run: npm install -g npm@latest
         working-directory: ./scripts/deployment-test
 
-      - name: Deploy to Vercel
+      - name: 📥 Install deployment-test deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ./scripts/deployment-test
+
+      - name: 🚀 Deploy to Vercel
         run: node ./vercel.mjs
         working-directory: ./scripts/deployment-test
         env:
