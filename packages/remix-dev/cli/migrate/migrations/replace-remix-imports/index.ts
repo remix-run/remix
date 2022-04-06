@@ -13,6 +13,7 @@ import { isAdapter, isRuntime } from "./transform";
 import type { MigrationFunction } from "../../types";
 import { readConfig } from "../../../../config";
 import { hint } from "../../../../logging";
+import * as colors from "../../../../colors";
 
 const transformPath = join(__dirname, "transform");
 
@@ -25,11 +26,17 @@ function* getTasks({
   runtime: string;
   adapter?: string;
 }): Generator<string> {
+  let commandTask = (message: string, command: string) =>
+    `${message}:\n\t${colors.hint(command)}`;
+  let remixRunPrefix = (dep: string) => "@remix-run/" + dep;
   let remixDeps = findRemixDependencies(packageJson.dependencies);
 
   // runtime not in deps
   if (!remixDeps.includes(runtime)) {
-    yield `Install \`@remix-run/${runtime}\` as a dependency`;
+    yield commandTask(
+      `Install \`@remix-run/${runtime}\` as a dependency`,
+      `npm install @remix-run/${runtime}`
+    );
   }
 
   // other runtimes in deps
@@ -37,14 +44,18 @@ function* getTasks({
     .filter(isRuntime)
     .filter((dep) => dep !== runtime);
   if (otherRuntimes.length > 0) {
-    yield `Uninstall all unused runtimes: (${otherRuntimes
-      .map((r) => "@remix-run/" + r)
-      .join(",")})`;
+    yield commandTask(
+      "Uninstall all unused runtimes",
+      `npm uninstall ${otherRuntimes.map(remixRunPrefix).join(" ")}`
+    );
   }
 
   // adapter not in deps
   if (adapter && !remixDeps.includes(adapter)) {
-    yield `Install \`@remix-run/${adapter}\` as a dependency`;
+    yield commandTask(
+      `Install \`@remix-run/${adapter}\` as a dependency`,
+      `npm install @remix-run/${adapter}`
+    );
   }
 
   // other adapters in deps
@@ -52,14 +63,18 @@ function* getTasks({
     .filter(isAdapter)
     .filter((dep) => dep !== adapter);
   if (otherAdapters.length > 0) {
-    yield `Uninstall all unused adapters: (${otherRuntimes
-      .map((r) => "@remix-run/" + r)
-      .join(",")})`;
+    yield commandTask(
+      "Uninstall all unused adapters",
+      `npm uninstall ${otherAdapters.map(remixRunPrefix).join(" ")}`
+    );
   }
 
   // remix in deps
   if (Object.keys(packageJson.dependencies || {}).includes("remix")) {
-    yield "Uninstall `remix` as a dependency";
+    yield commandTask(
+      "Uninstall `remix` as a dependency",
+      "npm uninstall remix"
+    );
   }
 
   // `remix setup` in `postinstall`
