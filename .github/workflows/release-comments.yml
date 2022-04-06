@@ -1,4 +1,4 @@
-name: Comment on Release
+name: 📝 Comment on Release
 
 on:
   release:
@@ -10,19 +10,21 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
+      - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: Setup node
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: 16
-          cache: "npm"
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
-      - name: Install dependencies
-        run: npm install
+      - name: 📥 Install deps
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
 
-      - name: Comment on issues
+      - name: 📝 Comment on issues
         run: node ./scripts/release/comment.mjs
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
