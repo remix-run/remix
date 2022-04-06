@@ -3,9 +3,11 @@ import meow from "meow";
 import inspector from "inspector";
 import inquirer from "inquirer";
 import semver from "semver";
+import fse from "fs-extra";
 
 import * as colors from "./colors";
 import * as commands from "./commands";
+import { convertTemplateToJavaScript } from "./convert-to-javascript";
 
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
@@ -243,17 +245,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             ],
           },
           {
-            name: "useTypeScript",
-            type: "list",
-            message: "TypeScript or JavaScript?",
-            suffix:
-              "note, if the template uses JavaScript, you won't get TypeScript by selecting this option.",
-            choices: [
-              { name: "TypeScript", value: true },
-              { name: "JavaScript", value: false },
-            ],
-          },
-          {
             name: "install",
             type: "confirm",
             message: "Do you want me to run `npm install`?",
@@ -286,9 +277,32 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         projectDir,
         remixVersion: flags.remixVersion,
         installDeps: flags.install ?? answers.install,
-        useTypeScript: flags.typescript ?? answers.useTypeScript,
+        useTypeScript: flags.typescript ?? false,
         githubToken: process.env.GITHUB_TOKEN,
       });
+
+      let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
+      let isDeno = fse.existsSync(path.join(projectDir, "deno.json"));
+      if (isTypeScript && !isDeno) {
+        let { useTypeScript } = await inquirer.prompt<{
+          useTypeScript: boolean;
+        }>([
+          {
+            name: "useTypeScript",
+            type: "list",
+            message: "TypeScript or JavaScript?",
+            choices: [
+              { name: "TypeScript", value: true },
+              { name: "JavaScript", value: false },
+            ],
+          },
+        ]);
+
+        if (useTypeScript === false) {
+          await convertTemplateToJavaScript(projectDir);
+        }
+      }
+
       break;
     }
     case "init":
