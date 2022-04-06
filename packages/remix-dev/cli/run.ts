@@ -277,7 +277,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         projectDir,
         remixVersion: flags.remixVersion,
         installDeps: flags.install ?? answers.install,
-        useTypeScript: flags.typescript ?? false,
+        useTypeScript: flags.typescript ?? true,
         githubToken: process.env.GITHUB_TOKEN,
       });
 
