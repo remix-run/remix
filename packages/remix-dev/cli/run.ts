@@ -1,13 +1,15 @@
 import * as path from "path";
-import meow from "meow";
+import os from "os";
 import inspector from "inspector";
+import meow from "meow";
 import inquirer from "inquirer";
 import semver from "semver";
 import fse from "fs-extra";
 
-import * as colors from "./colors";
+import * as colors from "../colors";
 import * as commands from "./commands";
 import { convertTemplateToJavaScript } from "./convert-to-javascript";
+import { validateNewProjectPath, validateTemplate } from "./create";
 
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
@@ -23,6 +25,7 @@ ${colors.heading("Usage")}:
   $ remix dev [${colors.arg("projectDir")}]
   $ remix routes [${colors.arg("projectDir")}]
   $ remix setup [${colors.arg("remixPlatform")}]
+  $ remix migrate [-m ${colors.arg("migration")}] [${colors.arg("projectDir")}]
 
 ${colors.heading("Options")}:
   --help, -h          Print this help message and exit
@@ -39,11 +42,18 @@ ${colors.heading("Options")}:
   --debug             Attach Node.js inspector
 \`routes\` Options:
   --json              Print the routes as JSON
+\`migrate\` Options:
+  --dry               Dry run (no changes are made to files)
+  --force             Bypass Git safety checks and forcibly run migration
+  --migration, -m     Name of the migration to run
 
 ${colors.heading("Values")}:
   - ${colors.arg("projectDir")}        The Remix project directory
   - ${colors.arg("template")}          The project template to use
-  - ${colors.arg("remixPlatform")}     node or cloudflare
+  - ${colors.arg("remixPlatform")}     \`node\` or \`cloudflare\`
+  - ${colors.arg(
+    "migration"
+  )}         One of the choices from https://github.com/remix-run/remix/tree/main/packages/remix-dev/cli/migrate/migration-options
 
 ${colors.heading("Creating a new project")}:
 
@@ -51,14 +61,13 @@ ${colors.heading("Creating a new project")}:
 
   - a file path to a directory of files
   - a file path to a tarball
-  - the name of a repo in the remix-run GitHub org
-  - the name of a username/repo on GitHub
+  - the name of a :username/:repo on GitHub
   - the URL of a tarball
 
   $ remix create my-app --template /path/to/remix-template
   $ remix create my-app --template /path/to/remix-template.tar.gz
-  $ remix create my-app --template [remix-run/]grunge-stack
-  $ remix create my-app --template github-username/repo-name
+  $ remix create my-app --template remix-run/grunge-stack
+  $ remix create my-app --template :username/:repo
   $ remix create my-app --template https://github.com/:username/:repo
   $ remix create my-app --template https://github.com/:username/:repo/tree/:branch
   $ remix create my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
@@ -96,6 +105,17 @@ ${colors.heading("Show all routes in your app")}:
   $ remix routes --json
 `;
 
+const templateChoices = [
+  { name: "Remix App Server", value: "remix" },
+  { name: "Express Server", value: "express" },
+  { name: "Architect (AWS Lambda)", value: "arc" },
+  { name: "Fly.io", value: "fly" },
+  { name: "Netlify", value: "netlify" },
+  { name: "Vercel", value: "vercel" },
+  { name: "Cloudflare Pages", value: "cloudflare-pages" },
+  { name: "Cloudflare Workers", value: "cloudflare-workers" },
+];
+
 /**
  * Programmatic interface for running the Remix CLI with the given command line
  * arguments.
@@ -110,14 +130,17 @@ export async function run(argv: string[] = process.argv.slice(2)) {
   }
 
   let { flags, input, showHelp, showVersion } = meow(helpText, {
-    argv: argv,
-    description: false,
+    argv,
     booleanDefault: undefined,
+    description: false,
     flags: {
       debug: { type: "boolean" },
+      dry: { type: "boolean" },
+      force: { type: "boolean" },
       help: { type: "boolean", alias: "h" },
       install: { type: "boolean" },
       json: { type: "boolean" },
+      migration: { type: "string", alias: "m" },
       remixVersion: { type: "string" },
       sourcemap: { type: "boolean" },
       template: { type: "string" },
@@ -132,49 +155,70 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     flags.template = "remix-ts";
   }
 
-  //   if (!flags.template) {
-  //     if (colors.supportsColor && process.env.NODE_ENV !== "test") {
-  //       let anim = chalkAnimation.rainbow(
-  //         `\nR E M I X - v${remixDevPackageVersion}\n`
-  //       );
-  //       await new Promise((res) => setTimeout(res, 1500));
-  //       anim.stop();
-  //     }
-  //   }
+  let command = input[0];
 
   // Note: Keep each case in this switch statement small.
-  switch (input[0]) {
+  switch (command) {
     case "create":
     // `remix new` is an alias for `remix create`
     case "new": {
-      let projectPath =
-        input.length > 1
-          ? input[1]
-          : (
-              await inquirer
-                .prompt<{ dir: string }>([
-                  {
-                    type: "input",
-                    name: "dir",
-                    message: "Where would you like to create your app?",
-                    default: "./my-remix-app",
-                  },
-                ])
-                .catch((error) => {
-                  if (error.isTtyError) {
-                    showHelp();
-                    return;
-                  }
-                  throw error;
-                })
-            )?.dir;
+      let projectPath = input[1];
 
-      if (!projectPath) {
+      // Flags will validate early and stop the process if invalid flags are
+      // provided. Input provided in the interactive CLI is validated by
+      // inquirer step-by-step. This not only allows us to catch issues as early
+      // as possible, but inquirer will allow users to retry input rather than
+      // stop the process.
+      if (flags.template) {
+        await validateTemplate(flags.template);
+      }
+      if (projectPath) {
+        await validateNewProjectPath(projectPath);
+      }
+
+      let projectDir = projectPath
+        ? path.resolve(process.cwd(), projectPath)
+        : await inquirer
+            .prompt<{ dir: string }>([
+              {
+                type: "input",
+                name: "dir",
+                message: "Where would you like to create your app?",
+                default: "./my-remix-app",
+                async validate(input) {
+                  try {
+                    await validateNewProjectPath(String(input));
+                    return true;
+                  } catch (error) {
+                    if (error instanceof Error && error.message) {
+                      return error.message;
+                    }
+                    throw error;
+                  }
+                },
+              },
+            ])
+            .then(async (input) => {
+              let inputDir = input.dir.startsWith("~")
+                ? input.dir.replace("~", os.homedir())
+                : input.dir;
+              if (path.isAbsolute(inputDir)) {
+                return inputDir;
+              }
+              return path.resolve(process.cwd(), inputDir);
+            })
+            .catch((error) => {
+              if (error.isTtyError) {
+                showHelp();
+                return;
+              }
+              throw error;
+            });
+
+      if (!projectDir) {
         showHelp();
         return;
       }
-
-      let projectDir = path.resolve(process.cwd(), projectPath);
 
       let answers = await inquirer
         .prompt<{
@@ -213,15 +257,15 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             choices: [
               {
                 name: "Blues",
-                value: "blues-stack",
+                value: "remix-run/blues-stack",
               },
               {
                 name: "Indie",
-                value: "indie-stack",
+                value: "remix-run/indie-stack",
               },
               {
                 name: "Grunge",
-                value: "grunge-stack",
+                value: "remix-run/grunge-stack",
               },
             ],
           },
@@ -231,18 +275,11 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             when(answers) {
               return answers.appType === "template";
             },
-            message: `Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets.`,
+            message:
+              "Where do you want to deploy? Choose Remix if you're unsure; " +
+              "it's easy to change deployment targets.",
             loop: false,
-            choices: [
-              { name: "Remix App Server", value: "remix" },
-              { name: "Express Server", value: "express" },
-              { name: "Architect (AWS Lambda)", value: "arc" },
-              { name: "Fly.io", value: "fly" },
-              { name: "Netlify", value: "netlify" },
-              { name: "Vercel", value: "vercel" },
-              { name: "Cloudflare Pages", value: "cloudflare-pages" },
-              { name: "Cloudflare Workers", value: "cloudflare-workers" },
-            ],
+            choices: templateChoices,
           },
           {
             name: "install",
@@ -258,12 +295,15 @@ export async function run(argv: string[] = process.argv.slice(2)) {
           if (error.isTtyError) {
             console.warn(
               colors.warning(
-                "🚨 Your terminal doesn't support interactivity; using default configuration.\n\n" +
-                  "If you'd like to use different settings, try passing them as arguments. Run " +
-                  "`npx create-remix@latest --help` to see available options."
+                "🚨 Your terminal doesn't support interactivity; using default " +
+                  "configuration.\n\n" +
+                  "If you'd like to use different settings, try passing them " +
+                  "as arguments. Run `npx create-remix@latest --help` to see " +
+                  "available options."
               )
             );
             return {
+              appType: "template",
               appTemplate: "remix",
               useTypeScript: true,
               install: true,
@@ -273,11 +313,11 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         });
 
       await commands.create({
-        appTemplate: flags.template ?? answers.appTemplate,
+        appTemplate: flags.template || answers.appTemplate,
         projectDir,
         remixVersion: flags.remixVersion,
-        installDeps: flags.install ?? answers.install,
-        useTypeScript: flags.typescript ?? true,
+        installDeps: flags.install !== false && answers.install !== false,
+        useTypeScript: flags.typescript !== false,
         githubToken: process.env.GITHUB_TOKEN,
       });
 
@@ -339,6 +379,14 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     case "setup":
       await commands.setup(input[1]);
       break;
+    case "migrate": {
+      let { migrationId, projectDir } = await commands.migrate.resolveInput({
+        migrationId: flags.migration,
+        projectDir: input[1],
+      });
+      await commands.migrate.run({ migrationId, projectDir, flags });
+      break;
+    }
     case "dev":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
       if (flags.debug) inspector.open();
