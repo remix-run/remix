@@ -57,22 +57,6 @@ export async function create({
       );
     }
   }
-
-  let relProjectDir = path.relative(process.cwd(), projectDir);
-  let projectDirIsCurrentDir = relProjectDir === "";
-
-  if (projectDirIsCurrentDir) {
-    console.log(
-      `💿 That's it! Check the README for development and deploy instructions!`
-    );
-  } else {
-    console.log(
-      `💿 That's it! \`cd\` into "${path.resolve(
-        process.cwd(),
-        projectDir
-      )}" and check the README for development and deploy instructions!`
-    );
-  }
 }
 
 export async function init(projectDir: string) {

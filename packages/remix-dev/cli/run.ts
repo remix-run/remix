@@ -283,6 +283,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
 
       let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
       let isDeno = fse.existsSync(path.join(projectDir, "deno.json"));
+
       if (isTypeScript && !isDeno) {
         let { useTypeScript } = await inquirer.prompt<{
           useTypeScript: boolean;
@@ -301,6 +302,22 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         if (useTypeScript === false) {
           await convertTemplateToJavaScript(projectDir);
         }
+      }
+
+      let relProjectDir = path.relative(process.cwd(), projectDir);
+      let projectDirIsCurrentDir = relProjectDir === "";
+
+      if (projectDirIsCurrentDir) {
+        console.log(
+          `💿 That's it! Check the README for development and deploy instructions!`
+        );
+      } else {
+        console.log(
+          `💿 That's it! \`cd\` into "${path.resolve(
+            process.cwd(),
+            projectDir
+          )}" and check the README for development and deploy instructions!`
+        );
       }
 
       break;
