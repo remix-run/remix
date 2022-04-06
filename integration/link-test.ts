@@ -471,6 +471,7 @@ test.describe("route module link export", () => {
     });
   });
 
+  // playwright doesn't support checking where a resource came from
   test.skip("preloads assets for other pages and serves from browser cache on navigation", async ({
     page,
   }) => {
@@ -485,6 +486,7 @@ test.describe("route module link export", () => {
     // expect(jsResponses.every((res) => res.fromCache())).toBe(true);
   });
 
+  // playwright doesn't support checking where a resource came from
   test.skip("preloads data for other pages and serves from browser cache on navigation", async ({
     page,
   }) => {
@@ -502,6 +504,7 @@ test.describe("route module link export", () => {
     expect(dataResponses.length).toBe(4);
     let [, , gists, username] = dataResponses;
     expect(gists.request().resourceType()).toBe("fetch");
+    expect(username.request().resourceType()).toBe("fetch");
     // expect(gists.fromCache()).toBe(true);
     // expect(username.fromCache()).toBe(true);
   });

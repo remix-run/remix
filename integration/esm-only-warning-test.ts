@@ -146,7 +146,7 @@ test.beforeAll(async () => {
   });
 });
 
-test.skip("logs warnings for ESM only packages", async () => {
+test("logs warnings for ESM only packages", async () => {
   expect(buildOutput).toContain(
     "esm-only-no-exports is possibly an ESM only package"
   );
