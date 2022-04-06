@@ -117,7 +117,7 @@ export async function commentOnIssue({ owner, repo, issue, version }) {
 export async function getIssuesClosedByPullRequests(prHtmlUrl) {
   let res = await graphqlWithAuth(
     gql`
-      query GET_ISSUES_CLOSED($prHtmlUrl: URI!) {
+      query GET_ISSUES_CLOSED_BY_PR($prHtmlUrl: URI!) {
         resource(url: $prHtmlUrl) {
           ... on PullRequest {
             closingIssuesReferences(first: 100) {
