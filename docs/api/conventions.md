@@ -918,9 +918,9 @@ Because Remix has nested routes, there's a battle of the headers to be won when 
 ```
 ├── users.tsx
 └── users
-    ├── $userId.tsx
-    └── $userId
-        └── profile.tsx
+    ├── $userId.tsx
+    └── $userId
+        └── profile.tsx
 ```
 
 If we are looking at `/users/123/profile` then three routes are rendering:
