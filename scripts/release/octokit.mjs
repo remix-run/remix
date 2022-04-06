@@ -92,6 +92,8 @@ export async function prsMergedSinceLast({
   );
 
   return prsWithFiles.filter((pr) => {
+    // if you're changing the paths to be counted, make sure you also update
+    // /.github/workflows/release.yml
     return pr.files.some((file) => file.filename.startsWith("packages/"));
   });
 }
