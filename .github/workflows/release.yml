@@ -30,29 +30,11 @@ jobs:
             echo "::set-output name=release::false"
           fi
 
-      - name: Get Node Version
-        if: steps.nightly.ouputs.RELEASE == true
-        run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
-        if: steps.nightly.ouputs.RELEASE == true
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
-        if: steps.nightly.ouputs.RELEASE == true
-        id: yarn-cache
-
-      - name: Restore dependency cache
-        if: steps.nightly.ouputs.RELEASE == true
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
       - name: Install dependencies
         if: steps.nightly.ouputs.RELEASE == true
@@ -105,24 +87,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
-        id: yarn-cache
-
-      - name: Restore dependency cache
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
       - name: Install dependencies
         run: yarn --frozen-lockfile
@@ -146,17 +115,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-          cache: "npm"
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install
         working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
@@ -179,17 +145,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-          cache: "npm"
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install
         working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
@@ -213,17 +176,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-          cache: "npm"
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install
         working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
@@ -245,17 +205,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-          cache: "npm"
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install
         working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
@@ -279,17 +236,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-          cache: "npm"
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install
         working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
@@ -310,17 +264,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
       - name: Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-          cache: "npm"
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
       - name: Install dependencies
-        run: npm install
+        run: yarn install
         working-directory: ./scripts/deployment-test
 
       - name: Install latest version of npm
