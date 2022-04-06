@@ -2,7 +2,11 @@ import { Octokit as RestOctokit } from "@octokit/rest";
 import { paginateRest } from "@octokit/plugin-paginate-rest";
 import { graphql } from "@octokit/graphql";
 
-import { GITHUB_TOKEN, GITHUB_REPOSITORY } from "./constants.mjs";
+import {
+  GITHUB_TOKEN,
+  GITHUB_REPOSITORY,
+  PR_FILES_STARTS_WITH,
+} from "./constants.mjs";
 
 const graphqlWithAuth = graphql.defaults({
   headers: { authorization: `token ${GITHUB_TOKEN}` },
@@ -92,9 +96,9 @@ export async function prsMergedSinceLast({
   );
 
   return prsWithFiles.filter((pr) => {
-    // if you're changing the paths to be counted, make sure you also update
-    // /.github/workflows/release.yml
-    return pr.files.some((file) => file.filename.startsWith("packages/"));
+    return pr.files.some((file) => {
+      return checkIfStringStartsWith(file.filename, PR_FILES_STARTS_WITH);
+    });
   });
 }
 
@@ -135,4 +139,8 @@ export async function getIssuesClosedByPullRequests(prHtmlUrl) {
   );
 
   return res?.resource?.closingIssuesReferences?.nodes ?? [];
+}
+
+function checkIfStringStartsWith(str, substrs) {
+  return substrs.some((substr) => str.startsWith(substr));
 }
