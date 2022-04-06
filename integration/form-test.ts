@@ -312,7 +312,7 @@ test.describe("Forms", () => {
     await app.goto(page, "/get-submission");
     await page.focus(`#${KEYBOARD_INPUT}`);
     await page.keyboard.press("Enter");
-    await page.waitForLoadState("load");
+    await page.waitForLoadState("networkidle");
     expect(await app.getHtml(page, "pre")).toMatch(LAKSA);
   });
 

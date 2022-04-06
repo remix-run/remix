@@ -59,19 +59,14 @@ test.describe("pathless layout routes", () => {
     expect(responses).toHaveLength(1);
   });
 
-  // we're getting 3 responses
-  // 2 GETs, 1 POST
-  // haven't looked into why yet
-  // GET  - 'http://localhost:50468/'
-  // POST - 'http://localhost:50468/?index=&_data=routes%2Findex'
-  // GET  - 'http://localhost:50468/?index=&_data=routes%2Findex'
   test("should get multiple cookies from the action", async ({ page }) => {
-    let responses = app.collectResponses(page, (url) => url.pathname === "/");
     await app.goto(page, "/");
+    // do this after the first request so that it doesnt appear in our next assertions
+    let responses = app.collectResponses(page, (url) => url.pathname === "/");
     await page.click("button[type=submit]");
     await page.waitForSelector(`[data-testid="action-success"]`);
     let setCookies = await responses[0].headerValues("set-cookie");
-    expect(setCookies).toEqual(["foo=bar", "bar=baz"]);
+    expect(setCookies).toEqual(["another=one", "how-about=two"]);
     // one for the POST and one for the GET
     expect(responses).toHaveLength(2);
   });
