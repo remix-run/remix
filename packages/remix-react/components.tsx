@@ -1431,7 +1431,7 @@ export const LiveReload =
             nonce={nonce}
             suppressHydrationWarning
             dangerouslySetInnerHTML={{
-              __html: `(${setupLiveReload})(+${port})`,
+              __html: `(${setupLiveReload})(${port})`,
             }}
           />
         );
