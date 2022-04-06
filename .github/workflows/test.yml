@@ -90,8 +90,8 @@ jobs:
     name: 👀 Integration Test
     runs-on: ubuntu-latest
     steps:
-      # - name: 🛑 Cancel Previous Runs
-      #   uses: styfle/cancel-workflow-action@0.9.1
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
 
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
@@ -100,7 +100,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          # cache: "yarn"
+          cache: "yarn"
 
       - name: 📥 Install deps
         # even though this is called "npm-install" it does use yarn to install
