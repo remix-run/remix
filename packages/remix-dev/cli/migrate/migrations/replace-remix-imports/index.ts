@@ -16,12 +16,6 @@ export const replaceRemixImports: MigrationFunction = async ({
   projectDir,
   flags,
 }) => {
-  let pkgJsonPath = join(projectDir, "package.json");
-  let packageJson: PackageJson = JSON.parse(
-    await readFile(pkgJsonPath, "utf-8")
-  );
-  let transformOptions = getTransformOptions(packageJson);
-
   await cleanupPackageJson({
     content: packageJson,
     path: pkgJsonPath,
@@ -35,7 +29,12 @@ export const replaceRemixImports: MigrationFunction = async ({
     absolute: true,
   });
 
-  return jscodeshift.run<Options>({
+  let pkgJsonPath = join(projectDir, "package.json");
+  let packageJson: PackageJson = JSON.parse(
+    await readFile(pkgJsonPath, "utf-8")
+  );
+  let transformOptions = await getTransformOptions(packageJson);
+  jscodeshift.run<Options>({
     transformPath,
     files,
     flags,

@@ -6,7 +6,12 @@ import { mapNormalizedImports } from "./mapNormalizedImports";
 import type { Adapter, Runtime } from "./mapNormalizedImports/packageExports";
 import { normalizeImports } from "./normalizeImports";
 
-export { adapters, runtimes } from "./mapNormalizedImports/packageExports";
+export {
+  adapters,
+  runtimes,
+  isRuntime,
+  isAdapter,
+} from "./mapNormalizedImports/packageExports";
 
 export interface Options {
   runtime: Runtime;
