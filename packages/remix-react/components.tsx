@@ -770,7 +770,9 @@ export function processMeta(
   routeMeta: HtmlMetaDescriptor | HtmlMetaDescriptor[]
 ) {
   let items: HtmlMetaDescriptor[] = Array.isArray(routeMeta)
-    ? routeMeta
+    ? routeMeta.map((item) =>
+        item.title ? { key: "title", content: item.title } : item
+      )
     : Object.entries(routeMeta)
         .map(([key, value]) => {
           if (!value) return [];
