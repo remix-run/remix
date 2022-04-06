@@ -9,8 +9,7 @@ import {
   getTransformOptions,
 } from "./getTransformOptions";
 import type { Options } from "./transform";
-import { isAdapter } from "./transform";
-import { isRuntime } from "./transform";
+import { isAdapter, isRuntime } from "./transform";
 import type { MigrationFunction } from "../../types";
 import { readConfig } from "../../../../config";
 import { hint } from "../../../../logging";
