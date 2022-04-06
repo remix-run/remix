@@ -78,9 +78,10 @@ function* getTasks({
   }
 
   // `remix setup` in `postinstall`
-  let remixSetup = packageJson.scripts?.postinstall?.match(/remix setup \w+/);
+  let remixSetup =
+    packageJson.scripts?.postinstall?.match(/remix setup(\s+\w+)?/);
   if (remixSetup) {
-    yield `Remove \`${remixSetup}\` from your \`postinstall\` script`;
+    yield `Remove \`${remixSetup[0]}\` from your \`postinstall\` script`;
   }
 }
 

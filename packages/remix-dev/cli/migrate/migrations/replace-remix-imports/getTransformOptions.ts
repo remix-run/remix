@@ -14,9 +14,12 @@ const resolveRuntime = async ({
   scripts,
 }: PackageJson): Promise<Runtime> => {
   // match `remix setup <runtime>` in `postinstall` script
-  let remixSetupMatch = scripts?.postinstall?.match(/remix setup (\w+)/);
+  let remixSetupMatch = scripts?.postinstall?.match(/remix setup(\s+\w+)/);
   if (remixSetupMatch && remixSetupMatch.length >= 2) {
-    let postinstallRuntime = remixSetupMatch[1];
+    // `remix setup` defaults to `node
+    if (remixSetupMatch[1] === undefined) return "node";
+
+    let postinstallRuntime = remixSetupMatch[1].trim();
     if (isRuntime(postinstallRuntime)) {
       return postinstallRuntime;
     }
