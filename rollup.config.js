@@ -877,6 +877,9 @@ function copyToPlaygrounds() {
       let writtenDir = path.join(__dirname, options.dir);
       for (let playground of playgrounds) {
         let playgroundDir = path.join(playgroundsDir, playground);
+        if (!fse.statSync(playgroundDir).isDirectory()) {
+          continue;
+        }
         let destDir = writtenDir.replace(
           path.join(__dirname, "build"),
           playgroundDir
