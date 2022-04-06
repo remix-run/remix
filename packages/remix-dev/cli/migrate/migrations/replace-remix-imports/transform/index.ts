@@ -10,7 +10,7 @@ export { adapters, runtimes } from "./mapNormalizedImports/packageExports";
 
 export interface Options {
   runtime: Runtime;
-  adapter: Adapter;
+  adapter?: Adapter;
 }
 const transform: Transform = (file, api, options) => {
   let j = api.jscodeshift;
