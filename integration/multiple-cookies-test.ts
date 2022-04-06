@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import type { Response } from "@playwright/test";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { AppFixture } from "./helpers/create-fixture";

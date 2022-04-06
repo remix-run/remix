@@ -476,9 +476,9 @@ test.describe("route module link export", () => {
     page,
   }) => {
     await app.goto(page, "/links", true);
-    let jsResponses = app.collectResponses(page, (url) =>
-      url.pathname.endsWith(".js")
-    );
+    // let jsResponses = app.collectResponses(page, (url) =>
+    //   url.pathname.endsWith(".js")
+    // );
 
     await page.click('a[href="/gists/ryanflorence"]');
     await page.waitForSelector('[data-test-id="/gists/$username"]');
