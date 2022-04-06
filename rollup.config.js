@@ -229,7 +229,7 @@ function remixDev() {
       output: {
         banner: createBanner("@remix-run/dev", version),
         dir: `${outputDir}/cli/migrate/migrations`,
-        exports: "auto",
+        exports: "named",
         format: "cjs",
         preserveModules: true,
       },
