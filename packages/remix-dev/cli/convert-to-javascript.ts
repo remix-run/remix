@@ -38,6 +38,7 @@ export async function convertTemplateToJavaScript(projectDir: string) {
   let entries = glob.sync("**/*.+(ts|tsx)", {
     cwd: projectDir,
     absolute: true,
+    ignore: ["**/node_modules/**"],
   });
   for (let entry of entries) {
     if (entry.endsWith(".d.ts")) {
