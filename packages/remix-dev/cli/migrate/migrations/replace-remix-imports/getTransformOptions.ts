@@ -9,7 +9,10 @@ import type {
   Runtime,
 } from "./transform/mapNormalizedImports/packageExports";
 
-const resolveRuntime = async ({ scripts }: PackageJson): Promise<Runtime> => {
+const resolveRuntime = async ({
+  dependencies,
+  scripts,
+}: PackageJson): Promise<Runtime> => {
   // match `remix setup <runtime>` in `postinstall` script
   let remixSetupMatch = scripts?.postinstall?.match(/remix setup (\w+)/);
   if (remixSetupMatch && remixSetupMatch.length >= 2) {
@@ -17,6 +20,11 @@ const resolveRuntime = async ({ scripts }: PackageJson): Promise<Runtime> => {
     if (isRuntime(postinstallRuntime)) {
       return postinstallRuntime;
     }
+  }
+
+  // @remix-run/serve uses node
+  if (findRemixDependencies(dependencies).includes("serve")) {
+    return "node";
   }
 
   // otherwise, ask user for runtime
