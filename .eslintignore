@@ -4,4 +4,4 @@
 !.eslintrc.js
 templates/deno
 .tmp
-**/playground/**
+/playground
