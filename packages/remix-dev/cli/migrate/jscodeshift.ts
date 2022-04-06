@@ -24,11 +24,12 @@ export const run = <TransformOptions>({
   files,
   flags: { debug, dry, print, runInBand },
   transformOptions,
-}: Args<TransformOptions>) => {
+}: Args<TransformOptions>): boolean => {
   let args = [
     dry ? "--dry" : "",
     print ? "--print" : "",
     runInBand ? "--run-in-band" : "",
+    "--fail-on-error",
     "--verbose=2",
     "--ignore-pattern=**/node_modules/**",
     "--ignore-pattern=**/.cache/**",
@@ -48,12 +49,13 @@ export const run = <TransformOptions>({
     );
   }
 
-  let result = execaSync(jscodeshiftExecutable, args, {
-    stdio: "inherit",
-    stripFinalNewline: false,
-  });
-
-  if (result.failed) {
-    throw new Error(`jscodeshift exited with code ${result.exitCode}`);
+  try {
+    let result = execaSync(jscodeshiftExecutable, args, {
+      stdio: debug ? "inherit" : "ignore",
+      stripFinalNewline: false,
+    });
+    return result.exitCode === 0;
+  } catch (error) {
+    return false;
   }
 };

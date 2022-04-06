@@ -2,11 +2,11 @@ import inquirer from "inquirer";
 
 import { migrations } from "./migrations";
 
-const resolveProjectDir = (input?: string): string => {
+export const resolveProjectDir = (input?: string): string => {
   return input || process.env.REMIX_ROOT || process.cwd();
 };
 
-const resolveMigrationId = async (input?: string): Promise<string> => {
+export const resolveMigrationId = async (input?: string): Promise<string> => {
   if (input !== undefined) return input;
   let { migrationId } = await inquirer.prompt<{ migrationId?: string }>([
     {
@@ -32,17 +32,4 @@ const resolveMigrationId = async (input?: string): Promise<string> => {
     process.exit(0);
   }
   return migrationId;
-};
-
-export const resolveInput = async ({
-  migrationId,
-  projectDir,
-}: {
-  migrationId?: string;
-  projectDir?: string;
-}) => {
-  return {
-    projectDir: resolveProjectDir(projectDir),
-    migrationId: await resolveMigrationId(migrationId),
-  };
 };

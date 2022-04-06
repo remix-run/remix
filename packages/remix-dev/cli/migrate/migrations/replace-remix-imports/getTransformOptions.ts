@@ -9,7 +9,7 @@ import type {
   Runtime,
 } from "./transform/mapNormalizedImports/packageExports";
 
-const getRuntime = async ({ scripts }: PackageJson): Promise<Runtime> => {
+const resolveRuntime = async ({ scripts }: PackageJson): Promise<Runtime> => {
   // match `remix setup <runtime>` in `postinstall` script
   let remixSetupMatch = scripts?.postinstall?.match(/remix setup (\w+)/);
   if (remixSetupMatch && remixSetupMatch.length >= 2) {
@@ -33,12 +33,17 @@ const getRuntime = async ({ scripts }: PackageJson): Promise<Runtime> => {
   return runtime;
 };
 
-const getAdapter = ({ dependencies }: PackageJson): Adapter | undefined => {
-  // find adapter in package.json dependencies
-  let matched = Object.keys(dependencies || {})
+export const findRemixDependencies = (
+  dependencies: PackageJson["dependencies"]
+): string[] => {
+  return Object.keys(dependencies || {})
     .filter((dep) => dep.startsWith("@remix-run/"))
-    .map((dep) => dep.replace("@remix-run/", ""))
-    .filter(isAdapter);
+    .map((dep) => dep.replace("@remix-run/", ""));
+};
+
+const resolveAdapter = ({ dependencies }: PackageJson): Adapter | undefined => {
+  // find adapter in package.json dependencies
+  let matched = findRemixDependencies(dependencies).filter(isAdapter);
 
   if (matched.length > 1) {
     console.error(
@@ -64,6 +69,6 @@ const getAdapter = ({ dependencies }: PackageJson): Adapter | undefined => {
 export const getTransformOptions = async (
   packageJson: PackageJson
 ): Promise<Options> => ({
-  adapter: getAdapter(packageJson),
-  runtime: await getRuntime(packageJson),
+  adapter: resolveAdapter(packageJson),
+  runtime: await resolveRuntime(packageJson),
 });
