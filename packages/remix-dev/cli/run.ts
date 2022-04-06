@@ -5,6 +5,7 @@ import meow from "meow";
 import inquirer from "inquirer";
 import semver from "semver";
 import fse from "fs-extra";
+import ora from "ora";
 
 import * as colors from "../colors";
 import * as commands from "./commands";
@@ -312,11 +313,13 @@ export async function run(argv: string[] = process.argv.slice(2)) {
           throw error;
         });
 
+      let installDeps = flags.install !== false && answers.install !== false;
+
       await commands.create({
         appTemplate: flags.template || answers.appTemplate,
         projectDir,
         remixVersion: flags.remixVersion,
-        installDeps: flags.install !== false && answers.install !== false,
+        installDeps,
         useTypeScript: flags.typescript !== false,
         githubToken: process.env.GITHUB_TOKEN,
       });
@@ -340,7 +343,30 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         ]);
 
         if (useTypeScript === false) {
+          let spinner = ora("Converting template to JavaScript…").start();
           await convertTemplateToJavaScript(projectDir);
+          spinner.stop();
+          spinner.clear();
+        }
+      }
+
+      let initScriptDir = path.join(projectDir, "remix.init");
+      let hasInitScript = await fse.pathExists(initScriptDir);
+      if (hasInitScript) {
+        if (installDeps) {
+          console.log("💿 Running remix.init script");
+          await commands.init(projectDir);
+          await fse.remove(initScriptDir);
+        } else {
+          console.log();
+          console.log(
+            colors.warning(
+              "💿 You've opted out of installing dependencies so we won't run the " +
+                "remix.init/index.js script for you just yet. Once you've installed " +
+                "dependencies, you can run it manually with `npx remix init`"
+            )
+          );
+          console.log();
         }
       }
 
