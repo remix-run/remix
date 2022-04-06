@@ -140,7 +140,7 @@ jobs:
 
   arc_deploy:
     name: Architect Deploy
-    needs: [build]
+    needs: [stable]
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
@@ -173,7 +173,7 @@ jobs:
 
   cf_pages_deploy:
     name: "CF Pages Deploy"
-    needs: [build]
+    needs: [stable]
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
@@ -207,7 +207,7 @@ jobs:
 
   cf_workers_deploy:
     name: "CF Workers Deploy"
-    needs: [build]
+    needs: [stable]
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
@@ -239,7 +239,7 @@ jobs:
 
   fly_deploy:
     name: "Fly Deploy"
-    needs: [build]
+    needs: [stable]
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
@@ -273,7 +273,7 @@ jobs:
 
   netlify_deploy:
     name: "Netlify Deploy"
-    needs: [build]
+    needs: [stable]
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
@@ -304,7 +304,7 @@ jobs:
 
   vercel_deploy:
     name: "Vercel Deploy"
-    needs: [build]
+    needs: [stable]
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
