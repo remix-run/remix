@@ -12,7 +12,7 @@ import { verifyLogin } from "~/models/user.server";
 import { validateEmail } from "~/utils";
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const userId = await getUserId(request);
+  let userId = await getUserId(request);
   if (userId) return redirect("/");
   return json({});
 };
@@ -25,11 +25,11 @@ interface ActionData {
 }
 
 export const action: ActionFunction = async ({ request }) => {
-  const formData = await request.formData();
-  const email = formData.get("email");
-  const password = formData.get("password");
-  const redirectTo = formData.get("redirectTo");
-  const remember = formData.get("remember");
+  let formData = await request.formData();
+  let email = formData.get("email");
+  let password = formData.get("password");
+  let redirectTo = formData.get("redirectTo");
+  let remember = formData.get("remember");
 
   if (!validateEmail(email)) {
     return json<ActionData>(
@@ -52,7 +52,7 @@ export const action: ActionFunction = async ({ request }) => {
     );
   }
 
-  const user = await verifyLogin(email, password);
+  let user = await verifyLogin(email, password);
 
   if (!user) {
     return json<ActionData>(
@@ -76,11 +76,11 @@ export const meta: MetaFunction = () => {
 };
 
 export default function LoginPage() {
-  const [searchParams] = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") || "/notes";
-  const actionData = useActionData() as ActionData;
-  const emailRef = React.useRef<HTMLInputElement>(null);
-  const passwordRef = React.useRef<HTMLInputElement>(null);
+  let [searchParams] = useSearchParams();
+  let redirectTo = searchParams.get("redirectTo") || "/notes";
+  let actionData = useActionData() as ActionData;
+  let emailRef = React.useRef<HTMLInputElement>(null);
+  let passwordRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     if (actionData?.errors?.email) {

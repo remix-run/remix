@@ -11,14 +11,14 @@ type LoaderData = {
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const userId = await requireUserId(request);
-  const noteListItems = await getNoteListItems({ userId });
+  let userId = await requireUserId(request);
+  let noteListItems = await getNoteListItems({ userId });
   return json<LoaderData>({ noteListItems });
 };
 
 export default function NotesPage() {
-  const data = useLoaderData() as LoaderData;
-  const user = useUser();
+  let data = useLoaderData() as LoaderData;
+  let user = useUser();
 
   return (
     <div className="flex h-full min-h-screen flex-col">

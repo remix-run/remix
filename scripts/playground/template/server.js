@@ -1,6 +1,5 @@
 let path = require("path");
 let express = require("express");
-let compression = require("compression");
 let morgan = require("morgan");
 let { createRequestHandler } = require("@remix-run/express");
 
@@ -17,7 +16,7 @@ app.all(
     ? createRequestHandler({ build: require(BUILD_DIR) })
     : (...args) => {
         purgeRequireCache();
-        const requestHandler = createRequestHandler({
+        let requestHandler = createRequestHandler({
           build: require(BUILD_DIR),
           mode: MODE,
         });
@@ -40,7 +39,7 @@ go();
 
 function purgeRequireCache() {
   // this is how we can update the app without a full restart
-  for (const key in require.cache) {
+  for (let key in require.cache) {
     if (
       key.startsWith(BUILD_DIR) ||
       key.includes("/@remix-run/") ||

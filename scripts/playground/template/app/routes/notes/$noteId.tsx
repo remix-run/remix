@@ -13,10 +13,10 @@ type LoaderData = {
 };
 
 export const loader: LoaderFunction = async ({ request, params }) => {
-  const userId = await requireUserId(request);
+  let userId = await requireUserId(request);
   invariant(params.noteId, "noteId not found");
 
-  const note = await getNote({ userId, id: params.noteId });
+  let note = await getNote({ userId, id: params.noteId });
   if (!note) {
     throw new Response("Not Found", { status: 404 });
   }
@@ -24,7 +24,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 };
 
 export const action: ActionFunction = async ({ request, params }) => {
-  const userId = await requireUserId(request);
+  let userId = await requireUserId(request);
   invariant(params.noteId, "noteId not found");
 
   await deleteNote({ userId, id: params.noteId });
@@ -33,7 +33,7 @@ export const action: ActionFunction = async ({ request, params }) => {
 };
 
 export default function NoteDetailsPage() {
-  const data = useLoaderData() as LoaderData;
+  let data = useLoaderData() as LoaderData;
 
   return (
     <div>
@@ -59,7 +59,7 @@ export function ErrorBoundary({ error }: { error: Error }) {
 }
 
 export function CatchBoundary() {
-  const caught = useCatch();
+  let caught = useCatch();
 
   if (caught.status === 404) {
     return <div>Note not found</div>;

@@ -12,8 +12,8 @@ import type { User } from "~/models/user.server";
 export function useMatchesData(
   id: string
 ): Record<string, unknown> | undefined {
-  const matchingRoutes = useMatches();
-  const route = useMemo(
+  let matchingRoutes = useMatches();
+  let route = useMemo(
     () => matchingRoutes.find((route) => route.id === id),
     [matchingRoutes, id]
   );
@@ -25,7 +25,7 @@ function isUser(user: any): user is User {
 }
 
 export function useOptionalUser(): User | undefined {
-  const data = useMatchesData("root");
+  let data = useMatchesData("root");
   if (!data || !isUser(data.user)) {
     return undefined;
   }
@@ -33,7 +33,7 @@ export function useOptionalUser(): User | undefined {
 }
 
 export function useUser(): User {
-  const maybeUser = useOptionalUser();
+  let maybeUser = useOptionalUser();
   if (!maybeUser) {
     throw new Error(
       "No user found in root loader, but user is required by useUser. If user is optional, try useOptionalUser instead."

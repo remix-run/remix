@@ -7,14 +7,14 @@
   "scripts": {
     "build": "run-s build:*",
     "build:css": "npm run generate:css -- --minify",
-    "build:remix": "remix build",
+    "build:remix": "node ./node_modules/@remix-run/dev/cli build",
     "dev": "run-p dev:*",
     "dev:server": "cross-env NODE_ENV=development node --inspect --require ./node_modules/dotenv/config ./server.js",
-    "dev:remix": "cross-env NODE_ENV=development remix watch",
+    "dev:remix": "cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/cli watch",
     "dev:css": "cross-env NODE_ENV=development npm run generate:css -- --watch",
     "generate:css": "tailwindcss -o ./app/styles/tailwind.css",
-    "setup": "prisma migrate dev && prisma db seed",
-    "start": "remix-serve build"
+    "setup": "prisma migrate dev",
+    "start": "cross-env NODE_ENV=production node --inspect --require ./node_modules/dotenv/config ./server.js"
   },
   "eslintIgnore": [
     "/node_modules",

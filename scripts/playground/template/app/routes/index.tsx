@@ -3,7 +3,7 @@ import { Link } from "@remix-run/react";
 import { useOptionalUser } from "~/utils";
 
 export default function Index() {
-  const user = useOptionalUser();
+  let user = useOptionalUser();
   return (
     <main>
       <div className="flex flex-col justify-center items-center gap-12 mt-12">

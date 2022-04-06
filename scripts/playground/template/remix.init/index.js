@@ -1,6 +1,7 @@
 const { execSync } = require("child_process");
 
 async function main({ rootDirectory }) {
+  execSync(`npm run build`, { stdio: "inherit", cwd: rootDirectory });
   execSync(`npm run setup`, { stdio: "inherit", cwd: rootDirectory });
 
   console.log(

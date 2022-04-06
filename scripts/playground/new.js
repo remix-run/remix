@@ -40,23 +40,30 @@ async function createNewProject(name = `playground-${Date.now()}`) {
   console.log("📥  Installing deps...");
   execSync(`npm install`, { stdio: "inherit", cwd: projectDir });
 
-  console.log("🚚  Copying remix deps...");
-  await fse.copy(
-    path.join(__dirname, "../../build/node_modules"),
-    path.join(projectDir, "node_modules"),
-    { overwrite: true }
-  );
+  let remixDeps = path.join(__dirname, "../../build/node_modules");
 
+  console.log("🏗  Building remix...");
+  execSync(`yarn rollup -c`, { stdio: "inherit" });
+
+  console.log("🚚  Copying remix deps...");
+  await fse.copy(remixDeps, path.join(projectDir, "node_modules"), {
+    overwrite: true,
+  });
+
+  let relativeProjectDir = projectDir.replace(process.cwd(), ".");
   let hasInit = await fse.exists(path.join(projectDir, "remix.init"));
   if (hasInit) {
     console.log("🎬  Running Remix Init...");
-    execSync(`npx remix init`, { stdio: "inherit", cwd: projectDir });
+    execSync(`node ./node_modules/@remix-run/dev/cli init`, {
+      stdio: "inherit",
+      cwd: projectDir,
+    });
   } else {
     console.log(
-      `ℹ️  No remix.init directory found in ${projectDir.replace(
-        process.cwd(),
-        "."
-      )}. Skipping init.`
+      `ℹ️  No remix.init directory found in ${relativeProjectDir}. Skipping init.`
     );
   }
+  console.log(
+    `✅  Done! Now in one terminal run \`yarn watch\` in the root of the remix repo and in another cd into ${relativeProjectDir} and run \`npm run dev\` and you should be set.`
+  );
 }
