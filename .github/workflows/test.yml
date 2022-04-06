@@ -30,14 +30,14 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "yarn"
 
-      - name: Cache yarn
+      - name: 🧶 Cache yarn
         uses: actions/cache@v3
         with:
           path: ~/.yarn
           key: yarn-${{ hashFiles('yarn.lock') }}
           restore-keys: yarn-
 
-      - name: Cache node_modules
+      - name: 📗 Cache node_modules
         uses: actions/cache@v3
         id: cache-node-modules
         with:
@@ -46,7 +46,7 @@ jobs:
             packages/*/node_modules
           key: modules-${{ hashFiles('yarn.lock') }}
 
-      - name: Install dependencies
+      - name: 📥 Install dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: yarn
 
