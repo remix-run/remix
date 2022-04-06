@@ -87,12 +87,12 @@ test.describe("prefetch=none", () => {
   test("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
-    expect((await page.$$("#nav link")).length).toBe(0);
+    expect(await page.locator("#nav link").count()).toBe(0);
   });
 
   test("does not add prefetch tags on hydration", async ({ page }) => {
     await app.goto(page, "/");
-    expect((await page.$$("#nav link")).length).toBe(0);
+    expect(await page.locator("#nav link").count()).toBe(0);
   });
 });
 
@@ -112,7 +112,7 @@ test.describe("prefetch=render", () => {
   test("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
-    expect((await page.$$("#nav link")).length).toBe(0);
+    expect(await page.locator("#nav link").count()).toBe(0);
   });
 
   test("adds prefetch tags on hydration", async ({ page }) => {
@@ -120,20 +120,20 @@ test.describe("prefetch=render", () => {
     // Both data and asset fetch for /with-loader
     await page.waitForSelector(
       "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']",
-      { state: "hidden" }
+      { state: "attached" }
     );
     await page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']",
-      { state: "hidden" }
+      { state: "attached" }
     );
     // Only asset fetch for /without-loader
     await page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']",
-      { state: "hidden" }
+      { state: "attached" }
     );
 
     // Ensure no other links in the #nav element
-    expect((await page.$$("#nav link")).length).toBe(3);
+    expect(await page.locator("#nav link").count()).toBe(3);
   });
 });
 
@@ -153,33 +153,34 @@ test.describe("prefetch=intent (hover)", () => {
   test("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
-    expect((await page.$$("#nav link")).length).toBe(0);
+    expect(await page.locator("#nav link").count()).toBe(0);
   });
 
   test("does not add prefetch tags on hydration", async ({ page }) => {
     await app.goto(page, "/");
-    expect((await page.$$("#nav link")).length).toBe(0);
+    expect(await page.locator("#nav link").count()).toBe(0);
   });
 
   test("adds prefetch tags on hover", async ({ page }) => {
+    await app.goto(page, "/");
     await page.hover("a[href='/with-loader']");
     await page.waitForSelector(
       "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']",
-      { state: "hidden" }
+      { state: "attached" }
     );
     // Check href prefix due to hashed filenames
     await page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']",
-      { state: "hidden" }
+      { state: "attached" }
     );
-    expect((await page.$$("#nav link")).length).toBe(2);
+    expect(await page.locator("#nav link").count()).toBe(2);
 
     await page.hover("a[href='/without-loader']");
     await page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']",
-      { state: "hidden" }
+      { state: "attached" }
     );
-    expect((await page.$$("#nav link")).length).toBe(3);
+    expect(await page.locator("#nav link").count()).toBe(3);
   });
 });
 
@@ -199,35 +200,36 @@ test.describe("prefetch=intent (focus)", () => {
   test("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
-    expect((await page.$$("#nav link")).length).toBe(0);
+    expect(await page.locator("#nav link").count()).toBe(0);
   });
 
   test("does not add prefetch tags on hydration", async ({ page }) => {
     await app.goto(page, "/");
-    expect((await page.$$("#nav link")).length).toBe(0);
+    expect(await page.locator("#nav link").count()).toBe(0);
   });
 
   test("adds prefetch tags on focus", async ({ page }) => {
+    await app.goto(page, "/");
     // This click is needed to transfer focus to the main window, allowing
     // subsequent focus events to fire
     await page.click("body");
     await page.focus("a[href='/with-loader']");
     await page.waitForSelector(
       "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']",
-      { state: "hidden" }
+      { state: "attached" }
     );
     // Check href prefix due to hashed filenames
     await page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/with-loader-']",
-      { state: "hidden" }
+      { state: "attached" }
     );
-    expect((await page.$$("#nav link")).length).toBe(2);
+    expect(await page.locator("#nav link").count()).toBe(2);
 
     await page.focus("a[href='/without-loader']");
     await page.waitForSelector(
       "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']",
-      { state: "hidden" }
+      { state: "attached" }
     );
-    expect((await page.$$("#nav link")).length).toBe(3);
+    expect(await page.locator("#nav link").count()).toBe(3);
   });
 });

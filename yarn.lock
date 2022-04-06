@@ -1542,10 +1542,10 @@
   resolved "https://registry.yarnpkg.com/@open-draft/until/-/until-1.0.3.tgz#db9cc719191a62e7d9200f6e7bab21c5b848adca"
   integrity sha512-Aq58f5HiWdyDlFffbbSjAlv596h/cOnt2DO1w3DOC7OJ5EHs0hd/nycJfiu9RJbT6Yk6F1knnRRXNSpxoIVZ9Q==
 
-"@playwright/test@1.20.1":
-  version "1.20.1"
-  resolved "https://registry.npmjs.org/@playwright/test/-/test-1.20.1.tgz#6c0891271ec267fd513afdb7c6b6466cabed594c"
-  integrity sha512-muk3KZXfA7sXTwUEXfL3m4tusj/MBGYjxIFmooi+F2Pf6hKjjVl4+8niy77Xujk4jpL7hZbbqq9v5bRl2m+C8Q==
+"@playwright/test@1.20.2":
+  version "1.20.2"
+  resolved "https://registry.npmjs.org/@playwright/test/-/test-1.20.2.tgz#0da1f24bf12d5a7249fa771a5344b76170f62653"
+  integrity sha512-unkLa+xe/lP7MVC0qpgadc9iSG1+LEyGBzlXhGS/vLGAJaSFs8DNfI89hNd5shHjWfNzb34JgPVnkRKCSNo5iw==
   dependencies:
     "@babel/code-frame" "7.16.7"
     "@babel/core" "7.16.12"
@@ -1576,7 +1576,7 @@
     ms "2.1.3"
     open "8.4.0"
     pirates "4.0.4"
-    playwright-core "1.20.1"
+    playwright-core "1.20.2"
     rimraf "3.0.2"
     source-map-support "0.4.18"
     stack-utils "2.0.5"
@@ -8412,10 +8412,10 @@ pkg-dir@^4.2.0:
   dependencies:
     find-up "^4.0.0"
 
-playwright-core@1.20.1:
-  version "1.20.1"
-  resolved "https://registry.npmjs.org/playwright-core/-/playwright-core-1.20.1.tgz#2d892964dd3ddc93f6e185be4b59621f3a339d4c"
-  integrity sha512-A8ZsZ09gaSbxP0UijoLyzp3LJc0kWMxDooLPi+mm4/5iYnTbd6PF5nKjoFw1a7KwjZIEgdhJduah4BcUIh+IPA==
+playwright-core@1.20.2:
+  version "1.20.2"
+  resolved "https://registry.npmjs.org/playwright-core/-/playwright-core-1.20.2.tgz#02336afd9a631d59a666f11f3492550201c6c31b"
+  integrity sha512-iV6+HftSPalynkq0CYJala1vaTOq7+gU9BRfKCdM9bAxNq/lFLrwbluug2Wt5OoUwbMABcnTThIEm3/qUhCdJQ==
   dependencies:
     colors "1.4.0"
     commander "8.3.0"
