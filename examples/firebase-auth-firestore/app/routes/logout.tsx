@@ -1,5 +1,7 @@
-import type { LoaderFunction } from "remix";
-import { Form, redirect } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
+import { Form } from "@remix-run/react";
+
 import { destroySession, getSession } from "~/sessions";
 
 export const action: LoaderFunction = async ({ request }) => {

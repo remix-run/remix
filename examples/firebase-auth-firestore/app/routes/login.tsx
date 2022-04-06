@@ -1,5 +1,7 @@
-import type { ActionFunction, LoaderFunction } from "remix";
-import { json, Link, redirect, useActionData } from "remix";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { Link, useActionData } from "@remix-run/react";
+
 import { checkSessionCookie, signIn } from "~/server/auth.server";
 import { commitSession, getSession } from "~/sessions";
 

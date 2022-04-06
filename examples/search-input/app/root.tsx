@@ -1,5 +1,4 @@
-import * as React from "react";
-import type { LinksFunction, MetaFunction } from "remix";
+import type { LinksFunction, MetaFunction } from "@remix-run/node";
 import {
   Links,
   LiveReload,
@@ -8,7 +7,8 @@ import {
   Scripts,
   ScrollRestoration,
   useCatch,
-} from "remix";
+} from "@remix-run/react";
+import * as React from "react";
 
 import globalStylesUrl from "~/styles/global.css";
 
