@@ -138,6 +138,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
       - name: 📦 Install latest version of npm
         run: npm install -g npm@latest
         working-directory: ./scripts/deployment-test
@@ -174,6 +177,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
       - name: 📦 Install latest version of npm
         run: npm install -g npm@latest
         working-directory: ./scripts/deployment-test
@@ -211,6 +217,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
       - name: 📦 Install latest version of npm
         run: npm install -g npm@latest
         working-directory: ./scripts/deployment-test
@@ -246,6 +255,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
       - name: 📦 Install latest version of npm
         run: npm install -g npm@latest
         working-directory: ./scripts/deployment-test
@@ -283,6 +295,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
       - name: 📦 Install latest version of npm
         run: npm install -g npm@latest
         working-directory: ./scripts/deployment-test
@@ -317,6 +332,9 @@ jobs:
           cache: "npm"
           cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
       - name: 📦 Install latest version of npm
         run: npm install -g npm@latest
         working-directory: ./scripts/deployment-test
