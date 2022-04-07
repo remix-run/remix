@@ -1,0 +1,18 @@
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+body {
+  font-family: sans-serif;
+}
+
+footer {
+  text-align: center;
+  color: #ccc;
+  padding-top: 80px;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}

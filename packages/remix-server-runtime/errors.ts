@@ -40,7 +40,7 @@
  * line.
  */
 
-export interface ComponentDidCatchEmulator {
+export interface AppState {
   error?: SerializedError;
   catch?: ThrownResponse;
   catchBoundaryRouteId: string | null;
@@ -65,6 +65,6 @@ export interface SerializedError {
 export async function serializeError(error: Error): Promise<SerializedError> {
   return {
     message: error.message,
-    stack: error.stack
+    stack: error.stack,
   };
 }

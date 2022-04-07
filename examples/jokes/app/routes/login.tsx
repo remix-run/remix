@@ -4,14 +4,14 @@ import { login, createUserSession, register } from "~/utils/session.server";
 import { db } from "~/utils/db.server";
 import stylesUrl from "../styles/login.css";
 
-export let meta: MetaFunction = () => {
+export const meta: MetaFunction = () => {
   return {
     title: "Remix Jokes | Login",
     description: "Login to submit your own jokes to Remix Jokes!",
   };
 };
 
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
@@ -27,6 +27,14 @@ function validatePassword(password: unknown) {
   }
 }
 
+function validateUrl(url: any) {
+  let urls = ["/jokes", "/", "https://remix.run"];
+  if (urls.includes(url)) {
+    return url;
+  }
+  return "/jokes";
+}
+
 type ActionData = {
   formError?: string;
   fieldErrors?: { username: string | undefined; password: string | undefined };
@@ -40,12 +48,12 @@ type ActionData = {
  */
 const badRequest = (data: ActionData) => json(data, { status: 400 });
 
-export let action: ActionFunction = async ({ request }) => {
-  let form = await request.formData();
-  let loginType = form.get("loginType");
-  let username = form.get("username");
-  let password = form.get("password");
-  let redirectTo = form.get("redirectTo") || "/jokes";
+export const action: ActionFunction = async ({ request }) => {
+  const form = await request.formData();
+  const loginType = form.get("loginType");
+  const username = form.get("username");
+  const password = form.get("password");
+  const redirectTo = validateUrl(form.get("redirectTo") || "/jokes");
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
@@ -55,8 +63,8 @@ export let action: ActionFunction = async ({ request }) => {
     return badRequest({ formError: `Form not submitted correctly.` });
   }
 
-  let fields = { loginType, username, password };
-  let fieldErrors = {
+  const fields = { loginType, username, password };
+  const fieldErrors = {
     username: validateUsername(username),
     password: validatePassword(password),
   };
@@ -76,7 +84,7 @@ export let action: ActionFunction = async ({ request }) => {
       return createUserSession(user.id, redirectTo);
     }
     case "register": {
-      let userExists = await db.user.findFirst({ where: { username } });
+      const userExists = await db.user.findFirst({ where: { username } });
       if (userExists) {
         return badRequest({
           fields,
@@ -99,18 +107,13 @@ export let action: ActionFunction = async ({ request }) => {
 };
 
 export default function Login() {
-  let actionData = useActionData<ActionData>();
-  let [searchParams] = useSearchParams();
+  const actionData = useActionData<ActionData>();
+  const [searchParams] = useSearchParams();
   return (
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <Form
-          method="post"
-          aria-describedby={
-            actionData?.formError ? "form-error-message" : undefined
-          }
-        >
+        <Form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -148,7 +151,7 @@ export default function Login() {
               name="username"
               defaultValue={actionData?.fields?.username}
               aria-invalid={Boolean(actionData?.fieldErrors?.username)}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.username ? "username-error" : undefined
               }
             />
@@ -170,7 +173,7 @@ export default function Login() {
               defaultValue={actionData?.fields?.password}
               type="password"
               aria-invalid={Boolean(actionData?.fieldErrors?.password)}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.password ? "password-error" : undefined
               }
             />

@@ -1,3 +1,5 @@
+// TODO: We eventually might not want to import anything directly from `history`
+// and leverage `react-router` here instead
 import { Action } from "history";
 import type { Location } from "history";
 
@@ -6,6 +8,10 @@ import type { RouteMatch } from "./routeMatching";
 import type { ClientRoute } from "./routes";
 import { matchClientRoutes } from "./routeMatching";
 import invariant from "./invariant";
+
+////////////////////////////////////////////////////////////////////////////////
+//#region Types and Utils
+////////////////////////////////////////////////////////////////////////////////
 
 export interface CatchData<T = any> {
   status: number;
@@ -168,31 +174,28 @@ export type TransitionStates = {
   };
 };
 
-export type SubmissionTransition =
-  | TransitionStates["SubmittingAction"]
-  | TransitionStates["LoadingAction"]
-  | TransitionStates["LoadingActionRedirect"]
-  | TransitionStates["SubmittingLoader"]
-  | TransitionStates["LoadingLoaderSubmissionRedirect"];
-
 export type Transition = TransitionStates[keyof TransitionStates];
 
 export type Redirects = {
   Loader: {
     isRedirect: true;
     type: "loader";
+    setCookie: boolean;
   };
   Action: {
     isRedirect: true;
     type: "action";
+    setCookie: boolean;
   };
   LoaderSubmission: {
     isRedirect: true;
     type: "loaderSubmission";
+    setCookie: boolean;
   };
   FetchAction: {
     isRedirect: true;
     type: "fetchAction";
+    setCookie: boolean;
   };
 };
 
@@ -214,7 +217,7 @@ type FetcherStates<TData = any> = {
     state: "submitting";
     type: "loaderSubmission";
     submission: LoaderSubmission;
-    data: undefined;
+    data: TData | undefined;
   };
   ReloadingAction: {
     state: "loading";
@@ -222,11 +225,17 @@ type FetcherStates<TData = any> = {
     submission: ActionSubmission;
     data: TData;
   };
+  LoadingActionRedirect: {
+    state: "loading";
+    type: "actionRedirect";
+    submission: ActionSubmission;
+    data: undefined;
+  };
   Loading: {
     state: "loading";
     type: "normalLoad";
     submission: undefined;
-    data: undefined;
+    data: TData | undefined;
   };
   Done: {
     state: "idle";
@@ -285,7 +294,6 @@ export type FetcherEvent = {
 
 export type DataEvent = NavigationEvent | FetcherEvent;
 
-////////////////////////////////////////////////////////////////////////////////
 function isActionSubmission(
   submission: Submission
 ): submission is ActionSubmission {
@@ -298,25 +306,80 @@ function isLoaderSubmission(
   return submission.method === "GET";
 }
 
-function isRedirectLocation(location: Location): location is Location {
-  return Boolean(location.state) && location.state.isRedirect;
+interface _Location extends Location {
+  state: {
+    isRedirect: boolean;
+    type: string;
+  } | null;
 }
 
-function isLoaderRedirectLocation(location: Location): location is Location {
+interface RedirectLocation extends _Location {
+  state: {
+    isRedirect: true;
+    type: string;
+    setCookie: boolean;
+  };
+}
+
+function isRedirectLocation(location: Location): location is RedirectLocation {
+  return (
+    Boolean(location.state) && (location as RedirectLocation).state.isRedirect
+  );
+}
+
+interface LoaderRedirectLocation extends RedirectLocation {
+  state: {
+    isRedirect: true;
+    type: "loader";
+    setCookie: boolean;
+  };
+}
+
+function isLoaderRedirectLocation(
+  location: Location
+): location is LoaderRedirectLocation {
   return isRedirectLocation(location) && location.state.type === "loader";
 }
 
-function isActionRedirectLocation(location: Location): location is Location {
+interface ActionRedirectLocation extends RedirectLocation {
+  state: {
+    isRedirect: true;
+    type: "action";
+    setCookie: boolean;
+  };
+}
+
+function isActionRedirectLocation(
+  location: Location
+): location is ActionRedirectLocation {
   return isRedirectLocation(location) && location.state.type === "action";
 }
 
-function isFetchActionRedirect(location: Location): location is Location {
+interface FetchActionRedirectLocation extends RedirectLocation {
+  state: {
+    isRedirect: true;
+    type: "fetchAction";
+    setCookie: boolean;
+  };
+}
+
+function isFetchActionRedirect(
+  location: Location
+): location is FetchActionRedirectLocation {
   return isRedirectLocation(location) && location.state.type === "fetchAction";
+}
+
+interface LoaderSubmissionRedirectLocation extends RedirectLocation {
+  state: {
+    isRedirect: true;
+    type: "loaderSubmission";
+    setCookie: boolean;
+  };
 }
 
 function isLoaderSubmissionRedirectLocation(
   location: Location
-): location is Location {
+): location is LoaderSubmissionRedirectLocation {
   return (
     isRedirectLocation(location) && location.state.type === "loaderSubmission"
   );
@@ -324,7 +387,7 @@ function isLoaderSubmissionRedirectLocation(
 
 export class TransitionRedirect {
   location: string;
-  constructor(location: Location | string) {
+  constructor(location: Location | string, public setCookie: boolean) {
     this.location =
       typeof location === "string"
         ? location
@@ -336,16 +399,20 @@ export const IDLE_TRANSITION: TransitionStates["Idle"] = {
   state: "idle",
   submission: undefined,
   location: undefined,
-  type: "idle"
+  type: "idle",
 };
 
 export const IDLE_FETCHER: FetcherStates["Idle"] = {
   state: "idle",
   type: "init",
   data: undefined,
-  submission: undefined
+  submission: undefined,
 };
+//#endregion
 
+////////////////////////////////////////////////////////////////////////////////
+//#region createTransitionManager
+////////////////////////////////////////////////////////////////////////////////
 export function createTransitionManager(init: TransitionManagerInit) {
   let { routes } = init;
 
@@ -354,6 +421,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let incrementingLoadId = 0;
   let navigationLoadId = -1;
   let fetchReloadIds = new Map<string, number>();
+  let fetchRedirectIds = new Set<string>();
 
   let matches = matchClientRoutes(routes, init.location);
 
@@ -364,8 +432,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
       {
         params: {},
         pathname: "",
-        route: routes[0]
-      }
+        route: routes[0],
+      },
     ];
   }
 
@@ -380,10 +448,19 @@ export function createTransitionManager(init: TransitionManagerInit) {
     matches,
     nextMatches: undefined,
     transition: IDLE_TRANSITION,
-    fetchers: new Map()
+    fetchers: new Map(),
   };
 
   function update(updates: Partial<TransitionManagerState>) {
+    if (updates.transition) {
+      console.debug(
+        `[transition] transition set to ${updates.transition.state}/${updates.transition.type}`
+      );
+      if (updates.transition === IDLE_TRANSITION) {
+        pendingNavigationController = undefined;
+      }
+    }
+
     state = Object.assign({}, state, updates);
     init.onChange(state);
   }
@@ -396,9 +473,18 @@ export function createTransitionManager(init: TransitionManagerInit) {
     return state.fetchers.get(key) || IDLE_FETCHER;
   }
 
+  function setFetcher(key: string, fetcher: Fetcher): void {
+    console.debug(
+      `[transition] fetcher set to ${fetcher.state}/${fetcher.type} (key: ${key})`
+    );
+    state.fetchers.set(key, fetcher);
+  }
+
   function deleteFetcher(key: string): void {
+    console.debug(`[transition] deleting fetcher (key: ${key})`);
     if (fetchControllers.has(key)) abortFetcher(key);
     fetchReloadIds.delete(key);
+    fetchRedirectIds.delete(key);
     state.fetchers.delete(key);
   }
 
@@ -407,6 +493,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       case "navigation": {
         let { action, location, submission } = event;
 
+        console.debug(
+          `[transition] navigation send() - ${action} ${location.pathname}`
+        );
         let matches = matchClientRoutes(routes, location);
 
         if (!matches) {
@@ -414,43 +503,55 @@ export function createTransitionManager(init: TransitionManagerInit) {
             {
               params: {},
               pathname: "",
-              route: routes[0]
-            }
+              route: routes[0],
+            },
           ];
+          console.debug("[transition]   handling not found navigation");
           await handleNotFoundNavigation(location, matches);
         } else if (!submission && isHashChangeOnly(location)) {
+          console.debug("[transition]   handling hash change");
           await handleHashChange(location, matches);
         }
         // back/forward button, treat all as normal navigation
         else if (action === Action.Pop) {
+          console.debug(
+            "[transition]   handling Action.Pop (back/forward button)"
+          );
           await handleLoad(location, matches);
         }
         // <Form method="post | put | delete | patch">
         else if (submission && isActionSubmission(submission)) {
+          console.debug("[transition]   handling form action submission");
           await handleActionSubmissionNavigation(location, submission, matches);
         }
         // <Form method="get"/>
         else if (submission && isLoaderSubmission(submission)) {
+          console.debug("[transition]   handling form loader submission");
           await handleLoaderSubmissionNavigation(location, submission, matches);
         }
         // action=>redirect
         else if (isActionRedirectLocation(location)) {
+          console.debug("[transition]   handling form action redirect");
           await handleActionRedirect(location, matches);
         }
         // <Form method="get"> --> loader=>redirect
         else if (isLoaderSubmissionRedirectLocation(location)) {
+          console.debug("[transition]   handling form loader redirect");
           await handleLoaderSubmissionRedirect(location, matches);
         }
         // loader=>redirect
         else if (isLoaderRedirectLocation(location)) {
+          console.debug("[transition]   handling loader redirect");
           await handleLoaderRedirect(location, matches);
         }
         // useSubmission()=>redirect
         else if (isFetchActionRedirect(location)) {
+          console.debug("[transition]   handling fetcher action redirect");
           await handleFetchActionRedirect(location, matches);
         }
         // <Link>, navigate()
         else {
+          console.debug("[transition]   handling link navigation");
           await handleLoad(location, matches);
         }
 
@@ -460,18 +561,33 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
       case "fetcher": {
         let { key, submission, href } = event;
+        console.debug(
+          `[transition] fetcher send() - ${event.submission?.method} ${href} (key: ${key})`
+        );
 
         let matches = matchClientRoutes(routes, href);
         invariant(matches, "No matches found");
-        let match = matches.slice(-1)[0];
-
         if (fetchControllers.has(key)) abortFetcher(key);
 
+        let match = getFetcherRequestMatch(
+          new URL(href, window.location.href),
+          matches
+        );
+
         if (submission && isActionSubmission(submission)) {
+          console.debug(
+            `[transition]   handling fetcher action submission (key: ${key})`
+          );
           await handleActionFetchSubmission(key, submission, match);
         } else if (submission && isLoaderSubmission(submission)) {
+          console.debug(
+            `[transition]   handling fetcher loader submission (key: ${key})`
+          );
           await handleLoaderFetchSubmission(href, key, submission, match);
         } else {
+          console.debug(
+            `[transition]   handling fetcher loader fetch (key: ${key})`
+          );
           await handleLoaderFetch(href, key, match);
         }
 
@@ -492,35 +608,77 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
   }
 
+  function isIndexRequestUrl(url: URL) {
+    for (let param of url.searchParams.getAll("index")) {
+      // only use bare `?index` params without a value
+      // ✅ /foo?index
+      // ✅ /foo?index&index=123
+      // ✅ /foo?index=123&index
+      // ❌ /foo?index=123
+      if (param === "") {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function getFetcherRequestMatch(
+    url: URL,
+    matches: RouteMatch<ClientRoute>[]
+  ) {
+    let match = matches.slice(-1)[0];
+
+    if (!isIndexRequestUrl(url) && match.route.index) {
+      return matches.slice(-2)[0];
+    }
+
+    return match;
+  }
+
   async function handleActionFetchSubmission(
     key: string,
     submission: ActionSubmission,
     match: ClientMatch
   ) {
+    let currentFetcher = state.fetchers.get(key);
+
     let fetcher: FetcherStates["SubmittingAction"] = {
       state: "submitting",
       type: "actionSubmission",
       submission,
-      data: undefined
+      data: currentFetcher?.data || undefined,
     };
-    state.fetchers.set(key, fetcher);
+    setFetcher(key, fetcher);
 
     update({ fetchers: new Map(state.fetchers) });
 
     let controller = new AbortController();
     fetchControllers.set(key, controller);
 
+    console.debug(`[transition] fetcher calling action (key: ${key})`);
     let result = await callAction(submission, match, controller.signal);
     if (controller.signal.aborted) {
+      console.debug(`[transition] fetcher action aborted (key: ${key})`);
       return;
     }
 
     if (isRedirectResult(result)) {
       let locationState: Redirects["FetchAction"] = {
         isRedirect: true,
-        type: "fetchAction"
+        type: "fetchAction",
+        setCookie: result.value.setCookie,
       };
+      fetchRedirectIds.add(key);
       init.onRedirect(result.value.location, locationState);
+      let loadingFetcher: FetcherStates["LoadingActionRedirect"] = {
+        state: "loading",
+        type: "actionRedirect",
+        submission,
+        data: undefined,
+      };
+      setFetcher(key, loadingFetcher);
+      update({ fetchers: new Map(state.fetchers) });
       return;
     }
 
@@ -536,9 +694,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state: "loading",
       type: "actionReload",
       data: result.value,
-      submission
+      submission,
     };
-    state.fetchers.set(key, loadFetcher);
+    setFetcher(key, loadFetcher);
 
     update({ fetchers: new Map(state.fetchers) });
 
@@ -549,20 +707,22 @@ export function createTransitionManager(init: TransitionManagerInit) {
     fetchReloadIds.set(key, loadId);
 
     let matchesToLoad = state.nextMatches || state.matches;
-    let hrefToLoad = createHref(state.transition.location || state.location);
 
+    console.debug(`[transition] fetcher calling loaders (key: ${key})`);
     let results = await callLoaders(
       state,
-      createUrl(hrefToLoad),
+      state.transition.location || state.location,
       matchesToLoad,
       controller.signal,
       maybeActionErrorResult,
       maybeActionCatchResult,
       submission,
+      match.route.id,
       loadFetcher
     );
 
     if (controller.signal.aborted) {
+      console.debug(`[transition] fetcher loaders aborted (key: ${key})`);
       return;
     }
 
@@ -573,7 +733,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     if (redirect) {
       let locationState: Redirects["Loader"] = {
         isRedirect: true,
-        type: "loader"
+        type: "loader",
+        setCookie: redirect.setCookie,
       };
       init.onRedirect(redirect.location, locationState);
       return;
@@ -585,22 +746,26 @@ export function createTransitionManager(init: TransitionManagerInit) {
       maybeActionErrorResult
     );
 
-    let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
-      results,
-      state.matches,
-      maybeActionCatchResult
-    );
+    let [catchVal, catchBoundaryId] =
+      (await findCatchAndBoundaryId(
+        results,
+        state.matches,
+        maybeActionCatchResult
+      )) || [];
 
     let doneFetcher: FetcherStates["Done"] = {
       state: "idle",
       type: "done",
       data: result.value,
-      submission: undefined
+      submission: undefined,
     };
-    state.fetchers.set(key, doneFetcher);
+    setFetcher(key, doneFetcher);
 
     let abortedKeys = abortStaleFetchLoads(loadId);
     if (abortedKeys) {
+      console.debug(
+        `[transition] marking aborted fetchers as done (keys: ${abortedKeys})`
+      );
       markFetchersDone(abortedKeys);
     }
 
@@ -611,6 +776,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       let { transition } = state;
       invariant(transition.state === "loading", "Expected loading transition");
 
+      console.debug(
+        `[transition] setting transition back to idle due to aborted navigation (key: ${key})`
+      );
       update({
         location: transition.location,
         matches: state.nextMatches,
@@ -622,7 +790,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
         actionData:
           transition.type === "actionReload" ? state.actionData : undefined,
         transition: IDLE_TRANSITION,
-        fetchers: new Map(state.fetchers)
+        fetchers: new Map(state.fetchers),
       });
     }
 
@@ -632,7 +800,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
         fetchers: new Map(state.fetchers),
         error,
         errorBoundaryId,
-        loaderData: makeLoaderData(state, results, matchesToLoad)
+        loaderData: makeLoaderData(state, results, matchesToLoad),
       });
     }
   }
@@ -653,9 +821,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
         state: "idle",
         type: "done",
         data: fetcher.data,
-        submission: undefined
+        submission: undefined,
       };
-      state.fetchers.set(key, doneFetcher);
+      setFetcher(key, doneFetcher);
     }
   }
 
@@ -681,13 +849,15 @@ export function createTransitionManager(init: TransitionManagerInit) {
     submission: LoaderSubmission,
     match: ClientMatch
   ) {
+    let currentFetcher = state.fetchers.get(key);
     let fetcher: FetcherStates["SubmittingLoader"] = {
       state: "submitting",
       type: "loaderSubmission",
       submission,
-      data: undefined
+      data: currentFetcher?.data || undefined,
     };
-    state.fetchers.set(key, fetcher);
+
+    setFetcher(key, fetcher);
     update({ fetchers: new Map(state.fetchers) });
 
     let controller = new AbortController();
@@ -696,13 +866,15 @@ export function createTransitionManager(init: TransitionManagerInit) {
     fetchControllers.delete(key);
 
     if (controller.signal.aborted) {
+      console.debug(`[transition] fetcher loader aborted (key: ${key})`);
       return;
     }
 
     if (isRedirectResult(result)) {
       let locationState: Redirects["Loader"] = {
         isRedirect: true,
-        type: "loader"
+        type: "loader",
+        setCookie: result.value.setCookie,
       };
       init.onRedirect(result.value.location, locationState);
       return;
@@ -720,9 +892,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state: "idle",
       type: "done",
       data: result.value,
-      submission: undefined
+      submission: undefined,
     };
-    state.fetchers.set(key, doneFetcher);
+    setFetcher(key, doneFetcher);
 
     update({ fetchers: new Map(state.fetchers) });
   }
@@ -732,14 +904,23 @@ export function createTransitionManager(init: TransitionManagerInit) {
     key: string,
     match: ClientMatch
   ) {
+    if (typeof AbortController === "undefined") {
+      throw new Error(
+        "handleLoaderFetch was called during the server render, but it shouldn't be. " +
+          "You are likely calling useFetcher.load() in the body of your component. " +
+          "Try moving it to a useEffect or a callback."
+      );
+    }
+    let currentFetcher = state.fetchers.get(key);
+
     let fetcher: FetcherStates["Loading"] = {
       state: "loading",
       type: "normalLoad",
       submission: undefined,
-      data: undefined
+      data: currentFetcher?.data || undefined,
     };
 
-    state.fetchers.set(key, fetcher);
+    setFetcher(key, fetcher);
     update({ fetchers: new Map(state.fetchers) });
 
     let controller = new AbortController();
@@ -752,7 +933,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     if (isRedirectResult(result)) {
       let locationState: Redirects["Loader"] = {
         isRedirect: true,
-        type: "loader"
+        type: "loader",
+        setCookie: result.value.setCookie,
       };
       init.onRedirect(result.value.location, locationState);
       return;
@@ -770,9 +952,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state: "idle",
       type: "done",
       data: result.value,
-      submission: undefined
+      submission: undefined,
     };
-    state.fetchers.set(key, doneFetcher);
+    setFetcher(key, doneFetcher);
 
     update({ fetchers: new Map(state.fetchers) });
   }
@@ -782,6 +964,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     key: string,
     result: DataResult
   ) {
+    // TODO: revisit this if submission is correct after review
     if (isCatchResult(result)) {
       let catchBoundaryId = findNearestCatchBoundary(match, state.matches);
       state.fetchers.delete(key);
@@ -791,9 +974,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
         catch: {
           data: result.value.data,
           status: result.value.status,
-          statusText: result.value.statusText
+          statusText: result.value.statusText,
         },
-        catchBoundaryId
+        catchBoundaryId,
       });
       return true;
     }
@@ -811,7 +994,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       update({
         fetchers: new Map(state.fetchers),
         error: result.value,
-        errorBoundaryId
+        errorBoundaryId,
       });
       return true;
     }
@@ -827,7 +1010,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state: "loading",
       type: "normalLoad",
       submission: undefined,
-      location
+      location,
     };
     update({ transition, nextMatches: matches });
 
@@ -844,10 +1027,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
       catch: {
         data: null,
         status: 404,
-        statusText: "Not Found"
+        statusText: "Not Found",
       },
       catchBoundaryId,
-      transition: IDLE_TRANSITION
+      transition: IDLE_TRANSITION,
     });
   }
 
@@ -862,7 +1045,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state: "submitting",
       type: "actionSubmission",
       submission,
-      location
+      location,
     };
 
     update({ transition, nextMatches: matches });
@@ -870,14 +1053,18 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     pendingNavigationController = controller;
 
+    // Create a local copy we can mutate for proper determination of the acton
+    // to run on layout/index routes.  We do not want to mutate the eventual
+    // matches used for revalidation
+    let actionMatches = matches;
     if (
-      !isIndexRequestAction(submission.action) &&
-      matches[matches.length - 1].route.id.endsWith("/index")
+      !isIndexRequestUrl(createUrl(submission.action)) &&
+      actionMatches[matches.length - 1].route.index
     ) {
-      matches = matches.slice(0, -1);
+      actionMatches = actionMatches.slice(0, -1);
     }
 
-    let leafMatch = matches.slice(-1)[0];
+    let leafMatch = actionMatches.slice(-1)[0];
     let result = await callAction(submission, leafMatch, controller.signal);
 
     if (controller.signal.aborted) {
@@ -887,39 +1074,40 @@ export function createTransitionManager(init: TransitionManagerInit) {
     if (isRedirectResult(result)) {
       let locationState: Redirects["Action"] = {
         isRedirect: true,
-        type: "action"
+        type: "action",
+        setCookie: result.value.setCookie,
       };
       init.onRedirect(result.value.location, locationState);
       return;
     }
 
+    let catchVal, catchBoundaryId;
     if (isCatchResult(result)) {
-      let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
-        [result],
-        matches,
-        result
-      );
-      update({
-        transition: IDLE_TRANSITION,
-        catch: catchVal,
-        catchBoundaryId
-      });
-      return;
+      [catchVal, catchBoundaryId] =
+        (await findCatchAndBoundaryId([result], actionMatches, result)) || [];
     }
 
     let loadTransition: TransitionStates["LoadingAction"] = {
       state: "loading",
       type: "actionReload",
       submission,
-      location
+      location,
     };
 
     update({
       transition: loadTransition,
-      actionData: { [leafMatch.route.id]: result.value }
+      actionData: { [leafMatch.route.id]: result.value },
     });
 
-    await loadPageData(location, matches, submission, result);
+    await loadPageData(
+      location,
+      matches,
+      submission,
+      leafMatch.route.id,
+      result,
+      catchVal,
+      catchBoundaryId
+    );
   }
 
   async function handleLoaderSubmissionNavigation(
@@ -932,7 +1120,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state: "submitting",
       type: "loaderSubmission",
       submission,
-      location
+      location,
     };
     update({ transition, nextMatches: matches });
     await loadPageData(location, matches, submission);
@@ -944,7 +1132,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state: "loading",
       type: "normalLoad",
       submission: undefined,
-      location
+      location,
     };
     update({ transition, nextMatches: matches });
     // Force async so UI code doesn't have to special case hash changes not
@@ -955,7 +1143,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     update({
       location,
       matches,
-      transition: IDLE_TRANSITION
+      transition: IDLE_TRANSITION,
     });
   }
 
@@ -965,7 +1153,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state: "loading",
       type: "normalLoad",
       submission: undefined,
-      location
+      location,
     };
     update({ transition, nextMatches: matches });
     await loadPageData(location, matches);
@@ -980,7 +1168,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state: "loading",
       type: "normalRedirect",
       submission: undefined,
-      location
+      location,
     };
     update({ transition, nextMatches: matches });
     await loadPageData(location, matches);
@@ -1000,7 +1188,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state: "loading",
       type: "loaderSubmissionRedirect",
       submission,
-      location: location
+      location: location,
     };
     update({ transition, nextMatches: matches });
     await loadPageData(location, matches, submission);
@@ -1015,7 +1203,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state: "loading",
       type: "fetchActionRedirect",
       submission: undefined,
-      location
+      location,
     };
     update({ transition, nextMatches: matches });
     await loadPageData(location, matches);
@@ -1037,7 +1225,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state: "loading",
       type: "actionRedirect",
       submission,
-      location
+      location,
     };
     update({ transition, nextMatches: matches });
     await loadPageData(location, matches, submission);
@@ -1054,7 +1242,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     location: Location,
     matches: ClientMatch[],
     submission?: Submission,
-    actionResult?: DataResult
+    submissionRouteId?: string,
+    actionResult?: DataResult,
+    catchVal?: CatchData<any>,
+    catchBoundaryId?: string | null
   ) {
     let maybeActionErrorResult =
       actionResult && isErrorResult(actionResult) ? actionResult : undefined;
@@ -1066,41 +1257,52 @@ export function createTransitionManager(init: TransitionManagerInit) {
     pendingNavigationController = controller;
     navigationLoadId = ++incrementingLoadId;
 
+    console.debug("[transition] calling loaders for loadPageData");
     let results = await callLoaders(
       state,
-      createUrl(createHref(location)),
+      location,
       matches,
       controller.signal,
       maybeActionErrorResult,
       maybeActionCatchResult,
-      submission
+      submission,
+      submissionRouteId,
+      undefined,
+      catchBoundaryId
     );
 
     if (controller.signal.aborted) {
+      console.debug("[transition] transition loaders aborted");
       return;
     }
 
     let redirect = findRedirect(results);
     if (redirect) {
+      console.debug(
+        `[transition] transition loaders redirected to ${redirect.location}`
+      );
       // loader redirected during an action reload, treat it like an
       // actionRedirect instead so that all the loaders get called again and the
       // submission sticks around for optimistic/pending UI.
       if (state.transition.type === "actionReload") {
         let locationState: Redirects["Action"] = {
           isRedirect: true,
-          type: "action"
+          type: "action",
+          setCookie: redirect.setCookie,
         };
         init.onRedirect(redirect.location, locationState);
       } else if (state.transition.type === "loaderSubmission") {
         let locationState: Redirects["LoaderSubmission"] = {
           isRedirect: true,
-          type: "loaderSubmission"
+          type: "loaderSubmission",
+          setCookie: redirect.setCookie,
         };
         init.onRedirect(redirect.location, locationState);
       } else {
         let locationState: Redirects["Loader"] = {
           isRedirect: true,
-          type: "loader"
+          type: "loader",
+          setCookie: redirect.setCookie,
         };
         init.onRedirect(redirect.location, locationState);
       }
@@ -1113,14 +1315,19 @@ export function createTransitionManager(init: TransitionManagerInit) {
       maybeActionErrorResult
     );
 
-    let [catchVal, catchBoundaryId] = await findCatchAndBoundaryId(
+    [catchVal, catchBoundaryId] = (await findCatchAndBoundaryId(
       results,
       matches,
       maybeActionErrorResult
-    );
+    )) || [catchVal, catchBoundaryId];
+
+    markFetchRedirectsDone();
 
     let abortedIds = abortStaleFetchLoads(navigationLoadId);
     if (abortedIds) {
+      console.debug(
+        `[transition] marking aborted fetchers as done (keys: ${abortedIds})`
+      );
       markFetchersDone(abortedIds);
     }
 
@@ -1135,19 +1342,36 @@ export function createTransitionManager(init: TransitionManagerInit) {
       actionData:
         state.transition.type === "actionReload" ? state.actionData : undefined,
       transition: IDLE_TRANSITION,
-      fetchers: abortedIds ? new Map(state.fetchers) : state.fetchers
+      fetchers: abortedIds ? new Map(state.fetchers) : state.fetchers,
     });
   }
 
   function abortNormalNavigation() {
-    pendingNavigationController?.abort();
+    if (pendingNavigationController) {
+      console.debug(`[transition] aborting pending navigation`);
+      pendingNavigationController.abort();
+    }
   }
 
   function abortFetcher(key: string) {
+    console.debug(`[transition] aborting fetcher (key: ${key})`);
     let controller = fetchControllers.get(key);
     invariant(controller, `Expected fetch controller: ${key}`);
     controller.abort();
     fetchControllers.delete(key);
+  }
+
+  function markFetchRedirectsDone(): void {
+    let doneKeys = [];
+    for (let key of fetchRedirectIds) {
+      let fetcher = state.fetchers.get(key);
+      invariant(fetcher, `Expected fetcher: ${key}`);
+      if (fetcher.type === "actionRedirect") {
+        fetchRedirectIds.delete(key);
+        doneKeys.push(key);
+      }
+    }
+    markFetchersDone(doneKeys);
   }
 
   return {
@@ -1158,46 +1382,41 @@ export function createTransitionManager(init: TransitionManagerInit) {
     dispose,
     get _internalFetchControllers() {
       return fetchControllers;
-    }
+    },
   };
 }
+//#endregion
 
 ////////////////////////////////////////////////////////////////////////////////
-function isIndexRequestAction(action: string) {
-  let indexRequest = false;
-
-  let searchParams = new URLSearchParams(action.split("?", 2)[1] || "");
-  for (let param of searchParams.getAll("index")) {
-    if (!param) {
-      indexRequest = true;
-    }
-  }
-
-  return indexRequest;
-}
-
+//#region createTransitionManager sub-functions
+////////////////////////////////////////////////////////////////////////////////
 async function callLoaders(
   state: TransitionManagerState,
-  url: URL,
+  location: Location,
   matches: ClientMatch[],
   signal: AbortSignal,
   actionErrorResult?: DataErrorResult,
   actionCatchResult?: DataCatchResult,
   submission?: Submission,
-  fetcher?: Fetcher
+  submissionRouteId?: string,
+  fetcher?: Fetcher,
+  catchBoundaryId?: string | null
 ): Promise<DataResult[]> {
+  let url = createUrl(createHref(location));
   let matchesToLoad = filterMatchesToLoad(
     state,
-    url,
+    location,
     matches,
     actionErrorResult,
     actionCatchResult,
     submission,
-    fetcher
+    submissionRouteId,
+    fetcher,
+    catchBoundaryId
   );
 
   return Promise.all(
-    matchesToLoad.map(match => callLoader(match, url, signal))
+    matchesToLoad.map((match) => callLoader(match, url, signal))
   );
 }
 
@@ -1217,19 +1436,12 @@ async function callAction(
   match: ClientMatch,
   signal: AbortSignal
 ): Promise<DataResult> {
-  if (!match.route.action) {
-    throw new Error(
-      `Route "${match.route.id}" does not have an action, but you are trying ` +
-        `to submit to it. To fix this, please add an \`action\` function to the route`
-    );
-  }
-
   try {
     let value = await match.route.action({
       url: createUrl(submission.action),
       params: match.params,
       submission,
-      signal
+      signal,
     });
     return { match, value };
   } catch (error) {
@@ -1239,13 +1451,37 @@ async function callAction(
 
 function filterMatchesToLoad(
   state: TransitionManagerState,
-  url: URL,
+  location: Location,
   matches: ClientMatch[],
   actionErrorResult?: DataErrorResult,
   actionCatchResult?: DataCatchResult,
   submission?: Submission,
-  fetcher?: Fetcher
+  submissionRouteId?: string,
+  fetcher?: Fetcher,
+  catchBoundaryId?: string | null
 ): ClientMatch[] {
+  // Filter out all routes below the problematic route as they aren't going
+  // to render so we don't need to load them.
+  if (
+    catchBoundaryId ||
+    (submissionRouteId && (actionCatchResult || actionErrorResult))
+  ) {
+    let foundProblematicRoute = false;
+    matches = matches.filter((match) => {
+      if (foundProblematicRoute) {
+        return false;
+      }
+      if (
+        match.route.id === submissionRouteId ||
+        match.route.id === catchBoundaryId
+      ) {
+        foundProblematicRoute = true;
+        return false;
+      }
+      return true;
+    });
+  }
+
   let isNew = (match: ClientMatch, index: number) => {
     // [a] -> [a, b]
     if (!state.matches[index]) return true;
@@ -1265,6 +1501,8 @@ function filterMatchesToLoad(
     );
   };
 
+  let url = createUrl(createHref(location));
+
   let filterByRouteProps = (match: ClientMatch, index: number) => {
     if (!match.route.loader) {
       return false;
@@ -1280,7 +1518,7 @@ function filterMatchesToLoad(
         prevUrl,
         url,
         submission,
-        params: match.params
+        params: match.params,
       });
     }
 
@@ -1289,7 +1527,7 @@ function filterMatchesToLoad(
 
   let isInRootCatchBoundary = state.matches.length === 1;
   if (isInRootCatchBoundary) {
-    return matches.filter(match => !!match.route.loader);
+    return matches.filter((match) => !!match.route.loader);
   }
 
   if (fetcher?.type === "actionReload") {
@@ -1301,7 +1539,9 @@ function filterMatchesToLoad(
     // clicked the same link, resubmitted a GET form
     createHref(url) === createHref(state.location) ||
     // search affects all loaders
-    url.searchParams.toString() !== state.location.search
+    url.searchParams.toString() !== state.location.search.substring(1) ||
+    // a cookie was set
+    (location.state as any)?.setCookie
   ) {
     return matches.filter(filterByRouteProps);
   }
@@ -1314,7 +1554,9 @@ function filterMatchesToLoad(
 
     return (
       match.route.loader &&
-      (isNew(match, index) || matchPathChanged(match, index))
+      (isNew(match, index) ||
+        matchPathChanged(match, index) ||
+        (location.state as any)?.setCookie)
     );
   });
 }
@@ -1340,7 +1582,7 @@ async function findCatchAndBoundaryId(
   results: DataResult[],
   matches: ClientMatch[],
   actionCatchResult?: DataCatchResult
-): Promise<[CatchData, string | null] | [undefined, undefined]> {
+): Promise<[CatchData, string | null] | null> {
   let loaderCatchResult: DataCatchResult | undefined;
 
   for (let result of results) {
@@ -1353,7 +1595,7 @@ async function findCatchAndBoundaryId(
   let extractCatchData = async (res: CatchValue) => ({
     status: res.status,
     statusText: res.statusText,
-    data: res.data
+    data: res.data,
   });
 
   // Weird case where action threw, and then a parent loader ALSO threw, we
@@ -1369,7 +1611,7 @@ async function findCatchAndBoundaryId(
     return [await extractCatchData(loaderCatchResult.value), boundaryId];
   }
 
-  return [undefined, undefined];
+  return null;
 }
 
 function findErrorAndBoundaryId(
@@ -1480,3 +1722,4 @@ function isErrorResult(result: DataResult) {
 function createUrl(href: string) {
   return new URL(href, window.location.origin);
 }
+//#endregion

@@ -1,0 +1,65 @@
+.ui--combobox {
+  position: relative;
+  --combobox-option-height: var(
+    --form-field-height,
+    calc((var(--spaces-01) * 2) + var(--spaces-06))
+  );
+}
+
+.ui--combobox__popover {
+  display: block;
+  position: absolute;
+  top: calc(var(--form-field-height, 0) + 5px);
+  left: 0;
+  right: 0;
+  border: 1px solid var(--colors-gray-09);
+  background: var(--colors-gray-02);
+  font-size: var(--font-sizes-md);
+  z-index: 10;
+  border-radius: 4px;
+  overflow: hidden;
+  overflow-y: auto;
+  max-height: calc(var(--combobox-option-height) * 6);
+}
+
+.ui--combobox:where([data-expanded]):focus-within .ui--combobox__popover {
+  outline: 2px solid var(--colors-blue-08);
+  outline-offset: 0;
+}
+
+.ui--combobox__list {
+  list-style: none;
+  white-space: nowrap;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+.ui--combobox__option {
+  display: flex;
+  font-family: var(--fonts-sans);
+  cursor: pointer;
+  align-items: center;
+  padding-right: var(--spaces-03);
+  padding-left: var(--spaces-03);
+  height: var(--combobox-option-height);
+  background-color: var(--colors-gray-02);
+  user-select: none;
+}
+
+.ui--combobox__option:where([aria-selected="true"]) {
+  background: var(--colors-blue-05);
+}
+
+.ui--combobox__option:hover {
+  background: var(--colors-blue-10);
+  color: var(--colors-white);
+}
+
+.ui--combobox__option:where([aria-selected="true"]):hover {
+  background: var(--colors-blue-11);
+}
+
+.ui--combobox__option [data-suggested-value] {
+  font-weight: bold;
+}

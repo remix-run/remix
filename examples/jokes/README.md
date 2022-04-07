@@ -1,4 +1,10 @@
-# Welcome to Remix!
+# Remix Jokes!
+
+So great, it's funny!
+
+Production deploy here: https://remix-jokes.lol
+
+Tutorial here: https://rmx.as/jokes
 
 This example demonstrates some of the basic features of Remix, including:
 
@@ -16,7 +22,7 @@ This example demonstrates some of the basic features of Remix, including:
 - Resource Routes
 - Deployment
 
-This is the finished version of [the tutorial](https://remix.run/docs/tutorials/jokes)
+This is the finished version of [the tutorial](https://remix.run/tutorials/jokes)
 
 - [Remix Docs](https://remix.run/docs)
 
@@ -26,10 +32,11 @@ From your terminal:
 
 ```sh
 npm install
+npx prisma migrate dev
 npm run dev
 ```
 
-This starts your app in development mode, rebuilding assets on file changes.
+This prepares the local dev database and starts your app in development mode, rebuilding assets on file changes.
 
 ## Deployment
 
@@ -37,6 +44,12 @@ First, build your app for production:
 
 ```sh
 npm run build
+```
+
+Then apply any database changes:
+
+```sh
+npx prisma migrate deploy
 ```
 
 Then run the app in production mode:
@@ -49,4 +62,4 @@ npm start
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
-[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/jokes)
+[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/jokes)

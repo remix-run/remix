@@ -1,4 +1,5 @@
 import * as React from "react";
+import type { LinksFunction, MetaFunction } from "remix";
 import {
   Link,
   Links,
@@ -8,9 +9,8 @@ import {
   Scripts,
   ScrollRestoration,
   useCatch,
-  useLocation
+  useLocation,
 } from "remix";
-import type { LinksFunction } from "remix";
 
 import deleteMeRemixStyles from "~/styles/demos/remix.css";
 import globalStylesUrl from "~/styles/global.css";
@@ -24,17 +24,22 @@ import darkStylesUrl from "~/styles/dark.css";
  *
  * https://remix.run/api/app#links
  */
-export let links: LinksFunction = () => {
+export const links: LinksFunction = () => {
   return [
     { rel: "stylesheet", href: globalStylesUrl },
     {
       rel: "stylesheet",
       href: darkStylesUrl,
-      media: "(prefers-color-scheme: dark)"
+      media: "(prefers-color-scheme: dark)",
     },
-    { rel: "stylesheet", href: deleteMeRemixStyles }
+    { rel: "stylesheet", href: deleteMeRemixStyles },
   ];
 };
+
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 /**
  * The root module's default export is a component that renders the current
@@ -53,7 +58,7 @@ export default function App() {
 
 function Document({
   children,
-  title
+  title,
 }: {
   children: React.ReactNode;
   title?: string;
@@ -61,8 +66,6 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         {title ? <title>{title}</title> : null}
         <Meta />
         <Links />
@@ -72,7 +75,7 @@ function Document({
         <RouteChangeAnnouncement />
         <ScrollRestoration />
         <Scripts />
-        {process.env.NODE_ENV === "development" && <LiveReload />}
+        <LiveReload />
       </body>
     </html>
   );
@@ -114,7 +117,7 @@ function Layout({ children }: React.PropsWithChildren<{}>) {
 }
 
 export function CatchBoundary() {
-  let caught = useCatch();
+  const caught = useCatch();
 
   let message;
   switch (caught.status) {
@@ -195,15 +198,15 @@ function RemixLogo(props: React.ComponentPropsWithoutRef<"svg">) {
  * Provides an alert for screen reader users when the route changes.
  */
 const RouteChangeAnnouncement = React.memo(() => {
-  let [hydrated, setHydrated] = React.useState(false);
-  let [innerHtml, setInnerHtml] = React.useState("");
-  let location = useLocation();
+  const [hydrated, setHydrated] = React.useState(false);
+  const [innerHtml, setInnerHtml] = React.useState("");
+  const location = useLocation();
 
   React.useEffect(() => {
     setHydrated(true);
   }, []);
 
-  let firstRenderRef = React.useRef(true);
+  const firstRenderRef = React.useRef(true);
   React.useEffect(() => {
     // Skip the first render because we don't want an announcement on the
     // initial page load.
@@ -212,7 +215,7 @@ const RouteChangeAnnouncement = React.memo(() => {
       return;
     }
 
-    let pageTitle =
+    const pageTitle =
       location.pathname === "/" ? "Remix demo home page" : document.title;
     setInnerHtml(`Navigated to ${pageTitle}`);
   }, [location.pathname]);
@@ -239,10 +242,11 @@ const RouteChangeAnnouncement = React.memo(() => {
         position: "absolute",
         width: "1px",
         whiteSpace: "nowrap",
-        wordWrap: "normal"
+        wordWrap: "normal",
       }}
     >
       {innerHtml}
     </div>
   );
 });
+RouteChangeAnnouncement.displayName = "RouteChangeAnnouncement";

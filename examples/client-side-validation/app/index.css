@@ -1,0 +1,47 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: Cambria, Cochin, Georgia, Times, "Times New Roman", serif;
+  max-width: 100%;
+  width: 480px;
+  margin: auto;
+}
+
+.form-control {
+  margin-bottom: 0.5rem;
+}
+
+.form-control > label {
+  display: block;
+}
+
+.form-control em {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="number"],
+textarea,
+fieldset {
+  width: 100%;
+  border: 1px solid #333;
+  box-sizing: border-box;
+}
+
+input:invalid,
+textarea:invalid {
+  box-shadow: 0 0 5px 1px red;
+}
+
+.result {
+  width: 100%;
+  word-wrap: normal;
+  white-space: pre-line;
+  padding: 1rem;
+  background-color: aquamarine;
+  box-sizing: border-box;
+}

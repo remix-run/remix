@@ -15,7 +15,7 @@ Your testing framework should provide you with a hook or location to polyfill gl
 ```ts
 import { installGlobals } from "@remix-run/node";
 
-// This installs globals such as "fetch", "Response", "Request" and "Headers.
+// This installs globals such as "fetch", "Response", "Request" and "Headers".
 installGlobals();
 ```
 
