@@ -253,6 +253,18 @@ export function RemixRoute({ id }: { id: string }) {
   let location = useLocation();
   let { routeData, routeModules, appState } = useRemixEntryContext();
 
+  // This checks prevent cryptic error messages such as: 'Cannot read properties of undefined (reading 'root')'
+  invariant(
+    routeData,
+    "Cannot initialize 'routeData'. This normally occurs when you have server code in your client modules.\n" +
+      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
+  );
+  invariant(
+    routeModules,
+    "Cannot initialize 'routeModules'. This normally occurs when you have server code in your client modules.\n" +
+      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
+  );
+
   let data = routeData[id];
   let { default: Component, CatchBoundary, ErrorBoundary } = routeModules[id];
   let element = Component ? <Component /> : <DefaultRouteComponent id={id} />;
@@ -1387,8 +1399,10 @@ export const LiveReload =
     ? () => null
     : function LiveReload({
         port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
+        nonce = undefined,
       }: {
         port?: number;
+        nonce?: string;
       }) {
         let setupLiveReload = ((port: number) => {
           let protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -1414,9 +1428,10 @@ export const LiveReload =
 
         return (
           <script
+            nonce={nonce}
             suppressHydrationWarning
             dangerouslySetInnerHTML={{
-              __html: `(${setupLiveReload})(${JSON.stringify(port)})`,
+              __html: `(${setupLiveReload})(${port})`,
             }}
           />
         );
