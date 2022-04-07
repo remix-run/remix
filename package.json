@@ -15,6 +15,7 @@
     "test:integration": "playwright test --config ./integration/playwright.config.ts",
     "pretest:integration": "rollup -c",
     "bug-report-test": "playwright test --config ./integration/jest.config.ts integration/bug-report-test.ts",
+    "playground:new": "node ./scripts/playground/new.js",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
     "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx,.md .",

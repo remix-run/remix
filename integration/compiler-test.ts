@@ -57,9 +57,20 @@ test.describe("compiler", () => {
             return <div id="esm-only-pkg">{esmOnlyPkg}</div>;
           }
         `,
+        "app/routes/esm-only-exports-pkg.jsx": js`
+          import esmOnlyPkg from "esm-only-exports-pkg";
+
+          export default function EsmOnlyPkg() {
+            return <div id="esm-only-exports-pkg">{esmOnlyPkg}</div>;
+          }
+        `,
         "remix.config.js": js`
+          let { getDependenciesToBundle } = require("@remix-run/dev");
           module.exports = {
-            serverDependenciesToBundle: ["esm-only-pkg"],
+            serverDependenciesToBundle: [
+              "esm-only-pkg",
+              ...getDependenciesToBundle("esm-only-exports-pkg")
+            ],
           };
         `,
         "node_modules/esm-only-pkg/package.json": `{
@@ -70,6 +81,17 @@ test.describe("compiler", () => {
         }`,
         "node_modules/esm-only-pkg/esm-only-pkg.js": js`
           export default "esm-only-pkg";
+        `,
+        "node_modules/esm-only-exports-pkg/package.json": `{
+          "name": "esm-only-exports-pkg",
+          "version": "1.0.0",
+          "type": "module",
+          "exports": {
+            ".": "./esm-only-exports-pkg.js"
+          }
+        }`,
+        "node_modules/esm-only-exports-pkg/esm-only-exports-pkg.js": js`
+          export default "esm-only-exports-pkg";
         `,
       },
     });
@@ -134,5 +156,14 @@ test.describe("compiler", () => {
     expect(res.status()).toBe(200); // server rendered fine
     // rendered the page instead of the error boundary
     expect(await app.getHtml(page, "#esm-only-pkg")).toMatchSnapshot();
+  });
+
+  it("allows consumption of ESM modules with exports in CJS builds with `serverDependenciesToBundle` and `getDependenciesToBundle`", async () => {
+    let res = await app.goto("/esm-only-exports-pkg", true);
+    expect(res.status()).toBe(200); // server rendered fine
+    // rendered the page instead of the error boundary
+    expect(await app.getHtml("#esm-only-exports-pkg")).toMatchInlineSnapshot(
+      `"<div id=\\"esm-only-exports-pkg\\">esm-only-exports-pkg</div>"`
+    );
   });
 });
