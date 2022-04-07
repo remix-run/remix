@@ -11,7 +11,7 @@ import { validateNewProjectPath, validateTemplate } from "./create";
 /**
  * Determine which package manager the user prefers.
  *
- * npm, Yarn and pNPM set the user agent environment variable
+ * npm, Yarn and pnpm set the user agent environment variable
  * that can be used to determine which package manager ran
  * the command.
  */

@@ -208,7 +208,7 @@ describe("remix CLI", () => {
       );
     });
 
-    it.skip("recognizes when pNPM was used to run the command", async () => {
+    it.skip("recognizes when pnpm was used to run the command", async () => {
       let projectDir = getProjectDir("pnpm-create");
       await execFile(
         "node",
