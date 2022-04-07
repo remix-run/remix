@@ -57,14 +57,13 @@ export async function init(projectDir: string) {
   let initScript = path.resolve(initScriptDir, "index.js");
 
   let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
-  let isDeno = fse.existsSync(path.join(projectDir, "deno.json"));
 
   if (await fse.pathExists(initScript)) {
     // TODO: check for npm/yarn/pnpm
     execSync("npm install", { stdio: "ignore", cwd: initScriptDir });
     let initFn = require(initScript);
     try {
-      await initFn({ rootDirectory: projectDir, isTypeScript, isDeno });
+      await initFn({ rootDirectory: projectDir, isTypeScript });
     } catch (error) {
       if (error instanceof Error) {
         error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${

@@ -325,9 +325,8 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       });
 
       let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
-      let isDeno = fse.existsSync(path.join(projectDir, "deno.json"));
 
-      if (flags.typescript === undefined && isTypeScript && !isDeno) {
+      if (flags.typescript === undefined && isTypeScript) {
         let { useTypeScript } = await inquirer.prompt<{
           useTypeScript: boolean;
         }>([
