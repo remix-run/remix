@@ -22,15 +22,24 @@ export async function prsMergedSinceLast({
   repo,
   lastRelease: lastReleaseVersion,
 }) {
+  // we don't want to comment about experimental releases
+  if (lastReleaseVersion.includes("experimental")) {
+    return [];
+  }
+
   let releases = await octokit.paginate(octokit.rest.repos.listReleases, {
     owner,
     repo,
     per_page: 100,
   });
 
-  let sorted = releases.sort((a, b) => {
-    return new Date(b.published_at) - new Date(a.published_at);
-  });
+  let sorted = releases
+    .sort((a, b) => {
+      return new Date(b.published_at) - new Date(a.published_at);
+    })
+    .filter((release) => {
+      return release.tag_name.includes("experimental") === false;
+    });
 
   let lastReleaseIndex = sorted.findIndex((release) => {
     return release.tag_name === lastReleaseVersion;
