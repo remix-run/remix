@@ -2,9 +2,10 @@ import { test, expect } from "@playwright/test";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 let fixture: Fixture;
-let app: AppFixture;
+let appFixture: AppFixture;
 
 let ROOT_BOUNDARY_TEXT = "ROOT_TEXT";
 let LAYOUT_BOUNDARY_TEXT = "LAYOUT_BOUNDARY_TEXT";
@@ -152,10 +153,10 @@ test.beforeAll(async () => {
     },
   });
 
-  app = await createAppFixture(fixture);
+  appFixture = await createAppFixture(fixture);
 });
 
-test.afterAll(async () => app.close());
+test.afterAll(async () => appFixture.close());
 
 test("renders root boundary with data available", async () => {
   let res = await fixture.requestDocument(NO_BOUNDARY_LOADER);
@@ -168,9 +169,10 @@ test("renders root boundary with data available", async () => {
 test("renders root boundary with data available on transition", async ({
   page,
 }) => {
-  await app.goto(page, "/");
-  await app.clickLink(page, NO_BOUNDARY_LOADER);
-  let html = await app.getHtml(page);
+  let app = new PlaywrightFixture(appFixture, page);
+  await app.goto("/");
+  await app.clickLink(NO_BOUNDARY_LOADER);
+  let html = await app.getHtml();
   expect(html).toMatch(ROOT_BOUNDARY_TEXT);
   expect(html).toMatch(ROOT_DATA);
 });
@@ -187,9 +189,10 @@ test("renders layout boundary with data available", async () => {
 test("renders layout boundary with data available on transition", async ({
   page,
 }) => {
-  await app.goto(page, "/");
-  await app.clickLink(page, HAS_BOUNDARY_LAYOUT_NESTED_LOADER);
-  let html = await app.getHtml(page);
+  let app = new PlaywrightFixture(appFixture, page);
+  await app.goto("/");
+  await app.clickLink(HAS_BOUNDARY_LAYOUT_NESTED_LOADER);
+  let html = await app.getHtml();
   expect(html).toMatch(ROOT_DATA);
   expect(html).toMatch(LAYOUT_BOUNDARY_TEXT);
   expect(html).toMatch(LAYOUT_DATA);
@@ -207,9 +210,10 @@ test("renders self boundary with layout data available", async () => {
 test("renders self boundary with layout data available on transition", async ({
   page,
 }) => {
-  await app.goto(page, "/");
-  await app.clickLink(page, HAS_BOUNDARY_NESTED_LOADER);
-  let html = await app.getHtml(page);
+  let app = new PlaywrightFixture(appFixture, page);
+  await app.goto("/");
+  await app.clickLink(HAS_BOUNDARY_NESTED_LOADER);
+  let html = await app.getHtml();
   expect(html).toMatch(ROOT_DATA);
   expect(html).toMatch(LAYOUT_DATA);
   expect(html).toMatch(OWN_BOUNDARY_TEXT);

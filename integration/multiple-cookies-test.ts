@@ -2,12 +2,13 @@ import { test, expect } from "@playwright/test";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 test.describe("pathless layout routes", () => {
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   test.beforeAll(async () => {
-    app = await createAppFixture(
+    appFixture = await createAppFixture(
       await createFixture({
         files: {
           "app/routes/index.jsx": js`
@@ -47,21 +48,23 @@ test.describe("pathless layout routes", () => {
   });
 
   test.afterAll(async () => {
-    await app.close();
+    await appFixture.close();
   });
 
   test("should get multiple cookies from the loader", async ({ page }) => {
-    let responses = app.collectResponses(page, (url) => url.pathname === "/");
-    await app.goto(page, "/");
+    let app = new PlaywrightFixture(appFixture, page);
+    let responses = app.collectResponses((url) => url.pathname === "/");
+    await app.goto("/");
     let setCookies = await responses[0].headerValues("set-cookie");
     expect(setCookies).toEqual(["foo=bar", "bar=baz"]);
     expect(responses).toHaveLength(1);
   });
 
   test("should get multiple cookies from the action", async ({ page }) => {
-    await app.goto(page, "/");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
     // do this after the first request so that it doesnt appear in our next assertions
-    let responses = app.collectResponses(page, (url) => url.pathname === "/");
+    let responses = app.collectResponses((url) => url.pathname === "/");
     await page.click("button[type=submit]");
     await page.waitForSelector(`[data-testid="action-success"]`);
     let setCookies = await responses[0].headerValues("set-cookie");

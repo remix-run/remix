@@ -4,10 +4,11 @@ import { test, expect } from "@playwright/test";
 
 import { createFixture, createAppFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 test.describe("file-uploads", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   test.beforeAll(async () => {
     fixture = await createFixture({
@@ -65,14 +66,15 @@ test.describe("file-uploads", () => {
       },
     });
 
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
   test.afterAll(async () => {
-    await app.close();
+    await appFixture.close();
   });
 
   test("handles files under upload size limit", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     let uploadFile = path.join(
       fixture.projectDir,
       "toUpload",
@@ -84,10 +86,10 @@ test.describe("file-uploads", () => {
       .catch(() => {});
     await fs.writeFile(uploadFile, uploadData, "utf8");
 
-    await app.goto(page, "/file-upload");
-    await app.uploadFile(page, "#file", uploadFile);
-    await app.clickSubmitButton(page, "/file-upload");
-    expect(await app.getHtml(page, "pre")).toBe(`<pre>
+    await app.goto("/file-upload");
+    await app.uploadFile("#file", uploadFile);
+    await app.clickSubmitButton("/file-upload");
+    expect(await app.getHtml("pre")).toBe(`<pre>
 {
   "name": "underLimit.txt",
   "size": 1000
@@ -102,6 +104,7 @@ test.describe("file-uploads", () => {
   });
 
   test("rejects files over upload size limit", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     let uploadFile = path.join(fixture.projectDir, "toUpload", "overLimit.txt");
     let uploadData = Array(10_001).fill("a").join(""); // 10.000001KB
     await fs
@@ -109,10 +112,10 @@ test.describe("file-uploads", () => {
       .catch(() => {});
     await fs.writeFile(uploadFile, uploadData, "utf8");
 
-    await app.goto(page, "/file-upload");
-    await app.uploadFile(page, "#file", uploadFile);
-    await app.clickSubmitButton(page, "/file-upload");
-    expect(await app.getHtml(page, "pre")).toBe(`<pre>
+    await app.goto("/file-upload");
+    await app.uploadFile("#file", uploadFile);
+    await app.clickSubmitButton("/file-upload");
+    expect(await app.getHtml("pre")).toBe(`<pre>
 {
   "errorMessage": "Field \\"file\\" exceeded upload size of 10000 bytes."
 }</pre

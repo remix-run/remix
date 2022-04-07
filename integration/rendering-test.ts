@@ -1,16 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import {
-  createAppFixture,
-  createFixture,
-  js,
-  selectHtml,
-} from "./helpers/create-fixture";
+import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture, selectHtml } from "./helpers/playwright-fixture";
 
 test.describe("rendering", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   test.beforeAll(async () => {
     fixture = await createFixture({
@@ -45,10 +41,10 @@ test.describe("rendering", () => {
       },
     });
 
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => app.close());
+  test.afterAll(async () => appFixture.close());
 
   test("server renders matching routes", async () => {
     let res = await fixture.requestDocument("/");
@@ -60,8 +56,9 @@ test.describe("rendering", () => {
   });
 
   test("hydrates", async ({ page }) => {
-    await app.goto(page, "/");
-    expect(await app.getHtml(page, "#content")).toBe(`<div id="content">
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    expect(await app.getHtml("#content")).toBe(`<div id="content">
   <h1>Root</h1>
   <h2>Index</h2>
 </div>`);

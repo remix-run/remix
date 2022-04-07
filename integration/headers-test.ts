@@ -9,10 +9,10 @@ test.describe("headers export", () => {
   let ACTION_HKEY = "X-Test-Action";
   let ACTION_HVALUE = "SUCCESS";
 
-  let fixture: Fixture;
+  let appFixture: Fixture;
 
   test.beforeAll(async () => {
-    fixture = await createFixture({
+    appFixture = await createFixture({
       files: {
         "app/root.jsx": js`
           import { json } from "@remix-run/node";
@@ -82,12 +82,15 @@ test.describe("headers export", () => {
   });
 
   test("can use `action` headers", async () => {
-    let response = await fixture.postDocument("/action", new URLSearchParams());
+    let response = await appFixture.postDocument(
+      "/action",
+      new URLSearchParams()
+    );
     expect(response.headers.get(ACTION_HKEY)).toBe(ACTION_HVALUE);
   });
 
   test("can use the loader headers when all routes have loaders", async () => {
-    let response = await fixture.requestDocument("/");
+    let response = await appFixture.requestDocument("/");
     expect(response.headers.get(ROOT_HEADER_KEY)).toBe(ROOT_HEADER_VALUE);
   });
 

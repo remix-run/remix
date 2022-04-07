@@ -2,10 +2,11 @@ import { test, expect } from "@playwright/test";
 
 import { createFixture, createAppFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 test.describe("compiler", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   test.beforeAll(async () => {
     fixture = await createFixture({
@@ -96,39 +97,38 @@ test.describe("compiler", () => {
       },
     });
 
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => app.close());
+  test.afterAll(async () => appFixture.close());
 
   test("removes server code with `*.server` files", async ({ page }) => {
-    let res = await app.goto(page, "/", true);
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/", true);
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml(page, "#index")).toBe(
-      '<div id="index">true</div>'
-    );
+    expect(await app.getHtml("#index")).toBe('<div id="index">true</div>');
   });
 
   test("removes server code with `*.client` files", async ({ page }) => {
-    let res = await app.goto(page, "/", true);
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/", true);
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml(page, "#index")).toBe(
-      '<div id="index">true</div>'
-    );
+    expect(await app.getHtml("#index")).toBe('<div id="index">true</div>');
   });
 
   test("removes node built-ins from client bundle when used in just loader", async ({
     page,
   }) => {
-    let res = await app.goto(page, "/built-ins", true);
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/built-ins", true);
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml(page, "#built-ins")).toBe(
+    expect(await app.getHtml("#built-ins")).toBe(
       '<div id="built-ins">test/file.txt</div>'
     );
 
@@ -142,11 +142,12 @@ test.describe("compiler", () => {
   test("bundles node built-ins polyfill for client bundle when used in client code", async ({
     page,
   }) => {
-    let res = await app.goto(page, "/built-ins-polyfill", true);
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/built-ins-polyfill", true);
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml(page, "#built-ins-polyfill")).toBe(
+    expect(await app.getHtml("#built-ins-polyfill")).toBe(
       '<div id="built-ins-polyfill">test/file.txt</div>'
     );
 
@@ -160,10 +161,11 @@ test.describe("compiler", () => {
   test("allows consumption of ESM modules in CJS builds with `serverDependenciesToBundle`", async ({
     page,
   }) => {
-    let res = await app.goto(page, "/esm-only-pkg", true);
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/esm-only-pkg", true);
     expect(res.status()).toBe(200); // server rendered fine
     // rendered the page instead of the error boundary
-    expect(await app.getHtml(page, "#esm-only-pkg")).toBe(
+    expect(await app.getHtml("#esm-only-pkg")).toBe(
       '<div id="esm-only-pkg">esm-only-pkg</div>'
     );
   });
@@ -171,10 +173,11 @@ test.describe("compiler", () => {
   test("allows consumption of ESM modules with exports in CJS builds with `serverDependenciesToBundle` and `getDependenciesToBundle`", async ({
     page,
   }) => {
-    let res = await app.goto(page, "/esm-only-exports-pkg", true);
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/esm-only-exports-pkg", true);
     expect(res.status()).toBe(200); // server rendered fine
     // rendered the page instead of the error boundary
-    expect(await app.getHtml(page, "#esm-only-exports-pkg")).toBe(
+    expect(await app.getHtml("#esm-only-exports-pkg")).toBe(
       '<div id="esm-only-exports-pkg">esm-only-exports-pkg</div>'
     );
   });

@@ -2,9 +2,10 @@ import { test, expect } from "@playwright/test";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 let fixture: Fixture;
-let app: AppFixture;
+let appFixture: AppFixture;
 
 let BANNER_MESSAGE = "you do not have permission to view /protected";
 
@@ -111,15 +112,16 @@ test.beforeAll(async () => {
   });
 
   // This creates an interactive app using puppeteer.
-  app = await createAppFixture(fixture);
+  appFixture = await createAppFixture(fixture);
 });
 
-test.afterAll(() => app.close());
+test.afterAll(() => appFixture.close());
 
 test("should revalidate when cookie is set on redirect from loader", async ({
   page,
 }) => {
-  await app.goto(page, "/");
-  await app.clickLink(page, "/protected");
-  expect(await app.getHtml(page)).toMatch(BANNER_MESSAGE);
+  let app = new PlaywrightFixture(appFixture, page);
+  await app.goto("/");
+  await app.clickLink("/protected");
+  expect(await app.getHtml()).toMatch(BANNER_MESSAGE);
 });

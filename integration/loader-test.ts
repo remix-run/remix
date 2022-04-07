@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 test.describe("loader", () => {
   let fixture: Fixture;
@@ -65,12 +66,12 @@ test.describe("loader", () => {
 });
 
 test.describe("loader in an app", () => {
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   let HOME_PAGE_TEXT = "hello world";
 
   test.beforeAll(async () => {
-    app = await createAppFixture(
+    appFixture = await createAppFixture(
       await createFixture({
         files: {
           "app/root.jsx": js`
@@ -95,11 +96,12 @@ test.describe("loader in an app", () => {
   });
 
   test.afterAll(async () => {
-    await app.close();
+    await appFixture.close();
   });
 
   test("sends a redirect", async ({ page }) => {
-    await app.goto(page, "/redirect");
-    expect(await app.getHtml(page)).toMatch(HOME_PAGE_TEXT);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/redirect");
+    expect(await app.getHtml()).toMatch(HOME_PAGE_TEXT);
   });
 });

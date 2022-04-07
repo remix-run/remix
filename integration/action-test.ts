@@ -1,17 +1,13 @@
 import { test, expect } from "@playwright/test";
 import path from "path";
 
-import {
-  createFixture,
-  createAppFixture,
-  selectHtml,
-  js,
-} from "./helpers/create-fixture";
+import { createFixture, createAppFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture, selectHtml } from "./helpers/playwright-fixture";
 
 test.describe("actions", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   let FIELD_NAME = "message";
   let WAITING_VALUE = "Waiting...";
@@ -164,11 +160,11 @@ test.describe("actions", () => {
       },
     });
 
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
   test.afterAll(async () => {
-    await app.close();
+    await appFixture.close();
   });
 
   let logs: string[] = [];
@@ -210,13 +206,14 @@ test.describe("actions", () => {
   });
 
   test("is called on script transition POST requests", async ({ page }) => {
-    await app.goto(page, `/urlencoded`);
-    let html = await app.getHtml(page, "#text");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto(`/urlencoded`);
+    let html = await app.getHtml("#text");
     expect(html).toMatch(WAITING_VALUE);
 
     await page.click("button[type=submit]");
     await page.waitForSelector("#action-text");
-    html = await app.getHtml(page, "#text");
+    html = await app.getHtml("#text");
     expect(html).toMatch(SUBMITTED_VALUE);
   });
 
@@ -230,8 +227,9 @@ test.describe("actions", () => {
   test("redirects a thrown response on script transitions", async ({
     page,
   }) => {
-    await app.goto(page, `/${THROWS_REDIRECT}`);
-    await app.clickSubmitButton(page, `/${THROWS_REDIRECT}`);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto(`/${THROWS_REDIRECT}`);
+    await app.clickSubmitButton(`/${THROWS_REDIRECT}`);
     // TODO: These are failing but unsure why. Responses array is empty. Problem
     //       w/ Remix or with collectDataResponses?
     // let responses = app.collectDataResponses(); expect(responses.length).toBe(1);
@@ -239,17 +237,17 @@ test.describe("actions", () => {
     // expect(responses[0].status()).toBe(204);
 
     expect(new URL(page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
-    expect(await app.getHtml(page)).toMatch(PAGE_TEXT);
+    expect(await app.getHtml()).toMatch(PAGE_TEXT);
   });
 
   test("can upload file with JavaScript", async ({ page }) => {
-    await app.goto(page, `/${HAS_FILE_ACTIONS}`);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto(`/${HAS_FILE_ACTIONS}`);
 
-    let html = await app.getHtml(page, "#action-text");
+    let html = await app.getHtml("#action-text");
     expect(html).toMatch(WAITING_VALUE);
 
     await app.uploadFile(
-      page,
       "#file",
       path.resolve(__dirname, "assets/toupload.txt")
     );
@@ -257,7 +255,7 @@ test.describe("actions", () => {
     await page.click("button[type=submit]");
     await page.waitForSelector("#action-data");
 
-    html = await app.getHtml(page, "#action-text");
+    html = await app.getHtml("#action-text");
     expect(html).toMatch(ACTION_DATA_VALUE + " stuff");
   });
 
@@ -267,13 +265,13 @@ test.describe("actions", () => {
   test.skip("rejects too big of an upload with JavaScript", async ({
     page,
   }) => {
-    await app.goto(page, `/${HAS_FILE_ACTIONS}`);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto(`/${HAS_FILE_ACTIONS}`);
 
-    let html = await app.getHtml(page, "#action-text");
+    let html = await app.getHtml("#action-text");
     expect(html).toMatch(WAITING_VALUE);
 
     await app.uploadFile(
-      page,
       "#file",
       path.resolve(__dirname, "assets/touploadtoobig.txt")
     );
@@ -281,7 +279,7 @@ test.describe("actions", () => {
     await page.click("button[type=submit]");
     await page.waitForSelector("#actions-error-boundary");
 
-    let text = await app.getHtml(page, "#actions-error-text");
+    let text = await app.getHtml("#actions-error-text");
     expect(text).toMatch(
       `Field "file" exceeded upload size of ${MAX_FILE_UPLOAD_SIZE} bytes`
     );
@@ -298,13 +296,13 @@ test.describe("actions", () => {
     test.use({ javaScriptEnabled: false });
 
     test("can upload file", async ({ page }) => {
-      await app.goto(page, `/${HAS_FILE_ACTIONS}`);
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto(`/${HAS_FILE_ACTIONS}`);
 
-      let html = await app.getHtml(page, "#action-text");
+      let html = await app.getHtml("#action-text");
       expect(html).toMatch(WAITING_VALUE);
 
       await app.uploadFile(
-        page,
         "#file",
         path.resolve(__dirname, "assets/toupload.txt")
       );
@@ -317,25 +315,25 @@ test.describe("actions", () => {
       expect(response!.status()).toBe(200);
       expect(response!.headers()["x-test"]).toBe("works");
 
-      html = await app.getHtml(page, "#action-text");
+      html = await app.getHtml("#action-text");
       expect(html).toMatch(ACTION_DATA_VALUE + " stuff");
     });
 
     // TODO: figure out what the heck is wrong with this test...
     // "Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
     test.skip("rejects too big of an upload", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
       let logs: string[] = [];
       page.on("console", (msg) => {
         logs.push(msg.text());
       });
 
-      await app.goto(page, `/${HAS_FILE_ACTIONS}`);
+      await app.goto(`/${HAS_FILE_ACTIONS}`);
 
-      let html = await app.getHtml(page, "#action-text");
+      let html = await app.getHtml("#action-text");
       expect(html).toMatch(WAITING_VALUE);
 
       await app.uploadFile(
-        page,
         "#file",
         path.resolve(__dirname, "assets/touploadtoobig.txt")
       );
@@ -345,7 +343,7 @@ test.describe("actions", () => {
         page.click("#submit"),
       ]);
       expect(response!.status()).toBe(500);
-      let text = await app.getHtml(page, "#actions-error-text");
+      let text = await app.getHtml("#actions-error-text");
       let errorMessage = `Field "file" exceeded upload size of ${MAX_FILE_UPLOAD_SIZE} bytes`;
       expect(text).toMatch(errorMessage);
 

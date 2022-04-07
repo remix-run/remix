@@ -1,10 +1,11 @@
 import { test, expect } from "@playwright/test";
 
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 
 let fixture: Fixture;
-let app: AppFixture;
+let appFixture: AppFixture;
 
 ////////////////////////////////////////////////////////////////////////////////
 // 💿 👋 Hola! It's me, Dora the Remix Disc, I'm here to help you write a great
@@ -66,10 +67,10 @@ test.beforeAll(async () => {
   });
 
   // This creates an interactive app using puppeteer.
-  app = await createAppFixture(fixture);
+  appFixture = await createAppFixture(fixture);
 });
 
-test.afterAll(async () => app.close());
+test.afterAll(async () => appFixture.close());
 
 ////////////////////////////////////////////////////////////////////////////////
 // 💿 Almost done, now write your failing test case(s) down here Make sure to
@@ -77,14 +78,15 @@ test.afterAll(async () => app.close());
 ////////////////////////////////////////////////////////////////////////////////
 
 test("[description of what you expect it to do]", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
   expect(await response.text()).toMatch("pizza");
 
   // If you need to test interactivity use the `app`
-  await app.goto(page, "/");
-  await app.clickLink(page, "/burgers");
-  expect(await app.getHtml(page)).toMatch("cheeseburger");
+  await app.goto("/");
+  await app.clickLink("/burgers");
+  expect(await app.getHtml()).toMatch("cheeseburger");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!

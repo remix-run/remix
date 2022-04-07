@@ -1,16 +1,9 @@
 import { test, expect } from "@playwright/test";
 
-import {
-  createAppFixture,
-  createFixture,
-  js,
-  json,
-  mdx,
-} from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { createFixture, js, json, mdx } from "./helpers/create-fixture";
+import type { Fixture } from "./helpers/create-fixture";
 
 let fixture: Fixture;
-let app: AppFixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
@@ -107,11 +100,7 @@ test.beforeAll(async () => {
       `,
     },
   });
-
-  app = await createAppFixture(fixture);
 });
-
-test.afterAll(() => app.close());
 
 test("import internal library via alias other than ~", async () => {
   // test for https://github.com/remix-run/remix/issues/2298

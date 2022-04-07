@@ -1,16 +1,12 @@
 import { test, expect } from "@playwright/test";
 
-import {
-  createAppFixture,
-  createFixture,
-  getElement,
-  js,
-} from "./helpers/create-fixture";
+import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { getElement, PlaywrightFixture } from "./helpers/playwright-fixture";
 
 test.describe("Forms", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   let KEYBOARD_INPUT = "KEYBOARD_INPUT";
   let CHECKBOX_BUTTON = "CHECKBOX_BUTTON";
@@ -262,72 +258,79 @@ test.describe("Forms", () => {
       },
     });
 
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
   test.afterAll(async () => {
-    await app.close();
+    await appFixture.close();
   });
 
   test.describe("without JavaScript", () => {
     test.use({ javaScriptEnabled: false });
     test("posts to a loader", async ({ page }) => {
-      await app.goto(page, "/get-submission");
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/get-submission");
       await Promise.all([
         page.waitForNavigation(),
-        app.clickSubmitButton(page, "/get-submission", { wait: false }),
+        app.clickSubmitButton("/get-submission", { wait: false }),
       ]);
-      expect(await app.getHtml(page, "pre")).toMatch(CHEESESTEAK);
+      expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
     });
   });
 
   test.describe("with JavaScript", () => {
     test("posts to a loader", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
       // this indirectly tests that clicking SVG children in buttons works
-      await app.goto(page, "/get-submission");
-      await app.clickSubmitButton(page, "/get-submission");
-      expect(await app.getHtml(page, "pre")).toMatch(CHEESESTEAK);
+      await app.goto("/get-submission");
+      await app.clickSubmitButton("/get-submission");
+      expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
     });
   });
 
   test("posts to a loader with an <input name='action' />", async ({
     page,
   }) => {
-    await app.goto(page, "/get-submission");
-    await app.clickElement(page, `#${FORM_WITH_ACTION_INPUT} button`);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/get-submission");
+    await app.clickElement(`#${FORM_WITH_ACTION_INPUT} button`);
     await page.waitForLoadState("load");
-    expect(await app.getHtml(page, "pre")).toMatch(EAT);
+    expect(await app.getHtml("pre")).toMatch(EAT);
   });
 
   test("posts to a loader with button data with click", async ({ page }) => {
-    await app.goto(page, "/get-submission");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/get-submission");
     await Promise.all([
       page.waitForNavigation(),
-      app.clickElement(page, "#buttonWithValue"),
+      app.clickElement("#buttonWithValue"),
     ]);
-    expect(await app.getHtml(page, "pre")).toMatch(LAKSA);
+    expect(await app.getHtml("pre")).toMatch(LAKSA);
   });
 
   test("posts to a loader with button data with keyboard", async ({ page }) => {
-    await app.goto(page, "/get-submission");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/get-submission");
     await page.focus(`#${KEYBOARD_INPUT}`);
     await page.keyboard.press("Enter");
     await page.waitForLoadState("networkidle");
-    expect(await app.getHtml(page, "pre")).toMatch(LAKSA);
+    expect(await app.getHtml("pre")).toMatch(LAKSA);
   });
 
   test("posts with the correct checkbox data", async ({ page }) => {
-    await app.goto(page, "/get-submission");
-    await app.clickElement(page, `#${CHECKBOX_BUTTON}`);
-    expect(await app.getHtml(page, "pre")).toBe(
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/get-submission");
+    await app.clickElement(`#${CHECKBOX_BUTTON}`);
+    expect(await app.getHtml("pre")).toBe(
       `<pre>LUNCH=CHEESESTEAK&amp;LUNCH=LAKSA</pre>`
     );
   });
 
   test("posts button data from outside the form", async ({ page }) => {
-    await app.goto(page, "/get-submission");
-    await app.clickElement(page, `#${ORPHAN_BUTTON}`);
-    expect(await app.getHtml(page, "pre")).toMatch(SQUID_INK_HOTDOG);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/get-submission");
+    await app.clickElement(`#${ORPHAN_BUTTON}`);
+    expect(await app.getHtml("pre")).toMatch(SQUID_INK_HOTDOG);
   });
 
   test.describe("<Form> action", () => {
@@ -335,8 +338,9 @@ test.describe("Forms", () => {
       test("absolute action resolves relative to the root route", async ({
         page,
       }) => {
-        await app.goto(page, "/inbox");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/inbox");
+        let html = await app.getHtml();
         let el = getElement(html, `#${STATIC_ROUTE_ABSOLUTE_ACTION}`);
         expect(el.attr("action")).toMatch("/about");
       });
@@ -344,8 +348,9 @@ test.describe("Forms", () => {
       test("'.' action resolves relative to the current route", async ({
         page,
       }) => {
-        await app.goto(page, "/inbox");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/inbox");
+        let html = await app.getHtml();
         let el = getElement(html, `#${STATIC_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/inbox");
       });
@@ -353,8 +358,9 @@ test.describe("Forms", () => {
       test("'..' action resolves relative to the parent route", async ({
         page,
       }) => {
-        await app.goto(page, "/inbox");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/inbox");
+        let html = await app.getHtml();
         let el = getElement(html, `#${STATIC_ROUTE_PARENT_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
@@ -362,8 +368,9 @@ test.describe("Forms", () => {
       test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
         page,
       }) => {
-        await app.goto(page, "/inbox");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/inbox");
+        let html = await app.getHtml();
         let el = getElement(html, `#${STATIC_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
@@ -373,8 +380,9 @@ test.describe("Forms", () => {
       test("absolute action resolves relative to the root route", async ({
         page,
       }) => {
-        await app.goto(page, "/blog/abc");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog/abc");
+        let html = await app.getHtml();
         let el = getElement(html, `#${DYNAMIC_ROUTE_ABSOLUTE_ACTION}`);
         expect(el.attr("action")).toMatch("/about");
       });
@@ -382,8 +390,9 @@ test.describe("Forms", () => {
       test("'.' action resolves relative to the current route", async ({
         page,
       }) => {
-        await app.goto(page, "/blog/abc");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog/abc");
+        let html = await app.getHtml();
         let el = getElement(html, `#${DYNAMIC_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/blog/abc");
       });
@@ -391,8 +400,9 @@ test.describe("Forms", () => {
       test("'..' action resolves relative to the parent route", async ({
         page,
       }) => {
-        await app.goto(page, "/blog/abc");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog/abc");
+        let html = await app.getHtml();
         let el = getElement(html, `#${DYNAMIC_ROUTE_PARENT_ACTION}`);
         expect(el.attr("action")).toMatch("/blog");
       });
@@ -400,8 +410,9 @@ test.describe("Forms", () => {
       test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
         page,
       }) => {
-        await app.goto(page, "/blog/abc");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog/abc");
+        let html = await app.getHtml();
         let el = getElement(html, `#${DYNAMIC_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
@@ -411,8 +422,9 @@ test.describe("Forms", () => {
       test("absolute action resolves relative to the root route", async ({
         page,
       }) => {
-        await app.goto(page, "/blog");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog");
+        let html = await app.getHtml();
         let el = getElement(html, `#${INDEX_ROUTE_ABSOLUTE_ACTION}`);
         expect(el.attr("action")).toMatch("/about");
       });
@@ -420,8 +432,9 @@ test.describe("Forms", () => {
       test("'.' action resolves relative to the current route", async ({
         page,
       }) => {
-        await app.goto(page, "/blog");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog");
+        let html = await app.getHtml();
         let el = getElement(html, `#${INDEX_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/blog");
       });
@@ -429,8 +442,9 @@ test.describe("Forms", () => {
       test("'..' action resolves relative to the parent route", async ({
         page,
       }) => {
-        await app.goto(page, "/blog");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog");
+        let html = await app.getHtml();
         let el = getElement(html, `#${INDEX_ROUTE_PARENT_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
@@ -438,8 +452,9 @@ test.describe("Forms", () => {
       test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
         page,
       }) => {
-        await app.goto(page, "/blog");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog");
+        let html = await app.getHtml();
         let el = getElement(html, `#${INDEX_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
@@ -449,8 +464,9 @@ test.describe("Forms", () => {
       test("absolute action resolves relative to the root route", async ({
         page,
       }) => {
-        await app.goto(page, "/blog");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog");
+        let html = await app.getHtml();
         let el = getElement(html, `#${LAYOUT_ROUTE_ABSOLUTE_ACTION}`);
         expect(el.attr("action")).toMatch("/about");
       });
@@ -458,8 +474,9 @@ test.describe("Forms", () => {
       test("'.' action resolves relative to the current route", async ({
         page,
       }) => {
-        await app.goto(page, "/blog");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog");
+        let html = await app.getHtml();
         let el = getElement(html, `#${LAYOUT_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/blog");
       });
@@ -467,8 +484,9 @@ test.describe("Forms", () => {
       test("'..' action resolves relative to the parent route", async ({
         page,
       }) => {
-        await app.goto(page, "/blog");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog");
+        let html = await app.getHtml();
         let el = getElement(html, `#${LAYOUT_ROUTE_PARENT_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
@@ -476,8 +494,9 @@ test.describe("Forms", () => {
       test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
         page,
       }) => {
-        await app.goto(page, "/blog");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog");
+        let html = await app.getHtml();
         let el = getElement(html, `#${LAYOUT_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
@@ -487,8 +506,9 @@ test.describe("Forms", () => {
       test("absolute action resolves relative to the root route", async ({
         page,
       }) => {
-        await app.goto(page, "/projects/blarg");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/projects/blarg");
+        let html = await app.getHtml();
         let el = getElement(html, `#${SPLAT_ROUTE_ABSOLUTE_ACTION}`);
         expect(el.attr("action")).toMatch("/about");
       });
@@ -496,8 +516,9 @@ test.describe("Forms", () => {
       test("'.' action resolves relative to the current route", async ({
         page,
       }) => {
-        await app.goto(page, "/projects/blarg");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/projects/blarg");
+        let html = await app.getHtml();
         let el = getElement(html, `#${SPLAT_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/projects");
       });
@@ -505,8 +526,9 @@ test.describe("Forms", () => {
       test("'..' action resolves relative to the parent route", async ({
         page,
       }) => {
-        await app.goto(page, "/projects/blarg");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/projects/blarg");
+        let html = await app.getHtml();
         let el = getElement(html, `#${SPLAT_ROUTE_PARENT_ACTION}`);
         expect(el.attr("action")).toMatch("/projects");
       });
@@ -514,8 +536,9 @@ test.describe("Forms", () => {
       test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
         page,
       }) => {
-        await app.goto(page, "/projects/blarg");
-        let html = await app.getHtml(page);
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/projects/blarg");
+        let html = await app.getHtml();
         let el = getElement(html, `#${SPLAT_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });

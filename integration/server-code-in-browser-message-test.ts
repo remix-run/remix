@@ -7,9 +7,10 @@ import {
   json,
 } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 let fixture: Fixture;
-let app: AppFixture;
+let appFixture: AppFixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
@@ -47,14 +48,15 @@ test.beforeAll(async () => {
     },
   });
 
-  app = await createAppFixture(fixture);
+  appFixture = await createAppFixture(fixture);
 });
 
-test.afterAll(() => app.close());
+test.afterAll(() => appFixture.close());
 
 test.skip("should log relevant error message", async ({ page }) => {
-  await app.goto(page, "/");
-  expect(await app.getHtml(page)).toMatch(
+  let app = new PlaywrightFixture(appFixture, page);
+  await app.goto("/");
+  expect(await app.getHtml()).toMatch(
     "https://remix.run/pages/gotchas#server-code-in-client-bundles"
   );
 });

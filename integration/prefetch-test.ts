@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import type { RemixLinkProps } from "../build/node_modules/@remix-run/react/components";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 // Generate the test app using the given prefetch mode
 function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
@@ -75,14 +76,14 @@ function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
 
 test.describe("prefetch=none", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   test.beforeAll(async () => {
     fixture = await createFixture(fixtureFactory("none"));
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(() => app.close());
+  test.afterAll(() => appFixture.close());
 
   test("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
@@ -91,22 +92,23 @@ test.describe("prefetch=none", () => {
   });
 
   test("does not add prefetch tags on hydration", async ({ page }) => {
-    await app.goto(page, "/");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
     expect(await page.locator("#nav link").count()).toBe(0);
   });
 });
 
 test.describe("prefetch=render", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   test.beforeAll(async () => {
     fixture = await createFixture(fixtureFactory("render"));
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
   test.afterAll(async () => {
-    await app.close();
+    await appFixture.close();
   });
 
   test("does not render prefetch tags during SSR", async ({ page }) => {
@@ -116,7 +118,8 @@ test.describe("prefetch=render", () => {
   });
 
   test("adds prefetch tags on hydration", async ({ page }) => {
-    await app.goto(page, "/");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
     // Both data and asset fetch for /with-loader
     await page.waitForSelector(
       "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']",
@@ -139,15 +142,15 @@ test.describe("prefetch=render", () => {
 
 test.describe("prefetch=intent (hover)", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   test.beforeAll(async () => {
     fixture = await createFixture(fixtureFactory("intent"));
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
   test.afterAll(async () => {
-    await app.close();
+    await appFixture.close();
   });
 
   test("does not render prefetch tags during SSR", async ({ page }) => {
@@ -157,12 +160,14 @@ test.describe("prefetch=intent (hover)", () => {
   });
 
   test("does not add prefetch tags on hydration", async ({ page }) => {
-    await app.goto(page, "/");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
     expect(await page.locator("#nav link").count()).toBe(0);
   });
 
   test("adds prefetch tags on hover", async ({ page }) => {
-    await app.goto(page, "/");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
     await page.hover("a[href='/with-loader']");
     await page.waitForSelector(
       "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']",
@@ -186,15 +191,15 @@ test.describe("prefetch=intent (hover)", () => {
 
 test.describe("prefetch=intent (focus)", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   test.beforeAll(async () => {
     fixture = await createFixture(fixtureFactory("intent"));
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
   test.afterAll(async () => {
-    await app.close();
+    await appFixture.close();
   });
 
   test("does not render prefetch tags during SSR", async ({ page }) => {
@@ -204,12 +209,14 @@ test.describe("prefetch=intent (focus)", () => {
   });
 
   test("does not add prefetch tags on hydration", async ({ page }) => {
-    await app.goto(page, "/");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
     expect(await page.locator("#nav link").count()).toBe(0);
   });
 
   test("adds prefetch tags on focus", async ({ page }) => {
-    await app.goto(page, "/");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
     // This click is needed to transfer focus to the main window, allowing
     // subsequent focus events to fire
     await page.click("body");

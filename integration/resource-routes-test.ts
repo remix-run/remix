@@ -2,12 +2,13 @@ import { test, expect } from "@playwright/test";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 test.describe("loader in an app", () => {
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   test.beforeAll(async () => {
-    app = await createAppFixture(
+    appFixture = await createAppFixture(
       await createFixture({
         files: {
           "app/routes/index.jsx": js`
@@ -52,7 +53,7 @@ test.describe("loader in an app", () => {
   });
 
   test.afterAll(async () => {
-    await app.close();
+    await appFixture.close();
   });
 
   test.describe("with JavaScript", () => {
@@ -66,19 +67,22 @@ test.describe("loader in an app", () => {
 
   function runTests() {
     test("should redirect to redirected", async ({ page }) => {
-      await app.goto(page, "/");
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
       await page.click("a[href='/redirect']");
       await page.waitForSelector("[data-testid='redirected']");
     });
 
     test("should handle post to destination", async ({ page }) => {
-      await app.goto(page, "/");
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
       await page.click("button[type='submit']");
       await page.waitForSelector("[data-testid='redirect-destination']");
     });
 
     test("should handle reloadDocument to resource route", async ({ page }) => {
-      await app.goto(page, "/data.json");
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/data.json");
       expect(await page.content()).toContain('{"hello":"world"}');
     });
   }

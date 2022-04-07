@@ -2,10 +2,11 @@ import { test, expect } from "@playwright/test";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 test.describe("rendering", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   let PAGE = "page";
   let PAGE_TEXT = "PAGE_TEXT";
@@ -154,61 +155,65 @@ test.describe("rendering", () => {
       },
     });
 
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
   test.afterAll(async () => {
-    await app.close();
+    await appFixture.close();
   });
 
   test("calls all loaders for new routes", async ({ page }) => {
-    await app.goto(page, "/");
-    let responses = app.collectDataResponses(page);
-    await app.clickLink(page, `/${PAGE}`);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    let responses = app.collectDataResponses();
+    await app.clickLink(`/${PAGE}`);
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}`, `routes/${PAGE}/index`]);
 
-    let html = await app.getHtml(page, "main");
+    let html = await app.getHtml("main");
     expect(html).toMatch(PAGE_TEXT);
     expect(html).toMatch(PAGE_INDEX_TEXT);
   });
 
   test("calls only loaders for changing routes", async ({ page }) => {
-    await app.goto(page, `/${PAGE}`);
-    let responses = app.collectDataResponses(page);
-    await app.clickLink(page, `/${PAGE}/${CHILD}`);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto(`/${PAGE}`);
+    let responses = app.collectDataResponses();
+    await app.clickLink(`/${PAGE}/${CHILD}`);
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}/${CHILD}`]);
 
-    let html = await app.getHtml(page, "main");
+    let html = await app.getHtml("main");
     expect(html).toMatch(PAGE_TEXT);
     expect(html).toMatch(CHILD_TEXT);
   });
 
   test("loader redirect", async ({ page }) => {
-    await app.goto(page, "/");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
 
-    let responses = app.collectDataResponses(page);
-    await app.clickLink(page, `/${REDIRECT}`);
+    let responses = app.collectDataResponses();
+    await app.clickLink(`/${REDIRECT}`);
     expect(new URL(page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${REDIRECT}`, `routes/${PAGE}`, `routes/${PAGE}/index`]);
 
-    let html = await app.getHtml(page, "main");
+    let html = await app.getHtml("main");
     expect(html).toMatch(PAGE_TEXT);
     expect(html).toMatch(PAGE_INDEX_TEXT);
   });
 
   test("loader redirect with hash", async ({ page }) => {
-    await app.goto(page, "/");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
 
-    await app.clickLink(page, `/${REDIRECT_HASH}`);
+    await app.clickLink(`/${REDIRECT_HASH}`);
 
     let url = new URL(page.url());
     expect(url.pathname).toBe(`/${REDIRECT_TARGET}`);
@@ -216,18 +221,19 @@ test.describe("rendering", () => {
   });
 
   test("calls changing routes on POP", async ({ page }) => {
-    await app.goto(page, `/${PAGE}`);
-    await app.clickLink(page, `/${PAGE}/${CHILD}`);
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto(`/${PAGE}`);
+    await app.clickLink(`/${PAGE}/${CHILD}`);
 
-    let responses = app.collectDataResponses(page);
-    await app.goBack(page);
+    let responses = app.collectDataResponses();
+    await app.goBack();
     await page.waitForLoadState("networkidle");
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}/index`]);
 
-    let html = await app.getHtml(page, "main");
+    let html = await app.getHtml("main");
     expect(html).toMatch(PAGE_TEXT);
     expect(html).toMatch(PAGE_INDEX_TEXT);
   });
@@ -235,10 +241,11 @@ test.describe("rendering", () => {
   test("useFetcher state should return to the idle when redirect from an action", async ({
     page,
   }) => {
-    await app.goto(page, "/gh-1691");
-    expect(await app.getHtml(page, "span")).toMatch("idle");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/gh-1691");
+    expect(await app.getHtml("span")).toMatch("idle");
 
-    await app.clickSubmitButton(page, "/gh-1691");
-    expect(await app.getHtml(page, "span")).toMatch("idle");
+    await app.clickSubmitButton("/gh-1691");
+    expect(await app.getHtml("span")).toMatch("idle");
   });
 });

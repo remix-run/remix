@@ -7,6 +7,7 @@ import {
   createAppFixture,
 } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 const fakeGists = [
   {
@@ -27,7 +28,7 @@ const fakeGists = [
 
 test.describe("route module link export", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   test.beforeAll(async () => {
     fixture = await createFixture({
@@ -430,19 +431,20 @@ test.describe("route module link export", () => {
         `,
       },
     });
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
   test.afterAll(async () => {
-    await app.close();
+    await appFixture.close();
   });
 
   test("waits for new styles to load before transitioning", async ({
     page,
   }) => {
-    await app.goto(page, "/");
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
 
-    let cssResponses = app.collectResponses(page, (url) =>
+    let cssResponses = app.collectResponses((url) =>
       url.pathname.endsWith(".css")
     );
 
@@ -461,11 +463,12 @@ test.describe("route module link export", () => {
     test.use({ javaScriptEnabled: false });
 
     test("adds links to the document", async ({ page }) => {
-      let responses = app.collectResponses(page, (url) =>
+      let app = new PlaywrightFixture(appFixture, page);
+      let responses = app.collectResponses((url) =>
         url.pathname.endsWith(".css")
       );
 
-      await app.goto(page, "/links");
+      await app.goto("/links");
       await page.waitForSelector('[data-test-id="/links"]');
       expect(responses.length).toEqual(4);
     });
@@ -475,8 +478,9 @@ test.describe("route module link export", () => {
   test.skip("preloads assets for other pages and serves from browser cache on navigation", async ({
     page,
   }) => {
-    await app.goto(page, "/links", true);
-    // let jsResponses = app.collectResponses(page, (url) =>
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/links", true);
+    // let jsResponses = app.collectResponses((url) =>
     //   url.pathname.endsWith(".js")
     // );
 
@@ -490,8 +494,9 @@ test.describe("route module link export", () => {
   test.skip("preloads data for other pages and serves from browser cache on navigation", async ({
     page,
   }) => {
-    let dataResponses = app.collectDataResponses(page);
-    await app.goto(page, "/links", true);
+    let app = new PlaywrightFixture(appFixture, page);
+    let dataResponses = app.collectDataResponses();
+    await app.goto("/links", true);
 
     expect(dataResponses.length).toBe(2);
     let [prefetchGists, prefetchUser] = dataResponses;
