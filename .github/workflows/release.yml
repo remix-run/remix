@@ -18,54 +18,43 @@ jobs:
         with:
           ref: dev
           token: ${{ secrets.NIGHTLY_PAT }}
+          fetch-depth: 0
+
+      - name: Get Previous tag
+        id: previous_tag
+        uses: WyriHaximus/github-action-get-previous-tag@v1
 
       - name: Check for commits
         id: nightly
         run: |
           # if you're changing the paths to be counted
           # make sure you also update `/scripts/release/constants.mjs`
-          count=$(git rev-list $GITHUB_SHA..HEAD --count packages)
+          count=$(git rev-list ${{ steps.previous_tag.outputs.tag }}..$GITHUB_SHA --count packages)
           echo "commit count $count"
           if [ "$count" -gt "0" ]; then
             echo "::set-output name=RELEASE::true"
           else
-            echo "::set-output name=release::false"
+            echo "::set-output name=RELEASE::false"
           fi
 
-      - name: Get Node Version
-        if: steps.nightly.ouputs.RELEASE == true
-        run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
-      - name: Setup node
-        if: steps.nightly.ouputs.RELEASE == true
+      - name: ⎔ Setup node
+        if: steps.nightly.ouputs.RELEASE == 'true'
         uses: actions/setup-node@v3
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
 
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
-        if: steps.nightly.ouputs.RELEASE == true
-        id: yarn-cache
+      - name: 📥 Install deps
+        if: steps.nightly.ouputs.RELEASE == 'true'
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
 
-      - name: Restore dependency cache
-        if: steps.nightly.ouputs.RELEASE == true
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
-
-      - name: Install dependencies
-        if: steps.nightly.ouputs.RELEASE == true
-        run: yarn --frozen-lockfile
-
-      - name: Build
-        if: steps.nightly.ouputs.RELEASE == true
+      - name: 🏗 Build
+        if: steps.nightly.ouputs.RELEASE == 'true'
         run: yarn build
 
-      - name: Update Version
-        if: steps.nightly.ouputs.RELEASE == true
+      - name: ⤴️ Update Version
+        if: steps.nightly.ouputs.RELEASE == 'true'
         id: version
         run: |
           SHA=$(git rev-parse HEAD)
@@ -78,18 +67,18 @@ jobs:
 
           git push origin --tags
 
-      - name: Setup npm auth
-        if: steps.nightly.ouputs.RELEASE == true
+      - name: 🔐 Setup npm auth
+        if: steps.nightly.ouputs.RELEASE == 'true'
         run: |
           echo "registry=https://registry.npmjs.org" >> ~/.npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
-      - name: Publish
-        if: steps.nightly.ouputs.RELEASE == true
+      - name: 🚀 Publish
+        if: steps.nightly.ouputs.RELEASE == 'true'
         run: npm run publish
 
-      - name: Create GitHub release
-        if: steps.nightly.ouputs.RELEASE == true
+      - name: 🐱 Create GitHub release
+        if: steps.nightly.ouputs.RELEASE == 'true'
         uses: actions/create-release@v1
         with:
           draft: false
