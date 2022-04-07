@@ -67,25 +67,23 @@ export async function convertTemplateToJavaScript(projectDir: string) {
   }
 
   // 3. Remove @types/* and typescript from package.json
-  let packageJson = path.join(projectDir, "package.json");
-  if (!fse.existsSync(packageJson)) {
+  let packageJsonPath = path.join(projectDir, "package.json");
+  if (!fse.existsSync(packageJsonPath)) {
     throw new Error("Could not find package.json");
   }
-  let pkg = JSON.parse(fse.readFileSync(packageJson, "utf8"));
+  let pkg = JSON.parse(fse.readFileSync(packageJsonPath, "utf8"));
   let devDeps = pkg.devDependencies || {};
-  let newPackageJson = {
-    ...pkg,
-    devDependencies: Object.fromEntries(
-      Object.entries(devDeps).filter(([name]) => {
-        return !name.startsWith("@types/") && name !== "typescript";
-      })
-    ),
-  };
+  devDeps = Object.fromEntries(
+    Object.entries(devDeps).filter(([name]) => {
+      return !name.startsWith("@types/") && name !== "typescript";
+    })
+  );
+  pkg.devDependencies = devDeps;
   // 4. Remove typecheck npm script from package.json
   if (pkg.scripts && pkg.scripts.typecheck) {
     delete pkg.scripts.typecheck;
   }
-  fse.writeJSONSync(path.join(projectDir, "package.json"), newPackageJson, {
+  fse.writeJSONSync(packageJsonPath, pkg, {
     spaces: 2,
   });
 }
