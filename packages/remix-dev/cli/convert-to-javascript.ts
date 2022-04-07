@@ -79,10 +79,6 @@ export async function convertTemplateToJavaScript(projectDir: string) {
     })
   );
   pkg.devDependencies = devDeps;
-  // 4. Remove typecheck npm script from package.json
-  if (pkg.scripts && pkg.scripts.typecheck) {
-    delete pkg.scripts.typecheck;
-  }
   fse.writeJSONSync(packageJsonPath, pkg, {
     spaces: 2,
   });
