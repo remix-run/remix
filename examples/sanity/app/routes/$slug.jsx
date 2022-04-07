@@ -1,5 +1,6 @@
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 import { useState } from "react";
-import { json, useLoaderData } from "remix";
 
 import { getClient } from "~/lib/sanity/getClient";
 import { filterDataToSingleItem } from "~/lib/sanity/filterDataToSingleItem";

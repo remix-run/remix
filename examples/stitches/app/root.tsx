@@ -1,5 +1,4 @@
-import { useContext, useEffect } from "react";
-import type { MetaFunction } from "remix";
+import type { MetaFunction } from "@remix-run/node";
 import {
   Links,
   LiveReload,
@@ -8,7 +7,8 @@ import {
   Scripts,
   ScrollRestoration,
   useCatch,
-} from "remix";
+} from "@remix-run/react";
+import { useContext, useEffect } from "react";
 
 import ClientStyleContext from "./styles/client.context";
 import { styled } from "./styles/stitches.config";

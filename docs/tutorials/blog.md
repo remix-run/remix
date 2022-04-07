@@ -169,7 +169,7 @@ export default function Posts() {
     <main>
       <h1>Posts</h1>
       <ul>
-        {posts.map((post: any) => (
+        {posts.map((post) => (
           <li key={post.slug}>
             <Link
               to={post.slug}
@@ -401,7 +401,7 @@ export async function getPosts() {
 
 <docs-warning>You only need to ever do this when you change the Prisma schema and update the Prisma client. Normally you don't need to restart the dev server during development. Nice that it's so fast though right?</docs-warning>
 
-With the server up and running again, you should be able to go to `http://localhost:3000/post` and the posts should still be there, but now they're coming from SQLite!
+With the server up and running again, you should be able to go to `http://localhost:3000/posts` and the posts should still be there, but now they're coming from SQLite!
 
 ## Dynamic Route Params
 

@@ -1,5 +1,5 @@
-import type { LoaderFunction } from "remix";
-import { json } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
 
 import greetingsQueue from "~/queues/greetings.server";
 

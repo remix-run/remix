@@ -1,7 +1,7 @@
-import type { LoaderFunction } from "remix";
-import { useParams, useCatch } from "remix";
-import { useLoaderData } from "remix";
-import { json } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useCatch, useLoaderData, useParams } from "@remix-run/react";
+
 import type { Invoice } from "~/db";
 import { getClient } from "~/db";
 
