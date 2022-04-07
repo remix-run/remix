@@ -100,7 +100,21 @@ We use [Yarn workspaces](https://classic.yarnpkg.com/en/docs/workspaces/) to man
 
 ### Building
 
-Running `yarn build` from the root directory will run the build.
+Running `yarn build` from the root directory will run the build. You can run the build in watch mode with `yarn watch`.
+
+### Playground
+
+It's often really useful to be able to interact with a real app while developing features for apps. So you can place an app in the `playground` directory and the build process will automatically copy all the output to the `node_modules` of all the apps in the `playground` directory for you. It will even trigger a live reload event for you!
+
+To generate a new playground, simply run:
+
+```sh
+yarn playground:new <?name>
+```
+
+Where the name of the playground is optional and defaults to `playground-${Date.now()}`. Then you can `cd` into the directory that's generated for you and run `npm run dev`. In another teminal window have `yarn watch` running and you're ready to work on whatever Remix features you like with live reload magic 🧙‍♂️
+
+The playground generated from `yarn playground:new` is based on a template in `scripts/playground/template`. If you'd like to change anything about the template, you can create a custom one in `scripts/playground/template.local` which is `.gitignored` so you can customize it to your heart's content.
 
 ### Testing
 

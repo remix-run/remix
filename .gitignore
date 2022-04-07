@@ -18,3 +18,7 @@ yarn-error.log
 /scripts/deployment-test/yarn.lock
 
 /.idea/
+/playground
+/scripts/playground/template.local
+/scripts/playground/template/build
+/scripts/playground/template/package-lock.json

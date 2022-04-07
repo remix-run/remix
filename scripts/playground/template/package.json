@@ -1,0 +1,62 @@
+{
+  "name": "remix-playground",
+  "private": true,
+  "description": "",
+  "license": "",
+  "sideEffects": false,
+  "scripts": {
+    "build": "run-s build:*",
+    "build:css": "npm run generate:css -- --minify",
+    "build:remix": "node ./node_modules/@remix-run/dev/cli build",
+    "dev": "run-p dev:*",
+    "dev:server": "cross-env NODE_ENV=development node --inspect --require ./node_modules/dotenv/config ./server.js",
+    "dev:remix": "cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/cli watch",
+    "dev:css": "cross-env NODE_ENV=development npm run generate:css -- --watch",
+    "generate:css": "tailwindcss -o ./app/styles/tailwind.css",
+    "setup": "prisma migrate dev",
+    "start": "cross-env NODE_ENV=production node --inspect --require ./node_modules/dotenv/config ./server.js"
+  },
+  "eslintIgnore": [
+    "/node_modules",
+    "/build",
+    "/public/build"
+  ],
+  "dependencies": {
+    "@prisma/client": "^3.12.0",
+    "@remix-run/express": "^1.3.4",
+    "@remix-run/node": "^1.3.4",
+    "@remix-run/react": "^1.3.4",
+    "@remix-run/serve": "^1.3.4",
+    "@remix-run/server-runtime": "^1.3.4",
+    "bcryptjs": "^2.4.3",
+    "express": "^4.17.3",
+    "get-port": "^6.1.2",
+    "morgan": "^1.10.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "tiny-invariant": "^1.2.0"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^6.1.2",
+    "@remix-run/dev": "^1.3.4",
+    "@types/bcryptjs": "^2.4.2",
+    "@types/node": "^17.0.23",
+    "@types/react": "^17.0.43",
+    "@types/react-dom": "^17.0.14",
+    "autoprefixer": "^10.4.4",
+    "cross-env": "^7.0.3",
+    "npm-run-all": "^4.1.5",
+    "postcss": "^8.4.12",
+    "prisma": "^3.12.0",
+    "tailwindcss": "^3.0.23",
+    "ts-node": "^10.7.0",
+    "tsconfig-paths": "^3.14.1",
+    "typescript": "^4.6.3"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "prisma": {
+    "seed": "ts-node --require tsconfig-paths/register prisma/seed.ts"
+  }
+}
