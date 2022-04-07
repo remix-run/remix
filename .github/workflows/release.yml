@@ -20,16 +20,12 @@ jobs:
           token: ${{ secrets.NIGHTLY_PAT }}
           fetch-depth: 0
 
-      - name: Get Previous tag
-        id: previous_tag
-        uses: WyriHaximus/github-action-get-previous-tag@v1
-
-      - name: Check for commits
+      - name: 👀 Check for commits
         id: nightly
         run: |
           # if you're changing the paths to be counted
           # make sure you also update `/scripts/release/constants.mjs`
-          count=$(git rev-list ${{ steps.previous_tag.outputs.tag }}..$GITHUB_SHA --count packages)
+          count=$(git rev-list $GITHUB_SHA..HEAD --count packages)
           echo "commit count $count"
           if [ "$count" -gt "0" ]; then
             echo "::set-output name=RELEASE::true"
