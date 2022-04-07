@@ -120,3 +120,15 @@ if (typeof document === "undefined") {
 This will work for all JS environments (Node.js, Deno, Workers, etc.).
 
 [esbuild]: https://esbuild.github.io/
+
+## Browser extensions injecting code
+
+You may run into this warning in the browser:
+
+```
+Warning: Did not expect server HTML to contain a <script> in <html>.
+```
+
+This is a hydration warning from React, and is most likely due to one of your browser extensions injecting scripts into the server-rendered HTML, creating a difference with the resulting HTML.
+
+Check out the page in incognito mode, the warning should disappear.
