@@ -8,7 +8,6 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-  // eslint-disable-next-line testing-library/render-result-naming-convention
   let markup = renderToString(
     <RemixServer context={remixContext} url={request.url} />
   );

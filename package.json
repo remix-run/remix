@@ -15,6 +15,7 @@
     "test:integration": "jest --forceExit --runInBand --config ./integration/jest.config.js",
     "pretest:integration": "rollup -c",
     "bug-report-test": "yarn jest --config ./integration/jest.config.js integration/bug-report-test.ts",
+    "playground:new": "node ./scripts/playground/new.js",
     "version": "node ./scripts/version.js",
     "watch": "rollup -c -w",
     "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx,.md .",
