@@ -366,13 +366,16 @@ Isn't it great?
   },
 ];
 
-for (const post of posts) {
-  await prisma.post.upsert({
-    where: { slug: post.slug },
-    update: post,
-    create: post,
-  });
-}
+const loadPosts = async () => {
+  for (const post of posts) {
+    await prisma.post.upsert({
+      where: { slug: post.slug },
+      update: post,
+      create: post,
+    });
+  }
+};
+loadPosts();
 ```
 
 <docs-info>Note that we're using `upsert` so you can run the seed script over and over without adding multiple versions of the same post every time.</docs-info>
