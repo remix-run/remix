@@ -1,3 +1,4 @@
+import fs from "fs";
 import { builtinModules } from "module";
 import { isAbsolute, relative } from "path";
 import type { Plugin } from "esbuild";
@@ -7,6 +8,7 @@ import {
   serverBuildVirtualModule,
   assetsManifestVirtualModule,
 } from "../virtualModules";
+import { createMatchPath } from "../utils/tsconfig";
 
 /**
  * A plugin responsible for resolving bare module ids based on server target.
@@ -18,12 +20,23 @@ export function serverBareModulesPlugin(
   dependencies: Record<string, string>,
   onWarning?: (warning: string, key: string) => void
 ): Plugin {
+  let matchPath = createMatchPath();
+  // Resolve paths according to tsconfig paths property
+  function resolvePath(id: string) {
+    if (!matchPath) {
+      return id;
+    }
+    return (
+      matchPath(id, undefined, undefined, [".ts", ".tsx", ".js", ".jsx"]) || id
+    );
+  }
+
   return {
     name: "server-bare-modules",
     setup(build) {
       build.onResolve({ filter: /.*/ }, ({ importer, path }) => {
         // If it's not a bare module ID, bundle it.
-        if (!isBareModuleId(path)) {
+        if (!isBareModuleId(resolvePath(path))) {
           return undefined;
         }
 
@@ -82,6 +95,15 @@ export function serverBareModulesPlugin(
           }
         }
 
+        if (
+          onWarning &&
+          !isNodeBuiltIn(packageName) &&
+          (!remixConfig.serverBuildTarget ||
+            remixConfig.serverBuildTarget === "node-cjs")
+        ) {
+          warnOnceIfEsmOnlyPackage(packageName, path, onWarning);
+        }
+
         // Externalize everything else if we've gotten here.
         return {
           path,
@@ -104,10 +126,43 @@ function getNpmPackageName(id: string): string {
 }
 
 function isBareModuleId(id: string): boolean {
-  return (
-    !id.startsWith("node:") &&
-    !id.startsWith(".") &&
-    !id.startsWith("~") &&
-    !isAbsolute(id)
-  );
+  return !id.startsWith("node:") && !id.startsWith(".") && !isAbsolute(id);
+}
+
+function warnOnceIfEsmOnlyPackage(
+  packageName: string,
+  path: string,
+  onWarning: (msg: string, key: string) => void
+) {
+  let packageJsonFile = require.resolve(`${packageName}/package.json`);
+  if (!fs.existsSync(packageJsonFile)) {
+    console.log(packageJsonFile, `does not exist`);
+    return;
+  }
+  let pkg = JSON.parse(fs.readFileSync(packageJsonFile, "utf8"));
+
+  let subImport = path.slice(packageName.length + 1);
+
+  if (pkg.type === "module") {
+    let isEsmOnly = true;
+    if (pkg.exports) {
+      if (!subImport) {
+        if (pkg.exports.require) {
+          isEsmOnly = false;
+        } else if (pkg.exports["."]?.require) {
+          isEsmOnly = false;
+        }
+      } else if (pkg.exports[`./${subImport}`]?.require) {
+        isEsmOnly = false;
+      }
+    }
+
+    if (isEsmOnly) {
+      onWarning(
+        `${packageName} is possibly an ESM only package and should be bundled with ` +
+          `"serverDependenciesToBundle in remix.config.js.`,
+        packageName + ":esm-only"
+      );
+    }
+  }
 }

@@ -19,7 +19,8 @@ The Remix compiler will automatically remove server code from the browser bundle
 Consider a route module that exports `loader`, `meta`, and a component:
 
 ```tsx
-import { json, useLoaderData } from "remix";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 import PostsView from "../PostsView";
 import { prisma } from "../db";
@@ -49,7 +50,7 @@ export { meta, default } from "./routes/posts.tsx";
 The compiler will now analyze the code in `routes/posts.tsx` and only keep code that's inside of `meta` and the component. The result is something like this:
 
 ```tsx
-import { useLoaderData } from "remix";
+import { useLoaderData } from "@remix-run/react";
 
 import PostsView from "../PostsView";
 
@@ -75,8 +76,9 @@ Simply put, a **side effect** is any code that might _do something_. A **module 
 
 Taking our code from earlier, we saw how the compiler can remove the exports and their imports that aren't used. But if we add this seemingly harmless line of code your app will break!
 
-```tsx bad lines=[6]
-import { json, useLoaderData } from "remix";
+```tsx bad lines=[7]
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 import PostsView from "../PostsView";
 import { prisma } from "../db";
@@ -100,7 +102,7 @@ export default function Posts() {
 That `console.log` _does something_. The module is imported and then immediately logs to the console. The compiler won't remove it because it has to run when the module is imported. It will bundle something like this:
 
 ```tsx bad lines=[4,6]
-import { useLoaderData } from "remix";
+import { useLoaderData } from "@remix-run/react";
 
 import PostsView from "../PostsView";
 import { prisma } from "../db"; //😬
@@ -121,8 +123,9 @@ The loader is gone but the prisma dependency stayed! Had we logged something har
 
 To fix this, remove the side effect by simply moving the code _into the loader_.
 
-```tsx lines=[7]
-import { json, useLoaderData } from "remix";
+```tsx lines=[8]
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 import PostsView from "../PostsView";
 import { prisma } from "../db";
@@ -151,7 +154,7 @@ Occasionally, the build may have trouble tree-shaking code that should only run 
 Some Remix newcomers try to abstract their loaders with "higher order functions". Something like this:
 
 ```js bad filename=app/http.js
-import { redirect } from "remix";
+import { redirect } from "@remix-run/node";
 
 export function removeTrailingSlash(loader) {
   return function (arg) {
@@ -182,7 +185,7 @@ You can probably now see that this is a module side effect so the compiler can't
 This type of abstraction is introduced to try to return a response early. Since you can throw a Response in a loader, we can make this simpler and remove the module side effect at the same time so that the server code can be pruned:
 
 ```js filename=app/http.js
-import { redirect } from "remix";
+import { redirect } from "@remix-run/node";
 
 export function removeTrailingSlash(url) {
   if (url.pathname.endsWith("/")) {
@@ -196,7 +199,7 @@ export function removeTrailingSlash(url) {
 And then use it like this:
 
 ```js bad filename=app/root.js
-import { json } from "remix";
+import { json } from "@remix-run/node";
 
 import { removeTrailingSlash } from "~/http";
 
