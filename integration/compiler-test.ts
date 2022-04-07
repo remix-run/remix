@@ -106,7 +106,9 @@ test.describe("compiler", () => {
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml(page, "#index")).toMatchSnapshot();
+    expect(await app.getHtml(page, "#index")).toBe(
+      '<div id="index">true</div>'
+    );
   });
 
   test("removes server code with `*.client` files", async ({ page }) => {
@@ -114,7 +116,9 @@ test.describe("compiler", () => {
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml(page, "#index")).toMatchSnapshot();
+    expect(await app.getHtml(page, "#index")).toBe(
+      '<div id="index">true</div>'
+    );
   });
 
   test("removes node built-ins from client bundle when used in just loader", async ({
@@ -124,7 +128,9 @@ test.describe("compiler", () => {
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml(page, "#built-ins")).toMatchSnapshot();
+    expect(await app.getHtml(page, "#built-ins")).toBe(
+      '<div id="built-ins">test/file.txt</div>'
+    );
 
     let routeModule = await fixture.getBrowserAsset(
       fixture.build.assets.routes["routes/built-ins"].module
@@ -140,7 +146,9 @@ test.describe("compiler", () => {
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml(page, "#built-ins-polyfill")).toMatchSnapshot();
+    expect(await app.getHtml(page, "#built-ins-polyfill")).toBe(
+      '<div id="built-ins-polyfill">test/file.txt</div>'
+    );
 
     let routeModule = await fixture.getBrowserAsset(
       fixture.build.assets.routes["routes/built-ins-polyfill"].module
@@ -155,7 +163,9 @@ test.describe("compiler", () => {
     let res = await app.goto(page, "/esm-only-pkg", true);
     expect(res.status()).toBe(200); // server rendered fine
     // rendered the page instead of the error boundary
-    expect(await app.getHtml(page, "#esm-only-pkg")).toMatchSnapshot();
+    expect(await app.getHtml(page, "#esm-only-pkg")).toBe(
+      '<div id="esm-only-pkg">esm-only-pkg</div>'
+    );
   });
 
   test("allows consumption of ESM modules with exports in CJS builds with `serverDependenciesToBundle` and `getDependenciesToBundle`", async ({
@@ -164,6 +174,8 @@ test.describe("compiler", () => {
     let res = await app.goto(page, "/esm-only-exports-pkg", true);
     expect(res.status()).toBe(200); // server rendered fine
     // rendered the page instead of the error boundary
-    expect(await app.getHtml(page, "#esm-only-exports-pkg")).toMatchSnapshot();
+    expect(await app.getHtml(page, "#esm-only-exports-pkg")).toBe(
+      '<div id="esm-only-exports-pkg">esm-only-exports-pkg</div>'
+    );
   });
 });

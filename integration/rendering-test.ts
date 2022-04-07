@@ -53,11 +53,17 @@ test.describe("rendering", () => {
   test("server renders matching routes", async () => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
-    expect(selectHtml(await res.text(), "#content")).toMatchSnapshot();
+    expect(selectHtml(await res.text(), "#content")).toBe(`<div id="content">
+  <h1>Root</h1>
+  <h2>Index</h2>
+</div>`);
   });
 
   test("hydrates", async ({ page }) => {
     await app.goto(page, "/");
-    expect(await app.getHtml(page, "#content")).toMatchSnapshot();
+    expect(await app.getHtml(page, "#content")).toBe(`<div id="content">
+  <h1>Root</h1>
+  <h2>Index</h2>
+</div>`);
   });
 });

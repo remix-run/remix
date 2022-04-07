@@ -1,1 +1,0 @@
-<div id="esm-only-exports-pkg">esm-only-exports-pkg</div>
