@@ -8,10 +8,12 @@ on:
 
 jobs:
   nightly:
-    name: Nightly Release
-    if: github.repository == 'remix-run/remix' && github.event_name == 'schedule'
+    name: 🌒 Nightly Release
+    if: |
+      github.repository == 'remix-run/remix' &&
+      github.event.action == 'published' &&
+      github.event_name == 'schedule'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -20,37 +22,20 @@ jobs:
           token: ${{ secrets.NIGHTLY_PAT }}
           fetch-depth: 0
 
-      - name: 👀 Check for commits
-        id: nightly
-        run: |
-          # if you're changing the paths to be counted
-          # make sure you also update `/scripts/release/constants.mjs`
-          count=$(git rev-list $GITHUB_SHA..HEAD --count packages)
-          echo "commit count $count"
-          if [ "$count" -gt "0" ]; then
-            echo "::set-output name=RELEASE::true"
-          else
-            echo "::set-output name=RELEASE::false"
-          fi
-
       - name: ⎔ Setup node
-        if: steps.nightly.ouputs.RELEASE == 'true'
         uses: actions/setup-node@v3
         with:
           node-version: "${{ steps.nvmrc.outputs.version }}"
 
       - name: 📥 Install deps
-        if: steps.nightly.ouputs.RELEASE == 'true'
         # even though this is called "npm-install" it does use yarn to install
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
 
       - name: 🏗 Build
-        if: steps.nightly.ouputs.RELEASE == 'true'
         run: yarn build
 
       - name: ⤴️ Update Version
-        if: steps.nightly.ouputs.RELEASE == 'true'
         id: version
         run: |
           SHA=$(git rev-parse HEAD)
@@ -64,17 +49,14 @@ jobs:
           git push origin --tags
 
       - name: 🔐 Setup npm auth
-        if: steps.nightly.ouputs.RELEASE == 'true'
         run: |
           echo "registry=https://registry.npmjs.org" >> ~/.npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
       - name: 🚀 Publish
-        if: steps.nightly.ouputs.RELEASE == 'true'
         run: npm run publish
 
       - name: 🐱 Create GitHub release
-        if: steps.nightly.ouputs.RELEASE == 'true'
         uses: actions/create-release@v1
         with:
           draft: false
@@ -85,10 +67,14 @@ jobs:
           # need this token in order to have it trigger the comment workflow
           GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
 
-  stable:
-    if: github.repository == 'remix-run/remix' && github.event.action == 'published' && github.event_name != 'schedule'
+  manual:
+    name: 📝 Manual Release
+    if: |
+      github.repository == 'remix-run/remix' &&
+      github.event.action == 'published' &&
+      github.event_name != 'schedule' &&
+      !github.event.release.prerelease
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
 
@@ -127,7 +113,7 @@ jobs:
 
   arc_deploy:
     name: Architect Deploy
-    needs: [stable]
+    needs: [manual]
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
@@ -160,7 +146,7 @@ jobs:
 
   cf_pages_deploy:
     name: "CF Pages Deploy"
-    needs: [stable]
+    needs: [manual]
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
@@ -194,7 +180,7 @@ jobs:
 
   cf_workers_deploy:
     name: "CF Workers Deploy"
-    needs: [stable]
+    needs: [manual]
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
@@ -226,7 +212,7 @@ jobs:
 
   fly_deploy:
     name: "Fly Deploy"
-    needs: [stable]
+    needs: [manual]
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
@@ -260,7 +246,7 @@ jobs:
 
   netlify_deploy:
     name: "Netlify Deploy"
-    needs: [stable]
+    needs: [manual]
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
@@ -291,7 +277,7 @@ jobs:
 
   vercel_deploy:
     name: "Vercel Deploy"
-    needs: [stable]
+    needs: [manual]
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
