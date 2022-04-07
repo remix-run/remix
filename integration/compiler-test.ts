@@ -158,12 +158,12 @@ test.describe("compiler", () => {
     expect(await app.getHtml(page, "#esm-only-pkg")).toMatchSnapshot();
   });
 
-  it("allows consumption of ESM modules with exports in CJS builds with `serverDependenciesToBundle` and `getDependenciesToBundle`", async () => {
-    let res = await app.goto("/esm-only-exports-pkg", true);
+  test("allows consumption of ESM modules with exports in CJS builds with `serverDependenciesToBundle` and `getDependenciesToBundle`", async ({
+    page,
+  }) => {
+    let res = await app.goto(page, "/esm-only-exports-pkg", true);
     expect(res.status()).toBe(200); // server rendered fine
     // rendered the page instead of the error boundary
-    expect(await app.getHtml("#esm-only-exports-pkg")).toMatchInlineSnapshot(
-      `"<div id=\\"esm-only-exports-pkg\\">esm-only-exports-pkg</div>"`
-    );
+    expect(await app.getHtml(page, "#esm-only-exports-pkg")).toMatchSnapshot();
   });
 });
