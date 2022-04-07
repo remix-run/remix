@@ -21,3 +21,4 @@ yarn-error.log
 /playground
 /scripts/playground/template.local
 /scripts/playground/template/build
+/scripts/playground/template/package-lock.json
