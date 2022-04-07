@@ -9,10 +9,19 @@ import type {
   Runtime,
 } from "./transform/mapNormalizedImports/packageExports";
 
-const resolveRuntime = async ({
-  dependencies,
-  scripts,
-}: PackageJson): Promise<Runtime> => {
+const adapter2runtime = {
+  architect: "node",
+  "cloudflare-pages": "cloudflare",
+  "cloudflare-workers": "cloudflare",
+  express: "node",
+  netlify: "node",
+  vercel: "node",
+} as const;
+
+const resolveRuntime = async (
+  { dependencies, scripts }: PackageJson,
+  adapter?: Adapter
+): Promise<Runtime> => {
   // match `remix setup <runtime>` in `postinstall` script
   let remixSetupMatch = scripts?.postinstall?.match(/remix setup(\s+\w+)/);
   if (remixSetupMatch && remixSetupMatch.length >= 2) {
@@ -29,6 +38,8 @@ const resolveRuntime = async ({
   if (findRemixDependencies(dependencies).includes("serve")) {
     return "node";
   }
+  // infer runtime from adapter
+  if (adapter) return adapter2runtime[adapter];
 
   // otherwise, ask user for runtime
   let { runtime } = await inquirer.prompt<{ runtime?: Runtime }>([
@@ -79,7 +90,10 @@ const resolveAdapter = ({ dependencies }: PackageJson): Adapter | undefined => {
 
 export const getTransformOptions = async (
   packageJson: PackageJson
-): Promise<Options> => ({
-  adapter: resolveAdapter(packageJson),
-  runtime: await resolveRuntime(packageJson),
-});
+): Promise<Options> => {
+  let adapter = resolveAdapter(packageJson);
+  return {
+    adapter,
+    runtime: await resolveRuntime(packageJson, adapter),
+  };
+};
