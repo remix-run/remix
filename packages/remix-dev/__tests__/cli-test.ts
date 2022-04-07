@@ -207,6 +207,24 @@ describe("remix CLI", () => {
         { question: /install/i, type: ["n", ENTER] },
         { question: /typescript or javascript/i, answer: /javascript/i },
       ]);
+
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.jsx"))
+      ).toBeTruthy();
+      expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
+      expect(
+        fse.existsSync(path.join(projectDir, "tsconfig.json"))
+      ).toBeFalsy();
+      expect(
+        fse.existsSync(path.join(projectDir, "jsconfig.json"))
+      ).toBeTruthy();
+      let pkgJSON = JSON.parse(
+        fse.readFileSync(path.join(projectDir, "package.json"), "utf-8")
+      );
+      expect(Object.keys(pkgJSON.devDependencies)).not.toContain("typescript");
     });
   });
 });

@@ -273,7 +273,6 @@ describe("the create command", () => {
       fse.readFileSync(path.join(projectDir, "package.json"), "utf-8")
     );
     expect(Object.keys(pkgJSON.devDependencies)).not.toContain("typescript");
-    expect(Object.keys(pkgJSON.scripts)).not.toContain("typecheck");
   });
 
   it("works for a file path to a directory on disk", async () => {
