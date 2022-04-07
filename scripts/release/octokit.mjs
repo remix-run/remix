@@ -102,7 +102,6 @@ export async function prsMergedSinceLast({
 
   return prsWithFiles.filter((pr) => {
     return pr.files.some((file) => {
-      console.log(file.filename);
       return checkIfStringStartsWith(file.filename, PR_FILES_STARTS_WITH);
     });
   });
