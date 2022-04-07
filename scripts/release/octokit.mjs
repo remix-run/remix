@@ -53,20 +53,16 @@ export async function prsMergedSinceLast({
   }
 
   // if the lastRelease was a stable release, then we want to find the previous stable release
-  let previousReleaseIndex;
+  let previousRelease;
   if (lastRelease.prerelease === false) {
-    let minusLatestRelease = [
-      ...sorted.slice(0, lastReleaseIndex),
-      ...sorted.slice(lastReleaseIndex + 1),
-    ];
-    previousReleaseIndex = minusLatestRelease.findIndex((release) => {
+    let stableReleases = sorted.filter((release) => {
       return release.prerelease === false;
     });
+    previousRelease = stableReleases.at(1);
   } else {
-    previousReleaseIndex = lastReleaseIndex + 1;
+    previousRelease = sorted.at(lastReleaseIndex + 1);
   }
 
-  let previousRelease = sorted.at(previousReleaseIndex);
   if (!previousRelease) {
     throw new Error(`Could not find previous release in ${GITHUB_REPOSITORY}`);
   }
@@ -106,6 +102,7 @@ export async function prsMergedSinceLast({
 
   return prsWithFiles.filter((pr) => {
     return pr.files.some((file) => {
+      console.log(file.filename);
       return checkIfStringStartsWith(file.filename, PR_FILES_STARTS_WITH);
     });
   });
