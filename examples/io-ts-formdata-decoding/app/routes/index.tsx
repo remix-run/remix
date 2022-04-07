@@ -1,5 +1,6 @@
-import type { ActionFunction } from "remix";
-import { Form, json, useCatch, useActionData } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, useActionData, useCatch } from "@remix-run/react";
 import * as t from "io-ts";
 
 import { decodeFormData } from "../formData";

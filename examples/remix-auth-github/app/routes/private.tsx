@@ -1,6 +1,8 @@
-import type { ActionFunction, LoaderFunction } from "remix";
-import { Form, json, useLoaderData } from "remix";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, useLoaderData } from "@remix-run/react";
 import type { GitHubProfile } from "remix-auth-github";
+
 import { auth } from "~/auth.server";
 
 type LoaderData = { profile: GitHubProfile };

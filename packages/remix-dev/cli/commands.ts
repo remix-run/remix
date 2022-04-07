@@ -15,10 +15,10 @@ import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
-import { createApp } from "../create";
+import { createApp } from "./create";
 import { loadEnv } from "../env";
-import { setupRemix, isSetupPlatform, SetupPlatform } from "../setup";
-import { log } from "../log";
+import { log } from "./logging";
+import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 
 export async function create({
   appTemplate,
@@ -75,8 +75,8 @@ export async function create({
   }
 }
 
-export async function init(remixRoot: string) {
-  let initScriptDir = path.join(remixRoot, "remix.init");
+export async function init(projectDir: string) {
+  let initScriptDir = path.join(projectDir, "remix.init");
   let initScript = path.resolve(initScriptDir, "index.js");
 
   if (await fse.pathExists(initScript)) {
@@ -84,7 +84,7 @@ export async function init(remixRoot: string) {
     execSync("npm install", { stdio: "ignore", cwd: initScriptDir });
     let initFn = require(initScript);
     try {
-      await initFn({ rootDirectory: remixRoot });
+      await initFn({ rootDirectory: projectDir });
     } catch (error) {
       console.error(`🚨 Oops, remix.init failed`);
       throw error;
@@ -93,9 +93,19 @@ export async function init(remixRoot: string) {
 }
 
 export async function setup(platformArg?: string) {
-  let platform = isSetupPlatform(platformArg)
-    ? platformArg
-    : SetupPlatform.Node;
+  let platform: SetupPlatform;
+  if (
+    platformArg === "cloudflare-workers" ||
+    platformArg === "cloudflare-pages"
+  ) {
+    console.warn(
+      `Using '${platformArg}' as a platform value is deprecated. Use 'cloudflare' instead.`
+    );
+    console.log("HINT: check the `postinstall` script in `package.json`");
+    platform = SetupPlatform.Cloudflare;
+  } else {
+    platform = isSetupPlatform(platformArg) ? platformArg : SetupPlatform.Node;
+  }
 
   await setupRemix(platform);
 
@@ -221,6 +231,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
   let createApp: typeof createAppType;
   let express: typeof Express;
   try {
+    // eslint-disable-next-line import/no-extraneous-dependencies
     let serve = require("@remix-run/serve");
     createApp = serve.createApp;
     express = require("express");
@@ -256,10 +267,12 @@ export async function dev(remixRoot: string, modeArg?: string) {
   try {
     await watch(config, mode, {
       onInitialBuild: () => {
-        server = app.listen(port, () => {
-          let address = Object.values(os.networkInterfaces())
-            .flat()
-            .find((ip) => ip?.family === "IPv4" && !ip.internal)?.address;
+        let onListen = () => {
+          let address =
+            process.env.HOST ||
+            Object.values(os.networkInterfaces())
+              .flat()
+              .find((ip) => ip?.family === "IPv4" && !ip.internal)?.address;
 
           if (!address) {
             console.log(`Remix App Server started at http://localhost:${port}`);
@@ -268,7 +281,11 @@ export async function dev(remixRoot: string, modeArg?: string) {
               `Remix App Server started at http://localhost:${port} (http://${address}:${port})`
             );
           }
-        });
+        };
+
+        server = process.env.HOST
+          ? app.listen(port, process.env.HOST, onListen)
+          : app.listen(port, onListen);
       },
     });
   } finally {

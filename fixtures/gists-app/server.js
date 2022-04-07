@@ -67,4 +67,5 @@ app.all(
 
 app.listen(port, () => {
   console.log(`Gists app running on port ${port}`);
+  console.log(`http://localhost:${port}`);
 });

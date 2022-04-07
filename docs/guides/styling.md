@@ -20,7 +20,7 @@ export function links() {
 Each nested route's `links` are merged (parents first) and rendered as `<link>` tags by the `<Links/>` you rendered in `app/root.js` in the head of the document.
 
 ```tsx filename=app/root.js lines=[1,7]
-import { Links } from "remix";
+import { Links } from "@remix-run/react";
 // ...
 export default function Root() {
   return (
@@ -253,8 +253,9 @@ Now Remix can prefetch, load, and unload the styles for `button.css`, `primary-b
 
 An initial reaction to this is that routes have to know more than you want them to. Keep in mind each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
 
-```tsx filename=app/routes/$category.js lines=[3-6,23-30]
-import { json, useLoaderData } from "remix";
+```tsx filename=app/routes/$category.js lines=[4-8,24-31]
+import { json } from "@remix-run/{runtime}";
+import { useLoaderData } from "@remix-run/react";
 
 import { TileGrid } from "~/components/tile-grid";
 import { ProductTile } from "~/components/product-tile";
@@ -437,7 +438,6 @@ Update the package scripts to generate the Tailwind file during dev and for the 
     "dev:css": "npm run generate:css -- --watch",
     "dev:remix": "remix dev",
     "generate:css": "npx tailwindcss -o ./app/tailwind.css",
-    "postinstall": "remix setup node",
     "start": "remix-serve build"
   }
   // ...
@@ -482,7 +482,6 @@ Then alter how Tailwind is generating your css:
     "dev:css": "npm run generate:css -- --watch",
     "dev:remix": "remix dev",
     "generate:css": "npx tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css",
-    "postinstall": "remix setup node",
     "start": "remix-serve build"
   }
   // ...
@@ -509,7 +508,7 @@ If you're using VS Code, it's recommended you install the [Tailwind IntelliSense
 You can load stylesheets from any server, here's an example of loading a modern css reset from unpkg.
 
 ```ts filename=app/root.tsx
-import type { LinksFunction } from "remix";
+import type { LinksFunction } from "@remix-run/{runtime}";
 
 export const links: LinksFunction = () => {
   return [
@@ -597,7 +596,7 @@ Here's how to set it up:
    Then import like any other css file:
 
    ```tsx filename=root.tsx
-   import type { LinksFunction } from "remix";
+   import type { LinksFunction } from "@remix-run/{runtime}";
 
    import styles from "./styles/app.css";
 
@@ -624,7 +623,7 @@ npm add -D concurrently
 
 You can use CSS preprocessors like LESS and SASS. Doing so requires running an additional build process to convert these files to CSS files. This can be done via the command line tools provided by the preprocessor or any equivalent tool.
 
-Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export]([route-module-links]) function, just like any other CSS file in Remix.
+Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export][route-module-links] function, just like any other CSS file in Remix.
 
 To ease development with CSS preprocessors you can add npm scripts to your `package.json` that generate CSS files from your SASS or LESS files. These scripts can be run in parallel alongside any other npm scripts that you run for developing a Remix application.
 
@@ -636,7 +635,7 @@ An example using SASS.
 npm add -D sass
 ```
 
-2. Add an npm script to your `package.json`'s `script` section' that uses the installed too to generate CSS files.
+2. Add an npm script to your `package.json`'s `script` section' that uses the installed tool to generate CSS files.
 
 ```json filename="package.json"
 {
@@ -686,7 +685,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
 1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
 
    ```tsx filename=app/root.tsx lines=[22-24]
-   import type { MetaFunction } from "remix";
+   import type { MetaFunction } from "@remix-run/{runtime}";
    import {
      Links,
      LiveReload,
@@ -694,7 +693,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
      Outlet,
      Scripts,
      ScrollRestoration,
-   } from "remix";
+   } from "@remix-run/react";
 
    export const meta: MetaFunction = () => ({
      charset: "utf-8",
@@ -725,9 +724,9 @@ Here's some sample code to show how you might use Styled Components with Remix (
 2. Your `entry.server.tsx` will look something like this:
 
    ```tsx filename=entry.server.tsx lines=[4,12,15-20,22-23]
-   import ReactDOMServer from "react-dom/server";
-   import { RemixServer } from "remix";
-   import type { EntryContext } from "remix";
+   import { renderToString } from "react-dom/server";
+   import { RemixServer } from "@remix-run/react";
+   import type { EntryContext } from "@remix-run/{runtime}";
    import { ServerStyleSheet } from "styled-components";
 
    export default function handleRequest(
@@ -738,7 +737,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
    ) {
      const sheet = new ServerStyleSheet();
 
-     let markup = ReactDOMServer.renderToString(
+     let markup = renderToString(
        sheet.collectStyles(
          <RemixServer
            context={remixContext}
