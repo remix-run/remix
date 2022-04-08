@@ -1,7 +1,8 @@
-import type { ActionFunction, LoaderFunction } from "remix";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
+
 import { deleteTodoList } from "~/db.server";
 import { requireUser } from "~/session.server";
-import { redirect } from "remix";
 
 export const action: ActionFunction = async ({ request, params }) => {
   await requireUser(request, {

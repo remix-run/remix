@@ -68,14 +68,20 @@ export function createRemixRequest(
 ): NodeRequest {
   let host = event.headers["x-forwarded-host"] || event.headers.host;
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
-  let url = new URL(event.rawPath + search, `https://${host}`);
+  let scheme = process.env.ARC_SANDBOX ? "http" : "https";
+  let url = new URL(event.rawPath + search, `${scheme}://${host}`);
+  let isFormData = event.headers["content-type"]?.includes(
+    "multipart/form-data"
+  );
 
   return new NodeRequest(url.href, {
     method: event.requestContext.http.method,
     headers: createRemixHeaders(event.headers, event.cookies),
     body:
       event.body && event.isBase64Encoded
-        ? Buffer.from(event.body, "base64").toString()
+        ? isFormData
+          ? Buffer.from(event.body, "base64")
+          : Buffer.from(event.body, "base64").toString()
         : event.body,
     abortController,
     signal: abortController?.signal,

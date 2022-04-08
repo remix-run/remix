@@ -9,16 +9,15 @@
     "dev:remix": "remix watch",
     "dev:arc": "cross-env NODE_ENV=development arc sandbox",
     "dev": "remix build && run-p dev:*",
-    "postinstall": "remix setup node",
     "start": "cross-env NODE_ENV=production arc sandbox"
   },
   "dependencies": {
     "@remix-run/architect": "*",
+    "@remix-run/node": "*",
     "@remix-run/react": "*",
     "cross-env": "^7.0.3",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "remix": "*"
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
     "@remix-run/dev": "*",

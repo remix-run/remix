@@ -38,11 +38,12 @@ The following steps will get you setup to contribute changes to this repo:
    git checkout dev
    ```
 
-3. Install dependencies and build. Remix uses [`yarn` (version 1)](https://classic.yarnpkg.com/lang/en/docs/install), so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
+3. Install dependencies by running `yarn`. Remix uses [`yarn` (version 1)](https://classic.yarnpkg.com/lang/en/docs/install), so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
+4. Verify you've got everything set up for local development by running `yarn test`
 
 ## Think You Found a Bug?
 
-Please send a PR with a failing test. It's really easy if you follow the instructions in [`integration/bug-report-test.ts`](https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts)
+Please send a PR with a failing test. There are instructions in [`integration/bug-report-test.ts`](https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts)
 
 ## Proposing New or Changed API?
 
@@ -68,6 +69,23 @@ All commits that fix bugs or add features need a test.
 
 `<blink>`Do not merge code without tests!`</blink>`
 
+We use `jest` for our testing in this project. We have a suite of integration tests in the integration folder and packages have their own jest configuration which are then referenced by the primary jest config in the root of the project.
+
+The integration tests need to be run with `--runInBand` and the primary tests can be run in parallel which is why they each are run by different instances of `jest`. And then we use `npm-run-all` to run those both in parallel to make the tests run as quickly and efficiently as possible. To run these two sets of tests independently you'll need to run the individual script:
+
+- `yarn test:primary`
+- `yarn test:integration`
+
+We also support watch plugins for project, file, and test filtering. To filter things down, you can use a combination of `--testNamePattern`, `--testPathPattern`, and `--selectProjects`. For example:
+
+```
+yarn test:primary --selectProjects react --testPathPattern transition --testNamePattern "initial values"
+```
+
+We also have watch mode plugins for these. So, you can run `yarn test:primary --watch` and hit `w` to see the available watch commands.
+
+Alternatively, you can run a project completely independently by `cd`-ing into that project and running `yarn jest` which will pick up that project's jest config.
+
 ### Docs + Examples
 
 All commits that change or add to the API must be done in a pull request that also updates all relevant examples and docs.
@@ -82,7 +100,21 @@ We use [Yarn workspaces](https://classic.yarnpkg.com/en/docs/workspaces/) to man
 
 ### Building
 
-Running `yarn build` from the root directory will run the build.
+Running `yarn build` from the root directory will run the build. You can run the build in watch mode with `yarn watch`.
+
+### Playground
+
+It's often really useful to be able to interact with a real app while developing features for apps. So you can place an app in the `playground` directory and the build process will automatically copy all the output to the `node_modules` of all the apps in the `playground` directory for you. It will even trigger a live reload event for you!
+
+To generate a new playground, simply run:
+
+```sh
+yarn playground:new <?name>
+```
+
+Where the name of the playground is optional and defaults to `playground-${Date.now()}`. Then you can `cd` into the directory that's generated for you and run `npm run dev`. In another teminal window have `yarn watch` running and you're ready to work on whatever Remix features you like with live reload magic 🧙‍♂️
+
+The playground generated from `yarn playground:new` is based on a template in `scripts/playground/template`. If you'd like to change anything about the template, you can create a custom one in `scripts/playground/template.local` which is `.gitignored` so you can customize it to your heart's content.
 
 ### Testing
 

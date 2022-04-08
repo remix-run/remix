@@ -1,5 +1,5 @@
 import styled from "@emotion/styled";
-import { Link } from "remix";
+import { Link } from "@remix-run/react";
 
 const Container = styled("div")`
   font-family: "system-ui, sans-serif";
