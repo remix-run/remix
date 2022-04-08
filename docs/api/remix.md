@@ -1555,14 +1555,13 @@ These are fully featured utilities for handling fairly simple use cases. It's no
 **Example:**
 
 ```tsx
-const uploadHandler = unstable_createFileUploadHandler({
-  maxFileSize: 5_000_000,
-  file: ({ filename }) => filename,
-});
-
 export const action: ActionFunction = async ({
   request,
 }) => {
+  const uploadHandler = unstable_createFileUploadHandler({
+    maxFileSize: 5_000_000,
+    file: ({ filename }) => filename,
+  });
   const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
@@ -1594,13 +1593,12 @@ The `filter` function accepts an `object` and returns a `boolean` (or a promise 
 **Example:**
 
 ```tsx
-const uploadHandler = unstable_createMemoryUploadHandler({
-  maxFileSize: 500_000,
-});
-
 export const action: ActionFunction = async ({
   request,
 }) => {
+  const uploadHandler = unstable_createMemoryUploadHandler({
+    maxFileSize: 500_000,
+  });
   const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
@@ -1709,12 +1707,12 @@ Your job is to do whatever you need with the `stream` and return a value that's 
 
 We have the built-in `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler, here's a theoretical example:
 
-```tsx
+```tsx filename=file-upload-handler.server.tsx
 import type { UploadHandler } from "@remix-run/{runtime}";
 import { unstable_createFileUploadHandler } from "@remix-run/{runtime}";
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
-export const fileUploadHandler =
+export const standardFileUploadHandler =
   unstable_createFileUploadHandler({
     directory: "public/calendar-events",
   });
@@ -1724,9 +1722,9 @@ export const cloudinaryUploadHandler =
     folder: "/my-site/avatars",
   });
 
-export const multHandler: UploadHandler = (args) => {
+export const fileUploadHandler: UploadHandler = (args) => {
   if (args.name === "calendarEvent") {
-    return fileUploadHandler(args);
+    return standardFileUploadHandler(args);
   } else if (args.name === "eventBanner") {
     return cloudinaryUploadHandler(args);
   } else {
