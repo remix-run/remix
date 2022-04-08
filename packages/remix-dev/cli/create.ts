@@ -368,13 +368,19 @@ export async function validateNewProjectPath(input: string): Promise<void> {
   let projectDir = path.resolve(cwd, input);
   if (
     (await fse.pathExists(projectDir)) &&
-    (await fse.stat(projectDir)).isDirectory() &&
-    (await fse.readdir(projectDir)).length > 0
+    (await fse.stat(projectDir)).isDirectory()
   ) {
-    throw Error(
-      "🚨 The current directory must be empty to create a new project. Please " +
-        "clear the contents of the directory or choose a different path."
-    );
+    if ((await fse.readdir(projectDir)).length > 0) {
+      throw Error(
+        "🚨 The current directory must be empty to create a new project. Please " +
+          "clear the contents of the directory or choose a different path."
+      );
+    } else {
+      throw Error(
+        "🚨 The directory provided already exists. Please try again with a " +
+          "different directory."
+      );
+    }
   }
 }
 
