@@ -23,7 +23,6 @@
     "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint:fix"
   },
   "workspaces": [
-    "examples/netlify-edge",
     "packages/create-remix",
     "packages/remix",
     "packages/remix-architect",

@@ -1,6 +1,0 @@
-[build]
-command = "yarn build"
-publish = "public"
-
-[dev]
-framework = "#static"

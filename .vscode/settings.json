@@ -1,9 +1,8 @@
 {
   "typescript.tsdk": "node_modules/typescript/lib",
   "deno.enablePaths": [
-    "./examples/netlify-edge/edge-server.ts",
     "./templates/deno/",
-    "./templates/netlify/edge-server.ts",
+    "./templates/netlify/remix.init/edge-server.js",
     "./packages/remix-netlify-edge/server.ts",
     "./packages/remix-netlify-edge/globals.ts"
   ],
