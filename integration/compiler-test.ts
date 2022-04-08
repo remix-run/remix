@@ -107,7 +107,7 @@ describe("compiler", () => {
           "exports": "./esm-only-single-export.js"
         }`,
         "node_modules/esm-only-single-export/esm-only-single-export.js": js`
-          export default "esm-only-exports-pkg";
+          export default "esm-only-single-export";
         `,
       },
     });
