@@ -4,6 +4,10 @@ import { db } from "~/utils/db.server";
 
 export const loader: LoaderFunction = async ({ request }) => {
   const url = new URL(request.url);
+  // in the official deployed version of the app, we don't want to deploy
+  // a site with unmoderated content, so we only show users their own jokes
+  // or jokes from kody, which are safe to show to everyone
+  // by using search params, you can still share and view jokes from other users
   const username = url.searchParams.get("jokester") || "kody";
 
   const jokes = await db.joke.findMany({
