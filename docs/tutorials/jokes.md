@@ -5553,6 +5553,19 @@ import type { LoaderFunction } from "@remix-run/node";
 
 import { db } from "~/utils/db.server";
 
+function escapeCdata(s: string) {
+  return s.replace(/\]\]>/g, "]]]]><![CDATA[>");
+}
+
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export const loader: LoaderFunction = async ({ request }) => {
   const url = new URL(request.url);
   const username = url.searchParams.get("jokester") || "kody";
@@ -5560,7 +5573,6 @@ export const loader: LoaderFunction = async ({ request }) => {
   const jokes = await db.joke.findMany({
     take: 100,
     orderBy: { createdAt: "desc" },
-    include: { jokester: { select: { username: true } } },
     where: {
       jokester: {
         username
@@ -5590,10 +5602,10 @@ export const loader: LoaderFunction = async ({ request }) => {
           .map((joke) =>
             `
             <item>
-              <title>${joke.name}</title>
-              <description>A funny joke called ${joke.name}</description>
-              <author>${joke.jokester.username}</author>
-              <pubDate>${joke.createdAt}</pubDate>
+              <title><![CDATA[${escapeCdata(joke.name)}]]></title>
+              <description><![CDATA[A funny joke called ${escapeHtml(joke.name)}]]></description>
+              <author><![CDATA[${escapeCdata(username)}]]></author>
+              <pubDate>${joke.createdAt.toUTCString()}</pubDate>
               <link>${jokesUrl}/${joke.id}</link>
               <guid>${jokesUrl}/${joke.id}</guid>
             </item>

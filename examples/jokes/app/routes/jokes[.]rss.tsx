@@ -2,6 +2,19 @@ import type { LoaderFunction } from "@remix-run/node";
 
 import { db } from "~/utils/db.server";
 
+function escapeCdata(s: string) {
+  return s.replace(/\]\]>/g, "]]]]><![CDATA[>");
+}
+
+function escapeHtml(s: string) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export const loader: LoaderFunction = async ({ request }) => {
   const url = new URL(request.url);
   // in the official deployed version of the app, we don't want to deploy
@@ -42,10 +55,10 @@ export const loader: LoaderFunction = async ({ request }) => {
           .map((joke) =>
             `
             <item>
-              <title>${joke.name}</title>
-              <description>A funny joke called ${joke.name}</description>
-              <author>${username}</author>
-              <pubDate>${joke.createdAt}</pubDate>
+              <title><![CDATA[${escapeCdata(joke.name)}]]></title>
+              <description><![CDATA[A funny joke called ${escapeHtml(joke.name)}]]></description>
+              <author><![CDATA[${escapeCdata(username)}]]></author>
+              <pubDate>${joke.createdAt.toUTCString()}</pubDate>
               <link>${jokesUrl}/${joke.id}</link>
               <guid>${jokesUrl}/${joke.id}</guid>
             </item>
