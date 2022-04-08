@@ -58,6 +58,7 @@ interface RemixEntryContextType {
   matches: RouteMatch<ClientRoute>[];
   routeData: { [routeId: string]: RouteData };
   actionData?: RouteData;
+  routeLoadersDeferred: Record<string, Record<string, Promise<unknown>>>;
   pendingLocation?: Location;
   appState: AppState;
   routeModules: RouteModules;
@@ -93,6 +94,7 @@ export function RemixEntry({
     manifest,
     routeData: documentLoaderData,
     actionData: documentActionData,
+    routeLoadersDeferred: documentRouteLoadersDeferred,
     routeModules,
     serverHandoffString,
     appState: entryComponentDidCatchEmulator,
@@ -112,6 +114,7 @@ export function RemixEntry({
       routes: clientRoutes,
       actionData: documentActionData,
       loaderData: documentLoaderData,
+      routeLoadersDeferred: documentRouteLoadersDeferred,
       location: historyLocation,
       catch: entryComponentDidCatchEmulator.catch,
       catchBoundaryId: entryComponentDidCatchEmulator.catchBoundaryRouteId,
@@ -141,7 +144,7 @@ export function RemixEntry({
     return { ..._navigator, push };
   }, [_navigator, transitionManager]);
 
-  let { location, matches, loaderData, actionData } =
+  let { location, matches, loaderData, actionData, routeLoadersDeferred } =
     transitionManager.getState();
 
   // Send new location to the transition manager
@@ -182,6 +185,7 @@ export function RemixEntry({
         clientRoutes,
         routeData: loaderData,
         actionData,
+        routeLoadersDeferred,
         transitionManager,
       }}
     >
@@ -1289,6 +1293,106 @@ export function useMatches() {
       }),
     [matches, routeData, routeModules]
   );
+}
+
+const deferredContext = React.createContext<
+  | {
+      id: string;
+      key: string;
+      data: any;
+    }
+  | undefined
+>(undefined);
+const DEFERRED_PROMISE_VALUE = "$$__REMIX_DEFERRED_PROMISE__$$";
+
+export function Deferred({
+  data,
+  fallback,
+  children,
+}: {
+  data: any;
+  fallback:
+    | boolean
+    | React.ReactChild
+    | React.ReactFragment
+    | React.ReactPortal
+    | null;
+  children: React.ReactNode;
+}) {
+  let { routeLoadersDeferred } = useRemixEntryContext();
+  let { id } = useRemixRouteContext();
+
+  let dataResult = data;
+  let key: string = "";
+  if (
+    typeof data === "string" &&
+    data.startsWith(DEFERRED_PROMISE_VALUE) &&
+    routeLoadersDeferred[id]
+  ) {
+    let promises = routeLoadersDeferred[id];
+    key = data.substring(DEFERRED_PROMISE_VALUE.length);
+    dataResult = promises[key];
+  }
+
+  console.log({ dataResult });
+
+  return (
+    <deferredContext.Provider
+      value={{
+        data: dataResult,
+        id,
+        key,
+      }}
+    >
+      <React.Suspense fallback={fallback}>
+        {children}
+        <DeferredHydrationScript />
+      </React.Suspense>
+    </deferredContext.Provider>
+  );
+}
+
+function DeferredHydrationScript() {
+  let ctx = React.useContext(deferredContext);
+  if (!ctx) {
+    throw new Error("useDeferredLoaderData must be used within a Deferred");
+  }
+
+  let data = useDeferredLoaderData();
+
+  return typeof document === "undefined" ? (
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `window.__remixDeferredData=window.__remixDeferredData||{};window.__remixDeferredData[${JSON.stringify(
+          ctx.id
+        )}]=window.__remixDeferredData[${JSON.stringify(
+          ctx.id
+        )}]||{};window.__remixDeferredData[${JSON.stringify(
+          ctx.id
+        )}][${JSON.stringify(ctx.key)}] = ${JSON.stringify(data)};`,
+      }}
+    />
+  ) : (
+    <script
+      suppressHydrationWarning
+      dangerouslySetInnerHTML={{ __html: " " }}
+    />
+  );
+}
+
+export function useDeferredLoaderData() {
+  let ctx = React.useContext(deferredContext);
+  if (!ctx) {
+    throw new Error("useDeferredLoaderData must be used within a Deferred");
+  }
+
+  if (ctx.data?.then && ctx.data?.catch) {
+    throw ctx.data.then((data: any) => {
+      ctx!.data = data;
+    });
+  }
+
+  return ctx.data;
 }
 
 /**

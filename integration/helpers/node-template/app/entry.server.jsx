@@ -1,5 +1,10 @@
+import { PassThrough } from "stream";
+
 import { RemixServer } from "@remix-run/react";
-import { renderToString } from "react-dom/server";
+import { Response, Headers } from "@remix-run/node";
+import { renderToPipeableStream } from "react-dom/server";
+
+const ABORT_DELAY = 10000;
 
 export default function handleRequest(
   request,
@@ -7,14 +12,31 @@ export default function handleRequest(
   responseHeaders,
   remixContext
 ) {
-  let markup = renderToString(
-    <RemixServer context={remixContext} url={request.url} />
-  );
+  return new Promise((resolve) => {
+    let didError = false;
 
-  responseHeaders.set("Content-Type", "text/html");
+    const { pipe, abort } = renderToPipeableStream(
+      <RemixServer context={remixContext} url={request.url} />,
+      {
+        onShellReady() {
+          let body = new PassThrough();
 
-  return new Response("<!DOCTYPE html>" + markup, {
-    status: responseStatusCode,
-    headers: responseHeaders,
+          responseHeaders.set("Content-Type", "text/html");
+
+          resolve(
+            new Response(body, {
+              status: didError ? 500 : responseStatusCode,
+              headers: responseHeaders,
+            })
+          );
+          pipe(body);
+        },
+        onError(error) {
+          didError = true;
+          console.error(error);
+        },
+      }
+    );
+    setTimeout(abort, ABORT_DELAY);
   });
 }

@@ -14,6 +14,7 @@ declare global {
   var __remixContext: EntryContext;
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
+  var __remixDeferredData: any;
 }
 /* eslint-enable prefer-let/prefer-let */
 
@@ -42,6 +43,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   React.useLayoutEffect(() => history.listen(dispatch), [history]);
 
   let entryContext = window.__remixContext;
+  entryContext.routeLoadersDeferred = window.__remixDeferredData;
   entryContext.manifest = window.__remixManifest;
   entryContext.routeModules = window.__remixRouteModules;
   // In the browser, we don't need this because a) in the case of loader

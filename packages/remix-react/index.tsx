@@ -38,6 +38,8 @@ export {
   useActionData,
   useBeforeUnload,
   useMatches,
+  Deferred,
+  useDeferredLoaderData,
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";

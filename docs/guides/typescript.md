@@ -25,8 +25,8 @@ The remix compiler will not do any type checking (it simply removes the types). 
   },
   "dependencies": {
     "@remix-run/react": "^1.1.1",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
+    "react": "18.0.0",
+    "react-dom": "18.0.0",
     "remix": "^1.1.1",
     "@remix-run/serve": "^1.1.1"
   },

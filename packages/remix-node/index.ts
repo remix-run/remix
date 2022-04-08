@@ -37,6 +37,7 @@ export {
 export {
   createRequestHandler,
   createSession,
+  deferred,
   isCookie,
   isSession,
   json,

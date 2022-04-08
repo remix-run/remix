@@ -50,6 +50,8 @@ export interface TransitionManagerState {
    */
   actionData?: RouteData;
 
+  routeLoadersDeferred: Record<string, Record<string, Promise<unknown>>>;
+
   /**
    * Tracks the latest, non-keyed pending submission
    */
@@ -93,6 +95,7 @@ export interface TransitionManagerInit {
   location: Location;
   loaderData: RouteData;
   actionData?: RouteData;
+  routeLoadersDeferred: Record<string, Record<string, Promise<unknown>>>;
   catch?: CatchData;
   error?: Error;
   catchBoundaryId?: null | string;
@@ -253,6 +256,7 @@ type ClientMatch = RouteMatch<ClientRoute>;
 type DataResult = {
   match: ClientMatch;
   value: TransitionRedirect | Error | any;
+  events?: any;
 };
 
 type DataRedirectResult = {
@@ -441,6 +445,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     location: init.location,
     loaderData: init.loaderData || {},
     actionData: init.actionData,
+    routeLoadersDeferred: init.routeLoadersDeferred,
     catch: init.catch,
     error: init.error,
     catchBoundaryId: init.catchBoundaryId || null,
@@ -1338,12 +1343,37 @@ export function createTransitionManager(init: TransitionManagerInit) {
       errorBoundaryId,
       catch: catchVal,
       catchBoundaryId,
+      routeLoadersDeferred: makeLoaderDefered(state, results),
       loaderData: makeLoaderData(state, results, matches),
       actionData:
         state.transition.type === "actionReload" ? state.actionData : undefined,
       transition: IDLE_TRANSITION,
       fetchers: abortedIds ? new Map(state.fetchers) : state.fetchers,
     });
+  }
+
+  function makeLoaderDefered(
+    state: TransitionManagerState,
+    results: DataResult[]
+  ) {
+    let result = {
+      ...state.routeLoadersDeferred,
+    };
+
+    results.forEach((res) => {
+      result[res.match.route.id] = {
+        ...result[res.match.route.id],
+        ...Object.entries(res.events || {}).reduce(
+          (p, [k, v]: any) => ({
+            ...p,
+            [k]: v.promise,
+          }),
+          {}
+        ),
+      };
+    });
+
+    return result;
   }
 
   function abortNormalNavigation() {
@@ -1424,8 +1454,8 @@ async function callLoader(match: ClientMatch, url: URL, signal: AbortSignal) {
   invariant(match.route.loader, `Expected loader for ${match.route.id}`);
   try {
     let { params } = match;
-    let value = await match.route.loader({ params, url, signal });
-    return { match, value };
+    let [value, events] = await match.route.loader({ params, url, signal });
+    return { match, value, events };
   } catch (error) {
     return { match, value: error };
   }

@@ -1,3 +1,55 @@
+export const DEFERRED_PROMISE_VALUE = "$$__REMIX_DEFERRED_PROMISE__$$";
+
+export class DeferredResponse {
+  public __internal_name__ = "DeferredResponse";
+  public data: any;
+  public deferred: Record<string, Promise<unknown>>;
+  public init: ResponseInit;
+
+  constructor(data: unknown, init: number | ResponseInit) {
+    let responseInit = typeof init === "number" ? { status: init } : init;
+
+    let headers = new Headers(responseInit.headers);
+    if (!headers.has("Content-Type")) {
+      headers.set("Content-Type", "application/json; charset=utf-8");
+    }
+
+    this.init = responseInit;
+
+    let deferred: Record<string, Promise<unknown>> = {};
+    if (typeof data !== "object") {
+      this.data = data;
+    } else if (data) {
+      let dataWithoutPromises: Record<string, any> = {};
+      for (let [key, value] of Object.entries(data)) {
+        if (value?.then && value?.catch) {
+          deferred[key] = value;
+          dataWithoutPromises[key] = DEFERRED_PROMISE_VALUE + key;
+        } else {
+          dataWithoutPromises[key] = value;
+        }
+      }
+
+      this.data = dataWithoutPromises;
+    }
+
+    this.deferred = deferred;
+  }
+}
+
+export function isDeferredResponse(value: any): value is DeferredResponse {
+  return value && value.__internal_name__ === "DeferredResponse";
+}
+
+export type DeferredFunction = <Data>(
+  data: Data,
+  init?: number | ResponseInit
+) => DeferredResponse;
+
+export const deferred: DeferredFunction = (data, init = {}) => {
+  return new DeferredResponse(data, init);
+};
+
 export type JsonFunction = <Data>(
   data: Data,
   init?: number | ResponseInit

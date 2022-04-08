@@ -11,6 +11,7 @@ export interface EntryContext {
   routeData: RouteData;
   actionData?: RouteData;
   routeModules: RouteModules;
+  routeLoadersDeferred: Record<string, Record<string, Promise<unknown>>>;
   serverHandoffString?: string;
 }
 

@@ -60,7 +60,7 @@ export type RouteDataFunction = {
      * implementation when a load/action is aborted.
      */
     signal: AbortSignal;
-  }): Promise<any> | any;
+  }): Promise<[any, any]> | [any, any];
 };
 
 export interface ClientRoute extends Route {
@@ -148,7 +148,7 @@ async function loadRouteModuleWithBlockingLinks(
 function createLoader(route: EntryRoute, routeModules: RouteModules) {
   let loader: ClientRoute["loader"] = async ({ url, signal, submission }) => {
     if (route.hasLoader) {
-      let [result] = await Promise.all([
+      let [[result, events]] = await Promise.all([
         fetchData(url, route.id, signal, submission),
         loadRouteModuleWithBlockingLinks(route, routeModules),
       ]);
@@ -156,7 +156,7 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
       if (result instanceof Error) throw result;
 
       let redirect = await checkRedirect(result);
-      if (redirect) return redirect;
+      if (redirect) return [redirect, undefined];
 
       if (isCatchResponse(result)) {
         throw new CatchValue(
@@ -166,10 +166,12 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
         );
       }
 
-      return extractData(result);
+      console.log(result.headers.get("Content-Type"));
+      return [await extractData(result), events];
     } else {
       await loadRouteModuleWithBlockingLinks(route, routeModules);
     }
+    return [undefined, undefined];
   };
 
   return loader;
@@ -184,7 +186,7 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
       );
     }
 
-    let result = await fetchData(url, route.id, signal, submission);
+    let [result] = await fetchData(url, route.id, signal, submission);
 
     if (result instanceof Error) {
       throw result;

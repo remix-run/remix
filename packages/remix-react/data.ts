@@ -1,3 +1,5 @@
+import { fetchEventSource } from "@microsoft/fetch-event-source";
+
 import invariant from "./invariant";
 import type { Submission } from "./transition";
 
@@ -35,23 +37,108 @@ export async function fetchData(
   routeId: string,
   signal: AbortSignal,
   submission?: Submission
-): Promise<Response | Error> {
+): Promise<[Response | Error, any]> {
   url.searchParams.set("_data", routeId);
 
-  let init: RequestInit = submission
-    ? getActionInit(submission, signal)
-    : { credentials: "same-origin", signal };
+  // await fetchEventSource(url.href, {
+  //   ...init as any,
+  //   onmessage: (event) => {
 
-  let response = await fetch(url.href, init);
+  //   }
+  // })
+  let response: Response;
+  let events: {
+    [key: string]: {
+      promise: Promise<any>;
+      resolve: (value?: any) => void;
+    };
+  } = {};
+  let eventCount = 0;
+  let totalEvents = 0;
+  if (submission) {
+    response = await fetch(url.href, getActionInit(submission, signal));
+  } else {
+    let abort = new AbortController();
+    signal.addEventListener("abort", () => abort.abort());
 
-  if (isErrorResponse(response)) {
-    let data = await response.json();
-    let error = new Error(data.message);
-    error.stack = data.stack;
-    return error;
+    let gotEvents = false;
+    let status = 200;
+    await new Promise<void>(async (resolve) => {
+      fetchEventSource(url.href, {
+        credentials: "same-origin",
+        signal: abort.signal,
+        onopen: async (res) => {
+          let { headers } = res;
+          let contentType = headers.get("Content-Type");
+          if (contentType && /\bapplication\/json\b/.test(contentType)) {
+            response = new Response(await res.text(), {
+              status: res.status,
+              headers: {
+                "Content-Type": contentType,
+              },
+            });
+            abort.abort();
+            resolve();
+          } else {
+            status = res.status;
+          }
+        },
+        onmessage: (event) => {
+          console.log(event);
+          if (!gotEvents) {
+            if (!event.data.includes("$$__REMIX_DEFERRED_EVENTS__$$")) {
+              abort.abort();
+              response = new Response(null, {
+                status: 500,
+                headers: {
+                  "X-Remix-Error": "yes",
+                },
+              });
+            }
+            let eventKeys = event.data
+              .split("$$__REMIX_DEFERRED_EVENTS__$$")[1]
+              .split(",");
+            totalEvents = eventKeys.length;
+            for (let eventKey of eventKeys) {
+              events[eventKey] = {} as any;
+              events[eventKey].promise = new Promise((resolve) => {
+                events[eventKey].resolve = resolve;
+              });
+            }
+            gotEvents = true;
+          }
+
+          if (!event.data.includes("$$__REMIX_DEFERRED_KEY__$$")) {
+            response = new Response(event.data, {
+              status,
+              headers: { "Content-Type": "application/json" },
+            });
+            resolve();
+          } else {
+            eventCount++;
+            let [, eventKey, data] = event.data.split(
+              "$$__REMIX_DEFERRED_KEY__$$"
+            );
+            console.log({ eventKey, data });
+            events[eventKey].resolve(JSON.parse(data));
+            console.log({ totalEvents, eventCount });
+            if (totalEvents >= eventCount) {
+              abort.abort();
+            }
+          }
+        },
+      });
+    });
   }
 
-  return response;
+  if (isErrorResponse(response!)) {
+    let data = await response!.json();
+    let error = new Error(data.message);
+    error.stack = data.stack;
+    return [error, undefined];
+  }
+
+  return [response!, events];
 }
 
 export async function extractData(response: Response): Promise<AppData> {

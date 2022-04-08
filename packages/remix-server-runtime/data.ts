@@ -1,6 +1,13 @@
 import type { RouteMatch } from "./routeMatching";
+import type { LoaderFunction } from "./routeModules";
 import type { ServerRoute } from "./routes";
-import { json, isResponse, isRedirectResponse } from "./responses";
+import {
+  json,
+  isDeferredResponse,
+  isResponse,
+  isRedirectResponse,
+} from "./responses";
+import type { DeferredResponse } from "./responses";
 
 /**
  * An object of arbitrary for route loaders and actions provided by the
@@ -66,7 +73,7 @@ export async function callRouteLoader({
   request: Request;
   match: RouteMatch<ServerRoute>;
   loadContext: unknown;
-}) {
+}): Promise<Response | DeferredResponse> {
   let loader = match.route.module.loader;
 
   if (!loader) {
@@ -77,7 +84,7 @@ export async function callRouteLoader({
     );
   }
 
-  let result;
+  let result: Awaited<ReturnType<LoaderFunction>>;
   try {
     result = await loader({
       request: stripDataParam(stripIndexParam(request.clone())),
@@ -102,7 +109,11 @@ export async function callRouteLoader({
     );
   }
 
-  return isResponse(result) ? result : json(result);
+  return isDeferredResponse(result)
+    ? result
+    : isResponse(result)
+    ? result
+    : json(result);
 }
 
 function stripIndexParam(request: Request) {

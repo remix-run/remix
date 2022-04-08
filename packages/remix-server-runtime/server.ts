@@ -11,7 +11,12 @@ import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
 import type { ServerRoute } from "./routes";
 import { createRoutes } from "./routes";
-import { json, isRedirectResponse, isCatchResponse } from "./responses";
+import {
+  json,
+  isRedirectResponse,
+  isCatchResponse,
+  isDeferredResponse,
+} from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
 export type RequestHandler = (
@@ -129,7 +134,60 @@ async function handleDataRequest({
       }
       match = tempMatch;
 
-      response = await callRouteLoader({ loadContext, match, request });
+      let loaderResponse = await callRouteLoader({
+        loadContext,
+        match,
+        request,
+      });
+      if (isDeferredResponse(loaderResponse)) {
+        if (typeof loaderResponse.data !== "object") {
+          response = json(loaderResponse.data, loaderResponse.init);
+        } else {
+          // TODO: Get rid of stream from shared runtime
+          let stream = require("stream");
+          let body = new stream.PassThrough();
+          body.write(
+            "data: $$__REMIX_DEFERRED_EVENTS__$$" +
+              Object.keys(loaderResponse.deferred).join(",") +
+              "\n\n"
+          );
+
+          body.write("data: " + JSON.stringify(loaderResponse.data) + "\n\n");
+          let allPromises = [];
+          for (let [key, promise] of Object.entries(loaderResponse.deferred)) {
+            allPromises.push(
+              promise.then((data) => {
+                console.log("RESOLVED", key, data);
+                body.write(
+                  `data: $$__REMIX_DEFERRED_KEY__$$${key}$$__REMIX_DEFERRED_KEY__$$` +
+                    JSON.stringify(data) +
+                    "\n\n"
+                );
+              })
+            );
+          }
+          Promise.all(allPromises).then(() => {
+            body.end();
+          });
+          // try {
+          //   for (let [key, promise] of Object.entries(
+          //     loaderResponse.deferred
+          //   )) {
+          //     data[key] = await promise;
+          //   }
+          // } catch (err: any) {
+          //   return errorBoundaryError(err, 500);
+          // }
+
+          let headers = new Headers(loaderResponse.init.headers);
+          headers.set("Content-Type", "text/event-stream");
+          headers.set("Cache-Control", "no-cache");
+          headers.set("Connection", "keep-alive");
+          response = new Response(body, { ...loaderResponse.init, headers });
+        }
+      } else {
+        response = loaderResponse;
+      }
     }
 
     if (isRedirectResponse(response)) {
@@ -320,6 +378,10 @@ async function handleDocumentRequest({
 
   let headerMatches: RouteMatch<ServerRoute>[] = [];
   let routeLoaderResponses: Record<string, Response> = {};
+  let routeLoadersDeferred: Record<
+    string,
+    Record<string, Promise<unknown>>
+  > = {};
   let loaderStatusCodes: number[] = [];
   let routeData: Record<string, unknown> = {};
   for (let index = 0; index < matchesToLoad.length; index++) {
@@ -327,7 +389,16 @@ async function handleDocumentRequest({
     let result = routeLoaderResults[index];
 
     let error = result.status === "rejected" ? result.reason : undefined;
-    let response = result.status === "fulfilled" ? result.value : undefined;
+    let loaderResponse =
+      result.status === "fulfilled" ? result.value : undefined;
+
+    let response: Response | undefined;
+    if (isDeferredResponse(loaderResponse)) {
+      routeLoadersDeferred[match.route.id] = loaderResponse.deferred;
+      response = json(loaderResponse.data, loaderResponse.init);
+    } else {
+      response = loaderResponse;
+    }
     let isRedirect = response ? isRedirectResponse(response) : false;
     let isCatch = response ? isCatchResponse(response) : false;
 
@@ -451,6 +522,7 @@ async function handleDocumentRequest({
     ...serverHandoff,
     manifest: build.assets,
     routeModules,
+    routeLoadersDeferred,
     serverHandoffString: createServerHandoffString(serverHandoff),
   };
 
@@ -521,7 +593,28 @@ async function handleResourceRequest({
     if (isActionRequest(request)) {
       return await callRouteAction({ match, loadContext, request });
     } else {
-      return await callRouteLoader({ match, loadContext, request });
+      let loaderResponse = await callRouteLoader({
+        match,
+        loadContext,
+        request,
+      });
+      let response: Response;
+      if (isDeferredResponse(loaderResponse)) {
+        // TODO: Make this a SSE stream and chunk down deferred as they complete
+        let data: Record<string, any> = { ...loaderResponse.data };
+        try {
+          for (let [key, promise] of Object.entries(loaderResponse.deferred)) {
+            data[key] = await promise;
+          }
+        } catch (err: any) {
+          return errorBoundaryError(err, 500);
+        }
+        response = json(data, loaderResponse.init);
+      } else {
+        response = loaderResponse;
+      }
+
+      return response;
     }
   } catch (error: any) {
     if (serverMode !== ServerMode.Test) {

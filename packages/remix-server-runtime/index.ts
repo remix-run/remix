@@ -1,6 +1,6 @@
 // Default implementations for the Remix server runtime interface
 export { createCookieFactory, isCookie } from "./cookies";
-export { json, redirect } from "./responses";
+export { deferred, json, redirect } from "./responses";
 export { createRequestHandler } from "./server";
 export {
   createSession,
