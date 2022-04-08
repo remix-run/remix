@@ -13,7 +13,7 @@ Since Remix relies on browser API's such as fetch that are not natively availabl
 Your testing framework should provide you with a hook or location to polyfill globals / mock out API's; here you can add the following lines to install the globals that Remix relies on:
 
 ```ts
-import { installGlobals } from "@remix-run/node";
+import { installGlobals } from "@remix-run/{runtime}";
 
 // This installs globals such as "fetch", "Response", "Request" and "Headers".
 installGlobals();

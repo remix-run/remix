@@ -1,4 +1,4 @@
-name: No Response
+name: 🥺 No Response
 
 on:
   issue_comment:
@@ -13,7 +13,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: lee-dohm/no-response@v0.5.0
+      - name: 🥺 Handle Ghosting
+        uses: lee-dohm/no-response@v0.5.0
         with:
           closeComment: >
             This issue has been automatically closed because we haven't received a
