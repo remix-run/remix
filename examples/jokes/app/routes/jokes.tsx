@@ -93,7 +93,7 @@ export default function JokesScreen() {
       </main>
       <footer className="jokes-footer">
         <div className="container">
-          <Link reloadDocument to="/jokes.rss">
+          <Link reloadDocument to={data.user ? `/jokes.rss?jokester=${data.user.username}` : "/jokes.rss"}>
             RSS
           </Link>
         </div>
