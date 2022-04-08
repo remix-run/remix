@@ -17,7 +17,7 @@ export function createRequestHandler<Context = unknown>({
     try {
       let loadContext = getLoadContext
         ? await getLoadContext(request, context)
-        : undefined;
+        : context;
 
       return await remixHandler(request, loadContext);
     } catch (e) {

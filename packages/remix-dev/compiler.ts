@@ -432,11 +432,44 @@ function createServerBuild(
   if (config.serverBuildTarget === "netlify-edge") {
     let edgeManifest = {
       functions: [{ function: "server", path: "/*" }],
+      import_map: "../remix-import-map.json",
       version: 1,
     };
     let edgeDir = path.dirname(config.serverBuildPath);
+
     fse.ensureDirSync(edgeDir);
     fse.writeJSONSync(path.join(edgeDir, "manifest.json"), edgeManifest);
+
+    // This generated import map is processed by the netlify CLI and combined with the internal map
+    let importMapPath = path.join(
+      config.rootDirectory,
+      ".netlify",
+      "remix-import-map.json"
+    );
+
+    let runtimePath: string | undefined;
+
+    try {
+      // If the user has it locally-installed, use that
+      runtimePath = `file://${require.resolve("@remix-run/netlify-edge", {
+        paths: [config.rootDirectory],
+      })}`;
+    } catch {
+      console.error("Please install '@remix-run/netlify-edge'");
+      // When published, we can fall back to a URL import instead of bailing
+      // e.g. runtimePath = "https://esm.sh/@remix-run/netlify-edge";
+    }
+
+    if (runtimePath) {
+      let importMap = {
+        imports: {
+          "@remix-run/netlify-edge": runtimePath,
+        },
+      };
+
+      fse.ensureDirSync(path.dirname(importMapPath));
+      fse.writeJSONSync(importMapPath, importMap);
+    }
   }
 
   return esbuild
