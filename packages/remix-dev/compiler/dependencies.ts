@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { findRootSync } from "@manypkg/find-root";
 
 import type { RemixConfig } from "../config";
 
@@ -13,9 +14,24 @@ export function getPackageDependencies(
 }
 
 export function getAppDependencies(config: RemixConfig): PackageDependencies {
-  return getPackageDependencies(
-    path.resolve(config.rootDirectory, "package.json")
-  );
+  let monorepoRoot = findRootSync(config.rootDirectory);
+
+  let isMonorepo = config.rootDirectory !== monorepoRoot;
+  if (isMonorepo) {
+    // If we are in a monorepo, we need to include the dependencies of current package and root package.json
+    return {
+      ...getPackageDependencies(
+        path.resolve(monorepoRoot, "package.json")
+      ),
+      ...getPackageDependencies(
+        path.resolve(config.rootDirectory, "package.json")
+      ),
+    }
+  } else {
+    return getPackageDependencies(
+      path.resolve(config.rootDirectory, "package.json")
+    );
+  }
 }
 
 export function getDependenciesToBundle(...pkg: string[]): string[] {
