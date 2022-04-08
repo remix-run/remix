@@ -13,7 +13,6 @@ export const loader: LoaderFunction = async ({ request }) => {
   const jokes = await db.joke.findMany({
     take: 100,
     orderBy: { createdAt: "desc" },
-    include: { jokester: { select: { username: true } } },
     where: {
       jokester: {
         username
@@ -45,7 +44,7 @@ export const loader: LoaderFunction = async ({ request }) => {
             <item>
               <title>${joke.name}</title>
               <description>A funny joke called ${joke.name}</description>
-              <author>${joke.jokester.username}</author>
+              <author>${username}</author>
               <pubDate>${joke.createdAt}</pubDate>
               <link>${jokesUrl}/${joke.id}</link>
               <guid>${jokesUrl}/${joke.id}</guid>
