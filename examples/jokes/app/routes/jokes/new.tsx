@@ -1,13 +1,13 @@
-import type { ActionFunction, LoaderFunction } from "remix";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import {
-  Link,
-  useCatch,
-  useActionData,
   Form,
-  redirect,
+  Link,
+  useActionData,
+  useCatch,
   useTransition,
-  json,
-} from "remix";
+} from "@remix-run/react";
+
 import { JokeDisplay } from "~/components/joke";
 import { db } from "~/utils/db.server";
 import { getUserId, requireUserId } from "~/utils/session.server";

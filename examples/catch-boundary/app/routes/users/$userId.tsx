@@ -1,5 +1,7 @@
-import type { LoaderFunction, MetaFunction } from "remix";
-import { json, useCatch, useLoaderData, useParams } from "remix";
+import type { LoaderFunction, MetaFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useCatch, useLoaderData, useParams } from "@remix-run/react";
+
 import type { User as UserType } from "~/data.server";
 import { getUsers } from "~/data.server";
 

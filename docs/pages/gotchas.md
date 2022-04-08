@@ -19,7 +19,7 @@ TypeError: Cannot read properties of undefined (reading 'root')
 For example, you can't import "fs-extra" directly into a route module:
 
 ```js lines=[2] filename=app/routes/index.jsx bad
-import { json } from "remix";
+import { json } from "@remix-run/{runtime}";
 import fs from "fs-extra";
 
 export async function loader() {
@@ -40,7 +40,7 @@ export * from "fs-extra";
 And then change our import in the route to the new "wrapper" module:
 
 ```js lines=[3] filename=app/routes/index.jsx
-import { json } from "remix";
+import { json } from "@remix-run/{runtime}";
 
 import fs from "../utils/fs-extra.server";
 
@@ -120,3 +120,15 @@ if (typeof document === "undefined") {
 This will work for all JS environments (Node.js, Deno, Workers, etc.).
 
 [esbuild]: https://esbuild.github.io/
+
+## Browser extensions injecting code
+
+You may run into this warning in the browser:
+
+```
+Warning: Did not expect server HTML to contain a <script> in <html>.
+```
+
+This is a hydration warning from React, and is most likely due to one of your browser extensions injecting scripts into the server-rendered HTML, creating a difference with the resulting HTML.
+
+Check out the page in incognito mode, the warning should disappear.

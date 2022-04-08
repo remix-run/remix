@@ -13,19 +13,29 @@ describe("headers export", () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { Outlet } from "remix";
+          import { json } from "@remix-run/node";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
-          export function loader() {
-            return null
-          }
+          export const loader = () => json({});
 
-          export default function Index() {
-            return <html><body><Outlet/></body></html>
+          export default function Root() {
+            return (
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                  <Scripts />
+                </body>
+              </html>
+            );
           }
         `,
 
         "app/routes/index.jsx": js`
-          import { json } from "remix";
+          import { json } from "@remix-run/node";
 
           export function loader() {
             return json(null, {
@@ -47,7 +57,7 @@ describe("headers export", () => {
         `,
 
         "app/routes/action.jsx": js`
-          import { json } from "remix";
+          import { json } from "@remix-run/node";
 
           export function action() {
             return json(null, {
@@ -86,15 +96,26 @@ describe("headers export", () => {
     let fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { Outlet } from "remix";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
-          export default function Index() {
-            return <html><body><Outlet/></body></html>
+          export default function Root() {
+            return (
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                  <Scripts />
+                </body>
+              </html>
+            );
           }
         `,
 
         "app/routes/index.jsx": js`
-          import { json } from "remix";
+          import { json } from "@remix-run/node";
 
           export function loader() {
             return json(null, {

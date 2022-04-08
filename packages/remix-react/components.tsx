@@ -253,6 +253,18 @@ export function RemixRoute({ id }: { id: string }) {
   let location = useLocation();
   let { routeData, routeModules, appState } = useRemixEntryContext();
 
+  // This checks prevent cryptic error messages such as: 'Cannot read properties of undefined (reading 'root')'
+  invariant(
+    routeData,
+    "Cannot initialize 'routeData'. This normally occurs when you have server code in your client modules.\n" +
+      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
+  );
+  invariant(
+    routeModules,
+    "Cannot initialize 'routeModules'. This normally occurs when you have server code in your client modules.\n" +
+      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
+  );
+
   let data = routeData[id];
   let { default: Component, CatchBoundary, ErrorBoundary } = routeModules[id];
   let element = Component ? <Component /> : <DefaultRouteComponent id={id} />;
@@ -663,28 +675,38 @@ export function Meta() {
   return (
     <>
       {Object.entries(meta).map(([name, value]) => {
-        if (!value) return null;
+        if (!value) {
+          return null;
+        }
+
+        if (["charset", "charSet"].includes(name)) {
+          return <meta key="charset" charSet={value as string} />;
+        }
+
+        if (name === "title") {
+          return <title key="title">{value}</title>;
+        }
 
         // Open Graph tags use the `property` attribute, while other meta tags
         // use `name`. See https://ogp.me/
         let isOpenGraphTag = name.startsWith("og:");
-        return name === "title" ? (
-          <title key="title">{value}</title>
-        ) : ["charset", "charSet"].includes(name) ? (
-          <meta key="charset" charSet={value as string} />
-        ) : Array.isArray(value) ? (
-          value.map((content) =>
-            isOpenGraphTag ? (
-              <meta key={name + content} property={name} content={content} />
-            ) : (
-              <meta key={name + content} name={name} content={content} />
-            )
-          )
-        ) : isOpenGraphTag ? (
-          <meta key={name} property={name} content={value} />
-        ) : (
-          <meta key={name} name={name} content={value} />
-        );
+        return [value].flat().map((content) => {
+          if (isOpenGraphTag) {
+            return (
+              <meta
+                content={content as string}
+                key={name + content}
+                property={name}
+              />
+            );
+          }
+
+          if (typeof content === "string") {
+            return <meta content={content} name={name} key={name + content} />;
+          }
+
+          return <meta key={name + JSON.stringify(content)} {...content} />;
+        });
       })}
     </>
   );
@@ -1377,8 +1399,10 @@ export const LiveReload =
     ? () => null
     : function LiveReload({
         port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
+        nonce = undefined,
       }: {
         port?: number;
+        nonce?: string;
       }) {
         let setupLiveReload = ((port: number) => {
           let protocol = location.protocol === "https:" ? "wss:" : "ws:";
@@ -1404,9 +1428,10 @@ export const LiveReload =
 
         return (
           <script
+            nonce={nonce}
             suppressHydrationWarning
             dangerouslySetInnerHTML={{
-              __html: `(${setupLiveReload})(${JSON.stringify(port)})`,
+              __html: `(${setupLiveReload})(${port})`,
             }}
           />
         );

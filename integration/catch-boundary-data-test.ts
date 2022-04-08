@@ -19,13 +19,27 @@ beforeAll(async () => {
   fixture = await createFixture({
     files: {
       "app/root.jsx": js`
-        import { Outlet, Scripts, useMatches, useLoaderData } from "remix";
-        export let loader = () => "${ROOT_DATA}";
+        import { json } from "@remix-run/node";
+        import {
+          Links,
+          Meta,
+          Outlet,
+          Scripts,
+          useLoaderData,
+          useMatches,
+        } from "@remix-run/react";
+
+        export const loader = () => json("${ROOT_DATA}");
+
         export default function Root() {
-          let data = useLoaderData();
+          const data = useLoaderData();
+
           return (
-            <html>
-              <head />
+            <html lang="en">
+              <head>
+                <Meta />
+                <Links />
+              </head>
               <body>
                 <div>{data}</div>
                 <Outlet />
@@ -34,6 +48,7 @@ beforeAll(async () => {
             </html>
           );
         }
+
         export function CatchBoundary() {
           let matches = useMatches();
           let { data } = matches.find(match => match.id === "root");
@@ -52,7 +67,7 @@ beforeAll(async () => {
       `,
 
       "app/routes/index.jsx": js`
-        import { Link } from "remix";
+        import { Link } from "@remix-run/react";
         export default function Index() {
           return (
             <div>
@@ -74,7 +89,7 @@ beforeAll(async () => {
       `,
 
       [`app/routes${HAS_BOUNDARY_LAYOUT_NESTED_LOADER}.jsx`]: js`
-        import { useMatches } from "remix";
+        import { useMatches } from "@remix-run/react";
         export function loader() {
           return "${LAYOUT_DATA}";
         }
@@ -104,7 +119,7 @@ beforeAll(async () => {
       `,
 
       [`app/routes${HAS_BOUNDARY_NESTED_LOADER}.jsx`]: js`
-        import { Outlet, useLoaderData } from "remix";
+        import { Outlet, useLoaderData } from "@remix-run/react";
         export function loader() {
           return "${LAYOUT_DATA}";
         }

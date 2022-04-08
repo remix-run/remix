@@ -19,13 +19,13 @@ let app: AppFixture;
 // Now try running this test:
 //
 //    ```
-//    jest integration/bug-report-test.ts
+//    yarn bug-report-test
 //    ```
 //
 // You can add `--watch` to the end to have it re-run on file changes:
 //
 //    ```
-//    jest integration/bug-report-test.ts --watch
+//    yarn bug-report-test --watch
 //    ```
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -37,10 +37,11 @@ beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/index.jsx": js`
-        import { json, Form } from "remix";
+        import { json } from "@remix-run/node";
+        import { Form } from "@remix-run/react";
 
         export async function action() {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 1000));
           return json({});
         }
 

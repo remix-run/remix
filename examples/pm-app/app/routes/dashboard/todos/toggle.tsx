@@ -1,7 +1,8 @@
-import type { ActionFunction } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+
 import { getTodo, updateTodo } from "~/db.server";
 import { requireUser } from "~/session.server";
-import { json } from "remix";
 
 export const action: ActionFunction = async ({ request }) => {
   await requireUser(request, {

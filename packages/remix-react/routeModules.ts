@@ -71,7 +71,15 @@ export interface MetaFunction {
  * `name` attribute.
  */
 export interface HtmlMetaDescriptor {
-  [name: string]: string | string[] | null | undefined;
+  charset?: "utf-8";
+  charSet?: "utf-8";
+  title?: string;
+  [name: string]:
+    | null
+    | string
+    | undefined
+    | Record<string, string>
+    | Array<Record<string, string> | string>;
 }
 
 /**

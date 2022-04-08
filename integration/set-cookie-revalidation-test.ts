@@ -10,7 +10,7 @@ beforeAll(async () => {
   fixture = await createFixture({
     files: {
       "app/session.server.js": js`
-        import { createCookieSessionStorage } from "remix";
+        import { createCookieSessionStorage } from "@remix-run/node";
 
         export let MESSAGE_KEY = "message";
 
@@ -25,11 +25,18 @@ beforeAll(async () => {
       `,
 
       "app/root.jsx": js`
-        import { json, Outlet, Scripts, useLoaderData } from "remix";
+        import { json } from "@remix-run/node";
+        import {
+          Links,
+          Meta,
+          Outlet,
+          Scripts,
+          useLoaderData,
+        } from "@remix-run/react";
 
         import { sessionStorage, MESSAGE_KEY } from "~/session.server";
 
-        export let loader = async ({ request }) => {
+        export const loader = async ({ request }) => {
           let session = await sessionStorage.getSession(request.headers.get("Cookie"));
           let message = session.get(MESSAGE_KEY) || null;
 
@@ -41,10 +48,14 @@ beforeAll(async () => {
         };
 
         export default function Root() {
-          let message = useLoaderData();
+          const message = useLoaderData();
 
           return (
-            <html>
+            <html lang="en">
+              <head>
+                <Meta />
+                <Links />
+              </head>
               <body>
                 {!!message && <p id="message">{message}</p>}
                 <Outlet />
@@ -56,7 +67,7 @@ beforeAll(async () => {
       `,
 
       "app/routes/index.jsx": js`
-        import { Link } from "remix";
+        import { Link } from "@remix-run/react";
 
         export default function Index() {
           return (
@@ -74,7 +85,7 @@ beforeAll(async () => {
       `,
 
       "app/routes/protected.jsx": js`
-        import { redirect } from "remix";
+        import { redirect } from "@remix-run/node";
 
         import { sessionStorage, MESSAGE_KEY } from "~/session.server";
 

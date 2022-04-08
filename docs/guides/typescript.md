@@ -10,36 +10,37 @@ Remix seamlessly supports both JavaScript and TypeScript. If you name a file wit
 
 The remix compiler will not do any type checking (it simply removes the types). If you want to do type checking, you'll want to use TypeScript's `tsc` CLI yourself. A common solution is to add a `typecheck` script to your package.json:
 
-```json filename=package.json lines=[9]
+```json filename=package.json lines=[11]
 {
-  "private": true,
   "name": "remix-app",
+  "private": true,
   "description": "Example remix app using TypeScript",
-  "license": "MIT",
+  "license": "",
+  "sideEffects": false,
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
-    "typecheck": "tsc -b",
-    "postinstall": "remix setup node",
-    "start": "remix-serve build"
+    "start": "remix-serve build",
+    "typecheck": "tsc -b"
   },
   "dependencies": {
-    "@remix-run/react": "^1.1.1",
+    "@remix-run/node": "1.3.4",
+    "@remix-run/react": "1.3.4",
+    "@remix-run/serve": "1.3.4",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "remix": "^1.1.1",
-    "@remix-run/serve": "^1.1.1"
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@remix-run/dev": "^1.1.1",
+    "@remix-run/dev": "1.3.4",
+    "@remix-run/eslint-config": "1.3.4",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
-    "typescript": "^4.5.4"
+    "eslint": "^8.11.0",
+    "typescript": "^4.5.5"
   },
   "engines": {
     "node": ">=14"
-  },
-  "sideEffects": false
+  }
 }
 ```
 
@@ -52,6 +53,7 @@ Remix has TypeScript type definitions built-in as well. The starter templates cr
   "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2019"],
+    "isolatedModules": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
     "moduleResolution": "node",
