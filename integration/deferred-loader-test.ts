@@ -157,7 +157,7 @@ beforeAll(async () => {
         }
 
         export function ErrorBoundary() {
-          return <div>Error Boundary</div>;
+          return <div id="error-boundary">Error Boundary</div>;
         }
       `,
 
@@ -267,10 +267,16 @@ it("errored deferred data renders boundary", async () => {
   expect(text).toMatch("Oh, no!");
 });
 
-it("errored deferred data renders route boundary", async () => {
-  await app.poke(120, "/");
+it("errored deferred data renders route boundary on hydration", async () => {
+  await app.goto("/deferred-error-no-boundary");
+  let text = await app.getHtml();
+  let boundary = await app.getElement("#error-boundary");
+  expect(boundary.text()).toMatch("Error Boundary");
+});
+
+it("errored deferred data renders route boundary on transition", async () => {
   await app.goto("/");
   await app.clickLink("/deferred-error-no-boundary");
   let text = await app.getHtml();
   expect(text).toMatch("Error Boundary");
-}, 120_000);
+});
