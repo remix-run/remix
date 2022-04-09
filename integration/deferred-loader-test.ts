@@ -54,7 +54,7 @@ beforeAll(async () => {
           return deferred({
             foo: "pizza",
             bar: new Promise(async resolve => {
-              await new Promise(resolve => setTimeout(resolve, 500));
+              // await new Promise(resolve => setTimeout(resolve, 500));
               resolve("hamburger");
             }),
           });
@@ -90,11 +90,11 @@ beforeAll(async () => {
           return deferred({
             foo: "pizza",
             bar: new Promise(async resolve => {
-              await new Promise(resolve => setTimeout(resolve, 500));
+              // await new Promise(resolve => setTimeout(resolve, 500));
               resolve("hamburger");
             }),
             baz: new Promise(async resolve => {
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              // await new Promise(resolve => setTimeout(resolve, 1000));
               resolve("soup");
             }),
           });
