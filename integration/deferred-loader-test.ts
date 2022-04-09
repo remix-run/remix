@@ -61,9 +61,7 @@ beforeAll(async () => {
         }
 
         function DeferredComponent() {
-          // TODO: change to useDeferred();
           let deferred = useDeferred();
-          console.log({deferred})
           return <div>{deferred}</div>;
         }
 
@@ -142,13 +140,19 @@ it("works the same as json with no promise keys", async () => {
 });
 
 it("loads critical data first", async () => {
-  await app.poke(120, "/deferred");
   let response = await fixture.requestDocument("/deferred");
   let text = await response.text();
-  console.log(text);
   expect(text).toMatch("pizza");
   expect(text).toMatch('<div hidden id="S:1"><div>hamburger</div>');
-  expect(text).toMatch(
-    'window.__remixDeferredData["routes/deferred"]["deferred"]'
-  );
-}, 120_000);
+  expect(text).toMatch('window.__remixDeferredData["routes/deferred"]["bar"]');
+});
+
+it("loads critical data first", async () => {
+  let response = await fixture.requestDocument("/multiple-deferred");
+  let text = await response.text();
+  expect(text).toMatch("pizza");
+  expect(text).toMatch('<div hidden id="S:2"><div>hamburger</div>');
+  expect(text).toMatch('window.__remixDeferredData["routes/multiple-deferred"]["bar"]');
+  expect(text).toMatch('<div hidden id="S:4"><div>soup</div>');
+  expect(text).toMatch('window.__remixDeferredData["routes/multiple-deferred"]["baz"]');
+});

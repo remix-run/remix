@@ -1334,8 +1334,6 @@ export function Deferred({
     dataResult = promises[key];
   }
 
-  console.log({ dataResult });
-
   return (
     <deferredContext.Provider
       value={{

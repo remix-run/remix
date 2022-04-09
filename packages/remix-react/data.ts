@@ -86,7 +86,6 @@ export async function fetchData(
           }
         },
         onmessage: (event) => {
-          console.log({ event });
           if (!gotEvents) {
             if (!event.data.includes("$$__REMIX_DEFERRED_EVENTS__$$")) {
               abort.abort();
@@ -100,8 +99,9 @@ export async function fetchData(
             let eventKeys = event.data
               .split("$$__REMIX_DEFERRED_EVENTS__$$")[1]
               .split(",");
+
             totalEvents = eventKeys.length;
-            console.log({ eventKeys });
+
             for (let eventKey of eventKeys) {
               events[eventKey] = {} as any;
               events[eventKey].promise = new Promise((resolve, reject) => {
@@ -123,9 +123,8 @@ export async function fetchData(
             let [, eventKey, data] = event.data.split(
               "$$__REMIX_DEFERRED_KEY__$$"
             );
-            console.log({ eventKey, data });
             events[eventKey].resolve(JSON.parse(data));
-            console.log({ totalEvents, eventCount });
+
             if (totalEvents <= eventCount) {
               abort.abort();
             }
