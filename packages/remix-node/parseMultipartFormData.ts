@@ -47,7 +47,9 @@ export async function internalParseFormData(
         if (aborted) return;
         aborted = true;
 
-        stream.unpipe();
+        if (stream.unpipe) {
+          stream.unpipe();
+        }
         stream.removeAllListeners();
         busboy.removeAllListeners();
 

@@ -32,4 +32,27 @@ describe("internalParseFormData", () => {
     expect(file.name).toBe("file.txt");
     expect(await file.text()).toBe("file");
   });
+
+  it("throws an error when file is bigger than maxFileSize", async () => {
+    let formData = new NodeFormData();
+    formData.set("file", new File(["file"], "file.txt"));
+
+    let req = new NodeRequest("https://test.com", {
+      method: "post",
+      body: formData as any,
+    });
+
+    let uploadHandler = createMemoryUploadHandler({
+      maxFileSize: 1,
+    });
+
+    await expect(
+      internalParseFormData(
+        req.headers.get("Content-Type"),
+        req.body as any,
+        undefined,
+        uploadHandler
+      )
+    ).rejects.toThrow('Field "file" exceeded upload size of 1 bytes.');
+  });
 });
