@@ -136,13 +136,13 @@ function warnOnceIfEsmOnlyPackage(
   onWarning: (msg: string, key: string) => void
 ) {
   let packageDir = resolveModuleBasePath(packageName);
-  let pkgJsonPath = path.join(packageDir, "package.json");
+  let packageJsonFile = path.join(packageDir, "package.json");
 
-  if (!fs.existsSync(pkgJsonPath)) {
-    console.log(pkgJsonPath, `does not exist`);
+  if (!fs.existsSync(packageJsonFile)) {
+    console.log(packageJsonFile, `does not exist`);
     return;
   }
-  let pkg = JSON.parse(fs.readFileSync(pkgJsonPath, "utf-8"));
+  let pkg = JSON.parse(fs.readFileSync(packageJsonFile, "utf-8"));
 
   let subImport = fullImportPath.slice(packageName.length + 1);
 
