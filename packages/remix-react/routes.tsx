@@ -166,7 +166,6 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
         );
       }
 
-      console.log(result.headers.get("Content-Type"));
       return [await extractData(result), events];
     } else {
       await loadRouteModuleWithBlockingLinks(route, routeModules);

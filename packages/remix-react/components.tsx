@@ -1312,7 +1312,7 @@ export function Deferred({
   children,
 }: {
   data: any;
-  error:
+  error?:
     | boolean
     | React.ReactChild
     | React.ReactFragment
@@ -1360,7 +1360,7 @@ function DeferredErrorBoundary({
   error,
   children,
 }: {
-  error:
+  error?:
     | boolean
     | React.ReactChild
     | React.ReactFragment
@@ -1371,9 +1371,13 @@ function DeferredErrorBoundary({
   let data = useDeferred();
 
   if (data instanceof Error) {
+    if (typeof document !== "undefined" && typeof error === "undefined") {
+      throw data;
+    }
+
     return (
       <>
-        {error || null}
+        {error}
         <DeferredHydrationScript />
       </>
     );

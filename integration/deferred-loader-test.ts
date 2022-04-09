@@ -22,6 +22,7 @@ beforeAll(async () => {
               <Link to="/deferred">Deferred Route</Link>
               <Link to="/multiple-deferred">Multiple Deferred Route</Link>
               <Link to="/deferred-error">Deferred Error</Link>
+              <Link to="/deferred-error-no-boundary">Deferred Error No Boundary</Link>
               {data}
             </div>
           )
@@ -119,6 +120,47 @@ beforeAll(async () => {
         }
       `,
 
+      "app/routes/deferred-error-no-boundary.jsx": js`
+        import * as React from "react";
+        import { deferred } from "@remix-run/node";
+        import { useLoaderData, Link, Deferred, useDeferred } from "@remix-run/react";
+
+        export function loader() {
+          return deferred({
+            foo: "pizza",
+            bar: new Promise(async (resolve, reject) => {
+              // await new Promise(resolve => setTimeout(resolve, 500));
+              return reject(new Error("Oh, no!"));
+              resolve("hamburger");
+            }),
+          });
+        }
+
+        function DeferredComponent() {
+          let deferred = useDeferred();
+          return <div>{deferred}</div>;
+        }
+
+        export default function Index() {
+          let {foo, bar} = useLoaderData();
+          let [count, setCount] = React.useState(0);
+
+          return (
+            <div>
+              {foo}
+              <button onClick={() => setCount(count + 1)}>{count} Count</button>
+              <Deferred data={bar}>
+                <DeferredComponent />
+              </Deferred>
+            </div>
+          )
+        }
+
+        export function ErrorBoundary() {
+          return <div>Error Boundary</div>;
+        }
+      `,
+
       "app/routes/multiple-deferred.jsx": js`
         import * as React from "react";
         import { deferred } from "@remix-run/node";
@@ -150,7 +192,6 @@ beforeAll(async () => {
           return (
             <div>
               {foo}
-              <button onClick={() => setCount(count + 1)}>{count} Count</button>
               <Deferred data={bar}>
                 <DeferredComponent />
               </Deferred>
@@ -225,3 +266,11 @@ it("errored deferred data renders boundary", async () => {
   expect(text).not.toMatch("hamburger");
   expect(text).toMatch("Oh, no!");
 });
+
+it("errored deferred data renders route boundary", async () => {
+  await app.poke(120, "/");
+  await app.goto("/");
+  await app.clickLink("/deferred-error-no-boundary");
+  let text = await app.getHtml();
+  expect(text).toMatch("Error Boundary");
+}, 120_000);
