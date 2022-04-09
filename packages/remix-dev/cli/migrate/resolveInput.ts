@@ -1,12 +1,14 @@
 import inquirer from "inquirer";
 
+import { checkGitStatus } from "../checkGitStatus";
+import type { Flags } from "./flags";
 import { migrations } from "./migrations";
 
-export const resolveProjectDir = (input?: string): string => {
+const resolveProjectDir = (input?: string): string => {
   return input || process.env.REMIX_ROOT || process.cwd();
 };
 
-export const resolveMigrationId = async (input?: string): Promise<string> => {
+const resolveMigrationId = async (input?: string): Promise<string> => {
   if (input !== undefined) return input;
   let { migrationId } = await inquirer.prompt<{ migrationId?: string }>([
     {
@@ -32,4 +34,22 @@ export const resolveMigrationId = async (input?: string): Promise<string> => {
     process.exit(0);
   }
   return migrationId;
+};
+
+export const resolveInput = async (
+  input: {
+    projectId: string;
+    migrationId?: string;
+  },
+  flags: Flags
+) => {
+  let projectDir = resolveProjectDir(input.projectId);
+  if (!flags.dry) {
+    checkGitStatus(projectDir, { force: flags.force });
+  }
+  let migrationId = await resolveMigrationId(input.migrationId);
+  return {
+    projectDir,
+    migrationId,
+  };
 };
