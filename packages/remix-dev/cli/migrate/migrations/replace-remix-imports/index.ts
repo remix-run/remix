@@ -1,138 +1,112 @@
-import { readFile } from "fs/promises";
-import glob from "fast-glob";
+import semver from "semver";
+import NpmCliPackageJson from "@npmcli/package-json";
 import { join } from "path";
-import type { PackageJson } from "type-fest";
+import glob from "fast-glob";
+import { maxBy } from "lodash";
 
-import * as jscodeshift from "../../jscodeshift";
-import {
-  findRemixDependencies,
-  getTransformOptions,
-} from "./getTransformOptions";
-import type { Options } from "./transform";
-import { isAdapter, isRuntime } from "./transform";
-import type { MigrationFunction } from "../../types";
 import { readConfig } from "../../../../config";
-import { hint } from "../../../../logging";
-import * as colors from "../../../../colors";
+import * as jscodeshift from "../../jscodeshift";
+import type { MigrationFunction } from "../../types";
+import { resolveTransformOptions } from "./resolveTransformOptions";
+import type { Options } from "./transform";
+import type { Dependency } from "./dependency";
+import { depsToObject, isRemixPackage, depsToEntries } from "./dependency";
+import { remixSetupPattern } from "./postinstall";
 
-const transformPath = join(__dirname, "transform");
+const TRANSFORM_PATH = join(__dirname, "transform");
 
-function* getTasks({
-  packageJson,
-  runtime,
-  adapter,
-}: {
-  packageJson: PackageJson;
-  runtime: string;
-  adapter?: string;
-}): Generator<string> {
-  let commandTask = (message: string, command: string) =>
-    `${message}:\n\t${colors.hint(command)}`;
-  let remixRunPrefix = (dep: string) => "@remix-run/" + dep;
-  let remixDeps = findRemixDependencies(packageJson.dependencies);
-
-  // runtime not in deps
-  if (!remixDeps.includes(runtime)) {
-    yield commandTask(
-      `Install \`@remix-run/${runtime}\` as a dependency`,
-      `npm install @remix-run/${runtime}`
-    );
+const getRemixVersionSpec = (remixDeps: Dependency[]): string => {
+  let candidate = maxBy(remixDeps, (dep) => semver.minVersion(dep.versionSpec));
+  if (candidate === undefined) {
+    console.error("TODO");
+    process.exit(1);
   }
 
-  // other runtimes in deps
-  let otherRuntimes = remixDeps
-    .filter(isRuntime)
-    .filter((dep) => dep !== runtime);
-  if (otherRuntimes.length > 0) {
-    yield commandTask(
-      "Uninstall all unused runtimes",
-      `npm uninstall ${otherRuntimes.map(remixRunPrefix).join(" ")}`
-    );
+  let candidateMin = semver.minVersion(candidate.versionSpec);
+  if (candidateMin === null) {
+    console.error("TODO");
+    process.exit(1);
   }
+  return semver.lt(candidateMin, "1.3.3") ? "^1.3.3" : candidateMin.raw;
+};
 
-  // adapter not in deps
-  if (adapter && !remixDeps.includes(adapter)) {
-    yield commandTask(
-      `Install \`@remix-run/${adapter}\` as a dependency`,
-      `npm install @remix-run/${adapter}`
-    );
-  }
+const shouldKeepPostinstall = (original?: string): boolean => {
+  if (original === undefined) return false;
 
-  // other adapters in deps
-  let otherAdapters = remixDeps
-    .filter(isAdapter)
-    .filter((dep) => dep !== adapter);
-  if (otherAdapters.length > 0) {
-    yield commandTask(
-      "Uninstall all unused adapters",
-      `npm uninstall ${otherAdapters.map(remixRunPrefix).join(" ")}`
-    );
-  }
+  let hasRemixSetup = new RegExp(remixSetupPattern).test(original);
+  if (!hasRemixSetup) return true;
 
-  // remix in deps
-  if (Object.keys(packageJson.dependencies || {}).includes("remix")) {
-    yield commandTask(
-      "Uninstall `remix` as a dependency",
-      "npm uninstall remix"
-    );
-  }
+  let isOnlyRemixSetup = new RegExp(`^${remixSetupPattern}$`).test(original);
+  if (isOnlyRemixSetup) return false;
 
-  // `remix setup` in `postinstall`
-  let remixSetup =
-    packageJson.scripts?.postinstall?.match(/remix setup(\s+\w+)?/);
-  if (remixSetup) {
-    yield `Remove \`${remixSetup[0]}\` from your \`postinstall\` script`;
-  }
-}
+  console.warn("TODO");
+  return true;
+};
 
 export const replaceRemixImports: MigrationFunction = async ({
   projectDir,
   flags,
 }) => {
-  // find all Javascript and Typescript files within Remix app directory
+  let pkg = await NpmCliPackageJson.load(projectDir);
+
+  // 0. resolve runtime and adapter
+  let { runtime, adapter } = await resolveTransformOptions(pkg.content);
+
+  let deps = depsToEntries(pkg.content.dependencies);
+  let remixDeps = deps.filter(({ name }) => isRemixPackage(name));
+  let otherDeps = deps.filter(({ name }) => !isRemixPackage(name));
+  let devDeps = depsToEntries(pkg.content.devDependencies);
+  let remixDevDeps = devDeps.filter(({ name }) => isRemixPackage(name));
+  let otherDevDeps = devDeps.filter(({ name }) => !isRemixPackage(name));
+
+  // 1. upgrade Remix package, remove unused Remix packages
+  let remixVersionSpec = getRemixVersionSpec([...remixDeps, ...remixDevDeps]);
+  pkg.update({
+    dependencies: {
+      ...depsToObject(otherDeps),
+      "@remix-run/react": remixVersionSpec,
+      [`@remix-run/${runtime}`]: remixVersionSpec,
+      ...(adapter ? { [`@remix-run/${adapter}`]: remixVersionSpec } : {}),
+      // keep @remix-run/serve
+      ...(remixDeps.map(({ name }) => name).includes("@remix-run/serve")
+        ? { [`@remix-run/serve`]: remixVersionSpec }
+        : {}),
+    },
+    devDependencies: {
+      ...depsToObject(otherDevDeps),
+      ...depsToObject(
+        remixDevDeps.map(({ name }) => ({
+          name,
+          versionSpec: remixVersionSpec,
+        }))
+      ),
+    },
+  });
+
+  // 2. Remove `remix setup` from postinstall
+  if (!shouldKeepPostinstall(pkg.content.scripts?.postinstall)) {
+    pkg.update({
+      scripts: Object.fromEntries(
+        Object.entries(pkg.content.scripts || {}).filter(
+          ([script]) => script !== "postinstall"
+        )
+      ),
+    });
+  }
+
+  // write updates to package.json
+  await pkg.save();
+
+  // 3. Run codemod
   let config = await readConfig(projectDir);
   let files = glob.sync("**/*.+(js|jsx|ts|tsx)", {
     cwd: config.appDirectory,
     absolute: true,
   });
-
-  // run the codemod
-  let pkgJsonPath = join(projectDir, "package.json");
-  let packageJson: PackageJson = JSON.parse(
-    await readFile(pkgJsonPath, "utf-8")
-  );
-  let { runtime, adapter } = await getTransformOptions(packageJson);
-
-  console.log("💿 Running codemod...");
   let codemodOk = jscodeshift.run<Options>({
-    transformPath,
+    transformPath: TRANSFORM_PATH,
     files,
     flags,
     transformOptions: { runtime, adapter },
   });
-  if (codemodOk) {
-    console.log("✅ Codemod ran successfully!");
-  } else {
-    console.error("❌ Codemod encountered errors");
-    if (!flags.debug) {
-      console.log(
-        hint("Try again with the `--debug` flag to see what failed.")
-      );
-    }
-    process.exit(1);
-  }
-
-  console.log("\n💿 Checking if manual migration steps are necessary...");
-  // ask the user to do some post-migration tasks
-  let tasks = [...getTasks({ packageJson, runtime, adapter })];
-  if (tasks.length > 0) {
-    console.warn("⚠️  Manual migration steps are necessary");
-    console.log(
-      "\nYou're almost there! To finish the migration, please perform the following steps:"
-    );
-    tasks.forEach((task) => console.log("👉 " + task));
-    process.exit(1);
-  }
-  console.log("✅ No manual migration steps are necessary!");
-  console.log("✅ Migration complete!");
 };

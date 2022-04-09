@@ -1,5 +1,5 @@
 import inquirer from "inquirer";
-import type { PackageJson } from "type-fest";
+import type { PackageJson } from "@npmcli/package-json";
 
 import { error, hint } from "../../../../logging";
 import type { Options } from "./transform";
@@ -8,8 +8,10 @@ import type {
   Adapter,
   Runtime,
 } from "./transform/mapNormalizedImports/packageExports";
+import { depsToEntries, isRemixPackage } from "./dependency";
+import { remixSetupPattern } from "./postinstall";
 
-const adapter2runtime = {
+const adapterToRuntime = {
   architect: "node",
   "cloudflare-pages": "cloudflare",
   "cloudflare-workers": "cloudflare",
@@ -19,11 +21,12 @@ const adapter2runtime = {
 } as const;
 
 const resolveRuntime = async (
-  { dependencies, scripts }: PackageJson,
+  packageJson: PackageJson,
   adapter?: Adapter
 ): Promise<Runtime> => {
   // match `remix setup <runtime>` in `postinstall` script
-  let remixSetupMatch = scripts?.postinstall?.match(/remix setup(\s+\w+)/);
+  let remixSetupMatch =
+    packageJson.scripts?.postinstall?.match(remixSetupPattern);
   if (remixSetupMatch && remixSetupMatch.length >= 2) {
     // `remix setup` defaults to `node
     if (remixSetupMatch[1] === undefined) return "node";
@@ -35,11 +38,13 @@ const resolveRuntime = async (
   }
 
   // @remix-run/serve uses node
-  if (findRemixDependencies(dependencies).includes("serve")) {
+  let deps = depsToEntries(packageJson.dependencies);
+  let remixDeps = deps.filter(({ name }) => isRemixPackage(name));
+  if (remixDeps.map(({ name }) => name).includes("@remix-run/serve")) {
     return "node";
   }
   // infer runtime from adapter
-  if (adapter) return adapter2runtime[adapter];
+  if (adapter) return adapterToRuntime[adapter];
 
   // otherwise, ask user for runtime
   let { runtime } = await inquirer.prompt<{ runtime?: Runtime }>([
@@ -55,22 +60,16 @@ const resolveRuntime = async (
   return runtime;
 };
 
-export const findRemixDependencies = (
-  dependencies: PackageJson["dependencies"]
-): string[] => {
-  return Object.keys(dependencies || {})
-    .filter((dep) => dep.startsWith("@remix-run/"))
-    .map((dep) => dep.replace("@remix-run/", ""));
-};
-
-const resolveAdapter = ({ dependencies }: PackageJson): Adapter | undefined => {
+const resolveAdapter = (packageJson: PackageJson): Adapter | undefined => {
   // find adapter in package.json dependencies
-  let matched = findRemixDependencies(dependencies).filter(isAdapter);
+  let deps = depsToEntries(packageJson.dependencies);
+  let remixDeps = deps.filter(({ name }) => isRemixPackage(name));
+  let adapters = remixDeps.map(({ name }) => name).filter(isAdapter);
 
-  if (matched.length > 1) {
+  if (adapters.length > 1) {
     console.error(
       error(
-        `Found multiple Remix server adapters in dependencies: ${matched.join(
+        `Found multiple Remix server adapters in dependencies: ${adapters.join(
           ","
         )}`
       )
@@ -83,12 +82,12 @@ const resolveAdapter = ({ dependencies }: PackageJson): Adapter | undefined => {
     process.exit(1);
   }
 
-  if (matched.length === 1) return matched[0];
+  if (adapters.length === 1) return adapters[0];
 
   return undefined;
 };
 
-export const getTransformOptions = async (
+export const resolveTransformOptions = async (
   packageJson: PackageJson
 ): Promise<Options> => {
   let adapter = resolveAdapter(packageJson);
