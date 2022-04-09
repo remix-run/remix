@@ -11,13 +11,19 @@ We're going to be short on words and quick on code in this quickstart. If you're
 
 This tutorial uses TypeScript. Remix can definitely be used without TypeScript. We feel most productive when writing TypeScript, but if you'd prefer to skip the TypeScript syntax, feel free to write your code in JavaScript.
 
+
 ## Prerequisites
+
+Click this button to create a [Gitpod](https://gitpod.io) workspace with the project set up and ready to run in VS Code or JetBrains either directly in the browser or on the desktop.
+
+[![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/jacobPARIS/indie-stack/)
 
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
 - [Node.js](https://nodejs.org) 14 or greater
 - [npm](https://www.npmjs.com) 7 or greater
 - A code editor
+
 
 ## Creating the project
 
