@@ -156,28 +156,30 @@ async function handleDataRequest({
           let allPromises = [];
           for (let [key, promise] of Object.entries(loaderResponse.deferred)) {
             allPromises.push(
-              promise.then((data) => {
-                console.log("RESOLVED", key, data);
-                body.write(
-                  `data: $$__REMIX_DEFERRED_KEY__$$${key}$$__REMIX_DEFERRED_KEY__$$` +
-                    JSON.stringify(data) +
-                    "\n\n"
-                );
+              promise.then(async (data) => {
+                if (data instanceof Error) {
+                  body.write(
+                    `data: $$__REMIX_DEFERRED_ERROR__$$${key}$$__REMIX_DEFERRED_ERROR__$$` +
+                      JSON.stringify(await serializeError(data)) +
+                      "\n\n"
+                  );
+                } else {
+                  body.write(
+                    `data: $$__REMIX_DEFERRED_KEY__$$${key}$$__REMIX_DEFERRED_KEY__$$` +
+                      JSON.stringify(data) +
+                      "\n\n"
+                  );
+                }
               })
             );
           }
-          Promise.all(allPromises).then(() => {
-            body.end();
-          });
-          // try {
-          //   for (let [key, promise] of Object.entries(
-          //     loaderResponse.deferred
-          //   )) {
-          //     data[key] = await promise;
-          //   }
-          // } catch (err: any) {
-          //   return errorBoundaryError(err, 500);
-          // }
+          Promise.all(allPromises)
+            .then(() => {
+              body.end();
+            })
+            .catch(() => {
+              body.end();
+            });
 
           let headers = new Headers(loaderResponse.init.headers);
           headers.set("Content-Type", "text/event-stream");

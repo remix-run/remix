@@ -1307,10 +1307,17 @@ const DEFERRED_PROMISE_VALUE = "$$__REMIX_DEFERRED_PROMISE__$$";
 
 export function Deferred({
   data,
+  error,
   fallback,
   children,
 }: {
   data: any;
+  error:
+    | boolean
+    | React.ReactChild
+    | React.ReactFragment
+    | React.ReactPortal
+    | null;
   fallback:
     | boolean
     | React.ReactChild
@@ -1327,11 +1334,11 @@ export function Deferred({
   if (
     typeof data === "string" &&
     data.startsWith(DEFERRED_PROMISE_VALUE) &&
-    routeLoadersDeferred[id]
+    routeLoadersDeferred?.[id]
   ) {
     let promises = routeLoadersDeferred[id];
     key = data.substring(DEFERRED_PROMISE_VALUE.length);
-    dataResult = promises[key];
+    dataResult = promises?.[key];
   }
 
   return (
@@ -1343,10 +1350,40 @@ export function Deferred({
       }}
     >
       <React.Suspense fallback={fallback}>
-        {children}
-        <DeferredHydrationScript />
+        <DeferredErrorBoundary error={error}>{children}</DeferredErrorBoundary>
       </React.Suspense>
     </deferredContext.Provider>
+  );
+}
+
+function DeferredErrorBoundary({
+  error,
+  children,
+}: {
+  error:
+    | boolean
+    | React.ReactChild
+    | React.ReactFragment
+    | React.ReactPortal
+    | null;
+  children: React.ReactNode;
+}) {
+  let data = useDeferred();
+
+  if (data instanceof Error) {
+    return (
+      <>
+        {error || null}
+        <DeferredHydrationScript />
+      </>
+    );
+  }
+
+  return (
+    <>
+      {children}
+      <DeferredHydrationScript />
+    </>
   );
 }
 
@@ -1358,16 +1395,27 @@ function DeferredHydrationScript() {
 
   let data = useDeferred();
 
+  let pre = "",
+    value;
+  if (data instanceof Error) {
+    pre = `let e = new Error(${JSON.stringify(
+      data.message
+    )});e.stack = ${JSON.stringify(data.stack)};`;
+    value = `e`;
+  } else {
+    value = JSON.stringify(data);
+  }
+
   return typeof document === "undefined" ? (
     <script
       dangerouslySetInnerHTML={{
-        __html: `window.__remixDeferredData=window.__remixDeferredData||{};window.__remixDeferredData[${JSON.stringify(
+        __html: `${pre}window.__remixDeferredData=window.__remixDeferredData||{};window.__remixDeferredData[${JSON.stringify(
           ctx.id
         )}]=window.__remixDeferredData[${JSON.stringify(
           ctx.id
         )}]||{};window.__remixDeferredData[${JSON.stringify(
           ctx.id
-        )}][${JSON.stringify(ctx.key)}] = ${JSON.stringify(data)};`,
+        )}][${JSON.stringify(ctx.key)}] = ${value};`,
       }}
     />
   ) : (
@@ -1378,7 +1426,7 @@ function DeferredHydrationScript() {
   );
 }
 
-export function useDeferred() {
+export function useDeferred<T>(): T | undefined {
   let ctx = React.useContext(deferredContext);
   if (!ctx) {
     throw new Error("useDeferred must be used within a Deferred");
@@ -1388,6 +1436,10 @@ export function useDeferred() {
     throw ctx.data.then((data: any) => {
       ctx!.data = data;
     });
+  }
+
+  if (ctx.data?.startsWith?.("$$__REMIX_DEFERRED_PROMISE__$$")) {
+    return undefined;
   }
 
   return ctx.data;

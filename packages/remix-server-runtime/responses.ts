@@ -23,7 +23,7 @@ export class DeferredResponse {
       let dataWithoutPromises: Record<string, any> = {};
       for (let [key, value] of Object.entries(data)) {
         if (value?.then && value?.catch) {
-          deferred[key] = value;
+          deferred[key] = value.catch((err: any) => err);
           dataWithoutPromises[key] = DEFERRED_PROMISE_VALUE + key;
         } else {
           dataWithoutPromises[key] = value;

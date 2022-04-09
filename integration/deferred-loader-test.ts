@@ -21,6 +21,7 @@ beforeAll(async () => {
             <div>
               <Link to="/deferred">Deferred Route</Link>
               <Link to="/multiple-deferred">Multiple Deferred Route</Link>
+              <Link to="/deferred-error">Deferred Error</Link>
               {data}
             </div>
           )
@@ -53,7 +54,7 @@ beforeAll(async () => {
         export function loader() {
           return deferred({
             foo: "pizza",
-            bar: new Promise(async resolve => {
+            bar: new Promise(async (resolve, reject) => {
               // await new Promise(resolve => setTimeout(resolve, 500));
               resolve("hamburger");
             }),
@@ -74,6 +75,43 @@ beforeAll(async () => {
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
               <Deferred data={bar}>
+                <DeferredComponent />
+              </Deferred>
+            </div>
+          )
+        }
+      `,
+
+      "app/routes/deferred-error.jsx": js`
+        import * as React from "react";
+        import { deferred } from "@remix-run/node";
+        import { useLoaderData, Link, Deferred, useDeferred } from "@remix-run/react";
+
+        export function loader() {
+          return deferred({
+            foo: "pizza",
+            bar: new Promise(async (resolve, reject) => {
+              // await new Promise(resolve => setTimeout(resolve, 500));
+              return reject(new Error("Oh, no!"));
+              resolve("hamburger");
+            }),
+          });
+        }
+
+        function DeferredComponent() {
+          let deferred = useDeferred();
+          return <div>{deferred}</div>;
+        }
+
+        export default function Index() {
+          let {foo, bar} = useLoaderData();
+          let [count, setCount] = React.useState(0);
+
+          return (
+            <div>
+              {foo}
+              <button onClick={() => setCount(count + 1)}>{count} Count</button>
+              <Deferred data={bar} error={<div>Oh, no!</div>}>
                 <DeferredComponent />
               </Deferred>
             </div>
@@ -143,16 +181,47 @@ it("loads critical data first", async () => {
   let response = await fixture.requestDocument("/deferred");
   let text = await response.text();
   expect(text).toMatch("pizza");
-  expect(text).toMatch('<div hidden id="S:1"><div>hamburger</div>');
+  expect(text).toMatch('<div hidden id="S:0"><div>hamburger</div>');
   expect(text).toMatch('window.__remixDeferredData["routes/deferred"]["bar"]');
 });
 
-it("loads critical data first", async () => {
+it("loads deferred data on page transitions", async () => {
+  await app.goto("/");
+  await app.clickLink("/deferred");
+  let text = await app.getHtml();
+  expect(text).toMatch("pizza");
+  expect(text).toMatch("hamburger");
+});
+
+it("loads critical data first with multiple deferred", async () => {
   let response = await fixture.requestDocument("/multiple-deferred");
   let text = await response.text();
   expect(text).toMatch("pizza");
-  expect(text).toMatch('<div hidden id="S:2"><div>hamburger</div>');
-  expect(text).toMatch('window.__remixDeferredData["routes/multiple-deferred"]["bar"]');
-  expect(text).toMatch('<div hidden id="S:4"><div>soup</div>');
-  expect(text).toMatch('window.__remixDeferredData["routes/multiple-deferred"]["baz"]');
+  expect(text).toMatch('<div hidden id="S:0"><div>hamburger</div>');
+  expect(text).toMatch(
+    'window.__remixDeferredData["routes/multiple-deferred"]["bar"]'
+  );
+  expect(text).toMatch('<div hidden id="S:1"><div>soup</div>');
+  expect(text).toMatch(
+    'window.__remixDeferredData["routes/multiple-deferred"]["baz"]'
+  );
+});
+
+it("renders error boundary", async () => {
+  let response = await fixture.requestDocument("/deferred-error");
+  let text = await response.text();
+  expect(text).toMatch("pizza");
+  expect(text).toMatch('<div hidden id="S:0"><div>Oh, no!</div>');
+  expect(text).toMatch(
+    'window.__remixDeferredData["routes/deferred-error"]["bar"]'
+  );
+});
+
+it("errored deferred data renders boundary", async () => {
+  await app.goto("/");
+  await app.clickLink("/deferred-error");
+  let text = await app.getHtml();
+  expect(text).toMatch("pizza");
+  expect(text).not.toMatch("hamburger");
+  expect(text).toMatch("Oh, no!");
 });

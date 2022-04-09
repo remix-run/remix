@@ -4,7 +4,7 @@ import { RemixServer } from "@remix-run/react";
 import { Response, Headers } from "@remix-run/node";
 import { renderToPipeableStream } from "react-dom/server";
 
-const ABORT_DELAY = 10000;
+const ABORT_DELAY = 2000;
 
 export default function handleRequest(
   request,

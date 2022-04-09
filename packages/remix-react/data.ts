@@ -44,7 +44,6 @@ export async function fetchData(
     [key: string]: {
       promise: Promise<any>;
       resolve: (value?: any) => void;
-      reject: (reason?: any) => void;
     };
   } = {};
   let eventCount = 0;
@@ -56,8 +55,8 @@ export async function fetchData(
     signal.addEventListener("abort", () => abort.abort());
 
     let handleAbort = () => {
-      Object.values(events).forEach(({ reject }) =>
-        reject(new Error("Aborted"))
+      Object.values(events).forEach(({ resolve }) =>
+        resolve(new Error("Aborted"))
       );
     };
     abort.signal.addEventListener("abort", handleAbort);
@@ -104,30 +103,42 @@ export async function fetchData(
 
             for (let eventKey of eventKeys) {
               events[eventKey] = {} as any;
-              events[eventKey].promise = new Promise((resolve, reject) => {
+              events[eventKey].promise = new Promise((resolve) => {
                 events[eventKey].resolve = resolve;
-                events[eventKey].reject = reject;
               });
             }
             gotEvents = true;
           }
 
-          if (!event.data.includes("$$__REMIX_DEFERRED_KEY__$$")) {
-            response = new Response(event.data, {
-              status,
-              headers: { "Content-Type": "application/json" },
-            });
-            resolve();
-          } else {
-            eventCount++;
+          if (event.data.includes("$$__REMIX_DEFERRED_KEY__$$")) {
             let [, eventKey, data] = event.data.split(
               "$$__REMIX_DEFERRED_KEY__$$"
             );
             events[eventKey].resolve(JSON.parse(data));
 
+            eventCount++;
             if (totalEvents <= eventCount) {
               abort.abort();
             }
+          } else if (event.data.includes("$$__REMIX_DEFERRED_ERROR__$$")) {
+            let [, eventKey, data] = event.data.split(
+              "$$__REMIX_DEFERRED_ERROR__$$"
+            );
+            let json = JSON.parse(data);
+            let err = new Error(json.message);
+            err.stack = json.stack;
+            events[eventKey].resolve(err);
+
+            eventCount++;
+            if (totalEvents <= eventCount) {
+              abort.abort();
+            }
+          } else {
+            response = new Response(event.data, {
+              status,
+              headers: { "Content-Type": "application/json" },
+            });
+            resolve();
           }
         },
       });
