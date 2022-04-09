@@ -20,6 +20,7 @@ beforeAll(async () => {
           return (
             <div>
               <Link to="/deferred">Deferred Route</Link>
+              <Link to="/multiple-deferred">Multiple Deferred Route</Link>
               {data}
             </div>
           )
@@ -47,13 +48,13 @@ beforeAll(async () => {
       "app/routes/deferred.jsx": js`
         import * as React from "react";
         import { deferred } from "@remix-run/node";
-        import { useLoaderData, Link, Deferred, useDeferredLoaderData } from "@remix-run/react";
+        import { useLoaderData, Link, Deferred, useDeferred } from "@remix-run/react";
 
         export function loader() {
           return deferred({
             foo: "pizza",
             bar: new Promise(async resolve => {
-              await new Promise(resolve => setTimeout(resolve, 3000));
+              await new Promise(resolve => setTimeout(resolve, 500));
               resolve("hamburger");
             }),
           });
@@ -61,7 +62,7 @@ beforeAll(async () => {
 
         function DeferredComponent() {
           // TODO: change to useDeferred();
-          let deferred = useDeferredLoaderData();
+          let deferred = useDeferred();
           console.log({deferred})
           return <div>{deferred}</div>;
         }
@@ -75,6 +76,49 @@ beforeAll(async () => {
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
               <Deferred data={bar}>
+                <DeferredComponent />
+              </Deferred>
+            </div>
+          )
+        }
+      `,
+
+      "app/routes/multiple-deferred.jsx": js`
+        import * as React from "react";
+        import { deferred } from "@remix-run/node";
+        import { useLoaderData, Link, Deferred, useDeferred } from "@remix-run/react";
+
+        export function loader() {
+          return deferred({
+            foo: "pizza",
+            bar: new Promise(async resolve => {
+              await new Promise(resolve => setTimeout(resolve, 500));
+              resolve("hamburger");
+            }),
+            baz: new Promise(async resolve => {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              resolve("soup");
+            }),
+          });
+        }
+
+        function DeferredComponent() {
+          let deferred = useDeferred();
+          return <div>{deferred}</div>;
+        }
+
+        export default function Index() {
+          let {foo, bar, baz} = useLoaderData();
+          let [count, setCount] = React.useState(0);
+
+          return (
+            <div>
+              {foo}
+              <button onClick={() => setCount(count + 1)}>{count} Count</button>
+              <Deferred data={bar}>
+                <DeferredComponent />
+              </Deferred>
+              <Deferred data={baz}>
                 <DeferredComponent />
               </Deferred>
             </div>

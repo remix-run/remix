@@ -39,18 +39,12 @@ export async function fetchData(
   submission?: Submission
 ): Promise<[Response | Error, any]> {
   url.searchParams.set("_data", routeId);
-
-  // await fetchEventSource(url.href, {
-  //   ...init as any,
-  //   onmessage: (event) => {
-
-  //   }
-  // })
   let response: Response;
   let events: {
     [key: string]: {
       promise: Promise<any>;
       resolve: (value?: any) => void;
+      reject: (reason?: any) => void;
     };
   } = {};
   let eventCount = 0;
@@ -61,12 +55,20 @@ export async function fetchData(
     let abort = new AbortController();
     signal.addEventListener("abort", () => abort.abort());
 
+    let handleAbort = () => {
+      Object.values(events).forEach(({ reject }) =>
+        reject(new Error("Aborted"))
+      );
+    };
+    abort.signal.addEventListener("abort", handleAbort);
+
     let gotEvents = false;
     let status = 200;
     await new Promise<void>(async (resolve) => {
       fetchEventSource(url.href, {
         credentials: "same-origin",
         signal: abort.signal,
+        onerror: handleAbort,
         onopen: async (res) => {
           let { headers } = res;
           let contentType = headers.get("Content-Type");
@@ -84,7 +86,7 @@ export async function fetchData(
           }
         },
         onmessage: (event) => {
-          console.log(event);
+          console.log({ event });
           if (!gotEvents) {
             if (!event.data.includes("$$__REMIX_DEFERRED_EVENTS__$$")) {
               abort.abort();
@@ -99,10 +101,12 @@ export async function fetchData(
               .split("$$__REMIX_DEFERRED_EVENTS__$$")[1]
               .split(",");
             totalEvents = eventKeys.length;
+            console.log({ eventKeys });
             for (let eventKey of eventKeys) {
               events[eventKey] = {} as any;
-              events[eventKey].promise = new Promise((resolve) => {
+              events[eventKey].promise = new Promise((resolve, reject) => {
                 events[eventKey].resolve = resolve;
+                events[eventKey].reject = reject;
               });
             }
             gotEvents = true;
@@ -122,7 +126,7 @@ export async function fetchData(
             console.log({ eventKey, data });
             events[eventKey].resolve(JSON.parse(data));
             console.log({ totalEvents, eventCount });
-            if (totalEvents >= eventCount) {
+            if (totalEvents <= eventCount) {
               abort.abort();
             }
           }

@@ -39,7 +39,7 @@ export {
   useBeforeUnload,
   useMatches,
   Deferred,
-  useDeferredLoaderData,
+  useDeferred,
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";

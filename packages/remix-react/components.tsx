@@ -1355,10 +1355,10 @@ export function Deferred({
 function DeferredHydrationScript() {
   let ctx = React.useContext(deferredContext);
   if (!ctx) {
-    throw new Error("useDeferredLoaderData must be used within a Deferred");
+    throw new Error("useDeferred must be used within a Deferred");
   }
 
-  let data = useDeferredLoaderData();
+  let data = useDeferred();
 
   return typeof document === "undefined" ? (
     <script
@@ -1380,10 +1380,10 @@ function DeferredHydrationScript() {
   );
 }
 
-export function useDeferredLoaderData() {
+export function useDeferred() {
   let ctx = React.useContext(deferredContext);
   if (!ctx) {
-    throw new Error("useDeferredLoaderData must be used within a Deferred");
+    throw new Error("useDeferred must be used within a Deferred");
   }
 
   if (ctx.data?.then && ctx.data?.catch) {
