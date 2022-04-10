@@ -1,24 +1,23 @@
-import semver from "semver";
-import NpmCliPackageJson from "@npmcli/package-json";
 import { join } from "path";
+import NpmCliPackageJson from "@npmcli/package-json";
 import glob from "fast-glob";
 import { maxBy } from "lodash";
-import chalk from "chalk";
+import semver from "semver";
 
-import { readConfig } from "../../../../config";
 import * as colors from "../../../../colors";
+import { readConfig } from "../../../../config";
 import * as jscodeshift from "../../jscodeshift";
 import type { MigrationFunction } from "../../types";
-import { resolveTransformOptions } from "./resolveTransformOptions";
-import type { Options } from "./transform";
 import type { Dependency } from "./dependency";
-import { depsToObject, isRemixPackage, depsToEntries } from "./dependency";
+import { depsToEntries, depsToObject, isRemixPackage } from "./dependency";
+import { because, detected } from "./messages";
 import {
   onlyRemixSetup,
   onlyRemixSetupRuntime,
   remixSetup,
 } from "./remixSetup";
-import { because, detected } from "./messages";
+import { resolveTransformOptions } from "./resolveTransformOptions";
+import type { Options } from "./transform";
 
 const TRANSFORM_PATH = join(__dirname, "transform");
 
@@ -41,7 +40,7 @@ const getRemixVersionSpec = (remixDeps: Dependency[]): string => {
   }
   console.log(
     detected(
-      `\`${chalk.blue(
+      `\`${colors.hint(
         candidate.versionSpec
       )}\` as the best Remix version to use`
     )
@@ -94,7 +93,7 @@ export const replaceRemixImports: MigrationFunction = async ({
     .map(({ name }) => name)
     .includes("@remix-run/serve");
   if (remixServeInstalled) {
-    let servePackage = colors.hint("@remix-run/serve");
+    let servePackage = colors.code("@remix-run/serve");
     console.log(detected(`\`${servePackage}\` as your Remix server`));
     console.log(because("it is in your dependencies."));
   }
@@ -169,5 +168,5 @@ export const replaceRemixImports: MigrationFunction = async ({
   console.log(
     "\n👉 Reinstall from your new `package.json` to update your lockfile"
   );
-  console.log(`   ${chalk.blue("npm install")}`);
+  console.log(`   ${colors.code("npm install")}`);
 };

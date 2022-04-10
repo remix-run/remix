@@ -1,16 +1,16 @@
-import inquirer from "inquirer";
 import type { PackageJson } from "@npmcli/package-json";
-import chalk from "chalk";
+import inquirer from "inquirer";
 
+import * as colors from "../../../../colors";
+import { depsToEntries, isRemixPackage } from "./dependency";
+import { because, detected } from "./messages";
+import { remixSetup, remixSetupRuntime } from "./remixSetup";
 import type { Options } from "./transform";
 import { runtimes, isRuntime, isAdapter } from "./transform";
 import type {
   Adapter,
   Runtime,
 } from "./transform/mapNormalizedImports/packageExports";
-import { depsToEntries, isRemixPackage } from "./dependency";
-import { remixSetup, remixSetupRuntime } from "./remixSetup";
-import { because, detected } from "./messages";
 
 const adapterToRuntime: Record<Adapter, Runtime> = {
   architect: "node",
@@ -40,7 +40,7 @@ const autoDetectPostinstallRuntime = (
 };
 
 const detectedRuntime = (runtime: Runtime) => {
-  let runtimePackage = chalk.blue(`@remix-run/${runtime}`);
+  let runtimePackage = colors.code(`@remix-run/${runtime}`);
   return detected(`\`${runtimePackage}\` as your Remix server runtime`);
 };
 
@@ -64,7 +64,7 @@ const resolveRuntime = async (
   if (adapter) {
     let runtime = adapterToRuntime[adapter];
     console.log(detectedRuntime(runtime));
-    let adapterPackage = chalk.blue(`@remix-run/${adapter}`);
+    let adapterPackage = colors.code(`@remix-run/${adapter}`);
     console.log(because(`you have \`${adapterPackage}\` installed.`));
     return runtime;
   }
@@ -113,7 +113,7 @@ const resolveAdapter = (packageJson: PackageJson): Adapter | undefined => {
 
   if (adapters.length === 1) {
     let adapter = adapters[0];
-    let adapterPackage = chalk.blue(`@remix-run/${adapter}`);
+    let adapterPackage = colors.code(`@remix-run/${adapter}`);
     console.log(detected(`\`${adapterPackage}\` as your Remix server adapter`));
     console.log(because("it's in your dependencies."));
     return adapter;
