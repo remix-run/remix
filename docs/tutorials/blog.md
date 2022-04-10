@@ -932,8 +932,8 @@ Let's add some validation before we create the post.
 
 ```tsx filename=app/routes/posts/admin/new.tsx lines=[3,8-14,24-34]
 import type { ActionFunction } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { Form, json } from "@remix-run/react";
+import { json, redirect } from "@remix-run/node";
+import { Form } from "@remix-run/react";
 
 import { createPost } from "~/models/post.server";
 
