@@ -1,9 +1,8 @@
 import fse from "fs-extra";
 
-import type { Flags } from "./flags";
-import { migrations } from "./migrations";
-import type { Migration } from "./types";
 import * as colors from "../../colors";
+import { migrations } from "./migrations";
+import type { Flags, Migration } from "./types";
 
 const parseMigration = (migrationId: string): Migration => {
   let migration = migrations.find(({ id }) => id === migrationId);

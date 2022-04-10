@@ -1,8 +1,8 @@
 import inquirer from "inquirer";
 
 import { checkGitStatus } from "../checkGitStatus";
-import type { Flags } from "./flags";
 import { migrations } from "./migrations";
+import type { Flags } from "./types";
 
 const resolveProjectDir = (input?: string): string => {
   return input || process.env.REMIX_ROOT || process.cwd();

@@ -1,6 +1,6 @@
 import { sync as execaSync } from "execa";
 
-import type { Flags } from "./flags";
+import type { Flags } from "./types";
 
 const jscodeshiftExecutable = require.resolve(".bin/jscodeshift");
 

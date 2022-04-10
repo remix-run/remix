@@ -1,4 +1,10 @@
-import type { Flags } from "./flags";
+export type Flags = {
+  debug?: boolean;
+  dry?: boolean;
+  force?: boolean;
+  print?: boolean;
+  runInBand?: boolean;
+};
 
 export type MigrationFunction = (args: {
   projectDir: string;
