@@ -55,7 +55,7 @@ export default function SomeRoute() {
 
 Even better, send a PR to the project to add `"sideEffects": false` to their package.json so that bundlers that tree shake know they can safely remove the code from browser bundles.
 
-Similarly, you may run into a the same error if you call a function at the top-level scope of your route module that depends on server-only code.
+Similarly, you may run into the same error if you call a function at the top-level scope of your route module that depends on server-only code.
 
 For example, [Remix upload handlers like `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler`](../api/remix#uploadhandler) use Node globals under the hood and should only be called on the server. You can call either of these functions in a `*.server.js` or `*.server.ts` file, or you can move them into your route's `action` or `loader` function:
 
