@@ -5,12 +5,8 @@ import * as colors from "../../../../colors";
 import { depsToEntries, isRemixPackage } from "./dependency";
 import { because, detected } from "./messages";
 import { remixSetup, remixSetupRuntime } from "./remixSetup";
-import type { Options } from "./transform";
+import type { Adapter, Options, Runtime } from "./transform";
 import { runtimes, isRuntime, isAdapter } from "./transform";
-import type {
-  Adapter,
-  Runtime,
-} from "./transform/mapNormalizedImports/packageExports";
 
 const adapterToRuntime: Record<Adapter, Runtime> = {
   architect: "node",
