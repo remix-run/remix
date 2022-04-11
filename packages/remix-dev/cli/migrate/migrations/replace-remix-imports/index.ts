@@ -1,4 +1,5 @@
 import semver from "semver";
+// @ts-ignore https://github.com/DefinitelyTyped/DefinitelyTyped/pull/59806
 import NpmCliPackageJson from "@npmcli/package-json";
 import { join } from "path";
 import glob from "fast-glob";

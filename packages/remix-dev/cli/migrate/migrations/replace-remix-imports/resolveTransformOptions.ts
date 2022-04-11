@@ -1,4 +1,5 @@
 import inquirer from "inquirer";
+// @ts-ignore https://github.com/DefinitelyTyped/DefinitelyTyped/pull/59806
 import type { PackageJson } from "@npmcli/package-json";
 import chalk from "chalk";
 
