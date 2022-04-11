@@ -555,14 +555,25 @@ export type TemplateType =
   | "local";
 
 export function detectTemplateType(template: string): TemplateType | null {
-  // 1. Check if the user passed a local file. If they hand us an explicit file
+  // 1. Prioritize Remix templates and stacks first. This ensures that inputs
+  //    like `--template remix` always pull from our templates, which is almost
+  //    always the desired behavior. If users maintain a fork either locally or
+  //    in another repo they can pass the repo shorthand, URL or path instead.
+  //    This also ensures that our interactive CLI always works as expected even
+  //    if the user has another directory with the same name.
+  //    https://github.com/remix-run/remix/issues/2491
+  if (isRemixTemplate(template) || isRemixStack(template)) {
+    return "repoTemplate";
+  }
+
+  // 2. Check if the user passed a local file. If they hand us an explicit file
   //    URL, we'll validate it first. Otherwise we just ping the filesystem to
   //    see if the string references a filepath and, if not, move on.
   if (template.startsWith("file://")) {
     return "local";
   }
 
-  // 2. Check if it's a path to a local directory.
+  // 3. Check if it's a path to a local directory.
   try {
     if (
       fse.existsSync(
@@ -575,11 +586,6 @@ export function detectTemplateType(template: string): TemplateType | null {
     }
   } catch (_) {
     // ignore FS errors and move on
-  }
-
-  // 3. check if it's one of the pre-built remix stacks
-  if (isRemixStack(template)) {
-    return "repoTemplate";
   }
 
   // 4. examples/<template> will use an example folder in the Remix repo
