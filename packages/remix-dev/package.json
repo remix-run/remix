@@ -29,7 +29,6 @@
     "esbuild": "0.14.22",
     "esbuild-plugin-cache": "^0.2.9",
     "execa": "^5.1.1",
-    "esbuild-register": "^3.3.2",
     "exit-hook": "2.2.1",
     "express": "4.17.3",
     "fast-glob": "3.2.11",
