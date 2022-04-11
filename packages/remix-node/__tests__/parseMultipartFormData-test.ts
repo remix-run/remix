@@ -1,7 +1,8 @@
+import { FormData as NodeFormData } from "@web-std/fetch";
 import { Blob, File } from "@web-std/file";
 
 import { Request as NodeRequest } from "../fetch";
-import { FormData as NodeFormData } from "../formData";
+// import { FormData as NodeFormData } from "../formData";
 import { internalParseFormData } from "../parseMultipartFormData";
 import { createMemoryUploadHandler } from "../upload/memoryUploadHandler";
 
@@ -19,8 +20,8 @@ describe("internalParseFormData", () => {
 
     let uploadHandler = createMemoryUploadHandler({});
     let parsedFormData = await internalParseFormData(
-      req.headers.get("Content-Type"),
-      req.body as any,
+      req,
+      req.formData,
       undefined,
       uploadHandler
     );

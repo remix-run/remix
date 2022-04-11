@@ -40,7 +40,7 @@ export async function callRouteAction({
   let result;
   try {
     result = await action({
-      request: stripDataParam(stripIndexParam(request)),
+      request: stripDataParam(stripIndexParam(request.clone())),
       context: loadContext,
       params: match.params,
     });

@@ -37,7 +37,6 @@ describe("file-uploads", () => {
               let formData = await parseMultipartFormData(request, uploadHandler);
 
               let file = formData.get("file");
-
               if (typeof file === "string" || !file) {
                 throw new Error("invalid file type");
               }

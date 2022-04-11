@@ -187,4 +187,8 @@ export class NodeOnDiskFile implements File {
   text(): Promise<string> {
     return readFile(this.filepath, "utf-8");
   }
+
+  get [Symbol.toStringTag]() {
+    return "File"
+  }
 }
