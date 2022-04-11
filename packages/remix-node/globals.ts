@@ -1,4 +1,8 @@
 import { Blob as NodeBlob, File as NodeFile } from "@web-std/file";
+import {
+  ReadableStream as NodeReadableStream,
+  WritableStream as NodeWritableStream,
+} from "@web-std/stream";
 
 import { atob, btoa } from "./base64";
 import {
@@ -27,6 +31,8 @@ declare global {
       Response: typeof Response;
       fetch: typeof fetch;
       FormData: typeof FormData;
+      ReadableStream: ReadableStream;
+      WritableStream: WritableStream;
     }
   }
 }
@@ -43,4 +49,7 @@ export function installGlobals() {
   global.Response = NodeResponse as unknown as typeof Response;
   global.fetch = nodeFetch as unknown as typeof fetch;
   global.FormData = NodeFormData as unknown as typeof FormData;
+
+  global.ReadableStream = NodeReadableStream;
+  global.WritableStream = NodeWritableStream;
 }

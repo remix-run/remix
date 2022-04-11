@@ -16,6 +16,7 @@ import {
   isRedirectResponse,
   isCatchResponse,
   isDeferredResponse,
+  DeferredResponse,
 } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
@@ -143,43 +144,53 @@ async function handleDataRequest({
         if (typeof loaderResponse.data !== "object") {
           response = json(loaderResponse.data, loaderResponse.init);
         } else {
-          // TODO: Get rid of stream from shared runtime
-          let stream = require("stream");
-          let body = new stream.PassThrough();
-          body.write(
-            "data: $$__REMIX_DEFERRED_EVENTS__$$" +
-              Object.keys(loaderResponse.deferred).join(",") +
-              "\n\n"
-          );
+          let body = new ReadableStream({
+            start(controller) {
+              controller.enqueue(
+                "data: $$__REMIX_DEFERRED_EVENTS__$$" +
+                  Object.keys(
+                    (loaderResponse as DeferredResponse).deferred
+                  ).join(",") +
+                  "\n\n"
+              );
+              controller.enqueue(
+                "data: " +
+                  JSON.stringify((loaderResponse as DeferredResponse).data) +
+                  "\n\n"
+              );
 
-          body.write("data: " + JSON.stringify(loaderResponse.data) + "\n\n");
-          let allPromises = [];
-          for (let [key, promise] of Object.entries(loaderResponse.deferred)) {
-            allPromises.push(
-              promise.then(async (data) => {
-                if (data instanceof Error) {
-                  body.write(
-                    `data: $$__REMIX_DEFERRED_ERROR__$$${key}$$__REMIX_DEFERRED_ERROR__$$` +
-                      JSON.stringify(await serializeError(data)) +
-                      "\n\n"
-                  );
-                } else {
-                  body.write(
-                    `data: $$__REMIX_DEFERRED_KEY__$$${key}$$__REMIX_DEFERRED_KEY__$$` +
-                      JSON.stringify(data) +
-                      "\n\n"
-                  );
-                }
-              })
-            );
-          }
-          Promise.all(allPromises)
-            .then(() => {
-              body.end();
-            })
-            .catch(() => {
-              body.end();
-            });
+              let allPromises = [];
+              for (let [key, promise] of Object.entries(
+                (loaderResponse as DeferredResponse).deferred
+              )) {
+                allPromises.push(
+                  promise.then(async (data) => {
+                    if (data instanceof Error) {
+                      controller.enqueue(
+                        `data: $$__REMIX_DEFERRED_ERROR__$$${key}$$__REMIX_DEFERRED_ERROR__$$` +
+                          JSON.stringify(await serializeError(data)) +
+                          "\n\n"
+                      );
+                    } else {
+                      controller.enqueue(
+                        `data: $$__REMIX_DEFERRED_KEY__$$${key}$$__REMIX_DEFERRED_KEY__$$` +
+                          JSON.stringify(data) +
+                          "\n\n"
+                      );
+                    }
+                  })
+                );
+              }
+
+              Promise.all(allPromises)
+                .then(() => {
+                  controller.close();
+                })
+                .catch(() => {
+                  controller.close();
+                });
+            },
+          });
 
           let headers = new Headers(loaderResponse.init.headers);
           headers.set("Content-Type", "text/event-stream");
