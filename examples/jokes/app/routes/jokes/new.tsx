@@ -1,13 +1,13 @@
-import type { ActionFunction, LoaderFunction } from "remix";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import {
-  Link,
-  useCatch,
-  useActionData,
   Form,
-  redirect,
+  Link,
+  useActionData,
+  useCatch,
   useTransition,
-  json,
-} from "remix";
+} from "@remix-run/react";
+
 import { JokeDisplay } from "~/components/joke";
 import { db } from "~/utils/db.server";
 import { getUserId, requireUserId } from "~/utils/session.server";
@@ -17,7 +17,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   if (!userId) {
     throw new Response("Unauthorized", { status: 401 });
   }
-  return {};
+  return json({});
 };
 
 function validateJokeContent(content: string) {
@@ -142,6 +142,11 @@ export default function NewJokeRoute() {
           ) : null}
         </div>
         <div>
+          {actionData?.formError ? (
+            <p className="form-validation-error" role="alert">
+              {actionData.formError}
+            </p>
+          ) : null}
           <button type="submit" className="button">
             Add
           </button>

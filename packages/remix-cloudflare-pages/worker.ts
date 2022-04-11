@@ -1,21 +1,33 @@
-import type { ServerBuild, AppLoadContext } from "@remix-run/server-runtime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import type { AppLoadContext, ServerBuild } from "@remix-run/cloudflare";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cloudflare";
+
+/**
+ * A function that returns the value to use as `context` in route `loader` and
+ * `action` functions.
+ *
+ * You can think of this as an escape hatch that allows you to pass
+ * environment/platform-specific values through to your loader/action.
+ */
+export type GetLoadContextFunction<Env = any> = (
+  context: EventContext<Env, any, any>
+) => AppLoadContext;
+
+export type RequestHandler<Env = any> = PagesFunction<Env>;
 
 export interface createPagesFunctionHandlerParams<Env = any> {
   build: ServerBuild;
-  getLoadContext?: (context: EventContext<Env, any, any>) => AppLoadContext;
+  getLoadContext?: GetLoadContextFunction<Env>;
   mode?: string;
 }
 
 export function createRequestHandler<Env = any>({
   build,
   getLoadContext,
-  mode
-}: createPagesFunctionHandlerParams<Env>): PagesFunction<Env> {
-  let platform = {};
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+  mode,
+}: createPagesFunctionHandlerParams<Env>): RequestHandler<Env> {
+  let handleRequest = createRemixRequestHandler(build, mode);
 
-  return context => {
+  return (context) => {
     let loadContext =
       typeof getLoadContext === "function"
         ? getLoadContext(context)
@@ -29,15 +41,15 @@ declare const process: any;
 export function createPagesFunctionHandler<Env = any>({
   build,
   getLoadContext,
-  mode
+  mode,
 }: createPagesFunctionHandlerParams<Env>) {
-  const handleRequest = createRequestHandler<Env>({
+  let handleRequest = createRequestHandler<Env>({
     build,
     getLoadContext,
-    mode
+    mode,
   });
 
-  const handleFetch = async (context: EventContext<Env, any, any>) => {
+  let handleFetch = async (context: EventContext<Env, any, any>) => {
     let response: Response | undefined;
 
     // https://github.com/cloudflare/wrangler2/issues/117
@@ -68,12 +80,12 @@ export function createPagesFunctionHandler<Env = any>({
       if (process.env.NODE_ENV === "development" && e instanceof Error) {
         console.error(e);
         return new Response(e.message || e.toString(), {
-          status: 500
+          status: 500,
         });
       }
 
       return new Response("Internal Error", {
-        status: 500
+        status: 500,
       });
     }
   };

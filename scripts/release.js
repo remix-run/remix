@@ -9,7 +9,7 @@ const {
   ensureCleanWorkingDirectory,
   getPackageVersion,
   prompt,
-  incrementRemixVersion
+  incrementRemixVersion,
 } = require("./utils");
 
 const releaseTypes = ["patch", "minor", "major"];
@@ -18,7 +18,7 @@ run(process.argv.slice(2)).then(
   () => {
     process.exit(0);
   },
-  error => {
+  (error) => {
     console.error(chalk.red(error));
     process.exit(1);
   }
@@ -145,7 +145,7 @@ async function initBump(git) {
   ensureLatestReleaseBranch(git.initialBranch, git);
   let versionFromBranch = getVersionFromReleaseBranch(git.initialBranch);
   let currentVersion = git.tags
-    .filter(tag => tag.startsWith("v" + versionFromBranch))
+    .filter((tag) => tag.startsWith("v" + versionFromBranch))
     .sort((a, b) => (a > b ? -1 : a < b ? 1 : 0))[0];
   let nextVersion = semver.inc(currentVersion, "prerelease");
   return nextVersion;
@@ -198,7 +198,6 @@ Run ${chalk.bold(`git push origin ${releaseBranch} --follow-tags`)}`)
  */
 async function execBump(nextVersion, git) {
   ensureReleaseBranch(git.initialBranch);
-  await gitMerge("main", git.initialBranch, { pullFirst: true });
   await incrementRemixVersion(nextVersion);
   // TODO: After testing a few times, execute git push as a part of the flow and
   // remove the silly message
@@ -314,7 +313,7 @@ function getCurrentBranch() {
  */
 function hasMergeConflicts(output) {
   let lines = output.trim().split("\n");
-  return lines.some(line => /^CONFLICT\s/.test(line));
+  return lines.some((line) => /^CONFLICT\s/.test(line));
 }
 
 /**
@@ -323,7 +322,7 @@ function hasMergeConflicts(output) {
  */
 function mergeFailed(output) {
   let lines = output.trim().split("\n");
-  return lines.some(line => /^Automatic merge failed;\s/.test(line));
+  return lines.some((line) => /^Automatic merge failed;\s/.test(line));
 }
 
 /**
@@ -371,7 +370,7 @@ function ensureReleaseBranch(branch) {
 function ensureLatestReleaseBranch(branch, git) {
   let versionFromBranch = ensureReleaseBranch(branch);
   let taggedVersions = git.tags
-    .filter(tag => /^v\d/.test(tag))
+    .filter((tag) => /^v\d/.test(tag))
     .sort(semver.compare);
 
   let latestTaggedVersion = taggedVersions[taggedVersions.length - 1];
@@ -387,7 +386,7 @@ function ensureLatestReleaseBranch(branch, git) {
  * @returns {string | undefined}
  */
 function getVersionFromReleaseBranch(branch) {
-  return branch.split("/")[1]?.slice(1);
+  return branch.slice(branch.indexOf("-") + 1);
 }
 
 /**
@@ -401,7 +400,7 @@ function getVersionTag(version) {
  * @param {string} version
  */
 function getReleaseBranch(version) {
-  return `release/${getVersionTag(
+  return `release-${getVersionTag(
     version.includes("-") ? version.slice(0, version.indexOf("-")) : version
   )}`;
 }

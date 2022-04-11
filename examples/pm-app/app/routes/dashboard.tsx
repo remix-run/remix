@@ -1,6 +1,11 @@
+import type {
+  LinksFunction,
+  LoaderFunction,
+  MetaFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Outlet, useCatch } from "@remix-run/react";
 import * as React from "react";
-import { Outlet, useCatch } from "remix";
-import type { LoaderFunction, LinksFunction, MetaFunction } from "remix";
 
 import stylesUrl from "~/dist/styles/routes/dashboard.css";
 import { NavLink } from "~/ui/link";
@@ -10,11 +15,11 @@ import { requireUser } from "~/session.server";
 
 export const loader: LoaderFunction = async ({ request }) => {
   const { passwordHash, ...secureUser } = await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
-  return {
-    user: secureUser
-  };
+  return json({
+    user: secureUser,
+  });
 };
 
 export const links: LinksFunction = () => {
@@ -26,19 +31,19 @@ export const meta: MetaFunction = ({ params, data, location, parentsData }) => {
   userName = "Chance";
   return {
     title: `Welcome${userName?.padStart(userName.length + 1) || ""}! | PM Camp`,
-    description: "Welcome to PM Camp"
+    description: "Welcome to PM Camp",
   };
 };
 
 const navItems = [
   //   { label: "Notifications", to: "notifications" },
   //   { label: "Search", to: "search" },
-  { label: "Sign Out", to: "/sign-out" }
+  { label: "Sign Out", to: "/sign-out" },
 ];
 
 function Layout({
   currentYear,
-  children
+  children,
 }: React.PropsWithChildren<{ currentYear?: string | number }>) {
   return (
     <div className="dashboard-layout__container">

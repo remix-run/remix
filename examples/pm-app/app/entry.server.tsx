@@ -1,6 +1,6 @@
-import ReactDOMServer from "react-dom/server";
-import type { EntryContext } from "remix";
-import { RemixServer } from "remix";
+import type { EntryContext } from "@remix-run/node";
+import { RemixServer } from "@remix-run/react";
+import { renderToString } from "react-dom/server";
 
 export default function handleRequest(
   request: Request,
@@ -8,7 +8,7 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-  const markup = ReactDOMServer.renderToString(
+  const markup = renderToString(
     <RemixServer context={remixContext} url={request.url} />
   );
 
@@ -16,6 +16,6 @@ export default function handleRequest(
 
   return new Response("<!DOCTYPE html>" + markup, {
     status: responseStatusCode,
-    headers: responseHeaders
+    headers: responseHeaders,
   });
 }

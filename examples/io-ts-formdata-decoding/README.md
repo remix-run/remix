@@ -6,7 +6,7 @@ This example shows how to utilize [io-ts](https://gcanti.github.io/io-ts/) to de
 
 Open this example on [CodeSandbox](https://codesandbox.com):
 
-[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/io-ts-formdata-encoding)
+[![Open in codesandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/io-ts-formdata-decoding)
 
 ## Example
 
@@ -28,8 +28,8 @@ Typically, you want to _do something_ with `name` and `age`, e.g. create a new u
 const user = await prisma.user.create({
   data: {
     name, // type error
-    age // type error
-  }
+    age, // type error
+  },
 });
 ```
 

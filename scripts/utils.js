@@ -9,12 +9,19 @@ let rootDir = path.resolve(__dirname, "..");
 let examplesDir = path.resolve(rootDir, "examples");
 
 let remixPackages = {
-  adapters: ["architect", "express", "netlify", "vercel"],
-  runtimes: ["cloudflare-workers", "cloudflare-pages", "deno", "node"],
+  adapters: [
+    "architect",
+    "cloudflare-pages",
+    "cloudflare-workers",
+    "express",
+    "netlify",
+    "vercel",
+  ],
+  runtimes: ["cloudflare", "node"],
   core: ["dev", "server-runtime", "react", "eslint-config"],
   get all() {
     return [...this.adapters, ...this.runtimes, ...this.core, "serve"];
-  }
+  },
 };
 
 /**
@@ -42,7 +49,7 @@ async function getPackageVersion(packageName) {
 function ensureCleanWorkingDirectory() {
   let status = execSync(`git status --porcelain`).toString().trim();
   let lines = status.split("\n");
-  if (!lines.every(line => line === "" || line.startsWith("?"))) {
+  if (!lines.every((line) => line === "" || line.startsWith("?"))) {
     console.error(
       "Working directory is not clean. Please commit or stash your changes."
     );
@@ -94,7 +101,7 @@ async function updateExamplesRemixVersion(nextVersion) {
       let stat = await fsp.stat(path.join(examplesDir, example));
       if (!stat.isDirectory()) continue;
 
-      await updateExamplesPackageConfig(example, config => {
+      await updateExamplesPackageConfig(example, (config) => {
         if (config.dependencies?.["remix"]) {
           config.dependencies["remix"] = nextVersion;
         }
@@ -126,7 +133,7 @@ async function updateExamplesRemixVersion(nextVersion) {
  * @param {string} [successMessage]
  */
 async function updateRemixVersion(packageName, nextVersion, successMessage) {
-  await updatePackageConfig(packageName, config => {
+  await updatePackageConfig(packageName, (config) => {
     config.version = nextVersion;
     for (let pkg of remixPackages.all) {
       if (config.dependencies?.[`@remix-run/${pkg}`]) {
@@ -151,6 +158,25 @@ async function updateRemixVersion(packageName, nextVersion, successMessage) {
 }
 
 /**
+ *
+ * @param {string} nextVersion
+ */
+async function updateDeploymentScriptVersion(nextVersion) {
+  let file = packageJson("deployment-test", "scripts");
+  let json = await jsonfile.readFile(file);
+  json.dependencies["@remix-run/dev"] = nextVersion;
+  await jsonfile.writeFile(file, json, { spaces: 2 });
+
+  console.log(
+    chalk.green(
+      `  Updated Remix to version ${chalk.bold(nextVersion)} in ${chalk.bold(
+        "scripts/deployment-test"
+      )}`
+    )
+  );
+}
+
+/**
  * @param {string} nextVersion
  */
 async function incrementRemixVersion(nextVersion) {
@@ -163,6 +189,9 @@ async function incrementRemixVersion(nextVersion) {
 
   // Update versions in the examples
   await updateExamplesRemixVersion(nextVersion);
+
+  // Update deployment script `@remix-run/dev` version
+  await updateDeploymentScriptVersion(nextVersion);
 
   // Commit and tag
   execSync(`git commit --all --message="Version ${nextVersion}"`);

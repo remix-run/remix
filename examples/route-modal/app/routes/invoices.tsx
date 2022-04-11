@@ -1,5 +1,6 @@
-import type { LoaderFunction } from "remix";
-import { json, Link, Outlet, useLoaderData } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Link, Outlet, useLoaderData } from "@remix-run/react";
 
 export const loader: LoaderFunction = async ({ params }) => {
   const invoices = [
@@ -8,15 +9,15 @@ export const loader: LoaderFunction = async ({ params }) => {
       company: "Remix",
       description: "Remix license",
       amount: 200,
-      date: new Date(2021, 8, 1)
+      date: new Date(2021, 8, 1),
     },
     {
       id: 2,
       company: "Amazon",
       description: "AWS bill",
       amount: 340,
-      date: new Date(2022, 8, 1)
-    }
+      date: new Date(2022, 8, 1),
+    },
   ];
   return json(invoices);
 };

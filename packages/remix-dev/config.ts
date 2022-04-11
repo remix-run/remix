@@ -275,7 +275,9 @@ export async function readConfig(
   try {
     appConfig = require(configFile);
   } catch (error) {
-    throw new Error(`Error loading Remix config in ${configFile}`);
+    throw new Error(
+      `Error loading Remix config in ${configFile}\n${String(error)}`
+    );
   }
 
   let customServerEntryPoint = appConfig.server;
@@ -324,7 +326,7 @@ export async function readConfig(
       serverBuildPath = "functions/[[path]].js";
       break;
     case "netlify":
-      serverBuildPath = "netlify/functions/server/index.js";
+      serverBuildPath = ".netlify/functions-internal/server.js";
       break;
     case "vercel":
       serverBuildPath = "api/index.js";
@@ -369,7 +371,7 @@ export async function readConfig(
   }
 
   let routes: RouteManifest = {
-    root: { path: "", id: "root", file: rootRouteFile }
+    root: { path: "", id: "root", file: rootRouteFile },
   };
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
     let conventionalRoutes = defineConventionalRoutes(
@@ -414,7 +416,7 @@ export async function readConfig(
     serverBuildTargetEntryModule,
     serverEntryPoint: customServerEntryPoint,
     serverDependenciesToBundle,
-    mdx
+    mdx,
   };
 }
 

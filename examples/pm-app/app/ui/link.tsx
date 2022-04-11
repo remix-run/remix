@@ -1,10 +1,11 @@
 /* eslint-disable jsx-a11y/anchor-has-content */
-import * as React from "react";
+import type { LinkProps, NavLinkProps } from "@remix-run/react";
+import { Link, NavLink } from "@remix-run/react";
 import cx from "clsx";
-import { NavLink, Link } from "remix";
+import * as React from "react";
+
 import { isFunction, isExternalUrl } from "~/utils";
 import { IconArrowRight } from "~/ui/icons";
-import type { LinkProps, NavLinkProps } from "remix";
 
 const CustomNavLink = React.forwardRef<HTMLAnchorElement, NavLinkProps>(
   ({ to, ...props }, ref) => {
@@ -53,7 +54,7 @@ const ArrowLink = React.forwardRef<HTMLAnchorElement, LinkProps>(
         className={cx(className, "group items-center", {
           "inline-flex": !(
             className && /\b(flex|block|inline-block|inline)\b/g.test(className)
-          )
+          ),
         })}
         {...props}
         ref={ref}
@@ -67,6 +68,7 @@ const ArrowLink = React.forwardRef<HTMLAnchorElement, LinkProps>(
     );
   }
 );
+ArrowLink.displayName = "ArrowLink";
 
 export { CustomNavLink as NavLink, CustomLink as Link, ArrowLink };
 export type { NavLinkProps, LinkProps };

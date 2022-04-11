@@ -5,23 +5,28 @@ describe("rendering", () => {
   let fixture: Fixture;
   let app: AppFixture;
 
-  const PAGE = "page";
-  const PAGE_TEXT = "PAGE_TEXT";
-  const PAGE_INDEX_TEXT = "PAGE_INDEX_TEXT";
-  const CHILD = "child";
-  const CHILD_TEXT = "CHILD_TEXT";
-  const REDIRECT = "redirect";
-  const REDIRECT_TARGET = "page";
+  let PAGE = "page";
+  let PAGE_TEXT = "PAGE_TEXT";
+  let PAGE_INDEX_TEXT = "PAGE_INDEX_TEXT";
+  let CHILD = "child";
+  let CHILD_TEXT = "CHILD_TEXT";
+  let REDIRECT = "redirect";
+  let REDIRECT_HASH = "redirect-hash";
+  let REDIRECT_TARGET = "page";
 
   beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { Outlet, Scripts } from "remix";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
           export default function Root() {
             return (
-              <html>
-                <head />
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
                 <body>
                   <main>
                     <Outlet />
@@ -29,25 +34,26 @@ describe("rendering", () => {
                   <Scripts />
                 </body>
               </html>
-            )
+            );
           }
-
         `,
+
         "app/routes/index.jsx": js`
-          import { Link } from "remix";
+          import { Link } from "@remix-run/react";
           export default function() {
             return (
               <div>
                 <h2>Index</h2>
                 <Link to="/${PAGE}">${PAGE}</Link>
                 <Link to="/${REDIRECT}">${REDIRECT}</Link>
+                <Link to="/${REDIRECT_HASH}">${REDIRECT_HASH}</Link>
               </div>
             );
           }
         `,
 
         [`app/routes/${PAGE}.jsx`]: js`
-          import { Outlet, useLoaderData } from "remix";
+          import { Outlet, useLoaderData } from "@remix-run/react";
 
           export function loader() {
             return "${PAGE_TEXT}"
@@ -65,7 +71,7 @@ describe("rendering", () => {
         `,
 
         [`app/routes/${PAGE}/index.jsx`]: js`
-          import { useLoaderData, Link } from "remix";
+          import { useLoaderData, Link } from "@remix-run/react";
 
           export function loader() {
             return "${PAGE_INDEX_TEXT}"
@@ -83,7 +89,7 @@ describe("rendering", () => {
         `,
 
         [`app/routes/${PAGE}/${CHILD}.jsx`]: js`
-          import { useLoaderData } from "remix";
+          import { useLoaderData } from "@remix-run/react";
 
           export function loader() {
             return "${CHILD_TEXT}"
@@ -96,7 +102,7 @@ describe("rendering", () => {
         `,
 
         [`app/routes/${REDIRECT}.jsx`]: js`
-          import { redirect } from "remix";
+          import { redirect } from "@remix-run/node";
           export function loader() {
             return redirect("/${REDIRECT_TARGET}")
           }
@@ -105,8 +111,19 @@ describe("rendering", () => {
           }
         `,
 
+        [`app/routes/${REDIRECT_HASH}.jsx`]: js`
+          import { redirect } from "@remix-run/node";
+          export function loader() {
+            return redirect("/${REDIRECT_TARGET}#my-hash")
+          }
+          export default function() {
+            return null;
+          }
+        `,
+
         "app/routes/gh-1691.jsx": js`
-          import { Form, redirect, useFetcher, useTransition} from "remix";
+          import { redirect } from "@remix-run/node";
+          import { Form, useFetcher, useTransition} from "@remix-run/react";
 
           export const action = async ({ request }) => {
             return redirect("/gh-1691");
@@ -124,15 +141,15 @@ describe("rendering", () => {
                 <span>{fetcher.state}</span>
                 <fetcher.Form method="post">
                   <input type="hidden" name="source" value="fetcher" />
-                  <button type="submit" name="_action" value="add">
+                  <button type="submit" name="action" value="add">
                     Submit
                   </button>
                 </fetcher.Form>
               </div>
             );
           }
-        `
-      }
+        `,
+      },
     });
 
     app = await createAppFixture(fixture);
@@ -148,7 +165,7 @@ describe("rendering", () => {
     await app.clickLink(`/${PAGE}`);
 
     expect(
-      responses.map(res => new URL(res.url()).searchParams.get("_data"))
+      responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}`, `routes/${PAGE}/index`]);
 
     let html = await app.getHtml("main");
@@ -162,7 +179,7 @@ describe("rendering", () => {
     await app.clickLink(`/${PAGE}/${CHILD}`);
 
     expect(
-      responses.map(res => new URL(res.url()).searchParams.get("_data"))
+      responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}/${CHILD}`]);
 
     let html = await app.getHtml("main");
@@ -178,12 +195,22 @@ describe("rendering", () => {
     expect(new URL(app.page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
 
     expect(
-      responses.map(res => new URL(res.url()).searchParams.get("_data"))
+      responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${REDIRECT}`, `routes/${PAGE}`, `routes/${PAGE}/index`]);
 
     let html = await app.getHtml("main");
     expect(html).toMatch(PAGE_TEXT);
     expect(html).toMatch(PAGE_INDEX_TEXT);
+  });
+
+  test("loader redirect with hash", async () => {
+    await app.goto("/");
+
+    await app.clickLink(`/${REDIRECT_HASH}`);
+
+    let url = new URL(app.page.url());
+    expect(url.pathname).toBe(`/${REDIRECT_TARGET}`);
+    expect(url.hash).toBe(`#my-hash`);
   });
 
   it("calls changing routes on POP", async () => {
@@ -194,7 +221,7 @@ describe("rendering", () => {
     await app.goBack();
 
     expect(
-      responses.map(res => new URL(res.url()).searchParams.get("_data"))
+      responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}/index`]);
 
     let html = await app.getHtml("main");

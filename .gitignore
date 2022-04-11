@@ -13,6 +13,12 @@ yarn-error.log
 .eslintcache
 .tmp
 
-/deployment-test
+/scripts/deployment-test/apps
+/scripts/deployment-test/package-lock.json
+/scripts/deployment-test/yarn.lock
 
 /.idea/
+/playground
+/scripts/playground/template.local
+/scripts/playground/template/build
+/scripts/playground/template/package-lock.json

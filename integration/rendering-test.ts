@@ -2,7 +2,7 @@ import {
   createAppFixture,
   createFixture,
   js,
-  selectHtml
+  selectHtml,
 } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
@@ -14,11 +14,15 @@ describe("rendering", () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { Outlet, Scripts } from "remix";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
           export default function Root() {
             return (
-              <html>
-                <head />
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
                 <body>
                   <div id="content">
                     <h1>Root</h1>
@@ -27,7 +31,7 @@ describe("rendering", () => {
                   <Scripts />
                 </body>
               </html>
-            )
+            );
           }
         `,
 
@@ -35,8 +39,8 @@ describe("rendering", () => {
           export default function() {
             return <h2>Index</h2>;
           }
-        `
-      }
+        `,
+      },
     });
 
     app = await createAppFixture(fixture);

@@ -1,6 +1,7 @@
-import type { LoaderFunction, LinksFunction } from "remix";
-import { Form } from "remix";
-import { Outlet, useLoaderData, Link } from "remix";
+import type { LinksFunction, LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, Link, Outlet, useLoaderData } from "@remix-run/react";
+
 import { db } from "~/utils/db.server";
 import { getUser } from "~/utils/session.server";
 import stylesUrl from "../styles/jokes.css";
@@ -29,7 +30,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     user,
   };
 
-  return data;
+  return json(data);
 };
 
 export const links: LinksFunction = () => {

@@ -1,6 +1,7 @@
-import type { LoaderFunction } from "remix";
-import { useLoaderData, Link, useCatch } from "remix";
 import type { Joke } from "@prisma/client";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Link, useCatch, useLoaderData } from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 import { getUserId } from "~/utils/session.server";
@@ -27,7 +28,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     throw new Response("No jokes to be found!", { status: 404 });
   }
   const data: LoaderData = { randomJoke };
-  return data;
+  return json(data);
 };
 
 export default function JokesIndexRoute() {

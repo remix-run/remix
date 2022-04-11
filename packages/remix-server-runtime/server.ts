@@ -6,88 +6,80 @@ import type { EntryContext } from "./entry";
 import { createEntryMatches, createEntryRouteModules } from "./entry";
 import { serializeError } from "./errors";
 import { getDocumentHeaders } from "./headers";
-import type { ServerPlatform } from "./platform";
+import { ServerMode, isServerMode } from "./mode";
 import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
-import { ServerMode, isServerMode } from "./mode";
 import type { ServerRoute } from "./routes";
 import { createRoutes } from "./routes";
 import { json, isRedirectResponse, isCatchResponse } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
-/**
- * The main request handler for a Remix server. This handler runs in the context
- * of a cloud provider's server (e.g. Express on Firebase) or locally via their
- * dev tools.
- */
-export interface RequestHandler {
-  (request: Request, loadContext?: AppLoadContext): Promise<Response>;
-}
+export type RequestHandler = (
+  request: Request,
+  loadContext?: AppLoadContext
+) => Promise<Response>;
 
-/**
- * Creates a function that serves HTTP requests.
- */
-export function createRequestHandler(
+export type CreateRequestHandlerFunction = (
   build: ServerBuild,
-  platform: ServerPlatform,
   mode?: string
-): RequestHandler {
+) => RequestHandler;
+
+export const createRequestHandler: CreateRequestHandlerFunction = (
+  build,
+  mode
+) => {
   let routes = createRoutes(build.routes);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
 
   return async function requestHandler(request, loadContext) {
     let url = new URL(request.url);
     let matches = matchServerRoutes(routes, url.pathname);
-    let requestType = getRequestType(url, matches);
 
     let response: Response;
-    switch (requestType) {
-      case "data":
-        response = await handleDataRequest({
-          request,
-          loadContext,
-          matches: matches!,
-          handleDataRequest: build.entry.module.handleDataRequest,
-          serverMode
-        });
-        break;
-      case "document":
-        response = await renderDocumentRequest({
-          build,
-          loadContext,
-          matches,
-          request,
-          routes,
-          serverMode
-        });
-        break;
-      case "resource":
-        response = await handleResourceRequest({
-          request,
-          loadContext,
-          matches: matches!,
-          serverMode
-        });
-        break;
+    if (url.searchParams.has("_data")) {
+      response = await handleDataRequest({
+        request,
+        loadContext,
+        matches: matches!,
+        handleDataRequest: build.entry.module.handleDataRequest,
+        serverMode,
+      });
+    } else if (matches && !matches[matches.length - 1].route.module.default) {
+      response = await handleResourceRequest({
+        request,
+        loadContext,
+        matches,
+        serverMode,
+      });
+    } else {
+      response = await handleDocumentRequest({
+        build,
+        loadContext,
+        matches,
+        request,
+        routes,
+        serverMode,
+      });
     }
 
-    if (request.method.toLowerCase() === "head") {
+    if (request.method === "HEAD") {
       return new Response(null, {
         headers: response.headers,
         status: response.status,
-        statusText: response.statusText
+        statusText: response.statusText,
       });
     }
 
     return response;
   };
-}
+};
+
 async function handleDataRequest({
   handleDataRequest,
   loadContext,
   matches,
   request,
-  serverMode
+  serverMode,
 }: {
   handleDataRequest?: HandleDataRequestFunction;
   loadContext: unknown;
@@ -115,12 +107,12 @@ async function handleDataRequest({
   let match: RouteMatch<ServerRoute>;
   try {
     if (isActionRequest(request)) {
-      match = getActionRequestMatch(url, matches);
+      match = getRequestMatch(url, matches);
 
       response = await callRouteAction({
         loadContext,
         match,
-        request: request
+        request: request,
       });
     } else {
       let routeId = url.searchParams.get("_data");
@@ -128,7 +120,7 @@ async function handleDataRequest({
         return errorBoundaryError(new Error(`Missing route id in ?_data`), 403);
       }
 
-      let tempMatch = matches.find(match => match.route.id === routeId);
+      let tempMatch = matches.find((match) => match.route.id === routeId);
       if (!tempMatch) {
         return errorBoundaryError(
           new Error(`Route "${routeId}" does not match URL "${url.pathname}"`),
@@ -147,10 +139,13 @@ async function handleDataRequest({
       let headers = new Headers(response.headers);
       headers.set("X-Remix-Redirect", headers.get("Location")!);
       headers.delete("Location");
+      if (response.headers.get("Set-Cookie") !== null) {
+        headers.set("X-Remix-Revalidate", "yes");
+      }
 
       return new Response(null, {
         status: 204,
-        headers
+        headers,
       });
     }
 
@@ -158,7 +153,7 @@ async function handleDataRequest({
       response = await handleDataRequest(response.clone(), {
         context: loadContext,
         params: match.params,
-        request: request.clone()
+        request: request.clone(),
       });
     }
 
@@ -176,13 +171,13 @@ async function handleDataRequest({
   }
 }
 
-async function renderDocumentRequest({
+async function handleDocumentRequest({
   build,
   loadContext,
   matches,
   request,
   routes,
-  serverMode
+  serverMode,
 }: {
   build: ServerBuild;
   loadContext: unknown;
@@ -200,7 +195,7 @@ async function renderDocumentRequest({
     renderBoundaryRouteId: null,
     loaderBoundaryRouteId: null,
     error: undefined,
-    catch: undefined
+    catch: undefined,
   };
 
   if (!isValidRequestMethod(request)) {
@@ -209,14 +204,14 @@ async function renderDocumentRequest({
     appState.catch = {
       data: null,
       status: 405,
-      statusText: "Method Not Allowed"
+      statusText: "Method Not Allowed",
     };
   } else if (!matches) {
     appState.trackCatchBoundaries = false;
     appState.catch = {
       data: null,
       status: 404,
-      statusText: "Not Found"
+      statusText: "Not Found",
     };
   }
 
@@ -226,13 +221,13 @@ async function renderDocumentRequest({
   let actionResponse: Response | undefined;
 
   if (matches && isActionRequest(request)) {
-    actionMatch = getActionRequestMatch(url, matches);
+    actionMatch = getRequestMatch(url, matches);
 
     try {
       actionResponse = await callRouteAction({
         loadContext,
         match: actionMatch,
-        request: request
+        request: request,
       });
 
       if (isRedirectResponse(actionResponse)) {
@@ -241,7 +236,7 @@ async function renderDocumentRequest({
 
       actionStatus = {
         status: actionResponse.status,
-        statusText: actionResponse.statusText
+        statusText: actionResponse.statusText,
       };
 
       if (isCatchResponse(actionResponse)) {
@@ -252,11 +247,11 @@ async function renderDocumentRequest({
         appState.trackCatchBoundaries = false;
         appState.catch = {
           ...actionStatus,
-          data: await extractData(actionResponse)
+          data: await extractData(actionResponse),
         };
       } else {
         actionData = {
-          [actionMatch.route.id]: await extractData(actionResponse)
+          [actionMatch.route.id]: await extractData(actionResponse),
         };
       }
     } catch (error: any) {
@@ -299,12 +294,12 @@ async function renderDocumentRequest({
   }
 
   let routeLoaderResults = await Promise.allSettled(
-    matchesToLoad.map(match =>
+    matchesToLoad.map((match) =>
       match.route.module.loader
         ? callRouteLoader({
             loadContext,
             match,
-            request
+            request,
           })
         : Promise.resolve(undefined)
     )
@@ -318,7 +313,7 @@ async function renderDocumentRequest({
   let actionError = appState.error;
   let actionCatchBoundaryRouteId = appState.catchBoundaryRouteId;
   let actionLoaderBoundaryRouteId = appState.loaderBoundaryRouteId;
-  // Reset the app error and catch state to propogate the loader states
+  // Reset the app error and catch state to propagate the loader states
   // from the results into the app state.
   appState.catch = undefined;
   appState.error = undefined;
@@ -381,7 +376,7 @@ async function renderDocumentRequest({
         appState.catch = {
           data: await extractData(response),
           status: response.status,
-          statusText: response.statusText
+          statusText: response.statusText,
         };
         break;
       } else {
@@ -416,7 +411,7 @@ async function renderDocumentRequest({
       renderableMatches.push({
         params: {},
         pathname: "",
-        route: routes[0]
+        route: routes[0],
       });
     }
   }
@@ -426,7 +421,7 @@ async function renderDocumentRequest({
   let notOkResponse =
     actionStatus && actionStatus.status !== 200
       ? actionStatus.status
-      : loaderStatusCodes.find(status => status !== 200);
+      : loaderStatusCodes.find((status) => status !== 200);
 
   let responseStatusCode = appState.error
     ? 500
@@ -449,14 +444,14 @@ async function renderDocumentRequest({
     actionData,
     appState: appState,
     matches: entryMatches,
-    routeData
+    routeData,
   };
 
   let entryContext: EntryContext = {
     ...serverHandoff,
     manifest: build.assets,
     routeModules,
-    serverHandoffString: createServerHandoffString(serverHandoff)
+    serverHandoffString: createServerHandoffString(serverHandoff),
   };
 
   let handleDocumentRequest = build.entry.module.default;
@@ -502,8 +497,8 @@ async function renderDocumentRequest({
       return new Response(message, {
         status: 500,
         headers: {
-          "Content-Type": "text/plain"
-        }
+          "Content-Type": "text/plain",
+        },
       });
     }
   }
@@ -513,7 +508,7 @@ async function handleResourceRequest({
   loadContext,
   matches,
   request,
-  serverMode
+  serverMode,
 }: {
   request: Request;
   loadContext: unknown;
@@ -543,78 +538,49 @@ async function handleResourceRequest({
     return new Response(message, {
       status: 500,
       headers: {
-        "Content-Type": "text/plain"
-      }
+        "Content-Type": "text/plain",
+      },
     });
   }
 }
 
-type RequestType = "data" | "document" | "resource";
+const validActionMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-function getRequestType(
-  url: URL,
-  matches: RouteMatch<ServerRoute>[] | null
-): RequestType {
-  if (url.searchParams.has("_data")) {
-    return "data";
-  }
-
-  if (!matches) {
-    return "document";
-  }
-
-  let match = matches.slice(-1)[0];
-  if (!match.route.module.default) {
-    return "resource";
-  }
-
-  return "document";
+function isActionRequest({ method }: Request): boolean {
+  return validActionMethods.has(method.toUpperCase());
 }
 
-function isActionRequest(request: Request): boolean {
-  let method = request.method.toLowerCase();
-  return (
-    method === "post" ||
-    method === "put" ||
-    method === "patch" ||
-    method === "delete"
-  );
-}
+const validRequestMethods = new Set(["GET", "HEAD", ...validActionMethods]);
 
-function isHeadRequest(request: Request): boolean {
-  return request.method.toLowerCase() === "head";
-}
-
-function isValidRequestMethod(request: Request): boolean {
-  return (
-    request.method.toLowerCase() === "get" ||
-    isHeadRequest(request) ||
-    isActionRequest(request)
-  );
+function isValidRequestMethod({ method }: Request): boolean {
+  return validRequestMethods.has(method.toUpperCase());
 }
 
 async function errorBoundaryError(error: Error, status: number) {
   return json(await serializeError(error), {
     status,
     headers: {
-      "X-Remix-Error": "yes"
-    }
+      "X-Remix-Error": "yes",
+    },
   });
 }
 
 function isIndexRequestUrl(url: URL) {
-  let indexRequest = false;
-
   for (let param of url.searchParams.getAll("index")) {
-    if (!param) {
-      indexRequest = true;
+    // only use bare `?index` params without a value
+    // ✅ /foo?index
+    // ✅ /foo?index&index=123
+    // ✅ /foo?index=123&index
+    // ❌ /foo?index=123
+    if (param === "") {
+      return true;
     }
   }
 
-  return indexRequest;
+  return false;
 }
 
-function getActionRequestMatch(url: URL, matches: RouteMatch<ServerRoute>[]) {
+function getRequestMatch(url: URL, matches: RouteMatch<ServerRoute>[]) {
   let match = matches.slice(-1)[0];
 
   if (!isIndexRequestUrl(url) && match.route.id.endsWith("/index")) {

@@ -1,39 +1,97 @@
 ---
-title: Remix Package
+title: Remix Packages
 order: 2
 ---
 
-# Remix Package
+# Remix Packages
 
-This package provides all the components, hooks, and [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) objects and helpers.
+React: `@remix-run/react`
+
+Server runtimes:
+
+- `@remix-run/cloudflare`
+- `@remix-run/node`
+
+Server adapters:
+
+- `@remix-run/architect`
+- `@remix-run/cloudflare-pages`
+- `@remix-run/cloudflare-workers`
+- `@remix-run/express`
+- `@remix-run/netlify`
+- `@remix-run/vercel`
+
+These package provides all the components, hooks, and [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) objects and helpers.
 
 ## Components and Hooks
 
-### `<Meta>`, `<Links>`, `<Scripts>`
+### `<Links>`, `<LiveReload>`, `<Meta>`, `<Scripts>`, `<ScrollRestoration>`
 
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
-```tsx lines=[1,8-9,13]
-import { Meta, Links, Scripts, Outlet } from "remix";
+```tsx
+import type {
+  LinksFunction,
+  MetaFunction,
+} from "@remix-run/{runtime}";
+import {
+  Links,
+  LiveReload,
+  Meta,
+  Outlet,
+  Scripts,
+  ScrollRestoration,
+} from "@remix-run/react";
+
+import globalStylesheetUrl from "./global-styles.css";
+
+export const links: LinksFunction = () => {
+  return [{ rel: "stylesheet", href: globalStylesheetUrl }];
+};
+
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "My Amazing App",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 export default function App() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        {/* All meta exports on all routes will go here */}
         <Meta />
+
+        {/* All link exports on all routes will go here */}
         <Links />
       </head>
       <body>
+        {/* Child routes go here */}
         <Outlet />
+
+        {/* Manages scroll position for client-side transitions */}
+        {/* If you use a nonce-based content security policy for scripts, you must provide the `nonce` prop. Otherwise, omit the nonce prop as shown here. */}
+        <ScrollRestoration />
+
+        {/* Script tags go here */}
+        {/* If you use a nonce-based content security policy for scripts, you must provide the `nonce` prop. Otherwise, omit the nonce prop as shown here. */}
         <Scripts />
+
+        {/* Sets up automatic reload when you change code */}
+        {/* and only does anything during development */}
+        {/* If you use a nonce-based content security policy for scripts, you must provide the `nonce` prop. Otherwise, omit the nonce prop as shown here. */}
+        <LiveReload />
       </body>
     </html>
   );
 }
 ```
 
-You can pass extra props to `<Scripts/>` like `<Scripts crossOrigin>` for hosting your static assets on a different server than your app, or `<Script nonce={nonce}/>` for certain content security policies.
+You can pass extra props to `<Scripts />` like `<Scripts crossOrigin />` for hosting your static assets on a different server than your app.
+
+The example above renders several `<script />` tags into the resulting HTML. While this usually just works, you might have configured a [content security policy for scripts](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) that prevents these `<script />` tags from being executed. In particular, to support [content security policies with nonce-sources for scripts](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources), the `<Scripts />`, `<LiveReload />` and `<ScrollRestoration />` components support a `nonce` property, e.g.`<Script nonce={nonce}/>`. The provided nonce is subsequently passed to the `<script />` tag rendered into the HTML by these components, allowing the scripts to be executed in accordance with your CSP policy.
+
+Learn more about `meta` and `links` exports in the [conventions](/api/conventions) documentation.
 
 ### `<Link>`
 
@@ -42,7 +100,7 @@ This component renders an anchor tag and is the primary way the user will naviga
 It wraps React Router's Link with some extra behavior around resource prefetching.
 
 ```tsx
-import { Link } from "remix";
+import { Link } from "@remix-run/react";
 
 export default function GlobalNav() {
   return (
@@ -59,7 +117,7 @@ In our effort to remove all loading states from your UI, `Link` can automaticall
 
 ```tsx
 <>
-  <Link /> // defaults to "none"
+  <Link /> {/* defaults to "none" */}
   <Link prefetch="none" />
   <Link prefetch="intent" />
   <Link prefetch="render" />
@@ -93,15 +151,15 @@ A `<NavLink>` is a special kind of `<Link>` that knows whether or not it is "act
 By default, an `active` class is added to a `<NavLink>` component when it is active. You can pass a function as children to customize the content of the `<NavLink>` component based on their active state, specially useful to change styles on internal elements.
 
 ```tsx
-import { NavLink } from "remix";
+import { NavLink } from "@remix-run/react";
 
 function NavList() {
   // This styling will be applied to a <NavLink> when the
   // route that it links to is currently selected.
-  let activeStyle = {
-    textDecoration: "underline"
+  const activeStyle = {
+    textDecoration: "underline",
   };
-  let activeClassName = "underline";
+  const activeClassName = "underline";
   return (
     <nav>
       <ul>
@@ -158,8 +216,8 @@ If the `end` prop is used, it will ensure this component isn't matched as "activ
 
 The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mind-shift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
 
-```js
-import { Form } from "remix";
+```tsx
+import { Form } from "@remix-run/react";
 
 function NewEvent() {
   return (
@@ -182,7 +240,7 @@ Most of the time you can omit this prop. Forms without an action prop (`<Form me
 
 If you need to post to a different route, then add an action prop:
 
-```jsx
+```tsx
 <Form action="/projects/new" method="post" />
 ```
 
@@ -199,7 +257,7 @@ If you want to post to an index route use `?index` in the action: `<Form action=
 
 This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) to be used: get, post, put, patch, delete. The default is "get".
 
-```jsx
+```tsx
 <Form method="post" />
 ```
 
@@ -250,7 +308,7 @@ This component will emulate the browser's scroll restoration on location changes
 
 It must be the last element on the page, right before the `<Scripts/>` tag:
 
-```tsx [4,5]
+```tsx lines=[4,5]
 <html>
   <body>
     {/* ... */}
@@ -268,11 +326,12 @@ In order to avoid (usually) the client-side routing "scroll flash" on refresh or
 
 This hook returns the JSON parsed data from your route loader function.
 
-```tsx lines=[1,8]
-import { useLoaderData } from "remix";
+```tsx lines=[2,9]
+import { json } from "@remix-run/{runtime}";
+import { useLoaderData } from "@remix-run/react";
 
 export async function loader() {
-  return fakeDb.invoices.findAll();
+  return json(await fakeDb.invoices.findAll());
 }
 
 export default function Invoices() {
@@ -285,13 +344,14 @@ export default function Invoices() {
 
 This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
-```tsx lines=[1,10,19]
-import { useActionData, Form } from "remix";
+```tsx lines=[2,11,20]
+import { json } from "@remix-run/{runtime}";
+import { useActionData, Form } from "@remix-run/react";
 
 export async function action({ request }) {
   const body = await request.formData();
   const name = body.get("visitorsName");
-  return { message: `Hello, ${name}` };
+  return json({ message: `Hello, ${name}` });
 }
 
 export default function Invoices() {
@@ -312,8 +372,9 @@ export default function Invoices() {
 
 The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
 
-```tsx [21, 30, 38-40, 44-46]
-import { redirect, json, Form, useActionData } from "remix";
+```tsx lines=[22, 31, 39-41, 45-47]
+import { redirect, json } from "@remix-run/{runtime}";
+import { Form, useActionData } from "@remix-run/react";
 
 export async function action({ request }) {
   const form = await request.formData();
@@ -440,7 +501,7 @@ function SomeComponent() {
   return (
     <button
       formAction={useFormAction("destroy")}
-      formMethod="DELETE"
+      formMethod="post"
     >
       Delete
     </button>
@@ -456,11 +517,12 @@ Returns the function that may be used to submit a `<form>` (or some raw `FormDat
 
 This is useful whenever you need to programmatically submit a form. For example, you may wish to save a user preferences form whenever any field changes.
 
-```tsx filename=app/routes/prefs.tsx lines=[1,13,17]
-import { useSubmit, useTransition } from "remix";
+```tsx filename=app/routes/prefs.tsx lines=[2,14,18]
+import { json } from "@remix-run/{runtime}";
+import { useSubmit, useTransition } from "@remix-run/react";
 
 export async function loader() {
-  await getUserPreferences();
+  return json(await getUserPreferences());
 }
 
 export async function action({ request }) {
@@ -493,7 +555,7 @@ function UserPreferences() {
 This can also be useful if you'd like to automatically sign someone out of your website after a period of inactivity. In this case, we've defined inactivity as the user hasn't navigated to any other pages after 5 minutes.
 
 ```tsx lines=[1,10,15]
-import { useSubmit, useTransition } from "remix";
+import { useSubmit, useTransition } from "@remix-run/react";
 import { useEffect } from "react";
 
 function AdminPage() {
@@ -529,7 +591,7 @@ This hook tells you everything you need to know about a page transition to build
 - Optimistically showing the new state of a record while it's being updated
 
 ```js
-import { useTransition } from "remix";
+import { useTransition } from "@remix-run/react";
 
 function SomeComponent() {
   const transition = useTransition();
@@ -613,7 +675,7 @@ function SubmitButton() {
 
   const loadTexts = {
     actionRedirect: "Data saved, redirecting...",
-    actionReload: "Data saved, reloading fresh data..."
+    actionReload: "Data saved, reloading fresh data...",
   };
 
   const text =
@@ -640,7 +702,7 @@ This tells you what the next location is going to be. It's most useful when matc
 For example, this `Link` knows when its page is loading and about to become active:
 
 ```tsx lines=[7-9]
-import { Link, useResolvedPath } from "remix";
+import { Link, useResolvedPath } from "@remix-run/react";
 
 function PendingLink({ to, children }) {
   const transition = useTransition();
@@ -688,7 +750,7 @@ It is common for Remix newcomers to see this hook and think it is the primary wa
 If you're building a highly interactive, "app like" user interface, you will `useFetcher` often.
 
 ```tsx
-import { useFetcher } from "remix";
+import { useFetcher } from "@remix-run/react";
 
 function SomeComponent() {
   const fetcher = useFetcher();
@@ -747,6 +809,7 @@ This is the type of state the fetcher is in. It's like `fetcher.state`, but more
 - `state === "loading"`
 
   - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded.
+  - **actionRedirect** - The action from an "actionSubmission" returned a redirect and the page is transitioning to the new location.
   - **load** - A route's loader is being called without a submission (`fetcher.load()`).
 
 #### `fetcher.submission`
@@ -906,7 +969,7 @@ export default function NewsletterSignupRoute() {
 You could even refactor the component to take props from the hooks and reuse it:
 
 ```tsx filename=routes/newsletter/subscribe.tsx
-import { Form, useFetcher } from "remix";
+import { Form, useFetcher } from "@remix-run/react";
 
 // used in the footer
 export function NewsletterSignup() {
@@ -926,7 +989,7 @@ export function NewsletterForm({
   Form,
   data,
   state,
-  type
+  type,
 }) {
   // refactor a bit in here, just read from props instead of useFetcher
 }
@@ -935,7 +998,7 @@ export function NewsletterForm({
 And now you could reuse the same form, but it gets data from a different hook for the no-js experience:
 
 ```tsx filename=routes/newsletter/subscribe.tsx
-import { Form } from "remix";
+import { Form } from "@remix-run/react";
 
 import { NewsletterForm } from "~/NewsletterSignup";
 
@@ -965,7 +1028,7 @@ function useMarkAsRead({ articleId, userId }) {
       { userId },
       {
         method: "post",
-        action: `/article/${articleID}/mark-as-read`
+        action: `/article/${articleID}/mark-as-read`,
       }
     );
   });
@@ -978,7 +1041,9 @@ Anytime you show the user avatar, you could put a hover effect that fetches data
 
 ```tsx filename=routes/user/$id/details.tsx
 export async function loader({ params }) {
-  return fakeDb.user.find({ where: { id: params.id } });
+  return json(
+    await fakeDb.user.find({ where: { id: params.id } })
+  );
 }
 
 function UserAvatar({ partialUser }) {
@@ -1016,7 +1081,9 @@ If the user needs to select a city, you could have a loader that returns a list 
 ```tsx filename=routes/city-search.tsx
 export async function loader({ request }) {
   const url = new URL(request.url);
-  return searchCities(url.searchParams.get("city-query"));
+  return json(
+    await searchCities(url.searchParams.get("city-query"))
+  );
 }
 
 function CitySearchCombobox() {
@@ -1028,7 +1095,7 @@ function CitySearchCombobox() {
         <div>
           <ComboboxInput
             name="city-query"
-            onChange={event =>
+            onChange={(event) =>
               cities.submit(event.target.form)
             }
           />
@@ -1043,7 +1110,7 @@ function CitySearchCombobox() {
               <p>Failed to load cities :(</p>
             ) : cities.data.length ? (
               <ComboboxList>
-                {cities.data.map(city => (
+                {cities.data.map((city) => (
                   <ComboboxOption
                     key={city.id}
                     value={city.name}
@@ -1070,19 +1137,19 @@ This is useful for components throughout the app that didn't create the fetchers
 For example, imagine a UI where the sidebar lists projects, and the main view displays a list of checkboxes for the current project. The sidebar could display the number of completed and total tasks for each project.
 
 ```
-┌─────────────────┬────────────────────────────┐
-│                 │                            │
-│   Soccer  (8/9) │ [x] Do the dishes          │
-│                 │                            │
-│ > Home    (2/4) │ [x] Fold laundry           │
-│                 │                            │
-│                 │ [ ] Replace battery in the │
-│                 │     smoke alarm            │
-│                 │                            │
-│                 │ [ ] Change lights in kids  │
-│                 │     bathroom               │
-│                 │                            │
-└─────────────────┴────────────────────────────┘
++-----------------+----------------------------+
+|                 |                            |
+|   Soccer  (8/9) | [x] Do the dishes          |
+|                 |                            |
+| > Home    (2/4) | [x] Fold laundry           |
+|                 |                            |
+|                 | [ ] Replace battery in the |
+|                 |     smoke alarm            |
+|                 |                            |
+|                 | [ ] Change lights in kids  |
+|                 |     bathroom               |
+|                 |                            |
++-----------------+----------------------------┘
 ```
 
 When the user clicks a checkbox, the submission goes to the action to change the state of the task. Instead of creating a "loading state" we want to create an "optimistic UI" that will **immediately** update the checkbox to appear checked even though the server hasn't processed it yet. In the checkbox component, we can use `fetcher.submission`:
@@ -1106,7 +1173,7 @@ function Task({ task }) {
         <input
           type="checkbox"
           checked={checked}
-          onChange={e => toggle.submit(e.target.form)}
+          onChange={(e) => toggle.submit(e.target.form)}
         />
       </label>
     </toggle.Form>
@@ -1117,19 +1184,19 @@ function Task({ task }) {
 This awesome for the checkbox, but the sidebar will say 2/4 while the checkboxes show 3/4 when the user clicks on of them!
 
 ```
-┌─────────────────┬────────────────────────────┐
-│                 │                            │
-│   Soccer  (8/9) │ [x] Do the dishes          │
-│                 │                            │
-│ > Home    (2/4) │ [x] Fold laundry           │
-│                 │                            │
-│          CLICK!-->[x] Replace battery in the │
-│                 │     smoke alarm            │
-│                 │                            │
-│                 │ [ ] Change lights in kids  │
-│                 │     bathroom               │
-│                 │                            │
-└─────────────────┴────────────────────────────┘
++-----------------+----------------------------+
+|                 |                            |
+|   Soccer  (8/9) | [x] Do the dishes          |
+|                 |                            |
+| > Home    (2/4) | [x] Fold laundry           |
+|                 |                            |
+|          CLICK!-->[x] Replace battery in the |
+|                 |     smoke alarm            |
+|                 |                            |
+|                 | [ ] Change lights in kids  |
+|                 |     bathroom               |
+|                 |                            |
++-----------------+----------------------------┘
 ```
 
 Because Remix will automatically reload the routes, the sidebar will quickly update and be correct. But for a moment, it's gonna feel a little funny.
@@ -1205,7 +1272,7 @@ function SomeComponent() {
 [
   { pathname, data, params, handle }, // root route
   { pathname, data, params, handle }, // layout route
-  { pathname, data, params, handle } // child route
+  { pathname, data, params, handle }, // child route
   // etc.
 ];
 ```
@@ -1227,7 +1294,7 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
    ```tsx
    // routes/parent.tsx
    export const handle = {
-     breadcrumb: () => <Link to="/parent">Some Route</Link>
+     breadcrumb: () => <Link to="/parent">Some Route</Link>,
    };
    ```
 
@@ -1238,20 +1305,20 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
    export const handle = {
      breadcrumb: () => (
        <Link to="/parent/child">Child Route</Link>
-     )
+     ),
    };
    ```
 
 3. Now we can put it all together in our root route with `useMatches`.
 
-   ```tsx [6, 21-32]
+   ```tsx [6, 20-31]
    // root.tsx
    import {
      Links,
      Scripts,
      useLoaderData,
-     useMatches
-   } from "remix";
+     useMatches,
+   } from "@remix-run/react";
 
    export default function Root() {
      const matches = useMatches();
@@ -1259,7 +1326,6 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
      return (
        <html lang="en">
          <head>
-           <meta charSet="utf-8" />
            <Links />
          </head>
          <body>
@@ -1268,7 +1334,7 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
                {matches
                  // skip routes that don't have a breadcrumb
                  .filter(
-                   match =>
+                   (match) =>
                      match.handle && match.handle.breadcrumb
                  )
                  // render breadcrumbs!
@@ -1306,7 +1372,7 @@ In this situation, you may need to save important application state on the page 
 Remix or not, this is a good practice. The user can change the url, accidentally close the browser window, etc.
 
 ```tsx lines=[1,7-11]
-import { useBeforeUnload } from "remix";
+import { useBeforeUnload } from "@remix-run/react";
 
 function SomeForm() {
   const [state, setState] = React.useState(null);
@@ -1336,8 +1402,8 @@ function SomeForm() {
 This is a shortcut for creating `application/json` responses. It assumes you are using `utf-8` encoding.
 
 ```ts lines=[2,6]
-import type { LoaderFunction } from "remix";
-import { json } from "remix";
+import type { LoaderFunction } from "@remix-run/{runtime}";
+import { json } from "@remix-run/{runtime}";
 
 export const loader: LoaderFunction = async () => {
   // So you can write this:
@@ -1346,8 +1412,8 @@ export const loader: LoaderFunction = async () => {
   // Instead of this:
   return new Response(JSON.stringify({ any: "thing" }), {
     headers: {
-      "Content-Type": "application/json; charset=utf-8"
-    }
+      "Content-Type": "application/json; charset=utf-8",
+    },
   });
 };
 ```
@@ -1361,8 +1427,8 @@ export const loader: LoaderFunction = async () => {
     {
       status: 418,
       headers: {
-        "Cache-Control": "no-store"
-      }
+        "Cache-Control": "no-store",
+      },
     }
   );
 };
@@ -1373,8 +1439,8 @@ export const loader: LoaderFunction = async () => {
 This is shortcut for sending 30x responses.
 
 ```ts lines=[2,8]
-import type { ActionFunction } from "remix";
-import { redirect } from "remix";
+import type { ActionFunction } from "@remix-run/{runtime}";
+import { redirect } from "@remix-run/{runtime}";
 
 export const action: ActionFunction = async () => {
   const userSession = await getUserSessionOrWhatever();
@@ -1399,15 +1465,15 @@ You can also send a `ResponseInit` to set headers, like committing a session.
 ```ts
 redirect(path, {
   headers: {
-    "Set-Cookie": await commitSession(session)
-  }
+    "Set-Cookie": await commitSession(session),
+  },
 });
 
 redirect(path, {
   status: 302,
   headers: {
-    "Set-Cookie": await commitSession(session)
-  }
+    "Set-Cookie": await commitSession(session),
+  },
 });
 ```
 
@@ -1421,8 +1487,8 @@ return redirect("/else/where", 303);
 return new Response(null, {
   status: 303,
   headers: {
-    Location: "/else/where"
-  }
+    Location: "/else/where",
+  },
 });
 ```
 
@@ -1435,15 +1501,17 @@ Would be useful to understand [the Browser File API](https://developer.mozilla.o
 It's to be used in place of `request.formData()`.
 
 ```diff
-- let formData = await request.formData();
-+ let formData = await unstable_parseMultipartFormData(request, uploadHandler);
+- const formData = await request.formData();
++ const formData = await unstable_parseMultipartFormData(request, uploadHandler);
 ```
 
 For example:
 
-```tsx lines=[2-5,7,23]
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await unstable_parseMultipartFormData(
+```tsx lines=[4-7,9,25]
+export const action: ActionFunction = async ({
+  request,
+}) => {
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler // <-- we'll look at this deeper next
   );
@@ -1451,7 +1519,7 @@ export let action: ActionFunction = async ({ request }) => {
   // the returned value for the file field is whatever our uploadHandler returns.
   // Let's imagine we're uploading the avatar to s3,
   // so our uploadHandler returns the URL.
-  let avatarUrl = formData.get("avatar");
+  const avatarUrl = formData.get("avatar");
 
   // update the currently logged in user's avatar in our database
   await updateUserAvatar(request, avatarUrl);
@@ -1487,18 +1555,20 @@ These are fully featured utilities for handling fairly simple use cases. It's no
 **Example:**
 
 ```tsx
-let uploadHandler = unstable_createFileUploadHandler({
+const uploadHandler = unstable_createFileUploadHandler({
   maxFileSize: 5_000_000,
-  file: ({ filename }) => filename
+  file: ({ filename }) => filename,
 });
 
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await unstable_parseMultipartFormData(
+export const action: ActionFunction = async ({
+  request,
+}) => {
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  let file = formData.get("avatar");
+  const file = formData.get("avatar");
 
   // file is a "NodeFile" which has a similar API to "File"
   // ... etc
@@ -1524,17 +1594,19 @@ The `filter` function accepts an `object` and returns a `boolean` (or a promise 
 **Example:**
 
 ```tsx
-let uploadHandler = unstable_createMemoryUploadHandler({
-  maxFileSize: 500_000
+const uploadHandler = unstable_createMemoryUploadHandler({
+  maxFileSize: 500_000,
 });
 
-export let action: ActionFunction = async ({ request }) => {
-  let formData = await unstable_parseMultipartFormData(
+export const action: ActionFunction = async ({
+  request,
+}) => {
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  let file = formData.get("avatar");
+  const file = formData.get("avatar");
 
   // file is a "File" (https://mdn.io/File) polyfilled for node
   // ... etc
@@ -1550,16 +1622,18 @@ Most of the time, you'll probably want to proxy the file stream to a file host.
 **Example:**
 
 ```tsx
-import type { UploadHandler } from "remix";
+import type { UploadHandler } from "@remix-run/{runtime}";
 import type {
   UploadApiErrorResponse,
   UploadApiOptions,
   UploadApiResponse,
-  UploadStream
+  UploadStream,
 } from "cloudinary";
 import cloudinary from "cloudinary";
 
-export let action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const userId = getUserId(request);
 
   function uploadStreamToCloudinary(
@@ -1582,9 +1656,9 @@ export let action: ActionFunction = async ({ request }) => {
     });
   }
 
-  let uploadHandler: UploadHandler = async ({
+  const uploadHandler: UploadHandler = async ({
     name,
-    stream
+    stream,
   }) => {
     // we only care about the file form field called "avatar"
     // so we'll ignore anything else
@@ -1600,19 +1674,19 @@ export let action: ActionFunction = async ({ request }) => {
       stream,
       {
         public_id: userId,
-        folder: "/my-site/avatars"
+        folder: "/my-site/avatars",
       }
     );
 
     return uploadedImage.secure_url;
   };
 
-  let formData = await unstable_parseMultipartFormData(
+  const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
   );
 
-  let imageUrl = formData.get("avatar");
+  const imageUrl = formData.get("avatar");
 
   // because our uploadHandler returns a string, that's what the imageUrl will be.
   // ... etc
@@ -1636,21 +1710,21 @@ Your job is to do whatever you need with the `stream` and return a value that's 
 We have the built-in `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler, here's a theoretical example:
 
 ```tsx
-import type { UploadHandler } from "remix";
-import { unstable_createFileUploadHandler } from "remix";
+import type { UploadHandler } from "@remix-run/{runtime}";
+import { unstable_createFileUploadHandler } from "@remix-run/{runtime}";
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
-export let fileUploadHandler =
+export const fileUploadHandler =
   unstable_createFileUploadHandler({
-    directory: "public/calendar-events"
+    directory: "public/calendar-events",
   });
 
-export let cloudinaryUploadHandler =
+export const cloudinaryUploadHandler =
   createCloudinaryUploadHandler({
-    folder: "/my-site/avatars"
+    folder: "/my-site/avatars",
   });
 
-export let multHandler: UploadHandler = args => {
+export const multHandler: UploadHandler = (args) => {
   if (args.name === "calendarEvent") {
     return fileUploadHandler(args);
   } else if (args.name === "eventBanner") {
@@ -1678,10 +1752,10 @@ Let's say you have a banner on your e-commerce site that prompts users to check 
 First, create a cookie:
 
 ```js filename=app/cookies.js
-import { createCookie } from "remix";
+import { createCookie } from "@remix-run/{runtime}";
 
 export const userPrefs = createCookie("user-prefs", {
-  maxAge: 604_800 // one week
+  maxAge: 604_800, // one week
 });
 ```
 
@@ -1689,8 +1763,9 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
-```tsx filename=app/routes/index.tsx lines=[3,7-8,14-15,19]
-import { useLoaderData, json, redirect } from "remix";
+```tsx filename=app/routes/index.tsx lines=[4,8-9,15-16,20]
+import { json, redirect } from "@remix-run/{runtime}";
+import { useLoaderData } from "@remix-run/react";
 
 import { userPrefs } from "~/cookies";
 
@@ -1698,7 +1773,7 @@ export async function loader({ request }) {
   const cookieHeader = request.headers.get("Cookie");
   const cookie =
     (await userPrefs.parse(cookieHeader)) || {};
-  return { showBanner: cookie.showBanner };
+  return json({ showBanner: cookie.showBanner });
 }
 
 export async function action({ request }) {
@@ -1713,8 +1788,8 @@ export async function action({ request }) {
 
   return redirect("/", {
     headers: {
-      "Set-Cookie": await userPrefs.serialize(cookie)
-    }
+      "Set-Cookie": await userPrefs.serialize(cookie),
+    },
   });
 }
 
@@ -1755,7 +1830,7 @@ const cookie = createCookie("user-prefs", {
   httpOnly: true,
   secure: true,
   expires: new Date(Date.now() + 60_000),
-  maxAge: 60
+  maxAge: 60,
 });
 
 // You can either use the defaults:
@@ -1775,7 +1850,7 @@ To sign a cookie, provide one or more `secrets` when you first create the cookie
 
 ```js
 const cookie = createCookie("user-prefs", {
-  secrets: ["s3cret1"]
+  secrets: ["s3cret1"],
 });
 ```
 
@@ -1786,7 +1861,7 @@ Secrets may be rotated by adding new secrets to the front of the `secrets` array
 ```js
 // app/cookies.js
 const cookie = createCookie("user-prefs", {
-  secrets: ["n3wsecr3t", "olds3cret"]
+  secrets: ["n3wsecr3t", "olds3cret"],
 });
 
 // in your route module...
@@ -1798,8 +1873,8 @@ export async function loader({ request }) {
   new Response("...", {
     headers: {
       // Set-Cookie is signed with "n3wsecr3t"
-      "Set-Cookie": await cookie.serialize(value)
-    }
+      "Set-Cookie": await cookie.serialize(value),
+    },
   });
 }
 ```
@@ -1809,7 +1884,7 @@ export async function loader({ request }) {
 Creates a logical container for managing a browser cookie from the server.
 
 ```ts
-import { createCookie } from "remix";
+import { createCookie } from "@remix-run/{runtime}";
 
 const cookie = createCookie("cookie-name", {
   // all of these are optional defaults that can be overridden at runtime
@@ -1820,7 +1895,7 @@ const cookie = createCookie("cookie-name", {
   path: "/",
   sameSite: "lax",
   secrets: ["s3cret1"],
-  secure: true
+  secure: true,
 });
 ```
 
@@ -1831,7 +1906,7 @@ To learn more about each attribute, please see the [MDN Set-Cookie docs](https:/
 Returns `true` if an object is a Remix cookie container.
 
 ```ts
-import { isCookie } from "remix";
+import { isCookie } from "@remix-run/{runtime}";
 const cookie = createCookie("user-prefs");
 console.log(isCookie(cookie));
 // true
@@ -1870,9 +1945,9 @@ Serializes a value and combines it with this cookie's options to create a `Set-C
 new Response("...", {
   headers: {
     "Set-Cookie": await cookie.serialize({
-      showBanner: true
-    })
-  }
+      showBanner: true,
+    }),
+  },
 });
 ```
 
@@ -1885,7 +1960,7 @@ let cookie = createCookie("user-prefs");
 console.log(cookie.isSigned); // false
 
 cookie = createCookie("user-prefs", {
-  secrets: ["soopersekrit"]
+  secrets: ["soopersekrit"],
 });
 console.log(cookie.isSigned); // true
 ```
@@ -1895,8 +1970,8 @@ console.log(cookie.isSigned); // true
 The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will be the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
 
 ```js
-let cookie = createCookie("user-prefs", {
-  expires: new Date("2021-01-01")
+const cookie = createCookie("user-prefs", {
+  expires: new Date("2021-01-01"),
 });
 
 console.log(cookie.expires); // "2020-01-01T00:00:00.000Z"
@@ -1923,7 +1998,7 @@ This is an example of a cookie session storage:
 
 ```js filename=app/sessions.js
 // app/sessions.js
-import { createCookieSessionStorage } from "remix";
+import { createCookieSessionStorage } from "@remix-run/{runtime}";
 
 const { getSession, commitSession, destroySession } =
   createCookieSessionStorage({
@@ -1939,8 +2014,8 @@ const { getSession, commitSession, destroySession } =
       path: "/",
       sameSite: "lax",
       secrets: ["s3cret1"],
-      secure: true
-    }
+      secure: true,
+    },
   });
 
 export { getSession, commitSession, destroySession };
@@ -1954,8 +2029,9 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 
 A login form might look something like this:
 
-```tsx filename=app/routes/login.js lines=[3,6-8,10,15,19,25-27,38,43,48,53]
-import { json, redirect, useLoaderData } from "remix";
+```tsx filename=app/routes/login.js lines=[4,7-9,11,16,20,26-28,39,44,49,54]
+import { json, redirect } from "@remix-run/{runtime}";
+import { useLoaderData } from "@remix-run/react";
 
 import { getSession, commitSession } from "../sessions";
 
@@ -1973,8 +2049,8 @@ export async function loader({ request }) {
 
   return json(data, {
     headers: {
-      "Set-Cookie": await commitSession(session)
-    }
+      "Set-Cookie": await commitSession(session),
+    },
   });
 }
 
@@ -1997,8 +2073,8 @@ export async function action({ request }) {
     // Redirect back to the login page with errors.
     return redirect("/login", {
       headers: {
-        "Set-Cookie": await commitSession(session)
-      }
+        "Set-Cookie": await commitSession(session),
+      },
     });
   }
 
@@ -2007,8 +2083,8 @@ export async function action({ request }) {
   // Login succeeded, send them to the home page.
   return redirect("/", {
     headers: {
-      "Set-Cookie": await commitSession(session)
-    }
+      "Set-Cookie": await commitSession(session),
+    },
   });
 }
 
@@ -2041,13 +2117,15 @@ And then a logout form might look something like this:
 import { getSession, destroySession } from "../sessions";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const session = await getSession(
     request.headers.get("Cookie")
   );
   return redirect("/login", {
-    headers: { "Set-Cookie": await destroySession(session) }
+    headers: {
+      "Set-Cookie": await destroySession(session),
+    },
   });
 };
 
@@ -2079,10 +2157,10 @@ TODO:
 Returns `true` if an object is a Remix session.
 
 ```js
-import { isSession } from "remix";
+import { isSession } from "@remix-run/{runtime}";
 
-let sessionData = { foo: "bar" };
-let session = createSession(sessionData, "remix-session");
+const sessionData = { foo: "bar" };
+const session = createSession(sessionData, "remix-session");
 console.log(isSession(session));
 // true
 ```
@@ -2094,12 +2172,12 @@ Remix makes it easy to store sessions in your own database if needed. The `creat
 The following example shows how you could do this using a generic database client:
 
 ```js
-import { createSessionStorage } from "remix";
+import { createSessionStorage } from "@remix-run/{runtime}";
 
 function createDatabaseSessionStorage({
   cookie,
   host,
-  port
+  port,
 }) {
   // Configure your database client...
   const db = createDatabaseClient(host, port);
@@ -2121,7 +2199,7 @@ function createDatabaseSessionStorage({
     },
     async deleteData(id) {
       await db.delete(id);
-    }
+    },
   });
 }
 ```
@@ -2135,8 +2213,8 @@ const { getSession, commitSession, destroySession } =
     port: 1234,
     cookie: {
       name: "__session",
-      sameSite: "lax"
-    }
+      sameSite: "lax",
+    },
   });
 ```
 
@@ -2151,7 +2229,7 @@ The main advantage of cookie session storage is that you don't need any addition
 The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be committed. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strategies you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
 
 ```js
-import { createCookieSessionStorage } from "remix";
+import { createCookieSessionStorage } from "@remix-run/{runtime}";
 
 const { getSession, commitSession, destroySession } =
   createCookieSessionStorage({
@@ -2159,8 +2237,8 @@ const { getSession, commitSession, destroySession } =
     cookie: {
       name: "__session",
       secrets: ["r3m1xr0ck5"],
-      sameSite: "lax"
-    }
+      sameSite: "lax",
+    },
   });
 ```
 
@@ -2174,18 +2252,18 @@ This storage keeps all the cookie information in your server's memory.
 // app/sessions.js
 import {
   createCookie,
-  createMemorySessionStorage
-} from "remix";
+  createMemorySessionStorage,
+} from "@remix-run/{runtime}";
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
-  sameSite: true
+  sameSite: true,
 });
 
 const { getSession, commitSession, destroySession } =
   createMemorySessionStorage({
-    cookie: sessionCookie
+    cookie: sessionCookie,
   });
 
 export { getSession, commitSession, destroySession };
@@ -2203,13 +2281,13 @@ The advantage of file-backed sessions is that only the session ID is stored in t
 // app/sessions.js
 import {
   createCookie,
-  createFileSessionStorage
-} from "remix";
+  createFileSessionStorage,
+} from "@remix-run/node";
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
-  sameSite: true
+  sameSite: true,
 });
 
 const { getSession, commitSession, destroySession } =
@@ -2217,7 +2295,7 @@ const { getSession, commitSession, destroySession } =
     // The root directory where you want to store the files.
     // Make sure it's writable!
     dir: "/app/sessions",
-    cookie: sessionCookie
+    cookie: sessionCookie,
   });
 
 export { getSession, commitSession, destroySession };
@@ -2233,20 +2311,20 @@ The advantage of KV backed sessions is that only the session ID is stored in the
 // app/sessions.server.js
 import {
   createCookie,
-  createCloudflareKVSessionStorage
-} from "remix";
+  createCloudflareKVSessionStorage,
+} from "@remix-run/cloudflare";
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
-  sameSite: true
+  sameSite: true,
 });
 
 const { getSession, commitSession, destroySession } =
   createCloudflareKVSessionStorage({
     // The KV Namespace where you want to store sessions
     kv: YOUR_NAMESPACE,
-    cookie: sessionCookie
+    cookie: sessionCookie,
   });
 
 export { getSession, commitSession, destroySession };
@@ -2269,14 +2347,14 @@ sessions
 // app/sessions.server.js
 import {
   createCookie,
-  createArcTableSessionStorage
-} from "remix";
+  createArcTableSessionStorage,
+} from "@remix-run/architect";
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
   secrets: ["r3m1xr0ck5"],
   maxAge: 3600,
-  sameSite: true
+  sameSite: true,
 });
 
 const { getSession, commitSession, destroySession } =
@@ -2287,7 +2365,7 @@ const { getSession, commitSession, destroySession } =
     idx: "_idx",
     // The name of the key used to store the expiration time (should match app.arc)
     ttl: "_ttl",
-    cookie: sessionCookie
+    cookie: sessionCookie,
   });
 
 export { getSession, commitSession, destroySession };
@@ -2346,8 +2424,8 @@ export async function action({ request, params }) {
 
   return redirect("/dashboard", {
     headers: {
-      "Set-Cookie": await commitSession(session)
-    }
+      "Set-Cookie": await commitSession(session),
+    },
   });
 }
 ```
@@ -2357,7 +2435,13 @@ Now we can read the message in a loader.
 <docs-info>You must commit the session whenever you read a `flash`. This is different than you might be used to where some type of middleware automatically sets the cookie header for you.</docs-info>
 
 ```jsx
-import { Meta, Links, Scripts, Outlet, json } from "remix";
+import { json } from "@remix-run/{runtime}";
+import {
+  Meta,
+  Links,
+  Scripts,
+  Outlet,
+} from "@remix-run/react";
 
 import { getSession, commitSession } from "./sessions";
 
@@ -2372,8 +2456,8 @@ export async function loader({ request }) {
     {
       headers: {
         // only necessary with cookieSessionStorage
-        "Set-Cookie": await commitSession(session)
-      }
+        "Set-Cookie": await commitSession(session),
+      },
     }
   );
 }
@@ -2423,8 +2507,8 @@ export async function loader({ request }) {
 
   return json(data, {
     headers: {
-      "Set-Cookie": await commitSession(session)
-    }
+      "Set-Cookie": await commitSession(session),
+    },
   });
 }
 ```
@@ -2438,17 +2522,17 @@ This component is a wrapper around React Router's Outlet with the ability to pas
 Here's a practical example of when you may want to use this feature. Let's say you've got a list of companies that have invoices and you want to display those companies in an accordion. We'll render our outlet in that accordion, but we want the invoice sorting to be controlled by the parent (so changing companies preserves the invoice sorting). This is a perfect use case for `<Outlet context>`.
 
 ```tsx filename=app/routes/companies.tsx lines=[5,28-31,36-44,53-57,68]
+import { json } from "@remix-run/{runtime}";
 import {
-  json,
   useLoaderData,
   useParams,
-  Outlet
-} from "remix";
+  Outlet,
+} from "@remix-run/react";
 import {
   Accordion,
   AccordionItem,
   AccordionButton,
-  AccordionPanel
+  AccordionPanel,
 } from "@reach/accordion";
 
 import type { Companies } from "~/utils/companies";
@@ -2460,7 +2544,7 @@ type LoaderData = {
 
 export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
-    companies: await getCompanies()
+    companies: await getCompanies(),
   };
   return json(data);
 };
@@ -2476,16 +2560,16 @@ export default function CompaniesRoute() {
   const [invoiceSort, setInvoiceSort] =
     React.useState<Sort>("ASC");
   function changeInvoiceSort() {
-    setInvoiceSort(sort =>
+    setInvoiceSort((sort) =>
       sort === "ASC" ? "DESC" : "ASC"
     );
   }
-  const context: ContextType = { sort };
+  const context: ContextType = { invoiceSort };
   const outlet = <Outlet context={context} />;
 
   const params = useParams();
   const selectedCompanyIndex = data.companies.findIndex(
-    company => company.id === params.companyId
+    (company) => company.id === params.companyId
   );
 
   return (
@@ -2496,7 +2580,7 @@ export default function CompaniesRoute() {
           : "Sort Ascending"}
       </button>
       <Accordion index={selectedCompanyIndex}>
-        {data.companies.map(company => (
+        {data.companies.map((company) => (
           <AccordionItem key={company.id}>
             <AccordionButton as={Link} to={company.id}>
               {company.name}
@@ -2523,12 +2607,12 @@ This hook returns the context from the `<Outlet />` that rendered you.
 Continuing from the `<Outlet context />` example above, here's what the child route could do to use the sort order.
 
 ```tsx filename=app/routes/companies/$companyId.tsx lines=[5,8,25,27-30]
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/{runtime}";
+import { json } from "@remix-run/{runtime}";
 import {
-  json,
   useLoaderData,
-  useOutletContext
-} from "remix";
+  useOutletContext,
+} from "@remix-run/react";
 
 import type { ContextType } from "../companies";
 
@@ -2537,20 +2621,20 @@ type LoaderData = {
 };
 
 export const loader: LoaderFunction = async ({
-  params
+  params,
 }) => {
   const data: LoaderData = {
-    company: await getCompany(params.companyId)
+    company: await getCompany(params.companyId),
   };
   return json(data);
 };
 
 export default function CompanyRoute() {
   const data = useLoaderData<LoaderData>();
-  const { sort } = useOutletContext<ContextType>();
+  const { invoiceSort } = useOutletContext<ContextType>();
 
   const sortedInvoices =
-    sort === "ASC"
+    invoiceSort === "ASC"
       ? data.company.invoices
       : data.company.invoices.reverse();
 
@@ -2558,25 +2642,13 @@ export default function CompanyRoute() {
     <div>
       <h2>{data.company.name}</h2>
       <ul>
-        {sortedInvoices.map(invoice => (
+        {sortedInvoices.map((invoice) => (
           <li key={invoice.id}>{invoice.name}</li>
         ))}
       </ul>
     </div>
   );
 }
-```
-
-## Types
-
-```ts
-import type {
-  ActionFunction,
-  LoaderFunction,
-  MetaFunction,
-  LinksFunction,
-  ShouldReloadFunction
-} from "remix";
 ```
 
 [meta-links-scripts]: #meta-links-scripts

@@ -2,23 +2,29 @@ import fsp from "fs/promises";
 import path from "path";
 import lambdaTester from "lambda-tester";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import {
   // This has been added as a global in node 15+
   AbortController,
-  Response as NodeResponse
+  createRequestHandler as createRemixRequestHandler,
+  Response as NodeResponse,
 } from "@remix-run/node";
 
 import {
   createRequestHandler,
   createRemixHeaders,
   createRemixRequest,
-  sendRemixResponse
+  sendRemixResponse,
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the architect adapter
-jest.mock("@remix-run/server-runtime");
+jest.mock("@remix-run/node", () => {
+  let original = jest.requireActual("@remix-run/node");
+  return {
+    ...original,
+    createRequestHandler: jest.fn(),
+  };
+});
 let mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler
@@ -35,7 +41,7 @@ function createMockEvent(event: Partial<APIGatewayProxyEventV2> = {}) {
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
       "accept-language": "en-US,en;q=0.9",
       "accept-encoding": "gzip, deflate",
-      ...event.headers
+      ...event.headers,
     },
     isBase64Encoded: false,
     rawPath: "/",
@@ -48,7 +54,7 @@ function createMockEvent(event: Partial<APIGatewayProxyEventV2> = {}) {
         userAgent:
           "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
         sourceIp: "127.0.0.1",
-        ...event.requestContext?.http
+        ...event.requestContext?.http,
       },
       routeKey: "ANY /{proxy+}",
       accountId: "accountId",
@@ -59,11 +65,11 @@ function createMockEvent(event: Partial<APIGatewayProxyEventV2> = {}) {
       stage: "test",
       time: now.toISOString(),
       timeEpoch: now.getTime(),
-      ...event.requestContext
+      ...event.requestContext,
     },
     routeKey: "foo",
     version: "2.0",
-    ...event
+    ...event,
   };
 }
 
@@ -78,13 +84,13 @@ describe("architect createRequestHandler", () => {
     });
 
     it("handles requests", async () => {
-      mockedCreateRequestHandler.mockImplementation(() => async req => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
       await lambdaTester(createRequestHandler({ build: undefined } as any))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(200);
           expect(res.body).toBe("URL: /foo/bar");
         });
@@ -97,7 +103,7 @@ describe("architect createRequestHandler", () => {
 
       await lambdaTester(createRequestHandler({ build: undefined } as any))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(200);
         });
     });
@@ -109,7 +115,7 @@ describe("architect createRequestHandler", () => {
 
       await lambdaTester(createRequestHandler({ build: undefined } as any))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(204);
         });
     });
@@ -136,13 +142,13 @@ describe("architect createRequestHandler", () => {
 
       await lambdaTester(createRequestHandler({ build: undefined } as any))
         .event(createMockEvent({ rawPath: "/" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(200);
           expect(res.headers["x-time-of-year"]).toBe("most wonderful");
           expect(res.cookies).toEqual([
             "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
             "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax",
-            "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+            "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax",
           ]);
         });
     });
@@ -222,7 +228,7 @@ describe("architect createRemixHeaders", () => {
       expect(
         createRemixHeaders({ "x-something-else": "true" }, [
           "__session=some_value",
-          "__other=some_other_value"
+          "__other=some_other_value",
         ])
       ).toMatchInlineSnapshot(`
         Headers {
@@ -245,7 +251,7 @@ describe("architect createRemixRequest", () => {
     expect(
       createRemixRequest(
         createMockEvent({
-          cookies: ["__session=value"]
+          cookies: ["__session=value"],
         })
       )
     ).toMatchInlineSnapshot(`
@@ -324,8 +330,8 @@ describe("sendRemixResponse", () => {
     let response = new NodeResponse(json, {
       headers: {
         "Content-Type": "application/json",
-        "content-length": json.length.toString()
-      }
+        "content-length": json.length.toString(),
+      },
     });
 
     let abortController = new AbortController();
@@ -341,8 +347,8 @@ describe("sendRemixResponse", () => {
     let response = new NodeResponse(image, {
       headers: {
         "content-type": "image/jpeg",
-        "content-length": image.length.toString()
-      }
+        "content-length": image.length.toString(),
+      },
     });
 
     let abortController = new AbortController();

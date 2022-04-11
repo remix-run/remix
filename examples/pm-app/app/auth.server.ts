@@ -1,5 +1,6 @@
-import { json, redirect } from "remix";
-import type { Session } from "remix";
+import type { Session } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+
 import { sessionStorage, sessionKey, getUserSession } from "~/session.server";
 import type { User } from "~/models";
 
@@ -12,7 +13,7 @@ export async function authenticate(
     passwordField,
     usernameField,
     verify,
-    failureRedirect
+    failureRedirect,
   }: {
     loginURL: string;
     passwordField: string;
@@ -62,7 +63,7 @@ export async function authenticate(
     }
     session.flash(ERROR_KEY, { message });
     throw redirect(failureRedirect, {
-      headers: { "Set-Cookie": await sessionStorage.commitSession(session) }
+      headers: { "Set-Cookie": await sessionStorage.commitSession(session) },
     });
   }
 
