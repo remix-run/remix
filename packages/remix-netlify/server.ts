@@ -14,7 +14,6 @@ import type {
 import type {
   AppLoadContext,
   ServerBuild,
-  Response as NodeResponse,
   RequestInit as NodeRequestInit,
 } from "@remix-run/node";
 

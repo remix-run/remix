@@ -3,7 +3,6 @@ import type {
   AppLoadContext,
   ServerBuild,
   RequestInit as NodeRequestInit,
-  Response as NodeResponse,
 } from "@remix-run/node";
 import {
   // This has been added as a global in node 15+
