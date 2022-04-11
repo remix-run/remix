@@ -102,6 +102,7 @@ R E M I X
 💿 Welcome to Remix! Let's get you set up with a new project.
 
 ? Where would you like to create your app? remix-jokes
+? What type of app do you want to create? Just the basics
 ? Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets. Remix
  App Server
 ? TypeScript or JavaScript? TypeScript
