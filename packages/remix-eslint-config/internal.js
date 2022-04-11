@@ -90,5 +90,11 @@ module.exports = {
         "import/no-extraneous-dependencies": ERROR,
       },
     },
+    {
+      files: ["integration/**/*.*"],
+      env: {
+        "jest/globals": false,
+      },
+    },
   ],
 };
