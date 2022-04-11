@@ -1342,7 +1342,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
           event.promise.then((data: unknown) => {
             if (controller.signal.aborted) return;
             update({
-              routeLoadersDeferred: makeLoaderDefered(state, [
+              routeLoadersDeferred: makeLoaderDefered(getState(), [
                 { ...res, events: { [key]: { promise: data } } },
               ]),
             });

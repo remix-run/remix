@@ -63,25 +63,34 @@ export async function fetchData(
 
     let gotEvents = false;
     let status = 200;
+    let headers: Headers;
     await new Promise<void>(async (resolve) => {
-      fetchEventSource(url.href, {
+      await fetchEventSource(url.href, {
         credentials: "same-origin",
         signal: abort.signal,
         onerror: handleAbort,
         onopen: async (res) => {
-          let { headers } = res;
-          let contentType = headers.get("Content-Type");
+          let contentType = res.headers.get("Content-Type");
+          if (isRedirectResponse(res)) {
+            response = new Response(null, {
+              status: res.status,
+              headers: res.headers,
+            });
+            abort.abort();
+            resolve();
+            return;
+          }
           if (contentType && /\bapplication\/json\b/.test(contentType)) {
             response = new Response(await res.text(), {
               status: res.status,
-              headers: {
-                "Content-Type": contentType,
-              },
+              headers: res.headers,
             });
             abort.abort();
             resolve();
           } else {
             status = res.status;
+            headers = new Headers(res.headers);
+            headers.set("Content-Type", "application/json");
           }
         },
         onmessage: (event) => {
@@ -136,7 +145,7 @@ export async function fetchData(
           } else {
             response = new Response(event.data, {
               status,
-              headers: { "Content-Type": "application/json" },
+              headers,
             });
             resolve();
           }

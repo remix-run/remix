@@ -23,9 +23,17 @@ beforeAll(async () => {
               <Link to="/multiple-deferred">Multiple Deferred Route</Link>
               <Link to="/deferred-error">Deferred Error</Link>
               <Link to="/deferred-error-no-boundary">Deferred Error No Boundary</Link>
+              <Link to="/redirect">Redirect</Link>
               {data}
             </div>
           )
+        }
+      `,
+
+      "app/routes/redirect.jsx": js`
+        import { deferred } from "@remix-run/node";
+        export function loader() {
+          return deferred({food: "pizza"}, { status: 301, headers: { Location: "/?redirected" } });
         }
       `,
 
@@ -279,4 +287,10 @@ it("errored deferred data renders route boundary on transition", async () => {
   await app.clickLink("/deferred-error-no-boundary");
   let text = await app.getHtml();
   expect(text).toMatch("Error Boundary");
+}, 120_000);
+
+it("deferred response can redirect", async () => {
+  await app.goto("/");
+  await app.clickLink("/redirect");
+  expect(app.page.url()).toMatch("?redirected");
 });
