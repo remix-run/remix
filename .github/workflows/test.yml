@@ -112,10 +112,3 @@ jobs:
 
       - name: 👀 Run Integration Tests
         run: "yarn test:integration"
-
-      - name: 📤 Upload test results
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: playwright-results
-          path: test-results
