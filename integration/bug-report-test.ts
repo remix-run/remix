@@ -1,4 +1,9 @@
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+  getElement,
+} from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
 let fixture: Fixture;
@@ -36,27 +41,36 @@ beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { json, useLoaderData, Link } from "remix";
+      "app/routes/foo.jsx": js`
+        import { json, useActionData, Outlet } from "remix";
 
-        export function loader() {
-          return json("pizza");
+        export async function action({ request }) {
+          let data = Object.fromEntries(await request.formData());
+          return json(data);
         }
 
         export default function Index() {
-          let data = useLoaderData();
+          let data = useActionData();
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              <Outlet />
+              <pre data-testid="layout-data">{JSON.stringify(data)}</pre>
             </div>
           )
         }
       `,
 
-      "app/routes/burgers.jsx": js`
+      "app/routes/foo/index.jsx": js`
+        import { Form, useActionData } from "remix";
         export default function Index() {
-          return <div>cheeseburger</div>;
+          let actionData = useActionData();
+          return (
+            <Form action="/foo" method="post">
+              <input type="hidden" name="foo" value="bar" />
+              <button type="submit">Submit</button>
+              <pre data-testid="index-data">{JSON.stringify(actionData)}</pre>
+            </Form>
+          );
         }
       `,
     },
@@ -73,21 +87,26 @@ afterAll(async () => app.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-it("[description of what you expect it to do]", async () => {
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+describe("submit form to layout route action handler", () => {
+  beforeAll(async () => {
+    await app.goto("/foo");
+    await app.clickSubmitButton("/foo");
+    app.collectDataResponses();
+  });
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  let expected = JSON.stringify({ foo: "bar" });
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
+  it("layout component gets data from useActionData", async () => {
+    let html = await app.getHtml();
+    let layoutEl = getElement(html, "[data-testid=layout-data]");
+    expect(layoutEl.text()).toEqual(expected);
+  });
 
-  // Go check out the other tests to see what else you can do.
+  it("index component gets data from useActionData", async () => {
+    let html = await app.getHtml();
+    let childEl = getElement(html, "[data-testid=index-data]");
+    expect(childEl.text()).toEqual(expected);
+  });
 });
 
 ////////////////////////////////////////////////////////////////////////////////
