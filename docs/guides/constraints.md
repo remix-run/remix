@@ -160,7 +160,10 @@ export function removeTrailingSlash(loader) {
   return function (arg) {
     const { request } = arg;
     const url = new URL(request.url);
-    if (url.pathname !== '/' && url.pathname.endsWith("/")) {
+    if (
+      url.pathname !== "/" &&
+      url.pathname.endsWith("/")
+    ) {
       return redirect(request.url.slice(0, -1), {
         status: 308,
       });
@@ -188,7 +191,7 @@ This type of abstraction is introduced to try to return a response early. Since 
 import { redirect } from "@remix-run/{runtime}";
 
 export function removeTrailingSlash(url) {
-  if (url.pathname !== '/' && url.pathname.endsWith("/")) {
+  if (url.pathname !== "/" && url.pathname.endsWith("/")) {
     throw redirect(request.url.slice(0, -1), {
       status: 308,
     });
