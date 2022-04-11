@@ -473,44 +473,4 @@ test.describe("route module link export", () => {
       expect(responses.length).toEqual(4);
     });
   });
-
-  // playwright doesn't support checking where a resource came from
-  test.skip("preloads assets for other pages and serves from browser cache on navigation", async ({
-    page,
-  }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/links", true);
-    // let jsResponses = app.collectResponses((url) =>
-    //   url.pathname.endsWith(".js")
-    // );
-
-    await page.click('a[href="/gists/ryanflorence"]');
-    await page.waitForSelector('[data-test-id="/gists/$username"]');
-
-    // expect(jsResponses.every((res) => res.fromCache())).toBe(true);
-  });
-
-  // playwright doesn't support checking where a resource came from
-  test.skip("preloads data for other pages and serves from browser cache on navigation", async ({
-    page,
-  }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    let dataResponses = app.collectDataResponses();
-    await app.goto("/links", true);
-
-    expect(dataResponses.length).toBe(2);
-    let [prefetchGists, prefetchUser] = dataResponses;
-    expect(prefetchGists.request().resourceType()).toBe("other");
-    expect(prefetchUser.request().resourceType()).toBe("other");
-
-    await page.click('a[href="/gists/mjackson"]');
-    await page.waitForSelector('[data-test-id="/gists/$username"]');
-
-    expect(dataResponses.length).toBe(4);
-    let [, , gists, username] = dataResponses;
-    expect(gists.request().resourceType()).toBe("fetch");
-    expect(username.request().resourceType()).toBe("fetch");
-    // expect(gists.fromCache()).toBe(true);
-    // expect(username.fromCache()).toBe(true);
-  });
 });

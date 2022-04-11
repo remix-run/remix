@@ -175,15 +175,7 @@ test.describe("actions", () => {
     });
   });
 
-  test.afterEach(({ page }) => {
-    // if you *do* expect consoleError to have been called in your test
-    // then make sure to call consoleError.mockClear(); at the end of it
-    // accompanied by an assertion on the error that was logged.
-    // Note: If you have a failing test and this is also failing, focus on the
-    // test first. Once you get that fixed, this will probably be fixed as well.
-    // Don't worry about this error until tests are passing otherwise.
-    // expect(consoleError).not.toHaveBeenCalled();
-    // page.on('console', msg => console.log(msg.text()))
+  test.afterEach(() => {
     expect(logs).toHaveLength(0);
   });
 
@@ -229,12 +221,10 @@ test.describe("actions", () => {
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto(`/${THROWS_REDIRECT}`);
+    let responses = app.collectDataResponses();
     await app.clickSubmitButton(`/${THROWS_REDIRECT}`);
-    // TODO: These are failing but unsure why. Responses array is empty. Problem
-    //       w/ Remix or with collectDataResponses?
-    // let responses = app.collectDataResponses(); expect(responses.length).toBe(1);
-    // expect(responses.length).toBe(1);
-    // expect(responses[0].status()).toBe(204);
+    expect(responses.length).toBe(1);
+    expect(responses[0].status()).toBe(204);
 
     expect(new URL(page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
     expect(await app.getHtml()).toMatch(PAGE_TEXT);
@@ -260,7 +250,7 @@ test.describe("actions", () => {
   });
 
   // TODO: figure out what the heck is wrong with this test...
-  // For some reason the error message is "Unexpect Server Error" in the test
+  // For some reason the error message is "Unexpected Server Error" in the test
   // but if you try the app in the browser it works as expected.
   test.skip("rejects too big of an upload with JavaScript", async ({
     page,
