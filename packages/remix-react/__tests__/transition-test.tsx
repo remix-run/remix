@@ -66,6 +66,7 @@ describe("init", () => {
           },
         ],
         "nextMatches": undefined,
+        "routeLoadersDeferred": undefined,
         "transition": Object {
           "location": undefined,
           "state": "idle",
@@ -204,7 +205,7 @@ describe("normal navigation", () => {
 describe("shouldReload", () => {
   it("delegates to the route if it should reload or not", async () => {
     let rootLoader = jest.fn();
-    let childLoader = jest.fn(() => "CHILD");
+    let childLoader = jest.fn(() => ["CHILD", undefined] as [any, any]);
     let shouldReload = jest.fn(({ url, prevUrl, submission }) => {
       return url.searchParams.get("reload") === "1";
     });
@@ -514,8 +515,8 @@ describe("errors on navigation", () => {
   });
 
   it("loads data above error boundary route", async () => {
-    let loaderA = jest.fn(async () => "LOADER A");
-    let loaderB = jest.fn(async () => "LOADER B");
+    let loaderA = jest.fn(async () => ["LOADER A", undefined] as [any, any]);
+    let loaderB = jest.fn(async () => ["LOADER B", undefined] as [any, any]);
     let loaderC = async () => {
       throw new Error("Kaboom!");
     };
@@ -675,7 +676,7 @@ describe("submission navigations", () => {
           element: {},
           module: "",
           hasLoader: true,
-          loader: () => "PARENT LOADER",
+          loader: () => ["PARENT LOADER", undefined],
           action: () => "PARENT ACTION",
           children: [
             {
@@ -685,7 +686,7 @@ describe("submission navigations", () => {
               module: "",
               ErrorBoundary: FakeComponent,
               hasLoader: true,
-              loader: () => "CHILD LOADER",
+              loader: () => ["CHILD LOADER", undefined],
               action: () => "CHILD ACTION",
               children: [
                 {
@@ -695,7 +696,7 @@ describe("submission navigations", () => {
                   module: "",
                   ErrorBoundary: FakeComponent,
                   hasLoader: true,
-                  loader: () => "CHILD INDEX LOADER",
+                  loader: () => ["CHILD INDEX LOADER", undefined],
                   action: () => "CHILD INDEX ACTION",
                 },
               ],
@@ -772,8 +773,12 @@ describe("action errors", () => {
       let action = () => {
         throw new Error(ERROR_MESSAGE);
       };
-      let parentLoader = jest.fn(async () => "PARENT LOADER");
-      let actionRouteLoader = jest.fn(async () => "CHILD LOADER");
+      let parentLoader = jest.fn(
+        async () => ["PARENT LOADER", undefined] as [any, any]
+      );
+      let actionRouteLoader = jest.fn(
+        async () => ["CHILD LOADER", undefined] as [any, any]
+      );
       let tm = createTestTransitionManager("/", {
         routes: [
           {
@@ -1883,6 +1888,7 @@ function createTestTransitionManager(
   return createTransitionManager({
     actionData: undefined,
     loaderData: { root: "ROOT" },
+    routeLoadersDeferred: {},
     location,
     routes: [],
     onChange() {},
@@ -1915,7 +1921,7 @@ let setup = ({ url } = { url: "/" }) => {
     lastRedirect = navigate_(createLocation(href, state));
   });
 
-  let rootLoader = jest.fn(() => "ROOT");
+  let rootLoader = jest.fn(() => ["ROOT", undefined] as [any, any]);
 
   let createLoader = () => {
     return jest.fn(async ({ signal }: { signal: AbortSignal }) => {
@@ -1924,9 +1930,9 @@ let setup = ({ url } = { url: "/" }) => {
       signal.onabort = loaderAbortHandlers.get(myId);
       return loaderDeferreds.get(myId).promise.then(
         (val) => {
-          return val;
+          return [val, undefined] as [any, any];
         },
-        (error) => error
+        (error) => [error, undefined] as [any, any]
       );
     });
   };
@@ -2060,12 +2066,12 @@ let setup = ({ url } = { url: "/" }) => {
     }
 
     async function redirectAction(href: string) {
-      await resolveAction(new TransitionRedirect(href));
+      await resolveAction(new TransitionRedirect(href, false));
       return lastRedirect;
     }
 
     async function redirectLoader(href: string) {
-      await resolveLoader(new TransitionRedirect(href));
+      await resolveLoader(new TransitionRedirect(href, false));
       return lastRedirect;
     }
 
@@ -2154,12 +2160,12 @@ let setup = ({ url } = { url: "/" }) => {
     }
 
     async function redirectAction(href: string) {
-      await resolveAction(new TransitionRedirect(href));
+      await resolveAction(new TransitionRedirect(href, false));
       return lastRedirect;
     }
 
     async function redirectLoader(href: string) {
-      await resolveLoader(new TransitionRedirect(href));
+      await resolveLoader(new TransitionRedirect(href, false));
       return lastRedirect;
     }
 

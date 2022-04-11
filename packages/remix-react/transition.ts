@@ -1481,6 +1481,12 @@ async function callAction(
   match: ClientMatch,
   signal: AbortSignal
 ): Promise<DataResult> {
+  if (!match.route.action) {
+    return {
+      match,
+      value: new Error(`Route ${match.route.id} does not export an action.`),
+    };
+  }
   try {
     let value = await match.route.action({
       url: createUrl(submission.action),

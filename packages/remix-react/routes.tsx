@@ -38,7 +38,7 @@ export interface EntryRoute extends Route {
   parentId?: string;
 }
 
-export type RouteDataFunction = {
+export type RouteLoaderFunction = {
   (args: {
     /**
      * Parsed params from the route path
@@ -63,9 +63,34 @@ export type RouteDataFunction = {
   }): Promise<[any, any]> | [any, any];
 };
 
+export type RouteActionFunction = {
+  (args: {
+    /**
+     * Parsed params from the route path
+     */
+    params: Params;
+
+    /**
+     * The url to be loaded, resolved to the matched route.
+     */
+    url: URL; // resolved route
+
+    /**
+     * Will be present if being called from `<Form>` or `useSubmit`
+     */
+    submission?: Submission;
+
+    /**
+     * Attach this signal to fetch (or whatever else) to abort your
+     * implementation when a load/action is aborted.
+     */
+    signal: AbortSignal;
+  }): Promise<any> | any;
+};
+
 export interface ClientRoute extends Route {
-  loader?: RouteDataFunction;
-  action: RouteDataFunction;
+  loader?: RouteLoaderFunction;
+  action?: RouteActionFunction;
   shouldReload?: ShouldReloadFunction;
   ErrorBoundary?: any;
   CatchBoundary?: any;
