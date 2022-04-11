@@ -4,7 +4,6 @@ import NpmCliPackageJson from "@npmcli/package-json";
 import { join } from "path";
 import glob from "fast-glob";
 import { maxBy } from "lodash";
-import chalk from "chalk";
 
 import { readConfig } from "../../../../config";
 import * as colors from "../../../../colors";
@@ -42,7 +41,7 @@ const getRemixVersionSpec = (remixDeps: Dependency[]): string => {
   }
   console.log(
     detected(
-      `\`${chalk.blue(
+      `\`${colors.blue(
         candidate.versionSpec
       )}\` as the best Remix version to use`
     )
@@ -95,7 +94,7 @@ export const replaceRemixImports: MigrationFunction = async ({
     .map(({ name }) => name)
     .includes("@remix-run/serve");
   if (remixServeInstalled) {
-    let servePackage = colors.hint("@remix-run/serve");
+    let servePackage = colors.blue("@remix-run/serve");
     console.log(detected(`\`${servePackage}\` as your Remix server`));
     console.log(because("it is in your dependencies."));
   }
@@ -170,5 +169,5 @@ export const replaceRemixImports: MigrationFunction = async ({
   console.log(
     "\n👉 Reinstall from your new `package.json` to update your lockfile"
   );
-  console.log(`   ${chalk.blue("npm install")}`);
+  console.log(`   ${colors.blue("npm install")}`);
 };

@@ -1,7 +1,7 @@
-import chalk from "chalk";
+import * as colors from "../../../../colors";
 
 export const detected = (message: string) =>
-  chalk.gray("🕵️  I detected " + message);
+  colors.gray("🕵️  I detected " + message);
 
 export const because = (message: string) =>
-  chalk.gray("   ...because " + message);
+  colors.gray("   ...because " + message);

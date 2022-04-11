@@ -1,8 +1,8 @@
 import inquirer from "inquirer";
 // @ts-ignore https://github.com/DefinitelyTyped/DefinitelyTyped/pull/59806
 import type { PackageJson } from "@npmcli/package-json";
-import chalk from "chalk";
 
+import * as colors from "../../../../colors";
 import type { Options } from "./transform";
 import { runtimes, isRuntime, isAdapter } from "./transform";
 import type {
@@ -41,7 +41,7 @@ const autoDetectPostinstallRuntime = (
 };
 
 const detectedRuntime = (runtime: Runtime) => {
-  let runtimePackage = chalk.blue(`@remix-run/${runtime}`);
+  let runtimePackage = colors.blue(`@remix-run/${runtime}`);
   return detected(`\`${runtimePackage}\` as your Remix server runtime`);
 };
 
@@ -65,7 +65,7 @@ const resolveRuntime = async (
   if (adapter) {
     let runtime = adapterToRuntime[adapter];
     console.log(detectedRuntime(runtime));
-    let adapterPackage = chalk.blue(`@remix-run/${adapter}`);
+    let adapterPackage = colors.blue(`@remix-run/${adapter}`);
     console.log(because(`you have \`${adapterPackage}\` installed.`));
     return runtime;
   }
@@ -114,7 +114,7 @@ const resolveAdapter = (packageJson: PackageJson): Adapter | undefined => {
 
   if (adapters.length === 1) {
     let adapter = adapters[0];
-    let adapterPackage = chalk.blue(`@remix-run/${adapter}`);
+    let adapterPackage = colors.blue(`@remix-run/${adapter}`);
     console.log(detected(`\`${adapterPackage}\` as your Remix server adapter`));
     console.log(because("it's in your dependencies."));
     return adapter;
