@@ -215,8 +215,11 @@ async function doAndWait(
   action: () => Promise<unknown>,
   longPolls = 0
 ) {
-  let networkSettledCallback;
-  let networkSettledPromise = new Promise((f) => (networkSettledCallback = f));
+  let DEBUG = !!process.env.DEBUG;
+  let networkSettledCallback: any;
+  let networkSettledPromise = new Promise((resolve) => {
+    networkSettledCallback = resolve;
+  });
 
   let requestCounter = 0;
   let actionDone = false;
@@ -228,23 +231,28 @@ async function doAndWait(
 
   let onRequest = (request: Request) => {
     ++requestCounter;
-    process.env.DEBUG && pending.add(request);
-    process.env.DEBUG && console.log(`+[${requestCounter}]: ${request.url()}`);
+    if (DEBUG) {
+      pending.add(request);
+      console.log(`+[${requestCounter}]: ${request.url()}`);
+    }
   };
   let onRequestDone = (request: Request) => {
     // Let the page handle responses asynchronously (via setTimeout(0)).
     //
     // Note: this might be changed to use delay, e.g. setTimeout(f, 100),
     // when the page uses delay itself.
-    let evaluate = page.evaluate(() => new Promise((f) => setTimeout(f, 0)));
+    let evaluate = page.evaluate(() => {
+      return new Promise((resolve) => setTimeout(resolve, 0));
+    });
     evaluate
-      .catch((e) => null)
+      .catch(() => null)
       .then(() => {
         --requestCounter;
         maybeSettle();
-        process.env.DEBUG && pending.delete(request);
-        process.env.DEBUG &&
+        if (DEBUG) {
+          pending.delete(request);
           console.log(`-[${requestCounter}]: ${request.url()}`);
+        }
       });
   };
 
@@ -253,25 +261,31 @@ async function doAndWait(
   page.on("requestfailed", onRequestDone);
 
   let timeoutId: NodeJS.Timer;
-  process.env.DEBUG &&
-    (timeoutId = setInterval(() => {
+  if (DEBUG) {
+    timeoutId = setInterval(() => {
       console.log(`${requestCounter} requests pending:`);
       for (let request of pending) console.log(`  ${request.url()}`);
-    }, 5000));
+    }, 5000);
+  }
 
   let result = await action();
   actionDone = true;
   maybeSettle();
-  process.env.DEBUG &&
+  if (DEBUG) {
     console.log(`action done, ${requestCounter} requests pending`);
+  }
   await networkSettledPromise;
-  process.env.DEBUG && console.log(`action done, network settled`);
+  if (DEBUG) {
+    console.log(`action done, network settled`);
+  }
 
   page.removeListener("request", onRequest);
   page.removeListener("requestfinished", onRequestDone);
   page.removeListener("requestfailed", onRequestDone);
 
-  process.env.DEBUG && clearTimeout(timeoutId);
+  if (DEBUG) {
+    clearTimeout(timeoutId);
+  }
 
   return result;
 }
