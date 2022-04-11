@@ -49,9 +49,9 @@ For example, consider these routes:
 ```sh
 routes
 ├── sales
-│   ├── invoices
-│   │   └── $invoiceId.js
-│   └── invoices.js
+│   ├── invoices
+│   │   └── $invoiceId.js
+│   └── invoices.js
 └── sales.js
 ```
 

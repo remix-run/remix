@@ -1,4 +1,4 @@
-import { Link, useLoaderData } from "remix";
+import { Link, useLoaderData } from "@remix-run/react";
 
 import { Code } from "~/components/Code";
 import type { LoaderData } from "~/routes/api/characters";

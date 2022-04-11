@@ -1,12 +1,13 @@
-import type { ActionFunction, MetaFunction } from "remix";
+import type { ActionFunction, MetaFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
   Links,
   LiveReload,
   Meta,
   Scripts,
   ScrollRestoration,
-  json,
-} from "remix";
+} from "@remix-run/react";
+
 import notion from "./notion.server";
 
 export const action: ActionFunction = async ({ request }) => {

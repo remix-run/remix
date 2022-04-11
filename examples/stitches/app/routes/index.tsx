@@ -1,4 +1,5 @@
-import { Link } from "remix";
+import { Link } from "@remix-run/react";
+
 import { styled } from "../styles/stitches.config";
 
 const Container = styled("div", {

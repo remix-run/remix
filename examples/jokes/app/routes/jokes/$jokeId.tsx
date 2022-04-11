@@ -1,6 +1,12 @@
-import type { LoaderFunction, ActionFunction, MetaFunction } from "remix";
-import { json, useLoaderData, useCatch, redirect, useParams } from "remix";
 import type { Joke } from "@prisma/client";
+import type {
+  ActionFunction,
+  LoaderFunction,
+  MetaFunction,
+} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { useCatch, useLoaderData, useParams } from "@remix-run/react";
+
 import { db } from "~/utils/db.server";
 import { getUserId, requireUserId } from "~/utils/session.server";
 import { JokeDisplay } from "~/components/joke";

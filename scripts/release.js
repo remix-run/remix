@@ -386,7 +386,7 @@ function ensureLatestReleaseBranch(branch, git) {
  * @returns {string | undefined}
  */
 function getVersionFromReleaseBranch(branch) {
-  return branch.split("/")[1]?.slice(1);
+  return branch.slice(branch.indexOf("-") + 1);
 }
 
 /**
@@ -400,7 +400,7 @@ function getVersionTag(version) {
  * @param {string} version
  */
 function getReleaseBranch(version) {
-  return `release/${getVersionTag(
+  return `release-${getVersionTag(
     version.includes("-") ? version.slice(0, version.indexOf("-")) : version
   )}`;
 }
