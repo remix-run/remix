@@ -168,7 +168,7 @@ export const replaceRemixImports: MigrationFunction = async ({
 
   console.log("\n🚚 I've successfully migrated your project! 🎉");
   console.log(
-    "\n👉 Reinstall from your new `package.json` to update your lockfile"
+    "\n👉 Reinstall from your updated `package.json` to update your lockfile"
   );
   console.log(`   ${colors.blue("npm install")}`);
 };
