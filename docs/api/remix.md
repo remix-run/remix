@@ -1270,9 +1270,9 @@ function SomeComponent() {
 
 ```js
 [
-  { pathname, data, params, handle }, // root route
-  { pathname, data, params, handle }, // layout route
-  { pathname, data, params, handle }, // child route
+  { id, pathname, data, params, handle }, // root route
+  { id, pathname, data, params, handle }, // layout route
+  { id, pathname, data, params, handle }, // child route
   // etc.
 ];
 ```
