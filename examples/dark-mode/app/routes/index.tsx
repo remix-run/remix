@@ -1,4 +1,4 @@
-import type { LinksFunction } from "remix";
+import type { LinksFunction } from "@remix-run/node";
 
 import styles from "~/styles/styles.css";
 import { Theme, Themed, useTheme } from "~/utils/theme-provider";

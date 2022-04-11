@@ -1,5 +1,6 @@
-import { json } from "remix";
-import type { LoaderFunction, ActionFunction } from "remix";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+
 import { requireUser } from "~/session.server";
 import { getTodo, updateTodo } from "~/db.server";
 import type { Todo } from "~/models";
