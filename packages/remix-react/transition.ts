@@ -1336,6 +1336,21 @@ export function createTransitionManager(init: TransitionManagerInit) {
       markFetchersDone(abortedIds);
     }
 
+    results.forEach((res) => {
+      if (res.events) {
+        Object.entries(res.events).forEach(([key, event]: [string, any]) => {
+          event.promise.then((data: unknown) => {
+            if (controller.signal.aborted) return;
+            update({
+              routeLoadersDeferred: makeLoaderDefered(state, [
+                { ...res, events: { [key]: { promise: data } } },
+              ]),
+            });
+          });
+        });
+      }
+    });
+
     update({
       location,
       matches,
