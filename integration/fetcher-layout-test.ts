@@ -48,7 +48,7 @@ beforeAll(async () => {
           let data = useLoaderData();
           let fetcher = useFetcher();
           let action = useFormAction();
-          
+
           let invokeFetcher = () => {
             fetcher.submit({}, { method: "post", action })
           };
@@ -79,7 +79,7 @@ beforeAll(async () => {
           let data = useLoaderData();
           let fetcher = useFetcher();
           let action = useFormAction();
-          
+
           let invokeFetcher = () => {
             fetcher.submit({}, { method: "post", action })
           };
@@ -132,7 +132,7 @@ beforeAll(async () => {
         export default function ActionLayoutIndex() {
           let fetcher = useFetcher();
           let action = useFormAction();
-          
+
           let invokeFetcher = () => {
             fetcher.load(action);
           };
@@ -159,7 +159,7 @@ beforeAll(async () => {
         export default function ActionLayoutChild() {
           let fetcher = useFetcher();
           let action = useFormAction();
-          
+
           let invokeFetcher = () => {
             fetcher.load(action);
           };
@@ -242,4 +242,88 @@ it("fetcher calls paramaterized route route loader", async () => {
   await app.clickElement("#param-fetcher");
   let dataElement = await app.getElement("#param-fetcher-data");
   expect(dataElement.text()).toBe("foo");
+});
+
+test("root fetcher calls route action", async () => {
+  let fixture = await createFixture({
+    files: {
+      "app/root.jsx": js`
+        import {
+          Form,
+          Links,
+          LiveReload,
+          Meta,
+          Outlet,
+          Scripts,
+          ScrollRestoration,
+          useFetcher,
+        } from "@remix-run/react";
+
+        export const meta = () => ({
+          charset: "utf-8",
+          title: "New Remix App",
+          viewport: "width=device-width,initial-scale=1",
+        });
+
+        export const action = () => {
+          return "FETCHER ACTION"
+        }
+
+        export default function App() {
+          let fetcher = useFetcher();
+
+          return (
+            <html lang="en">
+              <head>
+                <Meta />
+                <Links />
+              </head>
+              <body>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <Form replace method="post" action="/">
+                    <input type="hidden" name="hello" value="world" />
+                    <button id="remix-form" type="submit">remix.Form</button>
+                  </Form>
+
+                  <fetcher.Form replace method="post" action="/">
+                    <input type="hidden" name="hello" value="world" />
+                    <button id="fetcher-form" type="submit">fetcher.Form</button>
+                  </fetcher.Form>
+                  <button
+                    id="fetcher-submit"
+                    type="button"
+                    onClick={() => {
+                      let search = new URLSearchParams({ hello: "world" });
+                      fetcher.submit(search, { action: "/", method: "post", replace: true });
+                    }}
+                  >
+                    fetcher.submit
+                  </button>
+                </div>
+                <Outlet />
+                <ScrollRestoration />
+                <Scripts />
+                <LiveReload />
+              </body>
+            </html>
+          );
+        }
+      `,
+
+      "app/routes/index.jsx": js`
+        export default function IndexPage() {
+          return <p>Hello from index.jsx</p>;
+        }
+      `,
+    },
+  });
+
+  let app = await createAppFixture(fixture);
+
+  await app.goto("/");
+  let responses = app.collectDataResponses();
+  await app.clickElement("#remix-form"); // <Form />
+  await app.clickElement("#fetcher-form"); // <Fetcher.Form />
+  await app.clickElement("#fetcher-submit"); // fetcher.submit()
+  expect(responses).toHaveLength(3);
 });
