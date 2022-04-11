@@ -1,10 +1,13 @@
+import { test, expect } from "@playwright/test";
+
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 let fixture: Fixture;
-let app: AppFixture;
+let appFixture: AppFixture;
 
-beforeAll(async () => {
+test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
       "app/routes/index.jsx": js`
@@ -213,12 +216,12 @@ beforeAll(async () => {
     },
   });
 
-  app = await createAppFixture(fixture);
+  appFixture = await createAppFixture(fixture);
 });
 
-afterAll(async () => app.close());
+test.afterAll(async () => appFixture.close());
 
-it("works the same as json with no promise keys", async () => {
+test("works the same as json with no promise keys", async () => {
   let response = await fixture.requestDocument("/");
   expect(await response.text()).toMatch("pizza");
 
@@ -226,7 +229,7 @@ it("works the same as json with no promise keys", async () => {
   expect(await response.text()).toMatch("pizza");
 });
 
-it("loads critical data first", async () => {
+test("loads critical data first", async () => {
   let response = await fixture.requestDocument("/deferred");
   let text = await response.text();
   expect(text).toMatch("pizza");
@@ -234,7 +237,8 @@ it("loads critical data first", async () => {
   expect(text).toMatch('window.__remixDeferredData["routes/deferred"]["bar"]');
 });
 
-it("loads deferred data on page transitions", async () => {
+test("loads deferred data on page transitions", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/");
   await app.clickLink("/deferred");
   let text = await app.getHtml();
@@ -242,7 +246,7 @@ it("loads deferred data on page transitions", async () => {
   expect(text).toMatch("hamburger");
 });
 
-it("loads critical data first with multiple deferred", async () => {
+test("loads critical data first with multiple deferred", async () => {
   let response = await fixture.requestDocument("/multiple-deferred");
   let text = await response.text();
   expect(text).toMatch("pizza");
@@ -256,7 +260,7 @@ it("loads critical data first with multiple deferred", async () => {
   );
 });
 
-it("renders error boundary", async () => {
+test("renders error boundary", async () => {
   let response = await fixture.requestDocument("/deferred-error");
   let text = await response.text();
   expect(text).toMatch("pizza");
@@ -266,7 +270,8 @@ it("renders error boundary", async () => {
   );
 });
 
-it("errored deferred data renders boundary", async () => {
+test("errored deferred data renders boundary", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/");
   await app.clickLink("/deferred-error");
   let text = await app.getHtml();
@@ -275,26 +280,34 @@ it("errored deferred data renders boundary", async () => {
   expect(text).toMatch("Oh, no!");
 });
 
-it("errored deferred data renders route boundary on hydration", async () => {
+test("errored deferred data renders route boundary on hydration", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/deferred-error-no-boundary");
   let text = await app.getHtml();
   let boundary = await app.getElement("#error-boundary");
   expect(boundary.text()).toMatch("Error Boundary");
 });
 
-it("errored deferred data renders route boundary on transition", async () => {
+test("errored deferred data renders route boundary on transition", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/");
   await app.clickLink("/deferred-error-no-boundary");
   let text = await app.getHtml();
   expect(text).toMatch("Error Boundary");
 });
 
-it("deferred response can redirect on document request", async () => {
+test("deferred response can redirect on document request", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/redirect");
   expect(app.page.url()).toMatch("?redirected");
 });
 
-it("deferred response can redirect on transition", async () => {
+test("deferred response can redirect on transition", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/");
   await app.clickLink("/redirect");
   expect(app.page.url()).toMatch("?redirected");
