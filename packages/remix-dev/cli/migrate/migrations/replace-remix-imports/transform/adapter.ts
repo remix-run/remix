@@ -1,3 +1,9 @@
+/**
+ * `jscodeshift` doesn't support Typescript casting, nor typeguards.
+ * https://github.com/facebook/jscodeshift/issues/467
+ *
+ * Do not import from this file for the `jscodeshift` transform.
+ */
 const adapters = [
   "architect",
   "cloudflare-pages",
