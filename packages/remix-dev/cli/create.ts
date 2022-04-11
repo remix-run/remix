@@ -562,7 +562,11 @@ export function detectTemplateType(template: string): TemplateType | null {
   //    This also ensures that our interactive CLI always works as expected even
   //    if the user has another directory with the same name.
   //    https://github.com/remix-run/remix/issues/2491
-  if (isRemixTemplate(template) || isRemixStack(template)) {
+  if (isRemixTemplate(template)) {
+    return "template";
+  }
+
+  if (isRemixStack(template)) {
     return "repoTemplate";
   }
 
@@ -593,18 +597,12 @@ export function detectTemplateType(template: string): TemplateType | null {
     return "example";
   }
 
-  // 5. If the string contains no slashes, spaces, or special chars, we assume
-  //    it is one of our remix-run/remix/templates.
-  if (/^[\w-]+$/.test(template)) {
-    return "template";
-  }
-
-  // 6. Handle GitHub repos (URLs or :org/:repo shorthand)
+  // 5. Handle GitHub repos (URLs or :org/:repo shorthand)
   if (isValidGithubUrl(template) || isGithubRepoShorthand(template)) {
     return "repo";
   }
 
-  // 7. Any other valid URL should be treated as a tarball.
+  // 6. Any other valid URL should be treated as a tarball.
   if (isUrl(template)) {
     return "remoteTarball";
   }
