@@ -121,6 +121,7 @@ export const replaceRemixImports: MigrationFunction = async ({
           versionSpec: remixVersionSpec,
         }))
       ),
+      [`@remix-run/dev`]: remixVersionSpec,
     },
   });
   console.log("✅ Your Remix dependencies look good!");
