@@ -287,9 +287,14 @@ it("errored deferred data renders route boundary on transition", async () => {
   await app.clickLink("/deferred-error-no-boundary");
   let text = await app.getHtml();
   expect(text).toMatch("Error Boundary");
-}, 120_000);
+});
 
-it("deferred response can redirect", async () => {
+it("deferred response can redirect on document request", async () => {
+  await app.goto("/redirect");
+  expect(app.page.url()).toMatch("?redirected");
+});
+
+it("deferred response can redirect on transition", async () => {
   await app.goto("/");
   await app.clickLink("/redirect");
   expect(app.page.url()).toMatch("?redirected");
