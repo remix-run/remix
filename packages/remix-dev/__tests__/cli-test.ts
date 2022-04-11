@@ -186,6 +186,7 @@ describe("remix CLI", () => {
 
     it("allows you to go through the prompts and convert to JS", async () => {
       let projectDir = path.join(TEMP_DIR, "my-js-app");
+
       let proc = childProcess.spawn(
         "node",
         [
