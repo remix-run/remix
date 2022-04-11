@@ -15,7 +15,6 @@ const resolveMigrationId = async (input?: string): Promise<string> => {
       name: "migrationId",
       message: "Which migration would you like to apply?",
       type: "list",
-      when: !input,
       pageSize: migrations.length + 1,
       choices: [
         ...migrations.map(({ id, description }) => ({
