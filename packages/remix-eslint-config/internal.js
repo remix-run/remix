@@ -17,16 +17,13 @@ module.exports = {
   root: true,
   extends: [
     require.resolve("./index.js"),
+    require.resolve("./node.js"),
     require.resolve("./jest-testing-library.js"),
   ],
-  env: {
-    node: true,
-  },
   plugins: [
     // Plugins used in the internal config should be installed in our
     // repositories. We don't want to ship these as dependencies to consumers
     // who may not use them.
-    "node",
     "prefer-let",
   ],
   rules: {
