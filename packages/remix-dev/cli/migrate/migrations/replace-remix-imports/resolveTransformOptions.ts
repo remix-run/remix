@@ -3,12 +3,11 @@ import inquirer from "inquirer";
 import type { PackageJson } from "@npmcli/package-json";
 
 import * as colors from "../../../../colors";
-import type { Options } from "./transform";
-import { runtimes, isRuntime, isAdapter } from "./transform";
-import type {
-  Adapter,
-  Runtime,
-} from "./transform/mapNormalizedImports/packageExports";
+import type { Options } from "./transform/options";
+import { isAdapter } from "./transform/adapter";
+import type { Adapter } from "./transform/adapter";
+import type { Runtime } from "./transform/runtime";
+import { runtimes, isRuntime } from "./transform/runtime";
 import { depsToEntries, isRemixPackage } from "./dependency";
 import { remixSetup, remixSetupRuntime } from "./remixSetup";
 import { because, detected } from "./messages";

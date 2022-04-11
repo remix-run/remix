@@ -10,7 +10,7 @@ import * as colors from "../../../../colors";
 import * as jscodeshift from "../../jscodeshift";
 import type { MigrationFunction } from "../../types";
 import { resolveTransformOptions } from "./resolveTransformOptions";
-import type { Options } from "./transform";
+import type { Options } from "./transform/options";
 import type { Dependency } from "./dependency";
 import { depsToObject, isRemixPackage, depsToEntries } from "./dependency";
 import {
