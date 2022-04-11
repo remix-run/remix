@@ -39,7 +39,7 @@ const autoDetectPostinstallRuntime = (
   return undefined;
 };
 
-const detectedRuntime = (runtime: string) => {
+const detectedRuntime = (runtime: Runtime) => {
   let runtimePackage = chalk.blue(`@remix-run/${runtime}`);
   return detected(`\`${runtimePackage}\` as your Remix server runtime`);
 };
