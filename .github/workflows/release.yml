@@ -3,77 +3,11 @@ name: release
 on:
   release:
     types: [published]
-  schedule:
-    - cron: "0 7 * * *" # every day at 12AM PST
 
 jobs:
-  nightly:
-    name: 🌒 Nightly Release
-    if: |
-      github.repository == 'remix-run/remix' &&
-      github.event.action == 'published' &&
-      github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-        with:
-          ref: dev
-          token: ${{ secrets.NIGHTLY_PAT }}
-          fetch-depth: 0
-
-      - name: ⎔ Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-
-      - name: 📥 Install deps
-        # even though this is called "npm-install" it does use yarn to install
-        # because we have a yarn.lock and caches efficiently.
-        uses: bahmutov/npm-install@v1
-
-      - name: 🏗 Build
-        run: yarn build
-
-      - name: ⤴️ Update Version
-        id: version
-        run: |
-          SHA=$(git rev-parse HEAD)
-          SHORT_SHA=${SHA::7}
-          NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}
-          echo ::set-output name=NEXT_VERSION::${NEXT_VERSION}
-
-          git checkout -b nightly/${NEXT_VERSION}
-          npm version ${NEXT_VERSION}
-
-          git push origin --tags
-
-      - name: 🔐 Setup npm auth
-        run: |
-          echo "registry=https://registry.npmjs.org" >> ~/.npmrc
-          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
-
-      - name: 🚀 Publish
-        run: npm run publish
-
-      - name: 🐱 Create GitHub release
-        uses: actions/create-release@v1
-        with:
-          draft: false
-          prerelease: true
-          release_name: v${{ steps.version.outputs.NEXT_VERSION }}
-          tag_name: v${{ steps.version.outputs.NEXT_VERSION }}
-        env:
-          # need this token in order to have it trigger the comment workflow
-          GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
-
   manual:
     name: 📝 Manual Release
-    if: |
-      github.repository == 'remix-run/remix' &&
-      github.event.action == 'published' &&
-      github.event_name != 'schedule' &&
-      !github.event.release.prerelease
+    if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
