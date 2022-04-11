@@ -2417,14 +2417,6 @@
     ts-node "8.9.1"
     typescript "4.3.4"
 
-"@web-std/blob@^3.0.0":
-  version "3.0.1"
-  resolved "https://registry.npmjs.org/@web-std/blob/-/blob-3.0.1.tgz"
-  integrity sha512-opuhO8ZGGUj2jdFwfgMjWjVdKaHlQanGWXxj5wV2YQ1uGTuL/SADnsDitpMfRb+lSpmQyzpwZFfj4CNKQuwSKQ==
-  dependencies:
-    "@web-std/stream" "1.0.0"
-    web-encoding "1.1.5"
-
 "@web-std/blob@^3.0.3":
   version "3.0.4"
   resolved "https://registry.npmjs.org/@web-std/blob/-/blob-3.0.4.tgz#dd67a685547331915428d69e723c7da2015c3fc5"
@@ -2444,12 +2436,12 @@
     data-uri-to-buffer "^3.0.1"
     mrmime "^1.0.0"
 
-"@web-std/file@^3.0.0":
-  version "3.0.0"
-  resolved "https://registry.npmjs.org/@web-std/file/-/file-3.0.0.tgz"
-  integrity sha512-ac2H3IUOky3GRJdbdJYgVvH+OApzpr0KX0t9p6Nj9AuHxKudc0pD7mVruekCW4CZv6DbOReDukwwskJN1bSCzA==
+"@web-std/file@^3.0.2":
+  version "3.0.2"
+  resolved "https://registry.npmjs.org/@web-std/file/-/file-3.0.2.tgz#b84cc9ed754608b18dcf78ac62c40dbcc6a94692"
+  integrity sha512-pIH0uuZsmY8YFvSHP1NsBIiMT/1ce0suPrX74fEeO3Wbr1+rW0fUGEe4d0R99iLwXtyCwyserqCFI4BJkJlkRA==
   dependencies:
-    "@web-std/blob" "^3.0.0"
+    "@web-std/blob" "^3.0.3"
 
 "@web-std/form-data@^3.0.2":
   version "3.0.2"
