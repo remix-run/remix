@@ -6,6 +6,7 @@ import type {
   RequestInit as NodeRequestInit,
   Response as NodeResponse,
 } from "@remix-run/node";
+import { ReadableStream } from "@web-std/stream";
 import {
   // This has been added as a global in node 15+
   AbortController,
@@ -60,10 +61,10 @@ export function createRequestHandler({
           ? getLoadContext(req, res)
           : undefined;
 
-      let response = (await handleRequest(
+      let response = await handleRequest(
         request as unknown as Request,
         loadContext
-      )) as unknown as NodeResponse;
+      );
 
       sendRemixResponse(res, response, abortController);
     } catch (error) {
@@ -76,7 +77,7 @@ export function createRequestHandler({
 
 export function createRemixHeaders(
   requestHeaders: express.Request["headers"]
-): NodeHeaders {
+): Headers {
   let headers = new NodeHeaders();
 
   for (let [key, values] of Object.entries(requestHeaders)) {
@@ -109,7 +110,16 @@ export function createRemixRequest(
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = req.pipe(new PassThrough({ highWaterMark: 16384 }));
+    init.body = new ReadableStream({
+      start(controller) {
+        req.on("data", (chunk) => {
+          controller.enqueue(chunk);
+        });
+        req.on("end", () => {
+          controller.close();
+        });
+      },
+    });
   }
 
   return new NodeRequest(url.href, init);
@@ -117,27 +127,41 @@ export function createRemixRequest(
 
 export function sendRemixResponse(
   res: express.Response,
-  nodeResponse: NodeResponse,
+  nodeResponse: Response,
   abortController: AbortController
 ): void {
   res.statusMessage = nodeResponse.statusText;
   res.status(nodeResponse.status);
 
-  for (let [key, values] of Object.entries(nodeResponse.headers.raw())) {
-    for (let value of values) {
-      res.append(key, value);
-    }
+  for (let [key, value] of nodeResponse.headers.entries()) {
+    res.append(key, value);
   }
 
   if (abortController.signal.aborted) {
     res.set("Connection", "close");
   }
 
-  if (Buffer.isBuffer(nodeResponse.body)) {
-    res.end(nodeResponse.body);
-  } else if (nodeResponse.body?.pipe) {
-    nodeResponse.body.pipe(res);
+  if (nodeResponse.body) {
+    let reader = nodeResponse.body.getReader();
+    async function read() {
+      let { done, value } = await reader.read();
+      if (done) {
+        res.end(value);
+        return;
+      }
+
+      res.write(value);
+      read();
+    }
+    read();
   } else {
     res.end();
   }
+  // if (Buffer.isBuffer(nodeResponse.body)) {
+  //   res.end(nodeResponse.body);
+  // } else if (nodeResponse.body?.pipe) {
+  //   nodeResponse.body.pipe(res);
+  // } else {
+  //   res.end();
+  // }
 }

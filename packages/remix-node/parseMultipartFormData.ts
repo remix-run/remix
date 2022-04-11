@@ -1,9 +1,9 @@
-import { Readable } from "stream";
+import { PassThrough } from "stream";
 import Busboy from "busboy";
+import { FormData } from "@web-std/fetch";
 
 import type { Request as NodeRequest } from "./fetch";
 import type { UploadHandler } from "./formData";
-import { FormData as NodeFormData } from "./formData";
 
 /**
  * Allows you to handle multipart forms (file uploads) for your app.
@@ -18,19 +18,42 @@ export function parseMultipartFormData(
 }
 
 export async function internalParseFormData(
-  contentType: string,
-  body: string | Buffer | Readable,
+  request: Request,
+  internalFormData: any,
   abortController?: AbortController,
   uploadHandler?: UploadHandler
 ) {
-  let formData = new NodeFormData();
+  let formData = new FormData();
+  let contentType = request.headers.get("Content-Type") || "";
+  if (/application\/x-www-form-urlencoded/.test(contentType)) {
+    let searchParams = new URLSearchParams(await request.text());
+    for (let [key, value] of searchParams.entries()) {
+      formData.append(key, value);
+    }
+    return formData;
+  }
+
+  if (!uploadHandler) {
+    return internalFormData();
+  }
+
   let fileWorkQueue: Promise<void>[] = [];
 
-  let stream: Readable;
-  if (typeof body === "string" || Buffer.isBuffer(body)) {
-    stream = Readable.from(body);
+  let stream: PassThrough = new PassThrough();
+  if (request.body) {
+    let reader = request.body.getReader();
+    async function read() {
+      let { done, value } = await reader.read();
+      if (done) {
+        stream.end(value);
+        return;
+      }
+      stream.write(value);
+      read();
+    }
+    read();
   } else {
-    stream = body;
+    stream.end();
   }
 
   await new Promise<void>(async (resolve, reject) => {

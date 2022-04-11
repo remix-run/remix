@@ -53,10 +53,10 @@ export function createRequestHandler({
         ? getLoadContext(req, res)
         : undefined;
 
-    let response = (await handleRequest(
+    let response = await handleRequest(
       request as unknown as Request,
       loadContext
-    )) as unknown as NodeResponse;
+    );
 
     if (abortController.signal.aborted) {
       response.headers.set("Connection", "close");
@@ -68,7 +68,7 @@ export function createRequestHandler({
 
 export function createRemixHeaders(
   requestHeaders: VercelRequest["headers"]
-): NodeHeaders {
+): Headers {
   let headers = new NodeHeaders();
   for (let key in requestHeaders) {
     let header = requestHeaders[key]!;
@@ -102,7 +102,16 @@ export function createRemixRequest(
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = req;
+    init.body = new ReadableStream({
+      start(controller) {
+        req.on("data", (chunk) => {
+          controller.enqueue(chunk);
+        });
+        req.on("end", () => {
+          controller.close();
+        });
+      },
+    });
   }
 
   return new NodeRequest(url.href, init);
@@ -110,7 +119,7 @@ export function createRemixRequest(
 
 export function sendRemixResponse(
   res: VercelResponse,
-  nodeResponse: NodeResponse
+  nodeResponse: Response
 ): void {
   let arrays = new Map();
   for (let [key, value] of nodeResponse.headers.entries()) {
@@ -125,12 +134,29 @@ export function sendRemixResponse(
   }
 
   res.statusMessage = nodeResponse.statusText;
-  res.writeHead(nodeResponse.status, nodeResponse.headers.raw());
+  let multiValueHeaders: Record<string, (string | string)[]> = {};
+  for (let [key, value] of nodeResponse.headers) {
+    if (typeof multiValueHeaders[key] === "undefined") {
+      multiValueHeaders[key] = [value];
+    } else {
+      (multiValueHeaders[key] as string[]).push(value);
+    }
+  }
+  res.writeHead(nodeResponse.status, multiValueHeaders);
 
-  if (Buffer.isBuffer(nodeResponse.body)) {
-    res.end(nodeResponse.body);
-  } else if (nodeResponse.body?.pipe) {
-    nodeResponse.body.pipe(res);
+  if (nodeResponse.body) {
+    let reader = nodeResponse.body.getReader();
+    async function read() {
+      let { done, value } = await reader.read();
+      if (done) {
+        res.end(value);
+        return;
+      }
+
+      res.write(value);
+      read();
+    }
+    read();
   } else {
     res.end();
   }

@@ -5,10 +5,10 @@ sourceMapSupport.install();
 export { AbortController } from "abort-controller";
 
 export type {
-  HeadersInit,
-  RequestInfo,
+  // HeadersInit,
+  // RequestInfo,
   RequestInit,
-  ResponseInit,
+  // ResponseInit,
 } from "./fetch";
 export { Headers, Request, Response, fetch } from "./fetch";
 

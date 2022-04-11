@@ -64,12 +64,7 @@ describe("pathless layout routes", () => {
 
   it("should get multiple cookies from the loader", async () => {
     await app.goto("/");
-    expect(responses[0].headers()["set-cookie"]).toBe(
-      `
-foo=bar
-bar=baz
-      `.trim()
-    );
+    expect(responses[0].headers()["set-cookie"]).toBe(`foo=bar, bar=baz`);
     expect(responses).toHaveLength(1);
   });
 
@@ -79,10 +74,7 @@ bar=baz
     await app.page.click("button[type=submit]");
     await app.page.waitForSelector(`[data-testid="action-success"]`);
     expect(responses[0].headers()["set-cookie"]).toBe(
-      `
-another=one
-how-about=two
-      `.trim()
+      `another=one, how-about=two`
     );
     // one for the POST and one for the GET
     expect(responses).toHaveLength(2);

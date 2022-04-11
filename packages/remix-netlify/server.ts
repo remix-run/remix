@@ -53,10 +53,10 @@ export function createRequestHandler({
         ? getLoadContext(event, context)
         : undefined;
 
-    let response = (await handleRequest(
+    let response = await handleRequest(
       request as unknown as Request,
       loadContext
-    )) as unknown as NodeResponse;
+    );
 
     return sendRemixResponse(response, abortController);
   };
@@ -99,7 +99,7 @@ export function createRemixRequest(
 
 export function createRemixHeaders(
   requestHeaders: HandlerEvent["multiValueHeaders"]
-): NodeHeaders {
+): Headers {
   let headers = new NodeHeaders();
 
   for (let [key, values] of Object.entries(requestHeaders)) {
@@ -139,7 +139,7 @@ function getRawPath(event: HandlerEvent): string {
 }
 
 export async function sendRemixResponse(
-  nodeResponse: NodeResponse,
+  nodeResponse: Response,
   abortController: AbortController
 ): Promise<HandlerResponse> {
   if (abortController.signal.aborted) {
@@ -147,21 +147,43 @@ export async function sendRemixResponse(
   }
 
   let contentType = nodeResponse.headers.get("Content-Type");
-  let isBinary = isBinaryType(contentType);
-  let body;
-  let isBase64Encoded = false;
+  let body: string | undefined;
+  let isBase64Encoded = isBinaryType(contentType);
 
-  if (isBinary) {
-    let blob = await nodeResponse.arrayBuffer();
-    body = Buffer.from(blob).toString("base64");
-    isBase64Encoded = true;
-  } else {
-    body = await nodeResponse.text();
+  if (nodeResponse.body) {
+    if (isBase64Encoded) {
+      let reader = nodeResponse.body.getReader();
+      body = "";
+      async function read() {
+        let { done, value } = await reader.read();
+        if (done) {
+          return;
+        } else if (value) {
+          body += Buffer.from(value).toString("base64");
+        }
+        await read();
+      }
+
+      await read();
+    } else {
+      body = await nodeResponse.text();
+    }
   }
+
+  let multiValueHeaders: Record<string, readonly (string | string)[]> = {};
+  for (let [key, value] of nodeResponse.headers) {
+    if (typeof multiValueHeaders[key] === "undefined") {
+      multiValueHeaders[key] = [value];
+    } else {
+      (multiValueHeaders[key] as string[]).push(value);
+    }
+  }
+
+  console.log({ multiValueHeaders });
 
   return {
     statusCode: nodeResponse.status,
-    multiValueHeaders: nodeResponse.headers.raw(),
+    multiValueHeaders,
     body,
     isBase64Encoded,
   };
