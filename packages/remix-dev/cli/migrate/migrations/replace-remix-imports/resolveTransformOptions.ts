@@ -12,14 +12,14 @@ import { depsToEntries, isRemixPackage } from "./dependency";
 import { remixSetup, remixSetupRuntime } from "./remixSetup";
 import { because, detected } from "./messages";
 
-const adapterToRuntime = {
+const adapterToRuntime: Record<Adapter, Runtime> = {
   architect: "node",
   "cloudflare-pages": "cloudflare",
   "cloudflare-workers": "cloudflare",
   express: "node",
   netlify: "node",
   vercel: "node",
-} as const;
+};
 
 const autoDetectPostinstallRuntime = (
   packageJson: PackageJson
