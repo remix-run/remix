@@ -2,7 +2,8 @@ import path from "path";
 import fse from "fs-extra";
 import os from "os";
 import stripAnsi from "strip-ansi";
-import type { PackageJson } from "@npmcli/package-json";
+import type { PackageJson } from "type-fest";
+import { spawnSync } from "child_process";
 
 import { run } from "../cli/run";
 
@@ -58,7 +59,7 @@ const makeApp = () => {
   return projectDir;
 };
 
-const migrate = async (projectDir: string) => {
+const replaceRemixImports = async (projectDir: string) => {
   await run([
     "migrate",
     "--migration",
@@ -71,12 +72,13 @@ const migrate = async (projectDir: string) => {
 describe("`replace-remix-imports` migration", () => {
   it("runs successfully", async () => {
     let projectDir = makeApp();
-    await migrate(projectDir);
+    await replaceRemixImports(projectDir);
 
     expect(output).toContain("detected `@remix-run/node`");
     expect(output).toContain("detected `@remix-run/serve`");
 
     expect(output).toContain("detected `1.3.4`");
+    expect(output).toContain("✅ Your Remix dependencies look good!");
     let packageJson: PackageJson = fse.readJSONSync(
       path.join(projectDir, "package.json")
     );
@@ -86,15 +88,18 @@ describe("`replace-remix-imports` migration", () => {
     expect(packageJson.dependencies["@remix-run/node"]).toBe("1.3.4");
     expect(packageJson.dependencies["@remix-run/serve"]).toBe("1.3.4");
     expect(packageJson.devDependencies["@remix-run/dev"]).toBe("1.3.4");
-    expect(output).toContain("✅ Your Remix dependencies look good!");
 
     expect(output).toContain(
       "🗑  I'm removing `remix setup` from your `postinstall` script."
     );
-    expect(packageJson.scripts).not.toContain("postinstall");
     expect(output).toContain("✅ Your `package.json` scripts looks good!");
+    expect(packageJson.scripts).not.toContain("postinstall");
 
     expect(output).toContain("✅ Your Remix imports look good!");
+    let { status } = spawnSync("grep", ["-nri", 'from "remix"', projectDir]);
+    // `grep` exits with status code `1` when no matches are found
+    expect(status).toBe(1);
+
     expect(output).toContain("successfully migrated");
     expect(output).toContain("npm install");
   });
