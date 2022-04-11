@@ -411,7 +411,7 @@ async function handleDocumentRequest({
       renderableMatches.push({
         params: {},
         pathname: "",
-        route: routes[0],
+        route: root,
       });
     }
   }

@@ -1525,6 +1525,13 @@ function filterMatchesToLoad(
     return true;
   };
 
+  let isInRootCatchBoundary =
+    state.matches.length === 1 && state.matches[0].pathname === "";
+
+  if (isInRootCatchBoundary) {
+    return matches.filter((match) => !!match.route.loader);
+  }
+
   if (fetcher?.type === "actionReload") {
     return matches.filter(filterByRouteProps);
   } else if (
