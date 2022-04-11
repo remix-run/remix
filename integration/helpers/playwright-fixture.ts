@@ -156,7 +156,6 @@ export class PlaywrightFixture {
    * Get HTML from the page. Useful for asserting something rendered that
    * you expected.
    *
-   * @param page The page from the Playwright context
    * @param selector CSS Selector for the element's HTML you want
    */
   getHtml(selector?: string) {
@@ -166,10 +165,9 @@ export class PlaywrightFixture {
   /**
    * Get a cheerio instance of an element from the page.
    *
-   * @param page The page from the Playwright context
    * @param selector CSS Selector for the element's HTML you want
    */
-  async getElement(source?: string, selector?: string) {
+  async getElement(selector?: string) {
     return getElement(await getHtml(this.page), selector);
   }
 
