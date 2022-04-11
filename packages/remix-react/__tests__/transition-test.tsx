@@ -9,7 +9,6 @@ import {
   IDLE_FETCHER,
   IDLE_TRANSITION
 } from "../transition";
-import type { ShouldReloadFunction } from "../routeModules";
 
 describe("init", () => {
   it("initializes with initial values", async () => {
