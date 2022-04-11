@@ -35,19 +35,20 @@ export type ServerPlatform = "node" | "neutral";
 export interface AppConfig {
   /**
    * The path to the `app` directory, relative to `remix.config.js`. Defaults
-   * to "app".
+   * to `"app"`.
    */
   appDirectory?: string;
 
   /**
    * The path to a directory Remix can use for caching things in development,
-   * relative to `remix.config.js`. Defaults to ".cache".
+   * relative to `remix.config.js`. Defaults to `".cache"`.
    */
   cacheDirectory?: string;
 
   /**
    * A function for defining custom routes, in addition to those already defined
-   * using the filesystem convention in `app/routes`.
+   * using the filesystem convention in `app/routes`. Both sets of routes will
+   * be merged.
    */
   routes?: (
     defineRoutes: DefineRoutesFunction
@@ -56,13 +57,17 @@ export interface AppConfig {
   /**
    * The path to the server build, relative to `remix.config.js`. Defaults to
    * "build".
+   *
    * @deprecated Use {@link ServerConfig.serverBuildPath} instead.
    */
   serverBuildDirectory?: string;
 
   /**
-   * The path to the server build file. This file should end in a `.js`. Defaults
-   * are based on {@link ServerConfig.serverBuildTarget}.
+   * The path to the server build file, relative to `remix.config.js`. This file
+   * should end in a `.js` extension and should be deployed to your server.
+   *
+   * If omitted, the default build path will be based on your
+   * {@link ServerConfig.serverBuildTarget}.
    */
   serverBuildPath?: string;
 
@@ -82,7 +87,7 @@ export interface AppConfig {
 
   /**
    * The URL prefix of the browser build with a trailing slash. Defaults to
-   * "/build/".
+   * `"/build/"`. This is the path the browser will use to find assets.
    */
   publicPath?: string;
 
@@ -90,8 +95,10 @@ export interface AppConfig {
    * The port number to use for the dev server. Defaults to 8002.
    */
   devServerPort?: number;
+
   /**
-   * The delay before the dev server broadcasts a reload event.
+   * The delay, in milliseconds, before the dev server broadcasts a reload
+   * event. There is no delay by default.
    */
   devServerBroadcastDelay?: number;
 
@@ -102,12 +109,14 @@ export interface AppConfig {
 
   /**
    * The output format of the server build. Defaults to "cjs".
-   * * @deprecated Use {@link ServerConfig.serverBuildTarget} instead.
+   *
+   * @deprecated Use {@link ServerConfig.serverBuildTarget} instead.
    */
   serverModuleFormat?: ServerModuleFormat;
 
   /**
    * The platform the server build is targeting. Defaults to "node".
+   *
    * @deprecated Use {@link ServerConfig.serverBuildTarget} instead.
    */
   serverPlatform?: ServerPlatform;
@@ -118,7 +127,10 @@ export interface AppConfig {
   serverBuildTarget?: ServerBuildTarget;
 
   /**
-   * A server entrypoint relative to the root directory that becomes your server's main module.
+   * A server entrypoint, relative to the root directory that becomes your
+   * server's main module. If specified, Remix will compile this file along with
+   * your application into a single file to be deployed to your server. This
+   * file can use either a `.js` or `.ts` file extension.
    */
   server?: string;
 
@@ -128,6 +140,13 @@ export interface AppConfig {
    * routes.
    */
   ignoredRouteFiles?: string[];
+
+  /**
+   * A list of patterns that determined if a module is transpiled and included
+   * in the server bundle. This can be useful when consuming ESM only packages
+   * in a CJS build.
+   */
+  serverDependenciesToBundle?: Array<string | RegExp>;
 }
 
 /**
@@ -224,6 +243,13 @@ export interface RemixConfig {
    * A server entrypoint relative to the root directory that becomes your server's main module.
    */
   serverEntryPoint?: string;
+
+  /**
+   * A list of patterns that determined if a module is transpiled and included
+   * in the server bundle. This can be useful when consuming ESM only packages
+   * in a CJS build.
+   */
+  serverDependenciesToBundle: Array<string | RegExp>;
 }
 
 /**
@@ -249,7 +275,9 @@ export async function readConfig(
   try {
     appConfig = require(configFile);
   } catch (error) {
-    throw new Error(`Error loading Remix config in ${configFile}`);
+    throw new Error(
+      `Error loading Remix config in ${configFile}\n${String(error)}`
+    );
   }
 
   let customServerEntryPoint = appConfig.server;
@@ -298,7 +326,7 @@ export async function readConfig(
       serverBuildPath = "functions/[[path]].js";
       break;
     case "netlify":
-      serverBuildPath = "netlify/functions/server/index.js";
+      serverBuildPath = ".netlify/functions-internal/server.js";
       break;
     case "vercel":
       serverBuildPath = "api/index.js";
@@ -343,7 +371,7 @@ export async function readConfig(
   }
 
   let routes: RouteManifest = {
-    root: { path: "", id: "root", file: rootRouteFile }
+    root: { path: "", id: "root", file: rootRouteFile },
   };
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
     let conventionalRoutes = defineConventionalRoutes(
@@ -367,6 +395,8 @@ export async function readConfig(
     serverBuildVirtualModule.id
   )};`;
 
+  let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
+
   return {
     appDirectory,
     cacheDirectory,
@@ -385,7 +415,8 @@ export async function readConfig(
     serverBuildTarget,
     serverBuildTargetEntryModule,
     serverEntryPoint: customServerEntryPoint,
-    mdx
+    serverDependenciesToBundle,
+    mdx,
   };
 }
 

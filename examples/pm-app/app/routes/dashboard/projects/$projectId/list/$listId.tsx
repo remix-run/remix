@@ -1,11 +1,13 @@
-import * as React from "react";
-import { useLoaderData, json, redirect, useFetcher, useFetchers } from "remix";
 import type {
-  LoaderFunction,
-  LinksFunction,
   ActionFunction,
-  MetaFunction
-} from "remix";
+  LinksFunction,
+  LoaderFunction,
+  MetaFunction,
+} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { useFetcher, useFetchers, useLoaderData } from "@remix-run/react";
+import * as React from "react";
+
 import { Heading, Section } from "~/ui/section-heading";
 
 import stylesUrl from "~/dist/styles/routes/dashboard/todo-lists/$listId/index.css";
@@ -16,7 +18,7 @@ import {
   getTodo,
   getTodoList,
   updateTodo,
-  updateTodoList
+  updateTodoList,
 } from "~/db.server";
 import type { TodoList as TTodoList, Project, Todo } from "~/models";
 import { Field, FieldProvider, Label } from "~/ui/form";
@@ -32,26 +34,26 @@ export const meta: MetaFunction = ({ data }) => {
   return {
     title: `${
       data.todoList ? data.todoList.name?.trim() : "List Overview"
-    } | PM Camp`
+    } | PM Camp`,
   };
 };
 
 export const loader: LoaderFunction = async ({ request, params }) => {
   const listId = params.listId as string;
   await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   const [todoList, projects] = await Promise.all([
     getTodoList(listId),
-    getProjects()
+    getProjects(),
   ]);
 
   if (!todoList) {
     throw redirect("/dashboard");
   }
 
-  const project = projects.find(p => p.id === todoList?.projectId);
+  const project = projects.find((p) => p.id === todoList?.projectId);
 
   if (!project) {
     throw redirect("/dashboard");
@@ -63,7 +65,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 
 export const action: ActionFunction = async ({ request, params }) => {
   await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   const listId = params.listId as string;
@@ -93,7 +95,7 @@ export const action: ActionFunction = async ({ request, params }) => {
     const fieldErrors: FieldErrors = { project: null };
     if (projectId != null && typeof projectId !== "string") {
       const data: ActionData = {
-        formError: `Something went wrong. Please try again later.`
+        formError: `Something went wrong. Please try again later.`,
       };
       return json(data);
     }
@@ -106,7 +108,7 @@ export const action: ActionFunction = async ({ request, params }) => {
     }
     const data: ActionData = {
       fieldErrors,
-      fields
+      fields,
     };
     return json(data);
   }
@@ -138,7 +140,7 @@ function TodoListRoute() {
           id: String(allTodos.length + 1),
           todoListId: todoList.id,
           name: fetcher.submission.formData.get("name") as string,
-          completed: false
+          completed: false,
         } as Todo);
       }
       if (
@@ -147,7 +149,7 @@ function TodoListRoute() {
         )
       ) {
         const todoId = fetcher.submission.formData.get("todoId");
-        allTodos.filter(todo => todoId === todo.id);
+        allTodos.filter((todo) => todoId === todo.id);
       }
     }
   }
@@ -197,7 +199,7 @@ function TodoListRoute() {
                   <Heading className="mb-2">Incomplete</Heading>
                   {incompleteTodos.length > 0 ? (
                     <TodoList>
-                      {incompleteTodos.map(todo => {
+                      {incompleteTodos.map((todo) => {
                         return <TodoItem todo={todo} key={todo.id} />;
                       })}
                     </TodoList>
@@ -210,7 +212,7 @@ function TodoListRoute() {
                   <Heading className="mb-2">Complete</Heading>
                   {completeTodos.length > 0 ? (
                     <TodoList>
-                      {completeTodos.map(todo => {
+                      {completeTodos.map((todo) => {
                         return <TodoItem key={todo.id} todo={todo} />;
                       })}
                     </TodoList>
@@ -263,7 +265,7 @@ function NewTodoForm({ listId }: { listId: TTodoList["id"] }) {
         disabled={todoFetcher.state !== "idle"}
       >
         <Label>New Todo</Label>
-        <Field value={value} onChange={e => setValue(e.target.value)} />
+        <Field value={value} onChange={(e) => setValue(e.target.value)} />
       </FieldProvider>
       <div>
         <Button className="flex-shrink-0">Create Todo</Button>

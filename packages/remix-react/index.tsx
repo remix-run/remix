@@ -10,7 +10,7 @@ export {
   useResolvedPath,
   useSearchParams,
   Outlet,
-  useOutletContext
+  useOutletContext,
 } from "react-router-dom";
 
 export type {
@@ -18,7 +18,7 @@ export type {
   SubmitOptions,
   SubmitFunction,
   RemixNavLinkProps as NavLinkProps,
-  RemixLinkProps as LinkProps
+  RemixLinkProps as LinkProps,
 } from "./components";
 export {
   Meta,
@@ -37,7 +37,7 @@ export {
   useLoaderData,
   useActionData,
   useBeforeUnload,
-  useMatches
+  useMatches,
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";

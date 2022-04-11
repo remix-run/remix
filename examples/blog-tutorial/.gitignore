@@ -1,7 +1,12 @@
 node_modules
 
-/.cache
 /build
 /public/build
-/package-lock.json
-/yarn.lock
+.env
+
+/cypress/screenshots
+/cypress/videos
+/prisma/data.db
+/prisma/data.db-journal
+
+/app/styles/tailwind.css

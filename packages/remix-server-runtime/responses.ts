@@ -1,17 +1,16 @@
+export type JsonFunction = <Data>(
+  data: Data,
+  init?: number | ResponseInit
+) => Response;
+
 /**
  * This is a shortcut for creating `application/json` responses. Converts `data`
  * to JSON and sets the `Content-Type` header.
  *
  * @see https://remix.run/api/remix#json
  */
-export function json<Data>(
-  data: Data,
-  init: number | ResponseInit = {}
-): Response {
-  let responseInit: any = init;
-  if (typeof init === "number") {
-    responseInit = { status: init };
-  }
+export const json: JsonFunction = (data, init = {}) => {
+  let responseInit = typeof init === "number" ? { status: init } : init;
 
   let headers = new Headers(responseInit.headers);
   if (!headers.has("Content-Type")) {
@@ -20,9 +19,14 @@ export function json<Data>(
 
   return new Response(JSON.stringify(data), {
     ...responseInit,
-    headers
+    headers,
   });
-}
+};
+
+export type RedirectFunction = (
+  url: string,
+  init?: number | ResponseInit
+) => Response;
 
 /**
  * A redirect response. Sets the status code and the `Location` header.
@@ -30,10 +34,7 @@ export function json<Data>(
  *
  * @see https://remix.run/api/remix#redirect
  */
-export function redirect(
-  url: string,
-  init: number | ResponseInit = 302
-): Response {
+export const redirect: RedirectFunction = (url, init = 302) => {
   let responseInit = init;
   if (typeof responseInit === "number") {
     responseInit = { status: responseInit };
@@ -46,9 +47,9 @@ export function redirect(
 
   return new Response(null, {
     ...responseInit,
-    headers
+    headers,
   });
-}
+};
 
 export function isResponse(value: any): value is Response {
   return (

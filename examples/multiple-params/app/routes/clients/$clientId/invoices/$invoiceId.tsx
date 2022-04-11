@@ -1,7 +1,7 @@
-import type { LoaderFunction } from "remix";
-import { useParams, useCatch } from "remix";
-import { useLoaderData } from "remix";
-import { json } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useCatch, useLoaderData, useParams } from "@remix-run/react";
+
 import type { Invoice } from "~/db";
 import { getClient } from "~/db";
 
@@ -10,24 +10,24 @@ type LoaderData = { invoice: Invoice };
 export const loader: LoaderFunction = async ({ params }) => {
   if (!params.clientId) {
     throw new Response(`No client ID provided`, {
-      status: 404
+      status: 404,
     });
   }
   const client = await getClient(params.clientId);
   if (!client) {
     throw new Response(`No client found by ID ${params.clientId}`, {
-      status: 404
+      status: 404,
     });
   }
   if (!params.invoiceId) {
     throw new Response(`No invoice ID provided`, {
-      status: 404
+      status: 404,
     });
   }
-  const invoice = client.invoices.find(i => i.id === params.invoiceId);
+  const invoice = client.invoices.find((i) => i.id === params.invoiceId);
   if (!invoice) {
     throw new Response(`No invoice found by ID ${params.invoiceId}`, {
-      status: 404
+      status: 404,
     });
   }
 

@@ -1,8 +1,9 @@
-import { Link, Outlet } from "remix";
+import type { MetaFunction } from "@remix-run/node";
+import { Link, Outlet } from "@remix-run/react";
 
-export function meta() {
-  return { title: "Boundaries Demo" };
-}
+export const meta: MetaFunction = () => ({
+  title: "Boundaries Demo",
+});
 
 export default function Boundaries() {
   return (

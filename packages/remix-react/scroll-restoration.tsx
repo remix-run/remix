@@ -20,7 +20,7 @@ if (typeof document !== "undefined") {
  *
  * @see https://remix.run/api/remix#scrollrestoration
  */
-export function ScrollRestoration() {
+export function ScrollRestoration({ nonce = undefined }: { nonce?: string }) {
   useScrollRestoration();
 
   // wait for the browser to restore it on its own
@@ -35,25 +35,29 @@ export function ScrollRestoration() {
     }, [])
   );
 
+  let restoreScroll = ((STORAGE_KEY: string) => {
+    if (!window.history.state || !window.history.state.key) {
+      let key = Math.random().toString(32).slice(2);
+      window.history.replaceState({ key }, "");
+    }
+    try {
+      let positions = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "{}");
+      let storedY = positions[window.history.state.key];
+      if (typeof storedY === "number") {
+        window.scrollTo(0, storedY);
+      }
+    } catch (error) {
+      console.error(error);
+      sessionStorage.removeItem(STORAGE_KEY);
+    }
+  }).toString();
+
   return (
     <script
+      nonce={nonce}
+      suppressHydrationWarning
       dangerouslySetInnerHTML={{
-        __html: `
-          let STORAGE_KEY = ${JSON.stringify(STORAGE_KEY)};
-          if (!window.history.state || !window.history.state.key) {
-            window.history.replaceState({ key: Math.random().toString(32).slice(2) }, null);
-          }
-          try {
-            let positions = JSON.parse(sessionStorage.getItem(STORAGE_KEY) ?? '{}')
-            let storedY = positions[window.history.state.key];
-            if (typeof storedY === 'number') {
-              window.scrollTo(0, storedY)
-            }
-          } catch(error) {
-            console.error(error)
-            sessionStorage.removeItem(STORAGE_KEY)
-          }
-        `
+        __html: `(${restoreScroll})(${JSON.stringify(STORAGE_KEY)})`,
       }}
     />
   );
@@ -98,7 +102,7 @@ function useScrollRestoration() {
       let y = positions[location.key];
 
       // been here before, scroll to it
-      if (y) {
+      if (y != undefined) {
         window.scrollTo(0, y);
         return;
       }

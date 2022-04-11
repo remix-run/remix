@@ -1,4 +1,9 @@
-import type { LinksFunction, LoaderFunction } from "remix";
+import type {
+  LinksFunction,
+  LoaderFunction,
+  MetaFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
   Links,
   LiveReload,
@@ -7,8 +12,8 @@ import {
   Scripts,
   ScrollRestoration,
   useCatch,
-  useLoaderData
-} from "remix";
+  useLoaderData,
+} from "@remix-run/react";
 
 import global from "~/dist/styles/global.css";
 import type { User } from "./models";
@@ -21,20 +26,25 @@ interface LoaderData {
   ENV: Exclude<Window["ENV"], undefined>;
 }
 
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
     ENV: {
-      SITE_URL: process.env.SITE_URL
-    }
+      SITE_URL: process.env.SITE_URL,
+    },
   };
 
-  return data;
+  return json(data);
 };
+
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 function Document({
   children,
   title,
-  ENV = {}
+  ENV = {},
 }: {
   children: React.ReactNode;
   title?: string;
@@ -43,7 +53,6 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
         {title ? <title>{title}</title> : null}
         <Meta />
         <Links />
@@ -52,7 +61,7 @@ function Document({
         {children}
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.ENV = ${JSON.stringify(ENV)}`
+            __html: `window.ENV = ${JSON.stringify(ENV)}`,
           }}
         />
         <ScrollRestoration />

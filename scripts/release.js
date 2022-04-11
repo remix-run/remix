@@ -1,11 +1,15 @@
 const { execSync } = require("child_process");
 const chalk = require("chalk");
+const path = require("path");
 const semver = require("semver");
+const { default: simpleGit } = require("simple-git");
+const git = simpleGit(path.resolve(__dirname, ".."));
 
 const {
   ensureCleanWorkingDirectory,
   getPackageVersion,
-  prompt
+  prompt,
+  incrementRemixVersion,
 } = require("./utils");
 
 const releaseTypes = ["patch", "minor", "major"];
@@ -14,7 +18,7 @@ run(process.argv.slice(2)).then(
   () => {
     process.exit(0);
   },
-  error => {
+  (error) => {
     console.error(chalk.red(error));
     process.exit(1);
   }
@@ -116,6 +120,12 @@ async function run(args) {
  */
 async function initStart(givenVersion, git) {
   ensureDevBranch(git.initialBranch);
+
+  if (releaseTypes.includes(givenVersion)) {
+    givenVersion = `pre${givenVersion}`;
+  }
+
+  /** @type {string | null} */
   let nextVersion = semver.valid(givenVersion);
   if (nextVersion == null) {
     nextVersion = getNextVersion(
@@ -123,6 +133,7 @@ async function initStart(givenVersion, git) {
       givenVersion
     );
   }
+
   return nextVersion;
 }
 
@@ -134,7 +145,7 @@ async function initBump(git) {
   ensureLatestReleaseBranch(git.initialBranch, git);
   let versionFromBranch = getVersionFromReleaseBranch(git.initialBranch);
   let currentVersion = git.tags
-    .filter(tag => tag.startsWith("v" + versionFromBranch))
+    .filter((tag) => tag.startsWith("v" + versionFromBranch))
     .sort((a, b) => (a > b ? -1 : a < b ? 1 : 0))[0];
   let nextVersion = semver.inc(currentVersion, "prerelease");
   return nextVersion;
@@ -168,7 +179,7 @@ async function execStart(nextVersion) {
   }
 
   await gitMerge("main", releaseBranch, { pullFirst: true });
-  incrementVersion(nextVersion);
+  await incrementRemixVersion(nextVersion);
   // TODO: After testing a few times, execute git push as a part of the flow and
   // remove the silly message
   console.log(
@@ -187,8 +198,7 @@ Run ${chalk.bold(`git push origin ${releaseBranch} --follow-tags`)}`)
  */
 async function execBump(nextVersion, git) {
   ensureReleaseBranch(git.initialBranch);
-  await gitMerge("main", git.initialBranch, { pullFirst: true });
-  incrementVersion(nextVersion);
+  await incrementRemixVersion(nextVersion);
   // TODO: After testing a few times, execute git push as a part of the flow and
   // remove the silly message
   console.log(
@@ -208,15 +218,8 @@ Run ${chalk.bold(`git push origin ${git.initialBranch} --follow-tags`)}`)
 async function execFinish(nextVersion, git) {
   ensureReleaseBranch(git.initialBranch);
   await gitMerge(git.initialBranch, "main");
-  incrementVersion(nextVersion);
+  await incrementRemixVersion(nextVersion);
   await gitMerge(git.initialBranch, "dev");
-}
-
-/**
- * @param {string} version
- */
-function incrementVersion(version) {
-  return execSync(`yarn run version ${version}`);
 }
 
 /**
@@ -231,16 +234,26 @@ async function gitMerge(from, to, opts = {}) {
     await gitPull(from);
   }
   execSync(`git checkout ${to}`);
-  let resp = execSync(`git merge ${from}`).toString();
-  if (hasMergeConflicts(resp)) {
+
+  let savedError;
+  /** @type {import('simple-git').MergeResult} */
+  let summary;
+  try {
+    summary = await git.merge([from]);
+  } catch (err) {
+    savedError = err;
+    summary = err.git;
+  }
+
+  if (summary.conflicts.length > 0) {
     let answer = await prompt(
       `Merge conflicts detected. Resolve all conflicts and commit the changes before resuming the process.
           ${chalk.bold("Press Y to continue or N to cancel the release.")}`
     );
     if (answer === false) return 0;
-  } else if (mergeFailed(resp)) {
+  } else if (savedError) {
     console.error(chalk.red("Merge failed.\n"));
-    throw Error(resp);
+    throw savedError;
   }
 
   execSync(`git checkout ${initialBranch}`);
@@ -300,7 +313,7 @@ function getCurrentBranch() {
  */
 function hasMergeConflicts(output) {
   let lines = output.trim().split("\n");
-  return lines.some(line => /^CONFLICT\s/.test(line));
+  return lines.some((line) => /^CONFLICT\s/.test(line));
 }
 
 /**
@@ -309,7 +322,7 @@ function hasMergeConflicts(output) {
  */
 function mergeFailed(output) {
   let lines = output.trim().split("\n");
-  return lines.some(line => /^Automatic merge failed;\s/.test(line));
+  return lines.some((line) => /^Automatic merge failed;\s/.test(line));
 }
 
 /**
@@ -357,8 +370,9 @@ function ensureReleaseBranch(branch) {
 function ensureLatestReleaseBranch(branch, git) {
   let versionFromBranch = ensureReleaseBranch(branch);
   let taggedVersions = git.tags
-    .filter(tag => /^v\d/.test(tag))
-    .sort(semver.compare)[0];
+    .filter((tag) => /^v\d/.test(tag))
+    .sort(semver.compare);
+
   let latestTaggedVersion = taggedVersions[taggedVersions.length - 1];
   if (semver.compare(latestTaggedVersion, versionFromBranch) > 0) {
     throw Error(
@@ -371,26 +385,33 @@ function ensureLatestReleaseBranch(branch, git) {
  * @param {string} branch
  * @returns {string | undefined}
  */
-const getVersionFromReleaseBranch = branch => branch.split("/")[1]?.slice(1);
+function getVersionFromReleaseBranch(branch) {
+  return branch.slice(branch.indexOf("-") + 1);
+}
 
 /**
  * @param {string} version
  */
-const getVersionTag = version => (version.startsWith("v") ? "" : "v") + version;
+function getVersionTag(version) {
+  return (version.startsWith("v") ? "" : "v") + version;
+}
 
 /**
  * @param {string} version
  */
-const getReleaseBranch = version =>
-  `release/${getVersionTag(
+function getReleaseBranch(version) {
+  return `release-${getVersionTag(
     version.includes("-") ? version.slice(0, version.indexOf("-")) : version
   )}`;
+}
 
 /**
  * @param {string[]} tags
  * @param {string} version
  */
-const versionExists = (tags, version) => tags.includes(getVersionTag(version));
+function versionExists(tags, version) {
+  return tags.includes(getVersionTag(version));
+}
 
 /**
  * @typedef {{ tags: string[]; initialBranch: string }} GitAttributes

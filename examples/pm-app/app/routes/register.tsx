@@ -1,11 +1,13 @@
-import * as React from "react";
 import type {
   ActionFunction,
-  MetaFunction,
   LinksFunction,
-  LoaderFunction
-} from "remix";
-import { Form, json, useActionData, useSearchParams } from "remix";
+  LoaderFunction,
+  MetaFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, useActionData, useSearchParams } from "@remix-run/react";
+import * as React from "react";
+
 import { Button } from "~/ui/button";
 import { Link } from "~/ui/link";
 import { ShadowBox } from "~/ui/shadow-box";
@@ -18,7 +20,7 @@ import { validateEmail, validatePassword } from "~/utils/validation";
 
 export const meta: MetaFunction = () => {
   return {
-    title: "Register | PM Camp"
+    title: "Register | PM Camp",
   };
 };
 
@@ -34,7 +36,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   //     successRedirect: "/done",
   //   });
 
-  return {};
+  return json({});
 };
 
 export const action: ActionFunction = async ({ request }) => {
@@ -46,7 +48,7 @@ export const action: ActionFunction = async ({ request }) => {
     "nameFirst",
     "nameLast",
     "email",
-    "password"
+    "password",
   ] as TextFields[]) {
     const fieldValue = formData.get(fieldName);
     fields[fieldName] = fieldValue as string;
@@ -64,7 +66,7 @@ export const action: ActionFunction = async ({ request }) => {
     typeof redirectTo !== "string"
   ) {
     const data: ActionData = {
-      formError: `Something went wrong. Please try again later.`
+      formError: `Something went wrong. Please try again later.`,
     };
     return json(data);
   }
@@ -102,25 +104,25 @@ export const action: ActionFunction = async ({ request }) => {
   // 3. Check for existing user
   const existingUser = await getUser("email", email);
   if (existingUser) {
-    return {
+    return json({
       fields,
-      formError: `Sorry! That email is already taken.`
-    };
+      formError: `Sorry! That email is already taken.`,
+    });
   }
 
   // 4. Register a new user
   const user = await register({ email, password, nameFirst, nameLast });
   if (!user) {
-    return {
+    return json({
       fields,
-      formError: `Something went wrong with registration. Please try again later!`
-    };
+      formError: `Something went wrong with registration. Please try again later!`,
+    });
   }
 
   // 5. Create a user session with the new user's ID
   return await createUserSession(user.id, {
     // 6. Redirect to the user's dashboard
-    redirect: redirectTo
+    redirect: redirectTo,
   });
 };
 
@@ -148,7 +150,7 @@ export default function Register() {
         "nameFirst",
         "nameLast",
         "email",
-        "password"
+        "password",
       ] as TextFields[]) {
         if (fieldErrors[field]) {
           const elem = document.getElementById(`register-${field}`);

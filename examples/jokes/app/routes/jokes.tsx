@@ -1,30 +1,36 @@
-import type { LoaderFunction, LinksFunction } from "remix";
-import { Form } from "remix";
-import { Outlet, useLoaderData, Link } from "remix";
+import type { LinksFunction, LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, Link, Outlet, useLoaderData } from "@remix-run/react";
+
 import { db } from "~/utils/db.server";
-import type { User } from "@prisma/client";
 import { getUser } from "~/utils/session.server";
 import stylesUrl from "../styles/jokes.css";
 
 type LoaderData = {
-  user: User | null;
+  user: Awaited<ReturnType<typeof getUser>>;
   jokeListItems: Array<{ id: string; name: string }>;
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const jokeListItems = await db.joke.findMany({
-    take: 5,
-    select: { id: true, name: true },
-    orderBy: { createdAt: "desc" },
-  });
   const user = await getUser(request);
+
+  // in the official deployed version of the app, we don't want to deploy
+  // a site with unmoderated content, so we only show users their own jokes
+  const jokeListItems = user
+    ? await db.joke.findMany({
+        take: 5,
+        select: { id: true, name: true },
+        where: { jokesterId: user.id },
+        orderBy: { createdAt: "desc" },
+      })
+    : [];
 
   const data: LoaderData = {
     jokeListItems,
     user,
   };
 
-  return data;
+  return json(data);
 };
 
 export const links: LinksFunction = () => {

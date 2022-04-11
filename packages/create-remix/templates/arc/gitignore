@@ -1,8 +1,0 @@
-node_modules
-
-/.cache
-/server/index.js
-/public/build
-
-sam.json
-sam.yaml

@@ -1,5 +1,11 @@
-import type { ActionFunction, LinksFunction, MetaFunction } from "remix";
-import { useActionData, Form, Link, useSearchParams, json } from "remix";
+import type {
+  ActionFunction,
+  LinksFunction,
+  MetaFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, Link, useActionData, useSearchParams } from "@remix-run/react";
+
 import { login, createUserSession, register } from "~/utils/session.server";
 import { db } from "~/utils/db.server";
 import stylesUrl from "../styles/login.css";
@@ -27,6 +33,14 @@ function validatePassword(password: unknown) {
   }
 }
 
+function validateUrl(url: any) {
+  let urls = ["/jokes", "/", "https://remix.run"];
+  if (urls.includes(url)) {
+    return url;
+  }
+  return "/jokes";
+}
+
 type ActionData = {
   formError?: string;
   fieldErrors?: { username: string | undefined; password: string | undefined };
@@ -45,7 +59,7 @@ export const action: ActionFunction = async ({ request }) => {
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
-  const redirectTo = form.get("redirectTo") || "/jokes";
+  const redirectTo = validateUrl(form.get("redirectTo") || "/jokes");
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
@@ -105,12 +119,7 @@ export default function Login() {
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <Form
-          method="post"
-          aria-describedby={
-            actionData?.formError ? "form-error-message" : undefined
-          }
-        >
+        <Form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -148,7 +157,7 @@ export default function Login() {
               name="username"
               defaultValue={actionData?.fields?.username}
               aria-invalid={Boolean(actionData?.fieldErrors?.username)}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.username ? "username-error" : undefined
               }
             />
@@ -170,7 +179,7 @@ export default function Login() {
               defaultValue={actionData?.fields?.password}
               type="password"
               aria-invalid={Boolean(actionData?.fieldErrors?.password)}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.password ? "password-error" : undefined
               }
             />

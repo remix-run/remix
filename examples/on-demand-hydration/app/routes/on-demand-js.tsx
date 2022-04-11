@@ -1,5 +1,6 @@
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 type LoaderData = { withJS: boolean };
 
@@ -12,7 +13,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 export const handle = {
   hydrate(data: LoaderData) {
     return data.withJS;
-  }
+  },
 };
 
 export default function Screen() {

@@ -4,29 +4,33 @@ import type { Fixture } from "./helpers/create-fixture";
 describe("rendering", () => {
   let fixture: Fixture;
 
-  const ROOT_$ = "FLAT";
-  const ROOT_INDEX = "ROOT_INDEX";
-  const FLAT_$ = "FLAT";
-  const PARENT = "PARENT";
-  const NESTED_$ = "NESTED_$";
-  const NESTED_INDEX = "NESTED_INDEX";
-  const PARENTLESS_$ = "PARENTLESS_$";
+  let ROOT_$ = "FLAT";
+  let ROOT_INDEX = "ROOT_INDEX";
+  let FLAT_$ = "FLAT";
+  let PARENT = "PARENT";
+  let NESTED_$ = "NESTED_$";
+  let NESTED_INDEX = "NESTED_INDEX";
+  let PARENTLESS_$ = "PARENTLESS_$";
 
   beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { Outlet, Scripts } from "remix";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
           export default function Root() {
             return (
-              <html>
-                <head />
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
                 <body>
                   <Outlet />
                   <Scripts />
                 </body>
               </html>
-            )
+            );
           }
         `,
 
@@ -49,7 +53,7 @@ describe("rendering", () => {
         `,
 
         "app/routes/nested.jsx": js`
-          import { Outlet } from "remix";
+          import { Outlet } from "@remix-run/react";
           export default function() {
             return (
               <div>
@@ -76,8 +80,8 @@ describe("rendering", () => {
           export default function() {
             return <h2>${PARENTLESS_$}</h2>
           }
-        `
-      }
+        `,
+      },
     });
   });
 
