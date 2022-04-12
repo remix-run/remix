@@ -2,7 +2,6 @@ import path from "path";
 import fse from "fs-extra";
 import type { Writable } from "stream";
 import express from "express";
-import getPort from "get-port";
 import stripIndent from "strip-indent";
 import chalk from "chalk";
 import { sync as spawnSync } from "cross-spawn";
@@ -96,7 +95,8 @@ export async function createAppFixture(fixture: Fixture) {
     stop: () => Promise<void>;
   }> => {
     return new Promise(async (accept) => {
-      let port = await getPort();
+      let getPort = await import("get-port");
+      let port = await getPort.default();
       let app = express();
       app.use(express.static(path.join(fixture.projectDir, "public")));
       app.all(
