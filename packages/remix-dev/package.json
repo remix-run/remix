@@ -33,7 +33,7 @@
     "express": "4.17.3",
     "fast-glob": "3.2.11",
     "fs-extra": "^10.0.0",
-    "get-port": "^6.1.2",
+    "get-port": "^5.1.1",
     "gunzip-maybe": "^1.4.2",
     "inquirer": "^8.2.1",
     "jscodeshift": "^0.13.1",
@@ -67,7 +67,7 @@
     "@types/ws": "^7.4.1",
     "esbuild-register": "^3.3.2",
     "msw": "^0.39.2",
-    "tiny-invariant": "^1.2.0",
-    "type-fest": "^2.12.2"
+    "type-fest": "^2.12.2",
+    "tiny-invariant": "^1.2.0"
   }
 }
