@@ -16,8 +16,4 @@ export const LATEST_RELEASE = process.env.GITHUB_REF.replace("refs/tags/", "");
 export const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 export const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY;
 
-/**
-  if you're changing the paths to be counted,
-  make sure you also update /.github/workflows/release.yml
- */
 export const PR_FILES_STARTS_WITH = ["packages/"];

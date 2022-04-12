@@ -10,6 +10,7 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     outputs:
+      # allows this to be used in the `comment` job below
       NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
     steps:
       - name: 🛑 Cancel Previous Runs
@@ -41,7 +42,8 @@ jobs:
         run: |
           SHA=$(git rev-parse HEAD)
           SHORT_SHA=${SHA::7}
-          NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}
+          DATE=$(date '+%Y%m%d')
+          NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}-${DATE}
           echo ::set-output name=NEXT_VERSION::${NEXT_VERSION}
 
           git checkout -b nightly/${NEXT_VERSION}
@@ -65,7 +67,7 @@ jobs:
           release_name: v${{ steps.version.outputs.NEXT_VERSION }}
           tag_name: v${{ steps.version.outputs.NEXT_VERSION }}
         env:
-          # need this token in order to have it trigger the comment workflow
+          # need this token in order to have it trigger the comment and deployment test workflows
           GITHUB_TOKEN: ${{ secrets.FORMAT_PAT }}
 
   comment:
@@ -74,7 +76,7 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - name: 🛴 Kick of comment and deployment test workflows
+      - name: 🛴 Kick off comment and deployment test workflows
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVENT_TYPE: release
