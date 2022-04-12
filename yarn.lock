@@ -1415,6 +1415,13 @@
     mkdirp "^1.0.4"
     rimraf "^3.0.2"
 
+"@npmcli/package-json@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@npmcli/package-json/-/package-json-2.0.0.tgz#3bbcf4677e21055adbe673d9f08c9f9cde942e4a"
+  integrity sha512-42jnZ6yl16GzjWSH7vtrmWyJDGVa/LXPdpN2rcUWolFjc9ON2N3uz0qdBbQACfmhuJZ2lbKYtmK5qx68ZPLHMA==
+  dependencies:
+    json-parse-even-better-errors "^2.3.1"
+
 "@octokit/auth-token@^2.4.4":
   version "2.5.0"
   resolved "https://registry.npmjs.org/@octokit/auth-token/-/auth-token-2.5.0.tgz"
@@ -6664,7 +6671,7 @@ json-parse-better-errors@^1.0.1:
   resolved "https://registry.npmjs.org/json-parse-better-errors/-/json-parse-better-errors-1.0.2.tgz"
   integrity sha512-mrqyZKfX5EhL7hvqcV6WG1yYjnjeuYDzDhhcAAUrq8Po85NBQBJP+ZDUT75qZQ98IkUoBqdkExkukOU7Ts2wrw==
 
-json-parse-even-better-errors@^2.3.0:
+json-parse-even-better-errors@^2.3.0, json-parse-even-better-errors@^2.3.1:
   version "2.3.1"
   resolved "https://registry.npmjs.org/json-parse-even-better-errors/-/json-parse-even-better-errors-2.3.1.tgz"
   integrity sha512-xyFwyhro/JEof6Ghe2iz2NcXoj2sloNsWr/XsERDK/oiPCfaNhl5ONfp+jQdAZRQQ0IJWNzH9zIZF7li91kh2w==
