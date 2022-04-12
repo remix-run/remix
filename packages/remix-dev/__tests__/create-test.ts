@@ -30,13 +30,16 @@ jest.mock("child_process", () => {
   let cp = jest.requireActual(
     "child_process"
   ) as typeof import("child_process");
+  let installDepsCmdPattern = /^(npm|yarn|pnpm) install$/;
+  let configGetCmdPattern = /^(npm|yarn|pnpm) config get/;
+
   return {
     ...cp,
     execSync: jest.fn((command: string, options: Parameters<typeof cp.execSync>[1]) => {
       // this prevents us from having to run the install process
       // and keeps our console output clean
-      if (command.startsWith("npm install") || command.startsWith("yarn install") || command.startsWith("pnpm install")) {
-        return { stdout: "mocked", stderr: "mocked" };
+      if (installDepsCmdPattern.test(command) || configGetCmdPattern.test(command)) {
+        return 'sample stdout';
       }
       return cp.execSync(command, options);
     }),
