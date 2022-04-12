@@ -21,6 +21,7 @@ interface CreateAppArgs {
   projectDir: string;
   remixVersion?: string;
   installDeps: boolean;
+  packageManager: "npm" | "yarn" | "pnpm";
   useTypeScript: boolean;
   githubToken?: string;
 }
@@ -30,6 +31,7 @@ export async function createApp({
   projectDir,
   remixVersion = remixDevPackageVersion,
   installDeps,
+  packageManager,
   useTypeScript = true,
   githubToken = process.env.GITHUB_TOKEN,
 }: CreateAppArgs) {
@@ -148,18 +150,24 @@ export async function createApp({
   }
 
   if (installDeps) {
-    // TODO: use yarn/pnpm/npm
-    let npmConfig = execSync("npm config get @remix-run:registry", {
-      encoding: "utf8",
-    });
+    let npmConfig = execSync(
+      `${packageManager} config get @remix-run:registry`,
+      {
+        encoding: "utf8",
+      }
+    );
     if (npmConfig?.startsWith("https://npm.remix.run")) {
       throw Error(
         "🚨 Oops! You still have the private Remix registry configured. Please " +
-          "run `npm config delete @remix-run:registry` or edit your .npmrc file " +
+          `run \`${packageManager} config delete @remix-run:registry\` or edit your .npmrc file ` +
           "to remove it."
       );
     }
-    execSync("npm install", { stdio: "inherit", cwd: projectDir });
+
+    execSync(`${packageManager} install`, {
+      stdio: "inherit",
+      cwd: projectDir,
+    });
   }
 }
 
@@ -555,14 +563,29 @@ export type TemplateType =
   | "local";
 
 export function detectTemplateType(template: string): TemplateType | null {
-  // 1. Check if the user passed a local file. If they hand us an explicit file
+  // 1. Prioritize Remix templates and stacks first. This ensures that inputs
+  //    like `--template remix` always pull from our templates, which is almost
+  //    always the desired behavior. If users maintain a fork either locally or
+  //    in another repo they can pass the repo shorthand, URL or path instead.
+  //    This also ensures that our interactive CLI always works as expected even
+  //    if the user has another directory with the same name.
+  //    https://github.com/remix-run/remix/issues/2491
+  if (isRemixTemplate(template)) {
+    return "template";
+  }
+
+  if (isRemixStack(template)) {
+    return "repoTemplate";
+  }
+
+  // 2. Check if the user passed a local file. If they hand us an explicit file
   //    URL, we'll validate it first. Otherwise we just ping the filesystem to
   //    see if the string references a filepath and, if not, move on.
   if (template.startsWith("file://")) {
     return "local";
   }
 
-  // 2. Check if it's a path to a local directory.
+  // 3. Check if it's a path to a local directory.
   try {
     if (
       fse.existsSync(
@@ -577,28 +600,17 @@ export function detectTemplateType(template: string): TemplateType | null {
     // ignore FS errors and move on
   }
 
-  // 3. check if it's one of the pre-built remix stacks
-  if (isRemixStack(template)) {
-    return "repoTemplate";
-  }
-
   // 4. examples/<template> will use an example folder in the Remix repo
   if (/^examples?\/[\w-]+$/.test(template)) {
     return "example";
   }
 
-  // 5. If the string contains no slashes, spaces, or special chars, we assume
-  //    it is one of our remix-run/remix/templates.
-  if (/^[\w-]+$/.test(template)) {
-    return "template";
-  }
-
-  // 6. Handle GitHub repos (URLs or :org/:repo shorthand)
+  // 5. Handle GitHub repos (URLs or :org/:repo shorthand)
   if (isValidGithubUrl(template) || isGithubRepoShorthand(template)) {
     return "repo";
   }
 
-  // 7. Any other valid URL should be treated as a tarball.
+  // 6. Any other valid URL should be treated as a tarball.
   if (isUrl(template)) {
     return "remoteTarball";
   }

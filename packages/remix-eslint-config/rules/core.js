@@ -88,7 +88,8 @@ module.exports = {
   "no-new-object": WARN,
   "no-octal": WARN,
   "no-redeclare": ERROR,
-  "no-restricted-imports": [WARN, ...replaceRemixImportsOptions],
+  // TODO: once we officially deprecate this we can bring this back
+  // "no-restricted-imports": [WARN, ...replaceRemixImportsOptions],
   "no-script-url": WARN,
   "no-self-assign": WARN,
   "no-self-compare": WARN,
