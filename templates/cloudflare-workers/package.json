@@ -11,16 +11,15 @@
     "dev:remix": "remix watch",
     "dev:miniflare": "cross-env NODE_ENV=development miniflare ./build/index.js --watch",
     "dev": "remix build && run-p dev:*",
-    "postinstall": "remix setup cloudflare",
     "start": "cross-env NODE_ENV=production miniflare ./build/index.js"
   },
   "dependencies": {
+    "@remix-run/cloudflare": "*",
     "@remix-run/cloudflare-workers": "*",
     "@remix-run/react": "*",
     "cross-env": "^7.0.3",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "remix": "*"
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^3.4.0",

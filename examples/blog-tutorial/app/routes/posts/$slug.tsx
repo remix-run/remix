@@ -1,9 +1,11 @@
-import type { LoaderFunction } from "remix";
-import { useLoaderData, json } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
+import { marked } from "marked";
+import invariant from "tiny-invariant";
+
 import { getPost } from "~/models/post.server";
 import type { Post } from "~/models/post.server";
-import invariant from "tiny-invariant";
-import { marked } from "marked";
 
 type LoaderData = { post: Post; html: string };
 

@@ -9,6 +9,8 @@ yarn-error.log
 /fixtures/test
 /fixtures/my-remix-app
 /fixtures/deno-app
+/playwright-report
+/test-results
 
 .eslintcache
 .tmp

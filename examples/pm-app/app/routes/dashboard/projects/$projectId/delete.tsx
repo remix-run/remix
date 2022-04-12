@@ -1,7 +1,8 @@
-import type { ActionFunction } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
+
 import { deleteProject } from "~/db.server";
 import { requireUser } from "~/session.server";
-import { redirect } from "remix";
 
 export const action: ActionFunction = async ({ request, params }) => {
   await requireUser(request, {
