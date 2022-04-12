@@ -69,9 +69,9 @@ All commits that fix bugs or add features need a test.
 
 `<blink>`Do not merge code without tests!`</blink>`
 
-We use `jest` for our testing in this project. We have a suite of integration tests in the integration folder and packages have their own jest configuration which are then referenced by the primary jest config in the root of the project.
+We use a mix of `jest` and `playwright` for our testing in this project. We have a suite of integration tests in the integration folder and packages have their own jest configuration, which are then referenced by the primary jest config in the root of the project.
 
-The integration tests need to be run with `--runInBand` and the primary tests can be run in parallel which is why they each are run by different instances of `jest`. And then we use `npm-run-all` to run those both in parallel to make the tests run as quickly and efficiently as possible. To run these two sets of tests independently you'll need to run the individual script:
+The integration tests, and the primary tests can be run in parallel using `npm-run-all` to make the tests run as quickly and efficiently as possible. To run these two sets of tests independently you'll need to run the individual script:
 
 - `yarn test:primary`
 - `yarn test:integration`

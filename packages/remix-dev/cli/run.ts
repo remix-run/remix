@@ -12,6 +12,20 @@ import * as commands from "./commands";
 import { convertTemplateToJavaScript } from "./convert-to-javascript";
 import { validateNewProjectPath, validateTemplate } from "./create";
 
+/**
+ * Determine which package manager the user prefers.
+ *
+ * npm, Yarn and pnpm set the user agent environment variable
+ * that can be used to determine which package manager ran
+ * the command.
+ */
+function getPreferredPackageManager() {
+  return ((process.env.npm_user_agent ?? "").split("/")[0] || "npm") as
+    | "npm"
+    | "yarn"
+    | "pnpm";
+}
+
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
   "M"
@@ -44,6 +58,7 @@ ${colors.heading("Options")}:
 \`routes\` Options:
   --json              Print the routes as JSON
 \`migrate\` Options:
+  --debug             Show debugging logs
   --dry               Dry run (no changes are made to files)
   --force             Bypass Git safety checks and forcibly run migration
   --migration, -m     Name of the migration to run
@@ -116,6 +131,12 @@ const templateChoices = [
   { name: "Cloudflare Pages", value: "cloudflare-pages" },
   { name: "Cloudflare Workers", value: "cloudflare-workers" },
 ];
+
+const npxInterop = {
+  npm: "npx",
+  yarn: "yarn",
+  pnpm: "pnpm exec",
+};
 
 /**
  * Programmatic interface for running the Remix CLI with the given command line
@@ -221,6 +242,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         return;
       }
 
+      let pm = getPreferredPackageManager();
       let answers = await inquirer
         .prompt<{
           appType: "template" | "stack";
@@ -285,7 +307,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
           {
             name: "install",
             type: "confirm",
-            message: "Do you want me to run `npm install`?",
+            message: `Do you want me to run \`${pm} install\`?`,
             when() {
               return flags.install === undefined;
             },
@@ -299,7 +321,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
                 "🚨 Your terminal doesn't support interactivity; using default " +
                   "configuration.\n\n" +
                   "If you'd like to use different settings, try passing them " +
-                  "as arguments. Run `npx create-remix@latest --help` to see " +
+                  `as arguments. Run \`${pm} create remix@latest --help\` to see ` +
                   "available options."
               )
             );
@@ -320,6 +342,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         projectDir,
         remixVersion: flags.remixVersion,
         installDeps,
+        packageManager: pm,
         useTypeScript: flags.typescript !== false,
         githubToken: process.env.GITHUB_TOKEN,
       });
@@ -354,7 +377,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       if (hasInitScript) {
         if (installDeps) {
           console.log("💿 Running remix.init script");
-          await commands.init(projectDir);
+          await commands.init(projectDir, pm);
           await fse.remove(initScriptDir);
         } else {
           console.log();
@@ -362,7 +385,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             colors.warning(
               "💿 You've opted out of installing dependencies so we won't run the " +
                 "remix.init/index.js script for you just yet. Once you've installed " +
-                "dependencies, you can run it manually with `npx remix init`"
+                `dependencies, you can run it manually with \`${npxInterop[pm]} remix init\``
             )
           );
           console.log();
@@ -388,7 +411,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     }
     case "init":
-      await commands.init(input[1] || process.env.REMIX_ROOT || process.cwd());
+      await commands.init(
+        input[1] || process.env.REMIX_ROOT || process.cwd(),
+        getPreferredPackageManager()
+      );
       break;
     case "routes":
       await commands.routes(input[1], flags.json ? "json" : "jsx");
@@ -405,10 +431,13 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       await commands.setup(input[1]);
       break;
     case "migrate": {
-      let { migrationId, projectDir } = await commands.migrate.resolveInput({
-        migrationId: flags.migration,
-        projectDir: input[1],
-      });
+      let { projectDir, migrationId } = await commands.migrate.resolveInput(
+        {
+          projectId: input[1],
+          migrationId: flags.migration,
+        },
+        flags
+      );
       await commands.migrate.run({ migrationId, projectDir, flags });
       break;
     }

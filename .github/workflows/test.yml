@@ -107,5 +107,8 @@ jobs:
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
 
+      - name: 📥 Install Playwright
+        run: npx playwright install --with-deps
+
       - name: 👀 Run Integration Tests
         run: "yarn test:integration"
