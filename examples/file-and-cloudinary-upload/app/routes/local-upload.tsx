@@ -1,11 +1,10 @@
+import type { ActionFunction } from "@remix-run/node";
 import {
-  Form,
+  json,
   unstable_createFileUploadHandler,
   unstable_parseMultipartFormData,
-  useActionData,
-  json,
-} from "remix";
-import type { ActionFunction } from "remix";
+} from "@remix-run/node";
+import { Form, useActionData } from "@remix-run/react";
 
 type ActionData = {
   errorMsg?: string;

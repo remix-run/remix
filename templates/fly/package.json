@@ -8,15 +8,14 @@
     "build": "remix build",
     "deploy": "fly deploy --remote-only",
     "dev": "remix dev",
-    "postinstall": "remix setup node",
     "start": "remix-serve build"
   },
   "dependencies": {
+    "@remix-run/node": "*",
     "@remix-run/react": "*",
     "@remix-run/serve": "*",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "remix": "*"
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
     "@remix-run/dev": "*",

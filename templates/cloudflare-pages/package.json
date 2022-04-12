@@ -9,16 +9,15 @@
     "dev:remix": "remix watch",
     "dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public",
     "dev": "remix build && run-p dev:*",
-    "postinstall": "remix setup cloudflare",
     "start": "cross-env NODE_ENV=production npm run dev:wrangler"
   },
   "dependencies": {
+    "@remix-run/cloudflare": "*",
     "@remix-run/cloudflare-pages": "*",
     "@remix-run/react": "*",
     "cross-env": "^7.0.3",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "remix": "*"
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^3.4.0",

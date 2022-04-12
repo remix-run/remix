@@ -1,12 +1,13 @@
-import * as React from "react";
 import Dialog from "@reach/dialog";
-import type { ActionFunction, LinksFunction, LoaderFunction } from "remix";
-import { redirect } from "remix";
-import { useLoaderData } from "remix";
-import { json } from "remix";
-import { Form } from "remix";
-import { useNavigate } from "remix";
 import styles from "@reach/dialog/styles.css";
+import type {
+  ActionFunction,
+  LinksFunction,
+  LoaderFunction,
+} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { Form, useLoaderData, useNavigate } from "@remix-run/react";
+import * as React from "react";
 
 export const links: LinksFunction = () => {
   return [

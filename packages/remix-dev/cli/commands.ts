@@ -24,12 +24,6 @@ import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 
 export * as migrate from "./migrate";
 
-const npxInterop = {
-  npm: "npx",
-  yarn: "yarn",
-  pnpm: "pnpm exec",
-};
-
 export async function create({
   appTemplate,
   projectDir,
@@ -57,45 +51,8 @@ export async function create({
     useTypeScript,
     githubToken,
   });
-
-  let initScriptDir = path.join(projectDir, "remix.init");
-  let hasInitScript = await fse.pathExists(initScriptDir);
-
   spinner.stop();
   spinner.clear();
-
-  if (hasInitScript) {
-    if (installDeps) {
-      console.log("💿 Running remix.init script");
-      await init(projectDir, packageManager);
-      await fse.remove(initScriptDir);
-    } else {
-      console.log();
-      console.log(
-        colors.warning(
-          "💿 You've opted out of installing dependencies so we won't run the " +
-            "remix.init/index.js script for you just yet. Once you've installed " +
-            `dependencies, you can run it manually with \`${npxInterop[packageManager]} remix init\``
-        )
-      );
-      console.log();
-    }
-  }
-
-  let relProjectDir = path.relative(process.cwd(), projectDir);
-  let projectDirIsCurrentDir = relProjectDir === "";
-
-  if (projectDirIsCurrentDir) {
-    console.log(
-      `💿 That's it! Check the README for development and deploy instructions!`
-    );
-  } else {
-    console.log(
-      "💿 That's it! `cd` into " +
-        colors.logoGreen(path.resolve(process.cwd(), projectDir)) +
-        " and check the README for development and deploy instructions!"
-    );
-  }
 }
 
 export async function init(
@@ -105,6 +62,8 @@ export async function init(
   let initScriptDir = path.join(projectDir, "remix.init");
   let initScript = path.resolve(initScriptDir, "index.js");
 
+  let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
+
   if (await fse.pathExists(initScript)) {
     execSync(`${packageManager} install`, {
       stdio: "ignore",
@@ -112,7 +71,7 @@ export async function init(
     });
     let initFn = require(initScript);
     try {
-      await initFn({ rootDirectory: projectDir });
+      await initFn({ rootDirectory: projectDir, isTypeScript });
     } catch (error) {
       if (error instanceof Error) {
         error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
@@ -182,7 +141,14 @@ export async function build(
 
   let start = Date.now();
   let config = await readConfig(remixRoot);
-  await compiler.build(config, { mode: mode, sourcemap });
+  await compiler.build(config, {
+    mode: mode,
+    sourcemap,
+    onBuildFailure: (failure: compiler.BuildError) => {
+      compiler.formatBuildFailure(failure);
+      throw Error();
+    },
+  });
 
   log(`Built in ${prettyMs(Date.now() - start)}`);
 }
