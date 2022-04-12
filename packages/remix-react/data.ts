@@ -80,7 +80,7 @@ export async function fetchData(
             resolve();
             return;
           }
-          if (contentType && /\bapplication\/json\b/.test(contentType)) {
+          if (contentType && !/\btext\/event-stream\b/.test(contentType)) {
             response = new Response(await res.text(), {
               status: res.status,
               headers: res.headers,

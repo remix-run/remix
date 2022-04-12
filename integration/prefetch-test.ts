@@ -20,10 +20,6 @@ function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
         } from "@remix-run/react";
 
         export default function Root() {
-          const styles =
-          'a:hover { color: red; } a:hover:after { content: " (hovered)"; }' +
-          'a:focus { color: green; } a:focus:after { content: " (focused)"; }';
-
           return (
             <html lang="en">
               <head>
@@ -31,7 +27,6 @@ function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
                 <Links />
               </head>
               <body>
-                <style>{styles}</style>
                 <h1>Root</h1>
                 <nav id="nav">
                   <Link to="/with-loader" prefetch="${mode}">
