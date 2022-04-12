@@ -12,12 +12,15 @@ export default function handleRequest(
   responseHeaders,
   remixContext
 ) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let didError = false;
 
     const { pipe, abort } = renderToPipeableStream(
       <RemixServer context={remixContext} url={request.url} />,
       {
+        onShellError(err) {
+          reject(err);
+        },
         onShellReady() {
           let body = new PassThrough();
 
