@@ -227,49 +227,6 @@ describe("remix CLI", () => {
       );
       expect(Object.keys(pkgJSON.devDependencies)).not.toContain("typescript");
     });
-
-    it("prioritizes built-in templates when validating input", async () => {
-      let projectDir = path.join(TEMP_DIR, "my-js-app");
-
-      // create a local directory with the same name as our chosen template and
-      // give it a package.json so we can check it against the one in our
-      // template
-      let dupedDir = path.join(projectDir, "express");
-      await fse.mkdir(dupedDir);
-      await fse.writeFile(
-        path.join(dupedDir, "package.json"),
-        '{ "name": "dummy" }'
-      );
-
-      let proc = childProcess.spawn(
-        "node",
-        [
-          "--require",
-          require.resolve("esbuild-register"),
-          "--require",
-          path.join(__dirname, "./msw.ts"),
-          path.resolve(__dirname, "../cli.ts"),
-          "create",
-        ],
-        { stdio: [null, null, null] }
-      );
-
-      await interactWithShell(proc, [
-        { question: /Where.*create.*app/i, type: [projectDir, ENTER] },
-        { question: /What type of app/i, answer: /basics/i },
-        { question: /Where.*deploy/i, answer: /express/i },
-        { question: /install/i, type: ["n", ENTER] },
-        { question: /typescript or javascript/i, answer: /javascript/i },
-      ]);
-
-      expect(
-        fse.existsSync(path.join(projectDir, "package.json"))
-      ).toBeTruthy();
-      let pkgJSON = JSON.parse(
-        fse.readFileSync(path.join(projectDir, "package.json"), "utf-8")
-      );
-      expect(pkgJSON.name).not.toBe("dummy");
-    });
   });
 });
 
