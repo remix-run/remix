@@ -20,7 +20,7 @@ import { validateNewProjectPath, validateTemplate } from "./create";
  * the command.
  */
 function getPreferredPackageManager() {
-  return ((process.env.npm_user_agent ?? "").split("/")[0] ?? "npm") as
+  return ((process.env.npm_user_agent ?? "").split("/")[0] || "npm") as
     | "npm"
     | "yarn"
     | "pnpm";
@@ -242,7 +242,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       }
 
       let pm = getPreferredPackageManager();
-
       let answers = await inquirer
         .prompt<{
           appType: "template" | "stack";
@@ -321,7 +320,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
                 "🚨 Your terminal doesn't support interactivity; using default " +
                   "configuration.\n\n" +
                   "If you'd like to use different settings, try passing them " +
-                  "as arguments. Run `npx create-remix@latest --help` to see " +
+                  `as arguments. Run \`${pm} create remix@latest --help\` to see ` +
                   "available options."
               )
             );

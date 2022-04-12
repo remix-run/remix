@@ -18,9 +18,6 @@ const TEMP_DIR = path.join(
   `remix-tests-${Math.random().toString(32).slice(2)}`
 );
 
-const yarnUserAgent = "yarn/1.22.18 npm/? node/v14.17.0 linux x64";
-const pnpmUserAgent = "pnpm/6.32.3 npm/? node/v14.17.0 linux x64";
-
 beforeAll(async () => {
   await fse.remove(TEMP_DIR);
   await fse.ensureDir(TEMP_DIR);
@@ -185,79 +182,6 @@ describe("remix CLI", () => {
         { question: /install/i, type: ["n", ENTER] },
         { question: /typescript or javascript/i, answer: /typescript/i },
       ]);
-    });
-
-    it.skip("recognizes when Yarn was used to run the command", async () => {
-      let projectDir = getProjectDir("yarn-create");
-      await execFile(
-        "node",
-        [
-          remix,
-          "create",
-          projectDir,
-          "--template",
-          "grunge-stack",
-          "--install",
-        ],
-        { env: { ...process.env, npm_user_agent: yarnUserAgent } }
-      );
-
-      expect(childProcess.execSync).toBeCalledWith(
-        "yarn install",
-        expect.anything()
-      );
-    });
-
-    it.skip("recognizes when pnpm was used to run the command", async () => {
-      let projectDir = getProjectDir("pnpm-create");
-      await execFile(
-        "node",
-        [
-          remix,
-          "create",
-          projectDir,
-          "--template",
-          "grunge-stack",
-          "--install",
-        ],
-        { env: { ...process.env, npm_user_agent: pnpmUserAgent } }
-      );
-
-      expect(childProcess.execSync).toBeCalledWith(
-        "pnpm install",
-        expect.anything()
-      );
-    });
-
-    it.skip("prompts to run the install command for the preferred package manager", async () => {
-      let projectDir = getProjectDir("pnpm-create");
-      let { stdout } = await execFile(
-        "node",
-        [remix, "create", projectDir, "--template", "grunge-stack"],
-        { env: { ...process.env, npm_user_agent: pnpmUserAgent } }
-      );
-
-      expect(stdout).toContain("Do you want me to run `pnpm install`?");
-    });
-
-    it.skip("suggests to run the init command with the preferred package manager", async () => {
-      let projectDir = getProjectDir("pnpm-create");
-      let { stdout } = await execFile(
-        "node",
-        [
-          remix,
-          "create",
-          projectDir,
-          "--template",
-          "grunge-stack",
-          "--no-install",
-        ],
-        { env: { ...process.env, npm_user_agent: pnpmUserAgent } }
-      );
-
-      expect(stdout).toContain(
-        "💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with `pnpm exec remix init`"
-      );
     });
 
     it("allows you to go through the prompts and convert to JS", async () => {
