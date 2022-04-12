@@ -1,3 +1,5 @@
+import path from "path";
+import fs from "fs/promises";
 import { test, expect } from "@playwright/test";
 
 import { createFixture, createAppFixture, js } from "./helpers/create-fixture";
@@ -10,6 +12,7 @@ test.describe("compiler", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
+      setup: "node",
       files: {
         "app/fake.server.js": js`
           export const hello = "server";
@@ -210,5 +213,62 @@ test.describe("compiler", () => {
     expect(await app.getHtml("#esm-only-exports-pkg")).toBe(
       '<div id="esm-only-exports-pkg">esm-only-exports-pkg</div>'
     );
+  });
+
+  // TODO: remove this when we get rid of that feature.
+  test("magic imports still works", async () => {
+    let magicExportsForNode = [
+      "createCookie",
+      "createCookieSessionStorage",
+      "createFileSessionStorage",
+      "createMemorySessionStorage",
+      "createSessionStorage",
+      "unstable_createFileUploadHandler",
+      "unstable_createMemoryUploadHandler",
+      "unstable_parseMultipartFormData",
+      "createSession",
+      "isCookie",
+      "isSession",
+      "json",
+      "redirect",
+      "Form",
+      "Link",
+      "Links",
+      "LiveReload",
+      "Meta",
+      "NavLink",
+      "Outlet",
+      "PrefetchPageLinks",
+      "RemixBrowser",
+      "RemixServer",
+      "Scripts",
+      "ScrollRestoration",
+      "useActionData",
+      "useBeforeUnload",
+      "useCatch",
+      "useFetcher",
+      "useFetchers",
+      "useFormAction",
+      "useHref",
+      "useLoaderData",
+      "useLocation",
+      "useMatches",
+      "useNavigate",
+      "useNavigationType",
+      "useOutlet",
+      "useOutletContext",
+      "useParams",
+      "useResolvedPath",
+      "useSearchParams",
+      "useSubmit",
+      "useTransition",
+    ];
+    let magicRemix = await fs.readFile(
+      path.resolve(fixture.projectDir, "node_modules/remix/index.js"),
+      "utf8"
+    );
+    for (let name of magicExportsForNode) {
+      expect(magicRemix).toContain(name);
+    }
   });
 });
