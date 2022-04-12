@@ -9,7 +9,6 @@ import WebSocket from "ws";
 import type { Server } from "http";
 import type * as Express from "express";
 import type { createApp as createAppType } from "@remix-run/serve";
-import getPort from "get-port";
 
 import { BuildMode, isBuildMode } from "../build";
 import * as colors from "../colors";
@@ -241,9 +240,16 @@ export async function dev(remixRoot: string, modeArg?: string) {
 
   await loadEnv(config.rootDirectory);
 
-  let port = await getPort({
-    port: process.env.PORT ? Number(process.env.PORT) : 3000,
-  });
+  let port: number;
+  let possiblePort = process.env.PORT ? Number(process.env.PORT) : 3000;
+  try {
+    let getPort = await import("get-port");
+    port = await getPort.default({
+      port: getPort.portNumbers(possiblePort, 3100),
+    });
+  } catch (error) {
+    port = possiblePort;
+  }
 
   if (config.serverEntryPoint) {
     throw new Error("remix dev is not supported for custom servers.");
