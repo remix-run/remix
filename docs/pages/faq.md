@@ -229,7 +229,7 @@ Again, `formData.getAll()` is often all you need, we encourage you to give it a 
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [query-string]: https://www.npmjs.com/package/query-string
 
-## What's the difference between ErrorBoundary and CatchBoundary?
+## What's the difference between `CatchBoundary` & `ErrorBoundary`?
 
 Error boundaries render when your application throws an error and you had no clue it was going to happen. Most apps just go blank or have spinners spin forever. In remix the error boundary renders and you have granular control over it.
 
