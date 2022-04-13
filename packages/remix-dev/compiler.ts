@@ -460,10 +460,13 @@ function createServerBuild(
       // e.g. runtimePath = "https://esm.sh/@remix-run/netlify-edge";
     }
 
+    let buildPath = require.resolve("./server-build.d.ts");
+
     if (runtimePath) {
       let importMap = {
         imports: {
           "@remix-run/netlify-edge": runtimePath,
+          "@remix-run/dev/server-build": `file://${buildPath}`,
         },
       };
 

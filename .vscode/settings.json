@@ -3,7 +3,6 @@
   "deno.enablePaths": [
     "./templates/deno/",
     "./templates/netlify/remix.init/edge-server.js",
-    "./packages/remix-netlify-edge/server.ts",
     "./packages/remix-netlify-edge/globals.ts"
   ],
   "deno.unstable": true,
