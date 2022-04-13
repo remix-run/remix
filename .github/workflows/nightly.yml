@@ -48,7 +48,8 @@ jobs:
           echo ::set-output name=NEXT_VERSION::${NEXT_VERSION}
 
           git checkout -b nightly/${NEXT_VERSION}
-          npm version ${NEXT_VERSION}
+
+          yarn run version ${NEXT_VERSION} --skip-prompt
 
           git push origin --tags
 
