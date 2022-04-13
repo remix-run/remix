@@ -106,6 +106,8 @@ jobs:
         # even though this is called "npm-install" it does use yarn to install
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
+        env:
+          PLAYWRIGHT_BROWSERS_PATH: 0
 
       - name: 📥 Install Playwright
         run: npx playwright install --with-deps
