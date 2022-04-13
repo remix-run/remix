@@ -1,6 +1,14 @@
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type { ServerBuild } from "@remix-run/server-runtime";
-export function createRequestHandler<Context = unknown>({
+
+// This can be replaced with the full context type when that is published
+interface BaseContext {
+  next: (options?: { sendConditionalRequest?: boolean }) => Promise<Response>;
+}
+
+export function createRequestHandler<
+  Context extends BaseContext = BaseContext
+>({
   build,
   mode,
   getLoadContext,
@@ -13,13 +21,34 @@ export function createRequestHandler<Context = unknown>({
   ) => Promise<Context> | Context;
 }) {
   let remixHandler = createRemixRequestHandler(build, mode);
-  return async (request: Request, context: Context): Promise<Response> => {
+
+  let assetPath = build.assets.url.split("/").slice(0, -1).join("/");
+
+  return async (
+    request: Request,
+    context: Context
+  ): Promise<Response | void> => {
+    let { pathname } = new URL(request.url);
+    // Skip the handler for static files
+    if (pathname.startsWith(`${assetPath}/`)) {
+      return;
+    }
     try {
       let loadContext = getLoadContext
         ? await getLoadContext(request, context)
         : context;
 
-      return await remixHandler(request, loadContext);
+      let response = await remixHandler(request, loadContext);
+      if (response.status === 404) {
+        // Check if there is a matching static file
+        let originResponse = await context.next({
+          sendConditionalRequest: true,
+        });
+        if (originResponse.status !== 404) {
+          return originResponse;
+        }
+      }
+      return response;
     } catch (e) {
       console.error(e);
 
