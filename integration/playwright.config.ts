@@ -15,7 +15,7 @@ const config: PlaywrightTestConfig = {
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "github" : [["html", { open: "never" }]],
   use: { actionTimeout: 0 },
-  fullyParallel: true,
+  fullyParallel: false,
 
   projects: [
     {
