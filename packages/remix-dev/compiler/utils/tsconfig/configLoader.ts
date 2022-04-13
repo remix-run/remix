@@ -39,15 +39,16 @@ export function configLoader({ cwd }: ConfigLoaderParams): ConfigLoaderResult {
   if (!loadResult.tsConfigPath) {
     return {
       resultType: "failed",
-      message: "Couldn't find tsconfig.json",
+      message: "Couldn't find tsconfig.json or jsconfig.json",
     };
   }
 
   if (!loadResult.baseUrl) {
-    return {
-      resultType: "failed",
-      message: "Missing baseUrl in compilerOptions",
-    };
+    let file = path.basename(loadResult.tsConfigPath);
+    let relative = path.relative(cwd, loadResult.tsConfigPath);
+    throw new Error(
+      `🚨 "${file}" at "${relative}" does not have a compilerOptions.baseUrl property`
+    );
   }
 
   let tsConfigDir = path.dirname(loadResult.tsConfigPath);
