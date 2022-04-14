@@ -451,13 +451,17 @@ function createServerBuild(
 
     try {
       // If the user has it locally-installed, use that
-      runtimePath = `file://${require.resolve("@remix-run/netlify-edge", {
-        paths: [config.rootDirectory],
-      })}`;
+      runtimePath = `file://${require.resolve(
+        "@remix-run/netlify-edge/mod.ts",
+        {
+          paths: [config.rootDirectory],
+        }
+      )}`;
     } catch {
-      console.error("Please install '@remix-run/netlify-edge'");
-      // When published, we can fall back to a URL import instead of bailing
-      // e.g. runtimePath = "https://esm.sh/@remix-run/netlify-edge";
+      // ...otherwise, load it from the package URL. The env var is so we can override in dev.
+      runtimePath =
+        process.env.NETLIFY_EDGE_RUNTIME_PATH ??
+        "https://unpkg.com/@remix-run/netlify-edge/mod.ts";
     }
 
     let buildPath = require.resolve("./server-build.d.ts");
@@ -467,6 +471,8 @@ function createServerBuild(
         imports: {
           "@remix-run/netlify-edge": runtimePath,
           "@remix-run/dev/server-build": `file://${buildPath}`,
+          "@remix-run/server-runtime":
+            "https://esm.sh/@remix-run/server-runtime@1.3.5?pin=v77",
         },
       };
 

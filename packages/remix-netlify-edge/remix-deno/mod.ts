@@ -1,4 +1,18 @@
-export { createRequestHandler } from "./server";
+import "./globals.d.ts";
+export {
+  createCookie,
+  createCookieSessionStorage,
+  createMemorySessionStorage,
+  createSessionStorage,
+} from "./implementations.ts";
+
+export {
+  createSession,
+  isCookie,
+  isSession,
+  json,
+  redirect,
+} from "https://esm.sh/@remix-run/server-runtime?pin=v77";
 
 export type {
   ActionFunction,
@@ -33,22 +47,4 @@ export type {
   SessionData,
   SessionIdStorageStrategy,
   SessionStorage,
-} from "@remix-run/server-runtime";
-
-export {
-  createSession,
-  isCookie,
-  isSession,
-  json,
-  redirect,
-} from "@remix-run/server-runtime";
-
-// Once the @remix-run/deno runtime has been published then we
-// can remove these exports and re-export that instead.
-
-export {
-  createCookie,
-  createCookieSessionStorage,
-  createMemorySessionStorage,
-  createSessionStorage,
-} from "./remix-deno/implementations";
+} from "https://esm.sh/@remix-run/server-runtime?pin=v77";

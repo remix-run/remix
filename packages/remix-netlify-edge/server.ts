@@ -1,5 +1,5 @@
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-import type { ServerBuild } from "@remix-run/server-runtime";
+import type { ServerBuild } from "https://esm.sh/@remix-run/server-runtime@1.3.5?pin=v77";
+import { createRequestHandler as createRemixRequestHandler } from "https://esm.sh/@remix-run/server-runtime@1.3.5?pin=v77";
 
 // This can be replaced with the full context type when that is published
 interface BaseContext {
