@@ -1,5 +1,8 @@
 export { createRequestHandler } from "./server";
 
+// Once the @remix-run/deno runtime has been published then we
+// can remove these exports and re-export that instead.
+
 export {
   createCookie,
   createCookieSessionStorage,
