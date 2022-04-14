@@ -20,8 +20,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
-          cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
       # some deployment targets require the latest version of npm
       # TODO: remove this eventually when the default version we get
@@ -58,8 +56,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
-          cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
       # some deployment targets require the latest version of npm
       # TODO: remove this eventually when the default version we get
@@ -97,8 +93,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
-          cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
       # some deployment targets require the latest version of npm
       # TODO: remove this eventually when the default version we get
@@ -134,8 +128,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
-          cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
       # some deployment targets require the latest version of npm
       # TODO: remove this eventually when the default version we get
@@ -173,8 +165,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
-          cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
       # some deployment targets require the latest version of npm
       # TODO: remove this eventually when the default version we get
@@ -209,8 +199,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
-          cache-dependency-path: ./scripts/deployment-test/package-lock.json
 
       # some deployment targets require the latest version of npm
       # TODO: remove this eventually when the default version we get
