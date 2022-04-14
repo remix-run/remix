@@ -12,6 +12,7 @@
     "emitDeclarationOnly": true,
 
     "outDir": "../../build/node_modules/@remix-run/express",
-    "rootDir": "."
+    "rootDir": ".",
+    "skipLibCheck": true
   }
 }

@@ -688,7 +688,7 @@ export function Meta() {
         }
 
         if (name === "title") {
-          return <title key="title">{value}</title>;
+          return <title key="title">{value as string}</title>;
         }
 
         // Open Graph tags use the `property` attribute, while other meta tags

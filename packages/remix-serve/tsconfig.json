@@ -12,6 +12,7 @@
     "emitDeclarationOnly": true,
 
     "outDir": "../../build/node_modules/@remix-run/serve",
-    "rootDir": "."
+    "rootDir": ".",
+    "skipLibCheck": true
   }
 }
