@@ -7,4 +7,4 @@ export {
   RemixServer,
   Scripts,
   ScrollRestoration,
-} from "https://esm.sh/@remix-run/react@latest?pin=v68&dev";
+} from "https://esm.sh/@remix-run/react@latest?pin=v77&dev";
