@@ -94,8 +94,8 @@ export async function fetchData(
           }
         },
         onmessage: (event) => {
-          if (!gotEvents) {
-            if (!event.data.includes("$$__REMIX_DEFERRED_EVENTS__$$")) {
+          if (event.data.includes("$$__REMIX_DEFERRED_KEY__$$")) {
+            if (!gotEvents) {
               abort.abort();
               response = new Response(null, {
                 status: 500,
@@ -103,23 +103,9 @@ export async function fetchData(
                   "X-Remix-Error": "yes",
                 },
               });
+              return;
             }
-            let eventKeys = event.data
-              .split("$$__REMIX_DEFERRED_EVENTS__$$")[1]
-              .split(",");
 
-            totalEvents = eventKeys.length;
-
-            for (let eventKey of eventKeys) {
-              events[eventKey] = {} as any;
-              events[eventKey].promise = new Promise((resolve) => {
-                events[eventKey].resolve = resolve;
-              });
-            }
-            gotEvents = true;
-          }
-
-          if (event.data.includes("$$__REMIX_DEFERRED_KEY__$$")) {
             let [, eventKey, data] = event.data.split(
               "$$__REMIX_DEFERRED_KEY__$$"
             );
@@ -143,6 +129,32 @@ export async function fetchData(
               abort.abort();
             }
           } else {
+            let data = JSON.parse(event.data);
+            gotEvents = true;
+            if (typeof data === "object") {
+              let eventKeys = Object.values(data).reduce<string[]>(
+                (keys, value) => {
+                  if (
+                    typeof value === "string" &&
+                    value.startsWith("$$__REMIX_DEFERRED_PROMISE__$$")
+                  ) {
+                    keys.push(value.split("$$__REMIX_DEFERRED_PROMISE__$$")[1]);
+                  }
+
+                  return keys;
+                },
+                []
+              );
+
+              totalEvents = eventKeys.length;
+              for (let eventKey of eventKeys) {
+                events[eventKey] = {} as any;
+                events[eventKey].promise = new Promise((resolve) => {
+                  events[eventKey].resolve = resolve;
+                });
+              }
+            }
+
             response = new Response(event.data, {
               status,
               headers,

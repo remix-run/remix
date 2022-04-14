@@ -147,13 +147,6 @@ async function handleDataRequest({
           let body = new ReadableStream({
             start(controller) {
               controller.enqueue(
-                "data: $$__REMIX_DEFERRED_EVENTS__$$" +
-                  Object.keys(
-                    (loaderResponse as DeferredResponse).deferred
-                  ).join(",") +
-                  "\n\n"
-              );
-              controller.enqueue(
                 "data: " +
                   JSON.stringify((loaderResponse as DeferredResponse).data) +
                   "\n\n"
