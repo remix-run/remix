@@ -1,23 +1,5 @@
 export { createRequestHandler } from "./server";
 
-// Once the @remix-run/deno runtime has been published then we
-// can remove these exports and re-export that instead.
-
-export {
-  createCookie,
-  createCookieSessionStorage,
-  createMemorySessionStorage,
-  createSessionStorage,
-} from "./implementations";
-
-export {
-  createSession,
-  isCookie,
-  isSession,
-  json,
-  redirect,
-} from "@remix-run/server-runtime";
-
 export type {
   ActionFunction,
   AppData,
@@ -52,3 +34,21 @@ export type {
   SessionIdStorageStrategy,
   SessionStorage,
 } from "@remix-run/server-runtime";
+
+export {
+  createSession,
+  isCookie,
+  isSession,
+  json,
+  redirect,
+} from "@remix-run/server-runtime";
+
+// Once the @remix-run/deno runtime has been published then we
+// can remove these exports and re-export that instead.
+
+export {
+  createCookie,
+  createCookieSessionStorage,
+  createMemorySessionStorage,
+  createSessionStorage,
+} from "./remix-deno/implementations";
