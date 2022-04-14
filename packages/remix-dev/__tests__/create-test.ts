@@ -446,6 +446,22 @@ describe("the create command", () => {
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
 
+  it("runs remix.init script when using index.ts", async () => {
+    let projectDir = await getProjectDir("remix-init-auto");
+    jest.setTimeout(100000);
+    await run([
+      "create",
+      projectDir,
+      "--template",
+      path.join(__dirname, "fixtures", "stack-init-ts.tar.gz"),
+      "--install",
+    ]);
+    expect(output).toContain(`Running init script on <TEMP_DIR>\\remix-init-auto`);
+    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
+    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
+  });
+
   it("runs remix.init script when using `remix init`", async () => {
     let projectDir = await getProjectDir("remix-init-manual");
     await run([

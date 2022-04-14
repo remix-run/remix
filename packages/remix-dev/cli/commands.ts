@@ -22,6 +22,7 @@ import { log } from "../logging";
 import { createApp } from "./create";
 import { getPreferredPackageManager } from "./getPreferredPackageManager";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
+import * as esbuild from "esbuild";
 
 export * as migrate from "./migrate";
 
@@ -64,8 +65,16 @@ export async function init(
   { deleteScript = true }: InitFlags = {}
 ) {
   let initScriptDir = path.join(projectDir, "remix.init");
+  let initScriptTs = path.resolve(initScriptDir, "index.ts");
   let initScript = path.resolve(initScriptDir, "index.js");
 
+  if (await fse.pathExists(initScriptTs)) {
+    await esbuild.build({
+      entryPoints: [initScriptTs],
+      platform: "node",
+      outfile: initScript,
+    })
+  }
   if (!(await fse.pathExists(initScript))) {
     return;
   }
@@ -73,6 +82,7 @@ export async function init(
   let initPackageJson = path.resolve(initScriptDir, "package.json");
   let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
   let packageManager = getPreferredPackageManager();
+
 
   if (await fse.pathExists(initPackageJson)) {
     execSync(`${packageManager} install`, {
@@ -82,6 +92,9 @@ export async function init(
   }
 
   let initFn = require(initScript);
+  if (initFn.default) {
+    initFn = initFn.default;
+  }
   try {
     await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
 
