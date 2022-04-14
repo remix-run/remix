@@ -99,6 +99,16 @@ function useScrollRestoration() {
         return;
       }
 
+      // If the user specifically indicated that scroll should
+      // be disabled, we don't need to scroll
+      if (
+        location.state &&
+        typeof location.state === "object" &&
+        (location.state as { scroll: boolean }).scroll === false
+      ) {
+        return;
+      }
+
       let y = positions[location.key];
 
       // been here before, scroll to it
