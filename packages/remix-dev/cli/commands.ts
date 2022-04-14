@@ -71,6 +71,7 @@ export async function init(
   if (await fse.pathExists(initScriptTs)) {
     await esbuild.build({
       entryPoints: [initScriptTs],
+      format: "cjs",
       platform: "node",
       outfile: initScript,
     })
@@ -92,7 +93,7 @@ export async function init(
   }
 
   let initFn = require(initScript);
-  if (initFn.default) {
+  if (typeof initFn !== 'function' && initFn.default) {
     initFn = initFn.default;
   }
   try {
