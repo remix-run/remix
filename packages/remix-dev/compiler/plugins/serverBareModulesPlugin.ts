@@ -170,6 +170,8 @@ function warnOnceIfEsmOnlyPackage(
     }
   } catch (error: unknown) {
     // module not installed
+    // we warned earlier if a package is used without being in package.json
+    // if the build fails, the reason will be right there
   }
 }
 
