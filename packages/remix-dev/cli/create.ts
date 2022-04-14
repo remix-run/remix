@@ -440,7 +440,11 @@ export async function validateTemplate(input: string) {
     case "remoteTarball": {
       let spinner = ora("Validating the template file…").start();
       try {
-        let response = await fetch(input, { method: "HEAD" });
+        let reqOptions = { method: "HEAD", headers: {} };
+        if (input.startsWith("https://github.com/")) {
+          reqOptions.headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
+        }
+        let response = await fetch(input, reqOptions);
         spinner.stop();
         switch (response.status) {
           case 200:
@@ -469,7 +473,7 @@ export async function validateTemplate(input: string) {
       let spinner = ora("Validating the template repo…").start();
       let { url, filePath } = getRepoInfo(input);
       try {
-        let response = await fetch(url, { method: "HEAD" });
+        let response = await fetch(url, { method: "HEAD", headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` } });
         spinner.stop();
         switch (response.status) {
           case 200:
