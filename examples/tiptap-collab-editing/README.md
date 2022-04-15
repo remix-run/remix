@@ -7,7 +7,7 @@ this is an example of using tiptap,yjs and webrtc to do real time collaborative 
 ```
 app
 ├── routes
-│   └── editor.tsx // tiptab editor route
+│   └── editor.tsx // tiptab editor route, open it in different browser to see the changes get sync
 └── utils
     └── webrtc.client.tsx //init the webrtc, ydoc and collaboration plugin on client
 ```
@@ -21,3 +21,4 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 ## Related Links
 
 - [Collaborative editing – Tiptap Editor](https://tiptap.dev/guide/collaborative-editing#show-other-cursors)
+- [Remix | Module Constraints](https://remix.run/docs/en/v1/guides/constraints#document-guard)

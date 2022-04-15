@@ -3,8 +3,8 @@ import StarterKit from "@tiptap/starter-kit";
 import { Collaboration, ydoc, WebrtcProvider } from "~/utils/webrtc.client";
 
 if (typeof document !== "undefined") {
-  //setting the room
-  const provider = new WebrtcProvider("room-remix-example", ydoc);
+  //join the room remix example
+  new WebrtcProvider("room-remix-example", ydoc);
 }
 export default () => {
   let editor;
