@@ -48,7 +48,7 @@ jobs:
           echo ::set-output name=NEXT_VERSION::${NEXT_VERSION}
 
           git checkout -b nightly/${NEXT_VERSION}
-          
+
           if [ -z "$(git status --porcelain)" ]; then
             echo "✨"
           else
@@ -56,7 +56,7 @@ jobs:
             git add .
             git commit -m "dirty working directory..."
           fi
-          
+
           yarn run version ${NEXT_VERSION} --skip-prompt
 
           git push origin --tags
