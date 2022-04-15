@@ -24,7 +24,6 @@ If you want to follow this tutorial locally on your own computer, it is importan
 - [npm](https://www.npmjs.com) 7 or greater
 - A code editor
 
-
 ## Creating the project
 
 <docs-warning>Make sure you are running at least Node v14 or greater</docs-warning>
