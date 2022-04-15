@@ -63,8 +63,12 @@ jobs:
         run: yarn lint
 
   test:
-    name: 🧪 Test
-    runs-on: ubuntu-latest
+    name: 🧪 Test: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
@@ -87,8 +91,12 @@ jobs:
         run: "yarn test:primary"
 
   integration:
-    name: 👀 Integration Test
-    runs-on: ubuntu-latest
+    name: 👀 Integration Test: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
