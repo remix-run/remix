@@ -171,7 +171,7 @@ Index routes are "leaf routes". They're the end of the line. If you think you ne
 
 This usually comes up when folks are just getting started with Remix and put their global nav in `app/routes/index.jsx`. Move that global nav up into `app/root.jsx`. Everything inside of `app/routes/*` is already a child of `root.tsx`.
 
-**What is the `?index` query param?**
+### What is the `?index` query param?
 
 You may notice an `?index` query parameter showing up on your URLs from time to time, particularly when you are submitting a `<Form>` from an index route. This is required to differentiate index routes from their parent layout routes. Consider the following structure, where a URL such as `/sales/invoices/` would be ambiguous. Is that referring to the `routes/sales/invoices.jsx` file? Or is it referring to the `routes/sales/invoices/index.jsx` file? In order to avoid this ambiguity, Remix uses the `?index` parameter to indicate when a URL refers to the index route instead of the layout route.
 
