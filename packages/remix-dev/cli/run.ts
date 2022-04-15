@@ -33,14 +33,16 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
 
   ${colors.heading("Usage")}:
     $ remix create <${colors.arg("projectDir")}> --template <${colors.arg(
-    "template"
-  )}>
+  "template"
+)}>
     $ remix init [${colors.arg("projectDir")}]
     $ remix build [${colors.arg("projectDir")}]
     $ remix dev [${colors.arg("projectDir")}]
     $ remix routes [${colors.arg("projectDir")}]
     $ remix setup [${colors.arg("remixPlatform")}]
-    $ remix migrate [-m ${colors.arg("migration")}] [${colors.arg("projectDir")}]
+    $ remix migrate [-m ${colors.arg("migration")}] [${colors.arg(
+  "projectDir"
+)}]
 
   ${colors.heading("Options")}:
     --help, -h          Print this help message and exit
@@ -173,32 +175,8 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     },
     {
       argv,
-      // permissive: true,
     }
   );
-
-  // let { flags, input, showHelp, showVersion } = meow(helpText, {
-  //   importMeta: {
-  //     url: new (require("url".replace("", "")).URL)("file:" + __filename).href,
-  //   },
-  //   argv,
-  //   booleanDefault: undefined,
-  //   description: false,
-  //   flags: {
-  //     debug: { type: "boolean" },
-  //     dry: { type: "boolean" },
-  //     force: { type: "boolean" },
-  //     help: { type: "boolean", alias: "h" },
-  //     install: { type: "boolean" },
-  //     json: { type: "boolean" },
-  //     migration: { type: "string", alias: "m" },
-  //     remixVersion: { type: "string" },
-  //     sourcemap: { type: "boolean" },
-  //     template: { type: "string" },
-  //     typescript: { type: "boolean" },
-  //     version: { type: "boolean", alias: "v" },
-  //   },
-  // });
 
   let flags: any = Object.entries(args).reduce((acc, [key, value]) => {
     key = key.replace(/^--/, "");
