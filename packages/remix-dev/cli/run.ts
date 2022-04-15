@@ -3,10 +3,28 @@ import os from "os";
 import inspector from "inspector";
 import meow from "meow";
 import inquirer from "inquirer";
+import semver from "semver";
+import fse from "fs-extra";
+import ora from "ora";
 
 import * as colors from "../colors";
 import * as commands from "./commands";
+import { convertTemplateToJavaScript } from "./convert-to-javascript";
 import { validateNewProjectPath, validateTemplate } from "./create";
+
+/**
+ * Determine which package manager the user prefers.
+ *
+ * npm, Yarn and pnpm set the user agent environment variable
+ * that can be used to determine which package manager ran
+ * the command.
+ */
+function getPreferredPackageManager() {
+  return ((process.env.npm_user_agent ?? "").split("/")[0] || "npm") as
+    | "npm"
+    | "yarn"
+    | "pnpm";
+}
 
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
@@ -40,6 +58,7 @@ ${colors.heading("Options")}:
 \`routes\` Options:
   --json              Print the routes as JSON
 \`migrate\` Options:
+  --debug             Show debugging logs
   --dry               Dry run (no changes are made to files)
   --force             Bypass Git safety checks and forcibly run migration
   --migration, -m     Name of the migration to run
@@ -113,11 +132,25 @@ const templateChoices = [
   { name: "Cloudflare Workers", value: "cloudflare-workers" },
 ];
 
+const npxInterop = {
+  npm: "npx",
+  yarn: "yarn",
+  pnpm: "pnpm exec",
+};
+
 /**
  * Programmatic interface for running the Remix CLI with the given command line
  * arguments.
  */
 export async function run(argv: string[] = process.argv.slice(2)) {
+  // Check the node version
+  let versions = process.versions;
+  if (versions && versions.node && semver.major(versions.node) < 14) {
+    throw new Error(
+      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than 14.`
+    );
+  }
+
   let { flags, input, showHelp, showVersion } = meow(helpText, {
     argv,
     booleanDefault: undefined,
@@ -209,6 +242,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         return;
       }
 
+      let pm = getPreferredPackageManager();
       let answers = await inquirer
         .prompt<{
           appType: "template" | "stack";
@@ -271,23 +305,9 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             choices: templateChoices,
           },
           {
-            name: "useTypeScript",
-            type: "list",
-            message: "TypeScript or JavaScript?",
-            when(answers) {
-              return (
-                flags.template === undefined && answers.appType !== "stack"
-              );
-            },
-            choices: [
-              { name: "TypeScript", value: true },
-              { name: "JavaScript", value: false },
-            ],
-          },
-          {
             name: "install",
             type: "confirm",
-            message: "Do you want me to run `npm install`?",
+            message: `Do you want me to run \`${pm} install\`?`,
             when() {
               return flags.install === undefined;
             },
@@ -301,7 +321,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
                 "🚨 Your terminal doesn't support interactivity; using default " +
                   "configuration.\n\n" +
                   "If you'd like to use different settings, try passing them " +
-                  "as arguments. Run `npx create-remix@latest --help` to see " +
+                  `as arguments. Run \`${pm} create remix@latest --help\` to see ` +
                   "available options."
               )
             );
@@ -315,19 +335,86 @@ export async function run(argv: string[] = process.argv.slice(2)) {
           throw error;
         });
 
+      let installDeps = flags.install !== false && answers.install !== false;
+
       await commands.create({
         appTemplate: flags.template || answers.appTemplate,
         projectDir,
         remixVersion: flags.remixVersion,
-        installDeps: flags.install !== false && answers.install !== false,
-        useTypeScript:
-          flags.typescript !== false && answers.useTypeScript !== false,
+        installDeps,
+        packageManager: pm,
+        useTypeScript: flags.typescript !== false,
         githubToken: process.env.GITHUB_TOKEN,
       });
+
+      let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
+
+      if (flags.typescript === undefined && isTypeScript) {
+        let { useTypeScript } = await inquirer.prompt<{
+          useTypeScript: boolean;
+        }>([
+          {
+            name: "useTypeScript",
+            type: "list",
+            message: "TypeScript or JavaScript?",
+            choices: [
+              { name: "TypeScript", value: true },
+              { name: "JavaScript", value: false },
+            ],
+          },
+        ]);
+
+        if (useTypeScript === false) {
+          let spinner = ora("Converting template to JavaScript…").start();
+          await convertTemplateToJavaScript(projectDir);
+          spinner.stop();
+          spinner.clear();
+        }
+      }
+
+      let initScriptDir = path.join(projectDir, "remix.init");
+      let hasInitScript = await fse.pathExists(initScriptDir);
+      if (hasInitScript) {
+        if (installDeps) {
+          console.log("💿 Running remix.init script");
+          await commands.init(projectDir, pm);
+          await fse.remove(initScriptDir);
+        } else {
+          console.log();
+          console.log(
+            colors.warning(
+              "💿 You've opted out of installing dependencies so we won't run the " +
+                "remix.init/index.js script for you just yet. Once you've installed " +
+                `dependencies, you can run it manually with \`${npxInterop[pm]} remix init\``
+            )
+          );
+          console.log();
+        }
+      }
+
+      let relProjectDir = path.relative(process.cwd(), projectDir);
+      let projectDirIsCurrentDir = relProjectDir === "";
+
+      if (projectDirIsCurrentDir) {
+        console.log(
+          `💿 That's it! Check the README for development and deploy instructions!`
+        );
+      } else {
+        console.log(
+          `💿 That's it! \`cd\` into "${path.resolve(
+            process.cwd(),
+            projectDir
+          )}" and check the README for development and deploy instructions!`
+        );
+      }
+
       break;
     }
     case "init":
-      await commands.init(input[1] || process.env.REMIX_ROOT || process.cwd());
+      await commands.init(
+        input[1] || process.env.REMIX_ROOT || process.cwd(),
+        getPreferredPackageManager()
+      );
       break;
     case "routes":
       await commands.routes(input[1], flags.json ? "json" : "jsx");
@@ -344,10 +431,13 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       await commands.setup(input[1]);
       break;
     case "migrate": {
-      let { migrationId, projectDir } = await commands.migrate.resolveInput({
-        migrationId: flags.migration,
-        projectDir: input[1],
-      });
+      let { projectDir, migrationId } = await commands.migrate.resolveInput(
+        {
+          projectId: input[1],
+          migrationId: flags.migration,
+        },
+        flags
+      );
       await commands.migrate.run({ migrationId, projectDir, flags });
       break;
     }

@@ -69,9 +69,9 @@ All commits that fix bugs or add features need a test.
 
 `<blink>`Do not merge code without tests!`</blink>`
 
-We use `jest` for our testing in this project. We have a suite of integration tests in the integration folder and packages have their own jest configuration which are then referenced by the primary jest config in the root of the project.
+We use a mix of `jest` and `playwright` for our testing in this project. We have a suite of integration tests in the integration folder and packages have their own jest configuration, which are then referenced by the primary jest config in the root of the project.
 
-The integration tests need to be run with `--runInBand` and the primary tests can be run in parallel which is why they each are run by different instances of `jest`. And then we use `npm-run-all` to run those both in parallel to make the tests run as quickly and efficiently as possible. To run these two sets of tests independently you'll need to run the individual script:
+The integration tests, and the primary tests can be run in parallel using `npm-run-all` to make the tests run as quickly and efficiently as possible. To run these two sets of tests independently you'll need to run the individual script:
 
 - `yarn test:primary`
 - `yarn test:integration`
@@ -100,7 +100,21 @@ We use [Yarn workspaces](https://classic.yarnpkg.com/en/docs/workspaces/) to man
 
 ### Building
 
-Running `yarn build` from the root directory will run the build.
+Running `yarn build` from the root directory will run the build. You can run the build in watch mode with `yarn watch`.
+
+### Playground
+
+It's often really useful to be able to interact with a real app while developing features for apps. So you can place an app in the `playground` directory and the build process will automatically copy all the output to the `node_modules` of all the apps in the `playground` directory for you. It will even trigger a live reload event for you!
+
+To generate a new playground, simply run:
+
+```sh
+yarn playground:new <?name>
+```
+
+Where the name of the playground is optional and defaults to `playground-${Date.now()}`. Then you can `cd` into the directory that's generated for you and run `npm run dev`. In another teminal window have `yarn watch` running and you're ready to work on whatever Remix features you like with live reload magic 🧙‍♂️
+
+The playground generated from `yarn playground:new` is based on a template in `scripts/playground/template`. If you'd like to change anything about the template, you can create a custom one in `scripts/playground/template.local` which is `.gitignored` so you can customize it to your heart's content.
 
 ### Testing
 

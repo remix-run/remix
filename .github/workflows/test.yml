@@ -1,11 +1,11 @@
-name: test
+name: 🧪 Test
 
 on:
   push:
     branches:
       - main
       - dev
-      - release/*
+      - release-*
     tags-ignore:
       - v*
     paths-ignore:
@@ -30,12 +30,12 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "yarn"
 
-      - name: 📥 Download deps
+      - name: 📥 Install deps
         # even though this is called "npm-install" it does use yarn to install
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
 
-      - name: ⚙️ Build
+      - name: 🏗 Build
         run: yarn build
 
   lint:
@@ -54,7 +54,7 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "yarn"
 
-      - name: 📥 Download deps
+      - name: 📥 Install deps
         # even though this is called "npm-install" it does use yarn to install
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
@@ -78,7 +78,7 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "yarn"
 
-      - name: 📥 Download deps
+      - name: 📥 Install deps
         # even though this is called "npm-install" it does use yarn to install
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
@@ -102,10 +102,30 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "yarn"
 
-      - name: 📥 Download deps
+      - name: 📥 Install deps
         # even though this is called "npm-install" it does use yarn to install
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
+
+      # playwright recommeds if you cache the binaries to keep it tied to the version of playwright you are using.
+      # https://playwright.dev/docs/ci#caching-browsers
+      - name: Get current Playwright version
+        id: playwright-version
+        run: |
+          playwright_version=$(npm --json list @playwright/test | jq -r .dependencies[].version)
+          echo "::set-output name=version::${playwright_version}"
+
+      - name: 🤖 Cache Playwright binaries
+        uses: actions/cache@v3
+        id: playwright-cache
+        with:
+          path: |
+            ~/.cache/ms-playwright
+          key: cache-playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: 📥 Install Playwright
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
 
       - name: 👀 Run Integration Tests
         run: "yarn test:integration"
