@@ -63,7 +63,7 @@ jobs:
         run: yarn lint
 
   test:
-    name: 🧪 Test: ${{ matrix.os }}
+    name: "🧪 Test: ${{ matrix.os }}"
     strategy:
       fail-fast: false
       matrix:
@@ -91,7 +91,7 @@ jobs:
         run: "yarn test:primary"
 
   integration:
-    name: 👀 Integration Test: ${{ matrix.os }}
+    name: "👀 Integration Test: ${{ matrix.os }}"
     strategy:
       fail-fast: false
       matrix:
