@@ -41,6 +41,9 @@ jobs:
       - name: ⤴️ Update Version
         id: version
         run: |
+          git config --local user.email "hello@remix.run"
+          git config --local user.name "Remix Run Bot"
+
           SHA=$(git rev-parse HEAD)
           SHORT_SHA=${SHA::7}
           DATE=$(date '+%Y%m%d')
