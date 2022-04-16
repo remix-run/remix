@@ -1,4 +1,4 @@
-const select = require("@inquirer/select");
+const inquirer = require("inquirer");
 const fs = require("fs/promises");
 const { join } = require("path");
 
@@ -24,24 +24,23 @@ async function main({ rootDirectory }) {
 }
 
 async function shouldUseEdge() {
-  let edge = await select({
-    name: "edge",
-    default: false,
-    message: "Run your Remix site with:",
-    choices: [
-      {
-        name: "Netlify Functions",
-        description: "Choose this for stable support for production sites",
-        value: false,
-      },
-      {
-        name: "Netlify Edge Functions (beta)",
-        description:
-          "Try this experimental beta for improved performance on non-critical sites",
-        value: true,
-      },
-    ],
-  });
+  let { edge } = await inquirer.prompt([
+    {
+      name: "edge",
+      type: "list",
+      message: "Run your Remix site with:",
+      choices: [
+        {
+          name: "Netlify Functions - Choose this for stable support for production sites",
+          value: false,
+        },
+        {
+          name: "Netlify Edge Functions - Try this experimental beta for improved performance on non-critical sites",
+          value: true,
+        },
+      ],
+    },
+  ]);
   return edge;
 }
 

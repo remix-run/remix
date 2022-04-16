@@ -5,6 +5,6 @@
   "license": "MIT",
   "private": true,
   "dependencies": {
-    "@inquirer/select": "^0.0.18-alpha.0"
+    "inquirer": "^8.2.2"
   }
 }
