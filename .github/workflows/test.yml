@@ -129,16 +129,32 @@ jobs:
           playwright_version=$(npm info @playwright/test version)
           echo "::set-output name=version::${playwright_version}"
 
-      - name: 🤖 Cache Playwright binaries
+      - name: 🤖 Cache Playwright binaries (Linux)
         uses: actions/cache@v3
         id: playwright-cache
         with:
           path: |
             ~/.cache/ms-playwright
-          key: cache-playwright-${{ steps.playwright-version.outputs.version }}
+          key: cache-playwright-${{ steps.playwright-version.outputs.version }}-${{ matrix.os }}
+
+      - name: 🤖 Cache Playwright binaries (Windows)
+        uses: actions/cache@v3
+        id: playwright-cache
+        with:
+          path: |
+            %USERPROFILE%\AppData\Local\ms-playwright
+          key: cache-playwright-${{ steps.playwright-version.outputs.version }}-${{ matrix.os }}
+
+      - name: 🤖 Cache Playwright binaries (macOS)
+        uses: actions/cache@v3
+        id: playwright-cache
+        with:
+          path: |
+            ~/Library/Caches/ms-playwright
+          key: cache-playwright-${{ steps.playwright-version.outputs.version }}-${{ matrix.os }}
 
       - name: 📥 Install Playwright
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        if: steps.playwright-cache-${{ matrix.os }}.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
 
       - name: 👀 Run Integration Tests
