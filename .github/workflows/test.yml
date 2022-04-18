@@ -123,7 +123,7 @@ jobs:
 
       # playwright recommends if you cache the binaries to keep it tied to the version of playwright you are using.
       # https://playwright.dev/docs/ci#caching-browsers
-      - name: Get current Playwright version
+      - name: 🕵️‍♂️ Get current Playwright version
         id: playwright-version
         shell: bash
         run: |
@@ -134,10 +134,10 @@ jobs:
         id: playwright-install-dir
         shell: bash
         run: |
-          if [[ ${{ matrix.os }} == "windows-latest" ]]
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]
           then
             echo "::set-output name=install-dir::%USERPROFILE%\AppData\Local\ms-playwright"
-          elif [[ ${{ matrix.os }} == "macos-latest" ]]
+          elif [[ "${{ matrix.os }}" == "macos-latest" ]]
           then
             echo "::set-output name=dir::~/Library/Caches/ms-playwright"
           else
