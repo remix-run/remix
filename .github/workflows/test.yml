@@ -151,7 +151,7 @@ jobs:
           path: ${{ steps.playwright-install-dir.outputs.dir }}
           key: cache-playwright-${{ steps.playwright-version.outputs.version }}-${{ matrix.os }}
 
-      - name: Debug
+      - name: 🖨️ Playwright info
         shell: bash
         run: |
           echo "OS: ${{ matrix.os }}"
