@@ -144,12 +144,20 @@ jobs:
             echo "::set-output name=dir::~/.cache/ms-playwright"
           fi
 
-      - name: 🤖 Cache Playwright binaries (Linux)
+      - name: 🤖 Cache Playwright binaries
         uses: actions/cache@v3
         id: playwright-cache
         with:
           path: ${{ steps.playwright-install-dir.outputs.dir }}
           key: cache-playwright-${{ steps.playwright-version.outputs.version }}-${{ matrix.os }}
+
+      - name: Debug
+        shell: bash
+        run: |
+          echo "OS: ${{ matrix.os }}"
+          echo "Playwright version: ${{ steps.playwright-version.outputs.version }}"
+          echo "Playwright install dir: ${{ steps.playwright-install-dir.outputs.dir }}"
+          echo "Cache Hit: ${{ steps.playwright-cache.outputs.cache-hit }}"
 
       - name: 📥 Install Playwright
         if: steps.playwright-cache.outputs.cache-hit != 'true'
