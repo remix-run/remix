@@ -67,7 +67,7 @@ jobs:
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
       - name: 🚀 Publish
-        run: npm run publish --tag nightly
+        run: npm run publish
 
       - name: 🐱 Create GitHub release
         uses: actions/create-release@v1
