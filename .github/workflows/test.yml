@@ -149,7 +149,7 @@ jobs:
         id: playwright-cache
         with:
           path: ${{ steps.playwright-install-dir.outputs.dir }}
-          key: ${{ runner.os }}-cache-playwright-${{ steps.playwright-version.outputs.version }}-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-cache-playwright-${{ steps.playwright-version.outputs.version }}
 
       - name: 🖨️ Playwright info
         shell: bash
@@ -157,7 +157,8 @@ jobs:
           echo "OS: ${{ matrix.os }}"
           echo "Playwright version: ${{ steps.playwright-version.outputs.version }}"
           echo "Playwright install dir: ${{ steps.playwright-install-dir.outputs.dir }}"
-          echo "Cache Hit: ${{ steps.playwright-cache.outputs.cache-hit == 'true' }}"
+          echo "Cache key: ${{ runner.os }}-cache-playwright-${{ steps.playwright-version.outputs.version }}"
+          echo "Cache hit: ${{ steps.playwright-cache.outputs.cache-hit == 'true' }}"
 
       - name: 📥 Install Playwright
         if: steps.playwright-cache.outputs.cache-hit != 'true'
