@@ -157,7 +157,7 @@ jobs:
           echo "OS: ${{ matrix.os }}"
           echo "Playwright version: ${{ steps.playwright-version.outputs.version }}"
           echo "Playwright install dir: ${{ steps.playwright-install-dir.outputs.dir }}"
-          echo "Cache Hit: ${{ steps.playwright-cache.outputs.cache-hit }}"
+          echo "Cache Hit: ${{ steps.playwright-cache.outputs.cache-hit == 'true' }}"
 
       - name: 📥 Install Playwright
         if: steps.playwright-cache.outputs.cache-hit != 'true'
