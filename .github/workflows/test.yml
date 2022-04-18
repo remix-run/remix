@@ -154,10 +154,6 @@ jobs:
           echo "Cache key: ${{ runner.os }}-cache-playwright-${{ steps.playwright-version.outputs.version }}"
           echo "Cache hit: ${{ steps.playwright-cache.outputs.cache-hit == 'true' }}"
 
-          echo "Files in cache"
-          ls -l ${{ matrix.playwright_binary_path }}
-          ls ${{ matrix.playwright_binary_path }}
-
       - name: 📥 Install Playwright
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
