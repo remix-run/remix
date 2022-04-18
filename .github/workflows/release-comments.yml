@@ -1,8 +1,8 @@
 name: 📝 Comment on Release
 
 on:
-  release:
-    types: [published]
+  repository_dispatch:
+    types: [release]
 
 jobs:
   comment:
@@ -29,4 +29,4 @@ jobs:
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{ github.token }}
-          GITHUB_REF: ${{ github.ref }}
+          GITHUB_REF: ${{ github.event.client_payload.ref }}

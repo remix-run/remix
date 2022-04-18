@@ -15,3 +15,5 @@ export const [OWNER, REPO] = process.env.GITHUB_REPOSITORY.split("/");
 export const LATEST_RELEASE = process.env.GITHUB_REF.replace("refs/tags/", "");
 export const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 export const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY;
+
+export const PR_FILES_STARTS_WITH = ["packages/"];

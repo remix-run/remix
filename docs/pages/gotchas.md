@@ -18,7 +18,7 @@ TypeError: Cannot read properties of undefined (reading 'root')
 
 For example, you can't import "fs-extra" directly into a route module:
 
-```js lines=[2] filename=app/routes/index.jsx bad
+```jsx bad filename=app/routes/index.jsx lines=[2] nocopy
 import { json } from "@remix-run/{runtime}";
 import fs from "fs-extra";
 
@@ -31,7 +31,7 @@ export default function SomeRoute() {
 }
 ```
 
-To fix it, move the import into a different module named `*.server.js` and import from there. In our example here, we create a new file at `utils/fs-extra.server.js`:
+To fix it, move the import into a different module named `*.server.js` or `*.server.ts` and import from there. In our example here, we create a new file at `utils/fs-extra.server.js`:
 
 ```js filename=app/utils/fs-extra.server.js
 export * from "fs-extra";
@@ -39,7 +39,7 @@ export * from "fs-extra";
 
 And then change our import in the route to the new "wrapper" module:
 
-```js lines=[3] filename=app/routes/index.jsx
+```jsx filename=app/routes/index.jsx lines=[3]
 import { json } from "@remix-run/{runtime}";
 
 import fs from "../utils/fs-extra.server";
@@ -57,26 +57,35 @@ Even better, send a PR to the project to add `"sideEffects": false` to their pac
 
 Similarly, you may run into the same error if you call a function at the top-level scope of your route module that depends on server-only code.
 
-For example, [Remix upload handlers like `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler`](../api/remix#uploadhandler) use Node globals under the hood and should only be called on the server. You can call either of these functions in a `*.server.js` or `*.server.ts` file, or you can move them into your route's `action` or `loader` function:
+For example, [Remix upload handlers like `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler`](../api/remix#uploadhandler) use Node globals under the hood and should only be called on the server. You can call either of these functions in a `*.server.js` or `*.server.ts` file, or you can move them into your route's `action` or `loader` function.
 
-```tsx filename=app/routes/some-route.jsx
+So instead of doing:
+
+```jsx bad filename=app/routes/some-route.jsx lines=[3-6]
 import { unstable_createFileUploadHandler } from "@remix-run/{runtime}";
 
-// Instead of this…
 const uploadHandler = unstable_createFileUploadHandler({
   maxFileSize: 5_000_000,
   file: ({ filename }) => filename,
 });
 
-// …do this
+export async function action() {
+  // use `uploadHandler` here ...
+}
+```
 
-export async function action({ request }) {
+You should be doing:
+
+```jsx filename=app/routes/some-route.jsx good lines=[4-7]
+import { unstable_createFileUploadHandler } from "@remix-run/{runtime}";
+
+export async function action() {
   const uploadHandler = unstable_createFileUploadHandler({
     maxFileSize: 5_000_000,
     file: ({ filename }) => filename,
   });
 
-  // ...
+  // use `uploadHandler` here ...
 }
 ```
 

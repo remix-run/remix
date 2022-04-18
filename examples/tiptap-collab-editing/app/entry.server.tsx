@@ -1,7 +1,6 @@
-import React from "./deps/react.ts";
-import { renderToString } from "./deps/react-dom-server.ts";
-import { RemixServer } from "./deps/@remix-run/react.ts";
-import type { EntryContext } from "../remix-deno/index.ts";
+import type { EntryContext } from "@remix-run/node";
+import { RemixServer } from "@remix-run/react";
+import { renderToString } from "react-dom/server";
 
 export default function handleRequest(
   request: Request,
