@@ -132,7 +132,7 @@ jobs:
 
       - name: 🤖 Cache Playwright binaries (Linux)
         uses: actions/cache@v3
-        id: playwright-cache
+        id: playwright-cache-${{ matrix.os }}
         with:
           path: |
             ~/.cache/ms-playwright
@@ -140,7 +140,7 @@ jobs:
 
       - name: 🤖 Cache Playwright binaries (Windows)
         uses: actions/cache@v3
-        id: playwright-cache
+        id: playwright-cache-${{ matrix.os }}
         with:
           path: |
             %USERPROFILE%\AppData\Local\ms-playwright
@@ -148,7 +148,7 @@ jobs:
 
       - name: 🤖 Cache Playwright binaries (macOS)
         uses: actions/cache@v3
-        id: playwright-cache
+        id: playwright-cache-${{ matrix.os }}
         with:
           path: |
             ~/Library/Caches/ms-playwright
