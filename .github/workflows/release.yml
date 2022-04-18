@@ -7,8 +7,11 @@ on:
 jobs:
   manual:
     name: 📝 Manual Release
+    # we need to check for `nightly` refs and skip them as we dont want to
+    # double publish a version as it would fail. unfortantely even using curl
+    # and a `repository_dispatch` trigger, actions still aren't ran if a version
+    # is published using the default secrets.GITHUB_TOKEN.
     if: |
-      # we need to check for `nightly` refs and skip them as we dont want to double publish a version as it would fail. unfortantely even using curl and a `repository_dispatch` trigger, actions still aren't ran if a version is published using the default secrets.GITHUB_TOKEN.
       github.repository == 'remix-run/remix' &&
       !contains(github.ref, 'nightly')
     runs-on: ubuntu-latest
