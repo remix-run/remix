@@ -124,16 +124,12 @@ jobs:
       # playwright recommeds if you cache the binaries to keep it tied to the version of playwright you are using.
       # https://playwright.dev/docs/ci#caching-browsers
       - name: Get current Playwright version
-        # TODO: Fix the version check to remove this conditional
-        if: ${{ matrix.os != 'windows-latest' }}
         id: playwright-version
         run: |
-          playwright_version=$(npm --json list @playwright/test | jq -r .dependencies[].version)
+          playwright_version=$(npm info @playwright/test version)
           echo "::set-output name=version::${playwright_version}"
 
       - name: 🤖 Cache Playwright binaries
-        # TODO: Fix the version check to remove this conditional
-        if: ${{ matrix.os != 'windows-latest' }}
         uses: actions/cache@v3
         id: playwright-cache
         with:
