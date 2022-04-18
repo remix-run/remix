@@ -121,7 +121,7 @@ jobs:
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
 
-      # playwright recommeds if you cache the binaries to keep it tied to the version of playwright you are using.
+      # playwright recommends if you cache the binaries to keep it tied to the version of playwright you are using.
       # https://playwright.dev/docs/ci#caching-browsers
       - name: Get current Playwright version
         id: playwright-version
@@ -132,6 +132,7 @@ jobs:
 
       - name: 🤖 Cache Playwright binaries (Linux)
         uses: actions/cache@v3
+        if: ${{ matrix.os == 'linux-latest' }}
         id: playwright-cache-ubuntu-latest
         with:
           path: |
@@ -140,6 +141,7 @@ jobs:
 
       - name: 🤖 Cache Playwright binaries (Windows)
         uses: actions/cache@v3
+        if: ${{ matrix.os == 'windows-latest' }}
         id: playwright-cache-windows-latest
         with:
           path: |
@@ -148,6 +150,7 @@ jobs:
 
       - name: 🤖 Cache Playwright binaries (macOS)
         uses: actions/cache@v3
+        if: ${{ matrix.os == 'macos-latest' }}
         id: playwright-cache-macos-latest
         with:
           path: |
