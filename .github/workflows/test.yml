@@ -149,7 +149,7 @@ jobs:
         id: playwright-cache
         with:
           path: ${{ steps.playwright-install-dir.outputs.dir }}
-          key: cache-playwright-${{ steps.playwright-version.outputs.version }}-${{ matrix.os }}
+          key: ${{ runner.os }}-cache-playwright-${{ steps.playwright-version.outputs.version }}-${{ hashFiles('**/package-lock.json') }}
 
       - name: 🖨️ Playwright info
         shell: bash
