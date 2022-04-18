@@ -136,7 +136,7 @@ jobs:
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]
           then
-            echo "::set-output name=install-dir::%USERPROFILE%\AppData\Local\ms-playwright"
+            echo "::set-output name=dir::%USERPROFILE%\AppData\Local\ms-playwright"
           elif [[ "${{ matrix.os }}" == "macos-latest" ]]
           then
             echo "::set-output name=dir::~/Library/Caches/ms-playwright"
