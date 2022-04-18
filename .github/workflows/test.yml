@@ -132,7 +132,7 @@ jobs:
           echo "::set-output name=version::${playwright_version}"
 
       - name: 🤖 Cache Playwright binaries
-      # TODO: Fix the version check to remove this conditional
+        # TODO: Fix the version check to remove this conditional
         if: ${{ matrix.os != 'windows-latest' }}
         uses: actions/cache@v3
         id: playwright-cache
