@@ -102,6 +102,14 @@ jobs:
           - ubuntu-latest
           # - macos-latest
           - windows-latest
+        include:
+          - os: ubuntu-latest
+            playwright_binary_path: ~/.cache/ms-playwright
+          # - os: macos-latest
+          #   playwright_binary_path: ~/Library/Caches/ms-playwright
+          - os: windows-latest
+            playwright_binary_path: '~\\AppData\\Local\\ms-playwright'
+
     runs-on: ${{ matrix.os }}
     steps:
       - name: 🛑 Cancel Previous Runs
@@ -121,25 +129,30 @@ jobs:
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
 
-      # playwright recommeds if you cache the binaries to keep it tied to the version of playwright you are using.
+      # playwright recommends if you cache the binaries to keep it tied to the version of playwright you are using.
       # https://playwright.dev/docs/ci#caching-browsers
-      - name: Get current Playwright version
-        # TODO: Fix the version check to remove this conditional
-        if: ${{ matrix.os != 'windows-latest' }}
+      - name: 🕵️‍♂️ Get current Playwright version
         id: playwright-version
+        shell: bash
         run: |
-          playwright_version=$(npm --json list @playwright/test | jq -r .dependencies[].version)
+          playwright_version=$(npm info @playwright/test version)
           echo "::set-output name=version::${playwright_version}"
 
       - name: 🤖 Cache Playwright binaries
-        # TODO: Fix the version check to remove this conditional
-        if: ${{ matrix.os != 'windows-latest' }}
         uses: actions/cache@v3
         id: playwright-cache
         with:
-          path: |
-            ~/.cache/ms-playwright
-          key: cache-playwright-${{ steps.playwright-version.outputs.version }}
+          path: ${{ matrix.playwright_binary_path }}
+          key: ${{ runner.os }}-cache-playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: 🖨️ Playwright info
+        shell: bash
+        run: |
+          echo "OS: ${{ matrix.os }}"
+          echo "Playwright version: ${{ steps.playwright-version.outputs.version }}"
+          echo "Playwright install dir: ${{ matrix.playwright_binary_path }}"
+          echo "Cache key: ${{ runner.os }}-cache-playwright-${{ steps.playwright-version.outputs.version }}"
+          echo "Cache hit: ${{ steps.playwright-cache.outputs.cache-hit == 'true' }}"
 
       - name: 📥 Install Playwright
         if: steps.playwright-cache.outputs.cache-hit != 'true'
