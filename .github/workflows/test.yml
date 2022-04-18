@@ -136,13 +136,14 @@ jobs:
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]
           then
-            echo "::set-output name=dir::%USERPROFILE%\AppData\Local\ms-playwright"
+            PLAYWRIGHT_DIR="%USERPROFILE%\AppData\Local\ms-playwright"
           elif [[ "${{ matrix.os }}" == "macos-latest" ]]
           then
-            echo "::set-output name=dir::~/Library/Caches/ms-playwright"
+            PLAYWRIGHT_DIR="~/Library/Caches/ms-playwright"
           else
-            echo "::set-output name=dir::~/.cache/ms-playwright"
+            PLAYWRIGHT_DIR="~/.cache/ms-playwright"
           fi
+          echo "::set-output name=dir::${PLAYWRIGHT_DIR}"
 
       - name: 🤖 Cache Playwright binaries
         uses: actions/cache@v3
@@ -154,6 +155,7 @@ jobs:
       - name: 🖨️ Playwright info
         shell: bash
         run: |
+          ls ${{ steps.playwright-install-dir.outputs.dir }}
           echo "OS: ${{ matrix.os }}"
           echo "Playwright version: ${{ steps.playwright-version.outputs.version }}"
           echo "Playwright install dir: ${{ steps.playwright-install-dir.outputs.dir }}"
