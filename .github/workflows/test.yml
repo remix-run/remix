@@ -146,7 +146,6 @@ jobs:
 
       - name: 🤖 Cache Playwright binaries (Linux)
         uses: actions/cache@v3
-        if: ${{ matrix.os == 'linux-latest' }}
         id: playwright-cache
         with:
           path: ${{ steps.playwright-install-dir.outputs.dir }}
