@@ -108,7 +108,7 @@ jobs:
           # - os: macos-latest
           #   playwright_binary_path: ~/Library/Caches/ms-playwright
           - os: windows-latest
-            playwright_binary_path: ~\AppData\Local\ms-playwright
+            playwright_binary_path: '~\AppData\Local\ms-playwright'
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -148,12 +148,15 @@ jobs:
       - name: 🖨️ Playwright info
         shell: bash
         run: |
-          ls ${{ matrix.playwright_binary_path }}
           echo "OS: ${{ matrix.os }}"
           echo "Playwright version: ${{ steps.playwright-version.outputs.version }}"
           echo "Playwright install dir: ${{ matrix.playwright_binary_path }}"
           echo "Cache key: ${{ runner.os }}-cache-playwright-${{ steps.playwright-version.outputs.version }}"
           echo "Cache hit: ${{ steps.playwright-cache.outputs.cache-hit == 'true' }}"
+
+          echo "Files in cache"
+          ls -l ${{ matrix.playwright_binary_path }}
+          ls ${{ matrix.playwright_binary_path }}
 
       - name: 📥 Install Playwright
         if: steps.playwright-cache.outputs.cache-hit != 'true'
