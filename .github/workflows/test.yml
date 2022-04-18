@@ -130,35 +130,30 @@ jobs:
           playwright_version=$(npm info @playwright/test version)
           echo "::set-output name=version::${playwright_version}"
 
+      - name: 🤖 Get Playwright install directory
+        id: playwright-install-dir
+        shell: bash
+        run: |
+          if [[ ${{ matrix.os }} == "windows-latest" ]]
+          then
+            echo "::set-output name=install-dir::%USERPROFILE%\AppData\Local\ms-playwright"
+          elif [[ ${{ matrix.os }} == "macos-latest" ]]
+          then
+            echo "::set-output name=dir::~/Library/Caches/ms-playwright"
+          else
+            echo "::set-output name=dir::~/.cache/ms-playwright"
+          fi
+
       - name: 🤖 Cache Playwright binaries (Linux)
         uses: actions/cache@v3
         if: ${{ matrix.os == 'linux-latest' }}
-        id: playwright-cache-ubuntu-latest
+        id: playwright-cache
         with:
-          path: |
-            ~/.cache/ms-playwright
-          key: cache-playwright-${{ steps.playwright-version.outputs.version }}-${{ matrix.os }}
-
-      - name: 🤖 Cache Playwright binaries (Windows)
-        uses: actions/cache@v3
-        if: ${{ matrix.os == 'windows-latest' }}
-        id: playwright-cache-windows-latest
-        with:
-          path: |
-            %USERPROFILE%\AppData\Local\ms-playwright
-          key: cache-playwright-${{ steps.playwright-version.outputs.version }}-${{ matrix.os }}
-
-      - name: 🤖 Cache Playwright binaries (macOS)
-        uses: actions/cache@v3
-        if: ${{ matrix.os == 'macos-latest' }}
-        id: playwright-cache-macos-latest
-        with:
-          path: |
-            ~/Library/Caches/ms-playwright
+          path: ${{ steps.playwright-install-dir.outputs.dir }}
           key: cache-playwright-${{ steps.playwright-version.outputs.version }}-${{ matrix.os }}
 
       - name: 📥 Install Playwright
-        if: steps.playwright-cache-${{ matrix.os }}.outputs.cache-hit != 'true'
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
 
       - name: 👀 Run Integration Tests
