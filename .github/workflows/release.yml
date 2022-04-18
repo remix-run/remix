@@ -52,7 +52,7 @@ jobs:
     steps:
       - name: 🛴 Kick of comment and deployment test workflows
         env:
-          # this needs to be a custom PAT with repo access in order for the actions 
+          # this needs to be a custom PAT with repo access in order for the actions
           # that this dispatch calls to run
           GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
           EVENT_TYPE: release
