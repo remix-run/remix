@@ -64,7 +64,6 @@ export function objectKeys<Type extends object>(
 function loadSync(cwd: string): TsConfigLoaderResult {
   // Tsconfig.loadSync uses path.resolve. This is why we can use an absolute path as filename
   let configPath = resolveConfigPath(cwd);
-
   if (!configPath) {
     return {
       tsConfigPath: undefined,
@@ -72,8 +71,8 @@ function loadSync(cwd: string): TsConfigLoaderResult {
       paths: undefined,
     };
   }
-  let config = parseTsConfig(configPath);
 
+  let config = parseTsConfig(configPath);
   if (!config) {
     return {
       tsConfigPath: undefined,
@@ -109,20 +108,20 @@ function loadSync(cwd: string): TsConfigLoaderResult {
     );
   }
 
-  objectKeys(suggestedCompilerOptions).forEach((key) => {
+  for (let key of objectKeys(suggestedCompilerOptions)) {
     // we check for config and config.compilerOptions above...
-    if (typeof config!.compilerOptions![key] === "undefined") {
-      config!.compilerOptions![key] = suggestedCompilerOptions[key] as any;
+    if (!(key in config.compilerOptions)) {
+      config.compilerOptions[key] = suggestedCompilerOptions[key] as any;
       suggestedChanges.push(
         colors.blue("compilerOptions." + key) +
           " was set to " +
           colors.bold(`'${suggestedCompilerOptions[key]}'`)
       );
     }
-  });
+  }
 
-  objectKeys(requiredCompilerOptions).forEach((key) => {
-    if (config!.compilerOptions![key] !== requiredCompilerOptions[key]) {
+  for (let key of objectKeys(requiredCompilerOptions)) {
+    if (config.compilerOptions[key] !== requiredCompilerOptions[key]) {
       config!.compilerOptions![key] = requiredCompilerOptions[key] as any;
       requiredChanges.push(
         colors.blue("compilerOptions." + key) +
@@ -130,11 +129,12 @@ function loadSync(cwd: string): TsConfigLoaderResult {
           colors.bold(`'${requiredCompilerOptions[key]}'`)
       );
     }
-  });
+  }
 
   if (suggestedChanges.length > 0 || requiredChanges.length > 0) {
     fse.writeJSONSync(configPath, config, { spaces: 2 });
   }
+
   if (suggestedChanges.length > 0) {
     console.log(
       `The following suggested values were added to your ${colors.blue(
@@ -179,14 +179,14 @@ function walkForTsConfig(
   directory: string,
   existsSync: (path: string) => boolean = fse.existsSync
 ): string | undefined {
-  let configPath = path.join(directory, "./tsconfig.json");
-  if (existsSync(configPath)) {
-    return configPath;
+  let tsconfigPath = path.join(directory, "./tsconfig.json");
+  if (existsSync(tsconfigPath)) {
+    return tsconfigPath;
   }
 
-  configPath = path.join(directory, "./jsconfig.json");
-  if (existsSync(configPath)) {
-    return configPath;
+  let jsconfigPath = path.join(directory, "./jsconfig.json");
+  if (existsSync(jsconfigPath)) {
+    return jsconfigPath;
   }
 
   let parentDirectory = path.join(directory, "../");
