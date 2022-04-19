@@ -1409,7 +1409,6 @@ export const LiveReload =
          */
         nonce?: string;
       }) {
-        console.log({ port, configPort: process.env.REMIX_DEV_SERVER_WS_PORT });
         return (
           <script
             nonce={nonce}
