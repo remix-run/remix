@@ -11,6 +11,12 @@ import {
 } from "../virtualModules";
 import { createMatchPath } from "../utils/tsconfig";
 
+// Modules that have Deno import mappings
+const denoModules = new Set([
+  "@remix-run/netlify-edge",
+  "@remix-run/server-runtime",
+]);
+
 /**
  * A plugin responsible for resolving bare module ids based on server target.
  * This includes externalizing for node based plaforms, and bundling for single file
@@ -80,10 +86,19 @@ export function serverBareModulesPlugin(
         }
 
         switch (remixConfig.serverBuildTarget) {
-          // Always bundle everything for cloudflare.
+          // Always bundle everything for Cloudflare
           case "cloudflare-pages":
           case "cloudflare-workers":
             return undefined;
+          case "netlify-edge":
+            // Bundle everything except URL imports and aliased modules for Netlify Edge
+            if (
+              !path.startsWith("https:") &&
+              !path.startsWith("file:") &&
+              !denoModules.has(path)
+            ) {
+              return undefined;
+            }
         }
 
         for (let pattern of remixConfig.serverDependenciesToBundle) {
