@@ -4,7 +4,7 @@ import { Client, Server } from "styletron-engine-atomic"; // or "styletron-engin
  * The Styletron engine to use on the current runtime.
  */
 export const styletron =
-  typeof window === "undefined"
+  typeof document === "undefined"
     ? new Server()
     : new Client({
         hydrate: getHydrateClass(),
