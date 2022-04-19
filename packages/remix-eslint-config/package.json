@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/eslint-config",
   "description": "ESLint configuration for Remix projects",
-  "version": "0.0.0-experimental-8685a32f",
+  "version": "0.0.0-experimental-07567e5e",
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",

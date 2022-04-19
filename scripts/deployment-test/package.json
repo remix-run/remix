@@ -10,7 +10,7 @@
     "@cloudflare/wrangler": "latest",
     "@iarna/toml": "^2.2.5",
     "@octokit/rest": "^18.12.0",
-    "@remix-run/dev": "0.0.0-experimental-8685a32f",
+    "@remix-run/dev": "0.0.0-experimental-07567e5e",
     "@testing-library/cypress": "^8.0.2",
     "aws-sdk": "^2.1055.0",
     "cypress": "9.2.0",
