@@ -29,6 +29,35 @@ export function tsConfigLoader({
   return loadResult;
 }
 
+// These are suggested values and will be set when not present in the
+// tsconfig.json
+let suggestedCompilerOptions: TsConfigJson.CompilerOptions = {
+  forceConsistentCasingInFileNames: true,
+  target: "es2019",
+  lib: ["DOM", "DOM.Iterable", "ES2019"] as TsConfigJson.CompilerOptions.Lib[],
+  allowJs: true,
+  strict: true,
+};
+
+// These values are required and cannot be changed by the user
+// Keep this in sync with esbuild
+let requiredCompilerOptions: TsConfigJson.CompilerOptions = {
+  esModuleInterop: true,
+  isolatedModules: true,
+  jsx: "react-jsx",
+  moduleResolution: "node",
+  resolveJsonModule: true,
+  noEmit: true,
+};
+
+// taken from https://github.com/sindresorhus/ts-extras/blob/781044f0412ec4a4224a1b9abce5ff0eacee3e72/source/object-keys.ts
+export type ObjectKeys<T extends object> = `${Exclude<keyof T, symbol>}`;
+export function objectKeys<Type extends object>(
+  value: Type
+): Array<ObjectKeys<Type>> {
+  return Object.keys(value) as Array<ObjectKeys<Type>>;
+}
+
 function loadSync(cwd: string): TsConfigLoaderResult {
   // Tsconfig.loadSync uses path.resolve. This is why we can use an absolute path as filename
   let configPath = resolveConfigPath(cwd);
@@ -42,156 +71,89 @@ function loadSync(cwd: string): TsConfigLoaderResult {
   }
   let config = parseTsConfig(configPath);
 
-  if (config) {
-    let configType = path.basename(configPath);
-    if (!config.compilerOptions) {
-      config.compilerOptions = {};
-    }
+  if (!config) {
+    return {
+      tsConfigPath: undefined,
+      baseUrl: undefined,
+      paths: undefined,
+    };
+  }
 
-    let suggestedChanges = [];
-    let requiredChanges = [];
+  let configType = path.basename(configPath);
+  if (!config.compilerOptions) {
+    config.compilerOptions = {};
+  }
 
-    if (!("include" in config)) {
-      config.include = ["remix.env.d.ts", "**/*.ts", "**/*.tsx"];
-      suggestedChanges.push(
-        colors.blue("include") +
-          " was set to " +
-          colors.bold(`['remix.env.d.ts', '**/*.ts', '**/*.tsx']`)
-      );
-    }
+  let suggestedChanges = [];
+  let requiredChanges = [];
 
-    // These are suggested values and will be set when not present in the
-    // tsconfig.json
-    if (
-      typeof config.compilerOptions.forceConsistentCasingInFileNames ===
-      "undefined"
-    ) {
-      config.compilerOptions.forceConsistentCasingInFileNames = true;
-      suggestedChanges.push(
-        colors.blue("compilerOptions.forceConsistentCasingInFileNames") +
-          " was set to " +
-          colors.bold(`true`)
-      );
-    }
-    if (typeof config.compilerOptions.target === "undefined") {
-      config.compilerOptions.target = "es2019";
-      suggestedChanges.push(
-        colors.blue("compilerOptions.target") +
-          " was set to " +
-          colors.bold("es2019")
-      );
-    }
-    if (typeof config.compilerOptions.lib === "undefined") {
-      config.compilerOptions.lib = ["DOM", "DOM.Iterable", "es2019"];
-      suggestedChanges.push(
-        colors.blue("compilerOptions.lib") +
-          " was set to " +
-          colors.bold(`['DOM', 'DOM.Iterable', 'es2019']`)
-      );
-    }
-    if (typeof config.compilerOptions.allowJs === "undefined") {
-      config.compilerOptions.allowJs = true;
-      suggestedChanges.push(
-        colors.blue("compilerOptions.allowJs") +
-          " was set to " +
-          colors.bold("true")
-      );
-    }
-    if (typeof config.compilerOptions.strict === "undefined") {
-      config.compilerOptions.strict = true;
-      suggestedChanges.push(
-        colors.blue("compilerOptions.strict") +
-          " was set to " +
-          colors.bold("true")
-      );
-    }
-    if (typeof config.compilerOptions.baseUrl === "undefined") {
-      let baseUrl = path.relative(cwd, path.dirname(configPath)) || ".";
-      config.compilerOptions!.baseUrl = baseUrl;
-      suggestedChanges.push(
-        colors.blue("compilerOptions.baseUrl") +
-          " was set to " +
-          colors.bold(`'${baseUrl}'`)
-      );
-    }
+  if (!("include" in config)) {
+    config.include = ["remix.env.d.ts", "**/*.ts", "**/*.tsx"];
+    suggestedChanges.push(
+      colors.blue("include") +
+        " was set to " +
+        colors.bold(`['remix.env.d.ts', '**/*.ts', '**/*.tsx']`)
+    );
+  }
 
-    // These values are required and cannot be changed by the user
-    // Keep this in sync with esbuild
-    if (config.compilerOptions.esModuleInterop !== true) {
-      config.compilerOptions.esModuleInterop = true;
+  if (typeof config.compilerOptions.baseUrl === "undefined") {
+    let baseUrl = path.relative(cwd, path.dirname(configPath)) || ".";
+    config.compilerOptions.baseUrl = baseUrl;
+    requiredChanges.push(
+      colors.blue("compilerOptions.baseUrl") +
+        " was set to " +
+        colors.bold(`'${baseUrl}'`)
+    );
+  }
+
+  objectKeys(suggestedCompilerOptions).forEach((key) => {
+    // we check for config and config.compilerOptions above...
+    if (typeof config!.compilerOptions![key] === "undefined") {
+      config!.compilerOptions![key] = suggestedCompilerOptions[key] as any;
+      suggestedChanges.push(
+        colors.blue("compilerOptions." + key) +
+          " was set to " +
+          colors.bold(`'${suggestedCompilerOptions[key]}'`)
+      );
+    }
+  });
+
+  objectKeys(requiredCompilerOptions).forEach((key) => {
+    if (config!.compilerOptions![key] !== requiredCompilerOptions[key]) {
+      config!.compilerOptions![key] = requiredCompilerOptions[key] as any;
       requiredChanges.push(
-        colors.blue("compilerOptions.esModuleInterop") +
+        colors.blue("compilerOptions." + key) +
           " was set to " +
-          colors.bold("true")
+          colors.bold(`'${requiredCompilerOptions[key]}'`)
       );
     }
-    if (config.compilerOptions.isolatedModules !== true) {
-      config.compilerOptions.isolatedModules = true;
-      requiredChanges.push(
-        colors.blue("compilerOptions.isolatedModules") +
-          " was set to " +
-          colors.bold("true")
-      );
-    }
-    if (config.compilerOptions.jsx !== "react-jsx") {
-      config.compilerOptions.jsx = "react-jsx";
-      requiredChanges.push(
-        colors.blue("compilerOptions.jsx") +
-          " was set to " +
-          colors.bold("react-jsx")
-      );
-    }
-    if (config.compilerOptions.moduleResolution !== "node") {
-      config.compilerOptions.moduleResolution = "node";
-      requiredChanges.push(
-        colors.blue("compilerOptions.moduleResolution") +
-          " was set to " +
-          colors.bold("node")
-      );
-    }
-    if (config.compilerOptions.resolveJsonModule !== true) {
-      config.compilerOptions.resolveJsonModule = true;
-      requiredChanges.push(
-        colors.blue("compilerOptions.resolveJsonModule") +
-          " was set to " +
-          colors.bold("true")
-      );
-    }
-    if (config.compilerOptions.noEmit !== true) {
-      config.compilerOptions.noEmit = true;
-      requiredChanges.push(
-        colors.blue("compilerOptions.noEmit") +
-          " was set to " +
-          colors.bold("true")
-      );
-    }
+  });
 
-    if (suggestedChanges.length > 0 || requiredChanges.length > 0) {
-      fse.writeJSONSync(configPath, config, { spaces: 2 });
-    }
-    if (suggestedChanges.length > 0) {
-      console.log(
-        `The following suggested values were added to your ${colors.blue(
-          `"${configType}"`
-        )}. These values ${colors.bold(
-          "can be changed"
-        )} to fit your project's needs:\n`
-      );
+  if (suggestedChanges.length > 0 || requiredChanges.length > 0) {
+    fse.writeJSONSync(configPath, config, { spaces: 2 });
+  }
+  if (suggestedChanges.length > 0) {
+    console.log(
+      `The following suggested values were added to your ${colors.blue(
+        `"${configType}"`
+      )}. These values ${colors.bold(
+        "can be changed"
+      )} to fit your project's needs:\n`
+    );
 
-      suggestedChanges.forEach((change) => console.log(`\t- ${change}`));
-      console.log("");
-    }
+    suggestedChanges.forEach((change) => console.log(`\t- ${change}`));
+    console.log("");
+  }
 
-    if (requiredChanges.length > 0) {
-      console.log(
-        `The following ${colors.bold(
-          "mandatory changes"
-        )} were made to your ${colors.blue(configType)}:\n`
-      );
+  if (requiredChanges.length > 0) {
+    console.log(
+      `The following ${colors.bold(
+        "mandatory changes"
+      )} were made to your ${colors.blue(configType)}:\n`
+    );
 
-      requiredChanges.forEach((change) => console.log(`\t- ${change}`));
-      console.log("");
-    }
+    requiredChanges.forEach((change) => console.log(`\t- ${change}`));
+    console.log("");
   }
 
   return {
