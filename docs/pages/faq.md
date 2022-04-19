@@ -177,6 +177,7 @@ export async function action({ request }) {
 
 Using the same input name and `formData.getAll()` covers most cases for wanting to submit structured data in your forms.
 
+### Structured data using [`query-string`][query-string]
 If you still want to submit nested structures as well, you can use non-standard form field naming conventions and the [`query-string`][query-string] package from npm:
 
 ```tsx
@@ -204,6 +205,69 @@ export async function action({ request }) {
   let obj = queryString.parse(formQueryString);
 }
 ```
+### Structured data using [Ramda][ramda]
+[Ramda][ramda] is a javascript framework for functional programming in JS, and it has tons of utility functions that can be handy when you want to manupulate the shape of data or json.
+
+So what we can do, We can input names containing `.` to represent the structured data and nested object shape and then in the action try to change the raw names containint dots into target nested object shape.
+```tsx
+<>
+  <input name="customer.name" value="John" />
+  <input name="customer.city" value="Stockholm" />
+  <input name="orderNo" value="A120" />
+  <input name="customer.phone" value="123-456-7894" />
+  <input name="customer.phone" value="123-111-2222" />
+</>
+```
+With this simple setup we expect to have an object with the following shape:
+```json
+{
+  orderNo: "A120"
+  customer:{
+    name: "John",
+    city: "Stockholm",
+    phone: ["123-456-7894", "123-111-2222"]
+  },
+}
+```
+To make this happen we need to have this setup for `action` fucntion:
+```tsx
+import { assocPath, hasPath, path, reduce, split } from 'ramda';
+
+// reduce function which will be called on every "name" "value" pairs in the formData object.
+const reduceFn = (
+  acc: Record<string, unknown>,
+  keyValuePair: [key: string, val: FormDataEntryValue]
+) => {
+  const [key, value] = keyValuePair;
+  // split the key if it has dot in it
+  const keyPath = split('.', key);
+
+  // check if path exist in the acc, it means this is an array property in the object
+  const isPathExist = hasPath(keyPath, acc);
+
+  if (isPathExist) {
+    const accValue = path<FormDataEntryValue[]>(keyPath, acc) || [];
+    const newValue = [accValue, value].flat();
+    // assigning the new array value to the path
+    return assocPath(keyPath, newValue, acc);
+  }
+
+  // if path does not exist in the acc, it means it's an ordinary value property and not an array 
+  return assocPath(keyPath, value, acc);
+};
+
+
+export const action: ActionFunction = async ({ request }) => {
+  const formData = await request.formData();
+  const pairs = Array.from(formData);
+
+  // create nested structure object
+  const data = reduce(reduceFn, {}, pairs);
+
+  return json(data);
+};
+```
+### Other solutions
 
 Some folks even dump their JSON into a hidden field. Note that this approach won't work with progressive enhancement. If that's not important to your app, this is an easy way to send structured data.
 
@@ -228,6 +292,7 @@ Again, `formData.getAll()` is often all you need, we encourage you to give it a 
 
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [query-string]: https://www.npmjs.com/package/query-string
+[ramda]: https://www.npmjs.com/package/ramda
 
 ## What's the difference between `CatchBoundary` & `ErrorBoundary`?
 
