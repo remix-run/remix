@@ -32,14 +32,14 @@ export type {
   SessionData,
   SessionIdStorageStrategy,
   SessionStorage,
-} from "https://esm.sh/@remix-run/server-runtime@1.3.5";
+} from "https://esm.sh/@remix-run/server-runtime@1.4.1";
 export {
   createSession,
   isCookie,
   isSession,
   json,
   redirect,
-} from "https://esm.sh/@remix-run/server-runtime@1.3.5";
+} from "https://esm.sh/@remix-run/server-runtime@1.4.1";
 export {
   createCookie,
   createCookieSessionStorage,

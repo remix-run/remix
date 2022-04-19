@@ -477,7 +477,7 @@ function createServerBuild(
           "@remix-run/netlify-edge": runtimePath,
           "@remix-run/dev/server-build": `file://${buildPath}`,
           "@remix-run/server-runtime":
-            "https://esm.sh/@remix-run/server-runtime@1.3.5?pin=v77",
+            "https://esm.sh/@remix-run/server-runtime@1.4.1?pin=v77",
         },
       };
 
