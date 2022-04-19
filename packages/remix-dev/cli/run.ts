@@ -284,8 +284,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       let installDeps = flags.install !== false && answers.install !== false;
 
       await commands.create({
-        appTemplate:
-          "https://github.com/remix-run/remix/tree/experimental-netlify-edge/templates/netlify",
+        appTemplate: "https://github.com/netlify/remix-edge-template",
         projectDir,
         remixVersion: flags.remixVersion,
         installDeps,
