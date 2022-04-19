@@ -1,5 +1,5 @@
 import * as path from "path";
-import * as fs from "fs";
+import * as fse from "fs-extra";
 import JSON5 from "json5";
 import stripBom from "strip-bom";
 
@@ -51,6 +51,15 @@ function loadSync(cwd: string): TsConfigLoaderResult {
   }
   let config = parseTsConfig(configPath);
 
+  if (config && !config.compilerOptions?.baseUrl) {
+    if (!config.compilerOptions) {
+      config.compilerOptions = {};
+    }
+    let baseUrl = path.relative(cwd, path.dirname(configPath)) || ".";
+    config.compilerOptions.baseUrl = baseUrl;
+    fse.writeJSONSync(configPath, config, { spaces: 2 });
+  }
+
   return {
     tsConfigPath: configPath,
     baseUrl: config && config.compilerOptions && config.compilerOptions.baseUrl,
@@ -59,7 +68,7 @@ function loadSync(cwd: string): TsConfigLoaderResult {
 }
 
 function resolveConfigPath(cwd: string): string | undefined {
-  if (fs.statSync(cwd).isFile()) {
+  if (fse.statSync(cwd).isFile()) {
     return path.resolve(cwd);
   }
 
@@ -69,7 +78,7 @@ function resolveConfigPath(cwd: string): string | undefined {
 
 function walkForTsConfig(
   directory: string,
-  existsSync: (path: string) => boolean = fs.existsSync
+  existsSync: (path: string) => boolean = fse.existsSync
 ): string | undefined {
   let configPath = path.join(directory, "./tsconfig.json");
   if (existsSync(configPath)) {
@@ -93,9 +102,9 @@ function walkForTsConfig(
 
 function parseTsConfig(
   configFilePath: string,
-  existsSync: (path: string) => boolean = fs.existsSync,
+  existsSync: (path: string) => boolean = fse.existsSync,
   readFileSync: (filename: string) => string = (filename: string) =>
-    fs.readFileSync(filename, "utf8")
+    fse.readFileSync(filename, "utf8")
 ): TsConfig | undefined {
   if (!existsSync(configFilePath)) {
     return undefined;
