@@ -25,11 +25,14 @@ async function run() {
   }
 
   let prerelease = semver.prerelease(taggedVersion);
-  let prereleaseTag = prerelease ? prerelease[0] : undefined;
+  let prereleaseTag =
+    prerelease && prerelease.length > 0 ? String(prerelease[0]) : undefined;
   let tag = prereleaseTag
     ? prereleaseTag.includes("nightly")
       ? "nightly"
       : prereleaseTag
+    : taggedVersion === "experimental-netlify-edge"
+    ? "experimental-netlify-edge"
     : "latest";
 
   // Publish eslint config directly from the package directory
