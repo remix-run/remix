@@ -317,7 +317,6 @@ function cleanBuildDirectories(config: RemixConfig) {
     fse.emptyDirSync(config.assetsBuildDirectory);
     fse.emptyDirSync(path.dirname(config.serverBuildPath));
   } catch (err) {
-    console.error(err);
     console.error("Could not clean build directories");
   }
 }
