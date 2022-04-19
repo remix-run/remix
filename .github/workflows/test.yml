@@ -6,6 +6,8 @@ on:
       - main
       - dev
       - release-*
+      # TODO: Uncomment before merging back into `dev` branch
+      - experimental-netlify-edge
     tags-ignore:
       - v*
     paths-ignore:
