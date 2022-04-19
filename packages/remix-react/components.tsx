@@ -752,7 +752,7 @@ export function Meta() {
  */
 let isHydrated = false;
 
-type ScriptProps = Omit<
+export type ScriptProps = Omit<
   React.HTMLProps<HTMLScriptElement>,
   | "children"
   | "async"
