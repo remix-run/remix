@@ -37,6 +37,9 @@ let suggestedCompilerOptions: TsConfigJson.CompilerOptions = {
   lib: ["DOM", "DOM.Iterable", "ES2019"] as TsConfigJson.CompilerOptions.Lib[],
   allowJs: true,
   strict: true,
+  paths: {
+    "~/*": ["./app/*"],
+  },
 };
 
 // These values are required and cannot be changed by the user
