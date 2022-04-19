@@ -27,6 +27,8 @@ describe("readConfig", () => {
         "assetsBuildDirectory": Any<String>,
         "cacheDirectory": Any<String>,
         "devServerBroadcastDelay": 0,
+        "devServerCert": null,
+        "devServerKey": null,
         "devServerPort": Any<Number>,
         "entryClientFile": "entry.client.tsx",
         "entryServerFile": "entry.server.tsx",

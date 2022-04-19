@@ -97,6 +97,16 @@ export interface AppConfig {
   devServerPort?: number;
 
   /**
+   * The port number to use for the dev server. Defaults to 8002.
+   */
+  devServerCert?: string | null;
+
+  /**
+   * TLS key to use for dev server running on wss.
+   */
+  devServerKey?: string | null;
+
+  /**
    * The delay, in milliseconds, before the dev server broadcasts a reload
    * event. There is no delay by default.
    */
@@ -208,6 +218,16 @@ export interface RemixConfig {
    * The port number to use for the dev (asset) server.
    */
   devServerPort: number;
+
+  /**
+   * TLS key to use for dev server running on wss.
+   */
+  devServerCert: string | null;
+
+  /**
+   * TLS key to use for dev server running on wss.
+   */
+  devServerKey: string | null;
 
   /**
    * The delay before the dev (asset) server broadcasts a reload event.
@@ -360,6 +380,9 @@ export async function readConfig(
   process.env.REMIX_DEV_SERVER_WS_PORT = `${devServerPort}`;
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
+  let devServerCert = appConfig.devServerCert || null;
+  let devServerKey = appConfig.devServerKey || null;
+
   let defaultPublicPath = "/build/";
   switch (serverBuildTarget) {
     case "arc":
@@ -408,6 +431,8 @@ export async function readConfig(
     entryServerFile,
     devServerPort,
     devServerBroadcastDelay,
+    devServerCert,
+    devServerKey,
     assetsBuildDirectory,
     publicPath,
     rootDirectory,
