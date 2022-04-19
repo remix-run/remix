@@ -1,0 +1,10 @@
+{
+  "name": "remix.init",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "inquirer": "^8.2.2"
+  }
+}
