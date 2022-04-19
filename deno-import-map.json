@@ -1,0 +1,9 @@
+{
+  "imports": {
+    "netlify:edge": "https://edge-bootstrap.netlify.app/v1/index.ts",
+    "@remix-run/netlify-edge": "./packages/remix-netlify-edge/mod.ts",
+    "@remix-run/netlify-edge/deno": "./packages/remix-netlify-edge/remix-deno/mod.ts",
+    "@remix-run/dev/server-build": "https://esm.sh/@remix-run/dev/server-build",
+    "@remix-run/server-runtime": "https://esm.sh/@remix-run/server-runtime@1.4.1?pin=v77"
+  }
+}
