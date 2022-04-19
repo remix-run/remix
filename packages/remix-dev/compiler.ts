@@ -466,7 +466,7 @@ function createServerBuild(
       // ...otherwise, load it from the package URL. The env var is so we can override in dev.
       runtimePath =
         process.env.NETLIFY_EDGE_RUNTIME_PATH ??
-        "https://unpkg.com/@remix-run/netlify-edge/mod.ts";
+        "https://unpkg.com/@remix-run/netlify-edge@experimental-netlify-edge/mod.ts";
     }
 
     let buildPath = require.resolve("./server-build.d.ts");
