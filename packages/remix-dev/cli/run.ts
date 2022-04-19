@@ -121,16 +121,16 @@ ${colors.heading("Show all routes in your app")}:
   $ remix routes --json
 `;
 
-const templateChoices = [
-  { name: "Remix App Server", value: "remix" },
-  { name: "Express Server", value: "express" },
-  { name: "Architect (AWS Lambda)", value: "arc" },
-  { name: "Fly.io", value: "fly" },
-  { name: "Netlify", value: "netlify" },
-  { name: "Vercel", value: "vercel" },
-  { name: "Cloudflare Pages", value: "cloudflare-pages" },
-  { name: "Cloudflare Workers", value: "cloudflare-workers" },
-];
+// const templateChoices = [
+//   { name: "Remix App Server", value: "remix" },
+//   { name: "Express Server", value: "express" },
+//   { name: "Architect (AWS Lambda)", value: "arc" },
+//   { name: "Fly.io", value: "fly" },
+//   { name: "Netlify", value: "netlify" },
+//   { name: "Vercel", value: "vercel" },
+//   { name: "Cloudflare Pages", value: "cloudflare-pages" },
+//   { name: "Cloudflare Workers", value: "cloudflare-workers" },
+// ];
 
 const npxInterop = {
   npm: "npx",
@@ -250,6 +250,61 @@ export async function run(argv: string[] = process.argv.slice(2)) {
           useTypeScript: boolean;
           install: boolean;
         }>([
+          // TODO: Uncomment before merging back into `dev` branch
+          //   {
+          //     name: "appType",
+          //     type: "list",
+          //     message: "What type of app do you want to create?",
+          //     when() {
+          //       return flags.template === undefined;
+          //     },
+          //     choices: [
+          //       {
+          //         name: "A pre-configured stack ready for production",
+          //         value: "stack",
+          //       },
+          //       {
+          //         name: "Just the basics",
+          //         value: "template",
+          //       },
+          //     ],
+          //   },
+          //   {
+          //     name: "appTemplate",
+          //     type: "list",
+          //     when(answers) {
+          //       return answers.appType === "stack";
+          //     },
+          //     message: "Which Stack do you want? ",
+          //     loop: false,
+          //     suffix: "(Learn more about these stacks: https://remix.run/stacks)",
+          //     choices: [
+          //       {
+          //         name: "Blues",
+          //         value: "remix-run/blues-stack",
+          //       },
+          //       {
+          //         name: "Indie",
+          //         value: "remix-run/indie-stack",
+          //       },
+          //       {
+          //         name: "Grunge",
+          //         value: "remix-run/grunge-stack",
+          //       },
+          //     ],
+          //   },
+          //   {
+          //     name: "appTemplate",
+          //     type: "list",
+          //     when(answers) {
+          //       return answers.appType === "template";
+          //     },
+          //     message:
+          //       "Where do you want to deploy? Choose Remix if you're unsure; " +
+          //       "it's easy to change deployment targets.",
+          //     loop: false,
+          //     choices: templateChoices,
+          //   },
           {
             name: "install",
             type: "confirm",
@@ -284,7 +339,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       let installDeps = flags.install !== false && answers.install !== false;
 
       await commands.create({
-        appTemplate: "https://github.com/netlify/remix-edge-template",
+        // TODO: Uncomment before merging back into `dev` branch
+        // appTemplate: flags.template || answers.appTemplate,
+        appTemplate:
+          flags.template || "https://github.com/netlify/remix-edge-template",
         projectDir,
         remixVersion: flags.remixVersion,
         installDeps,

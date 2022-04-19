@@ -24,6 +24,14 @@ async function run() {
     process.exit(1);
   }
 
+  // TODO: Uncomment before merging back into `dev` branch
+  //   let prerelease = semver.prerelease(taggedVersion);
+  //   let prereleaseTag = prerelease ? prerelease[0] : undefined;
+  //   let tag = prereleaseTag
+  //     ? prereleaseTag.includes("nightly")
+  //       ? "nightly"
+  //       : prereleaseTag
+  //     : "latest";
   let tag = "experimental-netlify-edge";
 
   // Publish eslint config directly from the package directory
