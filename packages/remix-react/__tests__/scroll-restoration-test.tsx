@@ -1,16 +1,8 @@
 import * as React from "react";
 import { MemoryRouter, Outlet } from "react-router-dom";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 
-import {
-  Link,
-  Links,
-  LiveReload,
-  Meta,
-  NavLink,
-  RemixEntryContext,
-  Scripts,
-} from "../components";
+import { LiveReload, RemixEntryContext, Scripts } from "../components";
 import type { RemixEntryContextType } from "../components";
 import { ScrollRestoration } from "../scroll-restoration";
 
