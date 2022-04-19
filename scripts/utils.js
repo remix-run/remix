@@ -14,6 +14,7 @@ let remixPackages = {
     "cloudflare-pages",
     "cloudflare-workers",
     "express",
+    "netlify-edge",
     "netlify",
     "vercel",
   ],
