@@ -24,16 +24,7 @@ async function run() {
     process.exit(1);
   }
 
-  let prerelease = semver.prerelease(taggedVersion);
-  let prereleaseTag =
-    prerelease && prerelease.length > 0 ? String(prerelease[0]) : undefined;
-  let tag = prereleaseTag
-    ? prereleaseTag.includes("nightly")
-      ? "nightly"
-      : prereleaseTag
-    : taggedVersion === "experimental-netlify-edge"
-    ? "experimental-netlify-edge"
-    : "latest";
+  let tag = "experimental-netlify-edge";
 
   // Publish eslint config directly from the package directory
   publish(path.join(packageDir, "remix-eslint-config"), tag);
