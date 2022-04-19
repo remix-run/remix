@@ -1392,6 +1392,7 @@ export function useFetchers(): Fetcher[] {
   return [...fetchers.values()];
 }
 
+let liveReloadMounted = false;
 // Dead Code Elimination magic for production builds.
 // This way devs don't have to worry about doing the NODE_ENV check themselves.
 export const LiveReload =
@@ -1402,9 +1403,12 @@ export const LiveReload =
         nonce = undefined,
       }: {
         port?: number;
+        /**
+         * @deprecated this property is no longer relevant.
+         */
         nonce?: string;
       }) {
-        let setupLiveReload = ((port: number) => {
+        let setupLiveReload = (port: number) => {
           let protocol = location.protocol === "https:" ? "wss:" : "ws:";
           let host = location.hostname;
           let socketPath = `${protocol}//${host}:${port}/socket`;
@@ -1424,17 +1428,16 @@ export const LiveReload =
             console.log("Remix dev asset server web socket error:");
             console.error(error);
           };
-        }).toString();
+        };
 
-        return (
-          <script
-            nonce={nonce}
-            suppressHydrationWarning
-            dangerouslySetInnerHTML={{
-              __html: `(${setupLiveReload})(${port})`,
-            }}
-          />
-        );
+        React.useEffect(() => {
+          if (!liveReloadMounted) {
+            setupLiveReload(port);
+            liveReloadMounted = true;
+          }
+        }, []);
+
+        return null;
       };
 
 function useComposedRefs<RefValueType = any>(

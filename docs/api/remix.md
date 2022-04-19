@@ -253,6 +253,10 @@ If you want to post to an index route use `?index` in the action: `<Form action=
 | `/accounts?index` | `routes/accounts/index.js` |
 | `/accounts`       | `routes/accounts.js`       |
 
+See also:
+
+- [`?index` query param][index query param]
+
 #### `<Form method>`
 
 This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) to be used: get, post, put, patch, delete. The default is "get".
@@ -852,6 +856,21 @@ function SomeComponent() {
 }
 ```
 
+Although a URL matches multiple Routes in a remix router hierarchy, a `fetcher.submit()` call will only call the action on the deepest matching route, unless the deepest matching route is an "index route". In this case, it will post to the parent route of the index route (because they share the same URL).
+
+If you want to submit to an index route use `?index` in the URL:
+
+```js
+fetcher.submit(
+  { some: "values" },
+  { method: "post", action: "/accounts?index" }
+);
+```
+
+See also:
+
+- [`?index` query param][index query param]
+
 #### `fetcher.load()`
 
 Loads data from a route loader.
@@ -869,6 +888,18 @@ function SomeComponent() {
   fetcher.data; // the data from the loader
 }
 ```
+
+Although a URL matches multiple Routes in a remix router hierarchy, a `fetcher.load()` call will only call the loader on the deepest matching route, unless the deepest matching route is an "index route". In this case, it will load the parent route of the index route (because they share the same URL).
+
+If you want to load an index route use `?index` in the URL:
+
+```js
+fetcher.load("/some/route?index");
+```
+
+See also:
+
+- [`?index` query param][index query param]
 
 #### Examples
 
@@ -1270,9 +1301,9 @@ function SomeComponent() {
 
 ```js
 [
-  { pathname, data, params, handle }, // root route
-  { pathname, data, params, handle }, // layout route
-  { pathname, data, params, handle }, // child route
+  { id, pathname, data, params, handle }, // root route
+  { id, pathname, data, params, handle }, // layout route
+  { id, pathname, data, params, handle }, // child route
   // etc.
 ];
 ```
@@ -1555,14 +1586,13 @@ These are fully featured utilities for handling fairly simple use cases. It's no
 **Example:**
 
 ```tsx
-const uploadHandler = unstable_createFileUploadHandler({
-  maxFileSize: 5_000_000,
-  file: ({ filename }) => filename,
-});
-
 export const action: ActionFunction = async ({
   request,
 }) => {
+  const uploadHandler = unstable_createFileUploadHandler({
+    maxFileSize: 5_000_000,
+    file: ({ filename }) => filename,
+  });
   const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
@@ -1594,13 +1624,12 @@ The `filter` function accepts an `object` and returns a `boolean` (or a promise 
 **Example:**
 
 ```tsx
-const uploadHandler = unstable_createMemoryUploadHandler({
-  maxFileSize: 500_000,
-});
-
 export const action: ActionFunction = async ({
   request,
 }) => {
+  const uploadHandler = unstable_createMemoryUploadHandler({
+    maxFileSize: 500_000,
+  });
   const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
@@ -1709,12 +1738,12 @@ Your job is to do whatever you need with the `stream` and return a value that's 
 
 We have the built-in `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler, here's a theoretical example:
 
-```tsx
+```tsx filename=file-upload-handler.server.tsx
 import type { UploadHandler } from "@remix-run/{runtime}";
 import { unstable_createFileUploadHandler } from "@remix-run/{runtime}";
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
-export const fileUploadHandler =
+export const standardFileUploadHandler =
   unstable_createFileUploadHandler({
     directory: "public/calendar-events",
   });
@@ -1724,9 +1753,9 @@ export const cloudinaryUploadHandler =
     folder: "/my-site/avatars",
   });
 
-export const multHandler: UploadHandler = (args) => {
+export const fileUploadHandler: UploadHandler = (args) => {
   if (args.name === "calendarEvent") {
-    return fileUploadHandler(args);
+    return standardFileUploadHandler(args);
   } else if (args.name === "eventBanner") {
     return cloudinaryUploadHandler(args);
   } else {
@@ -2664,3 +2693,4 @@ export default function CompanyRoute() {
 [action]: #form-action
 [disabling-javascript]: ../guides/disabling-javascript
 [example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data
+[index query param]: ../guides/routing#what-is-the-index-query-param

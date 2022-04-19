@@ -39,7 +39,12 @@ function defaultWarningHandler(message: string, key: string) {
   warnOnce(message, key);
 }
 
-function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
+export type BuildError = Error | esbuild.BuildFailure;
+function defaultBuildFailureHandler(failure: BuildError) {
+  formatBuildFailure(failure);
+}
+
+export function formatBuildFailure(failure: BuildError) {
   if ("warnings" in failure || "errors" in failure) {
     if (failure.warnings) {
       let messages = esbuild.formatMessagesSync(failure.warnings, {
@@ -549,7 +554,7 @@ async function writeServerBuildResult(
   for (let file of outputFiles) {
     if (file.path.endsWith(".js")) {
       // fix sourceMappingURL to be relative to current path instead of /build
-      let filename = file.path.substring(file.path.lastIndexOf("/") + 1);
+      let filename = file.path.substring(file.path.lastIndexOf(path.sep) + 1);
       let escapedFilename = filename.replace(/\./g, "\\.");
       let pattern = `(//# sourceMappingURL=)(.*)${escapedFilename}`;
       let contents = Buffer.from(file.contents).toString("utf-8");

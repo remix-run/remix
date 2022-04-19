@@ -1,3 +1,4 @@
+import path from "path";
 import fs from "fs";
 import { builtinModules } from "module";
 import { isAbsolute, relative } from "path";
@@ -52,7 +53,7 @@ export function serverBareModulesPlugin(
           return undefined;
         }
 
-        // These are our virutal modules, always bundle them because there is no
+        // These are our virtual modules, always bundle them because there is no
         // "real" file on disk to externalize.
         if (
           path === serverBuildVirtualModule.id ||
@@ -73,7 +74,6 @@ export function serverBareModulesPlugin(
           onWarning &&
           !isNodeBuiltIn(packageName) &&
           !/\bnode_modules\b/.test(importer) &&
-          !builtinModules.includes(packageName) &&
           !dependencies[packageName]
         ) {
           onWarning(
@@ -146,38 +146,74 @@ function isBareModuleId(id: string): boolean {
 
 function warnOnceIfEsmOnlyPackage(
   packageName: string,
-  path: string,
+  fullImportPath: string,
   onWarning: (msg: string, key: string) => void
 ) {
-  let packageJsonFile = require.resolve(`${packageName}/package.json`);
-  if (!fs.existsSync(packageJsonFile)) {
-    console.log(packageJsonFile, `does not exist`);
-    return;
-  }
-  let pkg = JSON.parse(fs.readFileSync(packageJsonFile, "utf8"));
+  try {
+    let packageDir = resolveModuleBasePath(packageName, fullImportPath);
+    let packageJsonFile = path.join(packageDir, "package.json");
 
-  let subImport = path.slice(packageName.length + 1);
+    if (!fs.existsSync(packageJsonFile)) {
+      console.log(packageJsonFile, `does not exist`);
+      return;
+    }
+    let pkg = JSON.parse(fs.readFileSync(packageJsonFile, "utf-8"));
 
-  if (pkg.type === "module") {
-    let isEsmOnly = true;
-    if (pkg.exports) {
-      if (!subImport) {
-        if (pkg.exports.require) {
-          isEsmOnly = false;
-        } else if (pkg.exports["."]?.require) {
+    let subImport = fullImportPath.slice(packageName.length + 1);
+
+    if (pkg.type === "module") {
+      let isEsmOnly = true;
+      if (pkg.exports) {
+        if (!subImport) {
+          if (pkg.exports.require) {
+            isEsmOnly = false;
+          } else if (pkg.exports["."]?.require) {
+            isEsmOnly = false;
+          }
+        } else if (pkg.exports[`./${subImport}`]?.require) {
           isEsmOnly = false;
         }
-      } else if (pkg.exports[`./${subImport}`]?.require) {
-        isEsmOnly = false;
+      }
+
+      if (isEsmOnly) {
+        onWarning(
+          `${packageName} is possibly an ESM only package and should be bundled with ` +
+            `"serverDependenciesToBundle in remix.config.js.`,
+          packageName + ":esm-only"
+        );
       }
     }
-
-    if (isEsmOnly) {
-      onWarning(
-        `${packageName} is possibly an ESM only package and should be bundled with ` +
-          `"serverDependenciesToBundle in remix.config.js.`,
-        packageName + ":esm-only"
-      );
-    }
+  } catch (error: unknown) {
+    // module not installed
+    // we warned earlier if a package is used without being in package.json
+    // if the build fails, the reason will be right there
   }
+}
+
+// https://github.com/nodejs/node/issues/33460#issuecomment-919184789
+// adapted to use the fullImportPath to resolve sub packages like @heroicons/react/solid
+function resolveModuleBasePath(packageName: string, fullImportPath: string) {
+  let moduleMainFilePath = require.resolve(fullImportPath);
+
+  let packageNameParts = packageName.split("/");
+
+  let searchForPathSection;
+
+  if (packageName.startsWith("@") && packageNameParts.length > 1) {
+    let [org, mod] = packageNameParts;
+    searchForPathSection = `node_modules${path.sep}${org}${path.sep}${mod}`;
+  } else {
+    let [mod] = packageNameParts;
+    searchForPathSection = `node_modules${path.sep}${mod}`;
+  }
+
+  let lastIndex = moduleMainFilePath.lastIndexOf(searchForPathSection);
+
+  if (lastIndex === -1) {
+    throw new Error(
+      `Couldn't resolve the base path of "${packageName}". Searched inside the resolved main file path "${moduleMainFilePath}" using "${searchForPathSection}"`
+    );
+  }
+
+  return moduleMainFilePath.slice(0, lastIndex + searchForPathSection.length);
 }

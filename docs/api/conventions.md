@@ -887,6 +887,7 @@ See also:
 
 - [`<Form>`][form]
 - [`<Form action>`][form action]
+- [`?index` query param][index query param]
 
 ### `headers`
 
@@ -1417,6 +1418,7 @@ export default function Page() {
 [urlsearchparams]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [form]: ./remix#form
 [form action]: ./remix#form-action
+[index query param]: ../guides/routing#what-is-the-index-query-param
 [link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
 [minimatch]: https://www.npmjs.com/package/minimatch
 [handledatarequest]: #entryservertsx
