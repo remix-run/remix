@@ -11,9 +11,9 @@
     "start:dev": "cross-env NODE_ENV=development node -r esbuild-register server/index.ts"
   },
   "dependencies": {
-    "@remix-run/express": "0.0.0-experimental-40464a28",
-    "@remix-run/node": "0.0.0-experimental-40464a28",
-    "@remix-run/react": "0.0.0-experimental-40464a28",
+    "@remix-run/express": "0.0.0-experimental-8685a32f",
+    "@remix-run/node": "0.0.0-experimental-8685a32f",
+    "@remix-run/react": "0.0.0-experimental-8685a32f",
     "compression": "^1.7.4",
     "cross-env": "^7.0.3",
     "dataloader": "^2.0.0",
@@ -23,8 +23,8 @@
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@remix-run/dev": "0.0.0-experimental-40464a28",
-    "@remix-run/eslint-config": "0.0.0-experimental-40464a28",
+    "@remix-run/dev": "0.0.0-experimental-8685a32f",
+    "@remix-run/eslint-config": "0.0.0-experimental-8685a32f",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
     "esbuild-register": "^3.3.2",

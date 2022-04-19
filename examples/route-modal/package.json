@@ -11,15 +11,15 @@
   },
   "dependencies": {
     "@reach/dialog": "^0.16.2",
-    "@remix-run/node": "0.0.0-experimental-40464a28",
-    "@remix-run/react": "0.0.0-experimental-40464a28",
-    "@remix-run/serve": "0.0.0-experimental-40464a28",
+    "@remix-run/node": "0.0.0-experimental-8685a32f",
+    "@remix-run/react": "0.0.0-experimental-8685a32f",
+    "@remix-run/serve": "0.0.0-experimental-8685a32f",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@remix-run/dev": "0.0.0-experimental-40464a28",
-    "@remix-run/eslint-config": "0.0.0-experimental-40464a28",
+    "@remix-run/dev": "0.0.0-experimental-8685a32f",
+    "@remix-run/eslint-config": "0.0.0-experimental-8685a32f",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
     "eslint": "^8.10.0",
