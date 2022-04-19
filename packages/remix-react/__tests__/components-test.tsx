@@ -47,14 +47,14 @@ describe("<LiveReload />", () => {
       LiveReload = require("../components").LiveReload;
       const { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
-        /:8002\/socket/
+        `8002 + "/socket"`
       );
     });
 
     it("can set the port explicitly", () => {
       const { container } = render(<LiveReload port={4321} />);
       expect(container.querySelector("script")).toHaveTextContent(
-        /:4321\/socket/
+        `4321 + "/socket"`
       );
     });
 
@@ -62,7 +62,7 @@ describe("<LiveReload />", () => {
       process.env.REMIX_DEV_SERVER_WS_PORT = "1234";
       const { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
-        /:1234\/socket/
+        `1234 + "/socket"`
       );
     });
   });

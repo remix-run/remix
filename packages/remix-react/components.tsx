@@ -1409,15 +1409,18 @@ export const LiveReload =
          */
         nonce?: string;
       }) {
+        let js = String.raw;
         return (
           <script
             nonce={nonce}
             suppressHydrationWarning
             dangerouslySetInnerHTML={{
-              __html: `
+              __html: js`
                 let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                 let host = location.hostname;
-                let socketPath = \`\${protocol}//\${host}:${port}/socket\`;
+                let socketPath = protocol + "//" + host + ":" + ${String(
+                  port
+                )} + "/socket";
       
                 let ws = new WebSocket(socketPath);
                 ws.onmessage = (message) => {
