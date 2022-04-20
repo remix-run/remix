@@ -1,7 +1,6 @@
 name: 🌒 Nightly Release
 
 on:
-  workflow_dispatch:
   schedule:
     - cron: "0 7 * * *" # every day at 12AM PST
 
@@ -91,7 +90,7 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      name: 🛴 Kick off comment and deployment test workflows
+      - name: 🛴 Kick off comment and deployment test workflows
         env:
           # this needs to be a custom PAT with repo access in order for the actions
           # that this dispatch calls to run
@@ -100,7 +99,8 @@ jobs:
           REPO: remix-run/remix
           VERSION: refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}
         run: |
-          curl -H "Accept: application/json" \
+          curl \
+            -H "Accept: application/json" \
             -H "Authorization: token ${GITHUB_TOKEN}" \
             --request POST \
             --data '{ "event_type": "${EVENT_TYPE}", "client_payload": { "ref": "${VERSION}" } }' \

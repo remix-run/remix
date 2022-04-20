@@ -59,7 +59,8 @@ jobs:
           REPO: remix-run/remix
           VERSION: ${{ github.ref }}
         run: |
-          curl -H "Accept: application/json" \
+          curl \
+            -H "Accept: application/json" \
             -H "Authorization: token ${GITHUB_TOKEN}" \
             --request POST \
             --data '{ "event_type": "${EVENT_TYPE}", "client_payload": { "ref": "${VERSION}" } }' \
