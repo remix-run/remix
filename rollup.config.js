@@ -672,6 +672,7 @@ function remixServerAdapters() {
     ...getAdapterConfig("cloudflare-workers"),
     ...getAdapterConfig("express"),
     ...getAdapterConfig("netlify"),
+    ...getAdapterConfig("netlify-edge"),
     ...getAdapterConfig("vercel"),
   ];
 }

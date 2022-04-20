@@ -444,46 +444,6 @@ function createServerBuild(
 
     fse.ensureDirSync(edgeDir);
     fse.writeJSONSync(path.join(edgeDir, "manifest.json"), edgeManifest);
-
-    // This generated import map is processed by the netlify CLI and combined with the internal map
-    let importMapPath = path.join(
-      config.rootDirectory,
-      ".netlify",
-      "remix-import-map.json"
-    );
-
-    let runtimePath: string | undefined;
-
-    try {
-      // If the user has it locally-installed, use that
-      runtimePath = `file://${require.resolve(
-        "@remix-run/netlify-edge/mod.ts",
-        {
-          paths: [config.rootDirectory],
-        }
-      )}`;
-    } catch {
-      // ...otherwise, load it from the package URL. The env var is so we can override in dev.
-      runtimePath =
-        process.env.NETLIFY_EDGE_RUNTIME_PATH ??
-        "https://unpkg.com/@remix-run/netlify-edge@experimental-netlify-edge/mod.ts";
-    }
-
-    let buildPath = require.resolve("./server-build.d.ts");
-
-    if (runtimePath) {
-      let importMap = {
-        imports: {
-          "@remix-run/netlify-edge": runtimePath,
-          "@remix-run/dev/server-build": `file://${buildPath}`,
-          "@remix-run/server-runtime":
-            "https://esm.sh/@remix-run/server-runtime@1.4.1?pin=v77",
-        },
-      };
-
-      fse.ensureDirSync(path.dirname(importMapPath));
-      fse.writeJSONSync(importMapPath, importMap);
-    }
   }
 
   return esbuild

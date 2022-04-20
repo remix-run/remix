@@ -1,7 +1,4 @@
-import type {
-  SignFunction,
-  UnsignFunction,
-} from "https://esm.sh/@remix-run/server-runtime?pin=v77";
+import type { SignFunction, UnsignFunction } from "@remix-run/server-runtime";
 
 const encoder = new TextEncoder();
 
