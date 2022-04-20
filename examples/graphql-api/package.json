@@ -13,9 +13,9 @@
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/node": "0.0.0-experimental-b345bdf5",
-    "@remix-run/react": "0.0.0-experimental-b345bdf5",
-    "@remix-run/serve": "0.0.0-experimental-b345bdf5",
+    "@remix-run/node": "0.0.0-experimental-c6bf743d",
+    "@remix-run/react": "0.0.0-experimental-c6bf743d",
+    "@remix-run/serve": "0.0.0-experimental-c6bf743d",
     "apollo-server-errors": "^3.3.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
@@ -24,8 +24,8 @@
     "@graphql-codegen/cli": "2.6.2",
     "@graphql-codegen/typescript": "^2.4.5",
     "@graphql-codegen/typescript-operations": "^2.3.2",
-    "@remix-run/dev": "0.0.0-experimental-b345bdf5",
-    "@remix-run/eslint-config": "0.0.0-experimental-b345bdf5",
+    "@remix-run/dev": "0.0.0-experimental-c6bf743d",
+    "@remix-run/eslint-config": "0.0.0-experimental-c6bf743d",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
     "eslint": "^8.10.0",
