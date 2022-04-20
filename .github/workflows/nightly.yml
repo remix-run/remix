@@ -40,9 +40,6 @@ jobs:
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
 
-      - name: 🏗 Build
-        run: yarn build
-
       - name: ⤴️ Update Version
         id: version
         run: |
@@ -66,8 +63,12 @@ jobs:
           fi
 
           yarn run version ${NEXT_VERSION} --skip-prompt
-
-          git push origin --tags
+          
+      - name: 🏗 Build
+        run: yarn build
+        
+      - name: 🏷 Push Tag
+        run: git push origin --follow-tags
 
       - name: 🔐 Setup npm auth
         run: |
