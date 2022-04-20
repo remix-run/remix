@@ -58,10 +58,10 @@ jobs:
           fi
 
           yarn run version ${NEXT_VERSION} --skip-prompt
-          
+
       - name: 🏗 Build
         run: yarn build
-        
+
       - name: 🏷 Push Tag
         run: git push origin --follow-tags
 
