@@ -38,8 +38,6 @@ export function configLoader({ cwd }: ConfigLoaderParams): ConfigLoaderResult {
   });
 
   if (!loadResult.tsConfigPath) {
-    console.log("No tsconfig found");
-
     return {
       resultType: "failed",
       message: "Couldn't find tsconfig.json or jsconfig.json",
