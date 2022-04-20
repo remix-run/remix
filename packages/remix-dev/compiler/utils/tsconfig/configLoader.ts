@@ -45,7 +45,7 @@ export function configLoader({ cwd }: ConfigLoaderParams): ConfigLoaderResult {
   }
 
   // we should have already configured the baseUrl by now
-  invariant(loadResult.baseUrl, "baseUrl is required, but was not set");
+  invariant(loadResult.baseUrl, `baseUrl is required, but was not set. please set compilerOptions.baseUrl in your ${loadResult.tsConfigPath}`);
 
   let tsConfigDir = path.dirname(loadResult.tsConfigPath);
   let absoluteBaseUrl = path.join(tsConfigDir, loadResult.baseUrl);
