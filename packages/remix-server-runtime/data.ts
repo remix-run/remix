@@ -6,7 +6,9 @@ import { json, isResponse, isRedirectResponse } from "./responses";
  * An object of arbitrary for route loaders and actions provided by the
  * server's `getLoadContext()` function.
  */
-export interface AppLoadContext {};
+export interface AppLoadContext {
+  [key: string]: unknown;
+};
 
 /**
  * Data for a route that was returned from a `loader()`.
