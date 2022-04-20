@@ -16,7 +16,7 @@ import "@testing-library/jest-dom/extend-expect";
 // LiveReload's real features and these tests wouldn't know it.
 
 describe("<LiveReload />", () => {
-  const originalNodeEnv = process.env.NODE_ENV;
+  let originalNodeEnv = process.env.NODE_ENV;
   afterEach(() => {
     process.env.NODE_ENV = originalNodeEnv;
   });
@@ -30,7 +30,7 @@ describe("<LiveReload />", () => {
     });
 
     it("does nothing if the NODE_ENV is not development", () => {
-      const { container } = render(<LiveReload />);
+      let { container } = render(<LiveReload />);
       expect(container).toBeEmptyDOMElement();
     });
   });
@@ -45,14 +45,14 @@ describe("<LiveReload />", () => {
 
     it("defaults the port to 8002", () => {
       LiveReload = require("../components").LiveReload;
-      const { container } = render(<LiveReload />);
+      let { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
         `8002 + "/socket"`
       );
     });
 
     it("can set the port explicitly", () => {
-      const { container } = render(<LiveReload port={4321} />);
+      let { container } = render(<LiveReload port={4321} />);
       expect(container.querySelector("script")).toHaveTextContent(
         `4321 + "/socket"`
       );
@@ -60,7 +60,7 @@ describe("<LiveReload />", () => {
 
     it("determines the right port based on REMIX_DEV_SERVER_WS_PORT env variable", () => {
       process.env.REMIX_DEV_SERVER_WS_PORT = "1234";
-      const { container } = render(<LiveReload />);
+      let { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
         `1234 + "/socket"`
       );
