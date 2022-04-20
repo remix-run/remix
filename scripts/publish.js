@@ -54,6 +54,7 @@ async function run() {
     "express", // publish express before serve
     "vercel",
     "netlify",
+    "netlify-edge",
     "react",
     "serve",
   ]) {

@@ -3,14 +3,7 @@
   "description": "Netlify Edge platform abstractions for Remix",
   "version": "1.0.0",
   "license": "MIT",
-  "type": "module",
-  "main": "./index.js",
   "types": "./index.d.ts",
-  "exports": {
-    ".": "./index.js",
-    "./mod.ts": "./mod.ts",
-    "./deno": "./remix-deno/mod.ts"
-  },
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
@@ -20,10 +13,11 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "files": [
-    "**/*.ts",
-    "index.js"
+    "remix-deno/*",
+    "*.js",
+    "*.d.ts"
   ],
-  "peerDependencies": {
+  "dependencies": {
     "@remix-run/server-runtime": "*"
   }
 }

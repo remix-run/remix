@@ -4,7 +4,7 @@ export {
   createCookieSessionStorage,
   createMemorySessionStorage,
   createSessionStorage,
-} from "./implementations.ts";
+} from "./implementations";
 
 export {
   createSession,
@@ -12,7 +12,7 @@ export {
   isSession,
   json,
   redirect,
-} from "https://esm.sh/@remix-run/server-runtime?pin=v77";
+} from "@remix-run/server-runtime";
 
 export type {
   ActionFunction,
@@ -47,4 +47,4 @@ export type {
   SessionData,
   SessionIdStorageStrategy,
   SessionStorage,
-} from "https://esm.sh/@remix-run/server-runtime?pin=v77";
+} from "@remix-run/server-runtime";

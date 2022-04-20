@@ -9,6 +9,7 @@
   "dependencies": {
     "@netlify/functions": "^1.0.0",
     "@remix-run/netlify": "*",
+    "@remix-run/netlify-edge": "*",
     "@remix-run/node": "*",
     "@remix-run/react": "*",
     "cross-env": "^7.0.3",
