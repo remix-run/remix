@@ -86,7 +86,7 @@ jobs:
 
   comment:
     needs: [nightly]
-    name: Comment on Issues and PRs
+    name: 🛴 Kick off comment and deployment test workflows
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
