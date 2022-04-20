@@ -3,6 +3,7 @@ import * as fse from "fs-extra";
 import JSON5 from "json5";
 import stripBom from "strip-bom";
 import type { TsConfigJson } from "type-fest";
+import prettier from "prettier";
 
 import * as colors from "../../../colors";
 
@@ -132,7 +133,12 @@ function loadSync(cwd: string): TsConfigLoaderResult {
   }
 
   if (suggestedChanges.length > 0 || requiredChanges.length > 0) {
-    fse.writeJSONSync(configPath, config, { spaces: 2 });
+    fse.writeFileSync(
+      configPath,
+      prettier.format(JSON.stringify(config, null, 2), {
+        parser: "json",
+      })
+    );
   }
 
   if (suggestedChanges.length > 0) {
