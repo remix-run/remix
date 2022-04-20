@@ -531,13 +531,55 @@ export function Links() {
 
   return (
     <>
-      {links.map((link) =>
-        isPageLinkDescriptor(link) ? (
-          <PrefetchPageLinks key={link.page} {...link} />
-        ) : (
-          <link key={link.rel + link.href} {...link} />
-        )
-      )}
+      {links.map((link) => {
+        if (isPageLinkDescriptor(link)) {
+          return <PrefetchPageLinks key={link.page} {...link} />;
+        }
+
+        let imageSrcSet: string | null = null;
+
+        // In React 17, <link imageSrcSet> and <link imageSizes> will warn
+        // because the DOM attributes aren't recognized, so users need to pass
+        // them in all lowercase to forward the attributes to the node without a
+        // warning. Normalize so that either property can be used in Remix.
+        if ("useId" in React) {
+          // @ts-expect-error
+          if (link.imagesrcset) {
+            // @ts-expect-error
+            link.imageSrcSet = imageSrcSet = link.imagesrcset;
+            // @ts-expect-error
+            delete link.imagesrcset;
+          }
+
+          // @ts-expect-error
+          if (link.imagesizes) {
+            // @ts-expect-error
+            link.imageSizes = link.imagesizes;
+            // @ts-expect-error
+            delete link.imagesizes;
+          }
+        } else {
+          if (link.imageSrcSet) {
+            // @ts-expect-error
+            link.imagesrcset = imageSrcSet = link.imageSrcSet;
+            // @ts-expect-error
+            delete link.imageSrcSet;
+          }
+
+          if (link.imageSizes) {
+            // @ts-expect-error
+            link.imagesizes = link.imageSizes;
+            delete link.imageSizes;
+          }
+        }
+
+        return (
+          <link
+            key={link.rel + (link.href || "") + (imageSrcSet || "")}
+            {...link}
+          />
+        );
+      })}
     </>
   );
 }
@@ -1428,14 +1470,22 @@ export const LiveReload =
             console.log("Remix dev asset server web socket error:");
             console.error(error);
           };
+
+          return () => {
+            ws.close();
+          };
         };
 
         React.useEffect(() => {
           if (!liveReloadMounted) {
-            setupLiveReload(port);
+            let cleanup = setupLiveReload(port);
             liveReloadMounted = true;
+            return () => {
+              cleanup();
+              liveReloadMounted = false;
+            };
           }
-        }, []);
+        }, [port]);
 
         return null;
       };
