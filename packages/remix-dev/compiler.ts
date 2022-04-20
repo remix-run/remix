@@ -283,14 +283,10 @@ function isEntryPoint(config: RemixConfig, file: string) {
 
 ///////////////////////////////////////////////////////////////////////////////
 
-export interface FullBuildOptions extends Required<BuildOptions> {
-  incremental?: boolean;
-}
-
 async function buildEverything(
   config: RemixConfig,
   assetsManifestPromiseRef: AssetsManifestPromiseRef,
-  options: FullBuildOptions
+  options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<(esbuild.BuildResult | undefined)[]> {
   try {
     let browserBuildPromise = createBrowserBuild(config, options);
@@ -320,7 +316,7 @@ async function buildEverything(
 
 async function createBrowserBuild(
   config: RemixConfig,
-  options: FullBuildOptions
+  options: BuildOptions & { incremental?: boolean }
 ): Promise<esbuild.BuildResult> {
   // For the browser build, exclude node built-ins that don't have a
   // browser-safe alternative installed in node_modules. Nothing should
@@ -401,7 +397,7 @@ async function createBrowserBuild(
 
 function createServerBuild(
   config: RemixConfig,
-  options: FullBuildOptions,
+  options: Required<BuildOptions> & { incremental?: boolean },
   assetsManifestPromiseRef: AssetsManifestPromiseRef
 ): Promise<esbuild.BuildResult> {
   let dependencies = getAppDependencies(config);
