@@ -429,18 +429,6 @@ function createServerBuild(
     plugins.unshift(NodeModulesPolyfillPlugin());
   }
 
-  if (config.serverBuildTarget === "netlify-edge") {
-    let edgeManifest = {
-      functions: [{ function: "server", path: "/*" }],
-      import_map: "../remix-import-map.json",
-      version: 1,
-    };
-    let edgeDir = path.dirname(config.serverBuildPath);
-
-    fse.ensureDirSync(edgeDir);
-    fse.writeJSONSync(path.join(edgeDir, "manifest.json"), edgeManifest);
-  }
-
   return esbuild
     .build({
       absWorkingDir: config.rootDirectory,
