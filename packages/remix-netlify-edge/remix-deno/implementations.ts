@@ -3,9 +3,9 @@ import {
   createCookieSessionStorageFactory,
   createMemorySessionStorageFactory,
   createSessionStorageFactory,
-} from "https://esm.sh/@remix-run/server-runtime?pin=v77";
+} from "@remix-run/server-runtime";
 
-import { sign, unsign } from "./crypto.ts";
+import { sign, unsign } from "./crypto";
 
 export const createCookie = createCookieFactory({ sign, unsign });
 export const createCookieSessionStorage =

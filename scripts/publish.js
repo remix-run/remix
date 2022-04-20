@@ -37,8 +37,6 @@ async function run() {
   // Publish eslint config directly from the package directory
   publish(path.join(packageDir, "remix-eslint-config"), tag);
 
-  publish(path.join(packageDir, "remix-netlify-edge"), tag);
-
   // Publish all @remix-run/* packages
   for (let name of [
     "dev",
@@ -51,6 +49,7 @@ async function run() {
     "express", // publish express before serve
     "vercel",
     "netlify",
+    "netlify-edge",
     "react",
     "serve",
   ]) {

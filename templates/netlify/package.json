@@ -12,6 +12,7 @@
   "dependencies": {
     "@netlify/functions": "latest",
     "@remix-run/netlify": "*",
+    "@remix-run/netlify-edge": "*",
     "@remix-run/node": "*",
     "@remix-run/react": "*",
     "cross-env": "^7.0.3",
