@@ -421,6 +421,23 @@ function createServerBuild(
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
     config.serverBuildTarget ?? ""
   );
+  let isDenoRuntime = ["deno", "netlify-edge"].includes(
+    config.serverBuildTarget ?? ""
+  );
+
+  let conditions = undefined;
+  let mainFields =
+    config.serverModuleFormat === "esm"
+      ? ["module", "main"]
+      : ["main", "module"];
+  if (isCloudflareRuntime) {
+    conditions = ["worker", "browser"];
+    mainFields = ["browser", "module", "main"];
+  } else if (isDenoRuntime) {
+    conditions = ["deno", "worker", "browser"];
+    mainFields = ["browser", "module", "main"];
+  }
+
   let plugins: esbuild.Plugin[] = [
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
@@ -453,16 +470,12 @@ function createServerBuild(
       entryPoints,
       outfile: config.serverBuildPath,
       write: false,
-      conditions: isCloudflareRuntime ? ["worker"] : undefined,
+      conditions,
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
       minify: options.mode === BuildMode.Production && isCloudflareRuntime,
-      mainFields: isCloudflareRuntime
-        ? ["browser", "module", "main"]
-        : config.serverModuleFormat === "esm"
-        ? ["module", "main"]
-        : ["main", "module"],
+      mainFields,
       target: options.target,
       inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
       loader: loaders,
