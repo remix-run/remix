@@ -10,9 +10,9 @@
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/node": "0.0.0-experimental-c6bf743d",
-    "@remix-run/react": "0.0.0-experimental-c6bf743d",
-    "@remix-run/serve": "0.0.0-experimental-c6bf743d",
+    "@remix-run/node": "0.0.0-experimental-fd9fa7f4",
+    "@remix-run/react": "0.0.0-experimental-fd9fa7f4",
+    "@remix-run/serve": "0.0.0-experimental-fd9fa7f4",
     "@sanity/block-content-to-react": "^3.0.0",
     "@sanity/groq-store": "^0.3.1",
     "@sanity/image-url": "^1.0.1",
@@ -21,8 +21,8 @@
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@remix-run/dev": "0.0.0-experimental-c6bf743d",
-    "@remix-run/eslint-config": "0.0.0-experimental-c6bf743d",
+    "@remix-run/dev": "0.0.0-experimental-fd9fa7f4",
+    "@remix-run/eslint-config": "0.0.0-experimental-fd9fa7f4",
     "eslint": "^8.10.0"
   },
   "engines": {

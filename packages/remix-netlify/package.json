@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/netlify",
   "description": "Netlify server request handler for Remix",
-  "version": "0.0.0-experimental-c6bf743d",
+  "version": "0.0.0-experimental-fd9fa7f4",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -12,7 +12,7 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@remix-run/node": "0.0.0-experimental-c6bf743d"
+    "@remix-run/node": "0.0.0-experimental-fd9fa7f4"
   },
   "peerDependencies": {
     "@netlify/functions": "^1.0.0"

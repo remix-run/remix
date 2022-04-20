@@ -11,9 +11,9 @@
     "start:dev": "cross-env NODE_ENV=development node server/index.js"
   },
   "dependencies": {
-    "@remix-run/express": "0.0.0-experimental-c6bf743d",
-    "@remix-run/node": "0.0.0-experimental-c6bf743d",
-    "@remix-run/react": "0.0.0-experimental-c6bf743d",
+    "@remix-run/express": "0.0.0-experimental-fd9fa7f4",
+    "@remix-run/node": "0.0.0-experimental-fd9fa7f4",
+    "@remix-run/react": "0.0.0-experimental-fd9fa7f4",
     "compression": "^1.7.4",
     "cross-env": "^7.0.3",
     "express": "^4.17.3",
@@ -24,8 +24,8 @@
     "socket.io-client": "^4.4.1"
   },
   "devDependencies": {
-    "@remix-run/dev": "0.0.0-experimental-c6bf743d",
-    "@remix-run/eslint-config": "0.0.0-experimental-c6bf743d",
+    "@remix-run/dev": "0.0.0-experimental-fd9fa7f4",
+    "@remix-run/eslint-config": "0.0.0-experimental-fd9fa7f4",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
     "eslint": "^8.10.0",

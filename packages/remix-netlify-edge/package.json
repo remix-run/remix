@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/netlify-edge",
   "description": "Netlify Edge platform abstractions for Remix",
-  "version": "0.0.0-experimental-c6bf743d",
+  "version": "0.0.0-experimental-fd9fa7f4",
   "license": "MIT",
   "types": "./index.d.ts",
   "repository": {
@@ -18,6 +18,6 @@
     "*.d.ts"
   ],
   "dependencies": {
-    "@remix-run/server-runtime": "0.0.0-experimental-c6bf743d"
+    "@remix-run/server-runtime": "0.0.0-experimental-fd9fa7f4"
   }
 }
