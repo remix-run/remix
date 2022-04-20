@@ -1,6 +1,5 @@
 import * as path from "path";
 
-import invariant from "../../../invariant";
 import { tsConfigLoader } from "./tsConfigLoader";
 
 export interface ConfigLoaderParams {
@@ -45,7 +44,13 @@ export function configLoader({ cwd }: ConfigLoaderParams): ConfigLoaderResult {
   }
 
   // we should have already configured the baseUrl by now
-  invariant(loadResult.baseUrl, `baseUrl is required, but was not set. please set compilerOptions.baseUrl in your ${loadResult.tsConfigPath}`);
+  if (!loadResult.baseUrl) {
+    let baseUrl =
+      path.relative(cwd, path.dirname(loadResult.tsConfigPath)) || ".";
+    throw new Error(
+      `No baseUrl found, please set compilerOptions.baseUrl in your ${loadResult.tsConfigPath} to "${baseUrl}"`
+    );
+  }
 
   let tsConfigDir = path.dirname(loadResult.tsConfigPath);
   let absoluteBaseUrl = path.join(tsConfigDir, loadResult.baseUrl);
