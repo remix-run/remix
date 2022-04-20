@@ -6,7 +6,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
-    "dev": "remix dev",
+    "dev": "remix watch",
     "start": "cross-env NODE_ENV=production node server/index.js",
     "start:dev": "cross-env NODE_ENV=development node server/index.js"
   },
