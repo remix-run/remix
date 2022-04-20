@@ -281,7 +281,7 @@ test.describe("route module link export", () => {
               {
                 rel: "preload",
                 as: "image",
-                imageSrcSet: guitar600 + " 600w, " + guitar900 + " 800w",
+                imageSrcSet: guitar600 + " 600w, " + guitar900 + " 900w",
                 imageSizes: "100vw",
               },
             ];
@@ -293,7 +293,7 @@ test.describe("route module link export", () => {
                 <p>
                   <img
                     alt="a guitar"
-                    srcSet={guitar600 + " 600w, " + guitar900 + " 800w"}
+                    srcSet={guitar600 + " 600w, " + guitar900 + " 900w"}
                     sizes="100vw"
                     data-test-id="blocked"
                   />{" "}
