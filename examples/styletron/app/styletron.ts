@@ -8,15 +8,13 @@ export const styletron =
     ? new Server()
     : new Client({
         hydrate: getHydrateClass(),
-    });
+      });
 
-export function isStyletronClient(engine: typeof styletron): engine is Client
-{
+export function isStyletronClient(engine: typeof styletron): engine is Client {
   return styletron instanceof Client;
 }
 
-export function isStyletronServer(engine: typeof styletron): engine is Server
-{
+export function isStyletronServer(engine: typeof styletron): engine is Server {
   return styletron instanceof Server;
 }
 
