@@ -86,7 +86,7 @@ jobs:
 
   comment:
     needs: [nightly]
-    name: Comment on Issues and PRs
+    name: 🛴 Kick off comment and deployment test workflows
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
@@ -100,6 +100,7 @@ jobs:
           VERSION: refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}
         run: |
           curl \
+            -H "Accept: application/json" \
             -H "Authorization: token ${GITHUB_TOKEN}" \
             --request POST \
             --data '{ "event_type": "${EVENT_TYPE}", "client_payload": { "ref": "${VERSION}" } }' \
