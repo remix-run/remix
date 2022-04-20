@@ -26,7 +26,7 @@ export type ConfigLoaderResult =
   | ConfigLoaderFailResult;
 
 export function loadTsConfig(cwd: string = process.cwd()): ConfigLoaderResult {
-  return configLoader({ cwd });
+  return configLoader({ cwd: cwd });
 }
 
 export function configLoader({ cwd }: ConfigLoaderParams): ConfigLoaderResult {
@@ -39,17 +39,15 @@ export function configLoader({ cwd }: ConfigLoaderParams): ConfigLoaderResult {
   if (!loadResult.tsConfigPath) {
     return {
       resultType: "failed",
-      message: "Couldn't find tsconfig.json or jsconfig.json",
+      message: "Couldn't find tsconfig.json",
     };
   }
 
-  // we should have already configured the baseUrl by now
   if (!loadResult.baseUrl) {
-    let baseUrl =
-      path.relative(cwd, path.dirname(loadResult.tsConfigPath)) || ".";
-    throw new Error(
-      `No baseUrl found, please set compilerOptions.baseUrl in your ${loadResult.tsConfigPath} to "${baseUrl}"`
-    );
+    return {
+      resultType: "failed",
+      message: "Missing baseUrl in compilerOptions",
+    };
   }
 
   let tsConfigDir = path.dirname(loadResult.tsConfigPath);

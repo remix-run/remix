@@ -1,11 +1,19 @@
 import * as path from "path";
-import * as fse from "fs-extra";
+import * as fs from "fs";
 import JSON5 from "json5";
 import stripBom from "strip-bom";
-import type { TsConfigJson } from "type-fest";
-import prettier from "prettier";
 
-import * as colors from "../../../colors";
+/**
+ * Typing for the parts of tsconfig that we care about
+ */
+export interface TsConfig {
+  extends?: string;
+  compilerOptions?: {
+    baseUrl?: string;
+    paths?: { [key: string]: Array<string> };
+    strict?: boolean;
+  };
+}
 
 export interface TsConfigLoaderResult {
   tsConfigPath: string | undefined;
@@ -30,41 +38,10 @@ export function tsConfigLoader({
   return loadResult;
 }
 
-// These are suggested values and will be set when not present in the
-// tsconfig.json
-let suggestedCompilerOptions: TsConfigJson.CompilerOptions = {
-  forceConsistentCasingInFileNames: true,
-  target: "es2019",
-  lib: ["DOM", "DOM.Iterable", "ES2019"] as TsConfigJson.CompilerOptions.Lib[],
-  allowJs: true,
-  strict: true,
-  paths: {
-    "~/*": ["./app/*"],
-  },
-};
-
-// These values are required and cannot be changed by the user
-// Keep this in sync with esbuild
-let requiredCompilerOptions: TsConfigJson.CompilerOptions = {
-  esModuleInterop: true,
-  isolatedModules: true,
-  jsx: "react-jsx",
-  moduleResolution: "node",
-  resolveJsonModule: true,
-  noEmit: true,
-};
-
-// taken from https://github.com/sindresorhus/ts-extras/blob/781044f0412ec4a4224a1b9abce5ff0eacee3e72/source/object-keys.ts
-export type ObjectKeys<T extends object> = `${Exclude<keyof T, symbol>}`;
-export function objectKeys<Type extends object>(
-  value: Type
-): Array<ObjectKeys<Type>> {
-  return Object.keys(value) as Array<ObjectKeys<Type>>;
-}
-
 function loadSync(cwd: string): TsConfigLoaderResult {
   // Tsconfig.loadSync uses path.resolve. This is why we can use an absolute path as filename
   let configPath = resolveConfigPath(cwd);
+
   if (!configPath) {
     return {
       tsConfigPath: undefined,
@@ -72,108 +49,17 @@ function loadSync(cwd: string): TsConfigLoaderResult {
       paths: undefined,
     };
   }
-
   let config = parseTsConfig(configPath);
-  if (!config) {
-    return {
-      tsConfigPath: undefined,
-      baseUrl: undefined,
-      paths: undefined,
-    };
-  }
-
-  let configType = path.basename(configPath);
-  if (!config.compilerOptions) {
-    config.compilerOptions = {};
-  }
-
-  let suggestedChanges = [];
-  let requiredChanges = [];
-
-  if (!("include" in config)) {
-    config.include = ["remix.env.d.ts", "**/*.ts", "**/*.tsx"];
-    suggestedChanges.push(
-      colors.blue("include") +
-        " was set to " +
-        colors.bold(`['remix.env.d.ts', '**/*.ts', '**/*.tsx']`)
-    );
-  }
-
-  if (typeof config.compilerOptions.baseUrl === "undefined") {
-    let baseUrl = path.relative(cwd, path.dirname(configPath)) || ".";
-    config.compilerOptions.baseUrl = baseUrl;
-    requiredChanges.push(
-      colors.blue("compilerOptions.baseUrl") +
-        " was set to " +
-        colors.bold(`'${baseUrl}'`)
-    );
-  }
-
-  for (let key of objectKeys(suggestedCompilerOptions)) {
-    // we check for config and config.compilerOptions above...
-    if (!(key in config.compilerOptions)) {
-      config.compilerOptions[key] = suggestedCompilerOptions[key] as any;
-      suggestedChanges.push(
-        colors.blue("compilerOptions." + key) +
-          " was set to " +
-          colors.bold(`'${suggestedCompilerOptions[key]}'`)
-      );
-    }
-  }
-
-  for (let key of objectKeys(requiredCompilerOptions)) {
-    if (config.compilerOptions[key] !== requiredCompilerOptions[key]) {
-      config!.compilerOptions![key] = requiredCompilerOptions[key] as any;
-      requiredChanges.push(
-        colors.blue("compilerOptions." + key) +
-          " was set to " +
-          colors.bold(`'${requiredCompilerOptions[key]}'`)
-      );
-    }
-  }
-
-  if (suggestedChanges.length > 0 || requiredChanges.length > 0) {
-    fse.writeFileSync(
-      configPath,
-      prettier.format(JSON.stringify(config, null, 2), {
-        parser: "json",
-      })
-    );
-  }
-
-  if (suggestedChanges.length > 0) {
-    console.log(
-      `The following suggested values were added to your ${colors.blue(
-        `"${configType}"`
-      )}. These values ${colors.bold(
-        "can be changed"
-      )} to fit your project's needs:\n`
-    );
-
-    suggestedChanges.forEach((change) => console.log(`\t- ${change}`));
-    console.log("");
-  }
-
-  if (requiredChanges.length > 0) {
-    console.log(
-      `The following ${colors.bold(
-        "mandatory changes"
-      )} were made to your ${colors.blue(configType)}:\n`
-    );
-
-    requiredChanges.forEach((change) => console.log(`\t- ${change}`));
-    console.log("");
-  }
 
   return {
     tsConfigPath: configPath,
-    baseUrl: config?.compilerOptions?.baseUrl,
-    paths: config?.compilerOptions?.paths,
+    baseUrl: config && config.compilerOptions && config.compilerOptions.baseUrl,
+    paths: config && config.compilerOptions && config.compilerOptions.paths,
   };
 }
 
 function resolveConfigPath(cwd: string): string | undefined {
-  if (fse.statSync(cwd).isFile()) {
+  if (fs.statSync(cwd).isFile()) {
     return path.resolve(cwd);
   }
 
@@ -183,16 +69,16 @@ function resolveConfigPath(cwd: string): string | undefined {
 
 function walkForTsConfig(
   directory: string,
-  existsSync: (path: string) => boolean = fse.existsSync
+  existsSync: (path: string) => boolean = fs.existsSync
 ): string | undefined {
-  let tsconfigPath = path.join(directory, "./tsconfig.json");
-  if (existsSync(tsconfigPath)) {
-    return tsconfigPath;
+  let configPath = path.join(directory, "./tsconfig.json");
+  if (existsSync(configPath)) {
+    return configPath;
   }
 
-  let jsconfigPath = path.join(directory, "./jsconfig.json");
-  if (existsSync(jsconfigPath)) {
-    return jsconfigPath;
+  configPath = path.join(directory, "./jsconfig.json");
+  if (existsSync(configPath)) {
+    return configPath;
   }
 
   let parentDirectory = path.join(directory, "../");
@@ -207,17 +93,17 @@ function walkForTsConfig(
 
 function parseTsConfig(
   configFilePath: string,
-  existsSync: (path: string) => boolean = fse.existsSync,
+  existsSync: (path: string) => boolean = fs.existsSync,
   readFileSync: (filename: string) => string = (filename: string) =>
-    fse.readFileSync(filename, "utf8")
-): TsConfigJson | undefined {
+    fs.readFileSync(filename, "utf8")
+): TsConfig | undefined {
   if (!existsSync(configFilePath)) {
     return undefined;
   }
 
   let configString = readFileSync(configFilePath);
   let cleanedJson = stripBom(configString);
-  let config = JSON5.parse<TsConfigJson>(cleanedJson);
+  let config = JSON5.parse<TsConfig>(cleanedJson);
   let extendedConfig = config.extends;
 
   if (extendedConfig) {
