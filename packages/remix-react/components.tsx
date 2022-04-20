@@ -1470,22 +1470,14 @@ export const LiveReload =
             console.log("Remix dev asset server web socket error:");
             console.error(error);
           };
-
-          return () => {
-            ws.close();
-          };
         };
 
         React.useEffect(() => {
           if (!liveReloadMounted) {
-            let cleanup = setupLiveReload(port);
+            setupLiveReload(port);
             liveReloadMounted = true;
-            return () => {
-              cleanup();
-              liveReloadMounted = false;
-            };
           }
-        }, [port]);
+        }, []);
 
         return null;
       };
