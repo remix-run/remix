@@ -53,6 +53,7 @@ export function writeConfigDefaults(configPath: string) {
         colors.bold(`['remix.env.d.ts', '**/*.ts', '**/*.tsx']`)
     );
   }
+  // TODO: check for user's typescript version and only add baseUrl if < 4.1
   if (!("baseUrl" in config.compilerOptions)) {
     let baseUrl = path.relative(process.cwd(), path.dirname(configPath)) || ".";
     config.compilerOptions.baseUrl = baseUrl;
@@ -63,7 +64,6 @@ export function writeConfigDefaults(configPath: string) {
     );
   }
   for (let key of objectKeys(suggestedCompilerOptions)) {
-    // we check for config and config.compilerOptions above...
     if (!(key in config.compilerOptions)) {
       config.compilerOptions[key] = suggestedCompilerOptions[key] as any;
       suggestedChanges.push(
@@ -75,7 +75,7 @@ export function writeConfigDefaults(configPath: string) {
   }
   for (let key of objectKeys(requiredCompilerOptions)) {
     if (config.compilerOptions[key] !== requiredCompilerOptions[key]) {
-      config!.compilerOptions![key] = requiredCompilerOptions[key] as any;
+      config.compilerOptions[key] = requiredCompilerOptions[key] as any;
       requiredChanges.push(
         colors.blue("compilerOptions." + key) +
           " was set to " +
