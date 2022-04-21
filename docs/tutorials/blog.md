@@ -19,7 +19,7 @@ Click this button to create a [Gitpod](https://gitpod.io) workspace with the pro
 
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
-- [Node.js](https://nodejs.org) 14 or greater
+- [Node.js](https://nodejs.org) 15 or greater
 - [npm](https://www.npmjs.com) 7 or greater
 - A code editor
 
