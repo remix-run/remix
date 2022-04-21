@@ -63,7 +63,7 @@ jobs:
         run: yarn build
 
       - name: 🏷 Push Tag
-        run: git push origin --follow-tags
+        run: git push origin --tags
 
       - name: 🔐 Setup npm auth
         run: |
