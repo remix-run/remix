@@ -3,6 +3,7 @@ import fse from "fs-extra";
 import type { TsConfigJson } from "type-fest";
 import prettier from "prettier";
 import { loadTsconfig } from "tsconfig-paths/lib/tsconfig-loader";
+import JSON5 from "json5";
 
 import * as colors from "../../../colors";
 
@@ -37,21 +38,27 @@ function objectKeys<Type extends object>(value: Type): Array<ObjectKeys<Type>> {
 }
 
 export function writeConfigDefaults(configPath: string) {
-  let config = loadTsconfig(configPath) as TsConfigJson | undefined;
+  // this will be the *full* tsconfig.json with any extensions deeply merged
+  let fullConfig = loadTsconfig(configPath) as TsConfigJson | undefined;
+  // this will be the user's actual tsconfig file
+  let configContents = fse.readFileSync(configPath, "utf8");
+  let config = JSON5.parse(configContents) as TsConfigJson | undefined;
 
-  if (!config) {
+  if (!fullConfig || !config) {
     // how did we get here?
     return;
   }
 
   let configType = path.basename(configPath);
-  if (!config.compilerOptions) {
-    config.compilerOptions = {};
-  }
+  // sanity checks to make sure we can write the compilerOptions
+  if (!fullConfig.compilerOptions) fullConfig.compilerOptions = {};
+  if (!config.compilerOptions) config.compilerOptions = {};
+
   let suggestedChanges = [];
   let requiredChanges = [];
-  if (!("include" in config)) {
-    config.include = ["remix.env.d.ts", "**/*.ts", "**/*.tsx"];
+
+  if (!("include" in fullConfig)) {
+    fullConfig.include = ["remix.env.d.ts", "**/*.ts", "**/*.tsx"];
     suggestedChanges.push(
       colors.blue("include") +
         " was set to " +
@@ -59,7 +66,7 @@ export function writeConfigDefaults(configPath: string) {
     );
   }
   // TODO: check for user's typescript version and only add baseUrl if < 4.1
-  if (!("baseUrl" in config.compilerOptions)) {
+  if (!("baseUrl" in fullConfig.compilerOptions)) {
     let baseUrl = path.relative(process.cwd(), path.dirname(configPath)) || ".";
     config.compilerOptions.baseUrl = baseUrl;
     requiredChanges.push(
@@ -69,7 +76,7 @@ export function writeConfigDefaults(configPath: string) {
     );
   }
   for (let key of objectKeys(suggestedCompilerOptions)) {
-    if (!(key in config.compilerOptions)) {
+    if (!(key in fullConfig.compilerOptions)) {
       config.compilerOptions[key] = suggestedCompilerOptions[key] as any;
       suggestedChanges.push(
         colors.blue("compilerOptions." + key) +
@@ -79,7 +86,7 @@ export function writeConfigDefaults(configPath: string) {
     }
   }
   for (let key of objectKeys(requiredCompilerOptions)) {
-    if (config.compilerOptions[key] !== requiredCompilerOptions[key]) {
+    if (fullConfig.compilerOptions[key] !== requiredCompilerOptions[key]) {
       config.compilerOptions[key] = requiredCompilerOptions[key] as any;
       requiredChanges.push(
         colors.blue("compilerOptions." + key) +
