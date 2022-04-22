@@ -135,13 +135,12 @@ function warnOnceIfEsmOnlyPackage(
   onWarning: (msg: string, key: string) => void
 ) {
   try {
-    let packageDir = resolveModuleBasePath(packageName, fullImportPath);
-    let packageJsonFile = path.join(packageDir, "package.json");
-
+    let packageJsonFile = resolveModuleBasePath(packageName, fullImportPath);
     if (!fs.existsSync(packageJsonFile)) {
       console.log(packageJsonFile, `does not exist`);
       return;
     }
+
     let pkg = JSON.parse(fs.readFileSync(packageJsonFile, "utf-8"));
 
     let subImport = fullImportPath.slice(packageName.length + 1);
@@ -175,30 +174,25 @@ function warnOnceIfEsmOnlyPackage(
   }
 }
 
-// https://github.com/nodejs/node/issues/33460#issuecomment-919184789
-// adapted to use the fullImportPath to resolve sub packages like @heroicons/react/solid
 function resolveModuleBasePath(packageName: string, fullImportPath: string) {
   let moduleMainFilePath = require.resolve(fullImportPath);
-
-  let packageNameParts = packageName.split("/");
-
-  let searchForPathSection;
-
-  if (packageName.startsWith("@") && packageNameParts.length > 1) {
-    let [org, mod] = packageNameParts;
-    searchForPathSection = `node_modules${path.sep}${org}${path.sep}${mod}`;
-  } else {
-    let [mod] = packageNameParts;
-    searchForPathSection = `node_modules${path.sep}${mod}`;
+  let moduleMainFileDirectory = path.dirname(moduleMainFilePath);
+  let packageJsonFile = path.join(moduleMainFileDirectory, "package.json");
+  if (fs.existsSync(packageJsonFile)) {
+    return packageJsonFile;
   }
 
-  let lastIndex = moduleMainFilePath.lastIndexOf(searchForPathSection);
-
-  if (lastIndex === -1) {
-    throw new Error(
-      `Couldn't resolve the base path of "${packageName}". Searched inside the resolved main file path "${moduleMainFilePath}" using "${searchForPathSection}"`
-    );
+  let parentDirectory = path.dirname(moduleMainFileDirectory);
+  while (parentDirectory !== moduleMainFileDirectory) {
+    console.log({ parentDirectory, moduleMainFileDirectory });
+    packageJsonFile = path.join(parentDirectory, "package.json");
+    if (fs.existsSync(packageJsonFile)) {
+      return packageJsonFile;
+    }
+    parentDirectory = path.dirname(parentDirectory);
   }
 
-  return moduleMainFilePath.slice(0, lastIndex + searchForPathSection.length);
+  throw new Error(
+    `Couldn't resolve the base path of "${packageName}". Searched inside the resolved main file path "${moduleMainFilePath}" and its parent directories.`
+  );
 }
