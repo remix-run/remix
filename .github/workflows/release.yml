@@ -52,7 +52,7 @@ jobs:
     steps:
       - uses: peter-evans/repository-dispatch@v2
         env:
-          VERSION: refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}
+          VERSION: ${{ github.ref }}
         with:
           token: ${{ secrets.NIGHTLY_PAT }}
           event-type: release
