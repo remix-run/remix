@@ -1,8 +1,8 @@
 import * as path from "path";
 import fse from "fs-extra";
-import JSON5 from "json5";
 import type { TsConfigJson } from "type-fest";
 import prettier from "prettier";
+import { loadTsconfig } from "tsconfig-paths/lib/tsconfig-loader";
 
 import * as colors from "../../../colors";
 
@@ -37,8 +37,13 @@ function objectKeys<Type extends object>(value: Type): Array<ObjectKeys<Type>> {
 }
 
 export function writeConfigDefaults(configPath: string) {
-  let configContents = fse.readFileSync(configPath, "utf-8");
-  let config = JSON5.parse(configContents);
+  let config = loadTsconfig(configPath) as TsConfigJson | undefined;
+
+  if (!config) {
+    // how did we get here?
+    return;
+  }
+
   let configType = path.basename(configPath);
   if (!config.compilerOptions) {
     config.compilerOptions = {};
