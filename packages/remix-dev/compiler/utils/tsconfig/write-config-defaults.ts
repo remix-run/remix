@@ -38,11 +38,18 @@ function objectKeys<Type extends object>(value: Type): Array<ObjectKeys<Type>> {
 }
 
 export function writeConfigDefaults(configPath: string) {
+  // check files exist
+  if (!fse.existsSync(configPath)) return;
+
   // this will be the *full* tsconfig.json with any extensions deeply merged
   let fullConfig = loadTsconfig(configPath) as TsConfigJson | undefined;
   // this will be the user's actual tsconfig file
   let configContents = fse.readFileSync(configPath, "utf8");
-  let config = JSON5.parse(configContents) as TsConfigJson | undefined;
+
+  let config: TsConfigJson | undefined;
+  try {
+    config = JSON5.parse(configContents);
+  } catch (error: unknown) {}
 
   if (!fullConfig || !config) {
     // how did we get here?
