@@ -10,7 +10,7 @@ const executableBanner = "#!/usr/bin/env node\n";
 let activeOutputDir = "build";
 
 if (process.env.REMIX_LOCAL_DEV_OUTPUT_DIRECTORY) {
-  let appDir = path.join(
+  let appDir = path.resolve(
     process.cwd(),
     process.env.REMIX_LOCAL_DEV_OUTPUT_DIRECTORY
   );
@@ -869,6 +869,7 @@ export default function rollup(options) {
 }
 
 function copyToPlaygrounds() {
+  if (process.env.REMIX_LOCAL_DEV_OUTPUT_DIRECTORY) return;
   return {
     name: "copy-to-remix-playground",
     async writeBundle(options, bundle) {
