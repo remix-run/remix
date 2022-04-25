@@ -457,7 +457,7 @@ function findEntry(dir: string, basename: string): string | undefined {
 }
 
 function findConfig(dir: string, basename: string) {
-  for (let ext of [".js", ".cjs", ".mjs", ".json"]) {
+  for (let ext of [".js", ".cjs", ".mjs"]) {
     let file = path.resolve(dir, basename + ext);
     if (fse.existsSync(file)) return path.relative(dir, file);
   }
