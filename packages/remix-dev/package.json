@@ -26,6 +26,7 @@
     "chalk": "^4.1.2",
     "chokidar": "^3.5.1",
     "dotenv": "^16.0.0",
+    "enhanced-resolve": "^5.9.3",
     "esbuild": "0.14.22",
     "esbuild-plugin-cache": "^0.2.9",
     "execa": "^5.1.1",

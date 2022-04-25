@@ -3,6 +3,7 @@ import fs from "fs";
 import { builtinModules } from "module";
 import { isAbsolute, relative } from "path";
 import type { Plugin } from "esbuild";
+import resolver from "enhanced-resolve";
 
 import type { RemixConfig } from "../../config";
 import {
@@ -10,6 +11,10 @@ import {
   assetsManifestVirtualModule,
 } from "../virtualModules";
 import { createMatchPath } from "../utils/tsconfig";
+
+const nodeEsmImportResolver = resolver.create({
+  conditionNames: ["node", "import", "default"],
+});
 
 /**
  * A plugin responsible for resolving bare module ids based on server target.
@@ -35,81 +40,107 @@ export function serverBareModulesPlugin(
   return {
     name: "server-bare-modules",
     setup(build) {
-      build.onResolve({ filter: /.*/ }, ({ importer, path }) => {
-        // If it's not a bare module ID, bundle it.
-        if (!isBareModuleId(resolvePath(path))) {
-          return undefined;
-        }
-
-        // To prevent `import xxx from "remix"` from ending up in the bundle
-        // we "bundle" remix but the other modules where the code lives.
-        if (path === "remix") {
-          return undefined;
-        }
-
-        // These are our virtual modules, always bundle them because there is no
-        // "real" file on disk to externalize.
-        if (
-          path === serverBuildVirtualModule.id ||
-          path === assetsManifestVirtualModule.id
-        ) {
-          return undefined;
-        }
-
-        // Always bundle CSS files so we get immutable fingerprinted asset URLs.
-        if (path.endsWith(".css")) {
-          return undefined;
-        }
-
-        let packageName = getNpmPackageName(path);
-
-        // Warn if we can't find an import for a package.
-        if (
-          onWarning &&
-          !isNodeBuiltIn(packageName) &&
-          !/\bnode_modules\b/.test(importer) &&
-          !dependencies[packageName]
-        ) {
-          onWarning(
-            `The path "${path}" is imported in ` +
-              `${relative(process.cwd(), importer)} but ` +
-              `${packageName} is not listed in your package.json dependencies. ` +
-              `Did you forget to install it?`,
-            packageName
-          );
-        }
-
-        switch (remixConfig.serverBuildTarget) {
-          // Always bundle everything for cloudflare.
-          case "cloudflare-pages":
-          case "cloudflare-workers":
+      build.onResolve(
+        { filter: /.*/ },
+        async ({ importer, path, resolveDir }) => {
+          // If it's not a bare module ID, bundle it.
+          if (!isBareModuleId(resolvePath(path))) {
             return undefined;
-        }
+          }
 
-        for (let pattern of remixConfig.serverDependenciesToBundle) {
-          // bundle it if the path matches the pattern
+          // To prevent `import xxx from "remix"` from ending up in the bundle
+          // we "bundle" remix but the other modules where the code lives.
+          if (path === "remix") {
+            return undefined;
+          }
+
+          // These are our virtual modules, always bundle them because there is no
+          // "real" file on disk to externalize.
           if (
-            typeof pattern === "string" ? path === pattern : pattern.test(path)
+            path === serverBuildVirtualModule.id ||
+            path === assetsManifestVirtualModule.id
           ) {
             return undefined;
           }
-        }
 
-        if (
-          onWarning &&
-          !isNodeBuiltIn(packageName) &&
-          (!remixConfig.serverBuildTarget ||
-            remixConfig.serverBuildTarget === "node-cjs")
-        ) {
-          warnOnceIfEsmOnlyPackage(packageName, path, onWarning);
-        }
+          // Always bundle CSS files so we get immutable fingerprinted asset URLs.
+          if (path.endsWith(".css")) {
+            return undefined;
+          }
 
-        // Externalize everything else if we've gotten here.
-        return {
-          path,
-          external: true,
-        };
-      });
+          let packageName = getNpmPackageName(path);
+
+          // Warn if we can't find an import for a package.
+          if (
+            onWarning &&
+            !isNodeBuiltIn(packageName) &&
+            !/\bnode_modules\b/.test(importer) &&
+            !dependencies[packageName]
+          ) {
+            onWarning(
+              `The path "${path}" is imported in ` +
+                `${relative(process.cwd(), importer)} but ` +
+                `${packageName} is not listed in your package.json dependencies. ` +
+                `Did you forget to install it?`,
+              packageName
+            );
+          }
+
+          switch (remixConfig.serverBuildTarget) {
+            // Always bundle everything for cloudflare.
+            case "cloudflare-pages":
+            case "cloudflare-workers":
+              return undefined;
+          }
+
+          for (let pattern of remixConfig.serverDependenciesToBundle) {
+            // bundle it if the path matches the pattern
+            if (
+              typeof pattern === "string"
+                ? path === pattern
+                : pattern.test(path)
+            ) {
+              return undefined;
+            }
+          }
+
+          if (
+            onWarning &&
+            !isNodeBuiltIn(packageName) &&
+            (!remixConfig.serverBuildTarget ||
+              remixConfig.serverBuildTarget === "node-cjs" ||
+              remixConfig.serverBuildTarget === "node-esm")
+          ) {
+            warnOnceIfEsmOnlyPackage(packageName, path, onWarning);
+          }
+
+          if (remixConfig.serverBuildTarget === "node-esm") {
+            try {
+              const resolvedPath = await new Promise<string>(
+                (finish, reject) => {
+                  nodeEsmImportResolver(resolveDir, path, (err: Error, res: string) => {
+                    if (err) reject(err);
+                    else finish(res);
+                  });
+                }
+              );
+              const relativePath = resolvedPath
+                .split("node_modules", 2)[1]
+                .slice(1);
+              return {
+                path: relativePath,
+                external: true,
+              };
+            } catch (err) {}
+          }
+
+          // Externalize everything else if we've gotten here.
+          return {
+            path,
+            external: true,
+          };
+        }
+      );
     },
   };
 }

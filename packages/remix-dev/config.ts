@@ -19,6 +19,7 @@ export type RemixMdxConfigFunction = (
 
 export type ServerBuildTarget =
   | "node-cjs"
+  | "node-esm"
   | "arc"
   | "netlify"
   | "vercel"
@@ -269,15 +270,25 @@ export async function readConfig(
   }
 
   let rootDirectory = path.resolve(remixRoot);
-  let configFile = path.resolve(rootDirectory, "remix.config.js");
+  let configFile = findConfig(rootDirectory, "remix.config");
+  let appConfig: AppConfig = {};
 
-  let appConfig: AppConfig;
-  try {
-    appConfig = require(configFile);
-  } catch (error) {
-    throw new Error(
-      `Error loading Remix config in ${configFile}\n${String(error)}`
-    );
+  if (configFile) {
+    let importPath = path.resolve(rootDirectory, configFile);
+    try {
+      let importedConfig: undefined | AppConfig | { default: AppConfig } =
+        undefined;
+      importedConfig = await import(importPath);
+
+      appConfig =
+        importedConfig && "default" in importedConfig
+          ? importedConfig.default
+          : importedConfig || {};
+    } catch (error) {
+      throw new Error(
+        `Error loading Remix config in ${configFile}\n${String(error)}`
+      );
+    }
   }
 
   let customServerEntryPoint = appConfig.server;
@@ -293,6 +304,9 @@ export async function readConfig(
       serverModuleFormat = "esm";
       serverPlatform = "neutral";
       break;
+    case "node-esm":
+      serverModuleFormat = "esm";
+      serverPlatform = "node";
   }
 
   let mdx = appConfig.mdx;
@@ -435,6 +449,15 @@ const entryExts = [".js", ".jsx", ".ts", ".tsx"];
 
 function findEntry(dir: string, basename: string): string | undefined {
   for (let ext of entryExts) {
+    let file = path.resolve(dir, basename + ext);
+    if (fse.existsSync(file)) return path.relative(dir, file);
+  }
+
+  return undefined;
+}
+
+function findConfig(dir: string, basename: string) {
+  for (let ext of [".js", ".cjs", ".mjs", ".json"]) {
     let file = path.resolve(dir, basename + ext);
     if (fse.existsSync(file)) return path.relative(dir, file);
   }

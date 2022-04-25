@@ -4,7 +4,7 @@
   "compilerOptions": {
     "lib": ["ES2019", "DOM.Iterable"],
     "target": "ES2019",
-    "module": "CommonJS",
+    "module": "ESNext",
 
     "moduleResolution": "node",
     "resolveJsonModule": true,

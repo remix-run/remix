@@ -470,6 +470,7 @@ function isRemixTemplate(input: string) {
   return [
     "remix",
     "express",
+    "express-esm",
     "arc",
     "fly",
     "netlify",
