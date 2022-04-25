@@ -91,9 +91,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: peter-evans/repository-dispatch@v2
-        env:
-          VERSION: refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}
         with:
           token: ${{ secrets.NIGHTLY_PAT }}
           event-type: release
-          client-payload: '{ "ref": "${VERSION}" }'
+          client-payload: '{ "ref": "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}" }'
