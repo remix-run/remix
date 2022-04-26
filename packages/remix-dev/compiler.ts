@@ -215,7 +215,7 @@ export async function watch(
     if (onRebuildFinish) onRebuildFinish();
   }, 100);
 
-  let toWatch = [config.appDirectory];
+  let toWatch = [config.appDirectory, ...config.extraPathsToWatch];
   if (config.serverEntryPoint) {
     toWatch.push(config.serverEntryPoint);
   }

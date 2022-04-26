@@ -40,6 +40,12 @@ export interface AppConfig {
   appDirectory?: string;
 
   /**
+  * List of extra paths or globs to watch changes on in addition to the main app directory.
+  * relative to `remix.config.js`. Defaults to `[]`.
+  */
+  extraPathsToWatch?: string | string[];
+
+  /**
    * The path to a directory Remix can use for caching things in development,
    * relative to `remix.config.js`. Defaults to `".cache"`.
    */
@@ -162,6 +168,11 @@ export interface RemixConfig {
    * The absolute path to the application source directory.
    */
   appDirectory: string;
+
+  /**
+  * List of extra paths or globs to watch changes on in addition to the main app directory.
+  */
+   extraPathsToWatch: string[];
 
   /**
    * The absolute path to the cache directory.
@@ -397,8 +408,15 @@ export async function readConfig(
 
   let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
 
+  let extraPathsToWatch: string[] = [];
+
+  if (appConfig.extraPathsToWatch) {
+    extraPathsToWatch = extraPathsToWatch.concat(Array.isArray(appConfig.extraPathsToWatch) ? appConfig.extraPathsToWatch : [appConfig.extraPathsToWatch]);
+  }
+
   return {
     appDirectory,
+    extraPathsToWatch,
     cacheDirectory,
     entryClientFile,
     entryServerFile,
