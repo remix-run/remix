@@ -125,27 +125,51 @@ export async function commentOnIssue({ owner, repo, issue, version }) {
   });
 }
 
-export async function getIssuesClosedByPullRequests(prHtmlUrl) {
+export async function getIssuesClosedByPullRequests(
+  prHtmlUrl,
+  nodes = [],
+  after
+) {
+  console.log(`Getting issues closed by ${prHtmlUrl}`);
   let res = await graphqlWithAuth(
     gql`
-      query GET_ISSUES_CLOSED_BY_PR($prHtmlUrl: URI!) {
+      query GET_ISSUES_CLOSED_BY_PR($prHtmlUrl: URI!, $after: String) {
         resource(url: $prHtmlUrl) {
           ... on PullRequest {
-            closingIssuesReferences(first: 100) {
+            closingIssuesReferences(first: 100, after: $after) {
               nodes {
                 number
+              }
+              pageInfo {
+                hasNextPage
+                endCursor
               }
             }
           }
         }
       }
     `,
-    { prHtmlUrl }
+    { prHtmlUrl, after }
   );
 
-  return res?.resource?.closingIssuesReferences?.nodes ?? [];
+  let newNodes = res?.resource?.closingIssuesReferences?.nodes ?? [];
+  nodes.push(...newNodes);
+  console.log(
+    `Found ${newNodes.length} for a total of ${nodes.length} issues closed by ${prHtmlUrl}`
+  );
+
+  if (res?.resource?.closingIssuesReferences?.pageInfo?.hasNextPage) {
+    console.log(`Has next page`);
+    return getIssuesClosedByPullRequests(
+      prHtmlUrl,
+      nodes,
+      res?.resource?.closingIssuesReferences?.pageInfo?.endCursor
+    );
+  }
+
+  return nodes;
 }
 
-function checkIfStringStartsWith(str, substrs) {
-  return substrs.some((substr) => str.startsWith(substr));
+function checkIfStringStartsWith(string, substrings) {
+  return substrings.some((substr) => string.startsWith(substr));
 }
