@@ -1,6 +1,7 @@
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 import { Link } from "react-router-dom";
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData } from "remix";
 import { route } from "routes-gen";
 
 type Post = {

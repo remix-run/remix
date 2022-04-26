@@ -17,7 +17,7 @@ We recommend you create a function that validates the user session that can be a
 import {
   createCookieSessionStorage,
   redirect,
-} from "remix";
+} from "@remix-run/{runtime}";
 
 // somewhere you've got a session storage
 const { getSession } = createCookieSessionStorage();
@@ -228,3 +228,9 @@ Again, `formData.getAll()` is often all you need, we encourage you to give it a 
 
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [query-string]: https://www.npmjs.com/package/query-string
+
+## What's the difference between `CatchBoundary` & `ErrorBoundary`?
+
+Error boundaries render when your application throws an error and you had no clue it was going to happen. Most apps just go blank or have spinners spin forever. In remix the error boundary renders and you have granular control over it.
+
+Catch boundaries render when you decide in a loader that you can't proceed down the happy path to render the UI you want (auth required, record not found, etc.), so you throw a response and let some catch boundary up the tree handle it.

@@ -25,7 +25,12 @@ async function run() {
   }
 
   let prerelease = semver.prerelease(taggedVersion);
-  let tag = prerelease ? prerelease[0] : "latest";
+  let prereleaseTag = prerelease ? prerelease[0] : undefined;
+  let tag = prereleaseTag
+    ? prereleaseTag.includes("nightly")
+      ? "nightly"
+      : prereleaseTag
+    : "latest";
 
   // Publish eslint config directly from the package directory
   publish(path.join(packageDir, "remix-eslint-config"), tag);

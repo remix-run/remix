@@ -6,15 +6,15 @@
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
-    "dev": "remix dev",
-    "postinstall": "remix setup node"
+    "dev": "remix dev"
   },
   "dependencies": {
+    "@remix-run/node": "*",
     "@remix-run/react": "*",
     "@remix-run/vercel": "*",
+    "@vercel/node": "^1.14.0",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "remix": "*"
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
     "@remix-run/dev": "*",

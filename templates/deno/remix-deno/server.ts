@@ -1,5 +1,6 @@
 import * as path from "https://deno.land/std@0.128.0/path/mod.ts";
 import mime from "https://esm.sh/mime";
+
 import { createRequestHandler as createRemixRequestHandler } from "./deps/@remix-run/server-runtime.ts";
 import type { ServerBuild } from "./deps/@remix-run/server-runtime.ts";
 
@@ -20,7 +21,7 @@ export function createRequestHandler<Context = unknown>({
   mode?: string;
   getLoadContext?: (request: Request) => Promise<Context> | Context;
 }) {
-  const remixHandler = createRemixRequestHandler(build, {}, mode);
+  const remixHandler = createRemixRequestHandler(build, mode);
   return async (request: Request) => {
     try {
       const loadContext = getLoadContext

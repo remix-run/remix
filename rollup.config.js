@@ -3,6 +3,7 @@ import babel from "@rollup/plugin-babel";
 import nodeResolve from "@rollup/plugin-node-resolve";
 import copy from "rollup-plugin-copy";
 import fse from "fs-extra";
+import fs from "fs";
 
 const executableBanner = "#!/usr/bin/env node\n";
 
@@ -83,6 +84,7 @@ function createRemix() {
             { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
+        copyToPlaygrounds(),
       ],
     },
   ];
@@ -118,6 +120,7 @@ function remix() {
             { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
+        copyToPlaygrounds(),
       ],
     },
     {
@@ -136,6 +139,7 @@ function remix() {
           exclude: /node_modules/,
           extensions: [".ts"],
         }),
+        copyToPlaygrounds(),
       ],
     },
   ];
@@ -255,6 +259,7 @@ function remixDev() {
             };
           },
         },
+        copyToPlaygrounds(),
       ],
     },
     {
@@ -274,6 +279,27 @@ function remixDev() {
           extensions: [".ts"],
         }),
         nodeResolve({ extensions: [".ts"] }),
+        copyToPlaygrounds(),
+      ],
+    },
+    {
+      external: (id) => isBareModuleId(id),
+      input: [`${sourceDir}/cli/migrate/migrations/transforms.ts`],
+      output: {
+        banner: createBanner("@remix-run/dev", version),
+        dir: `${outputDir}/cli/migrate/migrations`,
+        exports: "named",
+        format: "cjs",
+        preserveModules: true,
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts"],
+        }),
+        nodeResolve({ extensions: [".ts"] }),
+        copyToPlaygrounds(),
       ],
     },
     {
@@ -293,6 +319,7 @@ function remixDev() {
           extensions: [".ts"],
         }),
         nodeResolve({ extensions: [".ts"] }),
+        copyToPlaygrounds(),
       ],
     },
   ];
@@ -331,6 +358,7 @@ function remixServerRuntime() {
             { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
+        copyToPlaygrounds(),
       ],
     },
     {
@@ -351,6 +379,7 @@ function remixServerRuntime() {
           extensions: [".ts", ".tsx"],
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
+        copyToPlaygrounds(),
       ],
     },
     {
@@ -369,6 +398,7 @@ function remixServerRuntime() {
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
         }),
+        copyToPlaygrounds(),
       ],
     },
     {
@@ -387,6 +417,7 @@ function remixServerRuntime() {
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
         }),
+        copyToPlaygrounds(),
       ],
     },
   ];
@@ -425,6 +456,7 @@ function remixNode() {
             { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
+        copyToPlaygrounds(),
       ],
     },
     {
@@ -443,6 +475,7 @@ function remixNode() {
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
         }),
+        copyToPlaygrounds(),
       ],
     },
     {
@@ -461,6 +494,7 @@ function remixNode() {
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
         }),
+        copyToPlaygrounds(),
       ],
     },
   ];
@@ -499,6 +533,7 @@ function remixCloudflare() {
             { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
+        copyToPlaygrounds(),
       ],
     },
     {
@@ -517,6 +552,7 @@ function remixCloudflare() {
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
         }),
+        copyToPlaygrounds(),
       ],
     },
     {
@@ -535,6 +571,7 @@ function remixCloudflare() {
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
         }),
+        copyToPlaygrounds(),
       ],
     },
   ];
@@ -565,6 +602,7 @@ function remixCloudflareWorkers() {
           extensions: [".ts", ".tsx"],
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
+        copyToPlaygrounds(),
       ],
     },
   ];
@@ -595,6 +633,7 @@ function remixCloudflarePages() {
           extensions: [".ts", ".tsx"],
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
+        copyToPlaygrounds(),
       ],
     },
   ];
@@ -636,6 +675,7 @@ function getAdapterConfig(adapterName) {
             { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
+        copyToPlaygrounds(),
       ],
     },
     ...(hasMagicExports
@@ -656,6 +696,7 @@ function getAdapterConfig(adapterName) {
                 exclude: /node_modules/,
                 extensions: [".ts", ".tsx"],
               }),
+              copyToPlaygrounds(),
             ],
           },
           {
@@ -674,6 +715,7 @@ function getAdapterConfig(adapterName) {
                 exclude: /node_modules/,
                 extensions: [".ts", ".tsx"],
               }),
+              copyToPlaygrounds(),
             ],
           },
         ]
@@ -728,6 +770,7 @@ function remixReact() {
           { src: `${sourceDir}/README.md`, dest: outputDir },
         ],
       }),
+      copyToPlaygrounds(),
     ],
   };
 
@@ -751,6 +794,7 @@ function remixReact() {
         extensions: [".ts", ".tsx"],
       }),
       nodeResolve({ extensions: [".ts", ".tsx"] }),
+      copyToPlaygrounds(),
     ],
   };
 
@@ -771,6 +815,7 @@ function remixReact() {
         exclude: /node_modules/,
         extensions: [".ts", ".tsx"],
       }),
+      copyToPlaygrounds(),
     ],
   };
 
@@ -791,6 +836,7 @@ function remixReact() {
         exclude: /node_modules/,
         extensions: [".ts", ".tsx"],
       }),
+      copyToPlaygrounds(),
     ],
   };
 
@@ -835,6 +881,7 @@ function remixServe() {
             { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
+        copyToPlaygrounds(),
       ],
     },
     {
@@ -854,6 +901,7 @@ function remixServe() {
           extensions: [".ts"],
         }),
         nodeResolve({ extensions: [".ts"] }),
+        copyToPlaygrounds(),
       ],
     },
   ];
@@ -878,4 +926,35 @@ export default function rollup(options) {
   ];
 
   return builds;
+}
+
+function copyToPlaygrounds() {
+  return {
+    name: "copy-to-remix-playground",
+    async writeBundle(options, bundle) {
+      let playgroundsDir = path.join(__dirname, "playground");
+      let playgrounds = await fs.promises.readdir(playgroundsDir);
+      let writtenDir = path.join(__dirname, options.dir);
+      for (let playground of playgrounds) {
+        let playgroundDir = path.join(playgroundsDir, playground);
+        if (!fse.statSync(playgroundDir).isDirectory()) {
+          continue;
+        }
+        let destDir = writtenDir.replace(
+          path.join(__dirname, "build"),
+          playgroundDir
+        );
+        await fse.copy(writtenDir, destDir);
+
+        // tickle live reload by touching the server entry
+        let serverEntry = ["entry.server.tsx", "entry.server.jsx"].find(
+          (entryPath) =>
+            fse.existsSync(path.join(playgroundDir, "app", entryPath))
+        );
+        let serverEntryPath = path.join(playgroundDir, "app", serverEntry);
+        let serverEntryContent = await fse.readFile(serverEntryPath);
+        await fse.writeFile(serverEntryPath, serverEntryContent);
+      }
+    },
+  };
 }

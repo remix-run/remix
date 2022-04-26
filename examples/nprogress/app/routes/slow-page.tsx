@@ -1,5 +1,6 @@
-import type { LoaderFunction } from "remix";
-import { json, Link } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Link } from "@remix-run/react";
 
 export const loader: LoaderFunction = async () => {
   await new Promise((resolve) => setTimeout(resolve, 1000));

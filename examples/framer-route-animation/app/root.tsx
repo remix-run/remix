@@ -1,5 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
-import type { MetaFunction } from "remix";
+import type { MetaFunction } from "@remix-run/node";
 import {
   Links,
   LiveReload,
@@ -7,7 +6,8 @@ import {
   NavLink,
   Scripts,
   ScrollRestoration,
-} from "remix";
+} from "@remix-run/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useLocation, useOutlet } from "react-router-dom";
 
 export const meta: MetaFunction = () => ({

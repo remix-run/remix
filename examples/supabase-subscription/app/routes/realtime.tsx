@@ -1,6 +1,8 @@
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, useFetcher, useLoaderData } from "@remix-run/react";
 import { useSubscription } from "react-supabase";
-import type { ActionFunction, LoaderFunction } from "remix";
-import { Form, json, useFetcher, useLoaderData } from "remix";
+
 import { client } from "~/utils/supabaseClient.server";
 
 export const loader: LoaderFunction = async () => {

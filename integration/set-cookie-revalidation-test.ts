@@ -1,16 +1,19 @@
+import { test, expect } from "@playwright/test";
+
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 let fixture: Fixture;
-let app: AppFixture;
+let appFixture: AppFixture;
 
 let BANNER_MESSAGE = "you do not have permission to view /protected";
 
-beforeAll(async () => {
+test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
       "app/session.server.js": js`
-        import { createCookieSessionStorage } from "remix";
+        import { createCookieSessionStorage } from "@remix-run/node";
 
         export let MESSAGE_KEY = "message";
 
@@ -25,7 +28,14 @@ beforeAll(async () => {
       `,
 
       "app/root.jsx": js`
-        import { json, Links, Meta, Outlet, Scripts, useLoaderData } from "remix";
+        import { json } from "@remix-run/node";
+        import {
+          Links,
+          Meta,
+          Outlet,
+          Scripts,
+          useLoaderData,
+        } from "@remix-run/react";
 
         import { sessionStorage, MESSAGE_KEY } from "~/session.server";
 
@@ -60,7 +70,7 @@ beforeAll(async () => {
       `,
 
       "app/routes/index.jsx": js`
-        import { Link } from "remix";
+        import { Link } from "@remix-run/react";
 
         export default function Index() {
           return (
@@ -78,7 +88,7 @@ beforeAll(async () => {
       `,
 
       "app/routes/protected.jsx": js`
-        import { redirect } from "remix";
+        import { redirect } from "@remix-run/node";
 
         import { sessionStorage, MESSAGE_KEY } from "~/session.server";
 
@@ -102,12 +112,15 @@ beforeAll(async () => {
   });
 
   // This creates an interactive app using puppeteer.
-  app = await createAppFixture(fixture);
+  appFixture = await createAppFixture(fixture);
 });
 
-afterAll(async () => app.close());
+test.afterAll(() => appFixture.close());
 
-it("should revalidate when cookie is set on redirect from loader", async () => {
+test("should revalidate when cookie is set on redirect from loader", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/");
   await app.clickLink("/protected");
   expect(await app.getHtml()).toMatch(BANNER_MESSAGE);
