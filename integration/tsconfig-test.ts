@@ -91,4 +91,46 @@ test("shouldn't change suggested config if set", async () => {
   expect(content).toEqual(config);
 });
 
-// TODO: add test for nested tsconfig
+test("allows for `extends` in tsconfig", async () => {
+  let config = {
+    extends: "./tsconfig.base.json",
+  };
+
+  let baseConfig = {
+    compilerOptions: {
+      allowJs: true,
+      baseUrl: ".",
+    },
+  };
+
+  let fixture = await createFixture({
+    files: {
+      "tsconfig.json": json(config),
+      "tsconfig.base.json": json(baseConfig),
+    },
+  });
+
+  let content = JSON5.parse(
+    await fse.readFile(path.join(fixture.projectDir, "tsconfig.json"), "utf8")
+  );
+  // our base config only sets a few options, so our local config should fill in the missing ones
+  expect(content).toEqual({
+    extends: "./tsconfig.base.json",
+    include: ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
+    compilerOptions: {
+      esModuleInterop: true,
+      forceConsistentCasingInFileNames: true,
+      isolatedModules: true,
+      jsx: "react-jsx",
+      lib: ["DOM", "DOM.Iterable", "ES2019"],
+      moduleResolution: "node",
+      noEmit: true,
+      resolveJsonModule: true,
+      strict: true,
+      target: "es2019",
+      paths: {
+        "~/*": ["./app/*"],
+      },
+    },
+  });
+});
