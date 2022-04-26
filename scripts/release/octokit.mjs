@@ -162,17 +162,22 @@ async function getIssuesLinkedToPullRequest(prHtmlUrl, nodes = [], after) {
   return nodes;
 }
 
-export async function getIssuesClosedByPullRequests(prHtmlUrl, prDescription) {
+export async function getIssuesClosedByPullRequests(prHtmlUrl, prBody) {
   let linked = await getIssuesLinkedToPullRequest(prHtmlUrl);
-  if (!prDescription) return linked;
+  if (!prBody) return linked;
 
-  let regex = /([\w]*.?\s+).?#([0-9]+)/gi;
-  let matches = prDescription.match(regex);
+  /**
+   * This regex matches for one of github's issue references for auto linking an issue to a PR
+   * as that only happens when the PR is sent to the default branch of the repo
+   * https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword
+   */
+  let regex =
+    /([close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved]*.?\s+).?#([0-9]+)/gi;
+  let matches = prBody.match(regex);
   if (!matches) return linked;
 
   let issues = matches.map((match) => {
-    let [keyword, issueNumber] = match.split(" #");
-    if (!PR_KEYWORDS.has(keyword.toLowerCase())) return null;
+    let [, issueNumber] = match.split(" #");
     return { number: parseInt(issueNumber, 10) };
   });
 
