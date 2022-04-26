@@ -71,7 +71,7 @@ async function deleteOldestDeployment() {
     throw new Error("🚨 Failed to destroy deployment");
   }
 
-  await fse.rmdir(FAKE_PROJECT_DIR);
+  await fse.rmdir(FAKE_PROJECT_DIR, { recursive: true });
 }
 
 async function getArcDeployment() {
