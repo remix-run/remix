@@ -6,7 +6,6 @@ import {
   GITHUB_TOKEN,
   GITHUB_REPOSITORY,
   PR_FILES_STARTS_WITH,
-  PR_KEYWORDS,
 } from "./constants.mjs";
 
 const graphqlWithAuth = graphql.defaults({
