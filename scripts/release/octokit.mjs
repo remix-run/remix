@@ -6,6 +6,7 @@ import {
   GITHUB_TOKEN,
   GITHUB_REPOSITORY,
   PR_FILES_STARTS_WITH,
+  PR_KEYWORDS,
 } from "./constants.mjs";
 
 const graphqlWithAuth = graphql.defaults({
@@ -67,6 +68,11 @@ export async function prsMergedSinceLast({
     throw new Error(`Could not find previous release in ${GITHUB_REPOSITORY}`);
   }
 
+  console.log({
+    lastRelease: lastRelease.tag_name,
+    previousRelease: previousRelease.tag_name,
+  });
+
   let startDate = new Date(previousRelease.created_at);
   let endDate = new Date(lastRelease.created_at);
 
@@ -102,6 +108,7 @@ export async function prsMergedSinceLast({
 
   return prsWithFiles.filter((pr) => {
     return pr.files.some((file) => {
+      console.log(file.filename);
       return checkIfStringStartsWith(file.filename, PR_FILES_STARTS_WITH);
     });
   });
@@ -125,12 +132,7 @@ export async function commentOnIssue({ owner, repo, issue, version }) {
   });
 }
 
-export async function getIssuesClosedByPullRequests(
-  prHtmlUrl,
-  nodes = [],
-  after
-) {
-  console.log(`Getting issues closed by ${prHtmlUrl}`);
+async function getIssuesLinkedToPullRequest(prHtmlUrl, nodes = [], after) {
   let res = await graphqlWithAuth(
     gql`
       query GET_ISSUES_CLOSED_BY_PR($prHtmlUrl: URI!, $after: String) {
@@ -154,13 +156,9 @@ export async function getIssuesClosedByPullRequests(
 
   let newNodes = res?.resource?.closingIssuesReferences?.nodes ?? [];
   nodes.push(...newNodes);
-  console.log(
-    `Found ${newNodes.length} for a total of ${nodes.length} issues closed by ${prHtmlUrl}`
-  );
 
   if (res?.resource?.closingIssuesReferences?.pageInfo?.hasNextPage) {
-    console.log(`Has next page`);
-    return getIssuesClosedByPullRequests(
+    return getIssuesLinkedToPullRequest(
       prHtmlUrl,
       nodes,
       res?.resource?.closingIssuesReferences?.pageInfo?.endCursor
@@ -168,6 +166,23 @@ export async function getIssuesClosedByPullRequests(
   }
 
   return nodes;
+}
+
+export async function getIssuesClosedByPullRequests(prHtmlUrl, prDescription) {
+  let linked = await getIssuesLinkedToPullRequest(prHtmlUrl);
+  if (!prDescription) return linked;
+
+  let regex = /([\w]*.?\s+).?#([0-9]+)/gi;
+  let matches = prDescription.match(regex);
+  if (!matches) return linked;
+
+  let issues = matches.map((match) => {
+    let [keyword, issueNumber] = match.split(" #");
+    if (!PR_KEYWORDS.has(keyword.toLowerCase())) return null;
+    return { number: parseInt(issueNumber, 10) };
+  });
+
+  return [...linked, ...issues.filter((issue) => issue !== null)];
 }
 
 function checkIfStringStartsWith(string, substrings) {
