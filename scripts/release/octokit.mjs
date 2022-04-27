@@ -22,11 +22,6 @@ export async function prsMergedSinceLast({
   repo,
   lastRelease: lastReleaseVersion,
 }) {
-  // we don't want to comment about experimental releases
-  if (lastReleaseVersion.includes("experimental")) {
-    return [];
-  }
-
   let releases = await octokit.paginate(octokit.rest.repos.listReleases, {
     owner,
     repo,
@@ -100,11 +95,14 @@ export async function prsMergedSinceLast({
     })
   );
 
-  return prsWithFiles.filter((pr) => {
-    return pr.files.some((file) => {
-      return checkIfStringStartsWith(file.filename, PR_FILES_STARTS_WITH);
-    });
-  });
+  return {
+    previousRelease: previousRelease.tag_name,
+    merged: prsWithFiles.filter((pr) => {
+      return pr.files.some((file) => {
+        return checkIfStringStartsWith(file.filename, PR_FILES_STARTS_WITH);
+      });
+    }),
+  };
 }
 
 export async function commentOnPullRequest({ owner, repo, pr, version }) {
