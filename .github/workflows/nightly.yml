@@ -35,12 +35,12 @@ jobs:
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
 
-      - name: 🏗 Build
-        run: yarn build
-
       - name: ⤴️ Update Version
         id: version
         run: |
+          git config --local user.email "hello@remix.run"
+          git config --local user.name "Remix Run Bot"
+
           SHA=$(git rev-parse HEAD)
           SHORT_SHA=${SHA::7}
           DATE=$(date '+%Y%m%d')
@@ -59,7 +59,11 @@ jobs:
 
           yarn run version ${NEXT_VERSION} --skip-prompt
 
-          git push origin --tags
+      - name: 🏗 Build
+        run: yarn build
+
+      - name: 🏷 Push Tag
+        run: git push origin --tags
 
       - name: 🔐 Setup npm auth
         run: |
@@ -67,7 +71,7 @@ jobs:
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
       - name: 🚀 Publish
-        run: npm run publish --tag nightly
+        run: npm run publish
 
       - name: 🐱 Create GitHub release
         uses: actions/create-release@v1
@@ -82,19 +86,12 @@ jobs:
 
   comment:
     needs: [nightly]
-    name: Comment on Issues and PRs
+    name: 🛴 Kick off comment and deployment test workflows
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - name: 🛴 Kick off comment and deployment test workflows
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EVENT_TYPE: release
-          REPO: remix-run/remix
-          VERSION: refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}
-        run: |
-          curl \
-            -H "Authorization: token ${GITHUB_TOKEN}" \
-            --request POST \
-            --data '{ "event_type": "${EVENT_TYPE}", "client_payload": { "ref": "${VERSION}" } }' \
-            https://api.github.com/repos/${REPO}/dispatches
+      - uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.NIGHTLY_PAT }}
+          event-type: release
+          client-payload: '{ "ref": "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}" }'

@@ -8,10 +8,7 @@ import semver from "semver";
 let DOWN = "\x1B\x5B\x42";
 let ENTER = "\x0D";
 
-let execFile =
-  process.platform === "win32"
-    ? util.promisify(childProcess.exec)
-    : util.promisify(childProcess.execFile);
+let execFile = util.promisify(childProcess.execFile);
 
 const TEMP_DIR = path.join(
   fse.realpathSync(os.tmpdir()),
@@ -31,30 +28,57 @@ async function execRemix(
   args: Array<string>,
   options: Parameters<typeof execFile>[2] = {}
 ) {
-  let result = await execFile(
-    "node",
-    [
-      "--require",
-      require.resolve("esbuild-register"),
-      "--require",
-      path.join(__dirname, "./msw.ts"),
-      path.resolve(__dirname, "../cli.ts"),
-      ...args,
-    ],
-    {
-      cwd: TEMP_DIR,
-      ...options,
-      env: {
-        ...process.env,
-        NO_COLOR: "1",
-        ...options.env,
-      },
-    }
-  );
-  return {
-    ...result,
-    stdout: result.stdout.replace(TEMP_DIR, "<TEMP_DIR>").trim(),
-  };
+  if (process.platform === "win32") {
+    let cp = childProcess.spawnSync(
+      "node",
+      [
+        "--require",
+        require.resolve("esbuild-register"),
+        "--require",
+        path.join(__dirname, "./msw.ts"),
+        path.resolve(__dirname, "../cli.ts"),
+        ...args,
+      ],
+      {
+        cwd: TEMP_DIR,
+        ...options,
+        env: {
+          ...process.env,
+          NO_COLOR: "1",
+          ...options.env,
+        },
+      }
+    );
+
+    return {
+      stdout: cp.stdout?.toString("utf-8"),
+    };
+  } else {
+    let result = await execFile(
+      "node",
+      [
+        "--require",
+        require.resolve("esbuild-register"),
+        "--require",
+        path.join(__dirname, "./msw.ts"),
+        path.resolve(__dirname, "../cli.ts"),
+        ...args,
+      ],
+      {
+        cwd: TEMP_DIR,
+        ...options,
+        env: {
+          ...process.env,
+          NO_COLOR: "1",
+          ...options.env,
+        },
+      }
+    );
+    return {
+      ...result,
+      stdout: result.stdout.replace(TEMP_DIR, "<TEMP_DIR>").trim(),
+    };
+  }
 }
 
 describe("remix CLI", () => {
@@ -89,6 +113,7 @@ describe("remix CLI", () => {
           \`routes\` Options:
             --json              Print the routes as JSON
           \`migrate\` Options:
+            --debug             Show debugging logs
             --dry               Dry run (no changes are made to files)
             --force             Bypass Git safety checks and forcibly run migration
             --migration, -m     Name of the migration to run
@@ -179,9 +204,52 @@ describe("remix CLI", () => {
         { question: /Where.*create.*app/i, type: [projectDir, ENTER] },
         { question: /What type of app/i, answer: /basics/i },
         { question: /Where.*deploy/i, answer: /express/i },
-        { question: /JavaScript/i, answer: /javascript/i },
         { question: /install/i, type: ["n", ENTER] },
+        { question: /typescript or javascript/i, answer: /typescript/i },
       ]);
+    });
+
+    it("allows you to go through the prompts and convert to JS", async () => {
+      let projectDir = path.join(TEMP_DIR, "my-js-app");
+
+      let proc = childProcess.spawn(
+        "node",
+        [
+          "--require",
+          require.resolve("esbuild-register"),
+          "--require",
+          path.join(__dirname, "./msw.ts"),
+          path.resolve(__dirname, "../cli.ts"),
+          "create",
+        ],
+        { stdio: [null, null, null] }
+      );
+
+      await interactWithShell(proc, [
+        { question: /Where.*create.*app/i, type: [projectDir, ENTER] },
+        { question: /What type of app/i, answer: /basics/i },
+        { question: /Where.*deploy/i, answer: /express/i },
+        { question: /install/i, type: ["n", ENTER] },
+        { question: /typescript or javascript/i, answer: /javascript/i },
+      ]);
+
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+      expect(
+        fse.existsSync(path.join(projectDir, "app/root.jsx"))
+      ).toBeTruthy();
+      expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
+      expect(
+        fse.existsSync(path.join(projectDir, "tsconfig.json"))
+      ).toBeFalsy();
+      expect(
+        fse.existsSync(path.join(projectDir, "jsconfig.json"))
+      ).toBeTruthy();
+      let pkgJSON = JSON.parse(
+        fse.readFileSync(path.join(projectDir, "package.json"), "utf-8")
+      );
+      expect(Object.keys(pkgJSON.devDependencies)).not.toContain("typescript");
     });
   });
 });
@@ -207,8 +275,8 @@ function defer() {
 async function interactWithShell(
   proc: childProcess.ChildProcessWithoutNullStreams,
   qAndA: Array<
-    | { question: RegExp; type: Array<String>; answer?: undefined }
-    | { question: RegExp; answer: RegExp; type?: undefined }
+    | { question: RegExp; type: Array<String>; answer?: never }
+    | { question: RegExp; answer: RegExp; type?: never }
   >
 ) {
   proc.stdin.setDefaultEncoding("utf-8");
@@ -236,7 +304,7 @@ async function interactWithShell(
         let currentSelection = chunk
           .split("\n")
           .slice(1)
-          .find((l) => l.includes("❯"));
+          .find((l) => l.includes("❯") || l.includes(">"));
 
         if (currentSelection && answer.test(currentSelection)) {
           proc.stdin.write(ENTER);

@@ -10,15 +10,10 @@ import * as semver from "semver";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 import sortPackageJSON from "sort-package-json";
-import glob from "fast-glob";
-import * as babel from "@babel/core";
-// @ts-expect-error these modules dont have types
-import babelPluginSyntaxJSX from "@babel/plugin-syntax-jsx";
-// @ts-expect-error these modules dont have types
-import babelPresetTypeScript from "@babel/preset-typescript";
-import prettier from "prettier";
 
+import * as colors from "../colors";
 import packageJson from "../package.json";
+import { convertTemplateToJavaScript } from "./convert-to-javascript";
 
 const remixDevPackageVersion = packageJson.version;
 
@@ -27,8 +22,10 @@ interface CreateAppArgs {
   projectDir: string;
   remixVersion?: string;
   installDeps: boolean;
+  packageManager: "npm" | "yarn" | "pnpm";
   useTypeScript: boolean;
   githubToken?: string;
+  debug?: boolean;
 }
 
 export async function createApp({
@@ -36,16 +33,20 @@ export async function createApp({
   projectDir,
   remixVersion = remixDevPackageVersion,
   installDeps,
+  packageManager,
   useTypeScript = true,
   githubToken = process.env.GITHUB_TOKEN,
+  debug,
 }: CreateAppArgs) {
-  // Check the node version
-  let versions = process.versions;
-  if (versions?.node && semver.major(versions.node) < 14) {
-    throw new Error(
-      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version ` +
-        `greater than 14.`
-    );
+  // Create the app directory
+  let relativeProjectDir = path.relative(process.cwd(), projectDir);
+  let projectDirIsCurrentDir = relativeProjectDir === "";
+  if (!projectDirIsCurrentDir) {
+    if (fse.existsSync(projectDir)) {
+      throw new Error(
+        `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
+      );
+    }
   }
 
   /**
@@ -63,6 +64,12 @@ export async function createApp({
   let options = { useTypeScript, token: githubToken };
   switch (templateType) {
     case "local": {
+      if (debug) {
+        console.log(
+          colors.warning(` 🔍  Using local template: ${appTemplate}`)
+        );
+      }
+
       let filepath = appTemplate.startsWith("file://")
         ? fileURLToPath(appTemplate)
         : appTemplate;
@@ -77,12 +84,29 @@ export async function createApp({
       }
     }
     case "remoteTarball": {
+      if (debug) {
+        console.log(
+          colors.warning(
+            ` 🔍  Using template from remote tarball: ${appTemplate}`
+          )
+        );
+      }
+
       await downloadAndExtractTarball(projectDir, appTemplate, options);
       break;
     }
     case "repoTemplate": {
       let owner = "remix-run";
       let name = appTemplate.split("/").slice(-1)[0];
+
+      if (debug) {
+        console.log(
+          colors.warning(
+            ` 🔍  Using template from the ${`${owner}/${name}`} repo`
+          )
+        );
+      }
+
       await downloadAndExtractRepoTarball(
         projectDir,
         getRepoInfo(`${owner}/${name}`),
@@ -92,6 +116,14 @@ export async function createApp({
     }
     case "example": {
       let name = appTemplate.split("/").slice(-1)[0];
+      if (debug) {
+        console.log(
+          colors.warning(
+            ` 🔍  Using the ${name} example template from the remix-run/remix repo`
+          )
+        );
+      }
+
       await downloadAndExtractRepoTarball(
         projectDir,
         getRepoInfo(
@@ -102,6 +134,14 @@ export async function createApp({
       break;
     }
     case "template": {
+      if (debug) {
+        console.log(
+          colors.warning(
+            ` 🔍  Using the ${appTemplate} template from the remix-run/remix repo`
+          )
+        );
+      }
+
       await downloadAndExtractRepoTarball(
         projectDir,
         getRepoInfo(
@@ -112,12 +152,28 @@ export async function createApp({
       break;
     }
     case "repo": {
-      await downloadAndExtractRepoTarball(
-        projectDir,
-        getRepoInfo(appTemplate),
-        options
-      );
+      let repoInfo = getRepoInfo(appTemplate);
+      if (debug) {
+        console.log(
+          colors.warning(
+            ` 🔍  Using the ${`${repoInfo.owner}/${repoInfo.name}`} repo as a template.`
+          )
+        );
+      }
+
+      await downloadAndExtractRepoTarball(projectDir, repoInfo, options);
       break;
+    }
+
+    case null: {
+      console.error(
+        `🚨  Could not find a template for "${appTemplate}". Please open an issue at https://github.com/remix-run/remix/issues to report the bug.`
+      );
+      if (debug) {
+        throw Error(`Invalid template "${appTemplate}"`);
+      } else {
+        process.exit(1);
+      }
     }
   }
 
@@ -152,18 +208,24 @@ export async function createApp({
   }
 
   if (installDeps) {
-    // TODO: use yarn/pnpm/npm
-    let npmConfig = execSync("npm config get @remix-run:registry", {
-      encoding: "utf8",
-    });
+    let npmConfig = execSync(
+      `${packageManager} config get @remix-run:registry`,
+      {
+        encoding: "utf8",
+      }
+    );
     if (npmConfig?.startsWith("https://npm.remix.run")) {
       throw Error(
         "🚨 Oops! You still have the private Remix registry configured. Please " +
-          "run `npm config delete @remix-run:registry` or edit your .npmrc file " +
+          `run \`${packageManager} config delete @remix-run:registry\` or edit your .npmrc file ` +
           "to remove it."
       );
     }
-    execSync("npm install", { stdio: "inherit", cwd: projectDir });
+
+    execSync(`${packageManager} install`, {
+      stdio: "inherit",
+      cwd: projectDir,
+    });
   }
 }
 
@@ -201,7 +263,7 @@ async function downloadAndExtractRepoTarball(
   // redirect and get the tarball URL directly.
   if (repo.branch && repo.filePath) {
     let { filePath, tarballURL } = getTarballUrl(repo);
-    return downloadAndExtractTarball(projectDir, tarballURL, {
+    return await downloadAndExtractTarball(projectDir, tarballURL, {
       ...options,
       filePath,
     });
@@ -215,7 +277,7 @@ async function downloadAndExtractRepoTarball(
     url += `/${repo.branch}`;
   }
 
-  return downloadAndExtractTarball(projectDir, url, {
+  return await downloadAndExtractTarball(projectDir, url, {
     ...options,
     filePath: null,
   });
@@ -242,6 +304,11 @@ async function downloadAndExtractTarball(
       "🚨 There was a problem fetching the file from GitHub. The request " +
         `responded with a ${response.status} status. Please try again later.`
     );
+  }
+
+  // file paths returned from github are always unix style
+  if (filePath) {
+    filePath = filePath.replaceAll("\\", "/");
   }
 
   try {
@@ -344,7 +411,7 @@ function getRepoInfo(validatedGithubUrl: string): RepoInfo {
     Branch: string | undefined,
     FileInfo: string | undefined
   ];
-  let filePath = file.join(path.sep);
+  let filePath = file.join("/");
 
   if (tree === undefined) {
     return {
@@ -374,24 +441,17 @@ export async function validateNewProjectPath(input: string): Promise<void> {
     (await fse.pathExists(projectDir)) &&
     (await fse.stat(projectDir)).isDirectory()
   ) {
-    let contents = await fse.readdir(projectDir);
-    if (contents.length > 0) {
+    if ((await fse.readdir(projectDir)).length > 0) {
       throw Error(
         "🚨 The current directory must be empty to create a new project. Please " +
           "clear the contents of the directory or choose a different path."
       );
+    } else {
+      throw Error(
+        "🚨 The directory provided already exists. Please try again with a " +
+          "different directory."
+      );
     }
-    return;
-  }
-
-  if (
-    (await fse.pathExists(projectDir)) &&
-    (await fse.stat(projectDir)).isDirectory()
-  ) {
-    throw Error(
-      "🚨 The directory provided already exists. Please try again with a " +
-        "different directory."
-    );
   }
 }
 
@@ -566,14 +626,29 @@ export type TemplateType =
   | "local";
 
 export function detectTemplateType(template: string): TemplateType | null {
-  // 1. Check if the user passed a local file. If they hand us an explicit file
+  // 1. Prioritize Remix templates and stacks first. This ensures that inputs
+  //    like `--template remix` always pull from our templates, which is almost
+  //    always the desired behavior. If users maintain a fork either locally or
+  //    in another repo they can pass the repo shorthand, URL or path instead.
+  //    This also ensures that our interactive CLI always works as expected even
+  //    if the user has another directory with the same name.
+  //    https://github.com/remix-run/remix/issues/2491
+  if (isRemixTemplate(template)) {
+    return "template";
+  }
+
+  if (isRemixStack(template)) {
+    return "repoTemplate";
+  }
+
+  // 2. Check if the user passed a local file. If they hand us an explicit file
   //    URL, we'll validate it first. Otherwise we just ping the filesystem to
   //    see if the string references a filepath and, if not, move on.
   if (template.startsWith("file://")) {
     return "local";
   }
 
-  // 2. Check if it's a path to a local directory.
+  // 3. Check if it's a path to a local directory.
   try {
     if (
       fse.existsSync(
@@ -588,28 +663,17 @@ export function detectTemplateType(template: string): TemplateType | null {
     // ignore FS errors and move on
   }
 
-  // 3. check if it's one of the pre-built remix stacks
-  if (isRemixStack(template)) {
-    return "repoTemplate";
-  }
-
   // 4. examples/<template> will use an example folder in the Remix repo
   if (/^examples?\/[\w-]+$/.test(template)) {
     return "example";
   }
 
-  // 5. If the string contains no slashes, spaces, or special chars, we assume
-  //    it is one of our remix-run/remix/templates.
-  if (/^[\w-]+$/.test(template)) {
-    return "template";
-  }
-
-  // 6. Handle GitHub repos (URLs or :org/:repo shorthand)
+  // 5. Handle GitHub repos (URLs or :org/:repo shorthand)
   if (isValidGithubUrl(template) || isGithubRepoShorthand(template)) {
     return "repo";
   }
 
-  // 7. Any other valid URL should be treated as a tarball.
+  // 6. Any other valid URL should be treated as a tarball.
   if (isUrl(template)) {
     return "remoteTarball";
   }
@@ -650,85 +714,4 @@ function isValidGithubUrl(value: string | URL): value is URL | GithubUrlString {
   } catch (_) {
     return false;
   }
-}
-
-function convertToJavaScript(
-  filename: string,
-  source: string,
-  projectDir: string
-): string {
-  let result = babel.transformSync(source, {
-    filename,
-    presets: [[babelPresetTypeScript, { jsx: "preserve" }]],
-    plugins: [babelPluginSyntaxJSX],
-    compact: false,
-    retainLines: true,
-    cwd: projectDir,
-  });
-
-  if (!result || !result.code) {
-    throw new Error("Could not parse typescript");
-  }
-
-  /*
-    Babel's `compact` and `retainLines` options are both bad at formatting code.
-    Use Prettier for nicer formatting.
-  */
-  return prettier.format(result.code, { parser: "babel" });
-}
-
-async function convertTemplateToJavaScript(projectDir: string) {
-  // 1. Convert all .ts files in the template to .js
-  let entries = glob.sync("**/*.+(ts|tsx)", {
-    cwd: projectDir,
-    absolute: true,
-  });
-  for (let entry of entries) {
-    if (entry.endsWith(".d.ts")) {
-      fse.removeSync(entry);
-      continue;
-    }
-
-    let contents = fse.readFileSync(entry, "utf8");
-    let filename = path.basename(entry);
-    let javascript = convertToJavaScript(filename, contents, projectDir);
-
-    fse.writeFileSync(entry, javascript, "utf8");
-    if (entry.endsWith(".tsx")) {
-      fse.renameSync(entry, entry.replace(/\.tsx?$/, ".jsx"));
-    } else {
-      fse.renameSync(entry, entry.replace(/\.ts?$/, ".js"));
-    }
-  }
-
-  // 2. Rename the tsconfig.json to jsconfig.json
-  if (fse.existsSync(path.join(projectDir, "tsconfig.json"))) {
-    fse.renameSync(
-      path.join(projectDir, "tsconfig.json"),
-      path.join(projectDir, "jsconfig.json")
-    );
-  }
-
-  // 3. Remove @types/* and typescript from package.json
-  let packageJson = path.join(projectDir, "package.json");
-  if (!fse.existsSync(packageJson)) {
-    throw new Error("Could not find package.json");
-  }
-  let pkg = JSON.parse(fse.readFileSync(packageJson, "utf8"));
-  let devDeps = pkg.devDependencies || {};
-  let newPackageJson = {
-    ...pkg,
-    devDependencies: Object.fromEntries(
-      Object.entries(devDeps).filter(([name]) => {
-        return !name.startsWith("@types/") && name !== "typescript";
-      })
-    ),
-  };
-  // 4. Remove typecheck npm script from package.json
-  if (pkg.scripts && pkg.scripts.typecheck) {
-    delete pkg.scripts.typecheck;
-  }
-  fse.writeJSONSync(path.join(projectDir, "package.json"), newPackageJson, {
-    spaces: 2,
-  });
 }

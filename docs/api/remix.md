@@ -253,6 +253,10 @@ If you want to post to an index route use `?index` in the action: `<Form action=
 | `/accounts?index` | `routes/accounts/index.js` |
 | `/accounts`       | `routes/accounts.js`       |
 
+See also:
+
+- [`?index` query param][index query param]
+
 #### `<Form method>`
 
 This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) to be used: get, post, put, patch, delete. The default is "get".
@@ -852,6 +856,21 @@ function SomeComponent() {
 }
 ```
 
+Although a URL matches multiple Routes in a remix router hierarchy, a `fetcher.submit()` call will only call the action on the deepest matching route, unless the deepest matching route is an "index route". In this case, it will post to the parent route of the index route (because they share the same URL).
+
+If you want to submit to an index route use `?index` in the URL:
+
+```js
+fetcher.submit(
+  { some: "values" },
+  { method: "post", action: "/accounts?index" }
+);
+```
+
+See also:
+
+- [`?index` query param][index query param]
+
 #### `fetcher.load()`
 
 Loads data from a route loader.
@@ -869,6 +888,18 @@ function SomeComponent() {
   fetcher.data; // the data from the loader
 }
 ```
+
+Although a URL matches multiple Routes in a remix router hierarchy, a `fetcher.load()` call will only call the loader on the deepest matching route, unless the deepest matching route is an "index route". In this case, it will load the parent route of the index route (because they share the same URL).
+
+If you want to load an index route use `?index` in the URL:
+
+```js
+fetcher.load("/some/route?index");
+```
+
+See also:
+
+- [`?index` query param][index query param]
 
 #### Examples
 
@@ -2662,3 +2693,4 @@ export default function CompanyRoute() {
 [action]: #form-action
 [disabling-javascript]: ../guides/disabling-javascript
 [example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data
+[index query param]: ../guides/routing#what-is-the-index-query-param
