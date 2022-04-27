@@ -2,7 +2,12 @@ import { test, expect } from "@playwright/test";
 
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  js,
+  json,
+} from "./helpers/create-fixture";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
@@ -71,6 +76,31 @@ test.beforeAll(async () => {
           return <div>cheeseburger</div>;
         }
       `,
+
+      // one would import this like so: import submodule from "dummy-package/submodule";
+      "node_modules/dummy-package/package.json": json`
+        {
+            "type": "module",
+            "name": "dummy-package",
+            "version": "1.0.0",
+            "description": "",
+            "exports": {
+              "./submodule": "./submodule.js"
+            }
+        }
+      `,
+
+      "node_modules/dummy-package/submodule.js": js`
+        export const subModule = "submodule";
+      `,
+
+      "remix.config.js": js`
+        const { getDependenciesToBundle } = require("@remix-run/dev");
+
+        module.exports = {
+          serverDependenciesToBundle: [ ...getDependenciesToBundle("dummy-package") ]
+        };
+      `,
     },
   });
 
@@ -85,8 +115,10 @@ test.afterAll(async () => appFixture.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+// packages without a "main" can mostly not be resolved by just providing the package name
+test("expect remix to build with a warning", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
+
   // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
   expect(await response.text()).toMatch("pizza");
