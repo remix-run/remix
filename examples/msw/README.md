@@ -21,7 +21,7 @@ You can read more about the use cases of MSW [here](https://mswjs.io/docs/#when-
 
 ## Gotchas
 
-MSW currently does not support intercepting requests made by [undici](https://undici.nodejs.org/#/). For local development, Cloudflare Workers and Pages simulates the production environment using [wrangler](https://developers.cloudflare.com/workers/cli-wrangler), which intern runs [miniflare](https://github.com/cloudflare/miniflare). `Miniflare` implements `fetch` using `undici` instead of `node-fetch`. You can follow this issue [#159](https://github.com/mswjs/interceptors/issues/159) to track the progress.
+MSW currently does not support intercepting requests made by [undici](https://undici.nodejs.org/#/). For local development, Cloudflare Workers and Pages simulates the production environment using [wrangler](https://developers.cloudflare.com/workers/cli-wrangler), which runs [miniflare](https://github.com/cloudflare/miniflare) internally. `Miniflare` implements `fetch` using `undici` instead of `node-fetch`. You can follow this issue [#159](https://github.com/mswjs/interceptors/issues/159) to track the progress.
 
 ## Relevant files
 

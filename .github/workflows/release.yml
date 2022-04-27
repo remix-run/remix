@@ -50,16 +50,8 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - name: 🛴 Kick off comment and deployment test workflows
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EVENT_TYPE: release
-          REPO: remix-run/remix
-          VERSION: ${{ github.ref }}
-        run: |
-          curl \
-            -H "Accept: application/json" \
-            -H "Authorization: token ${GITHUB_TOKEN}" \
-            --request POST \
-            --data '{ "event_type": "${EVENT_TYPE}", "client_payload": { "ref": "${VERSION}" } }' \
-            https://api.github.com/repos/${REPO}/dispatches
+      - uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.NIGHTLY_PAT }}
+          event-type: release
+          client-payload: '{ "ref": "${{ github.ref }}" }'
