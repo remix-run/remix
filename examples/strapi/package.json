@@ -12,16 +12,16 @@
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/node": "1.4.3-pre.0",
-    "@remix-run/react": "1.4.3-pre.0",
-    "@remix-run/serve": "1.4.3-pre.0",
+    "@remix-run/node": "1.4.3",
+    "@remix-run/react": "1.4.3",
+    "@remix-run/serve": "1.4.3",
     "marked": "^4.0.12",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.4.3-pre.0",
-    "@remix-run/eslint-config": "1.4.3-pre.0",
+    "@remix-run/dev": "1.4.3",
+    "@remix-run/eslint-config": "1.4.3",
     "@types/marked": "^4.0.2",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
