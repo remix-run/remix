@@ -169,14 +169,7 @@ export async function sendRemixResponse(
     }
   }
 
-  let multiValueHeaders: Record<string, readonly (string | string)[]> = {};
-  for (let [key, value] of nodeResponse.headers) {
-    if (typeof multiValueHeaders[key] === "undefined") {
-      multiValueHeaders[key] = [value];
-    } else {
-      (multiValueHeaders[key] as string[]).push(value);
-    }
-  }
+  let multiValueHeaders: Record<string, readonly (string | string)[]> = (nodeResponse.headers as any).raw();
 
   console.log({ multiValueHeaders });
 

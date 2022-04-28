@@ -133,8 +133,12 @@ export function sendRemixResponse(
   res.statusMessage = nodeResponse.statusText;
   res.status(nodeResponse.status);
 
-  for (let [key, value] of Object.entries(nodeResponse.headers)) {
-    res.append(key, value);
+  for (let [key, values] of Object.entries(
+    (nodeResponse.headers as any).raw() as Record<string, string[]>
+  )) {
+    for (let value of values) {
+      res.append(key, value);
+    }
   }
 
   if (abortController.signal.aborted) {

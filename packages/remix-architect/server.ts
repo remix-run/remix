@@ -110,9 +110,13 @@ export async function sendRemixResponse(
   let cookies: string[] = [];
 
   // Arc/AWS API Gateway will send back set-cookies outside of response headers.
-  for (let [key, value] of Object.entries(nodeResponse.headers)) {
+  for (let [key, values] of Object.entries(
+    (nodeResponse.headers as any).raw() as Record<string, string[]>
+  )) {
     if (key.toLowerCase() === "set-cookie") {
-      cookies.push(value);
+      for (let value of values) {
+        cookies.push(value);
+      }
     }
   }
 

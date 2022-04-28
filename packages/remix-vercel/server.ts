@@ -120,15 +120,17 @@ export function sendRemixResponse(
   res: VercelResponse,
   nodeResponse: Response
 ): void {
-  let arrays = new Map();
-  for (let [key, value] of nodeResponse.headers.entries()) {
+  let arrays = new Map<string, string[]>();
+  for (let [key, values] of Object.entries(
+    (nodeResponse.headers as any).raw() as Record<string, string[]>
+  )) {
     if (arrays.has(key)) {
-      let newValue = arrays.get(key).concat(value);
+      let newValue = arrays.get(key)!.concat(...values);
       res.setHeader(key, newValue);
       arrays.set(key, newValue);
     } else {
-      res.setHeader(key, value);
-      arrays.set(key, [value]);
+      res.setHeader(key, values);
+      arrays.set(key, values);
     }
   }
 

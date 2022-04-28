@@ -127,7 +127,9 @@ describe("netlify createRequestHandler", () => {
             "most wonderful",
           ]);
           expect(res.multiValueHeaders["set-cookie"]).toEqual([
-            "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax, second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax, third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax",
+            "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
+            "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax",
+            "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax",
           ]);
         });
     });

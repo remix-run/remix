@@ -56,7 +56,7 @@ test.describe("pathless layout routes", () => {
     let responses = app.collectResponses((url) => url.pathname === "/");
     await app.goto("/");
     let setCookies = await responses[0].headerValues("set-cookie");
-    expect(setCookies).toEqual(["foo=bar, bar=baz"]);
+    expect(setCookies).toEqual(["foo=bar", "bar=baz"]);
     expect(responses).toHaveLength(1);
   });
 
@@ -68,7 +68,7 @@ test.describe("pathless layout routes", () => {
     await page.click("button[type=submit]");
     await page.waitForSelector(`[data-testid="action-success"]`);
     let setCookies = await responses[0].headerValues("set-cookie");
-    expect(setCookies).toEqual([`another=one, how-about=two`]);
+    expect(setCookies).toEqual(["another=one", "how-about=two"]);
     // one for the POST and one for the GET
     expect(responses).toHaveLength(2);
   });
