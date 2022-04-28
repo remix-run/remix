@@ -148,7 +148,7 @@ function remix() {
 /** @returns {import("rollup").RollupOptions[]} */
 function remixCssModules() {
   let sourceDir = "packages/remix-css-modules";
-  let outputDir = "build/node_modules/@remix-run/css-modules";
+  let outputDir = getOutputDir("@remix-run/css-modules")
   let version = getVersion(sourceDir);
 
   return [
