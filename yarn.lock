@@ -1561,6 +1561,47 @@
     stack-utils "2.0.5"
     yazl "2.5.1"
 
+"@remix-run/web-blob@^3.0.3":
+  version "3.0.4"
+  resolved "https://registry.npmjs.org/@remix-run/web-blob/-/web-blob-3.0.4.tgz#99c67b9d0fb641bd0c07d267fd218ae5aa4ae5ed"
+  integrity sha512-AfegzZvSSDc+LwnXV+SwROTrDtoLiPxeFW+jxgvtDAnkuCX1rrzmVJ6CzqZ1Ai0bVfmJadkG5GxtAfYclpPmgw==
+  dependencies:
+    "@remix-run/web-stream" "^1.0.0"
+    web-encoding "1.1.5"
+
+"@remix-run/web-fetch@^4.1.0":
+  version "4.1.0"
+  resolved "https://registry.npmjs.org/@remix-run/web-fetch/-/web-fetch-4.1.0.tgz#f4e7d31863add71c1bf759fbde7c9750d0c57313"
+  integrity sha512-V1q8ZnViqePZ44OCuHZbEbuof3jnru5L9ZxOgO2zjrbryIxc3J/ZgyZxIV0HeviD3vUWNdz283FNl2mUOZ5+ZA==
+  dependencies:
+    "@remix-run/web-blob" "^3.0.3"
+    "@remix-run/web-form-data" "^3.0.2"
+    "@remix-run/web-stream" "^1.0.1"
+    "@web3-storage/multipart-parser" "^1.0.0"
+    data-uri-to-buffer "^3.0.1"
+    mrmime "^1.0.0"
+
+"@remix-run/web-file@^3.0.2":
+  version "3.0.2"
+  resolved "https://registry.npmjs.org/@remix-run/web-file/-/web-file-3.0.2.tgz#1a6cc0900a1310ede4bc96abad77ac6eb27a2131"
+  integrity sha512-eFC93Onh/rZ5kUNpCQersmBtxedGpaXK2/gsUl49BYSGK/DvuPu3l06vmquEDdcPaEuXcsdGP0L7zrmUqrqo4A==
+  dependencies:
+    "@remix-run/web-blob" "^3.0.3"
+
+"@remix-run/web-form-data@^3.0.2":
+  version "3.0.2"
+  resolved "https://registry.npmjs.org/@remix-run/web-form-data/-/web-form-data-3.0.2.tgz#733a4c8f8176523b7b60a8bd0dc6704fd4d498f3"
+  integrity sha512-F8tm3iB1sPxMpysK6Js7lV3gvLfTNKGmIW38t/e6dtPEB5L1WdbRG1cmLyhsonFc7rT1x1JKdz+2jCtoSdnIUw==
+  dependencies:
+    web-encoding "1.1.5"
+
+"@remix-run/web-stream@^1.0.0", "@remix-run/web-stream@^1.0.1":
+  version "1.0.2"
+  resolved "https://registry.npmjs.org/@remix-run/web-stream/-/web-stream-1.0.2.tgz#f07dc9cf6db02507ea71a234bc8e06103a2207b4"
+  integrity sha512-FO4om5mrwMs5bi7L5hbLMP1hm+flAS2oYRptfNPkK2u0Hhv0crS9GiE9/MsVvY53tTAxVkzUG/m+9ET1mTjEnw==
+  dependencies:
+    web-streams-polyfill "^3.1.1"
+
 "@rollup/plugin-babel@^5.2.2":
   version "5.3.0"
   resolved "https://registry.npmjs.org/@rollup/plugin-babel/-/plugin-babel-5.3.0.tgz"
@@ -2056,7 +2097,7 @@
   resolved "https://registry.npmjs.org/@types/ms/-/ms-0.7.31.tgz"
   integrity sha512-iiUgKzV9AuaEkZqkOLDIvlQiL6ltuZd9tGcW3gwpnX8JbuiuhFlEGmmFXEXkN50Cvq7Os88IY2v0dkDqXYWVgA==
 
-"@types/node-fetch@^2.5.12", "@types/node-fetch@^2.5.7":
+"@types/node-fetch@^2.5.7":
   version "2.5.12"
   resolved "https://registry.npmjs.org/@types/node-fetch/-/node-fetch-2.5.12.tgz"
   integrity sha512-MKgC4dlq4kKNa/mYrwpKfzQMB5X3ee5U6fSprkKpToBqBmX4nFZL9cW5jl6sWn+xpRJ7ypWh2yyqqr8UUCstSw==
@@ -2353,46 +2394,6 @@
     "@types/node" "*"
     ts-node "8.9.1"
     typescript "4.3.4"
-
-"@web-std/blob@^3.0.3":
-  version "3.0.4"
-  resolved "https://registry.npmjs.org/@web-std/blob/-/blob-3.0.4.tgz#dd67a685547331915428d69e723c7da2015c3fc5"
-  integrity sha512-+dibyiw+uHYK4dX5cJ7HA+gtDAaUUe6JsOryp2ZpAC7h4ICsh49E34JwHoEKPlPvP0llCrNzz45vvD+xX5QDBg==
-  dependencies:
-    "@web-std/stream" "1.0.0"
-    web-encoding "1.1.5"
-
-"@web-std/fetch@^4.0.0":
-  version "4.0.0"
-  resolved "https://registry.npmjs.org/@web-std/fetch/-/fetch-4.0.0.tgz#32cb02e38c25518599843a51c4518b7ccb108d2c"
-  integrity sha512-RZUY1m7WoSsNGLfBeef3oAsmskU/IrlDSCMEakQZjD1csC91bdq3MJG7GiKijKJNg/PKRC45YxOo5yeSrAz5mA==
-  dependencies:
-    "@web-std/blob" "^3.0.3"
-    "@web-std/form-data" "^3.0.2"
-    "@web3-storage/multipart-parser" "^1.0.0"
-    data-uri-to-buffer "^3.0.1"
-    mrmime "^1.0.0"
-
-"@web-std/file@^3.0.2":
-  version "3.0.2"
-  resolved "https://registry.npmjs.org/@web-std/file/-/file-3.0.2.tgz#b84cc9ed754608b18dcf78ac62c40dbcc6a94692"
-  integrity sha512-pIH0uuZsmY8YFvSHP1NsBIiMT/1ce0suPrX74fEeO3Wbr1+rW0fUGEe4d0R99iLwXtyCwyserqCFI4BJkJlkRA==
-  dependencies:
-    "@web-std/blob" "^3.0.3"
-
-"@web-std/form-data@^3.0.2":
-  version "3.0.2"
-  resolved "https://registry.npmjs.org/@web-std/form-data/-/form-data-3.0.2.tgz#c71d9def6a593138ea92fe3d1ffbce19f43e869c"
-  integrity sha512-rhc8IRw66sJ0FHcnC84kT3mTN6eACTuNftkt1XSl1Ef6WRKq4Pz65xixxqZymAZl1K3USpwhLci4SKNn4PYxWQ==
-  dependencies:
-    web-encoding "1.1.5"
-
-"@web-std/stream@1.0.0":
-  version "1.0.0"
-  resolved "https://registry.npmjs.org/@web-std/stream/-/stream-1.0.0.tgz"
-  integrity sha512-jyIbdVl+0ZJyKGTV0Ohb9E6UnxP+t7ZzX4Do3AHjZKxUXKMs9EmqnBDQgHF7bEw0EzbQygOjtt/7gvtmi//iCQ==
-  dependencies:
-    web-streams-polyfill "^3.1.1"
 
 "@web3-storage/multipart-parser@^1.0.0":
   version "1.0.0"

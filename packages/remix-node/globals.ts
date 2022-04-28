@@ -1,4 +1,4 @@
-import { Blob as NodeBlob, File as NodeFile } from "@web-std/file";
+import { Blob as NodeBlob, File as NodeFile } from "@remix-run/web-file";
 
 import { atob, btoa } from "./base64";
 import {
