@@ -23,20 +23,12 @@ export async function internalParseFormData(
   abortController?: AbortController,
   uploadHandler?: UploadHandler
 ) {
-  let formData = new FormData();
-  let contentType = request.headers.get("Content-Type") || "";
-  if (/application\/x-www-form-urlencoded/.test(contentType)) {
-    let searchParams = new URLSearchParams(await request.text());
-    for (let [key, value] of searchParams.entries()) {
-      formData.append(key, value);
-    }
-    return formData;
-  }
-
   if (!uploadHandler) {
     return internalFormData();
   }
-
+  
+  let formData = new FormData();
+  let contentType = request.headers.get("Content-Type") || "";
   let fileWorkQueue: Promise<void>[] = [];
 
   let stream: PassThrough = new PassThrough();
