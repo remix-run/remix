@@ -133,7 +133,7 @@ export function sendRemixResponse(
   res.statusMessage = nodeResponse.statusText;
   res.status(nodeResponse.status);
 
-  for (let [key, value] of nodeResponse.headers.entries()) {
+  for (let [key, value] of nodeResponse.headers) {
     res.append(key, value);
   }
 
