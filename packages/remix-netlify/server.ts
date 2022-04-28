@@ -169,9 +169,9 @@ export async function sendRemixResponse(
     }
   }
 
-  let multiValueHeaders: Record<string, readonly (string | string)[]> = (nodeResponse.headers as any).raw();
-
-  console.log({ multiValueHeaders });
+  let multiValueHeaders: Record<string, readonly (string | string)[]> = (
+    nodeResponse.headers as any
+  ).raw();
 
   return {
     statusCode: nodeResponse.status,
