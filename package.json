@@ -5,8 +5,6 @@
   "scripts": {
     "clean": "git clean -fdX .",
     "build": "rollup -c && tsc -b",
-    "predev": "npm install --prefix ./fixtures/gists-app/",
-    "dev": "yarn build && yarn --cwd ./fixtures/gists-app/ dev",
     "license": "node ./scripts/license.js",
     "publish": "node ./scripts/publish.js",
     "publish:private": "node ./scripts/publish-private.js",
