@@ -369,8 +369,7 @@ async function createBrowserBuild(
   }
 
   let plugins = [
-    // TODO remove handler parameter from css modules plugin
-    cssModulesPlugin(config, () => {}),
+    cssModulesPlugin(config),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),

@@ -21,13 +21,7 @@ const decoder = new TextDecoder();
  * Loads *.module.css files and returns the hashed JSON so we can get the right
  * classnames in the HTML.
  */
-export function cssModulesPlugin(
-  config: RemixConfig,
-  handleProcessedCss: (
-    filePath: string,
-    { css, json }: CssModuleFileContents
-  ) => void
-): esbuild.Plugin {
+export function cssModulesPlugin(config: RemixConfig): esbuild.Plugin {
   return {
     name: pluginName,
     async setup(build) {
@@ -81,7 +75,6 @@ Install the dependency by running the following command, then restart your app.
               config,
               filePath: args.path,
             });
-            handleProcessedCss(args.path, processed);
             return {
               contents: JSON.stringify(processed.json),
               loader: "json",
