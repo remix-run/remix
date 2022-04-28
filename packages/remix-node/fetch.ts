@@ -32,7 +32,7 @@ class NodeRequest extends BaseNodeRequest {
     ) {
       return await internalParseFormData(
         this,
-        super.formData,
+        super.formData.bind(this),
         this.abortController,
         uploadHandler
       );
