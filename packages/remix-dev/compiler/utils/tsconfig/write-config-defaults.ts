@@ -10,14 +10,14 @@ import * as colors from "../../../colors";
 // These are suggested values and will be set when not present in the
 // tsconfig.json
 let suggestedCompilerOptions: TsConfigJson.CompilerOptions = {
-  forceConsistentCasingInFileNames: true,
-  target: "es2019",
-  lib: ["DOM", "DOM.Iterable", "ES2019"] as TsConfigJson.CompilerOptions.Lib[],
   allowJs: true,
-  strict: true,
+  forceConsistentCasingInFileNames: true,
+  lib: ["DOM", "DOM.Iterable", "ES2019"],
   paths: {
     "~/*": ["./app/*"],
   },
+  strict: true,
+  target: "ES2019",
 };
 
 // These values are required and cannot be changed by the user
@@ -27,8 +27,8 @@ let requiredCompilerOptions: TsConfigJson.CompilerOptions = {
   isolatedModules: true,
   jsx: "react-jsx",
   moduleResolution: "node",
-  resolveJsonModule: true,
   noEmit: true,
+  resolveJsonModule: true,
 };
 
 // taken from https://github.com/sindresorhus/ts-extras/blob/781044f0412ec4a4224a1b9abce5ff0eacee3e72/source/object-keys.ts

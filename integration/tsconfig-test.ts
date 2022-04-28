@@ -25,7 +25,7 @@ const DEFAULT_CONFIG = {
     noEmit: true,
     resolveJsonModule: true,
     strict: true,
-    target: "es2019",
+    target: "ES2019",
     baseUrl: ".",
     paths: {
       "~/*": ["./app/*"],
@@ -116,7 +116,7 @@ test("allows for `extends` in tsconfig", async () => {
       noEmit: true,
       resolveJsonModule: true,
       strict: true,
-      target: "es2019",
+      target: "ES2019",
       paths: {
         "~/*": ["./app/*"],
       },
