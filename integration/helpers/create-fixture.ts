@@ -6,6 +6,7 @@ import getPort from "get-port";
 import stripIndent from "strip-indent";
 import chalk from "chalk";
 import { sync as spawnSync } from "cross-spawn";
+import type { JsonObject } from "type-fest";
 
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
@@ -18,15 +19,18 @@ interface FixtureInit {
   sourcemap?: boolean;
   files: { [filename: string]: string };
   template?: "cf-template" | "node-template";
+  setup?: "node" | "cloudflare";
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
 export type AppFixture = Awaited<ReturnType<typeof createAppFixture>>;
 
 export const js = String.raw;
-export const json = String.raw;
 export const mdx = String.raw;
 export const css = String.raw;
+export function json(value: JsonObject) {
+  return JSON.stringify(value, null, 2);
+}
 
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
@@ -152,6 +156,13 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     path.join(projectDir, "node_modules"),
     { overwrite: true }
   );
+  if (init.setup) {
+    spawnSync(
+      "node",
+      ["node_modules/@remix-run/dev/cli.js", "setup", init.setup],
+      { cwd: projectDir }
+    );
+  }
   await writeTestFiles(init, projectDir);
   build(projectDir, init.buildStdio, init.sourcemap);
 

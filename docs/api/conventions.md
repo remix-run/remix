@@ -18,7 +18,7 @@ This file has a few build and development configuration options, but does not ac
 module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
-  ignoredRouteFiles: [".*"],
+  ignoredRouteFiles: ["**/.*"],
   publicPath: "/build/",
   routes(defineRoutes) {
     return defineRoutes((route) => {
@@ -152,7 +152,7 @@ module.exports = {
   assetsBuildDirectory: "public/build",
   publicPath: "/build/",
   serverBuildDirectory: "build",
-  ignoredRouteFiles: [".*"],
+  ignoredRouteFiles: ["**/.*"],
   serverDependenciesToBundle: [
     /^rehype.*/,
     /^remark.*/,
@@ -887,6 +887,7 @@ See also:
 
 - [`<Form>`][form]
 - [`<Form action>`][form action]
+- [`?index` query param][index query param]
 
 ### `headers`
 
@@ -1417,6 +1418,7 @@ export default function Page() {
 [urlsearchparams]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [form]: ./remix#form
 [form action]: ./remix#form-action
+[index query param]: ../guides/routing#what-is-the-index-query-param
 [link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
 [minimatch]: https://www.npmjs.com/package/minimatch
 [handledatarequest]: #entryservertsx

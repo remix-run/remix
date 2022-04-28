@@ -2,13 +2,13 @@ export type {
   ServerBuild,
   SessionIdStorageStrategy,
   SessionStorage,
-  Sign,
-  Unsign,
-} from "https://esm.sh/@remix-run/server-runtime?pin=v68";
+  SignFunction,
+  UnsignFunction,
+} from "https://esm.sh/@remix-run/server-runtime@1.4.0?pin=v77";
 export {
   createCookieFactory,
   createCookieSessionStorageFactory,
   createMemorySessionStorageFactory,
   createSessionStorageFactory,
   createRequestHandler,
-} from "https://esm.sh/@remix-run/server-runtime?pin=v68";
+} from "https://esm.sh/@remix-run/server-runtime@1.4.0?pin=v77";
