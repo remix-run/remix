@@ -22,10 +22,8 @@ import { serverAssetsManifestPlugin } from "./compiler/plugins/serverAssetsManif
 import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlugin";
 import { serverEntryModulePlugin } from "./compiler/plugins/serverEntryModulePlugin";
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
-import type {
-  CssModuleFileContents,
-  CssModulesResults,
-} from "./compiler/plugins/cssModules";
+import type { CssModulesResults } from "./compiler/plugins/cssModules";
+import { processCss } from "./compiler/plugins/cssModules";
 import {
   cssModulesPlugin,
   cssModulesFakerPlugin,
@@ -342,32 +340,6 @@ async function createBrowserBuild(
   config: RemixConfig,
   options: BuildOptions & { incremental?: boolean }
 ): Promise<BrowserBuild> {
-  let cssModulesContent = "";
-  let cssModulesMap: Record<string, CssModuleFileContents> = {};
-  function handleProcessedCss(
-    filePath: string,
-    { css, dependencies, moduleExports, json, source }: CssModuleFileContents
-  ) {
-    // For now we are simply keeping processed CSS content and the DIY asset app
-    // in local mutable state. We may want to reconsider this as it will pose
-    // some challenges with sourcemaps and supporting imports of other modules.
-    // We may want to consider going back to a completely separate build for CSS
-    // modules assets as we did in a previous version of this work. Having the
-    // entire module map ahead of the browser/server builds would drastically
-    // simplify some things we'll need to implement still.
-    cssModulesContent += css;
-    cssModulesMap = {
-      ...cssModulesMap,
-      [filePath]: {
-        source,
-        css,
-        json,
-        moduleExports,
-        dependencies,
-      },
-    };
-  }
-
   // For the browser build, exclude node built-ins that don't have a
   // browser-safe alternative installed in node_modules. Nothing should
   // *actually* be external in the browser build (we want to bundle all deps) so
@@ -397,7 +369,8 @@ async function createBrowserBuild(
   }
 
   let plugins = [
-    cssModulesPlugin(config, handleProcessedCss),
+    // TODO remove handler parameter from css modules plugin
+    cssModulesPlugin(config, () => {}),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
@@ -446,6 +419,41 @@ async function createBrowserBuild(
       plugins,
     })
     .then(async (build) => {
+      // Model files and their imports as an adjacency list
+      // https://en.wikipedia.org/wiki/Adjacency_list
+      // E.g. "Module A imports from B, C, and D" becomes `{A:[B,C,D]}`
+      let graph = Object.fromEntries(
+        Object.entries(build.metafile.inputs).map(([input, { imports }]) => {
+          return [input, imports.map(({ path }) => path)];
+        })
+      );
+
+      // order css modules based on the jsx/tsx that imported them
+      let componentFiles = topologicalSort(graph).filter((x) =>
+        /^app\/.*\.[j|t]sx/.test(x)
+      );
+      let cssModules: string[] = [];
+      componentFiles.forEach((componentFile) => {
+        let imports = graph[componentFile];
+        imports
+          .filter((x) => x.endsWith(".module.css"))
+          .filter((x) => !cssModules.includes(x))
+          .forEach((x) => cssModules.push(x));
+      });
+      let cssModulesMap = Object.fromEntries(
+        await Promise.all(
+          cssModules
+            .map((filePath) => filePath.replace(/^css-modules-namespace:/, ""))
+            .map(
+              async (filePath) =>
+                [filePath, await processCss({ config, filePath })] as const
+            )
+        )
+      );
+      let cssModulesContent = Object.values(cssModulesMap)
+        .map(({ css }) => css)
+        .join("");
+
       let [globalStylesheetFilePath, globalStylesheetFileUrl] =
         getCssModulesFileReferences(config, cssModulesContent);
 
@@ -460,6 +468,7 @@ async function createBrowserBuild(
         // may have implications for LiveReload, so we should definitely test
         // that.
         rebuild: (() => {
+          // TODO support rebuild
           if (!options.incremental) {
             return undefined;
           }
@@ -622,3 +631,28 @@ async function writeServerBuildResult(
     }
   }
 }
+
+/**
+ * Topological sort: For each node, all of its (recursive) dependencies come before it.
+ * See https://en.wikipedia.org/wiki/Topological_sorting
+ */
+const topologicalSort = (graph: Record<string, string[]>) => {
+  let visited: string[] = [];
+  let chain = new Set();
+
+  let nodes = Object.keys(graph);
+  nodes.forEach(visit);
+
+  function visit(n: string) {
+    if (visited.includes(n)) return;
+    if (chain.has(n)) throw Error(`Cycle detected: ${[...chain].join(" -> ")}`);
+
+    chain.add(n);
+    let edges = graph[n];
+    edges.forEach(visit);
+    chain.delete(n);
+
+    visited.push(n);
+  }
+  return visited;
+};

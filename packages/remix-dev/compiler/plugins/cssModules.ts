@@ -12,6 +12,7 @@ import type { AssetsManifestPromiseRef } from "./serverAssetsManifestPlugin";
 const pluginName = "css-modules";
 const pluginNamespace = `${pluginName}-namespace`;
 const suffixMatcher = /\.modules?\.css?$/;
+// TODO is the `?` after `css` intentional?
 
 let parcelTransform: (opts: ParcelTransformOptions) => ParcelTransformResult;
 const decoder = new TextDecoder();
@@ -167,7 +168,7 @@ async function processCssCached({
   //   return processedCssPromise;
 }
 
-async function processCss({
+export async function processCss({
   config,
   filePath,
 }: {
