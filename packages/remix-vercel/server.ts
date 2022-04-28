@@ -120,30 +120,22 @@ export function sendRemixResponse(
   res: VercelResponse,
   nodeResponse: Response
 ): void {
-  let arrays = new Map<string, string[]>();
+  res.statusMessage = nodeResponse.statusText;
+  let multiValueHeaders: Record<string, (string | string)[]> = {};
   for (let [key, values] of Object.entries(
     (nodeResponse.headers as any).raw() as Record<string, string[]>
   )) {
-    if (arrays.has(key)) {
-      let newValue = arrays.get(key)!.concat(...values);
-      res.setHeader(key, newValue);
-      arrays.set(key, newValue);
-    } else {
-      res.setHeader(key, values);
-      arrays.set(key, values);
-    }
-  }
-
-  res.statusMessage = nodeResponse.statusText;
-  let multiValueHeaders: Record<string, (string | string)[]> = {};
-  for (let [key, value] of nodeResponse.headers) {
     if (typeof multiValueHeaders[key] === "undefined") {
-      multiValueHeaders[key] = [value];
+      multiValueHeaders[key] = [...values];
     } else {
-      (multiValueHeaders[key] as string[]).push(value);
+      (multiValueHeaders[key] as string[]).push(...values);
     }
   }
-  res.writeHead(nodeResponse.status, multiValueHeaders);
+  res.writeHead(
+    nodeResponse.status,
+    nodeResponse.statusText,
+    multiValueHeaders
+  );
 
   if (nodeResponse.body) {
     let reader = nodeResponse.body.getReader();
