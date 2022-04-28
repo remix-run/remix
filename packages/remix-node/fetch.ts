@@ -1,17 +1,10 @@
 import type AbortController from "abort-controller";
-// import FormStream from "form-data";
-// import type { RequestInfo, RequestInit, Response } from "node-fetch";
-// import nodeFetch, { Request as BaseNodeRequest } from "node-fetch";
-import { Request as BaseNodeRequest } from "@web-std/fetch";
+import { Request as BaseNodeRequest } from "@remix-run/web-fetch";
 
-// import { FormData as NodeFormData, isFile } from "./formData";
 import type { UploadHandler } from "./formData";
 import { internalParseFormData } from "./parseMultipartFormData";
 
-// export type { HeadersInit, RequestInfo, ResponseInit } from "node-fetch";
-// export { Headers, Response } from "node-fetch";
-
-export { fetch, Headers, Response } from "@web-std/fetch";
+export { fetch, Headers, Response } from "@remix-run/web-fetch";
 
 interface NodeRequestInit extends RequestInit {
   abortController?: AbortController;
@@ -21,7 +14,7 @@ class NodeRequest extends BaseNodeRequest {
   private abortController?: AbortController;
 
   constructor(input: RequestInfo, init?: NodeRequestInit | undefined) {
-    super(input, init);
+    super(input as any, init);
 
     let anyInput = input as any;
     let anyInit = init as any;

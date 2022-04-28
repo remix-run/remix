@@ -1413,6 +1413,8 @@ describe("fetcher redirects", () => {
         "type": "done",
       }
     `);
+    // Root loader should be re-called after fetchActionRedirect
+    expect(t.rootLoaderMock.calls.length).toBe(1);
   });
 });
 

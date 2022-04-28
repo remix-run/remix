@@ -68,7 +68,6 @@ export function serverBareModulesPlugin(
           onWarning &&
           !isNodeBuiltIn(packageName) &&
           !/\bnode_modules\b/.test(importer) &&
-          !builtinModules.includes(packageName) &&
           !dependencies[packageName]
         ) {
           onWarning(
@@ -135,44 +134,51 @@ function warnOnceIfEsmOnlyPackage(
   fullImportPath: string,
   onWarning: (msg: string, key: string) => void
 ) {
-  let packageDir = resolveModuleBasePath(packageName);
-  let packageJsonFile = path.join(packageDir, "package.json");
+  try {
+    let packageDir = resolveModuleBasePath(packageName, fullImportPath);
+    let packageJsonFile = path.join(packageDir, "package.json");
 
-  if (!fs.existsSync(packageJsonFile)) {
-    console.log(packageJsonFile, `does not exist`);
-    return;
-  }
-  let pkg = JSON.parse(fs.readFileSync(packageJsonFile, "utf-8"));
+    if (!fs.existsSync(packageJsonFile)) {
+      console.log(packageJsonFile, `does not exist`);
+      return;
+    }
+    let pkg = JSON.parse(fs.readFileSync(packageJsonFile, "utf-8"));
 
-  let subImport = fullImportPath.slice(packageName.length + 1);
+    let subImport = fullImportPath.slice(packageName.length + 1);
 
-  if (pkg.type === "module") {
-    let isEsmOnly = true;
-    if (pkg.exports) {
-      if (!subImport) {
-        if (pkg.exports.require) {
-          isEsmOnly = false;
-        } else if (pkg.exports["."]?.require) {
+    if (pkg.type === "module") {
+      let isEsmOnly = true;
+      if (pkg.exports) {
+        if (!subImport) {
+          if (pkg.exports.require) {
+            isEsmOnly = false;
+          } else if (pkg.exports["."]?.require) {
+            isEsmOnly = false;
+          }
+        } else if (pkg.exports[`./${subImport}`]?.require) {
           isEsmOnly = false;
         }
-      } else if (pkg.exports[`./${subImport}`]?.require) {
-        isEsmOnly = false;
+      }
+
+      if (isEsmOnly) {
+        onWarning(
+          `${packageName} is possibly an ESM only package and should be bundled with ` +
+            `"serverDependenciesToBundle in remix.config.js.`,
+          packageName + ":esm-only"
+        );
       }
     }
-
-    if (isEsmOnly) {
-      onWarning(
-        `${packageName} is possibly an ESM only package and should be bundled with ` +
-          `"serverDependenciesToBundle in remix.config.js.`,
-        packageName + ":esm-only"
-      );
-    }
+  } catch (error: unknown) {
+    // module not installed
+    // we warned earlier if a package is used without being in package.json
+    // if the build fails, the reason will be right there
   }
 }
 
 // https://github.com/nodejs/node/issues/33460#issuecomment-919184789
-function resolveModuleBasePath(packageName: string) {
-  let moduleMainFilePath = require.resolve(packageName);
+// adapted to use the fullImportPath to resolve sub packages like @heroicons/react/solid
+function resolveModuleBasePath(packageName: string, fullImportPath: string) {
+  let moduleMainFilePath = require.resolve(fullImportPath);
 
   let packageNameParts = packageName.split("/");
 

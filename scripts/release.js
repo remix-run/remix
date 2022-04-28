@@ -386,7 +386,7 @@ function ensureLatestReleaseBranch(branch, git) {
  * @returns {string | undefined}
  */
 function getVersionFromReleaseBranch(branch) {
-  return branch.slice(branch.indexOf("-") + 1);
+  return branch.slice(branch.indexOf("-") + 2);
 }
 
 /**

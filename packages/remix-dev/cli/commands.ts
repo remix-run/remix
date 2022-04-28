@@ -9,7 +9,7 @@ import WebSocket from "ws";
 import type { Server } from "http";
 import type * as Express from "express";
 import type { createApp as createAppType } from "@remix-run/serve";
-import getPort from "get-port";
+import getPort, { makeRange } from "get-port";
 
 import { BuildMode, isBuildMode } from "../build";
 import * as colors from "../colors";
@@ -29,15 +29,19 @@ export async function create({
   projectDir,
   remixVersion,
   installDeps,
+  packageManager,
   useTypeScript,
   githubToken,
+  debug,
 }: {
   appTemplate: string;
   projectDir: string;
   remixVersion?: string;
   installDeps: boolean;
+  packageManager: "npm" | "yarn" | "pnpm";
   useTypeScript: boolean;
   githubToken?: string;
+  debug?: boolean;
 }) {
   let spinner = ora("Creating your app…").start();
   await createApp({
@@ -45,22 +49,29 @@ export async function create({
     projectDir,
     remixVersion,
     installDeps,
+    packageManager,
     useTypeScript,
     githubToken,
+    debug,
   });
   spinner.stop();
   spinner.clear();
 }
 
-export async function init(projectDir: string) {
+export async function init(
+  projectDir: string,
+  packageManager: "npm" | "yarn" | "pnpm"
+) {
   let initScriptDir = path.join(projectDir, "remix.init");
   let initScript = path.resolve(initScriptDir, "index.js");
 
   let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
 
   if (await fse.pathExists(initScript)) {
-    // TODO: check for npm/yarn/pnpm
-    execSync("npm install", { stdio: "ignore", cwd: initScriptDir });
+    execSync(`${packageManager} install`, {
+      stdio: "ignore",
+      cwd: initScriptDir,
+    });
     let initFn = require(initScript);
     try {
       await initFn({ rootDirectory: projectDir, isTypeScript });
@@ -242,7 +253,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
   await loadEnv(config.rootDirectory);
 
   let port = await getPort({
-    port: process.env.PORT ? Number(process.env.PORT) : 3000,
+    port: process.env.PORT ? Number(process.env.PORT) : makeRange(3000, 3100),
   });
 
   if (config.serverEntryPoint) {

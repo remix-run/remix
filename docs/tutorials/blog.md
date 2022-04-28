@@ -13,6 +13,10 @@ This tutorial uses TypeScript. Remix can definitely be used without TypeScript. 
 
 ## Prerequisites
 
+Click this button to create a [Gitpod](https://gitpod.io) workspace with the project set up and ready to run in VS Code or JetBrains either directly in the browser or on the desktop.
+
+[![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/remix-run/indie-stack)
+
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
 - [Node.js](https://nodejs.org) 14 or greater
@@ -930,8 +934,12 @@ Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[3-9,19-29]
-// ...
+```tsx filename=app/routes/posts/admin/new.tsx lines=[3,8-14,24-34]
+import type { ActionFunction } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { Form } from "@remix-run/react";
+
+import { createPost } from "~/models/post.server";
 
 type ActionData =
   | {

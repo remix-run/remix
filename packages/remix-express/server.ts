@@ -6,7 +6,7 @@ import type {
   RequestInit as NodeRequestInit,
   Response as NodeResponse,
 } from "@remix-run/node";
-import { ReadableStream } from "@web-std/stream";
+import { ReadableStream } from "@remix-run/web-stream";
 import {
   // This has been added as a global in node 15+
   AbortController,

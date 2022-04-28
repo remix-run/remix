@@ -1,6 +1,6 @@
 import { PassThrough } from "stream";
 import Busboy from "busboy";
-import { FormData } from "@web-std/fetch";
+import { FormData } from "@remix-run/web-fetch";
 
 import type { Request as NodeRequest } from "./fetch";
 import type { UploadHandler } from "./formData";

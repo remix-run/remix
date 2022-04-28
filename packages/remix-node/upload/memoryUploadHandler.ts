@@ -1,6 +1,6 @@
 import type { TransformCallback } from "stream";
 import { Transform } from "stream";
-import { File as BufferFile } from "@web-std/file";
+import { File as BufferFile } from "@remix-run/web-file";
 
 import { Meter } from "./meter";
 import type { UploadHandler } from "../formData";

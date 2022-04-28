@@ -1,5 +1,5 @@
-import { FormData as NodeFormData } from "@web-std/fetch";
-import { Blob, File } from "@web-std/file";
+import { FormData as NodeFormData } from "@remix-run/web-fetch";
+import { Blob, File } from "@remix-run/web-file";
 
 import { Request as NodeRequest } from "../fetch";
 // import { FormData as NodeFormData } from "../formData";

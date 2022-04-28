@@ -1,4 +1,4 @@
-import { Blob, File } from "@web-std/file";
+import { Blob, File } from "@remix-run/web-file";
 
 import { FormData as NodeFormData } from "../formData";
 

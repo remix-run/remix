@@ -1587,6 +1587,7 @@ function filterMatchesToLoad(
     // mutation, reload for fresh data
     state.transition.type === "actionReload" ||
     state.transition.type === "actionRedirect" ||
+    state.transition.type === "fetchActionRedirect" ||
     // clicked the same link, resubmitted a GET form
     createHref(url) === createHref(state.location) ||
     // search affects all loaders
