@@ -11,6 +11,7 @@ async function getTsConfig(projectDir: string) {
   return JSON5.parse(config);
 }
 
+// this is the default tsconfig.json that is shipped with `create-remix` templates
 const DEFAULT_CONFIG = {
   include: ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
   compilerOptions: {
@@ -46,17 +47,16 @@ test("should output default tsconfig if file is empty", async () => {
 });
 
 test("should add/update mandatory config", async () => {
-  let fixture = await createFixture({
-    files: {
-      "tsconfig.json": json({
-        ...DEFAULT_CONFIG,
-        compilerOptions: {
-          ...DEFAULT_CONFIG.compilerOptions,
-          isolatedModules: false, // true is required by esbuild
-          // moduleResolution: "node", // this is required by esbuild
-        },
-      }),
+  let config = {
+    ...DEFAULT_CONFIG,
+    compilerOptions: {
+      ...DEFAULT_CONFIG.compilerOptions,
+      isolatedModules: false, // true is required by esbuild
     },
+  };
+  delete config.compilerOptions.moduleResolution; // this is required by esbuild
+  let fixture = await createFixture({
+    files: { "tsconfig.json": json(config) },
   });
 
   let tsconfig = await getTsConfig(fixture.projectDir);
