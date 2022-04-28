@@ -5,6 +5,12 @@ import JSON5 from "json5";
 
 import { createFixture, json } from "./helpers/create-fixture";
 
+async function getTsConfig(projectDir: string) {
+  let tsconfigPath = path.join(projectDir, "tsconfig.json");
+  let config = await fse.readFile(tsconfigPath, "utf8");
+  return JSON5.parse(config);
+}
+
 const DEFAULT_CONFIG = {
   include: ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
   compilerOptions: {
@@ -35,39 +41,26 @@ test("should output default tsconfig if file is empty", async () => {
     },
   });
 
-  let content = JSON5.parse(
-    await fse.readFile(path.join(fixture.projectDir, "tsconfig.json"), "utf8")
-  );
-  expect(content).toEqual(DEFAULT_CONFIG);
+  let tsconfig = await getTsConfig(fixture.projectDir);
+  expect(tsconfig).toEqual(DEFAULT_CONFIG);
 });
 
 test("should add/update mandatory config", async () => {
   let fixture = await createFixture({
     files: {
       "tsconfig.json": json({
-        include: ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
+        ...DEFAULT_CONFIG,
         compilerOptions: {
-          allowJs: true,
-          baseUrl: ".",
-          esModuleInterop: true,
-          forceConsistentCasingInFileNames: true,
+          ...DEFAULT_CONFIG.compilerOptions,
           isolatedModules: false, // true is required by esbuild
-          jsx: "react-jsx",
-          lib: ["DOM", "DOM.Iterable", "ES2019"],
           // moduleResolution: "node", // this is required by esbuild
-          noEmit: true,
-          resolveJsonModule: true,
-          strict: true,
-          target: "es2019",
         },
       }),
     },
   });
 
-  let content = JSON5.parse(
-    await fse.readFile(path.join(fixture.projectDir, "tsconfig.json"), "utf8")
-  );
-  expect(content).toEqual(DEFAULT_CONFIG);
+  let tsconfig = await getTsConfig(fixture.projectDir);
+  expect(tsconfig).toEqual(DEFAULT_CONFIG);
 });
 
 test("shouldn't change suggested config if set", async () => {
@@ -85,10 +78,8 @@ test("shouldn't change suggested config if set", async () => {
     },
   });
 
-  let content = JSON5.parse(
-    await fse.readFile(path.join(fixture.projectDir, "tsconfig.json"), "utf8")
-  );
-  expect(content).toEqual(config);
+  let tsconfig = await getTsConfig(fixture.projectDir);
+  expect(tsconfig).toEqual(config);
 });
 
 test("allows for `extends` in tsconfig", async () => {
@@ -110,11 +101,9 @@ test("allows for `extends` in tsconfig", async () => {
     },
   });
 
-  let content = JSON5.parse(
-    await fse.readFile(path.join(fixture.projectDir, "tsconfig.json"), "utf8")
-  );
+  let tsconfig = await getTsConfig(fixture.projectDir);
   // our base config only sets a few options, so our local config should fill in the missing ones
-  expect(content).toEqual({
+  expect(tsconfig).toEqual({
     extends: "./tsconfig.base.json",
     include: ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
     compilerOptions: {
