@@ -52,7 +52,10 @@ export function writeConfigDefaults(configPath: string) {
   } catch (error: unknown) {}
 
   if (!fullConfig || !config) {
-    // how did we get here?
+    // how did we get here? we validated a tsconfig existed in the first place
+    console.warn(
+      "This should never happen, please open an issue with a reproduction https://github.com/remix-run/remix/issues/new"
+    );
     return;
   }
 
