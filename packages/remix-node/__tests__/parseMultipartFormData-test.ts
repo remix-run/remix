@@ -21,7 +21,7 @@ describe("internalParseFormData", () => {
     let uploadHandler = createMemoryUploadHandler({});
     let parsedFormData = await internalParseFormData(
       req,
-      req.formData,
+      req.formData.bind(req),
       undefined,
       uploadHandler
     );
