@@ -16,8 +16,8 @@ import {
   isRedirectResponse,
   isCatchResponse,
   isDeferredResponse,
-  DeferredResponse,
 } from "./responses";
+import type { DeferredResponse } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
 export type RequestHandler = (

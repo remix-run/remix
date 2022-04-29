@@ -1,7 +1,6 @@
 import { PassThrough } from "stream";
-
 import { RemixServer } from "@remix-run/react";
-import { Response, Headers } from "@remix-run/node";
+import { Response } from "@remix-run/node";
 import { renderToPipeableStream } from "react-dom/server";
 
 const ABORT_DELAY = 2000;
@@ -15,7 +14,7 @@ export default function handleRequest(
   return new Promise((resolve, reject) => {
     let didError = false;
 
-    const { pipe, abort } = renderToPipeableStream(
+    let { pipe, abort } = renderToPipeableStream(
       <RemixServer context={remixContext} url={request.url} />,
       {
         onShellError(err) {
