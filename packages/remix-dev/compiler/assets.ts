@@ -6,7 +6,7 @@ import invariant from "../invariant";
 import { getRouteModuleExportsCached } from "./routes";
 import { getHash } from "./utils/crypto";
 import { createUrl } from "./utils/url";
-import type { CssModulesResults } from "./plugins/cssModules";
+import type { CssModulesResults } from "./plugins/cssModulesPlugin";
 
 type Route = RemixConfig["routes"][string];
 

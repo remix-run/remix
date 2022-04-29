@@ -22,13 +22,13 @@ import { serverAssetsManifestPlugin } from "./compiler/plugins/serverAssetsManif
 import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlugin";
 import { serverEntryModulePlugin } from "./compiler/plugins/serverEntryModulePlugin";
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
-import type { CssModulesResults } from "./compiler/plugins/cssModules";
-import { processCss } from "./compiler/plugins/cssModules";
+import type { CssModulesResults } from "./compiler/plugins/cssModulesPlugin";
 import {
   cssModulesPlugin,
   cssModulesFakerPlugin,
   getCssModulesFileReferences,
-} from "./compiler/plugins/cssModules";
+  processCss,
+} from "./compiler/plugins/cssModulesPlugin";
 import { writeFileSafe } from "./compiler/utils/fs";
 
 // When we build Remix, this shim file is copied directly into the output
