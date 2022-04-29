@@ -1,5 +1,5 @@
 {
-  "exclude": ["__tests__"],
+  "exclude": ["__tests__", "node_modules"],
   "compilerOptions": {
     "lib": ["ES2019", "DOM.Iterable"],
     "target": "ES2019",
@@ -12,6 +12,7 @@
     "emitDeclarationOnly": true,
 
     "outDir": "../../build/node_modules/@remix-run/architect",
-    "rootDir": "."
+    "rootDir": ".",
+    "skipLibCheck": true
   }
 }
