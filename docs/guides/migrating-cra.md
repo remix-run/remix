@@ -52,9 +52,13 @@ export function Logo() {
 
 If you want to use SVG files as React components, you'll need to first create the components and import them directly. [React SVGR](https://react-svgr.com/) is a great toolset that can help you generate these components from the [command line](https://react-svgr.com/docs/cli/) or in an [online playground](https://react-svgr.com/playground/) if you prefer to copy and paste.
 
+- TODO: Mention pre-loading in `links`
+
 ### Style imports
 
 CRA supports importing styles in your components in many ways. While this is common practice in the React ecosystem, it's not supported the same way in Remix for a few different reasons.
+
+TODO: Link to the bottom where we talk about styles
 
 ## Installing packages
 
@@ -144,6 +148,8 @@ Many apps built on CRA don't have a dedicated server for rendering the React app
 If you never set up a server for your app, that'll be our first step. Otherwise, keep reading until we talk about the Remix request handler!
 
 ### Building an Express server
+
+TODO: Mention our Express server template at the end
 
 <docs-info>
 
@@ -772,3 +778,7 @@ These scripts are a bit more verbose, but that's because we don't abstract the p
 While we've done our best to provide a comprehensive migration guide, it's important to note that we built Remix from the ground up with a few key principles that differ significantly from how many React apps are currently built. While your app will likely run at this point, as you dig through our docs and explore our APIs, we think you'll be able to drastically reduce the complexity of your code and improve the end user experience of your app. It might take a bit of time to get there, but you can eat that elephant one bite at a time. 🐘
 
 Now then, go off and Remix your CRA app. We think you'll like what you build along the way! 💿
+
+- TODO: Add links to other docs that would help
+
+/pages/philosophy
