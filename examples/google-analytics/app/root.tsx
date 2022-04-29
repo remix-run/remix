@@ -1,4 +1,4 @@
-import type { MetaFunction } from "@remix-run/node";
+import { json, LoaderFunction, MetaFunction } from "@remix-run/node";
 // import { json } from "@remix-run/node";
 import {
   Link,
@@ -8,6 +8,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useLoaderData,
   useLocation,
 } from "@remix-run/react";
 import { useEffect } from "react";
@@ -28,6 +29,15 @@ import * as gtag from "~/utils/gtags.client";
 //   });
 // }
 
+type LoaderData = {
+  gaTrackingId: string | undefined;
+};
+
+// Load the GA tracking id from the .env
+export const loader: LoaderFunction = async () => {
+  return json<LoaderData>({ gaTrackingId: process.env.GA_TRACKING_ID });
+};
+
 export const meta: MetaFunction = () => ({
   charset: "utf-8",
   title: "New Remix App",
@@ -36,10 +46,13 @@ export const meta: MetaFunction = () => ({
 
 export default function App() {
   const location = useLocation();
+  const { gaTrackingId } = useLoaderData<LoaderData>();
 
   useEffect(() => {
-    gtag.pageview(location.pathname);
-  }, [location]);
+    if (gaTrackingId?.length) {
+      gtag.pageview(location.pathname, gaTrackingId);
+    }
+  }, [location, gaTrackingId]);
 
   return (
     <html lang="en">
@@ -48,11 +61,11 @@ export default function App() {
         <Links />
       </head>
       <body>
-        {process.env.NODE_ENV === "development" ? null : (
+        {process.env.NODE_ENV === "development" || !gaTrackingId ? null : (
           <>
             <script
               async
-              src={`https://www.googletagmanager.com/gtag/js?id=${gtag.GA_TRACKING_ID}`}
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaTrackingId}`}
             />
             <script
               async
@@ -63,7 +76,7 @@ export default function App() {
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
 
-                gtag('config', '${gtag.GA_TRACKING_ID}', {
+                gtag('config', '${gaTrackingId}', {
                   page_path: window.location.pathname,
                 });
               `,
