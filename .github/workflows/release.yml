@@ -55,23 +55,3 @@ jobs:
           token: ${{ secrets.NIGHTLY_PAT }}
           event-type: release
           client-payload: '{ "ref": "${{ github.ref }}" }'
-
-  stacks:
-    needs: [manual]
-    name: Run tests on Remix Stack Repos
-    if: github.repository == 'remix-run/remix'
-    strategy:
-      matrix:
-        repo:
-          - "remix-run/indie-stack"
-          - "remix-run/blues-stack"
-          - "remix-run/grunge-stack"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Run tests against ${{ matrix.repo }} for ${{ github.ref }}
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.NIGHTLY_PAT }}
-          repository: ${{ matrix.repo }}
-          event-type: remix-release
-          client-payload: '{ "ref": "${{ github.ref_name }}" }'

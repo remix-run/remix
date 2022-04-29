@@ -100,23 +100,3 @@ jobs:
           token: ${{ secrets.NIGHTLY_PAT }}
           event-type: release
           client-payload: '{ "ref": "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}" }'
-
-  stacks:
-    needs: [nightly]
-    name: Run tests on Remix Stack Repos
-    if: github.repository == 'remix-run/remix'
-    strategy:
-      matrix:
-        repo:
-          - "remix-run/indie-stack"
-          - "remix-run/blues-stack"
-          - "remix-run/grunge-stack"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Run tests against ${{ matrix.repo }} for ${{ needs.nightly.outputs.NEXT_VERSION }}
-        uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.NIGHTLY_PAT }}
-          repository: ${{ matrix.repo }}
-          event-type: remix-release
-          client-payload: '{ "ref": "${{ needs.nightly.outputs.NEXT_VERSION }}" }'

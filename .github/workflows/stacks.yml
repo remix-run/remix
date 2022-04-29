@@ -1,0 +1,209 @@
+name: 🥞 Remix Stacks Test
+
+on:
+  repository_dispatch:
+    types: [release]
+
+jobs:
+  setup:
+    name: Remix Stacks Test
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack:
+          - repo: "remix-run/indie-stack"
+            name: "indie"
+          - repo: "remix-run/blues-stack"
+            name: "blues"
+          - repo: "remix-run/grunge-stack"
+            name: "grunge"
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: ⚒️ Create new ${{ matrix.stack.name }} app with ${{ github.event.client_payload.ref }}
+        run: |
+          npx -y create-remix@${{ github.event.client_payload.ref }} ${{ matrix.stack.name }} --template ${{ matrix.stack.repo }} --typescript --no-install
+
+      - name: 📥 Download deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ${{ matrix.stack.name }}
+          useLockFile: false
+
+      - name: 🏄 Copy test env vars
+        run: cp .env.example .env
+
+      - name: 🏛 Archive ${{ matrix.stack.name }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.stack.name }}-archive
+          path: ${{ matrix.stack.name }}
+
+  lint:
+    name: ⬣ ESLint
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack:
+          - repo: "remix-run/indie-stack"
+            name: "indie"
+          - repo: "remix-run/blues-stack"
+            name: "blues"
+          - repo: "remix-run/grunge-stack"
+            name: "grunge"
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: 🏛 Restore ${{ matrix.stack.name }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ matrix.stack.name }}-archive
+
+      - name: 📥 Download deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ${{ matrix.stack.name }}
+
+      - name: 🔬 Lint
+        run: npm run lint
+        with:
+          working-directory: ${{ matrix.stack.name }}
+
+  typecheck:
+    name: ʦ TypeScript
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack:
+          - repo: "remix-run/indie-stack"
+            name: "indie"
+          - repo: "remix-run/blues-stack"
+            name: "blues"
+          - repo: "remix-run/grunge-stack"
+            name: "grunge"
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: 🏛 Restore ${{ matrix.stack.name }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ matrix.stack.name }}-archive
+
+      - name: 📥 Download deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ${{ matrix.stack.name }}
+
+      - name: 🔎 Type check
+        run: npm run typecheck --if-present
+        with:
+          working-directory: ${{ matrix.stack.name }}
+
+  vitest:
+    name: ⚡ Vitest
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack:
+          - repo: "remix-run/indie-stack"
+            name: "indie"
+          - repo: "remix-run/blues-stack"
+            name: "blues"
+          - repo: "remix-run/grunge-stack"
+            name: "grunge"
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: 🏛 Restore ${{ matrix.stack.name }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ matrix.stack.name }}-archive
+
+      - name: 📥 Download deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ${{ matrix.stack.name }}
+
+      - name: ⚡ Run vitest
+        run: npm run test -- --coverage
+        with:
+          working-directory: ${{ matrix.stack.name }}
+
+  cypress:
+    name: ⚫️ Cypress
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        stack:
+          - repo: "remix-run/indie-stack"
+            name: "indie"
+          - repo: "remix-run/blues-stack"
+            name: "blues"
+          - repo: "remix-run/grunge-stack"
+            name: "grunge"
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: 🏛 Restore ${{ matrix.stack.name }}
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ matrix.stack.name }}-archive
+
+      - name: 📥 Download deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ${{ matrix.stack.name }}
+
+      - name: 🛠 Setup Database
+        run: npx prisma migrate reset --force
+        with:
+          working-directory: ${{ matrix.stack.name }}
+
+      - name: ⚙️ Build
+        run: npm run build
+        with:
+          working-directory: ${{ matrix.stack.name }}
+
+      - name: 🌳 Cypress run
+        uses: cypress-io/github-action@v3
+        with:
+          start: npm run start:mocks
+          wait-on: "http://localhost:8811"
+          working-directory: ${{ matrix.stack.name }}
+        env:
+          PORT: "8811"
