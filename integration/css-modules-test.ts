@@ -12,6 +12,9 @@ import {
 let fixture: Fixture;
 let appFixture: AppFixture;
 
+// TODO: Finish all todo tests
+const testTodo = (title: string) => {};
+
 test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
@@ -259,7 +262,7 @@ test("composes from locally scoped classname", async ({ page }) => {
 });
 
 // TODO: Feature not implemented yet
-// it.todo("composes from imported module classname", () => {});
+testTodo("composes from imported module classname");
 
 test("composes :global selector with :local selector", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
@@ -277,4 +280,9 @@ test("composes :global selector with :local selector", async ({ page }) => {
     }
   }
   expect(found.length).toBe(2);
+});
+
+test("keeps declarations in the correct order", async ({ page }) => {
+
+
 });

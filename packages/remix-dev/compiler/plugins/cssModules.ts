@@ -11,8 +11,7 @@ import type { AssetsManifestPromiseRef } from "./serverAssetsManifestPlugin";
 
 const pluginName = "css-modules";
 const pluginNamespace = `${pluginName}-namespace`;
-const suffixMatcher = /\.modules?\.css?$/;
-// TODO is the `?` after `css` intentional?
+const suffixMatcher = /\.modules?\.css$/;
 
 let parcelTransform: (opts: ParcelTransformOptions) => ParcelTransformResult;
 const decoder = new TextDecoder();
