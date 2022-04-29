@@ -24,7 +24,7 @@ describe("<LiveReload />", () => {
   describe("non-development environment", () => {
     let LiveReload: typeof ActualLiveReload;
     beforeEach(() => {
-      process.env.NODE_ENV = "not-development";
+      process.env.NODE_ENV = "not-development" as any;
       jest.resetModules();
       LiveReload = require("../components").LiveReload;
     });
@@ -106,6 +106,7 @@ function itPrefetchesPageLinks<
         routeData: {},
         appState: {} as any,
         transitionManager: {} as any,
+        routeLoadersDeferred: {}
       };
       return (
         <RemixEntryContext.Provider value={context}>

@@ -25,7 +25,9 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^5.16.2",
     "@testing-library/react": "^12.1.3",
-    "abort-controller": "^3.0.0"
+    "abort-controller": "^3.0.0",
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0"
   },
   "sideEffects": false
 }
