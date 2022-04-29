@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import type * as Playwright from "@playwright/test";
 
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
@@ -13,7 +14,13 @@ let fixture: Fixture;
 let appFixture: AppFixture;
 
 // TODO: Finish all todo tests
-const testTodo = (title: string) => {};
+const testTodo = (
+  title: string,
+  testFunction?: (
+    args: { page: Playwright.Page },
+    testInfo: Playwright.TestInfo
+  ) => any
+) => {};
 
 test.beforeAll(async () => {
   fixture = await createFixture({
@@ -155,12 +162,12 @@ test.beforeAll(async () => {
       `,
       "app/lib/text.jsx": js`
         import styles from "./text.module.css";
-        export function Text(props) {
+        export function Text({ as: Comp = "span", ...props }) {
           return (
-            <span
+            <Comp
               {...props}
               data-ui-text=""
-              className={styles.text}
+              className={props.className ? props.className + " " +  styles.text : styles.text}
             />
           );
         }
@@ -173,21 +180,21 @@ test.beforeAll(async () => {
       `,
       "app/lib/heading.jsx": js`
         import styles from "./heading.module.css";
+        import { Text } from "~/lib/text";
         export function Heading({ level = 2, ...props }) {
-          let Comp = "h" + level;
           return (
-            <Comp
+            <Text
               {...props}
+              as={"h" + level}
               data-ui-heading=""
               data-ui-heading-level={level}
-              className={styles.heading}
+              className={props.className ? props.className + " " +  styles.heading : styles.heading}
             />
           );
         }
       `,
       "app/lib/heading.module.css": css`
         .heading {
-          /* TODO: composes: text from "./text.module.css"; */
           font-weight: bold;
         }
         .heading[data-heading-level="1"] {
@@ -282,7 +289,14 @@ test("composes :global selector with :local selector", async ({ page }) => {
   expect(found.length).toBe(2);
 });
 
-test("keeps declarations in the correct order", async ({ page }) => {
-
-
+testTodo("keeps declarations in the correct order", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
+  await app.goto("/a");
+  // let heading = await app.getElement("[data-ui-heading]"); A couple of
+  // approaches:
+  //  - get the stylesheet text and check the order
+  //  - check that the heading itself has computed styles from `Text` that are
+  //    not overridden
+  //  - check that the heading does NOT have computed styles from `Text` that
+  //    are overridden
 });

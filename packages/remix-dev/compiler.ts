@@ -632,10 +632,11 @@ async function writeServerBuildResult(
 }
 
 /**
- * Topological sort: For each node, all of its (recursive) dependencies come before it.
- * See https://en.wikipedia.org/wiki/Topological_sorting
+ * Topological sort: For each node, all of its (recursive) dependencies come
+ * before it.
+ * @see https://en.wikipedia.org/wiki/Topological_sorting
  */
-const topologicalSort = (graph: Record<string, string[]>) => {
+function topologicalSort(graph: Record<string, string[]>) {
   let visited: string[] = [];
   let chain = new Set();
 
@@ -654,4 +655,4 @@ const topologicalSort = (graph: Record<string, string[]>) => {
     visited.push(n);
   }
   return visited;
-};
+}
