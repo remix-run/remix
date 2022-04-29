@@ -5,8 +5,7 @@
   "license": "",
   "sideEffects": false,
   "scripts": {
-    "postinstall": "npm run routes-gen",
-    "build": "remix build",
+    "build": "remix build && npm run routes-gen",
     "dev": "remix dev",
     "routes-gen": "routes-gen -d @routes-gen/remix",
     "start": "remix-serve build"
