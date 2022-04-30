@@ -27,9 +27,9 @@ jobs:
         with:
           node-version: 16
 
-      - name: ⚒️ Create new ${{ matrix.stack.name }} app with ${{ github.event.client_payload.ref }}
+      - name: ⚒️ Create new ${{ matrix.stack.name }} app with ${{ github.event.client_payload.version }}
         run: |
-          npx -y create-remix@${{ github.event.client_payload.ref }} ${{ matrix.stack.name }} --template ${{ matrix.stack.repo }} --typescript --no-install
+          npx -y create-remix@${{ github.event.client_payload.version }} ${{ matrix.stack.name }} --template ${{ matrix.stack.repo }} --typescript --no-install
 
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
@@ -37,18 +37,29 @@ jobs:
           working-directory: ${{ matrix.stack.name }}
           useLockFile: false
 
-      - name: 🏄 Copy test env vars
-        run: cp .env.example .env
+      - name: Run `remix init`
+        run: |
+          cd ${{ matrix.stack.name }}
+          npx remix init
 
-      - name: 🏛 Archive ${{ matrix.stack.name }}
+      - name: 🏄 Copy test env vars
+        run: |
+          cd ${{ matrix.stack.name }}
+          cp .env.example .env
+
+      - name: 📁 Zip artifact
+        run: zip ${{ matrix.stack.name }}.zip ./${{ matrix.stack.name }} -r -x "**/node_modules/*"
+
+      - name: 🗄️ Archive ${{ matrix.stack.name }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.stack.name }}-archive
-          path: ${{ matrix.stack.name }}
+          path: ${{ matrix.stack.name }}.zip
 
   lint:
     name: ⬣ ESLint
     if: github.repository == 'remix-run/remix'
+    needs: [setup]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -68,10 +79,13 @@ jobs:
         with:
           node-version: 16
 
-      - name: 🏛 Restore ${{ matrix.stack.name }}
+      - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
         with:
           name: ${{ matrix.stack.name }}-archive
+
+      - name: 📁 Unzip artifact
+        run: unzip ${{ matrix.stack.name }}.zip
 
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
@@ -79,12 +93,13 @@ jobs:
           working-directory: ${{ matrix.stack.name }}
 
       - name: 🔬 Lint
-        run: npm run lint
-        with:
-          working-directory: ${{ matrix.stack.name }}
+        run: |
+          cd ${{ matrix.stack.name }}
+          npm run lint
 
   typecheck:
     name: ʦ TypeScript
+    needs: [setup]
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     strategy:
@@ -105,10 +120,13 @@ jobs:
         with:
           node-version: 16
 
-      - name: 🏛 Restore ${{ matrix.stack.name }}
+      - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
         with:
           name: ${{ matrix.stack.name }}-archive
+
+      - name: 📁 Unzip artifact
+        run: unzip ${{ matrix.stack.name }}.zip
 
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
@@ -116,13 +134,14 @@ jobs:
           working-directory: ${{ matrix.stack.name }}
 
       - name: 🔎 Type check
-        run: npm run typecheck --if-present
-        with:
-          working-directory: ${{ matrix.stack.name }}
+        run: |
+          cd ${{ matrix.stack.name }}
+          npm run typecheck --if-present
 
   vitest:
     name: ⚡ Vitest
     if: github.repository == 'remix-run/remix'
+    needs: [setup]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -142,10 +161,13 @@ jobs:
         with:
           node-version: 16
 
-      - name: 🏛 Restore ${{ matrix.stack.name }}
+      - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
         with:
           name: ${{ matrix.stack.name }}-archive
+
+      - name: 📁 Unzip artifact
+        run: unzip ${{ matrix.stack.name }}.zip
 
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
@@ -153,23 +175,27 @@ jobs:
           working-directory: ${{ matrix.stack.name }}
 
       - name: ⚡ Run vitest
-        run: npm run test -- --coverage
-        with:
-          working-directory: ${{ matrix.stack.name }}
+        run: |
+          cd ${{ matrix.stack.name }}
+          npm run test -- --coverage
 
   cypress:
     name: ⚫️ Cypress
     if: github.repository == 'remix-run/remix'
+    needs: [setup]
     runs-on: ubuntu-latest
     strategy:
       matrix:
         stack:
           - repo: "remix-run/indie-stack"
             name: "indie"
+            cypress: "npm run start:mocks"
           - repo: "remix-run/blues-stack"
             name: "blues"
+            cypress: "npm run start:mocks"
           - repo: "remix-run/grunge-stack"
             name: "grunge"
+            cypress: "npm run dev"
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
@@ -179,30 +205,43 @@ jobs:
         with:
           node-version: 16
 
-      - name: 🏛 Restore ${{ matrix.stack.name }}
+      - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
         with:
           name: ${{ matrix.stack.name }}-archive
+
+      - name: 📁 Unzip artifact
+        run: unzip ${{ matrix.stack.name }}.zip
 
       - name: 📥 Download deps
         uses: bahmutov/npm-install@v1
         with:
           working-directory: ${{ matrix.stack.name }}
 
+      - name: 🐳 Docker compose
+        if: ${{ matrix.stack.name == 'blues' }}
+        # the sleep is just there to give time for postgres to get started
+        run: |
+          cd ${{ matrix.stack.name }}
+          docker-compose up -d && sleep 3
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/postgres"
+
       - name: 🛠 Setup Database
-        run: npx prisma migrate reset --force
-        with:
-          working-directory: ${{ matrix.stack.name }}
+        if: ${{ matrix.stack.name != 'grunge' }}
+        run: |
+          cd ${{ matrix.stack.name }}
+          npx prisma migrate reset --force
 
       - name: ⚙️ Build
-        run: npm run build
-        with:
-          working-directory: ${{ matrix.stack.name }}
+        run: |
+          cd ${{ matrix.stack.name }}
+          npm run build
 
       - name: 🌳 Cypress run
         uses: cypress-io/github-action@v3
         with:
-          start: npm run start:mocks
+          start: ${{ matrix.stack.cypress }}
           wait-on: "http://localhost:8811"
           working-directory: ${{ matrix.stack.name }}
         env:
