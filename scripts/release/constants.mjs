@@ -8,7 +8,7 @@ if (!process.env.VERSION) {
   throw new Error("VERSION is required");
 }
 if (!process.env.VERSION.startsWith("refs/tags/")) {
-  throw new Error("VERSION must be a tag, recieved " + process.env.VERSION);
+  throw new Error("VERSION must be a tag, received " + process.env.VERSION);
 }
 
 export const [OWNER, REPO] = process.env.GITHUB_REPOSITORY.split("/");
