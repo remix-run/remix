@@ -356,7 +356,7 @@ For example, all of your marketing pages could be in `app/routes/__marketing/*` 
 
 <docs-warning>Be careful, pathless layout routes introduce the possibility of URL conflicts</docs-warning>
 
-#### Dot Delimeters
+#### Dot Delimiters
 
 <!-- prettier-ignore -->
 ```markdown [8]
