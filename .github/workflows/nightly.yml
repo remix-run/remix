@@ -99,4 +99,4 @@ jobs:
         with:
           token: ${{ secrets.NIGHTLY_PAT }}
           event-type: release
-          client-payload: '{ "ref": "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}" }'
+          client-payload: '{ "ref": "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}", "version": "${{ needs.nightly.outputs.NEXT_VERSION }}" }'
