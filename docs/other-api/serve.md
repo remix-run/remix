@@ -17,12 +17,12 @@ The `server-build-path` needs to point to the `serverBuildDirectory` defined in 
 
 Because only the build artifacts (`build/`, `public/build/`) need to be deployed to production, the `remix.config.js` is not guaranteed to be available in production, so you need to tell Remix where your server build is with this option.
 
-In development, `remix-serve` will ensure the latest code is run on each request by purging the require cache of your application modules when files change. This has some effects on your code you might need to be aware of:
+In development, `remix-serve` will ensure the latest code is run by purging the require cache for every request. This has some effects on your code you might need to be aware of:
 
 - Any values in the module scope will be "reset"
 
   ```ts [1-3]
-  // this will be reset whenever any files change because the module cache was
+  // this will be reset for every request because the module cache was
   // cleared and this will be required brand new
   const cache = new Map();
 
@@ -36,8 +36,6 @@ In development, `remix-serve` will ensure the latest code is run on each request
     return json(record);
   }
   ```
-
-  This should be fine, just be aware that `cache` will be empty after file changes.
 
 - Any **module side effects** will remain in place! This may cause problems, but should probably be avoided anyway.
 
