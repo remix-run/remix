@@ -47,28 +47,30 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
-
-        export function loader() {
-          return json("pizza");
-        }
-
+      "app/routes/nested/index.jsx": js`
         export default function Index() {
-          let data = useLoaderData();
-          return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
+          return <div>Index</div>
         }
       `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+      "app/routes/nested/__pathless/foo.jsx": js`
+        export default function Foo() {
+          return <div>Foo</div>
+        }
+      `,
+      "app/routes/nested/__pathless/bar.jsx": js`
+        export default function Bar() {
+          return <div>Bar</div>;
+        }
+      `,
+      "app/routes/nested/__pathless.jsx": js`
+        import { Outlet } from "@remix-run/react";
+        export default function Layout() {
+          return (
+            <>
+              <div>Layout</div>
+              <Outlet />
+            </>
+          );
         }
       `,
     },
@@ -85,16 +87,11 @@ test.afterAll(async () => appFixture.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("display home page without the pathless layout", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  await app.goto("/nested");
+  expect(await app.getHtml()).toMatch("Index");
+  expect(await app.getHtml()).not.toMatch("Layout");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
