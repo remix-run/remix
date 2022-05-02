@@ -52,13 +52,11 @@ export function Logo() {
 
 If you want to use SVG files as React components, you'll need to first create the components and import them directly. [React SVGR](https://react-svgr.com/) is a great toolset that can help you generate these components from the [command line](https://react-svgr.com/docs/cli/) or in an [online playground](https://react-svgr.com/playground/) if you prefer to copy and paste.
 
-- TODO: Mention pre-loading in `links`
+### CSS imports
 
-### Style imports
+CRA supports importing CSS in your components in many ways. While this is common practice in the React ecosystem, it's not supported the same way in Remix for a few different reasons. We'll discuss this in depth a bit later, but for now just know that you need to import your stylesheets in route modules. Importing stylesheets directly in non-route components is not currently supported.
 
-CRA supports importing styles in your components in many ways. While this is common practice in the React ecosystem, it's not supported the same way in Remix for a few different reasons.
-
-TODO: Link to the bottom where we talk about styles
+[Read more about route styles and why Remix does things a bit differently.](#route-stylesheets)
 
 ## Installing packages
 
@@ -148,8 +146,6 @@ Many apps built on CRA don't have a dedicated server for rendering the React app
 If you never set up a server for your app, that'll be our first step. Otherwise, keep reading until we talk about the Remix request handler!
 
 ### Building an Express server
-
-TODO: Mention our Express server template at the end
 
 <docs-info>
 
@@ -384,6 +380,8 @@ function purgeRequireCache() {
   }
 }
 ```
+
+<docs-info>This tutorial closely mirrors the <a href="https://github.com/remix-run/remix/blob/main/templates/express/server.js">Express template in the Remix repo</a>.</docs-info>
 
 ## Creating server and browser entrypoints
 
@@ -620,7 +618,7 @@ export default function Root() {
 
 <docs-warning><strong>Important:</strong> be sure to delete the `index.html` from your `public` directory after you've created your root route. Keeping the file around will cause your server to send that HTML instead of your Remix app when accessing the `/` route.</docs-warning>
 
-### Route styles and `<link />` tags
+### Route stylesheets
 
 At this point, you _might_ be able to run your app with no changes, but you probably import a stylesheet somewhere in your `App` component (and probably from others, I'm sure). Remember though—Remix does not handle CSS imports the same way CRA does, and we think for good reason.
 
@@ -667,6 +665,8 @@ We think there's a better way, and it's one that happens to be as old as HTML2: 
 We also do not yet support CSS Modules, as that requires compiler integration and current approaches are not aligned with our design philosophy. We are actively working on a solution and plan to have an API for CSS Modules very soon.
 
 </docs-info>
+
+### Route `links` exports
 
 In Remix, stylesheets can only be loaded from route component files. Importing them does not do anything magical with your styles, rather it returns a URL that can be used to load the stylesheet as you see fit. You can render the stylesheet directly in your component or use our `links` export.
 
@@ -719,7 +719,7 @@ You'll notice on line 32 that we've rendered a `<Links />` component that replac
 
 If you inject `<link />` tags into your page client-side in your existing route components, either directly or via an abstraction like [`react-helmet`](https://www.npmjs.com/package/react-helmet), you'll get to delete a lot of code and possibly a dependency or two!
 
-### Route `<meta />` tags
+### Route `meta` exports
 
 Similar to `links`, each route can also export a `meta` function that—you guessed it—returns a value responsible for rendering `<meta />` tags for that route. This is useful because each route often has its own
 
@@ -779,6 +779,12 @@ While we've done our best to provide a comprehensive migration guide, it's impor
 
 Now then, go off and Remix your CRA app. We think you'll like what you build along the way! 💿
 
-- TODO: Add links to other docs that would help
+### Further reading
 
-/pages/philosophy
+- [Remix philosophy](../pages/philosophy)
+- [Remix technical explanation](../pages/technical-explanation)
+- [Data loading in Remix](./data-loading)
+- [Routing in Remix](./routing)
+- [Styling in Remix](./styling)
+- [Frequently asked questions](../pages/faq)
+- [Common "gotchas"](../pages/gotchas)
