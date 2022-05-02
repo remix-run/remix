@@ -653,7 +653,7 @@ export default function App() {
 While this is a convenient API, consider a few questions:
 
 - How do the styles actually end up on the page? Do you get a `<link />` or an inline `<style />` in the `<head>`?
-- If other components also import CSS, where do they end up in relation other component styles?
+- If other components also import CSS, where do they end up in relation other component styles? This has important implications on how the styles are applied due to the cascading nature of CSS.
 - As the styles are static assets, are we caching them? Can they be preloaded or lazy loaded?
 
 The answer to all of these questions is up to CRA, not you. And if you want to know you'll have to dig around the CRA source code to know for sure.
