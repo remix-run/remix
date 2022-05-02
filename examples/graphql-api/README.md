@@ -5,7 +5,7 @@ This example demonstrates using the [Fetch API][link-fetch] to query a [GraphQL]
 ## Setup
 
 - Setup the `GRAPHQL_API` environment variable
-  - See the [Remix docs](/docs/guides/envvars) for some suggested patterns
+  - See the [Remix docs](https://remix.run/docs/guides/envvars) for some suggested patterns
 - Run `npm install`
 - And start the example with `npm run dev`
 - Visit [http://localhost:3000](http://localhost:3000) in your browser.
