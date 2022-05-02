@@ -580,7 +580,7 @@ export default function Root() {
 
 Notice that we don't need to use `%PUBLIC_URL%` as our server serves relative paths from the `public` directory.
 
-We can also get rid of the `noscript` tag because we're server rendering now, which means users who disable JavaScript will still be able to see our app and thanks to [progressive enahancement](../pages/philosophy#progressive-enhancement) most of the app will still work anyway.
+We can also get rid of the `noscript` tag because we're server rendering now, which means users who disable JavaScript will still be able to see our app. And [with a few tweaks to improve progressive enahancement](../pages/philosophy#progressive-enhancement), much of your app should still work anyway!
 
 And since we aren't mounting our app in the DOM on the client, we can replace `<div id="root"></div>` with our `<App />` component (assuming your `App` component renders an `<Outlet />` from React Router).
 
