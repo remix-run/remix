@@ -426,7 +426,7 @@ function usePrefetchBehavior(
   };
 
   React.useEffect(() => {
-    // If we navigate to a route that potentially prefetched for, unset
+    // If we navigate to a route that we potentially prefetched for, unset
     // shouldPrefetch so that when we navigate away from this route the links
     // don't get re-inserted and cause a dup call to the loader.  We should
     // require another intent to re-insert
