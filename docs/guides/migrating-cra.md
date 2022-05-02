@@ -580,7 +580,7 @@ export default function Root() {
 
 Notice that we don't need to use `%PUBLIC_URL%` as our server serves relative paths from the `public` directory.
 
-We can also get rid of the `noscript` tag because we're server rendering now, which means users who disable JavaScript will still be able to see our app (even if they can't interact with it in exactly the same way).
+We can also get rid of the `noscript` tag because we're server rendering now, which means users who disable JavaScript will still be able to see our app and thanks to [progressive enahancement](../pages/philosophy#progressive-enhancement) most of the app will still work anyway.
 
 And since we aren't mounting our app in the DOM on the client, we can replace `<div id="root"></div>` with our `<App />` component (assuming your `App` component renders an `<Outlet />` from React Router).
 
@@ -715,9 +715,9 @@ export default function Root() {
 }
 ```
 
-You'll notice on line 32 that we've rendered a `<Links />` component that replaced all of our individual `<link />` components. This is inconsequential if we only ever use links in the root route, but it's all child routes may export their own links that will also be rendered here. The `links` function can also return a [`PageLinkDescriptor` object](../api/conventions#pagelinkdescriptor) that allows you to prefetch the resources for a page the user is likely to navigate to.
+You'll notice on line 32 that we've rendered a `<Links />` component that replaced all of our individual `<link />` components. This is inconsequential if we only ever use links in the root route, but all child routes may export their own links that will also be rendered here. The `links` function can also return a [`PageLinkDescriptor` object](../api/conventions#pagelinkdescriptor) that allows you to prefetch the resources for a page the user is likely to navigate to.
 
-If you inject `<link />` tags into your page client-side in your existing route components, either directly or via an abstraction like [`react-helmet`](https://www.npmjs.com/package/react-helmet), you'll get to delete a lot of code and possibly a dependency or two!
+If you currently inject `<link />` tags into your page client-side in your existing route components, either directly or via an abstraction like [`react-helmet`](https://www.npmjs.com/package/react-helmet), you can stop doing that and instead use the `links` export. You get to delete a lot of code and possibly a dependency or two!
 
 ### Route `meta` exports
 
