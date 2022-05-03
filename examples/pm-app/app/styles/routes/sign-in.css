@@ -1,0 +1,62 @@
+@import "../_defs.css";
+
+.signin__container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: var(--spaces-10);
+  gap: var(--spaces-04);
+}
+
+.signin__box {
+  --gutter: var(--spaces-04);
+  position: relative;
+  width: 24rem;
+  max-width: calc(100% - var(--gutter) * 2);
+}
+
+.signin__form-error {
+  position: absolute;
+  top: calc(var(--spaces-08) * -1);
+  right: 0;
+  left: 0;
+  text-align: center;
+}
+
+.signin__form-error-text {
+  display: inline-flex;
+  text-align: center;
+  color: var(--colors-red-10);
+  font-family: var(--fonts-sans);
+  font-weight: bold;
+  line-height: 1.25;
+  padding: 0.5em;
+  padding-top: calc(0.5em / 1.25);
+  background: hsl(var(--hsl-red-04) / 0.5);
+  border: 2px solid var(--colors-red-07);
+  border-radius: 4px;
+}
+
+.signin__heading {
+  text-align: center;
+  margin-bottom: var(--spaces-04);
+}
+
+.signin__email-form {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: var(--spaces-04);
+}
+
+.signin__email-form-submit {
+  margin-top: var(--spaces-04);
+  width: 100%;
+}
+
+.signin__outer-text,
+.signin__outer-text a {
+  color: var(--colors-gray-12);
+}

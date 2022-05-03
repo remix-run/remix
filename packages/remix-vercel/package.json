@@ -1,0 +1,26 @@
+{
+  "name": "@remix-run/vercel",
+  "description": "Vercel server request handler for Remix",
+  "version": "1.4.3",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-vercel"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
+  "dependencies": {
+    "@remix-run/node": "1.4.3"
+  },
+  "peerDependencies": {
+    "@vercel/node": "^1.8.3"
+  },
+  "devDependencies": {
+    "@types/supertest": "^2.0.10",
+    "@vercel/node": "^1.8.3",
+    "node-mocks-http": "^1.10.1",
+    "supertest": "^6.1.5"
+  }
+}

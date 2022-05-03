@@ -1,0 +1,8 @@
+**/build/
+**/tests/__snapshots/
+**/node_modules/
+!.eslintrc.js
+templates/deno
+.tmp
+/playground
+**/__tests__/fixtures

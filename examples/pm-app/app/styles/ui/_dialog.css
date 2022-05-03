@@ -1,0 +1,43 @@
+:root {
+  --reach-dialog: 1;
+}
+
+.ui--dialog__overlay {
+  background: hsl(var(--hsl-black) / 0.3);
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  overflow: auto;
+}
+
+[data-reach-dialog-content] {
+  --dialog-gutter: 15px;
+  position: relative;
+  width: calc(100% - var(--dialog-gutter) * 2);
+  margin: var(--dialog-gutter) auto;
+  background: white;
+  padding: var(--spaces-05);
+  padding-top: var(--spaces-07);
+  outline: none;
+
+  @media (min-width: 400px) {
+    margin: max(10vh, var(--dialog-gutter)) auto;
+  }
+
+  @media (--viewport-md) {
+    width: max(50vw);
+    margin: 10vh auto;
+  }
+}
+
+.ui--dialog__close-button {
+  color: var(--colors-gray-11);
+  border: 1px solid currentColor;
+  padding: var(--spaces-02);
+  position: absolute;
+  right: var(--spaces-02);
+  top: var(--spaces-02);
+  border-radius: 9999px;
+}

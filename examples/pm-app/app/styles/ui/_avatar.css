@@ -1,0 +1,76 @@
+.ui--avatar {
+  --background-color: var(--colors-gray-11);
+  --text-color: var(--colors-white);
+  --size: 1.5rem;
+  --font-size: var(--font-sizes-01);
+  border-radius: 9999px;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  width: var(--size);
+  height: var(--size);
+  font-size: var(--font-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  user-select: none;
+}
+
+.ui--avatar--sm {
+  --size: 1.5rem;
+  --font-size: var(--font-sizes-01);
+}
+
+.ui--avatar--md {
+  --size: 1.75rem;
+  --font-size: var(--font-sizes-02);
+}
+
+.ui--avatar--lg {
+  --size: 2rem;
+  --font-size: var(--font-sizes-02);
+}
+
+@media (--viewport-lg) {
+  .ui--avatar--lg {
+    --size: 2.25rem;
+    --font-size: var(--font-sizes-03);
+  }
+}
+
+.ui--avatar--xl {
+  --size: 2.5rem;
+  --font-size: var(--font-sizes-04);
+}
+
+@media (--viewport-lg) {
+  .ui--avatar--xl {
+    --size: 3rem;
+    --font-size: var(--font-sizes-05);
+  }
+}
+
+.ui--avatar--2x {
+  --size: 3rem;
+  --font-size: var(--font-sizes-05);
+}
+
+@media (--viewport-md) {
+  .ui--avatar--2x {
+    --size: 3.25rem;
+    --font-size: var(--font-sizes-06);
+  }
+}
+
+@media (--viewport-lg) {
+  .ui--avatar--2x {
+    --size: 3.5rem;
+  }
+}
+
+.ui--avatar__initials {
+  display: contents;
+  user-select: none;
+  font-family: var(--fonts-sans);
+  font-weight: bold;
+}
