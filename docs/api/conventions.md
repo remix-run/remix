@@ -1025,7 +1025,7 @@ The `meta` object can also hold a `title` reference which maps to the [HTML `<ti
 
 As a convenience, `charset: "utf-8"` will render a `<meta charset="utf-8">`.
 
-As a last option, you can also pass an object of attribute/value pairs as the value. This can be used as an escape-hetch for meta tags like the [`http-equiv` tag](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta#attr-http-equiv) which uses `http-equiv` instead of `name`.
+As a last option, you can also pass an object of attribute/value pairs as the value. This can be used as an escape-hatch for meta tags like the [`http-equiv` tag](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta#attr-http-equiv) which uses `http-equiv` instead of `name`.
 
 Examples:
 
@@ -1038,7 +1038,7 @@ export const meta: MetaFunction = () => ({
   "og:image": "https://josiesshakeshack.com/logo.jpg", // <meta property="og:image" content="https://josiesshakeshack.com/logo.jpg">
   title: "Josie's Shake Shack", // <title>Josie's Shake Shack</title>
 
-  // content => name
+  // name => content
   description: "Delicious shakes", // <meta name="description" content="Delicious shakes">
   viewport: "width=device-width,initial-scale=1", // <meta name="viewport" content="width=device-width,initial-scale=1">
 
