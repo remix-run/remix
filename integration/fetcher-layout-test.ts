@@ -1,14 +1,18 @@
+import { test, expect } from "@playwright/test";
+
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 let fixture: Fixture;
-let app: AppFixture;
+let appFixture: AppFixture;
 
-beforeAll(async () => {
+test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
       "app/routes/layout-action.jsx": js`
-        import { json, Outlet, useFetcher, useFormAction } from "remix";
+        import { json } from "@remix-run/node";
+        import { Outlet, useFetcher, useFormAction } from "@remix-run/react";
 
         export let action = ({ params }) => json("layout action data");
 
@@ -32,7 +36,12 @@ beforeAll(async () => {
       `,
 
       "app/routes/layout-action/index.jsx": js`
-        import { json, useFetcher, useFormAction, useLoaderData } from "remix";
+        import { json } from "@remix-run/node";
+        import {
+          useFetcher,
+          useFormAction,
+          useLoaderData,
+        } from "@remix-run/react";
 
         export let loader = ({ params }) => json("index data");
 
@@ -42,7 +51,7 @@ beforeAll(async () => {
           let data = useLoaderData();
           let fetcher = useFetcher();
           let action = useFormAction();
-          
+
           let invokeFetcher = () => {
             fetcher.submit({}, { method: "post", action })
           };
@@ -58,7 +67,12 @@ beforeAll(async () => {
       `,
 
       "app/routes/layout-action/$param.jsx": js`
-        import { json, useFetcher, useFormAction, useLoaderData } from "remix";
+        import { json } from "@remix-run/node";
+        import {
+          useFetcher,
+          useFormAction,
+          useLoaderData,
+        } from "@remix-run/react";
 
         export let loader = ({ params }) => json(params.param);
 
@@ -68,7 +82,7 @@ beforeAll(async () => {
           let data = useLoaderData();
           let fetcher = useFetcher();
           let action = useFormAction();
-          
+
           let invokeFetcher = () => {
             fetcher.submit({}, { method: "post", action })
           };
@@ -84,7 +98,8 @@ beforeAll(async () => {
       `,
 
       "app/routes/layout-loader.jsx": js`
-        import { json, Outlet, useFetcher, useFormAction } from "remix";
+        import { json } from "@remix-run/node";
+        import { Outlet, useFetcher, useFormAction } from "@remix-run/react";
 
         export let loader = () => json("layout loader data");
 
@@ -108,14 +123,19 @@ beforeAll(async () => {
       `,
 
       "app/routes/layout-loader/index.jsx": js`
-        import { json, useFetcher, useFormAction, useLoaderData } from "remix";
+        import { json } from "@remix-run/node";
+        import {
+          useFetcher,
+          useFormAction,
+          useLoaderData,
+        } from "@remix-run/react";
 
         export let loader = ({ params }) => json("index data");
 
         export default function ActionLayoutIndex() {
           let fetcher = useFetcher();
           let action = useFormAction();
-          
+
           let invokeFetcher = () => {
             fetcher.load(action);
           };
@@ -130,14 +150,19 @@ beforeAll(async () => {
       `,
 
       "app/routes/layout-loader/$param.jsx": js`
-        import { json, useFetcher, useFormAction, useLoaderData } from "remix";
+        import { json } from "@remix-run/node";
+        import {
+          useFetcher,
+          useFormAction,
+          useLoaderData,
+        } from "@remix-run/react";
 
         export let loader = ({ params }) => json(params.param);
 
         export default function ActionLayoutChild() {
           let fetcher = useFetcher();
           let action = useFormAction();
-          
+
           let invokeFetcher = () => {
             fetcher.load(action);
           };
@@ -153,12 +178,15 @@ beforeAll(async () => {
     },
   });
 
-  app = await createAppFixture(fixture);
+  appFixture = await createAppFixture(fixture);
 });
 
-afterAll(async () => app.close());
+test.afterAll(() => appFixture.close());
 
-it("fetcher calls layout route action when at index route", async () => {
+test("fetcher calls layout route action when at index route", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/layout-action");
   await app.clickElement("button");
   let dataElement = await app.getElement("#layout-fetcher-data");
@@ -167,14 +195,20 @@ it("fetcher calls layout route action when at index route", async () => {
   expect(dataElement.text()).toBe("index data");
 });
 
-it("fetcher calls layout route loader when at index route", async () => {
+test("fetcher calls layout route loader when at index route", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/layout-loader");
   await app.clickElement("button");
   let dataElement = await app.getElement("#layout-fetcher-data");
   expect(dataElement.text()).toBe("layout loader data");
 });
 
-it("fetcher calls index route action when at index route", async () => {
+test("fetcher calls index route action when at index route", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/layout-action");
   await app.clickElement("#index-fetcher");
   let dataElement = await app.getElement("#index-fetcher-data");
@@ -183,14 +217,20 @@ it("fetcher calls index route action when at index route", async () => {
   expect(dataElement.text()).toBe("index data");
 });
 
-it("fetcher calls index route loader when at index route", async () => {
+test("fetcher calls index route loader when at index route", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/layout-loader");
   await app.clickElement("#index-fetcher");
   let dataElement = await app.getElement("#index-fetcher-data");
   expect(dataElement.text()).toBe("index data");
 });
 
-it("fetcher calls layout route action when at paramaterized route", async () => {
+test("fetcher calls layout route action when at paramaterized route", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/layout-action/foo");
   await app.clickElement("button");
   let dataElement = await app.getElement("#layout-fetcher-data");
@@ -199,14 +239,18 @@ it("fetcher calls layout route action when at paramaterized route", async () => 
   expect(dataElement.text()).toBe("foo");
 });
 
-it("fetcher calls layout route loader when at paramaterized route", async () => {
+test("fetcher calls layout route loader when at paramaterized route", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/layout-loader/foo");
   await app.clickElement("button");
   let dataElement = await app.getElement("#layout-fetcher-data");
   expect(dataElement.text()).toBe("layout loader data");
 });
 
-it("fetcher calls paramaterized route route action", async () => {
+test("fetcher calls paramaterized route route action", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/layout-action/foo");
   await app.clickElement("#param-fetcher");
   let dataElement = await app.getElement("#param-fetcher-data");
@@ -215,7 +259,8 @@ it("fetcher calls paramaterized route route action", async () => {
   expect(dataElement.text()).toBe("foo");
 });
 
-it("fetcher calls paramaterized route route loader", async () => {
+test("fetcher calls paramaterized route route loader", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/layout-loader/foo");
   await app.clickElement("#param-fetcher");
   let dataElement = await app.getElement("#param-fetcher-data");

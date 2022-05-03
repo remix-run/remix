@@ -20,11 +20,15 @@ import {
  * You can think of this as an escape hatch that allows you to pass
  * environment/platform-specific values through to your loader/action.
  */
-export interface GetLoadContextFunction {
-  (req: VercelRequest, res: VercelResponse): AppLoadContext;
-}
+export type GetLoadContextFunction = (
+  req: VercelRequest,
+  res: VercelResponse
+) => AppLoadContext;
 
-export type RequestHandler = ReturnType<typeof createRequestHandler>;
+export type RequestHandler = (
+  req: VercelRequest,
+  res: VercelResponse
+) => Promise<void>;
 
 /**
  * Returns a request handler for Vercel's Node.js runtime that serves the
@@ -38,10 +42,10 @@ export function createRequestHandler({
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
-}) {
+}): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
 
-  return async (req: VercelRequest, res: VercelResponse) => {
+  return async (req, res) => {
     let abortController = new AbortController();
     let request = createRemixRequest(req, abortController);
     let loadContext =
@@ -104,9 +108,12 @@ export function createRemixRequest(
   return new NodeRequest(url.href, init);
 }
 
-function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
+export function sendRemixResponse(
+  res: VercelResponse,
+  nodeResponse: NodeResponse
+): void {
   let arrays = new Map();
-  for (let [key, value] of response.headers.entries()) {
+  for (let [key, value] of nodeResponse.headers.entries()) {
     if (arrays.has(key)) {
       let newValue = arrays.get(key).concat(value);
       res.setHeader(key, newValue);
@@ -117,13 +124,13 @@ function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
     }
   }
 
-  res.statusMessage = response.statusText;
-  res.writeHead(response.status, response.headers.raw());
+  res.statusMessage = nodeResponse.statusText;
+  res.writeHead(nodeResponse.status, nodeResponse.headers.raw());
 
-  if (Buffer.isBuffer(response.body)) {
-    res.end(response.body);
-  } else if (response.body?.pipe) {
-    response.body.pipe(res);
+  if (Buffer.isBuffer(nodeResponse.body)) {
+    res.end(nodeResponse.body);
+  } else if (nodeResponse.body?.pipe) {
+    nodeResponse.body.pipe(res);
   } else {
     res.end();
   }

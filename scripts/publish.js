@@ -11,9 +11,10 @@ function getTaggedVersion() {
 }
 
 function publish(dir, tag) {
-  execSync(`npm publish --access public --tag ${tag} ${dir}`, {
-    stdio: "inherit",
-  });
+  execSync(
+    `npm publish --access public${tag != null ? ` --tag ${tag}` : ""} ${dir}`,
+    { stdio: "inherit" }
+  );
 }
 
 async function run() {
@@ -25,7 +26,14 @@ async function run() {
   }
 
   let prerelease = semver.prerelease(taggedVersion);
-  let tag = prerelease ? prerelease[0] : "latest";
+  let prereleaseTag = prerelease ? String(prerelease[0]) : undefined;
+  let tag = prereleaseTag
+    ? prereleaseTag.includes("nightly")
+      ? "nightly"
+      : prereleaseTag.includes("experimental")
+      ? null
+      : prereleaseTag
+    : "latest";
 
   // Publish eslint config directly from the package directory
   publish(path.join(packageDir, "remix-eslint-config"), tag);

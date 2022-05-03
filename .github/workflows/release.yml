@@ -1,242 +1,57 @@
-name: release
+name: 🕊 Release
 
 on:
   release:
     types: [published]
 
 jobs:
-  build:
-    if: github.repository == 'remix-run/remix'
+  manual:
+    name: 📝 Manual Release
+    # we need to check for `nightly` refs and skip them as we dont want to
+    # double publish a version as it would fail. unfortantely even using curl
+    # and a `repository_dispatch` trigger, actions still aren't ran if a version
+    # is published using the default secrets.GITHUB_TOKEN.
+    if: |
+      github.repository == 'remix-run/remix' &&
+      !contains(github.ref, 'nightly')
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v3
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Setup node
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
-        id: yarn-cache
+      - name: 📥 Install deps
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
 
-      - name: Restore dependency cache
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
-
-      - name: Install dependencies
-        run: yarn --frozen-lockfile
-
-      - name: Build
+      - name: 🏗 Build
         run: yarn build
 
-      - name: Setup npm auth
+      - name: 🔐 Setup npm auth
         run: |
           echo "registry=https://registry.npmjs.org" >> ~/.npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
-      - name: Publish
+      - name: 🚀 Publish
         run: npm run publish
 
-  arc_deploy:
-    name: Architect Deploy
-    needs: [build]
+  comment:
+    needs: [manual]
+    name: 🛴 Kick off comment and deployment test workflows
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
-      - name: Setup node
-        uses: actions/setup-node@v3
+      - uses: peter-evans/repository-dispatch@v2
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: Install latest version of npm
-        run: npm install -g npm@latest
-        working-directory: ./scripts/deployment-test
-
-      - name: Deploy to Arc
-        run: node ./arc.mjs
-        working-directory: ./scripts/deployment-test
-        env:
-          CI: true
-          AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
-
-  cf_pages_deploy:
-    name: "CF Pages Deploy"
-    needs: [build]
-    if: github.repository == 'remix-run/remix'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
-      - name: Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: Install latest version of npm
-        run: npm install -g npm@latest
-        working-directory: ./scripts/deployment-test
-
-      - name: Deploy to Cloudflare Pages
-        run: node ./cf-pages.mjs
-        working-directory: ./scripts/deployment-test
-        env:
-          CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
-          CF_GLOBAL_API_KEY: ${{ secrets.TEST_CF_GLOBAL_API_KEY }}
-          CF_EMAIL: ${{ secrets.TEST_CF_EMAIL }}
-          GITHUB_TOKEN: ${{ secrets.TEST_CF_GITHUB_TOKEN }}
-
-  cf_workers_deploy:
-    name: "CF Workers Deploy"
-    needs: [build]
-    if: github.repository == 'remix-run/remix'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
-      - name: Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: Install latest version of npm
-        run: npm install -g npm@latest
-        working-directory: ./scripts/deployment-test
-
-      - name: Deploy to Cloudflare Workers
-        run: node ./cf-workers.mjs
-        working-directory: ./scripts/deployment-test
-        env:
-          CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
-          CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
-
-  fly_deploy:
-    name: "Fly Deploy"
-    needs: [build]
-    if: github.repository == 'remix-run/remix'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
-      - name: Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: Install latest version of npm
-        run: npm install -g npm@latest
-        working-directory: ./scripts/deployment-test
-
-      - name: Install the Fly CLI
-        run: curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/usr/local sh
-
-      - name: Deploy to Fly
-        run: node ./fly.mjs
-        working-directory: ./scripts/deployment-test
-        env:
-          FLY_API_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
-
-  netlify_deploy:
-    name: "Netlify Deploy"
-    needs: [build]
-    if: github.repository == 'remix-run/remix'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
-      - name: Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: Install latest version of npm
-        run: npm install -g npm@latest
-        working-directory: ./scripts/deployment-test
-
-      - name: Deploy to Netlify
-        run: node ./netlify.mjs
-        working-directory: ./scripts/deployment-test
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
-
-  vercel_deploy:
-    name: "Vercel Deploy"
-    needs: [build]
-    if: github.repository == 'remix-run/remix'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
-
-      - name: Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm install
-        working-directory: ./scripts/deployment-test
-
-      - name: Install latest version of npm
-        run: npm install -g npm@latest
-        working-directory: ./scripts/deployment-test
-
-      - name: Deploy to Vercel
-        run: node ./vercel.mjs
-        working-directory: ./scripts/deployment-test
-        env:
-          VERCEL_TOKEN: ${{ secrets.TEST_VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.TEST_VERCEL_USER_ID }}
+          token: ${{ secrets.NIGHTLY_PAT }}
+          event-type: release
+          client-payload: '{ "ref": "${{ github.ref }}" }'

@@ -4,18 +4,10 @@
 
 ## Development
 
-You'll need to run two terminals (or bring in a process manager like concurrently/pm2-dev if you like):
-
-Start the Remix development asset server
+Start the Remix development asset server and the Express server by running:
 
 ```sh
 npm run dev
-```
-
-In a new tab start your express app:
-
-```sh
-npm run start:dev
 ```
 
 This starts your app in development mode, which will purge the server require cache when Remix rebuilds assets so you don't need a process manager restarting the express server.

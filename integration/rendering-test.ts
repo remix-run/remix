@@ -1,24 +1,26 @@
-import {
-  createAppFixture,
-  createFixture,
-  js,
-  selectHtml,
-} from "./helpers/create-fixture";
+import { test, expect } from "@playwright/test";
+
+import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture, selectHtml } from "./helpers/playwright-fixture";
 
-describe("rendering", () => {
+test.describe("rendering", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { Outlet, Scripts } from "remix";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
           export default function Root() {
             return (
-              <html>
-                <head />
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
                 <body>
                   <div id="content">
                     <h1>Root</h1>
@@ -27,7 +29,7 @@ describe("rendering", () => {
                   <Scripts />
                 </body>
               </html>
-            )
+            );
           }
         `,
 
@@ -39,31 +41,26 @@ describe("rendering", () => {
       },
     });
 
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
-    await app.close();
-  });
+  test.afterAll(async () => appFixture.close());
 
-  it("server renders matching routes", async () => {
+  test("server renders matching routes", async () => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
-    expect(selectHtml(await res.text(), "#content")).toMatchInlineSnapshot(`
-      "<div id=\\"content\\">
-        <h1>Root</h1>
-        <h2>Index</h2>
-      </div>"
-    `);
+    expect(selectHtml(await res.text(), "#content")).toBe(`<div id="content">
+  <h1>Root</h1>
+  <h2>Index</h2>
+</div>`);
   });
 
-  it("hydrates", async () => {
+  test("hydrates", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
-    expect(await app.getHtml("#content")).toMatchInlineSnapshot(`
-      "<div id=\\"content\\">
-        <h1>Root</h1>
-        <h2>Index</h2>
-      </div>"
-    `);
+    expect(await app.getHtml("#content")).toBe(`<div id="content">
+  <h1>Root</h1>
+  <h2>Index</h2>
+</div>`);
   });
 });
