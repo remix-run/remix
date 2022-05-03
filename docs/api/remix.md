@@ -33,7 +33,7 @@ These components are to be used once inside of your root route (`root.tsx`). The
 import type {
   LinksFunction,
   MetaFunction,
-} from "@remix-run/{runtime}";
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
 import {
   Links,
   LiveReload,
@@ -331,7 +331,7 @@ In order to avoid (usually) the client-side routing "scroll flash" on refresh or
 This hook returns the JSON parsed data from your route loader function.
 
 ```tsx lines=[2,9]
-import { json } from "@remix-run/{runtime}";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { useLoaderData } from "@remix-run/react";
 
 export async function loader() {
@@ -349,7 +349,7 @@ export default function Invoices() {
 This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
 ```tsx lines=[2,11,20]
-import { json } from "@remix-run/{runtime}";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { useActionData, Form } from "@remix-run/react";
 
 export async function action({ request }) {
@@ -377,7 +377,7 @@ export default function Invoices() {
 The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
 
 ```tsx lines=[22, 31, 39-41, 45-47]
-import { redirect, json } from "@remix-run/{runtime}";
+import { redirect, json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { Form, useActionData } from "@remix-run/react";
 
 export async function action({ request }) {
@@ -522,7 +522,7 @@ Returns the function that may be used to submit a `<form>` (or some raw `FormDat
 This is useful whenever you need to programmatically submit a form. For example, you may wish to save a user preferences form whenever any field changes.
 
 ```tsx filename=app/routes/prefs.tsx lines=[2,14,18]
-import { json } from "@remix-run/{runtime}";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { useSubmit, useTransition } from "@remix-run/react";
 
 export async function loader() {
@@ -1433,8 +1433,8 @@ function SomeForm() {
 This is a shortcut for creating `application/json` responses. It assumes you are using `utf-8` encoding.
 
 ```ts lines=[2,6]
-import type { LoaderFunction } from "@remix-run/{runtime}";
-import { json } from "@remix-run/{runtime}";
+import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const loader: LoaderFunction = async () => {
   // So you can write this:
@@ -1470,8 +1470,8 @@ export const loader: LoaderFunction = async () => {
 This is shortcut for sending 30x responses.
 
 ```ts lines=[2,8]
-import type { ActionFunction } from "@remix-run/{runtime}";
-import { redirect } from "@remix-run/{runtime}";
+import type { ActionFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const action: ActionFunction = async () => {
   const userSession = await getUserSessionOrWhatever();
@@ -1651,7 +1651,7 @@ Most of the time, you'll probably want to proxy the file stream to a file host.
 **Example:**
 
 ```tsx
-import type { UploadHandler } from "@remix-run/{runtime}";
+import type { UploadHandler } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import type {
   UploadApiErrorResponse,
   UploadApiOptions,
@@ -1739,8 +1739,8 @@ Your job is to do whatever you need with the `stream` and return a value that's 
 We have the built-in `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler, here's a theoretical example:
 
 ```tsx filename=file-upload-handler.server.tsx
-import type { UploadHandler } from "@remix-run/{runtime}";
-import { unstable_createFileUploadHandler } from "@remix-run/{runtime}";
+import type { UploadHandler } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { unstable_createFileUploadHandler } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
 export const standardFileUploadHandler =
@@ -1781,7 +1781,7 @@ Let's say you have a banner on your e-commerce site that prompts users to check 
 First, create a cookie:
 
 ```js filename=app/cookies.js
-import { createCookie } from "@remix-run/{runtime}";
+import { createCookie } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const userPrefs = createCookie("user-prefs", {
   maxAge: 604_800, // one week
@@ -1793,7 +1793,7 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
 ```tsx filename=app/routes/index.tsx lines=[4,8-9,15-16,20]
-import { json, redirect } from "@remix-run/{runtime}";
+import { json, redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { useLoaderData } from "@remix-run/react";
 
 import { userPrefs } from "~/cookies";
@@ -1913,7 +1913,7 @@ export async function loader({ request }) {
 Creates a logical container for managing a browser cookie from the server.
 
 ```ts
-import { createCookie } from "@remix-run/{runtime}";
+import { createCookie } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 const cookie = createCookie("cookie-name", {
   // all of these are optional defaults that can be overridden at runtime
@@ -1935,7 +1935,7 @@ To learn more about each attribute, please see the [MDN Set-Cookie docs](https:/
 Returns `true` if an object is a Remix cookie container.
 
 ```ts
-import { isCookie } from "@remix-run/{runtime}";
+import { isCookie } from "@remix-run/node"; // or "@remix-run/cloudflare"
 const cookie = createCookie("user-prefs");
 console.log(isCookie(cookie));
 // true
@@ -2027,7 +2027,7 @@ This is an example of a cookie session storage:
 
 ```js filename=app/sessions.js
 // app/sessions.js
-import { createCookieSessionStorage } from "@remix-run/{runtime}";
+import { createCookieSessionStorage } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 const { getSession, commitSession, destroySession } =
   createCookieSessionStorage({
@@ -2059,7 +2059,7 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 A login form might look something like this:
 
 ```tsx filename=app/routes/login.js lines=[4,7-9,11,16,20,26-28,39,44,49,54]
-import { json, redirect } from "@remix-run/{runtime}";
+import { json, redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { useLoaderData } from "@remix-run/react";
 
 import { getSession, commitSession } from "../sessions";
@@ -2186,7 +2186,7 @@ TODO:
 Returns `true` if an object is a Remix session.
 
 ```js
-import { isSession } from "@remix-run/{runtime}";
+import { isSession } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 const sessionData = { foo: "bar" };
 const session = createSession(sessionData, "remix-session");
@@ -2201,7 +2201,7 @@ Remix makes it easy to store sessions in your own database if needed. The `creat
 The following example shows how you could do this using a generic database client:
 
 ```js
-import { createSessionStorage } from "@remix-run/{runtime}";
+import { createSessionStorage } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 function createDatabaseSessionStorage({
   cookie,
@@ -2258,7 +2258,7 @@ The main advantage of cookie session storage is that you don't need any addition
 The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be committed. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strategies you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
 
 ```js
-import { createCookieSessionStorage } from "@remix-run/{runtime}";
+import { createCookieSessionStorage } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 const { getSession, commitSession, destroySession } =
   createCookieSessionStorage({
@@ -2282,7 +2282,7 @@ This storage keeps all the cookie information in your server's memory.
 import {
   createCookie,
   createMemorySessionStorage,
-} from "@remix-run/{runtime}";
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
@@ -2464,7 +2464,7 @@ Now we can read the message in a loader.
 <docs-info>You must commit the session whenever you read a `flash`. This is different than you might be used to where some type of middleware automatically sets the cookie header for you.</docs-info>
 
 ```jsx
-import { json } from "@remix-run/{runtime}";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import {
   Meta,
   Links,
@@ -2551,7 +2551,7 @@ This component is a wrapper around React Router's Outlet with the ability to pas
 Here's a practical example of when you may want to use this feature. Let's say you've got a list of companies that have invoices and you want to display those companies in an accordion. We'll render our outlet in that accordion, but we want the invoice sorting to be controlled by the parent (so changing companies preserves the invoice sorting). This is a perfect use case for `<Outlet context>`.
 
 ```tsx filename=app/routes/companies.tsx lines=[5,28-31,36-44,53-57,68]
-import { json } from "@remix-run/{runtime}";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import {
   useLoaderData,
   useParams,
@@ -2636,8 +2636,8 @@ This hook returns the context from the `<Outlet />` that rendered you.
 Continuing from the `<Outlet context />` example above, here's what the child route could do to use the sort order.
 
 ```tsx filename=app/routes/companies/$companyId.tsx lines=[5,8,25,27-30]
-import type { LoaderFunction } from "@remix-run/{runtime}";
-import { json } from "@remix-run/{runtime}";
+import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import {
   useLoaderData,
   useOutletContext,
