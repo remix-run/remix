@@ -13,8 +13,8 @@ const DEFAULT_REDIRECT = "/";
  * @param {string} defaultRedirect The redirect to use if the to is unsafe.
  */
 export function safeRedirect(
-    to: FormDataEntryValue | string | null | undefined,
-    defaultRedirect: string = DEFAULT_REDIRECT
+  to: FormDataEntryValue | string | null | undefined,
+  defaultRedirect: string = DEFAULT_REDIRECT
 ) {
   if (!to || typeof to !== "string") {
     return defaultRedirect;
