@@ -887,9 +887,9 @@ function copyToPlaygrounds() {
         await fse.copy(writtenDir, destDir);
 
         // tickle live reload by touching the server entry
-        let serverEntry = ["entry.server.tsx", "entry.server.jsx"].find(
-          (entryPath) =>
-            fse.existsSync(path.join(playgroundDir, "app", entryPath))
+        let serverEntry = ["tsx", "js", "jsx"].find(
+          (entryPathExtension) =>
+            fse.existsSync(path.join(playgroundDir, "app", `entry.server.${entryPathExtension}`))
         );
         let serverEntryPath = path.join(playgroundDir, "app", serverEntry);
         let serverEntryContent = await fse.readFile(serverEntryPath);
