@@ -7,20 +7,25 @@ import {
 import { LATEST_RELEASE, OWNER, REPO } from "./constants.mjs";
 
 async function commentOnIssuesAndPrsAboutRelease() {
-  let pullRequests = await prsMergedSinceLast({
+  if (LATEST_RELEASE.includes("experimental")) {
+    return;
+  }
+
+  let { merged, previousRelease } = await prsMergedSinceLast({
     owner: OWNER,
     repo: REPO,
     lastRelease: LATEST_RELEASE,
   });
-  let suffix = pullRequests.length === 1 ? "" : "s";
+
+  let suffix = merged.length === 1 ? "" : "s";
   console.log(
-    `Found ${pullRequests.length} PR${suffix} merged since last release`
+    `Found ${merged.length} PR${suffix} merged since last release (latest: ${LATEST_RELEASE}, previous: ${previousRelease})`
   );
 
   let promises = [];
   let issuesCommentedOn = new Set();
 
-  for (let pr of pullRequests) {
+  for (let pr of merged) {
     console.log(`commenting on pr #${pr.number}`);
 
     promises.push(
