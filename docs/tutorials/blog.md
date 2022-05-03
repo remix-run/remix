@@ -615,7 +615,7 @@ export default function PostSlug() {
 
 Holy smokes, you did it. You have a blog. Check it out! Next, we're gonna make it easier to create new blog posts 📝
 
-## Creating Blog Posts
+## Nested Routing
 
 Right now, our blog posts just come from seeding the database. Not a real solution, so we need a way to create a new blog post in the database. We're going to be using actions for that.
 
@@ -690,7 +690,7 @@ export default function PostAdmin() {
 You should recognize several of the things we're doing in there from what we've done so far. With that, you should have a decent looking page with the posts on the left and a placeholder on the right.
 Now, if you click on the Admin link, it'll take you to [http://localhost:3000/posts/admin](http://localhost:3000/posts/admin).
 
-## Index Routes
+### Index Routes
 
 Let's fill in that placeholder with an index route for admin. Hang with us, we're introducing "nested routes" here where your route file nesting becomes UI component nesting.
 
