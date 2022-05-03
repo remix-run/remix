@@ -504,11 +504,11 @@ export async function validateTemplate(input: string) {
       let spinner = ora("Validating the template file…").start();
       let response;
       try {
-        let reqOptions = { method: "HEAD", headers: {} };
+        let headers: Record<string, string> = {};
         if (input.startsWith("https://github.com/")) {
-          reqOptions.headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
+          headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
         }
-        response = await fetch(input, reqOptions);
+        response = await fetch(input, { method: "head", headers });
       } catch (_) {
         throw Error(
           "🚨 There was a problem verifying the template file. Please ensure " +
@@ -539,7 +539,10 @@ export async function validateTemplate(input: string) {
       let { url, filePath } = getRepoInfo(input);
       let response;
       try {
-        response = await fetch(url, { method: "HEAD", headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` } });
+        response = await fetch(url, {
+          method: "HEAD",
+          headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
+        });
       } catch (_) {
         throw Error(
           "🚨 There was a problem fetching the template. Please ensure you " +
