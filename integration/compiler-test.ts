@@ -87,6 +87,13 @@ test.describe("compiler", () => {
             return <div id="package-with-submodule">{submodule()}</div>;
           }
         `,
+        "app/routes/webmanifest.jsx": js`
+          import webmanifest from '~/manifest.webmanifest';
+
+          export default function WebManifest() {
+            return <div id="webmanifest">{webmanifest.name}</div>;
+          }
+        `,
         "remix.config.js": js`
           let { getDependenciesToBundle } = require("@remix-run/dev");
           module.exports = {
@@ -154,6 +161,14 @@ test.describe("compiler", () => {
             return "package-with-submodule";
           }
         `,
+        // https://developer.mozilla.org/en-US/docs/Web/Manifest#example_manifest
+        "app/manifest.webmanifest": json({
+          $schema: "https://json.schemastore.org/web-manifest-combined.json",
+          name: "webmanifest",
+          short_name: "short_name",
+          start_url: ".",
+          display: "standalone",
+        }),
       },
     });
 
@@ -261,6 +276,16 @@ test.describe("compiler", () => {
     // rendered the page instead of the error boundary
     expect(await app.getHtml("#package-with-submodule")).toBe(
       '<div id="package-with-submodule">package-with-submodule</div>'
+    );
+  });
+
+  test("allows loading webmanifest files", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/webmanifest", true);
+    expect(res.status()).toBe(200); // server rendered fine
+    // rendered the page instead of the error boundary
+    expect(await app.getHtml("#webmanifest")).toBe(
+      '<div id="webmanifest">webmanifest</div>'
     );
   });
 
