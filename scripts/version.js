@@ -35,10 +35,12 @@ async function run(args) {
   }
 
   // Confirm the next version number
-  let answer = await prompt(
-    `Are you sure you want to bump version ${currentVersion} to ${nextVersion}? [Yn] `
-  );
-  if (answer === false) return 0;
+  if (prereleaseId !== "--skip-prompt") {
+    let answer = await prompt(
+      `Are you sure you want to bump version ${currentVersion} to ${nextVersion}? [Yn] `
+    );
+    if (answer === false) return 0;
+  }
 
   await incrementRemixVersion(nextVersion);
 }

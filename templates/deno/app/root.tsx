@@ -7,7 +7,7 @@ import {
   Scripts,
   ScrollRestoration,
 } from "./deps/@remix-run/react.ts";
-import type { MetaFunction } from "./deps/@remix-run/server-runtime.ts";
+import type { MetaFunction } from "../remix-deno/index.ts";
 
 export const meta: MetaFunction = () => ({
   charset: "utf-8",

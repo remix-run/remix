@@ -32,6 +32,7 @@ export async function create({
   packageManager,
   useTypeScript,
   githubToken,
+  debug,
 }: {
   appTemplate: string;
   projectDir: string;
@@ -40,6 +41,7 @@ export async function create({
   packageManager: "npm" | "yarn" | "pnpm";
   useTypeScript: boolean;
   githubToken?: string;
+  debug?: boolean;
 }) {
   let spinner = ora("Creating your app…").start();
   await createApp({
@@ -50,6 +52,7 @@ export async function create({
     packageManager,
     useTypeScript,
     githubToken,
+    debug,
   });
   spinner.stop();
   spinner.clear();
@@ -250,7 +253,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
   await loadEnv(config.rootDirectory);
 
   let port = await getPort({
-    port: makeRange(process.env.PORT ? Number(process.env.PORT) : 3000, 3100),
+    port: process.env.PORT ? Number(process.env.PORT) : makeRange(3000, 3100),
   });
 
   if (config.serverEntryPoint) {

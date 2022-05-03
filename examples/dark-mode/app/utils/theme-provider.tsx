@@ -45,7 +45,7 @@ function ThemeProvider({
 
     // there's no way for us to know what the theme should be in this context
     // the client will have to figure it out before hydration.
-    if (typeof window !== "object") {
+    if (typeof document === "undefined") {
       return null;
     }
 
@@ -250,7 +250,8 @@ function Themed({
   const [theme] = useTheme();
   const [initialTheme] = useState(theme);
   const themeToReference = initialOnly ? initialTheme : theme;
-  const serverRenderWithUnknownTheme = !theme && typeof window !== "object";
+  const serverRenderWithUnknownTheme =
+    !theme && typeof document === "undefined";
 
   if (serverRenderWithUnknownTheme) {
     // stick them both in and our little script will update the DOM to match
