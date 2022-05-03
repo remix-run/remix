@@ -259,12 +259,12 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             },
             choices: [
               {
-                name: "A pre-configured stack ready for production",
-                value: "stack",
-              },
-              {
                 name: "Just the basics",
                 value: "template",
+              },
+              {
+                name: "A pre-configured stack ready for production",
+                value: "stack",
               },
             ],
           },
