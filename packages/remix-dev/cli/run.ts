@@ -77,8 +77,7 @@ ${colors.heading("Creating a new project")}:
   $ remix create my-app --template https://example.com/remix-template.tar.gz
 
   To create a new project from a template in a private GitHub repo,
-  set the \`GITHUB_TOKEN\` environment variable to a personal access
-  token with access to that repo.
+  pass the \`token\` flag with a personal access token with access to that repo.
 
 ${colors.heading("Initialize a project:")}:
 
@@ -156,6 +155,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       template: { type: "string" },
       typescript: { type: "boolean" },
       version: { type: "boolean", alias: "v" },
+      token: { type: "string" },
     },
   });
 
@@ -332,7 +332,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         remixVersion: flags.remixVersion,
         installDeps,
         useTypeScript: flags.typescript !== false,
-        githubToken: process.env.GITHUB_TOKEN,
+        githubToken: flags.token,
         debug: flags.debug,
       });
 

@@ -34,7 +34,7 @@ export async function createApp({
   remixVersion = remixDevPackageVersion,
   installDeps,
   useTypeScript = true,
-  githubToken = process.env.GITHUB_TOKEN,
+  githubToken,
   debug,
 }: CreateAppArgs) {
   /**
