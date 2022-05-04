@@ -36,7 +36,7 @@ describe("createRoutePath", () => {
       ["[index]", "index"],
       ["test/inde[x]", "test/index"],
       ["[i]ndex/[[].[[]]", "index/[/[]"],
-    ];
+    ] as const;
 
     for (let [input, expected] of tests) {
       it(`"${input}" -> "${expected}"`, () => {
