@@ -270,7 +270,8 @@ export async function dev(remixRoot: string, modeArg?: string) {
     purgeAppRequireCache(config.serverBuildPath);
     next();
   });
-  app.use(createApp(config.serverBuildPath, mode));
+
+  app.use(createApp(config));
 
   let server: Server | null = null;
 
