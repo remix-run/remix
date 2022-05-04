@@ -1407,21 +1407,3 @@ export const LiveReload =
           />
         );
       };
-
-function useComposedRefs<RefValueType = any>(
-  ...refs: Array<React.Ref<RefValueType> | null | undefined>
-): React.RefCallback<RefValueType> {
-  return React.useCallback((node) => {
-    for (let ref of refs) {
-      if (ref == null) continue;
-      if (typeof ref === "function") {
-        ref(node);
-      } else {
-        try {
-          (ref as React.MutableRefObject<RefValueType>).current = node!;
-        } catch (_) {}
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, refs);
-}
