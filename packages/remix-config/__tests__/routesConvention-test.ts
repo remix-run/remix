@@ -1,4 +1,4 @@
-import { createRoutePath } from "../config/routesConvention";
+import { createRoutePath } from "../routesConvention";
 
 describe("createRoutePath", () => {
   describe("creates proper route paths", () => {

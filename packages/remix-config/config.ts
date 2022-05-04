@@ -2,11 +2,11 @@ import * as path from "path";
 import * as fse from "fs-extra";
 import getPort from "get-port";
 
-import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
-import { defineRoutes } from "./config/routes";
-import { defineConventionalRoutes } from "./config/routesConvention";
-import { ServerMode, isValidServerMode } from "./config/serverModes";
-import { serverBuildVirtualModule } from "./compiler/virtualModules";
+import type { RouteManifest, DefineRoutesFunction } from "./routes";
+import { defineRoutes } from "./routes";
+import { defineConventionalRoutes } from "./routesConvention";
+import { ServerMode, isValidServerMode } from "./serverModes";
+import { serverBuildVirtualModule } from "./virtualModules";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];

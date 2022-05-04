@@ -1,8 +1,8 @@
 import type { Plugin } from "esbuild";
 import jsesc from "jsesc";
+import { assetsManifestVirtualModule } from "@remix-run/config";
 
 import invariant from "../../invariant";
-import { assetsManifestVirtualModule } from "../virtualModules";
 
 export type AssetsManifestPromiseRef = { current?: Promise<unknown> };
 

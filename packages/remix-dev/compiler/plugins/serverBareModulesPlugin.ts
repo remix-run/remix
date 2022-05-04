@@ -3,12 +3,12 @@ import fs from "fs";
 import { builtinModules } from "module";
 import { isAbsolute, relative } from "path";
 import type { Plugin } from "esbuild";
-
-import type { RemixConfig } from "../../config";
 import {
   serverBuildVirtualModule,
   assetsManifestVirtualModule,
-} from "../virtualModules";
+} from "@remix-run/config";
+import type { RemixConfig } from "@remix-run/config";
+
 import { createMatchPath } from "../utils/tsconfig";
 
 /**

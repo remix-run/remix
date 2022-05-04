@@ -1,7 +1,7 @@
 import * as path from "path";
 import type esbuild from "esbuild";
+import type { RemixConfig } from "@remix-run/config";
 
-import type { RemixConfig } from "../../config";
 import { getRouteModuleExportsCached } from "../routes";
 import invariant from "../../invariant";
 

@@ -1,0 +1,19 @@
+{
+  "name": "@remix-run/config",
+  "version": "1.4.3",
+  "description": "",
+  "homepage": "https://remix.run",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-config"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
+  "dependencies": {
+    "fs-extra": "^10.0.0",
+    "get-port": "^5.1.1"
+  }
+}

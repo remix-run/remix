@@ -10,13 +10,17 @@ import type { Server } from "http";
 import type * as Express from "express";
 import type { createApp as createAppType } from "@remix-run/serve";
 import getPort, { makeRange } from "get-port";
+import type { RemixConfig } from "@remix-run/config";
+import {
+  readConfig,
+  formatRoutes,
+  RoutesFormat,
+  isRoutesFormat,
+} from "@remix-run/config";
 
 import { BuildMode, isBuildMode } from "../build";
 import * as colors from "../colors";
 import * as compiler from "../compiler";
-import type { RemixConfig } from "../config";
-import { readConfig } from "../config";
-import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
 import { createApp } from "./create";
 import { loadEnv } from "../env";
 import { log } from "../logging";

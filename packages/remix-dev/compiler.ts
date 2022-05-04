@@ -5,10 +5,10 @@ import * as fse from "fs-extra";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
+import type { RemixConfig } from "@remix-run/config";
+import { readConfig } from "@remix-run/config";
 
 import { BuildMode, BuildTarget } from "./build";
-import type { RemixConfig } from "./config";
-import { readConfig } from "./config";
 import { warnOnce } from "./compiler/warnings";
 import type { AssetsManifest } from "./compiler/assets";
 import { createAssetsManifest } from "./compiler/assets";

@@ -1,11 +1,10 @@
 import * as path from "path";
 import type { Plugin } from "esbuild";
-
-import type { RemixConfig } from "../../config";
+import type { RemixConfig } from "@remix-run/config";
 import {
   serverBuildVirtualModule,
   assetsManifestVirtualModule,
-} from "../virtualModules";
+} from "@remix-run/config";
 
 /**
  * Creates a virtual module called `@remix-run/dev/server-build` that exports the

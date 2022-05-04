@@ -4,8 +4,8 @@ import NpmCliPackageJson from "@npmcli/package-json";
 import { join } from "path";
 import glob from "fast-glob";
 import { maxBy } from "lodash";
+import { readConfig } from "@remix-run/config";
 
-import { readConfig } from "../../../../config";
 import * as colors from "../../../../colors";
 import * as jscodeshift from "../../jscodeshift";
 import type { MigrationFunction } from "../../types";

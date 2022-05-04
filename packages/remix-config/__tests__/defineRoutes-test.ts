@@ -1,4 +1,4 @@
-import { defineRoutes } from "../config/routes";
+import { defineRoutes } from "../routes";
 
 describe("defineRoutes", () => {
   it("returns an array of routes", () => {

@@ -1,11 +1,11 @@
 import path from "path";
 import type { RollupOutput } from "rollup";
+import type { RemixConfig } from "@remix-run/config";
+import { readConfig } from "@remix-run/config";
 
 import { BuildMode, BuildTarget } from "../build";
 import type { BuildOptions } from "../compiler";
 import { build, generate } from "../compiler";
-import type { RemixConfig } from "../config";
-import { readConfig } from "../config";
 
 const remixRoot = path.resolve(__dirname, "../../../fixtures/gists-app");
 

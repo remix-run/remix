@@ -1,8 +1,8 @@
 import * as path from "path";
 import * as fse from "fs-extra";
 import type esbuild from "esbuild";
+import type { RemixConfig } from "@remix-run/config";
 
-import type { RemixConfig } from "../../config";
 import { getLoaderForFile } from "../loaders";
 
 /**

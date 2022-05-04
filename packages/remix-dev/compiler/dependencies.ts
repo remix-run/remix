@@ -1,7 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-
-import type { RemixConfig } from "../config";
+import type { RemixConfig } from "@remix-run/config";
 
 type PackageDependencies = { [packageName: string]: string };
 

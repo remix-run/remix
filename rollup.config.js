@@ -146,6 +146,45 @@ function remix() {
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
+function remixConfig() {
+  let sourceDir = "packages/remix-config";
+  let outputDir = getOutputDir("@remix-run/config");
+  let version = getVersion(sourceDir);
+
+  return [
+    {
+      external(id) {
+        return isBareModuleId(id);
+      },
+      input: `${sourceDir}/index.ts`,
+      output: {
+        banner: createBanner("@remix-run/config", version),
+        dir: outputDir,
+        format: "cjs",
+        preserveModules: true,
+        exports: "named",
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts", ".tsx"],
+        }),
+        nodeResolve({ extensions: [".ts", ".tsx"] }),
+        copy({
+          targets: [
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
+          ],
+        }),
+        copyToPlaygrounds(),
+      ],
+    },
+  ];
+}
+
+/** @returns {import("rollup").RollupOptions[]} */
 function remixDev() {
   let sourceDir = "packages/remix-dev";
   let outputDir = getOutputDir("@remix-run/dev");
@@ -854,6 +893,7 @@ export default function rollup(options) {
     // Do not blow away destination app node_modules/remix directory which is
     // correct for that deploy target setup
     ...(activeOutputDir === "build" ? remix(options) : []),
+    ...remixConfig(options),
     ...remixDev(options),
     ...remixServerRuntime(options),
     ...remixNode(options),
