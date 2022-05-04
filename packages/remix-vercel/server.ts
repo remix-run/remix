@@ -3,6 +3,7 @@ import type {
   AppLoadContext,
   ServerBuild,
   RequestInit as NodeRequestInit,
+  Response as NodeResponse,
 } from "@remix-run/node";
 import {
   // This has been added as a global in node 15+
@@ -10,6 +11,7 @@ import {
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
+  pipeReadableStreamToWritable,
 } from "@remix-run/node";
 
 /**
@@ -61,13 +63,13 @@ export function createRequestHandler({
       response.headers.set("Connection", "close");
     }
 
-    sendRemixResponse(res, response);
+    sendRemixResponse(res, response as NodeResponse);
   };
 }
 
 export function createRemixHeaders(
   requestHeaders: VercelRequest["headers"]
-): Headers {
+): NodeHeaders {
   let headers = new NodeHeaders();
   for (let key in requestHeaders) {
     let header = requestHeaders[key]!;
@@ -101,16 +103,7 @@ export function createRemixRequest(
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = new ReadableStream({
-      start(controller) {
-        req.on("data", (chunk) => {
-          controller.enqueue(chunk);
-        });
-        req.on("end", () => {
-          controller.close();
-        });
-      },
-    });
+    init.body = req;
   }
 
   return new NodeRequest(url.href, init);
@@ -118,12 +111,12 @@ export function createRemixRequest(
 
 export function sendRemixResponse(
   res: VercelResponse,
-  nodeResponse: Response
+  nodeResponse: NodeResponse
 ): void {
   res.statusMessage = nodeResponse.statusText;
   let multiValueHeaders: Record<string, (string | string)[]> = {};
   for (let [key, values] of Object.entries(
-    (nodeResponse.headers as any).raw() as Record<string, string[]>
+    (nodeResponse.headers as NodeHeaders).raw()
   )) {
     if (typeof multiValueHeaders[key] === "undefined") {
       multiValueHeaders[key] = [...values];
@@ -138,18 +131,7 @@ export function sendRemixResponse(
   );
 
   if (nodeResponse.body) {
-    let reader = nodeResponse.body.getReader();
-    async function read() {
-      let { done, value } = await reader.read();
-      if (done) {
-        res.end(value);
-        return;
-      }
-
-      res.write(value);
-      read();
-    }
-    read();
+    pipeReadableStreamToWritable(nodeResponse.body, res);
   } else {
     res.end();
   }

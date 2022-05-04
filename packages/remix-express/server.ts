@@ -1,4 +1,3 @@
-import { PassThrough } from "stream";
 import type * as express from "express";
 import type {
   AppLoadContext,
@@ -6,13 +5,13 @@ import type {
   RequestInit as NodeRequestInit,
   Response as NodeResponse,
 } from "@remix-run/node";
-import { ReadableStream } from "@remix-run/web-stream";
 import {
   // This has been added as a global in node 15+
   AbortController,
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
+  pipeReadableStreamToWritable,
 } from "@remix-run/node";
 
 /**
@@ -61,12 +60,9 @@ export function createRequestHandler({
           ? getLoadContext(req, res)
           : undefined;
 
-      let response = await handleRequest(
-        request as unknown as Request,
-        loadContext
-      );
+      let response = await handleRequest(request, loadContext);
 
-      sendRemixResponse(res, response, abortController);
+      sendRemixResponse(res, response as NodeResponse, abortController);
     } catch (error) {
       // Express doesn't support async functions, so we have to pass along the
       // error manually using next().
@@ -77,7 +73,7 @@ export function createRequestHandler({
 
 export function createRemixHeaders(
   requestHeaders: express.Request["headers"]
-): Headers {
+): NodeHeaders {
   let headers = new NodeHeaders();
 
   for (let [key, values] of Object.entries(requestHeaders)) {
@@ -110,16 +106,7 @@ export function createRemixRequest(
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = new ReadableStream({
-      start(controller) {
-        req.on("data", (chunk) => {
-          controller.enqueue(chunk);
-        });
-        req.on("end", () => {
-          controller.close();
-        });
-      },
-    });
+    init.body = req;
   }
 
   return new NodeRequest(url.href, init);
@@ -127,14 +114,14 @@ export function createRemixRequest(
 
 export function sendRemixResponse(
   res: express.Response,
-  nodeResponse: Response,
+  nodeResponse: NodeResponse,
   abortController: AbortController
 ): void {
   res.statusMessage = nodeResponse.statusText;
   res.status(nodeResponse.status);
 
   for (let [key, values] of Object.entries(
-    (nodeResponse.headers as any).raw() as Record<string, string[]>
+    (nodeResponse.headers as NodeHeaders).raw()
   )) {
     for (let value of values) {
       res.append(key, value);
@@ -146,26 +133,8 @@ export function sendRemixResponse(
   }
 
   if (nodeResponse.body) {
-    let reader = nodeResponse.body.getReader();
-    async function read() {
-      let { done, value } = await reader.read();
-      if (done) {
-        res.end(value);
-        return;
-      }
-
-      res.write(value);
-      read();
-    }
-    read();
+    pipeReadableStreamToWritable(nodeResponse.body, res);
   } else {
     res.end();
   }
-  // if (Buffer.isBuffer(nodeResponse.body)) {
-  //   res.end(nodeResponse.body);
-  // } else if (nodeResponse.body?.pipe) {
-  //   nodeResponse.body.pipe(res);
-  // } else {
-  //   res.end();
-  // }
 }

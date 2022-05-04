@@ -1,7 +1,7 @@
-import { Blob as NodeBlob, File as NodeFile } from "@remix-run/web-file";
-
 import { atob, btoa } from "./base64";
 import {
+  Blob as NodeBlob,
+  File as NodeFile,
   Headers as NodeHeaders,
   Request as NodeRequest,
   Response as NodeResponse,

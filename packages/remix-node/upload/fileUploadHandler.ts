@@ -4,19 +4,19 @@ import { rm, mkdir, readFile, stat } from "fs/promises";
 import { tmpdir } from "os";
 import { basename, dirname, extname, resolve as resolvePath } from "path";
 
-import { Meter } from "./meter";
+import { MeterError } from "./meter";
 import type { UploadHandler } from "../formData";
 
 export type FileUploadHandlerFilterArgs = {
   filename: string;
-  encoding: string;
-  mimetype: string;
+  contentType: string;
+  name: string;
 };
 
 export type FileUploadHandlerPathResolverArgs = {
   filename: string;
-  encoding: string;
-  mimetype: string;
+  contentType: string;
+  name: string;
 };
 
 /**
@@ -87,29 +87,26 @@ export function createFileUploadHandler({
   filter,
   maxFileSize = 3000000,
 }: FileUploadHandlerOptions): UploadHandler {
-  return async ({ name, stream, filename, encoding, mimetype }) => {
-    if (filter && !(await filter({ filename, encoding, mimetype }))) {
-      stream.resume();
-      return;
+  return async ({ name, filename, contentType, data }) => {
+    if (filter && !(await filter({ name, filename, contentType }))) {
+      return undefined;
     }
 
     let dir =
       typeof directory === "string"
         ? directory
-        : directory({ filename, encoding, mimetype });
+        : directory({ name, filename, contentType });
 
     if (!dir) {
-      stream.resume();
-      return;
+      return undefined;
     }
 
     let filedir = resolvePath(dir);
     let path =
-      typeof file === "string" ? file : file({ filename, encoding, mimetype });
+      typeof file === "string" ? file : file({ name, filename, contentType });
 
     if (!path) {
-      stream.resume();
-      return;
+      return undefined;
     }
 
     let filepath = resolvePath(filedir, path);
@@ -120,35 +117,21 @@ export function createFileUploadHandler({
 
     await mkdir(dirname(filepath), { recursive: true }).catch(() => {});
 
-    let meter = new Meter(name, maxFileSize);
-    await new Promise<void>((resolve, reject) => {
-      let writeFileStream = createWriteStream(filepath);
-
-      let aborted = false;
-      async function abort(error: Error) {
-        if (aborted) return;
-        aborted = true;
-
-        stream.unpipe();
-        meter.unpipe();
-        stream.removeAllListeners();
-        meter.removeAllListeners();
-        writeFileStream.removeAllListeners();
-
-        await rm(filepath, { force: true }).catch(() => {});
-
-        reject(error);
+    let writeFileStream = createWriteStream(filepath);
+    let size = 0;
+    try {
+      for await (let chunk of data) {
+        size += chunk.length;
+        if (size > maxFileSize) {
+          throw new MeterError(name, maxFileSize);
+        }
+        writeFileStream.write(chunk);
       }
+    } finally {
+      writeFileStream.close();
+    }
 
-      stream.on("error", abort);
-      meter.on("error", abort);
-      writeFileStream.on("error", abort);
-      writeFileStream.on("finish", resolve);
-
-      stream.pipe(meter).pipe(writeFileStream);
-    });
-
-    return new NodeOnDiskFile(filepath, meter.bytes, mimetype);
+    return new NodeOnDiskFile(filepath, size, contentType);
   };
 }
 
@@ -189,6 +172,6 @@ export class NodeOnDiskFile implements File {
   }
 
   get [Symbol.toStringTag]() {
-    return "File"
+    return "File";
   }
 }

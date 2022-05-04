@@ -75,6 +75,7 @@ describe("Request", () => {
   it("clones", async () => {
     let body = new PassThrough();
     test.source.forEach((chunk) => body.write(chunk));
+    body.end();
 
     let req = new Request("http://test.com", {
       method: "post",

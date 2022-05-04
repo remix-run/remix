@@ -7,8 +7,7 @@ export { AbortController } from "abort-controller";
 export type {
   // HeadersInit,
   // RequestInfo,
-  RequestInit,
-  // ResponseInit,
+  RequestInit, // ResponseInit,
 } from "./fetch";
 export { Headers, Request, Response, fetch } from "./fetch";
 
@@ -26,6 +25,7 @@ export {
   NodeOnDiskFile,
 } from "./upload/fileUploadHandler";
 export { createMemoryUploadHandler as unstable_createMemoryUploadHandler } from "./upload/memoryUploadHandler";
+export { MeterError } from "./upload/meter";
 
 export {
   createCookie,
@@ -33,6 +33,11 @@ export {
   createMemorySessionStorage,
   createSessionStorage,
 } from "./implementations";
+
+export {
+  pipeReadableStreamToWritable,
+  readableStreamToBase64String,
+} from "./stream";
 
 export {
   createRequestHandler,

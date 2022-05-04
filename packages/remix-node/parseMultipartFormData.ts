@@ -1,6 +1,5 @@
-import { PassThrough } from "stream";
-import Busboy from "busboy";
 import { FormData } from "@remix-run/web-fetch";
+import { streamMultipart } from "@web3-storage/multipart-parser";
 
 import type { Request as NodeRequest } from "./fetch";
 import type { UploadHandler } from "./formData";
@@ -11,121 +10,60 @@ import type { UploadHandler } from "./formData";
  * @see https://remix.run/api/remix#parsemultipartformdata-node
  */
 export function parseMultipartFormData(
-  request: Request,
+  request: Request | NodeRequest,
   uploadHandler: UploadHandler
 ) {
   return (request as unknown as NodeRequest).formData(uploadHandler);
 }
 
-export async function internalParseFormData(
-  request: Request,
-  internalFormData: any,
-  abortController?: AbortController,
-  uploadHandler?: UploadHandler
-) {
-  if (!uploadHandler) {
-    return internalFormData();
-  }
-  
-  let formData = new FormData();
+export const internalParseFormData = async (
+  request: NodeRequest,
+  uploadHandler: UploadHandler,
+  abortController: AbortController | undefined
+) => {
   let contentType = request.headers.get("Content-Type") || "";
-  let fileWorkQueue: Promise<void>[] = [];
+  let [type, boundary] = contentType.split(/\s*;\s*boundary=/);
 
-  let stream: PassThrough = new PassThrough();
-  if (request.body) {
-    let reader = request.body.getReader();
-    async function read() {
-      let { done, value } = await reader.read();
-      if (done) {
-        stream.end(value);
-        return;
-      }
-      stream.write(value);
-      read();
-    }
-    read();
-  } else {
-    stream.end();
+  if (!request.body || !boundary || type !== "multipart/form-data") {
+    throw new TypeError("Could not parse content as FormData.");
   }
 
-  await new Promise<void>(async (resolve, reject) => {
-    try {
-      let busboy = new Busboy({
-        highWaterMark: 2 * 1024 * 1024,
-        headers: {
-          "content-type": contentType,
-        },
-      });
+  let formData = new FormData();
 
-      let aborted = false;
-      function abort(error?: Error) {
-        if (aborted) return;
-        aborted = true;
+  let parts = streamMultipart(request.clone().body, boundary);
 
-        stream.unpipe();
-        stream.removeAllListeners();
-        busboy.removeAllListeners();
+  for await (let part of parts) {
+    if (part.done) break;
 
-        abortController?.abort();
-        reject(error || new Error("failed to parse form data"));
+    if (!part.filename) {
+      let chunks = [];
+      for await (let chunk of part.data) {
+        chunks.push(chunk);
       }
 
-      busboy.on("field", (name, value) => {
-        formData.append(name, value);
-      });
-
-      busboy.on("file", (name, filestream, filename, encoding, mimetype) => {
-        if (uploadHandler) {
-          fileWorkQueue.push(
-            (async () => {
-              try {
-                let value = await uploadHandler({
-                  name,
-                  stream: filestream,
-                  filename,
-                  encoding,
-                  mimetype,
-                });
-
-                if (typeof value !== "undefined") {
-                  formData.append(name, value);
-                }
-              } catch (error: any) {
-                // Emit error to busboy to bail early if possible
-                busboy.emit("error", error);
-                // It's possible that the handler is doing stuff and fails
-                // *after* busboy has finished. Rethrow the error for surfacing
-                // in the Promise.all(fileWorkQueue) below.
-                throw error;
-              } finally {
-                filestream.resume();
-              }
-            })()
-          );
-        } else {
-          filestream.resume();
-        }
-
-        if (!uploadHandler) {
-          console.warn(
-            `Tried to parse multipart file upload for field "${name}" but no uploadHandler was provided.` +
-              " Read more here: https://remix.run/api/remix#parseMultipartFormData-node"
-          );
-        }
-      });
-
-      stream.on("error", abort);
-      stream.on("aborted", abort);
-      busboy.on("error", abort);
-      busboy.on("finish", resolve);
-
-      stream.pipe(busboy);
-    } catch (err) {
-      reject(err);
+      formData.append(
+        part.name,
+        new TextDecoder().decode(mergeArrays(...chunks))
+      );
+    } else {
+      let file = await uploadHandler(part);
+      if (typeof file !== "undefined") {
+        formData.append(part.name, file);
+      }
     }
-  });
-
-  await Promise.all(fileWorkQueue);
+  }
 
   return formData;
+};
+
+export function mergeArrays(...arrays: Uint8Array[]) {
+  const out = new Uint8Array(
+    arrays.reduce((total, arr) => total + arr.length, 0)
+  );
+  let offset = 0;
+  for (const arr of arrays) {
+    out.set(arr, offset);
+    offset += arr.length;
+  }
+  return out;
 }

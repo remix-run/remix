@@ -1,14 +1,14 @@
 import type { TransformCallback } from "stream";
 import { Transform } from "stream";
-import { File as BufferFile } from "@remix-run/web-file";
+import { File } from "../fetch";
 
-import { Meter } from "./meter";
+import { MeterError } from "./meter";
 import type { UploadHandler } from "../formData";
 
 export type MemoryUploadHandlerFilterArgs = {
   filename: string;
-  encoding: string;
-  mimetype: string;
+  contentType: string;
+  name: string;
 };
 
 export type MemoryUploadHandlerOptions = {
@@ -30,42 +30,61 @@ export function createMemoryUploadHandler({
   filter,
   maxFileSize = 3000000,
 }: MemoryUploadHandlerOptions): UploadHandler {
-  return async ({ name, stream, filename, encoding, mimetype }) => {
-    if (filter && !(await filter({ filename, encoding, mimetype }))) {
-      stream.resume();
-      return;
+  return async ({ filename, contentType, name, data }) => {
+    if (filter && !(await filter({ filename, contentType, name }))) {
+      return undefined;
     }
 
-    let bufferStream = new BufferStream();
-    await new Promise<void>((resolve, reject) => {
-      let meter = new Meter(name, maxFileSize);
-
-      let aborted = false;
-      async function abort(error: Error) {
-        if (aborted) return;
-        aborted = true;
-
-        stream.unpipe();
-        meter.unpipe();
-        stream.removeAllListeners();
-        meter.removeAllListeners();
-        bufferStream.removeAllListeners();
-
-        reject(error);
+    let size = 0;
+    const chunks = [];
+    for await (let chunk of data) {
+      chunks.push(chunk);
+      size += chunk.length;
+      if (size > maxFileSize) {
+        throw new MeterError(name, maxFileSize);
       }
+    }
 
-      stream.on("error", abort);
-      meter.on("error", abort);
-      bufferStream.on("error", abort);
-      bufferStream.on("finish", resolve);
+    const file = new File(chunks, filename, { type: contentType });
 
-      stream.pipe(meter).pipe(bufferStream);
-    });
-
-    return new BufferFile(bufferStream.data, filename, {
-      type: mimetype,
-    });
+    return file;
   };
+  // return async ({ name, stream, filename, encoding, mimetype }) => {
+  //   if (filter && !(await filter({ filename, encoding, mimetype }))) {
+  //     stream.resume();
+  //     return;
+  //   }
+
+  //   let bufferStream = new BufferStream();
+  //   await new Promise<void>((resolve, reject) => {
+  //     let meter = new Meter(name, maxFileSize);
+
+  //     let aborted = false;
+  //     async function abort(error: Error) {
+  //       if (aborted) return;
+  //       aborted = true;
+
+  //       stream.unpipe();
+  //       meter.unpipe();
+  //       stream.removeAllListeners();
+  //       meter.removeAllListeners();
+  //       bufferStream.removeAllListeners();
+
+  //       reject(error);
+  //     }
+
+  //     stream.on("error", abort);
+  //     meter.on("error", abort);
+  //     bufferStream.on("error", abort);
+  //     bufferStream.on("finish", resolve);
+
+  //     stream.pipe(meter).pipe(bufferStream);
+  //   });
+
+  //   return new BufferFile(bufferStream.data, filename, {
+  //     type: mimetype,
+  //   });
+  // };
 }
 
 class BufferStream extends Transform {
