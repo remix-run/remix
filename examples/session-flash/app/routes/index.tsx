@@ -103,6 +103,7 @@ function FlashMessage({ message }: { message: FlashMessage }) {
   return message ? (
     <dialog ref={dialogRef} id="dialog" style={{ borderColor: message.color }}>
       <p>{message.text}</p>
+      {/* https://developer.mozilla.org/en-US/docs/Web/HTML/Element/form#attr-method */}
       <form method="dialog">
         <button>Close</button>
       </form>
