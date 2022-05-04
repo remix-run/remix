@@ -889,6 +889,8 @@ let Form = React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
 Form.displayName = "Form";
 export { Form };
 
+type FormSubmitButton = HTMLButtonElement | HTMLInputElement;
+
 interface FormImplProps extends FormProps {
   fetchKey?: string;
 }
@@ -929,7 +931,7 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     // the submit event (even when submitting via keyboard when focused on
     // another form field, yeeeeet) so we should have access to that button's
     // data for use in the submit handler.
-    let clickedButtonRef = React.useRef<any>();
+    let clickedButtonRef = React.useRef<FormSubmitButton | null>(null);
 
     React.useEffect(() => {
       let form = formRef.current;
@@ -937,9 +939,9 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
 
       function handleClick(event: MouseEvent) {
         if (!(event.target instanceof Element)) return;
-        let submitButton = event.target.closest<
-          HTMLButtonElement | HTMLInputElement
-        >("button,input[type=submit]");
+        let submitButton = event.target.closest<FormSubmitButton>(
+          "button,input[type=submit]"
+        );
 
         if (
           submitButton &&
@@ -1093,9 +1095,8 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       let formData: FormData;
 
       if (isFormElement(target)) {
-        let submissionTrigger: HTMLButtonElement | HTMLInputElement = (
-          options as any
-        ).submissionTrigger;
+        let submissionTrigger: FormSubmitButton = (options as any)
+          .submissionTrigger;
 
         method =
           options.method || target.getAttribute("method") || defaultMethod;
@@ -1422,7 +1423,7 @@ export const LiveReload =
                   let socketPath = protocol + "//" + host + ":" + ${String(
                     port
                   )} + "/socket";
-        
+
                   let ws = new WebSocket(socketPath);
                   ws.onmessage = (message) => {
                     let event = JSON.parse(message.data);
