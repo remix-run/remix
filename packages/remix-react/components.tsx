@@ -926,20 +926,13 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
                 if (event.defaultPrevented) return;
                 event.preventDefault();
 
-                let formData = new FormData(event.currentTarget);
-
                 let submitter = (event as unknown as HTMLSubmitEvent)
-                  .nativeEvent.submitter;
+                  .nativeEvent.submitter as
+                  | HTMLButtonElement
+                  | HTMLInputElement
+                  | null;
 
-                if (submitter) {
-                  let name = submitter.getAttribute("name");
-                  let value = submitter.getAttribute("value");
-                  if (name && value) {
-                    formData.append(name, value);
-                  }
-                }
-
-                submit(formData, { method, replace });
+                submit(submitter || event.currentTarget, { method, replace });
               }
         }
         {...props}
