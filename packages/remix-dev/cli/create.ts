@@ -443,7 +443,7 @@ export async function validateNewProjectPath(input: string): Promise<void> {
   ) {
     if ((await fse.readdir(projectDir)).length > 0) {
       throw Error(
-        "🚨 The current directory must be empty to create a new project. Please " +
+        "🚨 The project directory must be empty to create a new project. Please " +
           "clear the contents of the directory or choose a different path."
       );
     }
