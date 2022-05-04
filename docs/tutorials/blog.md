@@ -562,6 +562,9 @@ export default function PostSlug() {
 }
 ```
 
+
+<docs-info>The data returned by the loader will be serialized and deserialized in transit, so in reality types like `Date` will arrive as `string` on the client side. You should consider using [a different signature for `useLoaderData`](https://gist.github.com/merelinguist/350be12b8d1c492c40491819727c9283) </docs-info>
+
 Quick note on that `invariant` for the params. Because `params` comes from the URL, we can't be totally sure that `params.slug` will be defined--maybe you change the name of the file to `$postId.ts`! It's good practice to validate that stuff with `invariant`, and it makes TypeScript happy too.
 
 We also have an invariant for the post. We'll handle the `404` case better later. Keep going!
