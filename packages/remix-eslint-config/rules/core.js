@@ -1,13 +1,13 @@
-const {
-  defaultAdapterExports,
-  defaultRuntimeExports,
-  architectSpecificExports,
-  cloudflareSpecificExports,
-  cloudflarePagesSpecificExports,
-  cloudflareWorkersSpecificExports,
-  nodeSpecificExports,
-  reactSpecificExports,
-} = require("./packageExports");
+// const {
+//   defaultAdapterExports,
+//   defaultRuntimeExports,
+//   architectSpecificExports,
+//   cloudflareSpecificExports,
+//   cloudflarePagesSpecificExports,
+//   cloudflareWorkersSpecificExports,
+//   nodeSpecificExports,
+//   reactSpecificExports,
+// } = require("./packageExports");
 
 // const OFF = 0;
 const WARN = 1;
