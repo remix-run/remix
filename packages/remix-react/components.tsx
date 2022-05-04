@@ -889,8 +889,6 @@ let Form = React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
 Form.displayName = "Form";
 export { Form };
 
-type FormSubmitButton = HTMLButtonElement | HTMLInputElement;
-
 interface FormImplProps extends FormProps {
   fetchKey?: string;
 }
@@ -913,54 +911,10 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     let formMethod: FormMethod =
       method.toLowerCase() === "get" ? "get" : "post";
     let formAction = useFormAction(action);
-    let formRef = React.useRef<HTMLFormElement>();
-    let ref = useComposedRefs(forwardedRef, formRef);
-
-    // When calling `submit` on the form element itself, we don't get data from
-    // the button that submitted the event. For example:
-    //
-    //   <Form>
-    //     <button name="something" value="whatever">Submit</button>
-    //   </Form>
-    //
-    // formData.get("something") should be "whatever", but we don't get that
-    // unless we call submit on the clicked button itself.
-    //
-    // To figure out which button triggered the submit, we'll attach a click
-    // event listener to the form. The click event is always triggered before
-    // the submit event (even when submitting via keyboard when focused on
-    // another form field, yeeeeet) so we should have access to that button's
-    // data for use in the submit handler.
-    let clickedButtonRef = React.useRef<FormSubmitButton | null>(null);
-
-    React.useEffect(() => {
-      let form = formRef.current;
-      if (!form) return;
-
-      function handleClick(event: MouseEvent) {
-        if (!(event.target instanceof Element)) return;
-        let submitButton = event.target.closest<FormSubmitButton>(
-          "button,input[type=submit]"
-        );
-
-        if (
-          submitButton &&
-          submitButton.form === form &&
-          submitButton.type === "submit"
-        ) {
-          clickedButtonRef.current = submitButton;
-        }
-      }
-
-      window.addEventListener("click", handleClick);
-      return () => {
-        window.removeEventListener("click", handleClick);
-      };
-    }, []);
 
     return (
       <form
-        ref={ref}
+        ref={forwardedRef}
         method={formMethod}
         action={formAction}
         encType={encType}
@@ -968,15 +922,27 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
           reloadDocument
             ? undefined
             : (event) => {
+                console.log(event.nativeEvent);
                 onSubmit && onSubmit(event);
                 if (event.defaultPrevented) return;
                 event.preventDefault();
 
-                submit(clickedButtonRef.current || event.currentTarget, {
-                  method,
-                  replace,
-                });
-                clickedButtonRef.current = null;
+                let formData = new FormData(event.currentTarget);
+
+                let submitter = (event as unknown as HTMLSubmitEvent)
+                  .nativeEvent.submitter;
+
+                if (submitter) {
+                  let name = submitter.getAttribute("name");
+                  let value = submitter.getAttribute("value");
+                  if (name && value) {
+                    formData.append(name, value);
+                  }
+                }
+
+                console.log(Object.fromEntries(formData));
+
+                submit(formData, { method, replace });
               }
         }
         {...props}
@@ -986,6 +952,12 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
 );
 FormImpl.displayName = "FormImpl";
 export { FormImpl };
+
+type HTMLSubmitEvent = React.BaseSyntheticEvent<
+  SubmitEvent,
+  Event,
+  HTMLFormElement
+>;
 
 /**
  * Resolves a `<form action>` path relative to the current route.
@@ -1095,8 +1067,9 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       let formData: FormData;
 
       if (isFormElement(target)) {
-        let submissionTrigger: FormSubmitButton = (options as any)
-          .submissionTrigger;
+        let submissionTrigger: HTMLButtonElement | HTMLInputElement = (
+          options as any
+        ).submissionTrigger;
 
         method =
           options.method || target.getAttribute("method") || defaultMethod;
@@ -1106,6 +1079,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
           options.encType || target.getAttribute("enctype") || defaultEncType;
 
         formData = new FormData(target);
+        console.log(Object.fromEntries(formData));
 
         if (submissionTrigger && submissionTrigger.name) {
           formData.append(submissionTrigger.name, submissionTrigger.value);
