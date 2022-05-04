@@ -922,7 +922,6 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
           reloadDocument
             ? undefined
             : (event) => {
-                console.log(event.nativeEvent);
                 onSubmit && onSubmit(event);
                 if (event.defaultPrevented) return;
                 event.preventDefault();
@@ -939,8 +938,6 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
                     formData.append(name, value);
                   }
                 }
-
-                console.log(Object.fromEntries(formData));
 
                 submit(formData, { method, replace });
               }
