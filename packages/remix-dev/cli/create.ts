@@ -446,11 +446,6 @@ export async function validateNewProjectPath(input: string): Promise<void> {
         "🚨 The current directory must be empty to create a new project. Please " +
           "clear the contents of the directory or choose a different path."
       );
-    } else {
-      throw Error(
-        "🚨 The directory provided already exists. Please try again with a " +
-          "different directory."
-      );
     }
   }
 }
