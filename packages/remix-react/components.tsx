@@ -927,10 +927,7 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
                 event.preventDefault();
 
                 let submitter = (event as unknown as HTMLSubmitEvent)
-                  .nativeEvent.submitter as
-                  | HTMLButtonElement
-                  | HTMLInputElement
-                  | null;
+                  .nativeEvent.submitter as HTMLFormSubmitter | null;
 
                 submit(submitter || event.currentTarget, { method, replace });
               }
@@ -948,6 +945,8 @@ type HTMLSubmitEvent = React.BaseSyntheticEvent<
   Event,
   HTMLFormElement
 >;
+
+type HTMLFormSubmitter = HTMLButtonElement | HTMLInputElement;
 
 /**
  * Resolves a `<form action>` path relative to the current route.
@@ -1069,7 +1068,6 @@ export function useSubmitImpl(key?: string): SubmitFunction {
           options.encType || target.getAttribute("enctype") || defaultEncType;
 
         formData = new FormData(target);
-        console.log(Object.fromEntries(formData));
 
         if (submissionTrigger && submissionTrigger.name) {
           formData.append(submissionTrigger.name, submissionTrigger.value);
