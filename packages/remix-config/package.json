@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "fs-extra": "^10.0.0",
-    "get-port": "^5.1.1"
+    "get-port": "^5.1.1",
+    "minimatch": "^3.0.4"
   }
 }
