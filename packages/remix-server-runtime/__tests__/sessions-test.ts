@@ -139,6 +139,24 @@ describe("Cookie session storage", () => {
     await expect(() => commitSession(session)).rejects.toThrow();
   });
 
+  it("warns against using `expires` when creating the session", async () => {
+    let spy = jest.spyOn(console, "warn").mockImplementation();
+
+    // prettier-ignore
+    let createCookieSessionStorage = createCookieSessionStorageFactory(createCookie);
+
+    createCookieSessionStorage({
+      cookie: {
+        secrets: ["secret1"],
+        expires: new Date(Date.now() + 60_000),
+      },
+    });
+
+    expect(spy).toHaveBeenCalledWith(
+      'The "__session" cookie has an "expires" property set. This will cause the expires value to not be updated when the session is updated. Instead use the second argument to commitSession `commitSession(session, { expires })` to set the expires value.'
+    );
+  });
+
   describe("when a new secret shows up in the rotation", () => {
     it("unsigns old session cookies using the old secret and encodes new cookies using the new secret", async () => {
       let { getSession, commitSession } = createCookieSessionStorage({
