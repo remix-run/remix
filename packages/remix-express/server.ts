@@ -5,11 +5,10 @@ import type {
   RequestInit as NodeRequestInit,
 } from "@remix-run/node";
 import {
-  // This has been added as a global in node 15+
-  AbortController,
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
+  Response as NodeResponse,
   pipeReadableStreamToWritable,
 } from "@remix-run/node";
 

@@ -465,7 +465,7 @@ Typically this module uses `ReactDOM.hydrate` to re-hydrate the markup that was 
 Here's a basic example:
 
 ```tsx
-import { hydrate } from "react-dom";
+import { hydrateRoot } from "react-dom/client";
 import { RemixBrowser } from "@remix-run/react";
 
 hydrate(<RemixBrowser />, document);
