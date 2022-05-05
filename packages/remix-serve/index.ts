@@ -1,4 +1,3 @@
-import path from "path";
 import express from "express";
 import type { Express } from "express";
 import compression from "compression";
@@ -11,59 +10,49 @@ export function createApp(buildPathOrConfig: RemixConfig): Express;
 export function createApp(buildPathOrConfig: string): Express;
 
 export function createApp(
-  buildPathOrConfig: string | RemixConfig,
+  serverBuildPathOrConfig: string | RemixConfig,
   mode = "production"
 ): Express {
+  let serverBuildPath: string;
+  let assetsBuildDirectory: string;
+  let publicPath: string;
+  if (typeof serverBuildPathOrConfig === "string") {
+    // TODO: Deprecate using a string as 1st argument. Keep this behavior for
+    // now to avoid breaking changes.
+    serverBuildPath = serverBuildPathOrConfig;
+    assetsBuildDirectory = "public/build";
+    publicPath = "/build/";
+  } else {
+    serverBuildPath = serverBuildPathOrConfig.serverBuildPath;
+    assetsBuildDirectory = serverBuildPathOrConfig.assetsBuildDirectory;
+    publicPath = serverBuildPathOrConfig.publicPath;
+  }
+
   let app = express();
 
   app.disable("x-powered-by");
 
   app.use(compression());
 
-  // this is the old behavior, but we're keeping it around to prevent breaking changes
-  if (typeof buildPathOrConfig === "string") {
-    app.use(
-      "/build/",
-      express.static("public/build", { immutable: true, maxAge: "1y" })
-    );
+  app.use(
+    publicPath,
+    express.static(assetsBuildDirectory, { immutable: true, maxAge: "1y" })
+  );
 
-    app.use(express.static("public", { maxAge: "1h" }));
+  app.use(express.static("public", { maxAge: "1h" }));
 
-    app.use(morgan("tiny"));
-    app.all(
-      "*",
-      mode === "production"
-        ? createRequestHandler({ build: require(buildPathOrConfig), mode })
-        : (req, res, next) => {
-            // require cache is purged in @remix-run/dev where the file watcher is
-            let build = require(buildPathOrConfig);
-            return createRequestHandler({ build, mode })(req, res, next);
-          }
-    );
-  } else {
-    app.use(
-      buildPathOrConfig.publicPath,
-      express.static(
-        path.relative(process.cwd(), buildPathOrConfig.assetsBuildDirectory),
-        { immutable: true, maxAge: "1y" }
-      )
-    );
+  app.use(morgan("tiny"));
 
-    app.use(morgan("tiny"));
-    app.all(
-      "*",
-      mode === "production"
-        ? createRequestHandler({
-            build: require(buildPathOrConfig.serverBuildPath),
-            mode,
-          })
-        : (req, res, next) => {
-            // require cache is purged in @remix-run/dev where the file watcher is
-            let build = require(buildPathOrConfig.serverBuildPath);
-            return createRequestHandler({ build, mode })(req, res, next);
-          }
-    );
-  }
+  app.all(
+    "*",
+    mode === "production"
+      ? createRequestHandler({ build: require(serverBuildPath), mode })
+      : (req, res, next) => {
+          // require cache is purged in @remix-run/dev where the file watcher is
+          let build = require(serverBuildPath);
+          return createRequestHandler({ build, mode })(req, res, next);
+        }
+  );
 
   return app;
 }
