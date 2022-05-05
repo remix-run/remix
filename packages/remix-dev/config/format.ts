@@ -1,4 +1,4 @@
-import type { RouteManifest } from "./routes";
+import type { RouteManifest } from "@remix-run/config";
 
 export enum RoutesFormat {
   json = "json",
