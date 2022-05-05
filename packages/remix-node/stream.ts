@@ -4,10 +4,10 @@ export function pipeReadableStreamToWritable(
   stream: ReadableStream,
   writable: Writable
 ) {
-  const reader = stream.getReader();
+  let reader = stream.getReader();
 
   async function read() {
-    const { done, value } = await reader.read();
+    let { done, value } = await reader.read();
     if (done) {
       writable.end();
       return;

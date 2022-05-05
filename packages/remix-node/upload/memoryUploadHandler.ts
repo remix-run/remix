@@ -1,9 +1,6 @@
-import type { TransformCallback } from "stream";
-import { Transform } from "stream";
 import { File } from "../fetch";
-
-import { MeterError } from "./meter";
 import type { UploadHandler } from "../formData";
+import { MeterError } from "./meter";
 
 export type MemoryUploadHandlerFilterArgs = {
   filename: string;
@@ -36,7 +33,7 @@ export function createMemoryUploadHandler({
     }
 
     let size = 0;
-    const chunks = [];
+    let chunks = [];
     for await (let chunk of data) {
       chunks.push(chunk);
       size += chunk.length;
@@ -45,58 +42,6 @@ export function createMemoryUploadHandler({
       }
     }
 
-    const file = new File(chunks, filename, { type: contentType });
-
-    return file;
+    return new File(chunks, filename, { type: contentType });
   };
-  // return async ({ name, stream, filename, encoding, mimetype }) => {
-  //   if (filter && !(await filter({ filename, encoding, mimetype }))) {
-  //     stream.resume();
-  //     return;
-  //   }
-
-  //   let bufferStream = new BufferStream();
-  //   await new Promise<void>((resolve, reject) => {
-  //     let meter = new Meter(name, maxFileSize);
-
-  //     let aborted = false;
-  //     async function abort(error: Error) {
-  //       if (aborted) return;
-  //       aborted = true;
-
-  //       stream.unpipe();
-  //       meter.unpipe();
-  //       stream.removeAllListeners();
-  //       meter.removeAllListeners();
-  //       bufferStream.removeAllListeners();
-
-  //       reject(error);
-  //     }
-
-  //     stream.on("error", abort);
-  //     meter.on("error", abort);
-  //     bufferStream.on("error", abort);
-  //     bufferStream.on("finish", resolve);
-
-  //     stream.pipe(meter).pipe(bufferStream);
-  //   });
-
-  //   return new BufferFile(bufferStream.data, filename, {
-  //     type: mimetype,
-  //   });
-  // };
-}
-
-class BufferStream extends Transform {
-  public data: any[];
-
-  constructor() {
-    super();
-    this.data = [];
-  }
-
-  _transform(chunk: any, _: BufferEncoding, callback: TransformCallback) {
-    this.data.push(chunk);
-    callback();
-  }
 }

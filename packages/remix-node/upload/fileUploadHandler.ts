@@ -119,16 +119,21 @@ export function createFileUploadHandler({
 
     let writeFileStream = createWriteStream(filepath);
     let size = 0;
+    let deleteFile = false;
     try {
       for await (let chunk of data) {
         size += chunk.length;
         if (size > maxFileSize) {
+          deleteFile = true;
           throw new MeterError(name, maxFileSize);
         }
         writeFileStream.write(chunk);
       }
     } finally {
       writeFileStream.close();
+      if (deleteFile) {
+        await rm(filepath).catch(() => {});
+      }
     }
 
     return new NodeOnDiskFile(filepath, size, contentType);

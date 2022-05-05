@@ -56,11 +56,11 @@ export const internalParseFormData = async (
 };
 
 export function mergeArrays(...arrays: Uint8Array[]) {
-  const out = new Uint8Array(
+  let out = new Uint8Array(
     arrays.reduce((total, arr) => total + arr.length, 0)
   );
   let offset = 0;
-  for (const arr of arrays) {
+  for (let arr of arrays) {
     out.set(arr, offset);
     offset += arr.length;
   }

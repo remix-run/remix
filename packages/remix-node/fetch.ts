@@ -1,12 +1,10 @@
 import type { Readable } from "stream";
-
 import {
   fetch as nodeFetch,
   Headers as BaseNodeHeaders,
   Request as BaseNodeRequest,
   Response as BaseNodeResponse,
 } from "@remix-run/web-fetch";
-
 export { File, Blob } from "@remix-run/web-file";
 
 type NodeHeadersInit = ConstructorParameters<typeof BaseNodeHeaders>[0];
@@ -46,6 +44,7 @@ class NodeRequest extends BaseNodeRequest {
 }
 
 class NodeResponse extends BaseNodeResponse {
+  // eslint-disable-next-line @typescript-eslint/no-useless-constructor
   constructor(input: NodeResponseBody, init?: NodeResponseInit) {
     super(input, init);
   }
