@@ -12,7 +12,9 @@ type NodeResponseBody = ConstructorParameters<typeof BaseNodeResponse>[0];
 type NodeResponseInit = NonNullable<
   ConstructorParameters<typeof BaseNodeResponse>[1]
 >;
-type NodeRequestInfo = ConstructorParameters<typeof BaseNodeRequest>[0];
+type NodeRequestInfo =
+  | ConstructorParameters<typeof BaseNodeRequest>[0]
+  | NodeRequest;
 type NodeRequestInit = Omit<
   NonNullable<ConstructorParameters<typeof BaseNodeRequest>[1]>,
   "body"
@@ -30,8 +32,8 @@ export type {
 };
 
 class NodeRequest extends BaseNodeRequest {
-  constructor(input: NodeRequestInfo, init?: NodeRequestInit) {
-    super(input, init as RequestInit);
+  constructor(info: NodeRequestInfo, init?: NodeRequestInit) {
+    super(info, init as RequestInit);
   }
 
   public get headers(): BaseNodeHeaders {
@@ -51,6 +53,16 @@ class NodeResponse extends BaseNodeResponse {
 
   public get headers(): BaseNodeHeaders {
     return super.headers as BaseNodeHeaders;
+  }
+
+  public clone(): NodeResponse {
+    return new NodeResponse(super.clone().body, {
+      url: this.url,
+      status: this.status,
+      statusText: this.statusText,
+      headers: this.headers,
+      size: this.size,
+    });
   }
 }
 

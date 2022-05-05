@@ -35,12 +35,12 @@ export function installGlobals() {
   global.atob = atob;
   global.btoa = btoa;
 
-  global.Blob = NodeBlob as unknown as typeof Blob;
-  global.File = NodeFile as unknown as typeof File;
+  global.Blob = NodeBlob;
+  global.File = NodeFile;
 
-  global.Headers = NodeHeaders as unknown as typeof Headers;
-  global.Request = NodeRequest as unknown as typeof Request;
+  global.Headers = NodeHeaders;
+  global.Request = NodeRequest as typeof Request;
   global.Response = NodeResponse as unknown as typeof Response;
-  global.fetch = nodeFetch as unknown as typeof fetch;
-  global.FormData = NodeFormData as unknown as typeof FormData;
+  global.fetch = nodeFetch as typeof fetch;
+  global.FormData = NodeFormData;
 }
