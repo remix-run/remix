@@ -263,11 +263,7 @@ async function incrementRemixVersion(nextVersion) {
 
   // Commit and tag
   execSync(`git commit --all --message="Version ${nextVersion}"`);
-  execSync(
-    `git tag -a -m "Version ${nextVersion}" ${
-      /^\d/.test(nextVersion.charAt(0)) ? "v" + nextVersion : nextVersion
-    }`
-  );
+  execSync(`git tag -a -m "Version ${nextVersion}" v${nextVersion}`);
   console.log(chalk.green(`  Committed and tagged version ${nextVersion}`));
 }
 
