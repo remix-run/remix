@@ -3,12 +3,12 @@ import type {
   AppLoadContext,
   ServerBuild,
   RequestInit as NodeRequestInit,
+  Response as NodeResponse,
 } from "@remix-run/node";
 import {
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
-  Response as NodeResponse,
   pipeReadableStreamToWritable,
 } from "@remix-run/node";
 
