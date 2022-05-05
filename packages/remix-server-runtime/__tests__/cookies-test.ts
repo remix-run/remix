@@ -155,4 +155,14 @@ describe("cookies", () => {
     });
     expect(setCookie2).toContain("Path=/about");
   });
+
+  it("warns against using `expires` when creating the cookie instance", async () => {
+    let spy = jest.spyOn(console, "warn").mockImplementation();
+
+    createCookie("my-cookie", { expires: new Date(Date.now() + 60_000) });
+
+    expect(spy).toHaveBeenCalledWith(
+      'The "my-cookie" cookie has an "expires" property set. This will cause the expires value to not be updated when the session is committed. Instead, use `serialize("value", { expires })` to set the expires value.'
+    );
+  });
 });

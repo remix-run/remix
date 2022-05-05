@@ -266,7 +266,7 @@ export function warnOnceAboutExpiresSessionCookie(cookie: Cookie) {
     typeof cookie.expires === "undefined",
     `The "${cookie.name}" cookie has an "expires" property set. ` +
       `This will cause the expires value to not be updated when the session is committed. ` +
-      `Instead use the second argument to commitSession \`commitSession(session, { expires })\` to set the expires value.`
+      `Instead, use \`commitSession(session, { expires })\` to set the expires value.`
   );
 }
 
