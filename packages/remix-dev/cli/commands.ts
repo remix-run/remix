@@ -267,7 +267,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
     next();
   });
 
-  app.use(createApp(config));
+  app.use(createApp(config, mode));
 
   let server: Server | null = null;
 

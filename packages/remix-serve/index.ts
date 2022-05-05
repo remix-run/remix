@@ -5,10 +5,6 @@ import morgan from "morgan";
 import { createRequestHandler } from "@remix-run/express";
 import type { RemixConfig } from "@remix-run/config";
 
-export function createApp(buildPathOrConfig: RemixConfig): Express;
-
-export function createApp(buildPathOrConfig: string): Express;
-
 export function createApp(
   serverBuildPathOrConfig: string | RemixConfig,
   mode = "production"
