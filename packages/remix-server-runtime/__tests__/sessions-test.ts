@@ -139,19 +139,31 @@ describe("Cookie session storage", () => {
     await expect(() => commitSession(session)).rejects.toThrow();
   });
 
-  it("warns against using `expires` when creating the session", async () => {
-    let spy = jest.spyOn(console, "warn").mockImplementation();
+  describe("warnings when providing options you may not want to", () => {
+    let spy = spyConsole();
 
-    createCookieSessionStorage({
-      cookie: {
-        secrets: ["secret1"],
-        expires: new Date(Date.now() + 60_000),
-      },
+    it("warns against using `expires` when creating the session", async () => {
+      createCookieSessionStorage({
+        cookie: {
+          secrets: ["secret1"],
+          expires: new Date(Date.now() + 60_000),
+        },
+      });
+
+      expect(spy.console).toHaveBeenCalledTimes(1);
+      expect(spy.console).toHaveBeenCalledWith(
+        'The "__session" cookie has an "expires" property set. This will cause the expires value to not be updated when the session is committed. Instead, you should set the expires value when serializing the cookie. You can use `commitSession(session, { expires })` if using a session abstraction, or `serialize("value", { expires })` if you\'re creating a cookie yourself.'
+      );
     });
 
-    expect(spy).toHaveBeenCalledWith(
-      'The "__session" cookie has an "expires" property set. This will cause the expires value to not be updated when the session is committed. Instead, use `commitSession(session, { expires })` to set the expires value.'
-    );
+    it("warns when not passing secrets when creating the session", async () => {
+      createCookieSessionStorage({ cookie: {} });
+
+      expect(spy.console).toHaveBeenCalledTimes(1);
+      expect(spy.console).toHaveBeenCalledWith(
+        'The "__session" cookie is not signed, but session cookies should be signed to prevent tampering on the client before they are sent back to the server. See https://remix.run/api/remix#signing-cookies for more information.'
+      );
+    });
   });
 
   describe("when a new secret shows up in the rotation", () => {
@@ -183,3 +195,22 @@ describe("Cookie session storage", () => {
     });
   });
 });
+
+function spyConsole() {
+  // https://github.com/facebook/react/issues/7047
+  let spy: any = {};
+
+  beforeAll(() => {
+    spy.console = jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  beforeEach(() => {
+    spy.console.mockClear();
+  });
+
+  afterAll(() => {
+    spy.console.mockRestore();
+  });
+
+  return spy;
+}

@@ -1,11 +1,7 @@
 import type { CreateCookieFunction } from "../cookies";
 import { isCookie } from "../cookies";
 import type { SessionStorage, SessionIdStorageStrategy } from "../sessions";
-import {
-  warnOnceAboutSigningSessionCookie,
-  warnOnceAboutExpiresSessionCookie,
-  createSession,
-} from "../sessions";
+import { warnOnceAboutSigningSessionCookie, createSession } from "../sessions";
 
 interface CookieSessionStorageOptions {
   /**
@@ -37,7 +33,6 @@ export const createCookieSessionStorageFactory =
       ? cookieArg
       : createCookie(cookieArg?.name || "__session", cookieArg);
 
-    warnOnceAboutExpiresSessionCookie(cookie);
     warnOnceAboutSigningSessionCookie(cookie);
 
     return {

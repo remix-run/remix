@@ -231,7 +231,6 @@ export const createSessionStorageFactory =
       ? cookieArg
       : createCookie(cookieArg?.name || "__session", cookieArg);
 
-    warnOnceAboutExpiresSessionCookie(cookie);
     warnOnceAboutSigningSessionCookie(cookie);
 
     return {
@@ -260,15 +259,6 @@ export const createSessionStorageFactory =
       },
     };
   };
-
-export function warnOnceAboutExpiresSessionCookie(cookie: Cookie) {
-  warnOnce(
-    typeof cookie.expires === "undefined",
-    `The "${cookie.name}" cookie has an "expires" property set. ` +
-      `This will cause the expires value to not be updated when the session is committed. ` +
-      `Instead, use \`commitSession(session, { expires })\` to set the expires value.`
-  );
-}
 
 export function warnOnceAboutSigningSessionCookie(cookie: Cookie) {
   warnOnce(

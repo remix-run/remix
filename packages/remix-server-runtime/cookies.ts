@@ -251,9 +251,11 @@ function myUnescape(value: string): string {
 
 function warnOnceAboutExpiresCookie(name: string, expires?: Date) {
   warnOnce(
-    typeof expires === "undefined",
+    !(expires instanceof Date),
     `The "${name}" cookie has an "expires" property set. ` +
       `This will cause the expires value to not be updated when the session is committed. ` +
-      `Instead, use \`serialize("value", { expires })\` to set the expires value.`
+      `Instead, you should set the expires value when serializing the cookie. ` +
+      `You can use \`commitSession(session, { expires })\` if using a session abstraction, ` +
+      `or \`serialize("value", { expires })\` if you're creating a cookie yourself.`
   );
 }
