@@ -27,14 +27,14 @@ The remix compiler will not do any type checking (it simply removes the types). 
     "@remix-run/node": "1.3.4",
     "@remix-run/react": "1.3.4",
     "@remix-run/serve": "1.3.4",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0"
   },
   "devDependencies": {
     "@remix-run/dev": "1.3.4",
     "@remix-run/eslint-config": "1.3.4",
-    "@types/react": "^17.0.38",
-    "@types/react-dom": "^17.0.11",
+    "@types/react": "^18.0.8",
+    "@types/react-dom": "^18.0.3",
     "eslint": "^8.11.0",
     "typescript": "^4.5.5"
   },
