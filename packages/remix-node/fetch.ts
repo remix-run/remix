@@ -1,24 +1,21 @@
 import type { Readable } from "stream";
 
-import type AbortController from "abort-controller";
-import { Request as BaseNodeRequest } from "@remix-run/web-fetch";
-
-import type { UploadHandler } from "./formData";
-import { internalParseFormData } from "./parseMultipartFormData";
-
-import type { Headers as NodeHeaders } from "@remix-run/web-fetch";
-import { fetch as nodeFetch } from "@remix-run/web-fetch";
+import {
+  fetch as nodeFetch,
+  Headers as BaseNodeHeaders,
+  Request as BaseNodeRequest,
+  Response as BaseNodeResponse,
+} from "@remix-run/web-fetch";
 
 export { File, Blob } from "@remix-run/web-file";
-export { Headers, Response } from "@remix-run/web-fetch";
 
-type NodeHeadersInit = ConstructorParameters<typeof NodeHeaders>[0];
-type NodeRequestInfo = ConstructorParameters<typeof BaseNodeRequest>[0];
-type BaseNodeRequestInit = NonNullable<
-  ConstructorParameters<typeof BaseNodeRequest>[1]
+type NodeHeadersInit = ConstructorParameters<typeof BaseNodeHeaders>[0];
+type NodeResponseBody = ConstructorParameters<typeof BaseNodeResponse>[0];
+type NodeResponseInit = NonNullable<
+  ConstructorParameters<typeof BaseNodeResponse>[1]
 >;
-
-type NodeResponseInit = Omit<
+type NodeRequestInfo = ConstructorParameters<typeof BaseNodeRequest>[0];
+type NodeRequestInit = Omit<
   NonNullable<ConstructorParameters<typeof BaseNodeRequest>[1]>,
   "body"
 > & {
@@ -26,41 +23,43 @@ type NodeResponseInit = Omit<
     | NonNullable<ConstructorParameters<typeof BaseNodeRequest>[1]>["body"]
     | Readable;
 };
-interface NodeRequestInit extends Omit<BaseNodeRequestInit, "body"> {
-  abortController?: AbortController;
-  body?: BaseNodeRequestInit["body"] | Readable;
-}
+
+export type {
+  NodeHeadersInit as HeadersInit,
+  NodeRequestInfo as RequestInfo,
+  NodeRequestInit as RequestInit,
+  NodeResponseInit as ResponseInit,
+};
 
 class NodeRequest extends BaseNodeRequest {
-  private abortController?: AbortController;
-
-  constructor(input: NodeRequestInfo, init?: NodeRequestInit | undefined) {
-    super(input as any, init as BaseNodeRequestInit);
-
-    let anyInput = input as any;
-    let anyInit = init as any;
-
-    this.abortController =
-      anyInput?.abortController || anyInit?.abortController;
+  constructor(input: NodeRequestInfo, init?: NodeRequestInit) {
+    super(input, init as RequestInit);
   }
 
-  formData(uploadHandler?: UploadHandler): Promise<FormData> {
-    let contentType = this.headers.get("Content-Type");
-    if (
-      uploadHandler &&
-      contentType &&
-      /multipart\/form-data/.test(contentType)
-    ) {
-      return internalParseFormData(this, uploadHandler, this.abortController);
-    }
-
-    return super.formData();
+  public get headers(): BaseNodeHeaders {
+    return super.headers as BaseNodeHeaders;
   }
 
-  clone(): NodeRequest {
+  public clone(): NodeRequest {
     return new NodeRequest(this);
   }
 }
+
+class NodeResponse extends BaseNodeResponse {
+  constructor(input: NodeResponseBody, init?: NodeResponseInit) {
+    super(input, init);
+  }
+
+  public get headers(): BaseNodeHeaders {
+    return super.headers as BaseNodeHeaders;
+  }
+}
+
+export {
+  BaseNodeHeaders as Headers,
+  NodeRequest as Request,
+  NodeResponse as Response,
+};
 
 export const fetch: typeof nodeFetch = (
   input: NodeRequestInfo,
@@ -71,13 +70,5 @@ export const fetch: typeof nodeFetch = (
     ...init,
   };
 
-  return nodeFetch(input, init as BaseNodeRequestInit);
+  return nodeFetch(input, init as RequestInit);
 };
-
-export type {
-  NodeHeadersInit as HeadersInit,
-  NodeRequestInfo as RequestInfo,
-  NodeRequestInit as RequestInit,
-  NodeResponseInit as ResponseInit,
-};
-export { NodeRequest as Request };

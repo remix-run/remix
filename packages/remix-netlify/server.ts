@@ -47,8 +47,7 @@ export function createRequestHandler({
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (event, context) => {
-    let abortController = new AbortController();
-    let request = createRemixRequest(event, abortController);
+    let request = createRemixRequest(event);
     let loadContext =
       typeof getLoadContext === "function"
         ? getLoadContext(event, context)
@@ -56,14 +55,11 @@ export function createRequestHandler({
 
     let response = await handleRequest(request, loadContext);
 
-    return sendRemixResponse(response as NodeResponse, abortController);
+    return sendRemixResponse(response as NodeResponse);
   };
 }
 
-export function createRemixRequest(
-  event: HandlerEvent,
-  abortController?: AbortController
-): NodeRequest {
+export function createRemixRequest(event: HandlerEvent): NodeRequest {
   let url: URL;
 
   if (process.env.NODE_ENV !== "development") {
@@ -77,8 +73,6 @@ export function createRemixRequest(
   let init: NodeRequestInit = {
     method: event.httpMethod,
     headers: createRemixHeaders(event.multiValueHeaders),
-    abortController,
-    signal: abortController?.signal,
   };
 
   if (event.httpMethod !== "GET" && event.httpMethod !== "HEAD" && event.body) {
@@ -137,13 +131,8 @@ function getRawPath(event: HandlerEvent): string {
 }
 
 export async function sendRemixResponse(
-  nodeResponse: NodeResponse,
-  abortController: AbortController
+  nodeResponse: NodeResponse
 ): Promise<HandlerResponse> {
-  if (abortController.signal.aborted) {
-    nodeResponse.headers.set("Connection", "close");
-  }
-
   let contentType = nodeResponse.headers.get("Content-Type");
   let body: string | undefined;
   let isBase64Encoded = isBinaryType(contentType);
@@ -156,9 +145,7 @@ export async function sendRemixResponse(
     }
   }
 
-  let multiValueHeaders: Record<string, readonly (string | string)[]> = (
-    nodeResponse.headers as NodeHeaders
-  ).raw();
+  let multiValueHeaders = nodeResponse.headers.raw();
 
   return {
     statusCode: nodeResponse.status,

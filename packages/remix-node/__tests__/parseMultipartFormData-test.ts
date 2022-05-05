@@ -30,8 +30,7 @@ describe("internalParseFormData", () => {
           chunks.push(chunk);
         }
         return new File(chunks, filename, { type: contentType });
-      },
-      undefined
+      }
     );
 
     expect(parsedFormData.get("a")).toBe("value");
@@ -58,13 +57,9 @@ describe("internalParseFormData", () => {
     });
 
     try {
-      await internalParseFormData(
-        req,
-        async () => {
-          throw new Error("test error");
-        },
-        undefined
-      );
+      await internalParseFormData(req, async () => {
+        throw new Error("test error");
+      });
       throw new Error("should have thrown");
     } catch (err) {
       expect(err.message).toBe("test error");

@@ -53,8 +53,7 @@ export function createRequestHandler({
     next: express.NextFunction
   ) => {
     try {
-      let abortController = new AbortController();
-      let request = createRemixRequest(req, abortController);
+      let request = createRemixRequest(req);
       let loadContext =
         typeof getLoadContext === "function"
           ? getLoadContext(req, res)
@@ -62,7 +61,7 @@ export function createRequestHandler({
 
       let response = await handleRequest(request, loadContext);
 
-      sendRemixResponse(res, response as NodeResponse, abortController);
+      sendRemixResponse(res, response as NodeResponse);
     } catch (error) {
       // Express doesn't support async functions, so we have to pass along the
       // error manually using next().
@@ -91,18 +90,13 @@ export function createRemixHeaders(
   return headers;
 }
 
-export function createRemixRequest(
-  req: express.Request,
-  abortController?: AbortController
-): NodeRequest {
+export function createRemixRequest(req: express.Request): NodeRequest {
   let origin = `${req.protocol}://${req.get("host")}`;
   let url = new URL(req.url, origin);
 
   let init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
-    signal: abortController?.signal,
-    abortController,
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
@@ -114,22 +108,15 @@ export function createRemixRequest(
 
 export function sendRemixResponse(
   res: express.Response,
-  nodeResponse: NodeResponse,
-  abortController: AbortController
+  nodeResponse: NodeResponse
 ): void {
   res.statusMessage = nodeResponse.statusText;
   res.status(nodeResponse.status);
 
-  for (let [key, values] of Object.entries(
-    (nodeResponse.headers as NodeHeaders).raw()
-  )) {
+  for (let [key, values] of Object.entries(nodeResponse.headers.raw())) {
     for (let value of values) {
       res.append(key, value);
     }
-  }
-
-  if (abortController.signal.aborted) {
-    res.set("Connection", "close");
   }
 
   if (nodeResponse.body) {

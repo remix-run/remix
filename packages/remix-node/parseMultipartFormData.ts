@@ -13,13 +13,12 @@ export function parseMultipartFormData(
   request: Request | NodeRequest,
   uploadHandler: UploadHandler
 ) {
-  return (request as unknown as NodeRequest).formData(uploadHandler);
+  return internalParseFormData(request, uploadHandler);
 }
 
 export const internalParseFormData = async (
-  request: NodeRequest,
-  uploadHandler: UploadHandler,
-  abortController: AbortController | undefined
+  request: Request,
+  uploadHandler: UploadHandler
 ) => {
   let contentType = request.headers.get("Content-Type") || "";
   let [type, boundary] = contentType.split(/\s*;\s*boundary=/);

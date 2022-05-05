@@ -47,21 +47,13 @@ export function createRequestHandler({
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (req, res) => {
-    let abortController = new AbortController();
-    let request = createRemixRequest(req, abortController);
+    let request = createRemixRequest(req);
     let loadContext =
       typeof getLoadContext === "function"
         ? getLoadContext(req, res)
         : undefined;
 
-    let response = await handleRequest(
-      request as unknown as Request,
-      loadContext
-    );
-
-    if (abortController.signal.aborted) {
-      response.headers.set("Connection", "close");
-    }
+    let response = await handleRequest(request, loadContext);
 
     sendRemixResponse(res, response as NodeResponse);
   };
@@ -86,10 +78,7 @@ export function createRemixHeaders(
   return headers;
 }
 
-export function createRemixRequest(
-  req: VercelRequest,
-  abortController?: AbortController
-): NodeRequest {
+export function createRemixRequest(req: VercelRequest): NodeRequest {
   let host = req.headers["x-forwarded-host"] || req.headers["host"];
   // doesn't seem to be available on their req object!
   let protocol = req.headers["x-forwarded-proto"] || "https";
@@ -98,8 +87,6 @@ export function createRemixRequest(
   let init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
-    abortController,
-    signal: abortController?.signal,
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
@@ -114,16 +101,7 @@ export function sendRemixResponse(
   nodeResponse: NodeResponse
 ): void {
   res.statusMessage = nodeResponse.statusText;
-  let multiValueHeaders: Record<string, (string | string)[]> = {};
-  for (let [key, values] of Object.entries(
-    (nodeResponse.headers as NodeHeaders).raw()
-  )) {
-    if (typeof multiValueHeaders[key] === "undefined") {
-      multiValueHeaders[key] = [...values];
-    } else {
-      (multiValueHeaders[key] as string[]).push(...values);
-    }
-  }
+  let multiValueHeaders = nodeResponse.headers.raw();
   res.writeHead(
     nodeResponse.status,
     nodeResponse.statusText,
