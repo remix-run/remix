@@ -53,8 +53,7 @@ async function cli() {
 cli()
   .then(() => {
     process.exit(0);
-  })
-  .catch((error) => {
+  }, (error) => {
     console.error(error);
     process.exit(1);
   });
