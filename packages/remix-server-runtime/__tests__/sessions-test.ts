@@ -150,7 +150,7 @@ describe("Cookie session storage", () => {
     });
 
     expect(spy).toHaveBeenCalledWith(
-      'The "__session" cookie has an "expires" property set. This will cause the expires value to not be updated when the session is committed. Instead, use `serialize("value", { expires })` to set the expires value.'
+      'The "__session" cookie has an "expires" property set. This will cause the expires value to not be updated when the session is committed. Instead, use `commitSession(session, { expires })` to set the expires value.'
     );
   });
 
