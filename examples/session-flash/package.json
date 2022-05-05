@@ -1,0 +1,33 @@
+{
+  "name": "remix-example-template",
+  "private": true,
+  "description": "",
+  "license": "",
+  "sideEffects": false,
+  "scripts": {
+    "build": "remix build",
+    "dev": "remix dev",
+    "start": "remix-serve build"
+  },
+  "dependencies": {
+    "@fontsource/fira-sans": "^4.5.8",
+    "@remix-run/node": "1.4.2",
+    "@remix-run/react": "1.4.2",
+    "@remix-run/serve": "1.4.2",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "react-router-dom": "^6.3.0"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "1.4.2",
+    "@remix-run/eslint-config": "1.4.2",
+    "@types/react": "^17.0.39",
+    "@types/react-dom": "^17.0.13",
+    "eslint": "^8.10.0",
+    "prettier": "2.6.2",
+    "typescript": "^4.6.2"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

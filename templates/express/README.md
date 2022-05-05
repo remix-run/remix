@@ -4,9 +4,7 @@
 
 ## Development
 
-You'll need to run two terminals (or bring in a process manager like concurrently/pm2-dev if you like):
-
-Start the Remix development asset server
+Start the Remix development asset server and the Express server by running:
 
 ```sh
 npm run dev
@@ -34,7 +32,7 @@ Now you'll need to pick a host to deploy it to.
 
 If you're familiar with deploying express applications you should be right at home just make sure to deploy the output of `remix build`
 
-- `server/build/`
+- `build/`
 - `public/build/`
 
 ### Using a Template
