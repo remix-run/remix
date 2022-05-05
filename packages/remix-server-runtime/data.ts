@@ -109,9 +109,7 @@ export async function callRouteLoader({
     );
   }
 
-  return isDeferredResponse(result)
-    ? result
-    : isResponse(result)
+  return isResponse(result)
     ? result
     : json(result);
 }

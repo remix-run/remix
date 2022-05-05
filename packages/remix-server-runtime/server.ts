@@ -346,7 +346,16 @@ async function handleDocumentRequest({
     let response: Response | undefined;
     if (isDeferredResponse(loaderResponse)) {
       routeLoadersDeferred[match.route.id] = loaderResponse.deferred;
-      response = json(loaderResponse.initialData, loaderResponse);
+      let headers = new Headers(loaderResponse.headers);
+      headers.set("Content-Type", "application/json; charset=utf-8");
+      response = json(
+        loaderResponse.initialData,
+        new Response(null, {
+          headers,
+          status: loaderResponse.status,
+          statusText: loaderResponse.statusText,
+        })
+      );
     } else {
       response = loaderResponse;
     }

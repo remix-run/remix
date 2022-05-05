@@ -3,7 +3,6 @@ import type { RouteManifest, EntryRoute } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import type { RouteModules } from "./routeModules";
-import type { DeferredResult } from "./transition";
 
 export interface EntryContext {
   appState: AppState;
@@ -12,7 +11,7 @@ export interface EntryContext {
   routeData: RouteData;
   actionData?: RouteData;
   routeModules: RouteModules;
-  routeLoadersDeferred: Record<string, Record<string, Promise<DeferredResult>>>;
+  routeLoadersDeferred: Record<string, Record<string, Promise<unknown>>>;
   serverHandoffString?: string;
 }
 

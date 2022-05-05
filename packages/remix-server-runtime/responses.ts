@@ -3,7 +3,7 @@ import { serializeError } from "./errors";
 export const DEFERRED_PROMISE_VALUE = "$$__REMIX_DEFERRED_PROMISE__$$";
 export const DEFERRED_CHUNK_SEPARATOR = "$$__REMIX_DEFERRED_PROMISE__$$";
 
-type DeferredResponse = Response & {
+export type DeferredResponse = Response & {
   deferred: Record<string, Promise<unknown>>;
   initialData: unknown;
 };
@@ -44,7 +44,8 @@ export const deferred: DeferredFunction = (data, init = {}) => {
       }
 
       let body = new ReadableStream({
-        async start(controller) {
+        // TODO: Figure out why any is needed here
+        async start(controller: any) {
           controller.enqueue("event: data\n");
           controller.enqueue("data: " + JSON.stringify(initialData) + "\n\n");
 
@@ -85,7 +86,9 @@ export const deferred: DeferredFunction = (data, init = {}) => {
   let headers = new Headers(responseInit.headers);
   headers.set("Cache-Control", "no-cache");
   headers.set("Connection", "keep-alive");
-  headers.set("Content-Type", "text/event-stream");
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "text/event-stream");
+  }
 
   return new DeferredResponse(data, {
     ...responseInit,
@@ -108,7 +111,9 @@ export const json: JsonFunction = (data, init = {}) => {
   let responseInit = typeof init === "number" ? { status: init } : init;
 
   let headers = new Headers(responseInit.headers);
-  headers.set("Content-Type", "application/json; charset=utf-8");
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json; charset=utf-8");
+  }
 
   return new Response(JSON.stringify(data), {
     ...responseInit,
