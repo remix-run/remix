@@ -621,8 +621,8 @@ describe("the create command", () => {
       );
     });
 
-    it("allows creating an app in the current dir if it's empty", async () => {
-      let projectDir = await getProjectDir("empty-dir");
+    it("allows creating an app in a dir if it's empty", async () => {
+      let projectDir = await getProjectDir("other-empty-dir");
       await run([
         "create",
         projectDir,
@@ -637,8 +637,9 @@ describe("the create command", () => {
       ).toBeTruthy();
     });
 
-    it("doesn't allow creating an app in the current dir if it's not empty", async () => {
+    it("doesn't allow creating an app in a dir if it's not empty", async () => {
       let projectDir = await getProjectDir("not-empty-dir");
+      fse.mkdirSync(projectDir);
       fse.createFileSync(path.join(projectDir, "some-file.txt"));
       await expect(() =>
         run([
@@ -652,6 +653,47 @@ describe("the create command", () => {
       ).rejects.toMatchInlineSnapshot(
         `[Error: 🚨 The project directory must be empty to create a new project. Please clear the contents of the directory or choose a different path.]`
       );
+    });
+
+    it("allows creating an app in the current dir if it's empty", async () => {
+      let projectDir = await getProjectDir("empty-dir");
+      let cwd = process.cwd();
+      fse.mkdirSync(projectDir);
+      process.chdir(projectDir);
+      await run([
+        "create",
+        ".",
+        "--template",
+        "grunge-stack",
+        "--no-install",
+        "--typescript",
+      ]);
+      process.chdir(cwd);
+
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+    });
+
+    it("doesn't allow creating an app in the current dir if it's not empty", async () => {
+      let projectDir = await getProjectDir("not-empty-dir");
+      let cwd = process.cwd();
+      fse.mkdirSync(projectDir);
+      fse.createFileSync(path.join(projectDir, "some-file.txt"));
+      process.chdir(projectDir);
+      await expect(() =>
+        run([
+          "create",
+          ".",
+          "--template",
+          "grunge-stack",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The project directory must be empty to create a new project. Please clear the contents of the directory or choose a different path.]`
+      );
+      process.chdir(cwd);
     });
   });
 });
