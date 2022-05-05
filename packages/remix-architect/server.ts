@@ -1,6 +1,4 @@
 import {
-  // This has been added as a global in node 15+
-  AbortController,
   Headers as NodeHeaders,
   Request as NodeRequest,
   createRequestHandler as createRemixRequestHandler,

@@ -1,7 +1,6 @@
 import { PassThrough } from "stream";
 
 import { Request } from "../fetch";
-import { createMemoryUploadHandler } from "../upload/memoryUploadHandler";
 
 let test = {
   source: [

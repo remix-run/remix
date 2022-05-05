@@ -6,8 +6,6 @@ import type {
   Response as NodeResponse,
 } from "@remix-run/node";
 import {
-  // This has been added as a global in node 15+
-  AbortController,
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
