@@ -468,7 +468,7 @@ Here's a basic example:
 import { hydrateRoot } from "react-dom/client";
 import { RemixBrowser } from "@remix-run/react";
 
-hydrate(<RemixBrowser />, document);
+hydrateRoot(document, <RemixBrowser />);
 ```
 
 This is the first piece of code that runs in the browser. As you can see, you have full control here. You can initialize client side libraries, setup things like `window.history.scrollRestoration`, etc.

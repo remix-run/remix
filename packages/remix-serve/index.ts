@@ -8,21 +8,27 @@ export function createApp(buildPath: string, mode = "production") {
 
   app.disable("x-powered-by");
 
-  // app.use(
-  //   compression({
-  //     filter(req) {
-  //       // No compression for html document requests to allow for streaming
-  //       if (
-  //         req.headers["accept"] &&
-  //         req.headers["accept"].indexOf("text/html") !== -1
-  //       ) {
-  //         return false;
-  //       }
+  app.use(
+    compression({
+      filter(req) {
+        // No compression for html document requests to allow for streaming
+        if (
+          req.headers["accept"] &&
+          req.headers["accept"].indexOf("text/html") !== -1
+        ) {
+          return false;
+        }
 
-  //       return true;
-  //     },
-  //   })
-  // );
+        // No compression for _data requests to allow for streaming
+        if (true) {
+          // TODO: Detect data requests, otherwise compress
+          return false;
+        }
+
+        return true;
+      },
+    })
+  );
 
   app.use(
     "/build",
