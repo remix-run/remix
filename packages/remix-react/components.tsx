@@ -1314,13 +1314,13 @@ export function Deferred({
   data: any;
   error?:
     | boolean
-    | React.ReactChild
+    | React.ReactNode
     | React.ReactFragment
     | React.ReactPortal
     | null;
   fallback:
     | boolean
-    | React.ReactChild
+    | React.ReactNode
     | React.ReactFragment
     | React.ReactPortal
     | null;
@@ -1430,7 +1430,7 @@ function DeferredHydrationScript() {
   );
 }
 
-export function useDeferred<T>(): T | undefined {
+export function useDeferred<T>(): T {
   let ctx = React.useContext(deferredContext);
   if (!ctx) {
     throw new Error("useDeferred must be used within a Deferred");
@@ -1440,10 +1440,6 @@ export function useDeferred<T>(): T | undefined {
     throw ctx.data.then((data: any) => {
       ctx!.data = data;
     });
-  }
-
-  if (ctx.data?.startsWith?.("$$__REMIX_DEFERRED_PROMISE__$$")) {
-    return undefined;
   }
 
   return ctx.data;
