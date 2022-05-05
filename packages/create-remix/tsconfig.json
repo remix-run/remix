@@ -1,4 +1,5 @@
 {
+  "exclude": ["__tests__", "node_modules"],
   "compilerOptions": {
     "lib": ["ES2019"],
     "target": "ES2019",

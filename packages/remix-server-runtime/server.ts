@@ -145,7 +145,8 @@ async function handleDataRequest({
           response = json(loaderResponse.data, loaderResponse.init);
         } else {
           let body = new ReadableStream({
-            start(controller) {
+            // TODO: Figure out why this has to be any
+            start(controller: any) {
               controller.enqueue(
                 "data: " +
                   JSON.stringify((loaderResponse as DeferredResponse).data) +
