@@ -650,7 +650,7 @@ describe("the create command", () => {
           "--typescript",
         ])
       ).rejects.toMatchInlineSnapshot(
-        `[Error: 🚨 The current directory must be empty to create a new project. Please clear the contents of the directory or choose a different path.]`
+        `[Error: 🚨 The project directory must be empty to create a new project. Please clear the contents of the directory or choose a different path.]`
       );
     });
   });
