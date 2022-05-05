@@ -137,7 +137,7 @@ describe("express createRemixHeaders", () => {
   describe("creates fetch headers from express headers", () => {
     it("handles empty headers", () => {
       expect(createRemixHeaders({})).toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [],
           Symbol(context): null,
         }
@@ -146,7 +146,7 @@ describe("express createRemixHeaders", () => {
 
     it("handles simple headers", () => {
       expect(createRemixHeaders({ "x-foo": "bar" })).toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar",
@@ -159,7 +159,7 @@ describe("express createRemixHeaders", () => {
     it("handles multiple headers", () => {
       expect(createRemixHeaders({ "x-foo": "bar", "x-bar": "baz" }))
         .toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar",
@@ -174,7 +174,7 @@ describe("express createRemixHeaders", () => {
     it("handles headers with multiple values", () => {
       expect(createRemixHeaders({ "x-foo": "bar, baz" }))
         .toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar, baz",
@@ -187,7 +187,7 @@ describe("express createRemixHeaders", () => {
     it("handles headers with multiple values and multiple headers", () => {
       expect(createRemixHeaders({ "x-foo": "bar, baz", "x-bar": "baz" }))
         .toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar, baz",
@@ -208,7 +208,7 @@ describe("express createRemixHeaders", () => {
           ],
         })
       ).toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "set-cookie",
             "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
@@ -237,7 +237,6 @@ describe("express createRemixRequest", () => {
 
     expect(createRemixRequest(expressRequest)).toMatchInlineSnapshot(`
       NodeRequest {
-        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
@@ -254,7 +253,7 @@ describe("express createRemixRequest", () => {
           "type": null,
         },
         Symbol(Request internals): Object {
-          "headers": Headers$1 {
+          "headers": Headers {
             Symbol(query): Array [
               "cache-control",
               "max-age=300, s-maxage=3600",

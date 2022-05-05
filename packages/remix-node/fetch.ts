@@ -1,49 +1,74 @@
-import type AbortController from "abort-controller";
-import { Request as BaseNodeRequest } from "@remix-run/web-fetch";
+import type { Readable } from "stream";
 
-import type { UploadHandler } from "./formData";
-import { internalParseFormData } from "./parseMultipartFormData";
+import {
+  fetch as nodeFetch,
+  Headers as BaseNodeHeaders,
+  Request as BaseNodeRequest,
+  Response as BaseNodeResponse,
+} from "@remix-run/web-fetch";
 
-export { fetch, Headers, Response } from "@remix-run/web-fetch";
+export { File, Blob } from "@remix-run/web-file";
 
-interface NodeRequestInit extends RequestInit {
-  abortController?: AbortController;
-}
+type NodeHeadersInit = ConstructorParameters<typeof BaseNodeHeaders>[0];
+type NodeResponseBody = ConstructorParameters<typeof BaseNodeResponse>[0];
+type NodeResponseInit = NonNullable<
+  ConstructorParameters<typeof BaseNodeResponse>[1]
+>;
+type NodeRequestInfo = ConstructorParameters<typeof BaseNodeRequest>[0];
+type NodeRequestInit = Omit<
+  NonNullable<ConstructorParameters<typeof BaseNodeRequest>[1]>,
+  "body"
+> & {
+  body?:
+    | NonNullable<ConstructorParameters<typeof BaseNodeRequest>[1]>["body"]
+    | Readable;
+};
+
+export type {
+  NodeHeadersInit as HeadersInit,
+  NodeRequestInfo as RequestInfo,
+  NodeRequestInit as RequestInit,
+  NodeResponseInit as ResponseInit,
+};
 
 class NodeRequest extends BaseNodeRequest {
-  private abortController?: AbortController;
-
-  constructor(input: RequestInfo, init?: NodeRequestInit | undefined) {
-    super(input as any, init);
-
-    let anyInput = input as any;
-    let anyInit = init as any;
-
-    this.abortController =
-      anyInput?.abortController || anyInit?.abortController;
+  constructor(input: NodeRequestInfo, init?: NodeRequestInit) {
+    super(input, init as RequestInit);
   }
 
-  async formData(uploadHandler?: UploadHandler): Promise<FormData> {
-    let contentType = this.headers.get("Content-Type");
-    if (
-      contentType &&
-      (/application\/x-www-form-urlencoded/.test(contentType) ||
-        /multipart\/form-data/.test(contentType))
-    ) {
-      return await internalParseFormData(
-        this,
-        super.formData.bind(this),
-        this.abortController,
-        uploadHandler
-      );
-    }
-
-    throw new Error("Invalid MIME type");
+  public get headers(): BaseNodeHeaders {
+    return super.headers as BaseNodeHeaders;
   }
 
-  clone(): NodeRequest {
+  public clone(): NodeRequest {
     return new NodeRequest(this);
   }
 }
 
-export { NodeRequest as Request, NodeRequestInit as RequestInit };
+class NodeResponse extends BaseNodeResponse {
+  constructor(input: NodeResponseBody, init?: NodeResponseInit) {
+    super(input, init);
+  }
+
+  public get headers(): BaseNodeHeaders {
+    return super.headers as BaseNodeHeaders;
+  }
+}
+
+export {
+  BaseNodeHeaders as Headers,
+  NodeRequest as Request,
+  NodeResponse as Response,
+};
+
+export const fetch: typeof nodeFetch = (
+  input: NodeRequestInfo,
+  init?: NodeRequestInit
+) => {
+  init = {
+    compress: false,
+    ...init,
+  };
+
+  return nodeFetch(input, init as RequestInit);
+};

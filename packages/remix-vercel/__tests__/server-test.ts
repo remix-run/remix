@@ -142,7 +142,7 @@ describe("vercel createRemixHeaders", () => {
   describe("creates fetch headers from vercel headers", () => {
     it("handles empty headers", () => {
       expect(createRemixHeaders({})).toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [],
           Symbol(context): null,
         }
@@ -151,7 +151,7 @@ describe("vercel createRemixHeaders", () => {
 
     it("handles simple headers", () => {
       expect(createRemixHeaders({ "x-foo": "bar" })).toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar",
@@ -164,7 +164,7 @@ describe("vercel createRemixHeaders", () => {
     it("handles multiple headers", () => {
       expect(createRemixHeaders({ "x-foo": "bar", "x-bar": "baz" }))
         .toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar",
@@ -179,7 +179,7 @@ describe("vercel createRemixHeaders", () => {
     it("handles headers with multiple values", () => {
       expect(createRemixHeaders({ "x-foo": "bar, baz" }))
         .toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar, baz",
@@ -192,7 +192,7 @@ describe("vercel createRemixHeaders", () => {
     it("handles headers with multiple values and multiple headers", () => {
       expect(createRemixHeaders({ "x-foo": "bar, baz", "x-bar": "baz" }))
         .toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar, baz",
@@ -213,7 +213,7 @@ describe("vercel createRemixHeaders", () => {
           ],
         })
       ).toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "set-cookie",
             "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
@@ -241,7 +241,6 @@ describe("vercel createRemixRequest", () => {
 
     expect(createRemixRequest(request)).toMatchInlineSnapshot(`
       NodeRequest {
-        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
@@ -258,7 +257,7 @@ describe("vercel createRemixRequest", () => {
           "type": null,
         },
         Symbol(Request internals): Object {
-          "headers": Headers$1 {
+          "headers": Headers {
             Symbol(query): Array [
               "cache-control",
               "max-age=300, s-maxage=3600",

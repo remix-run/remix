@@ -4,6 +4,7 @@ import {
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
+  readableStreamToBase64String,
 } from "@remix-run/node";
 import type {
   Handler,
@@ -15,6 +16,7 @@ import type {
   AppLoadContext,
   ServerBuild,
   RequestInit as NodeRequestInit,
+  Response as NodeResponse,
 } from "@remix-run/node";
 
 import { isBinaryType } from "./binaryTypes";
@@ -45,26 +47,19 @@ export function createRequestHandler({
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (event, context) => {
-    let abortController = new AbortController();
-    let request = createRemixRequest(event, abortController);
+    let request = createRemixRequest(event);
     let loadContext =
       typeof getLoadContext === "function"
         ? getLoadContext(event, context)
         : undefined;
 
-    let response = await handleRequest(
-      request as unknown as Request,
-      loadContext
-    );
+    let response = await handleRequest(request, loadContext);
 
-    return sendRemixResponse(response, abortController);
+    return sendRemixResponse(response as NodeResponse);
   };
 }
 
-export function createRemixRequest(
-  event: HandlerEvent,
-  abortController?: AbortController
-): NodeRequest {
+export function createRemixRequest(event: HandlerEvent): NodeRequest {
   let url: URL;
 
   if (process.env.NODE_ENV !== "development") {
@@ -78,8 +73,6 @@ export function createRemixRequest(
   let init: NodeRequestInit = {
     method: event.httpMethod,
     headers: createRemixHeaders(event.multiValueHeaders),
-    abortController,
-    signal: abortController?.signal,
   };
 
   if (event.httpMethod !== "GET" && event.httpMethod !== "HEAD" && event.body) {
@@ -98,7 +91,7 @@ export function createRemixRequest(
 
 export function createRemixHeaders(
   requestHeaders: HandlerEvent["multiValueHeaders"]
-): Headers {
+): NodeHeaders {
   let headers = new NodeHeaders();
 
   for (let [key, values] of Object.entries(requestHeaders)) {
@@ -138,40 +131,21 @@ function getRawPath(event: HandlerEvent): string {
 }
 
 export async function sendRemixResponse(
-  nodeResponse: Response,
-  abortController: AbortController
+  nodeResponse: NodeResponse
 ): Promise<HandlerResponse> {
-  if (abortController.signal.aborted) {
-    nodeResponse.headers.set("Connection", "close");
-  }
-
   let contentType = nodeResponse.headers.get("Content-Type");
   let body: string | undefined;
   let isBase64Encoded = isBinaryType(contentType);
 
   if (nodeResponse.body) {
     if (isBase64Encoded) {
-      let reader = nodeResponse.body.getReader();
-      body = "";
-      async function read() {
-        let { done, value } = await reader.read();
-        if (done) {
-          return;
-        } else if (value) {
-          body += Buffer.from(value).toString("base64");
-        }
-        await read();
-      }
-
-      await read();
+      body = await readableStreamToBase64String(nodeResponse.body);
     } else {
       body = await nodeResponse.text();
     }
   }
 
-  let multiValueHeaders: Record<string, readonly (string | string)[]> = (
-    nodeResponse.headers as any
-  ).raw();
+  let multiValueHeaders = nodeResponse.headers.raw();
 
   return {
     statusCode: nodeResponse.status,

@@ -15,7 +15,6 @@
     "@remix-run/node": "1.4.2"
   },
   "peerDependencies": {
-    "@remix-run/web-stream": "^1.0.2",
     "express": "^4.17.1"
   },
   "devDependencies": {

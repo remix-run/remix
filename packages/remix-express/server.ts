@@ -4,13 +4,13 @@ import type {
   ServerBuild,
   RequestInit as NodeRequestInit,
 } from "@remix-run/node";
-import { ReadableStream } from "@remix-run/web-stream";
 import {
   // This has been added as a global in node 15+
   AbortController,
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
+  pipeReadableStreamToWritable,
 } from "@remix-run/node";
 
 /**
@@ -52,19 +52,15 @@ export function createRequestHandler({
     next: express.NextFunction
   ) => {
     try {
-      let abortController = new AbortController();
-      let request = createRemixRequest(req, abortController);
+      let request = createRemixRequest(req);
       let loadContext =
         typeof getLoadContext === "function"
           ? getLoadContext(req, res)
           : undefined;
 
-      let response = await handleRequest(
-        request as unknown as Request,
-        loadContext
-      );
+      let response = await handleRequest(request, loadContext);
 
-      sendRemixResponse(res, response, abortController);
+      sendRemixResponse(res, response as NodeResponse);
     } catch (error) {
       // Express doesn't support async functions, so we have to pass along the
       // error manually using next().
@@ -75,7 +71,7 @@ export function createRequestHandler({
 
 export function createRemixHeaders(
   requestHeaders: express.Request["headers"]
-): Headers {
+): NodeHeaders {
   let headers = new NodeHeaders();
 
   for (let [key, values] of Object.entries(requestHeaders)) {
@@ -93,31 +89,17 @@ export function createRemixHeaders(
   return headers;
 }
 
-export function createRemixRequest(
-  req: express.Request,
-  abortController?: AbortController
-): NodeRequest {
+export function createRemixRequest(req: express.Request): NodeRequest {
   let origin = `${req.protocol}://${req.get("host")}`;
   let url = new URL(req.url, origin);
 
   let init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
-    signal: abortController?.signal,
-    abortController,
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = new ReadableStream({
-      start(controller) {
-        req.on("data", (chunk) => {
-          controller.enqueue(chunk);
-        });
-        req.on("end", () => {
-          controller.close();
-        });
-      },
-    });
+    init.body = req;
   }
 
   return new NodeRequest(url.href, init);
@@ -125,45 +107,20 @@ export function createRemixRequest(
 
 export function sendRemixResponse(
   res: express.Response,
-  nodeResponse: Response,
-  abortController: AbortController
+  nodeResponse: NodeResponse
 ): void {
   res.statusMessage = nodeResponse.statusText;
   res.status(nodeResponse.status);
 
-  for (let [key, values] of Object.entries(
-    (nodeResponse.headers as any).raw() as Record<string, string[]>
-  )) {
+  for (let [key, values] of Object.entries(nodeResponse.headers.raw())) {
     for (let value of values) {
       res.append(key, value);
     }
   }
 
-  if (abortController.signal.aborted) {
-    res.set("Connection", "close");
-  }
-
   if (nodeResponse.body) {
-    let reader = nodeResponse.body.getReader();
-    async function read() {
-      let { done, value } = await reader.read();
-      if (done) {
-        res.end(value);
-        return;
-      }
-
-      res.write(value);
-      read();
-    }
-    read();
+    pipeReadableStreamToWritable(nodeResponse.body, res);
   } else {
     res.end();
   }
-  // if (Buffer.isBuffer(nodeResponse.body)) {
-  //   res.end(nodeResponse.body);
-  // } else if (nodeResponse.body?.pipe) {
-  //   nodeResponse.body.pipe(res);
-  // } else {
-  //   res.end();
-  // }
 }

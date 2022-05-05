@@ -1581,10 +1581,10 @@
     "@remix-run/web-stream" "^1.0.0"
     web-encoding "1.1.5"
 
-"@remix-run/web-fetch@^4.1.0":
-  version "4.1.0"
-  resolved "https://registry.npmjs.org/@remix-run/web-fetch/-/web-fetch-4.1.0.tgz#f4e7d31863add71c1bf759fbde7c9750d0c57313"
-  integrity sha512-V1q8ZnViqePZ44OCuHZbEbuof3jnru5L9ZxOgO2zjrbryIxc3J/ZgyZxIV0HeviD3vUWNdz283FNl2mUOZ5+ZA==
+"@remix-run/web-fetch@^4.1.1":
+  version "4.1.1"
+  resolved "https://registry.npmjs.org/@remix-run/web-fetch/-/web-fetch-4.1.1.tgz#2b7ab898599ea1a273a31b357e7a19148e6cec26"
+  integrity sha512-rsGqRERL+aCYWgtHaZyEy4Xzic4IHS4A2AzWndtoDy+8mUqtBe95QtUoxX5J9jBMs1yl4A/YjXD6HwWP1yyLrw==
   dependencies:
     "@remix-run/web-blob" "^3.0.3"
     "@remix-run/web-form-data" "^3.0.2"
@@ -1805,13 +1805,6 @@
   integrity sha512-a6bTJ21vFOGIkwM0kzh9Yr89ziVxq4vYH2fQ6N8AeipEzai/cFK6aGMArIkUeIdRIgpwQa+2bXiLuUJCpSf2Cg==
   dependencies:
     "@types/connect" "*"
-    "@types/node" "*"
-
-"@types/busboy@^0.3.1":
-  version "0.3.1"
-  resolved "https://registry.npmjs.org/@types/busboy/-/busboy-0.3.1.tgz"
-  integrity sha512-8BPLNy4x+7lbTOGkAyUIZrrPEZ7WzbO7YlVGMf9EZi9J9mqILEkYbt/kgVWQ7fizOISo1hM/7cAsWVTa7EhQDg==
-  dependencies:
     "@types/node" "*"
 
 "@types/cacache@^15.0.0":
@@ -3250,13 +3243,6 @@ builtin-modules@^3.1.0:
   resolved "https://registry.npmjs.org/builtin-modules/-/builtin-modules-3.2.0.tgz"
   integrity sha512-lGzLKcioL90C7wMczpkY0n/oART3MbBa8R9OFGE1rJxoVI86u4WAGfEk8Wjv10eKSyTHVGkSo3bvBylCEtk7LA==
 
-busboy@^0.3.1:
-  version "0.3.1"
-  resolved "https://registry.npmjs.org/busboy/-/busboy-0.3.1.tgz"
-  integrity sha512-y7tTxhGKXcyBxRKAni+awqx8uqaJKrSFSNFSeRG5CsWNdmy2BIK+6VGWEW7TZnIO/533mtMEA4rOevQV815YJw==
-  dependencies:
-    dicer "0.3.0"
-
 bytes@3.0.0:
   version "3.0.0"
   resolved "https://registry.npmjs.org/bytes/-/bytes-3.0.0.tgz"
@@ -4047,13 +4033,6 @@ detect-newline@3.1.0, detect-newline@^3.0.0:
   version "3.1.0"
   resolved "https://registry.npmjs.org/detect-newline/-/detect-newline-3.1.0.tgz"
   integrity sha512-TLz+x/vEXm/Y7P7wn1EJFNLxYpUD4TgMosxY6fAVJUnJMbupHBOncxyWUG9OpTaH9EBD7uFI5LfEgmMOc54DsA==
-
-dicer@0.3.0:
-  version "0.3.0"
-  resolved "https://registry.npmjs.org/dicer/-/dicer-0.3.0.tgz"
-  integrity sha512-MdceRRWqltEG2dZqO769g27N/3PXfcKl04VhYnBlo2YhH7zPi88VebsjTKclaOyiuMaGU72hTfw3VkUitGcVCA==
-  dependencies:
-    streamsearch "0.1.2"
 
 diff-sequences@^27.5.1:
   version "27.5.1"
@@ -9478,11 +9457,6 @@ stream-shift@^1.0.0:
   version "1.0.1"
   resolved "https://registry.npmjs.org/stream-shift/-/stream-shift-1.0.1.tgz"
   integrity sha512-AiisoFqQ0vbGcZgQPY1cdP2I76glaVA/RauYR4G4thNFgkTqr90yXTo4LYX60Jl+sIlPNHHdGSwo01AvbKUSVQ==
-
-streamsearch@0.1.2:
-  version "0.1.2"
-  resolved "https://registry.npmjs.org/streamsearch/-/streamsearch-0.1.2.tgz"
-  integrity sha1-gIudDlb8Jz2Am6VzOOkpkZoanxo=
 
 strict-event-emitter@^0.2.0:
   version "0.2.0"

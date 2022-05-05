@@ -140,7 +140,7 @@ describe("netlify createRemixHeaders", () => {
   describe("creates fetch headers from netlify headers", () => {
     it("handles empty headers", () => {
       expect(createRemixHeaders({})).toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [],
           Symbol(context): null,
         }
@@ -149,7 +149,7 @@ describe("netlify createRemixHeaders", () => {
 
     it("handles simple headers", () => {
       expect(createRemixHeaders({ "x-foo": ["bar"] })).toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar",
@@ -162,7 +162,7 @@ describe("netlify createRemixHeaders", () => {
     it("handles multiple headers", () => {
       expect(createRemixHeaders({ "x-foo": ["bar"], "x-bar": ["baz"] }))
         .toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar",
@@ -177,7 +177,7 @@ describe("netlify createRemixHeaders", () => {
     it("handles headers with multiple values", () => {
       expect(createRemixHeaders({ "x-foo": ["bar", "baz"] }))
         .toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar",
@@ -192,7 +192,7 @@ describe("netlify createRemixHeaders", () => {
     it("handles headers with multiple values and multiple headers", () => {
       expect(createRemixHeaders({ "x-foo": ["bar", "baz"], "x-bar": ["baz"] }))
         .toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar",
@@ -217,7 +217,7 @@ describe("netlify createRemixHeaders", () => {
           "x-something-else": ["true"],
         })
       ).toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "cookie",
             "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
@@ -245,7 +245,6 @@ describe("netlify createRemixRequest", () => {
       )
     ).toMatchInlineSnapshot(`
       NodeRequest {
-        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
@@ -262,7 +261,7 @@ describe("netlify createRemixRequest", () => {
           "type": null,
         },
         Symbol(Request internals): Object {
-          "headers": Headers$1 {
+          "headers": Headers {
             Symbol(query): Array [
               "cookie",
               "__session=value",

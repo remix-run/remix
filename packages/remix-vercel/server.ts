@@ -3,6 +3,7 @@ import type {
   AppLoadContext,
   ServerBuild,
   RequestInit as NodeRequestInit,
+  Response as NodeResponse,
 } from "@remix-run/node";
 import {
   // This has been added as a global in node 15+
@@ -10,6 +11,7 @@ import {
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
+  pipeReadableStreamToWritable,
 } from "@remix-run/node";
 
 /**
@@ -45,29 +47,21 @@ export function createRequestHandler({
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (req, res) => {
-    let abortController = new AbortController();
-    let request = createRemixRequest(req, abortController);
+    let request = createRemixRequest(req);
     let loadContext =
       typeof getLoadContext === "function"
         ? getLoadContext(req, res)
         : undefined;
 
-    let response = await handleRequest(
-      request as unknown as Request,
-      loadContext
-    );
+    let response = await handleRequest(request, loadContext);
 
-    if (abortController.signal.aborted) {
-      response.headers.set("Connection", "close");
-    }
-
-    sendRemixResponse(res, response);
+    sendRemixResponse(res, response as NodeResponse);
   };
 }
 
 export function createRemixHeaders(
   requestHeaders: VercelRequest["headers"]
-): Headers {
+): NodeHeaders {
   let headers = new NodeHeaders();
   for (let key in requestHeaders) {
     let header = requestHeaders[key]!;
@@ -84,10 +78,7 @@ export function createRemixHeaders(
   return headers;
 }
 
-export function createRemixRequest(
-  req: VercelRequest,
-  abortController?: AbortController
-): NodeRequest {
+export function createRemixRequest(req: VercelRequest): NodeRequest {
   let host = req.headers["x-forwarded-host"] || req.headers["host"];
   // doesn't seem to be available on their req object!
   let protocol = req.headers["x-forwarded-proto"] || "https";
@@ -96,21 +87,10 @@ export function createRemixRequest(
   let init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
-    abortController,
-    signal: abortController?.signal,
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = new ReadableStream({
-      start(controller) {
-        req.on("data", (chunk) => {
-          controller.enqueue(chunk);
-        });
-        req.on("end", () => {
-          controller.close();
-        });
-      },
-    });
+    init.body = req;
   }
 
   return new NodeRequest(url.href, init);
@@ -118,19 +98,10 @@ export function createRemixRequest(
 
 export function sendRemixResponse(
   res: VercelResponse,
-  nodeResponse: Response
+  nodeResponse: NodeResponse
 ): void {
   res.statusMessage = nodeResponse.statusText;
-  let multiValueHeaders: Record<string, (string | string)[]> = {};
-  for (let [key, values] of Object.entries(
-    (nodeResponse.headers as any).raw() as Record<string, string[]>
-  )) {
-    if (typeof multiValueHeaders[key] === "undefined") {
-      multiValueHeaders[key] = [...values];
-    } else {
-      (multiValueHeaders[key] as string[]).push(...values);
-    }
-  }
+  let multiValueHeaders = nodeResponse.headers.raw();
   res.writeHead(
     nodeResponse.status,
     nodeResponse.statusText,
@@ -138,18 +109,7 @@ export function sendRemixResponse(
   );
 
   if (nodeResponse.body) {
-    let reader = nodeResponse.body.getReader();
-    async function read() {
-      let { done, value } = await reader.read();
-      if (done) {
-        res.end(value);
-        return;
-      }
-
-      res.write(value);
-      read();
-    }
-    read();
+    pipeReadableStreamToWritable(nodeResponse.body, res);
   } else {
     res.end();
   }

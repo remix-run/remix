@@ -44,24 +44,17 @@ export function createRequestHandler({
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (event /*, context*/) => {
-    let abortController = new AbortController();
-    let request = createRemixRequest(event, abortController);
+    let request = createRemixRequest(event);
     let loadContext =
       typeof getLoadContext === "function" ? getLoadContext(event) : undefined;
 
-    let response = await handleRequest(
-      request as unknown as Request,
-      loadContext
-    );
+    let response = await handleRequest(request, loadContext);
 
-    return sendRemixResponse(response, abortController);
+    return sendRemixResponse(response);
   };
 }
 
-export function createRemixRequest(
-  event: APIGatewayProxyEventV2,
-  abortController?: AbortController
-): NodeRequest {
+export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
   let host = event.headers["x-forwarded-host"] || event.headers.host;
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
   let scheme = process.env.ARC_SANDBOX ? "http" : "https";
@@ -79,8 +72,6 @@ export function createRemixRequest(
           ? Buffer.from(event.body, "base64")
           : Buffer.from(event.body, "base64").toString()
         : event.body,
-    abortController,
-    signal: abortController?.signal,
   });
 }
 
@@ -104,14 +95,13 @@ export function createRemixHeaders(
 }
 
 export async function sendRemixResponse(
-  nodeResponse: Response,
-  abortController: AbortController
+  nodeResponse: Response
 ): Promise<APIGatewayProxyStructuredResultV2> {
   let cookies: string[] = [];
 
   // Arc/AWS API Gateway will send back set-cookies outside of response headers.
   for (let [key, values] of Object.entries(
-    (nodeResponse.headers as any).raw() as Record<string, string[]>
+    (nodeResponse.headers as NodeHeaders).raw()
   )) {
     if (key.toLowerCase() === "set-cookie") {
       for (let value of values) {
@@ -122,10 +112,6 @@ export async function sendRemixResponse(
 
   if (cookies.length) {
     nodeResponse.headers.delete("Set-Cookie");
-  }
-
-  if (abortController.signal.aborted) {
-    nodeResponse.headers.set("Connection", "close");
   }
 
   let contentType = nodeResponse.headers.get("Content-Type");

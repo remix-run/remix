@@ -159,7 +159,7 @@ describe("architect createRemixHeaders", () => {
   describe("creates fetch headers from architect headers", () => {
     it("handles empty headers", () => {
       expect(createRemixHeaders({}, undefined)).toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [],
           Symbol(context): null,
         }
@@ -169,7 +169,7 @@ describe("architect createRemixHeaders", () => {
     it("handles simple headers", () => {
       expect(createRemixHeaders({ "x-foo": "bar" }, undefined))
         .toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar",
@@ -182,7 +182,7 @@ describe("architect createRemixHeaders", () => {
     it("handles multiple headers", () => {
       expect(createRemixHeaders({ "x-foo": "bar", "x-bar": "baz" }, undefined))
         .toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar",
@@ -197,7 +197,7 @@ describe("architect createRemixHeaders", () => {
     it("handles headers with multiple values", () => {
       expect(createRemixHeaders({ "x-foo": "bar, baz" }, undefined))
         .toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar, baz",
@@ -211,7 +211,7 @@ describe("architect createRemixHeaders", () => {
       expect(
         createRemixHeaders({ "x-foo": "bar, baz", "x-bar": "baz" }, undefined)
       ).toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-foo",
             "bar, baz",
@@ -230,7 +230,7 @@ describe("architect createRemixHeaders", () => {
           "__other=some_other_value",
         ])
       ).toMatchInlineSnapshot(`
-        Headers$1 {
+        Headers {
           Symbol(query): Array [
             "x-something-else",
             "true",
@@ -254,7 +254,6 @@ describe("architect createRemixRequest", () => {
       )
     ).toMatchInlineSnapshot(`
       NodeRequest {
-        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
@@ -271,7 +270,7 @@ describe("architect createRemixRequest", () => {
           "type": null,
         },
         Symbol(Request internals): Object {
-          "headers": Headers$1 {
+          "headers": Headers {
             Symbol(query): Array [
               "accept",
               "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
