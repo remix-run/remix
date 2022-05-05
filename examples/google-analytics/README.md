@@ -12,7 +12,7 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 
 This example shows how to use Google analytics with Remix.
 
-First you have to get the Google analytics ID and add that key in the [app/utils/gtags.client.ts](./app/utils/gtags.client.ts) file.
+First you have to get the Google analytics ID and add that key in the [.env.example](./.env.example) file.
 
 Check [app/root.tsx](./app/root.tsx) where page tracking code is added. For tracking events check [app/routes/contact.tsx](./app/routes/contact.tsx) file.
 
