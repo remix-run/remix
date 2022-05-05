@@ -1325,7 +1325,7 @@ function DeferredErrorBoundary({
 }: {
   error?:
     | boolean
-    | React.ReactChild
+    | React.ReactNode
     | React.ReactFragment
     | React.ReactPortal
     | null;
@@ -1400,9 +1400,13 @@ export function useDeferred<T>(): T {
   }
 
   if (ctx.data?.then && ctx.data?.catch) {
-    throw ctx.data.then((data: any) => {
-      ctx!.data = data;
-    });
+    throw ctx.data
+      .then((data: unknown) => {
+        ctx!.data = data;
+      })
+      .catch((err: unknown) => {
+        ctx!.data = err;
+      });
   }
 
   return ctx.data;

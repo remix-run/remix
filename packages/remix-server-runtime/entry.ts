@@ -1,4 +1,5 @@
 import type { AppState } from "./errors";
+import type { DeferredResult } from "./responses";
 import type {
   RouteManifest,
   ServerRouteManifest,
@@ -16,7 +17,8 @@ export interface EntryContext {
   routeData: RouteData;
   actionData?: RouteData;
   routeModules: RouteModules<EntryRouteModule>;
-  routeLoadersDeferred: Record<string, Record<string, Promise<unknown>>>;
+
+  routeLoadersDeferred: Record<string, Record<string, Promise<DeferredResult>>>;
   serverHandoffString?: string;
 }
 

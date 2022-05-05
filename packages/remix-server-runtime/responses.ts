@@ -1,53 +1,96 @@
+import { serializeError } from "./errors";
+
 export const DEFERRED_PROMISE_VALUE = "$$__REMIX_DEFERRED_PROMISE__$$";
+export const DEFERRED_CHUNK_SEPARATOR = "$$__REMIX_DEFERRED_PROMISE__$$";
 
-export class DeferredResponse {
-  public __internal_name__ = "DeferredResponse";
-  public data: any;
-  public deferred: Record<string, Promise<unknown>>;
-  public init: ResponseInit;
-
-  constructor(data: unknown, init: number | ResponseInit) {
-    let responseInit = typeof init === "number" ? { status: init } : init;
-
-    let headers = new Headers(responseInit.headers);
-    if (!headers.has("Content-Type")) {
-      headers.set("Content-Type", "application/json; charset=utf-8");
-    }
-
-    this.init = responseInit;
-
-    let deferred: Record<string, Promise<unknown>> = {};
-    if (typeof data !== "object") {
-      this.data = data;
-    } else if (data) {
-      let dataWithoutPromises: Record<string, any> = {};
-      for (let [key, value] of Object.entries(data)) {
-        if (value?.then && value?.catch) {
-          deferred[key] = value.catch((err: any) => err);
-          dataWithoutPromises[key] = DEFERRED_PROMISE_VALUE + key;
-        } else {
-          dataWithoutPromises[key] = value;
-        }
-      }
-
-      this.data = dataWithoutPromises;
-    }
-
-    this.deferred = deferred;
-  }
-}
+type DeferredResponse = Response & {
+  deferred: Record<string, Promise<unknown>>;
+  initialData: unknown;
+};
 
 export function isDeferredResponse(value: any): value is DeferredResponse {
-  return value && value.__internal_name__ === "DeferredResponse";
+  return (
+    isResponse(value) &&
+    typeof (value as DeferredResponse).deferred !== "undefined"
+  );
 }
 
 export type DeferredFunction = <Data>(
   data: Data,
   init?: number | ResponseInit
-) => DeferredResponse;
+) => Response;
 
 export const deferred: DeferredFunction = (data, init = {}) => {
-  return new DeferredResponse(data, init);
+  class DeferredResponse extends Response {
+    public deferred: Record<string, Promise<unknown>>;
+    public initialData: unknown;
+
+    constructor(data: unknown, init?: ResponseInit) {
+      let deferred: Record<string, Promise<unknown>> = {};
+      let initialData = data;
+      if (typeof data === "object" && data !== null) {
+        const dataWithoutPromises = {} as Record<string, unknown>;
+
+        for (let [key, value] of Object.entries(data)) {
+          if (typeof value?.then === "function") {
+            deferred[key] = value;
+            dataWithoutPromises[key] = DEFERRED_PROMISE_VALUE + key;
+          } else {
+            dataWithoutPromises[key] = value;
+          }
+        }
+
+        initialData = dataWithoutPromises;
+      }
+
+      let body = new ReadableStream({
+        async start(controller) {
+          controller.enqueue("event: data\n");
+          controller.enqueue("data: " + JSON.stringify(initialData) + "\n\n");
+
+          await Promise.all(
+            Object.entries(deferred).map(async ([key, promise]) => {
+              await promise.then(
+                (result) => {
+                  controller.enqueue("event: deferred-data\n");
+                  controller.enqueue("id: " + key + "\n");
+                  controller.enqueue(
+                    "data: " + JSON.stringify(result) + "\n\n"
+                  );
+                },
+                (error) => {
+                  controller.enqueue("event: deferred-error\n");
+                  controller.enqueue("id: " + key + "\n");
+                  controller.enqueue(
+                    "data: " + JSON.stringify(serializeError(error)) + "\n\n"
+                  );
+                }
+              );
+            })
+          );
+
+          controller.close();
+        },
+      });
+
+      super(body, init);
+
+      this.initialData = initialData;
+      this.deferred = deferred;
+    }
+  }
+
+  let responseInit = typeof init === "number" ? { status: init } : init;
+
+  let headers = new Headers(responseInit.headers);
+  headers.set("Cache-Control", "no-cache");
+  headers.set("Connection", "keep-alive");
+  headers.set("Content-Type", "text/event-stream");
+
+  return new DeferredResponse(data, {
+    ...responseInit,
+    headers,
+  });
 };
 
 export type JsonFunction = <Data>(
@@ -65,9 +108,7 @@ export const json: JsonFunction = (data, init = {}) => {
   let responseInit = typeof init === "number" ? { status: init } : init;
 
   let headers = new Headers(responseInit.headers);
-  if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json; charset=utf-8");
-  }
+  headers.set("Content-Type", "application/json; charset=utf-8");
 
   return new Response(JSON.stringify(data), {
     ...responseInit,

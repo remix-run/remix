@@ -1339,14 +1339,23 @@ export function createTransitionManager(init: TransitionManagerInit) {
     results.forEach((res) => {
       if (res.events) {
         Object.entries(res.events).forEach(([key, event]: [string, any]) => {
-          event.promise.then((data: unknown) => {
-            if (controller.signal.aborted) return;
-            update({
-              routeLoadersDeferred: makeLoaderDefered(getState(), [
-                { ...res, events: { [key]: { promise: data } } },
-              ]),
+          event.promise
+            .then((data: unknown) => {
+              if (controller.signal.aborted) return;
+              update({
+                routeLoadersDeferred: makeLoaderDefered(getState(), [
+                  { ...res, events: { [key]: { promise: data } } },
+                ]),
+              });
+            })
+            .catch((err: unknown) => {
+              if (controller.signal.aborted) return;
+              update({
+                routeLoadersDeferred: makeLoaderDefered(getState(), [
+                  { ...res, events: { [key]: { promise: err } } },
+                ]),
+              });
             });
-          });
         });
       }
     });

@@ -17,7 +17,6 @@ import {
   isCatchResponse,
   isDeferredResponse,
 } from "./responses";
-import type { DeferredResponse } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
 export type RequestHandler = (
@@ -135,66 +134,11 @@ async function handleDataRequest({
       }
       match = tempMatch;
 
-      let loaderResponse = await callRouteLoader({
+      response = await callRouteLoader({
         loadContext,
         match,
         request,
       });
-      if (isDeferredResponse(loaderResponse)) {
-        if (typeof loaderResponse.data !== "object") {
-          response = json(loaderResponse.data, loaderResponse.init);
-        } else {
-          let body = new ReadableStream({
-            // TODO: Figure out why this has to be any
-            start(controller: any) {
-              controller.enqueue(
-                "data: " +
-                  JSON.stringify((loaderResponse as DeferredResponse).data) +
-                  "\n\n"
-              );
-
-              let allPromises = [];
-              for (let [key, promise] of Object.entries(
-                (loaderResponse as DeferredResponse).deferred
-              )) {
-                allPromises.push(
-                  promise.then(async (data) => {
-                    if (data instanceof Error) {
-                      controller.enqueue(
-                        `data: $$__REMIX_DEFERRED_ERROR__$$${key}$$__REMIX_DEFERRED_ERROR__$$` +
-                          JSON.stringify(await serializeError(data)) +
-                          "\n\n"
-                      );
-                    } else {
-                      controller.enqueue(
-                        `data: $$__REMIX_DEFERRED_KEY__$$${key}$$__REMIX_DEFERRED_KEY__$$` +
-                          JSON.stringify(data) +
-                          "\n\n"
-                      );
-                    }
-                  })
-                );
-              }
-
-              Promise.all(allPromises)
-                .then(() => {
-                  controller.close();
-                })
-                .catch(() => {
-                  controller.close();
-                });
-            },
-          });
-
-          let headers = new Headers(loaderResponse.init.headers);
-          headers.set("Content-Type", "text/event-stream");
-          headers.set("Cache-Control", "no-cache");
-          headers.set("Connection", "keep-alive");
-          response = new Response(body, { ...loaderResponse.init, headers });
-        }
-      } else {
-        response = loaderResponse;
-      }
     }
 
     if (isRedirectResponse(response)) {
@@ -402,7 +346,7 @@ async function handleDocumentRequest({
     let response: Response | undefined;
     if (isDeferredResponse(loaderResponse)) {
       routeLoadersDeferred[match.route.id] = loaderResponse.deferred;
-      response = json(loaderResponse.data, loaderResponse.init);
+      response = json(loaderResponse.initialData, loaderResponse);
     } else {
       response = loaderResponse;
     }
@@ -600,28 +544,11 @@ async function handleResourceRequest({
     if (isActionRequest(request)) {
       return await callRouteAction({ match, loadContext, request });
     } else {
-      let loaderResponse = await callRouteLoader({
+      return await callRouteLoader({
         match,
         loadContext,
         request,
       });
-      let response: Response;
-      if (isDeferredResponse(loaderResponse)) {
-        // TODO: Make this a SSE stream and chunk down deferred as they complete
-        let data: Record<string, any> = { ...loaderResponse.data };
-        try {
-          for (let [key, promise] of Object.entries(loaderResponse.deferred)) {
-            data[key] = await promise;
-          }
-        } catch (err: any) {
-          return errorBoundaryError(err, 500);
-        }
-        response = json(data, loaderResponse.init);
-      } else {
-        response = loaderResponse;
-      }
-
-      return response;
     }
   } catch (error: any) {
     if (serverMode !== ServerMode.Test) {

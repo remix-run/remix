@@ -44,6 +44,7 @@ export async function fetchData(
     [key: string]: {
       promise: Promise<any>;
       resolve: (value?: any) => void;
+      resolved?: boolean;
     };
   } = {};
   let eventCount = 0;
@@ -55,9 +56,9 @@ export async function fetchData(
     signal.addEventListener("abort", () => abort.abort());
 
     let handleAbort = () => {
-      Object.values(events).forEach(({ resolve }) =>
-        resolve(new Error("Aborted"))
-      );
+      Object.values(events).forEach(({ resolve, resolved }) => {
+        if (!resolved) resolve(new Error("Aborted"));
+      });
     };
     abort.signal.addEventListener("abort", handleAbort);
 
@@ -94,54 +95,19 @@ export async function fetchData(
           }
         },
         onmessage: (event) => {
-          if (event.data.includes("$$__REMIX_DEFERRED_KEY__$$")) {
-            if (!gotEvents) {
-              abort.abort();
-              response = new Response(null, {
-                status: 500,
-                headers: {
-                  "X-Remix-Error": "yes",
-                },
-              });
-              return;
-            }
-
-            let [, eventKey, data] = event.data.split(
-              "$$__REMIX_DEFERRED_KEY__$$"
-            );
-            events[eventKey].resolve(JSON.parse(data));
-
-            eventCount++;
-            if (totalEvents <= eventCount) {
-              abort.abort();
-            }
-          } else if (event.data.includes("$$__REMIX_DEFERRED_ERROR__$$")) {
-            let [, eventKey, data] = event.data.split(
-              "$$__REMIX_DEFERRED_ERROR__$$"
-            );
-            let json = JSON.parse(data);
-            let err = new Error(json.message);
-            err.stack = json.stack;
-            events[eventKey].resolve(err);
-
-            eventCount++;
-            if (totalEvents <= eventCount) {
-              abort.abort();
-            }
-          } else {
+          if (event.event === "data") {
             let data = JSON.parse(event.data);
-            gotEvents = true;
-            if (typeof data === "object") {
-              let eventKeys = Object.values(data).reduce<string[]>(
-                (keys, value) => {
+            if (typeof data === "object" && data !== null) {
+              let eventKeys = Object.entries(data).reduce<string[]>(
+                (acc, [key, value]) => {
                   if (
                     typeof value === "string" &&
                     value.startsWith("$$__REMIX_DEFERRED_PROMISE__$$")
                   ) {
-                    keys.push(value.split("$$__REMIX_DEFERRED_PROMISE__$$")[1]);
+                    acc.push(key);
                   }
 
-                  return keys;
+                  return acc;
                 },
                 []
               );
@@ -149,17 +115,49 @@ export async function fetchData(
               totalEvents = eventKeys.length;
               for (let eventKey of eventKeys) {
                 events[eventKey] = {} as any;
-                events[eventKey].promise = new Promise((resolve) => {
-                  events[eventKey].resolve = resolve;
+                events[eventKey].promise = new Promise<any>((resolve) => {
+                  events[eventKey].resolve = (v: any) => {
+                    events[eventKey].resolved = true;
+                    resolve(v);
+                  };
                 });
               }
             }
+
+            gotEvents = true;
 
             response = new Response(event.data, {
               status,
               headers,
             });
             resolve();
+            return;
+          }
+
+          if (!gotEvents) {
+            abort.abort();
+            response = new Response(null, {
+              status: 500,
+              headers: {
+                "X-Remix-Error": "yes",
+              },
+            });
+            return;
+          }
+
+          if (event.event === "deferred-data") {
+            events[event.id].resolve(JSON.parse(event.data));
+          } else if (event.event === "deferred-error") {
+            let json = JSON.parse(event.data);
+            let err = new Error(json.message);
+            err.stack = json.stack;
+            events[event.id].resolve(err);
+            events[event.id];
+          }
+
+          eventCount++;
+          if (totalEvents <= eventCount) {
+            abort.abort();
           }
         },
       });
