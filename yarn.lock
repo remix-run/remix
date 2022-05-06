@@ -1602,10 +1602,10 @@
   dependencies:
     web-encoding "1.1.5"
 
-"@remix-run/web-stream@^1.0.0", "@remix-run/web-stream@^1.0.1", "@remix-run/web-stream@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.npmjs.org/@remix-run/web-stream/-/web-stream-1.0.2.tgz#f07dc9cf6db02507ea71a234bc8e06103a2207b4"
-  integrity sha512-FO4om5mrwMs5bi7L5hbLMP1hm+flAS2oYRptfNPkK2u0Hhv0crS9GiE9/MsVvY53tTAxVkzUG/m+9ET1mTjEnw==
+"@remix-run/web-stream@^1.0.0", "@remix-run/web-stream@^1.0.1", "@remix-run/web-stream@^1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@remix-run/web-stream/-/web-stream-1.0.3.tgz#3284a6a45675d1455c4d9c8f31b89225c9006438"
+  integrity sha512-wlezlJaA5NF6SsNMiwQnnAW6tnPzQ5I8qk0Y0pSohm0eHKa2FQ1QhEKLVVcDDu02TmkfHgnux0igNfeYhDOXiA==
   dependencies:
     web-streams-polyfill "^3.1.1"
 
