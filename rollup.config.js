@@ -871,10 +871,10 @@ export default function rollup(options) {
 async function triggerLiveReload(appDir) {
   // tickle live reload by touching the server entry
   let serverEntryPaths = [
+    "entry.server.ts",
     "entry.server.tsx",
-    "entry.server.jsx",
-    // .js included because our build supports JSX in a .js file, but not a .ts file
     "entry.server.js",
+    "entry.server.jsx",
   ];
   let serverEntryPath = serverEntryPaths
     .map((entryFile) => path.join(appDir, "app", entryFile))
