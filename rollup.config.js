@@ -869,7 +869,8 @@ export default function rollup(options) {
 }
 
 async function triggerLiveReload(appDir) {
-  // tickle live reload by touching the server entry
+  // Tickle live reload by touching the server entry.  Include all extensions
+  // since they may or may not use TS and/or JSX
   let serverEntryPaths = [
     "entry.server.ts",
     "entry.server.tsx",
