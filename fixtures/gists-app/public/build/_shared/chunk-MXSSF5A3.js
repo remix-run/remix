@@ -1,0 +1,6 @@
+import{a as o}from"/build/_shared/chunk-7G6VOURC.js";import{f as c}from"/build/_shared/chunk-AKSB5QXU.js";c();var n=(0,o.createCookieSessionStorage)({cookie:{name:"theme-css",secrets:["fjdlafjdkla"]}}),a={"--nc-tx-1":"#ffffff","--nc-tx-2":"#eeeeee","--nc-bg-1":"#000000","--nc-bg-2":"#111111","--nc-bg-3":"#222222","--nc-lk-1":"#3291FF","--nc-lk-2":"#0070F3","--nc-lk-tx":"#FFFFFF","--nc-ac-1":"#7928CA","--nc-ac-tx":"#FFFFFF"},f=async({request:r})=>{let i=new URLSearchParams(await r.text()),e=await n.getSession(r.headers.get("Cookie")),t=e.get("custom")||{};if(i.get("event")==="reset")return(0,o.redirect)("/resources/settings",{headers:{"Set-Cookie":await n.destroySession(e)}});for(let[s,m]of i)s in a&&(t[s]=m||a[s]);return e.set("custom",t),(0,o.redirect)("/resources/settings",{headers:{"Set-Cookie":await n.commitSession(e)}})},d=async({request:r})=>{let e=(await n.getSession(r.headers.get("Cookie"))).get("custom")||{};return new Response(`/* this css was generated via a loader in a remix resource route */
+:root {
+  ${Object.entries(e).map(([t,s])=>a[t]&&s?`${t}: ${s};`:!1).filter(t=>t).join(`
+  `)}
+}
+  `,{headers:{"Content-Type":"text/css; charset=UTF-8","x-has-custom":Object.keys(e).length>0?"yes":"no"}})};export{n as a,a as b,f as c,d};

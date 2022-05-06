@@ -1,0 +1,595 @@
+{
+  "version": "96240d2c",
+  "entry": {
+    "module": "/build/entry.client-J5F672DI.js",
+    "imports": [
+      "/build/_shared/chunk-3FICFDS2.js",
+      "/build/_shared/chunk-JKO55VJE.js",
+      "/build/_shared/chunk-AKSB5QXU.js"
+    ]
+  },
+  "routes": {
+    "pages/child": {
+      "id": "pages/child",
+      "parentId": "pages/test",
+      "path": ":messageId",
+      "module": "/build/pages/child-M3766NMA.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "pages/four": {
+      "id": "pages/four",
+      "parentId": "root",
+      "path": "/page/four",
+      "module": "/build/pages/four-43XGXQXO.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "pages/test": {
+      "id": "pages/test",
+      "parentId": "root",
+      "path": "programmatic",
+      "module": "/build/pages/test-WJXDPTTO.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "pages/three": {
+      "id": "pages/three",
+      "parentId": "root",
+      "path": "/page/three",
+      "module": "/build/pages/three-I3RZVLBY.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "root": {
+      "id": "root",
+      "path": "",
+      "module": "/build/root-D74ATMVK.js",
+      "hasAction": false,
+      "hasLoader": true,
+      "hasCatchBoundary": true,
+      "hasErrorBoundary": true
+    },
+    "routes/__layout": {
+      "id": "routes/__layout",
+      "parentId": "root",
+      "module": "/build/routes/__layout-I6JV37ZM.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/__layout/with-layout": {
+      "id": "routes/__layout/with-layout",
+      "parentId": "routes/__layout",
+      "path": "with-layout",
+      "module": "/build/routes/__layout/with-layout-GBBKN7AI.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/action-catches": {
+      "id": "routes/action-catches",
+      "parentId": "root",
+      "path": "action-catches",
+      "module": "/build/routes/action-catches-F27Z5CCJ.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": true,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/action-catches-from-loader": {
+      "id": "routes/action-catches-from-loader",
+      "parentId": "root",
+      "path": "action-catches-from-loader",
+      "module": "/build/routes/action-catches-from-loader-D5D67ZDA.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": true,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/action-catches-from-loader-self-boundary": {
+      "id": "routes/action-catches-from-loader-self-boundary",
+      "parentId": "root",
+      "path": "action-catches-from-loader-self-boundary",
+      "module": "/build/routes/action-catches-from-loader-self-boundary-IX3EBJHK.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": true,
+      "hasLoader": true,
+      "hasCatchBoundary": true,
+      "hasErrorBoundary": false
+    },
+    "routes/action-catches-self-boundary": {
+      "id": "routes/action-catches-self-boundary",
+      "parentId": "root",
+      "path": "action-catches-self-boundary",
+      "module": "/build/routes/action-catches-self-boundary-OA45U2XO.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": true,
+      "hasLoader": false,
+      "hasCatchBoundary": true,
+      "hasErrorBoundary": false
+    },
+    "routes/action-errors": {
+      "id": "routes/action-errors",
+      "parentId": "root",
+      "path": "action-errors",
+      "module": "/build/routes/action-errors-FMJOF674.js",
+      "hasAction": true,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/action-errors-self-boundary": {
+      "id": "routes/action-errors-self-boundary",
+      "parentId": "root",
+      "path": "action-errors-self-boundary",
+      "module": "/build/routes/action-errors-self-boundary-PUXE2YX5.js",
+      "hasAction": true,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": true
+    },
+    "routes/actions": {
+      "id": "routes/actions",
+      "parentId": "root",
+      "path": "actions",
+      "module": "/build/routes/actions-PNTYNZHF.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": true,
+      "hasLoader": true,
+      "hasCatchBoundary": true,
+      "hasErrorBoundary": true
+    },
+    "routes/blog": {
+      "id": "routes/blog",
+      "parentId": "root",
+      "path": "blog",
+      "module": "/build/routes/blog-HHXOEK4C.js",
+      "imports": [
+        "/build/_shared/chunk-PLBHTX4T.js"
+      ],
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/blog/hello-world": {
+      "id": "routes/blog/hello-world",
+      "parentId": "routes/blog",
+      "path": "hello-world",
+      "module": "/build/routes/blog/hello-world-QT3O2DZB.js",
+      "imports": [
+        "/build/_shared/chunk-ZJ3YXZYL.js",
+        "/build/_shared/chunk-6TZ3VSRZ.js"
+      ],
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/blog/index": {
+      "id": "routes/blog/index",
+      "parentId": "routes/blog",
+      "index": true,
+      "module": "/build/routes/blog/index-GFBP57TO.js",
+      "imports": [
+        "/build/_shared/chunk-ZJ3YXZYL.js",
+        "/build/_shared/chunk-PADKEIJU.js",
+        "/build/_shared/chunk-XPASCIC4.js",
+        "/build/_shared/chunk-6TZ3VSRZ.js",
+        "/build/_shared/chunk-KXEGYGL5.js",
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": false,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/blog/second": {
+      "id": "routes/blog/second",
+      "parentId": "routes/blog",
+      "path": "second",
+      "module": "/build/routes/blog/second-Z4SBW42G.js",
+      "imports": [
+        "/build/_shared/chunk-PADKEIJU.js"
+      ],
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/blog/third": {
+      "id": "routes/blog/third",
+      "parentId": "routes/blog",
+      "path": "third",
+      "module": "/build/routes/blog/third-KA7A3N7P.js",
+      "imports": [
+        "/build/_shared/chunk-XPASCIC4.js"
+      ],
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/catchall-nested": {
+      "id": "routes/catchall-nested",
+      "parentId": "root",
+      "path": "catchall-nested",
+      "module": "/build/routes/catchall-nested-47QHGC4R.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/catchall-nested-no-layout/$": {
+      "id": "routes/catchall-nested-no-layout/$",
+      "parentId": "root",
+      "path": "catchall-nested-no-layout/*",
+      "module": "/build/routes/catchall-nested-no-layout/$-32YG6LR3.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/catchall-nested/$": {
+      "id": "routes/catchall-nested/$",
+      "parentId": "routes/catchall-nested",
+      "path": "*",
+      "module": "/build/routes/catchall-nested/$-DC7A4ZKK.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/catchall-nested/index": {
+      "id": "routes/catchall-nested/index",
+      "parentId": "routes/catchall-nested",
+      "index": true,
+      "module": "/build/routes/catchall-nested/index-LE2BZZKK.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/catchall.flat.$": {
+      "id": "routes/catchall.flat.$",
+      "parentId": "root",
+      "path": "catchall/flat/*",
+      "module": "/build/routes/catchall.flat.$-F4HAXMTX.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/empty": {
+      "id": "routes/empty",
+      "parentId": "root",
+      "path": "empty",
+      "module": "/build/routes/empty-4PAY4C7K.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/fetchers": {
+      "id": "routes/fetchers",
+      "parentId": "root",
+      "path": "fetchers",
+      "module": "/build/routes/fetchers-M7VUJYC3.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": true,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/gists": {
+      "id": "routes/gists",
+      "parentId": "root",
+      "path": "gists",
+      "module": "/build/routes/gists-A2UEN674.js",
+      "imports": [
+        "/build/_shared/chunk-KXEGYGL5.js",
+        "/build/_shared/chunk-PLBHTX4T.js",
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": false,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/gists.mine": {
+      "id": "routes/gists.mine",
+      "parentId": "root",
+      "path": "gists/mine",
+      "module": "/build/routes/gists.mine-2S63G65X.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/gists/$username": {
+      "id": "routes/gists/$username",
+      "parentId": "routes/gists",
+      "path": ":username",
+      "module": "/build/routes/gists/$username-ZAW4KGQO.js",
+      "hasAction": false,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/gists/index": {
+      "id": "routes/gists/index",
+      "parentId": "routes/gists",
+      "index": true,
+      "module": "/build/routes/gists/index-PM75ETRC.js",
+      "hasAction": false,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/index": {
+      "id": "routes/index",
+      "parentId": "root",
+      "index": true,
+      "module": "/build/routes/index-7UP5Q4VI.js",
+      "imports": [
+        "/build/_shared/chunk-PLBHTX4T.js"
+      ],
+      "hasAction": false,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/links": {
+      "id": "routes/links",
+      "parentId": "root",
+      "path": "links",
+      "module": "/build/routes/links-RXSDYAOM.js",
+      "hasAction": false,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/loader-errors": {
+      "id": "routes/loader-errors",
+      "parentId": "root",
+      "path": "loader-errors",
+      "module": "/build/routes/loader-errors-XHJT4C2C.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": false,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/loader-errors/nested": {
+      "id": "routes/loader-errors/nested",
+      "parentId": "routes/loader-errors",
+      "path": "nested",
+      "module": "/build/routes/loader-errors/nested-6TENLM7J.js",
+      "hasAction": false,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": true
+    },
+    "routes/loader-errors/nested-catch": {
+      "id": "routes/loader-errors/nested-catch",
+      "parentId": "routes/loader-errors",
+      "path": "nested-catch",
+      "module": "/build/routes/loader-errors/nested-catch-V6GA2HYA.js",
+      "hasAction": false,
+      "hasLoader": true,
+      "hasCatchBoundary": true,
+      "hasErrorBoundary": false
+    },
+    "routes/methods": {
+      "id": "routes/methods",
+      "parentId": "root",
+      "path": "methods",
+      "module": "/build/routes/methods-W7HC7QPT.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": true,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/multiple-set-cookies": {
+      "id": "routes/multiple-set-cookies",
+      "parentId": "root",
+      "path": "multiple-set-cookies",
+      "module": "/build/routes/multiple-set-cookies-43AY6U54.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": true,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/nested-forms": {
+      "id": "routes/nested-forms",
+      "parentId": "root",
+      "path": "nested-forms",
+      "module": "/build/routes/nested-forms-FCFUJC2U.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": true,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/nested-forms/nested": {
+      "id": "routes/nested-forms/nested",
+      "parentId": "routes/nested-forms",
+      "path": "nested",
+      "module": "/build/routes/nested-forms/nested-NC7EBPW7.js",
+      "hasAction": true,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/nested-forms/nested/index": {
+      "id": "routes/nested-forms/nested/index",
+      "parentId": "routes/nested-forms/nested",
+      "index": true,
+      "module": "/build/routes/nested-forms/nested/index-Y4Y4IQ4J.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": true,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/one": {
+      "id": "routes/one",
+      "parentId": "root",
+      "path": "one",
+      "module": "/build/routes/one-OOQVW2G2.js",
+      "imports": [
+        "/build/_shared/chunk-6TZ3VSRZ.js"
+      ],
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/prefs": {
+      "id": "routes/prefs",
+      "parentId": "root",
+      "path": "prefs",
+      "module": "/build/routes/prefs-RG7FEJV4.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": true,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/redirects/login": {
+      "id": "routes/redirects/login",
+      "parentId": "root",
+      "path": "redirects/login",
+      "module": "/build/routes/redirects/login-JTSE6BB5.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": true,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/render-errors": {
+      "id": "routes/render-errors",
+      "parentId": "root",
+      "path": "render-errors",
+      "module": "/build/routes/render-errors-PORB4N3H.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/render-errors/nested": {
+      "id": "routes/render-errors/nested",
+      "parentId": "routes/render-errors",
+      "path": "nested",
+      "module": "/build/routes/render-errors/nested-FEHEV5LN.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": true
+    },
+    "routes/resources/index": {
+      "id": "routes/resources/index",
+      "parentId": "root",
+      "path": "resources",
+      "index": true,
+      "module": "/build/routes/resources/index-FX6CQVMX.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/resources/redirect": {
+      "id": "routes/resources/redirect",
+      "parentId": "root",
+      "path": "resources/redirect",
+      "module": "/build/routes/resources/redirect-JXBLR4ZQ.js",
+      "imports": [
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": false,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/resources/settings": {
+      "id": "routes/resources/settings",
+      "parentId": "root",
+      "path": "resources/settings",
+      "module": "/build/routes/resources/settings-36JBNMJZ.js",
+      "imports": [
+        "/build/_shared/chunk-XCTGKEWA.js",
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": false,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/resources/theme-css": {
+      "id": "routes/resources/theme-css",
+      "parentId": "root",
+      "path": "resources/theme-css",
+      "module": "/build/routes/resources/theme-css-2V67SJDF.js",
+      "imports": [
+        "/build/_shared/chunk-XCTGKEWA.js",
+        "/build/_shared/chunk-MXBYS5UE.js"
+      ],
+      "hasAction": true,
+      "hasLoader": true,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    },
+    "routes/two": {
+      "id": "routes/two",
+      "parentId": "root",
+      "path": "two",
+      "module": "/build/routes/two-H326JZSK.js",
+      "hasAction": false,
+      "hasLoader": false,
+      "hasCatchBoundary": false,
+      "hasErrorBoundary": false
+    }
+  },
+  "url": "/build/manifest-96240D2C.js"
+}

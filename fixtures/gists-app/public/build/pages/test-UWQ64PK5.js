@@ -1,0 +1,1 @@
+import{o as t}from"/build/_shared/chunk-5GYOXAJ7.js";import"/build/_shared/chunk-JKO55VJE.js";import{e,f as r}from"/build/_shared/chunk-AKSB5QXU.js";r();r();function i(){return e.createElement("div",null,e.createElement("h1",null,"Shell"),e.createElement(t.Outlet,null))}export{i as default};

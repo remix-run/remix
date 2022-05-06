@@ -1,0 +1,9 @@
+import{b as m,d as l,f as e}from"/build/_shared/chunk-AKSB5QXU.js";e();e();var s=m(l()),o={meta:{title:"Page two",description:"Fantastic"}};function r(p={}){let n=Object.assign({h1:"h1",p:"p",pre:"pre",code:"code",span:"span"},p.components),{wrapper:a}=n,t=s.default.createElement(s.default.Fragment,null,s.default.createElement(n.h1,null,"Page Two"),`
+`,s.default.createElement(n.p,null,"I am a page."),`
+`,s.default.createElement(n.p,null,"Here's a code block."),`
+`,s.default.createElement(n.pre,null,s.default.createElement(n.code,{className:"hljs language-jsx"},s.default.createElement(n.span,{className:"hljs-keyword"},"import")," ",s.default.createElement(n.span,{className:"hljs-title hljs-class"},"React")," ",s.default.createElement(n.span,{className:"hljs-keyword"},"from")," ",s.default.createElement(n.span,{className:"hljs-string"},'"react"'),`;
+
+`,s.default.createElement(n.span,{className:"hljs-keyword"},"export")," ",s.default.createElement(n.span,{className:"hljs-keyword"},"default")," ",s.default.createElement(n.span,{className:"hljs-keyword"},"function")," ",s.default.createElement(n.span,{className:"hljs-title hljs-function"},"PageOne"),"(",s.default.createElement(n.span,{className:"hljs-params"}),`) {
+  `,s.default.createElement(n.span,{className:"hljs-keyword"},"return")," ",s.default.createElement(n.span,{className:"xml"},s.default.createElement(n.span,{className:"hljs-tag"},"<",s.default.createElement(n.span,{className:"hljs-name"},"div"),">"),"Page One",s.default.createElement(n.span,{className:"hljs-tag"},"</",s.default.createElement(n.span,{className:"hljs-name"},"div"),">")),`;
+}
+`)));return a?s.default.createElement(a,{...p},t):t}var c=r;var h=typeof o!="undefined"&&o.headers,d=typeof o!="undefined"&&o.meta,i=void 0;export{c as default,i as links,d as meta};

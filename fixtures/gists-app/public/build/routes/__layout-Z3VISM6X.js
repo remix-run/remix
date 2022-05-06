@@ -1,0 +1,1 @@
+import{o as r}from"/build/_shared/chunk-5GYOXAJ7.js";import"/build/_shared/chunk-JKO55VJE.js";import{e as t,f as e}from"/build/_shared/chunk-AKSB5QXU.js";e();e();function o(){return t.createElement("div",{"data-test-id":"_layout"},t.createElement("h1",null,"Layout Test"),t.createElement(r.Outlet,null))}export{o as default};

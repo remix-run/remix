@@ -1,0 +1,1 @@
+import{e as s,f as e}from"/build/_shared/chunk-AKSB5QXU.js";e();e();function i(){return s.createElement("div",{"data-test-id":"/gists/mine"},s.createElement("h1",null,"My Gists"))}export{i as default};

@@ -1,0 +1,1 @@
+import{b as r,d as c,e as o,f as e}from"/build/_shared/chunk-AKSB5QXU.js";e();var n=r(c());function i(){let[t,u]=(0,n.useState)(0);return o.createElement("button",{"data-test-id":"counter-button",onClick:()=>u(t+1)},`Clicked ${t}`)}export{i as a};
