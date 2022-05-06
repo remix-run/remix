@@ -868,37 +868,47 @@ export default function rollup(options) {
   return builds;
 }
 
+async function triggerLiveReload(appDir) {
+  // Tickle live reload by touching the server entry
+  // Consider all of entry.server.{tsx,ts,jsx,js} since React may be used 
+  // via `React.createElement` without the need for JSX.
+  let serverEntryPaths = [
+    "entry.server.ts",
+    "entry.server.tsx",
+    "entry.server.js",
+    "entry.server.jsx",
+  ];
+  let serverEntryPath = serverEntryPaths
+    .map((entryFile) => path.join(appDir, "app", entryFile))
+    .find((entryPath) => fse.existsSync(entryPath));
+  let date = new Date();
+  await fs.promises.utimes(serverEntryPath, date, date);
+}
+
 function copyToPlaygrounds() {
   return {
     name: "copy-to-remix-playground",
     async writeBundle(options, bundle) {
-      let playgroundsDir = path.join(__dirname, "playground");
-      let playgrounds = await fs.promises.readdir(playgroundsDir);
-      let writtenDir = path.join(__dirname, options.dir);
-      for (let playground of playgrounds) {
-        let playgroundDir = path.join(playgroundsDir, playground);
-        if (!fse.statSync(playgroundDir).isDirectory()) {
-          continue;
+      if (activeOutputDir === "build") {
+        let playgroundsDir = path.join(__dirname, "playground");
+        let playgrounds = await fs.promises.readdir(playgroundsDir);
+        let writtenDir = path.join(__dirname, options.dir);
+        for (let playground of playgrounds) {
+          let playgroundDir = path.join(playgroundsDir, playground);
+          if (!fse.statSync(playgroundDir).isDirectory()) {
+            continue;
+          }
+          let destDir = writtenDir.replace(
+            path.join(__dirname, "build"),
+            playgroundDir
+          );
+          await fse.copy(writtenDir, destDir);
+          await triggerLiveReload(playgroundDir);
         }
-        let destDir = writtenDir.replace(
-          path.join(__dirname, "build"),
-          playgroundDir
-        );
-        await fse.copy(writtenDir, destDir);
-
-        // tickle live reload by touching the server entry
-        let serverEntry = ["tsx", "js", "jsx"].find((entryPathExtension) =>
-          fse.existsSync(
-            path.join(
-              playgroundDir,
-              "app",
-              `entry.server.${entryPathExtension}`
-            )
-          )
-        );
-        let serverEntryPath = path.join(playgroundDir, "app", serverEntry);
-        let serverEntryContent = await fse.readFile(serverEntryPath);
-        await fse.writeFile(serverEntryPath, serverEntryContent);
+      } else {
+        // If we're not building to "build" then trigger live reload on our
+        // external "playground" app
+        await triggerLiveReload(activeOutputDir);
       }
     },
   };
