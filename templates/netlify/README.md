@@ -1,7 +1,7 @@
 # Welcome to Remix!
 
 - [Remix Docs](https://remix.run/docs)
-- [Netlify Functions](https://www.netlify.com/products/functions/)
+- [Netlify Functions Overview](https://docs.netlify.com/functions/overview)
 
 ## Netlify Setup
 
@@ -34,7 +34,7 @@ netlify init
 The Remix dev server starts your app in development mode, rebuilding assets on file changes. To start the Remix dev server:
 
 ```sh
-npm run dev
+netlify dev
 ```
 
 Open up [http://localhost:3000](http://localhost:3000), and you should be ready to go!
@@ -51,7 +51,7 @@ Note: When running the Netlify CLI, file changes will rebuild assets, but you wi
 
 ## Deployment
 
-There are two ways to deploy your app to Netlify, you can either link your app to your git repo and have it auto deploy changes to Netlify, or you can deploy your app manually. If you've followed the setup instructions already, all you need to do is run this:
+There are two ways to deploy your app to Netlify, you can either link your app to your git repository and have it auto deploy changes to Netlify, or you can deploy your app manually. If you've followed the setup instructions already, all you need to do is run this:
 
 ```sh
 # preview deployment
