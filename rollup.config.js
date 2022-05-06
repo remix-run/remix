@@ -869,8 +869,9 @@ export default function rollup(options) {
 }
 
 async function triggerLiveReload(appDir) {
-  // Tickle live reload by touching the server entry.  Include all extensions
-  // since they may or may not use TS and/or JSX
+  // Tickle live reload by touching the server entry
+  // Consider all of entry.server.{tsx,ts,jsx,js} since React may be used 
+  // via `React.createElement` without the need for JSX.
   let serverEntryPaths = [
     "entry.server.ts",
     "entry.server.tsx",
