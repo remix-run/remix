@@ -1,4 +1,4 @@
-import React from "./deps/react.ts";
+import React from "react";
 import {
   Links,
   LiveReload,
@@ -6,8 +6,8 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-} from "./deps/@remix-run/react.ts";
-import type { MetaFunction } from "../remix-deno/index.ts";
+} from "@remix-run/react";
+import type { MetaFunction } from "@remix-run/deno";
 
 export const meta: MetaFunction = () => ({
   charset: "utf-8",

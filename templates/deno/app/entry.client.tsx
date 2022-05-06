@@ -1,5 +1,5 @@
-import React from "./deps/react.ts";
-import ReactDOM from "./deps/react-dom.ts";
-import { RemixBrowser } from "./deps/@remix-run/react.ts";
+import React from "react";
+import ReactDOM from "react-dom";
+import { RemixBrowser } from "@remix-run/react";
 
 ReactDOM.hydrate(<RemixBrowser />, document);
