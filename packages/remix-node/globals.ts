@@ -38,7 +38,7 @@ export function installGlobals() {
   global.Blob = NodeBlob;
   global.File = NodeFile;
 
-  global.Headers = NodeHeaders;
+  global.Headers = NodeHeaders as typeof Headers;
   global.Request = NodeRequest as typeof Request;
   global.Response = NodeResponse as unknown as typeof Response;
   global.fetch = nodeFetch as typeof fetch;
