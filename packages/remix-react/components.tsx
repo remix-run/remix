@@ -398,14 +398,12 @@ interface PrefetchHandlers {
 
 function usePrefetchBehavior(
   prefetch: PrefetchBehavior,
-  theirElementProps: PrefetchHandlers,
-  linkHref: string
+  theirElementProps: PrefetchHandlers
 ) {
   let [maybePrefetch, setMaybePrefetch] = React.useState(false);
   let [shouldPrefetch, setShouldPrefetch] = React.useState(false);
   let { onFocus, onBlur, onMouseEnter, onMouseLeave, onTouchStart } =
     theirElementProps;
-  let currentHref = useHref(useLocation());
 
   React.useEffect(() => {
     if (prefetch === "render") {
@@ -422,19 +420,9 @@ function usePrefetchBehavior(
   let cancelIntent = () => {
     if (prefetch === "intent") {
       setMaybePrefetch(false);
-    }
-  };
-
-  React.useEffect(() => {
-    // If we navigate to a route that we potentially prefetched for, unset
-    // shouldPrefetch so that when we navigate away from this route the links
-    // don't get re-inserted and cause a dup call to the loader.  We should
-    // require another intent to re-insert
-    if (prefetch === "intent" && linkHref === currentHref) {
-      setMaybePrefetch(false);
       setShouldPrefetch(false);
     }
-  }, [prefetch, linkHref, currentHref]);
+  };
 
   React.useEffect(() => {
     if (maybePrefetch) {
@@ -469,8 +457,7 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
-      props,
-      href
+      props
     );
     return (
       <>
@@ -498,8 +485,7 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
-      props,
-      href
+      props
     );
     return (
       <>

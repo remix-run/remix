@@ -185,7 +185,7 @@ test.describe("prefetch=intent (hover)", () => {
       "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']",
       { state: "attached" }
     );
-    expect(await page.locator("#nav link").count()).toBe(3);
+    expect(await page.locator("#nav link").count()).toBe(1);
   });
 
   test("removes prefetch tags after navigating to/from the page", async ({
@@ -259,6 +259,6 @@ test.describe("prefetch=intent (focus)", () => {
       "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']",
       { state: "attached" }
     );
-    expect(await page.locator("#nav link").count()).toBe(3);
+    expect(await page.locator("#nav link").count()).toBe(1);
   });
 });
