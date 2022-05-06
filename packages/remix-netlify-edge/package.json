@@ -18,6 +18,6 @@
     "*.d.ts"
   ],
   "dependencies": {
-    "@remix-run/server-runtime": "*"
+    "@remix-run/server-runtime": "1.4.3"
   }
 }
