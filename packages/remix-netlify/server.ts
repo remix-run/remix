@@ -51,9 +51,9 @@ export function createRequestHandler({
         ? getLoadContext(event, context)
         : undefined;
 
-    let response = await handleRequest(request, loadContext);
+    let response = (await handleRequest(request, loadContext)) as NodeResponse;
 
-    return sendRemixResponse(response as NodeResponse);
+    return sendRemixResponse(response);
   };
 }
 

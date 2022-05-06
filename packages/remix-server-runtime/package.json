@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@types/cookie": "^0.4.0",
+    "@web3-storage/multipart-parser": "^1.0.0",
     "cookie": "^0.4.1",
     "jsesc": "^3.0.1",
     "react-router-dom": "^6.2.2",

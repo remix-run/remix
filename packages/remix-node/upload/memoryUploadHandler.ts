@@ -1,5 +1,6 @@
+import type { UploadHandler } from "@remix-run/server-runtime";
+
 import { File } from "../fetch";
-import type { UploadHandler } from "../formData";
 import { MeterError } from "./meter";
 
 export type MemoryUploadHandlerFilterArgs = {

@@ -15,6 +15,7 @@ export {
   isCookie,
   isSession,
   json,
+  parseMultipartFormData,
   redirect,
 } from "@remix-run/server-runtime";
 
@@ -51,4 +52,6 @@ export type {
   SessionData,
   SessionIdStorageStrategy,
   SessionStorage,
+  UploadHandlerPart,
+  UploadHandler,
 } from "@remix-run/server-runtime";

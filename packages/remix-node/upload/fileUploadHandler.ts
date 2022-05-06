@@ -3,9 +3,9 @@ import { createReadStream, createWriteStream } from "fs";
 import { rm, mkdir, readFile, stat } from "fs/promises";
 import { tmpdir } from "os";
 import { basename, dirname, extname, resolve as resolvePath } from "path";
+import type { UploadHandler } from "@remix-run/server-runtime";
 
 import { MeterError } from "./meter";
-import type { UploadHandler } from "../formData";
 
 export type FileUploadHandlerFilterArgs = {
   filename: string;

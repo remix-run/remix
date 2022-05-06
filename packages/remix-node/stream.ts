@@ -1,6 +1,6 @@
 import type { Writable } from "stream";
 
-export function pipeReadableStreamToWritable(
+export async function pipeReadableStreamToWritable(
   stream: ReadableStream,
   writable: Writable
 ) {
@@ -8,32 +8,37 @@ export function pipeReadableStreamToWritable(
 
   async function read() {
     let { done, value } = await reader.read();
+
     if (done) {
       writable.end();
       return;
     }
 
     writable.write(value);
-    read();
+
+    await read();
   }
 
-  read();
+  await read();
 }
 
 export async function readableStreamToBase64String(stream: ReadableStream) {
   let reader = stream.getReader();
-  let body = "";
+  let chunks: Uint8Array[] = [];
+
   async function read() {
     let { done, value } = await reader.read();
+
     if (done) {
       return;
     } else if (value) {
-      body += Buffer.from(value).toString("base64");
+      chunks.push(value);
     }
+
     await read();
   }
 
   await read();
 
-  return body;
+  return Buffer.concat(chunks).toString("base64");
 }

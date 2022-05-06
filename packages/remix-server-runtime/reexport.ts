@@ -5,6 +5,8 @@ export type {
   ServerEntryModule,
 } from "./build";
 
+export type { UploadHandlerPart, UploadHandler } from "./formData";
+
 export type {
   Cookie,
   CookieOptions,

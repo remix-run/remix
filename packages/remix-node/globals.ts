@@ -2,12 +2,12 @@ import { atob, btoa } from "./base64";
 import {
   Blob as NodeBlob,
   File as NodeFile,
+  FormData as NodeFormData,
   Headers as NodeHeaders,
   Request as NodeRequest,
   Response as NodeResponse,
   fetch as nodeFetch,
 } from "./fetch";
-import { FormData as NodeFormData } from "./formData";
 
 declare global {
   namespace NodeJS {
