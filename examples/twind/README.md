@@ -17,6 +17,7 @@ Relevant files:
 - [app/twind.ts](./app/twind.ts) where a set up function has been exported.
 - [app/entry.client.tsx](./app/entry.client.tsx) where the set up function has been used.
 - [app/entry.server.tsx](./app/entry.server.tsx) where the twind styles have been added to the markup.
+- [remix.config.js](./remix.config.js) where the twind modules have been added to [`serverDependenciesToBundle`](https://remix.run/docs/en/v1/api/conventions#serverdependenciestobundle).
 - [app/root.tsx](./app/root.tsx), [app/routes/index.tsx](./app/routes/index.tsx), [app/routes/anything.tsx](./app/routes/anything.tsx) where some basic styling has been demonstrated.
 
 
