@@ -1150,6 +1150,7 @@ export function useFormAction(
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
+  let { manifest } = useRemixEntryContext();
   let resolvedPath = useResolvedPath(action ? action : ".");
 
   // Previously we set the default action to ".". The problem with this is that
@@ -1159,7 +1160,7 @@ export function useFormAction(
   // https://github.com/remix-run/remix/issues/927
   let location = useLocation();
   let { search, hash } = resolvedPath;
-  let isIndexRoute = id.endsWith("/index");
+  let isIndexRoute = Boolean(manifest.routes[id].index);
 
   if (action == null) {
     search = location.search;
