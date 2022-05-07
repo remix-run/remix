@@ -25,7 +25,6 @@ describe("parseMultipartFormData", () => {
         for await (let chunk of data) {
           chunks.push(chunk);
         }
-        console.log(chunks);
         return new File(chunks, filename, { type: contentType });
       }
     );
@@ -39,6 +38,12 @@ describe("parseMultipartFormData", () => {
   });
 
   it("can throw errors in upload handlers", async () => {
+    class CustomError extends Error {
+      constructor() {
+        super("test error");
+      }
+    }
+
     let formData = new NodeFormData();
     formData.set("blob", new Blob(["blob"]), "blob.txt");
 
@@ -49,11 +54,12 @@ describe("parseMultipartFormData", () => {
 
     try {
       await parseMultipartFormData(req, async () => {
-        throw new Error("test error");
+        throw new CustomError();
       });
       throw new Error("should have thrown");
     } catch (err) {
       expect(err.message).toBe("test error");
+      expect(err).toBeInstanceOf(CustomError);
     }
   });
 });
