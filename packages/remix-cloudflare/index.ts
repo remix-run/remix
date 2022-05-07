@@ -15,8 +15,10 @@ export {
   isCookie,
   isSession,
   json,
-  parseMultipartFormData,
   redirect,
+  unstable_parseMultipartFormData,
+  unstable_createMemoryUploadHandler,
+  MeterError
 } from "@remix-run/server-runtime";
 
 export type {
@@ -54,4 +56,6 @@ export type {
   SessionStorage,
   UploadHandlerPart,
   UploadHandler,
+  MemoryUploadHandlerOptions,
+  MemoryUploadHandlerFilterArgs,
 } from "@remix-run/server-runtime";

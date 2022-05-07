@@ -872,34 +872,34 @@ function copyToPlaygrounds() {
   return {
     name: "copy-to-remix-playground",
     async writeBundle(options, bundle) {
-      let playgroundsDir = path.join(__dirname, "playground");
-      let playgrounds = await fs.promises.readdir(playgroundsDir);
-      let writtenDir = path.join(__dirname, options.dir);
-      for (let playground of playgrounds) {
-        let playgroundDir = path.join(playgroundsDir, playground);
-        if (!fse.statSync(playgroundDir).isDirectory()) {
-          continue;
-        }
-        let destDir = writtenDir.replace(
-          path.join(__dirname, "build"),
-          playgroundDir
-        );
-        await fse.copy(writtenDir, destDir);
+      // let playgroundsDir = path.join(__dirname, "playground");
+      // let playgrounds = await fs.promises.readdir(playgroundsDir);
+      // let writtenDir = path.join(__dirname, options.dir);
+      // for (let playground of playgrounds) {
+      //   let playgroundDir = path.join(playgroundsDir, playground);
+      //   if (!fse.statSync(playgroundDir).isDirectory()) {
+      //     continue;
+      //   }
+      //   let destDir = writtenDir.replace(
+      //     path.join(__dirname, "build"),
+      //     playgroundDir
+      //   );
+      //   await fse.copy(writtenDir, destDir);
 
-        // tickle live reload by touching the server entry
-        let serverEntry = ["tsx", "js", "jsx"].find((entryPathExtension) =>
-          fse.existsSync(
-            path.join(
-              playgroundDir,
-              "app",
-              `entry.server.${entryPathExtension}`
-            )
-          )
-        );
-        let serverEntryPath = path.join(playgroundDir, "app", serverEntry);
-        let serverEntryContent = await fse.readFile(serverEntryPath);
-        await fse.writeFile(serverEntryPath, serverEntryContent);
-      }
+      //   // tickle live reload by touching the server entry
+      //   let serverEntry = ["tsx", "js", "jsx"].find((entryPathExtension) =>
+      //     fse.existsSync(
+      //       path.join(
+      //         playgroundDir,
+      //         "app",
+      //         `entry.server.${entryPathExtension}`
+      //       )
+      //     )
+      //   );
+      //   let serverEntryPath = path.join(playgroundDir, "app", serverEntry);
+      //   let serverEntryContent = await fse.readFile(serverEntryPath);
+      //   await fse.writeFile(serverEntryPath, serverEntryContent);
+      // }
     },
   };
 }

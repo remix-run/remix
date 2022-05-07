@@ -1,11 +1,15 @@
 import { randomBytes } from "crypto";
 import { createReadStream, createWriteStream } from "fs";
-import { rm, mkdir, readFile, stat } from "fs/promises";
+import { rm, mkdir, stat } from "fs/promises";
 import { tmpdir } from "os";
 import { basename, dirname, extname, resolve as resolvePath } from "path";
+import type { Readable, Writable } from "stream";
+import { MeterError } from "@remix-run/server-runtime";
 import type { UploadHandler } from "@remix-run/server-runtime";
+// @ts-expect-error
+import * as streamSlice from "stream-slice";
 
-import { MeterError } from "./meter";
+import { readableStreamFromStream, readableStreamToString } from "../stream";
 
 export type FileUploadHandlerFilterArgs = {
   filename: string;
@@ -148,13 +152,28 @@ export class NodeOnDiskFile implements File {
   constructor(
     private filepath: string,
     public size: number,
-    public type: string
+    public type: string,
+    private slicer?: Writable & Readable
   ) {
     this.name = basename(filepath);
   }
 
+  slice(start?: number, end?: number, contentType?: string): Blob {
+    start = typeof start !== "undefined" ? start : 0;
+    end = typeof end !== "undefined" ? end : this.size;
+    return new NodeOnDiskFile(
+      this.filepath,
+      end - start,
+      this.type,
+      streamSlice.slice(start, end)
+    );
+  }
+
   async arrayBuffer(): Promise<ArrayBuffer> {
-    let stream = createReadStream(this.filepath);
+    let stream: Readable = createReadStream(this.filepath);
+    if (this.slicer) {
+      stream = stream.pipe(this.slicer);
+    }
 
     return new Promise((resolve, reject) => {
       let buf: any[] = [];
@@ -164,16 +183,23 @@ export class NodeOnDiskFile implements File {
     });
   }
 
-  slice(start?: any, end?: any, contentType?: any): Blob {
-    throw new Error("Method not implemented.");
-  }
   stream(): ReadableStream<any>;
   stream(): NodeJS.ReadableStream;
   stream(): ReadableStream<any> | NodeJS.ReadableStream {
-    return createReadStream(this.filepath);
+    let stream: Readable = createReadStream(this.filepath);
+    if (this.slicer) {
+      stream = stream.pipe(this.slicer);
+    }
+    return readableStreamFromStream(stream);
   }
+
   text(): Promise<string> {
-    return readFile(this.filepath, "utf-8");
+    let stream: Readable = createReadStream(this.filepath);
+    if (this.slicer) {
+      stream = stream.pipe(this.slicer);
+    }
+
+    return readableStreamToString(readableStreamFromStream(stream));
   }
 
   get [Symbol.toStringTag]() {

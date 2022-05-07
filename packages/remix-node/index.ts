@@ -20,8 +20,6 @@ export {
   createFileUploadHandler as unstable_createFileUploadHandler,
   NodeOnDiskFile,
 } from "./upload/fileUploadHandler";
-export { createMemoryUploadHandler as unstable_createMemoryUploadHandler } from "./upload/memoryUploadHandler";
-export { MeterError } from "./upload/meter";
 
 export {
   createCookie,
@@ -41,8 +39,10 @@ export {
   isCookie,
   isSession,
   json,
-  parseMultipartFormData,
   redirect,
+  unstable_parseMultipartFormData,
+  unstable_createMemoryUploadHandler,
+  MeterError,
 } from "@remix-run/server-runtime";
 
 export type {
@@ -80,4 +80,6 @@ export type {
   SessionStorage,
   UploadHandlerPart,
   UploadHandler,
+  MemoryUploadHandlerOptions,
+  MemoryUploadHandlerFilterArgs,
 } from "@remix-run/server-runtime";

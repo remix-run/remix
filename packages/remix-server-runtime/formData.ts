@@ -35,12 +35,12 @@ export async function parseMultipartFormData(
   for await (let part of parts) {
     if (part.done) break;
 
-    if (!part.contentType || part.contentType.startsWith("text/")) {
+    if (!part.filename) {
       formData.append(part.name, await bufferPart(part));
     } else {
       let file = await uploadHandler(part);
       if (typeof file !== "undefined") {
-        formData.append(part.name, file);
+        formData.append(part.name, file as Blob);
       }
     }
   }

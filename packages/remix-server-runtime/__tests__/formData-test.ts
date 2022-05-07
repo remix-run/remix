@@ -25,6 +25,7 @@ describe("parseMultipartFormData", () => {
         for await (let chunk of data) {
           chunks.push(chunk);
         }
+        console.log(chunks);
         return new File(chunks, filename, { type: contentType });
       }
     );
@@ -41,15 +42,9 @@ describe("parseMultipartFormData", () => {
     let formData = new NodeFormData();
     formData.set("blob", new Blob(["blob"]), "blob.txt");
 
-    // TODO: Figure out why the stream is failing when formData is passed directly as body
     let req = new NodeRequest("https://test.com", {
       method: "post",
       body: formData,
-    });
-    req = new NodeRequest("https://test.com", {
-      method: "post",
-      headers: req.headers,
-      body: await req.text(),
     });
 
     try {
