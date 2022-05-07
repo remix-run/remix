@@ -1,9 +1,9 @@
 import { randomBytes } from "crypto";
-import { createReadStream, createWriteStream } from "fs";
-import { rm, mkdir, stat } from "fs/promises";
+import { createReadStream, createWriteStream, statSync } from "fs";
+import { rm, mkdir, stat as statAsync } from "fs/promises";
 import { tmpdir } from "os";
 import { basename, dirname, extname, resolve as resolvePath } from "path";
-import type { Readable, Writable } from "stream";
+import type { Readable } from "stream";
 import { MeterError } from "@remix-run/server-runtime";
 import type { UploadHandler } from "@remix-run/server-runtime";
 // @ts-expect-error
@@ -71,7 +71,7 @@ async function uniqueFile(filepath: string) {
 
   for (
     let i = 1;
-    await stat(uniqueFilepath)
+    await statAsync(uniqueFilepath)
       .then(() => true)
       .catch(() => false);
     i++
@@ -140,7 +140,7 @@ export function createFileUploadHandler({
       }
     }
 
-    return new NodeOnDiskFile(filepath, size, contentType);
+    return new NodeOnDiskFile(filepath, contentType);
   };
 }
 
@@ -151,28 +151,38 @@ export class NodeOnDiskFile implements File {
 
   constructor(
     private filepath: string,
-    public size: number,
     public type: string,
-    private slicer?: Writable & Readable
+    private slicer?: { start: number; end: number }
   ) {
     this.name = basename(filepath);
   }
 
-  slice(start?: number, end?: number, contentType?: string): Blob {
-    start = typeof start !== "undefined" ? start : 0;
-    end = typeof end !== "undefined" ? end : this.size;
-    return new NodeOnDiskFile(
-      this.filepath,
-      end - start,
-      this.type,
-      streamSlice.slice(start, end)
-    );
+  public get size(): number {
+    if (this.slicer) {
+      return this.slicer.end - this.slicer.start;
+    }
+
+    let stats = statSync(this.filepath);
+    return stats.size;
+  }
+
+  slice(start?: number, end?: number, type?: string): Blob {
+    let startOffset = this.slicer?.start || 0;
+
+    start = startOffset + (start || 0);
+    end = startOffset + (end || this.size);
+    return new NodeOnDiskFile(this.filepath, type || this.type, {
+      start,
+      end,
+    });
   }
 
   async arrayBuffer(): Promise<ArrayBuffer> {
     let stream: Readable = createReadStream(this.filepath);
     if (this.slicer) {
-      stream = stream.pipe(this.slicer);
+      stream = stream.pipe(
+        streamSlice.slice(this.slicer.start, this.slicer.end)
+      );
     }
 
     return new Promise((resolve, reject) => {
@@ -188,7 +198,9 @@ export class NodeOnDiskFile implements File {
   stream(): ReadableStream<any> | NodeJS.ReadableStream {
     let stream: Readable = createReadStream(this.filepath);
     if (this.slicer) {
-      stream = stream.pipe(this.slicer);
+      stream = stream.pipe(
+        streamSlice.slice(this.slicer.start, this.slicer.end)
+      );
     }
     return readableStreamFromStream(stream);
   }
@@ -196,7 +208,9 @@ export class NodeOnDiskFile implements File {
   text(): Promise<string> {
     let stream: Readable = createReadStream(this.filepath);
     if (this.slicer) {
-      stream = stream.pipe(this.slicer);
+      stream = stream.pipe(
+        streamSlice.slice(this.slicer.start, this.slicer.end)
+      );
     }
 
     return readableStreamToString(readableStreamFromStream(stream));

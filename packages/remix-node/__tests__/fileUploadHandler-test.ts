@@ -15,7 +15,7 @@ describe("NodeOnDiskFile", () => {
   let contents = fs.readFileSync(filepath, "utf-8");
   let file: NodeOnDiskFile;
   beforeEach(() => {
-    file = new NodeOnDiskFile(filepath, size, "text/plain");
+    file = new NodeOnDiskFile(filepath, "text/plain");
   });
 
   it("can read file as text", async () => {
@@ -32,9 +32,20 @@ describe("NodeOnDiskFile", () => {
     expect(await readableStreamToString(file.stream() as any)).toBe(contents);
   });
 
+  it("can slice file and change type", async () => {
+    let sliced = await file.slice(1, 5, "text/rofl");
+    expect(sliced.type).toBe("text/rofl");
+    expect(await sliced.text()).toBe(contents.slice(1, 5));
+  });
+
   it("can slice file and get text", async () => {
     let sliced = await file.slice(1, 5);
     expect(await sliced.text()).toBe(contents.slice(1, 5));
+  });
+
+  it("can slice file twice and get text", async () => {
+    let sliced = (await file.slice(1, 5)).slice(1, 2);
+    expect(await sliced.text()).toBe(contents.slice(1, 5).slice(1, 2));
   });
 
   it("can sice file and get an arrayBuffer", async () => {
