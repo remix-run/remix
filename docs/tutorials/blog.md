@@ -861,7 +861,7 @@ export async function createPost(post) {
 
 💿 Call `createPost` from the new post route's action
 
-```tsx filename=app/routes/posts/admin/new.tsx
+```tsx filename=app/routes/posts/admin/new.tsx lines=[1,4,6-16]
 import { redirect } from "@remix-run/node";
 import { Form } from "@remix-run/react";
 
