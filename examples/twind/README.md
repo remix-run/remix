@@ -1,4 +1,4 @@
-# TODO: Title of Example
+# Twind Example
 
 Integrate Twind with Remix
 
