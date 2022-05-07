@@ -10,17 +10,17 @@
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/node": "1.4.3",
-    "@remix-run/react": "1.4.3",
-    "@remix-run/serve": "1.4.3",
+    "@remix-run/node": "0.0.0-nightly-34577c6-20220507",
+    "@remix-run/react": "0.0.0-nightly-34577c6-20220507",
+    "@remix-run/serve": "0.0.0-nightly-34577c6-20220507",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "styletron-engine-atomic": "^1.4.8",
     "styletron-react": "^6.0.2"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.4.3",
-    "@remix-run/eslint-config": "1.4.3",
+    "@remix-run/dev": "0.0.0-nightly-34577c6-20220507",
+    "@remix-run/eslint-config": "0.0.0-nightly-34577c6-20220507",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
     "@types/styled-components": "^5.1.24",
