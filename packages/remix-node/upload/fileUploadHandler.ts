@@ -171,10 +171,14 @@ export class NodeOnDiskFile implements File {
 
     start = startOffset + (start || 0);
     end = startOffset + (end || this.size);
-    return new NodeOnDiskFile(this.filepath, type || this.type, {
-      start,
-      end,
-    });
+    return new NodeOnDiskFile(
+      this.filepath,
+      typeof type === "string" ? type : this.type,
+      {
+        start,
+        end,
+      }
+    );
   }
 
   async arrayBuffer(): Promise<ArrayBuffer> {
