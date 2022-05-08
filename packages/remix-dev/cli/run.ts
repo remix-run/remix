@@ -19,11 +19,11 @@ import { validateNewProjectPath, validateTemplate } from "./create";
  * that can be used to determine which package manager ran
  * the command.
  */
-function getPreferredPackageManager() {
-  return ((process.env.npm_user_agent ?? "").split("/")[0] || "npm") as
-    | "npm"
-    | "yarn"
-    | "pnpm";
+function getPreferredPackageManager(): "npm" | "yarn" | "pnpm" {
+  let npmUserAgentString = process.env.npm_user_agent || "";
+  let [npmUserAgent] = npmUserAgentString.split("/");
+  if (!npmUserAgent) return "npm";
+  return npmUserAgent as "npm" | "yarn" | "pnpm";
 }
 
 const helpText = `
