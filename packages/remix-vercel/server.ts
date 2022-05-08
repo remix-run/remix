@@ -6,6 +6,7 @@ import type {
   Response as NodeResponse,
 } from "@remix-run/node";
 import {
+  AbortController,
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
@@ -83,9 +84,16 @@ export function createRemixRequest(req: VercelRequest): NodeRequest {
   let protocol = req.headers["x-forwarded-proto"] || "https";
   let url = new URL(req.url!, `${protocol}://${host}`);
 
+  let controller = new AbortController();
+
+  req.on("close", () => {
+    controller.abort();
+  });
+
   let init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
+    signal: controller.signal,
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {

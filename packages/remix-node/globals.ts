@@ -1,3 +1,8 @@
+import {
+  ReadableStream as NodeReadableStream,
+  WritableStream as NodeWritableStream,
+} from "@remix-run/web-stream";
+
 import { atob, btoa } from "./base64";
 import {
   Blob as NodeBlob,
@@ -27,6 +32,9 @@ declare global {
       Response: typeof Response;
       fetch: typeof fetch;
       FormData: typeof FormData;
+
+      ReadableStream: typeof ReadableStream;
+      WritableStream: typeof WritableStream;
     }
   }
 }
@@ -43,4 +51,7 @@ export function installGlobals() {
   global.Response = NodeResponse as unknown as typeof Response;
   global.fetch = nodeFetch as typeof fetch;
   global.FormData = NodeFormData;
+
+  global.ReadableStream = NodeReadableStream;
+  global.WritableStream = NodeWritableStream;
 }
