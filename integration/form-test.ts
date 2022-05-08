@@ -1064,3 +1064,61 @@ test.describe("Forms", () => {
     });
   }
 });
+
+test.describe("Forms in an app with custom routes", () => {
+  let fixture: Fixture;
+  let appFixture: AppFixture;
+
+  test.beforeAll(async () => {
+    fixture = await createFixture({
+      files: {
+        "remix.config.js": js`
+          module.exports = {
+            routes(defineRoutes) {
+              return defineRoutes((defineRoute) => {
+                defineRoute("form-custom-route", "routes/form-custom-route/_route.jsx", () => {
+                  defineRoute("", "routes/form-custom-route.index/_route.jsx", { index: true });
+                });
+              });
+            },
+          };
+        `,
+        "app/routes/form-custom-route/_route.jsx": js`
+          import { Form, Outlet } from "@remix-run/react"
+          export default function FormCustomRoute() {
+            return (
+              <>
+                <Form id="form" />
+                <Outlet />
+              </>
+            )
+          }
+        `,
+        "app/routes/form-custom-route.index/_route.jsx": js`
+          import { Form } from "@remix-run/react"
+          export default function FormCustomRouteIndex() {
+            return <Form id="form-index" />
+          }
+        `,
+      },
+    });
+    appFixture = await createAppFixture(fixture);
+  });
+
+  test.afterAll(async () => {
+    await appFixture.close();
+  });
+
+  test("Form has correct action in a layout route and an index route", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/form-custom-route");
+    expect((await app.getElement("#form")).attr("action")).toBe(
+      "/form-custom-route"
+    );
+    expect((await app.getElement("#form-index")).attr("action")).toBe(
+      "/form-custom-route?index"
+    );
+  });
+});
