@@ -1,15 +1,19 @@
-import * as React from "react";
+import type {
+  LinksFunction,
+  LoaderFunction,
+  MetaFunction,
+} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import {
   Form,
-  json,
   Outlet,
-  redirect,
   useActionData,
   useFetcher,
   useLoaderData,
   useTransition,
-} from "remix";
-import type { LoaderFunction, LinksFunction, MetaFunction } from "remix";
+} from "@remix-run/react";
+import * as React from "react";
+
 import { Heading, Section } from "~/ui/section-heading";
 import { MaxContainer } from "~/ui/max-container";
 

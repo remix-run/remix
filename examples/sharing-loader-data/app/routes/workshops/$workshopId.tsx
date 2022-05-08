@@ -1,5 +1,7 @@
-import type { LoaderFunction } from "remix";
-import { json, useCatch, useMatches, useParams } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useCatch, useMatches, useParams } from "@remix-run/react";
+
 import type { Workshop } from "~/data.server";
 import { getWorkshops } from "~/data.server";
 

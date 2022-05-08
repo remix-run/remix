@@ -13,6 +13,10 @@ This tutorial uses TypeScript. Remix can definitely be used without TypeScript. 
 
 ## Prerequisites
 
+Click this button to create a [Gitpod](https://gitpod.io) workspace with the project set up and ready to run in VS Code or JetBrains either directly in the browser or on the desktop.
+
+[![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/remix-run/indie-stack)
+
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
 - [Node.js](https://nodejs.org) 14 or greater
@@ -169,7 +173,7 @@ export default function Posts() {
     <main>
       <h1>Posts</h1>
       <ul>
-        {posts.map((post: any) => (
+        {posts.map((post) => (
           <li key={post.slug}>
             <Link
               to={post.slug}
@@ -401,7 +405,7 @@ export async function getPosts() {
 
 <docs-warning>You only need to ever do this when you change the Prisma schema and update the Prisma client. Normally you don't need to restart the dev server during development. Nice that it's so fast though right?</docs-warning>
 
-With the server up and running again, you should be able to go to `http://localhost:3000/post` and the posts should still be there, but now they're coming from SQLite!
+With the server up and running again, you should be able to go to `http://localhost:3000/posts` and the posts should still be there, but now they're coming from SQLite!
 
 ## Dynamic Route Params
 
@@ -930,8 +934,12 @@ Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[3-9,19-29]
-// ...
+```tsx filename=app/routes/posts/admin/new.tsx lines=[2,7-13,23-33]
+import type { ActionFunction } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { Form } from "@remix-run/react";
+
+import { createPost } from "~/models/post.server";
 
 type ActionData =
   | {

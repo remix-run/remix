@@ -1,5 +1,6 @@
+import { createCookieSessionStorage, redirect } from "@remix-run/node";
 import bcrypt from "bcryptjs";
-import { createCookieSessionStorage, redirect } from "remix";
+
 import { db } from "./db.server";
 
 type LoginForm = {

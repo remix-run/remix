@@ -1,16 +1,11 @@
-import {
-  createAppFixture,
-  createFixture,
-  js,
-  json,
-  mdx,
-} from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { test, expect } from "@playwright/test";
+
+import { createFixture, js, json, mdx } from "./helpers/create-fixture";
+import type { Fixture } from "./helpers/create-fixture";
 
 let fixture: Fixture;
-let app: AppFixture;
 
-beforeAll(async () => {
+test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
       "app/components/my-lib/index.ts": js`
@@ -79,50 +74,44 @@ beforeAll(async () => {
         <PizzaComponent />
       `,
 
-      "tsconfig.json": json`
-        {
-          "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
-          "compilerOptions": {
-            "lib": ["DOM", "DOM.Iterable", "ES2019"],
-            "isolatedModules": true,
-            "esModuleInterop": true,
-            "jsx": "react-jsx",
-            "moduleResolution": "node",
-            "resolveJsonModule": true,
-            "target": "ES2019",
-            "strict": true,
-            "baseUrl": ".",
-            "paths": {
-              "~/*": ["./app/*"],
-              "@mylib": ["./app/components/my-lib/index"],
-              "@component": ["./app/components/component.jsx"],
-            },
+      "tsconfig.json": json({
+        include: ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
+        compilerOptions: {
+          lib: ["DOM", "DOM.Iterable", "ES2019"],
+          isolatedModules: true,
+          esModuleInterop: true,
+          jsx: "react-jsx",
+          moduleResolution: "node",
+          resolveJsonModule: true,
+          target: "ES2019",
+          strict: true,
+          baseUrl: ".",
+          paths: {
+            "~/*": ["./app/*"],
+            "@mylib": ["./app/components/my-lib/index"],
+            "@component": ["./app/components/component.jsx"],
+          },
 
-            // Remix takes care of building everything in \`remix build\`.
-            "noEmit": true
-          }
-        }
-      `,
+          // Remix takes care of building everything in \`remix build\`.
+          noEmit: true,
+        },
+      }),
     },
   });
-
-  app = await createAppFixture(fixture);
 });
 
-afterAll(async () => app.close());
-
-it("import internal library via alias other than ~", async () => {
+test("import internal library via alias other than ~", async () => {
   // test for https://github.com/remix-run/remix/issues/2298
   let response = await fixture.requestDocument("/");
   expect(await response.text()).toMatch("this is a pizza");
 });
 
-it("import internal library via ~ alias", async () => {
+test("import internal library via ~ alias", async () => {
   let response = await fixture.requestDocument("/tilde-alias");
   expect(await response.text()).toMatch("this is a pizza");
 });
 
-it("works for mdx files", async () => {
+test("works for mdx files", async () => {
   let response = await fixture.requestDocument("/mdx");
   expect(await response.text()).toMatch("this is a pizza");
 });

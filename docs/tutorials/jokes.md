@@ -102,6 +102,7 @@ R E M I X
 💿 Welcome to Remix! Let's get you set up with a new project.
 
 ? Where would you like to create your app? remix-jokes
+? What type of app do you want to create? Just the basics
 ? Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets. Remix
  App Server
 ? TypeScript or JavaScript? TypeScript
@@ -130,15 +131,15 @@ Here's the tree structure. Hopefully what you've got looks a bit like this:
 remix-jokes
 ├── README.md
 ├── app
-│   ├── entry.client.tsx
-│   ├── entry.server.tsx
-│   ├── root.tsx
-│   └── routes
-│       └── index.tsx
+│   ├── entry.client.tsx
+│   ├── entry.server.tsx
+│   ├── root.tsx
+│   └── routes
+│       └── index.tsx
 ├── package-lock.json
 ├── package.json
 ├── public
-│   └── favicon.ico
+│   └── favicon.ico
 ├── remix.config.js
 ├── remix.env.d.ts
 └── tsconfig.json
@@ -2993,7 +2994,7 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx nocopy
+```tsx filename=app/routes/login.tsx lines=[18] nocopy
 // ...
 
 export const action: ActionFunction = async ({

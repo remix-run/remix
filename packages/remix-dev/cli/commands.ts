@@ -9,7 +9,7 @@ import WebSocket from "ws";
 import type { Server } from "http";
 import type * as Express from "express";
 import type { createApp as createAppType } from "@remix-run/serve";
-import getPort from "get-port";
+import getPort, { makeRange } from "get-port";
 
 import { BuildMode, isBuildMode } from "../build";
 import * as colors from "../colors";
@@ -29,15 +29,19 @@ export async function create({
   projectDir,
   remixVersion,
   installDeps,
+  packageManager,
   useTypeScript,
   githubToken,
+  debug,
 }: {
   appTemplate: string;
   projectDir: string;
   remixVersion?: string;
   installDeps: boolean;
+  packageManager: "npm" | "yarn" | "pnpm";
   useTypeScript: boolean;
   githubToken?: string;
+  debug?: boolean;
 }) {
   let spinner = ora("Creating your app…").start();
   await createApp({
@@ -45,60 +49,32 @@ export async function create({
     projectDir,
     remixVersion,
     installDeps,
+    packageManager,
     useTypeScript,
     githubToken,
+    debug,
   });
-
-  let initScriptDir = path.join(projectDir, "remix.init");
-  let hasInitScript = await fse.pathExists(initScriptDir);
-
   spinner.stop();
   spinner.clear();
-
-  if (hasInitScript) {
-    if (installDeps) {
-      console.log("💿 Running remix.init script");
-      await init(projectDir);
-      await fse.remove(initScriptDir);
-    } else {
-      console.log();
-      console.log(
-        colors.warning(
-          "💿 You've opted out of installing dependencies so we won't run the " +
-            "remix.init/index.js script for you just yet. Once you've installed " +
-            "dependencies, you can run it manually with `npx remix init`"
-        )
-      );
-      console.log();
-    }
-  }
-
-  let relProjectDir = path.relative(process.cwd(), projectDir);
-  let projectDirIsCurrentDir = relProjectDir === "";
-
-  if (projectDirIsCurrentDir) {
-    console.log(
-      `💿 That's it! Check the README for development and deploy instructions!`
-    );
-  } else {
-    console.log(
-      "💿 That's it! `cd` into " +
-        colors.logoGreen(path.resolve(process.cwd(), projectDir)) +
-        " and check the README for development and deploy instructions!"
-    );
-  }
 }
 
-export async function init(projectDir: string) {
+export async function init(
+  projectDir: string,
+  packageManager: "npm" | "yarn" | "pnpm"
+) {
   let initScriptDir = path.join(projectDir, "remix.init");
   let initScript = path.resolve(initScriptDir, "index.js");
 
+  let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
+
   if (await fse.pathExists(initScript)) {
-    // TODO: check for npm/yarn/pnpm
-    execSync("npm install", { stdio: "ignore", cwd: initScriptDir });
+    execSync(`${packageManager} install`, {
+      stdio: "ignore",
+      cwd: initScriptDir,
+    });
     let initFn = require(initScript);
     try {
-      await initFn({ rootDirectory: projectDir });
+      await initFn({ rootDirectory: projectDir, isTypeScript });
     } catch (error) {
       if (error instanceof Error) {
         error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
@@ -168,7 +144,15 @@ export async function build(
 
   let start = Date.now();
   let config = await readConfig(remixRoot);
-  await compiler.build(config, { mode: mode, sourcemap });
+  fse.emptyDirSync(config.assetsBuildDirectory);
+  await compiler.build(config, {
+    mode: mode,
+    sourcemap,
+    onBuildFailure: (failure: compiler.BuildError) => {
+      compiler.formatBuildFailure(failure);
+      throw Error();
+    },
+  });
 
   log(`Built in ${prettyMs(Date.now() - start)}`);
 }
@@ -270,7 +254,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
   await loadEnv(config.rootDirectory);
 
   let port = await getPort({
-    port: process.env.PORT ? Number(process.env.PORT) : 3000,
+    port: process.env.PORT ? Number(process.env.PORT) : makeRange(3000, 3100),
   });
 
   if (config.serverEntryPoint) {

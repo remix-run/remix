@@ -19,7 +19,7 @@ The Remix compiler will automatically remove server code from the browser bundle
 Consider a route module that exports `loader`, `meta`, and a component:
 
 ```tsx
-import { json } from "@remix-run/node";
+import { json } from "@remix-run/{runtime}";
 import { useLoaderData } from "@remix-run/react";
 
 import PostsView from "../PostsView";
@@ -77,7 +77,7 @@ Simply put, a **side effect** is any code that might _do something_. A **module 
 Taking our code from earlier, we saw how the compiler can remove the exports and their imports that aren't used. But if we add this seemingly harmless line of code your app will break!
 
 ```tsx bad lines=[7]
-import { json } from "@remix-run/node";
+import { json } from "@remix-run/{runtime}";
 import { useLoaderData } from "@remix-run/react";
 
 import PostsView from "../PostsView";
@@ -124,7 +124,7 @@ The loader is gone but the prisma dependency stayed! Had we logged something har
 To fix this, remove the side effect by simply moving the code _into the loader_.
 
 ```tsx lines=[8]
-import { json } from "@remix-run/node";
+import { json } from "@remix-run/{runtime}";
 import { useLoaderData } from "@remix-run/react";
 
 import PostsView from "../PostsView";
@@ -154,13 +154,16 @@ Occasionally, the build may have trouble tree-shaking code that should only run 
 Some Remix newcomers try to abstract their loaders with "higher order functions". Something like this:
 
 ```js bad filename=app/http.js
-import { redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/{runtime}";
 
 export function removeTrailingSlash(loader) {
   return function (arg) {
     const { request } = arg;
     const url = new URL(request.url);
-    if (url.pathname.endsWith("/")) {
+    if (
+      url.pathname !== "/" &&
+      url.pathname.endsWith("/")
+    ) {
       return redirect(request.url.slice(0, -1), {
         status: 308,
       });
@@ -185,10 +188,10 @@ You can probably now see that this is a module side effect so the compiler can't
 This type of abstraction is introduced to try to return a response early. Since you can throw a Response in a loader, we can make this simpler and remove the module side effect at the same time so that the server code can be pruned:
 
 ```js filename=app/http.js
-import { redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/{runtime}";
 
 export function removeTrailingSlash(url) {
-  if (url.pathname.endsWith("/")) {
+  if (url.pathname !== "/" && url.pathname.endsWith("/")) {
     throw redirect(request.url.slice(0, -1), {
       status: 308,
     });
@@ -199,7 +202,7 @@ export function removeTrailingSlash(url) {
 And then use it like this:
 
 ```js bad filename=app/root.js
-import { json } from "@remix-run/node";
+import { json } from "@remix-run/{runtime}";
 
 import { removeTrailingSlash } from "~/http";
 
@@ -359,7 +362,21 @@ The point is to perform the effect at the same time as the browser paint so that
 
 It is **not** good for setting state that is rendered inside of elements. Just make sure you aren't using the state set in a `useLayoutEffect` in your elements and you can ignore React's warning.
 
-TODO: Link to Reach UI `useIsomorphicLayoutEffect`
+If you know you're calling `useLayoutEffect` correctly and just want to silence the warning, a popular solution in libraries is to create your own hook that doesn't call anything on the server. `useLayoutEffect` only runs in the browser anyway, so this should do the trick. **Please use this carefully, because the warning is there for a good reason!**
+
+```js
+import * as React from "react";
+
+const canUseDOM = !!(
+  typeof window !== "undefined" &&
+  window.document &&
+  window.document.createElement
+);
+
+const useLayoutEffect = canUseDOM
+  ? React.useLayoutEffect
+  : () => {};
+```
 
 ### Third-Party Module Side Effects
 

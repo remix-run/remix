@@ -42,7 +42,7 @@ In development, `remix-serve` will ensure the latest code is run on each request
 - Any **module side effects** will remain in place! This may cause problems, but should probably be avoided anyway.
 
   ```ts [3-6]
-  import { json } from "@remix-run/node";
+  import { json } from "@remix-run/{runtime}";
 
   // this starts running the moment the module is imported
   setInterval(() => {

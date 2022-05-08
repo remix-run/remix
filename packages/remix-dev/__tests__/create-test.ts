@@ -1,14 +1,19 @@
+import { execSync } from "child_process";
 import fse from "fs-extra";
 import os from "os";
 import path from "path";
 import { pathToFileURL } from "url";
 import stripAnsi from "strip-ansi";
+import inquirer from "inquirer";
 
 import { run } from "../cli/run";
 import { server } from "./msw";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterAll(() => server.close());
+
+const yarnUserAgent = "yarn/1.22.18 npm/? node/v14.17.0 linux x64";
+const pnpmUserAgent = "pnpm/6.32.3 npm/? node/v14.17.0 linux x64";
 
 // keep the console clear
 jest.mock("ora", () => {
@@ -20,21 +25,38 @@ jest.mock("ora", () => {
   }));
 });
 
-// this is so we can mock execSync for "npm install"
+// this is so we can mock execSync for "npm install" and the like
 jest.mock("child_process", () => {
   let cp = jest.requireActual(
     "child_process"
   ) as typeof import("child_process");
+  let installDepsCmdPattern = /^(npm|yarn|pnpm) install$/;
+  let configGetCmdPattern = /^(npm|yarn|pnpm) config get/;
+
   return {
     ...cp,
-    execSync(command: string, options: Parameters<typeof cp.execSync>[1]) {
-      // this prevents us from having to run the install process
-      // and keeps our console output clean
-      if (command.startsWith("npm install")) {
-        return { stdout: "mocked", stderr: "mocked" };
+    execSync: jest.fn(
+      (command: string, options: Parameters<typeof cp.execSync>[1]) => {
+        // this prevents us from having to run the install process
+        // and keeps our console output clean
+        if (
+          installDepsCmdPattern.test(command) ||
+          configGetCmdPattern.test(command)
+        ) {
+          return "sample stdout";
+        }
+        return cp.execSync(command, options);
       }
-      return cp.execSync(command, options);
-    },
+    ),
+  };
+});
+
+// this is so we can verify the prompts for the users
+jest.mock("inquirer", () => {
+  let inquirerActual = jest.requireActual("inquirer");
+  return {
+    ...inquirerActual,
+    prompt: jest.fn().mockImplementation(inquirerActual.prompt),
   };
 });
 
@@ -91,6 +113,7 @@ describe("the create command", () => {
 
   beforeEach(() => {
     process.chdir(TEMP_DIR);
+    jest.clearAllMocks();
   });
 
   afterEach(async () => {
@@ -116,11 +139,11 @@ describe("the create command", () => {
       "--template",
       "examples/basic",
       "--no-install",
+      "--typescript",
     ]);
-    expect(output).toMatchInlineSnapshot(`
-      "
-      💿 That's it! \`cd\` into <TEMP_DIR>/example and check the README for development and deploy instructions!"
-    `);
+    expect(output.trim()).toBe(
+      getSuccessMessage(path.join("<TEMP_DIR>", "example"))
+    );
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
@@ -133,14 +156,15 @@ describe("the create command", () => {
       "--template",
       "grunge-stack",
       "--no-install",
+      "--typescript",
     ]);
-    expect(output).toMatchInlineSnapshot(`
-      "
 
-      💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
+    expect(output.trim()).toBe(
+      getOptOutOfInstallMessage() +
+        "\n\n" +
+        getSuccessMessage(path.join("<TEMP_DIR>", "template"))
+    );
 
-      💿 That's it! \`cd\` into <TEMP_DIR>/template and check the README for development and deploy instructions!"
-    `);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
@@ -153,14 +177,13 @@ describe("the create command", () => {
       "--template",
       "remix-fake-tester-username/remix-fake-tester-repo",
       "--no-install",
+      "--typescript",
     ]);
-    expect(output).toMatchInlineSnapshot(`
-      "
-
-      💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
-
-      💿 That's it! \`cd\` into <TEMP_DIR>/repo and check the README for development and deploy instructions!"
-    `);
+    expect(output.trim()).toBe(
+      getOptOutOfInstallMessage() +
+        "\n\n" +
+        getSuccessMessage(path.join("<TEMP_DIR>", "repo"))
+    );
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
@@ -173,14 +196,13 @@ describe("the create command", () => {
       "--template",
       "https://example.com/remix-stack.tar.gz",
       "--no-install",
+      "--typescript",
     ]);
-    expect(output).toMatchInlineSnapshot(`
-      "
-
-      💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
-
-      💿 That's it! \`cd\` into <TEMP_DIR>/remote-tarball and check the README for development and deploy instructions!"
-    `);
+    expect(output.trim()).toBe(
+      getOptOutOfInstallMessage() +
+        "\n\n" +
+        getSuccessMessage(path.join("<TEMP_DIR>", "remote-tarball"))
+    );
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
@@ -193,14 +215,13 @@ describe("the create command", () => {
       "--template",
       "https://github.com/fake-remix-tester/nested-dir/tree/dev/stack",
       "--no-install",
+      "--typescript",
     ]);
-    expect(output).toMatchInlineSnapshot(`
-      "
-
-      💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
-
-      💿 That's it! \`cd\` into <TEMP_DIR>/diff-branch and check the README for development and deploy instructions!"
-    `);
+    expect(output.trim()).toBe(
+      getOptOutOfInstallMessage() +
+        "\n\n" +
+        getSuccessMessage(path.join("<TEMP_DIR>", "diff-branch"))
+    );
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
@@ -213,11 +234,11 @@ describe("the create command", () => {
       "--template",
       path.join(__dirname, "fixtures", "arc.tar.gz"),
       "--no-install",
+      "--typescript",
     ]);
-    expect(output).toMatchInlineSnapshot(`
-      "
-      💿 That's it! \`cd\` into <TEMP_DIR>/local-tarball and check the README for development and deploy instructions!"
-    `);
+    expect(output.trim()).toBe(
+      getSuccessMessage(path.join("<TEMP_DIR>", "local-tarball"))
+    );
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
@@ -230,11 +251,11 @@ describe("the create command", () => {
       "--template",
       pathToFileURL(path.join(__dirname, "fixtures", "arc.tar.gz")).toString(),
       "--no-install",
+      "--typescript",
     ]);
-    expect(output).toMatchInlineSnapshot(`
-      "
-      💿 That's it! \`cd\` into <TEMP_DIR>/file-url-tarball and check the README for development and deploy instructions!"
-    `);
+    expect(output.trim()).toBe(
+      getSuccessMessage(path.join("<TEMP_DIR>", "file-url-tarball"))
+    );
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
@@ -249,13 +270,11 @@ describe("the create command", () => {
       "--no-install",
       "--no-typescript",
     ]);
-    expect(output).toMatchInlineSnapshot(`
-      "
-
-      💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
-
-      💿 That's it! \`cd\` into <TEMP_DIR>/template-to-js and check the README for development and deploy instructions!"
-    `);
+    expect(output.trim()).toBe(
+      getOptOutOfInstallMessage() +
+        "\n\n" +
+        getSuccessMessage(path.join("<TEMP_DIR>", "template-to-js"))
+    );
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.jsx"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
@@ -266,7 +285,6 @@ describe("the create command", () => {
       fse.readFileSync(path.join(projectDir, "package.json"), "utf-8")
     );
     expect(Object.keys(pkgJSON.devDependencies)).not.toContain("typescript");
-    expect(Object.keys(pkgJSON.scripts)).not.toContain("typecheck");
   });
 
   it("works for a file path to a directory on disk", async () => {
@@ -277,14 +295,14 @@ describe("the create command", () => {
       "--template",
       path.join(__dirname, "fixtures/stack"),
       "--no-install",
+      "--typescript",
     ]);
-    expect(output).toMatchInlineSnapshot(`
-      "
+    expect(output.trim()).toBe(
+      getOptOutOfInstallMessage() +
+        "\n\n" +
+        getSuccessMessage(path.join("<TEMP_DIR>", "local-directory"))
+    );
 
-      💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
-
-      💿 That's it! \`cd\` into <TEMP_DIR>/local-directory and check the README for development and deploy instructions!"
-    `);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
@@ -297,16 +315,44 @@ describe("the create command", () => {
       "--template",
       pathToFileURL(path.join(__dirname, "fixtures/stack")).toString(),
       "--no-install",
+      "--typescript",
     ]);
-    expect(output).toMatchInlineSnapshot(`
-      "
-
-      💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
-
-      💿 That's it! \`cd\` into <TEMP_DIR>/file-url-directory and check the README for development and deploy instructions!"
-    `);
+    expect(output.trim()).toBe(
+      getOptOutOfInstallMessage() +
+        "\n\n" +
+        getSuccessMessage(path.join("<TEMP_DIR>", "file-url-directory"))
+    );
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+  });
+
+  it("prioritizes built-in templates when validating input", async () => {
+    let projectDir = await getProjectDir("built-in-template");
+
+    // create a local directory in our cwd with the same name as our chosen
+    // template and give it a package.json so we can check it against the one in
+    // our template
+    let dupedDir = path.join(process.cwd(), "express");
+    await fse.mkdir(dupedDir);
+    await fse.writeFile(
+      path.join(dupedDir, "package.json"),
+      '{ "name": "dummy" }'
+    );
+
+    await run([
+      "create",
+      projectDir,
+      "--template",
+      "express",
+      "--install",
+      "--typescript",
+    ]);
+
+    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
+    let pkgJSON = JSON.parse(
+      fse.readFileSync(path.join(projectDir, "package.json"), "utf-8")
+    );
+    expect(pkgJSON.name).not.toBe("dummy");
   });
 
   it("runs remix.init script when installing dependencies", async () => {
@@ -317,12 +363,12 @@ describe("the create command", () => {
       "--template",
       path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
       "--install",
+      "--typescript",
     ]);
-    expect(output).toMatchInlineSnapshot(`
-      "
-      💿 Running remix.init script
-      💿 That's it! \`cd\` into <TEMP_DIR>/remix-init-auto and check the README for development and deploy instructions!"
-    `);
+    expect(output.trim()).toBe(
+      "💿 Running remix.init script\n" +
+        getSuccessMessage(path.join("<TEMP_DIR>", "remix-init-auto"))
+    );
     expect(output).toContain(`💿 Running remix.init script`);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -338,14 +384,13 @@ describe("the create command", () => {
       "--template",
       path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
       "--no-install",
+      "--typescript",
     ]);
-    expect(output).toMatchInlineSnapshot(`
-      "
-
-      💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
-
-      💿 That's it! \`cd\` into <TEMP_DIR>/remix-init-manual and check the README for development and deploy instructions!"
-    `);
+    expect(output.trim()).toBe(
+      getOptOutOfInstallMessage() +
+        "\n\n" +
+        getSuccessMessage(path.join("<TEMP_DIR>", "remix-init-manual"))
+    );
 
     output = "";
     process.chdir(projectDir);
@@ -357,7 +402,6 @@ describe("the create command", () => {
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
     // if you run `remix init` keep around the remix.init directory for future use
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
-    // deps can take a bit to install
   });
 
   it("throws an error when invalid remix.init script when automatically ran", async () => {
@@ -369,6 +413,7 @@ describe("the create command", () => {
         "--template",
         path.join(__dirname, "fixtures", "failing-remix-init.tar.gz"),
         "--install",
+        "--typescript",
       ])
     ).rejects.toThrowError(`🚨 Oops, remix.init failed`);
 
@@ -376,7 +421,6 @@ describe("the create command", () => {
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     // we should keep remix.init around if the init script fails
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
-    // deps can take a bit to install
   });
 
   it("throws an error when invalid remix.init script when manually ran", async () => {
@@ -387,15 +431,13 @@ describe("the create command", () => {
       "--template",
       path.join(__dirname, "fixtures", "failing-remix-init.tar.gz"),
       "--no-install",
+      "--typescript",
     ]);
-
-    expect(output).toMatchInlineSnapshot(`
-      "
-
-      💿 You've opted out of installing dependencies so we won't run the remix.init/index.js script for you just yet. Once you've installed dependencies, you can run it manually with \`npx remix init\`
-
-      💿 That's it! \`cd\` into <TEMP_DIR>/invalid-remix-init-manual and check the README for development and deploy instructions!"
-    `);
+    expect(output.trim()).toBe(
+      getOptOutOfInstallMessage() +
+        "\n\n" +
+        getSuccessMessage(path.join("<TEMP_DIR>", "invalid-remix-init-manual"))
+    );
 
     process.chdir(projectDir);
     await expect(run(["init"])).rejects.toThrowError(
@@ -405,9 +447,269 @@ describe("the create command", () => {
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     // we should keep remix.init around if the init script fails
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
-    // deps can take a bit to install
+  });
+
+  it("recognizes when Yarn was used to run the command", async () => {
+    let originalUserAgent = process.env.npm_user_agent;
+    process.env.npm_user_agent = yarnUserAgent;
+
+    let projectDir = await getProjectDir("yarn-create");
+    await run([
+      "create",
+      projectDir,
+      "--template",
+      path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+      "--install",
+      "--typescript",
+    ]);
+
+    expect(execSync).toBeCalledWith("yarn install", expect.anything());
+    process.env.npm_user_agent = originalUserAgent;
+  });
+
+  it("recognizes when pnpm was used to run the command", async () => {
+    let originalUserAgent = process.env.npm_user_agent;
+    process.env.npm_user_agent = pnpmUserAgent;
+
+    let projectDir = await getProjectDir("pnpm-create");
+    await run([
+      "create",
+      projectDir,
+      "--template",
+      path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+      "--install",
+      "--typescript",
+    ]);
+
+    expect(execSync).toBeCalledWith("pnpm install", expect.anything());
+    process.env.npm_user_agent = originalUserAgent;
+  });
+
+  it("prompts to run the install command for the preferred package manager", async () => {
+    let originalUserAgent = process.env.npm_user_agent;
+    process.env.npm_user_agent = pnpmUserAgent;
+
+    let projectDir = await getProjectDir("pnpm-prompt-install");
+    let mockPrompt = jest.mocked(inquirer.prompt);
+    mockPrompt.mockImplementationOnce(() => {
+      return Promise.resolve({
+        install: false,
+      }) as unknown as ReturnType<typeof inquirer.prompt>;
+    });
+
+    await run([
+      "create",
+      projectDir,
+      "--template",
+      "grunge-stack",
+      "--typescript",
+    ]);
+
+    let mockPromptCalls = mockPrompt.mock.calls;
+    let lastCallArgs = mockPromptCalls[mockPromptCalls.length - 1][0];
+    let lastCallUnknown = lastCallArgs as Array<unknown>;
+    expect(lastCallUnknown[lastCallUnknown.length - 1]).toHaveProperty(
+      "message",
+      "Do you want me to run `pnpm install`?"
+    );
+    process.env.npm_user_agent = originalUserAgent;
+  });
+
+  it("suggests to run the init command with the preferred package manager", async () => {
+    let originalUserAgent = process.env.npm_user_agent;
+    process.env.npm_user_agent = pnpmUserAgent;
+
+    let projectDir = await getProjectDir("pnpm-suggest-install");
+    let mockPrompt = jest.mocked(inquirer.prompt);
+    mockPrompt.mockImplementationOnce(() => {
+      return Promise.resolve({
+        install: false,
+      }) as unknown as ReturnType<typeof inquirer.prompt>;
+    });
+
+    await run([
+      "create",
+      projectDir,
+      "--template",
+      "grunge-stack",
+      "--no-install",
+      "--typescript",
+    ]);
+
+    expect(output).toContain(getOptOutOfInstallMessage("pnpm exec remix init"));
+    process.env.npm_user_agent = originalUserAgent;
+  });
+
+  describe("errors", () => {
+    it("identifies when a github repo is not accessible (403)", async () => {
+      let projectDir = await getProjectDir("repo");
+      await expect(() =>
+        run([
+          "create",
+          projectDir,
+          "--template",
+          "error-username/403",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The template could not be verified because you do not have access to the repository. Please double check the access rights of this repo and try again.]`
+      );
+    });
+
+    it("identifies when a github repo does not exist (404)", async () => {
+      let projectDir = await getProjectDir("repo");
+      await expect(() =>
+        run([
+          "create",
+          projectDir,
+          "--template",
+          "error-username/404",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The template could not be verified. Please double check that the template is a valid GitHub repository and try again.]`
+      );
+    });
+
+    it("identifies when something unknown goes wrong with the repo request (4xx)", async () => {
+      let projectDir = await getProjectDir("repo");
+      await expect(() =>
+        run([
+          "create",
+          projectDir,
+          "--template",
+          "error-username/400",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The template could not be verified. The server returned a response with a 400 status. Please double check that the template is a valid GitHub repository and try again.]`
+      );
+    });
+
+    it("identifies when a remote tarball does not exist (404)", async () => {
+      let projectDir = await getProjectDir("remote-tarball");
+      await expect(() =>
+        run([
+          "create",
+          projectDir,
+          "--template",
+          "https://example.com/error/404/remix-stack.tar.gz",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The template file could not be verified. Please double check the URL and try again.]`
+      );
+    });
+
+    it("identifies when a remote tarball does not exist (4xx)", async () => {
+      let projectDir = await getProjectDir("remote-tarball");
+      await expect(() =>
+        run([
+          "create",
+          projectDir,
+          "--template",
+          "https://example.com/error/400/remix-stack.tar.gz",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The template file could not be verified. The server returned a response with a 400 status. Please double check the URL and try again.]`
+      );
+    });
+
+    it("allows creating an app in a dir if it's empty", async () => {
+      let projectDir = await getProjectDir("other-empty-dir");
+      await run([
+        "create",
+        projectDir,
+        "--template",
+        "grunge-stack",
+        "--no-install",
+        "--typescript",
+      ]);
+
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+    });
+
+    it("doesn't allow creating an app in a dir if it's not empty", async () => {
+      let projectDir = await getProjectDir("not-empty-dir");
+      fse.mkdirSync(projectDir);
+      fse.createFileSync(path.join(projectDir, "some-file.txt"));
+      await expect(() =>
+        run([
+          "create",
+          projectDir,
+          "--template",
+          "grunge-stack",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The project directory must be empty to create a new project. Please clear the contents of the directory or choose a different path.]`
+      );
+    });
+
+    it("allows creating an app in the current dir if it's empty", async () => {
+      let projectDir = await getProjectDir("empty-dir");
+      let cwd = process.cwd();
+      fse.mkdirSync(projectDir);
+      process.chdir(projectDir);
+      await run([
+        "create",
+        ".",
+        "--template",
+        "grunge-stack",
+        "--no-install",
+        "--typescript",
+      ]);
+      process.chdir(cwd);
+
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+    });
+
+    it("doesn't allow creating an app in the current dir if it's not empty", async () => {
+      let projectDir = await getProjectDir("not-empty-dir");
+      let cwd = process.cwd();
+      fse.mkdirSync(projectDir);
+      fse.createFileSync(path.join(projectDir, "some-file.txt"));
+      process.chdir(projectDir);
+      await expect(() =>
+        run([
+          "create",
+          ".",
+          "--template",
+          "grunge-stack",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The project directory must be empty to create a new project. Please clear the contents of the directory or choose a different path.]`
+      );
+      process.chdir(cwd);
+    });
   });
 });
+
+function getSuccessMessage(projectDirectory: string) {
+  return `💿 That's it! \`cd\` into "${projectDirectory}" and check the README for development and deploy instructions!`;
+}
+
+function getOptOutOfInstallMessage(command = "npx remix init") {
+  return (
+    "💿 You've opted out of installing dependencies so we won't run the " +
+    path.join("remix.init", "index.js") +
+    " script for you just yet. Once you've installed dependencies, you can run " +
+    `it manually with \`${command}\``
+  );
+}
 
 /*
 eslint
