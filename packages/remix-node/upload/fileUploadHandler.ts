@@ -1,11 +1,15 @@
 import { randomBytes } from "crypto";
-import { createReadStream, createWriteStream } from "fs";
-import { rm, mkdir, readFile, stat } from "fs/promises";
+import { createReadStream, createWriteStream, statSync } from "fs";
+import { rm, mkdir, stat as statAsync } from "fs/promises";
 import { tmpdir } from "os";
 import { basename, dirname, extname, resolve as resolvePath } from "path";
+import type { Readable } from "stream";
+import { MeterError } from "@remix-run/server-runtime";
+import type { UploadHandler } from "@remix-run/server-runtime";
+// @ts-expect-error
+import * as streamSlice from "stream-slice";
 
-import { MeterError } from "./meter";
-import type { UploadHandler } from "../formData";
+import { readableStreamFromStream, readableStreamToString } from "../stream";
 
 export type FileUploadHandlerFilterArgs = {
   filename: string;
@@ -67,7 +71,7 @@ async function uniqueFile(filepath: string) {
 
   for (
     let i = 1;
-    await stat(uniqueFilepath)
+    await statAsync(uniqueFilepath)
       .then(() => true)
       .catch(() => false);
     i++
@@ -136,7 +140,7 @@ export function createFileUploadHandler({
       }
     }
 
-    return new NodeOnDiskFile(filepath, size, contentType);
+    return new NodeOnDiskFile(filepath, contentType);
   };
 }
 
@@ -147,14 +151,43 @@ export class NodeOnDiskFile implements File {
 
   constructor(
     private filepath: string,
-    public size: number,
-    public type: string
+    public type: string,
+    private slicer?: { start: number; end: number }
   ) {
     this.name = basename(filepath);
   }
 
+  public get size(): number {
+    if (this.slicer) {
+      return this.slicer.end - this.slicer.start;
+    }
+
+    let stats = statSync(this.filepath);
+    return stats.size;
+  }
+
+  slice(start?: number, end?: number, type?: string): Blob {
+    let startOffset = this.slicer?.start || 0;
+
+    start = startOffset + (start || 0);
+    end = startOffset + (end || this.size);
+    return new NodeOnDiskFile(
+      this.filepath,
+      typeof type === "string" ? type : this.type,
+      {
+        start,
+        end,
+      }
+    );
+  }
+
   async arrayBuffer(): Promise<ArrayBuffer> {
-    let stream = createReadStream(this.filepath);
+    let stream: Readable = createReadStream(this.filepath);
+    if (this.slicer) {
+      stream = stream.pipe(
+        streamSlice.slice(this.slicer.start, this.slicer.end)
+      );
+    }
 
     return new Promise((resolve, reject) => {
       let buf: any[] = [];
@@ -164,16 +197,27 @@ export class NodeOnDiskFile implements File {
     });
   }
 
-  slice(start?: any, end?: any, contentType?: any): Blob {
-    throw new Error("Method not implemented.");
-  }
   stream(): ReadableStream<any>;
   stream(): NodeJS.ReadableStream;
   stream(): ReadableStream<any> | NodeJS.ReadableStream {
-    return createReadStream(this.filepath);
+    let stream: Readable = createReadStream(this.filepath);
+    if (this.slicer) {
+      stream = stream.pipe(
+        streamSlice.slice(this.slicer.start, this.slicer.end)
+      );
+    }
+    return readableStreamFromStream(stream);
   }
+
   text(): Promise<string> {
-    return readFile(this.filepath, "utf-8");
+    let stream: Readable = createReadStream(this.filepath);
+    if (this.slicer) {
+      stream = stream.pipe(
+        streamSlice.slice(this.slicer.start, this.slicer.end)
+      );
+    }
+
+    return readableStreamToString(readableStreamFromStream(stream));
   }
 
   get [Symbol.toStringTag]() {

@@ -51,9 +51,9 @@ export function createRequestHandler({
         ? getLoadContext(req, res)
         : undefined;
 
-    let response = await handleRequest(request, loadContext);
+    let response = (await handleRequest(request, loadContext)) as NodeResponse;
 
-    sendRemixResponse(res, response as NodeResponse);
+    await sendRemixResponse(res, response);
   };
 }
 
@@ -61,6 +61,7 @@ export function createRemixHeaders(
   requestHeaders: VercelRequest["headers"]
 ): NodeHeaders {
   let headers = new NodeHeaders();
+
   for (let key in requestHeaders) {
     let header = requestHeaders[key]!;
     // set-cookie is an array (maybe others)
@@ -94,10 +95,10 @@ export function createRemixRequest(req: VercelRequest): NodeRequest {
   return new NodeRequest(url.href, init);
 }
 
-export function sendRemixResponse(
+export async function sendRemixResponse(
   res: VercelResponse,
   nodeResponse: NodeResponse
-): void {
+): Promise<void> {
   res.statusMessage = nodeResponse.statusText;
   let multiValueHeaders = nodeResponse.headers.raw();
   res.writeHead(
@@ -107,7 +108,7 @@ export function sendRemixResponse(
   );
 
   if (nodeResponse.body) {
-    pipeReadableStreamToWritable(nodeResponse.body, res);
+    await pipeReadableStreamToWritable(nodeResponse.body, res);
   } else {
     res.end();
   }

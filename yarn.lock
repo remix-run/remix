@@ -1573,7 +1573,7 @@
     stack-utils "2.0.5"
     yazl "2.5.1"
 
-"@remix-run/web-blob@^3.0.3":
+"@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
   resolved "https://registry.npmjs.org/@remix-run/web-blob/-/web-blob-3.0.4.tgz#99c67b9d0fb641bd0c07d267fd218ae5aa4ae5ed"
   integrity sha512-AfegzZvSSDc+LwnXV+SwROTrDtoLiPxeFW+jxgvtDAnkuCX1rrzmVJ6CzqZ1Ai0bVfmJadkG5GxtAfYclpPmgw==
@@ -1581,14 +1581,14 @@
     "@remix-run/web-stream" "^1.0.0"
     web-encoding "1.1.5"
 
-"@remix-run/web-fetch@^4.1.1":
-  version "4.1.1"
-  resolved "https://registry.npmjs.org/@remix-run/web-fetch/-/web-fetch-4.1.1.tgz#2b7ab898599ea1a273a31b357e7a19148e6cec26"
-  integrity sha512-rsGqRERL+aCYWgtHaZyEy4Xzic4IHS4A2AzWndtoDy+8mUqtBe95QtUoxX5J9jBMs1yl4A/YjXD6HwWP1yyLrw==
+"@remix-run/web-fetch@^4.1.2":
+  version "4.1.2"
+  resolved "https://registry.npmjs.org/@remix-run/web-fetch/-/web-fetch-4.1.2.tgz#3a95be3c683f2d3d36fc9376199fdc7060b15ee6"
+  integrity sha512-3XQZnhZhhXw6W8B66rOFo9ZLXRXlfU608kni+Mz8Zi0tihF5M0Ar1Tb83aCjldetepyXtTcCO1V2li6QtqEqlw==
   dependencies:
-    "@remix-run/web-blob" "^3.0.3"
+    "@remix-run/web-blob" "^3.0.4"
     "@remix-run/web-form-data" "^3.0.2"
-    "@remix-run/web-stream" "^1.0.1"
+    "@remix-run/web-stream" "^1.0.3"
     "@web3-storage/multipart-parser" "^1.0.0"
     data-uri-to-buffer "^3.0.1"
     mrmime "^1.0.0"
@@ -1607,10 +1607,10 @@
   dependencies:
     web-encoding "1.1.5"
 
-"@remix-run/web-stream@^1.0.0", "@remix-run/web-stream@^1.0.1", "@remix-run/web-stream@^1.0.2":
-  version "1.0.2"
-  resolved "https://registry.npmjs.org/@remix-run/web-stream/-/web-stream-1.0.2.tgz#f07dc9cf6db02507ea71a234bc8e06103a2207b4"
-  integrity sha512-FO4om5mrwMs5bi7L5hbLMP1hm+flAS2oYRptfNPkK2u0Hhv0crS9GiE9/MsVvY53tTAxVkzUG/m+9ET1mTjEnw==
+"@remix-run/web-stream@^1.0.0", "@remix-run/web-stream@^1.0.3":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@remix-run/web-stream/-/web-stream-1.0.3.tgz#3284a6a45675d1455c4d9c8f31b89225c9006438"
+  integrity sha512-wlezlJaA5NF6SsNMiwQnnAW6tnPzQ5I8qk0Y0pSohm0eHKa2FQ1QhEKLVVcDDu02TmkfHgnux0igNfeYhDOXiA==
   dependencies:
     web-streams-polyfill "^3.1.1"
 
@@ -4757,7 +4757,7 @@ events@^3.3.0:
   resolved "https://registry.npmjs.org/events/-/events-3.3.0.tgz"
   integrity sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==
 
-execa@^5.0.0, execa@^5.1.1:
+execa@^5.0.0:
   version "5.1.1"
   resolved "https://registry.npmjs.org/execa/-/execa-5.1.1.tgz"
   integrity sha512-8uSpZZocAZRBAPIEINJj3Lo9HyGitllczc27Eh5YYojjMFMn8yHMDMaUHE2Jqfq05D/wucwI4JGURyXt1vchyg==
@@ -9437,6 +9437,11 @@ stream-shift@^1.0.0:
   version "1.0.1"
   resolved "https://registry.npmjs.org/stream-shift/-/stream-shift-1.0.1.tgz"
   integrity sha512-AiisoFqQ0vbGcZgQPY1cdP2I76glaVA/RauYR4G4thNFgkTqr90yXTo4LYX60Jl+sIlPNHHdGSwo01AvbKUSVQ==
+
+stream-slice@^0.1.2:
+  version "0.1.2"
+  resolved "https://registry.npmjs.org/stream-slice/-/stream-slice-0.1.2.tgz#2dc4f4e1b936fb13f3eb39a2def1932798d07a4b"
+  integrity sha1-LcT04bk2+xPz6zmi3vGTJ5jQeks=
 
 strict-event-emitter@^0.2.0:
   version "0.2.0"

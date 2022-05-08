@@ -1,5 +1,5 @@
-import { File } from "../fetch";
-import type { UploadHandler } from "../formData";
+import type { UploadHandler } from "@remix-run/server-runtime";
+
 import { MeterError } from "./meter";
 
 export type MemoryUploadHandlerFilterArgs = {
@@ -35,11 +35,11 @@ export function createMemoryUploadHandler({
     let size = 0;
     let chunks = [];
     for await (let chunk of data) {
-      chunks.push(chunk);
       size += chunk.length;
       if (size > maxFileSize) {
         throw new MeterError(name, maxFileSize);
       }
+      chunks.push(chunk);
     }
 
     return new File(chunks, filename, { type: contentType });

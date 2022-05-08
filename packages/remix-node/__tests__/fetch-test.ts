@@ -83,8 +83,6 @@ describe("Request", () => {
     });
 
     let cloned = req.clone();
-    expect(Object.getPrototypeOf(req)).toBe(Object.getPrototypeOf(cloned));
-
     let formData = await req.formData();
     let clonedFormData = await cloned.formData();
 
@@ -106,4 +104,10 @@ describe("Request", () => {
     expect(file.name).toBe("1k_b.dat");
     expect(file.size).toBe(1023);
   });
+});
+
+describe("fetch", () => {
+  // fetch a gzip-encoded json blob
+  // call res.json() and make sure it's decoded properly
+  it.todo("decodes gzip encoded body");
 });

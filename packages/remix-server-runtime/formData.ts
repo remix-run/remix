@@ -1,25 +1,26 @@
-import { FormData } from "@remix-run/web-fetch";
 import { streamMultipart } from "@web3-storage/multipart-parser";
 
-import type { Request as NodeRequest } from "./fetch";
-import type { UploadHandler } from "./formData";
+export type UploadHandlerPart = {
+  name: string;
+  filename: string;
+  contentType: string;
+  data: AsyncIterable<Uint8Array>;
+};
+
+export type UploadHandler = (
+  part: UploadHandlerPart
+) => Promise<string | File | undefined>;
 
 /**
  * Allows you to handle multipart forms (file uploads) for your app.
  *
+ * TODO: Update this comment
  * @see https://remix.run/api/remix#parsemultipartformdata-node
  */
-export function parseMultipartFormData(
-  request: Request | NodeRequest,
-  uploadHandler: UploadHandler
-) {
-  return internalParseFormData(request, uploadHandler);
-}
-
-export const internalParseFormData = async (
+export async function parseMultipartFormData(
   request: Request,
   uploadHandler: UploadHandler
-) => {
+): Promise<FormData> {
   let contentType = request.headers.get("Content-Type") || "";
   let [type, boundary] = contentType.split(/\s*;\s*boundary=/);
 
@@ -28,34 +29,36 @@ export const internalParseFormData = async (
   }
 
   let formData = new FormData();
-
-  let parts = streamMultipart(request.clone().body, boundary);
+  let parts: AsyncIterable<UploadHandlerPart & { done?: true }> =
+    streamMultipart(request.body, boundary);
 
   for await (let part of parts) {
     if (part.done) break;
 
     if (!part.filename) {
-      let chunks = [];
-      for await (let chunk of part.data) {
-        chunks.push(chunk);
-      }
-
-      formData.append(
-        part.name,
-        new TextDecoder().decode(mergeArrays(...chunks))
-      );
+      formData.append(part.name, await bufferPart(part));
     } else {
       let file = await uploadHandler(part);
       if (typeof file !== "undefined") {
-        formData.append(part.name, file);
+        formData.append(part.name, file as Blob);
       }
     }
   }
 
   return formData;
-};
+}
 
-export function mergeArrays(...arrays: Uint8Array[]) {
+async function bufferPart(part: UploadHandlerPart): Promise<string> {
+  let chunks = [];
+
+  for await (let chunk of part.data) {
+    chunks.push(chunk);
+  }
+
+  return new TextDecoder().decode(mergeArrays(...chunks));
+}
+
+function mergeArrays(...arrays: Uint8Array[]) {
   let out = new Uint8Array(
     arrays.reduce((total, arr) => total + arr.length, 0)
   );

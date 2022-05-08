@@ -13,14 +13,15 @@
   },
   "dependencies": {
     "@remix-run/server-runtime": "1.4.3",
-    "@remix-run/web-fetch": "^4.1.1",
+    "@remix-run/web-fetch": "^4.1.2",
     "@remix-run/web-file": "^3.0.2",
-    "@remix-run/web-stream": "^1.0.2",
+    "@remix-run/web-stream": "^1.0.3",
     "@web3-storage/multipart-parser": "^1.0.0",
     "abort-controller": "^3.0.0",
     "blob-stream": "^0.1.3",
     "cookie-signature": "^1.1.0",
-    "source-map-support": "^0.5.21"
+    "source-map-support": "^0.5.21",
+    "stream-slice": "^0.1.2"
   },
   "devDependencies": {
     "@types/blob-stream": "^0.1.30",
