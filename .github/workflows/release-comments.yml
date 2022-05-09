@@ -23,10 +23,16 @@ jobs:
         # even though this is called "npm-install" it does use yarn to install
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ./scripts/release
+          useLockFile: false
 
       - name: 📝 Comment on issues
-        run: node ./scripts/release/comment.mjs
+        working-directory: ./scripts/release
+        run: node -r esbuild-register ./comment.ts
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{ github.token }}
           VERSION: ${{ github.event.client_payload.ref }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          DEV_BRANCH: "dev"
