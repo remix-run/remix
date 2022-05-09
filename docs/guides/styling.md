@@ -448,6 +448,7 @@ Finally, import the generated CSS file into your app:
 
 ```tsx filename=app/root.tsx
 // ...
+import type { LinksFunction } from "@remix-run/node";
 import styles from "./tailwind.css";
 
 export const links: LinksFunction = () => [
