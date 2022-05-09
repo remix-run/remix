@@ -19,7 +19,6 @@ interface FixtureInit {
   sourcemap?: boolean;
   files: { [filename: string]: string };
   template?: "cf-template" | "node-template";
-  setup?: "node" | "cloudflare";
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
@@ -156,13 +155,6 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     path.join(projectDir, "node_modules"),
     { overwrite: true }
   );
-  if (init.setup) {
-    spawnSync(
-      "node",
-      ["node_modules/@remix-run/dev/cli.js", "setup", init.setup],
-      { cwd: projectDir }
-    );
-  }
   await writeTestFiles(init, projectDir);
   build(projectDir, init.buildStdio, init.sourcemap);
 

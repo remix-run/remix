@@ -17,7 +17,6 @@ test.describe("compiler", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      setup: "node",
       files: {
         "app/fake.server.js": js`
           export const hello = "server";
