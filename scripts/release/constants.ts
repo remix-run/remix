@@ -24,4 +24,3 @@ export const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY;
 export const DEFAULT_BRANCH = process.env.DEFAULT_BRANCH;
 export const DEV_BRANCH = process.env.DEV_BRANCH;
 export const PR_FILES_STARTS_WITH = ["packages/"];
-diff --git a/scripts/release/constants.mjs b/scripts/release/constants.mjs

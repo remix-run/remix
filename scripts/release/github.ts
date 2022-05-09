@@ -331,4 +331,3 @@ export async function commentOnIssue({
     body: `🤖 Hello there,\n\nWe just published version \`${version}\` which involves this issue. If you'd like to take it for a test run please try it out and let us know what you think!\n\nThanks!`,
   });
 }
-diff --git a/scripts/release/octokit.ts b/scripts/release/octokit.ts

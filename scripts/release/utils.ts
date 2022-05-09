@@ -21,4 +21,3 @@ export function getGitHubUrl(type: "pull" | "issue", number: number) {
   let segment = type === "pull" ? "pull" : "issues";
   return `https://github.com/${GITHUB_REPOSITORY}/${segment}/${number}`;
 }
-diff --git a/scripts/release/tsconfig.json b/scripts/release/tsconfig.json

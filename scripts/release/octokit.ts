@@ -39,4 +39,3 @@ export const octokit = new Octokit({
 });
 
 export const gql = String.raw;
-diff --git a/scripts/release/octokit.mjs b/scripts/release/octokit.mjs

@@ -69,4 +69,3 @@ async function commentOnIssuesAndPrsAboutRelease() {
 }
 
 commentOnIssuesAndPrsAboutRelease();
-diff --git a/scripts/release/constants.ts b/scripts/release/constants.ts

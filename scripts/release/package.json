@@ -19,4 +19,3 @@
     "typescript": "^4.6.3"
   }
 }
-diff --git a/scripts/release/comment.mjs b/scripts/release/comment.mjs
