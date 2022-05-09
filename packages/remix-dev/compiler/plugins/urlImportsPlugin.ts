@@ -1,7 +1,7 @@
 import type { Plugin } from "esbuild";
 
 /**
- * Mark all URL imports as external so that the URL import is preserved in the build output.
+ * Mark all URL imports as external so that each URL import is preserved in the build output.
  */
 export const urlImportsPlugin = (): Plugin => {
   return {

@@ -409,6 +409,8 @@ function createServerBuild(
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
     config.serverBuildTarget ?? ""
   );
+  let isDenoRuntime = config.serverBuildTarget === "deno";
+
   let plugins: esbuild.Plugin[] = [
     urlImportsPlugin(),
     mdxPlugin(config),
@@ -430,7 +432,11 @@ function createServerBuild(
       entryPoints,
       outfile: config.serverBuildPath,
       write: false,
-      conditions: isCloudflareRuntime ? ["worker"] : undefined,
+      conditions: isCloudflareRuntime
+        ? ["worker"]
+        : isDenoRuntime
+        ? ["deno", "worker"]
+        : undefined,
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
