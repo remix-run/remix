@@ -265,7 +265,7 @@ describe("express createRemixRequest", () => {
           "method": "GET",
           "parsedURL": "http://localhost:3000/foo/bar",
           "redirect": "follow",
-          "signal": null,
+          "signal": AbortSignal {},
         },
       }
     `);

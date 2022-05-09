@@ -32,8 +32,9 @@ declare global {
       Response: typeof Response;
       fetch: typeof fetch;
       FormData: typeof FormData;
-      ReadableStream: ReadableStream;
-      WritableStream: WritableStream;
+
+      ReadableStream: typeof ReadableStream;
+      WritableStream: typeof WritableStream;
     }
   }
 }
