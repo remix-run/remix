@@ -7,7 +7,7 @@ description: Remix makes integrating MDX into your project a breeze with built i
 
 Most apps bootstrapped with [Create React App](https://create-react-app.dev/) (CRA) already use [React Router](https://reactrouter.com/) for client-side routing. Because Remix is built on top of React Router, migration should be a relatively easy process.
 
-If you aren't already using React Router, we think there are several compelling reasons to reconsider! History management, dynamic path matching, nested routing, and much more. Take a look at the [React Router docs](https://reactrouter.com/docs/en/v6/getting-started/concepts) and see what all we have to offer.
+If you aren't already using React Router, we think there are several compelling reasons to reconsider! History management, dynamic path matching, nested routing, and much more. Take a look at the [React Router docs](https://reactrouter.com/docs/en/v6/getting-started/concepts) and see all what we have to offer.
 
 ## Ensure your app uses React Router v6
 
@@ -168,8 +168,9 @@ const app = express();
 
 There are a few things we can do right out of the gate to make our server app a bit more secure and performant. First, we'll use the `compression` middleware to compress our HTTP responses.
 
-```js filename=server.js lines=[4]
+```js filename=server.js lines=[2,5]
 const express = require("express");
+const compression = require("compression");
 const app = express();
 
 app.use(compression());
@@ -177,8 +178,9 @@ app.use(compression());
 
 Next, disable the `"x-powered-by"` header as recommended by the Express docs as a security measure.
 
-```js filename=server.js lines=[5]
+```js filename=server.js lines=[6]
 const express = require("express");
+const compression = require("compression");
 const app = express();
 
 app.use(compression());
@@ -187,7 +189,7 @@ app.disable("x-powered-by");
 
 We want our server to serve our Remix build output as well as any static files in the `public` directory. We'll use the `express.static` middleware for that. CRA uses the `build` directory for its compiled output, so we'll use that as well.
 
-```js filename=server.js lines=[2,7-14]
+```js filename=server.js lines=[7-14]
 const express = require("express");
 const compression = require("compression");
 const app = express();
@@ -231,7 +233,7 @@ To do that, use our `@remix-run/express` package and import its `createRequestHa
 
 `createRequestHandler` needs two pieces of information about your app to work: we need to pass in the output of your build and the `NODE_ENV` environment variable.
 
-```js filename=server.js lines=[4-7,10,24-30]
+```js filename=server.js lines=[3,5-7,10,24-30]
 const express = require("express");
 const compression = require("compression");
 const path = require("path");
@@ -266,7 +268,7 @@ app.all(
 
 We can improve the experience during development quite a bit here by purging the [require cache](https://nodejs.org/api/modules.html#caching) before each request. This is a good idea to avoid memory leaks and other issues that can arise from caching, especially when using live reload.
 
-We'll write a function called `purgeRequireCache` that will delete the cache for anything that requires our build output, and we'll call it cnoditionally when `NODE_ENV` is set to `development`.
+We'll write a function called `purgeRequireCache` that will delete the cache for anything that requires our build output, and we'll call it conditionally when `NODE_ENV` is set to `development`.
 
 ```js filename=server.js lines=[26-37,40-46]
 const express = require("express");
@@ -494,10 +496,10 @@ app/
 ├── routes/
 │   ├── $userId/
 │   │   ├── profile.jsx
-│   │   ├── sales.jsx
-│   └── expenses.jsx
-│   └── index.jsx
-│   └── invoices.jsx
+│   │   └── sales.jsx
+│   ├── expenses.jsx
+│   ├── index.jsx
+│   ├── invoices.jsx
 │   └── $userId.jsx
 └── root.jsx
 ```
@@ -584,7 +586,7 @@ We can also get rid of the `noscript` tag because we're server rendering now, wh
 
 And since we aren't mounting our app in the DOM on the client, we can replace `<div id="root"></div>` with our `<App />` component (assuming your `App` component renders an `<Outlet />` from React Router).
 
-```jsx filename=root.jsx lines=[3,25]
+```jsx filename=root.jsx lines=[1,23]
 import * as React from "react";
 
 import App from "./app";
