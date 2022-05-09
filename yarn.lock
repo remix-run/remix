@@ -1408,10 +1408,10 @@
     outvariant "^1.2.1"
     strict-event-emitter "^0.2.0"
 
-"@netlify/functions@^0.10.0":
-  version "0.10.0"
-  resolved "https://registry.npmjs.org/@netlify/functions/-/functions-0.10.0.tgz"
-  integrity sha512-NNFADTPnokuoMY1OUhaXlE/Jrzk5lHOl1uB4L/8pw1UJ/CaectZJACMExijbJnqaKIhOQG0WmbBQUh1lgnK/Qg==
+"@netlify/functions@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.npmjs.org/@netlify/functions/-/functions-1.0.0.tgz"
+  integrity sha512-7fnJv3vr8uyyyOYPChwoec6MjzsCw1CoRUO2DhQ1BD6bOyJRlD4DUaOOGlMILB2LCT8P24p5LexEGx8AJb7xdA==
   dependencies:
     is-promise "^4.0.0"
 
