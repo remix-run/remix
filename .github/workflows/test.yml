@@ -11,7 +11,7 @@ on:
     paths-ignore:
       - "docs/**"
       - "**/README.md"
-  pull_request: 
+  pull_request:
     paths-ignore:
       - "docs/**"
       - "**/*.md"
