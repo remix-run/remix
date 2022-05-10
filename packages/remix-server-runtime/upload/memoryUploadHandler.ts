@@ -35,7 +35,7 @@ export function createMemoryUploadHandler({
     let size = 0;
     let chunks = [];
     for await (let chunk of data) {
-      size += chunk.length;
+      size += chunk.byteLength;
       if (size > maxFileSize) {
         throw new MeterError(name, maxFileSize);
       }
