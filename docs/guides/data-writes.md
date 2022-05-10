@@ -29,11 +29,11 @@ Since Remix `<Form>` works identically to `<form>` (with a couple extra goodies 
 
 ### HTML Form HTTP Verbs
 
-Native forms support two HTTP verbs: `GET` and `POST`. Remix uses these verbs to understand your intent. If it's a get, Remix will figure out what parts of the page are changing and only fetch the data for the changing layouts, and use the cached data for the layouts that don't change. When it's a POST, Remix will reload all data to ensure it captures the update from the server. Let's take a look at both.
+Native forms support two HTTP verbs: `GET` and `POST`. Remix uses these verbs to understand your intent. If it's a GET, Remix will figure out what parts of the page are changing and only fetch the data for the changing layouts, and use the cached data for the layouts that don't change. When it's a POST, Remix will reload all data to ensure it captures the update from the server. Let's take a look at both.
 
 ### HTML Form GET
 
-A `GET` is just a normal navigation where the form data is passed in the URL search params. You use it for normal navigation, just like `<a>` except the user gets to provide the data in the search params through the form. Aside from search pages, it's use with `<form>` is pretty rare.
+A `GET` is just a normal navigation where the form data is passed in the URL search params. You use it for normal navigation, just like `<a>` except the user gets to provide the data in the search params through the form. Aside from search pages, its use with `<form>` is pretty rare.
 
 Consider this form:
 
@@ -114,7 +114,7 @@ export async function action({ request }) {
 }
 ```
 
-The browser started at `/projects/new`, then posted to `/projects` with the form data in the request, then the server redirected the browser to `/projects/123`. While this is all happening, the browser goes into it's normal "loading" state: the address progress bar fills up, the favicon turns into a spinner, etc. It's actually a decent user experience.
+The browser started at `/projects/new`, then posted to `/projects` with the form data in the request, then the server redirected the browser to `/projects/123`. While this is all happening, the browser goes into its normal "loading" state: the address progress bar fills up, the favicon turns into a spinner, etc. It's actually a decent user experience.
 
 If you're newer to web development, you may not have ever used a form this way. Lots of folks have always done:
 
