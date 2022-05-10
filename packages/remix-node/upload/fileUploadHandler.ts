@@ -4,6 +4,8 @@ import { rm, mkdir, stat as statAsync } from "fs/promises";
 import { tmpdir } from "os";
 import { basename, dirname, extname, resolve as resolvePath } from "path";
 import type { Readable } from "stream";
+import { finished } from "stream";
+import { promisify } from "util";
 import { MeterError } from "@remix-run/server-runtime";
 import type { UploadHandler } from "@remix-run/server-runtime";
 // @ts-expect-error
@@ -126,7 +128,7 @@ export function createFileUploadHandler({
     let deleteFile = false;
     try {
       for await (let chunk of data) {
-        size += chunk.length;
+        size += chunk.byteLength;
         if (size > maxFileSize) {
           deleteFile = true;
           throw new MeterError(name, maxFileSize);
@@ -134,7 +136,9 @@ export function createFileUploadHandler({
         writeFileStream.write(chunk);
       }
     } finally {
-      writeFileStream.close();
+      writeFileStream.end();
+      await promisify(finished)(writeFileStream);
+
       if (deleteFile) {
         await rm(filepath).catch(() => {});
       }
