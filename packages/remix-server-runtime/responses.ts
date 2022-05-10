@@ -43,27 +43,32 @@ export const deferred: DeferredFunction = (data, init = {}) => {
         initialData = dataWithoutPromises;
       }
 
+      let encoder = new TextEncoder();
       let body = new ReadableStream({
         // TODO: Figure out why any is needed here
         async start(controller: any) {
-          controller.enqueue("event: data\n");
-          controller.enqueue("data: " + JSON.stringify(initialData) + "\n\n");
+          controller.enqueue(encoder.encode("event: data\n"));
+          controller.enqueue(
+            encoder.encode("data: " + JSON.stringify(initialData) + "\n\n")
+          );
 
           await Promise.all(
             Object.entries(deferred).map(async ([key, promise]) => {
               await promise.then(
                 (result) => {
-                  controller.enqueue("event: deferred-data\n");
-                  controller.enqueue("id: " + key + "\n");
+                  controller.enqueue(encoder.encode("event: deferred-data\n"));
+                  controller.enqueue(encoder.encode("id: " + key + "\n"));
                   controller.enqueue(
-                    "data: " + JSON.stringify(result) + "\n\n"
+                    encoder.encode("data: " + JSON.stringify(result) + "\n\n")
                   );
                 },
                 (error) => {
-                  controller.enqueue("event: deferred-error\n");
-                  controller.enqueue("id: " + key + "\n");
+                  controller.enqueue(encoder.encode("event: deferred-error\n"));
+                  controller.enqueue(encoder.encode("id: " + key + "\n"));
                   controller.enqueue(
-                    "data: " + JSON.stringify(serializeError(error)) + "\n\n"
+                    encoder.encode(
+                      "data: " + JSON.stringify(serializeError(error)) + "\n\n"
+                    )
                   );
                 }
               );
