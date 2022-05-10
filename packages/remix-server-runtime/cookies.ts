@@ -251,7 +251,7 @@ function myUnescape(value: string): string {
 
 function warnOnceAboutExpiresCookie(name: string, expires?: Date) {
   warnOnce(
-    !(expires instanceof Date),
+    !expires,
     `The "${name}" cookie has an "expires" property set. ` +
       `This will cause the expires value to not be updated when the session is committed. ` +
       `Instead, you should set the expires value when serializing the cookie. ` +
