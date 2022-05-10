@@ -14,6 +14,7 @@ export {
   createSession,
   isCookie,
   isSession,
+  deferred,
   json,
   redirect,
   unstable_parseMultipartFormData,
