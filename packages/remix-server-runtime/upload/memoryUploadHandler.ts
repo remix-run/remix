@@ -3,7 +3,7 @@ import type { UploadHandler } from "@remix-run/server-runtime";
 import { MeterError } from "./meter";
 
 export type MemoryUploadHandlerFilterArgs = {
-  filename: string;
+  filename?: string;
   contentType: string;
   name: string;
 };
@@ -26,7 +26,7 @@ export type MemoryUploadHandlerOptions = {
 export function createMemoryUploadHandler({
   filter,
   maxFileSize = 3000000,
-}: MemoryUploadHandlerOptions): UploadHandler {
+}: MemoryUploadHandlerOptions = {}): UploadHandler {
   return async ({ filename, contentType, name, data }) => {
     if (filter && !(await filter({ filename, contentType, name }))) {
       return undefined;
@@ -42,6 +42,10 @@ export function createMemoryUploadHandler({
       chunks.push(chunk);
     }
 
-    return new File(chunks, filename, { type: contentType });
+    if (typeof filename === "string") {
+      return new File(chunks, filename, { type: contentType });
+    }
+
+    return await new Blob(chunks, { type: contentType }).text();
   };
 }

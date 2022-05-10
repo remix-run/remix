@@ -40,6 +40,7 @@ export {
   isSession,
   json,
   redirect,
+  unstable_composeUploadHandlers,
   unstable_parseMultipartFormData,
   unstable_createMemoryUploadHandler,
   MeterError,

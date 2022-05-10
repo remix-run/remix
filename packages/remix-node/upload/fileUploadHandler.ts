@@ -92,9 +92,12 @@ export function createFileUploadHandler({
   file = defaultFilePathResolver,
   filter,
   maxFileSize = 3000000,
-}: FileUploadHandlerOptions): UploadHandler {
+}: FileUploadHandlerOptions = {}): UploadHandler {
   return async ({ name, filename, contentType, data }) => {
-    if (filter && !(await filter({ name, filename, contentType }))) {
+    if (
+      !filename ||
+      (filter && !(await filter({ name, filename, contentType })))
+    ) {
       return undefined;
     }
 

@@ -1,6 +1,9 @@
 // Default implementations for the Remix server runtime interface
 export { createCookieFactory, isCookie } from "./cookies";
-export { parseMultipartFormData as unstable_parseMultipartFormData } from "./formData";
+export {
+  composeUploadHandlers as unstable_composeUploadHandlers,
+  parseMultipartFormData as unstable_parseMultipartFormData,
+} from "./formData";
 export { json, redirect } from "./responses";
 export { createRequestHandler } from "./server";
 export {

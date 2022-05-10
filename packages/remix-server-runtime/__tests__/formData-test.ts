@@ -25,7 +25,11 @@ describe("parseMultipartFormData", () => {
         for await (let chunk of data) {
           chunks.push(chunk);
         }
-        return new File(chunks, filename, { type: contentType });
+        if (filename) {
+          return new File(chunks, filename, { type: contentType });
+        }
+
+        return await new Blob(chunks, { type: contentType }).text();
       }
     );
 
