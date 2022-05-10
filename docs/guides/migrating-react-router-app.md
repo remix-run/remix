@@ -245,7 +245,86 @@ Once you create this file, you can delete the `<Route>` component from your `App
 
 ## Gotchas and next steps
 
-At this point you might be able to say you are done with the initial migration. Congrats! However Remix does things a bit differently than your typical React app. If it didn't, why would we have bothered building it in the first place? 😅
+At this point you _might_ be able to say you are done with the initial migration. Congrats! However Remix does things a bit differently than your typical React app. If it didn't, why would we have bothered building it in the first place? 😅
+
+### Unsafe browser references
+
+A common pain-point in migrating a client-rendered codebase to a server-rendered one is that you may have references to browser APIs in code that runs on the server. A common example can be found when initializing values in state:
+
+```jsx
+import * as React from "react";
+
+function Count() {
+  let [count, setCount] = React.useState(
+    () => localStorage.getItem("count") || 0
+  );
+
+  React.useEffect(() => {
+    localStorage.setItem("count", count);
+  }, [count]);
+
+  return (
+    <div>
+      <h1>Count: {count}</h1>
+      <button onClick={() => setCount(count + 1)}>
+        Increment
+      </button>
+    </div>
+  );
+}
+```
+
+In this example, `localStorage` is used as a global store to persist some data across page reloads. We update `localStorage` with the current value of `count` in `useEffect`, which is perfectly safe because `useEffect` is only ever called in the browser! However initializing state based on `localStorage` is a problem, as this callback is executed on both the server and in the browser.
+
+Your go-to solution may be to check for the `window` object and only run the callback in the browser. However this can lead to another problem, which is the dreaded [hydration mismatch](https://reactjs.org/docs/react-dom.html#hydrate). React relies on markup rendered by the server to be identical to what is rendered during client hydration. This ensures that `react-dom` knows how to match DOM elements with their corresponding React components so that it can attach event listeners and perform updates as state changes. So if local storage gives us a different value than whatever we initiate on the server, we'll have a new problem to deal with.
+
+#### Client-only components
+
+One potential solution here is using a different caching mechanism that can be used on the server and passed to the component via props passed from a route's [loader data](../api/conventions#loader). But if it isn't crucial for your app to render the component on the server, a simpler solution may be to skip rendering altogether on the server and wait until hydration is complete to render it in the browser.
+
+```jsx
+import * as React from "react";
+
+// We can safely track hydration in memory state
+// outside of the component because it is only
+// updated once after the version instance of
+// `SomeComponent` has been hydrated. From there,
+// the browser takes over rendering duties across
+// route changes and we no longer need to worry
+// about hydration mismatches until the page is
+// reloaded and `isHydrating` is reset to true.
+let isHydrating = true;
+
+function SomeComponent() {
+  let [isHydrated, setIsHydrated] = React.useState(
+    !isHydrating
+  );
+
+  React.useEffect(() => {
+    isHydrating = false;
+    setIsHydrated(true);
+  }, []);
+
+  if (isHydrated) {
+    return <Count />;
+  } else {
+    return <SomeFallbackComponent />;
+  }
+}
+```
+
+To simplify this solution, we recommend the using the [`ClientOnly` component](https://github.com/sergiodxa/remix-utils/blob/main/src/react/client-only.tsx) in the [`remix-utils`](https://www.npmjs.com/package/remix-utils) community package. An example of its usage can be found in the [`examples` directory of the Remix repo](https://github.com/remix-run/remix/blob/main/examples/client-only-components/app/routes/index.tsx).
+
+### `React.lazy` and `React.Suspense`
+
+If you are lazy-loading components with [`React.lazy`](https://reactjs.org/docs/code-splitting.html#reactlazy) and [`React.Suspense`](https://reactjs.org/docs/react-api.html#reactsuspense), you may run into issues depending on the version of React you are using. Until React 18, this would not work on the server as `React.Suspense` was originally implemented as a browser-only feature.
+
+If you are using React 17, you have a few options:
+
+- Upgrade to React 18
+- Use the [client-only approach](#client-only-components) outlined above
+- Use an alternative lazy-loading solution such as [Loadable Components](https://loadable-components.com/docs/loadable-vs-react-lazy/)
+- Remove `React.lazy` and `React.Suspense` altogether
 
 ### Configuration
 
