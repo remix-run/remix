@@ -177,7 +177,6 @@ export async function action({ request }) {
 
 Using the same input name and `formData.getAll()` covers most cases for wanting to submit structured data in your forms.
 
-### Structured data using [`query-string`][query-string]
 If you still want to submit nested structures as well, you can use non-standard form field naming conventions and the [`query-string`][query-string] package from npm:
 
 ```tsx
