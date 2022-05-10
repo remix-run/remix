@@ -15,9 +15,9 @@
     "@remix-run/node": "1.4.3"
   },
   "peerDependencies": {
-    "@netlify/functions": "^0.10.0"
+    "@netlify/functions": "^0.10.0 || ^1.0.0"
   },
   "devDependencies": {
-    "@netlify/functions": "^0.10.0"
+    "@netlify/functions": "^1.0.0"
   }
 }
