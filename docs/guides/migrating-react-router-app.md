@@ -3,6 +3,8 @@ title: Migrating your React Router App to Remix
 description: Migrating your React Router app to Remix can be done all at once or in stages. This guide will walk you through an iterative approach to get your app running quickly.
 ---
 
+<docs-info>If you want a TL;DR version along with a repo outlining a simplified migration, check out our <a href="https://github.com/kentcdodds/incremental-react-router-to-remix-upgrade-path">example React Router-to-Remix repo</a>.</docs-info>
+
 # Migrating your React Router App to Remix
 
 Millions of React applications deployed worldwide are powered by [React Router](https://reactrouter.com/). Chances are you've shipped a few of them! Because Remix is built on top of React Router, we wave worked to make migration an easy process you can work through iteratively to avoid huge refactors.
