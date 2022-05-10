@@ -9,7 +9,7 @@ export type UploadHandlerPart = {
 
 export type UploadHandler = (
   part: UploadHandlerPart
-) => Promise<FormDataEntryValue | null | undefined>;
+) => Promise<File | string | null | undefined>;
 
 export function composeUploadHandlers(
   ...handlers: UploadHandler[]
@@ -52,7 +52,7 @@ export async function parseMultipartFormData(
 
     let value = await uploadHandler(part);
     if (typeof value !== "undefined" && value !== null) {
-      formData.append(part.name, value);
+      formData.append(part.name, value as any);
     }
   }
 
