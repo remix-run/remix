@@ -1,11 +1,7 @@
 import { renderToString } from "react-dom/server";
 import type { EntryContext } from "@remix-run/node";
 import { RemixServer } from "@remix-run/react" ;
-import { inline } from "twind";
-
-import { setupTwind } from "./twind";
-
-setupTwind();
+import inline from "@twind/with-remix/server";
 
 export default function handleRequest(
   request: Request,

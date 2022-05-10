@@ -8,9 +8,9 @@ module.exports = {
   serverBuildPath: "build/index.js",
   publicPath: "/build/",
   serverDependenciesToBundle: [
-    "twind", 
-    "@twind/tailwind", 
-    "@twind/preset-autoprefix", 
+    "@twind/with-remix",
+    "twind",
+    "@twind/preset-autoprefix",
     "@twind/preset-tailwind",
   ],
 };
