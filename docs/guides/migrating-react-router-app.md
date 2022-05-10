@@ -40,8 +40,10 @@ Server-rendered React apps are a little different. The browser script is not ren
 
 Let's start by creating two new files:
 
-- `entry.server.jsx` (or `entry.server.tsx`)
-- `entry.client.jsx` (or `entry.client.tsx`)
+- `app/entry.server.jsx` (or `entry.server.tsx`)
+- `app/entry.client.jsx` (or `entry.client.tsx`)
+
+<docs-info>All of your app code in Remix will live in an `app` directory by convention. If your existing app uses a directory with the same name, rename it to something like `src` or `old-app` to differentiate as we migrate to Remix.</docs-info>
 
 ```js filename=entry.server.jsx
 import { RemixServer } from "@remix-run/react";
@@ -90,7 +92,7 @@ The root route (or the "root root" if you're Wes Bos) is responsible for providi
 
 In a client-rendered app, you will have an index HTML file that includes the DOM node for mounting your React app. The root route will render markup that mirrors the structure of this file.
 
-Create a new file called `root.jsx` (or `root.tsx`) in the a new `app` directory. The contents of that file will vary, but let's assume that your `index.html` looks something like this:
+Create a new file called `root.jsx` (or `root.tsx`) in your `app` directory. The contents of that file will vary, but let's assume that your `index.html` looks something like this:
 
 ```html filename=index.html
 <!DOCTYPE html>
