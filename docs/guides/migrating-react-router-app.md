@@ -177,7 +177,7 @@ Lastly, in your root `App` component (the one that would have been mounted to th
 
 Remix needs routes beyond the root route to know what to render in `<Outlet />`. Fortunately you already render `<Route>` components in your app, and Remix can use those as you migrate to use our [routing conventions](./routing.md).
 
-To start, create a new directory in `app` called `routes`. In that directory, create a file called `$.jsx`. This is called a **catch-all route** and it will be useful to let your old app handle routes that you haven't moved into the `routes` directory yet.
+To start, create a new directory in `app` called `routes`. In that directory, create a file called `$.jsx`. This is called [a **catch-all route**](./routing#splats) and it will be useful to let your old app handle routes that you haven't moved into the `routes` directory yet.
 
 Inside of your `$.jsx` file, all we need to do is export the code from our old root `App`:
 
@@ -200,6 +200,8 @@ In your `package.json` file, update your scripts to use `remix` commands instead
   }
 }
 ```
+
+And poof! Your app is now server-rendered and your build went from 90 seconds to 0.5 seconds ⚡
 
 ## Creating your routes
 
@@ -314,7 +316,7 @@ Remix does not support most non-standard imports, and we think for good reason. 
 
 #### Asset imports
 
-Many bundlers use plugins to allow importing various assets like images and fonts. These typically come into your component as string representing the filepath of the asset. This works the same way in Remix.
+Many bundlers use plugins to allow importing various assets like images and fonts. These typically come into your component as string representing the filepath of the asset.
 
 ```js
 import * as React from "react";
@@ -424,7 +426,7 @@ We also do not yet support CSS Modules, as that requires compiler integration an
 
 ### Route `links` exports
 
-In Remix, stylesheets can only be loaded from route component files. Importing them does not do anything magical with your styles, rather it returns a URL that can be used to load the stylesheet as you see fit. You can render the stylesheet directly in your component or use our `links` export.
+In Remix, stylesheets can only be loaded from route component files. Importing them does not do anything magical with your styles, rather it returns a URL that can be used to load the stylesheet as you see fit. You can render the stylesheet directly in your component or use our [`links` export](../api/conventions#links).
 
 Let's move our app's stylesheet and a few other assets to the `links` function in our root route:
 
