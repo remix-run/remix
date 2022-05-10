@@ -1,6 +1,7 @@
 import { Link } from "@remix-run/react";
 
-const linkClass = "transition-all duration-300 opacity-75 hover:(opacity-100 text-blue-500)";
+const linkClass =
+  "transition-all duration-300 opacity-75 hover:(opacity-100 text-blue-500)";
 
 export default function Index() {
   const links = [
@@ -24,7 +25,9 @@ export default function Index() {
 
   return (
     <main className="py-16 px-4 max-w-screen-md mx-auto w-full">
-      <h1 className="text-4xl font-light mb-6">Welcome to Remix + Twind 💿🚀</h1>
+      <h1 className="text-4xl font-light mb-6">
+        Welcome to Remix + Twind 💿🚀
+      </h1>
       <ul className="list-disc grid gap-2">
         {links.map((link) => (
           <li key={link.href}>
@@ -39,7 +42,9 @@ export default function Index() {
           </li>
         ))}
         <li>
-            <Link to="/anything" className={linkClass}>Some other route</Link>
+          <Link to="/anything" className={linkClass}>
+            Some other route
+          </Link>
         </li>
       </ul>
     </main>
