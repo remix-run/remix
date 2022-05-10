@@ -564,6 +564,28 @@ Similar to `links`, each route can also export a `meta` function that—you gues
 
 The API is slightly different for `meta`. Instead of an array, it returns an object where the keys represent the meta `name` attribute (or `property` in the case of OpenGraph tags) and the value is the `content` attribute. The object can also accept a `title` property that renders a `<title />` component specifically for that route.
 
+```jsx filename=app/routes/about.jsx lines=[1-10]
+export function meta() {
+  return {
+    title: "About Us",
+    "og:title": "About Us",
+    description: "Doin hoodrat stuff with our friends",
+    "og:description": "Doin hoodrat stuff with our friends",
+    "og:image:url": "https://remix.run/og-image.png",
+    "og:image:alt": "Just doin a bunch of hoodrat stuff",
+  };
+}
+
+export default function About() {
+  return (
+    <main>
+      <h1>About us</h1>
+      <PageContent />
+    </main>
+  );
+}
+```
+
 Again—no more weird dances to get meta into your routes from deep in the component tree. Export them at the route level and let the server handle it. ✨
 
 ### Updating imports
