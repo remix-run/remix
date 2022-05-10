@@ -326,6 +326,7 @@ If you are using React 17, you have a few options:
 - Use an alternative lazy-loading solution such as [Loadable Components](https://loadable-components.com/docs/loadable-vs-react-lazy/)
 - Remove `React.lazy` and `React.Suspense` altogether
 
+Keep in mind that Remix automatically handles code-splitting for all your routes that it manages, so as you move things into the `routes` directory you should rarely—if ever—need to use `React.lazy` manually.
 ### Configuration
 
 Further configuration is optional, but the following may be helpful to optimize your development workflow.
