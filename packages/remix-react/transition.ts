@@ -1336,6 +1336,21 @@ export function createTransitionManager(init: TransitionManagerInit) {
       markFetchersDone(abortedIds);
     }
 
+    update({
+      location,
+      matches,
+      error,
+      errorBoundaryId,
+      catch: catchVal,
+      catchBoundaryId,
+      routeLoadersDeferred: makeLoaderDefered(state, results),
+      loaderData: makeLoaderData(state, results, matches),
+      actionData:
+        state.transition.type === "actionReload" ? state.actionData : undefined,
+      transition: IDLE_TRANSITION,
+      fetchers: abortedIds ? new Map(state.fetchers) : state.fetchers,
+    });
+
     results.forEach((res) => {
       if (res.events) {
         Object.entries(res.events).forEach(([key, event]: [string, any]) => {
@@ -1358,21 +1373,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
             });
         });
       }
-    });
-
-    update({
-      location,
-      matches,
-      error,
-      errorBoundaryId,
-      catch: catchVal,
-      catchBoundaryId,
-      routeLoadersDeferred: makeLoaderDefered(state, results),
-      loaderData: makeLoaderData(state, results, matches),
-      actionData:
-        state.transition.type === "actionReload" ? state.actionData : undefined,
-      transition: IDLE_TRANSITION,
-      fetchers: abortedIds ? new Map(state.fetchers) : state.fetchers,
     });
   }
 
