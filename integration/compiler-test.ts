@@ -198,7 +198,7 @@ test.describe("compiler", () => {
     expect(routeModule).not.toMatch(/from\s*"path/);
   });
 
-  test.only("bundles node built-ins polyfill for client bundle when used in client code", async ({
+  test("bundles node built-ins polyfill for client bundle when used in client code", async ({
     page,
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
