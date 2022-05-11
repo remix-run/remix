@@ -88,8 +88,8 @@ export function createFileSessionStorage({
       await fsp.writeFile(file, content, "utf-8");
     },
     async deleteData(id) {
-      // An empty id will cause the session directory to be deleted
-      // and will throw a "EPERM" error.
+      // Return early if the id is empty, otherwise we'll end up trying to
+      // unlink the dir, which will cause the EPERM error.
       if (!id) {
         return;
       }
