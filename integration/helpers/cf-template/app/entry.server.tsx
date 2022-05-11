@@ -1,7 +1,6 @@
 import { renderToReadableStream } from "react-dom/server";
 import { RemixServer } from "@remix-run/react";
 import type { EntryContext } from "@remix-run/cloudflare";
-import isbot from "isbot";
 
 export function handleDataRequest(response: Response) {
   console.log(response);
@@ -26,10 +25,6 @@ export default async function handleRequest(
       },
     }
   );
-
-  if (isbot(request.headers.get("user-agent"))) {
-    await body.allReady;
-  }
 
   return new Response(body, {
     status: didError ? 500 : responseStatusCode,
