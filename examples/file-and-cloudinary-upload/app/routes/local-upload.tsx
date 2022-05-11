@@ -14,7 +14,7 @@ type ActionData = {
 export const action: ActionFunction = async ({ request }) => {
   const uploadHandler = unstable_createFileUploadHandler({
     directory: "public",
-    maxFileSize: 30000,
+    maxPartSize: 30000,
   });
   const formData = await unstable_parseMultipartFormData(
     request,

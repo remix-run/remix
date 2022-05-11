@@ -1590,7 +1590,7 @@ export const action: ActionFunction = async ({
   request,
 }) => {
   const uploadHandler = unstable_createFileUploadHandler({
-    maxFileSize: 5_000_000,
+    maxPartSize: 5_000_000,
     file: ({ filename }) => filename,
   });
   const formData = await unstable_parseMultipartFormData(
@@ -1612,7 +1612,7 @@ export const action: ActionFunction = async ({
 | avoidFileConflicts | boolean            | true                            | Avoid file conflicts by appending a timestamp on the end of the filename if it already exists on disk                                                     |
 | directory          | string \| Function | os.tmpdir()                     | The directory to write the upload.                                                                                                                        |
 | file               | Function           | () => `upload_${random}.${ext}` | The name of the file in the directory. Can be a relative path, the directory structure will be created if it does not exist.                              |
-| maxFileSize        | number             | 3000000                         | The maximum upload size allowed (in bytes). If the size is exceeded an error will be thrown.                                                              |
+| maxPartSize        | number             | 3000000                         | The maximum upload size allowed (in bytes). If the size is exceeded an error will be thrown.                                                              |
 | filter             | Function           | OPTIONAL                        | A function you can write to prevent a file upload from being saved based on filename, mimetype, or encoding. Return `false` and the file will be ignored. |
 
 The function API for `file` and `directory` are the same. They accept an `object` and return a `string`. The object it accepts has `filename`, `encoding`, and `mimetype` (all strings).The `string` returned is the path.
@@ -1628,7 +1628,7 @@ export const action: ActionFunction = async ({
   request,
 }) => {
   const uploadHandler = unstable_createMemoryUploadHandler({
-    maxFileSize: 500_000,
+    maxPartSize: 500_000,
   });
   const formData = await unstable_parseMultipartFormData(
     request,
@@ -1642,7 +1642,7 @@ export const action: ActionFunction = async ({
 };
 ```
 
-**Options:** The only options supported are `maxFileSize` and `filter` which work the same as in `unstable_createFileUploadHandler` above. This API is not recommended for anything at scale, but is a convenient utility for simple use cases.
+**Options:** The only options supported are `maxPartSize` and `filter` which work the same as in `unstable_createFileUploadHandler` above. This API is not recommended for anything at scale, but is a convenient utility for simple use cases.
 
 ### Custom `uploadHandler`
 

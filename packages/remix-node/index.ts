@@ -43,7 +43,7 @@ export {
   unstable_composeUploadHandlers,
   unstable_parseMultipartFormData,
   unstable_createMemoryUploadHandler,
-  MeterError,
+  MaxPartSizeExceededError,
 } from "@remix-run/server-runtime";
 
 export type {

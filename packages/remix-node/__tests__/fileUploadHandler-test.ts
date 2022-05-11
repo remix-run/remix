@@ -50,15 +50,58 @@ describe("NodeOnDiskFile", () => {
 
   it("can sice file and get an arrayBuffer", async () => {
     let sliced = await file.slice(1, 5);
+    let slicedRes = contents.slice(1, 5);
     let buffer = await sliced.arrayBuffer();
-    expect(buffer.byteLength).toBe(4);
-    expect(buffer).toEqual(Buffer.from(contents.slice(1, 5)));
+    expect(buffer.byteLength).toBe(slicedRes.length);
+    expect(buffer).toEqual(Buffer.from(slicedRes));
   });
 
   it("can slice file and use stream", async () => {
     let sliced = await file.slice(1, 5);
-    expect(await readableStreamToString(sliced.stream() as any)).toBe(
-      contents.slice(1, 5)
-    );
+    let slicedRes = contents.slice(1, 5);
+    expect(sliced.size).toBe(slicedRes.length);
+    expect(await sliced.text()).toBe(slicedRes);
+  });
+
+  it("can slice file with negative start and no end", async () => {
+    let sliced = await file.slice(-2);
+    let slicedRes = contents.slice(-2);
+    expect(sliced.size).toBe(slicedRes.length);
+    expect(await sliced.text()).toBe(slicedRes);
+  });
+
+  it("can slice file with negative start and negative end", async () => {
+    let sliced = await file.slice(-3, -1);
+    let slicedRes = contents.slice(-3, -1);
+    expect(sliced.size).toBe(slicedRes.length);
+    expect(await sliced.text()).toBe(slicedRes);
+  });
+
+  it("can slice file with negative start and negative end twice", async () => {
+    let sliced = await file.slice(-3, -1).slice(1, -1);
+    let slicedRes = contents.slice(-3, -1).slice(1, -1);
+    expect(sliced.size).toBe(slicedRes.length);
+    expect(await sliced.text()).toBe(slicedRes);
+  });
+
+  it("can slice file with start and negative end", async () => {
+    let sliced = await file.slice(1, -2);
+    let slicedRes = contents.slice(1, -2);
+    expect(sliced.size).toBe(slicedRes.length);
+    expect(await sliced.text()).toBe(slicedRes);
+  });
+
+  it("can slice file with negaive start and end", async () => {
+    let sliced = await file.slice(-3, 1);
+    let slicedRes = contents.slice(-3, 1);
+    expect(sliced.size).toBe(slicedRes.length);
+    expect(await sliced.text()).toBe(slicedRes);
+  });
+
+  it("can slice oob", async () => {
+    let sliced = await file.slice(0, 10000);
+    let slicedRes = contents.slice(0, 10000);
+    expect(sliced.size).toBe(slicedRes.length);
+    expect(await sliced.text()).toBe(slicedRes);
   });
 });

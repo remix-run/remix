@@ -18,7 +18,7 @@ test.beforeAll(async () => {
           unstable_createFileUploadHandler as createFileUploadHandler,
           unstable_createMemoryUploadHandler as createMemoryUploadHandler,
           unstable_parseMultipartFormData as parseMultipartFormData,
-          MeterError,
+          MaxPartSizeExceededError,
         } from "@remix-run/node";
         import { Form, useActionData } from "@remix-run/react";
 
@@ -26,7 +26,7 @@ test.beforeAll(async () => {
           let uploadHandler = composeUploadHandlers(
             createFileUploadHandler({
               directory: "./uploads",
-              maxFileSize: 15,
+              maxPartSize: 15,
               avoidFileConflicts: false,
               file: ({ filename }) => filename,
             }),
@@ -45,7 +45,7 @@ test.beforeAll(async () => {
 
             return json({ message: "SUCCESS", size });
           } catch (error) {
-            if (error instanceof MeterError) {
+            if (error instanceof MaxPartSizeExceededError) {
               return json({ message: "FILE_TOO_LARGE", size: error.maxBytes });
             }
             return json({ message: "ERROR" }, 500);
@@ -76,13 +76,13 @@ test.beforeAll(async () => {
           json,
           unstable_createMemoryUploadHandler as createMemoryUploadHandler,
           unstable_parseMultipartFormData as parseMultipartFormData,
-          MeterError,
+          MaxPartSizeExceededError,
         } from "@remix-run/node";
         import { Form, useActionData } from "@remix-run/react";
 
         export let action = async ({ request }) => {
           let uploadHandler = createMemoryUploadHandler({
-            maxFileSize: 15,
+            maxPartSize: 15,
           });
 
           try {
@@ -97,7 +97,7 @@ test.beforeAll(async () => {
 
             return json({ message: "SUCCESS", size });
           } catch (error) {
-            if (error instanceof MeterError) {
+            if (error instanceof MaxPartSizeExceededError) {
               return json({ message: "FILE_TOO_LARGE", size: error.maxBytes });
             }
             return json({ message: "ERROR" }, 500);
@@ -140,7 +140,7 @@ test("can upload a file with createFileUploadHandler", async ({ page }) => {
   expect(await app.getHtml("#size")).toMatch(">14<");
 });
 
-test("can catch MeterError when file is too big with createFileUploadHandler", async ({
+test("can catch MaxPartSizeExceededError when file is too big with createFileUploadHandler", async ({
   page,
 }) => {
   let app = new PlaywrightFixture(appFixture, page);
@@ -165,7 +165,7 @@ test("can upload a file with createMemoryUploadHandler", async ({ page }) => {
   expect(await app.getHtml("#size")).toMatch(">14<");
 });
 
-test("can catch MeterError when file is too big with createMemoryUploadHandler", async ({
+test("can catch MaxPartSizeExceededError when file is too big with createMemoryUploadHandler", async ({
   page,
 }) => {
   let app = new PlaywrightFixture(appFixture, page);
@@ -197,7 +197,7 @@ test.describe("without javascript", () => {
     expect(await app.getHtml("#size")).toMatch(">14<");
   });
 
-  test("can catch MeterError when file is too big with createFileUploadHandler", async ({
+  test("can catch MaxPartSizeExceededError when file is too big with createFileUploadHandler", async ({
     page,
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
@@ -227,7 +227,7 @@ test.describe("without javascript", () => {
     expect(await app.getHtml("#size")).toMatch(">14<");
   });
 
-  test("can catch MeterError when file is too big with createMemoryUploadHandler", async ({
+  test("can catch MaxPartSizeExceededError when file is too big with createMemoryUploadHandler", async ({
     page,
   }) => {
     let app = new PlaywrightFixture(appFixture, page);

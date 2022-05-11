@@ -1,6 +1,6 @@
 import type { UploadHandler } from "@remix-run/server-runtime";
 
-import { MeterError } from "./meter";
+import { MaxPartSizeExceededError } from "./errors";
 
 export type MemoryUploadHandlerFilterArgs = {
   filename?: string;
@@ -13,7 +13,7 @@ export type MemoryUploadHandlerOptions = {
    * The maximum upload size allowed. If the size is exceeded an error will be thrown.
    * Defaults to 3000000B (3MB).
    */
-  maxFileSize?: number;
+  maxPartSize?: number;
   /**
    *
    * @param filename
@@ -25,7 +25,7 @@ export type MemoryUploadHandlerOptions = {
 
 export function createMemoryUploadHandler({
   filter,
-  maxFileSize = 3000000,
+  maxPartSize = 3000000,
 }: MemoryUploadHandlerOptions = {}): UploadHandler {
   return async ({ filename, contentType, name, data }) => {
     if (filter && !(await filter({ filename, contentType, name }))) {
@@ -36,8 +36,8 @@ export function createMemoryUploadHandler({
     let chunks = [];
     for await (let chunk of data) {
       size += chunk.byteLength;
-      if (size > maxFileSize) {
-        throw new MeterError(name, maxFileSize);
+      if (size > maxPartSize) {
+        throw new MaxPartSizeExceededError(name, maxPartSize);
       }
       chunks.push(chunk);
     }

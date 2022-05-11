@@ -6,7 +6,7 @@ import { basename, dirname, extname, resolve as resolvePath } from "path";
 import type { Readable } from "stream";
 import { finished } from "stream";
 import { promisify } from "util";
-import { MeterError } from "@remix-run/server-runtime";
+import { MaxPartSizeExceededError } from "@remix-run/server-runtime";
 import type { UploadHandler } from "@remix-run/server-runtime";
 // @ts-expect-error
 import * as streamSlice from "stream-slice";
@@ -52,7 +52,7 @@ export type FileUploadHandlerOptions = {
    * The maximum upload size allowed. If the size is exceeded an error will be thrown.
    * Defaults to 3000000B (3MB).
    */
-  maxFileSize?: number;
+  maxPartSize?: number;
   /**
    *
    * @param filename
@@ -91,7 +91,7 @@ export function createFileUploadHandler({
   avoidFileConflicts = true,
   file = defaultFilePathResolver,
   filter,
-  maxFileSize = 3000000,
+  maxPartSize = 3000000,
 }: FileUploadHandlerOptions = {}): UploadHandler {
   return async ({ name, filename, contentType, data }) => {
     if (
@@ -132,9 +132,9 @@ export function createFileUploadHandler({
     try {
       for await (let chunk of data) {
         size += chunk.byteLength;
-        if (size > maxFileSize) {
+        if (size > maxPartSize) {
           deleteFile = true;
-          throw new MeterError(name, maxFileSize);
+          throw new MaxPartSizeExceededError(name, maxPartSize);
         }
         writeFileStream.write(chunk);
       }
@@ -164,16 +164,21 @@ export class NodeOnDiskFile implements File {
     this.name = basename(filepath);
   }
 
-  public get size(): number {
+  get size(): number {
+    let stats = statSync(this.filepath);
+
     if (this.slicer) {
-      return this.slicer.end - this.slicer.start;
+      let slice = this.slicer.end - this.slicer.start;
+      return slice < 0 ? 0 : slice > stats.size ? stats.size : slice;
     }
 
-    let stats = statSync(this.filepath);
     return stats.size;
   }
 
   slice(start?: number, end?: number, type?: string): Blob {
+    if (typeof start === "number" && start < 0) start = this.size + start;
+    if (typeof end === "number" && end < 0) end = this.size + end;
+
     let startOffset = this.slicer?.start || 0;
 
     start = startOffset + (start || 0);
@@ -216,18 +221,11 @@ export class NodeOnDiskFile implements File {
     return readableStreamFromStream(stream);
   }
 
-  text(): Promise<string> {
-    let stream: Readable = createReadStream(this.filepath);
-    if (this.slicer) {
-      stream = stream.pipe(
-        streamSlice.slice(this.slicer.start, this.slicer.end)
-      );
-    }
-
-    return readableStreamToString(readableStreamFromStream(stream));
+  async text(): Promise<string> {
+    return readableStreamToString(this.stream());
   }
 
-  get [Symbol.toStringTag]() {
+  public get [Symbol.toStringTag]() {
     return "File";
   }
 }

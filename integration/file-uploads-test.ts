@@ -24,7 +24,7 @@ test.describe("file-uploads", () => {
           export let uploadHandler = composeUploadHandlers(
             createFileUploadHandler({
               directory: path.resolve(__dirname, "..", "uploads"),
-              maxFileSize: 10_000, // 10kb
+              maxPartSize: 10_000, // 10kb
               // you probably want to avoid conflicts in production
               // do not set to false or passthrough filename in real
               // applications.

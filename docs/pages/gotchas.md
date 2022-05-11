@@ -65,7 +65,7 @@ So instead of doing:
 import { unstable_createFileUploadHandler } from "@remix-run/{runtime}";
 
 const uploadHandler = unstable_createFileUploadHandler({
-  maxFileSize: 5_000_000,
+  maxPartSize: 5_000_000,
   file: ({ filename }) => filename,
 });
 
@@ -81,7 +81,7 @@ import { unstable_createFileUploadHandler } from "@remix-run/{runtime}";
 
 export async function action() {
   const uploadHandler = unstable_createFileUploadHandler({
-    maxFileSize: 5_000_000,
+    maxPartSize: 5_000_000,
     file: ({ filename }) => filename,
   });
 
