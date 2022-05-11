@@ -2,7 +2,7 @@ import { streamMultipart } from "@web3-storage/multipart-parser";
 
 export type UploadHandlerPart = {
   name: string;
-  filename: string;
+  filename?: string;
   contentType: string;
   data: AsyncIterable<Uint8Array>;
 };
@@ -49,6 +49,11 @@ export async function parseMultipartFormData(
 
   for await (let part of parts) {
     if (part.done) break;
+
+    if (typeof part.filename === "string") {
+      // only pass basename as the multipart/form-data spec recommends
+      part.filename = part.filename.split(/[/\\]/).pop();
+    }
 
     let value = await uploadHandler(part);
     if (typeof value !== "undefined" && value !== null) {
