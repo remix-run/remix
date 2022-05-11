@@ -22,7 +22,7 @@ When you start a pull request, the remix-cla-bot will prompt you to review the [
 Before you can contribute to the codebase, you will need to fork the repo. This will look a bit different depending on what type of contribution you are making:
 
 - All new features, bug-fixes, or **anything that touches `remix` code** should be branched off of and merged into the `dev` branch
-- Changes that only touch documentation can be branched off of and merged into the `main` branch
+- Changes that only touch templates or documentation can be branched off of and merged into the `main` branch
 
 The following steps will get you setup to contribute changes to this repo:
 
