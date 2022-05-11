@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useLocation } from "react-router-dom";
 
-import { useBeforeUnload, useTransition } from "./components";
+import { useBeforeUnload, useFetchers, useTransition } from "./components";
 
 let STORAGE_KEY = "positions";
 
@@ -68,14 +68,15 @@ let hydrated = false;
 function useScrollRestoration() {
   let location = useLocation();
   let transition = useTransition();
+  let fetchers = useFetchers();
 
   let wasSubmissionRef = React.useRef(false);
 
   React.useEffect(() => {
-    if (transition.submission) {
+    if (transition.submission || fetchers.find((fetcher) => fetcher.submission)) {
       wasSubmissionRef.current = true;
     }
-  }, [transition]);
+  }, [transition, fetchers]);
 
   React.useEffect(() => {
     if (transition.location) {
@@ -128,8 +129,8 @@ function useScrollRestoration() {
   }
 
   React.useEffect(() => {
-    if (transition.submission) {
+    if (transition.submission || fetchers.find((fetcher) => fetcher.submission)) {
       wasSubmissionRef.current = true;
     }
-  }, [transition]);
+  }, [transition, fetchers]);
 }
