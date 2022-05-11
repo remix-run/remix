@@ -894,7 +894,7 @@ See also:
 Each route can define its own HTTP headers. One of the common headers is the `Cache-Control` header that indicates to browser and CDN caches where and for how long a page is able to be cached.
 
 ```tsx
-export function headers({ loaderHeaders, parentHeaders }) {
+export function headers({ actionHeaders, loaderHeaders, parentHeaders }) {
   return {
     "X-Stretchy-Pants": "its for fun",
     "Cache-Control": "max-age=300, s-maxage=3600",
@@ -902,7 +902,7 @@ export function headers({ loaderHeaders, parentHeaders }) {
 }
 ```
 
-Usually your data is a better indicator of your cache duration than your route module (data tends to be more dynamic than markup), so the loader's headers are passed in to `headers()` too:
+Usually your data is a better indicator of your cache duration than your route module (data tends to be more dynamic than markup), so the `action`'s & `loader`'s headers are passed in to `headers()` too:
 
 ```tsx
 export function headers({ loaderHeaders }) {
@@ -912,7 +912,7 @@ export function headers({ loaderHeaders }) {
 }
 ```
 
-Note: `loaderHeaders` is an instance of the [Web Fetch API][headers] `Headers` class.
+Note: `actionHeaders` & `loaderHeaders` are an instance of the [Web Fetch API][headers] `Headers` class.
 
 Because Remix has nested routes, there's a battle of the headers to be won when nested routes match. In this case, the deepest route wins. Consider these files in the routes directory:
 
