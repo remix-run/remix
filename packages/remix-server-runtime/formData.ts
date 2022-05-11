@@ -2,14 +2,29 @@ import { streamMultipart } from "@web3-storage/multipart-parser";
 
 export type UploadHandlerPart = {
   name: string;
-  filename: string;
+  filename?: string;
   contentType: string;
   data: AsyncIterable<Uint8Array>;
 };
 
 export type UploadHandler = (
   part: UploadHandlerPart
-) => Promise<string | File | undefined>;
+) => Promise<File | string | null | undefined>;
+
+export function composeUploadHandlers(
+  ...handlers: UploadHandler[]
+): UploadHandler {
+  return async (part) => {
+    for (let handler of handlers) {
+      let value = await handler(part);
+      if (typeof value !== "undefined" && value !== null) {
+        return value;
+      }
+    }
+
+    return undefined;
+  };
+}
 
 /**
  * Allows you to handle multipart forms (file uploads) for your app.
@@ -35,37 +50,16 @@ export async function parseMultipartFormData(
   for await (let part of parts) {
     if (part.done) break;
 
-    if (!part.filename) {
-      formData.append(part.name, await bufferPart(part));
-    } else {
-      let file = await uploadHandler(part);
-      if (typeof file !== "undefined") {
-        formData.append(part.name, file as Blob);
-      }
+    if (typeof part.filename === "string") {
+      // only pass basename as the multipart/form-data spec recommends
+      part.filename = part.filename.split(/[/\\]/).pop();
+    }
+
+    let value = await uploadHandler(part);
+    if (typeof value !== "undefined" && value !== null) {
+      formData.append(part.name, value as any);
     }
   }
 
   return formData;
-}
-
-async function bufferPart(part: UploadHandlerPart): Promise<string> {
-  let chunks = [];
-
-  for await (let chunk of part.data) {
-    chunks.push(chunk);
-  }
-
-  return new TextDecoder().decode(mergeArrays(...chunks));
-}
-
-function mergeArrays(...arrays: Uint8Array[]) {
-  let out = new Uint8Array(
-    arrays.reduce((total, arr) => total + arr.length, 0)
-  );
-  let offset = 0;
-  for (let arr of arrays) {
-    out.set(arr, offset);
-    offset += arr.length;
-  }
-  return out;
 }

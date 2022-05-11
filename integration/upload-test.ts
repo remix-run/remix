@@ -14,29 +14,42 @@ test.beforeAll(async () => {
       "app/routes/file-upload-handler.jsx": js`
         import {
           json,
+          unstable_composeUploadHandlers as composeUploadHandlers,
           unstable_createFileUploadHandler as createFileUploadHandler,
+          unstable_createMemoryUploadHandler as createMemoryUploadHandler,
           unstable_parseMultipartFormData as parseMultipartFormData,
-          MeterError,
+          MaxPartSizeExceededError,
         } from "@remix-run/node";
         import { Form, useActionData } from "@remix-run/react";
 
         export let action = async ({ request }) => {
-          let uploadHandler = createFileUploadHandler({
-            directory: "./uploads",
-            maxFileSize: 15,
-            avoidFileConflicts: false,
-            file: ({ filename }) => filename,
-          });
+          let uploadHandler = composeUploadHandlers(
+            createFileUploadHandler({
+              directory: "./uploads",
+              maxPartSize: 13,
+              avoidFileConflicts: false,
+              file: ({ filename }) => filename,
+            }),
+            createMemoryUploadHandler(),
+          );
 
           try {
             let formData = await parseMultipartFormData(request, uploadHandler);
+
+            if (formData.get("test") !== "hidden") {
+              return { message: "hidden field not in form data" };
+            }
+
             let file = formData.get("file");
             let size = typeof file !== "string" && file ? file.size : 0;
 
             return json({ message: "SUCCESS", size });
           } catch (error) {
-            if (error instanceof MeterError) {
-              return json({ message: "FILE_TOO_LARGE", size: error.maxBytes });
+            if (error instanceof MaxPartSizeExceededError) {
+              return json(
+                { message: "FILE_TOO_LARGE", size: error.maxBytes },
+                { status: 413, headers: { "Connection": "close" } }
+              );
             }
             return json({ message: "ERROR" }, 500);
           }
@@ -47,6 +60,7 @@ test.beforeAll(async () => {
           return (
             <main>
               <Form method="post" encType="multipart/form-data">
+                <input type="hidden" name="test" value="hidden" />
                 <label htmlFor="file">File Uploader</label>
                 <br />
                 <input type="file" id="file" name="file" />
@@ -65,24 +79,32 @@ test.beforeAll(async () => {
           json,
           unstable_createMemoryUploadHandler as createMemoryUploadHandler,
           unstable_parseMultipartFormData as parseMultipartFormData,
-          MeterError,
+          MaxPartSizeExceededError,
         } from "@remix-run/node";
         import { Form, useActionData } from "@remix-run/react";
 
         export let action = async ({ request }) => {
           let uploadHandler = createMemoryUploadHandler({
-            maxFileSize: 15,
+            maxPartSize: 13,
           });
 
           try {
             let formData = await parseMultipartFormData(request, uploadHandler);
+
+            if (formData.get("test") !== "hidden") {
+              return { message: "hidden field not in form data" };
+            }
+
             let file = formData.get("file");
             let size = typeof file !== "string" && file ? file.size : 0;
 
             return json({ message: "SUCCESS", size });
           } catch (error) {
-            if (error instanceof MeterError) {
-              return json({ message: "FILE_TOO_LARGE", size: error.maxBytes });
+            if (error instanceof MaxPartSizeExceededError) {
+              return json(
+                { message: "FILE_TOO_LARGE", size: error.maxBytes },
+                { status: 413, headers: { "Connection": "close" } }
+              );
             }
             return json({ message: "ERROR" }, 500);
           }
@@ -93,6 +115,48 @@ test.beforeAll(async () => {
           return (
             <main>
               <Form method="post" encType="multipart/form-data">
+                <input type="hidden" name="test" value="hidden" />
+                <label htmlFor="file">File Uploader</label>
+                <br />
+                <input type="file" id="file" name="file" />
+                <br />
+                <button id="submit" type="submit">Submit</button>
+                {message && <p id="message">{message}</p>}
+                {size && <p id="size">{size}</p>}
+              </Form>
+            </main>
+          );
+        }      
+      `,
+
+      "app/routes/passthrough-upload-handler.jsx": js`
+        import {
+          json,
+          unstable_parseMultipartFormData as parseMultipartFormData,
+        } from "@remix-run/node";
+        import { Form, useActionData } from "@remix-run/react";
+
+        export let action = async ({ request }) => {
+          try {
+            let formData = await parseMultipartFormData(request, () => undefined);
+
+            return json(
+              { message: "SUCCESS", size: 0 },
+            );
+          } catch (error) {
+            return json(
+              { message: "ERROR" },
+              { status: 500, headers: { "Connection": "close" } }
+            );
+          }
+        };
+        
+        export default function PassthroughUpload() {
+          let { message, size } = useActionData() || {};
+          return (
+            <main>
+              <Form method="post" encType="multipart/form-data">
+                <input type="hidden" name="test" value="hidden" />
                 <label htmlFor="file">File Uploader</label>
                 <br />
                 <input type="file" id="file" name="file" />
@@ -120,10 +184,12 @@ test("can upload a file with createFileUploadHandler", async ({ page }) => {
   await app.clickSubmitButton("/file-upload-handler");
 
   expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
-  expect(await app.getHtml("#size")).toMatch(">14<");
+  expect(await app.getHtml("#size")).toMatch(">13<");
 });
 
-test("can catch MeterError when file is too big with createFileUploadHandler", async ({ page }) => {
+test("can catch MaxPartSizeExceededError when file is too big with createFileUploadHandler", async ({
+  page,
+}) => {
   let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/file-upload-handler");
   await app.uploadFile(
@@ -133,7 +199,7 @@ test("can catch MeterError when file is too big with createFileUploadHandler", a
   await app.clickSubmitButton("/file-upload-handler");
 
   expect(await app.getHtml("#message")).toMatch(">FILE_TOO_LARGE<");
-  expect(await app.getHtml("#size")).toMatch(">15<");
+  expect(await app.getHtml("#size")).toMatch(">13<");
 });
 
 test("can upload a file with createMemoryUploadHandler", async ({ page }) => {
@@ -143,10 +209,21 @@ test("can upload a file with createMemoryUploadHandler", async ({ page }) => {
   await app.clickSubmitButton("/memory-upload-handler");
 
   expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
-  expect(await app.getHtml("#size")).toMatch(">14<");
+  expect(await app.getHtml("#size")).toMatch(">13<");
 });
 
-test("can catch MeterError when file is too big with createMemoryUploadHandler", async ({ page }) => {
+test("can upload a file with a passthrough handler", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
+  await app.goto("/passthrough-upload-handler");
+  await app.uploadFile("#file", path.resolve(__dirname, "assets/toupload.txt"));
+  await app.clickSubmitButton("/passthrough-upload-handler");
+
+  expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
+});
+
+test("can catch MaxPartSizeExceededError when file is too big with createMemoryUploadHandler", async ({
+  page,
+}) => {
   let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/memory-upload-handler");
   await app.uploadFile(
@@ -156,7 +233,7 @@ test("can catch MeterError when file is too big with createMemoryUploadHandler",
   await app.clickSubmitButton("/memory-upload-handler");
 
   expect(await app.getHtml("#message")).toMatch(">FILE_TOO_LARGE<");
-  expect(await app.getHtml("#size")).toMatch(">15<");
+  expect(await app.getHtml("#size")).toMatch(">13<");
 });
 
 test.describe("without javascript", () => {
@@ -173,10 +250,12 @@ test.describe("without javascript", () => {
     await Promise.all([page.click("#submit"), page.waitForNavigation()]);
 
     expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
-    expect(await app.getHtml("#size")).toMatch(">14<");
+    expect(await app.getHtml("#size")).toMatch(">13<");
   });
 
-  test("can catch MeterError when file is too big with createFileUploadHandler", async ({ page }) => {
+  test("can catch MaxPartSizeExceededError when file is too big with createFileUploadHandler", async ({
+    page,
+  }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/file-upload-handler");
     await app.uploadFile(
@@ -187,7 +266,7 @@ test.describe("without javascript", () => {
     await Promise.all([page.click("#submit"), page.waitForNavigation()]);
 
     expect(await app.getHtml("#message")).toMatch(">FILE_TOO_LARGE<");
-    expect(await app.getHtml("#size")).toMatch(">15<");
+    expect(await app.getHtml("#size")).toMatch(">13<");
   });
 
   test("can upload a file with createMemoryUploadHandler", async ({ page }) => {
@@ -201,10 +280,25 @@ test.describe("without javascript", () => {
     await Promise.all([page.click("#submit"), page.waitForNavigation()]);
 
     expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
-    expect(await app.getHtml("#size")).toMatch(">14<");
+    expect(await app.getHtml("#size")).toMatch(">13<");
   });
 
-  test("can catch MeterError when file is too big with createMemoryUploadHandler", async ({ page }) => {
+  test("can upload a file with passthrough handler", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/passthrough-upload-handler");
+    await app.uploadFile(
+      "#file",
+      path.resolve(__dirname, "assets/toupload.txt")
+    );
+
+    await Promise.all([page.click("#submit"), page.waitForNavigation()]);
+
+    expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
+  });
+
+  test("can catch MaxPartSizeExceededError when file is too big with createMemoryUploadHandler", async ({
+    page,
+  }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/memory-upload-handler");
     await app.uploadFile(
@@ -215,6 +309,6 @@ test.describe("without javascript", () => {
     await Promise.all([page.click("#submit"), page.waitForNavigation()]);
 
     expect(await app.getHtml("#message")).toMatch(">FILE_TOO_LARGE<");
-    expect(await app.getHtml("#size")).toMatch(">15<");
+    expect(await app.getHtml("#size")).toMatch(">13<");
   });
 });

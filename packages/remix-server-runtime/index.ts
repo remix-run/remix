@@ -1,6 +1,9 @@
 // Default implementations for the Remix server runtime interface
 export { createCookieFactory, isCookie } from "./cookies";
-export { parseMultipartFormData as unstable_parseMultipartFormData } from "./formData";
+export {
+  composeUploadHandlers as unstable_composeUploadHandlers,
+  parseMultipartFormData as unstable_parseMultipartFormData,
+} from "./formData";
 export { deferred, json, redirect } from "./responses";
 export { createRequestHandler } from "./server";
 export {
@@ -11,7 +14,7 @@ export {
 export { createCookieSessionStorageFactory } from "./sessions/cookieStorage";
 export { createMemorySessionStorageFactory } from "./sessions/memoryStorage";
 export { createMemoryUploadHandler as unstable_createMemoryUploadHandler } from "./upload/memoryUploadHandler";
-export { MeterError } from "./upload/meter";
+export { MaxPartSizeExceededError } from "./upload/errors";
 
 // Types for the Remix server runtime interface
 export type {

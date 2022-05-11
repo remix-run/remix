@@ -1,5 +1,5 @@
+import { PassThrough } from "node:stream";
 import cloudinary from "cloudinary";
-import type { Stream } from "stream";
 
 cloudinary.v2.config({
   cloud_name: process.env.CLOUD_NAME,
@@ -7,8 +7,9 @@ cloudinary.v2.config({
   api_secret: process.env.API_SECRET,
 });
 
-async function uploadImage(fileStream: Stream) {
-  return new Promise((resolve, reject) => {
+async function uploadImage(data: AsyncIterable<Uint8Array>) {
+  const dataStream = new PassThrough();
+  const uploadPromise = new Promise((resolve, reject) => {
     const uploadStream = cloudinary.v2.uploader.upload_stream(
       {
         folder: "remix",
@@ -16,12 +17,28 @@ async function uploadImage(fileStream: Stream) {
       (error, result) => {
         if (error) {
           reject(error);
+          return;
         }
         resolve(result);
       }
     );
-    fileStream.pipe(uploadStream);
+    dataStream.pipe(uploadStream);
   });
+
+  let errored = false;
+  try {
+    for await (let chunk of data) {
+      dataStream.write(chunk);
+    }
+  } catch (error: any) {
+    errored = true;
+    dataStream.destroy(error);
+  }
+  if (!errored) {
+    dataStream.end();
+  }
+
+  return uploadPromise;
 }
 
 console.log("configs", cloudinary.v2.config());
