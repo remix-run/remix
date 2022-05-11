@@ -46,7 +46,10 @@ test.beforeAll(async () => {
             return json({ message: "SUCCESS", size });
           } catch (error) {
             if (error instanceof MaxPartSizeExceededError) {
-              return json({ message: "FILE_TOO_LARGE", size: error.maxBytes });
+              return json(
+                { message: "FILE_TOO_LARGE", size: error.maxBytes },
+                { status: 413, headers: { "Connection": "close" } }
+              );
             }
             return json({ message: "ERROR" }, 500);
           }
@@ -98,13 +101,57 @@ test.beforeAll(async () => {
             return json({ message: "SUCCESS", size });
           } catch (error) {
             if (error instanceof MaxPartSizeExceededError) {
-              return json({ message: "FILE_TOO_LARGE", size: error.maxBytes });
+              return json(
+                { message: "FILE_TOO_LARGE", size: error.maxBytes },
+                { status: 413, headers: { "Connection": "close" } }
+              );
             }
             return json({ message: "ERROR" }, 500);
           }
         };
         
         export default function MemoryUpload() {
+          let { message, size } = useActionData() || {};
+          return (
+            <main>
+              <Form method="post" encType="multipart/form-data">
+                <input type="hidden" name="test" value="hidden" />
+                <label htmlFor="file">File Uploader</label>
+                <br />
+                <input type="file" id="file" name="file" />
+                <br />
+                <button id="submit" type="submit">Submit</button>
+                {message && <p id="message">{message}</p>}
+                {size && <p id="size">{size}</p>}
+              </Form>
+            </main>
+          );
+        }      
+      `,
+
+      "app/routes/passthrough-upload-handler.jsx": js`
+        import {
+          json,
+          unstable_parseMultipartFormData as parseMultipartFormData,
+        } from "@remix-run/node";
+        import { Form, useActionData } from "@remix-run/react";
+
+        export let action = async ({ request }) => {
+          try {
+            let formData = await parseMultipartFormData(request, () => undefined);
+
+            return json(
+              { message: "SUCCESS", size: 0 },
+            );
+          } catch (error) {
+            return json(
+              { message: "ERROR" },
+              { status: 500, headers: { "Connection": "close" } }
+            );
+          }
+        };
+        
+        export default function PassthroughUpload() {
           let { message, size } = useActionData() || {};
           return (
             <main>
@@ -163,6 +210,15 @@ test("can upload a file with createMemoryUploadHandler", async ({ page }) => {
 
   expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
   expect(await app.getHtml("#size")).toMatch(">14<");
+});
+
+test("can upload a file with a passthrough handler", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
+  await app.goto("/passthrough-upload-handler");
+  await app.uploadFile("#file", path.resolve(__dirname, "assets/toupload.txt"));
+  await app.clickSubmitButton("/passthrough-upload-handler");
+
+  expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
 });
 
 test("can catch MaxPartSizeExceededError when file is too big with createMemoryUploadHandler", async ({
@@ -225,6 +281,19 @@ test.describe("without javascript", () => {
 
     expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
     expect(await app.getHtml("#size")).toMatch(">14<");
+  });
+
+  test("can upload a file with passthrough handler", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/passthrough-upload-handler");
+    await app.uploadFile(
+      "#file",
+      path.resolve(__dirname, "assets/toupload.txt")
+    );
+
+    await Promise.all([page.click("#submit"), page.waitForNavigation()]);
+
+    expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
   });
 
   test("can catch MaxPartSizeExceededError when file is too big with createMemoryUploadHandler", async ({
