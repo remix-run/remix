@@ -15,6 +15,9 @@ const defaultRuntimeExports = {
     "isSession",
     "json",
     "redirect",
+    "unstable_composeUploadHandlers",
+    "unstable_createMemoryUploadHandler",
+    "unstable_parseMultipartFormData",
   ],
   type: [
     "ActionFunction",
@@ -83,8 +86,6 @@ const nodeSpecificExports = {
     "Request",
     "Response",
     "unstable_createFileUploadHandler",
-    "unstable_createMemoryUploadHandler",
-    "unstable_parseMultipartFormData",
   ],
   type: [
     "HeadersInit",
