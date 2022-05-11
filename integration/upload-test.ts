@@ -26,7 +26,7 @@ test.beforeAll(async () => {
           let uploadHandler = composeUploadHandlers(
             createFileUploadHandler({
               directory: "./uploads",
-              maxPartSize: 15,
+              maxPartSize: 13,
               avoidFileConflicts: false,
               file: ({ filename }) => filename,
             }),
@@ -85,7 +85,7 @@ test.beforeAll(async () => {
 
         export let action = async ({ request }) => {
           let uploadHandler = createMemoryUploadHandler({
-            maxPartSize: 15,
+            maxPartSize: 13,
           });
 
           try {
@@ -184,7 +184,7 @@ test("can upload a file with createFileUploadHandler", async ({ page }) => {
   await app.clickSubmitButton("/file-upload-handler");
 
   expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
-  expect(await app.getHtml("#size")).toMatch(">14<");
+  expect(await app.getHtml("#size")).toMatch(">13<");
 });
 
 test("can catch MaxPartSizeExceededError when file is too big with createFileUploadHandler", async ({
@@ -199,7 +199,7 @@ test("can catch MaxPartSizeExceededError when file is too big with createFileUpl
   await app.clickSubmitButton("/file-upload-handler");
 
   expect(await app.getHtml("#message")).toMatch(">FILE_TOO_LARGE<");
-  expect(await app.getHtml("#size")).toMatch(">15<");
+  expect(await app.getHtml("#size")).toMatch(">13<");
 });
 
 test("can upload a file with createMemoryUploadHandler", async ({ page }) => {
@@ -209,7 +209,7 @@ test("can upload a file with createMemoryUploadHandler", async ({ page }) => {
   await app.clickSubmitButton("/memory-upload-handler");
 
   expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
-  expect(await app.getHtml("#size")).toMatch(">14<");
+  expect(await app.getHtml("#size")).toMatch(">13<");
 });
 
 test("can upload a file with a passthrough handler", async ({ page }) => {
@@ -233,7 +233,7 @@ test("can catch MaxPartSizeExceededError when file is too big with createMemoryU
   await app.clickSubmitButton("/memory-upload-handler");
 
   expect(await app.getHtml("#message")).toMatch(">FILE_TOO_LARGE<");
-  expect(await app.getHtml("#size")).toMatch(">15<");
+  expect(await app.getHtml("#size")).toMatch(">13<");
 });
 
 test.describe("without javascript", () => {
@@ -250,7 +250,7 @@ test.describe("without javascript", () => {
     await Promise.all([page.click("#submit"), page.waitForNavigation()]);
 
     expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
-    expect(await app.getHtml("#size")).toMatch(">14<");
+    expect(await app.getHtml("#size")).toMatch(">13<");
   });
 
   test("can catch MaxPartSizeExceededError when file is too big with createFileUploadHandler", async ({
@@ -266,7 +266,7 @@ test.describe("without javascript", () => {
     await Promise.all([page.click("#submit"), page.waitForNavigation()]);
 
     expect(await app.getHtml("#message")).toMatch(">FILE_TOO_LARGE<");
-    expect(await app.getHtml("#size")).toMatch(">15<");
+    expect(await app.getHtml("#size")).toMatch(">13<");
   });
 
   test("can upload a file with createMemoryUploadHandler", async ({ page }) => {
@@ -280,7 +280,7 @@ test.describe("without javascript", () => {
     await Promise.all([page.click("#submit"), page.waitForNavigation()]);
 
     expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
-    expect(await app.getHtml("#size")).toMatch(">14<");
+    expect(await app.getHtml("#size")).toMatch(">13<");
   });
 
   test("can upload a file with passthrough handler", async ({ page }) => {
@@ -309,6 +309,6 @@ test.describe("without javascript", () => {
     await Promise.all([page.click("#submit"), page.waitForNavigation()]);
 
     expect(await app.getHtml("#message")).toMatch(">FILE_TOO_LARGE<");
-    expect(await app.getHtml("#size")).toMatch(">15<");
+    expect(await app.getHtml("#size")).toMatch(">13<");
   });
 });
