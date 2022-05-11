@@ -912,7 +912,7 @@ export function headers({ loaderHeaders }) {
 }
 ```
 
-Note: `loaderHeaders` and `actionHeaders` are an instance of the [Web Fetch API][headers] `Headers` class.
+Note: `actionHeaders` & `loaderHeaders` are an instance of the [Web Fetch API][headers] `Headers` class.
 
 Because Remix has nested routes, there's a battle of the headers to be won when nested routes match. In this case, the deepest route wins. Consider these files in the routes directory:
 
