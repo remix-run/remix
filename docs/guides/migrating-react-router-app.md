@@ -28,7 +28,7 @@ npm install -D @remix-run/dev
 
 Most React Router apps run primarily in the browser. The server's only job is to send a single static HTML page while React Router manages the route-based views client-side. These apps generally have a browser entrypoint file like a root `index.js` that looks something like this:
 
-```jsx
+```jsx filename=index.js
 import * as ReactDOM from "react-dom";
 
 import App from "./App";
@@ -126,7 +126,6 @@ Create a new file called `root.jsx` (or `root.tsx`) in your `app` directory. The
 In your `root.jsx`, export a component that mirrors its structure:
 
 ```js filename=root.jsx
-import * as React from "react";
 import { Outlet } from "@remix-run/react";
 
 export default function Root() {
@@ -252,8 +251,6 @@ At this point you _might_ be able to say you are done with the initial migration
 A common pain-point in migrating a client-rendered codebase to a server-rendered one is that you may have references to browser APIs in code that runs on the server. A common example can be found when initializing values in state:
 
 ```jsx
-import * as React from "react";
-
 function Count() {
   let [count, setCount] = React.useState(
     () => localStorage.getItem("count") || 0
@@ -283,8 +280,6 @@ Your go-to solution may be to check for the `window` object and only run the cal
 One potential solution here is using a different caching mechanism that can be used on the server and passed to the component via props passed from a route's [loader data](../api/conventions#loader). But if it isn't crucial for your app to render the component on the server, a simpler solution may be to skip rendering altogether on the server and wait until hydration is complete to render it in the browser.
 
 ```jsx
-import * as React from "react";
-
 // We can safely track hydration in memory state
 // outside of the component because it is only
 // updated once after the version instance of
@@ -400,8 +395,6 @@ Remix does not support most non-standard imports, and we think for good reason. 
 Many bundlers use plugins to allow importing various assets like images and fonts. These typically come into your component as string representing the filepath of the asset.
 
 ```js
-import * as React from "react";
-
 import logo from "./logo.png";
 
 export function Logo() {
@@ -415,9 +408,7 @@ In Remix, this works basically the same way. For assets like fonts that are load
 
 Create React App and some Webpack plugins allow you to import SVG files as a React component. This is a common use case for SVG files, but it's not supported by default in Remix.
 
-```js
-import * as React from "react";
-
+```js bad nocopy
 // This will not work in Remix!
 import MyLogo from "./logo.svg";
 
@@ -434,7 +425,7 @@ If you want to use SVG files as React components, you'll need to first create th
 </svg>
 ```
 
-```jsx filename=icon.jsx
+```jsx filename=icon.jsx good
 export default function Icon() {
   return (
     <svg
@@ -466,7 +457,6 @@ Let's talk a bit more about styles. Remix does not handle CSS imports the same w
 Assume you have a plain CSS import in your `App` component:
 
 ```jsx filename=app.jsx lines=[6]
-import * as React from "react";
 import { Outlet } from "react-router-dom";
 
 import Logo from "./logo";
@@ -511,8 +501,7 @@ In Remix, stylesheets can only be loaded from route component files. Importing t
 
 Let's move our app's stylesheet and a few other assets to the `links` function in our root route:
 
-```jsx filename=root.jsx lines=[2,5,7-16,32]
-import * as React from "react";
+```jsx filename=root.jsx lines=[1,4,6-15,31]
 import { Links } from "@remix-run/react";
 
 import App from "./app";
@@ -596,13 +585,13 @@ Remix re-exports everything you get from `react-router-dom` and we recommend tha
 
 **Before:**
 
-```jsx bad
+```jsx bad nocopy
 import { Link, Outlet } from "react-router-dom";
 ```
 
 **After:**
 
-```jsx
+```jsx good
 import { Link, Outlet } from "@remix-run/react";
 ```
 
