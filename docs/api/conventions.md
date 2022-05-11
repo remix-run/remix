@@ -894,7 +894,11 @@ See also:
 Each route can define its own HTTP headers. One of the common headers is the `Cache-Control` header that indicates to browser and CDN caches where and for how long a page is able to be cached.
 
 ```tsx
-export function headers({ actionHeaders, loaderHeaders, parentHeaders }) {
+export function headers({
+  actionHeaders,
+  loaderHeaders,
+  parentHeaders,
+}) {
   return {
     "X-Stretchy-Pants": "its for fun",
     "Cache-Control": "max-age=300, s-maxage=3600",
