@@ -52,11 +52,10 @@ test.describe("compiler", () => {
           }
         `,
         "app/routes/built-ins-polyfill.jsx": js`
-          import { useLoaderData } from "@remix-run/react";
           import * as path from "path";
 
           export default function BuiltIns() {
-            return <div id="built-ins-polyfill">{path.join("test", "file.txt")}</div>;
+            return <div id="built-ins-polyfill">{path.join("test", "file.txt").replace(/\\/g, "/")}</div>;
           }
         `,
         "app/routes/esm-only-pkg.jsx": js`
@@ -199,7 +198,7 @@ test.describe("compiler", () => {
     expect(routeModule).not.toMatch(/from\s*"path/);
   });
 
-  test("bundles node built-ins polyfill for client bundle when used in client code", async ({
+  test.only("bundles node built-ins polyfill for client bundle when used in client code", async ({
     page,
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
