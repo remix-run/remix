@@ -456,7 +456,7 @@ Let's talk a bit more about styles. Remix does not handle CSS imports the same w
 
 Assume you have a plain CSS import in your `App` component:
 
-```jsx filename=app.jsx lines=[6]
+```jsx filename=app.jsx lines=[5]
 import { Outlet } from "react-router-dom";
 
 import Logo from "./logo";
