@@ -1,7 +1,5 @@
-import type { Writable } from "stream";
+import type { Readable, Writable } from "stream";
 import { Stream } from "stream";
-
-const { readableHighWaterMark } = new Stream.Readable();
 
 export async function writeReadableStreamToWritable(
   stream: ReadableStream,
@@ -55,7 +53,7 @@ export async function readableStreamToString(
 }
 
 export const readableStreamFromStream = (
-  source: Stream & { readableHighWaterMark?: number }
+  source: Readable & { readableHighWaterMark?: number }
 ) => {
   let pump = new StreamPump(source);
   let stream = new ReadableStream(pump, pump);
@@ -75,7 +73,7 @@ class StreamPump {
   private controller?: ReadableStreamController<Uint8Array>;
 
   /**
-   * @param {Stream & {
+   * @param {Readable & {
    * 	readableHighWaterMark?: number
    * 	readable?:boolean,
    * 	resume?: () => void,
@@ -92,7 +90,9 @@ class StreamPump {
       destroy?: (error?: Error) => void;
     }
   ) {
-    this.highWaterMark = stream.readableHighWaterMark || readableHighWaterMark;
+    this.highWaterMark =
+      stream.readableHighWaterMark ||
+      new Stream.Readable().readableHighWaterMark;
     this.accumalatedSize = 0;
     this.stream = stream;
     this.enqueue = this.enqueue.bind(this);

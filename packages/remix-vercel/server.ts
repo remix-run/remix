@@ -10,7 +10,7 @@ import {
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
-  pipeReadableStreamToWritable,
+  writeReadableStreamToWritable,
 } from "@remix-run/node";
 
 /**
@@ -116,7 +116,7 @@ export async function sendRemixResponse(
   );
 
   if (nodeResponse.body) {
-    await pipeReadableStreamToWritable(nodeResponse.body, res);
+    await writeReadableStreamToWritable(nodeResponse.body, res);
   } else {
     res.end();
   }
