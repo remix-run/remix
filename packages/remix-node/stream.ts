@@ -67,7 +67,7 @@ export async function readableStreamToString(
   return Buffer.concat(chunks).toString(encoding);
 }
 
-export const readableStreamFromStream = (
+export const createReadableStreamFromReadable = (
   source: Readable & { readableHighWaterMark?: number }
 ) => {
   let pump = new StreamPump(source);
