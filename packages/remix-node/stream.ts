@@ -28,8 +28,23 @@ export async function writeReadableStreamToWritable(
   }
 }
 
+export async function writeAsyncIterableToWritable(
+  iterable: AsyncIterable<Uint8Array>,
+  writable: Writable
+) {
+  try {
+    for await (let chunk of iterable) {
+      writable.write(chunk);
+    }
+    writable.end();
+  } catch (error: any) {
+    writable.destroy(error);
+    throw error;
+  }
+}
+
 export async function readableStreamToString(
-  stream: ReadableStream<any>,
+  stream: ReadableStream<Uint8Array>,
   encoding?: BufferEncoding
 ) {
   let reader = stream.getReader();
