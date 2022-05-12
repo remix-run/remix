@@ -447,8 +447,10 @@ Update the package scripts to generate the Tailwind file during dev and for the 
 Finally, import the generated CSS file into your app:
 
 ```tsx filename=app/root.tsx
+import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+
 // ...
-import type { LinksFunction } from "@remix-run/node";
+
 import styles from "./tailwind.css";
 
 export const links: LinksFunction = () => [
