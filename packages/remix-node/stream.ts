@@ -3,7 +3,7 @@ import { Stream } from "stream";
 
 const { readableHighWaterMark } = new Stream.Readable();
 
-export async function pipeReadableStreamToWritable(
+export async function writeReadableStreamToWritable(
   stream: ReadableStream,
   writable: Writable
 ) {
@@ -22,10 +22,18 @@ export async function pipeReadableStreamToWritable(
     await read();
   }
 
-  await read();
+  try {
+    await read();
+  } catch (error: any) {
+    writable.destroy(error);
+    throw error;
+  }
 }
 
-export async function readableStreamToBase64String(stream: ReadableStream) {
+export async function readableStreamToString(
+  stream: ReadableStream<any>,
+  encoding?: BufferEncoding
+) {
   let reader = stream.getReader();
   let chunks: Uint8Array[] = [];
 
@@ -43,28 +51,7 @@ export async function readableStreamToBase64String(stream: ReadableStream) {
 
   await read();
 
-  return Buffer.concat(chunks).toString("base64");
-}
-
-export async function readableStreamToString(stream: ReadableStream<any>) {
-  let reader = stream.getReader();
-  let chunks: Uint8Array[] = [];
-
-  async function read() {
-    let { done, value } = await reader.read();
-
-    if (done) {
-      return;
-    } else if (value) {
-      chunks.push(value);
-    }
-
-    await read();
-  }
-
-  await read();
-
-  return Buffer.concat(chunks).toString();
+  return Buffer.concat(chunks).toString(encoding);
 }
 
 export const readableStreamFromStream = (

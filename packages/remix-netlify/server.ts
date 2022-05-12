@@ -2,7 +2,7 @@ import {
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
-  readableStreamToBase64String,
+  readableStreamToString,
 } from "@remix-run/node";
 import type {
   Handler,
@@ -137,7 +137,7 @@ export async function sendRemixResponse(
 
   if (nodeResponse.body) {
     if (isBase64Encoded) {
-      body = await readableStreamToBase64String(nodeResponse.body);
+      body = await readableStreamToString(nodeResponse.body, "base64");
     } else {
       body = await nodeResponse.text();
     }
