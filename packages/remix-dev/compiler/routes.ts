@@ -56,6 +56,9 @@ export async function getRouteModuleExports(
     format: "esm",
     metafile: true,
     write: false,
+    loader: {
+      ".js": "jsx",
+    },
     logLevel: "silent",
     plugins: [mdxPlugin(config)],
   });

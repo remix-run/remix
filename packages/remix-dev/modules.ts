@@ -98,3 +98,7 @@ declare module "*.woff2" {
   let asset: string;
   export default asset;
 }
+declare module "*.webmanifest" {
+  let asset: string;
+  export default asset;
+}

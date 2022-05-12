@@ -64,17 +64,21 @@ export async function init(
 ) {
   let initScriptDir = path.join(projectDir, "remix.init");
   let initScript = path.resolve(initScriptDir, "index.js");
+  let initPackageJson = path.resolve(initScriptDir, "package.json");
 
   let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
 
   if (await fse.pathExists(initScript)) {
-    execSync(`${packageManager} install`, {
-      stdio: "ignore",
-      cwd: initScriptDir,
-    });
+    if (await fse.pathExists(initPackageJson)) {
+      execSync(`${packageManager} install`, {
+        stdio: "ignore",
+        cwd: initScriptDir,
+      });
+    }
+
     let initFn = require(initScript);
     try {
-      await initFn({ rootDirectory: projectDir, isTypeScript });
+      await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
     } catch (error) {
       if (error instanceof Error) {
         error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
@@ -144,9 +148,7 @@ export async function build(
 
   let start = Date.now();
   let config = await readConfig(remixRoot);
-
-  cleanBuildDirectories(config);
-
+  fse.emptyDirSync(config.assetsBuildDirectory);
   await compiler.build(config, {
     mode: mode,
     sourcemap,
@@ -195,8 +197,6 @@ export async function watch(
     console.log(message);
     broadcast({ type: "LOG", message });
   }
-
-  cleanBuildDirectories(config);
 
   let closeWatcher = await compiler.watch(config, {
     mode,
@@ -309,14 +309,5 @@ function purgeAppRequireCache(buildPath: string) {
     if (key.startsWith(buildPath)) {
       delete require.cache[key];
     }
-  }
-}
-
-function cleanBuildDirectories(config: RemixConfig) {
-  try {
-    fse.emptyDirSync(config.assetsBuildDirectory);
-    fse.emptyDirSync(path.dirname(config.serverBuildPath));
-  } catch (err) {
-    console.error("Could not clean build directories");
   }
 }

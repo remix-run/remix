@@ -74,6 +74,7 @@ jobs:
         node:
           - 14
           - 16
+          - 18
     runs-on: ${{ matrix.os }}
     steps:
       - name: 🛑 Cancel Previous Runs
@@ -104,6 +105,7 @@ jobs:
         node:
           - 14
           - 16
+          - 18
         os:
           - ubuntu-latest
           # - macos-latest
