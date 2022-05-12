@@ -1591,7 +1591,7 @@ An upload handler that will write parts with a filename to disk to keep them out
 export const action: ActionFunction = async ({
   request,
 }) => {
-  const uploadHandler = composeUploadHandlers(
+  const uploadHandler = unstable_composeUploadHandlers(
     unstable_createFileUploadHandler({
       maxPartSize: 5_000_000,
       file: ({ filename }) => filename,
