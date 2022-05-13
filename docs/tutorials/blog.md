@@ -1075,7 +1075,7 @@ export const action: ActionFunction = async ({
 
 ## Progressive Enhancement
 
-For some real fun, [disable JavaScript](https://developer.chrome.com/docs/devtools/javascript/disable/) in your dev tools and try it out. Because Remix is built on the fundamentals of HTTP and HTML, this whole thing works without JavaScript in the browser 🤯 But that's not the point. What's cool about it is that this means our UI is resiliant to network issues. But we really _like_ having JavaScript in the browser and there are a lot of cool things we can do when we've got it, so make sure to re-enable JavaScript before continuing, because we're going to need it to _progressively enhance_ the user experience next.
+For some real fun, [disable JavaScript](https://developer.chrome.com/docs/devtools/javascript/disable/) in your dev tools and try it out. Because Remix is built on the fundamentals of HTTP and HTML, this whole thing works without JavaScript in the browser 🤯 But that's not the point. What's cool about it is that this means our UI is resilient to network issues. But we really _like_ having JavaScript in the browser and there are a lot of cool things we can do when we've got it, so make sure to re-enable JavaScript before continuing, because we're going to need it to _progressively enhance_ the user experience next.
 
 Let's slow this down and add some "pending UI" to our form.
 

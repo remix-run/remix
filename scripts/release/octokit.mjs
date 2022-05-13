@@ -22,11 +22,6 @@ export async function prsMergedSinceLast({
   repo,
   lastRelease: lastReleaseVersion,
 }) {
-  // we don't want to comment about experimental releases
-  if (lastReleaseVersion.includes("experimental")) {
-    return [];
-  }
-
   let releases = await octokit.paginate(octokit.rest.repos.listReleases, {
     owner,
     repo,
@@ -100,11 +95,14 @@ export async function prsMergedSinceLast({
     })
   );
 
-  return prsWithFiles.filter((pr) => {
-    return pr.files.some((file) => {
-      return checkIfStringStartsWith(file.filename, PR_FILES_STARTS_WITH);
-    });
-  });
+  return {
+    previousRelease: previousRelease.tag_name,
+    merged: prsWithFiles.filter((pr) => {
+      return pr.files.some((file) => {
+        return checkIfStringStartsWith(file.filename, PR_FILES_STARTS_WITH);
+      });
+    }),
+  };
 }
 
 export async function commentOnPullRequest({ owner, repo, pr, version }) {
@@ -125,27 +123,64 @@ export async function commentOnIssue({ owner, repo, issue, version }) {
   });
 }
 
-export async function getIssuesClosedByPullRequests(prHtmlUrl) {
+async function getIssuesLinkedToPullRequest(prHtmlUrl, nodes = [], after) {
   let res = await graphqlWithAuth(
     gql`
-      query GET_ISSUES_CLOSED_BY_PR($prHtmlUrl: URI!) {
+      query GET_ISSUES_CLOSED_BY_PR($prHtmlUrl: URI!, $after: String) {
         resource(url: $prHtmlUrl) {
           ... on PullRequest {
-            closingIssuesReferences(first: 100) {
+            closingIssuesReferences(first: 100, after: $after) {
               nodes {
                 number
+              }
+              pageInfo {
+                hasNextPage
+                endCursor
               }
             }
           }
         }
       }
     `,
-    { prHtmlUrl }
+    { prHtmlUrl, after }
   );
 
-  return res?.resource?.closingIssuesReferences?.nodes ?? [];
+  let newNodes = res?.resource?.closingIssuesReferences?.nodes ?? [];
+  nodes.push(...newNodes);
+
+  if (res?.resource?.closingIssuesReferences?.pageInfo?.hasNextPage) {
+    return getIssuesLinkedToPullRequest(
+      prHtmlUrl,
+      nodes,
+      res?.resource?.closingIssuesReferences?.pageInfo?.endCursor
+    );
+  }
+
+  return nodes;
 }
 
-function checkIfStringStartsWith(str, substrs) {
-  return substrs.some((substr) => str.startsWith(substr));
+export async function getIssuesClosedByPullRequests(prHtmlUrl, prBody) {
+  let linked = await getIssuesLinkedToPullRequest(prHtmlUrl);
+  if (!prBody) return linked;
+
+  /**
+   * This regex matches for one of github's issue references for auto linking an issue to a PR
+   * as that only happens when the PR is sent to the default branch of the repo
+   * https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword
+   */
+  let regex =
+    /(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s#([0-9]+)/gi;
+  let matches = prBody.match(regex);
+  if (!matches) return linked;
+
+  let issues = matches.map((match) => {
+    let [, issueNumber] = match.split(" #");
+    return { number: parseInt(issueNumber, 10) };
+  });
+
+  return [...linked, ...issues.filter((issue) => issue !== null)];
+}
+
+function checkIfStringStartsWith(string, substrings) {
+  return substrings.some((substr) => string.startsWith(substr));
 }

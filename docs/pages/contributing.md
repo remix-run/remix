@@ -22,7 +22,7 @@ When you start a pull request, the remix-cla-bot will prompt you to review the [
 Before you can contribute to the codebase, you will need to fork the repo. This will look a bit different depending on what type of contribution you are making:
 
 - All new features, bug-fixes, or **anything that touches `remix` code** should be branched off of and merged into the `dev` branch
-- Changes that only touch documentation can be branched off of and merged into the `main` branch
+- Changes that only touch templates or documentation can be branched off of and merged into the `main` branch
 
 The following steps will get you setup to contribute changes to this repo:
 
@@ -112,7 +112,7 @@ To generate a new playground, simply run:
 yarn playground:new <?name>
 ```
 
-Where the name of the playground is optional and defaults to `playground-${Date.now()}`. Then you can `cd` into the directory that's generated for you and run `npm run dev`. In another teminal window have `yarn watch` running and you're ready to work on whatever Remix features you like with live reload magic 🧙‍♂️
+Where the name of the playground is optional and defaults to `playground-${Date.now()}`. Then you can `cd` into the directory that's generated for you and run `npm run dev`. In another terminal window have `yarn watch` running and you're ready to work on whatever Remix features you like with live reload magic 🧙‍♂️
 
 The playground generated from `yarn playground:new` is based on a template in `scripts/playground/template`. If you'd like to change anything about the template, you can create a custom one in `scripts/playground/template.local` which is `.gitignored` so you can customize it to your heart's content.
 
