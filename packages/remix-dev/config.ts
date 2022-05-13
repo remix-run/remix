@@ -250,6 +250,11 @@ export interface RemixConfig {
    * in a CJS build.
    */
   serverDependenciesToBundle: Array<string | RegExp>;
+
+  /**
+   * An array of paths to watch for changes.
+   */
+  watchGlobs?: string[];
 }
 
 /**

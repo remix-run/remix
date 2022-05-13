@@ -215,7 +215,7 @@ export async function watch(
     if (onRebuildFinish) onRebuildFinish();
   }, 100);
 
-  let toWatch = [config.appDirectory];
+  const toWatch = [config.appDirectory].concat(config.watchGlobs || []);
   if (config.serverEntryPoint) {
     toWatch.push(config.serverEntryPoint);
   }
