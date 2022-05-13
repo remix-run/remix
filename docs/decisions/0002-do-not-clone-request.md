@@ -16,4 +16,4 @@
 
 If you are reading the request body in both an action and a loader this will now fail. Loaders should be thought of as a "GET" / "HEAD" request handler. These request methods are not allowed to have a body, therefore you should not be reading it in your Remix loader function.
 
-If you wish to continue reading the request body in multiple places for a single request against recommendations, consider using `.clone()` before reading it.
+If you wish to continue reading the request body in multiple places for a single request against recommendations, consider using `.clone()` before reading it; just know this comes with tradeoffs.
