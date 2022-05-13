@@ -60,6 +60,8 @@ Remix has TypeScript type definitions built-in as well. The starter templates cr
     "resolveJsonModule": true,
     "target": "ES2019",
     "strict": true,
+    "allowJs": true,
+    "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
       "~/*": ["./app/*"]
