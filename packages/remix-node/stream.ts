@@ -87,15 +87,6 @@ class StreamPump {
   };
   private controller?: ReadableStreamController<Uint8Array>;
 
-  /**
-   * @param {Readable & {
-   * 	readableHighWaterMark?: number
-   * 	readable?:boolean,
-   * 	resume?: () => void,
-   * 	pause?: () => void
-   * 	destroy?: (error?:Error) => void
-   * }} stream
-   */
   constructor(
     stream: Stream & {
       readableHighWaterMark?: number;
@@ -115,16 +106,10 @@ class StreamPump {
     this.close = this.close.bind(this);
   }
 
-  /**
-   * @param {Uint8Array} [chunk]
-   */
   size(chunk: Uint8Array) {
     return chunk?.byteLength || 0;
   }
 
-  /**
-   * @param {ReadableStreamController<Uint8Array>} controller
-   */
   start(controller: ReadableStreamController<Uint8Array>) {
     this.controller = controller;
     this.stream.on("data", this.enqueue);
@@ -137,7 +122,7 @@ class StreamPump {
     this.resume();
   }
 
-  cancel(reason: Error) {
+  cancel(reason?: Error) {
     if (this.stream.destroy) {
       this.stream.destroy(reason);
     }
@@ -158,13 +143,12 @@ class StreamPump {
         if (available <= 0) {
           this.pause();
         }
-      } catch {
+      } catch (error: any) {
         this.controller.error(
           new Error(
             "Could not create Buffer, chunk must be of type string or an instance of Buffer, ArrayBuffer, or Array or an Array-like Object"
           )
         );
-        // @ts-expect-error
         this.cancel();
       }
     }
