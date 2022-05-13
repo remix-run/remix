@@ -1618,7 +1618,7 @@ export const action: ActionFunction = async ({
 | avoidFileConflicts | boolean            | true                            | Avoid file conflicts by appending a timestamp on the end of the filename if it already exists on disk                                                     |
 | directory          | string \| Function | os.tmpdir()                     | The directory to write the upload.                                                                                                                        |
 | file               | Function           | () => `upload_${random}.${ext}` | The name of the file in the directory. Can be a relative path, the directory structure will be created if it does not exist.                              |
-| maxPartSize        | number             | 3000000                         | The maximum upload size allowed (in bytes). If the size is exceeded a MaxPartSizeExceededError will be thrown.                                                              |
+| maxPartSize        | number             | 3000000                         | The maximum upload size allowed (in bytes). If the size is exceeded a MaxPartSizeExceededError will be thrown.                                            |
 | filter             | Function           | OPTIONAL                        | A function you can write to prevent a file upload from being saved based on filename, mimetype, or encoding. Return `false` and the file will be ignored. |
 
 The function API for `file` and `directory` are the same. They accept an `object` and return a `string`. The object it accepts has `filename`, `encoding`, and `mimetype` (all strings).The `string` returned is the path.
@@ -1658,63 +1658,57 @@ Most of the time, you'll probably want to proxy the file stream to a file host.
 
 ```tsx
 import type { UploadHandler } from "@remix-run/{runtime}";
+import {
+  unstable_composeUploadHandlers,
+  unstable_createMemoryUploadHandler,
+} from "@remix-run/{runtime}";
+// writeAsyncIterableToWritable is a node only utility
+import { writeAsyncIterableToWritable } from "@remix-run/node";
 import type {
-  UploadApiErrorResponse,
   UploadApiOptions,
   UploadApiResponse,
   UploadStream,
 } from "cloudinary";
 import cloudinary from "cloudinary";
 
+async function uploadImageToCloudinary(data: AsyncIterable<Uint8Array>) {
+  const uploadPromise = new Promise<UploadApiResponse>(async (resolve, reject) => {
+    const uploadStream = cloudinary.v2.uploader.upload_stream(
+      {
+        folder: "remix",
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(result);
+      }
+    );
+    await writeAsyncIterableToWritable(data, uploadStream);
+  });
+
+  return uploadPromise;
+}
+
 export const action: ActionFunction = async ({
   request,
 }) => {
   const userId = getUserId(request);
 
-  function uploadStreamToCloudinary(
-    stream: Readable,
-    options?: UploadApiOptions
-  ): Promise<UploadApiResponse | UploadApiErrorResponse> {
-    return new Promise((resolve, reject) => {
-      const uploader = cloudinary.v2.uploader.upload_stream(
-        options,
-        (error, result) => {
-          if (result) {
-            resolve(result);
-          } else {
-            reject(error);
-          }
+  const uploadHandler =
+    unstable_composeUploadHandlers(
+      // our custom upload handler
+      async ({ name, contentType, data, filename }) => {
+        if (name !== "img") {
+          return undefined;
         }
-      );
-
-      stream.pipe(uploader);
-    });
-  }
-
-  const uploadHandler: UploadHandler = async ({
-    name,
-    stream,
-  }) => {
-    // we only care about the file form field called "avatar"
-    // so we'll ignore anything else
-    // NOTE: the way our form is set up, we shouldn't get any other fields,
-    // but this is good defensive programming in case someone tries to hit our
-    // action directly via curl or something weird like that.
-    if (name !== "avatar") {
-      stream.resume();
-      return;
-    }
-
-    const uploadedImage = await uploadStreamToCloudinary(
-      stream,
-      {
-        public_id: userId,
-        folder: "/my-site/avatars",
-      }
+        const uploadedImage = await uploadImageToCloudinary(data);
+        return uploadedImage.secure_url;
+      },
+      // fallback to memory for everything else
+      unstable_createMemoryUploadHandler()
     );
-
-    return uploadedImage.secure_url;
-  };
 
   const formData = await unstable_parseMultipartFormData(
     request,
