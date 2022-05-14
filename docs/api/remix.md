@@ -1671,22 +1671,30 @@ import type {
 } from "cloudinary";
 import cloudinary from "cloudinary";
 
-async function uploadImageToCloudinary(data: AsyncIterable<Uint8Array>) {
-  const uploadPromise = new Promise<UploadApiResponse>(async (resolve, reject) => {
-    const uploadStream = cloudinary.v2.uploader.upload_stream(
-      {
-        folder: "remix",
-      },
-      (error, result) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve(result);
-      }
-    );
-    await writeAsyncIterableToWritable(data, uploadStream);
-  });
+async function uploadImageToCloudinary(
+  data: AsyncIterable<Uint8Array>
+) {
+  const uploadPromise = new Promise<UploadApiResponse>(
+    async (resolve, reject) => {
+      const uploadStream =
+        cloudinary.v2.uploader.upload_stream(
+          {
+            folder: "remix",
+          },
+          (error, result) => {
+            if (error) {
+              reject(error);
+              return;
+            }
+            resolve(result);
+          }
+        );
+      await writeAsyncIterableToWritable(
+        data,
+        uploadStream
+      );
+    }
+  );
 
   return uploadPromise;
 }
@@ -1696,19 +1704,20 @@ export const action: ActionFunction = async ({
 }) => {
   const userId = getUserId(request);
 
-  const uploadHandler =
-    unstable_composeUploadHandlers(
-      // our custom upload handler
-      async ({ name, contentType, data, filename }) => {
-        if (name !== "img") {
-          return undefined;
-        }
-        const uploadedImage = await uploadImageToCloudinary(data);
-        return uploadedImage.secure_url;
-      },
-      // fallback to memory for everything else
-      unstable_createMemoryUploadHandler()
-    );
+  const uploadHandler = unstable_composeUploadHandlers(
+    // our custom upload handler
+    async ({ name, contentType, data, filename }) => {
+      if (name !== "img") {
+        return undefined;
+      }
+      const uploadedImage = await uploadImageToCloudinary(
+        data
+      );
+      return uploadedImage.secure_url;
+    },
+    // fallback to memory for everything else
+    unstable_createMemoryUploadHandler()
+  );
 
   const formData = await unstable_parseMultipartFormData(
     request,

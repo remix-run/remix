@@ -1,18 +1,18 @@
 # Do not clone request
 
- Date: 2022-05-13
+Date: 2022-05-13
 
- Status: accepted
+Status: accepted
 
- ## Context
+## Context
 
- To allow multiple loaders / actions to read the body of a request, we have been cloning the request before forwarding it to user-code. This is not the best thing to do as some runtimes will begin buffering the body to allow for multiple consumers. It is also goes against "the platform" that states a request body should only be consumed once.
+To allow multiple loaders / actions to read the body of a request, we have been cloning the request before forwarding it to user-code. This is not the best thing to do as some runtimes will begin buffering the body to allow for multiple consumers. It is also goes against "the platform" that states a request body should only be consumed once.
 
- ## Decision
+## Decision
 
- Do not clone requests before they are passed to user-code (loaders, actions, handleDocumentRequest, handleDataRequest, etc.).
+Do not clone requests before they are passed to user-code (loaders, actions, handleDocumentRequest, handleDataRequest, etc.).
 
- ## Consequences
+## Consequences
 
 If you are reading the request body in both an action and a loader this will now fail. Loaders should be thought of as a "GET" / "HEAD" request handler. These request methods are not allowed to have a body, therefore you should not be reading it in your Remix loader function.
 

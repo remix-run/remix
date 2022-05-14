@@ -1,11 +1,11 @@
 # Title
 
- Date: YYYY-MM-DD
+Date: YYYY-MM-DD
 
- Status: proposed | rejected | accepted | deprecated | … | superseded by [0005](0005-example.md)
+Status: proposed | rejected | accepted | deprecated | … | superseded by [0005](0005-example.md)
 
- ## Context
+## Context
 
- ## Decision
+## Decision
 
- ## Consequences
+## Consequences
