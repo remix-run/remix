@@ -31,8 +31,8 @@ The Remix compiler will not do any type checking (it simply removes the types). 
   "devDependencies": {
     "@remix-run/dev": "1.3.4",
     "@remix-run/eslint-config": "1.3.4",
-    "@types/react": "^18.0.8",
-    "@types/react-dom": "^18.0.3",
+    "@types/react": "^18.0.9",
+    "@types/react-dom": "^18.0.4",
     "eslint": "^8.11.0",
     "typescript": "^4.5.5"
   },
