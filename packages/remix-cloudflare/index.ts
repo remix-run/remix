@@ -16,6 +16,10 @@ export {
   isSession,
   json,
   redirect,
+  unstable_composeUploadHandlers,
+  unstable_parseMultipartFormData,
+  unstable_createMemoryUploadHandler,
+  MaxPartSizeExceededError
 } from "@remix-run/server-runtime";
 
 export type {
@@ -51,4 +55,8 @@ export type {
   SessionData,
   SessionIdStorageStrategy,
   SessionStorage,
+  UploadHandlerPart,
+  UploadHandler,
+  MemoryUploadHandlerOptions,
+  MemoryUploadHandlerFilterArgs,
 } from "@remix-run/server-runtime";

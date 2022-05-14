@@ -1523,7 +1523,7 @@ return new Response(null, {
 });
 ```
 
-## `unstable_parseMultipartFormData` (node)
+## `unstable_parseMultipartFormData`
 
 Allows you to handle multipart forms (file uploads) for your app.
 
@@ -1572,7 +1572,7 @@ export default function AvatarUploadRoute() {
 
 ### `uploadHandler`
 
-The `uploadHandler` is the key to the whole thing. It's responsible for what happens to the file as it's being streamed from the client. You can save it to disk, store it in memory, or act as a proxy to send it somewhere else (like a file storage provider).
+The `uploadHandler` is the key to the whole thing. It's responsible for what happens to the multipart/form-data parts as they are being streamed from the client. You can save it to disk, store it in memory, or act as a proxy to send it somewhere else (like a file storage provider).
 
 Remix has two utilities to create `uploadHandler`s for you:
 
@@ -1581,7 +1581,9 @@ Remix has two utilities to create `uploadHandler`s for you:
 
 These are fully featured utilities for handling fairly simple use cases. It's not recommended to load anything but quite small files into memory. Saving files to disk is a reasonable solution for many use cases. But if you want to upload the file to a file hosting provider, then you'll need to write your own.
 
-#### `unstable_createFileUploadHandler`
+#### `unstable_createFileUploadHandler (node)`
+
+An upload handler that will write parts with a filename to disk to keep them out of memory, parts without a filename will not be parsed. Should be composed with another upload handler.
 
 **Example:**
 
@@ -1589,10 +1591,14 @@ These are fully featured utilities for handling fairly simple use cases. It's no
 export const action: ActionFunction = async ({
   request,
 }) => {
-  const uploadHandler = unstable_createFileUploadHandler({
-    maxFileSize: 5_000_000,
-    file: ({ filename }) => filename,
-  });
+  const uploadHandler = unstable_composeUploadHandlers(
+    unstable_createFileUploadHandler({
+      maxPartSize: 5_000_000,
+      file: ({ filename }) => filename,
+    }),
+    // parse everything else into memory
+    unstable_createMemoryUploadHandler()
+  );
   const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler
@@ -1600,7 +1606,7 @@ export const action: ActionFunction = async ({
 
   const file = formData.get("avatar");
 
-  // file is a "NodeFile" which has a similar API to "File"
+  // file is a "NodeOnDiskFile" which implements the "File" API
   // ... etc
 };
 ```
@@ -1612,7 +1618,7 @@ export const action: ActionFunction = async ({
 | avoidFileConflicts | boolean            | true                            | Avoid file conflicts by appending a timestamp on the end of the filename if it already exists on disk                                                     |
 | directory          | string \| Function | os.tmpdir()                     | The directory to write the upload.                                                                                                                        |
 | file               | Function           | () => `upload_${random}.${ext}` | The name of the file in the directory. Can be a relative path, the directory structure will be created if it does not exist.                              |
-| maxFileSize        | number             | 3000000                         | The maximum upload size allowed (in bytes). If the size is exceeded an error will be thrown.                                                              |
+| maxPartSize        | number             | 3000000                         | The maximum upload size allowed (in bytes). If the size is exceeded a MaxPartSizeExceededError will be thrown.                                            |
 | filter             | Function           | OPTIONAL                        | A function you can write to prevent a file upload from being saved based on filename, mimetype, or encoding. Return `false` and the file will be ignored. |
 
 The function API for `file` and `directory` are the same. They accept an `object` and return a `string`. The object it accepts has `filename`, `encoding`, and `mimetype` (all strings).The `string` returned is the path.
@@ -1628,7 +1634,7 @@ export const action: ActionFunction = async ({
   request,
 }) => {
   const uploadHandler = unstable_createMemoryUploadHandler({
-    maxFileSize: 500_000,
+    maxPartSize: 500_000,
   });
   const formData = await unstable_parseMultipartFormData(
     request,
@@ -1642,7 +1648,7 @@ export const action: ActionFunction = async ({
 };
 ```
 
-**Options:** The only options supported are `maxFileSize` and `filter` which work the same as in `unstable_createFileUploadHandler` above. This API is not recommended for anything at scale, but is a convenient utility for simple use cases.
+**Options:** The only options supported are `maxPartSize` and `filter` which work the same as in `unstable_createFileUploadHandler` above. This API is not recommended for anything at scale, but is a convenient utility for simple use cases and as a fallback for another handler.
 
 ### Custom `uploadHandler`
 
@@ -1652,63 +1658,57 @@ Most of the time, you'll probably want to proxy the file stream to a file host.
 
 ```tsx
 import type { UploadHandler } from "@remix-run/{runtime}";
+import {
+  unstable_composeUploadHandlers,
+  unstable_createMemoryUploadHandler,
+} from "@remix-run/{runtime}";
+// writeAsyncIterableToWritable is a node only utility
+import { writeAsyncIterableToWritable } from "@remix-run/node";
 import type {
-  UploadApiErrorResponse,
   UploadApiOptions,
   UploadApiResponse,
   UploadStream,
 } from "cloudinary";
 import cloudinary from "cloudinary";
 
+async function uploadImageToCloudinary(data: AsyncIterable<Uint8Array>) {
+  const uploadPromise = new Promise<UploadApiResponse>(async (resolve, reject) => {
+    const uploadStream = cloudinary.v2.uploader.upload_stream(
+      {
+        folder: "remix",
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(result);
+      }
+    );
+    await writeAsyncIterableToWritable(data, uploadStream);
+  });
+
+  return uploadPromise;
+}
+
 export const action: ActionFunction = async ({
   request,
 }) => {
   const userId = getUserId(request);
 
-  function uploadStreamToCloudinary(
-    stream: Readable,
-    options?: UploadApiOptions
-  ): Promise<UploadApiResponse | UploadApiErrorResponse> {
-    return new Promise((resolve, reject) => {
-      const uploader = cloudinary.v2.uploader.upload_stream(
-        options,
-        (error, result) => {
-          if (result) {
-            resolve(result);
-          } else {
-            reject(error);
-          }
+  const uploadHandler =
+    unstable_composeUploadHandlers(
+      // our custom upload handler
+      async ({ name, contentType, data, filename }) => {
+        if (name !== "img") {
+          return undefined;
         }
-      );
-
-      stream.pipe(uploader);
-    });
-  }
-
-  const uploadHandler: UploadHandler = async ({
-    name,
-    stream,
-  }) => {
-    // we only care about the file form field called "avatar"
-    // so we'll ignore anything else
-    // NOTE: the way our form is set up, we shouldn't get any other fields,
-    // but this is good defensive programming in case someone tries to hit our
-    // action directly via curl or something weird like that.
-    if (name !== "avatar") {
-      stream.resume();
-      return;
-    }
-
-    const uploadedImage = await uploadStreamToCloudinary(
-      stream,
-      {
-        public_id: userId,
-        folder: "/my-site/avatars",
-      }
+        const uploadedImage = await uploadImageToCloudinary(data);
+        return uploadedImage.secure_url;
+      },
+      // fallback to memory for everything else
+      unstable_createMemoryUploadHandler()
     );
-
-    return uploadedImage.secure_url;
-  };
 
   const formData = await unstable_parseMultipartFormData(
     request,
