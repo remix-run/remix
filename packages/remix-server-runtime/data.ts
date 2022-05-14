@@ -87,7 +87,7 @@ export async function callRouteLoader({
   let result: Awaited<ReturnType<LoaderFunction>>;
   try {
     result = await loader({
-      request: stripDataParam(stripIndexParam(request.clone())),
+      request: stripDataParam(stripIndexParam(request)),
       context: loadContext,
       params: match.params,
     });

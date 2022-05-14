@@ -1,9 +1,7 @@
-import type { Writable } from "stream";
+import type { Readable, Writable } from "stream";
 import { Stream } from "stream";
 
-const { readableHighWaterMark } = new Stream.Readable();
-
-export async function pipeReadableStreamToWritable(
+export async function writeReadableStreamToWritable(
   stream: ReadableStream,
   writable: Writable
 ) {
@@ -22,10 +20,33 @@ export async function pipeReadableStreamToWritable(
     await read();
   }
 
-  await read();
+  try {
+    await read();
+  } catch (error: any) {
+    writable.destroy(error);
+    throw error;
+  }
 }
 
-export async function readableStreamToBase64String(stream: ReadableStream) {
+export async function writeAsyncIterableToWritable(
+  iterable: AsyncIterable<Uint8Array>,
+  writable: Writable
+) {
+  try {
+    for await (let chunk of iterable) {
+      writable.write(chunk);
+    }
+    writable.end();
+  } catch (error: any) {
+    writable.destroy(error);
+    throw error;
+  }
+}
+
+export async function readableStreamToString(
+  stream: ReadableStream<Uint8Array>,
+  encoding?: BufferEncoding
+) {
   let reader = stream.getReader();
   let chunks: Uint8Array[] = [];
 
@@ -43,32 +64,11 @@ export async function readableStreamToBase64String(stream: ReadableStream) {
 
   await read();
 
-  return Buffer.concat(chunks).toString("base64");
+  return Buffer.concat(chunks).toString(encoding);
 }
 
-export async function readableStreamToString(stream: ReadableStream<any>) {
-  let reader = stream.getReader();
-  let chunks: Uint8Array[] = [];
-
-  async function read() {
-    let { done, value } = await reader.read();
-
-    if (done) {
-      return;
-    } else if (value) {
-      chunks.push(value);
-    }
-
-    await read();
-  }
-
-  await read();
-
-  return Buffer.concat(chunks).toString();
-}
-
-export const readableStreamFromStream = (
-  source: Stream & { readableHighWaterMark?: number }
+export const createReadableStreamFromReadable = (
+  source: Readable & { readableHighWaterMark?: number }
 ) => {
   let pump = new StreamPump(source);
   let stream = new ReadableStream(pump, pump);
@@ -87,15 +87,6 @@ class StreamPump {
   };
   private controller?: ReadableStreamController<Uint8Array>;
 
-  /**
-   * @param {Stream & {
-   * 	readableHighWaterMark?: number
-   * 	readable?:boolean,
-   * 	resume?: () => void,
-   * 	pause?: () => void
-   * 	destroy?: (error?:Error) => void
-   * }} stream
-   */
   constructor(
     stream: Stream & {
       readableHighWaterMark?: number;
@@ -105,7 +96,9 @@ class StreamPump {
       destroy?: (error?: Error) => void;
     }
   ) {
-    this.highWaterMark = stream.readableHighWaterMark || readableHighWaterMark;
+    this.highWaterMark =
+      stream.readableHighWaterMark ||
+      new Stream.Readable().readableHighWaterMark;
     this.accumalatedSize = 0;
     this.stream = stream;
     this.enqueue = this.enqueue.bind(this);
@@ -113,16 +106,10 @@ class StreamPump {
     this.close = this.close.bind(this);
   }
 
-  /**
-   * @param {Uint8Array} [chunk]
-   */
   size(chunk: Uint8Array) {
     return chunk?.byteLength || 0;
   }
 
-  /**
-   * @param {ReadableStreamController<Uint8Array>} controller
-   */
   start(controller: ReadableStreamController<Uint8Array>) {
     this.controller = controller;
     this.stream.on("data", this.enqueue);
@@ -135,7 +122,7 @@ class StreamPump {
     this.resume();
   }
 
-  cancel(reason: Error) {
+  cancel(reason?: Error) {
     if (this.stream.destroy) {
       this.stream.destroy(reason);
     }
@@ -156,13 +143,12 @@ class StreamPump {
         if (available <= 0) {
           this.pause();
         }
-      } catch {
+      } catch (error: any) {
         this.controller.error(
           new Error(
             "Could not create Buffer, chunk must be of type string or an instance of Buffer, ArrayBuffer, or Array or an Array-like Object"
           )
         );
-        // @ts-expect-error
         this.cancel();
       }
     }

@@ -11,7 +11,10 @@ import type { UploadHandler } from "@remix-run/server-runtime";
 // @ts-expect-error
 import * as streamSlice from "stream-slice";
 
-import { readableStreamFromStream, readableStreamToString } from "../stream";
+import {
+  createReadableStreamFromReadable,
+  readableStreamToString,
+} from "../stream";
 
 export type FileUploadHandlerFilterArgs = {
   filename: string;
@@ -218,7 +221,7 @@ export class NodeOnDiskFile implements File {
         streamSlice.slice(this.slicer.start, this.slicer.end)
       );
     }
-    return readableStreamFromStream(stream);
+    return createReadableStreamFromReadable(stream);
   }
 
   async text(): Promise<string> {

@@ -52,6 +52,7 @@ export async function parseMultipartFormData(
 
     if (typeof part.filename === "string") {
       // only pass basename as the multipart/form-data spec recommends
+      // https://datatracker.ietf.org/doc/html/rfc7578#section-4.2
       part.filename = part.filename.split(/[/\\]/).pop();
     }
 

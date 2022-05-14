@@ -3,7 +3,7 @@ import {
   json,
   unstable_composeUploadHandlers as composeUploadHandlers,
   unstable_createMemoryUploadHandler as createMemoryUploadHandler,
-  unstable_parseMultipartFormData as parseMultipartFormData
+  unstable_parseMultipartFormData as parseMultipartFormData,
 } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
 
@@ -27,10 +27,7 @@ export const action: ActionFunction = async ({ request }) => {
     createMemoryUploadHandler()
   );
 
-  const formData = await parseMultipartFormData(
-    request,
-    uploadHandler
-  );
+  const formData = await parseMultipartFormData(request, uploadHandler);
   const imgSrc = formData.get("img");
   const imgDesc = formData.get("desc");
   if (!imgSrc) {

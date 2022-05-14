@@ -29,8 +29,10 @@ export {
 } from "./implementations";
 
 export {
-  pipeReadableStreamToWritable,
-  readableStreamToBase64String,
+  createReadableStreamFromReadable,
+  readableStreamToString,
+  writeAsyncIterableToWritable,
+  writeReadableStreamToWritable,
 } from "./stream";
 
 export {

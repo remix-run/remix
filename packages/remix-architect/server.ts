@@ -7,7 +7,7 @@ import {
   Headers as NodeHeaders,
   Request as NodeRequest,
   createRequestHandler as createRemixRequestHandler,
-  readableStreamToBase64String,
+  readableStreamToString,
 } from "@remix-run/node";
 import type {
   APIGatewayProxyEventHeaders,
@@ -121,7 +121,7 @@ export async function sendRemixResponse(
 
   if (nodeResponse.body) {
     if (isBase64Encoded) {
-      body = await readableStreamToBase64String(nodeResponse.body);
+      body = await readableStreamToString(nodeResponse.body, "base64");
     } else {
       body = await nodeResponse.text();
     }
