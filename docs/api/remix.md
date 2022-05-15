@@ -794,8 +794,6 @@ You can know the state of the fetcher with `fetcher.state`. It will be one of:
 - **submitting** - A form has been submitted. If the method is GET, then the route loader is being called. If POST, PUT, PATCH, or DELETE, then the route action is being called.
 - **loading** - The loaders for the routes are being reloaded after an action submission
 
-.
-
 #### `fetcher.type`
 
 This is the type of state the fetcher is in. It's like `fetcher.state`, but more granular. Depending on the fetcher's state, the types can be the following:
