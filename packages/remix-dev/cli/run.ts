@@ -152,7 +152,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     );
   }
 
-  const args = arg(
+  let args = arg(
     {
       "--debug": Boolean,
       "--dry": Boolean,
@@ -176,6 +176,8 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       argv,
     }
   );
+
+  let input = args._;
 
   let flags: any = Object.entries(args).reduce((acc, [key, value]) => {
     key = key.replace(/^--/, "");
@@ -203,14 +205,14 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     flags.template = "remix-ts";
   }
 
-  let command = args._[0];
+  let command = input[0];
 
   // Note: Keep each case in this switch statement small.
   switch (command) {
     case "create":
     // `remix new` is an alias for `remix create`
     case "new": {
-      let projectPath = args._[1];
+      let projectPath = input[1];
 
       // Flags will validate early and stop the process if invalid flags are
       // provided. Input provided in the interactive CLI is validated by
@@ -440,28 +442,28 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     }
     case "init":
       await commands.init(
-        args._[1] || process.env.REMIX_ROOT || process.cwd(),
+        input[1] || process.env.REMIX_ROOT || process.cwd(),
         getPreferredPackageManager()
       );
       break;
     case "routes":
-      await commands.routes(args._[1], flags.json ? "json" : "jsx");
+      await commands.routes(input[1], flags.json ? "json" : "jsx");
       break;
     case "build":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "production";
-      await commands.build(args._[1], process.env.NODE_ENV, flags.sourcemap);
+      await commands.build(input[1], process.env.NODE_ENV, flags.sourcemap);
       break;
     case "watch":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
-      await commands.watch(args._[1], process.env.NODE_ENV);
+      await commands.watch(input[1], process.env.NODE_ENV);
       break;
     case "setup":
-      await commands.setup(args._[1]);
+      await commands.setup(input[1]);
       break;
     case "migrate": {
       let { projectDir, migrationId } = await commands.migrate.resolveInput(
         {
-          projectId: args._[1],
+          projectId: input[1],
           migrationId: flags.migration,
         },
         flags
@@ -472,12 +474,12 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     case "dev":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
       if (flags.debug) inspector.open();
-      await commands.dev(args._[1], process.env.NODE_ENV);
+      await commands.dev(input[1], process.env.NODE_ENV);
       break;
     default:
       // `remix ./my-project` is shorthand for `remix dev ./my-project`
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
       if (flags.debug) inspector.open();
-      await commands.dev(args._[0], process.env.NODE_ENV);
+      await commands.dev(input[0], process.env.NODE_ENV);
   }
 }

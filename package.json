@@ -69,7 +69,6 @@
     "@types/ssri": "^7.1.0",
     "abort-controller": "^3.0.0",
     "abortcontroller-polyfill": "^1.7.3",
-    "arg": "^5.0.1",
     "aws-sdk": "^2.1055.0",
     "babel-jest": "^27.5.1",
     "babel-plugin-transform-remove-console": "^6.9.4",
