@@ -72,7 +72,7 @@ export async function callRouteLoader({
   if (!loader) {
     throw new Error(
       `You made a ${request.method} request to ${request.url} but did not provide ` +
-        `a default component, \`loader\` or \`action\` for route "${match.route.id}", ` +
+        `a default component or \`loader\` for route "${match.route.id}", ` +
         `so there is no way to handle the request.`
     );
   }
