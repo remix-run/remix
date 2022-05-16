@@ -8,6 +8,11 @@ import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/virtualModules";
 
+/* eslint-disable prefer-let/prefer-let */
+declare global {
+  var __devServerPort: number | undefined;
+}
+
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
   remarkPlugins?: any[];
@@ -358,7 +363,10 @@ export async function readConfig(
       process.env.REMIX_DEV_SERVER_WS_PORT || 8002
     );
   }
-  let devServerPort = await getPort({ port: appConfig.devServerPort });
+  if (!global.__devServerPort) {
+    global.__devServerPort = await getPort({ port: appConfig.devServerPort });
+  }
+  let devServerPort = global.__devServerPort;
   // set env variable so un-bundled servers can use it
   process.env.REMIX_DEV_SERVER_WS_PORT = `${devServerPort}`;
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
