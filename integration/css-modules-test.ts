@@ -22,7 +22,7 @@ const testTodo = (
   ) => any
 ) => {};
 
-test.describe.only("CSS Modules", () => {
+test.describe("CSS Modules", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
@@ -68,6 +68,7 @@ test.describe.only("CSS Modules", () => {
             font: inherit;
           }
         `,
+
         "app/routes/index.jsx": js`
             import { Badge } from "~/lib/badge";
             export default function() {
@@ -96,6 +97,7 @@ test.describe.only("CSS Modules", () => {
               );
             }
           `,
+
         "app/routes/page-b.jsx": js`
             import { Button } from "~/lib/button";
             import { Heading } from "~/lib/heading";
@@ -110,6 +112,37 @@ test.describe.only("CSS Modules", () => {
               );
             }
           `,
+
+        "app/routes/layout.jsx": js`
+          import { Outlet } from "@remix-run/react";
+          import { Container } from "~/lib/container";
+          import { Heading } from "~/lib/heading";
+          import { Text } from "~/lib/text";
+          export default function() {
+            return (
+              <div>
+                <Container>
+                  <Heading level={1}>Layout</Heading>
+                  <Outlet />
+                </Container>
+              </div>
+            );
+          }
+        `,
+
+        "app/routes/layout/one.jsx": js`
+          import { Heading } from "~/lib/heading";
+          import { Input } from "~/lib/input";
+          export default function() {
+            return (
+              <div>
+                <Heading level={2}>Subpage 1</Heading>
+                <Input name="email" type="email" defaultValue="hi@remix.run" />
+              </div>
+            );
+          }
+        `,
+
         "app/lib/button.jsx": js`
             import styles from "./button.module.css";
             export function Button({ variant, ...props }) {
@@ -137,6 +170,28 @@ test.describe.only("CSS Modules", () => {
             background-color: red;
           }
         `,
+
+        "app/lib/container.jsx": js`
+            import styles from "./container.module.css";
+            export function Container(props) {
+              return (
+                <div
+                  {...props}
+                  data-ui-container=""
+                  className={(styles.container + " " + (props.className || "")).trim()}
+                />
+              );
+            }
+          `,
+
+        "app/lib/container.module.css": css`
+          .container {
+            display: block;
+            max-width: 1000px;
+            margin: 0 auto;
+          }
+        `,
+
         "app/lib/badge.jsx": js`
             import styles from "./badge.module.css";
             export function Badge(props) {
@@ -149,6 +204,7 @@ test.describe.only("CSS Modules", () => {
               );
             }
           `,
+
         "app/lib/badge.module.css": css`
           .badge {
             /* TODO: composes: text from "./text.module.css"; */
@@ -162,6 +218,30 @@ test.describe.only("CSS Modules", () => {
             text-transform: uppercase;
           }
         `,
+
+        "app/lib/input.jsx": js`
+            import styles from "./input.module.css";
+            export function Input(props) {
+              return (
+                <input
+                  {...props}
+                  data-ui-input=""
+                  className={(styles.input + " " + (props.className || "")).trim()}
+                />
+              );
+            }
+          `,
+
+        "app/lib/input.module.css": css`
+          .input {
+            width: 100%;
+            outline-offset: 2px;
+            appearance: none;
+            border-radius: 3px;
+            border: 1px solid #000;
+          }
+        `,
+
         "app/lib/text.jsx": js`
             import styles from "./text.module.css";
             export function Text({ as: Comp = "span", ...props }) {
