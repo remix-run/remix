@@ -353,12 +353,19 @@ export async function readConfig(
       path.join("public", "build")
   );
 
-  if (typeof appConfig.devServerPort !== "number") {
-    appConfig.devServerPort = Number(
-      process.env.REMIX_DEV_SERVER_WS_PORT || 8002
-    );
+  let devServerPort: number;
+
+  // check if the port is already in use as this file is reloaded after a dep install or config change
+  if (process.env.REMIX_DEV_SERVER_WS_PORT) {
+    try {
+      devServerPort = Number(process.env.REMIX_DEV_SERVER_WS_PORT);
+    } catch (error: unknown) {
+      // failed to parse the port as a number
+      devServerPort = await getPort({ port: appConfig.devServerPort });
+    }
+  } else {
+    devServerPort = await getPort({ port: appConfig.devServerPort });
   }
-  let devServerPort = await getPort({ port: appConfig.devServerPort });
   // set env variable so un-bundled servers can use it
   process.env.REMIX_DEV_SERVER_WS_PORT = `${devServerPort}`;
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
