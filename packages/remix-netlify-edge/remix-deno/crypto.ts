@@ -18,7 +18,7 @@ export const sign: SignFunction = async (value, secret) => {
     ""
   );
 
-  return value + "." + hash;
+  return `${value}.${hash}`;
 };
 
 export const unsign: UnsignFunction = async (cookie, secret) => {
