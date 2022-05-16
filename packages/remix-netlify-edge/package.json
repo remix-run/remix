@@ -12,11 +12,6 @@
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
   },
-  "files": [
-    "remix-deno/*",
-    "*.js",
-    "*.d.ts"
-  ],
   "dependencies": {
     "@remix-run/server-runtime": "1.4.3"
   }
