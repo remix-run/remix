@@ -11,6 +11,7 @@ import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 import sortPackageJSON from "sort-package-json";
 
+import * as colors from "../colors";
 import packageJson from "../package.json";
 import { convertTemplateToJavaScript } from "./convert-to-javascript";
 
@@ -24,6 +25,7 @@ interface CreateAppArgs {
   packageManager: "npm" | "yarn" | "pnpm";
   useTypeScript: boolean;
   githubToken?: string;
+  debug?: boolean;
 }
 
 export async function createApp({
@@ -34,18 +36,8 @@ export async function createApp({
   packageManager,
   useTypeScript = true,
   githubToken = process.env.GITHUB_TOKEN,
+  debug,
 }: CreateAppArgs) {
-  // Create the app directory
-  let relativeProjectDir = path.relative(process.cwd(), projectDir);
-  let projectDirIsCurrentDir = relativeProjectDir === "";
-  if (!projectDirIsCurrentDir) {
-    if (fse.existsSync(projectDir)) {
-      throw new Error(
-        `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
-      );
-    }
-  }
-
   /**
    * Grab the template
    * First we'll need to determine if the template we got is
@@ -61,6 +53,12 @@ export async function createApp({
   let options = { useTypeScript, token: githubToken };
   switch (templateType) {
     case "local": {
+      if (debug) {
+        console.log(
+          colors.warning(` 🔍  Using local template: ${appTemplate}`)
+        );
+      }
+
       let filepath = appTemplate.startsWith("file://")
         ? fileURLToPath(appTemplate)
         : appTemplate;
@@ -75,12 +73,29 @@ export async function createApp({
       }
     }
     case "remoteTarball": {
+      if (debug) {
+        console.log(
+          colors.warning(
+            ` 🔍  Using template from remote tarball: ${appTemplate}`
+          )
+        );
+      }
+
       await downloadAndExtractTarball(projectDir, appTemplate, options);
       break;
     }
     case "repoTemplate": {
       let owner = "remix-run";
       let name = appTemplate.split("/").slice(-1)[0];
+
+      if (debug) {
+        console.log(
+          colors.warning(
+            ` 🔍  Using template from the ${`${owner}/${name}`} repo`
+          )
+        );
+      }
+
       await downloadAndExtractRepoTarball(
         projectDir,
         getRepoInfo(`${owner}/${name}`),
@@ -90,6 +105,14 @@ export async function createApp({
     }
     case "example": {
       let name = appTemplate.split("/").slice(-1)[0];
+      if (debug) {
+        console.log(
+          colors.warning(
+            ` 🔍  Using the ${name} example template from the remix-run/remix repo`
+          )
+        );
+      }
+
       await downloadAndExtractRepoTarball(
         projectDir,
         getRepoInfo(
@@ -100,6 +123,14 @@ export async function createApp({
       break;
     }
     case "template": {
+      if (debug) {
+        console.log(
+          colors.warning(
+            ` 🔍  Using the ${appTemplate} template from the remix-run/remix repo`
+          )
+        );
+      }
+
       await downloadAndExtractRepoTarball(
         projectDir,
         getRepoInfo(
@@ -110,12 +141,28 @@ export async function createApp({
       break;
     }
     case "repo": {
-      await downloadAndExtractRepoTarball(
-        projectDir,
-        getRepoInfo(appTemplate),
-        options
-      );
+      let repoInfo = getRepoInfo(appTemplate);
+      if (debug) {
+        console.log(
+          colors.warning(
+            ` 🔍  Using the ${`${repoInfo.owner}/${repoInfo.name}`} repo as a template.`
+          )
+        );
+      }
+
+      await downloadAndExtractRepoTarball(projectDir, repoInfo, options);
       break;
+    }
+
+    case null: {
+      console.error(
+        `🚨  Could not find a template for "${appTemplate}". Please open an issue at https://github.com/remix-run/remix/issues to report the bug.`
+      );
+      if (debug) {
+        throw Error(`Invalid template "${appTemplate}"`);
+      } else {
+        process.exit(1);
+      }
     }
   }
 
@@ -205,7 +252,7 @@ async function downloadAndExtractRepoTarball(
   // redirect and get the tarball URL directly.
   if (repo.branch && repo.filePath) {
     let { filePath, tarballURL } = getTarballUrl(repo);
-    return downloadAndExtractTarball(projectDir, tarballURL, {
+    return await downloadAndExtractTarball(projectDir, tarballURL, {
       ...options,
       filePath,
     });
@@ -219,7 +266,7 @@ async function downloadAndExtractRepoTarball(
     url += `/${repo.branch}`;
   }
 
-  return downloadAndExtractTarball(projectDir, url, {
+  return await downloadAndExtractTarball(projectDir, url, {
     ...options,
     filePath: null,
   });
@@ -246,6 +293,11 @@ async function downloadAndExtractTarball(
       "🚨 There was a problem fetching the file from GitHub. The request " +
         `responded with a ${response.status} status. Please try again later.`
     );
+  }
+
+  // file paths returned from github are always unix style
+  if (filePath) {
+    filePath = filePath.split(path.sep).join(path.posix.sep);
   }
 
   try {
@@ -380,13 +432,8 @@ export async function validateNewProjectPath(input: string): Promise<void> {
   ) {
     if ((await fse.readdir(projectDir)).length > 0) {
       throw Error(
-        "🚨 The current directory must be empty to create a new project. Please " +
+        "🚨 The project directory must be empty to create a new project. Please " +
           "clear the contents of the directory or choose a different path."
-      );
-    } else {
-      throw Error(
-        "🚨 The directory provided already exists. Please try again with a " +
-          "different directory."
       );
     }
   }
@@ -439,69 +486,73 @@ export async function validateTemplate(input: string) {
     }
     case "remoteTarball": {
       let spinner = ora("Validating the template file…").start();
+      let response;
       try {
-        let response = await fetch(input, { method: "HEAD" });
-        spinner.stop();
-        switch (response.status) {
-          case 200:
-            return;
-          case 404:
-            throw Error(
-              "🚨 The template file could not be verified. Please double check " +
-                "the URL and try again."
-            );
-          default:
-            throw Error(
-              "🚨 The template file could not be verified. The server returned " +
-                `a response with a ${response.status} status. Please double ` +
-                "check the URL and try again."
-            );
-        }
-      } catch (err) {
-        spinner.stop();
+        response = await fetch(input, { method: "HEAD" });
+      } catch (_) {
         throw Error(
           "🚨 There was a problem verifying the template file. Please ensure " +
             "you are connected to the internet and try again later."
         );
+      } finally {
+        spinner.stop();
+      }
+
+      switch (response.status) {
+        case 200:
+          return;
+        case 404:
+          throw Error(
+            "🚨 The template file could not be verified. Please double check " +
+              "the URL and try again."
+          );
+        default:
+          throw Error(
+            "🚨 The template file could not be verified. The server returned " +
+              `a response with a ${response.status} status. Please double ` +
+              "check the URL and try again."
+          );
       }
     }
     case "repo": {
       let spinner = ora("Validating the template repo…").start();
       let { url, filePath } = getRepoInfo(input);
+      let response;
       try {
-        let response = await fetch(url, { method: "HEAD" });
-        spinner.stop();
-        switch (response.status) {
-          case 200:
-            return;
-          case 403:
-            throw Error(
-              "🚨 The template could not be verified because you do not have " +
-                "access to the repository. Please double check the access " +
-                "rights of this repo and try again."
-            );
-          case 404:
-            throw Error(
-              "🚨 The template could not be verified. Please double check that " +
-                "the template is a valid GitHub repository" +
-                (filePath && filePath !== "/"
-                  ? " and that the filepath points to a directory in the repo"
-                  : "") +
-                " and try again."
-            );
-          default:
-            throw Error(
-              "🚨 The template could not be verified. The server returned a " +
-                `response with a ${response.status} status. Please double check ` +
-                "that the template is a valid GitHub repository  and try again."
-            );
-        }
+        response = await fetch(url, { method: "HEAD" });
       } catch (_) {
-        spinner.stop();
         throw Error(
-          "🚨 There was a problem verifying the template. Please ensure you " +
+          "🚨 There was a problem fetching the template. Please ensure you " +
             "are connected to the internet and try again later."
         );
+      } finally {
+        spinner.stop();
+      }
+
+      switch (response.status) {
+        case 200:
+          return;
+        case 403:
+          throw Error(
+            "🚨 The template could not be verified because you do not have " +
+              "access to the repository. Please double check the access " +
+              "rights of this repo and try again."
+          );
+        case 404:
+          throw Error(
+            "🚨 The template could not be verified. Please double check that " +
+              "the template is a valid GitHub repository" +
+              (filePath && filePath !== "/"
+                ? " and that the filepath points to a directory in the repo"
+                : "") +
+              " and try again."
+          );
+        default:
+          throw Error(
+            "🚨 The template could not be verified. The server returned a " +
+              `response with a ${response.status} status. Please double check ` +
+              "that the template is a valid GitHub repository and try again."
+          );
       }
     }
     case "example":
@@ -513,34 +564,36 @@ export async function validateTemplate(input: string) {
       }
       let typeDir = templateType + "s";
       let templateUrl = `https://github.com/remix-run/remix/tree/main/${typeDir}/${name}`;
+      let response;
       try {
-        let response = await fetch(templateUrl, { method: "HEAD" });
-        spinner.stop();
-        switch (response.status) {
-          case 200:
-            return;
-          case 404:
-            throw Error(
-              "🚨 The template could not be verified. Please double check that " +
-                "the template is a valid project directory in " +
-                `https://github.com/remix-run/remix/tree/main/${typeDir} and ` +
-                "try again."
-            );
-          default:
-            throw Error(
-              "🚨 The template could not be verified. The server returned a " +
-                `response with a ${response.status} status. Please double ` +
-                "check that the template is a valid project directory in " +
-                `https://github.com/remix-run/remix/tree/main/${typeDir} and ` +
-                "try again."
-            );
-        }
+        response = await fetch(templateUrl, { method: "HEAD" });
       } catch (_) {
-        spinner.stop();
         throw Error(
           "🚨 There was a problem verifying the template. Please ensure you are " +
             "connected to the internet and try again later."
         );
+      } finally {
+        spinner.stop();
+      }
+
+      switch (response.status) {
+        case 200:
+          return;
+        case 404:
+          throw Error(
+            "🚨 The template could not be verified. Please double check that " +
+              "the template is a valid project directory in " +
+              `https://github.com/remix-run/remix/tree/main/${typeDir} and ` +
+              "try again."
+          );
+        default:
+          throw Error(
+            "🚨 The template could not be verified. The server returned a " +
+              `response with a ${response.status} status. Please double ` +
+              "check that the template is a valid project directory in " +
+              `https://github.com/remix-run/remix/tree/main/${typeDir} and ` +
+              "try again."
+          );
       }
     }
   }

@@ -1,24 +1,23 @@
-import semver from "semver";
-// @ts-ignore https://github.com/DefinitelyTyped/DefinitelyTyped/pull/59806
-import NpmCliPackageJson from "@npmcli/package-json";
 import { join } from "path";
+import NpmCliPackageJson from "@npmcli/package-json";
 import glob from "fast-glob";
 import { maxBy } from "lodash";
+import semver from "semver";
 
-import { readConfig } from "../../../../config";
 import * as colors from "../../../../colors";
+import { readConfig } from "../../../../config";
 import * as jscodeshift from "../../jscodeshift";
 import type { MigrationFunction } from "../../types";
-import { resolveTransformOptions } from "./resolveTransformOptions";
-import type { Options } from "./transform/options";
 import type { Dependency } from "./dependency";
 import { depsToObject, isRemixPackage, depsToEntries } from "./dependency";
+import { because, detected } from "./messages";
 import {
   onlyRemixSetup,
   onlyRemixSetupRuntime,
   remixSetup,
 } from "./remixSetup";
-import { because, detected } from "./messages";
+import { resolveTransformOptions } from "./resolveTransformOptions";
+import type { Options } from "./transform/options";
 
 const TRANSFORM_PATH = join(__dirname, "transform");
 
@@ -151,11 +150,11 @@ export const replaceRemixImports: MigrationFunction = async ({
     cwd: config.appDirectory,
     absolute: true,
   });
-  let codemodOk = jscodeshift.run<Options>({
-    transformPath: TRANSFORM_PATH,
+  let codemodOk = await jscodeshift.run<Options>({
     files,
     flags,
-    transformOptions: { runtime, adapter },
+    transformOptions: { adapter, runtime },
+    transformPath: TRANSFORM_PATH,
   });
   if (!codemodOk) {
     console.error("❌ I couldn't replace all of your `remix` imports.");

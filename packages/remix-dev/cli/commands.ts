@@ -32,6 +32,7 @@ export async function create({
   packageManager,
   useTypeScript,
   githubToken,
+  debug,
 }: {
   appTemplate: string;
   projectDir: string;
@@ -40,6 +41,7 @@ export async function create({
   packageManager: "npm" | "yarn" | "pnpm";
   useTypeScript: boolean;
   githubToken?: string;
+  debug?: boolean;
 }) {
   let spinner = ora("Creating your app…").start();
   await createApp({
@@ -50,6 +52,7 @@ export async function create({
     packageManager,
     useTypeScript,
     githubToken,
+    debug,
   });
   spinner.stop();
   spinner.clear();
@@ -61,17 +64,21 @@ export async function init(
 ) {
   let initScriptDir = path.join(projectDir, "remix.init");
   let initScript = path.resolve(initScriptDir, "index.js");
+  let initPackageJson = path.resolve(initScriptDir, "package.json");
 
   let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
 
   if (await fse.pathExists(initScript)) {
-    execSync(`${packageManager} install`, {
-      stdio: "ignore",
-      cwd: initScriptDir,
-    });
+    if (await fse.pathExists(initPackageJson)) {
+      execSync(`${packageManager} install`, {
+        stdio: "ignore",
+        cwd: initScriptDir,
+      });
+    }
+
     let initFn = require(initScript);
     try {
-      await initFn({ rootDirectory: projectDir, isTypeScript });
+      await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
     } catch (error) {
       if (error instanceof Error) {
         error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
@@ -141,6 +148,7 @@ export async function build(
 
   let start = Date.now();
   let config = await readConfig(remixRoot);
+  fse.emptyDirSync(config.assetsBuildDirectory);
   await compiler.build(config, {
     mode: mode,
     sourcemap,
@@ -250,7 +258,7 @@ export async function dev(remixRoot: string, modeArg?: string) {
   await loadEnv(config.rootDirectory);
 
   let port = await getPort({
-    port: makeRange(process.env.PORT ? Number(process.env.PORT) : 3000, 3100),
+    port: process.env.PORT ? Number(process.env.PORT) : makeRange(3000, 3100),
   });
 
   if (config.serverEntryPoint) {

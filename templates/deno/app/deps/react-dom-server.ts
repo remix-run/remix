@@ -1,1 +1,4 @@
-export { default } from "https://esm.sh/react-dom@17.0.2/server?pin=v68&dev";
+export {
+  default,
+  renderToString,
+} from "https://esm.sh/react-dom@18.0.0/server?pin=v77&dev";

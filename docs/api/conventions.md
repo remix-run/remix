@@ -18,7 +18,7 @@ This file has a few build and development configuration options, but does not ac
 module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
-  ignoredRouteFiles: [".*"],
+  ignoredRouteFiles: ["**/.*"],
   publicPath: "/build/",
   routes(defineRoutes) {
     return defineRoutes((route) => {
@@ -152,7 +152,7 @@ module.exports = {
   assetsBuildDirectory: "public/build",
   publicPath: "/build/",
   serverBuildDirectory: "build",
-  ignoredRouteFiles: [".*"],
+  ignoredRouteFiles: ["**/.*"],
   serverDependenciesToBundle: [
     /^rehype.*/,
     /^remark.*/,
@@ -178,7 +178,7 @@ There are a few conventions that Remix uses you should be aware of.
 
 Setting up routes in Remix is as simple as creating files in your `app` directory. These are the conventions you should know to understand how routing in Remix works.
 
-Please note that you can use either `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication (and because we ❤️ TypeScript).
+Please note that you can use either `.js`, `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication (and because we ❤️ TypeScript).
 
 #### Root Layout Route
 
@@ -546,7 +546,7 @@ export default function SomeRouteComponent() {
 
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Single</a>: <a href="https://www.youtube.com/watch?v=NXqEP_PsPNc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Loading data into components</a></docs-success>
 
-Each route can define a "loader" function that will be called on the server before rendering to provide data to the route.
+Each route can define a "loader" function that will be called on the server before rendering to provide data to the route. You may think of this as a "GET" request handler in that you should not be reading the body of the request; that is the job of an [`action`](#action).
 
 ```js
 import { json } from "@remix-run/{runtime}";
@@ -887,6 +887,7 @@ See also:
 
 - [`<Form>`][form]
 - [`<Form action>`][form action]
+- [`?index` query param][index query param]
 
 ### `headers`
 
@@ -1417,6 +1418,7 @@ export default function Page() {
 [urlsearchparams]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [form]: ./remix#form
 [form action]: ./remix#form-action
+[index query param]: ../guides/routing#what-is-the-index-query-param
 [link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
 [minimatch]: https://www.npmjs.com/package/minimatch
 [handledatarequest]: #entryservertsx

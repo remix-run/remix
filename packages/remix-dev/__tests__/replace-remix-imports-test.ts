@@ -3,7 +3,7 @@ import fse from "fs-extra";
 import os from "os";
 import stripAnsi from "strip-ansi";
 import type { PackageJson } from "type-fest";
-import { spawnSync } from "child_process";
+import shell from "shelljs";
 
 import { run } from "../cli/run";
 
@@ -96,11 +96,11 @@ describe("`replace-remix-imports` migration", () => {
     expect(packageJson.scripts).not.toContain("postinstall");
 
     expect(output).toContain("✅ Your Remix imports look good!");
-    let { status } = spawnSync("grep", ["-nri", 'from "remix"', projectDir]);
+    let { code } = shell.grep("-nri", 'from "remix"', projectDir);
     // `grep` exits with status code `1` when no matches are found
-    expect(status).toBe(1);
+    expect(code).toBe(1);
 
     expect(output).toContain("successfully migrated");
     expect(output).toContain("npm install");
-  });
+  }, 25_000);
 });
