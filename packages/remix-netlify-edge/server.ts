@@ -6,6 +6,16 @@ interface BaseContext {
   next: (options?: { sendConditionalRequest?: boolean }) => Promise<Response>;
 }
 
+/**
+ * A function that returns the value to use as `context` in route `loader` and
+ * `action` functions.
+ *
+ * You can think of this as an escape hatch that allows you to pass
+ * environment/platform-specific values through to your loader/action.
+ */
+export type GetLoadContextFunction<Context extends BaseContext = BaseContext> =
+  (request: Request, context: Context) => Promise<Context> | Context;
+
 export function createRequestHandler<
   Context extends BaseContext = BaseContext
 >({
@@ -15,10 +25,7 @@ export function createRequestHandler<
 }: {
   build: ServerBuild;
   mode?: string;
-  getLoadContext?: (
-    request: Request,
-    context?: Context
-  ) => Promise<Context> | Context;
+  getLoadContext?: GetLoadContextFunction;
 }) {
   let remixHandler = createRemixRequestHandler(build, mode);
 
