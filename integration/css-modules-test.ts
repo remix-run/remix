@@ -10,19 +10,19 @@ import {
   js,
 } from "./helpers/create-fixture";
 
-let fixture: Fixture;
-let appFixture: AppFixture;
-
-// TODO: Finish all todo tests
-const testTodo = (
-  title: string,
-  testFunction?: (
-    args: { page: Playwright.Page },
-    testInfo: Playwright.TestInfo
-  ) => any
-) => {};
-
 test.describe("CSS Modules", () => {
+  // TODO: Finish all todo tests
+  let testTodo = (
+    title: string,
+    testFunction?: (
+      args: { page: Playwright.Page },
+      testInfo: Playwright.TestInfo
+    ) => any
+  ) => {};
+
+  let fixture: Fixture;
+  let appFixture: AppFixture;
+
   test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
@@ -291,7 +291,9 @@ test.describe("CSS Modules", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => appFixture.close());
+  test.afterAll(async () => {
+    await appFixture.close();
+  });
 
   test("server renders with hashed classnames", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
