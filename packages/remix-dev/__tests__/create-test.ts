@@ -447,7 +447,7 @@ describe("the create command", () => {
   });
 
   it("runs remix.init script when using index.ts", async () => {
-    let projectDir = await getProjectDir("remix-init-auto");
+    let projectDir = await getProjectDir("remix-init-ts");
     await run([
       "create",
       projectDir,
