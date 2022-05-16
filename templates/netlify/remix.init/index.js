@@ -16,7 +16,7 @@ async function main({ rootDirectory }) {
 
     for (let [file, target] of files) {
       await fs.copyFile(
-        join(__dirname, file),
+        join(rootDirectory, "remix.init", file),
         join(rootDirectory, target || file)
       );
     }
