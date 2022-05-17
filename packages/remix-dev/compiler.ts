@@ -513,15 +513,15 @@ async function writeServerBuildResult(
 			let contents = Buffer.from(file.contents).toString("utf-8");
 			contents = contents.replace(/"route:/gm, '"');
 			await fse.writeFile(file.path, contents);
-		} else if (file.path.endsWith(".node")){
+		} else if (file.path.endsWith(".node")) {
 			// Check for and make _assets folder if it does not exist in the directory
 			// I suspect this is usually done elsewhere
-			let parentFolderPath = file.path.slice(0,file.path.lastIndexOf("/"))
-			if (!fse.existsSync(parentFolderPath)){
-				fse.mkdirSync(parentFolderPath, {recursive: true });
+			let parentFolderPath = file.path.slice(0, file.path.lastIndexOf("/"))
+			if (!fse.existsSync(parentFolderPath)) {
+				fse.mkdirSync(parentFolderPath, { recursive: true });
 			}
 
 			await fse.writeFile(file.path, file.contents)
+		}
 	}
-}
 }
