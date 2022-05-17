@@ -420,6 +420,7 @@ function usePrefetchBehavior(
   let cancelIntent = () => {
     if (prefetch === "intent") {
       setMaybePrefetch(false);
+      setShouldPrefetch(false);
     }
   };
 

@@ -1,19 +1,17 @@
-import {
-  // This has been added as a global in node 15+
-  AbortController,
-  createRequestHandler as createRemixRequestHandler,
-} from "@remix-run/node";
-import type {
-  APIGatewayProxyEvent,
-  APIGatewayProxyEventV2,
-  APIGatewayProxyHandler,
-  APIGatewayProxyHandlerV2,
-} from "aws-lambda";
 import type {
   AppLoadContext,
   ServerBuild,
   Response as NodeResponse,
 } from "@remix-run/node";
+import {
+  createRequestHandler as createRemixRequestHandler
+} from "@remix-run/node";
+import type {
+  APIGatewayProxyEvent,
+  APIGatewayProxyEventV2,
+  APIGatewayProxyHandler,
+  APIGatewayProxyHandlerV2
+} from "aws-lambda";
 
 import {
   sendRemixResponse as sendRemixResponseV2,
@@ -60,20 +58,16 @@ export function createRequestHandler({
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (event: APIGatewayProxyEvent | APIGatewayProxyEventV2 /*, context*/) => {
-    let abortController = new AbortController();
     let request = apiGatewayVersion === APIGatewayVersion.v1
       ? createRemixRequest(event as APIGatewayProxyEvent, abortController)
       : createRemixRequestV2(event as APIGatewayProxyEventV2, abortController);
     let loadContext =
       typeof getLoadContext === "function" ? getLoadContext(event) : undefined;
 
-    let response = (await handleRequest(
-      request as unknown as Request,
-      loadContext
-    )) as unknown as NodeResponse;
+    let response = (await handleRequest(request, loadContext)) as NodeResponse;
 
     return apiGatewayVersion === APIGatewayVersion.v1
-        ? sendRemixResponse(response, abortController)
-        : sendRemixResponseV2(response, abortController);
+      ? sendRemixResponse(response)
+      : sendRemixResponseV2(response);
   };
 }

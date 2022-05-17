@@ -162,7 +162,7 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
         throw new CatchValue(
           result.status,
           result.statusText,
-          await extractData(result.clone())
+          await extractData(result)
         );
       }
 
@@ -199,7 +199,7 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
       throw new CatchValue(
         result.status,
         result.statusText,
-        await extractData(result.clone())
+        await extractData(result)
       );
     }
 
