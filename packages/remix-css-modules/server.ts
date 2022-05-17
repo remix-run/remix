@@ -1,2 +1,4 @@
 import assetsManifest from "@remix-run/dev/assets-manifest";
-export default assetsManifest.cssModules?.globalStylesheetFileUrl;
+const cssModulesStylesheetUrl =
+  assetsManifest.cssModules?.globalStylesheetFileUrl;
+export { cssModulesStylesheetUrl };

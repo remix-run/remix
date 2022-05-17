@@ -28,16 +28,12 @@ test.describe("CSS Modules", () => {
       files: {
         "app/root.jsx": js`
             import { Links, Outlet, Scripts } from "@remix-run/react";
-            import cssModuleStylesheetUrl from "@remix-run/css-modules";
+            import { cssModulesStylesheetUrl } from "@remix-run/css-modules";
             import stylesHref from "~/styles.css";
             export function links() {
               return [
                 { rel: "stylesheet", href: stylesHref },
-                {
-                  rel: "stylesheet",
-                  href: cssModuleStylesheetUrl,
-                  "data-css-modules-link": "",
-                },
+                { rel: "stylesheet", href: cssModulesStylesheetUrl },
               ];
             }
             export default function Root() {
