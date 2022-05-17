@@ -1,9 +1,9 @@
 import * as path from "https://deno.land/std@0.128.0/path/mod.ts";
 
 import type {
-  SessionStorage,
   SessionIdStorageStrategy,
-} from "../deps/@remix-run/server-runtime.ts";
+  SessionStorage,
+} from "@remix-run/server-runtime";
 import { createSessionStorage } from "../implementations.ts";
 
 interface FileSessionStorageOptions {
@@ -54,7 +54,7 @@ export function createFileSessionStorage({
           if (exists) continue;
 
           await Deno.mkdir(path.dirname(file), { recursive: true }).catch(
-            () => {}
+            () => {},
           );
           await Deno.writeFile(file, new TextEncoder().encode(content));
 
@@ -69,10 +69,9 @@ export function createFileSessionStorage({
         const file = getFile(dir, id);
         const content = JSON.parse(await Deno.readTextFile(file));
         const data = content.data;
-        const expires =
-          typeof content.expires === "string"
-            ? new Date(content.expires)
-            : null;
+        const expires = typeof content.expires === "string"
+          ? new Date(content.expires)
+          : null;
 
         if (!expires || expires > new Date()) {
           return data;

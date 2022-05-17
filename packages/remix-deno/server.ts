@@ -1,8 +1,7 @@
 import * as path from "https://deno.land/std@0.128.0/path/mod.ts";
-import mime from "https://esm.sh/mime";
-
-import { createRequestHandler as createRemixRequestHandler } from "./deps/@remix-run/server-runtime.ts";
-import type { ServerBuild } from "./deps/@remix-run/server-runtime.ts";
+import mime from "mime";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import type { ServerBuild } from "@remix-run/server-runtime";
 
 function defaultCacheControl(url: URL, assetsPublicPath = "/build/") {
   if (url.pathname.startsWith(assetsPublicPath)) {
@@ -37,6 +36,12 @@ export function createRequestHandler<Context = unknown>({
   };
 }
 
+class FileNotFoundError extends Error {
+  constructor(filePath: string) {
+    super(`No such file or directory: ${filePath}`);
+  }
+}
+
 export async function serveStaticFiles(
   request: Request,
   {
@@ -47,7 +52,7 @@ export async function serveStaticFiles(
     cacheControl?: string | ((url: URL) => string);
     publicDir?: string;
     assetsPublicPath?: string;
-  }
+  },
 ) {
   const url = new URL(request.url);
 
@@ -65,9 +70,16 @@ export async function serveStaticFiles(
     headers.set("Cache-Control", defaultCacheControl(url, assetsPublicPath));
   }
 
-  const file = await Deno.readFile(path.join(publicDir, url.pathname));
-
-  return new Response(file, { headers });
+  const filePath = path.join(publicDir, url.pathname);
+  try {
+    const file = await Deno.readFile(filePath);
+    return new Response(file, { headers });
+  } catch (error) {
+    if (error.code === "EISDIR" || error.code === "ENOENT") {
+      throw new FileNotFoundError(filePath);
+    }
+    throw error;
+  }
 }
 
 export function createRequestHandlerWithStaticFiles<Context = unknown>({
@@ -94,7 +106,7 @@ export function createRequestHandlerWithStaticFiles<Context = unknown>({
     try {
       return await serveStaticFiles(request, staticFiles);
     } catch (error) {
-      if (error.code !== "EISDIR" && error.code !== "ENOENT") {
+      if (!(error instanceof FileNotFoundError)) {
         throw error;
       }
     }
