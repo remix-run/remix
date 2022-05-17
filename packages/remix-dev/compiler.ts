@@ -427,10 +427,11 @@ async function createBrowserBuild(
         })
       );
 
-      // order css modules based on the jsx/tsx that imported them
-      let componentFiles = topologicalSort(graph).filter((x) =>
-        /^app\/.*\.[j|t]sx/.test(x)
-      );
+      // Order CSS Modules based on the module that imported them
+      let componentFiles = topologicalSort(graph, {
+        filterEdges: (node) => node.startsWith("css-modules-namespace:"),
+      });
+
       let cssModules: string[] = [];
       componentFiles.forEach((componentFile) => {
         let imports = graph[componentFile];
@@ -636,10 +637,13 @@ async function writeServerBuildResult(
  * before it.
  * @see https://en.wikipedia.org/wiki/Topological_sorting
  */
-function topologicalSort(graph: Record<string, string[]>) {
+function topologicalSort(
+  graph: Record<string, string[]>,
+  opts: Partial<{ filterEdges(edge: string): boolean }> = {}
+) {
+  let filter = opts.filterEdges || (() => true);
   let visited: string[] = [];
   let chain = new Set();
-
   let nodes = Object.keys(graph);
   nodes.forEach(visit);
 
@@ -648,10 +652,12 @@ function topologicalSort(graph: Record<string, string[]>) {
     if (chain.has(n)) throw Error(`Cycle detected: ${[...chain].join(" -> ")}`);
 
     chain.add(n);
-    let edges = graph[n];
-    edges.forEach(visit);
+    for (let edge of graph[n]) {
+      if (filter(edge)) {
+        visit(edge);
+      }
+    }
     chain.delete(n);
-
     visited.push(n);
   }
   return visited;
