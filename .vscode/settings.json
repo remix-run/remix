@@ -1,7 +1,5 @@
 {
   "typescript.tsdk": "node_modules/typescript/lib",
-  "deno.enablePaths": [
-    "./packages/remix-deno/",
-  ],
+  "deno.enablePaths": ["./packages/remix-deno/"],
   "deno.importMap": "./.vscode/deno_resolve_npm_imports.json"
 }

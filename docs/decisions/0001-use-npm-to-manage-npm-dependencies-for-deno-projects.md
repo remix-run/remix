@@ -15,6 +15,7 @@ Deno has three ways to manage dependencies:
 Additionally, NPM packages can be accessed as Deno modules via [Deno-friendly CDNs](https://deno.land/manual/node/cdns#deno-friendly-cdns) like https://esm.sh .
 
 Remix has some requirements around dependencies:
+
 - Remix treeshakes dependencies that are free of side-effects.
 - Remix sets the environment (dev/prod/test) across all code, including dependencies, at runtime via the `NODE_ENV` environment variable.
 - Remix depends on some NPM packages that should be specified as peer dependencies (notably, `react` and `react-dom`).
@@ -86,6 +87,7 @@ Remix will not yet support import maps.
 Users may configure an import map for the [Deno extension for VS Code](denoland.vscode-deno) to enable type hints for NPM-managed dependencies within their Deno editor:
 
 `.vscode/resolve_npm_imports_in_deno.json`
+
 ```json
 {
   "// This import map is used solely for the denoland.vscode-deno extension.": "",
@@ -102,6 +104,7 @@ Users may configure an import map for the [Deno extension for VS Code](denoland.
 ```
 
 `.vscode/settings.json`
+
 ```json
 {
   "deno.enable": true,
