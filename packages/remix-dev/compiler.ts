@@ -17,7 +17,7 @@ import { loaders } from "./compiler/loaders";
 import { browserRouteModulesPlugin } from "./compiler/plugins/browserRouteModulesPlugin";
 import { emptyModulesPlugin } from "./compiler/plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./compiler/plugins/mdx";
-import { nativeNodeModules } from "./compiler/plugins/nativeNodeModules";
+import { nativeNodeModulesPlugin } from "./compiler/plugins/nativeNodeModules";
 import type { AssetsManifestPromiseRef } from "./compiler/plugins/serverAssetsManifestPlugin";
 import { serverAssetsManifestPlugin } from "./compiler/plugins/serverAssetsManifestPlugin";
 import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlugin";
@@ -352,7 +352,7 @@ async function createBrowserBuild(
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
-    nativeNodeModules.nativeNodeModulesPlugin(),
+   nativeNodeModulesPlugin(),
   ];
 
   if (config.serverBuildTarget === "deno") {
@@ -426,7 +426,7 @@ function createServerBuild(
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config),
     serverAssetsManifestPlugin(assetsManifestPromiseRef),
-    nativeNodeModules.nativeNodeModulesPlugin(),
+    nativeNodeModulesPlugin(),
     serverBareModulesPlugin(config, dependencies, options.onWarning),
   ];
 

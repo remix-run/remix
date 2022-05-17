@@ -33,7 +33,7 @@ function _interopNamespace(e) {
 
 var path__namespace = /*#__PURE__*/_interopNamespace(path);
 
-function nativeNodeModulesPlugin() {
+export function nativeNodeModulesPlugin() {
   return {
     name: "native-node-modules",
 
@@ -94,4 +94,3 @@ function nativeNodeModulesPlugin() {
 
   };
 }
-exports.nativeNodeModulesPlugin = nativeNodeModulesPlugin; 
