@@ -357,12 +357,9 @@ export async function readConfig(
 
   // check if the port is already in use as this file is reloaded after a dep install or config change
   if (process.env.REMIX_DEV_SERVER_WS_PORT) {
-    try {
-      devServerPort = Number(process.env.REMIX_DEV_SERVER_WS_PORT);
-    } catch (error: unknown) {
-      // failed to parse the port as a number
-      devServerPort = await getPort({ port: appConfig.devServerPort });
-    }
+    devServerPort =
+      Number(process.env.REMIX_DEV_SERVER_WS_PORT) ||
+      (await getPort({ port: appConfig.devServerPort }));
   } else {
     devServerPort = await getPort({ port: appConfig.devServerPort });
   }
