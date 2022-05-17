@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/css-modules",
   "description": "Entrypoint for stylesheets created by CSS Modules in Remix",
-  "version": "1.2.3",
+  "version": "0.0.0-experimental-7632c498",
   "license": "MIT",
   "main": "./server.js",
   "module": "./esm/server.js",
@@ -19,6 +19,6 @@
   },
   "dependencies": {
     "@parcel/css": "^1.7.3",
-    "@remix-run/dev": "^1.3.3"
+    "@remix-run/dev": "0.0.0-experimental-7632c498"
   }
 }
