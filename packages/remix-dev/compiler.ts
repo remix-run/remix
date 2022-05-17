@@ -433,26 +433,29 @@ async function createBrowserBuild(
       });
 
       let cssModules: string[] = [];
-      componentFiles.forEach((componentFile) => {
+      for (let componentFile of componentFiles) {
         let imports = graph[componentFile];
-        imports
-          .filter((x) => x.endsWith(".module.css"))
-          .filter((x) => !cssModules.includes(x))
-          .forEach((x) => cssModules.push(x));
-      });
+        for (let imported of imports) {
+          if (
+            imported.endsWith(".module.css") &&
+            !cssModules.includes(imported)
+          ) {
+            cssModules.push(imported);
+          }
+        }
+      }
+
+      let cssModulesContent = "";
       let cssModulesMap = Object.fromEntries(
         await Promise.all(
-          cssModules
-            .map((filePath) => filePath.replace(/^css-modules-namespace:/, ""))
-            .map(
-              async (filePath) =>
-                [filePath, await processCss({ config, filePath })] as const
-            )
+          cssModules.map(async (filePath) => {
+            filePath = filePath.replace(/^css-modules-namespace:/, "");
+            let processed = await processCss({ config, filePath });
+            cssModulesContent += processed.css;
+            return [filePath, processed] as const;
+          })
         )
       );
-      let cssModulesContent = Object.values(cssModulesMap)
-        .map(({ css }) => css)
-        .join("");
 
       let [globalStylesheetFilePath, globalStylesheetFileUrl] =
         getCssModulesFileReferences(config, cssModulesContent);
