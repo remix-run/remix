@@ -424,12 +424,13 @@ function createServerBuild(
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config),
     serverAssetsManifestPlugin(assetsManifestPromiseRef),
-    nativeNodeModulesPlugin(),
     serverBareModulesPlugin(config, dependencies, options.onWarning),
   ];
 
   if (config.serverPlatform !== "node") {
     plugins.unshift(NodeModulesPolyfillPlugin());
+  }
+  if (config.serverPlatform == "node"){ 
     plugins.unshift(nativeNodeModulesPlugin());
   }
 
