@@ -352,7 +352,6 @@ async function createBrowserBuild(
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
-   nativeNodeModulesPlugin(),
   ];
 
   if (config.serverBuildTarget === "deno") {
@@ -365,7 +364,6 @@ async function createBrowserBuild(
       })
     );
   }
-
   return esbuild.build({
     entryPoints,
     outdir: config.assetsBuildDirectory,
