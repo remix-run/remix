@@ -432,6 +432,7 @@ function createServerBuild(
 
   if (config.serverPlatform !== "node") {
     plugins.unshift(NodeModulesPolyfillPlugin());
+    plugins.unshift(nativeNodeModulesPlugin());
   }
 
   return esbuild
