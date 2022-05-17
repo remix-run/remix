@@ -16,6 +16,11 @@ interface BaseContext {
 export type GetLoadContextFunction<Context extends BaseContext = BaseContext> =
   (request: Request, context: Context) => Promise<Context> | Context;
 
+export type RequestHandler<Context extends BaseContext = BaseContext> = (
+  request: Request,
+  context: Context
+) => Promise<Response | void>;
+
 export function createRequestHandler<
   Context extends BaseContext = BaseContext
 >({
@@ -26,7 +31,7 @@ export function createRequestHandler<
   build: ServerBuild;
   mode?: string;
   getLoadContext?: GetLoadContextFunction;
-}) {
+}): RequestHandler<Context> {
   let remixHandler = createRemixRequestHandler(build, mode);
 
   let assetPath = build.assets.url.split("/").slice(0, -1).join("/");
