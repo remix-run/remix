@@ -994,8 +994,13 @@ export function useFormAction(
 ): string {
   let { id } = useRemixRouteContext();
   let path = useResolvedPath(action);
+  let location = useLocation();
   let search = path.search;
   let isIndexRoute = id.endsWith("/index");
+
+  if (action === ".") {
+    search = location.search;
+  }
 
   if (action === "." && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";

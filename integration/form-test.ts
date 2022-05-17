@@ -40,6 +40,8 @@ test.describe("Forms", () => {
   let SPLAT_ROUTE_CURRENT_ACTION = "splat-route-cur";
   let SPLAT_ROUTE_PARENT_ACTION = "splat-route-parent";
   let SPLAT_ROUTE_TOO_MANY_DOTS_ACTION = "splat-route-too-many-dots";
+  let DEFAULT_ACTION_SEARCH_PARAMS = "default-action-search-params";
+  let EXPLICIT_ACTION_SEARCH_PARAMS = "explicit-action-search-params";
 
   test.beforeAll(async () => {
     fixture = await createFixture({
@@ -274,6 +276,22 @@ test.describe("Forms", () => {
                   <button type="submit" name="action" value="add">Add</button>
                 </Form>
               </div>
+            )
+          }
+        `,
+
+        "app/routes/login.jsx": js`
+          import { Form } from "@remix-run/react";
+          export default function() {
+            return (
+              <>
+                <Form id="${DEFAULT_ACTION_SEARCH_PARAMS}">
+                  <button>Login</button>
+                </Form>
+                <Form id="${EXPLICIT_ACTION_SEARCH_PARAMS}" action="/auth?nonce=123">
+                  <button>Login</button>
+                </Form>
+              </>
             )
           }
         `,
@@ -572,6 +590,29 @@ test.describe("Forms", () => {
         let html = await app.getHtml();
         let el = getElement(html, `#${SPLAT_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
+      });
+    });
+
+    test.describe("in a route with search params", () => {
+      test("default action preserves current location's search params", async ({
+        page,
+      }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        let url = "/login?redirectTo=/profile";
+        await app.goto(url);
+        let html = await app.getHtml();
+        let el = getElement(html, `#${DEFAULT_ACTION_SEARCH_PARAMS}`);
+        expect(el.attr("action")).toMatch(url);
+      });
+
+      test("explicit action is preserved as defined", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        let url = "/login?redirectTo=/profile";
+        let action = "/auth?nonce=123";
+        await app.goto(url);
+        let html = await app.getHtml();
+        let el = getElement(html, `#${EXPLICIT_ACTION_SEARCH_PARAMS}`);
+        expect(el.attr("action")).toMatch(action);
       });
     });
   });
