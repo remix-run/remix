@@ -1,4 +1,5 @@
 {
   "deno.enable": true,
-  "deno.lint": true
-} 
+  "deno.lint": true,
+  "deno.importMap": "./.vscode/resolve_npm_imports.json"
+}
