@@ -1,12 +1,7 @@
 {
-  "include": [
-    "**/*.ts"
-  ],
+  "include": ["**/*.ts"],
   "compilerOptions": {
-    "lib": [
-      "ES2019",
-      "WebWorker"
-    ],
+    "lib": ["ES2019", "WebWorker"],
     "target": "ES2019",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
