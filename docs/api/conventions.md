@@ -263,7 +263,7 @@ import { useParams } from "@remix-run/react";
 import type {
   LoaderFunction,
   ActionFunction,
-} from "@remix-run/{runtime}";
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const loader: LoaderFunction = async ({
   params,
@@ -356,7 +356,7 @@ For example, all of your marketing pages could be in `app/routes/__marketing/*` 
 
 <docs-warning>Be careful, pathless layout routes introduce the possibility of URL conflicts</docs-warning>
 
-#### Dot Delimeters
+#### Dot Delimiters
 
 <!-- prettier-ignore -->
 ```markdown [8]
@@ -426,7 +426,7 @@ import { useParams } from "@remix-run/react";
 import type {
   LoaderFunction,
   ActionFunction,
-} from "@remix-run/{runtime}";
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const loader: LoaderFunction = async ({
   params,
@@ -488,7 +488,7 @@ import { renderToString } from "react-dom/server";
 import type {
   EntryContext,
   HandleDataRequestFunction,
-} from "@remix-run/{runtime}";
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { RemixServer } from "@remix-run/react";
 
 export default function handleRequest(
@@ -549,7 +549,7 @@ export default function SomeRouteComponent() {
 Each route can define a "loader" function that will be called on the server before rendering to provide data to the route. You may think of this as a "GET" request handler in that you should not be reading the body of the request; that is the job of an [`action`](#action).
 
 ```js
-import { json } from "@remix-run/{runtime}";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const loader = async () => {
   // The `json` function converts a serializable object into a JSON response
@@ -560,8 +560,8 @@ export const loader = async () => {
 
 ```ts
 // Typescript
-import { json } from "@remix-run/{runtime}";
-import type { LoaderFunction } from "@remix-run/{runtime}";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const loader: LoaderFunction = async () => {
   return json({ ok: true });
@@ -573,7 +573,7 @@ This function is only ever run on the server. On the initial server render it wi
 Using the database ORM Prisma as an example:
 
 ```tsx lines=[1-2,6-8,11]
-import { json } from "@remix-run/{runtime}";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { useLoaderData } from "@remix-run/react";
 
 import { prisma } from "../db";
@@ -684,7 +684,7 @@ export const loader: LoaderFunction = async () => {
 Using the `json` helper simplifies this so you don't have to construct them yourself, but these two examples are effectively the same!
 
 ```tsx
-import { json } from "@remix-run/{runtime}";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const loader: LoaderFunction = async () => {
   const users = await fakeDb.users.findMany();
@@ -695,7 +695,7 @@ export const loader: LoaderFunction = async () => {
 You can see how `json` just does a little of the work to make your loader a lot cleaner. You can also use the `json` helper to add headers or a status code to your response:
 
 ```tsx
-import { json } from "@remix-run/{runtime}";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const loader: LoaderFunction = async ({
   params,
@@ -724,7 +724,7 @@ Along with returning responses, you can also throw Response objects from your lo
 Here is a full example showing how you can create utility functions that throw responses to stop code execution in the loader and move over to an alternative UI.
 
 ```ts filename=app/db.ts
-import { json } from "@remix-run/{runtime}";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import type { ThrownResponse } from "@remix-run/react";
 
 export type InvoiceNotFoundResponse = ThrownResponse<
@@ -742,7 +742,7 @@ export function getInvoice(id, user) {
 ```
 
 ```ts filename=app/http.ts
-import { redirect } from "@remix-run/{runtime}";
+import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 import { getSession } from "./session";
 
@@ -838,7 +838,7 @@ Actions have the same API as loaders, the only difference is when they are calle
 This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
 ```tsx
-import { json, redirect } from "@remix-run/{runtime}";
+import { json, redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { Form } from "@remix-run/react";
 
 import { fakeGetTodos, fakeCreateTodo } from "~/utils/db";
@@ -894,7 +894,11 @@ See also:
 Each route can define its own HTTP headers. One of the common headers is the `Cache-Control` header that indicates to browser and CDN caches where and for how long a page is able to be cached.
 
 ```tsx
-export function headers({ loaderHeaders, parentHeaders }) {
+export function headers({
+  actionHeaders,
+  loaderHeaders,
+  parentHeaders,
+}) {
   return {
     "X-Stretchy-Pants": "its for fun",
     "Cache-Control": "max-age=300, s-maxage=3600",
@@ -902,7 +906,7 @@ export function headers({ loaderHeaders, parentHeaders }) {
 }
 ```
 
-Usually your data is a better indicator of your cache duration than your route module (data tends to be more dynamic than markup), so the loader's headers are passed in to `headers()` too:
+Usually your data is a better indicator of your cache duration than your route module (data tends to be more dynamic than markup), so the `action`'s & `loader`'s headers are passed in to `headers()` too:
 
 ```tsx
 export function headers({ loaderHeaders }) {
@@ -912,7 +916,7 @@ export function headers({ loaderHeaders }) {
 }
 ```
 
-Note: `loaderHeaders` is an instance of the [Web Fetch API][headers] `Headers` class.
+Note: `actionHeaders` & `loaderHeaders` are an instance of the [Web Fetch API][headers] `Headers` class.
 
 Because Remix has nested routes, there's a battle of the headers to be won when nested routes match. In this case, the deepest route wins. Consider these files in the routes directory:
 
@@ -971,7 +975,7 @@ Note that you can also add headers in your `entry.server` file for things that s
 ```tsx lines=[16]
 import { renderToString } from "react-dom/server";
 import { RemixServer } from "@remix-run/react";
-import type { EntryContext } from "@remix-run/{runtime}";
+import type { EntryContext } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export default function handleRequest(
   request: Request,
@@ -1000,7 +1004,7 @@ Just keep in mind that doing this will apply to _all_ document requests, but doe
 The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route besides layout routes (their index route will set the meta).
 
 ```tsx
-import type { MetaFunction } from "@remix-run/{runtime}";
+import type { MetaFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const meta: MetaFunction = () => {
   return {
@@ -1025,12 +1029,12 @@ The `meta` object can also hold a `title` reference which maps to the [HTML `<ti
 
 As a convenience, `charset: "utf-8"` will render a `<meta charset="utf-8">`.
 
-As a last option, you can also pass an object of attribute/value pairs as the value. This can be used as an escape-hetch for meta tags like the [`http-equiv` tag](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta#attr-http-equiv) which uses `http-equiv` instead of `name`.
+As a last option, you can also pass an object of attribute/value pairs as the value. This can be used as an escape-hatch for meta tags like the [`http-equiv` tag](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta#attr-http-equiv) which uses `http-equiv` instead of `name`.
 
 Examples:
 
 ```tsx
-import type { MetaFunction } from "@remix-run/{runtime}";
+import type { MetaFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const meta: MetaFunction = () => ({
   // Special cases
@@ -1038,7 +1042,7 @@ export const meta: MetaFunction = () => ({
   "og:image": "https://josiesshakeshack.com/logo.jpg", // <meta property="og:image" content="https://josiesshakeshack.com/logo.jpg">
   title: "Josie's Shake Shack", // <title>Josie's Shake Shack</title>
 
-  // content => name
+  // name => content
   description: "Delicious shakes", // <meta name="description" content="Delicious shakes">
   viewport: "width=device-width,initial-scale=1", // <meta name="viewport" content="width=device-width,initial-scale=1">
 
@@ -1081,7 +1085,7 @@ export const meta: MetaFunction = ({ data, params }) => {
 The links function defines which `<link>` elements to add to the page when the user visits a route.
 
 ```tsx
-import type { LinksFunction } from "@remix-run/{runtime}";
+import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const links: LinksFunction = () => {
   return [
@@ -1115,7 +1119,7 @@ The `links` export from a route should return an array of `HtmlLinkDescriptor` o
 Examples:
 
 ```tsx
-import type { LinksFunction } from "@remix-run/{runtime}";
+import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 import stylesHref from "../styles/something.css";
 
@@ -1392,7 +1396,7 @@ Any files inside the `app` folder can be imported into your modules. Remix will:
 It's most common for stylesheets, but can used for anything.
 
 ```tsx filename=app/routes/root.tsx
-import type { LinksFunction } from "@remix-run/{runtime}";
+import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 import styles from "./styles/app.css";
 import banner from "./images/banner.jpg";

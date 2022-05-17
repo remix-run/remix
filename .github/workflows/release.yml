@@ -54,4 +54,4 @@ jobs:
         with:
           token: ${{ secrets.NIGHTLY_PAT }}
           event-type: release
-          client-payload: '{ "ref": "${{ github.ref }}" }'
+          client-payload: '{ "ref": "${{ github.ref }}", "version": "${{ github.ref_name }}" }'

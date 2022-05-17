@@ -84,7 +84,7 @@ Remix makes writing plain CSS a viable option even for apps with a lot of UI. In
 
 - how and when to load CSS, so it was usually all loaded on every page
 - if the class names and selectors you were using were accidentally styling other UI in the app
-- if some rules were even used anymore as the CSS source code grew over time
+- if some rules weren't even used anymore as the CSS source code grew over time
 
 Remix alleviates these issues with route-based stylesheets. Nested routes can each add their own stylesheets to the page and Remix will automatically prefetch, load, and unload them with the route. When the scope of concern is limited to just the active routes, the risks of these problems are reduced significantly. The only chances for conflicts are with the parent routes' styles (and even then, you will likely see the conflict since the parent route is also rendering).
 
@@ -254,7 +254,7 @@ Now Remix can prefetch, load, and unload the styles for `button.css`, `primary-b
 An initial reaction to this is that routes have to know more than you want them to. Keep in mind each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
 
 ```tsx filename=app/routes/$category.js lines=[4-8,24-31]
-import { json } from "@remix-run/{runtime}";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { useLoaderData } from "@remix-run/react";
 
 import { TileGrid } from "~/components/tile-grid";
@@ -447,7 +447,10 @@ Update the package scripts to generate the Tailwind file during dev and for the 
 Finally, import the generated CSS file into your app:
 
 ```tsx filename=app/root.tsx
+import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+
 // ...
+
 import styles from "./tailwind.css";
 
 export const links: LinksFunction = () => [
@@ -508,7 +511,7 @@ If you're using VS Code, it's recommended you install the [Tailwind IntelliSense
 You can load stylesheets from any server, here's an example of loading a modern css reset from unpkg.
 
 ```ts filename=app/root.tsx
-import type { LinksFunction } from "@remix-run/{runtime}";
+import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const links: LinksFunction = () => {
   return [
@@ -596,7 +599,7 @@ Here's how to set it up:
    Then import like any other css file:
 
    ```tsx filename=root.tsx
-   import type { LinksFunction } from "@remix-run/{runtime}";
+   import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
    import styles from "./styles/app.css";
 
@@ -685,7 +688,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
 1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
 
    ```tsx filename=app/root.tsx lines=[22-24]
-   import type { MetaFunction } from "@remix-run/{runtime}";
+   import type { MetaFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
    import {
      Links,
      LiveReload,
@@ -726,7 +729,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
    ```tsx filename=entry.server.tsx lines=[4,12,15-20,22-23]
    import { renderToString } from "react-dom/server";
    import { RemixServer } from "@remix-run/react";
-   import type { EntryContext } from "@remix-run/{runtime}";
+   import type { EntryContext } from "@remix-run/node"; // or "@remix-run/cloudflare"
    import { ServerStyleSheet } from "styled-components";
 
    export default function handleRequest(
