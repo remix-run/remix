@@ -24,8 +24,8 @@ import { serverEntryModulePlugin } from "./compiler/plugins/serverEntryModulePlu
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
 import type { CssModulesResults } from "./compiler/plugins/cssModulesPlugin";
 import {
-  cssModulesPlugin,
-  cssModulesFakerPlugin,
+  cssModulesBrowserPlugin,
+  cssModulesServerPlugin,
   getCssModulesFileReferences,
   processCss,
 } from "./compiler/plugins/cssModulesPlugin";
@@ -370,7 +370,7 @@ async function createBrowserBuild(
   }
 
   let plugins = [
-    cssModulesPlugin(config),
+    cssModulesBrowserPlugin(config),
     urlImportsPlugin(),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
@@ -484,7 +484,7 @@ function createServerBuild(
   let isDenoRuntime = config.serverBuildTarget === "deno";
 
   let plugins: esbuild.Plugin[] = [
-    cssModulesFakerPlugin(config, assetsManifestPromiseRef),
+    cssModulesServerPlugin(config, assetsManifestPromiseRef),
     urlImportsPlugin(),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),

@@ -9,8 +9,10 @@ import type { RemixConfig } from "../../config";
 import { resolveUrl } from "../utils/url";
 import type { AssetsManifestPromiseRef } from "./serverAssetsManifestPlugin";
 
-const pluginName = "css-modules";
-const pluginNamespace = `${pluginName}-namespace`;
+const browserPluginName = "css-modules";
+const browserPluginNamespace = `${browserPluginName}-namespace`;
+const serverPluginName = "css-modules-server";
+const serverPluginNamespace = `${serverPluginName}-namespace`;
 const suffixMatcher = /\.modules?\.css$/;
 
 let parcelTransform: (opts: ParcelTransformOptions) => ParcelTransformResult;
@@ -20,9 +22,9 @@ const decoder = new TextDecoder();
  * Loads *.module.css files and returns the hashed JSON so we can get the right
  * classnames in the HTML.
  */
-export function cssModulesPlugin(config: RemixConfig): esbuild.Plugin {
+export function cssModulesBrowserPlugin(config: RemixConfig): esbuild.Plugin {
   return {
-    name: pluginName,
+    name: browserPluginName,
     async setup(build) {
       build.onResolve({ filter: suffixMatcher }, async (args) => {
         try {
@@ -59,15 +61,15 @@ Install the dependency by running the following command, then restart your app.
 
         let path = getResolvedFilePath(config, args);
         return {
-          pluginName,
-          namespace: pluginNamespace,
+          pluginName: browserPluginName,
+          namespace: browserPluginNamespace,
           path,
           sideEffects: false,
         };
       });
 
       build.onLoad(
-        { filter: suffixMatcher, namespace: pluginNamespace },
+        { filter: suffixMatcher, namespace: browserPluginNamespace },
         async (args) => {
           try {
             let processed = await processCssCached({
@@ -91,28 +93,27 @@ Install the dependency by running the following command, then restart your app.
 }
 
 /**
- * This plugin is for the browser + server builds. It doesn't actually process
- * the CSS, but it resolves the import paths and yields to the CSS Modules build
- * for the results.
+ * This plugin is for the server build. It doesn't actually process the CSS, but
+ * it  and waits for the assets manifest to resolve module imports.
  */
-export function cssModulesFakerPlugin(
+export function cssModulesServerPlugin(
   config: RemixConfig,
   assetsManifestPromiseRef: AssetsManifestPromiseRef
 ): esbuild.Plugin {
   return {
-    name: "css-modules-faker",
+    name: serverPluginName,
     async setup(build) {
       build.onResolve({ filter: suffixMatcher }, (args) => {
         return {
-          pluginName: pluginName + "-faker",
-          namespace: pluginNamespace + "-faker",
+          pluginName: serverPluginName,
+          namespace: serverPluginNamespace,
           path: getResolvedFilePath(config, args),
           sideEffects: false,
         };
       });
 
       build.onLoad(
-        { filter: suffixMatcher, namespace: pluginNamespace + "-faker" },
+        { filter: suffixMatcher, namespace: serverPluginNamespace },
         async (args) => {
           let res = await assetsManifestPromiseRef.current;
           let json = res?.cssModules?.moduleMap[args.path]?.json || {};
