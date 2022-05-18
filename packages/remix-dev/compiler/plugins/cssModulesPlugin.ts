@@ -75,7 +75,7 @@ Install the dependency by running the following command, then restart your app.
               filePath: args.path,
             });
             return {
-              contents: JSON.stringify(processed.json),
+              contents: JSON.stringify(processed?.json || {}),
               loader: "json",
             };
           } catch (err: any) {
