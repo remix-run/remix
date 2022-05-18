@@ -74,8 +74,9 @@ Install the dependency by running the following command, then restart your app.
               config,
               filePath: args.path,
             });
+            let json = processed?.json || {};
             return {
-              contents: JSON.stringify(processed?.json || {}),
+              contents: JSON.stringify(json),
               loader: "json",
             };
           } catch (err: any) {
@@ -114,7 +115,7 @@ export function cssModulesFakerPlugin(
         { filter: suffixMatcher, namespace: pluginNamespace + "-faker" },
         async (args) => {
           let res = await assetsManifestPromiseRef.current;
-          let json = res?.cssModules?.moduleMap[args.path].json || {};
+          let json = res?.cssModules?.moduleMap[args.path]?.json || {};
           return {
             contents: JSON.stringify(json),
             loader: "json",
