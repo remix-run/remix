@@ -10,11 +10,14 @@ function getTaggedVersion() {
   return output.replace(/^v/g, "");
 }
 
+/**
+ * @param {string} dir
+ * @param {string} tag
+ */
 function publish(dir, tag) {
-  execSync(
-    `npm publish --access public${tag != null ? ` --tag ${tag}` : ""} ${dir}`,
-    { stdio: "inherit" }
-  );
+  execSync(`npm publish --access public --tag ${tag} ${dir}`, {
+    stdio: "inherit",
+  });
 }
 
 async function run() {
@@ -31,7 +34,7 @@ async function run() {
     ? prereleaseTag.includes("nightly")
       ? "nightly"
       : prereleaseTag.includes("experimental")
-      ? null
+      ? "experimental"
       : prereleaseTag
     : "latest";
 
