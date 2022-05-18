@@ -5,11 +5,10 @@ import type {
 } from "aws-lambda";
 import {
   Headers as NodeHeaders,
+  readableStreamToString,
   Request as NodeRequest
 } from "@remix-run/node";
 import type {
-  // This has been added as a global in node 15+
-  AbortController,
   Response as NodeResponse,
 } from "@remix-run/node";
 
@@ -36,7 +35,6 @@ export function createRemixRequest(
           ? Buffer.from(event.body, "base64")
           : Buffer.from(event.body, "base64").toString()
         : event.body,
-    abortController,
     signal: abortController?.signal,
   });
 }
@@ -61,8 +59,7 @@ export function createRemixHeaders(
 }
 
 export async function sendRemixResponse(
-  nodeResponse: NodeResponse,
-  abortController: AbortController
+  nodeResponse: NodeResponse
 ): Promise<APIGatewayProxyStructuredResultV2> {
   let cookies: string[] = [];
 
@@ -79,26 +76,21 @@ export async function sendRemixResponse(
     nodeResponse.headers.delete("Set-Cookie");
   }
 
-  if (abortController.signal.aborted) {
-    nodeResponse.headers.set("Connection", "close");
-  }
-
   let contentType = nodeResponse.headers.get("Content-Type");
-  let isBinary = isBinaryType(contentType);
-  let body;
-  let isBase64Encoded = false;
+  let isBase64Encoded = isBinaryType(contentType);
+  let body: string | undefined;
 
-  if (isBinary) {
-    let blob = await nodeResponse.arrayBuffer();
-    body = Buffer.from(blob).toString("base64");
-    isBase64Encoded = true;
-  } else {
-    body = await nodeResponse.text();
+  if (nodeResponse.body) {
+    if (isBase64Encoded) {
+      body = await readableStreamToString(nodeResponse.body, "base64");
+    } else {
+      body = await nodeResponse.text();
+    }
   }
 
   return {
     statusCode: nodeResponse.status,
-    headers: Object.fromEntries(nodeResponse.headers),
+    headers: Object.fromEntries(nodeResponse.headers.entries()),
     cookies,
     body,
     isBase64Encoded,

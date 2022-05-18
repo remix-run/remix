@@ -165,7 +165,7 @@ describe("architect createRequestHandler", () => {
           expect(res.body).toBe("URL: /foo/bar");
         });
 
-      expect(spyCreateRemixRequest).toHaveBeenCalledWith(mockEvent, expect.anything())
+      expect(spyCreateRemixRequest).toHaveBeenCalledWith(mockEvent)
       expect(spySendRemixResponse).toHaveBeenCalled()
     });
 
@@ -186,7 +186,7 @@ describe("architect createRequestHandler", () => {
           expect(res.body).toBe("URL: /foo/bar");
         });
 
-      expect(spyCreateRemixRequest).toHaveBeenCalledWith(mockEvent, expect.anything())
+      expect(spyCreateRemixRequest).toHaveBeenCalledWith(mockEvent)
       expect(spySendRemixResponse).toHaveBeenCalled()
     });
   });

@@ -59,8 +59,8 @@ export function createRequestHandler({
 
   return async (event: APIGatewayProxyEvent | APIGatewayProxyEventV2 /*, context*/) => {
     let request = apiGatewayVersion === APIGatewayVersion.v1
-      ? createRemixRequest(event as APIGatewayProxyEvent, abortController)
-      : createRemixRequestV2(event as APIGatewayProxyEventV2, abortController);
+      ? createRemixRequest(event as APIGatewayProxyEvent)
+      : createRemixRequestV2(event as APIGatewayProxyEventV2);
     let loadContext =
       typeof getLoadContext === "function" ? getLoadContext(event) : undefined;
 
