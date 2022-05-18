@@ -409,50 +409,11 @@ async function createBrowserBuild(
       plugins,
     })
     .then(async (build) => {
-      // Model files and their imports as an adjacency list
-      // https://en.wikipedia.org/wiki/Adjacency_list
-      // E.g. "Module A imports from B, C, and D" becomes `{A:[B,C,D]}`
-      let graph = Object.fromEntries(
-        Object.entries(build.metafile.inputs).map(([input, { imports }]) => {
-          return [input, imports.map(({ path }) => path)];
-        })
-      );
+      let { cssContent, moduleMap, stylesheetUrl, stylesheetPath } =
+        await buildCssModules(config, build);
 
-      // Order CSS Modules based on the module that imported them
-      let componentFiles = topologicalSort(graph, {
-        filterEdges: (node) => node.startsWith("css-modules-namespace:"),
-      });
-
-      let cssModules: string[] = [];
-      for (let componentFile of componentFiles) {
-        let imports = graph[componentFile];
-        for (let imported of imports) {
-          if (
-            imported.endsWith(".module.css") &&
-            !cssModules.includes(imported)
-          ) {
-            cssModules.push(imported);
-          }
-        }
-      }
-
-      let cssModulesContent = "";
-      let cssModulesMap = Object.fromEntries(
-        await Promise.all(
-          cssModules.map(async (filePath) => {
-            filePath = filePath.replace(/^css-modules-namespace:/, "");
-            let processed = await processCss({ config, filePath });
-            cssModulesContent += processed.css;
-            return [filePath, processed] as const;
-          })
-        )
-      );
-
-      let [globalStylesheetFilePath, globalStylesheetFileUrl] =
-        getCssModulesFileReferences(config, cssModulesContent);
-
-      await fse.ensureDir(path.dirname(globalStylesheetFilePath));
-      await fse.writeFile(globalStylesheetFilePath, cssModulesContent);
+      await fse.ensureDir(path.dirname(stylesheetPath));
+      await fse.writeFile(stylesheetPath, cssContent);
 
       return {
         ...build,
@@ -467,23 +428,23 @@ async function createBrowserBuild(
             return undefined;
           }
           let builder = (async () => {
-            // Clear CSS modules data before rebuild
-            cssModulesContent = "";
-            cssModulesMap = {};
-            let result = await build.rebuild!();
-            let [globalStylesheetFilePath, globalStylesheetFileUrl] =
-              getCssModulesFileReferences(config, cssModulesContent);
+            let { stylesheetUrl, stylesheetPath, ...rebuilt } =
+              await buildCssModules(config, build);
+            cssContent = rebuilt.cssContent;
+            moduleMap = rebuilt.moduleMap;
 
-            await fse.ensureDir(path.dirname(globalStylesheetFilePath));
-            await fse.writeFile(globalStylesheetFilePath, cssModulesContent);
+            let result = await build.rebuild!();
+
+            await fse.ensureDir(path.dirname(stylesheetPath));
+            await fse.writeFile(stylesheetPath, cssContent);
 
             return {
               ...result,
               rebuild: builder,
               cssModules: {
-                globalStylesheetFilePath,
-                globalStylesheetFileUrl,
-                moduleMap: cssModulesMap,
+                globalStylesheetFilePath: stylesheetPath,
+                globalStylesheetFileUrl: stylesheetUrl,
+                moduleMap,
               },
             };
           }) as BuildInvalidate;
@@ -493,9 +454,9 @@ async function createBrowserBuild(
           return builder;
         })(),
         cssModules: {
-          globalStylesheetFilePath,
-          globalStylesheetFileUrl,
-          moduleMap: cssModulesMap,
+          globalStylesheetFilePath: stylesheetPath,
+          globalStylesheetFileUrl: stylesheetUrl,
+          moduleMap,
         },
       };
     });
@@ -662,4 +623,58 @@ function topologicalSort(
     visited.push(n);
   }
   return visited;
+}
+
+async function buildCssModules(
+  config: RemixConfig,
+  build: esbuild.BuildResult & {
+    metafile: esbuild.Metafile;
+  }
+) {
+  // Model files and their imports as an adjacency list
+  // https://en.wikipedia.org/wiki/Adjacency_list
+  // E.g. "Module A imports from B, C, and D" becomes `{A:[B,C,D]}`
+  let graph = Object.fromEntries(
+    Object.entries(build.metafile.inputs).map(([input, { imports }]) => {
+      return [input, imports.map(({ path }) => path)];
+    })
+  );
+
+  // Order CSS Modules based on the module that imported them
+  let componentFiles = topologicalSort(graph, {
+    filterEdges: (node) => node.startsWith("css-modules-namespace:"),
+  });
+
+  let cssModules: string[] = [];
+  for (let componentFile of componentFiles) {
+    let imports = graph[componentFile];
+    for (let imported of imports) {
+      if (imported.endsWith(".module.css") && !cssModules.includes(imported)) {
+        cssModules.push(imported);
+      }
+    }
+  }
+
+  let cssContent = "";
+  let moduleMap = Object.fromEntries(
+    await Promise.all(
+      cssModules.map(async (filePath) => {
+        filePath = filePath.replace(/^css-modules-namespace:/, "");
+        let processed = await processCss({ config, filePath });
+        cssContent += processed.css;
+        return [filePath, processed] as const;
+      })
+    )
+  );
+  let [stylesheetPath, stylesheetUrl] = getCssModulesFileReferences(
+    config,
+    cssContent
+  );
+
+  return {
+    cssContent,
+    moduleMap: moduleMap,
+    stylesheetPath,
+    stylesheetUrl,
+  };
 }
