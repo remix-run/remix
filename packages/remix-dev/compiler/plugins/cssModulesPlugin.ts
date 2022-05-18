@@ -235,7 +235,6 @@ function getComposedClassNames(
   return composes.reduce((className, composed) => {
     // skip dependencies for now
     if (composed.type === "dependency") {
-      console.log({ composed });
       return className;
     }
     return className + " " + getPrefixedClassName(prefix, composed.name);
