@@ -91,6 +91,10 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+          
+      - name: Windows Networking
+        if: matrix.os == 'windows-latest'
+        run: Disable-NetAdapterChecksumOffload -Name * -TcpIPv4 -UdpIPv4 -TcpIPv6 -UdpIPv6
 
       - name: 📥 Install deps
         # even though this is called "npm-install" it does use yarn to install
