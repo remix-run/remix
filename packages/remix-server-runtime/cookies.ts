@@ -255,7 +255,7 @@ function warnOnceAboutExpiresCookie(name: string, expires?: Date) {
     `The "${name}" cookie has an "expires" property set. ` +
       `This will cause the expires value to not be updated when the session is committed. ` +
       `Instead, you should set the expires value when serializing the cookie. ` +
-      `You can use \`commitSession(session, { expires })\` if using a session abstraction, ` +
-      `or \`serialize("value", { expires })\` if you're creating a cookie yourself.`
+      `You can use \`commitSession(session, { expires })\` if using a session storage object, ` +
+      `or \`cookie.serialize("value", { expires })\` if you're using the cookie directly.`
   );
 }
