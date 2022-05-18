@@ -615,7 +615,7 @@ export default function PostSlug() {
 
 Holy smokes, you did it. You have a blog. Check it out! Next, we're gonna make it easier to create new blog posts 📝
 
-## Creating Blog Posts
+## Nested Routing
 
 Right now, our blog posts just come from seeding the database. Not a real solution, so we need a way to create a new blog post in the database. We're going to be using actions for that.
 
@@ -690,7 +690,7 @@ export default function PostAdmin() {
 You should recognize several of the things we're doing in there from what we've done so far. With that, you should have a decent looking page with the posts on the left and a placeholder on the right.
 Now, if you click on the Admin link, it'll take you to [http://localhost:3000/posts/admin](http://localhost:3000/posts/admin).
 
-## Index Routes
+### Index Routes
 
 Let's fill in that placeholder with an index route for admin. Hang with us, we're introducing "nested routes" here where your route file nesting becomes UI component nesting.
 
@@ -1075,7 +1075,7 @@ export const action: ActionFunction = async ({
 
 ## Progressive Enhancement
 
-For some real fun, [disable JavaScript](https://developer.chrome.com/docs/devtools/javascript/disable/) in your dev tools and try it out. Because Remix is built on the fundamentals of HTTP and HTML, this whole thing works without JavaScript in the browser 🤯 But that's not the point. What's cool about it is that this means our UI is resiliant to network issues. But we really _like_ having JavaScript in the browser and there are a lot of cool things we can do when we've got it, so make sure to re-enable JavaScript before continuing, because we're going to need it to _progressively enhance_ the user experience next.
+For some real fun, [disable JavaScript](https://developer.chrome.com/docs/devtools/javascript/disable/) in your dev tools and try it out. Because Remix is built on the fundamentals of HTTP and HTML, this whole thing works without JavaScript in the browser 🤯 But that's not the point. What's cool about it is that this means our UI is resilient to network issues. But we really _like_ having JavaScript in the browser and there are a lot of cool things we can do when we've got it, so make sure to re-enable JavaScript before continuing, because we're going to need it to _progressively enhance_ the user experience next.
 
 Let's slow this down and add some "pending UI" to our form.
 

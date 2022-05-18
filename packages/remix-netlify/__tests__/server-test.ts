@@ -123,10 +123,10 @@ describe("netlify createRequestHandler", () => {
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
         .expectResolve((res) => {
-          expect(res.multiValueHeaders["X-Time-Of-Year"]).toEqual([
+          expect(res.multiValueHeaders["x-time-of-year"]).toEqual([
             "most wonderful",
           ]);
-          expect(res.multiValueHeaders["Set-Cookie"]).toEqual([
+          expect(res.multiValueHeaders["set-cookie"]).toEqual([
             "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
             "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax",
             "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax",
@@ -141,7 +141,8 @@ describe("netlify createRemixHeaders", () => {
     it("handles empty headers", () => {
       expect(createRemixHeaders({})).toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {},
+          Symbol(query): Array [],
+          Symbol(context): null,
         }
       `);
     });
@@ -149,11 +150,11 @@ describe("netlify createRemixHeaders", () => {
     it("handles simple headers", () => {
       expect(createRemixHeaders({ "x-foo": ["bar"] })).toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-foo": Array [
-              "bar",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -162,14 +163,13 @@ describe("netlify createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": ["bar"], "x-bar": ["baz"] }))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-bar": Array [
-              "baz",
-            ],
-            "x-foo": Array [
-              "bar",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar",
+            "x-bar",
+            "baz",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -178,12 +178,13 @@ describe("netlify createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": ["bar", "baz"] }))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-foo": Array [
-              "bar",
-              "baz",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar",
+            "x-foo",
+            "baz",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -192,15 +193,15 @@ describe("netlify createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": ["bar", "baz"], "x-bar": ["baz"] }))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-bar": Array [
-              "baz",
-            ],
-            "x-foo": Array [
-              "bar",
-              "baz",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar",
+            "x-foo",
+            "baz",
+            "x-bar",
+            "baz",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -212,19 +213,20 @@ describe("netlify createRemixHeaders", () => {
             "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
             "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
           ],
+
           "x-something-else": ["true"],
         })
       ).toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "Cookie": Array [
-              "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-              "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
-            ],
-            "x-something-else": Array [
-              "true",
-            ],
-          },
+          Symbol(query): Array [
+            "cookie",
+            "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
+            "cookie",
+            "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
+            "x-something-else",
+            "true",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -243,44 +245,35 @@ describe("netlify createRemixRequest", () => {
       )
     ).toMatchInlineSnapshot(`
       NodeRequest {
-        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
         "follow": 20,
+        "highWaterMark": 16384,
+        "insecureHTTPParser": false,
         "size": 0,
-        "timeout": 0,
         Symbol(Body internals): Object {
           "body": null,
+          "boundary": null,
           "disturbed": false,
           "error": null,
+          "size": 0,
+          "type": null,
         },
         Symbol(Request internals): Object {
           "headers": Headers {
-            Symbol(map): Object {
-              "Cookie": Array [
-                "__session=value",
-                "__other=value",
-              ],
-            },
+            Symbol(query): Array [
+              "cookie",
+              "__session=value",
+              "cookie",
+              "__other=value",
+            ],
+            Symbol(context): null,
           },
           "method": "GET",
-          "parsedURL": Url {
-            "auth": null,
-            "hash": null,
-            "host": "localhost:3000",
-            "hostname": "localhost",
-            "href": "http://localhost:3000/",
-            "path": "/",
-            "pathname": "/",
-            "port": "3000",
-            "protocol": "http:",
-            "query": null,
-            "search": null,
-            "slashes": true,
-          },
+          "parsedURL": "http://localhost:3000/",
           "redirect": "follow",
-          "signal": undefined,
+          "signal": null,
         },
       }
     `);

@@ -10,8 +10,12 @@ on:
       - v*
     paths-ignore:
       - "docs/**"
+      - "scripts/**"
       - "**/README.md"
-  pull_request: {}
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
 
 jobs:
   build:
@@ -74,6 +78,7 @@ jobs:
         node:
           - 14
           - 16
+          - 18
     runs-on: ${{ matrix.os }}
     steps:
       - name: 🛑 Cancel Previous Runs
@@ -104,6 +109,7 @@ jobs:
         node:
           - 14
           - 16
+          - 18
         os:
           - ubuntu-latest
           # - macos-latest
@@ -149,7 +155,7 @@ jobs:
         id: playwright-cache
         with:
           path: ${{ matrix.playwright_binary_path }}
-          key: ${{ runner.os }}-cache-playwright-${{ steps.playwright-version.outputs.version }}
+          key: ${{ runner.os }}-${{ runner.arch }}-cache-playwright-${{ steps.playwright-version.outputs.version }}
 
       - name: 🖨️ Playwright info
         shell: bash
@@ -157,7 +163,7 @@ jobs:
           echo "OS: ${{ matrix.os }}"
           echo "Playwright version: ${{ steps.playwright-version.outputs.version }}"
           echo "Playwright install dir: ${{ matrix.playwright_binary_path }}"
-          echo "Cache key: ${{ runner.os }}-cache-playwright-${{ steps.playwright-version.outputs.version }}"
+          echo "Cache key: ${{ runner.os }}-${{ runner.arch }}-cache-playwright-${{ steps.playwright-version.outputs.version }}"
           echo "Cache hit: ${{ steps.playwright-cache.outputs.cache-hit == 'true' }}"
 
       - name: 📥 Install Playwright

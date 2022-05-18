@@ -9,7 +9,7 @@ import * as React from "react";
 
 import { getUserId, createUserSession } from "~/session.server";
 import { createUser, getUserByEmail } from "~/models/user.server";
-import { validateEmail } from "~/utils";
+import { safeRedirect, validateEmail } from "~/utils";
 
 export const loader: LoaderFunction = async ({ request }) => {
   let userId = await getUserId(request);
@@ -28,7 +28,7 @@ export const action: ActionFunction = async ({ request }) => {
   let formData = await request.formData();
   let email = formData.get("email");
   let password = formData.get("password");
-  let redirectTo = formData.get("redirectTo");
+  let redirectTo = safeRedirect(formData.get("redirectTo"), "/");
 
   if (!validateEmail(email)) {
     return json<ActionData>(
@@ -65,7 +65,7 @@ export const action: ActionFunction = async ({ request }) => {
     request,
     userId: user.id,
     remember: false,
-    redirectTo: typeof redirectTo === "string" ? redirectTo : "/",
+    redirectTo,
   });
 };
 

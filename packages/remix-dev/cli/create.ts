@@ -14,6 +14,7 @@ import sortPackageJSON from "sort-package-json";
 import * as colors from "../colors";
 import packageJson from "../package.json";
 import { convertTemplateToJavaScript } from "./convert-to-javascript";
+import { getPreferredPackageManager } from "./getPreferredPackageManager";
 
 const remixDevPackageVersion = packageJson.version;
 
@@ -22,7 +23,6 @@ interface CreateAppArgs {
   projectDir: string;
   remixVersion?: string;
   installDeps: boolean;
-  packageManager: "npm" | "yarn" | "pnpm";
   useTypeScript: boolean;
   githubToken?: string;
   debug?: boolean;
@@ -33,22 +33,10 @@ export async function createApp({
   projectDir,
   remixVersion = remixDevPackageVersion,
   installDeps,
-  packageManager,
   useTypeScript = true,
   githubToken = process.env.GITHUB_TOKEN,
   debug,
 }: CreateAppArgs) {
-  // Create the app directory
-  let relativeProjectDir = path.relative(process.cwd(), projectDir);
-  let projectDirIsCurrentDir = relativeProjectDir === "";
-  if (!projectDirIsCurrentDir) {
-    if (fse.existsSync(projectDir)) {
-      throw new Error(
-        `️🚨 Oops, "${relativeProjectDir}" already exists. Please try again with a different directory.`
-      );
-    }
-  }
-
   /**
    * Grab the template
    * First we'll need to determine if the template we got is
@@ -208,6 +196,8 @@ export async function createApp({
   }
 
   if (installDeps) {
+    let packageManager = getPreferredPackageManager();
+
     let npmConfig = execSync(
       `${packageManager} config get @remix-run:registry`,
       {
@@ -223,8 +213,8 @@ export async function createApp({
     }
 
     execSync(`${packageManager} install`, {
-      stdio: "inherit",
       cwd: projectDir,
+      stdio: "inherit",
     });
   }
 }
@@ -443,13 +433,8 @@ export async function validateNewProjectPath(input: string): Promise<void> {
   ) {
     if ((await fse.readdir(projectDir)).length > 0) {
       throw Error(
-        "🚨 The current directory must be empty to create a new project. Please " +
+        "🚨 The project directory must be empty to create a new project. Please " +
           "clear the contents of the directory or choose a different path."
-      );
-    } else {
-      throw Error(
-        "🚨 The directory provided already exists. Please try again with a " +
-          "different directory."
       );
     }
   }
@@ -468,14 +453,15 @@ function isRemixStack(input: string) {
 
 function isRemixTemplate(input: string) {
   return [
-    "remix",
-    "express",
     "arc",
-    "fly",
-    "netlify",
-    "vercel",
     "cloudflare-pages",
     "cloudflare-workers",
+    "deno",
+    "express",
+    "fly",
+    "netlify",
+    "remix",
+    "vercel",
   ].includes(input);
 }
 
