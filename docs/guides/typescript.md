@@ -6,9 +6,7 @@ title: TypeScript
 
 Remix seamlessly supports both JavaScript and TypeScript. If you name a file with a `.ts` or `.tsx` extension, it will treat it as TypeScript (`.tsx` is for TypeScript files [with JSX](https://www.typescriptlang.org/docs/handbook/jsx.html) in them). But it isn't required. You can write all your files as `.js` files if you don't want TypeScript.
 
-<docs-warning>To use JSX without TypeScript, you need to use the `.jsx` extension.</docs-warning>
-
-The remix compiler will not do any type checking (it simply removes the types). If you want to do type checking, you'll want to use TypeScript's `tsc` CLI yourself. A common solution is to add a `typecheck` script to your package.json:
+The Remix compiler will not do any type checking (it simply removes the types). If you want to do type checking, you'll want to use TypeScript's `tsc` CLI yourself. A common solution is to add a `typecheck` script to your package.json:
 
 ```json filename=package.json lines=[11]
 {

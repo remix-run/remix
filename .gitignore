@@ -11,6 +11,7 @@ yarn-error.log
 /fixtures/deno-app
 /playwright-report
 /test-results
+/uploads
 
 .eslintcache
 .tmp

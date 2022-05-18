@@ -1,5 +1,10 @@
 import type { ActionFunction, UploadHandler } from "@remix-run/node";
-import { json, unstable_parseMultipartFormData } from "@remix-run/node";
+import {
+  json,
+  unstable_composeUploadHandlers as composeUploadHandlers,
+  unstable_createMemoryUploadHandler as createMemoryUploadHandler,
+  unstable_parseMultipartFormData as parseMultipartFormData,
+} from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
 
 import { uploadImage } from "~/utils/utils.server";
@@ -11,19 +16,18 @@ type ActionData = {
 };
 
 export const action: ActionFunction = async ({ request }) => {
-  const uploadHandler: UploadHandler = async ({ name, stream }) => {
-    if (name !== "img") {
-      stream.resume();
-      return;
-    }
-    const uploadedImage = await uploadImage(stream);
-    return uploadedImage.secure_url;
-  };
-
-  const formData = await unstable_parseMultipartFormData(
-    request,
-    uploadHandler
+  const uploadHandler: UploadHandler = composeUploadHandlers(
+    async ({ name, contentType, data, filename }) => {
+      if (name !== "img") {
+        return undefined;
+      }
+      const uploadedImage = await uploadImage(data);
+      return uploadedImage.secure_url;
+    },
+    createMemoryUploadHandler()
   );
+
+  const formData = await parseMultipartFormData(request, uploadHandler);
   const imgSrc = formData.get("img");
   const imgDesc = formData.get("desc");
   if (!imgSrc) {

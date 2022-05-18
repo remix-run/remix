@@ -150,10 +150,10 @@ async function handleDataRequest({
     }
 
     if (handleDataRequest) {
-      response = await handleDataRequest(response.clone(), {
+      response = await handleDataRequest(response, {
         context: loadContext,
         params: match.params,
-        request: request.clone(),
+        request,
       });
     }
 
@@ -293,13 +293,21 @@ async function handleDocumentRequest({
     );
   }
 
+  let loaderRequest = new Request(request.url, {
+    body: null,
+    headers: request.headers,
+    method: request.method,
+    redirect: request.redirect,
+    signal: request.signal,
+  });
+
   let routeLoaderResults = await Promise.allSettled(
     matchesToLoad.map((match) =>
       match.route.module.loader
         ? callRouteLoader({
             loadContext,
             match,
-            request,
+            request: loaderRequest,
           })
         : Promise.resolve(undefined)
     )
@@ -457,7 +465,7 @@ async function handleDocumentRequest({
   let handleDocumentRequest = build.entry.module.default;
   try {
     return await handleDocumentRequest(
-      request.clone(),
+      request,
       responseStatusCode,
       responseHeaders,
       entryContext
@@ -477,7 +485,7 @@ async function handleDocumentRequest({
 
     try {
       return await handleDocumentRequest(
-        request.clone(),
+        request,
         responseStatusCode,
         responseHeaders,
         entryContext

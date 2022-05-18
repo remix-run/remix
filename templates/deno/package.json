@@ -7,7 +7,15 @@
     "dev": "remix build && run-p dev:*",
     "dev:remix": "remix watch",
     "dev:deno": "cross-env NODE_ENV=development deno run --unstable --watch --allow-net --allow-read --allow-env ./build/index.js",
-    "start": "cross-env NODE_ENV=production deno run --unstable --allow-net --allow-read --allow-env ./build/index.js"
+    "start": "cross-env NODE_ENV=production deno run --unstable --allow-net --allow-read --allow-env ./build/index.js",
+    "lint": "deno lint --ignore=node_modules",
+    "format": "deno fmt --ignore=node_modules"
+  },
+  "dependencies": {
+    "@remix-run/deno": "*",
+    "@remix-run/react": "*",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
     "@remix-run/dev": "*",

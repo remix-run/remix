@@ -362,7 +362,21 @@ The point is to perform the effect at the same time as the browser paint so that
 
 It is **not** good for setting state that is rendered inside of elements. Just make sure you aren't using the state set in a `useLayoutEffect` in your elements and you can ignore React's warning.
 
-TODO: Link to Reach UI `useIsomorphicLayoutEffect`
+If you know you're calling `useLayoutEffect` correctly and just want to silence the warning, a popular solution in libraries is to create your own hook that doesn't call anything on the server. `useLayoutEffect` only runs in the browser anyway, so this should do the trick. **Please use this carefully, because the warning is there for a good reason!**
+
+```js
+import * as React from "react";
+
+const canUseDOM = !!(
+  typeof window !== "undefined" &&
+  window.document &&
+  window.document.createElement
+);
+
+const useLayoutEffect = canUseDOM
+  ? React.useLayoutEffect
+  : () => {};
+```
 
 ### Third-Party Module Side Effects
 
