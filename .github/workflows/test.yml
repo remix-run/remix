@@ -94,6 +94,8 @@ jobs:
           
       - name: 🗑 Windows Networking
         if: matrix.os == 'windows-latest'
+        # disable network offloading on windows
+        # https://github.com/actions/virtual-environments/issues/1187#issuecomment-687364572
         run: Disable-NetAdapterChecksumOffload -Name * -TcpIPv4 -UdpIPv4 -TcpIPv6 -UdpIPv6
 
       - name: 📥 Install deps
