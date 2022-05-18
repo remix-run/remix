@@ -12,8 +12,7 @@ npx create-remix@latest --template deno
 
 ## Managing dependencies
 
-Read about [how we recommend to manage dependencies for Remix projects using Deno](https://github.com/remix-run/remix/blob/main/docs/decisions/0001-use-npm-to-manage-npm-dependencies-for-deno-projects.md
-).
+Read about [how we recommend to manage dependencies for Remix projects using Deno](https://github.com/remix-run/remix/blob/main/docs/decisions/0001-use-npm-to-manage-npm-dependencies-for-deno-projects.md).
 
 - ✅ You should use `npm` to install NPM packages
   ```sh
