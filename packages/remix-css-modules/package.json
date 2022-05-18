@@ -18,7 +18,7 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@parcel/css": "^1.7.3",
+    "@parcel/css": "1.8.1",
     "@remix-run/dev": "^1.4.3"
   }
 }

@@ -55,7 +55,7 @@
     "xdm": "^2.0.0"
   },
   "devDependencies": {
-    "@parcel/css": "^1.7.3",
+    "@parcel/css": "1.8.1",
     "@types/cacache": "^15.0.0",
     "@types/gunzip-maybe": "^1.4.0",
     "@types/inquirer": "^8.2.0",
