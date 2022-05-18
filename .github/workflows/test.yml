@@ -92,7 +92,7 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: "yarn"
           
-      - name: 🗑 Windows Networking
+      - name: 🙈 Windows Networking
         if: matrix.os == 'windows-latest'
         # disable network offloading on windows
         # https://github.com/actions/virtual-environments/issues/1187#issuecomment-687364572
