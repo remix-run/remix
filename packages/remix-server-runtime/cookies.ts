@@ -32,7 +32,7 @@ export type CookieOptions = CookieParseOptions &
  *
  * @see https://remix.run/api/remix#cookie-api
  */
-export interface Cookie {
+export interface Cookie<Type = any> {
   /**
    * The name of the cookie, used in the `Cookie` and `Set-Cookie` headers.
    */
@@ -58,19 +58,19 @@ export interface Cookie {
   parse(
     cookieHeader: string | null,
     options?: CookieParseOptions
-  ): Promise<any>;
+  ): Promise<Type>;
 
   /**
    * Serializes the given value to a string and returns the `Set-Cookie`
    * header.
    */
-  serialize(value: any, options?: CookieSerializeOptions): Promise<string>;
+  serialize(value: Type, options?: CookieSerializeOptions): Promise<string>;
 }
 
-export type CreateCookieFunction = (
+export type CreateCookieFunction = <Type = any>(
   name: string,
   cookieOptions?: CookieOptions
-) => Cookie;
+) => Cookie<Type>;
 
 /**
  * Creates a logical container for managing a browser cookie from the server.
