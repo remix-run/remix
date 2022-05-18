@@ -10,6 +10,7 @@ on:
       - v*
     paths-ignore:
       - "docs/**"
+      - "scripts/**"
       - "**/README.md"
   pull_request: {}
 
