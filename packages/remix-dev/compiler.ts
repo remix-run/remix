@@ -428,15 +428,11 @@ async function createBrowserBuild(
             return undefined;
           }
           let builder = (async () => {
-            let { stylesheetUrl, stylesheetPath, ...rebuilt } =
+            let { stylesheetUrl, stylesheetPath, cssContent, moduleMap } =
               await buildCssModules(config, build);
-            cssContent = rebuilt.cssContent;
-            moduleMap = rebuilt.moduleMap;
-
-            let result = await build.rebuild!();
-
             await fse.ensureDir(path.dirname(stylesheetPath));
             await fse.writeFile(stylesheetPath, cssContent);
+            let result = await build.rebuild!();
 
             return {
               ...result,
