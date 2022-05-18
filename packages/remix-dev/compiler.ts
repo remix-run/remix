@@ -438,8 +438,8 @@ async function createBrowserBuild(
               ...result,
               rebuild: builder,
               cssModules: {
-                globalStylesheetFilePath: stylesheetPath,
-                globalStylesheetFileUrl: stylesheetUrl,
+                stylesheetPath,
+                stylesheetUrl,
                 moduleMap,
               },
             };
@@ -450,8 +450,8 @@ async function createBrowserBuild(
           return builder;
         })(),
         cssModules: {
-          globalStylesheetFilePath: stylesheetPath,
-          globalStylesheetFileUrl: stylesheetUrl,
+          stylesheetPath,
+          stylesheetUrl,
           moduleMap,
         },
       };

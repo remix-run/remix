@@ -236,7 +236,7 @@ function getResolvedFilePath(
 export function getCssModulesFileReferences(
   config: RemixConfig,
   css: string
-): [globalStylesheetFilePath: string, globalStylesheetFileUrl: string] {
+): [stylesheetPath: string, stylesheetUrl: string] {
   let hash = getHash(css).slice(0, 8).toUpperCase();
   let filePath = path.resolve(
     config.assetsBuildDirectory,
@@ -285,8 +285,8 @@ export interface CssModuleFileContents {
 export type CssModuleFileMap = Record<string, CssModuleFileContents>;
 
 export interface CssModulesResults {
-  globalStylesheetFilePath: string;
-  globalStylesheetFileUrl: string;
+  stylesheetPath: string;
+  stylesheetUrl: string;
   moduleMap: CssModuleFileMap;
 }
 

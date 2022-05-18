@@ -1,5 +1,5 @@
 import type { AssetsManifest } from "@remix-run/dev/assets-manifest";
 let assetsManifest: AssetsManifest = (window as any).__remixManifest;
 const cssModulesStylesheetUrl =
-  assetsManifest.cssModules?.globalStylesheetFileUrl;
+  assetsManifest.cssModules?.stylesheetUrl;
 export { cssModulesStylesheetUrl };
