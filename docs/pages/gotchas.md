@@ -65,7 +65,7 @@ So instead of doing:
 import { unstable_createFileUploadHandler } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 const uploadHandler = unstable_createFileUploadHandler({
-  maxFileSize: 5_000_000,
+  maxPartSize: 5_000_000,
   file: ({ filename }) => filename,
 });
 
@@ -81,7 +81,7 @@ import { unstable_createFileUploadHandler } from "@remix-run/node"; // or "@remi
 
 export async function action() {
   const uploadHandler = unstable_createFileUploadHandler({
-    maxFileSize: 5_000_000,
+    maxPartSize: 5_000_000,
     file: ({ filename }) => filename,
   });
 
