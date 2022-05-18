@@ -37,7 +37,10 @@ async function commentOnIssuesAndPrsAboutRelease() {
       })
     );
 
-    let issuesClosed = await getIssuesClosedByPullRequests(pr.html_url);
+    let issuesClosed = await getIssuesClosedByPullRequests(
+      pr.html_url,
+      pr.body
+    );
 
     for (let issue of issuesClosed) {
       if (issuesCommentedOn.has(issue.number)) {
