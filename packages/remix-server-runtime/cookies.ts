@@ -120,7 +120,9 @@ export const createCookieFactory =
       async serialize(value, serializeOptions) {
         return serialize(
           name,
-          value === "" ? "" : await encodeCookieValue(sign, value, secrets),
+          (value as any) === ""
+            ? ""
+            : await encodeCookieValue(sign, value, secrets),
           {
             ...options,
             ...serializeOptions,
