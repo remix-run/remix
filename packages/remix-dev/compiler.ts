@@ -409,11 +409,11 @@ async function createBrowserBuild(
       plugins,
     })
     .then(async (build) => {
-      let { cssContent, moduleMap, stylesheetUrl, stylesheetPath } =
+      let { css, moduleMap, stylesheetUrl, stylesheetPath } =
         await buildCssModules(config, build);
 
       await fse.ensureDir(path.dirname(stylesheetPath));
-      await fse.writeFile(stylesheetPath, cssContent);
+      await fse.writeFile(stylesheetPath, css);
 
       return {
         ...build,
@@ -428,10 +428,10 @@ async function createBrowserBuild(
             return undefined;
           }
           let builder = (async () => {
-            let { stylesheetUrl, stylesheetPath, cssContent, moduleMap } =
+            let { stylesheetUrl, stylesheetPath, css, moduleMap } =
               await buildCssModules(config, build);
             await fse.ensureDir(path.dirname(stylesheetPath));
-            await fse.writeFile(stylesheetPath, cssContent);
+            await fse.writeFile(stylesheetPath, css);
             let result = await build.rebuild!();
 
             return {
@@ -651,25 +651,25 @@ async function buildCssModules(
     }
   }
 
-  let cssContent = "";
+  let css = "";
   let moduleMap = Object.fromEntries(
     await Promise.all(
       cssModules.map(async (filePath) => {
         filePath = filePath.replace(/^css-modules-namespace:/, "");
         let processed = await processCss({ config, filePath });
-        cssContent += processed.css;
+        css += processed.css;
         return [filePath, processed] as const;
       })
     )
   );
   let [stylesheetPath, stylesheetUrl] = getCssModulesFileReferences(
     config,
-    cssContent
+    css
   );
 
   return {
-    cssContent,
-    moduleMap: moduleMap,
+    css,
+    moduleMap,
     stylesheetPath,
     stylesheetUrl,
   };
