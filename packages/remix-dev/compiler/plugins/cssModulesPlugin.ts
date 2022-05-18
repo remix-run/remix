@@ -143,7 +143,7 @@ export async function processCss({
     code: source,
     cssModules: true,
     minify: process.env.NODE_ENV === "production",
-    analyzeDependencies: true, // TODO: Maybe?
+    analyzeDependencies: true,
     sourceMap: true,
     drafts: { nesting: true },
   });
@@ -225,7 +225,10 @@ export function getCssModulesFileReferences(
  * that the user may compose classnames referenced in other CSS module files,
  * but that will require us to juggle dependencies which is a little tricky with
  * the current build since we don't know for sure if that dependency has been
- * processed yet. Coming back to this.
+ * processed yet. We may encounter limitations with local composition as well.
+ * Coming back to this, but we'll initially launch without official support for
+ * the `composes` property.
+ * https://github.com/remix-run/remix/pull/2489/files#r862282330
  */
 function getComposedClassNames(
   prefix: string,
