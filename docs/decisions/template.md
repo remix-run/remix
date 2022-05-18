@@ -1,3 +1,7 @@
+---
+title: Title
+---
+
 # Title
 
 Date: YYYY-MM-DD
