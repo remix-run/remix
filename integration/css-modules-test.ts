@@ -168,7 +168,7 @@ test.describe("CSS Modules", () => {
         `,
 
         "app/lib/container.jsx": js`
-            import styles from "./container.module.css";
+            import styles from "~/lib/container.module.css";
             export function Container(props) {
               return (
                 <div

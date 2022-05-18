@@ -3,10 +3,10 @@ import * as fse from "fs-extra";
 import chalk from "chalk";
 import type * as esbuild from "esbuild";
 
-import { /* getFileHash, */ getHash } from "../utils/crypto";
-// import * as cache from "../../cache";
+import { getHash } from "../utils/crypto";
 import type { RemixConfig } from "../../config";
 import { resolveUrl } from "../utils/url";
+import { createMatchPath } from "../utils/tsconfig";
 import type { AssetsManifestPromiseRef } from "./serverAssetsManifestPlugin";
 
 const browserPluginName = "css-modules";
@@ -59,7 +59,7 @@ Install the dependency by running the following command, then restart your app.
           throw err;
         }
 
-        let path = getResolvedFilePath(config, args);
+        let path = getResolvedFilePath(args);
         return {
           pluginName: browserPluginName,
           namespace: browserPluginNamespace,
@@ -72,7 +72,7 @@ Install the dependency by running the following command, then restart your app.
         { filter: suffixMatcher, namespace: browserPluginNamespace },
         async (args) => {
           try {
-            let processed = await processCssCached({
+            let processed = await processCss({
               config,
               filePath: args.path,
             });
@@ -107,7 +107,7 @@ export function cssModulesServerPlugin(
         return {
           pluginName: serverPluginName,
           namespace: serverPluginNamespace,
-          path: getResolvedFilePath(config, args),
+          path: getResolvedFilePath(args),
           sideEffects: false,
         };
       });
@@ -125,42 +125,6 @@ export function cssModulesServerPlugin(
       );
     },
   };
-}
-
-async function processCssCached({
-  config,
-  filePath,
-}: {
-  config: RemixConfig;
-  filePath: string;
-}): Promise<CssModuleFileContents> {
-  // TODO: Caching as implemented not working as expected in dev mode. Bypass
-  // for now.
-  return await processCss({ config, filePath });
-
-  //   let file = path.resolve(config.appDirectory, filePath);
-  //   let hash = await getFileHash(file);
-  //   // Use an on-disk cache to speed up dev server boot.
-  //   let processedCssPromise = (async function () {
-  //     let key = file + ".cssmodule";
-  //     let cached: (CssModuleFileContents & { hash: string }) | null = null;
-  //     try {
-  //       cached = await cache.getJson(config.cacheDirectory, key);
-  //     } catch (error) {
-  //       // Ignore cache read errors.
-  //     }
-  //     if (!cached || cached.hash !== hash) {
-  //       let processed = await processCss({ config, filePath });
-  //       cached = { hash, ...processed };
-  //       try {
-  //         await cache.putJson(config.cacheDirectory, key, cached);
-  //       } catch (error) {
-  //         // Ignore cache put errors.
-  //       }
-  //     }
-  //     return cached;
-  //   })();
-  //   return processedCssPromise;
 }
 
 export async function processCss({
@@ -222,16 +186,23 @@ export async function processCss({
   };
 }
 
-function getResolvedFilePath(
-  config: RemixConfig,
-  args: { path: string; resolveDir: string }
-) {
-  // TODO: Ideally we should deal with the "~/" higher up in the build process
-  // if possible. Also ... what if the user changes this alias in their
-  // tsconfig? Do we support that?
-  return args.path.startsWith("~/")
-    ? path.resolve(config.appDirectory, args.path.replace(/^~\//, ""))
-    : path.resolve(args.resolveDir, args.path);
+function getResolvedFilePath(args: { path: string; resolveDir: string }) {
+  let matchPath = createMatchPath();
+  if (!matchPath) {
+    return path.resolve(args.resolveDir, args.path);
+  }
+
+  let resolvedPath =
+    matchPath(args.path, undefined, undefined, [
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".mdx",
+      ".md",
+    ]) || args.path;
+
+  return path.resolve(args.resolveDir, resolvedPath);
 }
 
 export function getCssModulesFileReferences(
