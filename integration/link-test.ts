@@ -479,14 +479,10 @@ test.describe("route module link export", () => {
     page,
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    let responses = app.collectResponses((url) =>
-      url.pathname.endsWith(".jpg")
-    );
     await app.goto("/responsive-image-preload");
     await page.waitForSelector('[data-test-id="/responsive-image-preload"]');
-
-    // We expect only one response based on the size of the screen
-    expect(responses.length).toEqual(1);
+    let locator = page.locator("link[rel=preload][as=image]");
+    expect(await locator.getAttribute("imagesizes")).toBe("100vw");
   });
 
   test("waits for new styles to load before transitioning", async ({
@@ -524,18 +520,14 @@ test.describe("route module link export", () => {
       expect(responses.length).toEqual(4);
     });
 
-    test("adds responsive image preload links to the document", async ({
+    test.only("adds responsive image preload links to the document", async ({
       page,
     }) => {
       let app = new PlaywrightFixture(appFixture, page);
-      let responses = app.collectResponses((url) =>
-        url.pathname.endsWith(".jpg")
-      );
       await app.goto("/responsive-image-preload");
       await page.waitForSelector('[data-test-id="/responsive-image-preload"]');
-
-      // We expect only one response based on the size of the screen
-      expect(responses.length).toEqual(1);
+      let locator = page.locator("link[rel=preload][as=image]");
+      expect(await locator.getAttribute("imagesizes")).toBe("100vw");
     });
   });
 });
