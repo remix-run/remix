@@ -58,4 +58,49 @@ Building the Deno app (`npm run build`) results in two outputs:
 - `build/` (server bundle)
 - `public/build/` (browser bundle)
 
-You can deploy these bundles to a host of your choice, just make sure it runs Deno!
+You can deploy these bundles to any host that runs Deno, but here we'll focus on deploying to [Deno Deploy](https://deno.com/deploy).
+
+## Setting up Deno Deploy
+
+1. [Sign up](https://dash.deno.com/signin) for Deno Deploy.
+
+2. [Create a new Deno Deploy project](https://dash.deno.com/new) for this app.
+
+3. Replace `<your deno deploy project>` in the `deploy` script in `package.json` with your Deno Deploy project name:
+
+```json
+{
+  "scripts": {
+    "deploy": "deployctl deploy --project=<your deno deploy project> --include=.cache,build,public ./build/index.js"
+  }
+}
+```
+
+4. [Create a personal access token](https://dash.deno.com/account) for the Deno Deploy API and export it as `DENO_DEPLOY_TOKEN`:
+
+```sh
+export DENO_DEPLOY_TOKEN=<your Deno Deploy API token>
+```
+
+You may want to add this to your `rc` file (e.g. `.bashrc` or `.zshrc`) to make it available for new terminal sessions, but make sure you don't commit this token into `git`.
+If you want to use this token in GitHub Actions, set it as a GitHub secret.
+
+5. Install the Deno Deploy CLI, [`deployctl`](https://github.com/denoland/deployctl):
+
+```sh
+deno install --allow-read --allow-write --allow-env --allow-net --allow-run --no-check -r -f https://deno.land/x/deploy/deployctl.ts
+```
+
+6. If you have previously installed the Deno Deploy CLI, you should update it to the latest version:
+
+```sh
+deployctl upgrade
+```
+
+### Deploying to Deno Deploy
+
+After you've set up Deno Deploy, run:
+
+```sh
+npm run deploy
+```

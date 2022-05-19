@@ -4,6 +4,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
+    "deploy": "deployctl deploy --prod --include=build,public --project=<your deno deploy project> ./build/index.js",
     "dev": "remix build && run-p dev:*",
     "dev:deno": "cross-env NODE_ENV=development deno run --unstable --watch --allow-net --allow-read --allow-env ./build/index.js",
     "dev:remix": "remix watch",
