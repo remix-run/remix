@@ -37,6 +37,14 @@ npm run dev
 
 This starts your app in development mode, rebuilding assets on file changes.
 
+### Type hints
+
+This template provides type hinting to VS Code via a [dedicated import map](./.vscode/resolve_npm_imports.json).
+
+To get types in another editor, use an extension for Deno that supports import maps and point your editor to `./.vscode/resolve_npm_imports.json`.
+
+For more, see [our decision doc for interop between Deno and NPM](https://github.com/remix-run/remix/blob/main/decisions/0001-use-npm-to-manage-npm-dependencies-for-deno-projects.md#vs-code-type-hints).
+
 ## Production
 
 First, build your app for production:
