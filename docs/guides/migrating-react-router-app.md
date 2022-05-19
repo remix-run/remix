@@ -159,7 +159,7 @@ export default function Root() {
 
 Notice a few things here:
 
-- We got rid of the `noscript` tag. We're server rendering now, which means users who disable JavaScript will still be able to see our app (and over time, as you make [a few tweaks to improve progressive enahancement](../pages/philosophy#progressive-enhancement), much of your app should still work).
+- We got rid of the `noscript` tag. We're server rendering now, which means users who disable JavaScript will still be able to see our app (and over time, as you make [a few tweaks to improve progressive enhancement](../pages/philosophy#progressive-enhancement), much of your app should still work).
 - Inside of the root element we render an `Outlet` component from `@remix-run/react`. This is the same component that you would normally use to render your matched route in a React Router app; it serves the same function here, but it's adapter for the router in Remix.
 
 <docs-warning><strong>Important:</strong> be sure to delete the `index.html` from your `public` directory after you've created your root route. Keeping the file around may cause your server to send that HTML instead of your Remix app when accessing the `/` route.</docs-warning>
