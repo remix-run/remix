@@ -90,8 +90,8 @@ export function serverBareModulesPlugin(
           case "deno":
             return undefined;
           case "netlify-edge":
-            // Bundle everything except URL imports
-            if (!path.startsWith("https:") && !path.startsWith("file:")) {
+            // Do not bundle file URIs
+            if (!path.startsWith("file:")) {
               return undefined;
             }
         }
