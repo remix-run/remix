@@ -520,7 +520,7 @@ test.describe("route module link export", () => {
       expect(responses.length).toEqual(4);
     });
 
-    test.only("adds responsive image preload links to the document", async ({
+    test("adds responsive image preload links to the document", async ({
       page,
     }) => {
       let app = new PlaywrightFixture(appFixture, page);
