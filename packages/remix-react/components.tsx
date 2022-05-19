@@ -543,31 +543,22 @@ export function Links() {
         // them in all lowercase to forward the attributes to the node without a
         // warning. Normalize so that either property can be used in Remix.
         if ("useId" in React) {
-          // @ts-expect-error
           if (link.imagesrcset) {
-            // @ts-expect-error
             link.imageSrcSet = imageSrcSet = link.imagesrcset;
-            // @ts-expect-error
             delete link.imagesrcset;
           }
 
-          // @ts-expect-error
           if (link.imagesizes) {
-            // @ts-expect-error
             link.imageSizes = link.imagesizes;
-            // @ts-expect-error
             delete link.imagesizes;
           }
         } else {
           if (link.imageSrcSet) {
-            // @ts-expect-error
             link.imagesrcset = imageSrcSet = link.imageSrcSet;
-            // @ts-expect-error
             delete link.imageSrcSet;
           }
 
           if (link.imageSizes) {
-            // @ts-expect-error
             link.imagesizes = link.imageSizes;
             delete link.imageSizes;
           }
