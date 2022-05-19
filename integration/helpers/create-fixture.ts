@@ -18,7 +18,7 @@ interface FixtureInit {
   buildStdio?: Writable;
   sourcemap?: boolean;
   files: { [filename: string]: string };
-  template?: "cf-template" | "deno-template" | "node-template";
+  template?: "cf-template" | "deno-template" | "node-template" | "node-javascript-template";
   setup?: "node" | "cloudflare";
 }
 

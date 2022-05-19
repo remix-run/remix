@@ -7,6 +7,7 @@ let fixture: Fixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
+    template: 'node-javascript-template',
     files: {
       "app/components/my-lib/index.js": js`
         export const pizza = "this is a pizza";
