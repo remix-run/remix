@@ -103,7 +103,7 @@ R E M I X
 
 ? Where would you like to create your app? remix-jokes
 ? What type of app do you want to create? Just the basics
-? Where do you want to deploy? Choose Remix App Server if you're unsure, 
+? Where do you want to deploy? Choose Remix App Server if you're unsure,
 it's easy to change deployment targets. Remix App Server
 ? TypeScript or JavaScript? TypeScript
 ? Do you want me to run `npm install`? Yes
