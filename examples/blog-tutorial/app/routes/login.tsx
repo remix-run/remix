@@ -9,7 +9,7 @@ import * as React from "react";
 
 import { createUserSession, getUserId } from "~/session.server";
 import { verifyLogin } from "~/models/user.server";
-import { validateEmail } from "~/utils";
+import { safeRedirect, validateEmail } from "~/utils";
 
 export const loader: LoaderFunction = async ({ request }) => {
   const userId = await getUserId(request);
@@ -28,7 +28,7 @@ export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
   const email = formData.get("email");
   const password = formData.get("password");
-  const redirectTo = formData.get("redirectTo");
+  const redirectTo = safeRedirect(formData.get("redirectTo"), "/notes");
   const remember = formData.get("remember");
 
   if (!validateEmail(email)) {
@@ -65,7 +65,7 @@ export const action: ActionFunction = async ({ request }) => {
     request,
     userId: user.id,
     remember: remember === "on" ? true : false,
-    redirectTo: typeof redirectTo === "string" ? redirectTo : "/notes",
+    redirectTo,
   });
 };
 
@@ -135,7 +135,7 @@ export default function LoginPage() {
                 ref={passwordRef}
                 name="password"
                 type="password"
-                autoComplete="new-password"
+                autoComplete="current-password"
                 aria-invalid={actionData?.errors?.password ? true : undefined}
                 aria-describedby="password-error"
                 className="w-full rounded border border-gray-500 px-2 py-1 text-lg"

@@ -7,5 +7,6 @@
 **/__tests__/fixtures
 
 # deno
+integration/helpers/deno-template
 packages/remix-deno
 templates/deno

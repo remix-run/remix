@@ -103,8 +103,8 @@ R E M I X
 
 ? Where would you like to create your app? remix-jokes
 ? What type of app do you want to create? Just the basics
-? Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets. Remix
- App Server
+? Where do you want to deploy? Choose Remix App Server if you're unsure,
+it's easy to change deployment targets. Remix App Server
 ? TypeScript or JavaScript? TypeScript
 ? Do you want me to run `npm install`? Yes
 ```
@@ -1379,7 +1379,7 @@ More information in our documentation:
 https://pris.ly/d/getting-started
 ```
 
-Now that we've got prisma initialized, we can start modeling our app data. Because this isn't a prisma tutorial, I'll just hand you that and you can read more about the prisma scheme from [their docs](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference):
+Now that we've got prisma initialized, we can start modeling our app data. Because this isn't a prisma tutorial, I'll just hand you that and you can read more about the prisma schema from [their docs](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference):
 
 ```prisma filename=prisma/schema.prisma lines=[13-19]
 // This is your Prisma schema file,

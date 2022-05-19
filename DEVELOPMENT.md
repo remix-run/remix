@@ -44,9 +44,13 @@ git checkout dev
 # create a prerelease tag.
 yarn release start patch|minor|major
 
-# Once you create the pre-release, you can run tests and even publish a pre-release
-# directly to ensure everything works as expected. If there are any issues, fix the bugs and commit directly to the pre-release branch. Once you're done working, you
-# can iterate with a new pre-release with the following command:
+# At this point you can push to GitHub...
+git push origin/release-<version> --follow-tags
+# ...then publish the pre-release by creating a release in the GitHub UI. Don't
+# forget to check the pre-release checkbox!
+
+# If there are any issues with the pre-release, fix the bugs and commit directly
+# to the release branch. You can iterate with a new pre-release with the following # command, then publish via GitHub the same as before.
 yarn release bump
 
 # Once all tests have passed and the release is ready to be made stable, the following
@@ -54,9 +58,11 @@ yarn release bump
 # and prompt you to push the changes and tags to GitHub
 yarn release finish
 git push origin/release-<version> --follow-tags
-
-# Now you can create the release from GitHub from the new tag and write release notes!
 ```
+
+Once the release is finished, you should see tests run in GitHub actions. Assuming there are no issues (you should also run tests locally before pushing) you can trigger publishing by creating a new release in the GitHub UI, this time using the stable release tag.
+
+After the release process is complete, be sure to merge the release branch back into `dev` and `main` and push both branches to GitHub.
 
 ### `create-remix`
 
