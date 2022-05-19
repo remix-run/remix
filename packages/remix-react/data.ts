@@ -1,5 +1,4 @@
-import { fetchEventSource } from "@microsoft/fetch-event-source";
-
+import type { SerializedError } from "./errors";
 import invariant from "./invariant";
 import type { Submission } from "./transition";
 
@@ -47,121 +46,111 @@ export async function fetchData(
       resolved?: boolean;
     };
   } = {};
-  let eventCount = 0;
-  let totalEvents = 0;
   if (submission) {
     response = await fetch(url.href, getActionInit(submission, signal));
   } else {
-    let abort = new AbortController();
-    signal.addEventListener("abort", () => abort.abort());
+    let ogResponse = await fetch(url.href, {
+      credentials: "same-origin",
+      signal,
+    });
 
-    let handleAbort = () => {
-      Object.values(events).forEach(({ resolve, resolved }) => {
-        if (!resolved) resolve(new Error("Aborted"));
-      });
-    };
-    abort.signal.addEventListener("abort", handleAbort);
+    response = ogResponse;
+    if (
+      !isRedirectResponse(ogResponse) &&
+      ogResponse.body &&
+      ogResponse.headers.get("Content-Type")?.includes("text/remix-deferred")
+    ) {
+      response = await new Promise<Response>(async (resolve, reject) => {
+        let reader = ogResponse.body!.getReader();
+        let chunks: Uint8Array[] = [];
+        let gotInitialData = false;
+        let decoder = new TextDecoder();
+        for (
+          let chunk = await reader.read();
+          !chunk.done;
+          chunk = await reader.read()
+        ) {
+          chunks.push(chunk.value);
 
-    let gotEvents = false;
-    let status = 200;
-    let headers: Headers;
-    await new Promise<void>(async (resolve) => {
-      await fetchEventSource(url.href, {
-        credentials: "same-origin",
-        signal: abort.signal,
-        onerror: handleAbort,
-        onopen: async (res) => {
-          let contentType = res.headers.get("Content-Type");
-          if (isRedirectResponse(res)) {
-            response = new Response(null, {
-              status: res.status,
-              headers: res.headers,
-            });
-            abort.abort();
-            resolve();
-            return;
+          let buffered = decoder.decode(mergeArrays(...chunks));
+          let split = buffered.split("\n\n");
+          if (split.length <= 1) {
+            continue;
           }
-          if (contentType && !/\btext\/event-stream\b/.test(contentType)) {
-            response = new Response(await res.text(), {
-              status: res.status,
-              headers: res.headers,
-            });
-            abort.abort();
-            resolve();
-          } else {
-            status = res.status;
-            headers = new Headers(res.headers);
-            headers.set("Content-Type", "application/json");
-          }
-        },
-        onmessage: (event) => {
-          if (event.event === "data") {
-            let data = JSON.parse(event.data);
-            if (typeof data === "object" && data !== null) {
-              let eventKeys = Object.entries(data).reduce<string[]>(
-                (acc, [key, value]) => {
+          chunks = [];
+
+          for (
+            let dataString = split.shift();
+            typeof dataString !== "undefined";
+            dataString = split.shift()
+          ) {
+            if (!dataString) continue;
+
+            if (!gotInitialData) {
+              let data = JSON.parse(dataString);
+              gotInitialData = true;
+              if (typeof data === "object" && data !== null) {
+                for (let [eventKey, value] of Object.entries(data)) {
                   if (
-                    typeof value === "string" &&
-                    value.startsWith("$$__REMIX_DEFERRED_PROMISE__$$")
+                    typeof value !== "string" ||
+                    !value.startsWith("$$__REMIX_DEFERRED_PROMISE__")
                   ) {
-                    acc.push(key);
+                    continue;
                   }
 
-                  return acc;
-                },
-                []
-              );
-
-              totalEvents = eventKeys.length;
-              for (let eventKey of eventKeys) {
-                events[eventKey] = {} as any;
-                events[eventKey].promise = new Promise<any>((resolve) => {
-                  events[eventKey].resolve = (v: any) => {
-                    events[eventKey].resolved = true;
-                    resolve(v);
-                  };
-                });
+                  events[eventKey] = {} as any;
+                  events[eventKey].promise = new Promise<any>((resolve) => {
+                    events[eventKey].resolve = (v: any) => {
+                      events[eventKey].resolved = true;
+                      resolve(v);
+                    };
+                  });
+                }
               }
+
+              let headers = new Headers(ogResponse.headers);
+              headers.set("Content-Type", "application/json");
+              resolve(
+                new Response(dataString, {
+                  headers,
+                  status: ogResponse.status,
+                  statusText: ogResponse.statusText,
+                })
+              );
+              continue;
             }
 
-            gotEvents = true;
+            let [event, ...eventDataChunks] = dataString.split(":");
+            let eventDataString = eventDataChunks.join(":");
 
-            response = new Response(event.data, {
-              status,
-              headers,
-            });
-            resolve();
-            return;
+            let data = JSON.parse(eventDataString);
+            if (event === "data") {
+              for (let [key, value] of Object.entries(data)) {
+                if (events[key] && !events[key].resolved) {
+                  events[key].resolve(value);
+                }
+              }
+            } else if (event === "error") {
+              for (let [key, value] of Object.entries(data) as Iterable<
+                [string, SerializedError]
+              >) {
+                let err = new Error(value.message);
+                err.stack = value.stack;
+                if (events[key] && !events[key].resolved) {
+                  events[key].resolve(err);
+                }
+              }
+            }
           }
+        }
 
-          if (!gotEvents) {
-            abort.abort();
-            response = new Response(null, {
-              status: 500,
-              headers: {
-                "X-Remix-Error": "yes",
-              },
-            });
-            return;
-          }
+        if (!gotInitialData) {
+          resolve(ogResponse);
+        }
 
-          if (event.event === "deferred-data") {
-            events[event.id].resolve(JSON.parse(event.data));
-          } else if (event.event === "deferred-error") {
-            let json = JSON.parse(event.data);
-            let err = new Error(json.message);
-            err.stack = json.stack;
-            events[event.id].resolve(err);
-            events[event.id];
-          }
-
-          eventCount++;
-          if (totalEvents <= eventCount) {
-            abort.abort();
-          }
-        },
+        // TODO: Reject running events if we didn't see all of them
       });
-    });
+    }
   }
 
   if (isErrorResponse(response!)) {
@@ -172,6 +161,18 @@ export async function fetchData(
   }
 
   return [response!, events];
+}
+
+export function mergeArrays(...arrays: Uint8Array[]) {
+  let out = new Uint8Array(
+    arrays.reduce((total, arr) => total + arr.length, 0)
+  );
+  let offset = 0;
+  for (let arr of arrays) {
+    out.set(arr, offset);
+    offset += arr.length;
+  }
+  return out;
 }
 
 export async function extractData(response: Response): Promise<AppData> {

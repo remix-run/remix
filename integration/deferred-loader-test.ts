@@ -140,9 +140,7 @@ test.beforeAll(async () => {
           return deferred({
             foo: "pizza",
             bar: new Promise(async (resolve, reject) => {
-              // await new Promise(resolve => setTimeout(resolve, 500));
               return reject(new Error("Oh, no!"));
-              resolve("hamburger");
             }),
           });
         }
@@ -285,7 +283,6 @@ test("errored deferred data renders route boundary on hydration", async ({
 }) => {
   let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/deferred-error-no-boundary");
-  let text = await app.getHtml();
   let boundary = await app.getElement("#error-boundary");
   expect(boundary.text()).toMatch("Error Boundary");
 });

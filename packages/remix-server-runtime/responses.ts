@@ -29,7 +29,7 @@ export const deferred: DeferredFunction = (data, init = {}) => {
       let deferred: Record<string, Promise<unknown>> = {};
       let initialData = data;
       if (typeof data === "object" && data !== null) {
-        const dataWithoutPromises = {} as Record<string, unknown>;
+        let dataWithoutPromises = {} as Record<string, unknown>;
 
         for (let [key, value] of Object.entries(data)) {
           if (typeof value?.then === "function") {
@@ -44,30 +44,28 @@ export const deferred: DeferredFunction = (data, init = {}) => {
       }
 
       let encoder = new TextEncoder();
-      let body = new ReadableStream({
-        // TODO: Figure out why any is needed here
-        async start(controller: any) {
-          controller.enqueue(encoder.encode("event: data\n"));
+      let body = new ReadableStream<Uint8Array>({
+        async start(controller) {
           controller.enqueue(
-            encoder.encode("data: " + JSON.stringify(initialData) + "\n\n")
+            encoder.encode(JSON.stringify(initialData) + "\n\n")
           );
 
           await Promise.all(
             Object.entries(deferred).map(async ([key, promise]) => {
               await promise.then(
                 (result) => {
-                  controller.enqueue(encoder.encode("event: deferred-data\n"));
-                  controller.enqueue(encoder.encode("id: " + key + "\n"));
-                  controller.enqueue(
-                    encoder.encode("data: " + JSON.stringify(result) + "\n\n")
-                  );
-                },
-                (error) => {
-                  controller.enqueue(encoder.encode("event: deferred-error\n"));
-                  controller.enqueue(encoder.encode("id: " + key + "\n"));
                   controller.enqueue(
                     encoder.encode(
-                      "data: " + JSON.stringify(serializeError(error)) + "\n\n"
+                      "data:" + JSON.stringify({ [key]: result }) + "\n\n"
+                    )
+                  );
+                },
+                async (error) => {
+                  controller.enqueue(
+                    encoder.encode(
+                      "error:" +
+                        JSON.stringify({ [key]: await serializeError(error) }) +
+                        "\n\n"
                     )
                   );
                 }
@@ -89,10 +87,11 @@ export const deferred: DeferredFunction = (data, init = {}) => {
   let responseInit = typeof init === "number" ? { status: init } : init;
 
   let headers = new Headers(responseInit.headers);
-  headers.set("Cache-Control", "no-cache");
-  headers.set("Connection", "keep-alive");
+  if (!headers.has("Connection")) {
+    headers.set("Connection", "keep-alive");
+  }
   if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", "text/event-stream");
+    headers.set("Content-Type", "text/remix-deferred");
   }
 
   return new DeferredResponse(data, {
