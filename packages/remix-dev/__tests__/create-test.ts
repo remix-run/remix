@@ -402,7 +402,6 @@ describe("the create command", () => {
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
     // if you run `remix init` keep around the remix.init directory for future use
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
-    // deps can take a bit to install
   });
 
   it("throws an error when invalid remix.init script when automatically ran", async () => {
@@ -422,7 +421,6 @@ describe("the create command", () => {
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     // we should keep remix.init around if the init script fails
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
-    // deps can take a bit to install
   });
 
   it("throws an error when invalid remix.init script when manually ran", async () => {
@@ -449,12 +447,11 @@ describe("the create command", () => {
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     // we should keep remix.init around if the init script fails
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
-    // deps can take a bit to install
   });
 
   it("recognizes when Yarn was used to run the command", async () => {
-    let originalUserAgent = process.env.npm_user_agent;
-    process.env.npm_user_agent = yarnUserAgent;
+    let originalUserAgent = process.env.npm_config_user_agent;
+    process.env.npm_config_user_agent = yarnUserAgent;
 
     let projectDir = await getProjectDir("yarn-create");
     await run([
@@ -467,12 +464,12 @@ describe("the create command", () => {
     ]);
 
     expect(execSync).toBeCalledWith("yarn install", expect.anything());
-    process.env.npm_user_agent = originalUserAgent;
+    process.env.npm_config_user_agent = originalUserAgent;
   });
 
   it("recognizes when pnpm was used to run the command", async () => {
-    let originalUserAgent = process.env.npm_user_agent;
-    process.env.npm_user_agent = pnpmUserAgent;
+    let originalUserAgent = process.env.npm_config_user_agent;
+    process.env.npm_config_user_agent = pnpmUserAgent;
 
     let projectDir = await getProjectDir("pnpm-create");
     await run([
@@ -485,12 +482,12 @@ describe("the create command", () => {
     ]);
 
     expect(execSync).toBeCalledWith("pnpm install", expect.anything());
-    process.env.npm_user_agent = originalUserAgent;
+    process.env.npm_config_user_agent = originalUserAgent;
   });
 
   it("prompts to run the install command for the preferred package manager", async () => {
-    let originalUserAgent = process.env.npm_user_agent;
-    process.env.npm_user_agent = pnpmUserAgent;
+    let originalUserAgent = process.env.npm_config_user_agent;
+    process.env.npm_config_user_agent = pnpmUserAgent;
 
     let projectDir = await getProjectDir("pnpm-prompt-install");
     let mockPrompt = jest.mocked(inquirer.prompt);
@@ -515,12 +512,12 @@ describe("the create command", () => {
       "message",
       "Do you want me to run `pnpm install`?"
     );
-    process.env.npm_user_agent = originalUserAgent;
+    process.env.npm_config_user_agent = originalUserAgent;
   });
 
   it("suggests to run the init command with the preferred package manager", async () => {
-    let originalUserAgent = process.env.npm_user_agent;
-    process.env.npm_user_agent = pnpmUserAgent;
+    let originalUserAgent = process.env.npm_config_user_agent;
+    process.env.npm_config_user_agent = pnpmUserAgent;
 
     let projectDir = await getProjectDir("pnpm-suggest-install");
     let mockPrompt = jest.mocked(inquirer.prompt);
@@ -540,7 +537,164 @@ describe("the create command", () => {
     ]);
 
     expect(output).toContain(getOptOutOfInstallMessage("pnpm exec remix init"));
-    process.env.npm_user_agent = originalUserAgent;
+    process.env.npm_config_user_agent = originalUserAgent;
+  });
+
+  describe("errors", () => {
+    it("identifies when a github repo is not accessible (403)", async () => {
+      let projectDir = await getProjectDir("repo");
+      await expect(() =>
+        run([
+          "create",
+          projectDir,
+          "--template",
+          "error-username/403",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The template could not be verified because you do not have access to the repository. Please double check the access rights of this repo and try again.]`
+      );
+    });
+
+    it("identifies when a github repo does not exist (404)", async () => {
+      let projectDir = await getProjectDir("repo");
+      await expect(() =>
+        run([
+          "create",
+          projectDir,
+          "--template",
+          "error-username/404",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The template could not be verified. Please double check that the template is a valid GitHub repository and try again.]`
+      );
+    });
+
+    it("identifies when something unknown goes wrong with the repo request (4xx)", async () => {
+      let projectDir = await getProjectDir("repo");
+      await expect(() =>
+        run([
+          "create",
+          projectDir,
+          "--template",
+          "error-username/400",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The template could not be verified. The server returned a response with a 400 status. Please double check that the template is a valid GitHub repository and try again.]`
+      );
+    });
+
+    it("identifies when a remote tarball does not exist (404)", async () => {
+      let projectDir = await getProjectDir("remote-tarball");
+      await expect(() =>
+        run([
+          "create",
+          projectDir,
+          "--template",
+          "https://example.com/error/404/remix-stack.tar.gz",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The template file could not be verified. Please double check the URL and try again.]`
+      );
+    });
+
+    it("identifies when a remote tarball does not exist (4xx)", async () => {
+      let projectDir = await getProjectDir("remote-tarball");
+      await expect(() =>
+        run([
+          "create",
+          projectDir,
+          "--template",
+          "https://example.com/error/400/remix-stack.tar.gz",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The template file could not be verified. The server returned a response with a 400 status. Please double check the URL and try again.]`
+      );
+    });
+
+    it("allows creating an app in a dir if it's empty", async () => {
+      let projectDir = await getProjectDir("other-empty-dir");
+      await run([
+        "create",
+        projectDir,
+        "--template",
+        "grunge-stack",
+        "--no-install",
+        "--typescript",
+      ]);
+
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+    });
+
+    it("doesn't allow creating an app in a dir if it's not empty", async () => {
+      let projectDir = await getProjectDir("not-empty-dir");
+      fse.mkdirSync(projectDir);
+      fse.createFileSync(path.join(projectDir, "some-file.txt"));
+      await expect(() =>
+        run([
+          "create",
+          projectDir,
+          "--template",
+          "grunge-stack",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The project directory must be empty to create a new project. Please clear the contents of the directory or choose a different path.]`
+      );
+    });
+
+    it("allows creating an app in the current dir if it's empty", async () => {
+      let projectDir = await getProjectDir("empty-dir");
+      let cwd = process.cwd();
+      fse.mkdirSync(projectDir);
+      process.chdir(projectDir);
+      await run([
+        "create",
+        ".",
+        "--template",
+        "grunge-stack",
+        "--no-install",
+        "--typescript",
+      ]);
+      process.chdir(cwd);
+
+      expect(
+        fse.existsSync(path.join(projectDir, "package.json"))
+      ).toBeTruthy();
+    });
+
+    it("doesn't allow creating an app in the current dir if it's not empty", async () => {
+      let projectDir = await getProjectDir("not-empty-dir");
+      let cwd = process.cwd();
+      fse.mkdirSync(projectDir);
+      fse.createFileSync(path.join(projectDir, "some-file.txt"));
+      process.chdir(projectDir);
+      await expect(() =>
+        run([
+          "create",
+          ".",
+          "--template",
+          "grunge-stack",
+          "--no-install",
+          "--typescript",
+        ])
+      ).rejects.toMatchInlineSnapshot(
+        `[Error: 🚨 The project directory must be empty to create a new project. Please clear the contents of the directory or choose a different path.]`
+      );
+      process.chdir(cwd);
+    });
   });
 });
 
@@ -548,14 +702,11 @@ function getSuccessMessage(projectDirectory: string) {
   return `💿 That's it! \`cd\` into "${projectDirectory}" and check the README for development and deploy instructions!`;
 }
 
-function getOptOutOfInstallMessage(command = "npx remix init") {
-  return (
-    "💿 You've opted out of installing dependencies so we won't run the " +
-    path.join("remix.init", "index.js") +
-    " script for you just yet. Once you've installed dependencies, you can run " +
-    `it manually with \`${command}\``
-  );
-}
+const getOptOutOfInstallMessage = (command = "yarn remix init") =>
+  "💿 You've opted out of installing dependencies so we won't run the " +
+  path.join("remix.init", "index.js") +
+  " script for you just yet. Once you've installed dependencies, you can run " +
+  `it manually with \`${command}\``;
 
 /*
 eslint

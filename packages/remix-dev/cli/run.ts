@@ -19,12 +19,11 @@ import { validateNewProjectPath, validateTemplate } from "./create";
  * that can be used to determine which package manager ran
  * the command.
  */
-function getPreferredPackageManager() {
-  return ((process.env.npm_user_agent ?? "").split("/")[0] || "npm") as
+const getPreferredPackageManager = () =>
+  ((process.env.npm_config_user_agent ?? "").split("/")[0] || "npm") as
     | "npm"
     | "yarn"
     | "pnpm";
-}
 
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
@@ -254,17 +253,18 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             name: "appType",
             type: "list",
             message: "What type of app do you want to create?",
+            default: "template",
             when() {
               return flags.template === undefined;
             },
             choices: [
               {
-                name: "A pre-configured stack ready for production",
-                value: "stack",
-              },
-              {
                 name: "Just the basics",
                 value: "template",
+              },
+              {
+                name: "A pre-configured stack ready for production",
+                value: "stack",
               },
             ],
           },

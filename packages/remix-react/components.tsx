@@ -420,6 +420,7 @@ function usePrefetchBehavior(
   let cancelIntent = () => {
     if (prefetch === "intent") {
       setMaybePrefetch(false);
+      setShouldPrefetch(false);
     }
   };
 
@@ -911,54 +912,10 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     let formMethod: FormMethod =
       method.toLowerCase() === "get" ? "get" : "post";
     let formAction = useFormAction(action);
-    let formRef = React.useRef<HTMLFormElement>();
-    let ref = useComposedRefs(forwardedRef, formRef);
-
-    // When calling `submit` on the form element itself, we don't get data from
-    // the button that submitted the event. For example:
-    //
-    //   <Form>
-    //     <button name="something" value="whatever">Submit</button>
-    //   </Form>
-    //
-    // formData.get("something") should be "whatever", but we don't get that
-    // unless we call submit on the clicked button itself.
-    //
-    // To figure out which button triggered the submit, we'll attach a click
-    // event listener to the form. The click event is always triggered before
-    // the submit event (even when submitting via keyboard when focused on
-    // another form field, yeeeeet) so we should have access to that button's
-    // data for use in the submit handler.
-    let clickedButtonRef = React.useRef<any>();
-
-    React.useEffect(() => {
-      let form = formRef.current;
-      if (!form) return;
-
-      function handleClick(event: MouseEvent) {
-        if (!(event.target instanceof Element)) return;
-        let submitButton = event.target.closest<
-          HTMLButtonElement | HTMLInputElement
-        >("button,input[type=submit]");
-
-        if (
-          submitButton &&
-          submitButton.form === form &&
-          submitButton.type === "submit"
-        ) {
-          clickedButtonRef.current = submitButton;
-        }
-      }
-
-      window.addEventListener("click", handleClick);
-      return () => {
-        window.removeEventListener("click", handleClick);
-      };
-    }, []);
 
     return (
       <form
-        ref={ref}
+        ref={forwardedRef}
         method={formMethod}
         action={formAction}
         encType={encType}
@@ -970,11 +927,10 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
                 if (event.defaultPrevented) return;
                 event.preventDefault();
 
-                submit(clickedButtonRef.current || event.currentTarget, {
-                  method,
-                  replace,
-                });
-                clickedButtonRef.current = null;
+                let submitter = (event as unknown as HTMLSubmitEvent)
+                  .nativeEvent.submitter as HTMLFormSubmitter | null;
+
+                submit(submitter || event.currentTarget, { method, replace });
               }
         }
         {...props}
@@ -984,6 +940,14 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
 );
 FormImpl.displayName = "FormImpl";
 export { FormImpl };
+
+type HTMLSubmitEvent = React.BaseSyntheticEvent<
+  SubmitEvent,
+  Event,
+  HTMLFormElement
+>;
+
+type HTMLFormSubmitter = HTMLButtonElement | HTMLInputElement;
 
 /**
  * Resolves a `<form action>` path relative to the current route.
@@ -1422,7 +1386,7 @@ export const LiveReload =
                   let socketPath = protocol + "//" + host + ":" + ${String(
                     port
                   )} + "/socket";
-        
+
                   let ws = new WebSocket(socketPath);
                   ws.onmessage = (message) => {
                     let event = JSON.parse(message.data);
@@ -1444,21 +1408,3 @@ export const LiveReload =
           />
         );
       };
-
-function useComposedRefs<RefValueType = any>(
-  ...refs: Array<React.Ref<RefValueType> | null | undefined>
-): React.RefCallback<RefValueType> {
-  return React.useCallback((node) => {
-    for (let ref of refs) {
-      if (ref == null) continue;
-      if (typeof ref === "function") {
-        ref(node);
-      } else {
-        try {
-          (ref as React.MutableRefObject<RefValueType>).current = node!;
-        } catch (_) {}
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, refs);
-}
