@@ -35,15 +35,13 @@ npx create-remix --template remix-run/indie-stack blog-tutorial
 
 ```
 ? Do you want me to run `npm install`? Yes
-...
-? Do you want to run the build/tests/etc to verify things are setup properly? Yes
 ```
-
-<docs-info>Running the verify script is optional, but handy.</docs-info>
 
 You can read more about the stacks available in [the stacks docs](/pages/stacks).
 
 We're using [the Indie stack](https://github.com/remix-run/indie-stack), which is a full application ready to deploy to [fly.io](https://fly.io). This includes development tools as well as production-ready authentication and persistence. Don't worry if you're unfamiliar with the tools used, we'll walk you through things as we go.
+
+<docs-info>Note, you can definitely start with "Just the basics" instead by running `npx create-remix` without the `--template` flag. The generated project is much more minimal that way. However, some bits of the tutorial will be different for you and you'll have to configure things for deployment manually.</docs-info>
 
 💿 Now, open the project that was generated in your preferred editor and check the instructions in the `README.md` file. Feel free to read over this. We'll get to the deployment bit later in the tutorial.
 
