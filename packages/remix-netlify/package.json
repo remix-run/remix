@@ -18,6 +18,6 @@
     "@netlify/functions": "^0.10.0 || ^0.11.0 || ^1.0.0"
   },
   "devDependencies": {
-    "@netlify/functions": "^0.10.0 || ^0.11.0 || ^1.0.0"
+    "@netlify/functions": "^1.0.0"
   }
 }
