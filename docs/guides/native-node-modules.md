@@ -19,5 +19,13 @@ Remix should work with these files out of the box, but you'll want to export the
 
 # Creating Native Node Modules
 
-If you're interested in creating a package with Node modules, look for a package that interacts with the Node API in your language of choice.For Rust, there is [napi-rs](https://napi.rs/) and [neon](https://neon-bindings.com/), and for C++ with the [Node Addon API](https://github.com/nodejs/node-addon-api).
+If you're interested in creating a package with Node modules, look for a package that interacts with the Node API in your language of choice. 
+Here are some examples:
+
+*Rust:*
+- [napi-rs](https://napi.rs/) 
+- [neon](https://neon-bindings.com/)
+
+*C++* 
+- [Node Addon API](https://github.com/nodejs/node-addon-api).
 
