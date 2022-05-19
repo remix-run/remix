@@ -9,7 +9,9 @@ Some node packages contain a binary `.node` file that contains code that is usua
 
 # Limitations
 
-Because these files use the Node FFI, they will only run on servers or edge environments that run Node. Also, the browser cannot run these files, so their use is limited to Loaders and Actions.
+Because these files use the Node FFI, they will only run on servers or edge environments that run Node. 
+
+The browser does not run Node, so their use is limited to Loaders and Actions, or other server side code.
 
 # Setup 
 
