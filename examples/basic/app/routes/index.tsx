@@ -1,8 +1,4 @@
-import type {
-  LoaderFunction,
-  MetaFunction,
-  LinksFunction,
-} from "@remix-run/node";
+import type { LoaderFunction, MetaFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 
@@ -49,10 +45,6 @@ export const loader: LoaderFunction = async () => {
 
   // https://remix.run/api/remix#json
   return json(data);
-};
-
-export const links: LinksFunction = () => {
-  return [{ rel: "preload", as: "image", imagesrcset: "", href: "" }];
 };
 
 // https://remix.run/api/conventions#meta
