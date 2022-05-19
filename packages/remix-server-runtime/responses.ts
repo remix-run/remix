@@ -44,8 +44,8 @@ export const deferred: DeferredFunction = (data, init = {}) => {
       }
 
       let encoder = new TextEncoder();
-      let body = new ReadableStream<Uint8Array>({
-        async start(controller) {
+      let body = new ReadableStream({
+        async start(controller: any) {
           controller.enqueue(
             encoder.encode(JSON.stringify(initialData) + "\n\n")
           );
