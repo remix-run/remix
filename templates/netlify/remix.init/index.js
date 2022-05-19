@@ -8,6 +8,8 @@ const files = [
   ["edge-server.js", "server.js"],
   ["remix.config-edge.js", "remix.config.js"],
   ["vscode.json", join(".vscode", "settings.json")],
+  ["app/entry.server.tsx"],
+  ["app/root.tsx"],
 ];
 
 async function main({ rootDirectory }) {
