@@ -5,11 +5,11 @@
   "scripts": {
     "build": "remix build",
     "dev": "remix build && run-p dev:*",
-    "dev:deno": "cross-env NODE_ENV=development deno run --unstable --watch --allow-net --allow-read --allow-env ./build/index.js",
     "dev:remix": "remix watch",
-    "format": "deno fmt --ignore=node_modules",
+    "dev:deno": "cross-env NODE_ENV=development deno run --unstable --watch --allow-net --allow-read --allow-env ./build/index.js",
+    "start": "cross-env NODE_ENV=production deno run --unstable --allow-net --allow-read --allow-env ./build/index.js",
     "lint": "deno lint --ignore=node_modules",
-    "start": "cross-env NODE_ENV=production deno run --unstable --allow-net --allow-read --allow-env ./build/index.js"
+    "format": "deno fmt --ignore=node_modules"
   },
   "dependencies": {
     "@remix-run/deno": "*",
