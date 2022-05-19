@@ -1,7 +1,7 @@
 import type { Plugin } from "esbuild";
 import * as path from "path";
 // See https://github.com/evanw/esbuild/issues/1051#issuecomment-806325487
-export const serverNativeNodeModulesPlugin: Plugin = {
+export const nativeNodeModulesPlugin: Plugin = {
   name: 'native-node-modules',
   setup(build) {
     // If a ".node" file is imported within a module in the "file" namespace, resolve
