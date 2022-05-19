@@ -58,7 +58,7 @@ export interface Cookie<Type = any> {
   parse(
     cookieHeader: string | null,
     options?: CookieParseOptions
-  ): Promise<Type>;
+  ): Promise<Type | null>;
 
   /**
    * Serializes the given value to a string and returns the `Set-Cookie`
