@@ -19,6 +19,7 @@ export const loaders: { [ext: string]: esbuild.Loader } = {
   ".mdx": "jsx",
   ".mp3": "file",
   ".mp4": "file",
+  ".node": "file",
   ".ogg": "file",
   ".otf": "file",
   ".png": "file",

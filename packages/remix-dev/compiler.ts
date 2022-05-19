@@ -17,6 +17,7 @@ import { loaders } from "./compiler/loaders";
 import { browserRouteModulesPlugin } from "./compiler/plugins/browserRouteModulesPlugin";
 import { emptyModulesPlugin } from "./compiler/plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./compiler/plugins/mdx";
+import { nativeNodeModulesPlugin } from "./compiler/plugins/nativeNodeModules";
 import type { AssetsManifestPromiseRef } from "./compiler/plugins/serverAssetsManifestPlugin";
 import { serverAssetsManifestPlugin } from "./compiler/plugins/serverAssetsManifestPlugin";
 import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlugin";
@@ -261,7 +262,7 @@ export async function watch(
     });
 
   return async () => {
-    await watcher.close().catch(() => {});
+    await watcher.close().catch(() => { });
     disposeBuilders();
   };
 }
@@ -424,6 +425,9 @@ function createServerBuild(
   if (config.serverPlatform !== "node") {
     plugins.unshift(NodeModulesPolyfillPlugin());
   }
+  if (config.serverPlatform == "node") {
+    plugins.unshift(nativeNodeModulesPlugin());
+  }
 
   return esbuild
     .build({
@@ -435,8 +439,8 @@ function createServerBuild(
       conditions: isCloudflareRuntime
         ? ["worker"]
         : isDenoRuntime
-        ? ["deno", "worker"]
-        : undefined,
+          ? ["deno", "worker"]
+          : undefined,
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
@@ -444,8 +448,8 @@ function createServerBuild(
       mainFields: isCloudflareRuntime
         ? ["browser", "module", "main"]
         : config.serverModuleFormat === "esm"
-        ? ["module", "main"]
-        : ["main", "module"],
+          ? ["module", "main"]
+          : ["main", "module"],
       target: options.target,
       inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
       loader: loaders,
@@ -508,6 +512,15 @@ async function writeServerBuildResult(
       let contents = Buffer.from(file.contents).toString("utf-8");
       contents = contents.replace(/"route:/gm, '"');
       await fse.writeFile(file.path, contents);
+    } else if (file.path.endsWith(".node")) {
+      // Check for and make _assets folder if it does not exist in the directory
+      // I suspect this is usually done elsewhere
+      let parentFolderPath = file.path.slice(0, file.path.lastIndexOf("/"))
+      if (!fse.existsSync(parentFolderPath)) {
+        fse.mkdirSync(parentFolderPath, { recursive: true });
+      }
+
+      await fse.writeFile(file.path, file.contents)
     }
   }
 }
