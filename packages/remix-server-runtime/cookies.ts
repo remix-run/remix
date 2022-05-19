@@ -67,7 +67,7 @@ export interface Cookie<Value extends unknown = unknown> {
   serialize(value: Value, options?: CookieSerializeOptions): Promise<string>;
 }
 
-export type CreateCookieFunction = <Value extends any = any>(
+export type CreateCookieFunction = <Value extends unknown = unknown>(
   name: string,
   cookieOptions?: CookieOptions
 ) => Cookie<Value>;
