@@ -2,26 +2,43 @@ const inquirer = require("inquirer");
 const fs = require("fs/promises");
 const { join } = require("path");
 
-const files = [
+const filesToCopy = [
   ["README.md"],
   ["netlify.toml"],
   ["edge-server.js", "server.js"],
   ["remix.config-edge.js", "remix.config.js"],
   ["vscode.json", join(".vscode", "settings.json")],
-  ["app/entry.server.tsx"],
-  ["app/root.tsx"],
 ];
+
+const filesToModify = ["app/entry.server.tsx", "app/root.tsx"];
+
+async function modifyFilesForEdge(files, rootDirectory) {
+  let filePaths = files.map((file) => join(rootDirectory, file));
+  let contents = await Promise.all(filePaths.map(fs.readFile));
+
+  await Promise.all(
+    contents.map((content, index) => {
+      let newContent = content.replace(/@remix-run\/node/g, "@remix-run/deno");
+      return fs.WriteFile(filePaths[index], newContent);
+    })
+  );
+}
+
+async function copyEdgeTemplateFiles(files, rootDirectory) {
+  for (let [file, target] of files) {
+    await fs.copyFile(
+      join(rootDirectory, "remix.init", file),
+      join(rootDirectory, target || file)
+    );
+  }
+}
 
 async function main({ rootDirectory }) {
   if (await shouldUseEdge()) {
     await fs.mkdir(join(rootDirectory, ".vscode"));
 
-    for (let [file, target] of files) {
-      await fs.copyFile(
-        join(rootDirectory, "remix.init", file),
-        join(rootDirectory, target || file)
-      );
-    }
+    await copyEdgeTemplateFiles(filesToCopy, rootDirectory);
+    await modifyFilesForEdge(filesToModify, rootDirectory);
   }
 }
 
