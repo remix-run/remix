@@ -7,7 +7,7 @@
   "// Deno-only dependencies may be imported via URL imports (without using import maps).": "",
 
   "imports": {
-    "mime": "https://esm.sh/mime@3.0.0",
-    "@remix-run/server-runtime": "https://esm.sh/@remix-run/server-runtime@1.4.3"
+    "@remix-run/server-runtime": "https://esm.sh/@remix-run/server-runtime@1.5.0",
+    "mime": "https://esm.sh/mime@3.0.0"
   }
 }
