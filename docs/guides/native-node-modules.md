@@ -7,7 +7,7 @@ toc: false
 
 Some node packages contain a binary `.node` file that contains code that is usually written in another language and that interacts with Node through the [Node-API](https://nodejs.org/api/n-api.html) foreign function interface. This can offer substantial benefits in speed, easy concurrency/multithreading, access to native interfaces, and/or interoperability with other languages. A popular example is the `Sharp` image processing library, which uses `libvips`, a C library, to increase performance.
 
-# #Limitations
+## Limitations
 
 Because these files use the Node FFI, they will only run on servers or edge environments that run Node.
 
