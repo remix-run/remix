@@ -1,6 +1,7 @@
 const inquirer = require("inquirer");
 const fs = require("fs/promises");
 const { join } = require("path");
+const sortPackageJson = require("sort-package-json");
 
 const filesToCopy = [
   ["README.md"],
@@ -33,12 +34,32 @@ async function copyEdgeTemplateFiles(files, rootDirectory) {
   }
 }
 
+async function updatePackageJsonForEdge(filepath) {
+  let { dependencies, ...restOfPackageJson } = JSON.parse(
+    await fs.readFile(filepath, "utf-8")
+  );
+
+  delete dependencies["@remix-run/netlify"];
+  dependencies["@remix-run/netlify-edge"] = "*";
+
+  let newPackageJson = {
+    ...restOfPackageJson,
+    dependencies,
+  };
+
+  await fs.writeFile(
+    filepath,
+    JSON.stringify(sortPackageJson(newPackageJson), null, 2) + "\n"
+  );
+}
+
 async function main({ rootDirectory }) {
   if (await shouldUseEdge()) {
     await fs.mkdir(join(rootDirectory, ".vscode"));
 
     await copyEdgeTemplateFiles(filesToCopy, rootDirectory);
     await modifyFilesForEdge(filesToModify, rootDirectory);
+    await updatePackageJsonForEdge(join(rootDirectory, "package.json"));
   }
 }
 
