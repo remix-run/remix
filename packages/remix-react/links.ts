@@ -133,7 +133,7 @@ interface HtmlLinkProps {
    * Images to use in different situations, e.g., high-resolution displays,
    * small monitors, etc. (for rel="preload")
    */
-  imageSrcSet: string;
+  imageSrcSet?: string;
 
   /**
    * Image sizes for different page layouts (for rel="preload")
@@ -177,10 +177,23 @@ interface HtmlLinkPreloadImage extends HtmlLinkProps {
 export type HtmlLinkDescriptor =
   // Must have an href *unless* it's a `<link rel="preload" as="image">` with an
   // `imageSrcSet` and `imageSizes` props
-  | (HtmlLinkProps & Pick<Required<HtmlLinkProps>, "href">)
-  | (HtmlLinkPreloadImage & Pick<Required<HtmlLinkPreloadImage>, "imageSizes">)
-  | (HtmlLinkPreloadImage &
-      Pick<Required<HtmlLinkPreloadImage>, "href"> & { imageSizes?: never });
+  (
+    | (HtmlLinkProps & Pick<Required<HtmlLinkProps>, "href">)
+    | (HtmlLinkPreloadImage &
+        Pick<Required<HtmlLinkPreloadImage>, "imageSizes">)
+    | (HtmlLinkPreloadImage &
+        Pick<Required<HtmlLinkPreloadImage>, "href"> & { imageSizes?: never })
+  ) & {
+    /**
+     * @deprecated Use `imageSrcSet` instead.
+     */
+    imagesrcset?: string;
+
+    /**
+     * @deprecated Use `imageSizes` instead.
+     */
+    imagesizes?: string;
+  };
 
 export interface PrefetchPageDescriptor
   extends Omit<
@@ -191,6 +204,8 @@ export interface PrefetchPageDescriptor
     | "sizes"
     | "imageSrcSet"
     | "imageSizes"
+    | "imagesrcset"
+    | "imagesizes"
     | "as"
     | "color"
     | "title"
@@ -299,8 +314,10 @@ export function isHtmlLinkDescriptor(
   if (object.href == null) {
     return (
       object.rel === "preload" &&
-      typeof object.imageSrcSet === "string" &&
-      typeof object.imageSizes === "string"
+      (typeof object.imageSrcSet === "string" ||
+        typeof object.imagesrcset === "string") &&
+      (typeof object.imageSizes === "string" ||
+        typeof object.imagesizes === "string")
     );
   }
   return typeof object.rel === "string" && typeof object.href === "string";
