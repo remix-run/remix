@@ -1,5 +1,3 @@
-export const GA_TRACKING_ID = "Your google analytics id goes here.";
-
 declare global {
   interface Window {
     gtag: (
@@ -14,14 +12,14 @@ declare global {
  * @example
  * https://developers.google.com/analytics/devguides/collection/gtagjs/pages
  */
-export const pageview = (url: string) => {
+export const pageview = (url: string, trackingId: string) => {
   if (!window.gtag) {
     console.warn(
       "window.gtag is not defined. This could mean your google anylatics script has not loaded on the page yet."
     );
     return;
   }
-  window.gtag("config", GA_TRACKING_ID, {
+  window.gtag("config", trackingId, {
     page_path: url,
   });
 };
