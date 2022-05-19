@@ -293,13 +293,21 @@ async function handleDocumentRequest({
     );
   }
 
+  let loaderRequest = new Request(request.url, {
+    body: null,
+    headers: request.headers,
+    method: request.method,
+    redirect: request.redirect,
+    signal: request.signal,
+  });
+
   let routeLoaderResults = await Promise.allSettled(
     matchesToLoad.map((match) =>
       match.route.module.loader
         ? callRouteLoader({
             loadContext,
             match,
-            request,
+            request: loaderRequest,
           })
         : Promise.resolve(undefined)
     )

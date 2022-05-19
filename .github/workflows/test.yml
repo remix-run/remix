@@ -10,8 +10,12 @@ on:
       - v*
     paths-ignore:
       - "docs/**"
+      - "scripts/**"
       - "**/README.md"
-  pull_request: {}
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
 
 jobs:
   build:

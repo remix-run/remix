@@ -519,6 +519,28 @@ function remixCloudflare() {
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
+function remixDeno() {
+  let sourceDir = "packages/remix-deno";
+  let outputDir = getOutputDir("@remix-run/deno");
+
+  return [
+    {
+      input: `${sourceDir}/.empty.js`,
+      plugins: [
+        copy({
+          targets: [
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/**/*`, dest: outputDir },
+          ],
+          gitignore: true,
+        }),
+        copyToPlaygrounds(),
+      ],
+    },
+  ];
+}
+
+/** @returns {import("rollup").RollupOptions[]} */
 function remixCloudflareWorkers() {
   let sourceDir = "packages/remix-cloudflare-workers";
   let outputDir = getOutputDir("@remix-run/cloudflare-workers");
@@ -858,6 +880,7 @@ export default function rollup(options) {
     ...remixServerRuntime(options),
     ...remixNode(options),
     ...remixCloudflare(options),
+    ...remixDeno(options),
     ...remixCloudflarePages(options),
     ...remixCloudflareWorkers(options),
     ...remixServerAdapters(options),

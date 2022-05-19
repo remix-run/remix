@@ -1379,7 +1379,7 @@ More information in our documentation:
 https://pris.ly/d/getting-started
 ```
 
-Now that we've got prisma initialized, we can start modeling our app data. Because this isn't a prisma tutorial, I'll just hand you that and you can read more about the prisma scheme from [their docs](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference):
+Now that we've got prisma initialized, we can start modeling our app data. Because this isn't a prisma tutorial, I'll just hand you that and you can read more about the prisma schema from [their docs](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference):
 
 ```prisma filename=prisma/schema.prisma lines=[13-19]
 // This is your Prisma schema file,
