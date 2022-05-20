@@ -1,6 +1,7 @@
+import type { ActionFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, Link, useActionData, useTransition } from "@remix-run/react";
 import { useEffect, useRef } from "react";
-import type { ActionFunction } from "remix";
-import { Form, Link, useActionData, useTransition } from "remix";
 
 export const action: ActionFunction = async ({ request }) => {
   await new Promise((res) => setTimeout(res, 1000));
@@ -19,7 +20,7 @@ export const action: ActionFunction = async ({ request }) => {
     },
   });
 
-  return res.json();
+  return json(await res.json());
 };
 
 export default function Newsletter() {

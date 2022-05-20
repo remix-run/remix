@@ -665,6 +665,66 @@ describe("submission navigations", () => {
     await B.loader.resolve("B LOADER");
     expect(t.getState().actionData).toBeUndefined();
   });
+
+  it("retains the index match when submitting to a layout route", async () => {
+    let tm = createTestTransitionManager("/", {
+      routes: [
+        {
+          path: "/",
+          id: "parent",
+          element: {},
+          module: "",
+          hasLoader: true,
+          loader: () => "PARENT LOADER",
+          action: () => "PARENT ACTION",
+          children: [
+            {
+              path: "/child",
+              id: "child",
+              element: {},
+              module: "",
+              ErrorBoundary: FakeComponent,
+              hasLoader: true,
+              loader: () => "CHILD LOADER",
+              action: () => "CHILD ACTION",
+              children: [
+                {
+                  index: true,
+                  id: "childIndex",
+                  element: {},
+                  module: "",
+                  ErrorBoundary: FakeComponent,
+                  hasLoader: true,
+                  loader: () => "CHILD INDEX LOADER",
+                  action: () => "CHILD INDEX ACTION",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    await tm.send({
+      type: "navigation",
+      location: createLocation("/child"),
+      submission: createActionSubmission("/child"),
+      action: Action.Push,
+    });
+    expect(tm.getState().transition.state).toBe("idle");
+    expect(tm.getState().loaderData).toEqual({
+      parent: "PARENT LOADER",
+      child: "CHILD LOADER",
+      childIndex: "CHILD INDEX LOADER",
+    });
+    expect(tm.getState().actionData).toEqual({
+      child: "CHILD ACTION",
+    });
+    expect(tm.getState().matches.map((m) => m.route.id)).toEqual([
+      "parent",
+      "child",
+      "childIndex",
+    ]);
+  });
 });
 
 describe("action errors", () => {
@@ -1331,20 +1391,25 @@ describe("fetcher redirects", () => {
   test("action fetch", async () => {
     let t = setup({ url: "/foo" });
     let A = t.fetch.post("/foo");
+    expect(t.getFetcher(A.key).state).toBe("submitting");
+    expect(t.getFetcher(A.key).type).toBe("actionSubmission");
     let AR = await A.action.redirect("/bar");
+    expect(t.getFetcher(A.key).state).toBe("loading");
+    expect(t.getFetcher(A.key).type).toBe("actionRedirect");
+    let state = t.getState();
+    expect(state.transition.type).toBe("fetchActionRedirect");
+    expect(state.transition.location).toBe(AR.location);
+    await AR.loader.resolve("stuff");
     expect(t.getFetcher(A.key)).toMatchInlineSnapshot(`
       Object {
-        "data": TransitionRedirect {
-          "location": "/bar",
-        },
+        "data": undefined,
         "state": "idle",
         "submission": undefined,
         "type": "done",
       }
     `);
-    let state = t.getState();
-    expect(state.transition.type).toBe("fetchActionRedirect");
-    expect(state.transition.location).toBe(AR.location);
+    // Root loader should be re-called after fetchActionRedirect
+    expect(t.rootLoaderMock.calls.length).toBe(1);
   });
 });
 

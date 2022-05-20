@@ -17,14 +17,14 @@ export const handle = { hydrate: true };
 
 Now open `root.tsx`, bring in `useMatches` and add this:
 
-```tsx [6,10,13-15,28]
+```tsx [6,10,13-15,27]
 import {
   Meta,
   Links,
   Scripts,
   Outlet,
   useMatches,
-} from "remix";
+} from "@remix-run/react";
 
 export default function App() {
   const matches = useMatches();
@@ -38,7 +38,6 @@ export default function App() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
         <Meta />
         <Links />
       </head>

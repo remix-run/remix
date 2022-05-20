@@ -1,11 +1,13 @@
-import * as React from "react";
 import type {
   ActionFunction,
-  MetaFunction,
   LinksFunction,
   LoaderFunction,
-} from "remix";
-import { Form, json, useActionData, useSearchParams } from "remix";
+  MetaFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, useActionData, useSearchParams } from "@remix-run/react";
+import * as React from "react";
+
 import { Button } from "~/ui/button";
 import { Link } from "~/ui/link";
 import { ShadowBox } from "~/ui/shadow-box";
@@ -117,7 +119,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   await redirectUser(request, {
     redirect: "/dashboard",
   });
-  return {};
+  return json({});
 };
 
 export default function SignIn() {

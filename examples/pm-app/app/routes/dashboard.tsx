@@ -1,6 +1,11 @@
+import type {
+  LinksFunction,
+  LoaderFunction,
+  MetaFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Outlet, useCatch } from "@remix-run/react";
 import * as React from "react";
-import { Outlet, useCatch } from "remix";
-import type { LoaderFunction, LinksFunction, MetaFunction } from "remix";
 
 import stylesUrl from "~/dist/styles/routes/dashboard.css";
 import { NavLink } from "~/ui/link";
@@ -12,9 +17,9 @@ export const loader: LoaderFunction = async ({ request }) => {
   const { passwordHash, ...secureUser } = await requireUser(request, {
     redirect: "/sign-in",
   });
-  return {
+  return json({
     user: secureUser,
-  };
+  });
 };
 
 export const links: LinksFunction = () => {

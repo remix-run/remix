@@ -1,8 +1,6 @@
-import { installGlobals } from "./globals";
-
-export { createCloudflareKVSessionStorage } from "./sessions/cloudflareKVSessionStorage";
-
-export type { createPagesFunctionHandlerParams } from "./worker";
+export type {
+  createPagesFunctionHandlerParams,
+  GetLoadContextFunction,
+  RequestHandler,
+} from "./worker";
 export { createPagesFunctionHandler, createRequestHandler } from "./worker";
-
-installGlobals();

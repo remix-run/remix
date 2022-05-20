@@ -12,7 +12,8 @@
  * Further improvements could be done by implementing ETags, but that is out of scope for this demo.
  */
 
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+
 import type { Params } from "react-router";
 
 import path from "path";
@@ -75,7 +76,7 @@ function streamingResize(
   height: number | undefined,
   fit: keyof FitEnum
 ) {
-  // create the sharp transform pipline
+  // create the sharp transform pipeline
   // https://sharp.pixelplumbing.com/api-resize
   // you can also add watermarks, sharpen, blur, etc.
   const sharpTransforms = sharp()
@@ -161,7 +162,7 @@ function handleError(error: unknown) {
     });
   }
 
-  // if there is an error proccessing the image, we return a 500 error
+  // if there is an error processing the image, we return a 500 error
   return new Response(errorT.message, {
     status: 500,
     statusText: errorT.message,

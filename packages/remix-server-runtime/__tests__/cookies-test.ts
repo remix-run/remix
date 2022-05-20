@@ -1,4 +1,19 @@
-import { createCookie, isCookie } from "../cookies";
+import { createCookieFactory, isCookie } from "../cookies";
+import type { SignFunction, UnsignFunction } from "../crypto";
+
+const sign: SignFunction = async (value, secret) => {
+  return JSON.stringify({ value, secret });
+};
+const unsign: UnsignFunction = async (signed, secret) => {
+  try {
+    let unsigned = JSON.parse(signed);
+    if (unsigned.secret !== secret) return false;
+    return unsigned.value;
+  } catch (e: unknown) {
+    return false;
+  }
+};
+const createCookie = createCookieFactory({ sign, unsign });
 
 function getCookieFromSetCookie(setCookie: string): string {
   return setCookie.split(/;\s*/)[0];
@@ -50,6 +65,14 @@ describe("cookies", () => {
     let value = await cookie.parse(getCookieFromSetCookie(setCookie));
 
     expect(value).toMatchInlineSnapshot(`"hello michael"`);
+  });
+
+  it("parses/serializes string values containing utf8 characters", async () => {
+    let cookie = createCookie("my-cookie");
+    let setCookie = await cookie.serialize("日本語");
+    let value = await cookie.parse(getCookieFromSetCookie(setCookie));
+
+    expect(value).toBe("日本語");
   });
 
   it("fails to parses signed string values with invalid signature", async () => {

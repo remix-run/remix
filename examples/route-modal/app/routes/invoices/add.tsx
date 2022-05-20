@@ -1,11 +1,13 @@
 import Dialog from "@reach/dialog";
-import type { ActionFunction, LinksFunction } from "remix";
-import { useTransition } from "remix";
-import { redirect, useActionData } from "remix";
-import { Form } from "remix";
-import { useNavigate } from "remix";
-
 import styles from "@reach/dialog/styles.css";
+import type { ActionFunction, LinksFunction } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
+import {
+  Form,
+  useActionData,
+  useNavigate,
+  useTransition,
+} from "@remix-run/react";
 
 export const links: LinksFunction = () => {
   return [
@@ -17,7 +19,7 @@ export const links: LinksFunction = () => {
 };
 
 export const action: ActionFunction = async ({ request }) => {
-  // Here we can update our dabatase with the new invoice
+  // Here we can update our database with the new invoice
 
   // This is just so we can see the transition
   return new Promise((resolve) =>

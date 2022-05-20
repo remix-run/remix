@@ -1,31 +1,29 @@
 {
-  "name": "remix-template-tailwindcss",
+  "name": "remix-example-tailwindcss",
   "private": true,
   "description": "",
   "license": "",
   "sideEffects": false,
   "scripts": {
-    "build": "run-p build:*",
+    "build": "run-s build:*",
     "build:css": "npm run generate:css -- --minify",
-    "build:remix": "cross-env NODE_ENV=production remix build",
+    "build:remix": "remix build",
     "dev": "run-p dev:*",
     "dev:css": "npm run generate:css -- --watch",
-    "dev:remix": "cross-env NODE_ENV=development remix dev",
+    "dev:remix": "remix dev",
     "generate:css": "npx tailwindcss -o ./app/tailwind.css",
-    "postinstall": "remix setup node",
-    "start": "cross-env NODE_ENV=production remix-serve build"
+    "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/react": "1.2.3",
-    "@remix-run/serve": "1.2.3",
-    "cross-env": "^7.0.3",
+    "@remix-run/node": "1.5.1",
+    "@remix-run/react": "1.5.1",
+    "@remix-run/serve": "1.5.1",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "remix": "1.2.3"
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.2.3",
-    "@remix-run/eslint-config": "1.2.3",
+    "@remix-run/dev": "1.5.1",
+    "@remix-run/eslint-config": "1.5.1",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
     "eslint": "^8.10.0",

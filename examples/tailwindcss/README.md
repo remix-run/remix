@@ -17,6 +17,7 @@ Relevant files:
 - [package.json](./package.json) where the tailwind CLI is used.
 - [tailwind.config.js](./tailwind.config.js) where tailwind is configured.
 - [app/root.tsx](./app/root.tsx) where tailwind is imported.
+- [.gitignore](.gitignore) where the generated tailwind.css is added to the ignore list.
 
 ## Related Links
 

@@ -1,5 +1,6 @@
-import { Link, useLoaderData } from "remix";
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Link, useLoaderData } from "@remix-run/react";
 
 import { Code } from "~/components/Code";
 import type { LoaderData } from "~/routes/api/character";
@@ -15,7 +16,7 @@ export const loader: LoaderFunction = async (args) => {
     method: "GET",
   });
 
-  return res.json();
+  return json(await res.json());
 };
 
 /**
