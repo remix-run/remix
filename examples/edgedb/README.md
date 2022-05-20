@@ -29,7 +29,6 @@ npm install             # install dependencies
 edgedb project init     # initialize EdgeDB
 npx edgeql-js           # generate query builder
 npm run seed            # seed the database
-npm run dev             # start dev server
 ```
 
 After seeding, you can sign in with the following credentials, or create a new account:
@@ -37,7 +36,11 @@ After seeding, you can sign in with the following credentials, or create a new a
 - username: `username`
 - password: `remixrulz`
 
-This prepares the local dev database and starts your app in development mode, rebuilding assets on file changes.
+Then start the development server. Your app will hot reload as you update your files.
+
+```sh
+npm run dev             # start dev server
+```
 
 ## Deployment
 
