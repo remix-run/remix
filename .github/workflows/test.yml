@@ -99,6 +99,9 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: Disable-NetAdapterChecksumOffload -Name * -TcpIPv4 -UdpIPv4 -TcpIPv6 -UdpIPv6
 
+      - name: 🧶 Increase Yarn Timeout
+        run: yarn config set network-timeout 300000
+
       - name: 📥 Install deps
         # even though this is called "npm-install" it does use yarn to install
         # because we have a yarn.lock and caches efficiently.
@@ -147,6 +150,9 @@ jobs:
       - name: 🙈 Windows Networking
         if: matrix.os == 'windows-latest'
         run: Disable-NetAdapterChecksumOffload -Name * -TcpIPv4 -UdpIPv4 -TcpIPv6 -UdpIPv6
+
+      - name: 🧶 Increase Yarn Timeout
+        run: yarn config set network-timeout 300000
 
       - name: 📥 Install deps
         # even though this is called "npm-install" it does use yarn to install
