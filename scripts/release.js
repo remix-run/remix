@@ -37,11 +37,11 @@ async function run() {
   execSync(`git reset HEAD~1 --hard`);
 
   console.log(
-    chalk.green(`  -------------------------------------------------------------------
-    The new version is ready to release. To trigger the publish script, create a new
-    release in GtiHub from the v${nextVersion} tag.
+    chalk.green(`  ---------------------------------------------------------------------------------------
+  The new version is ready to release. To trigger the publish script, create a new
+  release in GtiHub from the v${nextVersion} tag.
 
-    https://github.com/remix-run/remix/releases/new?tag=v${nextVersion}
-    -------------------------------------------------------------------`)
+  https://github.com/remix-run/remix/releases/new?tag=v${nextVersion}
+  ---------------------------------------------------------------------------------------`)
   );
 }
