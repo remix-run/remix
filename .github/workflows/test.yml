@@ -99,6 +99,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: Disable-NetAdapterChecksumOffload -Name * -TcpIPv4 -UdpIPv4 -TcpIPv6 -UdpIPv6
 
+        # https://github.com/yarnpkg/yarn/issues/8242
       - name: 🧶 Increase Yarn Timeout
         run: yarn config set network-timeout 300000
 
@@ -151,6 +152,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: Disable-NetAdapterChecksumOffload -Name * -TcpIPv4 -UdpIPv4 -TcpIPv6 -UdpIPv6
 
+        # https://github.com/yarnpkg/yarn/issues/8242
       - name: 🧶 Increase Yarn Timeout
         run: yarn config set network-timeout 300000
 
