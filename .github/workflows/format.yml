@@ -35,8 +35,11 @@ jobs:
         run: node scripts/patchup-example-names.mjs
 
       - name: 👔 Format
-        run: npm run format --if-present
-
+        run: |
+          if [ ${{ github.event_name == 'push' }} ]; then
+            git fetch origin ${{ github.event.before }}
+            npx nano-staged --diff ${{ github.event.before }} -c ./.format.js
+          fi
       - name: 💪 Commit
         run: |
           git config --local user.email "hello@remix.run"
