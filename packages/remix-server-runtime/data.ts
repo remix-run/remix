@@ -1,11 +1,7 @@
 import type { RouteMatch } from "./routeMatching";
 import type { LoaderFunction } from "./routeModules";
 import type { ServerRoute } from "./routes";
-import {
-  json,
-  isResponse,
-  isRedirectResponse,
-} from "./responses";
+import { json, isResponse, isRedirectResponse } from "./responses";
 import type { DeferredResponse } from "./responses";
 
 /**
@@ -108,9 +104,7 @@ export async function callRouteLoader({
     );
   }
 
-  return isResponse(result)
-    ? result
-    : json(result);
+  return isResponse(result) ? result : json(result);
 }
 
 function stripIndexParam(request: Request) {
