@@ -1,8 +1,8 @@
 import { client } from "~/utils/edgedb.server";
 import e from "./dbschema/edgeql-js";
 import bcrypt from "bcryptjs";
-const USERNAME = "billie";
-const PASSWORD = "password";
+const USERNAME = "joker";
+const PASSWORD = "remixrulz";
 
 const JOKES = [
   {
@@ -37,7 +37,7 @@ const JOKES = [
 
 async function seed() {
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
-  const billie = await e
+  const newUser = await e
     .insert(e.User, {
       username: USERNAME,
       passwordHash,
@@ -50,7 +50,7 @@ async function seed() {
         name: e.cast(e.str, joke.name),
         content: e.cast(e.str, joke.content),
         jokester: e.select(e.User, (user) => ({
-          filter: e.op(user.id, "=", e.uuid(billie.id)),
+          filter: e.op(user.id, "=", e.uuid(newUser.id)),
         })),
       });
     })

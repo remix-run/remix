@@ -6,13 +6,14 @@ import { client } from "~/utils/edgedb.server";
 import { getUserId } from "~/utils/session.server";
 import e from "../../../dbschema/edgeql-js";
 
-async function getRandomJoke() {
+async function getRandomJoke(userId: string) {
   return (
     await e
-      .select(e.Joke, () => ({
+      .select(e.Joke, (joke) => ({
         ...e.Joke["*"],
         order_by: e.random(),
         limit: 1,
+        filter: e.op(joke.jokester.id, "=", e.uuid(userId)),
       }))
       .run(client)
   )[0];
@@ -23,13 +24,10 @@ type LoaderData = { randomJoke: Joke };
 
 export const loader: LoaderFunction = async ({ request }) => {
   const userId = await getUserId(request);
-  const count = await e.count(e.Joke).run(client);
-
-  const randomRowNumber = Math.floor(Math.random() * count);
 
   // in the official deployed version of the app, we don't want to deploy
   // a site with unmoderated content, so we only show users their own jokes
-  const randomJoke = userId ? await getRandomJoke() : null;
+  const randomJoke = userId ? await getRandomJoke(userId) : null;
   if (!randomJoke) {
     throw new Response("No jokes to be found!", { status: 404 });
   }

@@ -32,7 +32,10 @@ npm run seed            # seed the database
 npm run dev             # start dev server
 ```
 
-After seeding, the
+After seeding, you can sign in with the following credentials, or create a new account:
+
+- username: `username`
+- password: `remixrulz`
 
 This prepares the local dev database and starts your app in development mode, rebuilding assets on file changes.
 
