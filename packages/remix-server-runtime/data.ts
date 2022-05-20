@@ -3,7 +3,6 @@ import type { LoaderFunction } from "./routeModules";
 import type { ServerRoute } from "./routes";
 import {
   json,
-  isDeferredResponse,
   isResponse,
   isRedirectResponse,
 } from "./responses";

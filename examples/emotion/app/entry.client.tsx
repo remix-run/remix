@@ -23,9 +23,9 @@ function ClientCacheProvider({ children }: ClientCacheProviderProps) {
   );
 }
 
-hydrate(
+hydrateRoot(
+  document,
   <ClientCacheProvider>
     <RemixBrowser />
-  </ClientCacheProvider>,
-  document
+  </ClientCacheProvider>
 );

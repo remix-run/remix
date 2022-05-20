@@ -283,8 +283,8 @@ test("errored deferred data renders route boundary on hydration", async ({
 }) => {
   let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/deferred-error-no-boundary");
-  let boundary = await app.getElement("#error-boundary");
-  expect(boundary.text()).toMatch("Error Boundary");
+  let boundary = await page.waitForSelector("#error-boundary");
+  expect(await boundary.innerText()).toMatch("Error Boundary");
 });
 
 test("errored deferred data renders route boundary on transition", async ({
