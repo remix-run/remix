@@ -97,7 +97,7 @@ test.afterAll(async () => appFixture.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-it("should redirect via referrer header", async ({page}) => {
+test("should redirect via referrer header", async ({page}) => {
   let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
   // If you need to test interactivity use the `app`
