@@ -1,5 +1,13 @@
-export type JsonFunction = <Data>(
-  data: Data,
+type Json =
+  | null
+  | boolean
+  | number
+  | string
+  | Array<Json>
+  | { [key: string]: Json };
+
+export type JsonFunction = (
+  data: Json,
   init?: number | ResponseInit
 ) => Response;
 
