@@ -532,13 +532,46 @@ export function Links() {
 
   return (
     <>
-      {links.map((link) =>
-        isPageLinkDescriptor(link) ? (
-          <PrefetchPageLinks key={link.page} {...link} />
-        ) : (
-          <link key={link.rel + link.href} {...link} />
-        )
-      )}
+      {links.map((link) => {
+        if (isPageLinkDescriptor(link)) {
+          return <PrefetchPageLinks key={link.page} {...link} />;
+        }
+
+        let imageSrcSet: string | null = null;
+
+        // In React 17, <link imageSrcSet> and <link imageSizes> will warn
+        // because the DOM attributes aren't recognized, so users need to pass
+        // them in all lowercase to forward the attributes to the node without a
+        // warning. Normalize so that either property can be used in Remix.
+        if ("useId" in React) {
+          if (link.imagesrcset) {
+            link.imageSrcSet = imageSrcSet = link.imagesrcset;
+            delete link.imagesrcset;
+          }
+
+          if (link.imagesizes) {
+            link.imageSizes = link.imagesizes;
+            delete link.imagesizes;
+          }
+        } else {
+          if (link.imageSrcSet) {
+            link.imagesrcset = imageSrcSet = link.imageSrcSet;
+            delete link.imageSrcSet;
+          }
+
+          if (link.imageSizes) {
+            link.imagesizes = link.imageSizes;
+            delete link.imageSizes;
+          }
+        }
+
+        return (
+          <link
+            key={link.rel + (link.href || "") + (imageSrcSet || "")}
+            {...link}
+          />
+        );
+      })}
     </>
   );
 }
