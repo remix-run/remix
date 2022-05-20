@@ -5,6 +5,10 @@ const semver = require("semver");
 const buildDir = path.resolve(__dirname, "../build/node_modules");
 const packageDir = path.resolve(__dirname, "../packages");
 
+function getCurrentBranch() {
+  return execSync("git rev-parse --abbrev-ref HEAD").toString().trim();
+}
+
 function getTaggedVersion() {
   let output = execSync("git tag --list --points-at HEAD").toString().trim();
   return output.replace(/^v/g, "");
@@ -28,15 +32,20 @@ async function run() {
     process.exit(1);
   }
 
+  let currentBranch = getCurrentBranch();
   let prerelease = semver.prerelease(taggedVersion);
   let prereleaseTag = prerelease ? String(prerelease[0]) : undefined;
-  let tag = prereleaseTag
-    ? prereleaseTag.includes("nightly")
-      ? "nightly"
-      : prereleaseTag.includes("experimental")
-      ? "experimental"
+  let tag =
+    // TODO: Remove this check when we are ready to merge and remove the tag
+    currentBranch === "jacob/suspense-lab"
+      ? "deferred"
       : prereleaseTag
-    : "latest";
+      ? prereleaseTag.includes("nightly")
+        ? "nightly"
+        : prereleaseTag.includes("experimental")
+        ? "experimental"
+        : prereleaseTag
+      : "latest";
 
   // Publish eslint config directly from the package directory
   publish(path.join(packageDir, "remix-eslint-config"), tag);
