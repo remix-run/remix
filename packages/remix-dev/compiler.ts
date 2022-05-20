@@ -23,6 +23,7 @@ import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlu
 import { serverEntryModulePlugin } from "./compiler/plugins/serverEntryModulePlugin";
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
 import { writeFileSafe } from "./compiler/utils/fs";
+import { urlImportsPlugin } from "./compiler/plugins/urlImportsPlugin";
 
 // When we build Remix, this shim file is copied directly into the output
 // directory in the same place relative to this file. It is eventually injected
@@ -36,10 +37,15 @@ interface BuildConfig {
 }
 
 function defaultWarningHandler(message: string, key: string) {
-  warnOnce(false, message, key);
+  warnOnce(message, key);
 }
 
-function defaultBuildFailureHandler(failure: Error | esbuild.BuildFailure) {
+export type BuildError = Error | esbuild.BuildFailure;
+function defaultBuildFailureHandler(failure: BuildError) {
+  formatBuildFailure(failure);
+}
+
+export function formatBuildFailure(failure: BuildError) {
   if ("warnings" in failure || "errors" in failure) {
     if (failure.warnings) {
       let messages = esbuild.formatMessagesSync(failure.warnings, {
@@ -342,22 +348,12 @@ async function createBrowserBuild(
   }
 
   let plugins = [
+    urlImportsPlugin(),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
   ];
-
-  if (config.serverBuildTarget === "deno") {
-    // @ts-expect-error
-    let { cache } = await import("esbuild-plugin-cache");
-    plugins.unshift(
-      cache({
-        importmap: {},
-        directory: path.join(config.cacheDirectory, "http-import-cache"),
-      })
-    );
-  }
 
   return esbuild.build({
     entryPoints,
@@ -410,13 +406,19 @@ function createServerBuild(
     };
   }
 
+  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
+    config.serverBuildTarget ?? ""
+  );
+  let isDenoRuntime = config.serverBuildTarget === "deno";
+
   let plugins: esbuild.Plugin[] = [
+    urlImportsPlugin(),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config),
     serverAssetsManifestPlugin(assetsManifestPromiseRef),
-    serverBareModulesPlugin(config, dependencies),
+    serverBareModulesPlugin(config, dependencies, options.onWarning),
   ];
 
   if (config.serverPlatform !== "node") {
@@ -430,26 +432,27 @@ function createServerBuild(
       entryPoints,
       outfile: config.serverBuildPath,
       write: false,
+      conditions: isCloudflareRuntime
+        ? ["worker"]
+        : isDenoRuntime
+        ? ["deno", "worker"]
+        : undefined,
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
-      minify:
-        options.mode === BuildMode.Production &&
-        !!config.serverBuildTarget &&
-        ["cloudflare-workers", "cloudflare-pages"].includes(
-          config.serverBuildTarget
-        ),
-      mainFields:
-        config.serverModuleFormat === "esm"
-          ? ["module", "main"]
-          : ["main", "module"],
+      minify: options.mode === BuildMode.Production && isCloudflareRuntime,
+      mainFields: isCloudflareRuntime
+        ? ["browser", "module", "main"]
+        : config.serverModuleFormat === "esm"
+        ? ["module", "main"]
+        : ["main", "module"],
       target: options.target,
       inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
       loader: loaders,
       bundle: true,
       logLevel: "silent",
       incremental: options.incremental,
-      sourcemap: options.sourcemap ? "inline" : false,
+      sourcemap: options.sourcemap, // use linked (true) to fix up .map file
       // The server build needs to know how to generate asset URLs for imports
       // of CSS and other files.
       assetNames: "_assets/[name]-[hash]",
@@ -492,9 +495,19 @@ async function writeServerBuildResult(
   await fse.ensureDir(path.dirname(config.serverBuildPath));
 
   for (let file of outputFiles) {
-    if (file.path === config.serverBuildPath) {
-      await fse.writeFile(file.path, file.contents);
-      break;
+    if (file.path.endsWith(".js")) {
+      // fix sourceMappingURL to be relative to current path instead of /build
+      let filename = file.path.substring(file.path.lastIndexOf(path.sep) + 1);
+      let escapedFilename = filename.replace(/\./g, "\\.");
+      let pattern = `(//# sourceMappingURL=)(.*)${escapedFilename}`;
+      let contents = Buffer.from(file.contents).toString("utf-8");
+      contents = contents.replace(new RegExp(pattern), `$1${filename}`);
+      await fse.writeFile(file.path, contents);
+    } else if (file.path.endsWith(".map")) {
+      // remove route: prefix from source filenames so breakpoints work
+      let contents = Buffer.from(file.contents).toString("utf-8");
+      contents = contents.replace(/"route:/gm, '"');
+      await fse.writeFile(file.path, contents);
     }
   }
 }

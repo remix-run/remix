@@ -24,7 +24,7 @@ import {
   Scripts,
   Outlet,
   useMatches,
-} from "remix";
+} from "@remix-run/react";
 
 export default function App() {
   const matches = useMatches();

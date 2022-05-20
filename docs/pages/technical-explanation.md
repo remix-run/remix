@@ -168,7 +168,7 @@ Taking our route module from before, here are a few small, but useful UX improve
 2. Focus the input when server side form validation fails
 3. Animate in the error messages
 
-```jsx nocopy lines=[4-6,8-12,21,22,28-30]
+```jsx nocopy lines=[4-6,8-12,23-26,30-32]
 export default function Projects() {
   const projects = useLoaderData();
   const actionData = useActionData();

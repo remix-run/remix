@@ -13,6 +13,10 @@ This tutorial uses TypeScript. Remix can definitely be used without TypeScript. 
 
 ## Prerequisites
 
+Click this button to create a [Gitpod](https://gitpod.io) workspace with the project set up and ready to run in VS Code or JetBrains either directly in the browser or on the desktop.
+
+[![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/remix-run/indie-stack)
+
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
 - [Node.js](https://nodejs.org) 14 or greater
@@ -31,15 +35,13 @@ npx create-remix --template remix-run/indie-stack blog-tutorial
 
 ```
 ? Do you want me to run `npm install`? Yes
-...
-? Do you want to run the build/tests/etc to verify things are setup properly? Yes
 ```
-
-<docs-info>Running the verify script is optional, but handy.</docs-info>
 
 You can read more about the stacks available in [the stacks docs](/pages/stacks).
 
 We're using [the Indie stack](https://github.com/remix-run/indie-stack), which is a full application ready to deploy to [fly.io](https://fly.io). This includes development tools as well as production-ready authentication and persistence. Don't worry if you're unfamiliar with the tools used, we'll walk you through things as we go.
+
+<docs-info>Note, you can definitely start with "Just the basics" instead by running `npx create-remix` without the `--template` flag. The generated project is much more minimal that way. However, some bits of the tutorial will be different for you and you'll have to configure things for deployment manually.</docs-info>
 
 💿 Now, open the project that was generated in your preferred editor and check the instructions in the `README.md` file. Feel free to read over this. We'll get to the deployment bit later in the tutorial.
 
@@ -124,8 +126,9 @@ So let's get to it and provide some data to our component.
 
 💿 Make the posts route "loader"
 
-```tsx filename=app/routes/posts/index.tsx lines=[1,3-16,19-20]
-import { json, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/index.tsx lines=[1-2,4-17,20-21]
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 export const loader = async () => {
   return json({
@@ -157,8 +160,9 @@ Loaders are the backend "API" for their component and it's already wired up for 
 
 💿 Render links to our posts
 
-```tsx filename=app/routes/posts/index.tsx lines=[1,9-20] nocopy
-import { Link, json, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/index.tsx lines=[2,10-21] nocopy
+import { json } from "@remix-run/node";
+import { Link, useLoaderData } from "@remix-run/react";
 
 // ...
 export default function Posts() {
@@ -187,8 +191,9 @@ TypeScript is mad, so let's help it out:
 
 💿 Add the Post type and generic for `useLoaderData`
 
-```tsx filename=app/routes/posts/index.tsx lines=[3-6,8-10,13,28]
-import { Link, json, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/index.tsx lines=[4-7,9-11,14,29]
+import { json } from "@remix-run/node";
+import { Link, useLoaderData } from "@remix-run/react";
 
 type Post = {
   slug: string;
@@ -275,7 +280,8 @@ Note that we're making the `getPosts` function `async` because even though it's 
 💿 Update the posts route to use our new posts module:
 
 ```tsx filename=app/routes/posts/index.tsx nocopy
-import { json, Link, useLoaderData } from "remix";
+import { json } from "@remix-run/node";
+import { Link, useLoaderData } from "@remix-run/react";
 
 import { getPosts } from "~/models/post.server";
 
@@ -397,7 +403,7 @@ export async function getPosts() {
 
 <docs-warning>You only need to ever do this when you change the Prisma schema and update the Prisma client. Normally you don't need to restart the dev server during development. Nice that it's so fast though right?</docs-warning>
 
-With the server up and running again, you should be able to go to `http://localhost:3000/post` and the posts should still be there, but now they're coming from SQLite!
+With the server up and running again, you should be able to go to `http://localhost:3000/posts` and the posts should still be there, but now they're coming from SQLite!
 
 ## Dynamic Route Params
 
@@ -432,8 +438,9 @@ You can click one of your posts and should see the new page.
 
 💿 Add a loader to access the params
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[1,3-5,8,12]
-import { useLoaderData, json } from "remix";
+```tsx filename=app/routes/posts/$slug.tsx lines=[1-2,4-6,9,13]
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 export const loader = async ({ params }) => {
   return json({ slug: params.slug });
@@ -455,9 +462,10 @@ The part of the filename attached to the `$` becomes a named key on the `params`
 
 💿 Let's get some help from TypeScript for the loader function signature.
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[1,4]
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/$slug.tsx lines=[1,5]
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 export const loader: LoaderFunction = async ({
   params,
@@ -488,9 +496,10 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[4,9-10,14,18]
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/$slug.tsx lines=[5,10-11,15,19]
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 
 import { getPost } from "~/models/post.server";
 
@@ -517,9 +526,10 @@ Check that out! We're now pulling our posts from a data source instead of includ
 
 Let's make TypeScript happy with our code:
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[3,5,8,13,16,18,22]
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData } from "remix";
+```tsx filename=app/routes/posts/$slug.tsx lines=[4,6,9,14,17,19,23]
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
 
 import type { Post } from "~/models/post.server";
@@ -564,10 +574,11 @@ npm add marked
 npm add @types/marked -D
 ```
 
-```tsx filename=app/routes/post/$slug.ts lines=[1,9,19-20,24,30]
+```tsx filename=app/routes/post/$slug.ts lines=[1,10,20-21,25,31]
 import { marked } from "marked";
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
 
 import type { Post } from "~/models/post.server";
@@ -602,7 +613,7 @@ export default function PostSlug() {
 
 Holy smokes, you did it. You have a blog. Check it out! Next, we're gonna make it easier to create new blog posts 📝
 
-## Creating Blog Posts
+## Nested Routing
 
 Right now, our blog posts just come from seeding the database. Not a real solution, so we need a way to create a new blog post in the database. We're going to be using actions for that.
 
@@ -629,8 +640,9 @@ touch app/routes/posts/admin.tsx
 ```
 
 ```tsx filename=app/routes/posts/admin.tsx
-import type { LoaderFunction } from "remix";
-import { Link, useLoaderData, json } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Link, useLoaderData } from "@remix-run/react";
 
 import { getPosts } from "~/models/post.server";
 
@@ -676,7 +688,7 @@ export default function PostAdmin() {
 You should recognize several of the things we're doing in there from what we've done so far. With that, you should have a decent looking page with the posts on the left and a placeholder on the right.
 Now, if you click on the Admin link, it'll take you to [http://localhost:3000/posts/admin](http://localhost:3000/posts/admin).
 
-## Index Routes
+### Index Routes
 
 Let's fill in that placeholder with an index route for admin. Hang with us, we're introducing "nested routes" here where your route file nesting becomes UI component nesting.
 
@@ -688,7 +700,7 @@ touch app/routes/posts/admin/index.tsx
 ```
 
 ```tsx filename=app/routes/posts/admin/index.tsx
-import { Link } from "remix";
+import { Link } from "@remix-run/react";
 
 export default function AdminIndex() {
   return (
@@ -705,9 +717,14 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 
 💿 Add an outlet to the admin page
 
-```tsx filename=app/routes/posts/admin.tsx lines=[2,37]
-import type { LoaderFunction } from "remix";
-import { Link, Outlet, useLoaderData, json } from "remix";
+```tsx filename=app/routes/posts/admin.tsx lines=[5,42]
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import {
+  Link,
+  Outlet,
+  useLoaderData,
+} from "@remix-run/react";
 
 import { getPosts } from "~/models/post.server";
 
@@ -775,7 +792,7 @@ We're gonna get serious now. Let's build a form to create a new post in our new 
 💿 Add a form to the new route
 
 ```tsx filename=app/routes/posts/admin/new.tsx
-import { Form } from "remix";
+import { Form } from "@remix-run/react";
 
 const inputClassName = `w-full rounded border border-gray-500 px-2 py-1 text-lg`;
 
@@ -843,7 +860,8 @@ export async function createPost(post) {
 💿 Call `createPost` from the new post route's action
 
 ```tsx filename=app/routes/posts/admin/new.tsx
-import { Form, redirect } from "remix";
+import { redirect } from "@remix-run/node";
+import { Form } from "@remix-run/react";
 
 import { createPost } from "~/models/post.server";
 
@@ -884,9 +902,10 @@ export async function createPost(
 }
 ```
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[1,6]
-import type { ActionFunction } from "remix";
-import { Form, redirect } from "remix";
+```tsx filename=app/routes/posts/admin/new.tsx lines=[1,7]
+import type { ActionFunction } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
+import { Form } from "@remix-run/react";
 
 import { createPost } from "~/models/post.server";
 
@@ -913,8 +932,12 @@ Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[3-9,19-29]
-// ...
+```tsx filename=app/routes/posts/admin/new.tsx lines=[2,7-13,23-33]
+import type { ActionFunction } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { Form } from "@remix-run/react";
+
+import { createPost } from "~/models/post.server";
 
 type ActionData =
   | {
@@ -956,9 +979,10 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[2,9,16-18,25-27,34-38]
-import type { ActionFunction } from "remix";
-import { Form, redirect, json, useActionData } from "remix";
+```tsx filename=app/routes/posts/admin/new.tsx lines=[3,10,17-19,26-28,35-39]
+import type { ActionFunction } from "@remix-run/node";
+import { redirect, json } from "@remix-run/node";
+import { Form, useActionData } from "@remix-run/react";
 
 // ...
 
@@ -1049,7 +1073,7 @@ export const action: ActionFunction = async ({
 
 ## Progressive Enhancement
 
-For some real fun, [disable JavaScript](https://developer.chrome.com/docs/devtools/javascript/disable/) in your dev tools and try it out. Because Remix is built on the fundamentals of HTTP and HTML, this whole thing works without JavaScript in the browser 🤯 But that's not the point. What's cool about it is that this means our UI is resiliant to network issues. But we really _like_ having JavaScript in the browser and there are a lot of cool things we can do when we've got it, so make sure to re-enable JavaScript before continuing, because we're going to need it to _progressively enhance_ the user experience next.
+For some real fun, [disable JavaScript](https://developer.chrome.com/docs/devtools/javascript/disable/) in your dev tools and try it out. Because Remix is built on the fundamentals of HTTP and HTML, this whole thing works without JavaScript in the browser 🤯 But that's not the point. What's cool about it is that this means our UI is resilient to network issues. But we really _like_ having JavaScript in the browser and there are a lot of cool things we can do when we've got it, so make sure to re-enable JavaScript before continuing, because we're going to need it to _progressively enhance_ the user experience next.
 
 Let's slow this down and add some "pending UI" to our form.
 
@@ -1070,14 +1094,13 @@ export const action: ActionFunction = async ({
 
 💿 Add some pending UI with `useTransition`
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[6,14-15,24,26]
+```tsx filename=app/routes/posts/admin/new.tsx lines=[5,13-14,23,25]
+import { json, redirect } from "@remix-run/node";
 import {
   Form,
-  redirect,
-  json,
   useActionData,
   useTransition,
-} from "remix";
+} from "@remix-run/react";
 
 // ..
 

@@ -275,7 +275,9 @@ export async function readConfig(
   try {
     appConfig = require(configFile);
   } catch (error) {
-    throw new Error(`Error loading Remix config in ${configFile}`);
+    throw new Error(
+      `Error loading Remix config in ${configFile}\n${String(error)}`
+    );
   }
 
   let customServerEntryPoint = appConfig.server;
@@ -351,7 +353,11 @@ export async function readConfig(
       path.join("public", "build")
   );
 
-  let devServerPort = await getPort({ port: appConfig.devServerPort || 8002 });
+  let devServerPort =
+    Number(process.env.REMIX_DEV_SERVER_WS_PORT) ||
+    (await getPort({ port: Number(appConfig.devServerPort) || undefined }));
+  // set env variable so un-bundled servers can use it
+  process.env.REMIX_DEV_SERVER_WS_PORT = `${devServerPort}`;
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
   let defaultPublicPath = "/build/";

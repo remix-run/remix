@@ -65,14 +65,14 @@ app
     ├── index.jsx
     ├── reports.jsx
     ├── sales
-    │   ├── customers.jsx
-    │   ├── deposits.jsx
-    │   ├── index.jsx
-    │   ├── invoices
-    │   │   ├── $invoiceId.jsx
-    │   │   └── index.jsx
-    │   ├── invoices.jsx
-    │   └── subscriptions.jsx
+    │   ├── customers.jsx
+    │   ├── deposits.jsx
+    │   ├── index.jsx
+    │   ├── invoices
+    │   │   ├── $invoiceId.jsx
+    │   │   └── index.jsx
+    │   ├── invoices.jsx
+    │   └── subscriptions.jsx
     └── sales.jsx
 ```
 
@@ -108,9 +108,9 @@ app
 ├── root.jsx
 └── routes
     ├── sales
-    │   ├── invoices
-    │   │   └── $invoiceId.jsx
-    │   └── invoices.jsx
+    │   ├── invoices
+    │   │   └── $invoiceId.jsx
+    │   └── invoices.jsx
     └── sales.jsx
 ```
 
@@ -125,7 +125,7 @@ If the URL is `/accounts`, the UI hierarchy changes to this:
 It's partly your job to make this work. You need to render an `<Outlet/>` to continue the rendering of the route hierarchy from the parent routes. `root.jsx` renders the main layout, sidebar, and then an outlet for the child routes to continue rendering through:
 
 ```jsx filename=app/root.jsx lines=[1,7]
-import { Outlet } from "remix";
+import { Outlet } from "@remix-run/react";
 
 export default function Root() {
   return (
@@ -140,7 +140,7 @@ export default function Root() {
 Next up is the sales route, which also renders an outlet for its child routes (all of the routes inside of `app/routes/sales/*.jsx`).
 
 ```jsx filename=app/routes/sales.jsx lines=[8]
-import { Outlet } from "remix";
+import { Outlet } from "@remix-run/react";
 
 export default function Sales() {
   return (
@@ -170,6 +170,22 @@ And index is the thing you render to fill in that empty space when none of the c
 Index routes are "leaf routes". They're the end of the line. If you think you need to add child routes to an index route, that usually means your layout code (like a shared nav) needs to move out of the index route and into the parent route.
 
 This usually comes up when folks are just getting started with Remix and put their global nav in `app/routes/index.jsx`. Move that global nav up into `app/root.jsx`. Everything inside of `app/routes/*` is already a child of `root.tsx`.
+
+### What is the `?index` query param?
+
+You may notice an `?index` query parameter showing up on your URLs from time to time, particularly when you are submitting a `<Form>` from an index route. This is required to differentiate index routes from their parent layout routes. Consider the following structure, where a URL such as `/sales/invoices` would be ambiguous. Is that referring to the `routes/sales/invoices.jsx` file? Or is it referring to the `routes/sales/invoices/index.jsx` file? In order to avoid this ambiguity, Remix uses the `?index` parameter to indicate when a URL refers to the index route instead of the layout route.
+
+```
+└── app
+    ├── root.jsx
+    └── routes
+        ├── sales
+        │   ├── invoices
+        │   │   └── index.jsx   <-- /sales/invoices?index
+        │   └── invoices.jsx    <-- /sales/invoices
+```
+
+This is handled automatically for you when you submit from a `<Form>` contained within either the layout route or the index route. But if you are submitting forms to different routes, or using `fetcher.submit`/`fetcher.load` you may need to be aware of this URL pattern so you can target the correct route.
 
 ## Nested URLs without nesting layouts
 
@@ -207,9 +223,9 @@ So, if we want a flat UI hierarchy, we create a flat filename--we use `"."` to c
     ├── root.jsx
     └── routes
         ├── sales
-        │   ├── invoices
-        │   │   └── $invoiceId.jsx
-        │   └── invoices.jsx
+        │   ├── invoices
+        │   │   └── $invoiceId.jsx
+        │   └── invoices.jsx
         ├── sales.invoices.$invoiceId.edit.jsx 👈 not nested
         └── sales.jsx
 ```
@@ -260,9 +276,9 @@ app
 ├── root.jsx
 └── routes
     ├── auth
-    │   ├── login.jsx
-    │   ├── logout.jsx
-    │   └── signup.jsx
+    │   ├── login.jsx
+    │   ├── logout.jsx
+    │   └── signup.jsx
     └── auth.jsx
 ```
 
@@ -275,9 +291,9 @@ app
 ├── root.jsx
 └── routes
     ├── __auth
-    │   ├── login.jsx
-    │   ├── logout.jsx
-    │   └── signup.jsx
+    │   ├── login.jsx
+    │   ├── logout.jsx
+    │   └── signup.jsx
     └── __auth.jsx
 ```
 
@@ -290,7 +306,7 @@ Prefixing a file name with `$` will make that route path a **dynamic segment**. 
 For example, the `$invoiceId.jsx` route. When the url is `/sales/invoices/102000`, Remix will provide the string value `102000` to your loaders, actions, and components by the same name as the filename segment:
 
 ```jsx
-import { useParams } from "remix";
+import { useParams } from "@remix-run/react";
 
 export function loader({ params }) {
   const id = params.invoiceId;
@@ -313,9 +329,9 @@ app
 ├── root.jsx
 └── routes
     ├── projects
-    │   ├── $projectId
-    │   │   └── $taskId.jsx
-    │   └── $projectId.jsx
+    │   ├── $projectId
+    │   │   └── $taskId.jsx
+    │   └── $projectId.jsx
     └── projects.jsx
 ```
 
@@ -337,9 +353,9 @@ app
 ├── root.jsx
 └── routes
     ├── files
-    │   ├── $.jsx
-    │   ├── mine.jsx
-    │   └── recent.jsx
+    │   ├── $.jsx
+    │   ├── mine.jsx
+    │   └── recent.jsx
     └── files.jsx
 ```
 

@@ -72,15 +72,15 @@ export async function callRouteLoader({
   if (!loader) {
     throw new Error(
       `You made a ${request.method} request to ${request.url} but did not provide ` +
-        `a \`loader\` for route "${match.route.id}", so there is no way to handle the ` +
-        `request.`
+        `a default component or \`loader\` for route "${match.route.id}", ` +
+        `so there is no way to handle the request.`
     );
   }
 
   let result;
   try {
     result = await loader({
-      request: stripDataParam(stripIndexParam(request.clone())),
+      request: stripDataParam(stripIndexParam(request)),
       context: loadContext,
       params: match.params,
     });

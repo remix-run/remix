@@ -1,14 +1,12 @@
-import {
-  createFixture,
-  createAppFixture,
-  selectHtml,
-  js,
-} from "./helpers/create-fixture";
-import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { test, expect } from "@playwright/test";
 
-describe("actions", () => {
+import { createFixture, createAppFixture, js } from "./helpers/create-fixture";
+import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture, selectHtml } from "./helpers/playwright-fixture";
+
+test.describe("actions", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   let FIELD_NAME = "message";
   let WAITING_VALUE = "Waiting...";
@@ -17,11 +15,11 @@ describe("actions", () => {
   let REDIRECT_TARGET = "page";
   let PAGE_TEXT = "PAGE_TEXT";
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/routes/urlencoded.jsx": js`
-          import { Form, useActionData } from "remix";
+          import { Form, useActionData } from "@remix-run/react";
 
           export let action = async ({ request }) => {
             let formData = await request.formData();
@@ -46,7 +44,8 @@ describe("actions", () => {
         `,
 
         [`app/routes/${THROWS_REDIRECT}.jsx`]: js`
-          import { Form, redirect } from "remix";
+          import { redirect } from "@remix-run/node";
+          import { Form } from "@remix-run/react";
 
           export function action() {
             throw redirect("/${REDIRECT_TARGET}")
@@ -69,20 +68,32 @@ describe("actions", () => {
       },
     });
 
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
-    await app.close();
+  test.afterAll(async () => {
+    await appFixture.close();
   });
 
-  it("is not called on document GET requests", async () => {
+  let logs: string[] = [];
+
+  test.beforeEach(({ page }) => {
+    page.on("console", (msg) => {
+      logs.push(msg.text());
+    });
+  });
+
+  test.afterEach(() => {
+    expect(logs).toHaveLength(0);
+  });
+
+  test("is not called on document GET requests", async () => {
     let res = await fixture.requestDocument("/urlencoded");
     let html = selectHtml(await res.text(), "#text");
     expect(html).toMatch(WAITING_VALUE);
   });
 
-  it("is called on document POST requests", async () => {
+  test("is called on document POST requests", async () => {
     let FIELD_VALUE = "cheeseburger";
 
     let params = new URLSearchParams();
@@ -94,31 +105,36 @@ describe("actions", () => {
     expect(html).toMatch(FIELD_VALUE);
   });
 
-  it("is called on script transition POST requests", async () => {
+  test("is called on script transition POST requests", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto(`/urlencoded`);
     let html = await app.getHtml("#text");
     expect(html).toMatch(WAITING_VALUE);
 
-    await app.page.click("button[type=submit]");
-    await app.page.waitForSelector("#action-text");
+    await page.click("button[type=submit]");
+    await page.waitForSelector("#action-text");
     html = await app.getHtml("#text");
     expect(html).toMatch(SUBMITTED_VALUE);
   });
 
-  it("redirects a thrown response on document requests", async () => {
+  test("redirects a thrown response on document requests", async () => {
     let params = new URLSearchParams();
     let res = await fixture.postDocument(`/${THROWS_REDIRECT}`, params);
     expect(res.status).toBe(302);
     expect(res.headers.get("Location")).toBe(`/${REDIRECT_TARGET}`);
   });
 
-  it("redirects a thrown response on script transitions", async () => {
+  test("redirects a thrown response on script transitions", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto(`/${THROWS_REDIRECT}`);
     let responses = app.collectDataResponses();
     await app.clickSubmitButton(`/${THROWS_REDIRECT}`);
     expect(responses.length).toBe(1);
     expect(responses[0].status()).toBe(204);
-    expect(new URL(app.page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
+
+    expect(new URL(page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
     expect(await app.getHtml()).toMatch(PAGE_TEXT);
   });
 });
