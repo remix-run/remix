@@ -15,10 +15,7 @@ declare global {
  *
  * @see https://remix.run/api/remix#json
  */
-export const json = <T>(
-  data: T,
-  init: number | ResponseInit = {}
-): Response<T> => {
+export const json: JsonFunction = (data, init = {}) => {
   let responseInit = typeof init === "number" ? { status: init } : init;
 
   let headers = new Headers(responseInit.headers);
