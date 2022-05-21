@@ -47,7 +47,7 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
+      "app/routes/form.jsx": js`
         import { useSearchParams, useFetcher, Form } from "@remix-run/react";
 
         export default function FormPage() {
@@ -70,7 +70,8 @@ test.beforeAll(async () => {
       `,
 
       "app/routes/action.jsx": js`
-        import { redirect } from 'remix'
+        import { redirect } from '@remix-run/node'
+        import { useActionData } from '@remix-run/react'
         export async function action({ request }) {
           const data = await request.formData()
           const redirects = data.get("redirects")
@@ -80,7 +81,7 @@ test.beforeAll(async () => {
         }
         
         export default function Render() {
-            return <span />;
+            return <span>This should not be shown</span>;
         }
       `,
     },
@@ -109,7 +110,10 @@ test("should redirect via referrer header", async ({page}) => {
   await app.clickElement("[data-testid=fetcher]");
   expect(await app.getHtml()).toMatch("redirects: 2");
   await app.clickElement("[data-testid=remix]");
-  expect(await app.getHtml()).toMatch("redirects: 3");
+
+  const html = await app.getHtml();
+  expect(html).toMatch("redirects: 3");
+  expect(html).not.toMatch("This should not be shown");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
