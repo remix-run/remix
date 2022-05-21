@@ -1,17 +1,16 @@
+export type JsonFunction = <Data>(
+  data: Data,
+  init?: number | ResponseInit
+) => Response;
+
 /**
  * This is a shortcut for creating `application/json` responses. Converts `data`
  * to JSON and sets the `Content-Type` header.
  *
  * @see https://remix.run/api/remix#json
  */
-export function json<Data>(
-  data: Data,
-  init: number | ResponseInit = {}
-): Response {
-  let responseInit: any = init;
-  if (typeof init === "number") {
-    responseInit = { status: init };
-  }
+export const json: JsonFunction = (data, init = {}) => {
+  let responseInit = typeof init === "number" ? { status: init } : init;
 
   let headers = new Headers(responseInit.headers);
   if (!headers.has("Content-Type")) {
@@ -22,7 +21,12 @@ export function json<Data>(
     ...responseInit,
     headers,
   });
-}
+};
+
+export type RedirectFunction = (
+  url: string,
+  init?: number | ResponseInit
+) => Response;
 
 /**
  * A redirect response. Sets the status code and the `Location` header.
@@ -30,10 +34,7 @@ export function json<Data>(
  *
  * @see https://remix.run/api/remix#redirect
  */
-export function redirect(
-  url: string,
-  init: number | ResponseInit = 302
-): Response {
+export const redirect: RedirectFunction = (url, init = 302) => {
   let responseInit = init;
   if (typeof responseInit === "number") {
     responseInit = { status: responseInit };
@@ -48,7 +49,7 @@ export function redirect(
     ...responseInit,
     headers,
   });
-}
+};
 
 export function isResponse(value: any): value is Response {
   return (
@@ -67,20 +68,4 @@ export function isRedirectResponse(response: Response): boolean {
 
 export function isCatchResponse(response: Response) {
   return response.headers.get("X-Remix-Catch") != null;
-}
-
-export function extractData(response: Response): Promise<unknown> {
-  let contentType = response.headers.get("Content-Type");
-
-  if (contentType && /\bapplication\/json\b/.test(contentType)) {
-    return response.json();
-  }
-
-  // What other data types do we need to handle here? What other kinds of
-  // responses are people going to be returning from their loaders?
-  // - application/x-www-form-urlencoded ?
-  // - multipart/form-data ?
-  // - binary (audio/video) ?
-
-  return response.text();
 }

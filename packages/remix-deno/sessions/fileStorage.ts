@@ -1,10 +1,10 @@
-// @ts-expect-error
-import * as path from "https://deno.land/std/path/mod.ts";
+import * as path from "https://deno.land/std@0.128.0/path/mod.ts";
+
 import type {
-  SessionStorage,
   SessionIdStorageStrategy,
+  SessionStorage,
 } from "@remix-run/server-runtime";
-import { createSessionStorage } from "@remix-run/server-runtime";
+import { createSessionStorage } from "../implementations.ts";
 
 interface FileSessionStorageOptions {
   /**
@@ -32,10 +32,10 @@ export function createFileSessionStorage({
   return createSessionStorage({
     cookie,
     async createData(data, expires) {
-      let content = JSON.stringify({ data, expires });
+      const content = JSON.stringify({ data, expires });
 
       while (true) {
-        let randomBytes = crypto.getRandomValues(new Uint8Array(8));
+        const randomBytes = crypto.getRandomValues(new Uint8Array(8));
 
         // This storage manages an id space of 2^64 ids, which is far greater
         // than the maximum number of files allowed on an NTFS or ext4 volume
@@ -47,32 +47,31 @@ export function createFileSessionStorage({
         }
 
         try {
-          let file = getFile(dir, id);
-          let exists = await Deno.stat(file)
-            .then((s: any) => s.isFile)
+          const file = getFile(dir, id);
+          const exists = await Deno.stat(file)
+            .then((s) => s.isFile)
             .catch(() => false);
           if (exists) continue;
 
           await Deno.mkdir(path.dirname(file), { recursive: true }).catch(
-            () => {}
+            () => {},
           );
           await Deno.writeFile(file, new TextEncoder().encode(content));
 
           return id;
-        } catch (error: any) {
+        } catch (error) {
           if (error.code !== "EEXIST") throw error;
         }
       }
     },
     async readData(id) {
       try {
-        let file = getFile(dir, id);
-        let content = JSON.parse(await Deno.readTextFile(file));
-        let data = content.data;
-        let expires =
-          typeof content.expires === "string"
-            ? new Date(content.expires)
-            : null;
+        const file = getFile(dir, id);
+        const content = JSON.parse(await Deno.readTextFile(file));
+        const data = content.data;
+        const expires = typeof content.expires === "string"
+          ? new Date(content.expires)
+          : null;
 
         if (!expires || expires > new Date()) {
           return data;
@@ -82,21 +81,21 @@ export function createFileSessionStorage({
         if (expires) await Deno.remove(file);
 
         return null;
-      } catch (error: any) {
+      } catch (error) {
         if (error.code !== "ENOENT") throw error;
         return null;
       }
     },
     async updateData(id, data, expires) {
-      let content = JSON.stringify({ data, expires });
-      let file = getFile(dir, id);
+      const content = JSON.stringify({ data, expires });
+      const file = getFile(dir, id);
       await Deno.mkdir(path.dirname(file), { recursive: true }).catch(() => {});
       await Deno.writeTextFile(file, content);
     },
     async deleteData(id) {
       try {
         await Deno.remove(getFile(dir, id));
-      } catch (error: any) {
+      } catch (error) {
         if (error.code !== "ENOENT") throw error;
       }
     },

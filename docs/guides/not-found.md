@@ -69,7 +69,11 @@ export function CatchBoundary() {
 Just like [errors], nested routes can export their own catch boundary to handle the 404 UI without taking down all of the parent layouts around it, and add some nice UX touches right in context. Bots are happy, SEO is happy, CDNs are happy, users are happy, and your code stays in context, so it seems like everybody involved is happy with this.
 
 ```tsx filename=app/routes/pages/$pageId.tsx
-import { Form, useLoaderData, useParams } from "remix";
+import {
+  Form,
+  useLoaderData,
+  useParams,
+} from "@remix-run/react";
 
 export async function loader({ params }) {
   const page = await db.page.findOne({

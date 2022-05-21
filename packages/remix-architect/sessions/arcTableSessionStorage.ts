@@ -1,9 +1,6 @@
 import * as crypto from "crypto";
-import type {
-  SessionStorage,
-  SessionIdStorageStrategy,
-} from "@remix-run/server-runtime";
-import { createSessionStorage } from "@remix-run/server-runtime";
+import type { SessionStorage, SessionIdStorageStrategy } from "@remix-run/node";
+import { createSessionStorage } from "@remix-run/node";
 import arc from "@architect/functions";
 import type { ArcTable } from "@architect/functions/tables";
 
@@ -49,7 +46,7 @@ export function createArcTableSessionStorage({
 }: ArcTableSessionStorageOptions): SessionStorage {
   async function getTable() {
     if (typeof props.table === "string") {
-      const tables = await arc.tables();
+      let tables = await arc.tables();
       return tables[props.table];
     } else {
       return props.table;
@@ -58,9 +55,9 @@ export function createArcTableSessionStorage({
   return createSessionStorage({
     cookie,
     async createData(data, expires) {
-      const table = await getTable();
+      let table = await getTable();
       while (true) {
-        const randomBytes = crypto.randomBytes(8);
+        let randomBytes = crypto.randomBytes(8);
         // This storage manages an id space of 2^64 ids, which is far greater
         // than the maximum number of files allowed on an NTFS or ext4 volume
         // (2^32). However, the larger id space should help to avoid collisions
@@ -88,7 +85,7 @@ export function createArcTableSessionStorage({
       }
     },
     async readData(id) {
-      const table = await getTable();
+      let table = await getTable();
       let data = await table.get({ [props.idx]: id });
       if (data) {
         delete data[props.idx];
@@ -97,7 +94,7 @@ export function createArcTableSessionStorage({
       return data;
     },
     async updateData(id, data, expires) {
-      const table = await getTable();
+      let table = await getTable();
       let params = {
         [props.idx]: id,
         ...data,
@@ -110,7 +107,7 @@ export function createArcTableSessionStorage({
       await table.put(params);
     },
     async deleteData(id) {
-      const table = await getTable();
+      let table = await getTable();
       await table.delete({ [props.idx]: id });
     },
   });

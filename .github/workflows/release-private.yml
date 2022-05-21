@@ -1,4 +1,4 @@
-name: release-private
+name: 👟 Release Private
 on:
   release:
     types: [published]
@@ -9,37 +9,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
 
-      - run: echo "::set-output name=version::$(cat .nvmrc)"
-        id: nvmrc
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Setup node
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: "${{ steps.nvmrc.outputs.version }}"
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
-      - run: echo "::set-output name=dir::$(yarn cache dir)"
-        id: yarn-cache
+      - name: 📥 Install deps
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
 
-      - name: Restore dependency cache
-        uses: actions/cache@v2
-        with:
-          path: "${{ steps.yarn-cache.outputs.dir }}"
-          key: ${{ runner.os }}-yarn-cache-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-cache-
-
-      - name: Install dependencies
-        run: yarn --frozen-lockfile
-
-      - name: Build
+      - name: 🏗 Build
         run: yarn build
 
-      - name: Setup npm auth
+      - name: 🔐 Setup npm auth
         run: |
           echo "@remix-run:registry=https://npm.pkg.github.com" >> ~/.npmrc
           echo "//npm.pkg.github.com/:_authToken=${{ secrets.GH_PACKAGES_PUBLISH_TOKEN }}" >> ~/.npmrc
 
-      - name: Publish
+      - name: 🚀 Publish
         run: npm run publish:private
