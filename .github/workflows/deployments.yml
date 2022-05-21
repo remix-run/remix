@@ -145,7 +145,7 @@ jobs:
         with:
           working-directory: ./scripts/deployment-test
           useLockFile: false
-      
+
       - name: 🦕 Install Deno
         uses: denoland/setup-deno@v1
         with:
