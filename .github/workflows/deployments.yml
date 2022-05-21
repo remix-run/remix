@@ -116,6 +116,49 @@ jobs:
           CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
 
+  # "deploy deploy" is not a typo, we are deploying to Deno Deploy
+  deno_deploy_deploy:
+    name: "Deno Deploy Deploy"
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
+      - name: 📦 Install latest version of npm
+        run: npm install -g npm@latest
+        working-directory: ./scripts/deployment-test
+
+      - name: 📥 Install deployment-test deps
+        uses: bahmutov/npm-install@v1
+        with:
+          working-directory: ./scripts/deployment-test
+          useLockFile: false
+      
+      - name: 🦕 Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+      - name: 🦕 Deno Deploy CLI
+        run: deno install --allow-read --allow-write --allow-env --allow-net --allow-run --no-check -r -f https://deno.land/x/deploy/deployctl.ts
+
+      - name: 🚀 Deploy to Deno Deploy
+        run: node ./deno-deploy.mjs
+        working-directory: ./scripts/deployment-test
+        env:
+          DENO_DEPLOY_TOKEN: ${{ secrets.TEST_DENO_DEPLOY_TOKEN }}
+
   fly_deploy:
     name: "Fly Deploy"
     if: github.repository == 'remix-run/remix'
