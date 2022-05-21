@@ -1,12 +1,14 @@
 export type JsonFunction = <Data>(
   data: Data,
   init?: number | ResponseInit
-) => Response<Data>;
+) => TypedResponse<Data>;
 
 declare global {
-  interface Response<T = any> {
+  // must be a type since this is a subtype of response
+  // interfaces must conform to the types they extend
+  type TypedResponse<T = any> = Response & {
     json(): Promise<T>;
-  }
+  };
 }
 
 /**

@@ -1,4 +1,4 @@
-import type { UseLoaderData } from "../components";
+import type { TypedResponse, UseLoaderData } from "../components";
 
 function isEqual<A, B>(
   arg: A extends B ? (B extends A ? true : false) : false
@@ -12,13 +12,13 @@ describe("useLoaderData", () => {
   });
 
   it("supports Response-returning loader", () => {
-    type Loader = (args: any) => Response<{ hello: string }>;
+    type Loader = (args: any) => TypedResponse<{ hello: string }>;
     type response = UseLoaderData<Loader>;
     isEqual<response, { hello: string }>(true);
   });
 
   it("supports async Response-returning loader", () => {
-    type Loader = (args: any) => Promise<Response<{ hello: string }>>;
+    type Loader = (args: any) => Promise<TypedResponse<{ hello: string }>>;
     type response = UseLoaderData<Loader>;
     isEqual<response, { hello: string }>(true);
   });

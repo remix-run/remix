@@ -20,7 +20,6 @@ import {
   useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
-import type { LoaderFunction } from "@remix-run/server-runtime";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
@@ -1321,14 +1320,18 @@ export function useMatches(): RouteMatch[] {
  *
  * @see https://remix.run/api/remix#useloaderdata
  */
-type DataOrLoader = AppData | LoaderFunction;
-export type UseLoaderData<T extends DataOrLoader> = T extends (
-  ...args: any[]
-) => any
-  ? Awaited<ReturnType<T>> extends Response<infer U>
+
+// matches any function
+export type TypedResponse<T> = Response & {
+  json(): Promise<T>;
+};
+type Loader = (...args: any[]) => any;
+type DataOrLoader = AppData | Loader;
+export type UseLoaderData<T extends DataOrLoader> = T extends Loader
+  ? Awaited<ReturnType<T>> extends TypedResponse<infer U>
     ? U
     : Awaited<ReturnType<T>>
-  : T;
+  : Awaited<T>;
 export function useLoaderData<T = AppData>(): UseLoaderData<T> {
   return useRemixRouteContext().data;
 }
