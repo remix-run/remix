@@ -2,19 +2,6 @@
 
 - [Remix Docs](https://remix.run/docs)
 
-## Architect Setup
-
-When deploying to AWS Lambda with Architect, you'll need:
-
-- Architect (`arc`) CLI
-- AWS SDK
-
-Architect recommends installing these globally:
-
-```sh
-npm i -g @architect/architect aws-sdk
-```
-
 ## Development
 
 The following command will run two processes during development when using Architect as your server.
