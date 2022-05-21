@@ -1,7 +1,13 @@
 export type JsonFunction = <Data>(
   data: Data,
   init?: number | ResponseInit
-) => Response;
+) => Response<Data>;
+
+declare global {
+  interface Response<T = any> {
+    json(): Promise<T>;
+  }
+}
 
 /**
  * This is a shortcut for creating `application/json` responses. Converts `data`
@@ -9,7 +15,10 @@ export type JsonFunction = <Data>(
  *
  * @see https://remix.run/api/remix#json
  */
-export const json: JsonFunction = (data, init = {}) => {
+export const json = <T>(
+  data: T,
+  init: number | ResponseInit = {}
+): Response<T> => {
   let responseInit = typeof init === "number" ? { status: init } : init;
 
   let headers = new Headers(responseInit.headers);

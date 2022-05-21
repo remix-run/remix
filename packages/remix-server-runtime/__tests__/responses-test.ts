@@ -1,4 +1,5 @@
 import { json, redirect } from "../index";
+import { isEqual } from "./utils";
 
 describe("json", () => {
   it("sets the Content-Type header", () => {
@@ -33,6 +34,13 @@ describe("json", () => {
   it("accepts status as a second parameter", () => {
     let response = json({}, 201);
     expect(response.status).toEqual(201);
+  });
+
+  it("infers input type", async () => {
+    let response = json({ hello: "remix" });
+    isEqual<typeof response, Response<{ hello: string }>>(true);
+    let result = await response.json();
+    expect(result).toMatchObject({ hello: "remix" });
   });
 });
 
