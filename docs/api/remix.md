@@ -1650,7 +1650,7 @@ export const action: ActionFunction = async ({
 
 ### Custom `uploadHandler`
 
-Most of the time, you'll probably want to proxy the file stream to a file host.
+Most of the time, you'll probably want to proxy the file to a file host.
 
 **Example:**
 
@@ -1731,15 +1731,14 @@ export const action: ActionFunction = async ({
 
 The `UploadHandler` function accepts a number of parameters about the file:
 
-| Property | Type     | Description                                                                  |
-| -------- | -------- | ---------------------------------------------------------------------------- |
-| name     | string   | The field name (comes from your HTML form field "name" value)                |
-| stream   | Readable | The stream of the file bytes                                                 |
-| filename | string   | The name of the file that the user selected for upload (like `rickroll.mp4`) |
-| encoding | string   | The encoding of the file (like `7bit`)                                       |
-| mimetype | string   | The mimetype of the file (like `video/mp4`)                                  |
+| Property    | Type                      | Description                                                                  |
+| --------    | ------------------------- | ---------------------------------------------------------------------------- |
+| name        | string                    | The field name (comes from your HTML form field "name" value)                |
+| data        | AsyncIterable<Uint8Array> | The iterable of the file bytes                                               |
+| filename    | string                    | The name of the file that the user selected for upload (like `rickroll.mp4`) |
+| contentType | string                    | The content type of the file (like `videomp4`)                               |
 
-Your job is to do whatever you need with the `stream` and return a value that's a valid [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) value: [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File), `string`, or `undefined`.
+Your job is to do whatever you need with the `data` and return a value that's a valid [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) value: [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File), `string`, or `undefined` to skip adding it to the resulting FormData.
 
 ### Upload Handler Composition
 
@@ -1765,9 +1764,8 @@ export const fileUploadHandler: UploadHandler = (args) => {
     return standardFileUploadHandler(args);
   } else if (args.name === "eventBanner") {
     return cloudinaryUploadHandler(args);
-  } else {
-    args.stream.resume();
   }
+  return undefined;
 };
 ```
 
