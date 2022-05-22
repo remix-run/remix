@@ -1,8 +1,5 @@
 {
-  "name": "remix-example-rust",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "remix build",

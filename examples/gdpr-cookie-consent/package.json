@@ -1,8 +1,5 @@
 {
-  "name": "remix-example-gdpr-cookie-consent",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "remix build",

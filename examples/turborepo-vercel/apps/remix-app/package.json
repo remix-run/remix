@@ -1,8 +1,6 @@
 {
   "name": "remix-example-turborepo-vercel-remix-app",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "remix build && rollup -c",
