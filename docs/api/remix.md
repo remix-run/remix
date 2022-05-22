@@ -1732,7 +1732,7 @@ export const action: ActionFunction = async ({
 The `UploadHandler` function accepts a number of parameters about the file:
 
 | Property    | Type                      | Description                                                                  |
-| --------    | ------------------------- | ---------------------------------------------------------------------------- |
+| ----------- | ------------------------- | ---------------------------------------------------------------------------- |
 | name        | string                    | The field name (comes from your HTML form field "name" value)                |
 | data        | AsyncIterable<Uint8Array> | The iterable of the file bytes                                               |
 | filename    | string                    | The name of the file that the user selected for upload (like `rickroll.mp4`) |
