@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-bullmq-task-queue",
   "private": true,
   "sideEffects": false,
   "scripts": {

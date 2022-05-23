@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-framer-route-animation",
   "private": true,
   "sideEffects": false,
   "scripts": {

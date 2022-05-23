@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-graphql-api",
   "private": true,
   "sideEffects": false,
   "scripts": {

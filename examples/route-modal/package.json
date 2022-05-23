@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-route-modal",
   "private": true,
   "sideEffects": false,
   "scripts": {

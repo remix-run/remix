@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-chakra-ui",
   "private": true,
   "sideEffects": false,
   "scripts": {

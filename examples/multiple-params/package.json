@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-multiple-params",
   "private": true,
   "sideEffects": false,
   "scripts": {

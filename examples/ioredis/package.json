@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-ioredis",
   "private": true,
   "sideEffects": false,
   "scripts": {

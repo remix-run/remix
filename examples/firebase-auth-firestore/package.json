@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-firebase-auth-firestore",
   "private": true,
   "sideEffects": false,
   "scripts": {

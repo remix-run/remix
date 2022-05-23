@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-blog-tutorial",
   "private": true,
   "sideEffects": false,
   "scripts": {

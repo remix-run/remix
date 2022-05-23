@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-remix-auth-supabase-github",
   "private": true,
   "sideEffects": false,
   "scripts": {

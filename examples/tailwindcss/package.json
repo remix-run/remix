@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-tailwindcss",
   "private": true,
   "sideEffects": false,
   "scripts": {

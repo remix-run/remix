@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-rust",
   "private": true,
   "sideEffects": false,
   "scripts": {

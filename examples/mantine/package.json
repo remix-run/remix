@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-mantine",
   "private": true,
   "sideEffects": false,
   "scripts": {

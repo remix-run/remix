@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-collected-notes",
   "private": true,
   "sideEffects": false,
   "scripts": {

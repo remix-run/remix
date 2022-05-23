@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-toast-message",
   "private": true,
   "sideEffects": false,
   "scripts": {

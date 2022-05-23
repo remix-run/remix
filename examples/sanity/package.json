@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-sanity",
   "private": true,
   "sideEffects": false,
   "scripts": {

@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-pm-app",
   "private": true,
   "sideEffects": false,
   "scripts": {

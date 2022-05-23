@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-msw",
   "private": true,
   "sideEffects": false,
   "scripts": {

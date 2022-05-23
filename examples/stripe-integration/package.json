@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-stripe-integration",
   "private": true,
   "sideEffects": false,
   "scripts": {

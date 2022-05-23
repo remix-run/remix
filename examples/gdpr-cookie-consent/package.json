@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-gdpr-cookie-consent",
   "private": true,
   "sideEffects": false,
   "scripts": {

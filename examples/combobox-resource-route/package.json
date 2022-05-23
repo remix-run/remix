@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-combobox-resource-route",
   "private": true,
   "sideEffects": false,
   "scripts": {

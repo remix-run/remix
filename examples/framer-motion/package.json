@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-framer-motion",
   "private": true,
   "sideEffects": false,
   "scripts": {

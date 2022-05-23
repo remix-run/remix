@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-io-ts-formdata-decoding",
   "private": true,
   "sideEffects": false,
   "scripts": {

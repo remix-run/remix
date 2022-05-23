@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-remix-auth-auth0",
   "private": true,
   "sideEffects": false,
   "scripts": {

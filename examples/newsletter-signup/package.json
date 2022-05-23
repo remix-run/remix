@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-newsletter-signup",
   "private": true,
   "sideEffects": false,
   "scripts": {

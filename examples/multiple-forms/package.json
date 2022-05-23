@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-multiple-forms",
   "private": true,
   "sideEffects": false,
   "scripts": {

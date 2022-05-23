@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-dark-mode",
   "private": true,
   "sideEffects": false,
   "scripts": {

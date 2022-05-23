@@ -1,4 +1,5 @@
 {
+  "name": "remix-example-react-spring",
   "private": true,
   "sideEffects": false,
   "scripts": {
