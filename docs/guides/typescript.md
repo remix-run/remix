@@ -12,8 +12,6 @@ The Remix compiler will not do any type checking (it simply removes the types). 
 {
   "name": "remix-app",
   "private": true,
-  "description": "Example remix app using TypeScript",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
