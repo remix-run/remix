@@ -48,27 +48,40 @@ test.beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+        import {
+          json,
+          unstable_parseMultipartFormData,
+          unstable_createMemoryUploadHandler,
+        } from "@remix-run/node";
+        import { Form, useActionData } from "@remix-run/react";
 
-        export function loader() {
-          return json("pizza");
+        export async function action({ request }) {
+          const formData = await unstable_parseMultipartFormData(
+            request,
+            unstable_createMemoryUploadHandler({
+              filter(args) {
+                return args.contentType === "text/csv";
+              },
+            })
+          );
+
+          return json({
+            spongebob: formData.get("spongebob"),
+          });
         }
 
         export default function Index() {
-          let data = useLoaderData();
+          let data = useActionData();
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              <p data-test-id="result">{data?.spongebob}</p>
+              <Form method="post" encType="multipart/form-data">
+                <input type="text" name="spongebob" defaultValue="squarepants" />
+                <input type="file" name="uploadFile" />
+                <button type="submit">Submit</button>
+              </Form>
             </div>
-          )
-        }
-      `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+          );
         }
       `,
     },
@@ -89,14 +102,13 @@ test.afterAll(() => {
 
 test("[description of what you expect it to do]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
 
   // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  await app.clickElement("text=Submit");
+  const result = await app.getElement("[data-test-id=result]");
+
+  expect(result.html()).toBe("squarepants");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
