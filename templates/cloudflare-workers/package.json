@@ -1,4 +1,5 @@
 {
+  "name": "remix-template-cloudflare-workers",
   "private": true,
   "sideEffects": false,
   "main": "build/index.js",

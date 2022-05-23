@@ -1,4 +1,5 @@
 {
+  "name": "remix-template-cloudflare-pages",
   "private": true,
   "sideEffects": false,
   "scripts": {

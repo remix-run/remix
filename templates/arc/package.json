@@ -1,4 +1,5 @@
 {
+  "name": "remix-template-arc",
   "private": true,
   "sideEffects": false,
   "scripts": {

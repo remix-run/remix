@@ -1,4 +1,5 @@
 {
+  "name": "remix-template-fly",
   "private": true,
   "sideEffects": false,
   "scripts": {
