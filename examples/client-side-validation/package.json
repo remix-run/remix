@@ -1,8 +1,5 @@
 {
-  "name": "remix-example-client-side-validation",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "remix build",

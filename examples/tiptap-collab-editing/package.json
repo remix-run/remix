@@ -1,8 +1,5 @@
 {
-  "name": "remix-example-tiptap-collab-editing",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "remix build",

@@ -1,8 +1,6 @@
 {
   "name": "ui",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

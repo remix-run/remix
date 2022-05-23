@@ -1,8 +1,5 @@
 {
-  "name": "remix-example-graphql-api",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "prebuild": "npm run generate:types",
