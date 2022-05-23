@@ -1,7 +1,7 @@
 {
   "name": "remix",
   "description": "A framework for building better websites",
-  "version": "1.5.1",
+  "version": "0.0.0-nightly-d19d888-20220523",
   "homepage": "https://remix.run",
   "license": "MIT",
   "repository": {
