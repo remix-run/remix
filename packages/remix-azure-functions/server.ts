@@ -77,7 +77,7 @@ export function createRemixRequest(req: HttpRequest): NodeRequest {
     headers: createRemixHeaders(req.headers),
   };
 
-  if (req.body && req.method !== "GET" && req.method !== "HEAD") {
+  if (req.body && !["HEAD", "GET"].includes(req.method)) {
     init.body = req.body;
   }
 
