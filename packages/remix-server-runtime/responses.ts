@@ -6,18 +6,16 @@ type Json =
   | Array<Json>
   | { [key: string]: Json };
 
-export type JsonFunction = (
-  data: Json,
-  init?: number | ResponseInit
-) => Response;
-
 /**
  * This is a shortcut for creating `application/json` responses. Converts `data`
  * to JSON and sets the `Content-Type` header.
  *
  * @see https://remix.run/api/remix#json
  */
-export const json: JsonFunction = (data, init = {}) => {
+export const json = <Data extends Json>(
+  data: Data,
+  init: number | ResponseInit = {}
+) => {
   let responseInit = typeof init === "number" ? { status: init } : init;
 
   let headers = new Headers(responseInit.headers);
@@ -30,6 +28,8 @@ export const json: JsonFunction = (data, init = {}) => {
     headers,
   });
 };
+
+export type JsonFunction = typeof json;
 
 export type RedirectFunction = (
   url: string,
