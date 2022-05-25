@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/deno",
-  "version": "1.5.1",
+  "version": "0.0.0-nightly-48fe580-20220525",
   "description": "Deno platform abstractions for Remix",
   "homepage": "https://remix.run",
   "license": "MIT",
@@ -14,7 +14,7 @@
   },
   "sideEffects": false,
   "dependencies": {
-    "@remix-run/server-runtime": "1.5.1",
+    "@remix-run/server-runtime": "0.0.0-nightly-48fe580-20220525",
     "mime": "^3.0.0"
   }
 }
