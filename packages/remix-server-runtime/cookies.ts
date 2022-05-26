@@ -32,7 +32,7 @@ export type CookieOptions = CookieParseOptions &
  *
  * @see https://remix.run/api/remix#cookie-api
  */
-export interface Cookie<Value extends unknown = unknown> {
+export interface Cookie<Value extends any = any> {
   /**
    * The name of the cookie, used in the `Cookie` and `Set-Cookie` headers.
    */
@@ -70,7 +70,7 @@ export interface Cookie<Value extends unknown = unknown> {
   ): Promise<string>;
 }
 
-export type CreateCookieFunction = <Value extends unknown = unknown>(
+export type CreateCookieFunction = <Value extends any = any>(
   name: string,
   cookieOptions?: CookieOptions
 ) => Cookie<Value>;
