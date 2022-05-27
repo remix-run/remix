@@ -17,5 +17,8 @@
   },
   "dependencies": {
     "@remix-run/dev": "1.5.1"
+  },
+  "engines": {
+    "node": ">=14"
   }
 }

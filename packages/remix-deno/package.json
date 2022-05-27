@@ -16,5 +16,8 @@
   "dependencies": {
     "@remix-run/server-runtime": "1.5.1",
     "mime": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=14"
   }
 }
