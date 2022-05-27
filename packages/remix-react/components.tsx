@@ -8,7 +8,7 @@ import type {
   TouchEventHandler,
 } from "react";
 import * as React from "react";
-import type { Navigator } from "react-router";
+import type { Navigator, Params } from "react-router";
 import {
   Router,
   Link as RouterLink,
@@ -44,7 +44,7 @@ import { createHtml } from "./markup";
 import type { ClientRoute } from "./routes";
 import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
-import type { RouteMatch } from "./routeMatching";
+import type { RouteMatch as BaseRouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
@@ -55,7 +55,7 @@ import type { Transition, Fetcher, Submission } from "./transition";
 
 interface RemixEntryContextType {
   manifest: AssetsManifest;
-  matches: RouteMatch<ClientRoute>[];
+  matches: BaseRouteMatch<ClientRoute>[];
   routeData: { [routeId: string]: RouteData };
   actionData?: RouteData;
   pendingLocation?: Location;
@@ -605,7 +605,7 @@ export function PrefetchPageLinks({
   );
 }
 
-function usePrefetchedStylesheets(matches: RouteMatch<ClientRoute>[]) {
+function usePrefetchedStylesheets(matches: BaseRouteMatch<ClientRoute>[]) {
   let { routeModules } = useRemixEntryContext();
 
   let [styleLinks, setStyleLinks] = React.useState<HtmlLinkDescriptor[]>([]);
@@ -630,7 +630,7 @@ function PrefetchPageLinksImpl({
   matches: nextMatches,
   ...linkProps
 }: PrefetchPageDescriptor & {
-  matches: RouteMatch<ClientRoute>[];
+  matches: BaseRouteMatch<ClientRoute>[];
 }) {
   let location = useLocation();
   let { matches, manifest } = useRemixEntryContext();
@@ -1261,13 +1261,40 @@ export function useBeforeUnload(callback: () => any): void {
   }, [callback]);
 }
 
+export interface RouteMatch {
+  /**
+   * The id of the matched route
+   */
+  id: string;
+  /**
+   * The pathname of the matched route
+   */
+  pathname: string;
+  /**
+   * The dynamic parameters of the matched route
+   *
+   * @see https://remix.run/docs/api/conventions#dynamic-route-parameters
+   */
+  params: Params<string>;
+  /**
+   * Any route data associated with the matched route
+   */
+  data: RouteData;
+  /**
+   * The exported `handle` object of the matched route.
+   *
+   * @see https://remix.run/docs/api/conventions#handle
+   */
+  handle: undefined | { [key: string]: any };
+}
+
 /**
  * Returns the current route matches on the page. This is useful for creating
  * layout abstractions with your current routes.
  *
  * @see https://remix.run/api/remix#usematches
  */
-export function useMatches() {
+export function useMatches(): RouteMatch[] {
   let { matches, routeData, routeModules } = useRemixEntryContext();
 
   return React.useMemo(
@@ -1333,9 +1360,11 @@ function createFetcherForm(fetchKey: string) {
 
 let fetcherId = 0;
 
-type FetcherWithComponents<TData> = Fetcher<TData> & {
-  Form: ReturnType<typeof createFetcherForm>;
-  submit: ReturnType<typeof useSubmitImpl>;
+export type FetcherWithComponents<TData> = Fetcher<TData> & {
+  Form: React.ForwardRefExoticComponent<
+    FormProps & React.RefAttributes<HTMLFormElement>
+  >;
+  submit: SubmitFunction;
   load: (href: string) => void;
 };
 
