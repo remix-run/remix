@@ -27,7 +27,7 @@ export type ServerBuildTarget =
   | "deno";
 
 export type ServerModuleFormat = "esm" | "cjs";
-export type ServerPlatform = "node" | "neutral";
+export type ServerPlatform = "node" | "neutral" | "browser";
 
 /**
  * The user-provided config in `remix.config.js`.
@@ -309,7 +309,7 @@ export async function readConfig(
     case "cloudflare-workers":
     case "deno":
       serverModuleFormat = "esm";
-      serverPlatform = "neutral";
+      serverPlatform = "browser";
       break;
   }
 
