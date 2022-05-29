@@ -37,6 +37,17 @@ npx create-remix --template remix-run/indie-stack blog-tutorial
 ? Do you want me to run `npm install`? Yes
 ```
 
+You might get a Github authorization error like the following:
+
+> Creating your app…🚨 There was a problem fetching the file from GitHub. The request responded with a 401 status. Please try again later.
+
+If that happens, set your a Github Personal Access token as an environment variable first:
+
+```
+GITHUB_TOKEN=<token> npx create-remix --template remix-run/indie-stack blog-tutorial
+```
+
+
 You can read more about the stacks available in [the stacks docs](/pages/stacks).
 
 We're using [the Indie stack](https://github.com/remix-run/indie-stack), which is a full application ready to deploy to [fly.io](https://fly.io). This includes development tools as well as production-ready authentication and persistence. Don't worry if you're unfamiliar with the tools used, we'll walk you through things as we go.
