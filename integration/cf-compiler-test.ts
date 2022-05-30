@@ -122,9 +122,9 @@ test.describe("cloudflare compiler", () => {
       "utf8"
     );
 
-    expect(serverBundle).not.toMatch("browser-pkg/browser-esm.mjs");
+    expect(serverBundle).toMatch("browser-pkg/browser-esm.mjs");
     expect(serverBundle).not.toMatch("browser-pkg/browser-cjs.js");
-    expect(serverBundle).toMatch("browser-pkg/node-esm.mjs");
+    expect(serverBundle).not.toMatch("browser-pkg/node-esm.mjs");
     expect(serverBundle).not.toMatch("browser-pkg/node-cjs.js");
 
     expect(serverBundle).toMatch("esm-only-pkg/browser-esm.js");
