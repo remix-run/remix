@@ -249,10 +249,14 @@ export async function dev(remixRoot: string, modeArg?: string) {
     );
   }
 
+  if (!remixRoot) {
+    remixRoot = process.env.REMIX_ROOT || process.cwd();
+  }
+
+  await loadEnv(path.resolve(remixRoot));
+
   let config = await readConfig(remixRoot);
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
-
-  await loadEnv(config.rootDirectory);
 
   let port = await getPort({
     port: process.env.PORT ? Number(process.env.PORT) : makeRange(3000, 3100),
