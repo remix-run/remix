@@ -1,4 +1,4 @@
-import type { TypedResponse, UseLoaderData } from "../components";
+import type { TypedResponse, UseDataFunction } from "../components";
 
 function isEqual<A, B>(
   arg: A extends B ? (B extends A ? true : false) : false
@@ -7,31 +7,31 @@ function isEqual<A, B>(
 describe("useLoaderData", () => {
   it("supports plain data type", () => {
     type AppData = { hello: string };
-    type response = UseLoaderData<AppData>;
+    type response = UseDataFunction<AppData>;
     isEqual<response, { hello: string }>(true);
   });
 
   it("supports Response-returning loader", () => {
     type Loader = (args: any) => TypedResponse<{ hello: string }>;
-    type response = UseLoaderData<Loader>;
+    type response = UseDataFunction<Loader>;
     isEqual<response, { hello: string }>(true);
   });
 
   it("supports async Response-returning loader", () => {
     type Loader = (args: any) => Promise<TypedResponse<{ hello: string }>>;
-    type response = UseLoaderData<Loader>;
+    type response = UseDataFunction<Loader>;
     isEqual<response, { hello: string }>(true);
   });
 
   it("supports data-returning loader", () => {
     type Loader = (args: any) => { hello: string };
-    type response = UseLoaderData<Loader>;
+    type response = UseDataFunction<Loader>;
     isEqual<response, { hello: string }>(true);
   });
 
   it("supports async data-returning loader", () => {
     type Loader = (args: any) => Promise<{ hello: string }>;
-    type response = UseLoaderData<Loader>;
+    type response = UseDataFunction<Loader>;
     isEqual<response, { hello: string }>(true);
   });
 });

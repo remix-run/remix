@@ -1325,14 +1325,14 @@ export function useMatches(): RouteMatch[] {
 export type TypedResponse<T> = Response & {
   json(): Promise<T>;
 };
-type Loader = (...args: any[]) => any;
-type DataOrLoader = AppData | Loader;
-export type UseLoaderData<T extends DataOrLoader> = T extends Loader
+type DataFunction = (...args: any[]) => any;
+type DataOrFunction = AppData | DataFunction;
+export type UseDataFunction<T extends DataOrFunction> = T extends DataFunction
   ? Awaited<ReturnType<T>> extends TypedResponse<infer U>
     ? U
     : Awaited<ReturnType<T>>
   : Awaited<T>;
-export function useLoaderData<T = AppData>(): UseLoaderData<T> {
+export function useLoaderData<T = AppData>(): UseDataFunction<T> {
   return useRemixRouteContext().data;
 }
 
@@ -1341,7 +1341,7 @@ export function useLoaderData<T = AppData>(): UseLoaderData<T> {
  *
  * @see https://remix.run/api/remix#useactiondata
  */
-export function useActionData<T = AppData>(): T | undefined {
+export function useActionData<T = AppData>(): UseDataFunction<T> | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
   let { actionData } = transitionManager.getState();
