@@ -28,6 +28,7 @@ export type {
   IsSessionFunction,
   JsonFunction,
   RedirectFunction,
+  TypedResponse,
 } from "./interface";
 
 // Remix server runtime packages should re-export these types

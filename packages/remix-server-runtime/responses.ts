@@ -1,30 +1,26 @@
-type JsonInputScalar = string | number | boolean | Date | null | undefined;
-type Json = JsonInputScalar | { [key: string]: Json } | Json[];
-
-export type JsonFunction = <Data extends Json>(
+type SerializablePrimitives =
+  | string
+  | number
+  | boolean
+  | null
+  | { toJSON(): any }
+  | undefined
+  | Function
+  | symbol;
+type Serializable =
+  | SerializablePrimitives
+  | { [key: string | number | symbol]: Serializable }
+  | Serializable[];
+export type JsonFunction = <Data extends Serializable>(
   data: Data,
   init?: number | ResponseInit
 ) => TypedResponse<Data>;
 
 // must be a type since this is a subtype of response
 // interfaces must conform to the types they extend
-type TypedResponse<T = any> = Response & {
+export type TypedResponse<T = any> = Response & {
   json(): Promise<T>;
 };
-
-// export interface Resp {
-//   json(): any;
-// }
-declare global {}
-export interface Response<T = any> {
-  json(): T;
-}
-
-const jsonFunction = <T>(arg: T): Response<T> => {
-  return arg as any;
-};
-const arg = jsonFunction("asdf");
-const out = arg.json(); // any
 
 /**
  * This is a shortcut for creating `application/json` responses. Converts `data`

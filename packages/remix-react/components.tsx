@@ -1327,11 +1327,37 @@ export type TypedResponse<T> = Response & {
 };
 type DataFunction = (...args: any[]) => any;
 type DataOrFunction = AppData | DataFunction;
-export type UseDataFunction<T extends DataOrFunction> = T extends DataFunction
-  ? Awaited<ReturnType<T>> extends TypedResponse<infer U>
-    ? U
-    : Awaited<ReturnType<T>>
-  : Awaited<T>;
+type JsonPrimitives = string | number | boolean | null;
+type NonJsonPrimitives = undefined | Function | symbol;
+type SerializeType<T> = T extends JsonPrimitives
+  ? T
+  : T extends undefined
+  ? undefined
+  : T extends { toJSON(): infer U }
+  ? U
+  : T extends []
+  ? []
+  : T extends [any, ...any[]]
+  ? {
+      [k in keyof T]: T[k] extends NonJsonPrimitives
+        ? null
+        : SerializeType<T[k]>;
+    }
+  : T extends (infer U)[]
+  ? SerializeType<U>[]
+  : {
+      [k in keyof T as T[k] extends NonJsonPrimitives
+        ? never
+        : k]: SerializeType<T[k]>;
+    };
+
+export type UseDataFunction<T extends DataOrFunction> = T extends (
+  ...args: any[]
+) => infer Output
+  ? Awaited<Output> extends TypedResponse<infer U>
+    ? SerializeType<U>
+    : SerializeType<Awaited<ReturnType<T>>>
+  : SerializeType<Awaited<T>>;
 export function useLoaderData<T = AppData>(): UseDataFunction<T> {
   return useRemixRouteContext().data;
 }
