@@ -5,8 +5,8 @@
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
-    "start": "remix-serve build",
-    "emulators": "firebase emulators:start --project remix-emulator --import=firebase-fixtures"
+    "emulators": "firebase emulators:start --project remix-emulator --import=firebase-fixtures",
+    "start": "remix-serve build"
   },
   "dependencies": {
     "@remix-run/node": "1.5.1",
