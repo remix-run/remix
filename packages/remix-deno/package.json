@@ -3,15 +3,15 @@
   "version": "1.5.1",
   "description": "Deno platform abstractions for Remix",
   "homepage": "https://remix.run",
-  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
     "directory": "packages/remix-deno"
   },
-  "bugs": {
-    "url": "https://github.com/remix-run/remix/issues"
-  },
+  "license": "MIT",
   "sideEffects": false,
   "dependencies": {
     "@remix-run/server-runtime": "1.5.1",
