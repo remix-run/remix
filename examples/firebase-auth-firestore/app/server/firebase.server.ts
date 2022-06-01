@@ -3,39 +3,29 @@ import {
   initializeApp as initializeServerApp,
   cert as serverCert,
 } from "firebase-admin/app";
-import {
-  getApps as getClientApps,
-  initializeApp as initializeClientApp,
-} from "firebase/app";
 import { getAuth as getServerAuth } from "firebase-admin/auth";
-import { getAuth as getClientAuth, connectAuthEmulator } from "firebase/auth";
 
-if (getClientApps().length === 0) {
-  let config,
-    useEmulator = false;
-  if (process.env.NODE_ENV === "development" && !process.env.CLIENT_CONFIG) {
-    console.warn(
-      "Missing CLIENT_CONFIG environment variable, using local emulator"
-    );
-    config = {
+import * as firebaseRest from "./firebase-rest.server";
+
+const getRestConfig = (): {
+  apiKey: string;
+  domain: string;
+} => {
+  if (process.env.NODE_ENV === "development" && !process.env.API_KEY) {
+    return {
       apiKey: "fake-api-key",
-      projectId: "remix-emulator",
+      domain: "http://localhost:9099/identitytoolkit.googleapis.com",
     };
-    useEmulator = true;
-  } else if (!process.env.CLIENT_CONFIG) {
-    throw new Error("Missing CLIENT_CONFIG environment variable, ");
+  } else if (!process.env.API_KEY) {
+    throw new Error("Missing API_KEY environment variable");
   } else {
-    try {
-      config = JSON.parse(process.env.CLIENT_CONFIG);
-    } catch {
-      throw Error("Invalid CLIENT_CONFIG environment variable");
-    }
+    return {
+      apiKey: process.env.API_KEY,
+      domain: "https://identitytoolkit.googleapis.com",
+    };
   }
-  initializeClientApp(config);
-  if (useEmulator) {
-    connectAuthEmulator(getClientAuth(), "http://localhost:9099");
-  }
-}
+};
+const restConfig = getRestConfig();
 
 if (getServerApps().length === 0) {
   let config;
@@ -64,7 +54,24 @@ if (getServerApps().length === 0) {
   initializeServerApp(config);
 }
 
+const signInWithPassword = async (email: string, password: string) => {
+  const signInResponse = await firebaseRest.signInWithPassword(
+    {
+      email,
+      password,
+      returnSecureToken: true,
+    },
+    restConfig
+  );
+
+  if (firebaseRest.isError(signInResponse)) {
+    throw new Error(signInResponse.error.message);
+  }
+
+  return signInResponse;
+};
+
 export const auth = {
   server: getServerAuth(),
-  client: getClientAuth(),
+  signInWithPassword,
 };
