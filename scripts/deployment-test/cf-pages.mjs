@@ -30,6 +30,26 @@ async function createNewApp() {
   });
 }
 
+async function getDeploymentUrl() {
+  let result = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects/${APP_NAME}/deployments`,
+    {
+      headers: {
+        "X-Auth-Email": process.env.CLOUDFLARE_EMAIL,
+        "X-Auth-Key": process.env.CLOUDFLARE_GLOBAL_API_KEY,
+      },
+    }
+  );
+
+  let json = await result.json();
+
+  let sorted = json.result.sort((a, b) => {
+    return new Date(b.created_on) - new Date(a.created_on);
+  });
+
+  return sorted[0].url;
+}
+
 let spawnOpts = getSpawnOpts(PROJECT_DIR);
 
 async function createAndDeployApp() {
@@ -80,7 +100,7 @@ async function createAndDeployApp() {
 
   console.log("Successfully created Cloudflare Pages project");
 
-  let appUrl = `https://${APP_NAME}.pages.dev`;
+  let appUrl = await getDeploymentUrl();
 
   await checkUrl(appUrl);
 
@@ -99,7 +119,8 @@ async function destroyApp() {
       },
     }
   );
-  console.log(await result.json());
+  let json = await result.json();
+  console.log(`[DESTROY_APP]`, json);
 }
 
 if (isMainModule(import.meta)) {
