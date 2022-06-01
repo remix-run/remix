@@ -1,7 +1,5 @@
-import crypto from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
-import { execSync } from "child_process";
 import { sync as spawnSync } from "cross-spawn";
 import jsonfile from "jsonfile";
 import fetch from "node-fetch";
@@ -17,9 +15,7 @@ export let CYPRESS_SOURCE_DIR = path.join(__dirname, "cypress");
 export let CYPRESS_CONFIG = path.join(__dirname, "cypress.json");
 
 export function getAppName(target) {
-  let sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
-  let unique = crypto.randomBytes(2).toString("hex");
-  return `remix-${target}-${sha}-${unique}`;
+  return `remix-deployment-test-${target}`;
 }
 
 export async function updatePackageConfig(directory, transform) {
@@ -116,4 +112,9 @@ export async function validatePackageVersions(directory) {
       return checkUrl(`https://registry.npmjs.org/${key}/${pinnedVersion}`);
     })
   );
+}
+
+// check if the file was called directly
+export function isMainModule(module) {
+  return module.url.endsWith(process.argv[1]);
 }
