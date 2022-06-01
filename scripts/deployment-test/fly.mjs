@@ -12,6 +12,7 @@ import {
   getAppDirectory,
   getAppName,
   getSpawnOpts,
+  isMainModule,
   runCypress,
   validatePackageVersions,
 } from "./_shared.mjs";
@@ -29,7 +30,9 @@ async function createNewApp() {
   });
 }
 
-try {
+let spawnOpts = getSpawnOpts(PROJECT_DIR);
+
+async function createAndDeployApp() {
   // create a new remix app
   await createNewApp();
 
@@ -42,8 +45,6 @@ try {
     fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
   ]);
-
-  let spawnOpts = getSpawnOpts(PROJECT_DIR);
 
   // create a new app on fly
   let flyLaunchCommand = spawnSync(
@@ -99,9 +100,18 @@ try {
 
   // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, flyUrl);
+}
 
-  process.exit(0);
-} catch (error) {
-  console.error(error);
-  process.exit(1);
+function destroyApp() {
+  spawnSync("fly", ["apps", "destroy", APP_NAME, "--yes"], spawnOpts);
+}
+
+if (isMainModule(import.meta)) {
+  createAndDeployApp()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    })
+    .finally(destroyApp);
 }
