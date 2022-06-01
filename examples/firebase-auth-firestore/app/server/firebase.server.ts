@@ -5,9 +5,10 @@ import {
 } from "firebase-admin/app";
 import { getAuth as getServerAuth } from "firebase-admin/auth";
 
-import * as firebaseRest from "./firebase-rest.server";
+import * as firebaseRest from "../firebase-rest";
 
-const getRestConfig = (): {
+// Warning: though getRestConfig is only run server side, its return value may be sent to the client
+export const getRestConfig = (): {
   apiKey: string;
   domain: string;
 } => {

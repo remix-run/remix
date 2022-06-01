@@ -29,6 +29,10 @@ export const requireAuth = async (request: Request): Promise<UserRecord> => {
 
 export const signIn = async (email: string, password: string) => {
   const { idToken } = await auth.signInWithPassword(email, password);
+  return signInWithToken(idToken);
+};
+
+export const signInWithToken = async (idToken: string) => {
   const expiresIn = 1000 * 60 * 60 * 24 * 7; // 1 week
   const sessionCookie = await auth.server.createSessionCookie(idToken, {
     expiresIn,
