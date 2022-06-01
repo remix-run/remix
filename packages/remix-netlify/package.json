@@ -19,5 +19,8 @@
   },
   "peerDependencies": {
     "@netlify/functions": "^0.10.0 || ^1.0.0"
+  },
+  "engines": {
+    "node": ">=14"
   }
 }

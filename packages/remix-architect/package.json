@@ -20,5 +20,8 @@
     "@types/architect__functions": "^3.13.6",
     "@types/lambda-tester": "^3.6.1",
     "lambda-tester": "^4.0.1"
+  },
+  "engines": {
+    "node": ">=14"
   }
 }
