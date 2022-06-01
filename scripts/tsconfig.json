@@ -5,8 +5,10 @@
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    "noEmit": true,
+    "forceConsistentCasingInFileNames": true,
     "moduleResolution": "Node",
+    "noEmit": true,
+    "strict": true,
     "target": "ES2018"
   }
 }

@@ -99,7 +99,10 @@ try {
     ["vercel", "deploy", "--prod", "--token", process.env.VERCEL_TOKEN],
     {
       ...spawnOpts,
-      env: { ...process.env, VERCEL_PROJECT_ID: project.id },
+      env: {
+        ...process.env,
+        VERCEL_PROJECT_ID: project.id,
+      },
     }
   );
   if (vercelDeployCommand.status !== 0) {

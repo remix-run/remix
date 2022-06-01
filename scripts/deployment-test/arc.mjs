@@ -51,7 +51,7 @@ async function getArcDeployment() {
   return deployments.Items.find((item) => item.Name === AWS_STACK_NAME);
 }
 
-async function createAndDeployArcApp() {
+async function createAndDeployApp() {
   await createNewApp();
 
   // validate dependencies are available
@@ -112,15 +112,11 @@ async function destroyApp() {
 }
 
 if (isMainModule(import.meta)) {
-  createAndDeployArcApp()
-    .then(() => {
-      process.exit(0);
-    })
+  createAndDeployApp()
+    .then(() => process.exit(0))
     .catch((error) => {
       console.error(error);
       process.exit(1);
     })
-    .finally(() => {
-      destroyApp();
-    });
+    .finally(destroyApp);
 }

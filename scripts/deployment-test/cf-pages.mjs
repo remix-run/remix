@@ -15,6 +15,7 @@ import {
   getAppDirectory,
   getAppName,
   getSpawnOpts,
+  isMainModule,
   runCypress,
   validatePackageVersions,
 } from "./_shared.mjs";
@@ -34,12 +35,12 @@ async function createNewApp() {
 
 async function createCloudflareProject() {
   let promise = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACCOUNT_ID}/pages/projects`,
+    `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
     {
       method: "POST",
       headers: {
-        "X-Auth-Email": process.env.CF_EMAIL,
-        "X-Auth-Key": process.env.CF_GLOBAL_API_KEY,
+        "X-Auth-Email": process.env.CLOUDFLARE_EMAIL,
+        "X-Auth-Key": process.env.CLOUDFLARE_GLOBAL_API_KEY,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -74,12 +75,12 @@ async function createCloudflareProject() {
 
 async function createCloudflareDeployment() {
   let promise = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACCOUNT_ID}/pages/projects/${APP_NAME}/deployments`,
+    `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects/${APP_NAME}/deployments`,
     {
       method: "POST",
       headers: {
-        "X-Auth-Email": process.env.CF_EMAIL,
-        "X-Auth-Key": process.env.CF_GLOBAL_API_KEY,
+        "X-Auth-Email": process.env.CLOUDFLARE_EMAIL,
+        "X-Auth-Key": process.env.CLOUDFLARE_GLOBAL_API_KEY,
       },
     }
   );
@@ -98,15 +99,15 @@ async function createCloudflareDeployment() {
 
 function checkDeploymentStatus() {
   let operation = retry.operation({ retries: 20 });
-  let url = `https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACCOUNT_ID}/pages/projects/${APP_NAME}/deployments`;
+  let url = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects/${APP_NAME}/deployments`;
 
   return new Promise((resolve, reject) => {
     operation.attempt(async (currentAttempt) => {
       console.log(`Checking deployment status; attempt ${currentAttempt}`);
       let response = await fetch(url, {
         headers: {
-          "X-Auth-Email": process.env.CF_EMAIL,
-          "X-Auth-Key": process.env.CF_GLOBAL_API_KEY,
+          "X-Auth-Email": process.env.CLOUDFLARE_EMAIL,
+          "X-Auth-Key": process.env.CLOUDFLARE_GLOBAL_API_KEY,
         },
       });
 
@@ -150,7 +151,7 @@ try {
 
 let spawnOpts = getSpawnOpts(PROJECT_DIR);
 
-try {
+async function createAndDeployApp() {
   // create a new remix app
   await createNewApp();
 
@@ -215,35 +216,42 @@ try {
 
   // run cypress against the Cloudflare Pages server
   runCypress(PROJECT_DIR, false, appUrl);
+}
 
-  if (currentGitUser.email && currentGitUser.name) {
-    spawnSync(
-      "git",
-      ["config", "--global", "user.email", currentGitUser.email],
-      spawnOpts
-    );
-    spawnSync(
-      "git",
-      ["config", "--global", "user.name", currentGitUser.name],
-      spawnOpts
-    );
-  }
+async function destroyApp() {
+  let result = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects/${APP_NAME}`,
+    {
+      method: "DELETE",
+      headers: {
+        "X-Auth-Email": process.env.CLOUDFLARE_EMAIL,
+        "X-Auth-Key": process.env.CLOUDFLARE_GLOBAL_API_KEY,
+      },
+    }
+  );
+  console.log(await result.json());
+}
 
-  process.exit(0);
-} catch (error) {
-  if (currentGitUser.email && currentGitUser.name) {
-    spawnSync(
-      "git",
-      ["config", "--global", "user.email", currentGitUser.email],
-      spawnOpts
-    );
-    spawnSync(
-      "git",
-      ["config", "--global", "user.name", currentGitUser.name],
-      spawnOpts
-    );
-  }
-
-  console.error(error);
-  process.exit(1);
+if (isMainModule(import.meta)) {
+  createAndDeployApp()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    })
+    .finally(() => {
+      if (currentGitUser.email && currentGitUser.name) {
+        spawnSync(
+          "git",
+          ["config", "--global", "user.email", currentGitUser.email],
+          spawnOpts
+        );
+        spawnSync(
+          "git",
+          ["config", "--global", "user.name", currentGitUser.name],
+          spawnOpts
+        );
+      }
+      destroyApp();
+    });
 }
