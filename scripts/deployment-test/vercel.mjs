@@ -11,6 +11,7 @@ import {
   getAppDirectory,
   getAppName,
   getSpawnOpts,
+  isMainModule,
   runCypress,
   validatePackageVersions,
 } from "./_shared.mjs";
@@ -42,36 +43,45 @@ function vercelClient(input, init) {
 }
 
 async function createVercelProject() {
-  let promise = await vercelClient(`/v8/projects`, {
+  let response = await vercelClient(`/v9/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      framework: "remix",
-      name: APP_NAME,
-    }),
+    body: JSON.stringify({ name: APP_NAME }),
   });
 
-  if (promise.status !== 200) {
-    throw new Error(`Error creating project: ${promise.status}`);
+  if (response.status !== 200) {
+    throw new Error(`Error creating project: ${response.status}`);
   }
 
-  let project = await promise.json();
+  let project = await response.json();
   return project;
 }
 
 async function getVercelDeploymentUrl(projectId) {
-  let promise = await vercelClient(`/v8/projects/${projectId}`);
+  let response = await vercelClient(`/v8/projects/${projectId}`);
 
-  if (promise.status !== 200) {
-    throw new Error(`Error fetching project: ${promise.status}`);
+  if (response.status !== 200) {
+    throw new Error(`Error fetching project: ${response.status}`);
   }
 
-  let project = await promise.json();
+  let project = await response.json();
 
   return project.targets?.production?.url;
 }
 
-try {
+async function destroyApp() {
+  console.log(`Destroying app ${APP_NAME}`);
+  let response = await vercelClient(`/v9/projects/${APP_NAME}`, {
+    method: "DELETE",
+  });
+  if (response.status !== 200) {
+    console.error(`Error destroying project ${APP_NAME}: ${response.status}`);
+  } else {
+    console.log(`Destroyed app ${APP_NAME}`);
+  }
+}
+
+async function createAndDeployApp() {
   await createNewApp();
 
   // validate dependencies are available
@@ -121,9 +131,14 @@ try {
 
   // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, fullUrl);
+}
 
-  process.exit(0);
-} catch (error) {
-  console.error(error);
-  process.exit(1);
+if (isMainModule(import.meta)) {
+  createAndDeployApp()
+    .then(() => process.exit(0))
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    })
+    .finally(destroyApp);
 }
