@@ -24,12 +24,12 @@ To run it, you need to either:
 
 ### 2. Use the Firebase emulators
 
-1. Run `yarn emulators` in one terminal window
-2. Run `yarn dev` in a second
+1. Run `npm run emulators` in one terminal window
+2. Run `npm run dev` in a second
 
-When the SERVICE_ACCOUNT and CLIENT_CONFIG environment variables have not been set, `yarn dev` will default to using the local emulator.
+When the SERVICE_ACCOUNT and CLIENT_CONFIG environment variables have not been set, `npm run dev` will default to using the local emulator.
 
-When you run `yarn emulators`, an initial user is created with credentials user@example.com:password. This can be configured in `firebase-fixtures/auth/accounts.json` or via the emulator UI.
+When you run `npm run emulators`, an initial user is created with credentials `user@example.com:password`. This can be configured in `firebase-fixtures/auth/accounts.json` or via the emulator UI.
 
 ## Auth (`app/server/auth.server.ts`)
 
