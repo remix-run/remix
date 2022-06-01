@@ -119,6 +119,7 @@ try {
 
   console.log(`Deployed to ${fullUrl}`);
 
+  // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, fullUrl);
 
   process.exit(0);

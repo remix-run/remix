@@ -97,7 +97,7 @@ try {
   console.log(`Fly app deployed, waiting for dns...`);
   await checkUrl(flyUrl);
 
-  // run cypress against the deployed server
+  // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, flyUrl);
 
   process.exit(0);

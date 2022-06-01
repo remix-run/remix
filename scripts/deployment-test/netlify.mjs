@@ -73,6 +73,7 @@ try {
 
   console.log(`Deployed to ${site.ssl_url}`);
 
+  // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, site.ssl_url);
 
   process.exit(0);

@@ -96,7 +96,7 @@ async function createAndDeployApp() {
     throw new Error("Deployment not found");
   }
 
-  // run cypress against the deployed server
+  // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, deployment.ApiEndpoint);
 }
 

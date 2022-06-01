@@ -66,7 +66,7 @@ try {
     throw new Error(`Failed to deploy app: ${deployCommand.stderr}`);
   }
 
-  // run cypress against the deployed server
+  // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, url);
 
   process.exit(0);
