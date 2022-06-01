@@ -14,5 +14,8 @@
   "license": "MIT",
   "sideEffects": false,
   "main": "index.js",
-  "module": "esm/index.js"
+  "module": "esm/index.js",
+  "engines": {
+    "node": ">=14"
+  }
 }
