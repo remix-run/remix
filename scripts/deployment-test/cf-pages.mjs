@@ -85,14 +85,7 @@ async function createAndDeployApp() {
       "--branch",
       "main",
     ],
-    {
-      ...spawnOpts,
-      env: {
-        ...process.env,
-        CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
-        CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
-      },
-    }
+    spawnOpts
   );
   if (pagesDeployCommand.status !== 0) {
     throw new Error("Cloudflare Pages deploy failed");
