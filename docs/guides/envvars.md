@@ -65,7 +65,7 @@ export const loader = async ({ context }) => {
 }
 ```
 
-Note that `dotenv` is only for development. You should not use it in production, so Remix doesn't load these when running `remix serve`. You'll need to follow your host's guides on adding secrets to your production server.
+Note that `.env` files are only for development. You should not use them in production, so Remix doesn't load them when running `remix serve`. You'll need to follow your host's guides on adding secrets to your production server, via the links below.
 
 ### Production
 
