@@ -54,6 +54,27 @@ Note that `dotenv` is only for development, you should not use it in production,
 
 <docs-error>Do not commit your <code>.env</code> file to git, the point is that it contains secrets!</docs-error>
 
+If you're using the `@remix-run/cloudflare-pages` adapter, env variables work a little differently. When running locally, you'll need to manually pass your `.env` file to `wrangler` by doing this:
+
+```sh
+// package.json
+
+{
+	"scripts": {
+		"dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public --binding $(cat .env)"
+	}
+}
+```
+
+When deploying to Cloudflare, you can use the Cloudflare Pages Project Settings UI to set env variables for Preview and Production.
+
+Then, in your `loader` functions, both locally and when deployed on Cloudflare, you can access environment variables directly on `context`:
+```
+export const loader = async ({ context }) => {
+  console.log('My env:', context.ENV_VAR);
+}
+```
+
 ## Browser Environment Variables
 
 Some folks ask if Remix can let them put environment variables into browser bundles. It's a common strategy in build-heavy frameworks. However, this approach is a problem for a few reasons:
