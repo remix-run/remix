@@ -814,14 +814,16 @@ window.__remixRouteModules = {${matches
           {...props}
           suppressHydrationWarning
           dangerouslySetInnerHTML={createHtml(contextScript)}
+          type={undefined}
         />
-        <script {...props} src={manifest.url} />
+        <script {...props} type={undefined} src={manifest.url} />
         <script
           {...props}
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
+          async
         />
-        <script {...props} src={manifest.entry.module} type="module" />
+        <script {...props} src={manifest.entry.module} type="module" async />
       </>
     );
     // disabled deps array because we are purposefully only rendering this once
@@ -1295,7 +1297,7 @@ export function useMatches() {
 const deferredContext = React.createContext<
   | {
       id: string;
-      key: string;
+      key?: string;
       data: any;
     }
   | undefined
@@ -1306,36 +1308,28 @@ export function Deferred({
   data,
   error,
   fallback,
+  nonce,
   children,
-}: {
+}: React.PropsWithChildren<{
   data: any;
-  error?:
-    | boolean
-    | React.ReactNode
-    | React.ReactFragment
-    | React.ReactPortal
-    | null;
-  fallback:
-    | boolean
-    | React.ReactNode
-    | React.ReactFragment
-    | React.ReactPortal
-    | null;
-  children: React.ReactNode;
-}) {
+  error?: React.ReactNode | null;
+  fallback: React.ReactNode | null;
+  nonce?: string;
+}>) {
   let { routeLoadersDeferred } = useRemixEntryContext();
   let { id } = useRemixRouteContext();
 
   let dataResult = data;
-  let key: string = "";
-  if (
-    typeof data === "string" &&
-    data.startsWith(DEFERRED_PROMISE_VALUE) &&
-    routeLoadersDeferred?.[id]
-  ) {
-    let promises = routeLoadersDeferred[id];
+  let key: string | undefined = undefined;
+  if (typeof data === "string" && data.startsWith(DEFERRED_PROMISE_VALUE)) {
     key = data.substring(DEFERRED_PROMISE_VALUE.length);
-    dataResult = promises?.[key];
+  }
+
+  if (key) {
+    let promise = routeLoadersDeferred[id]?.[key] as
+      | Promise<unknown>
+      | undefined;
+    dataResult = promise;
   }
 
   return (
@@ -1347,16 +1341,42 @@ export function Deferred({
       }}
     >
       <React.Suspense fallback={fallback}>
-        <DeferredErrorBoundary error={error}>{children}</DeferredErrorBoundary>
+        <DeferredErrorBoundary error={error} nonce={nonce}>
+          {children}
+        </DeferredErrorBoundary>
       </React.Suspense>
+      {key && (
+        <script
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: `let promise,resolve;promise=new Promise(r=>{resolve=r;});window.__remixDeferredData=window.__remixDeferredData||{};window.__remixDeferredData[${JSON.stringify(
+              id
+            )}]=window.__remixDeferredData[${JSON.stringify(
+              id
+            )}]||{};window.__remixDeferredData[${JSON.stringify(
+              id
+            )}][${JSON.stringify(
+              key
+            )}]=promise;window.__remixDeferredResolvers=window.__remixDeferredResolvers||{};window.__remixDeferredResolvers[${JSON.stringify(
+              id
+            )}]=window.__remixDeferredResolvers[${JSON.stringify(
+              id
+            )}]||{};window.__remixDeferredResolvers[${JSON.stringify(
+              id
+            )}][${JSON.stringify(key)}]=resolve;`,
+          }}
+        />
+      )}
     </deferredContext.Provider>
   );
 }
 
 function DeferredErrorBoundary({
+  nonce,
   error,
   children,
 }: {
+  nonce?: string;
   error?:
     | boolean
     | React.ReactNode
@@ -1375,7 +1395,7 @@ function DeferredErrorBoundary({
     return (
       <>
         {error}
-        <DeferredHydrationScript />
+        <DeferredHydrationScript nonce={nonce} />
       </>
     );
   }
@@ -1383,12 +1403,12 @@ function DeferredErrorBoundary({
   return (
     <>
       {children}
-      <DeferredHydrationScript />
+      <DeferredHydrationScript nonce={nonce} />
     </>
   );
 }
 
-function DeferredHydrationScript() {
+function DeferredHydrationScript({ nonce }: { nonce?: string }) {
   let ctx = React.useContext(deferredContext);
   if (!ctx) {
     throw new Error("useDeferred must be used within a Deferred");
@@ -1407,8 +1427,9 @@ function DeferredHydrationScript() {
     value = JSON.stringify(data);
   }
 
-  return typeof document === "undefined" ? (
+  return typeof document === "undefined" && ctx.key ? (
     <script
+      nonce={nonce}
       dangerouslySetInnerHTML={{
         __html: `${pre}window.__remixDeferredData=window.__remixDeferredData||{};window.__remixDeferredData[${JSON.stringify(
           ctx.id
@@ -1416,11 +1437,20 @@ function DeferredHydrationScript() {
           ctx.id
         )}]||{};window.__remixDeferredData[${JSON.stringify(
           ctx.id
-        )}][${JSON.stringify(ctx.key)}] = ${value};`,
+        )}][${JSON.stringify(
+          ctx.key
+        )}] = ${value};window.__remixDeferredResolvers[${JSON.stringify(
+          ctx.id
+        )}][${JSON.stringify(
+          ctx.key
+        )}](window.__remixDeferredData[${JSON.stringify(
+          ctx.id
+        )}][${JSON.stringify(ctx.key)}]);`,
       }}
     />
   ) : (
     <script
+      nonce={nonce}
       suppressHydrationWarning
       dangerouslySetInnerHTML={{ __html: " " }}
     />
