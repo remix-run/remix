@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-remix-auth-github",
   "private": true,
   "sideEffects": false,
   "scripts": {

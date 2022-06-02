@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-client-side-validation",
   "private": true,
   "sideEffects": false,
   "scripts": {

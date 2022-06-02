@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-google-analytics",
   "private": true,
   "sideEffects": false,
   "scripts": {

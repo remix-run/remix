@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-client-only-components",
   "private": true,
   "sideEffects": false,
   "scripts": {

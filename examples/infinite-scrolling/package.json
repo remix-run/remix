@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-infinite-scrolling",
   "private": true,
   "sideEffects": false,
   "scripts": {

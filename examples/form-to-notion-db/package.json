@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-form-to-notion-db",
   "private": true,
   "sideEffects": false,
   "scripts": {

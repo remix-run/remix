@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-quirrel",
   "private": true,
   "sideEffects": false,
   "scripts": {

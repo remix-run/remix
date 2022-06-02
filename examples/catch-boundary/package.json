@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-catch-boundary",
   "private": true,
   "sideEffects": false,
   "scripts": {

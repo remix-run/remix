@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-nprogress",
   "private": true,
   "sideEffects": false,
   "scripts": {
