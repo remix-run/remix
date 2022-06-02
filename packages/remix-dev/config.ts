@@ -353,9 +353,10 @@ export async function readConfig(
       path.join("public", "build")
   );
 
-  let devServerPort =
+  let devServerPort: number =
     Number(process.env.REMIX_DEV_SERVER_WS_PORT) ||
-    (await getPort({ port: Number(appConfig.devServerPort) || undefined }));
+    (await getPort({ port: appConfig.devServerPort || 8002 }));
+
   // set env variable so un-bundled servers can use it
   process.env.REMIX_DEV_SERVER_WS_PORT = `${devServerPort}`;
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
