@@ -12,13 +12,10 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
+    "@google-cloud/functions-framework": "^3.1.1",
     "@remix-run/node": "1.5.1"
   },
-  "peerDependencies": {
-    "express": "^4.17.1"
-  },
   "devDependencies": {
-    "@types/express": "^4.17.9",
     "@types/supertest": "^2.0.10",
     "node-mocks-http": "^1.10.1",
     "supertest": "^6.0.1"
