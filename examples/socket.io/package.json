@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-socket.io",
   "private": true,
   "sideEffects": false,
   "scripts": {

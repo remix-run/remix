@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-turborepo-vercel-remix-app",
   "private": true,
   "sideEffects": false,
   "scripts": {

@@ -1,5 +1,4 @@
 {
-  "name": "ui",
   "private": true,
   "sideEffects": false,
   "main": "./dist/index.js",

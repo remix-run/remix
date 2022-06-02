@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-pathless-routes",
   "private": true,
   "sideEffects": false,
   "scripts": {

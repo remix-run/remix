@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-styletron",
   "private": true,
   "sideEffects": false,
   "scripts": {

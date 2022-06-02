@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-styled-components",
   "private": true,
   "sideEffects": false,
   "scripts": {

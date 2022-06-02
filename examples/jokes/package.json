@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-jokes",
   "private": true,
   "sideEffects": false,
   "scripts": {

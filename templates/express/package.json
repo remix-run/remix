@@ -1,5 +1,4 @@
 {
-  "name": "remix-template-express",
   "private": true,
   "sideEffects": false,
   "scripts": {
