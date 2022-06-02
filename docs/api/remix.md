@@ -167,7 +167,7 @@ function NavList() {
           <NavLink
             to="messages"
             style={({ isActive }) =>
-              isActive ? activeStyle : undefined
+              isActive ? activeStyle : {}
             }
           >
             Messages
