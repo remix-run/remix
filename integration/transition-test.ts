@@ -1,9 +1,12 @@
+import { test, expect } from "@playwright/test";
+
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
-describe("rendering", () => {
+test.describe("rendering", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
   let PAGE = "page";
   let PAGE_TEXT = "PAGE_TEXT";
@@ -11,17 +14,22 @@ describe("rendering", () => {
   let CHILD = "child";
   let CHILD_TEXT = "CHILD_TEXT";
   let REDIRECT = "redirect";
+  let REDIRECT_HASH = "redirect-hash";
   let REDIRECT_TARGET = "page";
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { Outlet, Scripts } from "remix";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
           export default function Root() {
             return (
-              <html>
-                <head />
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
                 <body>
                   <main>
                     <Outlet />
@@ -29,25 +37,26 @@ describe("rendering", () => {
                   <Scripts />
                 </body>
               </html>
-            )
+            );
           }
-
         `,
+
         "app/routes/index.jsx": js`
-          import { Link } from "remix";
+          import { Link } from "@remix-run/react";
           export default function() {
             return (
               <div>
                 <h2>Index</h2>
                 <Link to="/${PAGE}">${PAGE}</Link>
                 <Link to="/${REDIRECT}">${REDIRECT}</Link>
+                <Link to="/${REDIRECT_HASH}">${REDIRECT_HASH}</Link>
               </div>
             );
           }
         `,
 
         [`app/routes/${PAGE}.jsx`]: js`
-          import { Outlet, useLoaderData } from "remix";
+          import { Outlet, useLoaderData } from "@remix-run/react";
 
           export function loader() {
             return "${PAGE_TEXT}"
@@ -65,7 +74,7 @@ describe("rendering", () => {
         `,
 
         [`app/routes/${PAGE}/index.jsx`]: js`
-          import { useLoaderData, Link } from "remix";
+          import { useLoaderData, Link } from "@remix-run/react";
 
           export function loader() {
             return "${PAGE_INDEX_TEXT}"
@@ -83,7 +92,7 @@ describe("rendering", () => {
         `,
 
         [`app/routes/${PAGE}/${CHILD}.jsx`]: js`
-          import { useLoaderData } from "remix";
+          import { useLoaderData } from "@remix-run/react";
 
           export function loader() {
             return "${CHILD_TEXT}"
@@ -96,7 +105,7 @@ describe("rendering", () => {
         `,
 
         [`app/routes/${REDIRECT}.jsx`]: js`
-          import { redirect } from "remix";
+          import { redirect } from "@remix-run/node";
           export function loader() {
             return redirect("/${REDIRECT_TARGET}")
           }
@@ -105,8 +114,19 @@ describe("rendering", () => {
           }
         `,
 
+        [`app/routes/${REDIRECT_HASH}.jsx`]: js`
+          import { redirect } from "@remix-run/node";
+          export function loader() {
+            return redirect("/${REDIRECT_TARGET}#my-hash")
+          }
+          export default function() {
+            return null;
+          }
+        `,
+
         "app/routes/gh-1691.jsx": js`
-          import { Form, redirect, useFetcher, useTransition} from "remix";
+          import { redirect } from "@remix-run/node";
+          import { Form, useFetcher, useTransition} from "@remix-run/react";
 
           export const action = async ({ request }) => {
             return redirect("/gh-1691");
@@ -124,7 +144,7 @@ describe("rendering", () => {
                 <span>{fetcher.state}</span>
                 <fetcher.Form method="post">
                   <input type="hidden" name="source" value="fetcher" />
-                  <button type="submit" name="_action" value="add">
+                  <button type="submit" name="action" value="add">
                     Submit
                   </button>
                 </fetcher.Form>
@@ -132,17 +152,56 @@ describe("rendering", () => {
             );
           }
         `,
+
+        "app/routes/parent.jsx": js`
+          import { Outlet, useLoaderData } from "@remix-run/react";
+
+          let count = 0;
+          export const loader = async ({ request }) => {
+            return { count: ++count };
+          };
+
+          export default function Parent() {
+            const data = useLoaderData();
+            return (
+              <div>
+                <div id="parent">{data.count}</div>
+                <Outlet />
+              </div>
+            );
+          }
+        `,
+
+        "app/routes/parent/child.jsx": js`
+          import { redirect } from "@remix-run/node";
+          import { useFetcher} from "@remix-run/react";
+
+          export const action = async ({ request }) => {
+            return redirect("/parent");
+          };
+
+          export default function Child() {
+            const fetcher = useFetcher();
+
+            return (
+              <fetcher.Form method="post">
+                <button id="fetcher-submit-redirect" type="submit">Submit</button>
+              </fetcher.Form>
+            );
+          }
+        `,
       },
     });
 
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
-  afterAll(async () => {
-    await app.close();
+  test.afterAll(async () => {
+    await appFixture.close();
   });
 
-  it("calls all loaders for new routes", async () => {
+  test("calls all loaders for new routes", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     let responses = app.collectDataResponses();
     await app.clickLink(`/${PAGE}`);
@@ -156,7 +215,8 @@ describe("rendering", () => {
     expect(html).toMatch(PAGE_INDEX_TEXT);
   });
 
-  it("calls only loaders for changing routes", async () => {
+  test("calls only loaders for changing routes", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto(`/${PAGE}`);
     let responses = app.collectDataResponses();
     await app.clickLink(`/${PAGE}/${CHILD}`);
@@ -170,12 +230,13 @@ describe("rendering", () => {
     expect(html).toMatch(CHILD_TEXT);
   });
 
-  test("loader redirect", async () => {
+  test("loader redirect", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
 
     let responses = app.collectDataResponses();
     await app.clickLink(`/${REDIRECT}`);
-    expect(new URL(app.page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
+    expect(new URL(page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
@@ -186,12 +247,25 @@ describe("rendering", () => {
     expect(html).toMatch(PAGE_INDEX_TEXT);
   });
 
-  it("calls changing routes on POP", async () => {
+  test("loader redirect with hash", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+
+    await app.clickLink(`/${REDIRECT_HASH}`);
+
+    let url = new URL(page.url());
+    expect(url.pathname).toBe(`/${REDIRECT_TARGET}`);
+    expect(url.hash).toBe(`#my-hash`);
+  });
+
+  test("calls changing routes on POP", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto(`/${PAGE}`);
     await app.clickLink(`/${PAGE}/${CHILD}`);
 
     let responses = app.collectDataResponses();
     await app.goBack();
+    await page.waitForLoadState("networkidle");
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
@@ -202,11 +276,23 @@ describe("rendering", () => {
     expect(html).toMatch(PAGE_INDEX_TEXT);
   });
 
-  it("useFetcher state should return to the idle when redirect from an action", async () => {
+  test("useFetcher state should return to the idle when redirect from an action", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/gh-1691");
     expect(await app.getHtml("span")).toMatch("idle");
 
     await app.clickSubmitButton("/gh-1691");
     expect(await app.getHtml("span")).toMatch("idle");
+  });
+
+  test("fetcher action redirects re-call parent loaders", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/parent/child");
+    expect(await app.getHtml("#parent")).toMatch("1");
+
+    await app.clickElement("#fetcher-submit-redirect");
+    expect(await app.getHtml("#parent")).toMatch("2");
   });
 });

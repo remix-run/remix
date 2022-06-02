@@ -1,5 +1,6 @@
 import path from "path";
-import { execSync, spawnSync } from "child_process";
+import { execSync } from "child_process";
+import { sync as spawnSync } from "cross-spawn";
 import { Octokit } from "@octokit/rest";
 import fse from "fs-extra";
 import fetch from "node-fetch";

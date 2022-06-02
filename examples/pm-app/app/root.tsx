@@ -1,6 +1,10 @@
-import type { LinksFunction, LoaderFunction } from "remix";
+import type {
+  LinksFunction,
+  LoaderFunction,
+  MetaFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
-  json,
   Links,
   LiveReload,
   Meta,
@@ -9,7 +13,7 @@ import {
   ScrollRestoration,
   useCatch,
   useLoaderData,
-} from "remix";
+} from "@remix-run/react";
 
 import global from "~/dist/styles/global.css";
 import type { User } from "./models";
@@ -22,7 +26,7 @@ interface LoaderData {
   ENV: Exclude<Window["ENV"], undefined>;
 }
 
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
     ENV: {
       SITE_URL: process.env.SITE_URL,
@@ -31,6 +35,11 @@ export const loader: LoaderFunction = async ({ request }) => {
 
   return json(data);
 };
+
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 function Document({
   children,
@@ -44,7 +53,6 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
         {title ? <title>{title}</title> : null}
         <Meta />
         <Links />

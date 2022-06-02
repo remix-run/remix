@@ -1,6 +1,6 @@
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction, MetaFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
-  json,
   Links,
   LiveReload,
   Meta,
@@ -8,7 +8,7 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
-} from "remix";
+} from "@remix-run/react";
 
 export const loader: LoaderFunction = () => {
   return json({
@@ -19,14 +19,18 @@ export const loader: LoaderFunction = () => {
   });
 };
 
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "New Remix App",
+  viewport: "width=device-width,initial-scale=1",
+});
+
 export default function App() {
   const { env } = useLoaderData<Window>();
 
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
       </head>

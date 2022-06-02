@@ -1,7 +1,8 @@
-import * as React from "react";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 import { marked } from "marked";
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData } from "remix";
+import * as React from "react";
 
 type Post = {
   title: string;
