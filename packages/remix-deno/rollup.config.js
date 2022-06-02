@@ -16,7 +16,10 @@ module.exports = function rollup() {
         copy({
           targets: [
             { src: `LICENSE.md`, dest: outputDir },
-            { src: `${sourceDir}/**/*`, dest: outputDir },
+            {
+              src: [`${sourceDir}/**/*`, `!${sourceDir}/rollup.config.js`],
+              dest: outputDir,
+            },
           ],
           gitignore: true,
         }),
