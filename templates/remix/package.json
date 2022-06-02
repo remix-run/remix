@@ -1,5 +1,4 @@
 {
-  "name": "remix-template-remix",
   "private": true,
   "sideEffects": false,
   "scripts": {

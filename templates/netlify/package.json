@@ -1,5 +1,4 @@
 {
-  "name": "remix-template-netlify",
   "private": true,
   "sideEffects": false,
   "scripts": {
