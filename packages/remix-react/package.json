@@ -1,25 +1,22 @@
 {
   "name": "@remix-run/react",
-  "description": "React DOM bindings for Remix",
   "version": "1.5.1",
-  "license": "MIT",
+  "description": "React DOM bindings for Remix",
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
     "directory": "packages/remix-react"
   },
-  "bugs": {
-    "url": "https://github.com/remix-run/remix/issues"
-  },
+  "license": "MIT",
+  "sideEffects": false,
   "main": "index.js",
   "module": "esm/index.js",
   "dependencies": {
     "history": "^5.3.0",
     "react-router-dom": "^6.2.2"
-  },
-  "peerDependencies": {
-    "react": ">=16.8",
-    "react-dom": ">=16.8"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^5.16.4",
@@ -28,5 +25,11 @@
     "react": "^18.1.0",
     "react-dom": "^18.1.0"
   },
-  "sideEffects": false
+  "peerDependencies": {
+    "react": ">=16.8",
+    "react-dom": ">=16.8"
+  },
+  "engines": {
+    "node": ">=14"
+  }
 }
