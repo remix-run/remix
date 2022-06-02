@@ -1345,6 +1345,8 @@ export function Deferred({
 }>) {
   let { routeLoadersDeferred } = useRemixEntryContext();
   let { id } = useRemixRouteContext();
+  let promiseVar = React.useId().replace(/:/g, "_");
+  let resolveVar = React.useId().replace(/:/g, "_");
 
   let dataResult = data;
   let key: string | undefined = undefined;
@@ -1376,7 +1378,7 @@ export function Deferred({
         <script
           nonce={nonce}
           dangerouslySetInnerHTML={{
-            __html: `let promise,resolve;promise=new Promise(r=>{resolve=r;});window.__remixDeferredData=window.__remixDeferredData||{};window.__remixDeferredData[${JSON.stringify(
+            __html: `var ${promiseVar},${resolveVar};${promiseVar}=new Promise(r=>{${resolveVar}=r;});window.__remixDeferredData=window.__remixDeferredData||{};window.__remixDeferredData[${JSON.stringify(
               id
             )}]=window.__remixDeferredData[${JSON.stringify(
               id
@@ -1384,13 +1386,13 @@ export function Deferred({
               id
             )}][${JSON.stringify(
               key
-            )}]=promise;window.__remixDeferredResolvers=window.__remixDeferredResolvers||{};window.__remixDeferredResolvers[${JSON.stringify(
+            )}]=${promiseVar};window.__remixDeferredResolvers=window.__remixDeferredResolvers||{};window.__remixDeferredResolvers[${JSON.stringify(
               id
             )}]=window.__remixDeferredResolvers[${JSON.stringify(
               id
             )}]||{};window.__remixDeferredResolvers[${JSON.stringify(
               id
-            )}][${JSON.stringify(key)}]=resolve;`,
+            )}][${JSON.stringify(key)}]=${resolveVar};`,
           }}
         />
       )}
