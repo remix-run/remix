@@ -6,23 +6,19 @@ const copy = require("rollup-plugin-copy");
 const fse = require("fs-extra");
 
 const executableBanner = "#!/usr/bin/env node\n";
-const defaultOutputDir = "build";
-const isNestedBuild = getOutputDir().startsWith(`../../${defaultOutputDir}`);
-const isNormalBuild =
-  !isNestedBuild && getOutputDir().startsWith(defaultOutputDir);
+const defaultBuildDir = "build";
+const buildDir = getBuildDir();
 
-function getOutputDir(pkg = "remix") {
+function getBuildDir() {
   if (!process.env.LOCAL_BUILD_DIRECTORY) {
-    let buildDir = path.relative(
-      process.cwd(),
-      path.join(__dirname, defaultOutputDir)
-    );
-    return path.join(buildDir, "node_modules", pkg);
+    return path.relative(process.cwd(), path.join(__dirname, defaultBuildDir));
   }
 
   let appDir = path.join(process.cwd(), process.env.LOCAL_BUILD_DIRECTORY);
   try {
     fse.readdirSync(path.join(appDir, "node_modules"));
+    console.log("Writing rollup output to", appDir);
+    return appDir;
   } catch (e) {
     console.error(
       "Oops! You pointed LOCAL_BUILD_DIRECTORY to a directory that " +
@@ -31,9 +27,6 @@ function getOutputDir(pkg = "remix") {
     );
     process.exit(1);
   }
-  console.log("Writing rollup output to", appDir);
-
-  return path.join(appDir, "node_modules", pkg);
 }
 
 function createBanner(packageName, version) {
@@ -65,7 +58,11 @@ function getAdapterConfig(adapterName) {
       process.cwd(),
       path.join(__dirname, "packages", `remix-${adapterName}`)
     ) || ".";
-  let outputDir = getOutputDir(packageName);
+  let outputDir = path.join(
+    buildDir,
+    "node_modules",
+    `@remix-run/${packageName}`
+  );
   let version = getVersion(sourceDir);
 
   let hasMagicExports = fse.existsSync(`${sourceDir}/magicExports/remix.ts`);
@@ -171,10 +168,11 @@ function copyToPlaygrounds() {
   return {
     name: "copy-to-remix-playground",
     async writeBundle(options, bundle) {
-      if (isNormalBuild) {
+      // Write to playgrounds for normal builds not using LOCAL_BUILD_DIRECTORY
+      if (!process.env.LOCAL_BUILD_DIRECTORY) {
         let playgroundsDir = path.join(__dirname, "playground");
         let playgrounds = await fs.promises.readdir(playgroundsDir);
-        let writtenDir = path.join(__dirname, options.dir);
+        let writtenDir = path.join(process.cwd(), options.dir);
         for (let playground of playgrounds) {
           let playgroundDir = path.join(playgroundsDir, playground);
           if (!fse.statSync(playgroundDir).isDirectory()) {
@@ -188,9 +186,8 @@ function copyToPlaygrounds() {
           await triggerLiveReload(playgroundDir);
         }
       } else {
-        // If we're not building to "build" then trigger live reload on our
-        // external "playground" app
-        await triggerLiveReload(getOutputDir());
+        // Otherwise, trigger live reload on our LOCAL_BUILD_DIRECTORY folder
+        await triggerLiveReload(buildDir);
       }
     },
   };
@@ -199,11 +196,10 @@ function copyToPlaygrounds() {
 module.exports = {
   copyToPlaygrounds,
   createBanner,
-  defaultOutputDir,
+  defaultBuildDir,
   executableBanner,
-  isNormalBuild,
   getAdapterConfig,
-  getOutputDir,
   getVersion,
   isBareModuleId,
+  buildDir,
 };

@@ -4,9 +4,9 @@ const babel = require("@rollup/plugin-babel").default;
 const copy = require("rollup-plugin-copy");
 
 const {
+  buildDir,
   copyToPlaygrounds,
   createBanner,
-  getOutputDir,
   getVersion,
   isNormalBuild,
 } = require("../../rollup-utils");
@@ -14,7 +14,7 @@ const {
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
   let sourceDir = path.relative(process.cwd(), __dirname) || ".";
-  let outputDir = getOutputDir("remix");
+  let outputDir = path.join(buildDir, "node_modules/remix");
   let version = getVersion(sourceDir);
 
   if (!isNormalBuild) {

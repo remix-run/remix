@@ -4,10 +4,10 @@ const babel = require("@rollup/plugin-babel").default;
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 
 const {
+  buildDir,
   copyToPlaygrounds,
   createBanner,
   getAdapterConfig,
-  getOutputDir,
   getVersion,
   isBareModuleId,
 } = require("../../rollup-utils");
@@ -15,7 +15,10 @@ const {
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
   let sourceDir = path.relative(process.cwd(), __dirname) || ".";
-  let outputDir = getOutputDir("@remix-run/cloudflare-workers");
+  let outputDir = path.join(
+    buildDir,
+    "node_modules/@remix-run/cloudflare-workers"
+  );
   let version = getVersion(sourceDir);
 
   return [

@@ -8,11 +8,11 @@ module.exports = function rollup(options) {
       let configPath = path.join("packages", dir, "rollup.config.js");
       try {
         fs.readFileSync(configPath);
-        let packageBuild = require(`.${path.sep}${configPath}`);
-        return packageBuild(options);
       } catch (e) {
         return null;
       }
+      let packageBuild = require(`.${path.sep}${configPath}`);
+      return packageBuild(options);
     })
     .filter((p) => p);
 };

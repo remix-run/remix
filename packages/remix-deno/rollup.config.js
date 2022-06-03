@@ -2,12 +2,12 @@
 const path = require("path");
 const copy = require("rollup-plugin-copy");
 
-const { copyToPlaygrounds, getOutputDir } = require("../../rollup-utils");
+const { buildDir, copyToPlaygrounds } = require("../../rollup-utils");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
   let sourceDir = path.relative(process.cwd(), __dirname) || ".";
-  let outputDir = getOutputDir("@remix-run/deno");
+  let outputDir = path.join(buildDir, "node_modules/@remix-run/deno");
 
   return [
     {

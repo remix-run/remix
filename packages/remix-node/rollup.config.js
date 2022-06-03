@@ -5,9 +5,9 @@ const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
 
 const {
+  buildDir,
   copyToPlaygrounds,
   createBanner,
-  getOutputDir,
   getVersion,
   isBareModuleId,
 } = require("../../rollup-utils");
@@ -15,7 +15,7 @@ const {
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
   let sourceDir = path.relative(process.cwd(), __dirname) || ".";
-  let outputDir = getOutputDir("@remix-run/node");
+  let outputDir = path.join(buildDir, "node_modules/@remix-run/node");
   let version = getVersion(sourceDir);
 
   return [
