@@ -75,7 +75,7 @@ module.exports = function rollup() {
     {
       external(id) {
         // Cannot mark the input module as external
-        return !id.endsWith(`${sourceDir}/cli.ts`);
+        return !id.endsWith(path.join(sourceDir, "cli.ts"));
       },
       input: `${sourceDir}/cli.ts`,
       output: {
@@ -118,7 +118,7 @@ module.exports = function rollup() {
     {
       external(id) {
         // Cannot mark the input module as external
-        return !id.endsWith(`${sourceDir}/server-build.ts`);
+        return !id.endsWith(path.join(sourceDir, "server-build.ts"));
       },
       input: `${sourceDir}/server-build.ts`,
       output: {
