@@ -20,8 +20,7 @@ export function createApp(buildPath: string, mode = "production") {
         }
 
         // No compression for _data requests to allow for streaming
-        if (true) {
-          // TODO: Detect data requests, otherwise compress
+        if (req.query._data) {
           return false;
         }
 

@@ -857,6 +857,11 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   return (
     <>
+      <link
+        rel="modulepreload"
+        href={manifest.entry.module}
+        crossOrigin={props.crossOrigin}
+      />
       {dedupe(preloads).map((path) => (
         <link
           key={path}
