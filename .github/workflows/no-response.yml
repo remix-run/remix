@@ -35,4 +35,3 @@ jobs:
           days-before-stale: -1
           any-of-labels: needs-response
           labels-to-remove-when-unstale: needs-response
-          repo-token: ${{ github.token }}
