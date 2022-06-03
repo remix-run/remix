@@ -10,7 +10,7 @@ const {
   createBanner,
   executableBanner,
   getVersion,
-} = require("../../rollup-utils");
+} = require("../../rollup.utils");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {

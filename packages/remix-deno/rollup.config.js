@@ -2,7 +2,7 @@
 const path = require("path");
 const copy = require("rollup-plugin-copy");
 
-const { buildDir, copyToPlaygrounds } = require("../../rollup-utils");
+const { buildDir, copyToPlaygrounds } = require("../../rollup.utils");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
