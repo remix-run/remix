@@ -28,7 +28,7 @@ We **strongly encourage you** to do one of the tutorials before anything else. R
   <a href="v1/tutorials/jokes" aria-label="Jokes App Tutorial">
     <docs-card>
       <h4>Jokes App Deep Dive</h4> 
-      <p>Dive deep into Remix and full stack develoment with this app. It's backed by a SQL database, user authentication and session, and of course some modern UI finishes. You'll learn about nested routes, sessions, data loading, data mutations, progressive enhancement, and more. Get a feel for what a data-backed web app feels like with Remix.</p>
+      <p>Dive deep into Remix and full stack development with this app. It's backed by a SQL database, user authentication and session, and of course some modern UI finishes. You'll learn about nested routes, sessions, data loading, data mutations, progressive enhancement, and more. Get a feel for what a data-backed web app feels like with Remix.</p>
     </docs-card>
   </a>
   <a href="v1/api/conventions" aria-label="Conventional APIs">

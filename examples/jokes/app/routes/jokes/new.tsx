@@ -1,12 +1,13 @@
-import type { ActionFunction, LoaderFunction } from "remix";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import {
-  Link,
-  useCatch,
-  useActionData,
   Form,
-  redirect,
+  Link,
+  useActionData,
+  useCatch,
   useTransition,
-} from "remix";
+} from "@remix-run/react";
+
 import { JokeDisplay } from "~/components/joke";
 import { db } from "~/utils/db.server";
 import { getUserId, requireUserId } from "~/utils/session.server";
@@ -16,7 +17,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   if (!userId) {
     throw new Response("Unauthorized", { status: 401 });
   }
-  return {};
+  return json({});
 };
 
 function validateJokeContent(content: string) {
@@ -40,16 +41,21 @@ type ActionData = {
   };
 };
 
-export const action: ActionFunction = async ({
-  request,
-}): Promise<Response | ActionData> => {
+/**
+ * This helper function gives us typechecking for our ActionData return
+ * statements, while still returning the accurate HTTP status, 400 Bad Request,
+ * to the client.
+ */
+const badRequest = (data: ActionData) => json(data, { status: 400 });
+
+export const action: ActionFunction = async ({ request }) => {
   const userId = await requireUserId(request);
 
   const form = await request.formData();
   const name = form.get("name");
   const content = form.get("content");
   if (typeof name !== "string" || typeof content !== "string") {
-    return { formError: `Form not submitted correctly.` };
+    return badRequest({ formError: `Form not submitted correctly.` });
   }
 
   const fieldErrors = {
@@ -57,7 +63,9 @@ export const action: ActionFunction = async ({
     content: validateJokeContent(content),
   };
   const fields = { name, content };
-  if (Object.values(fieldErrors).some(Boolean)) return { fieldErrors, fields };
+  if (Object.values(fieldErrors).some(Boolean)) {
+    return badRequest({ fieldErrors, fields });
+  }
 
   const joke = await db.joke.create({
     data: { ...fields, jokesterId: userId },
@@ -66,7 +74,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function NewJokeRoute() {
-  const actionData = useActionData<ActionData | undefined>();
+  const actionData = useActionData<ActionData>();
   const transition = useTransition();
 
   if (transition.submission) {
@@ -100,7 +108,7 @@ export default function NewJokeRoute() {
               defaultValue={actionData?.fields?.name}
               name="name"
               aria-invalid={Boolean(actionData?.fieldErrors?.name)}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.name ? "name-error" : undefined
               }
             />
@@ -118,7 +126,7 @@ export default function NewJokeRoute() {
               defaultValue={actionData?.fields?.content}
               name="content"
               aria-invalid={Boolean(actionData?.fieldErrors?.content)}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.content ? "content-error" : undefined
               }
             />
@@ -134,6 +142,11 @@ export default function NewJokeRoute() {
           ) : null}
         </div>
         <div>
+          {actionData?.formError ? (
+            <p className="form-validation-error" role="alert">
+              {actionData.formError}
+            </p>
+          ) : null}
           <button type="submit" className="button">
             Add
           </button>

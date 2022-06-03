@@ -1,36 +1,76 @@
-import type { RequestInfo, RequestInit, Response } from "node-fetch";
-import nodeFetch, { Request as NodeRequest } from "node-fetch";
+import type { Readable } from "stream";
+import {
+  fetch as webFetch,
+  Headers as WebHeaders,
+  Request as WebRequest,
+  Response as WebResponse,
+} from "@remix-run/web-fetch";
+export { FormData } from "@remix-run/web-fetch";
+export { File, Blob } from "@remix-run/web-file";
 
-import { RemixFormData } from "./form-data";
+type NodeHeadersInit = ConstructorParameters<typeof WebHeaders>[0];
+type NodeResponseInit = NonNullable<
+  ConstructorParameters<typeof WebResponse>[1]
+>;
+type NodeRequestInfo =
+  | ConstructorParameters<typeof WebRequest>[0]
+  | NodeRequest;
+type NodeRequestInit = Omit<
+  NonNullable<ConstructorParameters<typeof WebRequest>[1]>,
+  "body"
+> & {
+  body?:
+    | NonNullable<ConstructorParameters<typeof WebRequest>[1]>["body"]
+    | Readable;
+};
 
 export type {
-  HeadersInit,
-  RequestInfo,
-  RequestInit,
-  ResponseInit
-} from "node-fetch";
-export { Headers, Response } from "node-fetch";
+  NodeHeadersInit as HeadersInit,
+  NodeRequestInfo as RequestInfo,
+  NodeRequestInit as RequestInit,
+  NodeResponseInit as ResponseInit,
+};
 
-export class Request extends NodeRequest {
-  async formData() {
-    let body = await this.clone().text();
-    return new RemixFormData(body);
+class NodeRequest extends WebRequest {
+  constructor(info: NodeRequestInfo, init?: NodeRequestInit) {
+    super(info, init as RequestInit);
+  }
+
+  public get headers(): WebHeaders {
+    return super.headers as WebHeaders;
+  }
+
+  public clone(): NodeRequest {
+    return super.clone() as NodeRequest;
   }
 }
 
-/**
- * A `fetch` function for node that matches the web Fetch API. Based on
- * `node-fetch`.
- *
- * @see https://github.com/node-fetch/node-fetch
- * @see https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
- */
-export function fetch(
-  input: RequestInfo,
-  init?: RequestInit
-): Promise<Response> {
-  // Default to { compress: false } so responses can be proxied through more
-  // easily in loaders. Otherwise the response stream encoding will not match
-  // the Content-Encoding response header.
-  return nodeFetch(input, { compress: false, ...init });
+class NodeResponse extends WebResponse {
+  public get headers(): WebHeaders {
+    return super.headers as WebHeaders;
+  }
+
+  public clone(): NodeResponse {
+    return super.clone() as NodeResponse;
+  }
 }
+
+export {
+  WebHeaders as Headers,
+  NodeRequest as Request,
+  NodeResponse as Response,
+};
+
+export const fetch: typeof webFetch = (
+  info: NodeRequestInfo,
+  init?: NodeRequestInit
+) => {
+  init = {
+    // Disable compression handling so people can return the result of a fetch
+    // directly in the loader without messing with the Content-Encoding header.
+    compress: false,
+    ...init,
+  };
+
+  return webFetch(info, init as RequestInit);
+};

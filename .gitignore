@@ -1,13 +1,27 @@
-.vscode
 .DS_Store
 
 /build/
 node_modules/
 yarn-error.log
 
-/MICHAEL_TODOS.md
+/jacob
 /fixtures/cloudflare
 /fixtures/test
 /fixtures/my-remix-app
+/fixtures/deno-app
+/playwright-report
+/test-results
+/uploads
 
 .eslintcache
+.tmp
+
+/scripts/deployment-test/apps
+/scripts/deployment-test/package-lock.json
+/scripts/deployment-test/yarn.lock
+
+/.idea/
+/playground
+/scripts/playground/template.local
+/scripts/playground/template/build
+/scripts/playground/template/package-lock.json

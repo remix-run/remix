@@ -2,17 +2,15 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import type {
   AppLoadContext,
   ServerBuild,
-  ServerPlatform
-} from "@remix-run/server-runtime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-import type {
   RequestInit as NodeRequestInit,
-  Response as NodeResponse
+  Response as NodeResponse,
 } from "@remix-run/node";
 import {
+  AbortController,
+  createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
-  formatServerError
+  writeReadableStreamToWritable,
 } from "@remix-run/node";
 
 /**
@@ -22,11 +20,15 @@ import {
  * You can think of this as an escape hatch that allows you to pass
  * environment/platform-specific values through to your loader/action.
  */
-export interface GetLoadContextFunction {
-  (req: VercelRequest, res: VercelResponse): AppLoadContext;
-}
+export type GetLoadContextFunction = (
+  req: VercelRequest,
+  res: VercelResponse
+) => AppLoadContext;
 
-export type RequestHandler = ReturnType<typeof createRequestHandler>;
+export type RequestHandler = (
+  req: VercelRequest,
+  res: VercelResponse
+) => Promise<void>;
 
 /**
  * Returns a request handler for Vercel's Node.js runtime that serves the
@@ -35,28 +37,24 @@ export type RequestHandler = ReturnType<typeof createRequestHandler>;
 export function createRequestHandler({
   build,
   getLoadContext,
-  mode = process.env.NODE_ENV
+  mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
-}) {
-  let platform: ServerPlatform = { formatServerError };
-  let handleRequest = createRemixRequestHandler(build, platform, mode);
+}): RequestHandler {
+  let handleRequest = createRemixRequestHandler(build, mode);
 
-  return async (req: VercelRequest, res: VercelResponse) => {
+  return async (req, res) => {
     let request = createRemixRequest(req);
     let loadContext =
       typeof getLoadContext === "function"
         ? getLoadContext(req, res)
         : undefined;
 
-    let response = (await handleRequest(
-      request as unknown as Request,
-      loadContext
-    )) as unknown as NodeResponse;
+    let response = (await handleRequest(request, loadContext)) as NodeResponse;
 
-    sendRemixResponse(res, response);
+    await sendRemixResponse(res, response);
   };
 }
 
@@ -64,6 +62,7 @@ export function createRemixHeaders(
   requestHeaders: VercelRequest["headers"]
 ): NodeHeaders {
   let headers = new NodeHeaders();
+
   for (let key in requestHeaders) {
     let header = requestHeaders[key]!;
     // set-cookie is an array (maybe others)
@@ -85,38 +84,40 @@ export function createRemixRequest(req: VercelRequest): NodeRequest {
   let protocol = req.headers["x-forwarded-proto"] || "https";
   let url = new URL(req.url!, `${protocol}://${host}`);
 
+  let controller = new AbortController();
+
+  req.on("close", () => {
+    controller.abort();
+  });
+
   let init: NodeRequestInit = {
     method: req.method,
-    headers: createRemixHeaders(req.headers)
+    headers: createRemixHeaders(req.headers),
+    signal: controller.signal,
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
     init.body = req;
   }
 
-  return new NodeRequest(url.toString(), init);
+  return new NodeRequest(url.href, init);
 }
 
-function sendRemixResponse(res: VercelResponse, response: NodeResponse): void {
-  let arrays = new Map();
-  for (let [key, value] of response.headers.entries()) {
-    if (arrays.has(key)) {
-      let newValue = arrays.get(key).concat(value);
-      res.setHeader(key, newValue);
-      arrays.set(key, newValue);
-    } else {
-      res.setHeader(key, value);
-      arrays.set(key, [value]);
-    }
+export async function sendRemixResponse(
+  res: VercelResponse,
+  nodeResponse: NodeResponse
+): Promise<void> {
+  res.statusMessage = nodeResponse.statusText;
+  let multiValueHeaders = nodeResponse.headers.raw();
+  res.writeHead(
+    nodeResponse.status,
+    nodeResponse.statusText,
+    multiValueHeaders
+  );
+
+  if (nodeResponse.body) {
+    await writeReadableStreamToWritable(nodeResponse.body, res);
+  } else {
+    res.end();
   }
-
-  res.writeHead(response.status, response.headers.raw());
-
-  if (Buffer.isBuffer(response.body)) {
-    return res.end(response.body);
-  } else if (response.body?.pipe) {
-    return res.end(response.body.pipe(res));
-  }
-
-  return res.end();
 }

@@ -17,36 +17,34 @@ export const handle = { hydrate: true };
 
 Now open `root.tsx`, bring in `useMatches` and add this:
 
-```tsx [7,11,14-16,29]
-import React from "react";
+```tsx [6,10,13-15,27]
 import {
   Meta,
   Links,
   Scripts,
   Outlet,
-  useMatches
-} from "remix";
+  useMatches,
+} from "@remix-run/react";
 
 export default function App() {
   const matches = useMatches();
 
   // If at least one route wants to hydrate, this will return true
   const includeScripts = matches.some(
-    match => match.handle?.hydrate
+    (match) => match.handle?.hydrate
   );
 
   // then use the flag to render scripts or not
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
         <Meta />
         <Links />
       </head>
       <body>
         <Outlet />
         {/* include the scripts, or not! */}
-        {includeScripts && <Scripts />}
+        {includeScripts ? <Scripts /> : null}
       </body>
     </html>
   );
@@ -60,22 +58,29 @@ On any page, at anytime, you can flip between plain HTML and full client-side tr
 If you need one tiny bit of interactivity, use a `<script dangerouslySetInnerHTML>`.
 
 ```tsx
-<select id="qty">
-  <option>1</option>
-  <option>2</option>
-  <option value="contact">Contact Sales for more</option>
-</select>
-<script
-  dangerouslySetInnerHTML={{
-    __html: `
-      document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('qty').onchange = (event) => {
-          if (event.target.value === "contact") {
-            window.location.assign("/contact")
-          }
-        }
-      });
-    `,
-  }}
-/>
+return (
+  <>
+    <select id="qty">
+      <option>1</option>
+      <option>2</option>
+      <option value="contact">
+        Contact Sales for more
+      </option>
+    </select>
+
+    <script
+      dangerouslySetInnerHTML={{
+        __html: `
+          document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('qty').onchange = (event) => {
+              if (event.target.value === "contact") {
+                window.location.assign("/contact")
+              }
+            }
+          });
+        `,
+      }}
+    />
+  </>
+);
 ```

@@ -1,0 +1,82 @@
+.form-container {
+  width: 50vh;
+  display: flex;
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  min-height: 20em;
+  background: rgba(18, 18, 18);
+  border-radius: 3px;
+  box-shadow: 0 19px 38px rgba(0, 0, 0, 0.3), 0 15px 12px rgba(0, 0, 0, 0.22);
+}
+
+.grid-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  grid-gap: 1em;
+  margin-top: 1em;
+}
+
+.operand {
+  background: rgb(255, 255, 255);
+  border-radius: 10px;
+  width: 50px;
+  height: 50px;
+  padding: 0.5em;
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #000;
+  text-align: center;
+  outline: none;
+  margin: auto;
+  border: none;
+}
+
+.operator {
+  background: rgb(255, 255, 255);
+  border-radius: 10px;
+  width: 75px;
+  height: 75px;
+  padding: 0.5em;
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #000;
+  text-align: center;
+  outline: none;
+  border: none;
+  margin: auto;
+  appearance: none;
+}
+
+.submit {
+  grid-column: 1 / span 3;
+  background-color: rgba(254, 204, 27, 1);
+  height: 50px;
+  font-size: 1.5em;
+  margin: auto;
+  color: #000;
+  width: 100%;
+  border-radius: 10px;
+}
+
+.result {
+  grid-column: 1 / span 3;
+  background-color: #fff;
+  height: 50px;
+  margin: auto;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5em;
+  font-weight: bold;
+  color: #000;
+  border-radius: 10px;
+}
+
+.error-message {
+  color: red;
+  font-size: 1.2em;
+  margin-top: 1em;
+}

@@ -1,0 +1,7 @@
+{
+  "providers": {
+    "mode": "append",
+    "redirectOnSingle": false,
+    "entries": []
+  }
+}

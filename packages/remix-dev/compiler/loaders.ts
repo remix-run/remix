@@ -7,6 +7,7 @@ export const loaders: { [ext: string]: esbuild.Loader } = {
   ".eot": "file",
   ".flac": "file",
   ".gif": "file",
+  ".ico": "file",
   ".jpeg": "file",
   ".jpg": "file",
   ".js": "jsx",
@@ -27,9 +28,10 @@ export const loaders: { [ext: string]: esbuild.Loader } = {
   ".ttf": "file",
   ".wav": "file",
   ".webm": "file",
+  ".webmanifest": "file",
   ".webp": "file",
   ".woff": "file",
-  ".woff2": "file"
+  ".woff2": "file",
 };
 
 export function getLoaderForFile(file: string): esbuild.Loader {

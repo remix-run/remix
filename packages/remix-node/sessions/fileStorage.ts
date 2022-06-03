@@ -3,9 +3,10 @@ import { promises as fsp } from "fs";
 import * as path from "path";
 import type {
   SessionStorage,
-  SessionIdStorageStrategy
+  SessionIdStorageStrategy,
 } from "@remix-run/server-runtime";
-import { createSessionStorage } from "@remix-run/server-runtime";
+
+import { createSessionStorage } from "../implementations";
 
 interface FileSessionStorageOptions {
   /**
@@ -25,10 +26,12 @@ interface FileSessionStorageOptions {
  *
  * The advantage of using this instead of cookie session storage is that
  * files may contain much more data than cookies.
+ *
+ * @see https://remix.run/api/remix#createfilesessionstorage-node
  */
 export function createFileSessionStorage({
   cookie,
-  dir
+  dir,
 }: FileSessionStorageOptions): SessionStorage {
   return createSessionStorage({
     cookie,
@@ -90,7 +93,7 @@ export function createFileSessionStorage({
       } catch (error: any) {
         if (error.code !== "ENOENT") throw error;
       }
-    }
+    },
   });
 }
 

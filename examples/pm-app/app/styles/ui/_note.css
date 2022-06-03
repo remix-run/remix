@@ -1,0 +1,7 @@
+.ui--note {
+  padding: var(--spaces-04);
+  background: var(--colors-yellow-05);
+  border: 2px solid var(--colors-yellow-11);
+  color: var(--colors-yellow-12);
+  border-radius: 4px;
+}

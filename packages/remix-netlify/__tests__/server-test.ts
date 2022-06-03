@@ -1,16 +1,30 @@
+import fsp from "fs/promises";
+import path from "path";
 import lambdaTester from "lambda-tester";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import {
+  // This has been added as a global in node 15+
+  AbortController,
+  createRequestHandler as createRemixRequestHandler,
+  Response as NodeResponse,
+} from "@remix-run/node";
 import type { HandlerEvent } from "@netlify/functions";
 
 import {
   createRemixHeaders,
   createRemixRequest,
-  createRequestHandler
+  createRequestHandler,
+  sendRemixResponse,
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the netlify adapter
-jest.mock("@remix-run/server-runtime");
+jest.mock("@remix-run/node", () => {
+  let original = jest.requireActual("@remix-run/node");
+  return {
+    ...original,
+    createRequestHandler: jest.fn(),
+  };
+});
 let mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler
@@ -28,7 +42,7 @@ function createMockEvent(event: Partial<HandlerEvent> = {}): HandlerEvent {
     multiValueQueryStringParameters: null,
     body: null,
     isBase64Encoded: false,
-    ...event
+    ...event,
   };
 }
 
@@ -43,7 +57,7 @@ describe("netlify createRequestHandler", () => {
     });
 
     it("handles requests", async () => {
-      mockedCreateRequestHandler.mockImplementation(() => async req => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
@@ -51,7 +65,7 @@ describe("netlify createRequestHandler", () => {
       // won't ever call through to the real createRequestHandler
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000/foo/bar" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(200);
           expect(res.body).toBe("URL: /foo/bar");
         });
@@ -66,7 +80,7 @@ describe("netlify createRequestHandler", () => {
       // won't ever call through to the real createRequestHandler
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(200);
         });
     });
@@ -80,14 +94,14 @@ describe("netlify createRequestHandler", () => {
       // won't ever call through to the real createRequestHandler
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
-        .expectResolve(res => {
+        .expectResolve((res) => {
           expect(res.statusCode).toBe(204);
         });
     });
 
     it("sets headers", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        const headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
+        let headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
         headers.append(
           "Set-Cookie",
           "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax"
@@ -108,14 +122,14 @@ describe("netlify createRequestHandler", () => {
       // won't ever call through to the real createRequestHandler
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
-        .expectResolve(res => {
-          expect(res.multiValueHeaders["X-Time-Of-Year"]).toEqual([
-            "most wonderful"
+        .expectResolve((res) => {
+          expect(res.multiValueHeaders["x-time-of-year"]).toEqual([
+            "most wonderful",
           ]);
-          expect(res.multiValueHeaders["Set-Cookie"]).toEqual([
+          expect(res.multiValueHeaders["set-cookie"]).toEqual([
             "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
             "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax",
-            "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+            "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax",
           ]);
         });
     });
@@ -127,7 +141,8 @@ describe("netlify createRemixHeaders", () => {
     it("handles empty headers", () => {
       expect(createRemixHeaders({})).toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {},
+          Symbol(query): Array [],
+          Symbol(context): null,
         }
       `);
     });
@@ -135,11 +150,11 @@ describe("netlify createRemixHeaders", () => {
     it("handles simple headers", () => {
       expect(createRemixHeaders({ "x-foo": ["bar"] })).toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-foo": Array [
-              "bar",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -148,14 +163,13 @@ describe("netlify createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": ["bar"], "x-bar": ["baz"] }))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-bar": Array [
-              "baz",
-            ],
-            "x-foo": Array [
-              "bar",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar",
+            "x-bar",
+            "baz",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -164,12 +178,13 @@ describe("netlify createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": ["bar", "baz"] }))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-foo": Array [
-              "bar",
-              "baz",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar",
+            "x-foo",
+            "baz",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -178,15 +193,15 @@ describe("netlify createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": ["bar", "baz"], "x-bar": ["baz"] }))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-bar": Array [
-              "baz",
-            ],
-            "x-foo": Array [
-              "bar",
-              "baz",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar",
+            "x-foo",
+            "baz",
+            "x-bar",
+            "baz",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -196,21 +211,22 @@ describe("netlify createRemixHeaders", () => {
         createRemixHeaders({
           Cookie: [
             "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-            "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax"
+            "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
           ],
-          "x-something-else": ["true"]
+
+          "x-something-else": ["true"],
         })
       ).toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "Cookie": Array [
-              "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-              "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
-            ],
-            "x-something-else": Array [
-              "true",
-            ],
-          },
+          Symbol(query): Array [
+            "cookie",
+            "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
+            "cookie",
+            "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
+            "x-something-else",
+            "true",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -223,51 +239,85 @@ describe("netlify createRemixRequest", () => {
       createRemixRequest(
         createMockEvent({
           multiValueHeaders: {
-            Cookie: ["__session=value", "__other=value"]
-          }
+            Cookie: ["__session=value", "__other=value"],
+          },
         })
       )
     ).toMatchInlineSnapshot(`
-      Request {
+      NodeRequest {
         "agent": undefined,
         "compress": true,
         "counter": 0,
         "follow": 20,
+        "highWaterMark": 16384,
+        "insecureHTTPParser": false,
         "size": 0,
-        "timeout": 0,
         Symbol(Body internals): Object {
           "body": null,
+          "boundary": null,
           "disturbed": false,
           "error": null,
+          "size": 0,
+          "type": null,
         },
         Symbol(Request internals): Object {
           "headers": Headers {
-            Symbol(map): Object {
-              "Cookie": Array [
-                "__session=value",
-                "__other=value",
-              ],
-            },
+            Symbol(query): Array [
+              "cookie",
+              "__session=value",
+              "cookie",
+              "__other=value",
+            ],
+            Symbol(context): null,
           },
           "method": "GET",
-          "parsedURL": Url {
-            "auth": null,
-            "hash": null,
-            "host": "localhost:3000",
-            "hostname": "localhost",
-            "href": "http://localhost:3000/",
-            "path": "/",
-            "pathname": "/",
-            "port": "3000",
-            "protocol": "http:",
-            "query": null,
-            "search": null,
-            "slashes": true,
-          },
+          "parsedURL": "http://localhost:3000/",
           "redirect": "follow",
           "signal": null,
         },
       }
     `);
+  });
+});
+
+describe("sendRemixResponse", () => {
+  it("handles regular responses", async () => {
+    let response = new NodeResponse("anything");
+    let abortController = new AbortController();
+    let result = await sendRemixResponse(response, abortController);
+    expect(result.body).toBe("anything");
+  });
+
+  it("handles resource routes with regular data", async () => {
+    let json = JSON.stringify({ foo: "bar" });
+    let response = new NodeResponse(json, {
+      headers: {
+        "Content-Type": "application/json",
+        "content-length": json.length.toString(),
+      },
+    });
+
+    let abortController = new AbortController();
+
+    let result = await sendRemixResponse(response, abortController);
+
+    expect(result.body).toMatch(json);
+  });
+
+  it("handles resource routes with binary data", async () => {
+    let image = await fsp.readFile(path.join(__dirname, "554828.jpeg"));
+
+    let response = new NodeResponse(image, {
+      headers: {
+        "content-type": "image/jpeg",
+        "content-length": image.length.toString(),
+      },
+    });
+
+    let abortController = new AbortController();
+
+    let result = await sendRemixResponse(response, abortController);
+
+    expect(result.body).toMatch(image.toString("base64"));
   });
 });
