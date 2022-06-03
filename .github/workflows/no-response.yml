@@ -31,7 +31,8 @@ jobs:
             tracker clean from PRs that are unactionable. Please reach out if you
             have more information for us! 🙂
           days-before-close: 10
+          # don't automatically mark issues/PRs as stale
+          days-before-stale: -1
           any-of-labels: needs-response
           labels-to-remove-when-unstale: needs-response
-          exempt-draft-pr: true
           repo-token: ${{ github.token }}
