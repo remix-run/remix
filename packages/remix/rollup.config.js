@@ -8,7 +8,6 @@ const {
   copyToPlaygrounds,
   createBanner,
   getVersion,
-  isNormalBuild,
 } = require("../../rollup-utils");
 
 /** @returns {import("rollup").RollupOptions[]} */
@@ -17,7 +16,9 @@ module.exports = function rollup() {
   let outputDir = path.join(buildDir, "node_modules/remix");
   let version = getVersion(sourceDir);
 
-  if (!isNormalBuild) {
+  // Don't blow away remix magic exports on local builds, since they've
+  // already been configured by postinstall
+  if (process.env.LOCAL_BUILD_DIRECTORY) {
     return [];
   }
 

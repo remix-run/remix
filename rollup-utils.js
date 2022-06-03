@@ -58,11 +58,7 @@ function getAdapterConfig(adapterName) {
       process.cwd(),
       path.join(__dirname, "packages", `remix-${adapterName}`)
     ) || ".";
-  let outputDir = path.join(
-    buildDir,
-    "node_modules",
-    `@remix-run/${packageName}`
-  );
+  let outputDir = path.join(buildDir, `node_modules/${packageName}`);
   let version = getVersion(sourceDir);
 
   let hasMagicExports = fse.existsSync(`${sourceDir}/magicExports/remix.ts`);
@@ -194,6 +190,7 @@ function copyToPlaygrounds() {
 }
 
 module.exports = {
+  buildDir,
   copyToPlaygrounds,
   createBanner,
   defaultBuildDir,
@@ -201,5 +198,4 @@ module.exports = {
   getAdapterConfig,
   getVersion,
   isBareModuleId,
-  buildDir,
 };
