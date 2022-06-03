@@ -806,7 +806,9 @@ export function Scripts(props: ScriptProps) {
       .join("\n")}
 window.__remixRouteModules = {${matches
       .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
-      .join(",")}};`;
+      .join(",")}};
+      
+import(${JSON.stringify(manifest.entry.module)});`;
 
     return (
       <>
@@ -823,7 +825,6 @@ window.__remixRouteModules = {${matches
           type="module"
           async
         />
-        <script {...props} src={manifest.entry.module} type="module" async />
       </>
     );
     // disabled deps array because we are purposefully only rendering this once
