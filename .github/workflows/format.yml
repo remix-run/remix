@@ -31,9 +31,6 @@ jobs:
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
 
-      - name: 🤌 Update Example and Template names
-        run: node scripts/patchup-example-names.mjs
-
       - name: 👔 Format
         run: npm run format --if-present
 
