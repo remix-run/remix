@@ -1,11 +1,13 @@
-import * as React from "react";
 import type {
   ActionFunction,
-  MetaFunction,
   LinksFunction,
   LoaderFunction,
-} from "remix";
-import { Form, json, useActionData, useSearchParams } from "remix";
+  MetaFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, useActionData, useSearchParams } from "@remix-run/react";
+import * as React from "react";
+
 import { Button } from "~/ui/button";
 import { Link } from "~/ui/link";
 import { ShadowBox } from "~/ui/shadow-box";
@@ -34,7 +36,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   //     successRedirect: "/done",
   //   });
 
-  return {};
+  return json({});
 };
 
 export const action: ActionFunction = async ({ request }) => {
@@ -102,19 +104,19 @@ export const action: ActionFunction = async ({ request }) => {
   // 3. Check for existing user
   const existingUser = await getUser("email", email);
   if (existingUser) {
-    return {
+    return json({
       fields,
       formError: `Sorry! That email is already taken.`,
-    };
+    });
   }
 
   // 4. Register a new user
   const user = await register({ email, password, nameFirst, nameLast });
   if (!user) {
-    return {
+    return json({
       fields,
       formError: `Something went wrong with registration. Please try again later!`,
-    };
+    });
   }
 
   // 5. Create a user session with the new user's ID

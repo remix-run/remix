@@ -198,7 +198,6 @@ Run ${chalk.bold(`git push origin ${releaseBranch} --follow-tags`)}`)
  */
 async function execBump(nextVersion, git) {
   ensureReleaseBranch(git.initialBranch);
-  await gitMerge("main", git.initialBranch, { pullFirst: true });
   await incrementRemixVersion(nextVersion);
   // TODO: After testing a few times, execute git push as a part of the flow and
   // remove the silly message
@@ -387,7 +386,7 @@ function ensureLatestReleaseBranch(branch, git) {
  * @returns {string | undefined}
  */
 function getVersionFromReleaseBranch(branch) {
-  return branch.split("/")[1]?.slice(1);
+  return branch.slice(branch.indexOf("-") + 2);
 }
 
 /**
@@ -401,7 +400,7 @@ function getVersionTag(version) {
  * @param {string} version
  */
 function getReleaseBranch(version) {
-  return `release/${getVersionTag(
+  return `release-${getVersionTag(
     version.includes("-") ? version.slice(0, version.indexOf("-")) : version
   )}`;
 }

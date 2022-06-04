@@ -1,3 +1,4 @@
+import type { MetaFunction } from "@remix-run/node";
 import {
   Links,
   LiveReload,
@@ -5,16 +6,20 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-} from "remix";
+} from "@remix-run/react";
 import { useShouldHydrate } from "remix-utils";
+
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "New Remix App",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 export default function App() {
   const shouldHydrate = useShouldHydrate();
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
       </head>

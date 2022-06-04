@@ -1,8 +1,9 @@
-import { Form, useActionData } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, useActionData } from "@remix-run/react";
+
 import { add } from "~/rust.server";
 import indexStylesUrl from "~/styles/index.css";
-
-import type { ActionFunction } from "remix";
 
 export function links() {
   return [{ rel: "stylesheet", href: indexStylesUrl }];
@@ -17,14 +18,14 @@ export const action: ActionFunction = async ({ request }) => {
     case "+":
       const result = add(Number(left_operand), Number(right_operand));
       console.log("result", result);
-      return {
+      return json({
         result,
-      };
+      });
     default:
       // Implement other operators
-      return {
+      return json({
         result: "🤷🏾",
-      };
+      });
   }
 };
 

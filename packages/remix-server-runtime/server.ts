@@ -6,72 +6,63 @@ import type { EntryContext } from "./entry";
 import { createEntryMatches, createEntryRouteModules } from "./entry";
 import { serializeError } from "./errors";
 import { getDocumentHeaders } from "./headers";
-import type { ServerPlatform } from "./platform";
+import { ServerMode, isServerMode } from "./mode";
 import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
-import { ServerMode, isServerMode } from "./mode";
 import type { ServerRoute } from "./routes";
 import { createRoutes } from "./routes";
 import { json, isRedirectResponse, isCatchResponse } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
-/**
- * The main request handler for a Remix server. This handler runs in the context
- * of a cloud provider's server (e.g. Express on Firebase) or locally via their
- * dev tools.
- */
-export interface RequestHandler {
-  (request: Request, loadContext?: AppLoadContext): Promise<Response>;
-}
+export type RequestHandler = (
+  request: Request,
+  loadContext?: AppLoadContext
+) => Promise<Response>;
 
-/**
- * Creates a function that serves HTTP requests.
- */
-export function createRequestHandler(
+export type CreateRequestHandlerFunction = (
   build: ServerBuild,
-  platform: ServerPlatform,
   mode?: string
-): RequestHandler {
+) => RequestHandler;
+
+export const createRequestHandler: CreateRequestHandlerFunction = (
+  build,
+  mode
+) => {
   let routes = createRoutes(build.routes);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
 
   return async function requestHandler(request, loadContext) {
     let url = new URL(request.url);
     let matches = matchServerRoutes(routes, url.pathname);
-    let requestType = getRequestType(url, matches);
 
     let response: Response;
-    switch (requestType) {
-      case "data":
-        response = await handleDataRequest({
-          request,
-          loadContext,
-          matches: matches!,
-          handleDataRequest: build.entry.module.handleDataRequest,
-          serverMode,
-        });
-        break;
-      case "document":
-        response = await renderDocumentRequest({
-          build,
-          loadContext,
-          matches,
-          request,
-          routes,
-          serverMode,
-        });
-        break;
-      case "resource":
-        response = await handleResourceRequest({
-          request,
-          loadContext,
-          matches: matches!,
-          serverMode,
-        });
-        break;
+    if (url.searchParams.has("_data")) {
+      response = await handleDataRequest({
+        request,
+        loadContext,
+        matches: matches!,
+        handleDataRequest: build.entry.module.handleDataRequest,
+        serverMode,
+      });
+    } else if (matches && !matches[matches.length - 1].route.module.default) {
+      response = await handleResourceRequest({
+        request,
+        loadContext,
+        matches,
+        serverMode,
+      });
+    } else {
+      response = await handleDocumentRequest({
+        build,
+        loadContext,
+        matches,
+        request,
+        routes,
+        serverMode,
+      });
     }
 
-    if (request.method.toLowerCase() === "head") {
+    if (request.method === "HEAD") {
       return new Response(null, {
         headers: response.headers,
         status: response.status,
@@ -81,7 +72,8 @@ export function createRequestHandler(
 
     return response;
   };
-}
+};
+
 async function handleDataRequest({
   handleDataRequest,
   loadContext,
@@ -115,7 +107,7 @@ async function handleDataRequest({
   let match: RouteMatch<ServerRoute>;
   try {
     if (isActionRequest(request)) {
-      match = getActionRequestMatch(url, matches);
+      match = getRequestMatch(url, matches);
 
       response = await callRouteAction({
         loadContext,
@@ -147,6 +139,9 @@ async function handleDataRequest({
       let headers = new Headers(response.headers);
       headers.set("X-Remix-Redirect", headers.get("Location")!);
       headers.delete("Location");
+      if (response.headers.get("Set-Cookie") !== null) {
+        headers.set("X-Remix-Revalidate", "yes");
+      }
 
       return new Response(null, {
         status: 204,
@@ -155,10 +150,10 @@ async function handleDataRequest({
     }
 
     if (handleDataRequest) {
-      response = await handleDataRequest(response.clone(), {
+      response = await handleDataRequest(response, {
         context: loadContext,
         params: match.params,
-        request: request.clone(),
+        request,
       });
     }
 
@@ -176,7 +171,7 @@ async function handleDataRequest({
   }
 }
 
-async function renderDocumentRequest({
+async function handleDocumentRequest({
   build,
   loadContext,
   matches,
@@ -226,7 +221,7 @@ async function renderDocumentRequest({
   let actionResponse: Response | undefined;
 
   if (matches && isActionRequest(request)) {
-    actionMatch = getActionRequestMatch(url, matches);
+    actionMatch = getRequestMatch(url, matches);
 
     try {
       actionResponse = await callRouteAction({
@@ -298,13 +293,21 @@ async function renderDocumentRequest({
     );
   }
 
+  let loaderRequest = new Request(request.url, {
+    body: null,
+    headers: request.headers,
+    method: request.method,
+    redirect: request.redirect,
+    signal: request.signal,
+  });
+
   let routeLoaderResults = await Promise.allSettled(
     matchesToLoad.map((match) =>
       match.route.module.loader
         ? callRouteLoader({
             loadContext,
             match,
-            request,
+            request: loaderRequest,
           })
         : Promise.resolve(undefined)
     )
@@ -318,7 +321,7 @@ async function renderDocumentRequest({
   let actionError = appState.error;
   let actionCatchBoundaryRouteId = appState.catchBoundaryRouteId;
   let actionLoaderBoundaryRouteId = appState.loaderBoundaryRouteId;
-  // Reset the app error and catch state to propogate the loader states
+  // Reset the app error and catch state to propagate the loader states
   // from the results into the app state.
   appState.catch = undefined;
   appState.error = undefined;
@@ -462,7 +465,7 @@ async function renderDocumentRequest({
   let handleDocumentRequest = build.entry.module.default;
   try {
     return await handleDocumentRequest(
-      request.clone(),
+      request,
       responseStatusCode,
       responseHeaders,
       entryContext
@@ -482,7 +485,7 @@ async function renderDocumentRequest({
 
     try {
       return await handleDocumentRequest(
-        request.clone(),
+        request,
         responseStatusCode,
         responseHeaders,
         entryContext
@@ -549,48 +552,16 @@ async function handleResourceRequest({
   }
 }
 
-type RequestType = "data" | "document" | "resource";
+const validActionMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-function getRequestType(
-  url: URL,
-  matches: RouteMatch<ServerRoute>[] | null
-): RequestType {
-  if (url.searchParams.has("_data")) {
-    return "data";
-  }
-
-  if (!matches) {
-    return "document";
-  }
-
-  let match = matches.slice(-1)[0];
-  if (!match.route.module.default) {
-    return "resource";
-  }
-
-  return "document";
+function isActionRequest({ method }: Request): boolean {
+  return validActionMethods.has(method.toUpperCase());
 }
 
-function isActionRequest(request: Request): boolean {
-  let method = request.method.toLowerCase();
-  return (
-    method === "post" ||
-    method === "put" ||
-    method === "patch" ||
-    method === "delete"
-  );
-}
+const validRequestMethods = new Set(["GET", "HEAD", ...validActionMethods]);
 
-function isHeadRequest(request: Request): boolean {
-  return request.method.toLowerCase() === "head";
-}
-
-function isValidRequestMethod(request: Request): boolean {
-  return (
-    request.method.toLowerCase() === "get" ||
-    isHeadRequest(request) ||
-    isActionRequest(request)
-  );
+function isValidRequestMethod({ method }: Request): boolean {
+  return validRequestMethods.has(method.toUpperCase());
 }
 
 async function errorBoundaryError(error: Error, status: number) {
@@ -603,18 +574,21 @@ async function errorBoundaryError(error: Error, status: number) {
 }
 
 function isIndexRequestUrl(url: URL) {
-  let indexRequest = false;
-
   for (let param of url.searchParams.getAll("index")) {
-    if (!param) {
-      indexRequest = true;
+    // only use bare `?index` params without a value
+    // ✅ /foo?index
+    // ✅ /foo?index&index=123
+    // ✅ /foo?index=123&index
+    // ❌ /foo?index=123
+    if (param === "") {
+      return true;
     }
   }
 
-  return indexRequest;
+  return false;
 }
 
-function getActionRequestMatch(url: URL, matches: RouteMatch<ServerRoute>[]) {
+function getRequestMatch(url: URL, matches: RouteMatch<ServerRoute>[]) {
   let match = matches.slice(-1)[0];
 
   if (!isIndexRequestUrl(url) && match.route.id.endsWith("/index")) {

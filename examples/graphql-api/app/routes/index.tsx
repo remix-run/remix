@@ -1,4 +1,4 @@
-import { Link, useLoaderData } from "remix";
+import { Link, useLoaderData } from "@remix-run/react";
 
 import { Code } from "~/components/Code";
 import type { LoaderData } from "~/routes/api/characters";
@@ -13,7 +13,7 @@ export { loader } from "~/routes/api/characters";
  * @description This route demonstrates fetching a list of characters from
  * a GraphQL API.
  */
-export default function () {
+export default function Index() {
   const loader = useLoaderData<LoaderData>();
   const { data } = loader;
 

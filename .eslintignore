@@ -2,4 +2,11 @@
 **/tests/__snapshots/
 **/node_modules/
 !.eslintrc.js
-/packages/remix-deno/deno.d.ts
+.tmp
+/playground
+**/__tests__/fixtures
+
+# deno
+integration/helpers/deno-template
+packages/remix-deno
+templates/deno

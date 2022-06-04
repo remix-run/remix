@@ -1,5 +1,7 @@
-import { Form, redirect, useFetcher } from "remix";
-import type { ActionFunction } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
+import { Form, useFetcher } from "@remix-run/react";
+
 import {
   commitSession,
   getSession,
@@ -33,7 +35,7 @@ export const action: ActionFunction = async ({ request }) => {
   }
 };
 
-export default function () {
+export default function Index() {
   const fetcher = useFetcher();
 
   return (

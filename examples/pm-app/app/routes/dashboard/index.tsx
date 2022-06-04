@@ -1,6 +1,8 @@
+import type { LinksFunction, LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useCatch, useFetcher, useLoaderData } from "@remix-run/react";
 import * as React from "react";
-import { useLoaderData, useCatch, useFetcher } from "remix";
-import type { LoaderFunction, LinksFunction } from "remix";
+
 import type { UserSecure, Project } from "~/models";
 import { Heading, Section } from "~/ui/section-heading";
 import { MaxContainer } from "~/ui/max-container";
@@ -35,7 +37,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     projects,
   };
 
-  return data;
+  return json(data);
 };
 
 export default function DashboardIndex() {

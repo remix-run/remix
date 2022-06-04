@@ -87,7 +87,8 @@ The following example demonstrates how you might build a simple blog with MDX, i
 In `app/routes/index.jsx`:
 
 ```tsx
-import { Link, useLoaderData } from "remix";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { Link, useLoaderData } from "@remix-run/react";
 
 // Import all your posts from the app/routes/posts directory. Since these are
 // regular route modules, they will all be available for individual viewing
@@ -108,11 +109,11 @@ export async function loader() {
   // Referencing the posts here instead of in the Index component down below
   // lets us avoid bundling the actual posts themselves in the bundle for the
   // index page.
-  return [
+  return json([
     postFromModule(postA),
     postFromModule(postB),
     postFromModule(postC),
-  ];
+  ]);
 }
 
 export default function Index() {
