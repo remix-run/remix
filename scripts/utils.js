@@ -9,8 +9,15 @@ let rootDir = path.resolve(__dirname, "..");
 let examplesDir = path.resolve(rootDir, "examples");
 
 let remixPackages = {
-  adapters: ["architect", "express", "netlify", "vercel"],
-  runtimes: ["cloudflare-workers", "cloudflare-pages", "node"],
+  adapters: [
+    "architect",
+    "cloudflare-pages",
+    "cloudflare-workers",
+    "express",
+    "netlify",
+    "vercel",
+  ],
+  runtimes: ["cloudflare", "deno", "node"],
   core: ["dev", "server-runtime", "react", "eslint-config"],
   get all() {
     return [...this.adapters, ...this.runtimes, ...this.core, "serve"];
@@ -170,6 +177,52 @@ async function updateDeploymentScriptVersion(nextVersion) {
 }
 
 /**
+ * @param {string} importSpecifier
+ * @returns {[string, string]} [packageName, importPath]
+ */
+const getPackageNameFromImportSpecifier = (importSpecifier) => {
+  if (importSpecifier.startsWith("@")) {
+    let [scope, pkg, ...path] = importSpecifier.split("/");
+    return [`${scope}/${pkg}`, path.join("/")];
+  }
+
+  let [pkg, ...path] = importSpecifier.split("/");
+  return [pkg, path.join("/")];
+};
+/**
+ * @param {string} importMapPath
+ * @param {string} nextVersion
+ */
+const updateDenoImportMap = async (importMapPath, nextVersion) => {
+  let { imports, ...json } = await jsonfile.readFile(importMapPath);
+  let remixPackagesFull = remixPackages.all.map(
+    (remixPackage) => `@remix-run/${remixPackage}`
+  );
+
+  let newImports = Object.fromEntries(
+    Object.entries(imports).map(([importName, path]) => {
+      let [packageName, importPath] =
+        getPackageNameFromImportSpecifier(importName);
+
+      return remixPackagesFull.includes(packageName)
+        ? [
+            importName,
+            `https://esm.sh/${packageName}@${nextVersion}${
+              importPath ? `/${importPath}` : ""
+            }`,
+          ]
+        : [importName, path];
+    })
+  );
+
+  return jsonfile.writeFile(
+    importMapPath,
+    { ...json, imports: newImports },
+    { spaces: 2 }
+  );
+};
+
+/**
  * @param {string} nextVersion
  */
 async function incrementRemixVersion(nextVersion) {
@@ -179,6 +232,16 @@ async function incrementRemixVersion(nextVersion) {
   for (let name of remixPackages.all) {
     await updateRemixVersion(`remix-${name}`, nextVersion);
   }
+
+  // Update version numbers in Deno's import maps
+  await Promise.all(
+    [
+      path.join(".vscode", "deno_resolve_npm_imports.json"),
+      path.join("templates", "deno", ".vscode", "resolve_npm_imports.json"),
+    ].map((importMapPath) =>
+      updateDenoImportMap(path.join(rootDir, importMapPath), nextVersion)
+    )
+  );
 
   // Update versions in the examples
   await updateExamplesRemixVersion(nextVersion);

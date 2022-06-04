@@ -1,6 +1,10 @@
-import type { LinksFunction, LoaderFunction, MetaFunction } from "remix";
+import type {
+  LinksFunction,
+  LoaderFunction,
+  MetaFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
-  json,
   Links,
   LiveReload,
   Meta,
@@ -9,7 +13,7 @@ import {
   ScrollRestoration,
   useCatch,
   useLoaderData,
-} from "remix";
+} from "@remix-run/react";
 
 import global from "~/dist/styles/global.css";
 import type { User } from "./models";

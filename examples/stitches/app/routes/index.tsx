@@ -1,4 +1,5 @@
-import { Link } from "remix";
+import { Link } from "@remix-run/react";
+
 import { styled } from "../styles/stitches.config";
 
 const Container = styled("div", {
@@ -10,7 +11,7 @@ const Container = styled("div", {
 export default function Index() {
   return (
     <Container>
-      <h1>Welcome to Remix with Emotion Example</h1>
+      <h1>Welcome to Remix with Stitches Example</h1>
       <ul>
         <li>
           <Link to="/jokes">Jokes</Link>

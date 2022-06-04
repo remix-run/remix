@@ -1,16 +1,17 @@
-import * as React from "react";
-import type { LoaderFunction, MetaFunction } from "remix";
+import type { LoaderFunction, MetaFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
-  json,
   Links,
   LiveReload,
   Meta,
   Outlet,
   Scripts,
   ScrollRestoration,
-  useLoaderData,
   useFetcher,
-} from "remix";
+  useLoaderData,
+} from "@remix-run/react";
+import * as React from "react";
+
 import { gdprConsent } from "./cookies";
 
 export const loader: LoaderFunction = async ({ request }) => {

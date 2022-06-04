@@ -1,13 +1,12 @@
 import * as React from "react";
-import {
-  Form,
-  json,
-  redirect,
-  useActionData,
-  useLoaderData,
-  useCatch,
-} from "remix";
-import type { ActionFunction, LoaderFunction, LinksFunction } from "remix";
+import type {
+  ActionFunction,
+  LinksFunction,
+  LoaderFunction,
+} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { Form, useActionData, useCatch, useLoaderData } from "@remix-run/react";
+
 import type { UserSecure } from "~/models";
 import { Heading } from "~/ui/section-heading";
 import { MaxContainer } from "~/ui/max-container";

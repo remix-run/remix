@@ -1,21 +1,24 @@
 {
   "name": "create-remix",
-  "version": "1.3.2",
+  "version": "1.5.1",
   "description": "Create a new Remix app",
   "homepage": "https://remix.run",
-  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
     "directory": "packages/create-remix"
   },
-  "bugs": {
-    "url": "https://github.com/remix-run/remix/issues"
-  },
+  "license": "MIT",
   "bin": {
     "create-remix": "cli.js"
   },
   "dependencies": {
-    "@remix-run/dev": "1.3.2"
+    "@remix-run/dev": "1.5.1"
+  },
+  "engines": {
+    "node": ">=14"
   }
 }

@@ -1,4 +1,5 @@
-import type { LoaderFunction, MetaFunction } from "remix";
+import type { LoaderFunction, MetaFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
   Links,
   LiveReload,
@@ -6,8 +7,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  json,
-} from "remix";
+} from "@remix-run/react";
 
 import type { User } from "~/data.server";
 import { getUser } from "~/data.server";

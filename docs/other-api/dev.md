@@ -9,26 +9,6 @@ The Remix CLI comes from the `@remix-run/dev` package. It also includes the comp
 
 ## Commands
 
-### `remix setup`
-
-Remix is architected in a way that is not locked to a specific runtime, but this introduces a few challenges in getting your environment setup properly. To make life as easy as possible, we have included the `remix setup` command that will prepare your `node_modules/remix` folder; simply include this command in your packages postinstall command (the starter templates already do this):
-
-```json
-{
-  "scripts": {
-    "postinstall": "remix setup"
-  }
-}
-```
-
-Now, no matter which platform you're deploying to, you can import everything you need from `"remix"`.
-
-```js
-// whether you're on cloudflare workers, node.js, or something
-// else everything you need will come from this package.
-import {} from "remix";
-```
-
 ### `remix build`
 
 Builds your app for production. No need to add `NODE_ENV=production` to the command.
@@ -52,3 +32,5 @@ Same as `watch` but also boots the [Remix app server](serve.md) in development m
 ```sh
 remix dev
 ```
+
+_Note: The default port is `3000`, but can be changed by setting the `PORT` environment variable. If you are changing this to run multiple instances of Remix, you must also set unique [Dev websocket ports](https://remix.run/docs/en/v1/api/conventions#devserverport) via `remix.config.js` or setting `REMIX_DEV_SERVER_WS_PORT`._

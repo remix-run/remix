@@ -2,10 +2,10 @@ import fsp from "fs/promises";
 import path from "path";
 import lambdaTester from "lambda-tester";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import {
   // This has been added as a global in node 15+
   AbortController,
+  createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,
 } from "@remix-run/node";
 
@@ -18,7 +18,13 @@ import {
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the architect adapter
-jest.mock("@remix-run/server-runtime");
+jest.mock("@remix-run/node", () => {
+  let original = jest.requireActual("@remix-run/node");
+  return {
+    ...original,
+    createRequestHandler: jest.fn(),
+  };
+});
 let mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler
@@ -154,7 +160,8 @@ describe("architect createRemixHeaders", () => {
     it("handles empty headers", () => {
       expect(createRemixHeaders({}, undefined)).toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {},
+          Symbol(query): Array [],
+          Symbol(context): null,
         }
       `);
     });
@@ -163,11 +170,11 @@ describe("architect createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": "bar" }, undefined))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-foo": Array [
-              "bar",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -176,14 +183,13 @@ describe("architect createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": "bar", "x-bar": "baz" }, undefined))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-bar": Array [
-              "baz",
-            ],
-            "x-foo": Array [
-              "bar",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar",
+            "x-bar",
+            "baz",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -192,11 +198,11 @@ describe("architect createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": "bar, baz" }, undefined))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-foo": Array [
-              "bar, baz",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar, baz",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -206,14 +212,13 @@ describe("architect createRemixHeaders", () => {
         createRemixHeaders({ "x-foo": "bar, baz", "x-bar": "baz" }, undefined)
       ).toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-bar": Array [
-              "baz",
-            ],
-            "x-foo": Array [
-              "bar, baz",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar, baz",
+            "x-bar",
+            "baz",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -226,14 +231,13 @@ describe("architect createRemixHeaders", () => {
         ])
       ).toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "Cookie": Array [
-              "__session=some_value; __other=some_other_value",
-            ],
-            "x-something-else": Array [
-              "true",
-            ],
-          },
+          Symbol(query): Array [
+            "x-something-else",
+            "true",
+            "cookie",
+            "__session=some_value; __other=some_other_value",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -250,61 +254,45 @@ describe("architect createRemixRequest", () => {
       )
     ).toMatchInlineSnapshot(`
       NodeRequest {
-        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
         "follow": 20,
+        "highWaterMark": 16384,
+        "insecureHTTPParser": false,
         "size": 0,
-        "timeout": 0,
         Symbol(Body internals): Object {
           "body": null,
+          "boundary": null,
           "disturbed": false,
           "error": null,
+          "size": 0,
+          "type": null,
         },
         Symbol(Request internals): Object {
           "headers": Headers {
-            Symbol(map): Object {
-              "Cookie": Array [
-                "__session=value",
-              ],
-              "accept": Array [
-                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-              ],
-              "accept-encoding": Array [
-                "gzip, deflate",
-              ],
-              "accept-language": Array [
-                "en-US,en;q=0.9",
-              ],
-              "host": Array [
-                "localhost:3333",
-              ],
-              "upgrade-insecure-requests": Array [
-                "1",
-              ],
-              "user-agent": Array [
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
-              ],
-            },
+            Symbol(query): Array [
+              "accept",
+              "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              "accept-encoding",
+              "gzip, deflate",
+              "accept-language",
+              "en-US,en;q=0.9",
+              "cookie",
+              "__session=value",
+              "host",
+              "localhost:3333",
+              "upgrade-insecure-requests",
+              "1",
+              "user-agent",
+              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
+            ],
+            Symbol(context): null,
           },
           "method": "GET",
-          "parsedURL": Url {
-            "auth": null,
-            "hash": null,
-            "host": "localhost:3333",
-            "hostname": "localhost",
-            "href": "https://localhost:3333/",
-            "path": "/",
-            "pathname": "/",
-            "port": "3333",
-            "protocol": "https:",
-            "query": null,
-            "search": null,
-            "slashes": true,
-          },
+          "parsedURL": "https://localhost:3333/",
           "redirect": "follow",
-          "signal": undefined,
+          "signal": null,
         },
       }
     `);

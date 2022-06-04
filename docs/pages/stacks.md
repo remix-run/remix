@@ -22,7 +22,7 @@ What you're left with is everything completely set up for you to just get to wor
 
 - [The Blues Stack](https://github.com/remix-run/blues-stack): Deployed to the edge (distributed) with a long-running Node.js server and PostgreSQL database. Intended for large and fast production-grade applications serving millions of users.
 - [The Indie Stack](https://github.com/remix-run/indie-stack): Deployed to a long-running Node.js server with a persistent SQLite database. This stack is great for websites with dynamic data that you control (blogs, marketing, content sites). It's also a perfect, low-complexity bootstrap for MVPs, prototypes, and proof-of-concepts that can later be updated to the Blues stack easily.
-- [The Grunge Stack](https://github.com/remix-run/grunge-stack): Deployed to a serverless function running Node.js with DynamoDB for persistance. Intended for folks who want to deploy a production-grade application on AWS infrastructure serving millions of users.
+- [The Grunge Stack](https://github.com/remix-run/grunge-stack): Deployed to a serverless function running Node.js with DynamoDB for persistence. Intended for folks who want to deploy a production-grade application on AWS infrastructure serving millions of users.
 
 Yes, these are named after music genres. 🤘 Rock on.
 
@@ -81,8 +81,6 @@ You could even use `remix.init/index.js` to ask further questions of the develop
 After the init script has been run, it is deleted so you don't need to worry about it cluttering up the finished codebase.
 
 #### Remove TypeScript
-
-> This feature is coming soon!
 
 If there's a `tsconfig.json` file in the root of the project, the Remix CLI will ask whether the user wants the TypeScript automatically removed from the template. We don't recommend this, but some folks just really want to write regular JavaScript.
 
