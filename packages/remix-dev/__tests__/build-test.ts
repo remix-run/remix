@@ -9,16 +9,22 @@ import { readConfig } from "../config";
 
 // Mock ESM-only modules as these are not well-supported in
 // the Jest environment available.
-jest.mock("strip-json-comments", () => ({
-  __esModule: true,
-  default: (str: string) => str.replace(/\/\/.*/g, ""),
-}));
 jest.mock("xdm", () => ({
   __esModule: true,
   compile: () => ({}),
 }));
 jest.mock("remark-frontmatter", () => ({
   __esModule: true,
+}));
+jest.mock("tsconfig-paths", () => ({
+  __esModule: true,
+  default: {
+    loadConfig() {
+      return {
+        resultType: "failed",
+      };
+    },
+  },
 }));
 
 // a simple app that does not use ESM
@@ -116,11 +122,11 @@ describe("building", () => {
         {
           mode: BuildMode.Development,
         }
-      )[1];
+      );
 
       let jsxFn = jest.fn();
       let { module } = runBuildOutput(
-        buildOutput.outputFiles[0].text,
+        buildOutput[1].outputFiles[0].text,
         {},
         { jestFn: jsxFn }
       );
@@ -141,10 +147,10 @@ describe("building", () => {
     it('calls the default React factory without a "jsxImportSource"', async () => {
       let buildOutput = await generateBuild(config, {
         mode: BuildMode.Development,
-      })[1];
+      });
 
       let jsxFn = jest.fn();
-      let { module } = runBuildOutput(buildOutput.outputFiles[0].text, {
+      let { module } = runBuildOutput(buildOutput[1].outputFiles[0].text, {
         react: {
           createElement: jsxFn,
         },

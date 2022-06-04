@@ -388,7 +388,10 @@ async function createBrowserBuild(
     platform: "browser",
     format: "esm",
     external: externals,
-    inject: config.serverBuildTarget === "deno" ? [] : [reactShim].concat(config.customJSXShimPath ?? []),
+    inject:
+      config.serverBuildTarget === "deno"
+        ? []
+        : [reactShim].concat(config.customJSXShimPath ?? []),
     jsxFactory: config.customJSXShimPath && "jsx",
     loader: loaders,
     bundle: true,
@@ -476,7 +479,10 @@ function createServerBuild(
         ? ["module", "main"]
         : ["main", "module"],
       target: options.target,
-      inject: config.serverBuildTarget === "deno" ? [] : [reactShim].concat(config.customJSXShimPath ?? []),
+      inject:
+        config.serverBuildTarget === "deno"
+          ? []
+          : [reactShim].concat(config.customJSXShimPath ?? []),
       jsxFactory: config.customJSXShimPath && "jsx",
       loader: loaders,
       bundle: true,
