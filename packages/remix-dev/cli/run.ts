@@ -426,13 +426,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     }
     case "dev":
+    default: // `remix ./my-project` is shorthand for `remix dev ./my-project`
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
       if (flags.debug) inspector.open();
       await commands.dev(input[1], process.env.NODE_ENV);
       break;
-    default:
-      // `remix ./my-project` is shorthand for `remix dev ./my-project`
-      if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
-      await commands.dev(input[0], process.env.NODE_ENV);
   }
 }
