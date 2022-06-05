@@ -62,6 +62,10 @@ There is no delay by default.
 
 The port number to use for the dev websocket server. Defaults to 8002.
 
+### devServerRebuildingIndicator
+
+Whether to show loading spinner 💿 to indicate rebuilding is in progress. Defaults to `true`.
+
 ### ignoredRouteFiles
 
 This is an array of globs (via [minimatch][minimatch]) that Remix will match to

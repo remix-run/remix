@@ -1437,36 +1437,70 @@ export const LiveReload =
       }) {
         let js = String.raw;
         return (
-          <script
-            nonce={nonce}
-            suppressHydrationWarning
-            dangerouslySetInnerHTML={{
-              __html: js`
-                (() => {
-                  let protocol = location.protocol === "https:" ? "wss:" : "ws:";
-                  let host = location.hostname;
-                  let socketPath = protocol + "//" + host + ":" + ${String(
-                    port
-                  )} + "/socket";
+          <>
+            <span
+              id="__remix-livereload-spinner"
+              aria-label="loading..."
+              role="img"
+            >
+              💿
+            </span>
+            <script
+              nonce={nonce}
+              suppressHydrationWarning
+              dangerouslySetInnerHTML={{
+                __html: js`
+                  (() => {
+                    let protocol = location.protocol === "https:" ? "wss:" : "ws:";
+                    let host = location.hostname;
+                    let socketPath = protocol + "//" + host + ":" + ${String(
+                      port
+                    )} + "/socket";
 
-                  let ws = new WebSocket(socketPath);
-                  ws.onmessage = (message) => {
-                    let event = JSON.parse(message.data);
-                    if (event.type === "LOG") {
-                      console.log(event.message);
-                    }
-                    if (event.type === "RELOAD") {
-                      console.log("💿 Reloading window ...");
-                      window.location.reload();
-                    }
-                  };
-                  ws.onerror = (error) => {
-                    console.log("Remix dev asset server web socket error:");
-                    console.error(error);
-                  };
-                })();
+                    let ws = new WebSocket(socketPath);
+                    let spinner = document.getElementById('__remix-livereload-spinner');
+                    ws.onmessage = (message) => {
+                      let event = JSON.parse(message.data);
+                      if (event.type === "LOG") {
+                        console.log(event.message);
+                      }
+                      if(event.type === "REBUILDING") {
+                        spinner.classList.add("loading");
+                      }
+                      if (event.type === "RELOAD") {
+                        console.log("💿 Reloading window ...");
+                        window.location.reload();
+                      }
+                    };
+                    ws.onerror = (error) => {
+                      console.log("Remix dev asset server web socket error:");
+                      console.error(error);
+                    };
+                  })();
+                `,
+              }}
+            />
+            <style
+              dangerouslySetInnerHTML={{
+                __html: `
+              #__remix-livereload-spinner {
+                visibility: hidden;
+                position: fixed;
+                bottom: 10px;
+                right: 10px;
+                font-size: 20px;
+                user-select: none;
+              }
+              #__remix-livereload-spinner.loading {
+                visibility: visible;
+                animation: __remix-livereload-spin 1s linear infinite;
+              }
+              @keyframes __remix-livereload-spin {
+                to { transform: rotate(360deg); }
+              }
               `,
-            }}
-          />
+              }}
+            />
+          </>
         );
       };

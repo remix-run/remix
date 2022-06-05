@@ -202,6 +202,9 @@ export async function watch(
       start = Date.now();
       onRebuildStart?.();
       log("Rebuilding...");
+      if (config.devServerRebuildingIndicator) {
+        broadcast({ type: "REBUILDING" });
+      }
     },
     onRebuildFinish() {
       log(`Rebuilt in ${prettyMs(Date.now() - start)}`);

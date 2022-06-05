@@ -103,6 +103,11 @@ export interface AppConfig {
   devServerBroadcastDelay?: number;
 
   /**
+   * Whether to show loading spinner 💿 to indicate rebuilding is in progress. Defaults to `true`.
+   */
+  devServerRebuildingIndicator?: boolean;
+
+  /**
    * Additional MDX remark / rehype plugins.
    */
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
@@ -213,6 +218,11 @@ export interface RemixConfig {
    * The delay before the dev (asset) server broadcasts a reload event.
    */
   devServerBroadcastDelay: number;
+
+  /**
+   * Whether to show loading spinner 💿 to indicate rebuilding is in progress. Defaults to `true`.
+   */
+  devServerRebuildingIndicator?: boolean;
 
   /**
    * Additional MDX remark / rehype plugins.
@@ -359,6 +369,10 @@ export async function readConfig(
   // set env variable so un-bundled servers can use it
   process.env.REMIX_DEV_SERVER_WS_PORT = `${devServerPort}`;
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
+  let devServerRebuildingIndicator =
+    typeof appConfig.devServerRebuildingIndicator === "boolean"
+      ? appConfig.devServerRebuildingIndicator
+      : true;
 
   let defaultPublicPath = "/build/";
   switch (serverBuildTarget) {
@@ -408,6 +422,7 @@ export async function readConfig(
     entryServerFile,
     devServerPort,
     devServerBroadcastDelay,
+    devServerRebuildingIndicator,
     assetsBuildDirectory,
     publicPath,
     rootDirectory,

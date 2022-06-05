@@ -28,6 +28,7 @@ describe("readConfig", () => {
         "cacheDirectory": Any<String>,
         "devServerBroadcastDelay": 0,
         "devServerPort": Any<Number>,
+        "devServerRebuildingIndicator": true,
         "entryClientFile": "entry.client.tsx",
         "entryServerFile": "entry.server.tsx",
         "mdx": undefined,
