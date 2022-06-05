@@ -1,15 +1,10 @@
 {
   "exclude": ["__tests__"],
+  "extends": "../core.tsconfig.json",
   "compilerOptions": {
     "lib": ["ES2019", "DOM.Iterable"],
     "target": "ES2019",
 
-    "moduleResolution": "node",
-    "allowSyntheticDefaultImports": true,
-    "strict": true,
-
-    "declaration": true,
-    "emitDeclarationOnly": true,
 
     "outDir": "../../build/node_modules/@remix-run/express",
     "rootDir": "."
