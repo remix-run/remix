@@ -52,7 +52,7 @@ export function createRequestHandler({
     next: express.NextFunction
   ) => {
     try {
-      let request = createRemixRequest(req);
+      let request = createRemixRequest(req as FirebaseRequest);
       let loadContext =
         typeof getLoadContext === "function"
           ? getLoadContext(req, res)
@@ -92,7 +92,11 @@ export function createRemixHeaders(
   return headers;
 }
 
-export function createRemixRequest(req: express.Request): NodeRequest {
+interface FirebaseRequest extends express.Request {
+  rawBody: any;
+}
+
+export function createRemixRequest(req: FirebaseRequest): NodeRequest {
   let origin = `${req.protocol}://${req.get("host")}`;
   let url = new URL(req.url, origin);
 
@@ -109,7 +113,7 @@ export function createRemixRequest(req: express.Request): NodeRequest {
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = req;
+    init.body = req.rawBody;
   }
 
   return new NodeRequest(url.href, init);
