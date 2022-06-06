@@ -1,12 +1,12 @@
 {
-  "name": "@remix-run/firebase",
-  "description": "Firebase functions request handler for Remix",
+  "name": "@remix-run/google-cloud-functions",
+  "description": "Google Cloud functions request handler for Remix",
   "version": "1.5.1",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
-    "directory": "packages/remix-firebase"
+    "directory": "packages/remix-google-cloud-functions"
   },
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"

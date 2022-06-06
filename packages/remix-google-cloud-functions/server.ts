@@ -29,7 +29,7 @@ export type GetLoadContextFunction = (
 export type RequestHandler = (req: Request, res: Response) => Promise<void>;
 
 /**
- * Returns a request handler for Firebase that serves the response using Remix.
+ * Returns a request handler for Google Cloud functions that serves the response using Remix.
  */
 export function createRequestHandler({
   build,
