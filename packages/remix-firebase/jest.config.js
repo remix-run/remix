@@ -1,5 +1,5 @@
 /** @type {import('@jest/types').Config.InitialOptions} */
 module.exports = {
   ...require("../../jest/jest.config.shared"),
-  displayName: "express",
+  displayName: "firebase",
 };
