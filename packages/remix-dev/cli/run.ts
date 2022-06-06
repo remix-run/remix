@@ -430,6 +430,5 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
       if (flags.debug) inspector.open();
       await commands.dev(input[1], process.env.NODE_ENV);
-      break;
   }
 }
