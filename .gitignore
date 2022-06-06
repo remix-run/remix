@@ -25,3 +25,4 @@ yarn-error.log
 /scripts/playground/template.local
 /scripts/playground/template/build
 /scripts/playground/template/package-lock.json
+/packages/remix-google-cloud-functions/build

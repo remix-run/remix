@@ -1,15 +1,19 @@
 {
-  "name": "@remix-run/google-cloud-functions",
+  "name": "remix-google-cloud-functions",
   "description": "Google Cloud functions request handler for Remix",
-  "version": "1.5.1",
+  "version": "0.0.1",
   "license": "MIT",
+  "main": "build/index.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/remix-run/remix",
+    "url": "https://github.com/penx/remix",
     "directory": "packages/remix-google-cloud-functions"
   },
   "bugs": {
-    "url": "https://github.com/remix-run/remix/issues"
+    "url": "https://github.com/penx/remix/issues"
+  },
+  "scripts": {
+    "build": "rm -rf build && tsc -b"
   },
   "dependencies": {
     "@google-cloud/functions-framework": "^3.1.1",
