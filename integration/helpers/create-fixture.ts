@@ -2,15 +2,19 @@ import path from "path";
 import fse from "fs-extra";
 import type { Writable } from "stream";
 import express from "express";
+import proxy from "express-http-proxy";
 import getPort from "get-port";
 import stripIndent from "strip-indent";
 import chalk from "chalk";
 import { sync as spawnSync } from "cross-spawn";
 import type { JsonObject } from "type-fest";
+import { http } from "@google-cloud/functions-framework";
+// @ts-ignore
+import { getTestServer } from "@google-cloud/functions-framework/testing";
 
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
-import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express";
+import { createRequestHandler as createFirebaseHandler } from "../../build/node_modules/@remix-run/google-cloud-functions";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 
@@ -101,18 +105,30 @@ export async function createAppFixture(fixture: Fixture) {
   }> => {
     return new Promise(async (accept) => {
       let port = await getPort();
+      let functionsPort = await getPort();
       let app = express();
       app.use(express.static(path.join(fixture.projectDir, "public")));
-      app.all(
-        "*",
-        createExpressHandler({ build: fixture.build, mode: "production" })
-      );
-
+      app.all("*", proxy(`localhost:${functionsPort}`));
       let server = app.listen(port);
+      // Dependent on https://github.com/GoogleCloudPlatform/functions-framework-nodejs/pull/463
+      http(
+        "remixServer",
+        createFirebaseHandler({
+          build: fixture.build,
+          mode: "production",
+          getLoadContext: undefined,
+        })
+      );
+      let functionsServer = getTestServer("remixServer");
+      await functionsServer.listen(functionsPort);
 
       let stop = (): Promise<void> => {
         return new Promise((res) => {
-          server.close(() => res());
+          server.close(() => {
+            functionsServer.close(() => {
+              res();
+            });
+          });
         });
       };
 
