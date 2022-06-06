@@ -37,7 +37,7 @@ export const action: ActionFunction = async ({ request }) => {
   const action = form.get("action");
   if (action === "create") {
     const title = form.get("title");
-    if (typeof title !== "string" || !title.length) {
+    if (typeof title !== "string" || title.length === 0) {
       return json<ActionData>({ error: "title is required" }, { status: 400 });
     }
 
