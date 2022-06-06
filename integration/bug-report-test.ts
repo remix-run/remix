@@ -51,7 +51,8 @@ test.beforeAll(async () => {
         import { json } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
 
-        export function loader() {
+        export async function loader() {
+          await fetch("https://gmail.com");
           return json("pizza");
         }
 
