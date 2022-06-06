@@ -1,4 +1,3 @@
-import express from "express";
 import supertest from "supertest";
 import { createRequest } from "node-mocks-http";
 import {
@@ -6,6 +5,9 @@ import {
   Response as NodeResponse,
 } from "@remix-run/node";
 import { Readable } from "stream";
+import { http } from "@google-cloud/functions-framework";
+// @ts-ignore
+import { getTestServer } from "@google-cloud/functions-framework/testing";
 
 import {
   createRemixHeaders,
@@ -28,18 +30,15 @@ let mockedCreateRequestHandler =
   >;
 
 function createApp() {
-  let app = express();
-
-  app.all(
-    "*",
+  http(
+    "remixServer",
     createRequestHandler({
       // We don't have a real app to test, but it doesn't matter. We
       // won't ever call through to the real createRequestHandler
       build: undefined,
     })
   );
-
-  return app;
+  return getTestServer("remixServer");
 }
 
 describe("express createRequestHandler", () => {
@@ -62,7 +61,7 @@ describe("express createRequestHandler", () => {
 
       expect(res.status).toBe(200);
       expect(res.text).toBe("URL: /foo/bar");
-      expect(res.headers["x-powered-by"]).toBe("Express");
+      expect(res.headers["x-powered-by"]).toBe(undefined);
     });
 
     it("handles null body", async () => {
