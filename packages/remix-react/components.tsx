@@ -1426,15 +1426,24 @@ export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
-        port,
+        port = Number(process.env.REMIX_DEV_SERVER_WS_PORT),
         nonce = undefined,
       }: {
-        port: number;
+        port?: number;
         /**
          * @deprecated this property is no longer relevant.
          */
         nonce?: string;
       }) {
+        if (!port) {
+          throw new Error(
+            "We were unable to connect to the Remix dev asset server web socket. " +
+              "This usually happens when you use an unbundled server" +
+              "you can replace `<LiveReload />` with `<LiveReload port={Number(process.env.REMIX_DEV_SERVER_WS_PORT)} />`" +
+              "to manually set the port."
+          );
+        }
+
         let js = String.raw;
         return (
           <script
