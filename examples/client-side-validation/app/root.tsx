@@ -32,7 +32,7 @@ export const action: ActionFunction = async ({ request }) => {
   const message = `Successfully submitted data:
       - Required text: ${form.get("required-text")}
       - Required checkbox: ${form.get("required-checkbox")}
-      - Text with regex: ${form.get("text-with-regex")} 
+      - Text with regex: ${form.get("text-with-regex")}
       - Number with min max: ${form.get("number-with-min-max")}
       - Text with minlength maxlength: ${form.get(
         "text-with-minlength-maxlength"
@@ -196,7 +196,7 @@ export default function App() {
         </div>
         <ScrollRestoration />
         <Scripts />
-        <LiveReload />
+        <LiveReload port={Number(process.env.REMIX_DEV_SERVER_WS_PORT)} />
       </body>
     </html>
   );

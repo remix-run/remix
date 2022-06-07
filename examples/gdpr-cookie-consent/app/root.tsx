@@ -64,7 +64,7 @@ export default function App() {
         )}
         <ScrollRestoration />
         <Scripts />
-        <LiveReload />
+        <LiveReload port={Number(process.env.REMIX_DEV_SERVER_WS_PORT)} />
       </body>
     </html>
   );

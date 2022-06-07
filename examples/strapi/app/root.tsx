@@ -17,7 +17,7 @@ const App: React.FC = () => {
       </head>
       <body>
         <Outlet />
-        <LiveReload />
+        <LiveReload port={Number(process.env.REMIX_DEV_SERVER_WS_PORT)} />
       </body>
     </html>
   );
