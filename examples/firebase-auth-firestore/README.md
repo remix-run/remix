@@ -19,8 +19,8 @@ To run it, you need to either:
 1. [Create a Firebase Project](https://console.firebase.google.com)
 2. Enable Auth (with email) and Firestore
 3. Add a Web App
-4. Get the [admin-sdk](https://firebase.google.com/docs/admin/setup#initialize-sdk) and [client-sdk credentials](https://firebase.google.com/docs/web/learn-more#config-object)
-5. Save them to SERVICE_ACCOUNT and CLIENT_CONFIG in the `.env`-file
+4. Get the [admin-sdk](https://firebase.google.com/docs/admin/setup#initialize-sdk) and [Web API Key](https://firebase.google.com/docs/reference/rest/auth)
+5. Save them to SERVICE_ACCOUNT and API_KEY in the `.env`-file
 
 ### 2. Use the Firebase emulators
 
