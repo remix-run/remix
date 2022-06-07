@@ -75,10 +75,10 @@ jobs:
         run: node ./cf-pages.mjs
         working-directory: ./scripts/deployment-test
         env:
-          CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
-          CF_GLOBAL_API_KEY: ${{ secrets.TEST_CF_GLOBAL_API_KEY }}
-          CF_EMAIL: ${{ secrets.TEST_CF_EMAIL }}
-          GITHUB_TOKEN: ${{ secrets.TEST_CF_GITHUB_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
+          CLOUDFLARE_GLOBAL_API_KEY: ${{ secrets.TEST_CF_GLOBAL_API_KEY }}
+          CLOUDFLARE_EMAIL: ${{ secrets.TEST_CF_EMAIL }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CF_PAGES_API_TOKEN }}
 
   cf_workers_deploy:
     name: "CF Workers Deploy"
@@ -113,8 +113,8 @@ jobs:
         run: node ./cf-workers.mjs
         working-directory: ./scripts/deployment-test
         env:
-          CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
-          CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
 
   fly_deploy:
     name: "Fly Deploy"
