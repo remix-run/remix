@@ -1426,10 +1426,10 @@ export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
-        port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
+        port,
         nonce = undefined,
       }: {
-        port?: number;
+        port: number;
         /**
          * @deprecated this property is no longer relevant.
          */
