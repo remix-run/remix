@@ -5,6 +5,7 @@ import fse from "fs-extra";
 import arcParser from "@architect/parser";
 import { toLogicalID } from "@architect/utils";
 import { createApp } from "@remix-run/dev";
+import destroy from "@architect/destroy";
 
 import {
   addCypress,
@@ -33,53 +34,23 @@ async function createNewApp() {
   });
 }
 
-let client = new aws.ApiGatewayV2({
+const options = {
   region: "us-west-2",
   apiVersion: "latest",
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
-});
+};
 
-async function deleteOldestDeployment() {
-  let deployments = await client.getApis().promise();
-
-  // Sort by creation date, oldest first
-  let [deployment] = deployments.Items.sort((a, b) => {
-    return a.CreatedDate > b.CreatedDate ? 1 : -1;
-  });
-
-  let arcName = deployment.Name.toLowerCase();
-  let FAKE_PROJECT_DIR = getAppDirectory(arcName);
-  let spawnOpts = getSpawnOpts(FAKE_PROJECT_DIR);
-
-  console.log(`Deleting deployment ${arcName}`);
-  // create a fake app.arc with the deployment name
-  await fse.ensureDir(FAKE_PROJECT_DIR);
-  await fse.writeFile(
-    path.join(FAKE_PROJECT_DIR, "app.arc"),
-    arcParser.stringify({ app: [arcName] })
-  );
-  let arcDestroyCommand = spawnSync(
-    "npx",
-    ["@architect/architect", "destroy", "--app", arcName, "--force"],
-    spawnOpts
-  );
-  if (arcDestroyCommand.status !== 0) {
-    console.log(arcDestroyCommand.error);
-    throw new Error("🚨 Failed to destroy deployment");
-  }
-
-  await fse.rmdir(FAKE_PROJECT_DIR, { recursive: true });
-}
+let client = new aws.ApiGatewayV2(options);
 
 async function getArcDeployment() {
   let deployments = await client.getApis().promise();
   return deployments.Items.find((item) => item.Name === AWS_STACK_NAME);
 }
 
-try {
+async function createAndDeployApp() {
   await createNewApp();
 
   // validate dependencies are available
@@ -109,8 +80,6 @@ try {
   parsed.app = [APP_NAME];
   await fse.writeFile(ARC_CONFIG_PATH, arcParser.stringify(parsed));
 
-  await deleteOldestDeployment();
-
   // deploy to the staging environment
   let arcDeployCommand = spawnSync(
     "npx",
@@ -126,11 +95,25 @@ try {
     throw new Error("Deployment not found");
   }
 
-  // run cypress against the deployed server
+  // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, deployment.ApiEndpoint);
-
-  process.exit(0);
-} catch (error) {
-  console.error(error);
-  process.exit(1);
 }
+
+async function destroyApp() {
+  console.log(`Destroying app ${APP_NAME}`);
+  destroy({
+    appname: APP_NAME,
+    env: "staging",
+    // use true to also remove the s3 bucket
+    force: true,
+  });
+  console.log(`Destroyed app ${APP_NAME}`);
+}
+
+createAndDeployApp()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(destroyApp);

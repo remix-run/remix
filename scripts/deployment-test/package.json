@@ -5,22 +5,23 @@
   "scripts": {},
   "dependencies": {
     "@architect/architect": "latest",
+    "@architect/destroy": "latest",
     "@architect/parser": "^5.0.2",
     "@architect/utils": "^3.0.4",
     "@cloudflare/wrangler": "latest",
     "@iarna/toml": "^2.2.5",
-    "@octokit/rest": "^18.12.0",
     "@remix-run/dev": "1.5.1",
     "@testing-library/cypress": "^8.0.2",
     "aws-sdk": "^2.1055.0",
-    "cypress": "9.2.0",
+    "cypress": "^9.2.0",
+    "fetch-retry": "^5.0.2",
     "fs-extra": "^10.0.0",
-    "netlify-cli": "latest",
     "netlify": "^10.1.1",
+    "netlify-cli": "latest",
     "node-fetch": "^2.6.1",
-    "retry": "^0.13.1",
     "semver": "^7.3.5",
     "start-server-and-test": "^1.14.0",
-    "vercel": "latest"
+    "vercel": "latest",
+    "wrangler": "latest"
   }
 }
