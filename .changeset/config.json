@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@2.0.0/schema.json",
+  "changelog": ["@changesets/cli/changelog", { "repo": "remix-run/remix" }],
+  "commit": false,
+  "fixed": [
+    [
+      "remix",
+      "remix-cloudflare",
+      "remix-deno",
+      "remix-dev",
+      "remix-node",
+      "remix-react",
+      "remix-serve",
+      "remix-server-runtime"
+    ]
+  ],
+  "access": "public",
+  "baseBranch": "dev",
+  "updateInternalDependencies": "patch",
+  "ignore": []
+}
