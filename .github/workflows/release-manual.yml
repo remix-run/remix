@@ -1,0 +1,66 @@
+name: 🕊 Release (manual)
+
+on:
+  release:
+    types: [published]
+    tags:
+      # changesets will create a release for each package individually, so tags
+      # will look like "<package-name>@<version>". We want this workflow to
+      # ignore when those releases are created. This let's us continue to
+      # publish packages manually on a one-off basis, which may be useful for
+      # experimental or one-off tagged releases
+      - "!remix@*"
+      - "!create-remix@*"
+      - "!@remix-run/*"
+
+jobs:
+  manual:
+    name: 📝 Manual Release
+    # we need to check for `nightly` refs and skip them as we dont want to
+    # double publish a version as it would fail. unfortantely even using curl
+    # and a `repository_dispatch` trigger, actions still aren't ran if a version
+    # is published using the default secrets.GITHUB_TOKEN.
+    if: |
+      github.repository == 'remix-run/remix' &&
+      !contains(github.ref, 'nightly')
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+
+      - name: 📥 Install deps
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
+
+      - name: 🏗 Build
+        run: yarn build
+
+      - name: 🔐 Setup npm auth
+        run: |
+          echo "registry=https://registry.npmjs.org" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+
+      - name: 🚀 Publish
+        run: npm run publish
+
+  comment:
+    needs: [manual]
+    name: 🛴 Kick off comment and deployment test workflows
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.NIGHTLY_PAT }}
+          event-type: release
+          client-payload: '{ "ref": "${{ github.ref }}", "version": "${{ github.ref_name }}" }'
