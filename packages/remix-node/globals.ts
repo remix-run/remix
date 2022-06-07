@@ -18,6 +18,7 @@ declare global {
   namespace NodeJS {
     interface ProcessEnv {
       NODE_ENV: "development" | "production" | "test";
+      REMIX_DEV_SERVER_WS_PORT: string;
     }
 
     interface Global {
