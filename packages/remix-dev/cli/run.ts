@@ -126,6 +126,12 @@ const npxInterop = {
   pnpm: "pnpm exec",
 };
 
+async function dev(projectDir: string, flags: { debug: boolean|undefined }) {
+  if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
+  if (flags.debug) inspector.open();
+  await commands.dev(projectDir, process.env.NODE_ENV);
+}
+
 /**
  * Programmatic interface for running the Remix CLI with the given command line
  * arguments.
@@ -426,9 +432,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     }
     case "dev":
-    default: // `remix ./my-project` is shorthand for `remix dev ./my-project`
-      if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
-      if (flags.debug) inspector.open();
-      await commands.dev(input[1], process.env.NODE_ENV);
+      await dev(input[1], flags);
+      break;
+    default:
+      // `remix ./my-project` is shorthand for `remix dev ./my-project`
+      await dev(input[0], flags);
   }
 }
