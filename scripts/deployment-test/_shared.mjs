@@ -105,8 +105,3 @@ export async function validatePackageVersions(directory) {
     })
   );
 }
-
-// check if the file was called directly
-export function isMainModule(module) {
-  return module.url.endsWith(process.argv[1]);
-}

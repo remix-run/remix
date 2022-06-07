@@ -12,7 +12,6 @@ import {
   getAppDirectory,
   getAppName,
   getSpawnOpts,
-  isMainModule,
   runCypress,
   validatePackageVersions,
 } from "./_shared.mjs";
@@ -106,12 +105,10 @@ function destroyApp() {
   spawnSync("fly", ["apps", "destroy", APP_NAME, "--yes"], spawnOpts);
 }
 
-if (isMainModule(import.meta)) {
-  createAndDeployApp()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    })
-    .finally(destroyApp);
-}
+createAndDeployApp()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(destroyApp);

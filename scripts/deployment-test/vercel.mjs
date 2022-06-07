@@ -11,7 +11,6 @@ import {
   getAppDirectory,
   getAppName,
   getSpawnOpts,
-  isMainModule,
   runCypress,
   validatePackageVersions,
 } from "./_shared.mjs";
@@ -133,12 +132,10 @@ async function createAndDeployApp() {
   runCypress(PROJECT_DIR, false, fullUrl);
 }
 
-if (isMainModule(import.meta)) {
-  createAndDeployApp()
-    .then(() => process.exit(0))
-    .catch((error) => {
-      console.error(error);
-      process.exit(1);
-    })
-    .finally(destroyApp);
-}
+createAndDeployApp()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(destroyApp);
