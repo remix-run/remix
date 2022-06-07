@@ -52,19 +52,20 @@ If you're using the `@remix-run/cloudflare-pages` adapter, env variables work a 
 // package.json
 
 {
-	"scripts": {
-		"dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public --binding $(cat .env)"
-	}
+  "scripts": {
+    "dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public --binding $(cat .env)"
+  }
 }
 ```
 
 <docs-info>Learn more about <a href="https://npm.im/cross-env"><code>cross-env</code></a></docs-info>
 
 Then, in your `loader` functions, you can access environment variables directly on `context`:
+
 ```js
 export const loader = async ({ context }) => {
   console.log(context.SOME_SECRET);
-}
+};
 ```
 
 Note that `.env` files are only for development. You should not use them in production, so Remix doesn't load them when running `remix serve`. You'll need to follow your host's guides on adding secrets to your production server, via the links below.
