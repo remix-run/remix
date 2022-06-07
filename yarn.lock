@@ -2533,12 +2533,18 @@
     "@typescript-eslint/types" "5.12.1"
     eslint-visitor-keys "^3.0.0"
 
-"@vercel/node@^1.8.3":
-  version "1.12.1"
-  resolved "https://registry.npmjs.org/@vercel/node/-/node-1.12.1.tgz"
-  integrity sha512-NcawIY05BvVkWlsowaxF2hl/hJg475U8JvT2FnGykFPMx31q1/FtqyTw/awSrKfOSRXR0InrbEIDIelmS9NzPA==
+"@vercel/node-bridge@3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@vercel/node-bridge/-/node-bridge-3.0.0.tgz#443655b74713ec65531726fb5a30c5c528c804bf"
+  integrity sha512-TNQK6cufwrhd8ASDk5YHHenH8Xhp9sY8xUjOTKnQQI37KLk+Sw2HlHhT5rzUFN23ahosUlkY8InwtYUmSNb9kw==
+
+"@vercel/node@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/@vercel/node/-/node-2.0.1.tgz#29e256e7476cc08a91843da50e916fb234797936"
+  integrity sha512-49VaRMz7R5H1I0fjLowF+y1rM7f7maLxxXZV2cKYZgkw8/6KnHOopfLtLWAVoiY8rIyLmGSxM1zT4ZrlyKMdww==
   dependencies:
     "@types/node" "*"
+    "@vercel/node-bridge" "3.0.0"
     ts-node "8.9.1"
     typescript "4.3.4"
 
