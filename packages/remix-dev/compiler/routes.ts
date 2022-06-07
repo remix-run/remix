@@ -19,7 +19,7 @@ export async function getRouteModuleExportsCached(
   let cached: CachedRouteExports | null = null;
   try {
     cached = await cache.getJson(config.cacheDirectory, key);
-  } catch (error) {
+  } catch {
     // Ignore cache read errors.
   }
 
@@ -28,7 +28,7 @@ export async function getRouteModuleExportsCached(
     cached = { hash, exports };
     try {
       await cache.putJson(config.cacheDirectory, key, cached);
-    } catch (error) {
+    } catch {
       // Ignore cache put errors.
     }
   }
