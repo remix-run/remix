@@ -1,12 +1,10 @@
 import * as path from "path";
 import { builtinModules as nodeBuiltins } from "module";
-import * as os from "os";
 import * as esbuild from "esbuild";
 import * as fse from "fs-extra";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
-import { promises as fsp } from "fs";
 
 import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
@@ -27,6 +25,7 @@ import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesP
 import { writeFileSafe } from "./compiler/utils/fs";
 import { getJSXImportSource } from "./compiler/utils/tsconfig";
 import { urlImportsPlugin } from "./compiler/plugins/urlImportsPlugin";
+import { jsxImportSourcePlugin } from "./compiler/plugins/jsxImportSourcePlugin";
 
 // When we build Remix, this shim file is copied directly into the output
 // directory in the same place relative to this file. It is eventually injected
@@ -298,18 +297,10 @@ async function buildEverything(
   options: Required<BuildOptions> & { incremental?: boolean }
 ): Promise<(esbuild.BuildResult | undefined)[]> {
   try {
-    let customShimCleanup: CustomShimCleanupFn | null = null;
-
-    if (!config.customJSXShimPath) {
+    if (!config.jsxImportSource) {
       let jsxImportSource = await getJSXImportSource(config.rootDirectory);
       if (jsxImportSource) {
-        let { filePath, done } = await createCustomJSXFactoryShim(
-          jsxImportSource,
-          config.rootDirectory
-        );
-
-        config.customJSXShimPath = filePath;
-        customShimCleanup = done;
+        config.jsxImportSource = jsxImportSource;
       }
     }
 
@@ -332,8 +323,6 @@ async function buildEverything(
       assetsManifestPromise.then(() => browserBuildPromise),
       serverBuildPromise,
     ]);
-
-    await customShimCleanup?.();
 
     return buildResults;
   } catch (err) {
@@ -382,17 +371,19 @@ async function createBrowserBuild(
     NodeModulesPolyfillPlugin(),
   ];
 
+  if (config.jsxImportSource) {
+    plugins.unshift(
+      jsxImportSourcePlugin(config.jsxImportSource, config.rootDirectory)
+    );
+  }
+
   return esbuild.build({
     entryPoints,
     outdir: config.assetsBuildDirectory,
     platform: "browser",
     format: "esm",
     external: externals,
-    inject:
-      config.serverBuildTarget === "deno"
-        ? []
-        : [reactShim].concat(config.customJSXShimPath ?? []),
-    jsxFactory: config.customJSXShimPath && "jsx",
+    inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
     loader: loaders,
     bundle: true,
     logLevel: "silent",
@@ -457,6 +448,12 @@ function createServerBuild(
     plugins.unshift(NodeModulesPolyfillPlugin());
   }
 
+  if (config.jsxImportSource) {
+    plugins.unshift(
+      jsxImportSourcePlugin(config.jsxImportSource, config.rootDirectory)
+    );
+  }
+
   return esbuild
     .build({
       absWorkingDir: config.rootDirectory,
@@ -479,11 +476,7 @@ function createServerBuild(
         ? ["module", "main"]
         : ["main", "module"],
       target: options.target,
-      inject:
-        config.serverBuildTarget === "deno"
-          ? []
-          : [reactShim].concat(config.customJSXShimPath ?? []),
-      jsxFactory: config.customJSXShimPath && "jsx",
+      inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
       loader: loaders,
       bundle: true,
       logLevel: "silent",
@@ -546,55 +539,4 @@ async function writeServerBuildResult(
       await fse.writeFile(file.path, contents);
     }
   }
-}
-
-type CustomShimCleanupFn = () => Promise<void>;
-
-/**
- * Creates a temporary directory and file to inject to esbuild
- * that exports the given `importSource` as `React`. When esbuild
- * is finished, the `done()` function will clean up the temporary
- * directory.
- *
- * See https://github.com/evanw/esbuild/issues/1169; when inline
- * inject is available in esbuild temporary directory/file creation
- * can be removed.
- */
-async function createCustomJSXFactoryShim(
-  importSource: string,
-  rootDir: string
-): Promise<{ filePath: string; done: CustomShimCleanupFn }> {
-  let temporaryDirectory = await fsp.mkdtemp(path.join(os.tmpdir(), "remix-"));
-  let customShimFile = path.join(
-    temporaryDirectory,
-    "jsx-import-source-shim.js"
-  );
-
-  let importSourcePath = require.resolve(importSource, {
-    paths: [rootDir],
-  });
-
-  let importSourceExists = await fse.pathExists(importSourcePath);
-  if (!importSourceExists) {
-    throw new Error(
-      `Unable to find module "${importSource}" for custom shim in "${importSourcePath}"`
-    );
-  }
-
-  await fsp.writeFile(
-    customShimFile,
-    // Using JSON.stringify will escape any " and \ in the import source path.
-    `export { jsx } from ${JSON.stringify(importSourcePath)}`
-  );
-
-  return {
-    filePath: customShimFile,
-    async done() {
-      try {
-        await fsp.unlink(temporaryDirectory);
-      } catch (e) {
-        // Temporary folders may not be removed on some systems, which is okay.
-      }
-    },
-  };
 }

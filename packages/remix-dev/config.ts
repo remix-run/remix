@@ -149,13 +149,9 @@ export interface AppConfig {
   serverDependenciesToBundle?: Array<string | RegExp>;
 
   /**
-   * A path to a custom JSX shim file to be injected during build-time.
-   *
-   * "jsx" is used as the JSX factory; export this to use it instead of React's default JSX
-   * factory. If "jsxImportSource" is specified in tsconfig.json, a shim will be automatically
-   * created for it unless this option is used.
+   * A path or module name of a custom JSX import source.
    */
-  customJSXShimPath?: string;
+  jsxImportSource?: string;
 }
 
 /**
@@ -261,9 +257,9 @@ export interface RemixConfig {
   serverDependenciesToBundle: Array<string | RegExp>;
 
   /**
-   * A path to a custom JSX shim file to be injected during build-time.
+   * A path or a module name to a custom JSX module.
    */
-  customJSXShimPath?: string;
+  jsxImportSource?: string;
 }
 
 /**
@@ -415,7 +411,7 @@ export async function readConfig(
 
   let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
 
-  let customJSXShimPath = appConfig.customJSXShimPath;
+  let jsxImportSource = appConfig.jsxImportSource;
 
   return {
     appDirectory,
@@ -437,7 +433,7 @@ export async function readConfig(
     serverEntryPoint: customServerEntryPoint,
     serverDependenciesToBundle,
     mdx,
-    customJSXShimPath,
+    jsxImportSource,
   };
 }
 
