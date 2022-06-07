@@ -43,7 +43,13 @@ export async function callRouteAction({
     }
 
     if (!isRedirectResponse(error)) {
-      error.headers.set("X-Remix-Catch", "yes");
+      let headers = new Headers(error.headers);
+      headers.set("X-Remix-Catch", "yes");
+      return new Response(error.body, {
+        status: error.status,
+        statusText: error.statusText,
+        headers,
+      });
     }
     result = error;
   }
@@ -90,7 +96,13 @@ export async function callRouteLoader({
     }
 
     if (!isRedirectResponse(error)) {
-      error.headers.set("X-Remix-Catch", "yes");
+      let headers = new Headers(error.headers);
+      headers.set("X-Remix-Catch", "yes");
+      return new Response(error.body, {
+        status: error.status,
+        statusText: error.statusText,
+        headers,
+      });
     }
     result = error;
   }
