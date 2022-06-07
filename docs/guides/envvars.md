@@ -58,6 +58,8 @@ If you're using the `@remix-run/cloudflare-pages` adapter, env variables work a 
 }
 ```
 
+<docs-info>Learn more about <a href="https://npm.im/cross-env"><code>cross-env</code></a></docs-info>
+
 Then, in your `loader` functions, you can access environment variables directly on `context`:
 ```js
 export const loader = async ({ context }) => {
