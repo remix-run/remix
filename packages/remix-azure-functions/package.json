@@ -1,26 +1,26 @@
 {
   "name": "@remix-run/azure-functions",
-  "description": "Azure Functions server request handler for Remix",
   "version": "1.4.3",
-  "license": "MIT",
+  "description": "Azure Functions server request handler for Remix",
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
     "directory": "packages/remix-azure-functions"
   },
-  "bugs": {
-    "url": "https://github.com/remix-run/remix/issues"
-  },
+  "license": "MIT",
   "dependencies": {
     "@remix-run/node": "1.4.3"
-  },
-  "peerDependencies": {
-    "@azure/functions": "^3.0.0"
   },
   "devDependencies": {
     "@azure/functions": "^3.0.0",
     "@types/supertest": "^2.0.12",
     "node-mocks-http": "^1.11.0",
     "supertest": "^6.2.3"
+  },
+  "peerDependencies": {
+    "@azure/functions": "^3.0.0"
   }
 }
