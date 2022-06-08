@@ -2526,7 +2526,7 @@
     "@typescript-eslint/types" "5.12.1"
     eslint-visitor-keys "^3.0.0"
 
-"@vercel/node-bridge@3.0.0":
+"@vercel/node-bridge@3.0.0", "@vercel/node-bridge@^3.0.0":
   version "3.0.0"
   resolved "https://registry.npmjs.org/@vercel/node-bridge/-/node-bridge-3.0.0.tgz#443655b74713ec65531726fb5a30c5c528c804bf"
   integrity sha512-TNQK6cufwrhd8ASDk5YHHenH8Xhp9sY8xUjOTKnQQI37KLk+Sw2HlHhT5rzUFN23ahosUlkY8InwtYUmSNb9kw==
