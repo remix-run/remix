@@ -6,8 +6,7 @@ import {
 } from "@remix-run/node";
 import { Readable } from "stream";
 import { http } from "@google-cloud/functions-framework";
-// @ts-ignore
-import { getTestServer } from "@google-cloud/functions-framework/testing";
+import { getTestServer } from "@google-cloud/functions-framework/build/src/testing.js";
 
 import {
   createRemixHeaders,
