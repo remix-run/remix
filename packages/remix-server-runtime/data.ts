@@ -7,7 +7,7 @@ import { json, isResponse, isRedirectResponse } from "./responses";
  * server's `getLoadContext()` function.
  */
 export interface AppLoadContext {
-  [key: string]: unknown;
+  [key: string]: any;
 };
 
 /**
@@ -20,7 +20,7 @@ export async function callRouteAction({
   match,
   request,
 }: {
-  loadContext: unknown;
+  loadContext?: AppLoadContext;
   match: RouteMatch<ServerRoute>;
   request: Request;
 }) {
@@ -67,7 +67,7 @@ export async function callRouteLoader({
 }: {
   request: Request;
   match: RouteMatch<ServerRoute>;
-  loadContext: unknown;
+  loadContext?: AppLoadContext;
 }) {
   let loader = match.route.module.loader;
 
