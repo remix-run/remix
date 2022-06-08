@@ -5,7 +5,6 @@ import type {
 } from "@google-cloud/functions-framework";
 import type { 
   RequestInit as NodeRequestInit,
-  
  } from "@remix-run/node";
 import {
   AbortController,
