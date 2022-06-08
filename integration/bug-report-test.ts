@@ -7,102 +7,50 @@ import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 let fixture: Fixture;
 let appFixture: AppFixture;
 
-////////////////////////////////////////////////////////////////////////////////
-// 💿 👋 Hola! It's me, Dora the Remix Disc, I'm here to help you write a great
-// bug report pull request.
-//
-// You don't need to fix the bug, this is just to report one.
-//
-// The pull request you are submitting is supposed to fail when created, to let
-// the team see the erroneous behavior, and understand what's going wrong.
-//
-// If you happen to have a fix as well, it will have to be applied in a subsequent
-// commit to this pull request, and your now-succeeding test will have to be moved
-// to the appropriate file.
-//
-// First, make sure to install dependencies and build Remix. From the root of
-// the project, run this:
-//
-//    ```
-//    yarn && yarn build
-//    ```
-//
-// Now try running this test:
-//
-//    ```
-//    yarn bug-report-test
-//    ```
-//
-// You can add `--watch` to the end to have it re-run on file changes:
-//
-//    ```
-//    yarn bug-report-test --watch
-//    ```
-////////////////////////////////////////////////////////////////////////////////
+const SVG_CONTENTS = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#000" stroke-width="4" aria-label="Chicken"><path d="M48.1 34C22.1 32 1.4 51 2.5 67.2c1.2 16.1 19.8 17 29 17.8H89c15.7-6.6 6.3-18.9.3-20.5A28 28 0 0073 41.7c-.5-7.2 3.4-11.6 6.9-15.3 8.5 2.6 8-8 .8-7.2.6-6.5-12.3-5.9-6.7 2.7l-3.7 5c-6.9 5.4-10.9 5.1-22.2 7zM48.1 34c-38 31.9 29.8 58.4 25 7.7M70.3 26.9l5.4 4.2"/></svg>`;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    ////////////////////////////////////////////////////////////////////////////
-    // 💿 Next, add files to this object, just like files in a real app,
-    // `createFixture` will make an app and run your tests against it.
-    ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
+      "app/images/icon.svg": SVG_CONTENTS,
+
+      "app/routes/[manifest.webmanifest].js": js`
         import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+        import iconUrl from "~/images/icon.svg";
 
-        export function loader() {
-          return json("pizza");
-        }
-
-        export default function Index() {
-          let data = useLoaderData();
-          return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
-        }
-      `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+        export  function loader() {
+          return json(
+            {
+              icons: [
+                {
+                  src: iconUrl,
+                  sizes: '48x48 72x72 96x96 128x128 192x192 256x256 512x512',
+                  type: 'image/svg+xml',
+                },
+              ],
+            },
+          );
         }
       `,
+
+      // UNCOMMENT THIS TO OBSERVE THE FILE BEING INCLUDED IN THE BUILD OUTPUT
+      // "app/routes/index.js": js`
+      //   import iconUrl from "~/images/icon.svg";
+
+      //   export default function Index() {
+      //     return <img src={iconUrl} />;
+      //   }
+      // `,
     },
   });
 
-  // This creates an interactive app using puppeteer.
   appFixture = await createAppFixture(fixture);
 });
 
 test.afterAll(async () => appFixture.close());
 
-////////////////////////////////////////////////////////////////////////////////
-// 💿 Almost done, now write your failing test case(s) down here Make sure to
-// add a good description for what you expect Remix to do 👇🏽
-////////////////////////////////////////////////////////////////////////////////
-
-test("[description of what you expect it to do]", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
-
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+test("writes imported asset with hash to build directory", async ({ page }) => {
+  new PlaywrightFixture(appFixture, page);
+  let data = await fixture.getBrowserAsset("build/_assets/icon-W7PJN5PS.svg");
+  expect(data).toBe(SVG_CONTENTS);
 });
-
-////////////////////////////////////////////////////////////////////////////////
-// 💿 Finally, push your changes to your fork of Remix and open a pull request!
-////////////////////////////////////////////////////////////////////////////////
