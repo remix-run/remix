@@ -22,6 +22,11 @@ import {
   sendRemixResponse
 } from "./api/v1";
 
+export enum APIGatewayVersion {
+  v1 = "v1",
+  v2 = "v2",
+}
+
 /**
  * A function that returns the value to use as `context` in route `loader` and
  * `action` functions.
