@@ -14,7 +14,7 @@ export function usePreviewSubscription(query, subscriptionOptions) {
       // For more details about configuring groq-store see:
       // https://www.npmjs.com/package/@sanity/groq-store
       const {
-        default: { groqStore }
+        default: { groqStore },
       } = await import("@sanity/groq-store");
 
       const { projectId, dataset } = config;
@@ -24,7 +24,7 @@ export function usePreviewSubscription(query, subscriptionOptions) {
         dataset,
         listen: true,
         overlayDrafts: true,
-        documentLimit: 1000
+        documentLimit: 1000,
       });
 
       store.subscribe(

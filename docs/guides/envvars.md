@@ -4,11 +4,11 @@ title: Environment Variables
 
 # Environment Variables
 
-Remix does not do anything directly with environment variables, but there are some patterns we find useful that we'll share in this guide.
+Remix does not do anything directly with environment variables (except during local development), but there are some patterns we find useful that we'll share in this guide.
 
 Environment Variables are values that live on the server that your application can use. You may be familiar with the ubiquitous `NODE_ENV`. Your deployment server probably automatically sets that to "production".
 
-<docs-warning>When you run `remix build` we will compile `process.env.NODE_ENV` into whatever the current environment value is.</docs-warning>
+<docs-warning>Running `remix build` compiles using the value of `process.env.NODE_ENV` if it corresponds with a valid mode: "production", "development" or "test". If the value of `process.env.NODE_ENV` is invalid, "production" is used as a default.</docs-warning>
 
 Here are some example environment variables you might find in the wild:
 
@@ -28,12 +28,11 @@ Environment variables on your server will be handled by your host, for example:
 - [Vercel](https://vercel.com/docs/environment-variables)
 - [Architect](https://arc.codes/docs/en/reference/cli/env)
 
-If your host doesn't have any conventions for environment variables during development, we recommend using [dotenv](https://www.npmjs.com/package/dotenv).
+If your host doesn't have any conventions for environment variables during development, the `remix dev` server can help out as it provides built-in support for [dotenv](https://www.npmjs.com/package/dotenv).
 
-If you're using the Remix App Server, you can do this very quickly:
+If you're using the `remix dev` server, you can do this very quickly:
 
 ```sh
-npm add dotenv
 touch .env
 ```
 
@@ -43,16 +42,7 @@ Edit your `.env` file.
 SOME_SECRET=super-secret
 ```
 
-Then update your package.json dev script to this:
-
-```json lines=[2] filename=package.json
-{
-  "dev": "node -r dotenv/config node_modules/.bin/remix dev",
-  "start": "remix-serve build"
-}
-```
-
-Now you can access those values in your loaders/actions:
+Then, when running `remix dev` you will be able to access those values in your loaders/actions:
 
 ```js
 export async function loader() {
@@ -60,7 +50,7 @@ export async function loader() {
 }
 ```
 
-Note that dotenv is only for development, you should not use it in production, so don't do that with your start script, only dev. You'll need to follow your host's guides on adding secrets to your production server.
+Note that `dotenv` is only for development, you should not use it in production, so Remix doesn't load these when running `remix serve`. You'll need to follow your host's guides on adding secrets to your production server.
 
 <docs-error>Do not commit your <code>.env</code> file to git, the point is that it contains secrets!</docs-error>
 
@@ -78,12 +68,12 @@ Instead we recommend keeping all of your environment variables on the server (al
 
    ```tsx [3-6]
    export async function loader() {
-     return {
+     return json({
        ENV: {
          STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
-         FAUNA_DB_URL: process.env.FAUNA_DB_URL
-       }
-     };
+         FAUNA_DB_URL: process.env.FAUNA_DB_URL,
+       },
+     });
    }
 
    export function Root() {
@@ -106,11 +96,11 @@ Instead we recommend keeping all of your environment variables on the server (al
 
    ```tsx [10, 19-25]
    export async function loader() {
-     return {
+     return json({
        ENV: {
-         STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY
-       }
-     };
+         STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
+       },
+     });
    }
 
    export function Root() {
@@ -127,7 +117,7 @@ Instead we recommend keeping all of your environment variables on the server (al
              dangerouslySetInnerHTML={{
                __html: `window.ENV = ${JSON.stringify(
                  data.ENV
-               )}`
+               )}`,
              }}
            />
            <Scripts />

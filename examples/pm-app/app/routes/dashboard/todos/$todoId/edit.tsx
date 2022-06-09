@@ -1,5 +1,6 @@
-import { json } from "remix";
-import type { ActionFunction } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+
 import { requireUser } from "~/session.server";
 import { updateTodo } from "~/db.server";
 import type { Todo } from "~/models";
@@ -7,7 +8,7 @@ import { Sanitizer } from "~/utils/sanitizer";
 
 export const action: ActionFunction = async ({ request, context, params }) => {
   await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   let actionData: ActionData;

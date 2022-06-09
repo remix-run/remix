@@ -1,5 +1,6 @@
+import { createCookieSessionStorage, redirect } from "@remix-run/node";
 import bcrypt from "bcryptjs";
-import { createCookieSessionStorage, redirect } from "remix";
+
 import { db } from "./db.server";
 
 type LoginForm = {
@@ -59,8 +60,7 @@ export async function requireUserId(
   request: Request,
   redirectTo: string = new URL(request.url).pathname
 ) {
-  const session = await getUserSession(request);
-  const userId = session.get("userId");
+  const userId = await getUserId(request);
   if (!userId || typeof userId !== "string") {
     const searchParams = new URLSearchParams([["redirectTo", redirectTo]]);
     throw redirect(`/login?${searchParams}`);
@@ -86,7 +86,7 @@ export async function getUser(request: Request) {
 }
 
 export async function logout(request: Request) {
-  const session = await storage.getSession(request.headers.get("Cookie"));
+  const session = await getUserSession(request);
   return redirect("/login", {
     headers: {
       "Set-Cookie": await storage.destroySession(session),

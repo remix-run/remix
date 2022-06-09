@@ -1,41 +1,45 @@
 import path from "path";
-import { spawnSync } from "child_process";
+import { sync as spawnSync } from "cross-spawn";
 import fse from "fs-extra";
 import toml from "@iarna/toml";
+import { createApp } from "@remix-run/dev";
 
-import { sha, getSpawnOpts, runCypress, addCypress } from "./_shared.mjs";
-import { createApp } from "../../build/node_modules/create-remix/index.js";
+import {
+  addCypress,
+  CYPRESS_CONFIG,
+  CYPRESS_SOURCE_DIR,
+  getAppDirectory,
+  getAppName,
+  getSpawnOpts,
+  runCypress,
+  validatePackageVersions,
+} from "./_shared.mjs";
 
-let APP_NAME = `remix-cf-workers-${sha}`;
-let PROJECT_DIR = path.join(process.cwd(), "deployment-test", APP_NAME);
+let APP_NAME = getAppName("cf-workers");
+let PROJECT_DIR = getAppDirectory(APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:8787";
 
 async function createNewApp() {
   await createApp({
-    install: false,
-    lang: "ts",
-    server: "cloudflare-workers",
-    projectDir: PROJECT_DIR
+    appTemplate: "cloudflare-workers",
+    installDeps: false,
+    useTypeScript: true,
+    projectDir: PROJECT_DIR,
   });
 }
 
-try {
+async function createAndDeployApp() {
   // create a new remix app
   await createNewApp();
 
+  // validate dependencies are available
+  await validatePackageVersions(PROJECT_DIR);
+
   // add cypress to the project
   await Promise.all([
-    fse.copy(
-      path.join(process.cwd(), "scripts/deployment-test/cypress"),
-      path.join(PROJECT_DIR, "cypress")
-    ),
-
-    fse.copy(
-      path.join(process.cwd(), "scripts/deployment-test/cypress.json"),
-      path.join(PROJECT_DIR, "cypress.json")
-    ),
-
-    addCypress(PROJECT_DIR, CYPRESS_DEV_URL)
+    fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
+    fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
+    addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
   ]);
 
   let spawnOpts = getSpawnOpts(PROJECT_DIR);
@@ -62,11 +66,30 @@ try {
     throw new Error(`Failed to deploy app: ${deployCommand.stderr}`);
   }
 
-  // run cypress against the deployed server
+  // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, url);
-
-  process.exit(0);
-} catch (error) {
-  console.error(error);
-  process.exit(1);
 }
+
+async function destroyApp() {
+  let result = await fetch(
+    // using force will also delete bindings/durable objects
+    `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${APP_NAME}?force=true`,
+    {
+      method: "DELETE",
+      headers: {
+        "X-Auth-Email": process.env.CLOUDFLARE_EMAIL,
+        "X-Auth-Key": process.env.CLOUDFLARE_GLOBAL_API_KEY,
+      },
+    }
+  );
+  let json = await result.json();
+  console.log(`[DESTROY_APP]`, json);
+}
+
+createAndDeployApp()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(destroyApp);

@@ -1,20 +1,28 @@
 import supertest from "supertest";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import { createRequest } from "node-mocks-http";
 import { createServerWithHelpers } from "@vercel/node/dist/helpers";
 import type { VercelRequest } from "@vercel/node";
-import { Response as NodeResponse } from "@remix-run/node";
+import {
+  createRequestHandler as createRemixRequestHandler,
+  Response as NodeResponse,
+} from "@remix-run/node";
 import { Readable } from "stream";
 
 import {
   createRemixHeaders,
   createRemixRequest,
-  createRequestHandler
+  createRequestHandler,
 } from "../server";
 
 // We don't want to test that the remix server works here (that's what the
 // puppetteer tests do), we just want to test the vercel adapter
-jest.mock("@remix-run/server-runtime");
+jest.mock("@remix-run/node", () => {
+  let original = jest.requireActual("@remix-run/node");
+  return {
+    ...original,
+    createRequestHandler: jest.fn(),
+  };
+});
 let mockedCreateRequestHandler =
   createRemixRequestHandler as jest.MockedFunction<
     typeof createRemixRequestHandler
@@ -45,7 +53,7 @@ describe("vercel createRequestHandler", () => {
     });
 
     it("handles requests", async () => {
-      mockedCreateRequestHandler.mockImplementation(() => async req => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
@@ -74,7 +82,7 @@ describe("vercel createRequestHandler", () => {
     // https://github.com/node-fetch/node-fetch/blob/4ae35388b078bddda238277142bf091898ce6fda/test/response.js#L142-L148
     it("handles body as stream", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        const stream = Readable.from("hello world");
+        let stream = Readable.from("hello world");
         return new NodeResponse(stream, { status: 200 }) as unknown as Response;
       });
 
@@ -100,7 +108,7 @@ describe("vercel createRequestHandler", () => {
 
     it("sets headers", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
-        const headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
+        let headers = new Headers({ "X-Time-Of-Year": "most wonderful" });
         headers.append(
           "Set-Cookie",
           "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax"
@@ -124,7 +132,7 @@ describe("vercel createRequestHandler", () => {
       expect(res.headers["set-cookie"]).toEqual([
         "first=one; Expires=0; Path=/; HttpOnly; Secure; SameSite=Lax",
         "second=two; MaxAge=1209600; Path=/; HttpOnly; Secure; SameSite=Lax",
-        "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax"
+        "third=three; Expires=Wed, 21 Oct 2015 07:28:00 GMT; Path=/; HttpOnly; Secure; SameSite=Lax",
       ]);
     });
   });
@@ -135,7 +143,8 @@ describe("vercel createRemixHeaders", () => {
     it("handles empty headers", () => {
       expect(createRemixHeaders({})).toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {},
+          Symbol(query): Array [],
+          Symbol(context): null,
         }
       `);
     });
@@ -143,11 +152,11 @@ describe("vercel createRemixHeaders", () => {
     it("handles simple headers", () => {
       expect(createRemixHeaders({ "x-foo": "bar" })).toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-foo": Array [
-              "bar",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -156,14 +165,13 @@ describe("vercel createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": "bar", "x-bar": "baz" }))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-bar": Array [
-              "baz",
-            ],
-            "x-foo": Array [
-              "bar",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar",
+            "x-bar",
+            "baz",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -172,11 +180,11 @@ describe("vercel createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": "bar, baz" }))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-foo": Array [
-              "bar, baz",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar, baz",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -185,14 +193,13 @@ describe("vercel createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": "bar, baz", "x-bar": "baz" }))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "x-bar": Array [
-              "baz",
-            ],
-            "x-foo": Array [
-              "bar, baz",
-            ],
-          },
+          Symbol(query): Array [
+            "x-foo",
+            "bar, baz",
+            "x-bar",
+            "baz",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -202,17 +209,18 @@ describe("vercel createRemixHeaders", () => {
         createRemixHeaders({
           "set-cookie": [
             "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax"
-          ]
+            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
+          ],
         })
       ).toMatchInlineSnapshot(`
         Headers {
-          Symbol(map): Object {
-            "set-cookie": Array [
-              "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-              "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
-            ],
-          },
+          Symbol(query): Array [
+            "set-cookie",
+            "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
+            "set-cookie",
+            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
+          ],
+          Symbol(context): null,
         }
       `);
     });
@@ -227,55 +235,43 @@ describe("vercel createRemixRequest", () => {
       headers: {
         "x-forwarded-host": "localhost:3000",
         "x-forwarded-proto": "http",
-        "Cache-Control": "max-age=300, s-maxage=3600"
-      }
+        "Cache-Control": "max-age=300, s-maxage=3600",
+      },
     }) as VercelRequest;
 
     expect(createRemixRequest(request)).toMatchInlineSnapshot(`
       NodeRequest {
-        "abortController": undefined,
         "agent": undefined,
         "compress": true,
         "counter": 0,
         "follow": 20,
+        "highWaterMark": 16384,
+        "insecureHTTPParser": false,
         "size": 0,
-        "timeout": 0,
         Symbol(Body internals): Object {
           "body": null,
+          "boundary": null,
           "disturbed": false,
           "error": null,
+          "size": 0,
+          "type": null,
         },
         Symbol(Request internals): Object {
           "headers": Headers {
-            Symbol(map): Object {
-              "cache-control": Array [
-                "max-age=300, s-maxage=3600",
-              ],
-              "x-forwarded-host": Array [
-                "localhost:3000",
-              ],
-              "x-forwarded-proto": Array [
-                "http",
-              ],
-            },
+            Symbol(query): Array [
+              "cache-control",
+              "max-age=300, s-maxage=3600",
+              "x-forwarded-host",
+              "localhost:3000",
+              "x-forwarded-proto",
+              "http",
+            ],
+            Symbol(context): null,
           },
           "method": "GET",
-          "parsedURL": Url {
-            "auth": null,
-            "hash": null,
-            "host": "localhost:3000",
-            "hostname": "localhost",
-            "href": "http://localhost:3000/foo/bar",
-            "path": "/foo/bar",
-            "pathname": "/foo/bar",
-            "port": "3000",
-            "protocol": "http:",
-            "query": null,
-            "search": null,
-            "slashes": true,
-          },
+          "parsedURL": "http://localhost:3000/foo/bar",
           "redirect": "follow",
-          "signal": undefined,
+          "signal": AbortSignal {},
         },
       }
     `);

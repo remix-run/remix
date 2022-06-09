@@ -1,6 +1,8 @@
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Outlet, useLoaderData } from "@remix-run/react";
+
 import type { User } from "~/data.server";
-import { Outlet, useLoaderData } from "remix";
 
 interface LoaderData {
   users: User[];
@@ -9,9 +11,9 @@ interface LoaderData {
 export const loader: LoaderFunction = async ({ context }) => {
   const users = await context.loaders.usersById.loadMany([
     "ef3fcb93-0623-4d10-adbf-4dd865d6688c",
-    "2cbad877-2da6-422d-baa6-c6a96a9e085f"
+    "2cbad877-2da6-422d-baa6-c6a96a9e085f",
   ]);
-  return { users };
+  return json({ users });
 };
 
 export default function UserNames() {
@@ -21,7 +23,7 @@ export default function UserNames() {
     <article>
       <h1>Users</h1>
       <ul>
-        {users.map(user => (
+        {users.map((user) => (
           <li key={user.email}>{user.name}</li>
         ))}
       </ul>

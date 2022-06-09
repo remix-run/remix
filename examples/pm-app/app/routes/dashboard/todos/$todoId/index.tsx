@@ -1,5 +1,6 @@
-import { json } from "remix";
-import type { LoaderFunction, ActionFunction } from "remix";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+
 import { requireUser } from "~/session.server";
 import { getTodo, updateTodo } from "~/db.server";
 import type { Todo } from "~/models";
@@ -7,7 +8,7 @@ import type { Todo } from "~/models";
 export const loader: LoaderFunction = async ({ request, context, params }) => {
   const todoId = params.todoId as string;
   await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   const todo = await getTodo(todoId);
@@ -23,7 +24,7 @@ export const loader: LoaderFunction = async ({ request, context, params }) => {
 
 export const action: ActionFunction = async ({ request, context, params }) => {
   await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   let actionData: ActionData;
@@ -42,7 +43,7 @@ export const action: ActionFunction = async ({ request, context, params }) => {
       const status = formData.get("id");
 
       const todo = await updateTodo(todoId, {
-        completed: status === "on"
+        completed: status === "on",
       });
       actionData = { todo };
       return json(actionData, 200);

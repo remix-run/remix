@@ -1,31 +1,43 @@
+import { test, expect } from "@playwright/test";
+
 import { createFixture, js } from "./helpers/create-fixture";
 import type { Fixture } from "./helpers/create-fixture";
 
-describe("headers export", () => {
-  const ROOT_HEADER_KEY = "X-Test";
-  const ROOT_HEADER_VALUE = "SUCCESS";
-  const ACTION_HKEY = "X-Test-Action";
-  const ACTION_HVALUE = "SUCCESS";
+test.describe("headers export", () => {
+  let ROOT_HEADER_KEY = "X-Test";
+  let ROOT_HEADER_VALUE = "SUCCESS";
+  let ACTION_HKEY = "X-Test-Action";
+  let ACTION_HVALUE = "SUCCESS";
 
-  let fixture: Fixture;
+  let appFixture: Fixture;
 
-  beforeAll(async () => {
-    fixture = await createFixture({
+  test.beforeAll(async () => {
+    appFixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { Outlet } from "remix";
+          import { json } from "@remix-run/node";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
-          export function loader() {
-            return null
-          }
+          export const loader = () => json({});
 
-          export default function Index() {
-            return <html><body><Outlet/></body></html>
+          export default function Root() {
+            return (
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                  <Scripts />
+                </body>
+              </html>
+            );
           }
         `,
 
         "app/routes/index.jsx": js`
-          import { json } from "remix";
+          import { json } from "@remix-run/node";
 
           export function loader() {
             return json(null, {
@@ -47,7 +59,7 @@ describe("headers export", () => {
         `,
 
         "app/routes/action.jsx": js`
-          import { json } from "remix";
+          import { json } from "@remix-run/node";
 
           export function action() {
             return json(null, {
@@ -64,37 +76,51 @@ describe("headers export", () => {
           }
 
           export default function Action() { return <div/> }
-        `
-      }
+        `,
+      },
     });
   });
 
-  it("can use `action` headers", async () => {
-    let response = await fixture.postDocument("/action", new URLSearchParams());
+  test("can use `action` headers", async () => {
+    let response = await appFixture.postDocument(
+      "/action",
+      new URLSearchParams()
+    );
     expect(response.headers.get(ACTION_HKEY)).toBe(ACTION_HVALUE);
   });
 
-  it("can use the loader headers when all routes have loaders", async () => {
-    let response = await fixture.requestDocument("/");
+  test("can use the loader headers when all routes have loaders", async () => {
+    let response = await appFixture.requestDocument("/");
     expect(response.headers.get(ROOT_HEADER_KEY)).toBe(ROOT_HEADER_VALUE);
   });
 
-  it("can use the loader headers when parents don't have loaders", async () => {
-    const HEADER_KEY = "X-Test";
-    const HEADER_VALUE = "SUCCESS";
+  test("can use the loader headers when parents don't have loaders", async () => {
+    let HEADER_KEY = "X-Test";
+    let HEADER_VALUE = "SUCCESS";
 
     let fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { Outlet } from "remix";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
-          export default function Index() {
-            return <html><body><Outlet/></body></html>
+          export default function Root() {
+            return (
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                  <Scripts />
+                </body>
+              </html>
+            );
           }
         `,
 
         "app/routes/index.jsx": js`
-          import { json } from "remix";
+          import { json } from "@remix-run/node";
 
           export function loader() {
             return json(null, {
@@ -113,8 +139,8 @@ describe("headers export", () => {
           export default function Index() {
             return <div>Heyo!</div>
           }
-        `
-      }
+        `,
+      },
     });
     let response = await fixture.requestDocument("/");
     expect(response.headers.get(HEADER_KEY)).toBe(HEADER_VALUE);

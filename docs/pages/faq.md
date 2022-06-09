@@ -7,7 +7,7 @@ description: Frequently Asked Questions about Remix
 
 ## How can I have a parent route loader validate the user and protect all child routes?
 
-You can't 😅. During a client side transition, to make your app as speedy as possible, Remix will call all of your loaders _in parallel_, in separate fetch requests. Each one of them needs to have it's own authentication check.
+You can't 😅. During a client side transition, to make your app as speedy as possible, Remix will call all of your loaders _in parallel_, in separate fetch requests. Each one of them needs to have its own authentication check.
 
 This is probably not different than what you were doing before Remix, it might just be more obvious now. Outside of Remix, when you make multiple fetches to your "API Routes", each of those endpoints needs to validate the user session. In other words, Remix route loaders are their own "API Route" and must be treated as such.
 
@@ -16,8 +16,8 @@ We recommend you create a function that validates the user session that can be a
 ```tsx filename=app/session.js lines=[9-22]
 import {
   createCookieSessionStorage,
-  redirect
-} from "remix";
+  redirect,
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 // somewhere you've got a session storage
 const { getSession } = createCookieSessionStorage();
@@ -31,7 +31,7 @@ export async function requireUserSession(request) {
   // put in the session when the user authenticated
   if (!session.has("userId")) {
     // if there is no user session, redirect to login
-    throw new redirect("/login");
+    throw redirect("/login");
   }
 
   return session;
@@ -47,9 +47,9 @@ export async function loader({ request }) {
 
   // otherwise the code continues to execute
   const projects = await fakeDb.projects.scan({
-    userId: session.get("userId")
+    userId: session.get("userId"),
   });
-  return projects;
+  return json(projects);
 }
 ```
 
@@ -84,7 +84,7 @@ HTML buttons can send a value, so it's the easiest way to implement this:
 ```jsx filename=app/routes/projects/$id.jsx lines=[3-4,33,39]
 export async function action({ request }) {
   let formData = await request.formData();
-  let action = formData.get("_action");
+  let action = formData.get("action");
   switch (action) {
     case "update": {
       // do your update
@@ -114,13 +114,13 @@ export default function Projects() {
             defaultValue={project.name}
           />
         </label>
-        <button type="submit" name="_action" value="create">
+        <button type="submit" name="action" value="create">
           Update
         </button>
       </Form>
 
       <Form method="post">
-        <button type="submit" name="_action" value="delete">
+        <button type="submit" name="action" value="delete">
           Delete
         </button>
       </Form>
@@ -133,16 +133,10 @@ You can also use a hidden input field:
 
 ```jsx lines=[2]
 <Form method="post">
-  <input type="hidden" name="_action" value="create" />
+  <input type="hidden" name="action" value="create" />
   <button type="submit">Create</button>
 </Form>
 ```
-
-<docs-error>Do not use `action` as your field name!</docs-error>
-
-You may wonder why we used `<button name="_action">` instead of `<button name="action">`. You can use whatever you want, but just not `"action"`!
-
-Without getting into browser decisions decades ago, form elements have the `form.action` property in the DOM to know where to post to. In our case: `form._action`. If you use `action`, there's a conflict and the submission will fail.
 
 ## How can I have structured data in a form?
 
@@ -234,3 +228,10 @@ Again, `formData.getAll()` is often all you need, we encourage you to give it a 
 
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [query-string]: https://www.npmjs.com/package/query-string
+[ramda]: https://www.npmjs.com/package/ramda
+
+## What's the difference between `CatchBoundary` & `ErrorBoundary`?
+
+Error boundaries render when your application throws an error and you had no clue it was going to happen. Most apps just go blank or have spinners spin forever. In remix the error boundary renders and you have granular control over it.
+
+Catch boundaries render when you decide in a loader that you can't proceed down the happy path to render the UI you want (auth required, record not found, etc.), so you throw a response and let some catch boundary up the tree handle it.

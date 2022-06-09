@@ -8,7 +8,7 @@ import {
   extractData,
   fetchData,
   isCatchResponse,
-  isRedirectResponse
+  isRedirectResponse,
 } from "./data";
 import type { Submission } from "./transition";
 import { CatchValue, TransitionRedirect } from "./transition";
@@ -65,7 +65,7 @@ export type RouteDataFunction = {
 
 export interface ClientRoute extends Route {
   loader?: RouteDataFunction;
-  action?: RouteDataFunction;
+  action: RouteDataFunction;
   shouldReload?: ShouldReloadFunction;
   ErrorBoundary?: any;
   CatchBoundary?: any;
@@ -90,11 +90,11 @@ export function createClientRoute(
     index: entryRoute.index,
     module: entryRoute.module,
     loader: createLoader(entryRoute, routeModulesCache),
-    action: createAction(entryRoute),
+    action: createAction(entryRoute, routeModulesCache),
     shouldReload: createShouldReload(entryRoute, routeModulesCache),
     ErrorBoundary: entryRoute.hasErrorBoundary,
     CatchBoundary: entryRoute.hasCatchBoundary,
-    hasLoader: entryRoute.hasLoader
+    hasLoader: entryRoute.hasLoader,
   };
 }
 
@@ -105,8 +105,8 @@ export function createClientRoutes(
   parentId?: string
 ): ClientRoute[] {
   return Object.keys(routeManifest)
-    .filter(key => routeManifest[key].parentId === parentId)
-    .map(key => {
+    .filter((key) => routeManifest[key].parentId === parentId)
+    .map((key) => {
       let route = createClientRoute(
         routeManifest[key],
         routeModulesCache,
@@ -124,7 +124,7 @@ export function createClientRoutes(
 }
 
 function createShouldReload(route: EntryRoute, routeModules: RouteModules) {
-  let shouldReload: ShouldReloadFunction = arg => {
+  let shouldReload: ShouldReloadFunction = (arg) => {
     let module = routeModules[route.id];
     invariant(module, `Expected route module to be loaded for ${route.id}`);
     if (module.unstable_shouldReload) {
@@ -150,7 +150,7 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
     if (route.hasLoader) {
       let [result] = await Promise.all([
         fetchData(url, route.id, signal, submission),
-        loadRouteModuleWithBlockingLinks(route, routeModules)
+        loadRouteModuleWithBlockingLinks(route, routeModules),
       ]);
 
       if (result instanceof Error) throw result;
@@ -162,7 +162,7 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
         throw new CatchValue(
           result.status,
           result.statusText,
-          await extractData(result.clone())
+          await extractData(result)
         );
       }
 
@@ -175,10 +175,15 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
   return loader;
 }
 
-function createAction(route: EntryRoute) {
-  if (!route.hasAction) return undefined;
-
+function createAction(route: EntryRoute, routeModules: RouteModules) {
   let action: ClientRoute["action"] = async ({ url, signal, submission }) => {
+    if (!route.hasAction) {
+      console.error(
+        `Route "${route.id}" does not have an action, but you are trying ` +
+          `to submit to it. To fix this, please add an \`action\` function to the route`
+      );
+    }
+
     let result = await fetchData(url, route.id, signal, submission);
 
     if (result instanceof Error) {
@@ -188,11 +193,13 @@ function createAction(route: EntryRoute) {
     let redirect = await checkRedirect(result);
     if (redirect) return redirect;
 
+    await loadRouteModuleWithBlockingLinks(route, routeModules);
+
     if (isCatchResponse(result)) {
       throw new CatchValue(
         result.status,
         result.statusText,
-        await extractData(result.clone())
+        await extractData(result)
       );
     }
 
@@ -216,7 +223,10 @@ async function checkRedirect(
         window.location.replace(url.href);
       });
     } else {
-      return new TransitionRedirect(url.pathname + url.search);
+      return new TransitionRedirect(
+        url.pathname + url.search + url.hash,
+        response.headers.get("X-Remix-Revalidate") !== null
+      );
     }
   }
 

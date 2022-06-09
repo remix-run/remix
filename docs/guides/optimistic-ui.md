@@ -23,12 +23,13 @@ Remix can help you build optimistic UI with [`useTransition`][use-transition] an
 Consider the workflow for viewing and creating a new project. The project route loads the project and renders it.
 
 ```tsx filename=app/routes/project/$id.tsx
-import { useLoaderData } from "remix";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { useLoaderData } from "@remix-run/react";
 
 import { ProjectView } from "~/components/project";
 
 export async function loader({ params }) {
-  return findProject(params.id);
+  return json(await findProject(params.id));
 }
 
 export default function ProjectRoute() {
@@ -46,7 +47,7 @@ export function ProjectView({ project }) {
       <h2>{project.title}</h2>
       <p>{project.description}</p>
       <ul>
-        {project.tasks.map(task => (
+        {project.tasks.map((task) => (
           <li key={task.id}>{task.name}</li>
         ))}
       </ul>
@@ -58,12 +59,13 @@ export function ProjectView({ project }) {
 Now we can get to the fun part. Here's what a "new project" route might look like:
 
 ```tsx filename=app/routes/projects/new.tsx
-import { Form, redirect } from "remix";
+import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { Form } from "@remix-run/react";
 
 import { createProject } from "~/utils";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
@@ -90,13 +92,14 @@ export default function NewProject() {
 
 At this point, typically you'd render a busy spinner on the page while the user waits for the project to be sent to the server, added to the database, and sent back to the browser and then redirected to the project. Remix makes that pretty easy:
 
-```tsx filename=app/routes/projects/new.tsx lines=[1,15,27,29-31]
-import { Form, redirect, useTransition } from "remix";
+```tsx filename=app/routes/projects/new.tsx lines=[2,16,28,30-32]
+import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { Form, useTransition } from "@remix-run/react";
 
 import { createProject } from "~/utils";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
@@ -131,14 +134,15 @@ export default function NewProject() {
 
 Since we know that almost every time this form is submitted it's going to succeed, we can just skip the busy spinners and show the UI as we know it's going to be: the `<ProjectView>`.
 
-```tsx filename=app/routes/projects/new.tsx lines=[4,16-22]
-import { Form, redirect, useTransition } from "remix";
+```tsx filename=app/routes/projects/new.tsx lines=[5,17-23]
+import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { Form, useTransition } from "@remix-run/react";
 
 import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
@@ -178,20 +182,19 @@ One of the hardest parts about implementing optimistic UI is how to handle failu
 
 If you want to have more control over the UI when an error occurs and put the user right back where they were without losing any state, you can catch your own error and send it down through action data.
 
-```tsx filename=app/routes/projects/new.tsx lines=[5,6,17-25,30,49]
+```tsx filename=app/routes/projects/new.tsx lines=[4-5,16-24,29,48]
+import { json, redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import {
   Form,
-  redirect,
   useTransition,
   useActionData,
-  json
-} from "remix";
+} from "@remix-run/react";
 
 import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
@@ -201,7 +204,7 @@ export const action: ActionFunction = async ({
   } catch (e) {
     console.error(e);
     return json("Sorry, we couldn't create the project", {
-      status: 500
+      status: 500,
     });
   }
 };

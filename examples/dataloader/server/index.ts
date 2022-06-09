@@ -25,9 +25,9 @@ app.all(
         build: require("./build"),
         getLoadContext: () => ({
           loaders: {
-            usersById: createUsersByIdLoader()
-          }
-        })
+            usersById: createUsersByIdLoader(),
+          },
+        }),
       })
     : (req, res, next) => {
         purgeRequireCache();
@@ -37,9 +37,9 @@ app.all(
           mode: MODE,
           getLoadContext: () => ({
             loaders: {
-              usersById: createUsersByIdLoader()
-            }
-          })
+              usersById: createUsersByIdLoader(),
+            },
+          }),
         })(req, res, next);
       }
 );

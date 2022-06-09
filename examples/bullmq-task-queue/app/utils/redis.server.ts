@@ -9,7 +9,7 @@ declare global {
 
 const redisOptions: Redis.RedisOptions = {
   maxRetriesPerRequest: null,
-  enableReadyCheck: false
+  enableReadyCheck: false,
 };
 
 // this is needed because in development we don't want to restart

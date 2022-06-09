@@ -1,12 +1,13 @@
-import { json } from "remix";
-import type { ActionFunction } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+
 import { requireUser } from "~/session.server";
 import { updateTodo } from "~/db.server";
 import type { Todo } from "~/models";
 
 export const action: ActionFunction = async ({ request, params }) => {
   await requireUser(request, {
-    redirect: "/sign-in"
+    redirect: "/sign-in",
   });
 
   let actionData: ActionData;
@@ -22,7 +23,7 @@ export const action: ActionFunction = async ({ request, params }) => {
       const formData = await request.formData();
       const status = params.id || formData.get("id");
       const todo = await updateTodo(todoId, {
-        completed: status === "on"
+        completed: status === "on",
       });
       actionData = { todo };
       return json(actionData, 200);

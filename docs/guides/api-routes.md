@@ -14,7 +14,7 @@ Consider this route:
 
 ```tsx filename=routes/teams.tsx
 export async function loader() {
-  return getTeams();
+  return json(await getTeams());
 }
 
 export default function Teams() {
@@ -28,14 +28,16 @@ Whenever the user clicks a link to `<Link to="/teams" />`, Remix in the browser 
 
 There are times, however, that you want to get the data from a loader but not because the user is visiting the route, but the current page needs that route's data for some reason. A very clear example is a `<Combobox>` component that queries the database for records and suggests them to the user.
 
-You can `useFetcher` for cases like this. And once again, since Remix in the browser knows about Remix on the server, you don't have to do much to get the data. Remix's error handling kicks in, and race conditions, interruptions, and fetch cancelations are handled for you, too.
+You can `useFetcher` for cases like this. And once again, since Remix in the browser knows about Remix on the server, you don't have to do much to get the data. Remix's error handling kicks in, and race conditions, interruptions, and fetch cancellations are handled for you, too.
 
 For example, you could have a route to handle the search:
 
 ```tsx filename=routes/city-search.tsx
 export async function loader({ request }) {
   const url = new URL(request.url);
-  return searchCities(url.searchParams.get("q"));
+  return json(
+    await searchCities(url.searchParams.get("q"))
+  );
 }
 ```
 
@@ -51,7 +53,7 @@ function CitySearchCombobox() {
         <div>
           <ComboboxInput
             name="q"
-            onChange={event =>
+            onChange={(event) =>
               cities.submit(event.target.form)
             }
           />
@@ -66,7 +68,7 @@ function CitySearchCombobox() {
               <p>Failed to load cities :(</p>
             ) : cities.data.length ? (
               <ComboboxList>
-                {cities.data.map(city => (
+                {cities.data.map((city) => (
                   <ComboboxOption
                     key={city.id}
                     value={city.name}
@@ -95,8 +97,8 @@ export async function loader({ params }) {
   return new Response(pdf, {
     status: 200,
     headers: {
-      "Content-Type": "application/pdf"
-    }
+      "Content-Type": "application/pdf",
+    },
   });
 }
 ```

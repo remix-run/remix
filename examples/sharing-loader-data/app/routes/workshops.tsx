@@ -1,5 +1,7 @@
-import { Link, Outlet, json, useLoaderData } from "remix";
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Link, Outlet, useLoaderData } from "@remix-run/react";
+
 import type { Workshop } from "~/data.server";
 import { getWorkshops } from "~/data.server";
 
@@ -7,7 +9,7 @@ type LoaderData = { workshops: Array<Workshop> };
 
 export const loader: LoaderFunction = async () => {
   return json<LoaderData>({
-    workshops: await getWorkshops()
+    workshops: await getWorkshops(),
   });
 };
 
@@ -18,7 +20,7 @@ export default function Workshops() {
     <div>
       <h1>There are {data.workshops.length} workshops</h1>
       <ul>
-        {data.workshops.map(workshop => (
+        {data.workshops.map((workshop) => (
           <li key={workshop.id}>
             <Link to={workshop.id}>{workshop.title}</Link>
           </li>

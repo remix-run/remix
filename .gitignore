@@ -9,10 +9,19 @@ yarn-error.log
 /fixtures/test
 /fixtures/my-remix-app
 /fixtures/deno-app
+/playwright-report
+/test-results
+/uploads
 
 .eslintcache
 .tmp
 
-/deployment-test
+/scripts/deployment-test/apps
+/scripts/deployment-test/package-lock.json
+/scripts/deployment-test/yarn.lock
 
 /.idea/
+/playground
+/scripts/playground/template.local
+/scripts/playground/template/build
+/scripts/playground/template/package-lock.json

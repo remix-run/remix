@@ -1,5 +1,6 @@
-import type { ActionFunction } from "remix";
-import { Form, json, useActionData, useTransition } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, useActionData, useTransition } from "@remix-run/react";
 
 import { queue } from "~/queues/notifier.server";
 
@@ -12,10 +13,10 @@ export const action: ActionFunction = async ({ request }) => {
   }
 
   // Jobs are queued and not processed immediately.
-  // This function is asyncronous because it is writing
+  // This function is asynchronous because it is writing
   // the job to redis for our worker to later pick up.
   await queue.add("notification email", {
-    emailAddress: email
+    emailAddress: email,
   });
 
   return json(`Email queued for ${email}!`);

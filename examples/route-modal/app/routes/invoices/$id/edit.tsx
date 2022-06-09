@@ -1,19 +1,20 @@
-import * as React from "react";
 import Dialog from "@reach/dialog";
-import type { ActionFunction, LinksFunction, LoaderFunction } from "remix";
-import { redirect } from "remix";
-import { useLoaderData } from "remix";
-import { json } from "remix";
-import { Form } from "remix";
-import { useNavigate } from "remix";
 import styles from "@reach/dialog/styles.css";
+import type {
+  ActionFunction,
+  LinksFunction,
+  LoaderFunction,
+} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { Form, useLoaderData, useNavigate } from "@remix-run/react";
+import * as React from "react";
 
 export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: styles
-    }
+      href: styles,
+    },
   ];
 };
 
@@ -27,18 +28,18 @@ export const loader: LoaderFunction = async ({ params }) => {
       company: "Remix",
       description: "Remix license",
       amount: 200,
-      date: new Date(2021, 8, 1)
+      date: new Date(2021, 8, 1),
     },
     {
       id: 2,
       company: "Amazon",
       description: "AWS bill",
       amount: 340,
-      date: new Date(2022, 8, 1)
-    }
+      date: new Date(2022, 8, 1),
+    },
   ];
 
-  const invoice = invoices.find(invoice => invoice.id === parseInt(id));
+  const invoice = invoices.find((invoice) => invoice.id === parseInt(id));
   return json(invoice);
 };
 
@@ -57,7 +58,7 @@ export default function Edit() {
     company: data.company,
     description: data.description,
     amount: data.amount,
-    date: data.date
+    date: data.date,
   });
 
   function handleChange(

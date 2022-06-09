@@ -22,7 +22,7 @@ For example, consider a UI Route that renders a report, note the link:
 
 ```tsx lines=[10-12] filename=app/routes/reports/$id.js
 export async function loader({ params }) {
-  return getReport(params.id);
+  return json(await getReport(params.id));
 }
 
 export default function Report() {
@@ -48,8 +48,8 @@ export async function loader({ params }) {
   return new Response(pdf, {
     status: 200,
     headers: {
-      "Content-Type": "application/pdf"
-    }
+      "Content-Type": "application/pdf",
+    },
   });
 }
 ```
@@ -86,11 +86,11 @@ app/routes/reports/$id[.]pdf.ts
 To handle `GET` requests export a loader function:
 
 ```ts
-import { json } from "remix";
-import type { LoaderFunction } from "remix";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const loader: LoaderFunction = async ({
-  request
+  request,
 }) => {
   // handle "GET" request
 
@@ -101,10 +101,10 @@ export const loader: LoaderFunction = async ({
 To handle `POST`, `PUT`, `PATCH` or `DELETE` requests export an action function:
 
 ```ts
-import type { ActionFunction } from "remix";
+import type { ActionFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   switch (request.method) {
     case "POST": {
@@ -128,12 +128,12 @@ export const action: ActionFunction = async ({
 Resource routes can be used to handle webhooks. For example, you can create a webhook that receives notifications from GitHub when a new commit is pushed to a repository:
 
 ```ts
-import type { ActionFunction } from "remix";
-import { json } from "remix";
+import type { ActionFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import crypto from "crypto";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   if (request.method !== "POST") {
     return json({ message: "Method not allowed" }, 405);

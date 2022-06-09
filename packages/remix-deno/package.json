@@ -1,21 +1,23 @@
 {
   "name": "@remix-run/deno",
+  "version": "1.5.1",
   "description": "Deno platform abstractions for Remix",
-  "version": "1.2.1",
-  "license": "MIT",
-  "module": "./index.js",
-  "types": "./index.d.ts",
+  "homepage": "https://remix.run",
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
     "directory": "packages/remix-deno"
   },
-  "bugs": {
-    "url": "https://github.com/remix-run/remix/issues"
-  },
+  "license": "MIT",
+  "sideEffects": false,
   "dependencies": {
-    "@remix-run/server-runtime": "1.2.1",
+    "@remix-run/server-runtime": "1.5.1",
     "mime": "^3.0.0"
   },
-  "sideEffects": false
+  "engines": {
+    "node": ">=14"
+  }
 }

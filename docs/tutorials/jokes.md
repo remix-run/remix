@@ -94,7 +94,7 @@ This may ask you whether you want to install `create-remix` to run the command. 
 
 </docs-info>
 
-When the fun Remix animation is finished, it'll ask you a few questions. We'll call our app "remix-jokes", choose the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
+When the fun Remix animation is finished, it'll ask you a few questions. We'll call our app "remix-jokes", choose "Just the basics", then the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
 
 ```
 R E M I X
@@ -102,8 +102,9 @@ R E M I X
 💿 Welcome to Remix! Let's get you set up with a new project.
 
 ? Where would you like to create your app? remix-jokes
-? Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets. Remix
- App Server
+? What type of app do you want to create? Just the basics
+? Where do you want to deploy? Choose Remix App Server if you're unsure,
+it's easy to change deployment targets. Remix App Server
 ? TypeScript or JavaScript? TypeScript
 ? Do you want me to run `npm install`? Yes
 ```
@@ -130,15 +131,15 @@ Here's the tree structure. Hopefully what you've got looks a bit like this:
 remix-jokes
 ├── README.md
 ├── app
-│   ├── entry.client.tsx
-│   ├── entry.server.tsx
-│   ├── root.tsx
-│   └── routes
-│       └── index.tsx
+│   ├── entry.client.tsx
+│   ├── entry.server.tsx
+│   ├── root.tsx
+│   └── routes
+│       └── index.tsx
 ├── package-lock.json
 ├── package.json
 ├── public
-│   └── favicon.ico
+│   └── favicon.ico
 ├── remix.config.js
 ├── remix.env.d.ts
 └── tsconfig.json
@@ -183,17 +184,16 @@ Remix App Server started at http://localhost:3000
 
 Open up that URL and you should be presented with a minimal page pointing to some docs.
 
-💿 Now stop the server and delete all this stuff:
+💿 Now stop the server and delete this directory:
 
 - `app/routes`
-- `app/styles`
 
 We're going to trim this down the bare bones and introduce things incrementally.
 
 💿 Replace the contents of `app/root.tsx` with this:
 
 ```tsx filename=app/root.tsx
-import { LiveReload } from "remix";
+import { LiveReload } from "@remix-run/react";
 
 export default function App() {
   return (
@@ -270,14 +270,14 @@ export default function IndexRoute() {
 
 React Router supports "nested routing" which means we have parent-child relationships in our routes. The `app/routes/index.tsx` is a child of the `app/root.tsx` route. In nested routing, parents are responsible for laying out their children.
 
-💿 Update the `app/root.tsx` to position children. You'll do this with the `<Outlet />` component from `remix`:
+💿 Update the `app/root.tsx` to position children. You'll do this with the `<Outlet />` component from `@remix-run/react`:
 
 <details>
 
 <summary>app/root.tsx</summary>
 
 ```tsx filename=app/root.tsx lines=[1,11]
-import { LiveReload, Outlet } from "remix";
+import { LiveReload, Outlet } from "@remix-run/react";
 
 export default function App() {
   return (
@@ -314,7 +314,7 @@ Great! Next let's handle the `/jokes` route.
 <summary>app/routes/jokes.tsx</summary>
 
 ```tsx filename=app/routes/jokes.tsx
-import { Outlet } from "remix";
+import { Outlet } from "@remix-run/react";
 
 export default function JokesRoute() {
   return (
@@ -464,7 +464,7 @@ body {
 <summary>app/routes/index.tsx</summary>
 
 ```tsx filename=app/routes/index.tsx lines=[1, 3, 5-7]
-import type { LinksFunction } from "remix";
+import type { LinksFunction } from "@remix-run/node";
 
 import stylesUrl from "~/styles/index.css";
 
@@ -489,8 +489,12 @@ So we need some way to get the `link` exports from all active routes and add `<l
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[1,9]
-import { Links, LiveReload, Outlet } from "remix";
+```tsx filename=app/root.tsx lines=[2,13]
+import {
+  Links,
+  LiveReload,
+  Outlet,
+} from "@remix-run/react";
 
 export default function App() {
   return (
@@ -1172,9 +1176,13 @@ The `global-large.css` and `global-medium.css` files are for media query-based C
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[1,4-6,8-25]
-import type { LinksFunction } from "remix";
-import { Links, LiveReload, Outlet } from "remix";
+```tsx filename=app/root.tsx lines=[1,8-10,12-29]
+import type { LinksFunction } from "@remix-run/node";
+import {
+  Links,
+  LiveReload,
+  Outlet,
+} from "@remix-run/react";
 
 import globalStylesUrl from "./styles/global.css";
 import globalMediumStylesUrl from "./styles/global-medium.css";
@@ -1184,18 +1192,18 @@ export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: globalStylesUrl
+      href: globalStylesUrl,
     },
     {
       rel: "stylesheet",
       href: globalMediumStylesUrl,
-      media: "print, (min-width: 640px)"
+      media: "print, (min-width: 640px)",
     },
     {
       rel: "stylesheet",
       href: globalLargeStylesUrl,
-      media: "screen and (min-width: 1024px)"
-    }
+      media: "screen and (min-width: 1024px)",
+    },
   ];
 };
 
@@ -1223,8 +1231,8 @@ export default function App() {
 <summary>app/routes/jokes.tsx</summary>
 
 ```tsx filename=app/routes/jokes.tsx lines=[1,4,6-8]
-import type { LinksFunction } from "remix";
-import { Outlet, Link } from "remix";
+import type { LinksFunction } from "@remix-run/node";
+import { Outlet, Link } from "@remix-run/react";
 
 import stylesUrl from "~/styles/jokes.css";
 
@@ -1281,9 +1289,9 @@ export default function JokesRoute() {
 
 <summary>app/routes/index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx
-import type { LinksFunction } from "remix";
-import { Link } from "remix";
+```tsx filename=app/routes/index.tsx lines=[1,4,6-13]
+import type { LinksFunction } from "@remix-run/node";
+import { Link } from "@remix-run/react";
 
 import stylesUrl from "~/styles/index.css";
 
@@ -1291,8 +1299,8 @@ export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: stylesUrl
-    }
+      href: stylesUrl,
+    },
   ];
 };
 
@@ -1338,7 +1346,7 @@ In this tutorial we're going to use our own [SQLite](https://sqlite.org/index.ht
 
 There are two packages that we need to get started:
 
-- `prisma` for interact with our database and schema during development
+- `prisma` for interacting with our database and schema during development.
 - `@prisma/client` for making queries to our database during runtime.
 
 💿 Install the prisma packages:
@@ -1371,7 +1379,7 @@ More information in our documentation:
 https://pris.ly/d/getting-started
 ```
 
-Now that we've got prisma initialized, we can start modeling our app data. Because this isn't a prisma tutorial, I'll just hand you that and you can read more about the prisma scheme from [their docs](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference):
+Now that we've got prisma initialized, we can start modeling our app data. Because this isn't a prisma tutorial, I'll just hand you that and you can read more about the prisma schema from [their docs](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference):
 
 ```prisma filename=prisma/schema.prisma lines=[13-19]
 // This is your Prisma schema file,
@@ -1414,7 +1422,7 @@ Datasource "db": SQLite database "dev.db" at "file:./dev.db"
 @prisma/client in 26ms
 ```
 
-This command did a few things. For one, it created our database file in `prisma/dev.db`. Then it pushed all the necessary changes to our database to match the schema we provided. Finally it generated Prisma's TypeScript types so we'll get stellar autocomplete and type checking as we use it's API for interacting with our database.
+This command did a few things. For one, it created our database file in `prisma/dev.db`. Then it pushed all the necessary changes to our database to match the schema we provided. Finally it generated Prisma's TypeScript types so we'll get stellar autocomplete and type checking as we use its API for interacting with our database.
 
 💿 Let's add that `prisma/dev.db` to our `.gitignore` so we don't accidentally commit it to our repository. We'll also want to add the `.env` file to the `.gitignore` as mentioned in the prisma output so we don't commit our secrets!
 
@@ -1441,7 +1449,7 @@ const db = new PrismaClient();
 
 async function seed() {
   await Promise.all(
-    getJokes().map(joke => {
+    getJokes().map((joke) => {
       return db.joke.create({ data: joke });
     })
   );
@@ -1455,32 +1463,32 @@ function getJokes() {
   return [
     {
       name: "Road worker",
-      content: `I never wanted to believe that my Dad was stealing from his job as a road worker. But when I got home, all the signs were there.`
+      content: `I never wanted to believe that my Dad was stealing from his job as a road worker. But when I got home, all the signs were there.`,
     },
     {
       name: "Frisbee",
-      content: `I was wondering why the frisbee was getting bigger, then it hit me.`
+      content: `I was wondering why the frisbee was getting bigger, then it hit me.`,
     },
     {
       name: "Trees",
-      content: `Why do trees seem suspicious on sunny days? Dunno, they're just a bit shady.`
+      content: `Why do trees seem suspicious on sunny days? Dunno, they're just a bit shady.`,
     },
     {
       name: "Skeletons",
-      content: `Why don't skeletons ride roller coasters? They don't have the stomach for it.`
+      content: `Why don't skeletons ride roller coasters? They don't have the stomach for it.`,
     },
     {
       name: "Hippos",
-      content: `Why don't you find hippopotamuses hiding in trees? They're really good at it.`
+      content: `Why don't you find hippopotamuses hiding in trees? They're really good at it.`,
     },
     {
       name: "Dinner",
-      content: `What did one plate say to the other plate? Dinner is on me!`
+      content: `What did one plate say to the other plate? Dinner is on me!`,
     },
     {
       name: "Elevator",
-      content: `My first time using an elevator was an uplifting experience. The second time let me down.`
-    }
+      content: `My first time using an elevator was an uplifting experience. The second time let me down.`,
+    },
   ];
 }
 ```
@@ -1551,11 +1559,9 @@ declare global {
 // create a new connection to the DB with every change either.
 if (process.env.NODE_ENV === "production") {
   db = new PrismaClient();
-  db.$connect();
 } else {
   if (!global.__db) {
     global.__db = new PrismaClient();
-    global.__db.$connect();
   }
   db = global.__db;
 }
@@ -1577,25 +1583,28 @@ To _load_ data in a Remix route module, you use a [`loader`](../api/conventions#
 
 ```tsx nocopy
 // this is just an example. No need to copy/paste this 😄
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 import type { User } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
 
 type LoaderData = { users: Array<User> };
-export let loader: LoaderFunction = async () => {
+
+export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
-    users: await db.user.findMany()
+    users: await db.user.findMany(),
   };
-  return data;
+  return json(data);
 };
 
 export default function Users() {
   const data = useLoaderData<LoaderData>();
   return (
     <ul>
-      {data.users.map(user => (
-        <li>{user.name}</li>
+      {data.users.map((user) => (
+        <li key={user.id}>{user.name}</li>
       ))}
     </ul>
   );
@@ -1616,9 +1625,17 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[1-2,4,11-13,15-20,23,47-51]
-import type { LinksFunction, LoaderFunction } from "remix";
-import { Link, Outlet, useLoaderData } from "remix";
+```tsx filename=app/routes/jokes.tsx lines=[3,5,12,19-21,23-28,31,55-59]
+import type {
+  LinksFunction,
+  LoaderFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
+import {
+  Link,
+  Outlet,
+  useLoaderData,
+} from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 import stylesUrl from "~/styles/jokes.css";
@@ -1633,9 +1650,9 @@ type LoaderData = {
 
 export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
-    jokeListItems: await db.joke.findMany()
+    jokeListItems: await db.joke.findMany(),
   };
-  return data;
+  return json(data);
 };
 
 export default function JokesRoute() {
@@ -1663,7 +1680,7 @@ export default function JokesRoute() {
             <Link to=".">Get a random joke</Link>
             <p>Here are a few more jokes to check out:</p>
             <ul>
-              {data.jokeListItems.map(joke => (
+              {data.jokeListItems.map((joke) => (
                 <li key={joke.id}>
                   <Link to={joke.id}>{joke.name}</Link>
                 </li>
@@ -1703,10 +1720,10 @@ export const loader: LoaderFunction = async () => {
     jokeListItems: await db.joke.findMany({
       take: 5,
       select: { id: true, name: true },
-      orderBy: { createdAt: "desc" }
-    })
+      orderBy: { createdAt: "desc" },
+    }),
   };
-  return data;
+  return json(data);
 };
 ```
 
@@ -1728,7 +1745,7 @@ Before we get to the `/jokes/:jokeId` route, here's a quick example of how you c
 
 ```tsx nocopy
 export const loader: LoaderFunction = async ({
-  params
+  params,
 }) => {
   console.log(params); // <-- {jokeId: "123"}
 };
@@ -1738,7 +1755,7 @@ And here's how you get the joke from prisma:
 
 ```tsx nocopy
 const joke = await db.joke.findUnique({
-  where: { id: jokeId }
+  where: { id: jokeId },
 });
 ```
 
@@ -1750,9 +1767,10 @@ const joke = await db.joke.findUnique({
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[3,5,7,9-16,19]
-import type { LoaderFunction } from "remix";
-import { Link, useLoaderData } from "remix";
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[4,6,8,10-19,22]
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Link, useLoaderData } from "@remix-run/react";
 import type { Joke } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
@@ -1760,14 +1778,14 @@ import { db } from "~/utils/db.server";
 type LoaderData = { joke: Joke };
 
 export const loader: LoaderFunction = async ({
-  params
+  params,
 }) => {
   const joke = await db.joke.findUnique({
-    where: { id: params.jokeId }
+    where: { id: params.jokeId },
   });
   if (!joke) throw new Error("Joke not found");
   const data: LoaderData = { joke };
-  return data;
+  return json(data);
 };
 
 export default function JokeRoute() {
@@ -1800,7 +1818,7 @@ const count = await db.joke.count();
 const randomRowNumber = Math.floor(Math.random() * count);
 const [randomJoke] = await db.joke.findMany({
   take: 1,
-  skip: randomRowNumber
+  skip: randomRowNumber,
 });
 ```
 
@@ -1810,9 +1828,10 @@ const [randomJoke] = await db.joke.findMany({
 
 <summary>app/routes/jokes/index.tsx</summary>
 
-```tsx filename=app/routes/jokes/index.tsx lines=[3,5,7,9-18,21]
-import type { LoaderFunction } from "remix";
-import { useLoaderData, Link } from "remix";
+```tsx filename=app/routes/jokes/index.tsx lines=[4,6,8,10-19,22]
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData, Link } from "@remix-run/react";
 import type { Joke } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
@@ -1824,10 +1843,10 @@ export const loader: LoaderFunction = async () => {
   const randomRowNumber = Math.floor(Math.random() * count);
   const [randomJoke] = await db.joke.findMany({
     take: 1,
-    skip: randomRowNumber
+    skip: randomRowNumber,
   });
   const data: LoaderData = { randomJoke };
-  return data;
+  return json(data);
 };
 
 export default function JokesIndexRoute() {
@@ -1888,7 +1907,7 @@ Here's the prisma code you'll need:
 
 ```tsx
 const joke = await db.joke.create({
-  data: { name, content }
+  data: { name, content },
 });
 ```
 
@@ -1899,13 +1918,13 @@ const joke = await db.joke.create({
 <summary>app/routes/jokes/new.tsx</summary>
 
 ```tsx filename=app/routes/jokes/new.tsx lines=[1-2,4,6-25]
-import type { ActionFunction } from "remix";
-import { redirect } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 
 import { db } from "~/utils/db.server";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const form = await request.formData();
   const name = form.get("name");
@@ -1977,15 +1996,16 @@ Before I set you off on this one, there's one more thing you need to know about 
 
 But if there's an error, you can return an object with the error messages and then the component can get those values from [`useActionData`](../api/remix#useactiondata) and display them to the user.
 
-💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 2 characters long and the content should be at least 10 characters long. Do this validation server-side.
+💿 Go ahead and validate that the `name` and `content` fields are long enough. I'd say the name should be at least 3 characters long and the content should be at least 10 characters long. Do this validation server-side.
 
 <details>
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[2,6-10,12-16,18-28,30-31,43-45,48-51,53-55,62,73,75-83,86-94,100,102-110,113-121]
-import type { ActionFunction } from "remix";
-import { useActionData, redirect, json } from "remix";
+```tsx filename=app/routes/jokes/new.tsx lines=[2-3,7-11,13-17,19-29,31-32,44-46,49-52,54-56,63,74,76-84,87-95,101,103-111,114-122,125-132]
+import type { ActionFunction } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { useActionData } from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 
@@ -1996,7 +2016,7 @@ function validateJokeContent(content: string) {
 }
 
 function validateJokeName(name: string) {
-  if (name.length < 2) {
+  if (name.length < 3) {
     return `That joke's name is too short`;
   }
 }
@@ -2017,7 +2037,7 @@ const badRequest = (data: ActionData) =>
   json(data, { status: 400 });
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const form = await request.formData();
   const name = form.get("name");
@@ -2027,13 +2047,13 @@ export const action: ActionFunction = async ({
     typeof content !== "string"
   ) {
     return badRequest({
-      formError: `Form not submitted correctly.`
+      formError: `Form not submitted correctly.`,
     });
   }
 
   const fieldErrors = {
     name: validateJokeName(name),
-    content: validateJokeContent(content)
+    content: validateJokeContent(content),
   };
   const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
@@ -2062,7 +2082,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.name) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
                   : undefined
@@ -2089,7 +2109,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.content) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
                   : undefined
@@ -2107,6 +2127,14 @@ export default function NewJokeRoute() {
           ) : null}
         </div>
         <div>
+          {actionData?.formError ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
+              {actionData.formError}
+            </p>
+          ) : null}
           <button type="submit" className="button">
             Add
           </button>
@@ -2228,11 +2256,11 @@ async function seed() {
       username: "kody",
       // this is a hashed version of "twixrox"
       passwordHash:
-        "$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu/1u"
-    }
+        "$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu/1u",
+    },
   });
   await Promise.all(
-    getJokes().map(joke => {
+    getJokes().map((joke) => {
       const data = { jokesterId: kody.id, ...joke };
       return db.joke.create({ data });
     })
@@ -2247,32 +2275,32 @@ function getJokes() {
   return [
     {
       name: "Road worker",
-      content: `I never wanted to believe that my Dad was stealing from his job as a road worker. But when I got home, all the signs were there.`
+      content: `I never wanted to believe that my Dad was stealing from his job as a road worker. But when I got home, all the signs were there.`,
     },
     {
       name: "Frisbee",
-      content: `I was wondering why the frisbee was getting bigger, then it hit me.`
+      content: `I was wondering why the frisbee was getting bigger, then it hit me.`,
     },
     {
       name: "Trees",
-      content: `Why do trees seem suspicious on sunny days? Dunno, they're just a bit shady.`
+      content: `Why do trees seem suspicious on sunny days? Dunno, they're just a bit shady.`,
     },
     {
       name: "Skeletons",
-      content: `Why don't skeletons ride roller coasters? They don't have the stomach for it.`
+      content: `Why don't skeletons ride roller coasters? They don't have the stomach for it.`,
     },
     {
       name: "Hippos",
-      content: `Why don't you find hippopotamuses hiding in trees? They're really good at it.`
+      content: `Why don't you find hippopotamuses hiding in trees? They're really good at it.`,
     },
     {
       name: "Dinner",
-      content: `What did one plate say to the other plate? Dinner is on me!`
+      content: `What did one plate say to the other plate? Dinner is on me!`,
     },
     {
       name: "Elevator",
-      content: `My first time using an elevator was an uplifting experience. The second time let me down.`
-    }
+      content: `My first time using an elevator was an uplifting experience. The second time let me down.`,
+    },
   ];
 }
 ```
@@ -2419,8 +2447,8 @@ fieldset > :not(:last-child) {
 <summary>app/routes/login.tsx</summary>
 
 ```tsx filename=app/routes/login.tsx
-import type { LinksFunction } from "remix";
-import { Link, useSearchParams } from "remix";
+import type { LinksFunction } from "@remix-run/node";
+import { Link, useSearchParams } from "@remix-run/react";
 
 import stylesUrl from "../styles/login.css";
 
@@ -2517,13 +2545,16 @@ Great, now that we've got the UI looking nice, let's add some logic. This will b
 <summary>app/routes/login.tsx</summary>
 
 ```tsx filename=app/routes/login.tsx
-import type { ActionFunction, LinksFunction } from "remix";
+import type {
+  ActionFunction,
+  LinksFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
   useActionData,
-  json,
   Link,
-  useSearchParams
-} from "remix";
+  useSearchParams,
+} from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 import stylesUrl from "~/styles/login.css";
@@ -2544,6 +2575,15 @@ function validatePassword(password: unknown) {
   }
 }
 
+function validateUrl(url: any) {
+  console.log(url);
+  let urls = ["/jokes", "/", "https://remix.run"];
+  if (urls.includes(url)) {
+    return url;
+  }
+  return "/jokes";
+}
+
 type ActionData = {
   formError?: string;
   fieldErrors?: {
@@ -2561,13 +2601,15 @@ const badRequest = (data: ActionData) =>
   json(data, { status: 400 });
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
-  const redirectTo = form.get("redirectTo") || "/jokes";
+  const redirectTo = validateUrl(
+    form.get("redirectTo") || "/jokes"
+  );
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
@@ -2575,14 +2617,14 @@ export const action: ActionFunction = async ({
     typeof redirectTo !== "string"
   ) {
     return badRequest({
-      formError: `Form not submitted correctly.`
+      formError: `Form not submitted correctly.`,
     });
   }
 
   const fields = { loginType, username, password };
   const fieldErrors = {
     username: validateUsername(username),
-    password: validatePassword(password)
+    password: validatePassword(password),
   };
   if (Object.values(fieldErrors).some(Boolean))
     return badRequest({ fieldErrors, fields });
@@ -2594,30 +2636,30 @@ export const action: ActionFunction = async ({
       // if there is a user, create their session and redirect to /jokes
       return badRequest({
         fields,
-        formError: "Not implemented"
+        formError: "Not implemented",
       });
     }
     case "register": {
       const userExists = await db.user.findFirst({
-        where: { username }
+        where: { username },
       });
       if (userExists) {
         return badRequest({
           fields,
-          formError: `User with username ${username} already exists`
+          formError: `User with username ${username} already exists`,
         });
       }
       // create the user
       // create their session and redirect to /jokes
       return badRequest({
         fields,
-        formError: "Not implemented"
+        formError: "Not implemented",
       });
     }
     default: {
       return badRequest({
         fields,
-        formError: `Login type invalid`
+        formError: `Login type invalid`,
       });
     }
   }
@@ -2630,14 +2672,7 @@ export default function Login() {
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <form
-          method="post"
-          aria-describedby={
-            actionData?.formError
-              ? "form-error-message"
-              : undefined
-          }
-        >
+        <form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -2684,7 +2719,7 @@ export default function Login() {
               aria-invalid={Boolean(
                 actionData?.fieldErrors?.username
               )}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.username
                   ? "username-error"
                   : undefined
@@ -2696,7 +2731,7 @@ export default function Login() {
                 role="alert"
                 id="username-error"
               >
-                {actionData?.fieldErrors.username}
+                {actionData.fieldErrors.username}
               </p>
             ) : null}
           </div>
@@ -2712,7 +2747,7 @@ export default function Login() {
                   actionData?.fieldErrors?.password
                 ) || undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.password
                   ? "password-error"
                   : undefined
@@ -2724,7 +2759,7 @@ export default function Login() {
                 role="alert"
                 id="password-error"
               >
-                {actionData?.fieldErrors.password}
+                {actionData.fieldErrors.password}
               </p>
             ) : null}
           </div>
@@ -2734,7 +2769,7 @@ export default function Login() {
                 className="form-validation-error"
                 role="alert"
               >
-                {actionData?.formError}
+                {actionData.formError}
               </p>
             ) : null}
           </div>
@@ -2781,7 +2816,7 @@ Here's what we need in that file to get started:
 
 <summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.ts
+```ts filename=app/utils/session.server.ts
 import bcrypt from "bcryptjs";
 
 import { db } from "./db.server";
@@ -2793,10 +2828,10 @@ type LoginForm = {
 
 export async function login({
   username,
-  password
+  password,
 }: LoginForm) {
   const user = await db.user.findUnique({
-    where: { username }
+    where: { username },
   });
   if (!user) return null;
 
@@ -2818,14 +2853,8 @@ Great, with that in place, now we can update `app/routes/login.tsx` to use it:
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[10,21-28] nocopy
-import type { ActionFunction, LinksFunction } from "remix";
-import {
-  useActionData,
-  json,
-  Link,
-  useSearchParams
-} from "remix";
+```tsx filename=app/routes/login.tsx lines=[4,15-22] nocopy
+// ...
 
 import { db } from "~/utils/db.server";
 import { login } from "~/utils/session.server";
@@ -2834,7 +2863,7 @@ import stylesUrl from "~/styles/login.css";
 // ...
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   // ...
   switch (loginType) {
@@ -2844,13 +2873,13 @@ export const action: ActionFunction = async ({
       if (!user) {
         return badRequest({
           fields,
-          formError: `Username/Password combination is incorrect`
+          formError: `Username/Password combination is incorrect`,
         });
       }
       // if there is a user, create their session and redirect to /jokes
       return badRequest({
         fields,
-        formError: "Not implemented"
+        formError: "Not implemented",
       });
     }
     // ...
@@ -2874,10 +2903,7 @@ To check our work, I added a `console.log` to `app/routes/login.tsx` after the `
 {
   user: {
     id: '1dc45f54-4061-4d9e-8a6d-28d6df6a8d7f',
-    createdAt: 2021-11-21T00:28:52.560Z,
-    updatedAt: 2021-11-21T00:28:52.560Z,
-    username: 'kody',
-    passwordHash: '$2b$10$K7L1OJ45/4Y2nIvhRVpCe.FSmhDdWoXehVzJptJ/op0lSsvqNu/1u'
+    username: 'kody'
   }
 }
 ```
@@ -2898,12 +2924,12 @@ Note: If you need a hand, there's a small example of how the whole basic flow go
 
 <summary>app/utils/session.server.ts</summary>
 
-```tsx filename=app/utils/session.server.ts lines=[3,29-32,34-47,49-60]
+```ts filename=app/utils/session.server.ts lines=[2-5,30-33,35-48,50-61]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
-  redirect
-} from "remix";
+  redirect,
+} from "@remix-run/node";
 
 import { db } from "./db.server";
 
@@ -2914,10 +2940,10 @@ type LoginForm = {
 
 export async function login({
   username,
-  password
+  password,
 }: LoginForm) {
   const user = await db.user.findUnique({
-    where: { username }
+    where: { username },
   });
   if (!user) return null;
   const isCorrectPassword = await bcrypt.compare(
@@ -2944,8 +2970,8 @@ const storage = createCookieSessionStorage({
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
-    httpOnly: true
-  }
+    httpOnly: true,
+  },
 });
 
 export async function createUserSession(
@@ -2956,8 +2982,8 @@ export async function createUserSession(
   session.set("userId", userId);
   return redirect(redirectTo, {
     headers: {
-      "Set-Cookie": await storage.commitSession(session)
-    }
+      "Set-Cookie": await storage.commitSession(session),
+    },
   });
 }
 ```
@@ -2968,11 +2994,11 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx nocopy
+```tsx filename=app/routes/login.tsx lines=[18] nocopy
 // ...
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   // ...
 
@@ -2983,7 +3009,7 @@ export const action: ActionFunction = async ({
       if (!user) {
         return badRequest({
           fields,
-          formError: `Username/Password combination is incorrect`
+          formError: `Username/Password combination is incorrect`,
         });
       }
       return createUserSession(user.id, redirectTo);
@@ -2998,7 +3024,7 @@ export const action: ActionFunction = async ({
 
 </details>
 
-I want to call out the `SESSION_SECRET` environment variable I'm using really quick. The value of the `secrets` option is not the sort of thing you want in your code because the baddies could use it for their nefarious purposes. So instead we are going to read the value from the environment. This means you'll need to set the environment variable in your `.env` file. Incidentally, prisma loads that file for us automatically so all we need to do is make sure we set that value when we deploy to production (alternatively, during development we could use [dotenv](https://npm.im/dotenv) to load that when our app boots up).
+I want to call out the `SESSION_SECRET` environment variable I'm using really quick. The value of the `secrets` option is not the sort of thing you want in your code because the baddies could use it for their nefarious purposes. So instead we are going to read the value from the environment. This means you'll need to set the environment variable in your `.env` file. Incidentally, prisma loads that file for us automatically so all we need to do is make sure we set that value when we deploy to production.
 
 💿 Update .env file with SESSION_SECRET (with any value you like).
 
@@ -3024,12 +3050,12 @@ So we can now check whether the user is authenticated on the server by reading t
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[49-51,53-58,60-73]
+```ts filename=app/utils/session.server.ts lines=[50-52,54-59,61-74]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
-  redirect
-} from "remix";
+  redirect,
+} from "@remix-run/node";
 
 import { db } from "./db.server";
 
@@ -3040,10 +3066,10 @@ type LoginForm = {
 
 export async function login({
   username,
-  password
+  password,
 }: LoginForm) {
   const user = await db.user.findUnique({
-    where: { username }
+    where: { username },
   });
   if (!user) return null;
   const isCorrectPassword = await bcrypt.compare(
@@ -3070,11 +3096,11 @@ const storage = createCookieSessionStorage({
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
-    httpOnly: true
-  }
+    httpOnly: true,
+  },
 });
 
-export function getUserSession(request: Request) {
+function getUserSession(request: Request) {
   return storage.getSession(request.headers.get("Cookie"));
 }
 
@@ -3093,7 +3119,7 @@ export async function requireUserId(
   const userId = session.get("userId");
   if (!userId || typeof userId !== "string") {
     const searchParams = new URLSearchParams([
-      ["redirectTo", redirectTo]
+      ["redirectTo", redirectTo],
     ]);
     throw redirect(`/login?${searchParams}`);
   }
@@ -3108,8 +3134,8 @@ export async function createUserSession(
   session.set("userId", userId);
   return redirect(redirectTo, {
     headers: {
-      "Set-Cookie": await storage.commitSession(session)
-    }
+      "Set-Cookie": await storage.commitSession(session),
+    },
   });
 }
 ```
@@ -3130,9 +3156,10 @@ You may also notice that our solution makes use of the `login` route's `redirect
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[5,37,60]
-import type { ActionFunction } from "remix";
-import { useActionData, redirect, json } from "remix";
+```tsx filename=app/routes/jokes/new.tsx lines=[6,38,61]
+import type { ActionFunction } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { useActionData } from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 import { requireUserId } from "~/utils/session.server";
@@ -3144,7 +3171,7 @@ function validateJokeContent(content: string) {
 }
 
 function validateJokeName(name: string) {
-  if (name.length < 2) {
+  if (name.length < 3) {
     return `That joke's name is too short`;
   }
 }
@@ -3165,7 +3192,7 @@ const badRequest = (data: ActionData) =>
   json(data, { status: 400 });
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
@@ -3176,13 +3203,13 @@ export const action: ActionFunction = async ({
     typeof content !== "string"
   ) {
     return badRequest({
-      formError: `Form not submitted correctly.`
+      formError: `Form not submitted correctly.`,
     });
   }
 
   const fieldErrors = {
     name: validateJokeName(name),
-    content: validateJokeContent(content)
+    content: validateJokeContent(content),
   };
   const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
@@ -3190,7 +3217,7 @@ export const action: ActionFunction = async ({
   }
 
   const joke = await db.joke.create({
-    data: { ...fields, jokesterId: userId }
+    data: { ...fields, jokesterId: userId },
   });
   return redirect(`/jokes/${joke.id}`);
 };
@@ -3213,7 +3240,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.name) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
                   : undefined
@@ -3240,7 +3267,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.content) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
                   : undefined
@@ -3258,6 +3285,14 @@ export default function NewJokeRoute() {
           ) : null}
         </div>
         <div>
+          {actionData?.formError ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
+              {actionData.formError}
+            </p>
+          ) : null}
           <button type="submit" className="button">
             Add
           </button>
@@ -3282,12 +3317,12 @@ We should probably give people the ability to see that they're logged in and a w
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[75-90,92-101]
+```ts filename=app/utils/session.server.ts lines=[75-90,92-99]
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
-  redirect
-} from "remix";
+  redirect,
+} from "@remix-run/node";
 
 import { db } from "./db.server";
 
@@ -3298,10 +3333,10 @@ type LoginForm = {
 
 export async function login({
   username,
-  password
+  password,
 }: LoginForm) {
   const user = await db.user.findUnique({
-    where: { username }
+    where: { username },
   });
   if (!user) return null;
   const isCorrectPassword = await bcrypt.compare(
@@ -3328,11 +3363,11 @@ const storage = createCookieSessionStorage({
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
-    httpOnly: true
-  }
+    httpOnly: true,
+  },
 });
 
-export function getUserSession(request: Request) {
+function getUserSession(request: Request) {
   return storage.getSession(request.headers.get("Cookie"));
 }
 
@@ -3351,7 +3386,7 @@ export async function requireUserId(
   const userId = session.get("userId");
   if (!userId || typeof userId !== "string") {
     const searchParams = new URLSearchParams([
-      ["redirectTo", redirectTo]
+      ["redirectTo", redirectTo],
     ]);
     throw redirect(`/login?${searchParams}`);
   }
@@ -3367,7 +3402,7 @@ export async function getUser(request: Request) {
   try {
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { id: true, username: true }
+      select: { id: true, username: true },
     });
     return user;
   } catch {
@@ -3376,13 +3411,11 @@ export async function getUser(request: Request) {
 }
 
 export async function logout(request: Request) {
-  const session = await storage.getSession(
-    request.headers.get("Cookie")
-  );
+  const session = await getUserSession(request);
   return redirect("/login", {
     headers: {
-      "Set-Cookie": await storage.destroySession(session)
-    }
+      "Set-Cookie": await storage.destroySession(session),
+    },
   });
 }
 
@@ -3394,8 +3427,8 @@ export async function createUserSession(
   session.set("userId", userId);
   return redirect(redirectTo, {
     headers: {
-      "Set-Cookie": await storage.commitSession(session)
-    }
+      "Set-Cookie": await storage.commitSession(session),
+    },
   });
 }
 ```
@@ -3408,10 +3441,18 @@ export async function createUserSession(
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[6,19,31,35,57-68]
+```tsx filename=app/routes/jokes.tsx lines=[14,22,27,34,38,60-71]
 import type { User } from "@prisma/client";
-import type { LinksFunction, LoaderFunction } from "remix";
-import { Link, Outlet, useLoaderData } from "remix";
+import type {
+  LinksFunction,
+  LoaderFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
+import {
+  Link,
+  Outlet,
+  useLoaderData,
+} from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 import { getUser } from "~/utils/session.server";
@@ -3427,20 +3468,20 @@ type LoaderData = {
 };
 
 export const loader: LoaderFunction = async ({
-  request
+  request,
 }) => {
   const jokeListItems = await db.joke.findMany({
     take: 5,
     orderBy: { createdAt: "desc" },
-    select: { id: true, name: true }
+    select: { id: true, name: true },
   });
   const user = await getUser(request);
 
   const data: LoaderData = {
     jokeListItems,
-    user
+    user,
   };
-  return data;
+  return json(data);
 };
 
 export default function JokesRoute() {
@@ -3480,7 +3521,7 @@ export default function JokesRoute() {
             <Link to=".">Get a random joke</Link>
             <p>Here are a few more jokes to check out:</p>
             <ul>
-              {data.jokeListItems.map(joke => (
+              {data.jokeListItems.map((joke) => (
                 <li key={joke.id}>
                   <Link to={joke.id}>{joke.name}</Link>
                 </li>
@@ -3507,13 +3548,16 @@ export default function JokesRoute() {
 <summary>app/routes/logout.tsx</summary>
 
 ```tsx filename=app/routes/logout.tsx
-import type { ActionFunction, LoaderFunction } from "remix";
-import { redirect } from "remix";
+import type {
+  ActionFunction,
+  LoaderFunction,
+} from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 
 import { logout } from "~/utils/session.server";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   return logout(request);
 };
@@ -3559,8 +3603,8 @@ Luckily, all we need to do to support this is to update `app/utils/session.serve
 import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
-  redirect
-} from "remix";
+  redirect,
+} from "@remix-run/node";
 
 import { db } from "./db.server";
 
@@ -3571,21 +3615,21 @@ type LoginForm = {
 
 export async function register({
   username,
-  password
+  password,
 }: LoginForm) {
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await db.user.create({
-    data: { username, passwordHash }
+    data: { username, passwordHash },
   });
   return { id: user.id, username };
 }
 
 export async function login({
   username,
-  password
+  password,
 }: LoginForm) {
   const user = await db.user.findUnique({
-    where: { username }
+    where: { username },
   });
   if (!user) return null;
   const isCorrectPassword = await bcrypt.compare(
@@ -3612,11 +3656,11 @@ const storage = createCookieSessionStorage({
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 60 * 24 * 30,
-    httpOnly: true
-  }
+    httpOnly: true,
+  },
 });
 
-export function getUserSession(request: Request) {
+function getUserSession(request: Request) {
   return storage.getSession(request.headers.get("Cookie"));
 }
 
@@ -3635,7 +3679,7 @@ export async function requireUserId(
   const userId = session.get("userId");
   if (!userId || typeof userId !== "string") {
     const searchParams = new URLSearchParams([
-      ["redirectTo", redirectTo]
+      ["redirectTo", redirectTo],
     ]);
     throw redirect(`/login?${searchParams}`);
   }
@@ -3651,7 +3695,7 @@ export async function getUser(request: Request) {
   try {
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { id: true, username: true }
+      select: { id: true, username: true },
     });
     return user;
   } catch {
@@ -3660,13 +3704,11 @@ export async function getUser(request: Request) {
 }
 
 export async function logout(request: Request) {
-  const session = await storage.getSession(
-    request.headers.get("Cookie")
-  );
+  const session = await getUserSession(request);
   return redirect("/login", {
     headers: {
-      "Set-Cookie": await storage.destroySession(session)
-    }
+      "Set-Cookie": await storage.destroySession(session),
+    },
   });
 }
 
@@ -3678,8 +3720,8 @@ export async function createUserSession(
   session.set("userId", userId);
   return redirect(redirectTo, {
     headers: {
-      "Set-Cookie": await storage.commitSession(session)
-    }
+      "Set-Cookie": await storage.commitSession(session),
+    },
   });
 }
 ```
@@ -3690,20 +3732,23 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[13,97-103]
-import type { ActionFunction, LinksFunction } from "remix";
+```tsx filename=app/routes/login.tsx lines=[16,100-117]
+import type {
+  ActionFunction,
+  LinksFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
   useActionData,
-  json,
   useSearchParams,
-  Link
-} from "remix";
+  Link,
+} from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 import {
   createUserSession,
   login,
-  register
+  register,
 } from "~/utils/session.server";
 import stylesUrl from "~/styles/login.css";
 
@@ -3723,6 +3768,14 @@ function validatePassword(password: unknown) {
   }
 }
 
+function validateUrl(url: any) {
+  let urls = ["/jokes", "/", "https://remix.run"];
+  if (urls.includes(url)) {
+    return url;
+  }
+  return "/jokes";
+}
+
 type ActionData = {
   formError?: string;
   fieldErrors?: {
@@ -3740,13 +3793,15 @@ const badRequest = (data: ActionData) =>
   json(data, { status: 400 });
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
-  const redirectTo = form.get("redirectTo") || "/jokes";
+  const redirectTo = validateUrl(
+    form.get("redirectTo") || "/jokes"
+  );
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
@@ -3754,14 +3809,14 @@ export const action: ActionFunction = async ({
     typeof redirectTo !== "string"
   ) {
     return badRequest({
-      formError: `Form not submitted correctly.`
+      formError: `Form not submitted correctly.`,
     });
   }
 
   const fields = { loginType, username, password };
   const fieldErrors = {
     username: validateUsername(username),
-    password: validatePassword(password)
+    password: validatePassword(password),
   };
   if (Object.values(fieldErrors).some(Boolean))
     return badRequest({ fieldErrors, fields });
@@ -3772,26 +3827,26 @@ export const action: ActionFunction = async ({
       if (!user) {
         return badRequest({
           fields,
-          formError: `Username/Password combination is incorrect`
+          formError: `Username/Password combination is incorrect`,
         });
       }
       return createUserSession(user.id, redirectTo);
     }
     case "register": {
       const userExists = await db.user.findFirst({
-        where: { username }
+        where: { username },
       });
       if (userExists) {
         return badRequest({
           fields,
-          formError: `User with username ${username} already exists`
+          formError: `User with username ${username} already exists`,
         });
       }
       const user = await register({ username, password });
       if (!user) {
         return badRequest({
           fields,
-          formError: `Something went wrong trying to create a new user.`
+          formError: `Something went wrong trying to create a new user.`,
         });
       }
       return createUserSession(user.id, redirectTo);
@@ -3799,7 +3854,7 @@ export const action: ActionFunction = async ({
     default: {
       return badRequest({
         fields,
-        formError: `Login type invalid`
+        formError: `Login type invalid`,
       });
     }
   }
@@ -3812,14 +3867,7 @@ export default function Login() {
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <form
-          method="post"
-          aria-describedby={
-            actionData?.formError
-              ? "form-error-message"
-              : undefined
-          }
-        >
+        <form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -3866,7 +3914,7 @@ export default function Login() {
               aria-invalid={Boolean(
                 actionData?.fieldErrors?.username
               )}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.username
                   ? "username-error"
                   : undefined
@@ -3878,7 +3926,7 @@ export default function Login() {
                 role="alert"
                 id="username-error"
               >
-                {actionData?.fieldErrors.username}
+                {actionData.fieldErrors.username}
               </p>
             ) : null}
           </div>
@@ -3894,7 +3942,7 @@ export default function Login() {
                   actionData?.fieldErrors?.password
                 ) || undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.password
                   ? "password-error"
                   : undefined
@@ -3906,7 +3954,7 @@ export default function Login() {
                 role="alert"
                 id="password-error"
               >
-                {actionData?.fieldErrors.password}
+                {actionData.fieldErrors.password}
               </p>
             ) : null}
           </div>
@@ -3916,7 +3964,7 @@ export default function Login() {
                 className="form-validation-error"
                 role="alert"
               >
-                {actionData?.formError}
+                {actionData.formError}
               </p>
             ) : null}
           </div>
@@ -3962,9 +4010,13 @@ Remember that the `app/root.tsx` module is responsible for rendering our `<html>
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[57-67]
-import type { LinksFunction } from "remix";
-import { Links, LiveReload, Outlet } from "remix";
+```tsx filename=app/root.tsx lines=[31-51,53-59,61-70]
+import type { LinksFunction } from "@remix-run/node";
+import {
+  Links,
+  LiveReload,
+  Outlet,
+} from "@remix-run/react";
 
 import globalStylesUrl from "./styles/global.css";
 import globalMediumStylesUrl from "./styles/global-medium.css";
@@ -3974,24 +4026,24 @@ export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: globalStylesUrl
+      href: globalStylesUrl,
     },
     {
       rel: "stylesheet",
       href: globalMediumStylesUrl,
-      media: "print, (min-width: 640px)"
+      media: "print, (min-width: 640px)",
     },
     {
       rel: "stylesheet",
       href: globalLargeStylesUrl,
-      media: "screen and (min-width: 1024px)"
-    }
+      media: "screen and (min-width: 1024px)",
+    },
   ];
 };
 
 function Document({
   children,
-  title = `Remix: So great, it's funny!`
+  title = `Remix: So great, it's funny!`,
 }: {
   children: React.ReactNode;
   title?: string;
@@ -4018,7 +4070,7 @@ export default function App() {
     </Document>
   );
 }
-
+// 60
 export function ErrorBoundary({ error }: { error: Error }) {
   return (
     <Document title="Uh-oh!">
@@ -4040,7 +4092,11 @@ export function ErrorBoundary({ error }: { error: Error }) {
 ```tsx filename=app/routes/jokes/$jokeId.tsx nocopy
 // ...
 
-import { Link, useLoaderData, useParams } from "remix";
+import {
+  Link,
+  useLoaderData,
+  useParams,
+} from "@remix-run/react";
 
 // ...
 
@@ -4090,7 +4146,13 @@ export function ErrorBoundary() {
 
 </details>
 
-Ok great, with those in place, let's check what happens when there's an error. Go ahead and just add this to the default component, loader, or action of each of the routes. Here's what I get:
+Ok great, with those in place, let's check what happens when there's an error. Go ahead and just add this to the default component, loader, or action of each of the routes.
+
+```ts
+throw new Error("Testing Error Boundary");
+```
+
+Here's what I get:
 
 ![App error](/jokes-tutorial/img/app-level-error.png)
 
@@ -4127,9 +4189,14 @@ With that understanding, we're going to add a `CatchBoundary` component to the f
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[2,57-71]
-import type { LinksFunction } from "remix";
-import { Links, LiveReload, Outlet, useCatch } from "remix";
+```tsx filename=app/root.tsx lines=[6,62-76]
+import type { LinksFunction } from "@remix-run/node";
+import {
+  Links,
+  LiveReload,
+  Outlet,
+  useCatch,
+} from "@remix-run/react";
 
 import globalStylesUrl from "./styles/global.css";
 import globalMediumStylesUrl from "./styles/global-medium.css";
@@ -4139,24 +4206,24 @@ export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
-      href: globalStylesUrl
+      href: globalStylesUrl,
     },
     {
       rel: "stylesheet",
       href: globalMediumStylesUrl,
-      media: "print, (min-width: 640px)"
+      media: "print, (min-width: 640px)",
     },
     {
       rel: "stylesheet",
       href: globalLargeStylesUrl,
-      media: "screen and (min-width: 1024px)"
-    }
+      media: "screen and (min-width: 1024px)",
+    },
   ];
 };
 
 function Document({
   children,
-  title = `Remix: So great, it's funny!`
+  title = `Remix: So great, it's funny!`,
 }: {
   children: React.ReactNode;
   title?: string;
@@ -4218,14 +4285,15 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[5,20-24,41-52]
-import type { LoaderFunction } from "remix";
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[6,21-25,42-53]
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
   Link,
   useLoaderData,
   useCatch,
-  useParams
-} from "remix";
+  useParams,
+} from "@remix-run/react";
 import type { Joke } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
@@ -4233,18 +4301,18 @@ import { db } from "~/utils/db.server";
 type LoaderData = { joke: Joke };
 
 export const loader: LoaderFunction = async ({
-  params
+  params,
 }) => {
   const joke = await db.joke.findUnique({
-    where: { id: params.jokeId }
+    where: { id: params.jokeId },
   });
   if (!joke) {
     throw new Response("What a joke! Not found.", {
-      status: 404
+      status: 404,
     });
   }
   const data: LoaderData = { joke };
-  return data;
+  return json(data);
 };
 
 export default function JokeRoute() {
@@ -4286,9 +4354,14 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes/index.tsx</summary>
 
-```tsx filename=app/routes/jokes/index.tsx lines=[2,16-20,39-52]
-import type { LoaderFunction } from "remix";
-import { useLoaderData, Link, useCatch } from "remix";
+```tsx filename=app/routes/jokes/index.tsx lines=[6,21-25,44-57]
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import {
+  useLoaderData,
+  Link,
+  useCatch,
+} from "@remix-run/react";
 import type { Joke } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
@@ -4300,15 +4373,15 @@ export const loader: LoaderFunction = async () => {
   const randomRowNumber = Math.floor(Math.random() * count);
   const [randomJoke] = await db.joke.findMany({
     take: 1,
-    skip: randomRowNumber
+    skip: randomRowNumber,
   });
   if (!randomJoke) {
     throw new Response("No random joke found", {
-      status: 404
+      status: 404,
     });
   }
   const data: LoaderData = { randomJoke };
-  return data;
+  return json(data);
 };
 
 export default function JokesIndexRoute() {
@@ -4355,30 +4428,32 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[6-7,16-22,156-167]
-import type { ActionFunction, LoaderFunction } from "remix";
+```tsx filename=app/routes/jokes/new.tsx lines=[8,18-26,166-177]
+import type {
+  ActionFunction,
+  LoaderFunction,
+} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import {
   useActionData,
-  redirect,
-  json,
   useCatch,
-  Link
-} from "remix";
+  Link,
+} from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 import {
   requireUserId,
-  getUserId
+  getUserId,
 } from "~/utils/session.server";
 
 export const loader: LoaderFunction = async ({
-  request
+  request,
 }) => {
   const userId = await getUserId(request);
   if (!userId) {
     throw new Response("Unauthorized", { status: 401 });
   }
-  return {};
+  return json({});
 };
 
 function validateJokeContent(content: string) {
@@ -4388,7 +4463,7 @@ function validateJokeContent(content: string) {
 }
 
 function validateJokeName(name: string) {
-  if (name.length < 2) {
+  if (name.length < 3) {
     return `That joke's name is too short`;
   }
 }
@@ -4409,7 +4484,7 @@ const badRequest = (data: ActionData) =>
   json(data, { status: 400 });
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
@@ -4420,13 +4495,13 @@ export const action: ActionFunction = async ({
     typeof content !== "string"
   ) {
     return badRequest({
-      formError: `Form not submitted correctly.`
+      formError: `Form not submitted correctly.`,
     });
   }
 
   const fieldErrors = {
     name: validateJokeName(name),
-    content: validateJokeContent(content)
+    content: validateJokeContent(content),
   };
   const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
@@ -4434,7 +4509,7 @@ export const action: ActionFunction = async ({
   }
 
   const joke = await db.joke.create({
-    data: { ...fields, jokesterId: userId }
+    data: { ...fields, jokesterId: userId },
   });
   return redirect(`/jokes/${joke.id}`);
 };
@@ -4457,7 +4532,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.name) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
                   : undefined
@@ -4484,7 +4559,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.content) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
                   : undefined
@@ -4502,6 +4577,14 @@ export default function NewJokeRoute() {
           ) : null}
         </div>
         <div>
+          {actionData?.formError ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
+              {actionData.formError}
+            </p>
+          ) : null}
           <button type="submit" className="button">
             Add
           </button>
@@ -4568,16 +4651,19 @@ And then the `action` can determine whether the intention is to delete based on 
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[2,7,12,31-58,68-77,82-104]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[6,15,34-64,74-83,92-98,106-112]
 import type { Joke } from "@prisma/client";
-import type { ActionFunction, LoaderFunction } from "remix";
+import type {
+  ActionFunction,
+  LoaderFunction,
+} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import {
   Link,
   useLoaderData,
   useCatch,
-  redirect,
-  useParams
-} from "remix";
+  useParams,
+} from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 import { requireUserId } from "~/utils/session.server";
@@ -4585,47 +4671,50 @@ import { requireUserId } from "~/utils/session.server";
 type LoaderData = { joke: Joke };
 
 export const loader: LoaderFunction = async ({
-  params
+  params,
 }) => {
   const joke = await db.joke.findUnique({
-    where: { id: params.jokeId }
+    where: { id: params.jokeId },
   });
   if (!joke) {
     throw new Response("What a joke! Not found.", {
-      status: 404
+      status: 404,
     });
   }
   const data: LoaderData = { joke };
-  return data;
+  return json(data);
 };
 
 export const action: ActionFunction = async ({
   request,
-  params
+  params,
 }) => {
   const form = await request.formData();
-  if (form.get("_method") === "delete") {
-    const userId = await requireUserId(request);
-    const joke = await db.joke.findUnique({
-      where: { id: params.jokeId }
-    });
-    if (!joke) {
-      throw new Response(
-        "Can't delete what does not exist",
-        { status: 404 }
-      );
-    }
-    if (joke.jokesterId !== userId) {
-      throw new Response(
-        "Pssh, nice try. That's not your joke",
-        {
-          status: 401
-        }
-      );
-    }
-    await db.joke.delete({ where: { id: params.jokeId } });
-    return redirect("/jokes");
+  if (form.get("_method") !== "delete") {
+    throw new Response(
+      `The _method ${form.get("_method")} is not supported`,
+      { status: 400 }
+    );
   }
+  const userId = await requireUserId(request);
+  const joke = await db.joke.findUnique({
+    where: { id: params.jokeId },
+  });
+  if (!joke) {
+    throw new Response("Can't delete what does not exist", {
+      status: 404,
+    });
+  }
+  if (joke.jokesterId !== userId) {
+    throw new Response(
+      "Pssh, nice try. That's not your joke",
+      {
+        status: 401,
+      }
+    );
+  }
+  await db.joke.delete({ where: { id: params.jokeId } });
+  return redirect("/jokes");
 };
 
 export default function JokeRoute() {
@@ -4654,6 +4743,13 @@ export function CatchBoundary() {
   const caught = useCatch();
   const params = useParams();
   switch (caught.status) {
+    case 400: {
+      return (
+        <div className="error-container">
+          What you're trying to do is not allowed.
+        </div>
+      );
+    }
     case 404: {
       return (
         <div className="error-container">
@@ -4691,72 +4787,78 @@ Now that people will get a proper error message if they try to delete a joke tha
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[13,17,20,23,34,76-87]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[16,20,26,37,82-93]
 import type { Joke } from "@prisma/client";
-import type { ActionFunction, LoaderFunction } from "remix";
+import type {
+  ActionFunction,
+  LoaderFunction,
+} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import {
   Link,
   useLoaderData,
   useCatch,
-  redirect,
-  useParams
-} from "remix";
+  useParams,
+} from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 import {
   getUserId,
-  requireUserId
+  requireUserId,
 } from "~/utils/session.server";
 
 type LoaderData = { joke: Joke; isOwner: boolean };
 
 export const loader: LoaderFunction = async ({
   request,
-  params
+  params,
 }) => {
   const userId = await getUserId(request);
   const joke = await db.joke.findUnique({
-    where: { id: params.jokeId }
+    where: { id: params.jokeId },
   });
   if (!joke) {
     throw new Response("What a joke! Not found.", {
-      status: 404
+      status: 404,
     });
   }
   const data: LoaderData = {
     joke,
-    isOwner: userId === joke.jokesterId
+    isOwner: userId === joke.jokesterId,
   };
-  return data;
+  return json(data);
 };
 
 export const action: ActionFunction = async ({
   request,
-  params
+  params,
 }) => {
   const form = await request.formData();
-  if (form.get("_method") === "delete") {
-    const userId = await requireUserId(request);
-    const joke = await db.joke.findUnique({
-      where: { id: params.jokeId }
-    });
-    if (!joke) {
-      throw new Response(
-        "Can't delete what does not exist",
-        { status: 404 }
-      );
-    }
-    if (joke.jokesterId !== userId) {
-      throw new Response(
-        "Pssh, nice try. That's not your joke",
-        {
-          status: 401
-        }
-      );
-    }
-    await db.joke.delete({ where: { id: params.jokeId } });
-    return redirect("/jokes");
+  if (form.get("_method") !== "delete") {
+    throw new Response(
+      `The _method ${form.get("_method")} is not supported`,
+      { status: 400 }
+    );
   }
+  const userId = await requireUserId(request);
+  const joke = await db.joke.findUnique({
+    where: { id: params.jokeId },
+  });
+  if (!joke) {
+    throw new Response("Can't delete what does not exist", {
+      status: 404,
+    });
+  }
+  if (joke.jokesterId !== userId) {
+    throw new Response(
+      "Pssh, nice try. That's not your joke",
+      {
+        status: 401,
+      }
+    );
+  }
+  await db.joke.delete({ where: { id: params.jokeId } });
+  return redirect("/jokes");
 };
 
 export default function JokeRoute() {
@@ -4787,6 +4889,13 @@ export function CatchBoundary() {
   const caught = useCatch();
   const params = useParams();
   switch (caught.status) {
+    case 400: {
+      return (
+        <div className="error-container">
+          What you're trying to do is not allowed.
+        </div>
+      );
+    }
     case 404: {
       return (
         <div className="error-container">
@@ -4837,15 +4946,18 @@ But before you get started, remember that we're in charge of rendering everythin
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[1,7,33-45,58]
-import type { LinksFunction, MetaFunction } from "remix";
+```tsx filename=app/root.tsx lines=[3,8,33-46,58]
+import type {
+  LinksFunction,
+  MetaFunction,
+} from "@remix-run/node";
 import {
   Links,
   LiveReload,
+  Meta,
   Outlet,
   useCatch,
-  Meta
-} from "remix";
+} from "@remix-run/react";
 
 import globalStylesUrl from "./styles/global.css";
 import globalMediumStylesUrl from "./styles/global-medium.css";
@@ -4853,26 +4965,24 @@ import globalLargeStylesUrl from "./styles/global-large.css";
 
 export const links: LinksFunction = () => {
   return [
-    {
-      rel: "stylesheet",
-      href: globalStylesUrl
-    },
+    { rel: "stylesheet", href: globalStylesUrl },
     {
       rel: "stylesheet",
       href: globalMediumStylesUrl,
-      media: "print, (min-width: 640px)"
+      media: "print, (min-width: 640px)",
     },
     {
       rel: "stylesheet",
       href: globalLargeStylesUrl,
-      media: "screen and (min-width: 1024px)"
-    }
+      media: "screen and (min-width: 1024px)",
+    },
   ];
 };
 
 export const meta: MetaFunction = () => {
   const description = `Learn Remix and laugh at the same time!`;
   return {
+    charset: "utf-8",
     description,
     keywords: "Remix,jokes",
     "twitter:image": "https://remix-jokes.lol/social.png",
@@ -4880,13 +4990,13 @@ export const meta: MetaFunction = () => {
     "twitter:creator": "@remix_run",
     "twitter:site": "@remix_run",
     "twitter:title": "Remix Jokes",
-    "twitter:description": description
+    "twitter:description": description,
   };
 };
 
 function Document({
   children,
-  title = `Remix: So great, it's funny!`
+  title = `Remix: So great, it's funny!`,
 }: {
   children: React.ReactNode;
   title?: string;
@@ -4894,7 +5004,6 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
         <Meta />
         <title>{title}</title>
         <Links />
@@ -4949,9 +5058,12 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <summary>app/routes/index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx lines=[1,10-14]
-import type { LinksFunction, MetaFunction } from "remix";
-import { Link } from "remix";
+```tsx filename=app/routes/index.tsx lines=[3,13-17]
+import type {
+  LinksFunction,
+  MetaFunction,
+} from "@remix-run/node";
+import { Link } from "@remix-run/react";
 
 import stylesUrl from "~/styles/index.css";
 
@@ -4962,7 +5074,7 @@ export const links: LinksFunction = () => {
 export const meta: MetaFunction = () => ({
   title: "Remix: So great, it's funny!",
   description:
-    "Remix jokes app. Learn Remix and laugh at the same time!"
+    "Remix jokes app. Learn Remix and laugh at the same time!",
 });
 
 export default function Index() {
@@ -4995,20 +5107,20 @@ export default function Index() {
 import type {
   ActionFunction,
   LinksFunction,
-  MetaFunction
-} from "remix";
+  MetaFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
   useActionData,
-  json,
   useSearchParams,
-  Link
-} from "remix";
+  Link,
+} from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
 import {
   createUserSession,
   login,
-  register
+  register,
 } from "~/utils/session.server";
 import stylesUrl from "~/styles/login.css";
 
@@ -5020,7 +5132,7 @@ export const meta: MetaFunction = () => {
   return {
     title: "Remix Jokes | Login",
     description:
-      "Login to submit your own jokes to Remix Jokes!"
+      "Login to submit your own jokes to Remix Jokes!",
   };
 };
 
@@ -5034,6 +5146,14 @@ function validatePassword(password: unknown) {
   if (typeof password !== "string" || password.length < 6) {
     return `Passwords must be at least 6 characters long`;
   }
+}
+
+function validateUrl(url: any) {
+  let urls = ["/jokes", "/", "https://remix.run"];
+  if (urls.includes(url)) {
+    return url;
+  }
+  return "/jokes";
 }
 
 type ActionData = {
@@ -5053,13 +5173,15 @@ const badRequest = (data: ActionData) =>
   json(data, { status: 400 });
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const form = await request.formData();
   const loginType = form.get("loginType");
   const username = form.get("username");
   const password = form.get("password");
-  const redirectTo = form.get("redirectTo") || "/jokes";
+  const redirectTo = validateUrl(
+    form.get("redirectTo") || "/jokes"
+  );
   if (
     typeof loginType !== "string" ||
     typeof username !== "string" ||
@@ -5067,14 +5189,14 @@ export const action: ActionFunction = async ({
     typeof redirectTo !== "string"
   ) {
     return badRequest({
-      formError: `Form not submitted correctly.`
+      formError: `Form not submitted correctly.`,
     });
   }
 
   const fields = { loginType, username, password };
   const fieldErrors = {
     username: validateUsername(username),
-    password: validatePassword(password)
+    password: validatePassword(password),
   };
   if (Object.values(fieldErrors).some(Boolean))
     return badRequest({ fieldErrors, fields });
@@ -5085,26 +5207,26 @@ export const action: ActionFunction = async ({
       if (!user) {
         return badRequest({
           fields,
-          formError: `Username/Password combination is incorrect`
+          formError: `Username/Password combination is incorrect`,
         });
       }
       return createUserSession(user.id, redirectTo);
     }
     case "register": {
       const userExists = await db.user.findFirst({
-        where: { username }
+        where: { username },
       });
       if (userExists) {
         return badRequest({
           fields,
-          formError: `User with username ${username} already exists`
+          formError: `User with username ${username} already exists`,
         });
       }
       const user = await register({ username, password });
       if (!user) {
         return badRequest({
           fields,
-          formError: `Something went wrong trying to create a new user.`
+          formError: `Something went wrong trying to create a new user.`,
         });
       }
       return createUserSession(user.id, redirectTo);
@@ -5112,7 +5234,7 @@ export const action: ActionFunction = async ({
     default: {
       return badRequest({
         fields,
-        formError: `Login type invalid`
+        formError: `Login type invalid`,
       });
     }
   }
@@ -5125,14 +5247,7 @@ export default function Login() {
     <div className="container">
       <div className="content" data-light="">
         <h1>Login</h1>
-        <form
-          method="post"
-          aria-describedby={
-            actionData?.formError
-              ? "form-error-message"
-              : undefined
-          }
-        >
+        <form method="post">
           <input
             type="hidden"
             name="redirectTo"
@@ -5179,7 +5294,7 @@ export default function Login() {
               aria-invalid={Boolean(
                 actionData?.fieldErrors?.username
               )}
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.username
                   ? "username-error"
                   : undefined
@@ -5191,7 +5306,7 @@ export default function Login() {
                 role="alert"
                 id="username-error"
               >
-                {actionData?.fieldErrors.username}
+                {actionData.fieldErrors.username}
               </p>
             ) : null}
           </div>
@@ -5207,7 +5322,7 @@ export default function Login() {
                   actionData?.fieldErrors?.password
                 ) || undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.password
                   ? "password-error"
                   : undefined
@@ -5219,7 +5334,7 @@ export default function Login() {
                 role="alert"
                 id="password-error"
               >
-                {actionData?.fieldErrors.password}
+                {actionData.fieldErrors.password}
               </p>
             ) : null}
           </div>
@@ -5229,7 +5344,7 @@ export default function Login() {
                 className="form-validation-error"
                 role="alert"
               >
-                {actionData?.formError}
+                {actionData.formError}
               </p>
             ) : null}
           </div>
@@ -5263,37 +5378,37 @@ export default function Login() {
 import type {
   ActionFunction,
   LoaderFunction,
-  MetaFunction
-} from "remix";
+  MetaFunction,
+} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import {
   Link,
   useLoaderData,
   useCatch,
-  redirect,
-  useParams
-} from "remix";
+  useParams,
+} from "@remix-run/react";
 import type { Joke } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
 import {
   getUserId,
-  requireUserId
+  requireUserId,
 } from "~/utils/session.server";
 
 export const meta: MetaFunction = ({
-  data
+  data,
 }: {
   data: LoaderData | undefined;
 }) => {
   if (!data) {
     return {
       title: "No joke",
-      description: "No joke found"
+      description: "No joke found",
     };
   }
   return {
     title: `"${data.joke.name}" joke`,
-    description: `Enjoy the "${data.joke.name}" joke and much more`
+    description: `Enjoy the "${data.joke.name}" joke and much more`,
   };
 };
 
@@ -5301,51 +5416,54 @@ type LoaderData = { joke: Joke; isOwner: boolean };
 
 export const loader: LoaderFunction = async ({
   request,
-  params
+  params,
 }) => {
   const userId = await getUserId(request);
   const joke = await db.joke.findUnique({
-    where: { id: params.jokeId }
+    where: { id: params.jokeId },
   });
   if (!joke) {
     throw new Response("What a joke! Not found.", {
-      status: 404
+      status: 404,
     });
   }
   const data: LoaderData = {
     joke,
-    isOwner: userId === joke.jokesterId
+    isOwner: userId === joke.jokesterId,
   };
-  return data;
+  return json(data);
 };
 
 export const action: ActionFunction = async ({
   request,
-  params
+  params,
 }) => {
   const form = await request.formData();
-  if (form.get("_method") === "delete") {
-    const userId = await requireUserId(request);
-    const joke = await db.joke.findUnique({
-      where: { id: params.jokeId }
-    });
-    if (!joke) {
-      throw new Response(
-        "Can't delete what does not exist",
-        { status: 404 }
-      );
-    }
-    if (joke.jokesterId !== userId) {
-      throw new Response(
-        "Pssh, nice try. That's not your joke",
-        {
-          status: 401
-        }
-      );
-    }
-    await db.joke.delete({ where: { id: params.jokeId } });
-    return redirect("/jokes");
+  if (form.get("_method") !== "delete") {
+    throw new Response(
+      `The _method ${form.get("_method")} is not supported`,
+      { status: 400 }
+    );
   }
+  const userId = await requireUserId(request);
+  const joke = await db.joke.findUnique({
+    where: { id: params.jokeId },
+  });
+  if (!joke) {
+    throw new Response("Can't delete what does not exist", {
+      status: 404,
+    });
+  }
+  if (joke.jokesterId !== userId) {
+    throw new Response(
+      "Pssh, nice try. That's not your joke",
+      {
+        status: 401,
+      }
+    );
+  }
+  await db.joke.delete({ where: { id: params.jokeId } });
+  return redirect("/jokes");
 };
 
 export default function JokeRoute() {
@@ -5376,6 +5494,13 @@ export function CatchBoundary() {
   const caught = useCatch();
   const params = useParams();
   switch (caught.status) {
+    case 400: {
+      return (
+        <div className="error-container">
+          What you're trying to do is not allowed.
+        </div>
+      );
+    }
     case 404: {
       return (
         <div className="error-container">
@@ -5425,7 +5550,7 @@ For this one, you'll probably want to at least peek at the example unless you wa
 <summary>app/routes/jokes[.]rss.tsx</summary>
 
 ```tsx filename=app/routes/jokes[.]rss.tsx
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
 
 import { db } from "~/utils/db.server";
 
@@ -5435,7 +5560,7 @@ function escapeCdata(s: string) {
 
 function escapeHtml(s: string) {
   return s
-    .replace(/\&/g, "&amp;")
+    .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
@@ -5443,12 +5568,12 @@ function escapeHtml(s: string) {
 }
 
 export const loader: LoaderFunction = async ({
-  request
+  request,
 }) => {
   const jokes = await db.joke.findMany({
     take: 100,
     orderBy: { createdAt: "desc" },
-    include: { jokester: { select: { username: true } } }
+    include: { jokester: { select: { username: true } } },
   });
 
   const host =
@@ -5473,7 +5598,7 @@ export const loader: LoaderFunction = async ({
         <generator>Kody the Koala</generator>
         <ttl>40</ttl>
         ${jokes
-          .map(joke =>
+          .map((joke) =>
             `
             <item>
               <title><![CDATA[${escapeCdata(
@@ -5502,8 +5627,10 @@ export const loader: LoaderFunction = async ({
         60 * 10
       }, s-maxage=${60 * 60 * 24}`,
       "Content-Type": "application/xml",
-      "Content-Length": String(Buffer.byteLength(rssString))
-    }
+      "Content-Length": String(
+        Buffer.byteLength(rssString)
+      ),
+    },
   });
 };
 ```
@@ -5540,16 +5667,19 @@ Ok, so let's load JavaScript on this page now 😆
 
 <summary>app/root.tsx</summary>
 
-```tsx filename=app/root.tsx lines=[8,65,97]
-import type { LinksFunction, MetaFunction } from "remix";
+```tsx filename=app/root.tsx lines=[10,65,97]
+import type {
+  LinksFunction,
+  MetaFunction,
+} from "@remix-run/node";
 import {
   Links,
   LiveReload,
-  Outlet,
-  useCatch,
   Meta,
-  Scripts
-} from "remix";
+  Outlet,
+  Scripts,
+  useCatch,
+} from "@remix-run/react";
 
 import globalStylesUrl from "./styles/global.css";
 import globalMediumStylesUrl from "./styles/global-medium.css";
@@ -5557,26 +5687,24 @@ import globalLargeStylesUrl from "./styles/global-large.css";
 
 export const links: LinksFunction = () => {
   return [
-    {
-      rel: "stylesheet",
-      href: globalStylesUrl
-    },
+    { rel: "stylesheet", href: globalStylesUrl },
     {
       rel: "stylesheet",
       href: globalMediumStylesUrl,
-      media: "print, (min-width: 640px)"
+      media: "print, (min-width: 640px)",
     },
     {
       rel: "stylesheet",
       href: globalLargeStylesUrl,
-      media: "screen and (min-width: 1024px)"
-    }
+      media: "screen and (min-width: 1024px)",
+    },
   ];
 };
 
 export const meta: MetaFunction = () => {
   const description = `Learn Remix and laugh at the same time!`;
   return {
+    charset: "utf-8",
     description,
     keywords: "Remix,jokes",
     "twitter:image": "https://remix-jokes.lol/social.png",
@@ -5584,13 +5712,13 @@ export const meta: MetaFunction = () => {
     "twitter:creator": "@remix_run",
     "twitter:site": "@remix_run",
     "twitter:title": "Remix Jokes",
-    "twitter:description": description
+    "twitter:description": description,
   };
 };
 
 function Document({
   children,
-  title = `Remix: So great, it's funny!`
+  title = `Remix: So great, it's funny!`,
 }: {
   children: React.ReactNode;
   title?: string;
@@ -5598,7 +5726,6 @@ function Document({
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
         <Meta />
         <title>{title}</title>
         <Links />
@@ -5691,13 +5818,13 @@ Note, you'll probably want to create a new file in `app/components/` called `jok
 <summary>app/components/joke.tsx</summary>
 
 ```tsx filename=app/components/joke.tsx
-import { Link, Form } from "remix";
+import { Link, Form } from "@remix-run/react";
 import type { Joke } from "@prisma/client";
 
 export function JokeDisplay({
   joke,
   isOwner,
-  canDelete = true
+  canDelete = true,
 }: {
   joke: Pick<Joke, "content" | "name">;
   isOwner: boolean;
@@ -5735,42 +5862,41 @@ export function JokeDisplay({
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[20,94-96]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[19,97]
 import type {
   LoaderFunction,
   ActionFunction,
-  MetaFunction
-} from "remix";
+  MetaFunction,
+} from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
 import {
-  Link,
   useLoaderData,
   useCatch,
-  redirect,
-  useParams
-} from "remix";
+  useParams,
+} from "@remix-run/react";
 import type { Joke } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
 import {
   getUserId,
-  requireUserId
+  requireUserId,
 } from "~/utils/session.server";
 import { JokeDisplay } from "~/components/joke";
 
 export const meta: MetaFunction = ({
-  data
+  data,
 }: {
   data: LoaderData | undefined;
 }) => {
   if (!data) {
     return {
       title: "No joke",
-      description: "No joke found"
+      description: "No joke found",
     };
   }
   return {
     title: `"${data.joke.name}" joke`,
-    description: `Enjoy the "${data.joke.name}" joke and much more`
+    description: `Enjoy the "${data.joke.name}" joke and much more`,
   };
 };
 
@@ -5778,52 +5904,55 @@ type LoaderData = { joke: Joke; isOwner: boolean };
 
 export const loader: LoaderFunction = async ({
   request,
-  params
+  params,
 }) => {
   const userId = await getUserId(request);
 
   const joke = await db.joke.findUnique({
-    where: { id: params.jokeId }
+    where: { id: params.jokeId },
   });
   if (!joke) {
     throw new Response("What a joke! Not found.", {
-      status: 404
+      status: 404,
     });
   }
   const data: LoaderData = {
     joke,
-    isOwner: userId === joke.jokesterId
+    isOwner: userId === joke.jokesterId,
   };
-  return data;
+  return json(data);
 };
 
 export const action: ActionFunction = async ({
   request,
-  params
+  params,
 }) => {
   const form = await request.formData();
-  if (form.get("_method") === "delete") {
-    const userId = await requireUserId(request);
-    const joke = await db.joke.findUnique({
-      where: { id: params.jokeId }
-    });
-    if (!joke) {
-      throw new Response(
-        "Can't delete what does not exist",
-        { status: 404 }
-      );
-    }
-    if (joke.jokesterId !== userId) {
-      throw new Response(
-        "Pssh, nice try. That's not your joke",
-        {
-          status: 401
-        }
-      );
-    }
-    await db.joke.delete({ where: { id: params.jokeId } });
-    return redirect("/jokes");
+  if (form.get("_method") !== "delete") {
+    throw new Response(
+      `The _method ${form.get("_method")} is not supported`,
+      { status: 400 }
+    );
   }
+  const userId = await requireUserId(request);
+  const joke = await db.joke.findUnique({
+    where: { id: params.jokeId },
+  });
+  if (!joke) {
+    throw new Response("Can't delete what does not exist", {
+      status: 404,
+    });
+  }
+  if (joke.jokesterId !== userId) {
+    throw new Response(
+      "Pssh, nice try. That's not your joke",
+      {
+        status: 401,
+      }
+    );
+  }
+  await db.joke.delete({ where: { id: params.jokeId } });
+  return redirect("/jokes");
 };
 
 export default function JokeRoute() {
@@ -5838,6 +5967,13 @@ export function CatchBoundary() {
   const caught = useCatch();
   const params = useParams();
   switch (caught.status) {
+    case 400: {
+      return (
+        <div className="error-container">
+          What you're trying to do is not allowed.
+        </div>
+      );
+    }
     case 404: {
       return (
         <div className="error-container">
@@ -5874,33 +6010,35 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[9,12,89-109]
-import type { ActionFunction, LoaderFunction } from "remix";
+```tsx filename=app/routes/jokes/new.tsx lines=[11,14,91-111]
+import type {
+  ActionFunction,
+  LoaderFunction,
+} from "@remix-run/node";
+import { redirect, json } from "@remix-run/node";
 import {
-  useActionData,
-  redirect,
-  json,
-  useCatch,
-  Link,
   Form,
-  useTransition
-} from "remix";
+  Link,
+  useActionData,
+  useCatch,
+  useTransition,
+} from "@remix-run/react";
 
 import { JokeDisplay } from "~/components/joke";
 import { db } from "~/utils/db.server";
 import {
   requireUserId,
-  getUserId
+  getUserId,
 } from "~/utils/session.server";
 
 export const loader: LoaderFunction = async ({
-  request
+  request,
 }) => {
   const userId = await getUserId(request);
   if (!userId) {
     throw new Response("Unauthorized", { status: 401 });
   }
-  return {};
+  return json({});
 };
 
 function validateJokeContent(content: string) {
@@ -5910,7 +6048,7 @@ function validateJokeContent(content: string) {
 }
 
 function validateJokeName(name: string) {
-  if (name.length < 2) {
+  if (name.length < 3) {
     return `That joke's name is too short`;
   }
 }
@@ -5931,7 +6069,7 @@ const badRequest = (data: ActionData) =>
   json(data, { status: 400 });
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   const userId = await requireUserId(request);
   const form = await request.formData();
@@ -5942,13 +6080,13 @@ export const action: ActionFunction = async ({
     typeof content !== "string"
   ) {
     return badRequest({
-      formError: `Form not submitted correctly.`
+      formError: `Form not submitted correctly.`,
     });
   }
 
   const fieldErrors = {
     name: validateJokeName(name),
-    content: validateJokeContent(content)
+    content: validateJokeContent(content),
   };
   const fields = { name, content };
   if (Object.values(fieldErrors).some(Boolean)) {
@@ -5956,7 +6094,7 @@ export const action: ActionFunction = async ({
   }
 
   const joke = await db.joke.create({
-    data: { ...fields, jokesterId: userId }
+    data: { ...fields, jokesterId: userId },
   });
   return redirect(`/jokes/${joke.id}`);
 };
@@ -6000,7 +6138,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.name) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
                   : undefined
@@ -6027,7 +6165,7 @@ export default function NewJokeRoute() {
                 Boolean(actionData?.fieldErrors?.content) ||
                 undefined
               }
-              aria-describedby={
+              aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
                   : undefined
@@ -6045,6 +6183,14 @@ export default function NewJokeRoute() {
           ) : null}
         </div>
         <div>
+          {actionData?.formError ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
+              {actionData.formError}
+            </p>
+          ) : null}
           <button type="submit" className="button">
             Add
           </button>

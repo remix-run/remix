@@ -1,16 +1,15 @@
+import { createSessionStorage } from "@remix-run/node";
 import * as crypto from "crypto";
-
-import { createSessionStorage } from "remix";
 
 const upstashRedisRestUrl = process.env.UPSTASH_REDIS_REST_URL;
 
 const headers = {
   Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
   Accept: "application/json",
-  "Content-Type": "application/json"
+  "Content-Type": "application/json",
 };
 
-const expiresToSeconds = expires => {
+const expiresToSeconds = (expires) => {
   const now = new Date();
   const expiresDate = new Date(expires);
   const secondsDelta = Math.ceil(
@@ -34,7 +33,7 @@ export function createUpstashSessionStorage({ cookie }: any) {
         {
           method: "post",
           body: JSON.stringify({ data }),
-          headers
+          headers,
         }
       );
       return id;
@@ -42,7 +41,7 @@ export function createUpstashSessionStorage({ cookie }: any) {
     async readData(id) {
       console.log(id);
       const response = await fetch(`${upstashRedisRestUrl}/get/${id}`, {
-        headers
+        headers,
       });
       try {
         const { result } = await response.json();
@@ -57,15 +56,15 @@ export function createUpstashSessionStorage({ cookie }: any) {
         {
           method: "post",
           body: JSON.stringify({ data }),
-          headers
+          headers,
         }
       );
     },
     async deleteData(id) {
       await fetch(`${upstashRedisRestUrl}/del/${id}`, {
         method: "post",
-        headers
+        headers,
       });
-    }
+    },
   });
 }

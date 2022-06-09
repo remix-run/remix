@@ -1,19 +1,20 @@
-import * as React from "react";
-import { useFetcher, useFetchers } from "remix";
-import type { Todo } from "~/models";
+import { useFetcher, useFetchers } from "@remix-run/react";
 import cx from "clsx";
+import * as React from "react";
+
+import type { Todo } from "~/models";
 import { Token } from "~/ui/token";
 
 export function TodoList({
   className,
-  children
+  children,
 }: React.PropsWithChildren<{ className?: string }>) {
   return <ul className={cx(className, "ui--todo-list")}>{children}</ul>;
 }
 
 export function TodoItem({
   todo,
-  className
+  className,
 }: {
   todo: Todo;
   className?: string;
@@ -40,7 +41,7 @@ export function TodoItem({
   return (
     <li
       className={cx(className, "ui--todo-list__item flex gap-2", {
-        "ui--todo-list__item--completed": isCompleted
+        "ui--todo-list__item--completed": isCompleted,
       })}
     >
       <fetcher.Form method="post" action={`/dashboard/todos/${todo.id}/edit`}>
@@ -50,7 +51,7 @@ export function TodoItem({
             name="id"
             type="checkbox"
             checked={isCompleted}
-            onChange={e => fetcher.submit(e.target.form)}
+            onChange={(e) => fetcher.submit(e.target.form)}
             disabled={isCreating || undefined}
           />
           <span>{todo.name}</span>

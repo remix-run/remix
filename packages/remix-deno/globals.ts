@@ -1,20 +1,12 @@
-import { sign, unsign } from "./cookieSigning";
+/*
+Remix provides `process.env.NODE_ENV` at compile time.
+Declare types for `process` here so that they are available in Deno.
+*/
 
-declare global {
-  interface ProcessEnv {
-    NODE_ENV: "development" | "production" | "test";
-  }
-  interface Process {
-    env: ProcessEnv;
-  }
-
-  // This is here because we need it in our node setup,
-  // but not in an actual deno project.
-  // @ts-ignore
-  var process: Process;
+interface ProcessEnv {
+  NODE_ENV: "development" | "production" | "test";
 }
-
-export function installGlobals() {
-  window.sign = sign;
-  window.unsign = unsign;
+interface Process {
+  env: ProcessEnv;
 }
+var process: Process;

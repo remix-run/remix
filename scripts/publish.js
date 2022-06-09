@@ -10,9 +10,13 @@ function getTaggedVersion() {
   return output.replace(/^v/g, "");
 }
 
+/**
+ * @param {string} dir
+ * @param {string} tag
+ */
 function publish(dir, tag) {
   execSync(`npm publish --access public --tag ${tag} ${dir}`, {
-    stdio: "inherit"
+    stdio: "inherit",
   });
 }
 
@@ -25,7 +29,14 @@ async function run() {
   }
 
   let prerelease = semver.prerelease(taggedVersion);
-  let tag = prerelease ? prerelease[0] : "latest";
+  let prereleaseTag = prerelease ? String(prerelease[0]) : undefined;
+  let tag = prereleaseTag
+    ? prereleaseTag.includes("nightly")
+      ? "nightly"
+      : prereleaseTag.includes("experimental")
+      ? "experimental"
+      : prereleaseTag
+    : "latest";
 
   // Publish eslint config directly from the package directory
   publish(path.join(packageDir, "remix-eslint-config"), tag);
@@ -34,6 +45,7 @@ async function run() {
   for (let name of [
     "dev",
     "server-runtime", // publish before platforms
+    "cloudflare",
     "cloudflare-pages",
     "cloudflare-workers",
     "deno",
@@ -43,7 +55,7 @@ async function run() {
     "vercel",
     "netlify",
     "react",
-    "serve"
+    "serve",
   ]) {
     publish(path.join(buildDir, "@remix-run", name), tag);
   }
@@ -59,7 +71,7 @@ run().then(
   () => {
     process.exit(0);
   },
-  error => {
+  (error) => {
     console.error(error);
     process.exit(1);
   }
