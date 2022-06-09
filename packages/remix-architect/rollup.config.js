@@ -1,6 +1,13 @@
-const { getAdapterConfig } = require("../../rollup.utils");
+const { index, magicExports } = require("../../rollup.utils");
+
+let sourceDir = __dirname;
+let packageName = "@remix-run/architect";
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  return [...getAdapterConfig("architect")];
+  return [
+    index({ sourceDir, packageName, format: "cjs" }),
+    magicExports({ sourceDir, packageName, format: "cjs" }),
+    magicExports({ sourceDir, packageName, format: "esm" }),
+  ];
 };

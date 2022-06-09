@@ -43,102 +43,11 @@ function createBanner(packageName, version) {
 }
 
 function getVersion(packageDir) {
-  return require(`./${packageDir}/package.json`).version;
+  return require(`${packageDir}/package.json`).version;
 }
 
 function isBareModuleId(id) {
   return !id.startsWith(".") && !path.isAbsolute(id);
-}
-
-/** @returns {import("rollup").RollupOptions[]} */
-function getAdapterConfig(adapterName) {
-  let packageName = `@remix-run/${adapterName}`;
-  let sourceDir =
-    path.relative(
-      process.cwd(),
-      path.join(__dirname, "packages", `remix-${adapterName}`)
-    ) || ".";
-  let outputDir = path.join(buildDir, `node_modules/${packageName}`);
-  let version = getVersion(sourceDir);
-
-  let hasMagicExports = fse.existsSync(`${sourceDir}/magicExports/remix.ts`);
-
-  return [
-    {
-      external(id) {
-        return isBareModuleId(id);
-      },
-      input: `${sourceDir}/index.ts`,
-      output: {
-        banner: createBanner(packageName, version),
-        dir: outputDir,
-        format: "cjs",
-        preserveModules: true,
-        exports: "auto",
-      },
-      plugins: [
-        babel({
-          babelHelpers: "bundled",
-          exclude: /node_modules/,
-          extensions: [".ts", ".tsx"],
-          rootMode: "upward",
-        }),
-        nodeResolve({ extensions: [".ts", ".tsx"] }),
-        copy({
-          targets: [
-            { src: `LICENSE.md`, dest: outputDir },
-            { src: `${sourceDir}/package.json`, dest: outputDir },
-            { src: `${sourceDir}/README.md`, dest: outputDir },
-          ],
-        }),
-        copyToPlaygrounds(),
-      ],
-    },
-    ...(hasMagicExports
-      ? [
-          {
-            external() {
-              return true;
-            },
-            input: `${sourceDir}/magicExports/remix.ts`,
-            output: {
-              banner: createBanner(packageName, version),
-              dir: `${outputDir}/magicExports`,
-              format: "cjs",
-            },
-            plugins: [
-              babel({
-                babelHelpers: "bundled",
-                exclude: /node_modules/,
-                extensions: [".ts", ".tsx"],
-                rootMode: "upward",
-              }),
-              copyToPlaygrounds(),
-            ],
-          },
-          {
-            external() {
-              return true;
-            },
-            input: `${sourceDir}/magicExports/remix.ts`,
-            output: {
-              banner: createBanner(packageName, version),
-              dir: `${outputDir}/magicExports/esm`,
-              format: "esm",
-            },
-            plugins: [
-              babel({
-                babelHelpers: "bundled",
-                exclude: /node_modules/,
-                extensions: [".ts", ".tsx"],
-                rootMode: "upward",
-              }),
-              copyToPlaygrounds(),
-            ],
-          },
-        ]
-      : []),
-  ];
 }
 
 async function triggerLiveReload(appDir) {
@@ -189,13 +98,126 @@ function copyToPlaygrounds() {
   };
 }
 
+/**
+ * @param {{
+ *  sourceDir: string
+ *  packageName: string
+ *  format: "cjs" | "esm"
+ * }} args
+ * @returns {import("rollup").RollupOptions} Default Rollup configuration for `<sourceDir>/index.ts`
+ */
+function index({ sourceDir, packageName, format }) {
+  let version = getVersion(sourceDir);
+  let outputDir = path.join(buildDir, `node_modules/${packageName}`);
+  return {
+    external: (id) => isBareModuleId(id),
+    input: `${sourceDir}/index.ts`,
+    output: {
+      banner: createBanner(packageName, version),
+      dir: format === "cjs" ? outputDir : `${outputDir}/${format}`,
+      format,
+      preserveModules: true,
+      exports: "named",
+    },
+    plugins: [
+      babel({
+        babelHelpers: "bundled",
+        exclude: /node_modules/,
+        extensions: [".ts", ".tsx"],
+        rootMode: "upward",
+      }),
+      nodeResolve({ extensions: [".ts", ".tsx"] }),
+      copy({
+        targets: [
+          { src: `LICENSE.md`, dest: outputDir },
+          { src: `${sourceDir}/package.json`, dest: outputDir },
+          { src: `${sourceDir}/README.md`, dest: outputDir },
+        ],
+      }),
+      copyToPlaygrounds(),
+    ],
+  };
+}
+
+/**
+ * @param {{
+ *  sourceDir: string
+ *  packageName: string
+ * }} args
+ * @returns {import("rollup").RollupOptions} Default Rollup configuration for `<sourceDir>/cli.ts`
+ */
+function cli({ sourceDir, packageName }) {
+  let version = getVersion(sourceDir);
+  let outputDir = path.join(buildDir, `node_modules/${packageName}`);
+  return {
+    external: (id) => !id.endsWith(path.join(sourceDir, "cli.ts")),
+    input: `${sourceDir}/cli.ts`,
+    output: {
+      format: "cjs",
+      dir: outputDir,
+      banner: executableBanner + createBanner(packageName, version),
+    },
+    plugins: [
+      babel({
+        babelHelpers: "bundled",
+        exclude: /node_modules/,
+        extensions: [".ts"],
+        rootMode: "upward",
+      }),
+      nodeResolve({ extensions: [".ts"] }),
+      copy({
+        targets: [
+          { src: `LICENSE.md`, dest: outputDir },
+          { src: `${sourceDir}/package.json`, dest: outputDir },
+          { src: `${sourceDir}/README.md`, dest: outputDir },
+        ],
+      }),
+      copyToPlaygrounds(),
+    ],
+  };
+}
+
+/**
+ * @deprecated New packages should not provide magic exports
+ * @param {{
+ *  sourceDir: string
+ *  packageName: string
+ *  format: "cjs" | "esm"
+ * }} args
+ * @returns {import("rollup").RollupOptions} Default Rollup configuration for `<sourceDir>/magicExports/remix.ts`
+ */
+function magicExports({ sourceDir, packageName, format }) {
+  let version = getVersion(sourceDir);
+  let outputDir = path.join(buildDir, `node_modules/${packageName}`);
+  return {
+    external: () => true,
+    input: `${sourceDir}/magicExports/remix.ts`,
+    output: {
+      banner: createBanner(packageName, version),
+      dir: `${outputDir}/magicExports${format === "cjs" ? "" : `/${format}`}`,
+      format,
+    },
+    plugins: [
+      babel({
+        babelHelpers: "bundled",
+        exclude: /node_modules/,
+        extensions: [".ts", ".tsx"],
+        rootMode: "upward",
+      }),
+      copyToPlaygrounds(),
+    ],
+  };
+}
+
 module.exports = {
   buildDir,
   copyToPlaygrounds,
   createBanner,
   defaultBuildDir,
   executableBanner,
-  getAdapterConfig,
   getVersion,
   isBareModuleId,
+  index,
+  cli,
+  magicExports,
 };

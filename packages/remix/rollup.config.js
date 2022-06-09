@@ -10,9 +10,10 @@ const {
   getVersion,
 } = require("../../rollup.utils");
 
+let sourceDir = __dirname;
+
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  let sourceDir = path.relative(process.cwd(), __dirname) || ".";
   let outputDir = path.join(buildDir, "node_modules/remix");
   let version = getVersion(sourceDir);
 
