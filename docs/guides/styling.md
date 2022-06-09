@@ -415,7 +415,8 @@ npx tailwindcss init
 
 Now we can tell it which files to generate classes from:
 
-```js filename=tailwind.config.js lines=[2]
+```js filename=tailwind.config.js lines=[3]
+/** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./app/**/*.{ts,tsx,jsx,js}"],
   theme: {
