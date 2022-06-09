@@ -15,6 +15,7 @@ import * as colors from "../colors";
 import packageJson from "../package.json";
 import { convertTemplateToJavaScript } from "./convert-to-javascript";
 import { getPreferredPackageManager } from "./getPreferredPackageManager";
+import invariant from "../invariant";
 
 const remixDevPackageVersion = packageJson.version;
 
@@ -522,11 +523,25 @@ export async function validateTemplate(input: string) {
     }
     case "repo": {
       let spinner = ora("Validating the template repo…").start();
-      let { url, filePath } = getRepoInfo(input);
+      let { branch, filePath, owner, name } = getRepoInfo(input);
       let response;
+      let apiUrl = `https://api.github.com/repos/${owner}/${name}`;
+      let method = "HEAD";
+      if (branch) {
+        apiUrl += `/git/trees/${branch}?recursive=1`;
+      }
+      if (filePath) {
+        // When filePath is present, we need to examine the response json to see
+        // if that path exists in the repo.
+        invariant(
+          branch,
+          "expected branch to be present, since the github URL structure requires it (and we need the recursive tree of files to validate)"
+        );
+        method = "GET";
+      }
       try {
-        response = await fetch(url, {
-          method: "HEAD",
+        response = await fetch(apiUrl, {
+          method,
           headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
         });
       } catch (_) {
@@ -540,6 +555,24 @@ export async function validateTemplate(input: string) {
 
       switch (response.status) {
         case 200:
+          if (filePath && filePath !== "/") {
+            // if a filePath is included there must also be a branch, because of how github structures
+            // their URLs. That means the api results list all files. Not directories though, so we'll
+            // try to find some file that starts with the path we're after
+            let filesWithinRepo = await response.json();
+            if (
+              !filesWithinRepo.tree.some((file: any) =>
+                file.path.startsWith(filePath)
+              )
+            ) {
+              throw Error(
+                "🚨 The template could not be verified. The GitHub repository was found, but did " +
+                  "not seem to contain anything at that path. " +
+                  "Please double check that the filepath points to a directory in the repo " +
+                  "and try again."
+              );
+            }
+          }
           return;
         case 403:
           throw Error(
