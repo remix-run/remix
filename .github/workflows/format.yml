@@ -34,6 +34,9 @@ jobs:
       - name: 👔 Format
         run: npm run format --if-present
 
+      - name: 🔗 Convert Docs links to references
+        run: node scripts/markdown-references.mjs
+
       - name: 💪 Commit
         run: |
           git config --local user.email "hello@remix.run"
