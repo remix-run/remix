@@ -8,7 +8,7 @@ let packageName = "@remix-run/deno";
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  let outputDir = path.join(buildDir, `node_modules/${packageName}`);
+  let outputDir = path.join(buildDir, "node_modules", packageName);
 
   return [
     {

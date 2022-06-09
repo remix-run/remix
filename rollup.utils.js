@@ -108,7 +108,7 @@ function copyToPlaygrounds() {
  */
 function index({ sourceDir, packageName, format }) {
   let version = getVersion(sourceDir);
-  let outputDir = path.join(buildDir, `node_modules/${packageName}`);
+  let outputDir = path.join(buildDir, "node_modules", packageName);
   return {
     external: (id) => isBareModuleId(id),
     input: `${sourceDir}/index.ts`,
@@ -148,7 +148,7 @@ function index({ sourceDir, packageName, format }) {
  */
 function cli({ sourceDir, packageName }) {
   let version = getVersion(sourceDir);
-  let outputDir = path.join(buildDir, `node_modules/${packageName}`);
+  let outputDir = path.join(buildDir, "node_modules", packageName);
   return {
     external: (id) => !id.endsWith(path.join(sourceDir, "cli.ts")),
     input: `${sourceDir}/cli.ts`,
@@ -188,7 +188,7 @@ function cli({ sourceDir, packageName }) {
  */
 function magicExports({ sourceDir, packageName, format }) {
   let version = getVersion(sourceDir);
-  let outputDir = path.join(buildDir, `node_modules/${packageName}`);
+  let outputDir = path.join(buildDir, "node_modules", packageName);
   return {
     external: () => true,
     input: `${sourceDir}/magicExports/remix.ts`,

@@ -11,10 +11,11 @@ const {
 } = require("../../rollup.utils");
 
 let sourceDir = __dirname;
+let packageName = "remix";
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  let outputDir = path.join(buildDir, "node_modules/remix");
+  let outputDir = path.join(buildDir, "node_modules", packageName); 
   let version = getVersion(sourceDir);
 
   // Don't blow away remix magic exports on local builds, since they've
@@ -32,7 +33,7 @@ module.exports = function rollup() {
       output: {
         format: "cjs",
         dir: outputDir,
-        banner: createBanner("remix", version),
+        banner: createBanner(packageName, version),
       },
       plugins: [
         babel({
