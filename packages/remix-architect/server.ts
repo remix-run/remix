@@ -35,11 +35,6 @@ export type GetLoadContextFunction = (
 
 export type RequestHandler = APIGatewayProxyHandlerV2 | APIGatewayProxyHandler;
 
-export enum APIGatewayVersion {
-  v1 = "v1",
-  v2 = "v2",
-}
-
 /**
  * Returns a request handler for Architect that serves the response using
  * Remix.

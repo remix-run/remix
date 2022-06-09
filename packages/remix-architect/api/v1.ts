@@ -8,8 +8,6 @@ import type {
   APIGatewayProxyResult
 } from "aws-lambda";
 import type {
-  // This has been added as a global in node 15+
-  AbortController,
   Response as NodeResponse,
 } from "@remix-run/node";
 import { URLSearchParams } from "url";
@@ -19,11 +17,11 @@ import { isBinaryType } from "../binaryTypes";
 export function createRemixRequest(event: APIGatewayProxyEvent): NodeRequest {
   let host = event.headers["x-forwarded-host"] || event.headers.host;
   let scheme = process.env.ARC_SANDBOX ? "http" : "https";
-  let rawQueryString = new URLSearchParams(
-    (event.queryStringParameters as Record<string, string>) || {}
-  ).toString();
+
+  let rawQueryString = new URLSearchParams(event.queryStringParameters as Record<string, string>).toString();
   let search = rawQueryString.length > 0 ? `?${rawQueryString}` : "";
   let url = new URL(event.path + search, `${scheme}://${host}`);
+
   let isFormData = event.headers["content-type"]?.includes(
     "multipart/form-data"
   );
