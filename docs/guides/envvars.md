@@ -22,13 +22,13 @@ If your experience with web development is primarily with the JS frameworks in t
 
 Environment variables on your server will be handled by your host, for example:
 
-- [Netlify](https://docs.netlify.com/configure-builds/environment-variables/)
-- [Fly.io](https://fly.io/docs/reference/secrets/)
-- [Cloudflare Workers](https://developers.cloudflare.com/workers/platform/environment-variables)
-- [Vercel](https://vercel.com/docs/environment-variables)
-- [Architect](https://arc.codes/docs/en/reference/cli/env)
+- [Netlify][docs.netlify-1]
+- [Fly.io][fly-1]
+- [Cloudflare Workers][developers.cloudflare-1]
+- [Vercel][vercel-1]
+- [Architect][arc-1]
 
-If your host doesn't have any conventions for environment variables during development, the `remix dev` server can help out as it provides built-in support for [dotenv](https://www.npmjs.com/package/dotenv).
+If your host doesn't have any conventions for environment variables during development, the `remix dev` server can help out as it provides built-in support for [dotenv][www.npmjs-1].
 
 If you're using the `remix dev` server, you can do this very quickly:
 
@@ -141,3 +141,10 @@ Instead we recommend keeping all of your environment variables on the server (al
      return stripe.redirectToCheckout({ sessionId });
    }
    ```
+
+[docs.netlify-1]: https://docs.netlify.com/configure-builds/environment-variables/
+[fly-1]: https://fly.io/docs/reference/secrets/
+[developers.cloudflare-1]: https://developers.cloudflare.com/workers/platform/environment-variables
+[vercel-1]: https://vercel.com/docs/environment-variables
+[arc-1]: https://arc.codes/docs/en/reference/cli/env
+[www.npmjs-1]: https://www.npmjs.com/package/dotenv

@@ -384,4 +384,6 @@ Some third party libraries have their own module side effects that are incompati
 
 These libraries are incompatible with server rendering in React and therefore incompatible with Remix. Fortunately, very few third party libraries in the React ecosystem do this.
 
-We recommend finding an alternative. But if you can't, we recommend using [patch-package](https://www.npmjs.com/package/patch-package) to fix it up in your app.
+We recommend finding an alternative. But if you can't, we recommend using [patch-package][www.npmjs-1] to fix it up in your app.
+
+[www.npmjs-1]: https://www.npmjs.com/package/patch-package
