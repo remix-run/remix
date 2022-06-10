@@ -300,6 +300,19 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             choices: templateChoices,
           },
           {
+            name: "useTypeScript",
+            type: "list",
+            message: "TypeScript or JavaScript?",
+            default: true,
+            when() {
+              return flags.typescript === undefined;
+            },
+            choices: [
+              { name: "TypeScript", value: true },
+              { name: "JavaScript", value: false },
+            ],
+          },
+          {
             name: "install",
             type: "confirm",
             message: `Do you want me to run \`${packageManager} install\`?`,
@@ -332,40 +345,17 @@ export async function run(argv: string[] = process.argv.slice(2)) {
 
       let installDeps = flags.install !== false && answers.install !== false;
 
+      let useTypeScript = flags.typescript ?? answers.useTypeScript;
+
       await commands.create({
         appTemplate: flags.template || answers.appTemplate,
         projectDir,
         remixVersion: flags.remixVersion,
         installDeps,
-        useTypeScript: flags.typescript !== false,
+        useTypeScript,
         githubToken: process.env.GITHUB_TOKEN,
         debug: flags.debug,
       });
-
-      let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
-
-      if (flags.typescript === undefined && isTypeScript) {
-        let { useTypeScript } = await inquirer.prompt<{
-          useTypeScript: boolean;
-        }>([
-          {
-            name: "useTypeScript",
-            type: "list",
-            message: "TypeScript or JavaScript?",
-            choices: [
-              { name: "TypeScript", value: true },
-              { name: "JavaScript", value: false },
-            ],
-          },
-        ]);
-
-        if (useTypeScript === false) {
-          let spinner = ora("Converting template to JavaScript…").start();
-          await convertTemplateToJavaScript(projectDir);
-          spinner.stop();
-          spinner.clear();
-        }
-      }
 
       let initScriptDir = path.join(projectDir, "remix.init");
       let hasInitScript = await fse.pathExists(initScriptDir);
