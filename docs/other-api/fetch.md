@@ -15,9 +15,7 @@ const res = await fetch(url);
 That `res` is an instance of `Response`. And you can make a response yourself:
 
 ```js
-const res = new Response(
-  JSON.stringify({ hello: "there" })
-);
+const res = new Response(JSON.stringify({ hello: "there" }));
 const json = await res.json();
 console.log(json);
 // { hello: "there" }

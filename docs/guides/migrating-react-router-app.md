@@ -100,24 +100,15 @@ Create a new file called `root.jsx` (or `root.tsx`) in your `app` directory. The
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="/favicon.ico" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="My beautiful React app"
-    />
+    <meta name="description" content="My beautiful React app" />
     <link rel="apple-touch-icon" href="/logo192.png" />
     <link rel="manifest" href="/manifest.json" />
     <title>My React App</title>
   </head>
   <body>
-    <noscript
-      >You need to enable JavaScript to run this
-      app.</noscript
-    >
+    <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
   </body>
 </html>
@@ -134,15 +125,9 @@ export default function Root() {
       <head>
         <meta charSet="utf-8" />
         <link rel="icon" href="/favicon.ico" />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1"
-        />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#000000" />
-        <meta
-          name="description"
-          content="My beautiful React app"
-        />
+        <meta name="description" content="My beautiful React app" />
         <link rel="apple-touch-icon" href="/logo192.png" />
         <link rel="manifest" href="/manifest.json" />
         <title>My React App</title>
@@ -263,9 +248,7 @@ function Count() {
   return (
     <div>
       <h1>Count: {count}</h1>
-      <button onClick={() => setCount(count + 1)}>
-        Increment
-      </button>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
     </div>
   );
 }
@@ -291,9 +274,7 @@ One potential solution here is using a different caching mechanism that can be u
 let isHydrating = true;
 
 function SomeComponent() {
-  let [isHydrated, setIsHydrated] = React.useState(
-    !isHydrating
-  );
+  let [isHydrated, setIsHydrated] = React.useState(!isHydrating);
 
   React.useEffect(() => {
     isHydrating = false;
@@ -523,10 +504,7 @@ export default function Root() {
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1"
-        />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#000000" />
         <meta
           name="description"

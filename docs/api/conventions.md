@@ -260,20 +260,13 @@ On each of these pages, the dynamic segment of the URL path is the value of the 
 
 ```tsx filename=app/routes/blog/$postId.tsx
 import { useParams } from "@remix-run/react";
-import type {
-  LoaderFunction,
-  ActionFunction,
-} from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LoaderFunction, ActionFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader: LoaderFunction = async ({ params }) => {
   console.log(params.postId);
 };
 
-export const action: ActionFunction = async ({
-  params,
-}) => {
+export const action: ActionFunction = async ({ params }) => {
   console.log(params.postId);
 };
 
@@ -423,20 +416,13 @@ Similar to dynamic route parameters, you can access the value of the matched pat
 
 ```tsx filename=app/routes/$.tsx
 import { useParams } from "@remix-run/react";
-import type {
-  LoaderFunction,
-  ActionFunction,
-} from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LoaderFunction, ActionFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader: LoaderFunction = async ({ params }) => {
   console.log(params["*"]);
 };
 
-export const action: ActionFunction = async ({
-  params,
-}) => {
+export const action: ActionFunction = async ({ params }) => {
   console.log(params["*"]);
 };
 
@@ -485,10 +471,7 @@ Here's a basic example:
 
 ```tsx
 import { renderToString } from "react-dom/server";
-import type {
-  EntryContext,
-  HandleDataRequestFunction,
-} from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { EntryContext, HandleDataRequestFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { RemixServer } from "@remix-run/react";
 
 export default function handleRequest(
@@ -510,15 +493,14 @@ export default function handleRequest(
 }
 
 // this is an optional export
-export const handleDataRequest: HandleDataRequestFunction =
-  (
-    response: Response,
-    // same args that get passed to the action or loader that was called
-    { request, params, context }
-  ) => {
-    response.headers.set("x-custom", "yay!");
-    return response;
-  };
+export const handleDataRequest: HandleDataRequestFunction = (
+  response: Response,
+  // same args that get passed to the action or loader that was called
+  { request, params, context }
+) => {
+  response.headers.set("x-custom", "yay!");
+  return response;
+};
 ```
 
 ## Route Module API
@@ -604,9 +586,7 @@ Route params are passed to your loader. If you have a loader at `data/invoices/$
 
 ```ts
 // if the user visits /invoices/123
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader: LoaderFunction = async ({ params }) => {
   params.invoiceId; // "123"
 };
 ```
@@ -618,9 +598,7 @@ This is a [Fetch Request][request] instance with information about the request. 
 Most common cases are reading headers or the URL. You can also use this to read URL [URLSearchParams][urlsearchparams] from the request like so:
 
 ```tsx
-export const loader: LoaderFunction = async ({
-  request,
-}) => {
+export const loader: LoaderFunction = async ({ request }) => {
   // read a cookie
   const cookie = request.headers.get("Cookie");
 
@@ -639,9 +617,7 @@ This is the context you passed in to your server adapter's `getLoadContext()` fu
 Say your express server (or your serverless function handler) looks something like this:
 
 ```js filename=some-express-server.js
-const {
-  createRequestHandler,
-} = require("@remix-run/express");
+const { createRequestHandler } = require("@remix-run/express");
 
 app.all(
   "*",
@@ -657,9 +633,7 @@ app.all(
 And then your loader can access it.
 
 ```ts filename=routes/some-route.tsx
-export const loader: LoaderFunction = async ({
-  context,
-}) => {
+export const loader: LoaderFunction = async ({ context }) => {
   const { expressUser } = context;
   // ...
 };
@@ -697,9 +671,7 @@ You can see how `json` just does a little of the work to make your loader a lot 
 ```tsx
 import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader: LoaderFunction = async ({ params }) => {
   const user = await fakeDb.project.findOne({
     where: { id: params.id },
   });
@@ -727,10 +699,7 @@ Here is a full example showing how you can create utility functions that throw r
 import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import type { ThrownResponse } from "@remix-run/react";
 
-export type InvoiceNotFoundResponse = ThrownResponse<
-  404,
-  string
->;
+export type InvoiceNotFoundResponse = ThrownResponse<404, string>;
 
 export function getInvoice(id, user) {
   const invoice = db.invoice.find({ where: { id } });
@@ -747,9 +716,7 @@ import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { getSession } from "./session";
 
 export async function requireUserSession(request) {
-  const session = await getSession(
-    request.headers.get("cookie")
-  );
+  const session = await getSession(request.headers.get("cookie"));
   if (!session) {
     // can throw our helpers like `redirect` and `json` because they
     // return responses.
@@ -765,10 +732,7 @@ import type { ThrownResponse } from "@remix-run/react";
 
 import { requireUserSession } from "~/http";
 import { getInvoice } from "~/db";
-import type {
-  Invoice,
-  InvoiceNotFoundResponse,
-} from "~/db";
+import type { Invoice, InvoiceNotFoundResponse } from "~/db";
 
 type InvoiceCatchData = {
   invoiceOwnerEmail: string;
@@ -806,10 +770,7 @@ export function CatchBoundary() {
       return (
         <div>
           <p>You don't have access to this invoice.</p>
-          <p>
-            Contact {caught.data.invoiceOwnerEmail} to get
-            access
-          </p>
+          <p>Contact {caught.data.invoiceOwnerEmail} to get access</p>
         </div>
       );
     case 404:
@@ -820,8 +781,7 @@ export function CatchBoundary() {
   // This will be caught by the closest `ErrorBoundary`.
   return (
     <div>
-      Something went wrong: {caught.status}{" "}
-      {caught.statusText}
+      Something went wrong: {caught.status} {caught.statusText}
     </div>
   );
 }
@@ -894,11 +854,7 @@ See also:
 Each route can define its own HTTP headers. One of the common headers is the `Cache-Control` header that indicates to browser and CDN caches where and for how long a page is able to be cached.
 
 ```tsx
-export function headers({
-  actionHeaders,
-  loaderHeaders,
-  parentHeaders,
-}) {
+export function headers({ actionHeaders, loaderHeaders, parentHeaders }) {
   return {
     "X-Stretchy-Pants": "its for fun",
     "Cache-Control": "max-age=300, s-maxage=3600",
@@ -946,19 +902,12 @@ That is all to say that Remix has given you a very large gun with which to shoot
 import parseCacheControl from "parse-cache-control";
 
 export function headers({ loaderHeaders, parentHeaders }) {
-  const loaderCache = parseCacheControl(
-    loaderHeaders.get("Cache-Control")
-  );
-  const parentCache = parseCacheControl(
-    parentHeaders.get("Cache-Control")
-  );
+  const loaderCache = parseCacheControl(loaderHeaders.get("Cache-Control"));
+  const parentCache = parseCacheControl(parentHeaders.get("Cache-Control"));
 
   // take the most conservative between the parent and loader, otherwise
   // we'll be too aggressive for one of them.
-  const maxAge = Math.min(
-    loaderCache["max-age"],
-    parentCache["max-age"]
-  );
+  const maxAge = Math.min(loaderCache["max-age"], parentCache["max-age"]);
 
   return {
     "Cache-Control": `max-age=${maxAge}`,
@@ -1007,8 +956,7 @@ import type { MetaFunction } from "@remix-run/node"; // or "@remix-run/cloudflar
 export const meta: MetaFunction = () => {
   return {
     title: "Something cool",
-    description:
-      "This becomes the nice preview on search results.",
+    description: "This becomes the nice preview on search results.",
   };
 };
 ```
@@ -1249,20 +1197,19 @@ This function lets apps optimize which routes should be reloaded on some client-
 ```ts
 import type { ShouldReloadFunction } from "@remix-run/react";
 
-export const unstable_shouldReload: ShouldReloadFunction =
-  ({
-    // same params that go to `loader` and `action`
-    params,
+export const unstable_shouldReload: ShouldReloadFunction = ({
+  // same params that go to `loader` and `action`
+  params,
 
-    // a possible form submission that caused this to be reloaded
-    submission,
+  // a possible form submission that caused this to be reloaded
+  submission,
 
-    // the next URL being used to render this page
-    url,
+  // the next URL being used to render this page
+  url,
 
-    // the previous URL used to render this page
-    prevUrl,
-  }) => false; // or `true`;
+  // the previous URL used to render this page
+  prevUrl,
+}) => false; // or `true`;
 ```
 
 During client-side transitions, Remix will optimize reloading of routes that are already rendering, like not reloading layout routes that aren't changing. In other cases, like form submissions or search param changes, Remix doesn't know which routes need to be reloaded so it reloads them all to be safe. This ensures data mutations from the submission or changes in the search params are reflected across the entire page.
@@ -1366,13 +1313,9 @@ Now if the child route causes the search params to change, this route will no lo
 You may want to get more granular and reload only for submissions to this project:
 
 ```tsx
-export function unstable_shouldReload({
-  params,
-  submission,
-}) {
+export function unstable_shouldReload({ params, submission }) {
   return !!(
-    submission &&
-    submission.action === `/projects/${params.projectId}`
+    submission && submission.action === `/projects/${params.projectId}`
   );
 }
 ```

@@ -113,9 +113,7 @@ Instead we recommend keeping all of your environment variables on the server (al
             <Outlet />
             <script
               dangerouslySetInnerHTML={{
-                __html: `window.ENV = ${JSON.stringify(
-                  data.ENV
-                )}`,
+                __html: `window.ENV = ${JSON.stringify(data.ENV)}`,
               }}
             />
             <Scripts />
@@ -130,12 +128,8 @@ Instead we recommend keeping all of your environment variables on the server (al
     ```tsx [6-8]
     import { loadStripe } from "@stripe/stripe-js";
 
-    export async function redirectToStripeCheckout(
-      sessionId
-    ) {
-      const stripe = await loadStripe(
-        window.ENV.STRIPE_PUBLIC_KEY
-      );
+    export async function redirectToStripeCheckout(sessionId) {
+      const stripe = await loadStripe(window.ENV.STRIPE_PUBLIC_KEY);
       return stripe.redirectToCheckout({ sessionId });
     }
     ```
