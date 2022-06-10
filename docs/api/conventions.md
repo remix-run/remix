@@ -1389,9 +1389,9 @@ You need to be very careful here, though. That project (or its nested relationsh
 
 Any files inside the `app` folder can be imported into your modules. Remix will:
 
-1.  Copy the file to your browser build directory
-2.  Fingerprint the file for long-term caching
-3.  Return the public URL to your module to be used while rendering
+1. Copy the file to your browser build directory
+2. Fingerprint the file for long-term caching
+3. Return the public URL to your module to be used while rendering
 
 It's most common for stylesheets, but can used for anything.
 

@@ -8,8 +8,8 @@ Data writes (some people call these mutations) in Remix are built on top of two 
 
 When the user submits a form, Remix will:
 
-1.  Call the action for the form
-2.  Reload all of the data for all of the routes on the page
+1. Call the action for the form
+2. Reload all of the data for all of the routes on the page
 
 Many times people reach for global state management libraries in React like redux, data libs like apollo, and fetch wrappers like React Query in order to help manage getting server state into your components and keeping the UI in sync with it when the user changes it. Remix's HTML based API replaces the majority of use cases for these tools. Remix knows how to load the data as well as how to revalidate it after it changes when you use standard HTML APIs.
 
@@ -133,11 +133,11 @@ If this is you, you're going to be delighted when you see just how easy mutation
 
 We're going to build a mutation from start to finish with:
 
-1.  JavaScript optional
-2.  Validation
-3.  Error handling
-4.  Progressively enhanced loading indicators
-5.  Progressively enhanced error display
+1. JavaScript optional
+2. Validation
+3. Error handling
+4. Progressively enhanced loading indicators
+5. Progressively enhanced error display
 
 You use the Remix `<Form>` component for data mutations the same way you use HTML forms. The difference is now you get access to pending form state to build a nicer user experience: like contextual loading indicators and "optimistic UI".
 

@@ -10,13 +10,13 @@ Remix can help you build optimistic UI with [`useTransition`][use-transition] an
 
 ## Strategy
 
-1.  User submits a form (or you do with [`useSubmit`][use-submit] or [`fetcher.submit`][fetcher-submission])
-2.  Remix makes the submission and its data immediately available to you on [`transition.submission`][transition-submission] or [`fetcher.submission`][fetcher-submission]
-3.  App uses [`submission.formData`][form-data] to render an optimistic version of _what it will render_ when the submission completes successfully
-4.  Remix automatically revalidates all the data
-    - If successful, the user doesn't even notice
-    - If it fails, the page data is automatically in sync with the server so the UI reverts automatically
-      - App notifies the user of a problem (which is also likely automatic in Remix with [error boundaries][error-boundary]).
+1. User submits a form (or you do with [`useSubmit`][use-submit] or [`fetcher.submit`][fetcher-submission])
+2. Remix makes the submission and its data immediately available to you on [`transition.submission`][transition-submission] or [`fetcher.submission`][fetcher-submission]
+3. App uses [`submission.formData`][form-data] to render an optimistic version of _what it will render_ when the submission completes successfully
+4. Remix automatically revalidates all the data
+   - If successful, the user doesn't even notice
+   - If it fails, the page data is automatically in sync with the server so the UI reverts automatically
+     - App notifies the user of a problem (which is also likely automatic in Remix with [error boundaries][error-boundary]).
 
 ## Example
 

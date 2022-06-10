@@ -444,9 +444,9 @@ Form submissions are navigation events in browsers (and Remix), which means user
 
 For example, consider this user flow:
 
-1.  The user lands at `/buy`
-2.  They submit a form to `/checkout`
-3.  They click a link to `/order/123`
+1. The user lands at `/buy`
+2. They submit a form to `/checkout`
+3. They click a link to `/order/123`
 
 The history stack looks like this, where "\*" is the current entry:
 
@@ -1234,9 +1234,9 @@ This is where `useFetchers` comes in. Up in the sidebar, we can access all the i
 
 The strategy has three steps:
 
-1.  Find the submissions for tasks in a specific project
-2.  Use the `fetcher.submission.formData` to immediately update the count
-3.  Use the normal task's state if it's not inflight
+1. Find the submissions for tasks in a specific project
+2. Use the `fetcher.submission.formData` to immediately update the count
+3. Use the normal task's state if it's not inflight
 
 Here's some sample code:
 
@@ -1318,72 +1318,69 @@ Let's consider building some breadcrumbs. If a route wants to participate in the
 
 You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. It's not a Remix thing, it's whatever you want. Here it's added to a parent route:
 
-1.  Add the breadcrumb handle to the parent route
+1. Add the breadcrumb handle to the parent route
 
-    ```tsx
-    // routes/parent.tsx
-    export const handle = {
-      breadcrumb: () => (
-        <Link to="/parent">Some Route</Link>
-      ),
-    };
-    ```
+   ```tsx
+   // routes/parent.tsx
+   export const handle = {
+     breadcrumb: () => <Link to="/parent">Some Route</Link>,
+   };
+   ```
 
-2.  We can do the same for a child route
+2. We can do the same for a child route
 
-    ```tsx
-    // routes/parent/child.tsx
-    export const handle = {
-      breadcrumb: () => (
-        <Link to="/parent/child">Child Route</Link>
-      ),
-    };
-    ```
+   ```tsx
+   // routes/parent/child.tsx
+   export const handle = {
+     breadcrumb: () => (
+       <Link to="/parent/child">Child Route</Link>
+     ),
+   };
+   ```
 
-3.  Now we can put it all together in our root route with `useMatches`.
+3. Now we can put it all together in our root route with `useMatches`.
 
-    ```tsx [6, 20-31]
-    // root.tsx
-    import {
-      Links,
-      Scripts,
-      useLoaderData,
-      useMatches,
-    } from "@remix-run/react";
+   ```tsx [6, 20-31]
+   // root.tsx
+   import {
+     Links,
+     Scripts,
+     useLoaderData,
+     useMatches,
+   } from "@remix-run/react";
 
-    export default function Root() {
-      const matches = useMatches();
+   export default function Root() {
+     const matches = useMatches();
 
-      return (
-        <html lang="en">
-          <head>
-            <Links />
-          </head>
-          <body>
-            <header>
-              <ol>
-                {matches
-                  // skip routes that don't have a breadcrumb
-                  .filter(
-                    (match) =>
-                      match.handle &&
-                      match.handle.breadcrumb
-                  )
-                  // render breadcrumbs!
-                  .map((match, index) => (
-                    <li key={index}>
-                      {match.handle.breadcrumb(match)}
-                    </li>
-                  ))}
-              </ol>
-            </header>
+     return (
+       <html lang="en">
+         <head>
+           <Links />
+         </head>
+         <body>
+           <header>
+             <ol>
+               {matches
+                 // skip routes that don't have a breadcrumb
+                 .filter(
+                   (match) =>
+                     match.handle && match.handle.breadcrumb
+                 )
+                 // render breadcrumbs!
+                 .map((match, index) => (
+                   <li key={index}>
+                     {match.handle.breadcrumb(match)}
+                   </li>
+                 ))}
+             </ol>
+           </header>
 
-            <Outlet />
-          </body>
-        </html>
-      );
-    }
-    ```
+           <Outlet />
+         </body>
+       </html>
+     );
+   }
+   ```
 
 Notice that we're passing the `match` to breadcrumbs. We didn't use it, but we could have used `match.data` to use our route's data in the breadcrumb.
 

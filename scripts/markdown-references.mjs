@@ -17,7 +17,12 @@ async function main() {
 
   for (let file of files) {
     let result = await remark()
-      .use({ settings: { fences: true } })
+      .use({
+        settings: {
+          fences: true,
+          listItemIndent: "one",
+        },
+      })
       .use(remarkReferenceLinksBottom)
       .use(remarkFrontmatter, ["yaml", "toml"])
       .process(await read(file));

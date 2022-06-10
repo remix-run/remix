@@ -26,22 +26,22 @@ Before you can contribute to the codebase, you will need to fork the repo. This 
 
 The following steps will get you setup to contribute changes to this repo:
 
-1.  Fork the repo (click the <kbd>Fork</kbd> button at the top right of [this page][github-2])
+1. Fork the repo (click the <kbd>Fork</kbd> button at the top right of [this page][github-2])
 
-2.  Clone your fork locally
+2. Clone your fork locally
 
-    ```bash
-    # in a terminal, cd to parent directory where you want your clone to be, then
-    git clone https://github.com/<your_github_username>/remix.git
-    cd remix
+   ```bash
+   # in a terminal, cd to parent directory where you want your clone to be, then
+   git clone https://github.com/<your_github_username>/remix.git
+   cd remix
 
-    # if you are making *any* code changes, make sure to checkout the dev branch
-    git checkout dev
-    ```
+   # if you are making *any* code changes, make sure to checkout the dev branch
+   git checkout dev
+   ```
 
-3.  Install dependencies by running `yarn`. Remix uses [`yarn` (version 1)][classic.yarnpkg-1], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
+3. Install dependencies by running `yarn`. Remix uses [`yarn` (version 1)][classic.yarnpkg-1], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
 
-4.  Verify you've got everything set up for local development by running `yarn test`
+4. Verify you've got everything set up for local development by running `yarn test`
 
 ## Think You Found a Bug?
 

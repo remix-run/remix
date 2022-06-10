@@ -13,8 +13,8 @@ In order for Remix to run your app in both the server and browser environments, 
 
 The Remix compiler will automatically remove server code from the browser bundles. Our strategy is actually pretty straightforward, but requires you to follow some rules.
 
-1.  It creates a "proxy" module in front of your route module
-2.  The proxy module only imports the browser specific exports
+1. It creates a "proxy" module in front of your route module
+2. The proxy module only imports the browser specific exports
 
 Consider a route module that exports `loader`, `meta`, and a component:
 

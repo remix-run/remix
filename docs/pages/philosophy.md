@@ -9,10 +9,10 @@ We've worked on a lot of different types of websites: static sites for credit ca
 
 The Remix philosophy can be summed up in four points:
 
-1.  Embrace the server/client model, including separation of source code from content/data.
-2.  Work with, not against, the foundations of the web: Browsers, HTTP, and HTML. It’s always been good and it's gotten _really good_ in the last few years.
-3.  Use JavaScript to augment the user experience by emulating browser behavior.
-4.  Don't over-abstract the underlying technologies
+1. Embrace the server/client model, including separation of source code from content/data.
+2. Work with, not against, the foundations of the web: Browsers, HTTP, and HTML. It’s always been good and it's gotten _really good_ in the last few years.
+3. Use JavaScript to augment the user experience by emulating browser behavior.
+4. Don't over-abstract the underlying technologies
 
 ## Server/Client Model
 
@@ -110,13 +110,13 @@ While most recent frameworks only have read APIs for data, Remix has both read a
 
 Adding JavaScript allows Remix to speed up the user experience in two ways on a page transition:
 
-1.  Not downloading and evaluating JavaScript and CSS assets
-2.  Only fetching data for the parts of the layout that change
+1. Not downloading and evaluating JavaScript and CSS assets
+2. Only fetching data for the parts of the layout that change
 
 Also, with JavaScript on the page, Remix can provide the developer with APIs to make the UX nicer on page transitions:
 
-1.  Add nicer pending UI than the browser's spinning favicon
-2.  Add optimistic UI on data actions (create, read, update, delete, etc.)
+1. Add nicer pending UI than the browser's spinning favicon
+2. Add optimistic UI on data actions (create, read, update, delete, etc.)
 
 Finally, since data mutation is built into Remix, it knows when to refetch data that could have been changed after a mutation, ensuring different parts of your page don’t get out of sync.
 

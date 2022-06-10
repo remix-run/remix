@@ -74,8 +74,8 @@ In HTML, forms can post to any URL with the action prop and the app will navigat
 
 In Remix the action defaults to the route that the form is rendered in, making it easy to co-locate the UI and the server code that handles it. Developers often wonder how you can handle multiple actions in this scenario. You have two choices:
 
-1.  Send a form field to determine the action you want to take
-2.  Post to a different route and redirect back to the original
+1. Send a form field to determine the action you want to take
+2. Post to a different route and redirect back to the original
 
 We find option (1) to be the simplest because you don't have to mess around with sessions to get validation errors back to the UI.
 

@@ -31,15 +31,15 @@ The max-age tells the user's browser to cache this for 300 seconds, or 5 minutes
 
 The s-maxage tells the CDN to cache it for an hour. Here's what it looks like when the first person visits our website:
 
-1.  Request comes in to the website, which is really the CDN
-2.  CDN doesn't have the document cached, so it makes a request to our server (the "origin server").
-3.  Our server builds the page and sends it to the CDN
-4.  The CDN caches it and sends it to the visitor.
+1. Request comes in to the website, which is really the CDN
+2. CDN doesn't have the document cached, so it makes a request to our server (the "origin server").
+3. Our server builds the page and sends it to the CDN
+4. The CDN caches it and sends it to the visitor.
 
 Now, when the next person visits our page, it looks like this:
 
-1.  Request comes to the CDN
-2.  CDN has the document cached already and sends it right away without ever touching our origin server!
+1. Request comes to the CDN
+2. CDN has the document cached already and sends it right away without ever touching our origin server!
 
 We have a lot more to say about caching in the [CDN Caching][1] guide, make sure to read it sometime.
 
