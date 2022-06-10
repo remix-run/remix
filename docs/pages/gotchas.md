@@ -12,9 +12,7 @@ This document should help you get over these bumps.
 
 You may run into this strange error in the browser. It almost always means that server code made it into browser bundles.
 
-```
-TypeError: Cannot read properties of undefined (reading 'root')
-```
+    TypeError: Cannot read properties of undefined (reading 'root')
 
 For example, you can't import "fs-extra" directly into a route module:
 
@@ -57,7 +55,7 @@ Even better, send a PR to the project to add `"sideEffects": false` to their pac
 
 Similarly, you may run into the same error if you call a function at the top-level scope of your route module that depends on server-only code.
 
-For example, [Remix upload handlers like `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler`](../api/remix#uploadhandler) use Node globals under the hood and should only be called on the server. You can call either of these functions in a `*.server.js` or `*.server.ts` file, or you can move them into your route's `action` or `loader` function.
+For example, [Remix upload handlers like `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler`][1] use Node globals under the hood and should only be called on the server. You can call either of these functions in a `*.server.js` or `*.server.ts` file, or you can move them into your route's `action` or `loader` function.
 
 So instead of doing:
 
@@ -99,10 +97,8 @@ When you import a third party module, Remix checks the `package.json` of that pa
 
 You may try importing an ESM-only package into your app and see an error like this when server rendering:
 
-```
-Error [ERR_REQUIRE_ESM]: require() of ES Module /app/node_modules/dot-prop/index.js from /app/project/build/index.js not supported.
-Instead change the require of /app/project/node_modules/dot-prop/index.js in /app/project/build/index.js to a dynamic import() which is available in all CommonJS modules.
-```
+    Error [ERR_REQUIRE_ESM]: require() of ES Module /app/node_modules/dot-prop/index.js from /app/project/build/index.js not supported.
+    Instead change the require of /app/project/node_modules/dot-prop/index.js in /app/project/build/index.js to a dynamic import() which is available in all CommonJS modules.
 
 To fix it, add the ESM package to the `serverDependenciesToBundle` option in your `remix.config.js` file.
 
@@ -159,10 +155,10 @@ This will work for all JS environments (Node.js, Deno, Workers, etc.).
 
 You may run into this warning in the browser:
 
-```
-Warning: Did not expect server HTML to contain a <script> in <html>.
-```
+    Warning: Did not expect server HTML to contain a <script> in <html>.
 
 This is a hydration warning from React, and is most likely due to one of your browser extensions injecting scripts into the server-rendered HTML, creating a difference with the resulting HTML.
 
 Check out the page in incognito mode, the warning should disappear.
+
+[1]: ../api/remix#uploadhandler

@@ -15,7 +15,7 @@ When it comes to open source, there are many different kinds of contributions th
 
 If you'd like to contribute something—whether it's a bug fix to scratch your own itch or a typo in the docs—we'd be happy to have your contribution. We need you to "sign" a contributor license agreement (CLA) first that assigns us ownership so we are able to include it in this software.
 
-When you start a pull request, the remix-cla-bot will prompt you to review the [CLA](https://github.com/remix-run/remix/blob/main/CLA.md) and sign it by adding your name to `contributors.yml`.
+When you start a pull request, the remix-cla-bot will prompt you to review the [CLA][github-1] and sign it by adding your name to `contributors.yml`.
 
 ## Setup
 
@@ -26,24 +26,26 @@ Before you can contribute to the codebase, you will need to fork the repo. This 
 
 The following steps will get you setup to contribute changes to this repo:
 
-1. Fork the repo (click the <kbd>Fork</kbd> button at the top right of [this page](https://github.com/remix-run/remix))
-2. Clone your fork locally
+1.  Fork the repo (click the <kbd>Fork</kbd> button at the top right of [this page][github-2])
 
-   ```bash
-   # in a terminal, cd to parent directory where you want your clone to be, then
-   git clone https://github.com/<your_github_username>/remix.git
-   cd remix
+2.  Clone your fork locally
 
-   # if you are making *any* code changes, make sure to checkout the dev branch
-   git checkout dev
-   ```
+    ```bash
+    # in a terminal, cd to parent directory where you want your clone to be, then
+    git clone https://github.com/<your_github_username>/remix.git
+    cd remix
 
-3. Install dependencies by running `yarn`. Remix uses [`yarn` (version 1)](https://classic.yarnpkg.com/lang/en/docs/install), so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
-4. Verify you've got everything set up for local development by running `yarn test`
+    # if you are making *any* code changes, make sure to checkout the dev branch
+    git checkout dev
+    ```
+
+3.  Install dependencies by running `yarn`. Remix uses [`yarn` (version 1)][classic.yarnpkg-1], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
+
+4.  Verify you've got everything set up for local development by running `yarn test`
 
 ## Think You Found a Bug?
 
-Please send a PR with a failing test. There are instructions in [`integration/bug-report-test.ts`](https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts)
+Please send a PR with a failing test. There are instructions in [`integration/bug-report-test.ts`][github-3]
 
 ## Proposing New or Changed API?
 
@@ -53,7 +55,7 @@ But hey, who are we to tell you how to spend your time? Go ahead and build the f
 
 ## Issue Not Getting Attention?
 
-If you need a bug fixed and nobody is fixing it, your best bet is to provide a fix for it and make a [pull request](https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request). Open source code belongs to all of us, and it's all of our responsibility to push it forward.
+If you need a bug fixed and nobody is fixing it, your best bet is to provide a fix for it and make a [pull request][help.github-1]. Open source code belongs to all of us, and it's all of our responsibility to push it forward.
 
 ## Making a Pull Request?
 
@@ -78,9 +80,7 @@ The integration tests, and the primary tests can be run in parallel using `npm-r
 
 We also support watch plugins for project, file, and test filtering. To filter things down, you can use a combination of `--testNamePattern`, `--testPathPattern`, and `--selectProjects`. For example:
 
-```
-yarn test:primary --selectProjects react --testPathPattern transition --testNamePattern "initial values"
-```
+    yarn test:primary --selectProjects react --testPathPattern transition --testNamePattern "initial values"
 
 We also have watch mode plugins for these. So, you can run `yarn test:primary --watch` and hit `w` to see the available watch commands.
 
@@ -96,7 +96,7 @@ All commits that change or add to the API must be done in a pull request that al
 
 Remix uses a monorepo to host code for multiple packages. These packages live in the `packages` directory.
 
-We use [Yarn workspaces](https://classic.yarnpkg.com/en/docs/workspaces/) to manage installation of dependencies and running various scripts. To get everything installed, make sure you have [Yarn (version 1) installed](https://classic.yarnpkg.com/lang/en/docs/install), and then run `yarn` or `yarn install` from the repo root.
+We use [Yarn workspaces][classic.yarnpkg-2] to manage installation of dependencies and running various scripts. To get everything installed, make sure you have [Yarn (version 1) installed][classic.yarnpkg-1], and then run `yarn` or `yarn install` from the repo root.
 
 ### Building
 
@@ -132,9 +132,14 @@ yarn test --selectProjects express
 
 This repo maintains separate branches for different purposes. They will look something like this:
 
-```
-- main   > the most recent release and current docs
-- dev    > code under active development between stable releases
-```
+    - main   > the most recent release and current docs
+    - dev    > code under active development between stable releases
 
 There may be other branches for various features and experimentation, but all of the magic happens from these branches.
+
+[github-1]: https://github.com/remix-run/remix/blob/main/CLA.md
+[github-2]: https://github.com/remix-run/remix
+[classic.yarnpkg-1]: https://classic.yarnpkg.com/lang/en/docs/install
+[github-3]: https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts
+[help.github-1]: https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request
+[classic.yarnpkg-2]: https://classic.yarnpkg.com/en/docs/workspaces/

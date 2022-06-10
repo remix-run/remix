@@ -13,8 +13,8 @@ In order for Remix to run your app in both the server and browser environments, 
 
 The Remix compiler will automatically remove server code from the browser bundles. Our strategy is actually pretty straightforward, but requires you to follow some rules.
 
-1. It creates a "proxy" module in front of your route module
-2. The proxy module only imports the browser specific exports
+1.  It creates a "proxy" module in front of your route module
+2.  The proxy module only imports the browser specific exports
 
 Consider a route module that exports `loader`, `meta`, and a component:
 
@@ -160,10 +160,7 @@ export function removeTrailingSlash(loader) {
   return function (arg) {
     const { request } = arg;
     const url = new URL(request.url);
-    if (
-      url.pathname !== "/" &&
-      url.pathname.endsWith("/")
-    ) {
+    if (url.pathname !== "/" && url.pathname.endsWith("/")) {
       return redirect(request.url.slice(0, -1), {
         status: 308,
       });
@@ -317,9 +314,7 @@ Another common case is code that calls browser-only APIs while rendering. When s
 
 ```js bad lines=2
 function useLocalStorage(key) {
-  const [state, setState] = useState(
-    localStorage.getItem(key)
-  );
+  const [state, setState] = useState(localStorage.getItem(key));
 
   const setWithLocalStorage = (nextState) => {
     setState(nextState);
@@ -373,9 +368,7 @@ const canUseDOM = !!(
   window.document.createElement
 );
 
-const useLayoutEffect = canUseDOM
-  ? React.useLayoutEffect
-  : () => {};
+const useLayoutEffect = canUseDOM ? React.useLayoutEffect : () => {};
 ```
 
 ### Third-Party Module Side Effects
@@ -384,4 +377,6 @@ Some third party libraries have their own module side effects that are incompati
 
 These libraries are incompatible with server rendering in React and therefore incompatible with Remix. Fortunately, very few third party libraries in the React ecosystem do this.
 
-We recommend finding an alternative. But if you can't, we recommend using [patch-package](https://www.npmjs.com/package/patch-package) to fix it up in your app.
+We recommend finding an alternative. But if you can't, we recommend using [patch-package][www.npmjs-1] to fix it up in your app.
+
+[www.npmjs-1]: https://www.npmjs.com/package/patch-package

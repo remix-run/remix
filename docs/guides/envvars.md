@@ -22,13 +22,13 @@ If your experience with web development is primarily with the JS frameworks in t
 
 Environment variables on your server will be handled by your host, for example:
 
-- [Netlify](https://docs.netlify.com/configure-builds/environment-variables/)
-- [Fly.io](https://fly.io/docs/reference/secrets/)
-- [Cloudflare Workers](https://developers.cloudflare.com/workers/platform/environment-variables)
-- [Vercel](https://vercel.com/docs/environment-variables)
-- [Architect](https://arc.codes/docs/en/reference/cli/env)
+- [Netlify][docs.netlify-1]
+- [Fly.io][fly-1]
+- [Cloudflare Workers][developers.cloudflare-1]
+- [Vercel][vercel-1]
+- [Architect][arc-1]
 
-If your host doesn't have any conventions for environment variables during development, the `remix dev` server can help out as it provides built-in support for [dotenv](https://www.npmjs.com/package/dotenv).
+If your host doesn't have any conventions for environment variables during development, the `remix dev` server can help out as it provides built-in support for [dotenv][www.npmjs-1].
 
 If you're using the `remix dev` server, you can do this very quickly:
 
@@ -38,9 +38,7 @@ touch .env
 
 Edit your `.env` file.
 
-```
-SOME_SECRET=super-secret
-```
+    SOME_SECRET=super-secret
 
 Then, when running `remix dev` you will be able to access those values in your loaders/actions:
 
@@ -58,86 +56,87 @@ Note that `dotenv` is only for development, you should not use it in production,
 
 Some folks ask if Remix can let them put environment variables into browser bundles. It's a common strategy in build-heavy frameworks. However, this approach is a problem for a few reasons:
 
-1. It's not really an environment variable. You have to know which server you're deploying to at build time.
-2. You can't change the values without a rebuild and redeploy.
-3. It's easy to accidentally leak secrets into publicly accessible files!
+1.  It's not really an environment variable. You have to know which server you're deploying to at build time.
+2.  You can't change the values without a rebuild and redeploy.
+3.  It's easy to accidentally leak secrets into publicly accessible files!
 
 Instead we recommend keeping all of your environment variables on the server (all the server secrets as well as the stuff your JavaScript in the browser needs) and exposing them to your browser code through `window.ENV`. Since you always have a server, you don't need this information in your bundle, your server can provide the client-side environment variables in the loaders.
 
-1. **Return `ENV` for the client from the root loader** - Inside your loader you can access your server's environment variables. Loaders only run on the server and are never bundled into your client-side JavaScript.
+1.  **Return `ENV` for the client from the root loader** - Inside your loader you can access your server's environment variables. Loaders only run on the server and are never bundled into your client-side JavaScript.
 
-   ```tsx [3-6]
-   export async function loader() {
-     return json({
-       ENV: {
-         STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
-         FAUNA_DB_URL: process.env.FAUNA_DB_URL,
-       },
-     });
-   }
+    ```tsx [3-6]
+    export async function loader() {
+      return json({
+        ENV: {
+          STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
+          FAUNA_DB_URL: process.env.FAUNA_DB_URL,
+        },
+      });
+    }
 
-   export function Root() {
-     return (
-       <html lang="en">
-         <head>
-           <Meta />
-           <Links />
-         </head>
-         <body>
-           <Outlet />
-           <Scripts />
-         </body>
-       </html>
-     );
-   }
-   ```
+    export function Root() {
+      return (
+        <html lang="en">
+          <head>
+            <Meta />
+            <Links />
+          </head>
+          <body>
+            <Outlet />
+            <Scripts />
+          </body>
+        </html>
+      );
+    }
+    ```
 
-2. **Put `ENV` on window** - This is how we hand off the values from the server to the client. Make sure to put this before `<Scripts/>`
+2.  **Put `ENV` on window** - This is how we hand off the values from the server to the client. Make sure to put this before `<Scripts/>`
 
-   ```tsx [10, 19-25]
-   export async function loader() {
-     return json({
-       ENV: {
-         STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
-       },
-     });
-   }
+    ```tsx [10, 19-25]
+    export async function loader() {
+      return json({
+        ENV: {
+          STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
+        },
+      });
+    }
 
-   export function Root() {
-     const data = useLoaderData();
-     return (
-       <html lang="en">
-         <head>
-           <Meta />
-           <Links />
-         </head>
-         <body>
-           <Outlet />
-           <script
-             dangerouslySetInnerHTML={{
-               __html: `window.ENV = ${JSON.stringify(
-                 data.ENV
-               )}`,
-             }}
-           />
-           <Scripts />
-         </body>
-       </html>
-     );
-   }
-   ```
+    export function Root() {
+      const data = useLoaderData();
+      return (
+        <html lang="en">
+          <head>
+            <Meta />
+            <Links />
+          </head>
+          <body>
+            <Outlet />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `window.ENV = ${JSON.stringify(data.ENV)}`,
+              }}
+            />
+            <Scripts />
+          </body>
+        </html>
+      );
+    }
+    ```
 
-3. **Access the values**
+3.  **Access the values**
 
-   ```tsx [6-8]
-   import { loadStripe } from "@stripe/stripe-js";
+    ```tsx [6-8]
+    import { loadStripe } from "@stripe/stripe-js";
 
-   export async function redirectToStripeCheckout(
-     sessionId
-   ) {
-     const stripe = await loadStripe(
-       window.ENV.STRIPE_PUBLIC_KEY
-     );
-     return stripe.redirectToCheckout({ sessionId });
-   }
-   ```
+    export async function redirectToStripeCheckout(sessionId) {
+      const stripe = await loadStripe(window.ENV.STRIPE_PUBLIC_KEY);
+      return stripe.redirectToCheckout({ sessionId });
+    }
+    ```
+
+[docs.netlify-1]: https://docs.netlify.com/configure-builds/environment-variables/
+[fly-1]: https://fly.io/docs/reference/secrets/
+[developers.cloudflare-1]: https://developers.cloudflare.com/workers/platform/environment-variables
+[vercel-1]: https://vercel.com/docs/environment-variables
+[arc-1]: https://arc.codes/docs/en/reference/cli/env
+[www.npmjs-1]: https://www.npmjs.com/package/dotenv

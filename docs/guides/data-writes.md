@@ -8,16 +8,16 @@ Data writes (some people call these mutations) in Remix are built on top of two 
 
 When the user submits a form, Remix will:
 
-1. Call the action for the form
-2. Reload all of the data for all of the routes on the page
+1.  Call the action for the form
+2.  Reload all of the data for all of the routes on the page
 
 Many times people reach for global state management libraries in React like redux, data libs like apollo, and fetch wrappers like React Query in order to help manage getting server state into your components and keeping the UI in sync with it when the user changes it. Remix's HTML based API replaces the majority of use cases for these tools. Remix knows how to load the data as well as how to revalidate it after it changes when you use standard HTML APIs.
 
 There are a few ways to call an action and get the routes to revalidate:
 
-- [`<Form>`](../api/remix#form)
-- [`useSubmit()`](../api/remix#usesubmit)
-- [`useFetcher()`](../api/remix#usefetcher)
+- [`<Form>`][1]
+- [`useSubmit()`][2]
+- [`useFetcher()`][3]
 
 This guide only covers `<Form>`. We suggest you read the docs for the other two after this guide to get a sense of how to use them. Most of this guide applies to `useSubmit` but `useFetcher` is a bit different.
 
@@ -83,10 +83,8 @@ If you have more fields, the browser will add them:
 
 Depending on which checkboxes the user clicks, the browser will navigate to URLs like:
 
-```
-/search?brand=nike&color=black
-/search?brand=nike&brand=reebok&color=white
-```
+    /search?brand=nike&color=black
+    /search?brand=nike&brand=reebok&color=white
 
 ### HTML Form POST
 
@@ -133,11 +131,11 @@ If this is you, you're going to be delighted when you see just how easy mutation
 
 We're going to build a mutation from start to finish with:
 
-1. JavaScript optional
-2. Validation
-3. Error handling
-4. Progressively enhanced loading indicators
-5. Progressively enhanced error display
+1.  JavaScript optional
+2.  Validation
+3.  Error handling
+4.  Progressively enhanced loading indicators
+5.  Progressively enhanced error display
 
 You use the Remix `<Form>` component for data mutations the same way you use HTML forms. The difference is now you get access to pending form state to build a nicer user experience: like contextual loading indicators and "optimistic UI".
 
@@ -180,9 +178,7 @@ import type { ActionFunction } from "@remix-run/node"; // or "@remix-run/cloudfl
 import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 // Note the "action" export name, this will handle our form POST
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
   const project = await createProject(formData);
   return redirect(`/projects/${project.id}`);
@@ -212,9 +208,7 @@ const [errors, project] = await createProject(formData);
 If there are validation errors, we want to go back to the form and display them.
 
 ```tsx [5,7-10]
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
   const [errors, project] = await createProject(formData);
 
@@ -233,9 +227,7 @@ Just like `useLoaderData` returns the values from the `loader`, `useActionData` 
 import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { useActionData } from "@remix-run/react";
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action: ActionFunction = async ({ request }) => {
   // ...
 };
 
@@ -256,9 +248,7 @@ export default function NewProject() {
       </p>
 
       {actionData?.errors.name ? (
-        <p style={{ color: "red" }}>
-          {actionData.errors.name}
-        </p>
+        <p style={{ color: "red" }}>{actionData.errors.name}</p>
       ) : null}
 
       <p>
@@ -273,9 +263,7 @@ export default function NewProject() {
       </p>
 
       {actionData?.errors.description ? (
-        <p style={{ color: "red" }}>
-          {actionData.errors.description}
-        </p>
+        <p style={{ color: "red" }}>{actionData.errors.description}</p>
       ) : null}
 
       <p>
@@ -314,17 +302,13 @@ export default function NewProject() {
 
 If you don't have the time or drive to do the rest of the job here, use `<Form reloadDocument>`. This lets the browser continue to handle the pending UI state (spinner in the favicon of the tab, progress bar in the address bar, etc.) If you simply use `<Form>` without implementing pending UI, the user will have no idea anything is happening when they submit a form.
 
-<docs-info>We recommend always using capital-F Form, and if you want to let the browser handle the pending UI, use the <code>&lt;Form reloadDocument&gt;</code> prop.</docs-info>
+<docs-info>We recommend always using capital-F Form, and if you want to let the browser handle the pending UI, use the <code>\<Form reloadDocument></code> prop.</docs-info>
 
 Now let's add some pending UI so the user has a clue something happened when they submit. There's a hook called `useTransition`. When there is a pending form submission, Remix will give you the serialized version of the form as a <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData">`FormData`</a> object. You'll be most interested in the <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData/get">`formData.get()`</a> method..
 
 ```tsx [5, 13, 19, 65-67]
 import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import {
-  useActionData,
-  Form,
-  useTransition,
-} from "@remix-run/react";
+import { useActionData, Form, useTransition } from "@remix-run/react";
 
 // ...
 
@@ -336,28 +320,20 @@ export default function NewProject() {
 
   return (
     <Form method="post">
-      <fieldset
-        disabled={transition.state === "submitting"}
-      >
+      <fieldset disabled={transition.state === "submitting"}>
         <p>
           <label>
             Name:{" "}
             <input
               name="name"
               type="text"
-              defaultValue={
-                actionData
-                  ? actionData.values.name
-                  : undefined
-              }
+              defaultValue={actionData ? actionData.values.name : undefined}
             />
           </label>
         </p>
 
         {actionData && actionData.errors.name ? (
-          <p style={{ color: "red" }}>
-            {actionData.errors.name}
-          </p>
+          <p style={{ color: "red" }}>{actionData.errors.name}</p>
         ) : null}
 
         <p>
@@ -367,25 +343,19 @@ export default function NewProject() {
             <textarea
               name="description"
               defaultValue={
-                actionData
-                  ? actionData.values.description
-                  : undefined
+                actionData ? actionData.values.description : undefined
               }
             />
           </label>
         </p>
 
         {actionData && actionData.errors.description ? (
-          <p style={{ color: "red" }}>
-            {actionData.errors.description}
-          </p>
+          <p style={{ color: "red" }}>{actionData.errors.description}</p>
         ) : null}
 
         <p>
           <button type="submit">
-            {transition.state === "submitting"
-              ? "Creating..."
-              : "Create"}
+            {transition.state === "submitting" ? "Creating..." : "Create"}
           </button>
         </p>
       </fieldset>
@@ -438,24 +408,16 @@ export default function NewProject() {
 
   return (
     <Form method="post">
-      <fieldset
-        disabled={transition.state === "submitting"}
-      >
+      <fieldset disabled={transition.state === "submitting"}>
         <p>
           <label>
             Name:{" "}
             <input
               name="name"
               type="text"
-              defaultValue={
-                actionData
-                  ? actionData.values.name
-                  : undefined
-              }
+              defaultValue={actionData ? actionData.values.name : undefined}
               style={{
-                borderColor: actionData?.errors.name
-                  ? "red"
-                  : "",
+                borderColor: actionData?.errors.name ? "red" : "",
               }}
             />
           </label>
@@ -476,9 +438,7 @@ export default function NewProject() {
               name="description"
               defaultValue={actionData?.values.description}
               style={{
-                borderColor: actionData?.errors.description
-                  ? "red"
-                  : "",
+                borderColor: actionData?.errors.description ? "red" : "",
               }}
             />
           </label>
@@ -491,9 +451,7 @@ export default function NewProject() {
 
         <p>
           <button type="submit">
-            {transition.state === "submitting"
-              ? "Creating..."
-              : "Create"}
+            {transition.state === "submitting" ? "Creating..." : "Create"}
           </button>
         </p>
       </fieldset>
@@ -516,9 +474,16 @@ From your components perspective, all that happened was the `useTransition` hook
 
 ## See also
 
-- [Form](../api/remix#form)
-- [useTransition](../api/remix#usetransition)
-- [Actions](../api/conventions#action)
-- [Loaders](../api/conventions#loader)
-- [`useSubmit()`](../api/remix#usesubmit)
-- [`useFetcher()`](../api/remix#usefetcher)
+- [Form][1]
+- [useTransition][4]
+- [Actions][5]
+- [Loaders][6]
+- [`useSubmit()`][2]
+- [`useFetcher()`][3]
+
+[1]: ../api/remix#form
+[2]: ../api/remix#usesubmit
+[3]: ../api/remix#usefetcher
+[4]: ../api/remix#usetransition
+[5]: ../api/conventions#action
+[6]: ../api/conventions#loader

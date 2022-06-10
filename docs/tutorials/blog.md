@@ -13,14 +13,14 @@ This tutorial uses TypeScript. Remix can definitely be used without TypeScript. 
 
 ## Prerequisites
 
-Click this button to create a [Gitpod](https://gitpod.io) workspace with the project set up and ready to run in VS Code or JetBrains either directly in the browser or on the desktop.
+Click this button to create a [Gitpod][gitpod-1] workspace with the project set up and ready to run in VS Code or JetBrains either directly in the browser or on the desktop.
 
-[![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/remix-run/indie-stack)
+[![Gitpod Ready-to-Code][img.shields-1]][gitpod-2]
 
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
-- [Node.js](https://nodejs.org) 14 or greater
-- [npm](https://www.npmjs.com) 7 or greater
+- [Node.js][nodejs-1] 14 or greater
+- [npm][www.npmjs-1] 7 or greater
 - A code editor
 
 ## Creating the project
@@ -33,17 +33,15 @@ If you want to follow this tutorial locally on your own computer, it is importan
 npx create-remix --template remix-run/indie-stack blog-tutorial
 ```
 
-```
-? Do you want me to run `npm install`? Yes
-...
-? Do you want to run the build/tests/etc to verify things are setup properly? Yes
-```
+    ? Do you want me to run `npm install`? Yes
+    ...
+    ? Do you want to run the build/tests/etc to verify things are setup properly? Yes
 
 <docs-info>Running the verify script is optional, but handy.</docs-info>
 
-You can read more about the stacks available in [the stacks docs](/pages/stacks).
+You can read more about the stacks available in [the stacks docs][1].
 
-We're using [the Indie stack](https://github.com/remix-run/indie-stack), which is a full application ready to deploy to [fly.io](https://fly.io). This includes development tools as well as production-ready authentication and persistence. Don't worry if you're unfamiliar with the tools used, we'll walk you through things as we go.
+We're using [the Indie stack][github-1], which is a full application ready to deploy to [fly.io][fly-1]. This includes development tools as well as production-ready authentication and persistence. Don't worry if you're unfamiliar with the tools used, we'll walk you through things as we go.
 
 💿 Now, open the project that was generated in your preferred editor and check the instructions in the `README.md` file. Feel free to read over this. We'll get to the deployment bit later in the tutorial.
 
@@ -53,7 +51,7 @@ We're using [the Indie stack](https://github.com/remix-run/indie-stack), which i
 npm run dev
 ```
 
-💿 Open up [http://localhost:3000](http://localhost:3000), the app should be running.
+💿 Open up [http://localhost:3000][localhost:3000-1], the app should be running.
 
 If you want, take a minute and poke around the UI a bit. Feel free to create an account and create/delete some notes to get an idea of what's available in the UI out of the box.
 
@@ -67,10 +65,7 @@ Go ahead and copy/paste this:
 
 ```tsx
 <div className="mx-auto mt-16 max-w-7xl text-center">
-  <Link
-    to="/posts"
-    className="text-xl text-blue-600 underline"
-  >
+  <Link to="/posts" className="text-xl text-blue-600 underline">
     Blog Posts
   </Link>
 </div>
@@ -79,13 +74,14 @@ Go ahead and copy/paste this:
 You can put it anywhere you like. I stuck it right above the icons of all the technologies used in the stack:
 
 <!-- TODO: once the website can deploy properly, update this to use our self-hosted version of this image -->
+
 <!-- ![Screenshot of the app showing the blog post link](/blog-tutorial/blog-post-link.png) -->
 
-![Screenshot of the app showing the blog post link](https://user-images.githubusercontent.com/1500684/160208939-34fe20ed-3146-4f4b-a68a-d82284339c47.png)
+![Screenshot of the app showing the blog post link][user-images.githubusercontent-1]
 
 <docs-info>You may have noticed we're using <a href="https://tailwindcss.com">tailwind</a> classes.</docs-info>
 
-The Remix Indie stack has [tailwind](https://tailwindcss.com) support pre-configured. If you'd prefer to not use tailwind, you're welcome to remove it and use something else. Learn more about your styling options with Remix in [the styling guide](/guides/styling).
+The Remix Indie stack has [tailwind][tailwindcss-1] support pre-configured. If you'd prefer to not use tailwind, you're welcome to remove it and use something else. Learn more about your styling options with Remix in [the styling guide][2].
 
 Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
@@ -175,10 +171,7 @@ export default function Posts() {
       <ul>
         {posts.map((post) => (
           <li key={post.slug}>
-            <Link
-              to={post.slug}
-              className="text-blue-600 underline"
-            >
+            <Link to={post.slug} className="text-blue-600 underline">
               {post.title}
             </Link>
           </li>
@@ -229,10 +222,7 @@ export default function Posts() {
       <ul>
         {posts.map((post) => (
           <li key={post.slug}>
-            <Link
-              to={post.slug}
-              className="text-blue-600 underline"
-            >
+            <Link to={post.slug} className="text-blue-600 underline">
               {post.title}
             </Link>
           </li>
@@ -303,7 +293,7 @@ export const loader = async () => {
 
 ## Pulling from a data source
 
-With the Indie Stack, we've got a SQLite database already set up and configured for us, so let's update our Database Schema to handle SQLite. We're using [Prisma](https://prisma.io) to interact with the database, so we'll update that schema and Prisma will take care of updating our database to match the schema for us (as well as generating and running the necessary SQL commands for the migration).
+With the Indie Stack, we've got a SQLite database already set up and configured for us, so let's update our Database Schema to handle SQLite. We're using [Prisma][prisma-1] to interact with the database, so we'll update that schema and Prisma will take care of updating our database to match the schema for us (as well as generating and running the necessary SQL commands for the migration).
 
 <docs-info>You do not have to use Prisma when using Remix. Remix works great with whatever existing database or data persistence services you're currently using.</docs-info>
 
@@ -383,9 +373,7 @@ for (const post of posts) {
 
 Great, let's get those posts into the database with the seed script:
 
-```
-npx prisma db seed
-```
+    npx prisma db seed
 
 💿 Now update the `app/models/post.server.ts` file to read from the SQLite database:
 
@@ -411,10 +399,8 @@ With the server up and running again, you should be able to go to `http://localh
 
 Now let's make a route to actually view the post. We want these URLs to work:
 
-```
-/posts/my-first-post
-/posts/90s-mixtape
-```
+    /posts/my-first-post
+    /posts/90s-mixtape
 
 Instead of creating a route for every single one of our posts, we can use a "dynamic segment" in the url. Remix will parse and pass to us so we can look up the post dynamically.
 
@@ -428,9 +414,7 @@ touch app/routes/posts/\$slug.tsx
 export default function PostSlug() {
   return (
     <main className="mx-auto max-w-4xl">
-      <h1 className="my-6 border-b-2 text-center text-3xl">
-        Some Post
-      </h1>
+      <h1 className="my-6 border-b-2 text-center text-3xl">Some Post</h1>
     </main>
   );
 }
@@ -469,9 +453,7 @@ import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader: LoaderFunction = async ({ params }) => {
   return json({ slug: params.slug });
 };
 ```
@@ -505,9 +487,7 @@ import { useLoaderData } from "@remix-run/react";
 
 import { getPost } from "~/models/post.server";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader: LoaderFunction = async ({ params }) => {
   const post = await getPost(params.slug);
   return json({ post });
 };
@@ -516,9 +496,7 @@ export default function PostSlug() {
   const { post } = useLoaderData();
   return (
     <main className="mx-auto max-w-4xl">
-      <h1 className="my-6 border-b-2 text-center text-3xl">
-        {post.title}
-      </h1>
+      <h1 className="my-6 border-b-2 text-center text-3xl">{post.title}</h1>
     </main>
   );
 }
@@ -539,9 +517,7 @@ import { getPost } from "~/models/post.server";
 
 type LoaderData = { post: Post };
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader: LoaderFunction = async ({ params }) => {
   invariant(params.slug, `params.slug is required`);
 
   const post = await getPost(params.slug);
@@ -554,9 +530,7 @@ export default function PostSlug() {
   const { post } = useLoaderData() as LoaderData;
   return (
     <main className="mx-auto max-w-4xl">
-      <h1 className="my-6 border-b-2 text-center text-3xl">
-        {post.title}
-      </h1>
+      <h1 className="my-6 border-b-2 text-center text-3xl">{post.title}</h1>
     </main>
   );
 }
@@ -588,9 +562,7 @@ import { getPost } from "~/models/post.server";
 
 type LoaderData = { post: Post; html: string };
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader: LoaderFunction = async ({ params }) => {
   invariant(params.slug, `params.slug is required`);
 
   const post = await getPost(params.slug);
@@ -604,9 +576,7 @@ export default function PostSlug() {
   const { post, html } = useLoaderData() as LoaderData;
   return (
     <main className="mx-auto max-w-4xl">
-      <h1 className="my-6 border-b-2 text-center text-3xl">
-        {post.title}
-      </h1>
+      <h1 className="my-6 border-b-2 text-center text-3xl">{post.title}</h1>
       <div dangerouslySetInnerHTML={{ __html: html }} />
     </main>
   );
@@ -660,27 +630,20 @@ export default function PostAdmin() {
   const { posts } = useLoaderData() as LoaderData;
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">
-        Blog Admin
-      </h1>
+      <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">Blog Admin</h1>
       <div className="grid grid-cols-4 gap-6">
         <nav className="col-span-4 md:col-span-1">
           <ul>
             {posts.map((post) => (
               <li key={post.slug}>
-                <Link
-                  to={post.slug}
-                  className="text-blue-600 underline"
-                >
+                <Link to={post.slug} className="text-blue-600 underline">
                   {post.title}
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
-        <main className="col-span-4 md:col-span-3">
-          ...
-        </main>
+        <main className="col-span-4 md:col-span-3">...</main>
       </div>
     </div>
   );
@@ -688,7 +651,7 @@ export default function PostAdmin() {
 ```
 
 You should recognize several of the things we're doing in there from what we've done so far. With that, you should have a decent looking page with the posts on the left and a placeholder on the right.
-Now, if you click on the Admin link, it'll take you to [http://localhost:3000/posts/admin](http://localhost:3000/posts/admin).
+Now, if you click on the Admin link, it'll take you to [http://localhost:3000/posts/admin][localhost:3000-2].
 
 ### Index Routes
 
@@ -722,11 +685,7 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 ```tsx filename=app/routes/posts/admin.tsx lines=[5,42]
 import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import {
-  Link,
-  Outlet,
-  useLoaderData,
-} from "@remix-run/react";
+import { Link, Outlet, useLoaderData } from "@remix-run/react";
 
 import { getPosts } from "~/models/post.server";
 
@@ -742,18 +701,13 @@ export default function PostAdmin() {
   const { posts } = useLoaderData() as LoaderData;
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">
-        Blog Admin
-      </h1>
+      <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">Blog Admin</h1>
       <div className="grid grid-cols-4 gap-6">
         <nav className="col-span-4 md:col-span-1">
           <ul>
             {posts.map((post) => (
               <li key={post.slug}>
-                <Link
-                  to={post.slug}
-                  className="text-blue-600 underline"
-                >
+                <Link to={post.slug} className="text-blue-600 underline">
                   {post.title}
                 </Link>
               </li>
@@ -804,21 +758,13 @@ export default function NewPost() {
       <p>
         <label>
           Post Title:{" "}
-          <input
-            type="text"
-            name="title"
-            className={inputClassName}
-          />
+          <input type="text" name="title" className={inputClassName} />
         </label>
       </p>
       <p>
         <label>
           Post Slug:{" "}
-          <input
-            type="text"
-            name="slug"
-            className={inputClassName}
-          />
+          <input type="text" name="slug" className={inputClassName} />
         </label>
       </p>
       <p>
@@ -884,7 +830,7 @@ export const action = async ({ request }) => {
 
 That's it. Remix (and the browser) will take care of the rest. Click the submit button and watch the sidebar that lists our posts update automatically.
 
-In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and don't forget, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN! [mdn.io/request](https://mdn.io/request) [mdn.io/request.formData](https://mdn.io/request.formData).
+In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and don't forget, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN! [mdn.io/request][mdn-1] [mdn.io/request.formData][mdn-2].
 
 TypeScript is mad again, let's add some types.
 
@@ -911,9 +857,7 @@ import { Form } from "@remix-run/react";
 
 import { createPost } from "~/models/post.server";
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
 
   const title = formData.get("title");
@@ -948,9 +892,7 @@ type ActionData =
       markdown: null | string;
     }
   | undefined;
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action: ActionFunction = async ({ request }) => {
   const formData = await request.formData();
 
   const title = formData.get("title");
@@ -962,9 +904,7 @@ export const action: ActionFunction = async ({
     slug: slug ? null : "Slug is required",
     markdown: markdown ? null : "Markdown is required",
   };
-  const hasErrors = Object.values(errors).some(
-    (errorMessage) => errorMessage
-  );
+  const hasErrors = Object.values(errors).some((errorMessage) => errorMessage);
   if (hasErrors) {
     return json<ActionData>(errors);
   }
@@ -1017,9 +957,7 @@ export default function NewPost() {
         <label htmlFor="markdown">
           Markdown:{" "}
           {errors?.markdown ? (
-            <em className="text-red-600">
-              {errors.markdown}
-            </em>
+            <em className="text-red-600">{errors.markdown}</em>
           ) : null}
         </label>
         <br />
@@ -1050,22 +988,11 @@ TypeScript is still mad, because someone could call our API with non-string valu
 import invariant from "tiny-invariant";
 // ..
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action: ActionFunction = async ({ request }) => {
   // ...
-  invariant(
-    typeof title === "string",
-    "title must be a string"
-  );
-  invariant(
-    typeof slug === "string",
-    "slug must be a string"
-  );
-  invariant(
-    typeof markdown === "string",
-    "markdown must be a string"
-  );
+  invariant(typeof title === "string", "title must be a string");
+  invariant(typeof slug === "string", "slug must be a string");
+  invariant(typeof markdown === "string", "markdown must be a string");
 
   await createPost({ title, slug, markdown });
 
@@ -1075,7 +1002,7 @@ export const action: ActionFunction = async ({
 
 ## Progressive Enhancement
 
-For some real fun, [disable JavaScript](https://developer.chrome.com/docs/devtools/javascript/disable/) in your dev tools and try it out. Because Remix is built on the fundamentals of HTTP and HTML, this whole thing works without JavaScript in the browser 🤯 But that's not the point. What's cool about it is that this means our UI is resilient to network issues. But we really _like_ having JavaScript in the browser and there are a lot of cool things we can do when we've got it, so make sure to re-enable JavaScript before continuing, because we're going to need it to _progressively enhance_ the user experience next.
+For some real fun, [disable JavaScript][developer.chrome-1] in your dev tools and try it out. Because Remix is built on the fundamentals of HTTP and HTML, this whole thing works without JavaScript in the browser 🤯 But that's not the point. What's cool about it is that this means our UI is resilient to network issues. But we really _like_ having JavaScript in the browser and there are a lot of cool things we can do when we've got it, so make sure to re-enable JavaScript before continuing, because we're going to need it to _progressively enhance_ the user experience next.
 
 Let's slow this down and add some "pending UI" to our form.
 
@@ -1083,9 +1010,7 @@ Let's slow this down and add some "pending UI" to our form.
 
 ```tsx filename=app/routes/posts/admin/new.tsx lines=[5-6]
 // ...
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action: ActionFunction = async ({ request }) => {
   // TODO: remove me
   await new Promise((res) => setTimeout(res, 1000));
 
@@ -1098,11 +1023,7 @@ export const action: ActionFunction = async ({
 
 ```tsx filename=app/routes/posts/admin/new.tsx lines=[5,13-14,23,25]
 import { json, redirect } from "@remix-run/node";
-import {
-  Form,
-  useActionData,
-  useTransition,
-} from "@remix-run/react";
+import { Form, useActionData, useTransition } from "@remix-run/react";
 
 // ..
 
@@ -1137,12 +1058,32 @@ That's it for today! Here are some bits of homework to implement if you wanna go
 
 **Update/Delete posts:** make an `/admin/$slug.tsx` page for your posts. This should open an edit page for the post that allows you to update the post or even delete it. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts/$slug.tsx` and `app/routes/posts/admin/new.tsx`. You just gotta put it together.
 
-**Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly and if the tweet is deleted it reverts back to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Optimistic UI guide](/guides/optimistic-ui).
+**Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly and if the tweet is deleted it reverts back to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Optimistic UI guide][3].
 
-**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip, if you want to make it so you're the only one who can make posts, then simply check the user's email in your loaders and actions and if it's not yours redirect them [somewhere](https://www.youtube.com/watch?v=dQw4w9WgXcQ) 😈
+**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip, if you want to make it so you're the only one who can make posts, then simply check the user's email in your loaders and actions and if it's not yours redirect them [somewhere][www.youtube-1] 😈
 
-**Customize the app:** If you're happy with tailwind, keep it around, otherwise, check [the styling guide](/guides/styling) to learn of other options. Remove the `Notes` model and routes, etc. Whatever you want to make this thing yours.
+**Customize the app:** If you're happy with tailwind, keep it around, otherwise, check [the styling guide][2] to learn of other options. Remove the `Notes` model and routes, etc. Whatever you want to make this thing yours.
 
 **Deploy the app:** Check the README of your project. It has instructions you can follow to get your app deployed to Fly.io. Then you can actually start blogging!
 
 We hope you love Remix! 💿 👋
+
+[gitpod-1]: https://gitpod.io
+[gitpod-2]: https://gitpod.io/#https://github.com/remix-run/indie-stack
+[img.shields-1]: https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod
+[nodejs-1]: https://nodejs.org
+[www.npmjs-1]: https://www.npmjs.com
+[1]: /pages/stacks
+[github-1]: https://github.com/remix-run/indie-stack
+[fly-1]: https://fly.io
+[localhost:3000-1]: http://localhost:3000
+[user-images.githubusercontent-1]: https://user-images.githubusercontent.com/1500684/160208939-34fe20ed-3146-4f4b-a68a-d82284339c47.png
+[tailwindcss-1]: https://tailwindcss.com
+[2]: /guides/styling
+[prisma-1]: https://prisma.io
+[localhost:3000-2]: http://localhost:3000/posts/admin
+[mdn-1]: https://mdn.io/request
+[mdn-2]: https://mdn.io/request.formData
+[developer.chrome-1]: https://developer.chrome.com/docs/devtools/javascript/disable/
+[3]: /guides/optimistic-ui
+[www.youtube-1]: https://www.youtube.com/watch?v=dQw4w9WgXcQ

@@ -55,26 +55,24 @@ In Remix, all of these "boxes" are a **Route**, defined by a **Route Module** in
 
 The primary way to define a route is to create a new file in `app/routes/*`. The routes for the UI example above would look something like this:
 
-```
-app
-├── root.jsx
-└── routes
-    ├── accounts.jsx
-    ├── dashboard.jsx
-    ├── expenses.jsx
-    ├── index.jsx
-    ├── reports.jsx
-    ├── sales
-    │   ├── customers.jsx
-    │   ├── deposits.jsx
-    │   ├── index.jsx
-    │   ├── invoices
-    │   │   ├── $invoiceId.jsx
-    │   │   └── index.jsx
-    │   ├── invoices.jsx
-    │   └── subscriptions.jsx
-    └── sales.jsx
-```
+    app
+    ├── root.jsx
+    └── routes
+        ├── accounts.jsx
+        ├── dashboard.jsx
+        ├── expenses.jsx
+        ├── index.jsx
+        ├── reports.jsx
+        ├── sales
+        │   ├── customers.jsx
+        │   ├── deposits.jsx
+        │   ├── index.jsx
+        │   ├── invoices
+        │   │   ├── $invoiceId.jsx
+        │   │   └── index.jsx
+        │   ├── invoices.jsx
+        │   └── subscriptions.jsx
+        └── sales.jsx
 
 - `root.jsx` is the "root route" that serves as the layout for the entire application. Every route will render inside of its `<Outlet/>`.
 - Note that there are files that match the same name as a folder, this indicates a component layout hierarchy. For example, `sales.jsx` is the **parent route** for all of the **child routes** inside of `app/routes/sales/*`. When a route inside of the sales directory matches, it will render inside of the `sales.jsx` route's `<Outlet>`
@@ -103,16 +101,14 @@ When the user visits this page, Remix will render the components in this hierarc
 
 You'll note that the component hierarchy is perfectly mapped to the file system hierarchy in `routes`. By looking at the files, you can anticipate how they will render.
 
-```
-app
-├── root.jsx
-└── routes
-    ├── sales
-    │   ├── invoices
-    │   │   └── $invoiceId.jsx
-    │   └── invoices.jsx
-    └── sales.jsx
-```
+    app
+    ├── root.jsx
+    └── routes
+        ├── sales
+        │   ├── invoices
+        │   │   └── $invoiceId.jsx
+        │   └── invoices.jsx
+        └── sales.jsx
 
 If the URL is `/accounts`, the UI hierarchy changes to this:
 
@@ -175,15 +171,13 @@ This usually comes up when folks are just getting started with Remix and put the
 
 You may notice an `?index` query parameter showing up on your URLs from time to time, particularly when you are submitting a `<Form>` from an index route. This is required to differentiate index routes from their parent layout routes. Consider the following structure, where a URL such as `/sales/invoices` would be ambiguous. Is that referring to the `routes/sales/invoices.jsx` file? Or is it referring to the `routes/sales/invoices/index.jsx` file? In order to avoid this ambiguity, Remix uses the `?index` parameter to indicate when a URL refers to the index route instead of the layout route.
 
-```
-└── app
-    ├── root.jsx
-    └── routes
-        ├── sales
-        │   ├── invoices
-        │   │   └── index.jsx   <-- /sales/invoices?index
-        │   └── invoices.jsx    <-- /sales/invoices
-```
+    └── app
+        ├── root.jsx
+        └── routes
+            ├── sales
+            │   ├── invoices
+            │   │   └── index.jsx   <-- /sales/invoices?index
+            │   └── invoices.jsx    <-- /sales/invoices
 
 This is handled automatically for you when you submit from a `<Form>` contained within either the layout route or the index route. But if you are submitting forms to different routes, or using `fetcher.submit`/`fetcher.load` you may need to be aware of this URL pattern so you can target the correct route.
 
@@ -218,17 +212,15 @@ We want this:
 
 So, if we want a flat UI hierarchy, we create a flat filename--we use `"."` to create segments instead of folders. This defines URL nesting _without creating component nesting_.
 
-```
-└── app
-    ├── root.jsx
-    └── routes
-        ├── sales
-        │   ├── invoices
-        │   │   └── $invoiceId.jsx
-        │   └── invoices.jsx
-        ├── sales.invoices.$invoiceId.edit.jsx 👈 not nested
-        └── sales.jsx
-```
+    └── app
+        ├── root.jsx
+        └── routes
+            ├── sales
+            │   ├── invoices
+            │   │   └── $invoiceId.jsx
+            │   └── invoices.jsx
+            ├── sales.invoices.$invoiceId.edit.jsx 👈 not nested
+            └── sales.jsx
 
 Just for absolute clarity, if the url is "example.com/sales/invoices/2000/edit", we'll get this UI hierarchy that matches the file system hierarchy:
 
@@ -271,31 +263,27 @@ Consider we want to add some authentication routes, with a UI hierarchy like thi
 
 At first, you might think to just create an `auth` parent route and put the child routes inside to get the layout nesting:
 
-```
-app
-├── root.jsx
-└── routes
-    ├── auth
-    │   ├── login.jsx
-    │   ├── logout.jsx
-    │   └── signup.jsx
-    └── auth.jsx
-```
+    app
+    ├── root.jsx
+    └── routes
+        ├── auth
+        │   ├── login.jsx
+        │   ├── logout.jsx
+        │   └── signup.jsx
+        └── auth.jsx
 
 We have the right UI hierarchy, but we probably don't actually want each of the URLs to be prefixed with `/auth` like `/auth/login`. We just want `/login`.
 
 You can remove the URL nesting, but keep the UI nesting, by adding two underscores to the route and folder name:
 
-```
-app
-├── root.jsx
-└── routes
-    ├── __auth
-    │   ├── login.jsx
-    │   ├── logout.jsx
-    │   └── signup.jsx
-    └── __auth.jsx
-```
+    app
+    ├── root.jsx
+    └── routes
+        ├── __auth
+        │   ├── login.jsx
+        │   ├── logout.jsx
+        │   └── signup.jsx
+        └── __auth.jsx
 
 And that's it! When the URL matches `/login` the UI hierarchy will be same as before.
 
@@ -324,16 +312,14 @@ export default function Invoice() {
 
 Route can have multiple params, and params can be folders as well.
 
-```
-app
-├── root.jsx
-└── routes
-    ├── projects
-    │   ├── $projectId
-    │   │   └── $taskId.jsx
-    │   └── $projectId.jsx
-    └── projects.jsx
-```
+    app
+    ├── root.jsx
+    └── routes
+        ├── projects
+        │   ├── $projectId
+        │   │   └── $taskId.jsx
+        │   └── $projectId.jsx
+        └── projects.jsx
 
 If the URL is `/projects/123/abc` then the params will be as follows:
 
@@ -348,16 +334,14 @@ Naming a file `$.jsx` will make that route path a **splat route**. This means Re
 
 Consider the following routes:
 
-```
-app
-├── root.jsx
-└── routes
-    ├── files
-    │   ├── $.jsx
-    │   ├── mine.jsx
-    │   └── recent.jsx
-    └── files.jsx
-```
+    app
+    ├── root.jsx
+    └── routes
+        ├── files
+        │   ├── $.jsx
+        │   ├── mine.jsx
+        │   └── recent.jsx
+        └── files.jsx
 
 When the URL is `example.com/files/images/work/flyer.jpg`. The splat param will capture the trailing segments of the URL and be available to your app on `params["*"]`
 

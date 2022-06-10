@@ -89,9 +89,7 @@ To handle `GET` requests export a loader function:
 import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
-export const loader: LoaderFunction = async ({
-  request,
-}) => {
+export const loader: LoaderFunction = async ({ request }) => {
   // handle "GET" request
 
   return json({ success: true }, 200);
@@ -103,9 +101,7 @@ To handle `POST`, `PUT`, `PATCH` or `DELETE` requests export an action function:
 ```ts
 import type { ActionFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action: ActionFunction = async ({ request }) => {
   switch (request.method) {
     case "POST": {
       /* handle "POST" */
@@ -132,18 +128,14 @@ import type { ActionFunction } from "@remix-run/node"; // or "@remix-run/cloudfl
 import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import crypto from "crypto";
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action: ActionFunction = async ({ request }) => {
   if (request.method !== "POST") {
     return json({ message: "Method not allowed" }, 405);
   }
   const payload = await request.json();
 
   /* Validate the webhook */
-  const signature = request.headers.get(
-    "X-Hub-Signature-256"
-  );
+  const signature = request.headers.get("X-Hub-Signature-256");
   const generatedSignature = `sha256=${crypto
     .createHmac("sha256", process.env.GITHUB_WEBHOOK_SECRET)
     .update(JSON.stringify(payload))
