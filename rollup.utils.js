@@ -10,18 +10,21 @@ const defaultBuildDir = "build";
 const buildDir = getBuildDir();
 
 function getBuildDir() {
-  if (!process.env.LOCAL_BUILD_DIRECTORY) {
+  if (!process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
     return path.relative(process.cwd(), path.join(__dirname, defaultBuildDir));
   }
 
-  let appDir = path.join(process.cwd(), process.env.LOCAL_BUILD_DIRECTORY);
+  let appDir = path.join(
+    process.cwd(),
+    process.env.REMIX_LOCAL_BUILD_DIRECTORY
+  );
   try {
     fse.readdirSync(path.join(appDir, "node_modules"));
     console.log("Writing rollup output to", appDir);
     return appDir;
   } catch (e) {
     console.error(
-      "Oops! You pointed LOCAL_BUILD_DIRECTORY to a directory that " +
+      "Oops! You pointed REMIX_LOCAL_BUILD_DIRECTORY to a directory that " +
         "does not have a node_modules/ folder. Please `npm install` in that " +
         "directory and try again."
     );
@@ -73,8 +76,8 @@ function copyToPlaygrounds() {
   return {
     name: "copy-to-remix-playground",
     async writeBundle(options, bundle) {
-      // Write to playgrounds for normal builds not using LOCAL_BUILD_DIRECTORY
-      if (!process.env.LOCAL_BUILD_DIRECTORY) {
+      // Write to playgrounds for normal builds not using REMIX_LOCAL_BUILD_DIRECTORY
+      if (!process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
         let playgroundsDir = path.join(__dirname, "playground");
         let playgrounds = await fs.promises.readdir(playgroundsDir);
         let writtenDir = path.join(process.cwd(), options.dir);
@@ -91,7 +94,7 @@ function copyToPlaygrounds() {
           await triggerLiveReload(playgroundDir);
         }
       } else {
-        // Otherwise, trigger live reload on our LOCAL_BUILD_DIRECTORY folder
+        // Otherwise, trigger live reload on our REMIX_LOCAL_BUILD_DIRECTORY folder
         await triggerLiveReload(buildDir);
       }
     },
