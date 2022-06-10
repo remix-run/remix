@@ -5,7 +5,6 @@ import { remark } from "remark";
 import { remarkReferenceLinksBottom } from "@mcansh/remark-definition-links";
 import remarkFrontmatter from "remark-frontmatter";
 import glob from "glob";
-import prettier from "prettier";
 
 main();
 
@@ -28,9 +27,6 @@ async function main() {
       .use(remarkFrontmatter, ["yaml", "toml"])
       .process(await read(file));
 
-    await fsp.writeFile(
-      file,
-      prettier.format(result.toString(), { parser: "markdown" })
-    );
+    await fsp.writeFile(file, result.toString());
   }
 }
