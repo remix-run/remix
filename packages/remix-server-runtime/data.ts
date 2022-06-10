@@ -1,7 +1,12 @@
 import type { RouteMatch } from "./routeMatching";
 import type { ServerRoute } from "./routes";
 import type { DeferredResponse } from "./responses";
-import { json, isResponse, isRedirectResponse } from "./responses";
+import {
+  json,
+  isDeferredResponse,
+  isResponse,
+  isRedirectResponse,
+} from "./responses";
 
 /**
  * An object of arbitrary for route loaders and actions provided by the
@@ -135,7 +140,9 @@ export function extractData(response: Response): Promise<unknown> {
   if (
     contentType &&
     (/\bapplication\/json\b/.test(contentType) ||
-      /\text\/remix-deferred\b/.test(contentType))
+      // Deferred responses synchronously resolve the initial data and makes
+      // it available through the `json()` method.
+      isDeferredResponse(response))
   ) {
     return response.json();
   }

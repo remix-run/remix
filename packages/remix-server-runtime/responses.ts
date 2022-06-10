@@ -2,10 +2,12 @@ import { serializeError } from "./errors";
 
 const deferredPromisePrefix = "__deferred_promise:";
 
+// eslint-disable-next-line
 export type Deferrable<Data> = {};
 export type ResolvedDeferrable<Deferred extends Deferrable<any>> =
-  Deferred extends Deferrable<infer Data> ? Data : never;
+  Deferred extends Deferrable<infer Data> ? Data : unknown;
 
+// eslint-disable-next-line
 export interface DeferredResponse<Data = unknown> extends Response {
   deferred: Record<string | number, Promise<unknown>>;
 }
@@ -22,10 +24,12 @@ function createDeferredReadableStream(
       // Send the initial data
       controller.enqueue(encoder.encode(JSON.stringify(initialData) + "\n\n"));
 
+      // Watch all the deferred keys for resolution
       await Promise.all(
         Object.entries(deferred).map(async ([key, promise]) => {
           await promise.then(
             (result) => {
+              // Send the resolved data
               controller.enqueue(
                 encoder.encode(
                   "data:" + JSON.stringify({ [key]: result }) + "\n\n"
@@ -33,6 +37,7 @@ function createDeferredReadableStream(
               );
             },
             async (error) => {
+              // Send the error
               controller.enqueue(
                 encoder.encode(
                   "error:" +
@@ -76,10 +81,11 @@ export type DeferredFunction = <Data>(
 ) => DeferredResponse<Data>;
 
 /**
- * This is a shortcut for creating `application/json` responses. Converts `data`
- * to JSON and sets the `Content-Type` header.
+ * This is a shortcut for creating `text/remix-deferred` responses. Converts `data`
+ * to JSON for the initial payload, sends down subsequent chunks, and sets the
+ * `Content-Type` header.
  *
- * @see https://remix.run/api/remix#json
+ * @see https://remix.run/api/remix#deferred
  */
 export const deferred: DeferredFunction = (data, init = {}) => {
   let responseInit = typeof init === "number" ? { status: init } : init;
