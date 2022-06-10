@@ -1485,6 +1485,14 @@
   resolved "https://registry.npmjs.org/@kwsites/promise-deferred/-/promise-deferred-1.1.1.tgz"
   integrity sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw==
 
+"@mcansh/remark-definition-links@1.0.0":
+  version "1.0.0"
+  resolved "https://registry.npmjs.org/@mcansh/remark-definition-links/-/remark-definition-links-1.0.0.tgz#b29b267484517c327b2a153e533056f2586f45dc"
+  integrity sha512-aNaWemOECyJallrlqIS5kJhrX5yZrPs7sO1df4DyamzKLuJNW1FP38MDibHgLcB/XiMuuJobESPNAvFExxLxUQ==
+  dependencies:
+    unified "^10.1.2"
+    unist-util-visit "^4.1.0"
+
 "@mswjs/cookies@^0.2.0":
   version "0.2.0"
   resolved "https://registry.npmjs.org/@mswjs/cookies/-/cookies-0.2.0.tgz"
@@ -2052,15 +2060,7 @@
   dependencies:
     "@types/node" "*"
 
-"@types/glob@*", "@types/glob@^7.1.1":
-  version "7.2.0"
-  resolved "https://registry.npmjs.org/@types/glob/-/glob-7.2.0.tgz"
-  integrity sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==
-  dependencies:
-    "@types/minimatch" "*"
-    "@types/node" "*"
-
-"@types/glob@7.2.0":
+"@types/glob@*", "@types/glob@7.2.0", "@types/glob@^7.1.1":
   version "7.2.0"
   resolved "https://registry.npmjs.org/@types/glob/-/glob-7.2.0.tgz#bc1b5bf3aa92f25bd5dd39f35c57361bdce5b2eb"
   integrity sha512-ZUxbzKl0IfJILTS6t7ip5fQQM/J3TJYubDm3nMbgubNNYS62eXeUpoLUC8/7fJNiFYHTrGPQn7hspDUzIHX3UA==
@@ -2423,7 +2423,7 @@
   dependencies:
     "@types/node" "*"
 
-"@types/unist@*", "@types/unist@^2.0.0", "@types/unist@^2.0.2", "@types/unist@^2.0.3":
+"@types/unist@*", "@types/unist@^2.0.0", "@types/unist@^2.0.2":
   version "2.0.6"
   resolved "https://registry.npmjs.org/@types/unist/-/unist-2.0.6.tgz"
   integrity sha512-PBjIUxZHOuj0R15/xuwJYjFi+KZdNFrehocChv4g5hu6aFroHue8m0lBP0POdK2nKzbw0cgV1mws8+V/JAcEkQ==
@@ -9259,14 +9259,15 @@ regjsparser@^0.8.2:
   dependencies:
     jsesc "~0.5.0"
 
-remark-defsplit@4.0.1:
+remark-frontmatter@4.0.1:
   version "4.0.1"
-  resolved "https://registry.npmjs.org/remark-defsplit/-/remark-defsplit-4.0.1.tgz#69cb68dbafa8cccac6074bbd3cefb257550e16a0"
-  integrity sha512-ggkidpEDCKj7ATq8+J0FGfI/yldPZz7MLRVxlfNzIgOY/hBjY1RiHm/Uyiv8X+/UTTBkgqLd0gGqSMDQSTPmLQ==
+  resolved "https://registry.npmjs.org/remark-frontmatter/-/remark-frontmatter-4.0.1.tgz#84560f7ccef114ef076d3d3735be6d69f8922309"
+  integrity sha512-38fJrB0KnmD3E33a5jZC/5+gGAC2WKNiPw1/fdXJvijBlhA7RCsvJklrYJakS0HedninvaCYW8lQGf9C918GfA==
   dependencies:
     "@types/mdast" "^3.0.0"
+    mdast-util-frontmatter "^1.0.0"
+    micromark-extension-frontmatter "^1.0.0"
     unified "^10.0.0"
-    unist-util-index "^3.0.0"
 
 remark-frontmatter@^4.0.0:
   version "4.0.1"
@@ -10626,6 +10627,19 @@ unified@^10.0.0:
     trough "^2.0.0"
     vfile "^5.0.0"
 
+unified@^10.1.2:
+  version "10.1.2"
+  resolved "https://registry.npmjs.org/unified/-/unified-10.1.2.tgz#b1d64e55dafe1f0b98bb6c719881103ecf6c86df"
+  integrity sha512-pUSWAi/RAnVy1Pif2kAoeWNBa3JVrx0MId2LASj8G+7AiHWoKZNTomq6LG326T68U7/e263X6fTdcXIy7XnF7Q==
+  dependencies:
+    "@types/unist" "^2.0.0"
+    bail "^2.0.0"
+    extend "^3.0.0"
+    is-buffer "^2.0.0"
+    is-plain-obj "^4.0.0"
+    trough "^2.0.0"
+    vfile "^5.0.0"
+
 union-value@^1.0.0:
   version "1.0.1"
   resolved "https://registry.npmjs.org/union-value/-/union-value-1.0.1.tgz"
@@ -10661,14 +10675,6 @@ unist-util-generated@^2.0.0:
   version "2.0.0"
   resolved "https://registry.npmjs.org/unist-util-generated/-/unist-util-generated-2.0.0.tgz"
   integrity sha512-TiWE6DVtVe7Ye2QxOVW9kqybs6cZexNwTwSMVgkfjEReqy/xwGpAXb99OxktoWwmL+Z+Epb0Dn8/GNDYP1wnUw==
-
-unist-util-index@^3.0.0:
-  version "3.0.1"
-  resolved "https://registry.npmjs.org/unist-util-index/-/unist-util-index-3.0.1.tgz#9586eb314133f765dca4a835eac45aa4f93ed84d"
-  integrity sha512-y6nmRFzrEbpJ94gjqMsCRIrOdysHxOWUyF+skKOX/SMJG6FZQc19XxapFL5I7sumQvy6f2CUPpyHaHk6BkjO4Q==
-  dependencies:
-    "@types/unist" "^2.0.3"
-    unist-util-visit "^3.0.0"
 
 unist-util-is@^5.0.0:
   version "5.1.1"
@@ -10734,7 +10740,7 @@ unist-util-visit@^3.0.0:
     unist-util-is "^5.0.0"
     unist-util-visit-parents "^4.0.0"
 
-unist-util-visit@^4.0.0:
+unist-util-visit@^4.0.0, unist-util-visit@^4.1.0:
   version "4.1.0"
   resolved "https://registry.npmjs.org/unist-util-visit/-/unist-util-visit-4.1.0.tgz"
   integrity sha512-n7lyhFKJfVZ9MnKtqbsqkQEk5P1KShj0+//V7mAcoI6bpbUjh3C/OG8HVD+pBihfh6Ovl01m8dkcv9HNqYajmQ==

@@ -1,8 +1,9 @@
 import path from "node:path";
-import fsp from "fs/promises";
+import fsp from "node:fs/promises";
 import { read } from "to-vfile";
 import { remark } from "remark";
-import remarkDefsplit from "remark-defsplit";
+import { remarkReferenceLinksBottom } from "@mcansh/remark-definition-links";
+import remarkFrontmatter from "remark-frontmatter";
 import glob from "glob";
 import prettier from "prettier";
 
@@ -15,9 +16,9 @@ async function main() {
   });
 
   for (let file of files) {
-    console.log(`processing ${file}`);
     let result = await remark()
-      .use(remarkDefsplit)
+      .use(remarkReferenceLinksBottom)
+      .use(remarkFrontmatter)
       .process(await read(file));
 
     await fsp.writeFile(
