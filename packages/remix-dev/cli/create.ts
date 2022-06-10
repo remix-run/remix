@@ -285,10 +285,40 @@ async function downloadAndExtractTarball(
     filePath?: string | null;
   }
 ): Promise<void> {
-  let response = await fetch(
-    url,
-    token ? { headers: { Authorization: `token ${token}` } } : {}
-  );
+  let resourceUrl = url;
+  let headers: Record<string, string> = {};
+  if (isGithubReleaseAssetUrl(url)) {
+    // We can download the asset via the github api, but first we need to look up the
+    // asset id
+    let info = getGithubReleaseAssetInfo(url);
+    headers = {
+      Authorization: `token ${token}`,
+      Accept: "application/vnd.github.v3+json",
+    };
+    let response = await fetch(
+      `https://api.github.com/repos/${info.owner}/${info.name}/releases/tags/${info.tag}`,
+      { headers }
+    );
+    if (response.status !== 200) {
+      throw Error(
+        "🚨 There was a problem fetching the file from GitHub. The request " +
+          `responded with a ${response.status} status. Please try again later.`
+      );
+    }
+    let body = await response.json();
+    let assetId: number | undefined = body?.assets?.find(
+      (a: any) => a?.browser_download_url === url
+    )?.id;
+    if (!assetId) {
+      throw Error(
+        "🚨 There was a problem fetching the file from GitHub. No asset was " +
+          "found at that url. Please try again later."
+      );
+    }
+    resourceUrl = `https://api.github.com/repos/${info.owner}/${info.name}/releases/assets/${assetId}`;
+    headers.Accept = "application/octet-stream";
+  }
+  let response = await fetch(resourceUrl, { headers });
 
   if (response.status !== 200) {
     throw Error(
@@ -381,6 +411,40 @@ function getGithubUrl(info: Omit<RepoInfo, "url">) {
   return url;
 }
 
+function isGithubReleaseAssetUrl(url: string) {
+  return (
+    url.startsWith("https://github.com") && url.includes("/releases/download/")
+  );
+}
+interface ReleaseAssetInfo {
+  browserUrl: string;
+  owner: string;
+  name: string;
+  asset: string;
+  tag: string;
+}
+function getGithubReleaseAssetInfo(browserUrl: string): ReleaseAssetInfo {
+  // for example, https://github.com/deptagency/dash/releases/download/v0.0.1/stack.tar.gz
+  let url = new URL(browserUrl);
+  let [, owner, name, , , tag, asset] = url.pathname.split("/") as [
+    _: string,
+    Owner: string,
+    Name: string,
+    Releases: string,
+    Download: string,
+    Tag: string,
+    AssetFilename: string
+  ];
+
+  return {
+    browserUrl,
+    owner,
+    name,
+    asset,
+    tag,
+  };
+}
+
 function getRepoInfo(validatedGithubUrl: string): RepoInfo {
   if (isGithubRepoShorthand(validatedGithubUrl)) {
     let [owner, name] = validatedGithubUrl.split("/");
@@ -466,7 +530,10 @@ function isRemixTemplate(input: string) {
   ].includes(input);
 }
 
-export async function validateTemplate(input: string) {
+export async function validateTemplate(
+  input: string,
+  options?: { githubToken: string | undefined }
+) {
   // If a template string matches one of the choices in our interactive prompt,
   // we can skip all fetching and manual validation.
   if (isRemixStack(input)) {
@@ -489,9 +556,21 @@ export async function validateTemplate(input: string) {
     }
     case "remoteTarball": {
       let spinner = ora("Validating the template file…").start();
+      let apiUrl = input;
+      let method = "HEAD";
+      let headers: Record<string, string> = {};
+      if (isGithubReleaseAssetUrl(input)) {
+        let info = getGithubReleaseAssetInfo(input);
+        apiUrl = `https://api.github.com/repos/${info.owner}/${info.name}/releases/tags/${info.tag}`;
+        headers = {
+          Authorization: `token ${options?.githubToken}`,
+          Accept: "application/vnd.github.v3+json",
+        };
+        method = "GET";
+      }
       let response;
       try {
-        response = await fetch(input, { method: "HEAD" });
+        response = await fetch(apiUrl, { method, headers });
       } catch (_) {
         throw Error(
           "🚨 There was a problem verifying the template file. Please ensure " +
@@ -503,6 +582,17 @@ export async function validateTemplate(input: string) {
 
       switch (response.status) {
         case 200:
+          if (isGithubReleaseAssetUrl(input)) {
+            let body = await response.json();
+            if (
+              !body?.assets?.some((a: any) => a?.browser_download_url === input)
+            ) {
+              throw Error(
+                "🚨 The template file could not be verified. Please double check " +
+                  "the URL and try again."
+              );
+            }
+          }
           return;
         case 404:
           throw Error(
@@ -538,7 +628,7 @@ export async function validateTemplate(input: string) {
       try {
         response = await fetch(apiUrl, {
           method,
-          headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
+          headers: { Authorization: `token ${options?.githubToken}` },
         });
       } catch (_) {
         throw Error(
