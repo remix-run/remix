@@ -8,7 +8,26 @@ export function createApp(buildPath: string, mode = "production") {
 
   app.disable("x-powered-by");
 
-  app.use(compression());
+  app.use(
+    compression({
+      filter(req) {
+        // No compression for html document requests to allow for streaming
+        if (
+          req.headers["accept"] &&
+          req.headers["accept"].indexOf("text/html") !== -1
+        ) {
+          return false;
+        }
+
+        // No compression for _data requests to allow for streaming
+        if (req.query._data) {
+          return false;
+        }
+
+        return true;
+      },
+    })
+  );
 
   app.use(
     "/build",

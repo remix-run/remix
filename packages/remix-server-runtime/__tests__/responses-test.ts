@@ -3,9 +3,9 @@ import { deferred, json, redirect } from "../index";
 const DEFERRED_PROMISE_PREFIX = "__deferred_promise:";
 
 describe("deferred", () => {
-  type ChunkType = "initial" | "data" | "error";
+  type ChunkType = "initial" | "data" | "error" | "invalid-terminator";
   function chunkTypeAndData(chunk: string): [ChunkType, unknown] {
-    let type = "initial";
+    let type: ChunkType = "initial";
     if (chunk.startsWith("data:")) {
       type = "data";
     } else if (chunk.startsWith("error:")) {
@@ -17,7 +17,7 @@ describe("deferred", () => {
     }
 
     let data = undefined;
-    if (type !== "unknown") {
+    if (type !== "invalid-terminator") {
       data = JSON.parse(
         chunk
           .replace(/^data:/, "")

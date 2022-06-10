@@ -92,6 +92,10 @@ export const deferred: DeferredFunction = (data, init = {}) => {
 
   let headers = new Headers(responseInit.headers);
   if (!headers.has("Content-Type")) {
+    // We have opted to not use `text/event-stream` because it does not
+    // support cache-control headers. Browsers force the cache to be `no-store`
+    //
+    // spec: https://html.spec.whatwg.org/multipage/server-sent-events.html
     headers.set("Content-Type", "text/remix-deferred; charset=utf-8");
   }
 
