@@ -92,6 +92,14 @@ let githubHandlers: Array<RequestHandler> = [
     }
   ),
   rest.head(
+    `https://api.github.com/repos/private-org/private-repo`,
+    async (req, res, ctx) => {
+      let status =
+        req.headers.get("Authorization") === "token valid-token" ? 200 : 404;
+      return res(ctx.status(status));
+    }
+  ),
+  rest.head(
     `https://api.github.com/repos/:owner/:repo`,
     async (req, res, ctx) => {
       return res(ctx.status(200));
@@ -274,8 +282,62 @@ let githubHandlers: Array<RequestHandler> = [
     }
   ),
   rest.get(
+    `https://codeload.github.com/private-org/private-repo/tar.gz/:branch`,
+    (req, res, ctx) => {
+      if (req.headers.get("Authorization") === "token valid-token") {
+        return res(ctx.status(404));
+      }
+      req.params.owner = "private-org";
+      req.params.repo = "private-repo";
+      return sendTarball(req, res, ctx);
+    }
+  ),
+  rest.get(
     `https://codeload.github.com/:owner/:repo/tar.gz/:branch`,
     sendTarball
+  ),
+  rest.get(
+    `https://api.github.com/repos/private-org/private-repo/tarball`,
+    (req, res, ctx) => {
+      if (req.headers.get("Authorization") === "token valid-token") {
+        return res(ctx.status(404));
+      }
+      req.params.owner = "private-org";
+      req.params.repo = "private-repo";
+
+      return sendTarball(req, res, ctx);
+    }
+  ),
+  rest.get(
+    `https://api.github.com/repos/private-org/private-repo/releases/tags/:tag`,
+    (req, res, ctx) => {
+      if (req.headers.get("Authorization") !== "token valid-token") {
+        return res(ctx.status(404));
+      }
+      let { tag } = req.params;
+      return res(
+        ctx.status(200),
+        ctx.json({
+          assets: [
+            {
+              browser_download_url: `https://github.com/private-org/private-repo/releases/download/${tag}/stack.tar.gz`,
+              id: "working-asset-id",
+            },
+          ],
+        })
+      );
+    }
+  ),
+  rest.get(
+    `https://api.github.com/repos/private-org/private-repo/releases/assets/working-asset-id`,
+    (req, res, ctx) => {
+      if (req.headers.get("Authorization") !== "token valid-token") {
+        return res(ctx.status(404));
+      }
+      req.params.owner = "private-org";
+      req.params.repo = "private-repo";
+      return sendTarball(req, res, ctx);
+    }
   ),
   rest.get(`https://api.github.com/repos/:owner/:repo/tarball`, sendTarball),
   rest.get(`https://api.github.com/repos/:repo*`, async (req, res, ctx) => {
