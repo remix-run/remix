@@ -30,12 +30,12 @@ jobs:
         # even though this is called "npm-install" it does use yarn to install
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
+        
+      - name: 🔗 Convert Docs links to references
+        run: node scripts/markdown-references.mjs
 
       - name: 👔 Format
         run: npm run format --if-present
-
-      - name: 🔗 Convert Docs links to references
-        run: node scripts/markdown-references.mjs
 
       - name: 💪 Commit
         run: |
