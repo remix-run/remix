@@ -556,8 +556,8 @@ export async function validateTemplate(input: string) {
             // their URLs. That means the api results list all files and directories
             let filesWithinRepo = await response.json();
             if (
-              !filesWithinRepo.tree.some(
-                (file: any) => file.path === filePath && file.type === "tree"
+              !filesWithinRepo?.tree?.some(
+                (file: any) => file?.path === filePath && file?.type === "tree"
               )
             ) {
               throw Error(
