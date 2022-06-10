@@ -178,7 +178,9 @@ import type { ActionFunction } from "@remix-run/node"; // or "@remix-run/cloudfl
 import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 // Note the "action" export name, this will handle our form POST
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const formData = await request.formData();
   const project = await createProject(formData);
   return redirect(`/projects/${project.id}`);
@@ -208,7 +210,9 @@ const [errors, project] = await createProject(formData);
 If there are validation errors, we want to go back to the form and display them.
 
 ```tsx [5,7-10]
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const formData = await request.formData();
   const [errors, project] = await createProject(formData);
 
@@ -227,7 +231,9 @@ Just like `useLoaderData` returns the values from the `loader`, `useActionData` 
 import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { useActionData } from "@remix-run/react";
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   // ...
 };
 
@@ -248,7 +254,9 @@ export default function NewProject() {
       </p>
 
       {actionData?.errors.name ? (
-        <p style={{ color: "red" }}>{actionData.errors.name}</p>
+        <p style={{ color: "red" }}>
+          {actionData.errors.name}
+        </p>
       ) : null}
 
       <p>
@@ -263,7 +271,9 @@ export default function NewProject() {
       </p>
 
       {actionData?.errors.description ? (
-        <p style={{ color: "red" }}>{actionData.errors.description}</p>
+        <p style={{ color: "red" }}>
+          {actionData.errors.description}
+        </p>
       ) : null}
 
       <p>
@@ -308,7 +318,11 @@ Now let's add some pending UI so the user has a clue something happened when the
 
 ```tsx [5, 13, 19, 65-67]
 import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import { useActionData, Form, useTransition } from "@remix-run/react";
+import {
+  useActionData,
+  Form,
+  useTransition,
+} from "@remix-run/react";
 
 // ...
 
@@ -320,20 +334,28 @@ export default function NewProject() {
 
   return (
     <Form method="post">
-      <fieldset disabled={transition.state === "submitting"}>
+      <fieldset
+        disabled={transition.state === "submitting"}
+      >
         <p>
           <label>
             Name:{" "}
             <input
               name="name"
               type="text"
-              defaultValue={actionData ? actionData.values.name : undefined}
+              defaultValue={
+                actionData
+                  ? actionData.values.name
+                  : undefined
+              }
             />
           </label>
         </p>
 
         {actionData && actionData.errors.name ? (
-          <p style={{ color: "red" }}>{actionData.errors.name}</p>
+          <p style={{ color: "red" }}>
+            {actionData.errors.name}
+          </p>
         ) : null}
 
         <p>
@@ -343,19 +365,25 @@ export default function NewProject() {
             <textarea
               name="description"
               defaultValue={
-                actionData ? actionData.values.description : undefined
+                actionData
+                  ? actionData.values.description
+                  : undefined
               }
             />
           </label>
         </p>
 
         {actionData && actionData.errors.description ? (
-          <p style={{ color: "red" }}>{actionData.errors.description}</p>
+          <p style={{ color: "red" }}>
+            {actionData.errors.description}
+          </p>
         ) : null}
 
         <p>
           <button type="submit">
-            {transition.state === "submitting" ? "Creating..." : "Create"}
+            {transition.state === "submitting"
+              ? "Creating..."
+              : "Create"}
           </button>
         </p>
       </fieldset>
@@ -408,16 +436,24 @@ export default function NewProject() {
 
   return (
     <Form method="post">
-      <fieldset disabled={transition.state === "submitting"}>
+      <fieldset
+        disabled={transition.state === "submitting"}
+      >
         <p>
           <label>
             Name:{" "}
             <input
               name="name"
               type="text"
-              defaultValue={actionData ? actionData.values.name : undefined}
+              defaultValue={
+                actionData
+                  ? actionData.values.name
+                  : undefined
+              }
               style={{
-                borderColor: actionData?.errors.name ? "red" : "",
+                borderColor: actionData?.errors.name
+                  ? "red"
+                  : "",
               }}
             />
           </label>
@@ -438,7 +474,9 @@ export default function NewProject() {
               name="description"
               defaultValue={actionData?.values.description}
               style={{
-                borderColor: actionData?.errors.description ? "red" : "",
+                borderColor: actionData?.errors.description
+                  ? "red"
+                  : "",
               }}
             />
           </label>
@@ -451,7 +489,9 @@ export default function NewProject() {
 
         <p>
           <button type="submit">
-            {transition.state === "submitting" ? "Creating..." : "Create"}
+            {transition.state === "submitting"
+              ? "Creating..."
+              : "Create"}
           </button>
         </p>
       </fieldset>

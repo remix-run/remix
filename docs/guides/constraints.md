@@ -160,7 +160,10 @@ export function removeTrailingSlash(loader) {
   return function (arg) {
     const { request } = arg;
     const url = new URL(request.url);
-    if (url.pathname !== "/" && url.pathname.endsWith("/")) {
+    if (
+      url.pathname !== "/" &&
+      url.pathname.endsWith("/")
+    ) {
       return redirect(request.url.slice(0, -1), {
         status: 308,
       });
@@ -314,7 +317,9 @@ Another common case is code that calls browser-only APIs while rendering. When s
 
 ```js bad lines=2
 function useLocalStorage(key) {
-  const [state, setState] = useState(localStorage.getItem(key));
+  const [state, setState] = useState(
+    localStorage.getItem(key)
+  );
 
   const setWithLocalStorage = (nextState) => {
     setState(nextState);
@@ -368,7 +373,9 @@ const canUseDOM = !!(
   window.document.createElement
 );
 
-const useLayoutEffect = canUseDOM ? React.useLayoutEffect : () => {};
+const useLayoutEffect = canUseDOM
+  ? React.useLayoutEffect
+  : () => {};
 ```
 
 ### Third-Party Module Side Effects

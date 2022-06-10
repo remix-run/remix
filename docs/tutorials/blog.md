@@ -65,7 +65,10 @@ Go ahead and copy/paste this:
 
 ```tsx
 <div className="mx-auto mt-16 max-w-7xl text-center">
-  <Link to="/posts" className="text-xl text-blue-600 underline">
+  <Link
+    to="/posts"
+    className="text-xl text-blue-600 underline"
+  >
     Blog Posts
   </Link>
 </div>
@@ -171,7 +174,10 @@ export default function Posts() {
       <ul>
         {posts.map((post) => (
           <li key={post.slug}>
-            <Link to={post.slug} className="text-blue-600 underline">
+            <Link
+              to={post.slug}
+              className="text-blue-600 underline"
+            >
               {post.title}
             </Link>
           </li>
@@ -222,7 +228,10 @@ export default function Posts() {
       <ul>
         {posts.map((post) => (
           <li key={post.slug}>
-            <Link to={post.slug} className="text-blue-600 underline">
+            <Link
+              to={post.slug}
+              className="text-blue-600 underline"
+            >
               {post.title}
             </Link>
           </li>
@@ -414,7 +423,9 @@ touch app/routes/posts/\$slug.tsx
 export default function PostSlug() {
   return (
     <main className="mx-auto max-w-4xl">
-      <h1 className="my-6 border-b-2 text-center text-3xl">Some Post</h1>
+      <h1 className="my-6 border-b-2 text-center text-3xl">
+        Some Post
+      </h1>
     </main>
   );
 }
@@ -453,7 +464,9 @@ import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
   return json({ slug: params.slug });
 };
 ```
@@ -487,7 +500,9 @@ import { useLoaderData } from "@remix-run/react";
 
 import { getPost } from "~/models/post.server";
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
   const post = await getPost(params.slug);
   return json({ post });
 };
@@ -496,7 +511,9 @@ export default function PostSlug() {
   const { post } = useLoaderData();
   return (
     <main className="mx-auto max-w-4xl">
-      <h1 className="my-6 border-b-2 text-center text-3xl">{post.title}</h1>
+      <h1 className="my-6 border-b-2 text-center text-3xl">
+        {post.title}
+      </h1>
     </main>
   );
 }
@@ -517,7 +534,9 @@ import { getPost } from "~/models/post.server";
 
 type LoaderData = { post: Post };
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
   invariant(params.slug, `params.slug is required`);
 
   const post = await getPost(params.slug);
@@ -530,7 +549,9 @@ export default function PostSlug() {
   const { post } = useLoaderData() as LoaderData;
   return (
     <main className="mx-auto max-w-4xl">
-      <h1 className="my-6 border-b-2 text-center text-3xl">{post.title}</h1>
+      <h1 className="my-6 border-b-2 text-center text-3xl">
+        {post.title}
+      </h1>
     </main>
   );
 }
@@ -562,7 +583,9 @@ import { getPost } from "~/models/post.server";
 
 type LoaderData = { post: Post; html: string };
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
   invariant(params.slug, `params.slug is required`);
 
   const post = await getPost(params.slug);
@@ -576,7 +599,9 @@ export default function PostSlug() {
   const { post, html } = useLoaderData() as LoaderData;
   return (
     <main className="mx-auto max-w-4xl">
-      <h1 className="my-6 border-b-2 text-center text-3xl">{post.title}</h1>
+      <h1 className="my-6 border-b-2 text-center text-3xl">
+        {post.title}
+      </h1>
       <div dangerouslySetInnerHTML={{ __html: html }} />
     </main>
   );
@@ -630,20 +655,27 @@ export default function PostAdmin() {
   const { posts } = useLoaderData() as LoaderData;
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">Blog Admin</h1>
+      <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">
+        Blog Admin
+      </h1>
       <div className="grid grid-cols-4 gap-6">
         <nav className="col-span-4 md:col-span-1">
           <ul>
             {posts.map((post) => (
               <li key={post.slug}>
-                <Link to={post.slug} className="text-blue-600 underline">
+                <Link
+                  to={post.slug}
+                  className="text-blue-600 underline"
+                >
                   {post.title}
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
-        <main className="col-span-4 md:col-span-3">...</main>
+        <main className="col-span-4 md:col-span-3">
+          ...
+        </main>
       </div>
     </div>
   );
@@ -685,7 +717,11 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 ```tsx filename=app/routes/posts/admin.tsx lines=[5,42]
 import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import { Link, Outlet, useLoaderData } from "@remix-run/react";
+import {
+  Link,
+  Outlet,
+  useLoaderData,
+} from "@remix-run/react";
 
 import { getPosts } from "~/models/post.server";
 
@@ -701,13 +737,18 @@ export default function PostAdmin() {
   const { posts } = useLoaderData() as LoaderData;
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">Blog Admin</h1>
+      <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">
+        Blog Admin
+      </h1>
       <div className="grid grid-cols-4 gap-6">
         <nav className="col-span-4 md:col-span-1">
           <ul>
             {posts.map((post) => (
               <li key={post.slug}>
-                <Link to={post.slug} className="text-blue-600 underline">
+                <Link
+                  to={post.slug}
+                  className="text-blue-600 underline"
+                >
                   {post.title}
                 </Link>
               </li>
@@ -758,13 +799,21 @@ export default function NewPost() {
       <p>
         <label>
           Post Title:{" "}
-          <input type="text" name="title" className={inputClassName} />
+          <input
+            type="text"
+            name="title"
+            className={inputClassName}
+          />
         </label>
       </p>
       <p>
         <label>
           Post Slug:{" "}
-          <input type="text" name="slug" className={inputClassName} />
+          <input
+            type="text"
+            name="slug"
+            className={inputClassName}
+          />
         </label>
       </p>
       <p>
@@ -857,7 +906,9 @@ import { Form } from "@remix-run/react";
 
 import { createPost } from "~/models/post.server";
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const formData = await request.formData();
 
   const title = formData.get("title");
@@ -892,7 +943,9 @@ type ActionData =
       markdown: null | string;
     }
   | undefined;
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const formData = await request.formData();
 
   const title = formData.get("title");
@@ -904,7 +957,9 @@ export const action: ActionFunction = async ({ request }) => {
     slug: slug ? null : "Slug is required",
     markdown: markdown ? null : "Markdown is required",
   };
-  const hasErrors = Object.values(errors).some((errorMessage) => errorMessage);
+  const hasErrors = Object.values(errors).some(
+    (errorMessage) => errorMessage
+  );
   if (hasErrors) {
     return json<ActionData>(errors);
   }
@@ -957,7 +1012,9 @@ export default function NewPost() {
         <label htmlFor="markdown">
           Markdown:{" "}
           {errors?.markdown ? (
-            <em className="text-red-600">{errors.markdown}</em>
+            <em className="text-red-600">
+              {errors.markdown}
+            </em>
           ) : null}
         </label>
         <br />
@@ -988,11 +1045,22 @@ TypeScript is still mad, because someone could call our API with non-string valu
 import invariant from "tiny-invariant";
 // ..
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   // ...
-  invariant(typeof title === "string", "title must be a string");
-  invariant(typeof slug === "string", "slug must be a string");
-  invariant(typeof markdown === "string", "markdown must be a string");
+  invariant(
+    typeof title === "string",
+    "title must be a string"
+  );
+  invariant(
+    typeof slug === "string",
+    "slug must be a string"
+  );
+  invariant(
+    typeof markdown === "string",
+    "markdown must be a string"
+  );
 
   await createPost({ title, slug, markdown });
 
@@ -1010,7 +1078,9 @@ Let's slow this down and add some "pending UI" to our form.
 
 ```tsx filename=app/routes/posts/admin/new.tsx lines=[5-6]
 // ...
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   // TODO: remove me
   await new Promise((res) => setTimeout(res, 1000));
 
@@ -1023,7 +1093,11 @@ export const action: ActionFunction = async ({ request }) => {
 
 ```tsx filename=app/routes/posts/admin/new.tsx lines=[5,13-14,23,25]
 import { json, redirect } from "@remix-run/node";
-import { Form, useActionData, useTransition } from "@remix-run/react";
+import {
+  Form,
+  useActionData,
+  useTransition,
+} from "@remix-run/react";
 
 // ..
 

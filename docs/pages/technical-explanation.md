@@ -40,7 +40,10 @@ const remix = require("@remix-run/express");
 
 const app = express();
 
-app.all("*", remix.createRequestHandler({ build: require("./build") }));
+app.all(
+  "*",
+  remix.createRequestHandler({ build: require("./build") })
+);
 ```
 
 Express (or Node.js) is the actual server, Remix is just a handler on that server. The `"@remix-run/express"` package is called an adapter. Remix handlers are server agnostic. Adapters make them work for a specific server by converting the server's request/response API into the Fetch API on the way in, and then adapting the Fetch Response coming from Remix into the server's response API. Here's some pseudo code of what an adapter does:
@@ -121,7 +124,9 @@ export default function Projects() {
         <input name="title" />
         <button type="submit">Create New Project</button>
       </Form>
-      {actionData?.errors ? <ErrorMessages errors={actionData.errors} /> : null}
+      {actionData?.errors ? (
+        <ErrorMessages errors={actionData.errors} />
+      ) : null}
 
       {/* outlets render the nested child routes 
           that match the URL deeper than this route,

@@ -74,7 +74,10 @@ When you `import` a `.mdx` file, the exports of the module are:
 - **filename**: The basename of the source file (e.g. "first-post.mdx")
 
 ```tsx
-import Component, { attributes, filename } from "./first-post.mdx";
+import Component, {
+  attributes,
+  filename,
+} from "./first-post.mdx";
 ```
 
 ## Example Blog Usage
@@ -121,7 +124,9 @@ export default function Index() {
       {posts.map((post) => (
         <li key={post.slug}>
           <Link to={post.slug}>{post.title}</Link>
-          {post.description ? <p>{post.description}</p> : null}
+          {post.description ? (
+            <p>{post.description}</p>
+          ) : null}
         </li>
       ))}
     </ul>
@@ -136,7 +141,9 @@ Clearly this is not a scalable solution for a blog with thousands of posts. Real
 If you wish to configure your own remark plugins you can do so through the `remix.config.js`'s `mdx` export:
 
 ```js
-const { remarkMdxFrontmatter } = require("remark-mdx-frontmatter");
+const {
+  remarkMdxFrontmatter,
+} = require("remark-mdx-frontmatter");
 
 // can be an sync / async function or an object
 exports.mdx = async (filename) => {

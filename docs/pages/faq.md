@@ -14,7 +14,10 @@ This is probably not different than what you were doing before Remix, it might j
 We recommend you create a function that validates the user session that can be added to any routes that require it.
 
 ```tsx filename=app/session.js lines=[9-22]
-import { createCookieSessionStorage, redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import {
+  createCookieSessionStorage,
+  redirect,
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 // somewhere you've got a session storage
 const { getSession } = createCookieSessionStorage();
@@ -105,7 +108,11 @@ export default function Projects() {
       <Form method="post">
         <label>
           Project name:{" "}
-          <input type="text" name="name" defaultValue={project.name} />
+          <input
+            type="text"
+            name="name"
+            defaultValue={project.name}
+          />
         </label>
         <button type="submit" name="action" value="create">
           Update
@@ -144,13 +151,16 @@ If you're wanting to send structured data simply to post arrays, you can use the
 <Form method="post">
   <p>Select the categories for this video:</p>
   <label>
-    <input type="checkbox" name="category" value="comedy" /> Comedy
+    <input type="checkbox" name="category" value="comedy" />{" "}
+    Comedy
   </label>
   <label>
-    <input type="checkbox" name="category" value="music" /> Music
+    <input type="checkbox" name="category" value="music" />{" "}
+    Music
   </label>
   <label>
-    <input type="checkbox" name="category" value="howto" /> How-To
+    <input type="checkbox" name="category" value="howto" />{" "}
+    How-To
   </label>
 </Form>
 ```
@@ -198,7 +208,11 @@ export async function action({ request }) {
 Some folks even dump their JSON into a hidden field. Note that this approach won't work with progressive enhancement. If that's not important to your app, this is an easy way to send structured data.
 
 ```tsx
-<input type="hidden" name="json" value={JSON.stringify(obj)} />
+<input
+  type="hidden"
+  name="json"
+  value={JSON.stringify(obj)}
+/>
 ```
 
 And then parse it in the action:

@@ -64,7 +64,9 @@ import { Form } from "@remix-run/react";
 
 import { createProject } from "~/utils";
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
   const project = await createProject(newProject);
@@ -96,7 +98,9 @@ import { Form, useTransition } from "@remix-run/react";
 
 import { createProject } from "~/utils";
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
   const project = await createProject(newProject);
@@ -114,8 +118,13 @@ export default function NewProject() {
         </label>
         <label htmlFor="description">Description:</label>
         <textarea name="description" id="description" />
-        <button type="submit" disabled={transition.submission}>
-          {transition.submission ? "Creating project..." : "Create Project"}
+        <button
+          type="submit"
+          disabled={transition.submission}
+        >
+          {transition.submission
+            ? "Creating project..."
+            : "Create Project"}
         </button>
       </Form>
     </>
@@ -132,7 +141,9 @@ import { Form, useTransition } from "@remix-run/react";
 import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
   const project = await createProject(newProject);
@@ -142,7 +153,11 @@ export const action: ActionFunction = async ({ request }) => {
 export default function NewProject() {
   const transition = useTransition();
   return transition.submission ? (
-    <ProjectView project={Object.fromEntries(transition.submission.formData)} />
+    <ProjectView
+      project={Object.fromEntries(
+        transition.submission.formData
+      )}
+    />
   ) : (
     <>
       <h2>New Project</h2>
@@ -169,12 +184,18 @@ If you want to have more control over the UI when an error occurs and put the us
 
 ```tsx filename=app/routes/projects/new.tsx lines=[4-5,16-24,29,48]
 import { json, redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import { Form, useTransition, useActionData } from "@remix-run/react";
+import {
+  Form,
+  useTransition,
+  useActionData,
+} from "@remix-run/react";
 
 import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
   try {
@@ -193,7 +214,11 @@ export default function NewProject() {
   const error = useActionData();
 
   return transition.submission ? (
-    <ProjectView project={Object.fromEntries(transition.submission.formData)} />
+    <ProjectView
+      project={Object.fromEntries(
+        transition.submission.formData
+      )}
+    />
   ) : (
     <>
       <h2>New Project</h2>
@@ -220,7 +245,13 @@ For this to work best, you'll want a bit of client-side validation so that form 
 ```jsx filename=app/routes/projects/new.js lines=[7-8]
 <Form method="post">
   <label>
-    Title: <input type="text" name="title" required minLength={3} />
+    Title:{" "}
+    <input
+      type="text"
+      name="title"
+      required
+      minLength={3}
+    />
   </label>
   <label htmlFor="description">Description:</label>
   <textarea name="description" id="description" required />

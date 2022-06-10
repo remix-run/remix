@@ -57,7 +57,9 @@ When you name a file with `$` like `routes/users/$userId.tsx` and `routes/users/
 ```tsx filename=routes/users/$userId/projects/$projectId.tsx
 import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
   console.log(params.userId);
   console.log(params.projectId);
 };
@@ -76,7 +78,9 @@ These params are most useful for looking up data:
 import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
   return json(
     await fakeDb.project.findMany({
       where: {
@@ -96,7 +100,9 @@ Because these params come from the URL and not your source code, you can't know 
 import invariant from "tiny-invariant";
 import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
   invariant(params.userId, "Expected params.userId");
   invariant(params.projectId, "Expected params.projectId");
 
@@ -154,7 +160,9 @@ import { useLoaderData } from "@remix-run/react";
 
 import { db } from "~/db.server";
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
   return json(
     await db.product.findMany({
       where: {
@@ -201,8 +209,12 @@ async function getLoaderData(productId: string) {
   return product;
 }
 
-export const loader: LoaderFunction = async ({ params }) => {
-  return json<LoaderData>(await getLoaderData(params.productId));
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
+  return json<LoaderData>(
+    await getLoaderData(params.productId)
+  );
 };
 
 export default function Product() {
@@ -225,7 +237,9 @@ import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudfl
 import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { useLoaderData } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
   return json(
     await PRODUCTS_KV.get(`product-${params.productId}`, {
       type: "json",
@@ -249,7 +263,10 @@ export default function Product() {
 While loading data it's common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
 
 ```tsx lines=[10-13]
-export const loader: LoaderFunction = async ({ params, request }) => {
+export const loader: LoaderFunction = async ({
+  params,
+  request,
+}) => {
   const product = await db.product.findOne({
     where: { id: params.productId },
   });
@@ -277,7 +294,9 @@ URL Search Params are the portion of the URL after a `?`. Other names for this a
 import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader: LoaderFunction = async ({
+  request,
+}) => {
   const url = new URL(request.url);
   const term = url.searchParams.get("term");
   return json(await fakeProductSearch(term));
@@ -315,10 +334,20 @@ export default function ProductFilters() {
   return (
     <Form method="get">
       <label htmlFor="nike">Nike</label>
-      <input type="checkbox" id="nike" name="brand" value="nike" />
+      <input
+        type="checkbox"
+        id="nike"
+        name="brand"
+        value="nike"
+      />
 
       <label htmlFor="adidas">Adidas</label>
-      <input type="checkbox" id="adidas" name="brand" value="adidas" />
+      <input
+        type="checkbox"
+        id="adidas"
+        name="brand"
+        value="adidas"
+      />
 
       <button type="submit">Update</button>
     </Form>
@@ -400,7 +429,10 @@ export default function ProductFilters() {
 You might want to auto submit the form on any field change, for that there is [`useSubmit`][use-submit]:
 
 ```tsx lines=[2,7,14]
-import { useSubmit, useSearchParams } from "@remix-run/react";
+import {
+  useSubmit,
+  useSearchParams,
+} from "@remix-run/react";
 
 export default function ProductFilters() {
   const submit = useSubmit();
@@ -408,7 +440,10 @@ export default function ProductFilters() {
   const brands = searchParams.getAll("brand");
 
   return (
-    <Form method="get" onChange={(e) => submit(e.currentTarget)}>
+    <Form
+      method="get"
+      onChange={(e) => submit(e.currentTarget)}
+    >
       {/* ... */}
     </Form>
   );
@@ -490,7 +525,10 @@ You have two choices, and what you pick depends on the user experience you want.
 **First Choice**: The simplest thing is to auto-submit the form when the user clicks the checkbox:
 
 ```tsx lines=[2,7,20]
-import { useSubmit, useSearchParams } from "@remix-run/react";
+import {
+  useSubmit,
+  useSearchParams,
+} from "@remix-run/react";
 
 export default function ProductFilters() {
   const submit = useSubmit();
@@ -527,7 +565,10 @@ export default function ProductFilters() {
 - Update the state when the search params change (the user submitted the form or clicked the link) to reflect what's in the url search params
 
 ```tsx lines=[11-14,16-20,31-35]
-import { useSubmit, useSearchParams } from "@remix-run/react";
+import {
+  useSubmit,
+  useSearchParams,
+} from "@remix-run/react";
 
 export default function ProductFilters() {
   const submit = useSubmit();
@@ -581,7 +622,9 @@ You might want to make an abstraction for checkboxes like this:
 function SearchCheckbox({ name, value }) {
   const [searchParams] = useSearchParams();
   const all = searchParams.getAll(name);
-  const [checked, setChecked] = React.useState(all.includes(value));
+  const [checked, setChecked] = React.useState(
+    all.includes(value)
+  );
 
   React.useEffect(() => {
     setChecked(all.includes(value));

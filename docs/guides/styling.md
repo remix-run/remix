@@ -188,11 +188,15 @@ Note that these are not routes, but they export `links` functions as if they wer
 ```tsx filename=app/components/button/index.js lines=[1,3-5]
 import styles from "./styles.css";
 
-export const links = () => [{ rel: "stylesheet", href: styles }];
+export const links = () => [
+  { rel: "stylesheet", href: styles },
+];
 
-export const Button = React.forwardRef(({ children, ...props }, ref) => {
-  return <button {...props} ref={ref} data-button />;
-});
+export const Button = React.forwardRef(
+  ({ children, ...props }, ref) => {
+    return <button {...props} ref={ref} data-button />;
+  }
+);
 Button.displayName = "Button";
 ```
 
@@ -214,9 +218,13 @@ export const links = () => [
   { rel: "stylesheet", href: styles },
 ];
 
-export const PrimaryButton = React.forwardRef(({ children, ...props }, ref) => {
-  return <Button {...props} ref={ref} data-primary-button />;
-});
+export const PrimaryButton = React.forwardRef(
+  ({ children, ...props }, ref) => {
+    return (
+      <Button {...props} ref={ref} data-primary-button />
+    );
+  }
+);
 PrimaryButton.displayName = "PrimaryButton";
 ```
 
@@ -234,7 +242,10 @@ import {
 } from "~/components/primary-button";
 
 export function links() {
-  return [...primaryButtonLinks(), { rel: "stylesheet", href: styles }];
+  return [
+    ...primaryButtonLinks(),
+    { rel: "stylesheet", href: styles },
+  ];
 }
 ```
 
@@ -257,7 +268,9 @@ export function links() {
 }
 
 export async function loader({ params }) {
-  return json(await getProductsForCategory(params.category));
+  return json(
+    await getProductsForCategory(params.category)
+  );
 }
 
 export default function Category() {
@@ -278,7 +291,10 @@ export default function Category() {
 The component imports are already there, we just need to surface the assets:
 
 ```js filename=app/routes/$category.js lines=[3,7,11,15,22-25]
-import { TileGrid, links as tileGridLinks } from "~/components/tile-grid";
+import {
+  TileGrid,
+  links as tileGridLinks,
+} from "~/components/tile-grid";
 import {
   ProductTile,
   links as productTileLinks,
@@ -341,7 +357,9 @@ export const links = () => [
 
 export const CopyToClipboard = React.forwardRef(
   ({ children, ...props }, ref) => {
-    return <Button {...props} ref={ref} data-copy-to-clipboard />;
+    return (
+      <Button {...props} ref={ref} data-copy-to-clipboard />
+    );
   }
 );
 CopyToClipboard.displayName = "CopyToClipboard";
@@ -435,7 +453,9 @@ import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudfla
 
 import styles from "./tailwind.css";
 
-export const links: LinksFunction = () => [{ rel: "stylesheet", href: styles }];
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: styles },
+];
 ```
 
 If you want to use Tailwind's `@apply` method to extract custom classes, create a css file in the root directory, eg `./styles/tailwind.css`:
@@ -687,7 +707,9 @@ Here's some sample code to show how you might use Styled Components with Remix (
           <head>
             <Meta />
             <Links />
-            {typeof document === "undefined" ? "__STYLES__" : null}
+            {typeof document === "undefined"
+              ? "__STYLES__"
+              : null}
           </head>
           <body>
             <Outlet />
@@ -718,7 +740,10 @@ Here's some sample code to show how you might use Styled Components with Remix (
 
       let markup = renderToString(
         sheet.collectStyles(
-          <RemixServer context={remixContext} url={request.url} />
+          <RemixServer
+            context={remixContext}
+            url={request.url}
+          />
         )
       );
       const styles = sheet.getStyleTags();

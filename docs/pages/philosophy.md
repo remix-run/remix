@@ -28,7 +28,9 @@ Consider [the Github Gist API][api.github-1]. This payload is 75kb unpacked and 
 
 ```jsx
 export default function Gists() {
-  const gists = useSomeFetchWrapper("https://api.github.com/gists");
+  const gists = useSomeFetchWrapper(
+    "https://api.github.com/gists"
+  );
   if (!gists) {
     return <Skeleton />;
   }
