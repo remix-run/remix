@@ -26,15 +26,15 @@ module.exports = function rollup() {
     {
       external(id, parent) {
         if (
-          id === "../package.json" &&
-          parent === path.resolve(__dirname, "cli/create.ts")
+          id === path.join("..", "package.json") &&
+          parent === path.resolve(__dirname, path.join("cli", "create.ts"))
         ) {
           return true;
         }
 
         return isBareModuleId(id);
       },
-      input: `${sourceDir}/index.ts`,
+      input: path.join(sourceDir, "index.ts"),
       output: {
         banner: createBanner(packageName, version),
         dir: outputDir,
@@ -52,12 +52,12 @@ module.exports = function rollup() {
         nodeResolve({ extensions: [".ts"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: outputDir },
-            { src: `${sourceDir}/package.json`, dest: outputDir },
-            { src: `${sourceDir}/README.md`, dest: outputDir },
+            { src: "LICENSE.md", dest: outputDir },
+            { src: path.join(sourceDir, "package.json"), dest: outputDir },
+            { src: path.join(sourceDir, "README.md"), dest: outputDir },
             {
-              src: `${sourceDir}/compiler/shims`,
-              dest: `${outputDir}/compiler`,
+              src: path.join(sourceDir, "compiler", "shims"),
+              dest: path.join(outputDir, "compiler"),
             },
           ],
         }),
@@ -78,7 +78,13 @@ module.exports = function rollup() {
     cli({ sourceDir, packageName }),
     {
       external: (id) => isBareModuleId(id),
-      input: [`${sourceDir}/cli/migrate/migrations/transforms.ts`],
+      input: path.join(
+        sourceDir,
+        "cli",
+        "migrate",
+        "migrations",
+        "transforms.ts"
+      ),
       output: {
         banner: createBanner(packageName, version),
         dir: path.join(outputDir, "cli", "migrate", "migrations"),
@@ -102,7 +108,7 @@ module.exports = function rollup() {
         // Cannot mark the input module as external
         return !id.endsWith(path.join(sourceDir, "server-build.ts"));
       },
-      input: `${sourceDir}/server-build.ts`,
+      input: path.join(sourceDir, "server-build.ts"),
       output: {
         banner: executableBanner + createBanner(packageName, version),
         dir: outputDir,

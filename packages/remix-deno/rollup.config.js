@@ -12,13 +12,16 @@ module.exports = function rollup() {
 
   return [
     {
-      input: `${sourceDir}/.empty.js`,
+      input: path.join(sourceDir, ".empty.js"),
       plugins: [
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: outputDir },
+            { src: "LICENSE.md", dest: outputDir },
             {
-              src: [`${sourceDir}/**/*`, `!${sourceDir}/rollup.config.js`],
+              src: [
+                path.join(sourceDir, "**", "*"),
+                path.join(`!${sourceDir}`, "rollup.config.js"),
+              ],
               dest: outputDir,
             },
           ],

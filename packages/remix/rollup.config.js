@@ -29,7 +29,7 @@ module.exports = function rollup() {
       external() {
         return true;
       },
-      input: `${sourceDir}/index.ts`,
+      input: path.join(sourceDir, "index.ts"),
       output: {
         format: "cjs",
         dir: outputDir,
@@ -44,9 +44,9 @@ module.exports = function rollup() {
         }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: outputDir },
-            { src: `${sourceDir}/package.json`, dest: outputDir },
-            { src: `${sourceDir}/README.md`, dest: outputDir },
+            { src: "LICENSE.md", dest: outputDir },
+            { src: path.join(sourceDir, "package.json"), dest: outputDir },
+            { src: path.join(sourceDir, "README.md"), dest: outputDir },
           ],
         }),
         copyToPlaygrounds(),
@@ -56,7 +56,7 @@ module.exports = function rollup() {
       external() {
         return true;
       },
-      input: `${sourceDir}/index.ts`,
+      input: path.join(sourceDir, "index.ts"),
       output: {
         banner: createBanner("remix", version),
         dir: path.join(outputDir, "esm"),

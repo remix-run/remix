@@ -9,7 +9,7 @@ module.exports = function rollup(options) {
     } catch (e) {
       return [];
     }
-    let packageBuild = require(`.${path.sep}${configPath}`);
+    let packageBuild = require(path.join(".", configPath));
     return packageBuild(options);
   });
 };

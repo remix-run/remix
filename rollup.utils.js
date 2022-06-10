@@ -118,7 +118,7 @@ function index({ sourceDir, packageName, format }) {
   );
   return {
     external: (id) => isBareModuleId(id),
-    input: `${sourceDir}/index.ts`,
+    input: path.join(sourceDir, "index.ts"),
     output: {
       banner: createBanner(packageName, version),
       dir: format === "cjs" ? outputDir : path.join(outputDir, format),
@@ -136,9 +136,9 @@ function index({ sourceDir, packageName, format }) {
       nodeResolve({ extensions: [".ts", ".tsx"] }),
       copy({
         targets: [
-          { src: `LICENSE.md`, dest: outputDir },
-          { src: `${sourceDir}/package.json`, dest: outputDir },
-          { src: `${sourceDir}/README.md`, dest: outputDir },
+          { src: "LICENSE.md", dest: outputDir },
+          { src: path.join(sourceDir, "package.json"), dest: outputDir },
+          { src: path.join(sourceDir, "README.md"), dest: outputDir },
         ],
       }),
       copyToPlaygrounds(),
@@ -162,7 +162,7 @@ function cli({ sourceDir, packageName }) {
   );
   return {
     external: (id) => !id.endsWith(path.join(sourceDir, "cli.ts")),
-    input: `${sourceDir}/cli.ts`,
+    input: path.join(sourceDir, "cli.ts"),
     output: {
       format: "cjs",
       dir: outputDir,
@@ -178,9 +178,9 @@ function cli({ sourceDir, packageName }) {
       nodeResolve({ extensions: [".ts"] }),
       copy({
         targets: [
-          { src: `LICENSE.md`, dest: outputDir },
-          { src: `${sourceDir}/package.json`, dest: outputDir },
-          { src: `${sourceDir}/README.md`, dest: outputDir },
+          { src: "LICENSE.md", dest: outputDir },
+          { src: path.join(sourceDir, "package.json"), dest: outputDir },
+          { src: path.join(sourceDir, "README.md"), dest: outputDir },
         ],
       }),
       copyToPlaygrounds(),
@@ -206,7 +206,7 @@ function magicExports({ sourceDir, packageName, format }) {
   );
   return {
     external: () => true,
-    input: `${sourceDir}/magicExports/remix.ts`,
+    input: path.join(sourceDir, "magicExports", "remix.ts"),
     output: {
       banner: createBanner(packageName, version),
       dir: path.join(

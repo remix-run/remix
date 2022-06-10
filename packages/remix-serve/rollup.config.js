@@ -1,3 +1,5 @@
+const path = require("path");
+
 const { cli, index } = require("../../rollup.utils");
 
 let sourceDir = __dirname;
@@ -8,7 +10,7 @@ module.exports = function rollup() {
   return [
     {
       ...index({ sourceDir, packageName, format: "cjs" }),
-      input: [`${sourceDir}/index.ts`, `${sourceDir}/env.ts`],
+      input: [path.join(sourceDir, "index.ts"), path.join(sourceDir, "env.ts")],
     },
     cli({ sourceDir, packageName }),
   ];
