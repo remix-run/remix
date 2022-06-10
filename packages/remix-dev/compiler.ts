@@ -371,7 +371,7 @@ async function createBrowserBuild(
     incremental: options.incremental,
     mainFields: ["browser", "module", "main"],
     treeShaking: true,
-    minify: options.mode === BuildMode.Production,
+    minify: true,
     entryNames: "[dir]/[name]-[hash]",
     chunkNames: "_shared/[name]-[hash]",
     assetNames: "_assets/[name]-[hash]",
@@ -440,7 +440,7 @@ function createServerBuild(
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
-      minify: options.mode === BuildMode.Production && isCloudflareRuntime,
+      minify: true,
       mainFields: isCloudflareRuntime
         ? ["browser", "module", "main"]
         : config.serverModuleFormat === "esm"
