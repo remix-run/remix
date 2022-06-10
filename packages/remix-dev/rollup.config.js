@@ -25,12 +25,10 @@ module.exports = function rollup() {
   return [
     {
       external(id, parent) {
-        console.log("Checking for external id", id, parent);
         if (
           id === "../package.json" &&
           parent === path.resolve(__dirname, path.join("cli", "create.ts"))
         ) {
-          console.log("Marking external");
           return true;
         }
 
