@@ -5,11 +5,9 @@ import meow from "meow";
 import inquirer from "inquirer";
 import semver from "semver";
 import fse from "fs-extra";
-import ora from "ora";
 
 import * as colors from "../colors";
 import * as commands from "./commands";
-import { convertTemplateToJavaScript } from "./convert-to-javascript";
 import { validateNewProjectPath, validateTemplate } from "./create";
 import { getPreferredPackageManager } from "./getPreferredPackageManager";
 
