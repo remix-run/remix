@@ -21,6 +21,7 @@ async function main() {
         settings: {
           fences: true,
           listItemIndent: "one",
+          tightDefinitions: true,
         },
       })
       .use(remarkReferenceLinksBottom)
