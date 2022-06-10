@@ -35,7 +35,9 @@ For example, you could have a route to handle the search:
 ```tsx filename=routes/city-search.tsx
 export async function loader({ request }) {
   const url = new URL(request.url);
-  return json(await searchCities(url.searchParams.get("q")));
+  return json(
+    await searchCities(url.searchParams.get("q"))
+  );
 }
 ```
 
@@ -51,9 +53,13 @@ function CitySearchCombobox() {
         <div>
           <ComboboxInput
             name="q"
-            onChange={(event) => cities.submit(event.target.form)}
+            onChange={(event) =>
+              cities.submit(event.target.form)
+            }
           />
-          {cities.state === "submitting" ? <Spinner /> : null}
+          {cities.state === "submitting" ? (
+            <Spinner />
+          ) : null}
         </div>
 
         {cities.data ? (
@@ -63,7 +69,10 @@ function CitySearchCombobox() {
             ) : cities.data.length ? (
               <ComboboxList>
                 {cities.data.map((city) => (
-                  <ComboboxOption key={city.id} value={city.name} />
+                  <ComboboxOption
+                    key={city.id}
+                    value={city.name}
+                  />
                 ))}
               </ComboboxList>
             ) : (

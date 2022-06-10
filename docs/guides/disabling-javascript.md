@@ -18,13 +18,21 @@ export const handle = { hydrate: true };
 Now open `root.tsx`, bring in `useMatches` and add this:
 
 ```tsx [6,10,13-15,27]
-import { Meta, Links, Scripts, Outlet, useMatches } from "@remix-run/react";
+import {
+  Meta,
+  Links,
+  Scripts,
+  Outlet,
+  useMatches,
+} from "@remix-run/react";
 
 export default function App() {
   const matches = useMatches();
 
   // If at least one route wants to hydrate, this will return true
-  const includeScripts = matches.some((match) => match.handle?.hydrate);
+  const includeScripts = matches.some(
+    (match) => match.handle?.hydrate
+  );
 
   // then use the flag to render scripts or not
   return (
@@ -55,7 +63,9 @@ return (
     <select id="qty">
       <option>1</option>
       <option>2</option>
-      <option value="contact">Contact Sales for more</option>
+      <option value="contact">
+        Contact Sales for more
+      </option>
     </select>
 
     <script

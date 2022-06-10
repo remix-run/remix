@@ -14,7 +14,10 @@ This is probably not different than what you were doing before Remix, it might j
 We recommend you create a function that validates the user session that can be added to any routes that require it.
 
 ```tsx filename=app/session.js lines=[9-22]
-import { createCookieSessionStorage, redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import {
+  createCookieSessionStorage,
+  redirect,
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 // somewhere you've got a session storage
 const { getSession } = createCookieSessionStorage();
@@ -61,7 +64,7 @@ export async function loader({ request }) {
 
 ## How do I handle multiple forms in one route?
 
-[Watch on YouTube][www.youtube-1]
+[Watch on YouTube](https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix)
 
 In HTML, forms can post to any URL with the action prop and the app will navigate there:
 
@@ -71,8 +74,8 @@ In HTML, forms can post to any URL with the action prop and the app will navigat
 
 In Remix the action defaults to the route that the form is rendered in, making it easy to co-locate the UI and the server code that handles it. Developers often wonder how you can handle multiple actions in this scenario. You have two choices:
 
-1.  Send a form field to determine the action you want to take
-2.  Post to a different route and redirect back to the original
+1. Send a form field to determine the action you want to take
+2. Post to a different route and redirect back to the original
 
 We find option (1) to be the simplest because you don't have to mess around with sessions to get validation errors back to the UI.
 
@@ -105,7 +108,11 @@ export default function Projects() {
       <Form method="post">
         <label>
           Project name:{" "}
-          <input type="text" name="name" defaultValue={project.name} />
+          <input
+            type="text"
+            name="name"
+            defaultValue={project.name}
+          />
         </label>
         <button type="submit" name="action" value="create">
           Update
@@ -144,13 +151,16 @@ If you're wanting to send structured data simply to post arrays, you can use the
 <Form method="post">
   <p>Select the categories for this video:</p>
   <label>
-    <input type="checkbox" name="category" value="comedy" /> Comedy
+    <input type="checkbox" name="category" value="comedy" />{" "}
+    Comedy
   </label>
   <label>
-    <input type="checkbox" name="category" value="music" /> Music
+    <input type="checkbox" name="category" value="music" />{" "}
+    Music
   </label>
   <label>
-    <input type="checkbox" name="category" value="howto" /> How-To
+    <input type="checkbox" name="category" value="howto" />{" "}
+    How-To
   </label>
 </Form>
 ```
@@ -198,7 +208,11 @@ export async function action({ request }) {
 Some folks even dump their JSON into a hidden field. Note that this approach won't work with progressive enhancement. If that's not important to your app, this is an easy way to send structured data.
 
 ```tsx
-<input type="hidden" name="json" value={JSON.stringify(obj)} />
+<input
+  type="hidden"
+  name="json"
+  value={JSON.stringify(obj)}
+/>
 ```
 
 And then parse it in the action:
@@ -221,5 +235,3 @@ Again, `formData.getAll()` is often all you need, we encourage you to give it a 
 Error boundaries render when your application throws an error and you had no clue it was going to happen. Most apps just go blank or have spinners spin forever. In remix the error boundary renders and you have granular control over it.
 
 Catch boundaries render when you decide in a loader that you can't proceed down the happy path to render the UI you want (auth required, record not found, etc.), so you throw a response and let some catch boundary up the tree handle it.
-
-[www.youtube-1]: https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix

@@ -21,7 +21,7 @@ Server adapters:
 - `@remix-run/netlify`
 - `@remix-run/vercel`
 
-These package provides all the components, hooks, and [Web Fetch API][developer.mozilla-1] objects and helpers.
+These package provides all the components, hooks, and [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) objects and helpers.
 
 ## Components and Hooks
 
@@ -30,7 +30,10 @@ These package provides all the components, hooks, and [Web Fetch API][developer.
 These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
 ```tsx
-import type { LinksFunction, MetaFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type {
+  LinksFunction,
+  MetaFunction,
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
 import {
   Links,
   LiveReload,
@@ -86,9 +89,9 @@ export default function App() {
 
 You can pass extra props to `<Scripts />` like `<Scripts crossOrigin />` for hosting your static assets on a different server than your app.
 
-The example above renders several `<script />` tags into the resulting HTML. While this usually just works, you might have configured a [content security policy for scripts][developer.mozilla-2] that prevents these `<script />` tags from being executed. In particular, to support [content security policies with nonce-sources for scripts][developer.mozilla-3], the `<Scripts />`, `<LiveReload />` and `<ScrollRestoration />` components support a `nonce` property, e.g.`<Script nonce={nonce}/>`. The provided nonce is subsequently passed to the `<script />` tag rendered into the HTML by these components, allowing the scripts to be executed in accordance with your CSP policy.
+The example above renders several `<script />` tags into the resulting HTML. While this usually just works, you might have configured a [content security policy for scripts](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) that prevents these `<script />` tags from being executed. In particular, to support [content security policies with nonce-sources for scripts](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources), the `<Scripts />`, `<LiveReload />` and `<ScrollRestoration />` components support a `nonce` property, e.g.`<Script nonce={nonce}/>`. The provided nonce is subsequently passed to the `<script />` tag rendered into the HTML by these components, allowing the scripts to be executed in accordance with your CSP policy.
 
-Learn more about `meta` and `links` exports in the [conventions][1] documentation.
+Learn more about `meta` and `links` exports in the [conventions](/api/conventions) documentation.
 
 ### `<Link>`
 
@@ -102,7 +105,8 @@ import { Link } from "@remix-run/react";
 export default function GlobalNav() {
   return (
     <nav>
-      <Link to="/dashboard">Dashboard</Link> <Link to="/account">Account</Link>{" "}
+      <Link to="/dashboard">Dashboard</Link>{" "}
+      <Link to="/account">Account</Link>{" "}
       <Link to="/support">Dashboard</Link>
     </nav>
   );
@@ -162,7 +166,9 @@ function NavList() {
         <li>
           <NavLink
             to="messages"
-            style={({ isActive }) => (isActive ? activeStyle : undefined)}
+            style={({ isActive }) =>
+              isActive ? activeStyle : undefined
+            }
           >
             Messages
           </NavLink>
@@ -180,7 +186,11 @@ function NavList() {
         <li>
           <NavLink to="tasks">
             {({ isActive }) => (
-              <span className={isActive ? activeClassName : undefined}>
+              <span
+                className={
+                  isActive ? activeClassName : undefined
+                }
+              >
                 Tasks
               </span>
             )}
@@ -249,7 +259,7 @@ See also:
 
 #### `<Form method>`
 
-This determines the [HTTP verb][developer.mozilla-4] to be used: get, post, put, patch, delete. The default is "get".
+This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) to be used: get, post, put, patch, delete. The default is "get".
 
 ```tsx
 <Form method="post" />
@@ -283,7 +293,7 @@ If true, it will submit the form with the browser instead of JavaScript, even if
 <Form reloadDocument />
 ```
 
-<docs-info>This is recommended over <code>\<form></code></docs-info>
+<docs-info>This is recommended over <code>&lt;form></code></docs-info>
 
 When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is.
 
@@ -378,7 +388,8 @@ export async function action({ request }) {
 
   // validate the fields
   if (typeof email !== "string" || !email.includes("@")) {
-    errors.email = "That doesn't look like an email address";
+    errors.email =
+      "That doesn't look like an email address";
   }
 
   if (typeof password !== "string" || password.length < 6) {
@@ -404,11 +415,15 @@ export default function Signup() {
       <Form method="post">
         <p>
           <input type="text" name="email" />
-          {errors?.email ? <span>{errors.email}</span> : null}
+          {errors?.email ? (
+            <span>{errors.email}</span>
+          ) : null}
         </p>
         <p>
           <input type="text" name="password" />
-          {errors?.password ? <span>{errors.password}</span> : null}
+          {errors?.password ? (
+            <span>{errors.password}</span>
+          ) : null}
         </p>
         <p>
           <button type="submit">Sign up</button>
@@ -429,27 +444,35 @@ Form submissions are navigation events in browsers (and Remix), which means user
 
 For example, consider this user flow:
 
-1.  The user lands at `/buy`
-2.  They submit a form to `/checkout`
-3.  They click a link to `/order/123`
+1. The user lands at `/buy`
+2. They submit a form to `/checkout`
+3. They click a link to `/order/123`
 
 The history stack looks like this, where "\*" is the current entry:
 
-    GET /buy > POST /checkout > *GET /order/123
+```
+GET /buy > POST /checkout > *GET /order/123
+```
 
 Now consider the user clicks the back button 😨
 
-    GET /buy - *POST /checkout < GET /order/123
+```
+GET /buy - *POST /checkout < GET /order/123
+```
 
 The browser will repost the same information and likely charge their credit card again. You usually don't want this.
 
 The decades-old best practice is to redirect in the POST request. This way the location disappears from the browser's history stack and the user can't "back into it" anymore.
 
-    GET /buy > POST /checkout, Redirect > GET /order/123
+```
+GET /buy > POST /checkout, Redirect > GET /order/123
+```
 
 This results in a history stack that looks like this:
 
-    GET /buy - *GET /order/123
+```
+GET /buy - *GET /order/123
+```
 
 Now the user can click back without resubmitting the form.
 
@@ -480,7 +503,10 @@ Resolves the value of a `<form action>` attribute using React Router's relative 
 ```tsx
 function SomeComponent() {
   return (
-    <button formAction={useFormAction("destroy")} formMethod="post">
+    <button
+      formAction={useFormAction("destroy")}
+      formMethod="post"
+    >
       Delete
     </button>
   );
@@ -519,9 +545,12 @@ function UserPreferences() {
   return (
     <Form method="post" onChange={handleChange}>
       <label>
-        <input type="checkbox" name="darkMode" value="on" /> Dark Mode
+        <input type="checkbox" name="darkMode" value="on" />{" "}
+        Dark Mode
       </label>
-      {transition.state === "submitting" ? <p>Saving...</p> : null}
+      {transition.state === "submitting" ? (
+        <p>Saving...</p>
+      ) : null}
     </Form>
   );
 }
@@ -587,15 +616,21 @@ You can know the state of the transition with `transition.state`. It will be one
 
 Normal navigation's transition as follows:
 
-    idle → loading → idle
+```
+idle → loading → idle
+```
 
 GET form submissions transition as follows:
 
-    idle → submitting → idle
+```
+idle → submitting → idle
+```
 
 Form submissions with POST, PUT, PATCH, or DELETE transition as follows:
 
-    idle → submitting → loading → idle
+```
+idle → submitting → loading → idle
+```
 
 ```tsx
 function SubmitButton() {
@@ -660,7 +695,7 @@ function SubmitButton() {
 
 #### `transition.submission`
 
-Any transition that started from a `<Form>` or `useSubmit` will have your form's submission attached to it. This is primarily useful to build "Optimistic UI" with the `submission.formData` [`FormData`][developer.mozilla-5] object.
+Any transition that started from a `<Form>` or `useSubmit` will have your form's submission attached to it. This is primarily useful to build "Optimistic UI" with the `submission.formData` [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) object.
 
 TODO: Example
 
@@ -812,7 +847,8 @@ Just like `useSubmit` except it doesn't cause a navigation.
 function SomeComponent() {
   const fetcher = useFetcher();
 
-  const onClick = () => fetcher.submit({ some: "values" }, { method: "post" });
+  const onClick = () =>
+    fetcher.submit({ some: "values" }, { method: "post" });
 
   // ...
 }
@@ -899,10 +935,17 @@ function NewsletterSignup() {
   }, [newsletter]);
 
   return (
-    <newsletter.Form ref={ref} method="post" action="/newsletter/subscribe">
+    <newsletter.Form
+      ref={ref}
+      method="post"
+      action="/newsletter/subscribe"
+    >
       <p>
         <input type="text" name="email" />{" "}
-        <button type="submit" disabled={newsletter.state === "submitting"}>
+        <button
+          type="submit"
+          disabled={newsletter.state === "submitting"}
+        >
           Subscribe
         </button>
       </p>
@@ -971,7 +1014,12 @@ export function NewsletterSignup() {
 }
 
 // used here and in the route
-export function NewsletterForm({ Form, data, state, type }) {
+export function NewsletterForm({
+  Form,
+  data,
+  state,
+  type,
+}) {
   // refactor a bit in here, just read from props instead of useFetcher
 }
 ```
@@ -985,7 +1033,14 @@ import { NewsletterForm } from "~/NewsletterSignup";
 
 export default function NewsletterSignupRoute() {
   const data = useActionData();
-  return <NewsletterForm Form={Form} data={data} state="idle" type="done" />;
+  return (
+    <NewsletterForm
+      Form={Form}
+      data={data}
+      state="idle"
+      type="done"
+    />
+  );
 }
 ```
 
@@ -1015,7 +1070,9 @@ Anytime you show the user avatar, you could put a hover effect that fetches data
 
 ```tsx filename=routes/user/$id/details.tsx
 export async function loader({ params }) {
-  return json(await fakeDb.user.find({ where: { id: params.id } }));
+  return json(
+    await fakeDb.user.find({ where: { id: params.id } })
+  );
 }
 
 function UserAvatar({ partialUser }) {
@@ -1053,7 +1110,9 @@ If the user needs to select a city, you could have a loader that returns a list 
 ```tsx filename=routes/city-search.tsx
 export async function loader({ request }) {
   const url = new URL(request.url);
-  return json(await searchCities(url.searchParams.get("city-query")));
+  return json(
+    await searchCities(url.searchParams.get("city-query"))
+  );
 }
 
 function CitySearchCombobox() {
@@ -1065,9 +1124,13 @@ function CitySearchCombobox() {
         <div>
           <ComboboxInput
             name="city-query"
-            onChange={(event) => cities.submit(event.target.form)}
+            onChange={(event) =>
+              cities.submit(event.target.form)
+            }
           />
-          {cities.state === "submitting" ? <Spinner /> : null}
+          {cities.state === "submitting" ? (
+            <Spinner />
+          ) : null}
         </div>
 
         {cities.data ? (
@@ -1077,7 +1140,10 @@ function CitySearchCombobox() {
             ) : cities.data.length ? (
               <ComboboxList>
                 {cities.data.map((city) => (
-                  <ComboboxOption key={city.id} value={city.name} />
+                  <ComboboxOption
+                    key={city.id}
+                    value={city.name}
+                  />
                 ))}
               </ComboboxList>
             ) : (
@@ -1099,19 +1165,21 @@ This is useful for components throughout the app that didn't create the fetchers
 
 For example, imagine a UI where the sidebar lists projects, and the main view displays a list of checkboxes for the current project. The sidebar could display the number of completed and total tasks for each project.
 
-    +-----------------+----------------------------+
-    |                 |                            |
-    |   Soccer  (8/9) | [x] Do the dishes          |
-    |                 |                            |
-    | > Home    (2/4) | [x] Fold laundry           |
-    |                 |                            |
-    |                 | [ ] Replace battery in the |
-    |                 |     smoke alarm            |
-    |                 |                            |
-    |                 | [ ] Change lights in kids  |
-    |                 |     bathroom               |
-    |                 |                            |
-    +-----------------+----------------------------┘
+```
++-----------------+----------------------------+
+|                 |                            |
+|   Soccer  (8/9) | [x] Do the dishes          |
+|                 |                            |
+| > Home    (2/4) | [x] Fold laundry           |
+|                 |                            |
+|                 | [ ] Replace battery in the |
+|                 |     smoke alarm            |
+|                 |                            |
+|                 | [ ] Change lights in kids  |
+|                 |     bathroom               |
+|                 |                            |
++-----------------+----------------------------┘
+```
 
 When the user clicks a checkbox, the submission goes to the action to change the state of the task. Instead of creating a "loading state" we want to create an "optimistic UI" that will **immediately** update the checkbox to appear checked even though the server hasn't processed it yet. In the checkbox component, we can use `fetcher.submission`:
 
@@ -1126,7 +1194,10 @@ function Task({ task }) {
 
   const { projectId, id } = task;
   return (
-    <toggle.Form method="put" action={`/project/${projectId}/tasks/${id}`}>
+    <toggle.Form
+      method="put"
+      action={`/project/${projectId}/tasks/${id}`}
+    >
       <label>
         <input
           type="checkbox"
@@ -1141,19 +1212,21 @@ function Task({ task }) {
 
 This awesome for the checkbox, but the sidebar will say 2/4 while the checkboxes show 3/4 when the user clicks on of them!
 
-    +-----------------+----------------------------+
-    |                 |                            |
-    |   Soccer  (8/9) | [x] Do the dishes          |
-    |                 |                            |
-    | > Home    (2/4) | [x] Fold laundry           |
-    |                 |                            |
-    |          CLICK!-->[x] Replace battery in the |
-    |                 |     smoke alarm            |
-    |                 |                            |
-    |                 | [ ] Change lights in kids  |
-    |                 |     bathroom               |
-    |                 |                            |
-    +-----------------+----------------------------┘
+```
++-----------------+----------------------------+
+|                 |                            |
+|   Soccer  (8/9) | [x] Do the dishes          |
+|                 |                            |
+| > Home    (2/4) | [x] Fold laundry           |
+|                 |                            |
+|          CLICK!-->[x] Replace battery in the |
+|                 |     smoke alarm            |
+|                 |                            |
+|                 | [ ] Change lights in kids  |
+|                 |     bathroom               |
+|                 |                            |
++-----------------+----------------------------┘
+```
 
 Because Remix will automatically reload the routes, the sidebar will quickly update and be correct. But for a moment, it's gonna feel a little funny.
 
@@ -1161,9 +1234,9 @@ This is where `useFetchers` comes in. Up in the sidebar, we can access all the i
 
 The strategy has three steps:
 
-1.  Find the submissions for tasks in a specific project
-2.  Use the `fetcher.submission.formData` to immediately update the count
-3.  Use the normal task's state if it's not inflight
+1. Find the submissions for tasks in a specific project
+2. Use the `fetcher.submission.formData` to immediately update the count
+3. Use the normal task's state if it's not inflight
 
 Here's some sample code:
 
@@ -1177,7 +1250,9 @@ function ProjectTaskCount({ project }) {
   for (const f of fetchers) {
     if (
       f.submission &&
-      f.submission.action.startsWith(`/projects/${project.id}/task`)
+      f.submission.action.startsWith(
+        `/projects/${project.id}/task`
+      )
     ) {
       const taskId = f.submission.formData.get("id");
       myFetchers.set(
@@ -1243,62 +1318,69 @@ Let's consider building some breadcrumbs. If a route wants to participate in the
 
 You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. It's not a Remix thing, it's whatever you want. Here it's added to a parent route:
 
-1.  Add the breadcrumb handle to the parent route
+1. Add the breadcrumb handle to the parent route
 
-    ```tsx
-    // routes/parent.tsx
-    export const handle = {
-      breadcrumb: () => <Link to="/parent">Some Route</Link>,
-    };
-    ```
+   ```tsx
+   // routes/parent.tsx
+   export const handle = {
+     breadcrumb: () => <Link to="/parent">Some Route</Link>,
+   };
+   ```
 
-2.  We can do the same for a child route
+2. We can do the same for a child route
 
-    ```tsx
-    // routes/parent/child.tsx
-    export const handle = {
-      breadcrumb: () => <Link to="/parent/child">Child Route</Link>,
-    };
-    ```
+   ```tsx
+   // routes/parent/child.tsx
+   export const handle = {
+     breadcrumb: () => (
+       <Link to="/parent/child">Child Route</Link>
+     ),
+   };
+   ```
 
-3.  Now we can put it all together in our root route with `useMatches`.
+3. Now we can put it all together in our root route with `useMatches`.
 
-    ```tsx [6, 20-31]
-    // root.tsx
-    import {
-      Links,
-      Scripts,
-      useLoaderData,
-      useMatches,
-    } from "@remix-run/react";
+   ```tsx [6, 20-31]
+   // root.tsx
+   import {
+     Links,
+     Scripts,
+     useLoaderData,
+     useMatches,
+   } from "@remix-run/react";
 
-    export default function Root() {
-      const matches = useMatches();
+   export default function Root() {
+     const matches = useMatches();
 
-      return (
-        <html lang="en">
-          <head>
-            <Links />
-          </head>
-          <body>
-            <header>
-              <ol>
-                {matches
-                  // skip routes that don't have a breadcrumb
-                  .filter((match) => match.handle && match.handle.breadcrumb)
-                  // render breadcrumbs!
-                  .map((match, index) => (
-                    <li key={index}>{match.handle.breadcrumb(match)}</li>
-                  ))}
-              </ol>
-            </header>
+     return (
+       <html lang="en">
+         <head>
+           <Links />
+         </head>
+         <body>
+           <header>
+             <ol>
+               {matches
+                 // skip routes that don't have a breadcrumb
+                 .filter(
+                   (match) =>
+                     match.handle && match.handle.breadcrumb
+                 )
+                 // render breadcrumbs!
+                 .map((match, index) => (
+                   <li key={index}>
+                     {match.handle.breadcrumb(match)}
+                   </li>
+                 ))}
+             </ol>
+           </header>
 
-            <Outlet />
-          </body>
-        </html>
-      );
-    }
-    ```
+           <Outlet />
+         </body>
+       </html>
+     );
+   }
+   ```
 
 Notice that we're passing the `match` to breadcrumbs. We didn't use it, but we could have used `match.data` to use our route's data in the breadcrumb.
 
@@ -1443,7 +1525,7 @@ return new Response(null, {
 
 Allows you to handle multipart forms (file uploads) for your app.
 
-Would be useful to understand [the Browser File API][developer.mozilla-6] to know how to use this API.
+Would be useful to understand [the Browser File API](https://developer.mozilla.org/en-US/docs/Web/API/File) to know how to use this API.
 
 It's to be used in place of `request.formData()`.
 
@@ -1455,7 +1537,9 @@ It's to be used in place of `request.formData()`.
 For example:
 
 ```tsx lines=[4-7,9,25]
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler // <-- we'll look at this deeper next
@@ -1502,7 +1586,9 @@ An upload handler that will write parts with a filename to disk to keep them out
 **Example:**
 
 ```tsx
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const uploadHandler = unstable_composeUploadHandlers(
     unstable_createFileUploadHandler({
       maxPartSize: 5_000_000,
@@ -1525,13 +1611,13 @@ export const action: ActionFunction = async ({ request }) => {
 
 **Options:**
 
-| Property           | Type     | Default                         | Description                                                                                                                                               |
-| ------------------ | -------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| avoidFileConflicts | boolean  | true                            | Avoid file conflicts by appending a timestamp on the end of the filename if it already exists on disk                                                     |
-| directory          | string   | Function                        | os.tmpdir()                                                                                                                                               | The directory to write the upload. |
-| file               | Function | () => `upload_${random}.${ext}` | The name of the file in the directory. Can be a relative path, the directory structure will be created if it does not exist.                              |
-| maxPartSize        | number   | 3000000                         | The maximum upload size allowed (in bytes). If the size is exceeded a MaxPartSizeExceededError will be thrown.                                            |
-| filter             | Function | OPTIONAL                        | A function you can write to prevent a file upload from being saved based on filename, mimetype, or encoding. Return `false` and the file will be ignored. |
+| Property           | Type               | Default                         | Description                                                                                                                                               |
+| ------------------ | ------------------ | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| avoidFileConflicts | boolean            | true                            | Avoid file conflicts by appending a timestamp on the end of the filename if it already exists on disk                                                     |
+| directory          | string \| Function | os.tmpdir()                     | The directory to write the upload.                                                                                                                        |
+| file               | Function           | () => `upload_${random}.${ext}` | The name of the file in the directory. Can be a relative path, the directory structure will be created if it does not exist.                              |
+| maxPartSize        | number             | 3000000                         | The maximum upload size allowed (in bytes). If the size is exceeded a MaxPartSizeExceededError will be thrown.                                            |
+| filter             | Function           | OPTIONAL                        | A function you can write to prevent a file upload from being saved based on filename, mimetype, or encoding. Return `false` and the file will be ignored. |
 
 The function API for `file` and `directory` are the same. They accept an `object` and return a `string`. The object it accepts has `filename`, `encoding`, and `mimetype` (all strings).The `string` returned is the path.
 
@@ -1542,7 +1628,9 @@ The `filter` function accepts an `object` and returns a `boolean` (or a promise 
 **Example:**
 
 ```tsx
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const uploadHandler = unstable_createMemoryUploadHandler({
     maxPartSize: 500_000,
   });
@@ -1581,29 +1669,37 @@ import type {
 } from "cloudinary";
 import cloudinary from "cloudinary";
 
-async function uploadImageToCloudinary(data: AsyncIterable<Uint8Array>) {
+async function uploadImageToCloudinary(
+  data: AsyncIterable<Uint8Array>
+) {
   const uploadPromise = new Promise<UploadApiResponse>(
     async (resolve, reject) => {
-      const uploadStream = cloudinary.v2.uploader.upload_stream(
-        {
-          folder: "remix",
-        },
-        (error, result) => {
-          if (error) {
-            reject(error);
-            return;
+      const uploadStream =
+        cloudinary.v2.uploader.upload_stream(
+          {
+            folder: "remix",
+          },
+          (error, result) => {
+            if (error) {
+              reject(error);
+              return;
+            }
+            resolve(result);
           }
-          resolve(result);
-        }
+        );
+      await writeAsyncIterableToWritable(
+        data,
+        uploadStream
       );
-      await writeAsyncIterableToWritable(data, uploadStream);
     }
   );
 
   return uploadPromise;
 }
 
-export const action: ActionFunction = async ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   const userId = getUserId(request);
 
   const uploadHandler = unstable_composeUploadHandlers(
@@ -1612,7 +1708,9 @@ export const action: ActionFunction = async ({ request }) => {
       if (name !== "img") {
         return undefined;
       }
-      const uploadedImage = await uploadImageToCloudinary(data);
+      const uploadedImage = await uploadImageToCloudinary(
+        data
+      );
       return uploadedImage.secure_url;
     },
     // fallback to memory for everything else
@@ -1641,7 +1739,7 @@ The `UploadHandler` function accepts a number of parameters about the file:
 | encoding | string   | The encoding of the file (like `7bit`)                                       |
 | mimetype | string   | The mimetype of the file (like `video/mp4`)                                  |
 
-Your job is to do whatever you need with the `stream` and return a value that's a valid [`FormData`][developer.mozilla-5] value: [`File`][developer.mozilla-6], `string`, or `undefined`.
+Your job is to do whatever you need with the `stream` and return a value that's a valid [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) value: [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File), `string`, or `undefined`.
 
 ### Upload Handler Composition
 
@@ -1652,13 +1750,15 @@ import type { UploadHandler } from "@remix-run/node"; // or "@remix-run/cloudfla
 import { unstable_createFileUploadHandler } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
-export const standardFileUploadHandler = unstable_createFileUploadHandler({
-  directory: "public/calendar-events",
-});
+export const standardFileUploadHandler =
+  unstable_createFileUploadHandler({
+    directory: "public/calendar-events",
+  });
 
-export const cloudinaryUploadHandler = createCloudinaryUploadHandler({
-  folder: "/my-site/avatars",
-});
+export const cloudinaryUploadHandler =
+  createCloudinaryUploadHandler({
+    folder: "/my-site/avatars",
+  });
 
 export const fileUploadHandler: UploadHandler = (args) => {
   if (args.name === "calendarEvent") {
@@ -1673,7 +1773,7 @@ export const fileUploadHandler: UploadHandler = (args) => {
 
 ## Cookies
 
-A [cookie][developer.mozilla-7] is a small piece of information that your server sends someone in a HTTP response that their browser will send back on subsequent requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions][sessions]), shopping carts, user preferences, and many other features that require remembering who is "logged in".
+A [cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies) is a small piece of information that your server sends someone in a HTTP response that their browser will send back on subsequent requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions][sessions]), shopping carts, user preferences, and many other features that require remembering who is "logged in".
 
 Remix's `Cookie` interface provides a logical, reusable container for cookie metadata.
 
@@ -1707,13 +1807,15 @@ import { userPrefs } from "~/cookies";
 
 export async function loader({ request }) {
   const cookieHeader = request.headers.get("Cookie");
-  const cookie = (await userPrefs.parse(cookieHeader)) || {};
+  const cookie =
+    (await userPrefs.parse(cookieHeader)) || {};
   return json({ showBanner: cookie.showBanner });
 }
 
 export async function action({ request }) {
   const cookieHeader = request.headers.get("Cookie");
-  const cookie = (await userPrefs.parse(cookieHeader)) || {};
+  const cookie =
+    (await userPrefs.parse(cookieHeader)) || {};
   const bodyParams = await request.formData();
 
   if (bodyParams.get("bannerVisibility") === "hidden") {
@@ -1736,7 +1838,11 @@ export default function Home() {
         <div>
           <Link to="/sale">Don't miss our sale!</Link>
           <Form method="post">
-            <input type="hidden" name="bannerVisibility" value="hidden" />
+            <input
+              type="hidden"
+              name="bannerVisibility"
+              value="hidden"
+            />
             <button type="submit">Hide</button>
           </Form>
         </div>
@@ -1749,7 +1855,7 @@ export default function Home() {
 
 ### Cookie attributes
 
-Cookies have [several attributes][developer.mozilla-8] that control when they expire, how they are accessed, and where they are sent. Any of these attributes may be specified either in `createCookie(name, options)`, or during `serialize()` when the `Set-Cookie` header is generated.
+Cookies have [several attributes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes) that control when they expire, how they are accessed, and where they are sent. Any of these attributes may be specified either in `createCookie(name, options)`, or during `serialize()` when the `Set-Cookie` header is generated.
 
 ```js
 const cookie = createCookie("user-prefs", {
@@ -1770,7 +1876,7 @@ cookie.serialize(userPrefs);
 cookie.serialize(userPrefs, { sameSite: "strict" });
 ```
 
-Please read [more info about these attributes][developer.mozilla-8] to get a better understanding of what they do.
+Please read [more info about these attributes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes) to get a better understanding of what they do.
 
 ### Signing cookies
 
@@ -1829,7 +1935,7 @@ const cookie = createCookie("cookie-name", {
 });
 ```
 
-To learn more about each attribute, please see the [MDN Set-Cookie docs][developer.mozilla-8].
+To learn more about each attribute, please see the [MDN Set-Cookie docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes).
 
 ### `isCookie`
 
@@ -1862,7 +1968,9 @@ The name of the cookie, used in `Cookie` and `Set-Cookie` HTTP headers.
 Extracts and returns the value of this cookie in a given `Cookie` header.
 
 ```js
-const value = await cookie.parse(request.headers.get("Cookie"));
+const value = await cookie.parse(
+  request.headers.get("Cookie")
+);
 ```
 
 #### `cookie.serialize()`
@@ -1964,7 +2072,9 @@ import { useLoaderData } from "@remix-run/react";
 import { getSession, commitSession } from "../sessions";
 
 export async function loader({ request }) {
-  const session = await getSession(request.headers.get("Cookie"));
+  const session = await getSession(
+    request.headers.get("Cookie")
+  );
 
   if (session.has("userId")) {
     // Redirect to the home page if they are already signed in.
@@ -1981,12 +2091,17 @@ export async function loader({ request }) {
 }
 
 export async function action({ request }) {
-  const session = await getSession(request.headers.get("Cookie"));
+  const session = await getSession(
+    request.headers.get("Cookie")
+  );
   const form = await request.formData();
   const username = form.get("username");
   const password = form.get("password");
 
-  const userId = await validateCredentials(username, password);
+  const userId = await validateCredentials(
+    username,
+    password
+  );
 
   if (userId == null) {
     session.flash("error", "Invalid username/password");
@@ -2023,7 +2138,8 @@ export default function Login() {
           Username: <input type="text" name="username" />
         </label>
         <label>
-          Password: <input type="password" name="password" />
+          Password:{" "}
+          <input type="password" name="password" />
         </label>
       </form>
     </div>
@@ -2036,8 +2152,12 @@ And then a logout form might look something like this:
 ```tsx
 import { getSession, destroySession } from "../sessions";
 
-export const action: ActionFunction = async ({ request }) => {
-  const session = await getSession(request.headers.get("Cookie"));
+export const action: ActionFunction = async ({
+  request,
+}) => {
+  const session = await getSession(
+    request.headers.get("Cookie")
+  );
   return redirect("/login", {
     headers: {
       "Set-Cookie": await destroySession(session),
@@ -2058,7 +2178,7 @@ export default function LogoutRoute() {
 }
 ```
 
-<docs-warning>It's important that you logout (or perform any mutation for that matter) in an `action` and not a `loader`. Otherwise you open your users to [Cross-Site Request Forgery][developer.mozilla-9] attacks. Also, Remix only re-calls `loaders` when `actions` are called.</docs-warning>
+<docs-warning>It's important that you logout (or perform any mutation for that matter) in an `action` and not a `loader`. Otherwise you open your users to [Cross-Site Request Forgery](https://developer.mozilla.org/en-US/docs/Glossary/CSRF) attacks. Also, Remix only re-calls `loaders` when `actions` are called.</docs-warning>
 
 ### Session Gotchas
 
@@ -2090,7 +2210,11 @@ The following example shows how you could do this using a generic database clien
 ```js
 import { createSessionStorage } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
-function createDatabaseSessionStorage({ cookie, host, port }) {
+function createDatabaseSessionStorage({
+  cookie,
+  host,
+  port,
+}) {
   // Configure your database client...
   const db = createDatabaseClient(host, port);
 
@@ -2162,7 +2286,10 @@ This storage keeps all the cookie information in your server's memory.
 
 ```js
 // app/sessions.js
-import { createCookie, createMemorySessionStorage } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import {
+  createCookie,
+  createMemorySessionStorage,
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
@@ -2188,7 +2315,10 @@ The advantage of file-backed sessions is that only the session ID is stored in t
 
 ```js
 // app/sessions.js
-import { createCookie, createFileSessionStorage } from "@remix-run/node";
+import {
+  createCookie,
+  createFileSessionStorage,
+} from "@remix-run/node";
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
@@ -2196,19 +2326,20 @@ const sessionCookie = createCookie("__session", {
   sameSite: true,
 });
 
-const { getSession, commitSession, destroySession } = createFileSessionStorage({
-  // The root directory where you want to store the files.
-  // Make sure it's writable!
-  dir: "/app/sessions",
-  cookie: sessionCookie,
-});
+const { getSession, commitSession, destroySession } =
+  createFileSessionStorage({
+    // The root directory where you want to store the files.
+    // Make sure it's writable!
+    dir: "/app/sessions",
+    cookie: sessionCookie,
+  });
 
 export { getSession, commitSession, destroySession };
 ```
 
 ### `createCloudflareKVSessionStorage` (cloudflare-workers)
 
-For [Cloudflare KV][developers.cloudflare-1] backed sessions, use `createCloudflareKVSessionStorage()`.
+For [Cloudflare KV](https://developers.cloudflare.com/workers/learning/how-kv-works) backed sessions, use `createCloudflareKVSessionStorage()`.
 
 The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
@@ -2237,14 +2368,16 @@ export { getSession, commitSession, destroySession };
 
 ### `createArcTableSessionStorage` (architect, Amazon DynamoDB)
 
-For [Amazon DynamoDB][docs.aws.amazon-1] backed sessions, use `createArcTableSessionStorage()`.
+For [Amazon DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/) backed sessions, use `createArcTableSessionStorage()`.
 
 The advantage of DynamoDB backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
-    # app.arc
-    sessions
-      _idx *String
-      _ttl TTL
+```
+# app.arc
+sessions
+  _idx *String
+  _ttl TTL
+```
 
 ```js
 // app/sessions.server.js
@@ -2280,7 +2413,9 @@ After retrieving a session with `getSession`, the session object returned has a 
 
 ```js
 export async function action({ request }) {
-  const session = await getSession(request.headers.get("Cookie"));
+  const session = await getSession(
+    request.headers.get("Cookie")
+  );
   session.get("foo");
   session.has("bar");
   // etc.
@@ -2311,8 +2446,12 @@ Sets a session value that will be unset the first time it is read. After that, i
 import { getSession, commitSession } from "../sessions";
 
 export async function action({ request, params }) {
-  const session = await getSession(request.headers.get("Cookie"));
-  const deletedProject = await archiveProject(params.projectId);
+  const session = await getSession(
+    request.headers.get("Cookie")
+  );
+  const deletedProject = await archiveProject(
+    params.projectId
+  );
 
   session.flash(
     "globalMessage",
@@ -2333,12 +2472,19 @@ Now we can read the message in a loader.
 
 ```jsx
 import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import { Meta, Links, Scripts, Outlet } from "@remix-run/react";
+import {
+  Meta,
+  Links,
+  Scripts,
+  Outlet,
+} from "@remix-run/react";
 
 import { getSession, commitSession } from "./sessions";
 
 export async function loader({ request }) {
-  const session = await getSession(request.headers.get("Cookie"));
+  const session = await getSession(
+    request.headers.get("Cookie")
+  );
   const message = session.get("globalMessage") || null;
 
   return json(
@@ -2362,7 +2508,9 @@ export default function App() {
         <Links />
       </head>
       <body>
-        {message ? <div className="flash">{message}</div> : null}
+        {message ? (
+          <div className="flash">{message}</div>
+        ) : null}
         <Outlet />
         <Scripts />
       </body>
@@ -2405,13 +2553,17 @@ export async function loader({ request }) {
 
 This component is a wrapper around React Router's Outlet with the ability to pass UI state down to nested routes.
 
-<docs-warning>You can use this for loader data, but you don't need to. It's easier to access all loader data in any component via [`useLoaderData`][useloaderdata] or [`useMatches`][2].</docs-warning>
+<docs-warning>You can use this for loader data, but you don't need to. It's easier to access all loader data in any component via [`useLoaderData`](#useloaderdata) or [`useMatches`](#usematches).</docs-warning>
 
 Here's a practical example of when you may want to use this feature. Let's say you've got a list of companies that have invoices and you want to display those companies in an accordion. We'll render our outlet in that accordion, but we want the invoice sorting to be controlled by the parent (so changing companies preserves the invoice sorting). This is a perfect use case for `<Outlet context>`.
 
 ```tsx filename=app/routes/companies.tsx lines=[5,28-31,36-44,53-57,68]
 import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import { useLoaderData, useParams, Outlet } from "@remix-run/react";
+import {
+  useLoaderData,
+  useParams,
+  Outlet,
+} from "@remix-run/react";
 import {
   Accordion,
   AccordionItem,
@@ -2441,9 +2593,12 @@ export type ContextType = {
 export default function CompaniesRoute() {
   const data = useLoaderData<LoaderData>();
 
-  const [invoiceSort, setInvoiceSort] = React.useState<Sort>("ASC");
+  const [invoiceSort, setInvoiceSort] =
+    React.useState<Sort>("ASC");
   function changeInvoiceSort() {
-    setInvoiceSort((sort) => (sort === "ASC" ? "DESC" : "ASC"));
+    setInvoiceSort((sort) =>
+      sort === "ASC" ? "DESC" : "ASC"
+    );
   }
   const context: ContextType = { invoiceSort };
   const outlet = <Outlet context={context} />;
@@ -2456,7 +2611,9 @@ export default function CompaniesRoute() {
   return (
     <div>
       <button onClick={changeInvoiceSort}>
-        {invoiceSort === "ASC" ? "Sort Descending" : "Sort Ascending"}
+        {invoiceSort === "ASC"
+          ? "Sort Descending"
+          : "Sort Ascending"}
       </button>
       <Accordion index={selectedCompanyIndex}>
         {data.companies.map((company) => (
@@ -2467,7 +2624,9 @@ export default function CompaniesRoute() {
             {/* render the outlet by the
             currently selected company */}
             <AccordionPanel>
-              {params.companyId === company.id ? outlet : null}
+              {params.companyId === company.id
+                ? outlet
+                : null}
             </AccordionPanel>
           </AccordionItem>
         ))}
@@ -2486,7 +2645,10 @@ Continuing from the `<Outlet context />` example above, here's what the child ro
 ```tsx filename=app/routes/companies/$companyId.tsx lines=[5,8,25,27-30]
 import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import { useLoaderData, useOutletContext } from "@remix-run/react";
+import {
+  useLoaderData,
+  useOutletContext,
+} from "@remix-run/react";
 
 import type { ContextType } from "../companies";
 
@@ -2494,7 +2656,9 @@ type LoaderData = {
   company: Company;
 };
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
   const data: LoaderData = {
     company: await getCompany(params.companyId),
   };
@@ -2537,16 +2701,3 @@ export default function CompanyRoute() {
 [disabling-javascript]: ../guides/disabling-javascript
 [example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data
 [index query param]: ../guides/routing#what-is-the-index-query-param
-[developer.mozilla-1]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
-[developer.mozilla-2]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
-[developer.mozilla-3]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources
-[1]: /api/conventions
-[developer.mozilla-4]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
-[developer.mozilla-5]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
-[developer.mozilla-6]: https://developer.mozilla.org/en-US/docs/Web/API/File
-[developer.mozilla-7]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies
-[developer.mozilla-8]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes
-[developer.mozilla-9]: https://developer.mozilla.org/en-US/docs/Glossary/CSRF
-[developers.cloudflare-1]: https://developers.cloudflare.com/workers/learning/how-kv-works
-[docs.aws.amazon-1]: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/
-[2]: #usematches
