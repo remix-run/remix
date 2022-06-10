@@ -4,6 +4,7 @@ import { read } from "to-vfile";
 import { remark } from "remark";
 import { remarkReferenceLinksBottom } from "@mcansh/remark-definition-links";
 import remarkFrontmatter from "remark-frontmatter";
+import remarkGfm from "remark-gfm";
 import glob from "glob";
 
 main();
@@ -23,6 +24,7 @@ async function main() {
           tightDefinitions: true,
         },
       })
+      .use(remarkGfm)
       .use(remarkReferenceLinksBottom)
       .use(remarkFrontmatter, ["yaml", "toml"])
       .process(await read(file));
