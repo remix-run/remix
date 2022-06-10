@@ -5,5 +5,5 @@ export interface RouteData {
 }
 
 export interface DeferredRouteData {
-  [routeId: string]: Record<string | number, unknown>;
+  [routeId: string]: Record<string | number, Promise<unknown>>;
 }

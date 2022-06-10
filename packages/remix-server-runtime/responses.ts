@@ -1,6 +1,6 @@
 import { serializeError } from "./errors";
 
-const deferredPromisePrefix = "__deferred_promise:";
+const DEFERRED_PROMISE_PREFIX = "__deferred_promise:";
 
 // eslint-disable-next-line
 export type Deferrable<Data> = {};
@@ -58,13 +58,13 @@ function createDeferredReadableStream(
 function getDataForDeferred(data: unknown) {
   let deferred: Record<string, Promise<unknown>> = {};
   let initialData = data;
-  if (typeof data === "object" && data !== null) {
+  if (typeof data === "object" && data !== null && !Array.isArray(data)) {
     let dataWithoutPromises = {} as Record<string | number, unknown>;
 
     for (let [key, value] of Object.entries(data)) {
       if (typeof value?.then === "function") {
         deferred[key] = value;
-        dataWithoutPromises[key] = deferredPromisePrefix + key;
+        dataWithoutPromises[key] = DEFERRED_PROMISE_PREFIX + key;
       } else {
         dataWithoutPromises[key] = value;
       }
@@ -92,7 +92,7 @@ export const deferred: DeferredFunction = (data, init = {}) => {
 
   let headers = new Headers(responseInit.headers);
   if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json; charset=utf-8");
+    headers.set("Content-Type", "text/remix-deferred; charset=utf-8");
   }
 
   class DeferredResponseImplementation<Data = unknown> extends Response {
