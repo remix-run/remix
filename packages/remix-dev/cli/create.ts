@@ -491,11 +491,7 @@ export async function validateTemplate(input: string) {
       let spinner = ora("Validating the template file…").start();
       let response;
       try {
-        let headers: Record<string, string> = {};
-        if (input.startsWith("https://github.com/")) {
-          headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
-        }
-        response = await fetch(input, { method: "HEAD", headers });
+        response = await fetch(input, { method: "HEAD" });
       } catch (_) {
         throw Error(
           "🚨 There was a problem verifying the template file. Please ensure " +
