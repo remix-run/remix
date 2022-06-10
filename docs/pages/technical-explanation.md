@@ -7,10 +7,10 @@ order: 2
 
 This document hopes to answer the question: "What _is_ Remix?" Remix is four things:
 
-1. A compiler
-2. A server side HTTP handler
-3. A server framework
-4. A browser framework
+1.  A compiler
+2.  A server side HTTP handler
+3.  A server framework
+4.  A browser framework
 
 When all four of these things know about each other, you can do some pretty interesting things.
 
@@ -20,9 +20,9 @@ We often describe Remix as "a compiler for React Router" because everything abou
 
 Everything in Remix starts with the compiler: `remix build`. Using [esbuild][esbuild], this creates a few things:
 
-1. A server HTTP handler, usually in `server/build/index.js` (it's configurable) that includes all routes and modules together to be able to render on the server and handle any other server side requests for resources.
-2. A browser build, usually in `public/build/*`. This includes automatic code splitting by route, fingerprinted asset imports (like CSS and images), etc. Anything needed to run an application in the browser
-3. An asset manifest. Both the client and the server use this manifest to know the entire dependency graph. This is useful for preloading resources in the initial server render as well as prefetching them for client side transitions. This is how Remix is able to eliminate the render+fetch waterfalls so common in web apps today.
+1.  A server HTTP handler, usually in `server/build/index.js` (it's configurable) that includes all routes and modules together to be able to render on the server and handle any other server side requests for resources.
+2.  A browser build, usually in `public/build/*`. This includes automatic code splitting by route, fingerprinted asset imports (like CSS and images), etc. Anything needed to run an application in the browser
+3.  An asset manifest. Both the client and the server use this manifest to know the entire dependency graph. This is useful for preloading resources in the initial server render as well as prefetching them for client side transitions. This is how Remix is able to eliminate the render+fetch waterfalls so common in web apps today.
 
 With these build artifacts, an application can be deployed to any hosting service that runs JavaScript.
 
@@ -150,9 +150,9 @@ Once Remix has served the document to the browser, it "hydrates" the page with t
 
 When the user clicks a link, instead of making a round trip to the server for the entire document and all of the assets, Remix simply fetches the data for the next page and updates the UI. This has many performance benefits over making a full document request:
 
-1. Assets don't need to be re-downloaded (or pulled from cache)
-2. Assets don't need to be parsed by the browser again
-3. The data fetched is much smaller than the entire document (sometimes orders of magnitude)
+1.  Assets don't need to be re-downloaded (or pulled from cache)
+2.  Assets don't need to be parsed by the browser again
+3.  The data fetched is much smaller than the entire document (sometimes orders of magnitude)
 
 Remix also has some built in optimizations for client side navigation. It knows which layouts will persist between the two URLs, so it only fetches the data for the ones that are changing. A full document request would require all data to be fetched on the server, wasting resources on your back end and slowing down your app.
 
@@ -164,9 +164,9 @@ Remix then provides client side APIs so you can create rich user experiences wit
 
 Taking our route module from before, here are a few small, but useful UX improvements to the form that you can only do with JavaScript in the browser:
 
-1. Disable the button when the form is being submitted
-2. Focus the input when server side form validation fails
-3. Animate in the error messages
+1.  Disable the button when the form is being submitted
+2.  Focus the input when server side form validation fails
+3.  Animate in the error messages
 
 ```jsx nocopy lines=[4-6,8-12,23-26,30-32]
 export default function Projects() {

@@ -357,15 +357,15 @@ export default function ProductFilters() {
 
 If the user only has one selected:
 
-- [x] Nike
-- [ ] Adidas
+- \[x] Nike
+- \[ ] Adidas
 
 Then the URL will be `/products/shoes?brand=nike`
 
 If the user has both selected:
 
-- [x] Nike
-- [x] Adidas
+- \[x] Nike
+- \[x] Adidas
 
 Then the url will be: `/products/shoes?brand=nike&brand=adidas`
 

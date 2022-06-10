@@ -17,8 +17,9 @@ async function main() {
 
   for (let file of files) {
     let result = await remark()
+      .use({ settings: { fences: true } })
       .use(remarkReferenceLinksBottom)
-      .use(remarkFrontmatter)
+      .use(remarkFrontmatter, ["yaml", "toml"])
       .process(await read(file));
 
     await fsp.writeFile(
