@@ -31,6 +31,8 @@ export type {
   PageLinkDescriptor,
 } from "./links";
 
+export type { Deferrable, ResolvedDeferrable } from "./responses";
+
 export type {
   ActionFunction,
   DataFunctionArgs,

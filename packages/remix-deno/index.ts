@@ -15,6 +15,7 @@ export {
 
 export {
   createSession,
+  deferred,
   isCookie,
   isSession,
   json,
@@ -36,6 +37,7 @@ export type {
   CookieSignatureOptions,
   CreateRequestHandlerFunction,
   DataFunctionArgs,
+  Deferrable,
   EntryContext,
   ErrorBoundaryComponent,
   HandleDataRequestFunction,
@@ -52,6 +54,7 @@ export type {
   MetaFunction,
   PageLinkDescriptor,
   RequestHandler,
+  ResolvedDeferrable,
   RouteComponent,
   RouteHandle,
   ServerBuild,

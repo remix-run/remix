@@ -1,5 +1,6 @@
 import type { RouteMatch } from "./routeMatching";
 import type { ServerRoute } from "./routes";
+import type { DeferredResponse } from "./responses";
 import { json, isResponse, isRedirectResponse } from "./responses";
 
 /**
@@ -21,7 +22,7 @@ export async function callRouteAction({
   loadContext: unknown;
   match: RouteMatch<ServerRoute>;
   request: Request;
-}) {
+}): Promise<Response | DeferredResponse> {
   let action = match.route.module.action;
 
   if (!action) {
@@ -131,7 +132,11 @@ function stripDataParam(request: Request) {
 export function extractData(response: Response): Promise<unknown> {
   let contentType = response.headers.get("Content-Type");
 
-  if (contentType && /\bapplication\/json\b/.test(contentType)) {
+  if (
+    contentType &&
+    (/\bapplication\/json\b/.test(contentType) ||
+      /\text\/remix-deferred\b/.test(contentType))
+  ) {
     return response.json();
   }
 

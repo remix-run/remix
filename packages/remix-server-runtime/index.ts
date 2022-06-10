@@ -4,7 +4,7 @@ export {
   composeUploadHandlers as unstable_composeUploadHandlers,
   parseMultipartFormData as unstable_parseMultipartFormData,
 } from "./formData";
-export { json, redirect } from "./responses";
+export { deferred, json, redirect } from "./responses";
 export { createRequestHandler } from "./server";
 export {
   createSession,
@@ -41,6 +41,7 @@ export type {
   CookieSerializeOptions,
   CookieSignatureOptions,
   DataFunctionArgs,
+  Deferrable,
   EntryContext,
   ErrorBoundaryComponent,
   HandleDataRequestFunction,
@@ -55,6 +56,7 @@ export type {
   MetaFunction,
   PageLinkDescriptor,
   RequestHandler,
+  ResolvedDeferrable,
   RouteComponent,
   RouteHandle,
   ServerBuild,

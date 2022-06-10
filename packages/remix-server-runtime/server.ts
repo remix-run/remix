@@ -7,11 +7,18 @@ import { createEntryMatches, createEntryRouteModules } from "./entry";
 import { serializeError } from "./errors";
 import { getDocumentHeaders } from "./headers";
 import { ServerMode, isServerMode } from "./mode";
+import type { DeferredRouteData, RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
 import type { ServerRoute } from "./routes";
 import { createRoutes } from "./routes";
-import { json, isRedirectResponse, isCatchResponse } from "./responses";
+import type { DeferredResponse } from "./responses";
+import {
+  json,
+  isDeferredResponse,
+  isRedirectResponse,
+  isCatchResponse,
+} from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
 export type RequestHandler = (
@@ -103,7 +110,7 @@ async function handleDataRequest({
     );
   }
 
-  let response: Response;
+  let response: Response | DeferredResponse;
   let match: RouteMatch<ServerRoute>;
   try {
     if (isActionRequest(request)) {
@@ -329,7 +336,8 @@ async function handleDocumentRequest({
   let headerMatches: RouteMatch<ServerRoute>[] = [];
   let routeLoaderResponses: Record<string, Response> = {};
   let loaderStatusCodes: number[] = [];
-  let routeData: Record<string, unknown> = {};
+  let routeData: RouteData = {};
+  let deferredRouteData: DeferredRouteData = {};
   for (let index = 0; index < matchesToLoad.length; index++) {
     let match = matchesToLoad[index];
     let result = routeLoaderResults[index];
@@ -377,6 +385,10 @@ async function handleDocumentRequest({
       headerMatches.push(match);
       routeLoaderResponses[match.route.id] = response;
       loaderStatusCodes.push(response.status);
+
+      if (isDeferredResponse(response)) {
+        deferredRouteData[match.route.id] = response.deferred;
+      }
 
       if (isCatch) {
         // If it's a catch response, store it in app state, and bail
@@ -459,6 +471,7 @@ async function handleDocumentRequest({
     ...serverHandoff,
     manifest: build.assets,
     routeModules,
+    deferredRouteData,
     serverHandoffString: createServerHandoffString(serverHandoff),
   };
 

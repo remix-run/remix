@@ -5,7 +5,7 @@ import type {
   EntryRoute,
   ServerRoute,
 } from "./routes";
-import type { RouteData } from "./routeData";
+import type { DeferredRouteData, RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import type { RouteModules, EntryRouteModule } from "./routeModules";
 
@@ -14,6 +14,7 @@ export interface EntryContext {
   manifest: AssetsManifest;
   matches: RouteMatch<EntryRoute>[];
   routeData: RouteData;
+  deferredRouteData: DeferredRouteData;
   actionData?: RouteData;
   routeModules: RouteModules<EntryRouteModule>;
   serverHandoffString?: string;
