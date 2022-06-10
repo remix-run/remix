@@ -81,7 +81,7 @@ module.exports = function rollup() {
       input: [`${sourceDir}/cli/migrate/migrations/transforms.ts`],
       output: {
         banner: createBanner(packageName, version),
-        dir: `${outputDir}/cli/migrate/migrations`,
+        dir: path.join(outputDir, "cli", "migrate", "migrations"),
         exports: "named",
         format: "cjs",
         preserveModules: true,

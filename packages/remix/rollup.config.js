@@ -15,7 +15,7 @@ let packageName = "remix";
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  let outputDir = path.join(buildDir, "node_modules", packageName); 
+  let outputDir = path.join(buildDir, "node_modules", packageName);
   let version = getVersion(sourceDir);
 
   // Don't blow away remix magic exports on local builds, since they've
@@ -59,7 +59,7 @@ module.exports = function rollup() {
       input: `${sourceDir}/index.ts`,
       output: {
         banner: createBanner("remix", version),
-        dir: `${outputDir}/esm`,
+        dir: path.join(outputDir, "esm"),
         format: "esm",
       },
       plugins: [

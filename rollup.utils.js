@@ -108,13 +108,17 @@ function copyToPlaygrounds() {
  */
 function index({ sourceDir, packageName, format }) {
   let version = getVersion(sourceDir);
-  let outputDir = path.join(buildDir, "node_modules", packageName);
+  let outputDir = path.join(
+    buildDir,
+    "node_modules",
+    packageName.replace("/", path.sep)
+  );
   return {
     external: (id) => isBareModuleId(id),
     input: `${sourceDir}/index.ts`,
     output: {
       banner: createBanner(packageName, version),
-      dir: format === "cjs" ? outputDir : `${outputDir}/${format}`,
+      dir: format === "cjs" ? outputDir : path.join(outputDir, format),
       format,
       preserveModules: true,
       exports: "named",
@@ -148,7 +152,11 @@ function index({ sourceDir, packageName, format }) {
  */
 function cli({ sourceDir, packageName }) {
   let version = getVersion(sourceDir);
-  let outputDir = path.join(buildDir, "node_modules", packageName);
+  let outputDir = path.join(
+    buildDir,
+    "node_modules",
+    packageName.replace("/", path.sep)
+  );
   return {
     external: (id) => !id.endsWith(path.join(sourceDir, "cli.ts")),
     input: `${sourceDir}/cli.ts`,
@@ -188,13 +196,21 @@ function cli({ sourceDir, packageName }) {
  */
 function magicExports({ sourceDir, packageName, format }) {
   let version = getVersion(sourceDir);
-  let outputDir = path.join(buildDir, "node_modules", packageName);
+  let outputDir = path.join(
+    buildDir,
+    "node_modules",
+    packageName.replace("/", path.sep)
+  );
   return {
     external: () => true,
     input: `${sourceDir}/magicExports/remix.ts`,
     output: {
       banner: createBanner(packageName, version),
-      dir: `${outputDir}/magicExports${format === "cjs" ? "" : `/${format}`}`,
+      dir: path.join(
+        outputDir,
+        "magicExports",
+        ...(format === "cjs" ? [] : [format])
+      ),
       format,
     },
     plugins: [
