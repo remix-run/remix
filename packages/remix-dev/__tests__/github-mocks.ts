@@ -86,9 +86,52 @@ let githubHandlers: Array<RequestHandler> = [
     return res(ctx.status(200));
   }),
   rest.head(
+    `https://api.github.com/repos/error-username/:status`,
+    async (req, res, ctx) => {
+      return res(ctx.status(Number(req.params.status)));
+    }
+  ),
+  rest.head(
+    `https://api.github.com/repos/:owner/:repo`,
+    async (req, res, ctx) => {
+      return res(ctx.status(200));
+    }
+  ),
+  rest.head(
     `https://github.com/:owner/:repo/tree/:branch/:path*`,
     async (req, res, ctx) => {
       return res(ctx.status(200));
+    }
+  ),
+  rest.get(
+    `https://api.github.com/repos/:owner/:repo/git/trees/:branch`,
+    async (req, res, ctx) => {
+      let { owner, repo } = req.params;
+
+      return res(
+        ctx.status(200),
+        ctx.json({
+          sha: "7d906ff5bbb79401a4a8ec1e1799845ed502c0a1",
+          url: `https://api.github.com/repos/${owner}/${repo}/trees/7d906ff5bbb79401a4a8ec1e1799845ed502c0a1`,
+          tree: [
+            {
+              path: "package.json",
+              mode: "040000",
+              type: "blob",
+              sha: "a405cd8355516db9c96e1467fb14b74c97ac0a65",
+              size: 138,
+              url: `https://api.github.com/repos/${owner}/${repo}/git/blobs/a405cd8355516db9c96e1467fb14b74c97ac0a65`,
+            },
+            {
+              path: "stack",
+              mode: "040000",
+              type: "tree",
+              sha: "3f350a670e8fefd58535a9e1878539dc19afb4b5",
+              url: `https://api.github.com/repos/${owner}/${repo}/trees/3f350a670e8fefd58535a9e1878539dc19afb4b5`,
+            },
+          ],
+        })
+      );
     }
   ),
   rest.get(

@@ -543,16 +543,23 @@ describe("the create command", () => {
   describe("errors", () => {
     it("identifies when a github repo is not accessible (403)", async () => {
       let projectDir = await getProjectDir("repo");
-      await expect(() =>
-        run([
-          "create",
-          projectDir,
-          "--template",
-          "error-username/403",
-          "--no-install",
-          "--typescript",
-        ])
-      ).rejects.toMatchInlineSnapshot(
+      await expect(async () => {
+        try {
+          let res = await run([
+            "create",
+            projectDir,
+            "--template",
+            "error-username/403",
+            "--no-install",
+            "--typescript",
+          ]);
+          debugger;
+          return res;
+        } catch (err) {
+          debugger;
+          throw err;
+        }
+      }).rejects.toMatchInlineSnapshot(
         `[Error: 🚨 The template could not be verified because you do not have access to the repository. Please double check the access rights of this repo and try again.]`
       );
     });

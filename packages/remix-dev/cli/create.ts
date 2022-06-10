@@ -495,7 +495,7 @@ export async function validateTemplate(input: string) {
         if (input.startsWith("https://github.com/")) {
           headers.Authorization = `token ${process.env.GITHUB_TOKEN}`;
         }
-        response = await fetch(input, { method: "head", headers });
+        response = await fetch(input, { method: "HEAD", headers });
       } catch (_) {
         throw Error(
           "🚨 There was a problem verifying the template file. Please ensure " +
@@ -535,7 +535,7 @@ export async function validateTemplate(input: string) {
         // if that path exists in the repo.
         invariant(
           branch,
-          "expected branch to be present, since the github URL structure requires it (and we need the recursive tree of files to validate)"
+          "Expecting branch to be present when specifying a path."
         );
         method = "GET";
       }
@@ -557,12 +557,11 @@ export async function validateTemplate(input: string) {
         case 200:
           if (filePath && filePath !== "/") {
             // if a filePath is included there must also be a branch, because of how github structures
-            // their URLs. That means the api results list all files. Not directories though, so we'll
-            // try to find some file that starts with the path we're after
+            // their URLs. That means the api results list all files and directories
             let filesWithinRepo = await response.json();
             if (
-              !filesWithinRepo.tree.some((file: any) =>
-                file.path.startsWith(filePath)
+              !filesWithinRepo.tree.some(
+                (file: any) => file.path === filePath && file.type === "tree"
               )
             ) {
               throw Error(
