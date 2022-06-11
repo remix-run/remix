@@ -18,7 +18,7 @@ let remixPackages = {
     "vercel",
   ],
   runtimes: ["cloudflare", "deno", "node"],
-  core: ["dev", "server-runtime", "react", "eslint-config"],
+  core: ["dev", "scripts", "server-runtime", "react", "eslint-config"],
   get all() {
     return [...this.adapters, ...this.runtimes, ...this.core, "serve"];
   },
@@ -29,7 +29,7 @@ let remixPackages = {
  * @param {string} [directory]
  * @returns {string}
  */
-function packageJson(packageName, directory) {
+function packageJson(packageName, directory = "") {
   return path.join(rootDir, directory, packageName, "package.json");
 }
 
