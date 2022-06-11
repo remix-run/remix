@@ -933,7 +933,7 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
       reloadDocument = false,
       replace = false,
       method = "get",
-      action = ".",
+      action,
       encType = "application/x-www-form-urlencoded",
       fetchKey,
       onSubmit,
@@ -988,21 +988,21 @@ type HTMLFormSubmitter = HTMLButtonElement | HTMLInputElement;
  * @see https://remix.run/api/remix#useformaction
  */
 export function useFormAction(
-  action = ".",
+  action?: string,
   // TODO: Remove method param in v2 as it's no longer needed and is a breaking change
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
-  let path = useResolvedPath(action);
+  let path = useResolvedPath(action ?? ".");
   let location = useLocation();
   let search = path.search;
   let isIndexRoute = id.endsWith("/index");
 
-  if (action === ".") {
+  if (action === undefined) {
     search = location.search;
   }
 
-  if (action === "." && isIndexRoute) {
+  if ((action === undefined || action === ".") && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 

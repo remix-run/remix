@@ -40,7 +40,7 @@ test.describe("Forms", () => {
   let SPLAT_ROUTE_CURRENT_ACTION = "splat-route-cur";
   let SPLAT_ROUTE_PARENT_ACTION = "splat-route-parent";
   let SPLAT_ROUTE_TOO_MANY_DOTS_ACTION = "splat-route-too-many-dots";
-  let DEFAULT_ACTION_SEARCH_PARAMS = "default-action-search-params";
+  let UNDEFINED_ACTION_SEARCH_PARAMS = "undefined-action-search-params";
   let EXPLICIT_ACTION_SEARCH_PARAMS = "explicit-action-search-params";
 
   test.beforeAll(async () => {
@@ -285,7 +285,7 @@ test.describe("Forms", () => {
           export default function() {
             return (
               <>
-                <Form id="${DEFAULT_ACTION_SEARCH_PARAMS}">
+                <Form id="${UNDEFINED_ACTION_SEARCH_PARAMS}">
                   <button>Login</button>
                 </Form>
                 <Form id="${EXPLICIT_ACTION_SEARCH_PARAMS}" action="/auth?nonce=123">
@@ -594,14 +594,14 @@ test.describe("Forms", () => {
     });
 
     test.describe("in a route with search params", () => {
-      test("default action preserves current location's search params", async ({
+      test("undefined action preserves current location's search params", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
         let url = "/login?redirectTo=/profile";
         await app.goto(url);
         let html = await app.getHtml();
-        let el = getElement(html, `#${DEFAULT_ACTION_SEARCH_PARAMS}`);
+        let el = getElement(html, `#${UNDEFINED_ACTION_SEARCH_PARAMS}`);
         expect(el.attr("action")).toMatch(url);
       });
 
