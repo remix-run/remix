@@ -2149,6 +2149,13 @@
   resolved "https://registry.npmjs.org/@types/json5/-/json5-0.0.29.tgz"
   integrity sha1-7ihweulOEdK4J7y+UnC86n8+ce4=
 
+"@types/jsonfile@^6.1.0":
+  version "6.1.0"
+  resolved "https://registry.yarnpkg.com/@types/jsonfile/-/jsonfile-6.1.0.tgz#c413d113ae28619f418b8a6ce7a1dec29e8f8a1c"
+  integrity sha512-zQPywzif9EycCkvECjYT9dbbttT0dkk657zcLb/803ZOXHsBA963jzEPF/Jnh1zOdBbgFJvUE8kcvZverAoK1w==
+  dependencies:
+    "@types/node" "*"
+
 "@types/keyv@*":
   version "3.1.3"
   resolved "https://registry.npmjs.org/@types/keyv/-/keyv-3.1.3.tgz"
