@@ -109,6 +109,7 @@ describe("remix CLI", () => {
             --sourcemap         Generate source maps for production
           \`dev\` Options:
             --debug             Attach Node.js inspector
+            --port, -p          Choose the port from which to run your app
           \`routes\` Options:
             --json              Print the routes as JSON
 
@@ -197,8 +198,8 @@ describe("remix CLI", () => {
         { question: /Where.*create.*app/i, type: [projectDir, ENTER] },
         { question: /What type of app/i, answer: /basics/i },
         { question: /Where.*deploy/i, answer: /express/i },
-        { question: /install/i, type: ["n", ENTER] },
         { question: /typescript or javascript/i, answer: /typescript/i },
+        { question: /install/i, type: ["n", ENTER] },
       ]);
     });
 
@@ -222,8 +223,8 @@ describe("remix CLI", () => {
         { question: /Where.*create.*app/i, type: [projectDir, ENTER] },
         { question: /What type of app/i, answer: /basics/i },
         { question: /Where.*deploy/i, answer: /express/i },
-        { question: /install/i, type: ["n", ENTER] },
         { question: /typescript or javascript/i, answer: /javascript/i },
+        { question: /install/i, type: ["n", ENTER] },
       ]);
 
       expect(

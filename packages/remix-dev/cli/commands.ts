@@ -232,7 +232,11 @@ export async function watch(
   });
 }
 
-export async function dev(remixRoot: string, modeArg?: string) {
+export async function dev(
+  remixRoot: string,
+  modeArg?: string,
+  portArg?: number
+) {
   let createApp: typeof createAppType;
   let express: typeof Express;
   try {
@@ -253,7 +257,11 @@ export async function dev(remixRoot: string, modeArg?: string) {
   await loadEnv(config.rootDirectory);
 
   let port = await getPort({
-    port: process.env.PORT ? Number(process.env.PORT) : makeRange(3000, 3100),
+    port: portArg
+      ? Number(portArg)
+      : process.env.PORT
+      ? Number(process.env.PORT)
+      : makeRange(3000, 3100),
   });
 
   if (config.serverEntryPoint) {
