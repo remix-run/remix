@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { getElement, PlaywrightFixture } from "./helpers/playwright-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 
@@ -47,17 +47,28 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/login.jsx": js`
-        import { Form } from "@remix-run/react";
+      "app/routes/index.jsx": js`
+        import { json } from "@remix-run/node";
+        import { useLoaderData, Link } from "@remix-run/react";
 
-        export default function Login() {
+        export function loader() {
+          return json("pizza");
+        }
+
+        export default function Index() {
+          let data = useLoaderData();
           return (
             <div>
-              <Form method="post">
-                <button type="submit">Submit</button>
-              </Form>
+              {data}
+              <Link to="/burgers">Other Route</Link>
             </div>
           )
+        }
+      `,
+
+      "app/routes/burgers.jsx": js`
+        export default function Index() {
+          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -74,16 +85,22 @@ test.afterAll(async () => appFixture.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("default form action matches current path & search", async ({ page }) => {
+test("[description of what you expect it to do]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  let url = "/login?redirectTo=/profile";
+  // You can test any request your app might get using `fixture`.
+  let response = await fixture.requestDocument("/");
+  expect(await response.text()).toMatch("pizza");
 
-  await app.goto(url);
+  // If you need to test interactivity use the `app`
+  await app.goto("/");
+  await app.clickLink("/burgers");
+  expect(await app.getHtml()).toMatch("cheeseburger");
 
-  let html = await app.getHtml();
-  let form = getElement(html, `form`);
+  // If you're not sure what's going on, you can "poke" the app, it'll
+  // automatically open up in your browser for 20 seconds, so be quick!
+  // await app.poke(20);
 
-  expect(form.attr("action")).toEqual(url);
+  // Go check out the other tests to see what else you can do.
 });
 
 ////////////////////////////////////////////////////////////////////////////////
