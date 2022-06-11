@@ -2994,7 +2994,12 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[18] nocopy
+```tsx filename=app/routes/login.tsx lines=[4,23] nocopy
+// ...
+
+import { db } from "~/utils/db.server";
+import { login, createUserSession } from "~/utils/session.server";
+
 // ...
 
 export const action: ActionFunction = async ({
