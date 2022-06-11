@@ -27,10 +27,10 @@ ${colors.heading("Options")}:
 ${colors.heading("Values")}:
   - ${colors.arg(
     "migration"
-  )}         One of the choices from https://github.com/remix-run/remix/tree/dev/packages/remix-scripts/cli/migrate/migration-options
+  )}         One of the choices from https://github.com/remix-run/remix/tree/dev/packages/remix-scripts/cli/migrate/migrations/index.ts
 `;
 
-const MINIUMUM_NODE_VERSION = 14;
+const MINIMUM_NODE_VERSION = 14;
 
 /**
  * Programmatic interface for running the Remix CLI with the given command line
@@ -42,10 +42,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
   if (
     versions &&
     versions.node &&
-    semver.major(versions.node) < MINIUMUM_NODE_VERSION
+    semver.major(versions.node) < MINIMUM_NODE_VERSION
   ) {
     throw new Error(
-      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than ${MINIUMUM_NODE_VERSION}.`
+      `️🚨 Oops, Node v${versions.node} detected. Remix requires a Node version greater than ${MINIMUM_NODE_VERSION}.`
     );
   }
 

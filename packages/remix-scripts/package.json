@@ -13,7 +13,7 @@
   },
   "license": "MIT",
   "bin": {
-    "remix": "cli.js"
+    "remix-scripts": "cli.js"
   },
   "dependencies": {
     "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
