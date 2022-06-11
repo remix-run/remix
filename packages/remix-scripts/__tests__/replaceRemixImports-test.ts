@@ -31,7 +31,7 @@ function mockLog(message: unknown = "", ...rest: Array<unknown>) {
   output += "\n" + stripAnsi(messageString);
 }
 
-const FIXTURE = path.join(__dirname, "fixtures/replaceRemixImports");
+const FIXTURE = path.join(__dirname, "fixtures/replace-remix-imports");
 
 const TEMP_DIR = path.join(
   fse.realpathSync(os.tmpdir()),
