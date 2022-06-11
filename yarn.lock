@@ -2177,6 +2177,13 @@
   dependencies:
     "@types/lodash" "*"
 
+"@types/lodash.maxby@^4.6.7":
+  version "4.6.7"
+  resolved "https://registry.yarnpkg.com/@types/lodash.maxby/-/lodash.maxby-4.6.7.tgz#d754e57d3939a0e17218c5f4422dae7a1830d337"
+  integrity sha512-IEAUqiNm6L+dKSAx1StBfl+EUT3kMoLKDslTOxzkTlb2HYldIqcQOgavuRdqlTI2yKzSVRZM2ZZbRvKuEpaQaQ==
+  dependencies:
+    "@types/lodash" "*"
+
 "@types/lodash@*":
   version "4.14.174"
   resolved "https://registry.npmjs.org/@types/lodash/-/lodash-4.14.174.tgz"
@@ -7289,6 +7296,11 @@ lodash.debounce@^4.0.8:
   version "4.0.8"
   resolved "https://registry.npmjs.org/lodash.debounce/-/lodash.debounce-4.0.8.tgz"
   integrity sha1-gteb/zCmfEAF/9XiUVMArZyk168=
+
+lodash.maxby@^4.6.0:
+  version "4.6.0"
+  resolved "https://registry.yarnpkg.com/lodash.maxby/-/lodash.maxby-4.6.0.tgz#082240068f3c7a227aa00a8380e4f38cf0786e3d"
+  integrity sha512-QfTqQTwzmKxLy7VZlbx2M/ipWv8DCQ2F5BI/MRxLharOQ5V78yMSuB+JE+EuUM22txYfj09R2Q7hUlEYj7KdNg==
 
 lodash.merge@^4.6.2:
   version "4.6.2"

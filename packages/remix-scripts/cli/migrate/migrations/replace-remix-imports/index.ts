@@ -2,7 +2,7 @@ import { execSync } from "child_process";
 import { join } from "path";
 import NpmCliPackageJson from "@npmcli/package-json";
 import glob from "fast-glob";
-import { maxBy } from "lodash";
+import maxBy from "lodash.maxby";
 import semver from "semver";
 import { readConfig } from "@remix-run/dev/config";
 import * as colors from "@remix-run/dev/colors";
