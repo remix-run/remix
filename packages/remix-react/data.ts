@@ -1,5 +1,6 @@
 import invariant from "./invariant";
 import type { Submission } from "./transition";
+import { DeferredResponse } from "./transition";
 
 export type AppData = any;
 
@@ -35,14 +36,19 @@ export async function fetchData(
   routeId: string,
   signal: AbortSignal,
   submission?: Submission
-): Promise<Response | Error> {
+): Promise<Response | DeferredResponse | Error> {
   url.searchParams.set("_data", routeId);
 
   let init: RequestInit = submission
     ? getActionInit(submission, signal)
     : { credentials: "same-origin", signal };
 
-  let response = await fetch(url.href, init);
+  let response: Response | DeferredResponse = await fetch(url.href, init);
+  let contentType = response.headers.get("Content-Type");
+
+  if (contentType && contentType.match(/text\/remix-deferred/)) {
+    response = new DeferredResponse(response);
+  }
 
   if (isErrorResponse(response)) {
     let data = await response.json();
@@ -59,7 +65,10 @@ export async function extractData(response: Response): Promise<AppData> {
   // results when we render the HTML page.
   let contentType = response.headers.get("Content-Type");
 
-  if (contentType && /\bapplication\/json\b/.test(contentType)) {
+  if (
+    (contentType && /\bapplication\/json\b/.test(contentType)) ||
+    response instanceof DeferredResponse
+  ) {
     return response.json();
   }
 

@@ -38,6 +38,7 @@ describe("init", () => {
         },
         "catch": undefined,
         "catchBoundaryId": null,
+        "deferredLoaderData": Object {},
         "error": [Error: lol],
         "errorBoundaryId": "root",
         "fetchers": Map {},

@@ -5,7 +5,11 @@ import type {
   EntryRoute,
   ServerRoute,
 } from "./routes";
-import type { DeferredRouteData, RouteData } from "./routeData";
+import type {
+  DeferredRouteData,
+  DeferredRouteDataResolvers,
+  RouteData,
+} from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import type { RouteModules, EntryRouteModule } from "./routeModules";
 
@@ -15,6 +19,7 @@ export interface EntryContext {
   matches: RouteMatch<EntryRoute>[];
   routeData: RouteData;
   deferredRouteData: DeferredRouteData;
+  deferredRouteDataResolvers: DeferredRouteDataResolvers;
   actionData?: RouteData;
   routeModules: RouteModules<EntryRouteModule>;
   serverHandoffString?: string;

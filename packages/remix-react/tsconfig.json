@@ -12,6 +12,7 @@
 
     "declaration": true,
     "emitDeclarationOnly": true,
+    "skipLibCheck": true,
 
     "outDir": "../../build/node_modules/@remix-run/react",
     "rootDir": "."

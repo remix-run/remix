@@ -27,7 +27,7 @@ export async function callRouteAction({
   loadContext: unknown;
   match: RouteMatch<ServerRoute>;
   request: Request;
-}): Promise<Response | DeferredResponse> {
+}): Promise<Response> {
   let action = match.route.module.action;
 
   if (!action) {
@@ -72,7 +72,7 @@ export async function callRouteLoader({
   request: Request;
   match: RouteMatch<ServerRoute>;
   loadContext: unknown;
-}) {
+}): Promise<Response | DeferredResponse> {
   let loader = match.route.module.loader;
 
   if (!loader) {

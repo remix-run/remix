@@ -43,7 +43,7 @@ import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml } from "./markup";
 import type { ClientRoute } from "./routes";
 import { createClientRoutes } from "./routes";
-import type { RouteData } from "./routeData";
+import type { RouteData, DeferredRouteData } from "./routeData";
 import type { RouteMatch as BaseRouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
@@ -56,8 +56,9 @@ import type { Transition, Fetcher, Submission } from "./transition";
 interface RemixEntryContextType {
   manifest: AssetsManifest;
   matches: BaseRouteMatch<ClientRoute>[];
-  routeData: { [routeId: string]: RouteData };
-  actionData?: RouteData;
+  routeData: RouteData;
+  routeDataDeferred: DeferredRouteData;
+  actionData?: unknown;
   pendingLocation?: Location;
   appState: AppState;
   routeModules: RouteModules;
@@ -92,6 +93,7 @@ export function RemixEntry({
   let {
     manifest,
     routeData: documentLoaderData,
+    deferredRouteData: documentDeferredLoaderData,
     actionData: documentActionData,
     routeModules,
     serverHandoffString,
@@ -112,6 +114,7 @@ export function RemixEntry({
       routes: clientRoutes,
       actionData: documentActionData,
       loaderData: documentLoaderData,
+      deferredLoaderData: documentDeferredLoaderData,
       location: historyLocation,
       catch: entryComponentDidCatchEmulator.catch,
       catchBoundaryId: entryComponentDidCatchEmulator.catchBoundaryRouteId,
@@ -141,7 +144,7 @@ export function RemixEntry({
     return { ..._navigator, push };
   }, [_navigator, transitionManager]);
 
-  let { location, matches, loaderData, actionData } =
+  let { location, matches, loaderData, deferredLoaderData, actionData } =
     transitionManager.getState();
 
   // Send new location to the transition manager
@@ -181,6 +184,7 @@ export function RemixEntry({
         serverHandoffString,
         clientRoutes,
         routeData: loaderData,
+        routeDataDeferred: deferredLoaderData,
         actionData,
         transitionManager,
       }}
@@ -370,6 +374,219 @@ export function RemixRoute({ id }: { id: string }) {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Public API
+
+const DEFERRED_PROMISE_PREFIX = "__deferred_promise:";
+
+const deferredContext = React.createContext<
+  undefined | { data: unknown; key?: string; requiresSerialization: boolean }
+>(undefined);
+
+// TODO: update comment
+// These are duplicated in the server-runtime at: xxxxx
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type Deferrable<Data> = unknown;
+export type ResolvedDeferrable<Data> = Data extends Deferrable<infer Data>
+  ? Awaited<Data>
+  : Awaited<Data>;
+
+export interface DeferredResolveRenderFunction<Data> {
+  (args: { data: ResolvedDeferrable<Data> }): JSX.Element;
+}
+
+export interface DeferredProps<Data>
+  extends Omit<React.SuspenseProps, "children"> {
+  children: React.ReactNode | DeferredResolveRenderFunction<Data>;
+  data: Data;
+  errorBoundary?: React.ReactNode;
+  nonce?: string;
+}
+
+const js = String.raw;
+
+export function Deferred<Data = any>({
+  children,
+  data,
+  errorBoundary,
+  fallback,
+  nonce,
+}: DeferredProps<Data>) {
+  let { routeDataDeferred } = useRemixEntryContext();
+  let { id } = useRemixRouteContext();
+
+  let suspenseDataKey: string | undefined = undefined;
+  if (typeof data === "string" && data.startsWith(DEFERRED_PROMISE_PREFIX)) {
+    suspenseDataKey = data.slice(DEFERRED_PROMISE_PREFIX.length);
+  }
+
+  if (suspenseDataKey) {
+    data = routeDataDeferred[id][suspenseDataKey] as unknown as Data;
+  }
+
+  return (
+    <deferredContext.Provider
+      value={{
+        data,
+        key: suspenseDataKey,
+        requiresSerialization: !!suspenseDataKey,
+      }}
+    >
+      <React.Suspense fallback={fallback}>
+        <DeferredErrorBoundary errorBoundary={errorBoundary} nonce={nonce}>
+          {typeof children === "function" ? (
+            <ResolveDeferred
+              children={children as DeferredResolveRenderFunction<Data>}
+            />
+          ) : (
+            children
+          )}
+        </DeferredErrorBoundary>
+      </React.Suspense>
+      {suspenseDataKey && (
+        <script
+          nonce={nonce}
+          dangerouslySetInnerHTML={{
+            __html: js`(() => {
+  var promise, resolver;
+  promise = new Promise((resolve) => {
+    resolver = resolve;
+  });
+  window.__remixContext = window.__remixContext || { deferredRouteData: {}, deferredRouteDataResolvers: {} };
+  window.__remixContext.deferredRouteData[${JSON.stringify(
+    id
+  )}] = Object.assign(
+    {},
+    window.__remixContext.deferredRouteData[${JSON.stringify(id)}],
+    {
+      [${JSON.stringify(suspenseDataKey)}]: promise,
+    }
+  );
+  window.__remixContext.deferredRouteDataResolvers[${JSON.stringify(
+    id
+  )}] = Object.assign(
+    {},
+    window.__remixContext.deferredRouteDataResolvers[${JSON.stringify(id)}],
+    {
+      [${JSON.stringify(suspenseDataKey)}]: resolver
+    }
+  );
+})();`,
+          }}
+        />
+      )}
+    </deferredContext.Provider>
+  );
+}
+
+export function useDeferred<Data>() {
+  let ctx = React.useContext(deferredContext);
+  return ctx?.data as ResolvedDeferrable<Data>;
+}
+
+export interface ResolveDeferredProps<Data> {
+  children: DeferredResolveRenderFunction<Data>;
+}
+
+export function ResolveDeferred<Data>({
+  children,
+}: ResolveDeferredProps<Data>) {
+  let data = useDeferred<Data>();
+  return children({ data });
+}
+
+function DeferredErrorBoundary({
+  children,
+  errorBoundary,
+  nonce,
+}: {
+  children: React.ReactNode;
+  errorBoundary?: React.ReactNode;
+  nonce?: string;
+}) {
+  let ctx = React.useContext(deferredContext);
+  invariant(ctx, "Deferred must be used inside a DeferredProvider");
+  let { data } = ctx;
+
+  let child = children;
+
+  let promise = data as Promise<unknown>;
+  if (typeof promise === "object" && promise.then) {
+    throw promise.then(
+      (value) => {
+        if (ctx) {
+          ctx.data = value;
+        }
+      },
+      (error) => {
+        if (ctx) {
+          ctx.data = error;
+        }
+      }
+    );
+  }
+
+  if (data instanceof Error) {
+    if (
+      typeof errorBoundary === "undefined" &&
+      typeof document !== "undefined"
+    ) {
+      throw data;
+    }
+
+    child = errorBoundary;
+  }
+
+  return (
+    <>
+      {child}
+      <DeferredHydrationScript nonce={nonce} />
+    </>
+  );
+}
+
+function DeferredHydrationScript({ nonce }: { nonce?: string }) {
+  let { id } = useRemixRouteContext();
+  let ctx = React.useContext(deferredContext);
+  invariant(ctx, "Deferred must be used inside a DeferredProvider");
+  let { data, key, requiresSerialization } = ctx;
+
+  if (!requiresSerialization || !key) return null;
+
+  let pre = "",
+    value;
+  if (data instanceof Error) {
+    pre = `let error = new Error(${JSON.stringify(
+      data.message
+    )});error.stack = ${JSON.stringify(data.stack)};`;
+    value = `error`;
+  } else {
+    value = JSON.stringify(data);
+  }
+
+  return (
+    <script
+      nonce={nonce}
+      dangerouslySetInnerHTML={{
+        __html: js`(() => {
+${pre}
+window.__remixContext.deferredRouteData[${JSON.stringify(id)}] = Object.assign(
+  {},
+  window.__remixContext.deferredRouteData[${JSON.stringify(id)}],
+  {
+    [${JSON.stringify(key)}]: ${value},
+  }
+);
+window.__remixContext.deferredRouteDataResolvers[${JSON.stringify(
+          id
+        )}][${JSON.stringify(key)}](
+  window.__remixContext.deferredRouteData[${JSON.stringify(
+    id
+  )}][${JSON.stringify(key)}]
+);
+})();`,
+      }}
+    />
+  );
+}
 
 /**
  * Defines the prefetching behavior of the link:
@@ -718,7 +935,7 @@ export function Meta() {
         }
 
         if (name === "title") {
-          return <title key="title">{value}</title>;
+          return <title key="title">{value as string}</title>;
         }
 
         // Open Graph tags use the `property` attribute, while other meta tags
@@ -789,7 +1006,7 @@ export function Scripts(props: ScriptProps) {
 
   let initialScripts = React.useMemo(() => {
     let contextScript = serverHandoffString
-      ? `window.__remixContext = ${serverHandoffString};`
+      ? `window.__remixContext = Object.assign({}, ${serverHandoffString}, window.__remixContext);`
       : "";
 
     let routeModulesScript = `${matches
@@ -802,7 +1019,9 @@ export function Scripts(props: ScriptProps) {
       .join("\n")}
 window.__remixRouteModules = {${matches
       .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
-      .join(",")}};`;
+      .join(",")}};
+      
+import(${JSON.stringify(manifest.entry.module)});`;
 
     return (
       <>
@@ -810,14 +1029,15 @@ window.__remixRouteModules = {${matches
           {...props}
           suppressHydrationWarning
           dangerouslySetInnerHTML={createHtml(contextScript)}
+          type={undefined}
         />
-        <script {...props} src={manifest.url} />
+        <script {...props} type={undefined} src={manifest.url} />
         <script
           {...props}
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
+          async
         />
-        <script {...props} src={manifest.entry.module} type="module" />
       </>
     );
     // disabled deps array because we are purposefully only rendering this once
@@ -850,6 +1070,11 @@ window.__remixRouteModules = {${matches
 
   return (
     <>
+      <link
+        rel="modulepreload"
+        href={manifest.entry.module}
+        crossOrigin={props.crossOrigin}
+      />
       {dedupe(preloads).map((path) => (
         <link
           key={path}

@@ -3,12 +3,12 @@ import { serializeError } from "./errors";
 const DEFERRED_PROMISE_PREFIX = "__deferred_promise:";
 
 // eslint-disable-next-line
-export type Deferrable<Data> = {};
-export type ResolvedDeferrable<Deferred extends Deferrable<any>> =
-  Deferred extends Deferrable<infer Data> ? Data : unknown;
+export type Deferrable<Data> = unknown;
+export type ResolvedDeferrable<Data> = Data extends Deferrable<infer Data>
+  ? Awaited<Data>
+  : Awaited<Data>;
 
-// eslint-disable-next-line
-export interface DeferredResponse<Data = unknown> extends Response {
+export interface DeferredResponse extends Response {
   deferred: Record<string | number, Promise<unknown>>;
 }
 
@@ -78,7 +78,7 @@ function getDataForDeferred(data: unknown) {
 export type DeferredFunction = <Data>(
   data: Data,
   init?: number | ResponseInit
-) => DeferredResponse<Data>;
+) => DeferredResponse;
 
 /**
  * This is a shortcut for creating `text/remix-deferred` responses. Converts `data`
@@ -99,11 +99,11 @@ export const deferred: DeferredFunction = (data, init = {}) => {
     headers.set("Content-Type", "text/remix-deferred; charset=utf-8");
   }
 
-  class DeferredResponseImplementation<Data = unknown> extends Response {
+  class DeferredResponseImplementation extends Response {
     public deferred: Record<string | number, Promise<unknown>>;
     private initialData: unknown;
 
-    constructor(data: Data, init?: ResponseInit) {
+    constructor(data: unknown, init?: ResponseInit) {
       let { deferred, initialData } = getDataForDeferred(data);
 
       super(createDeferredReadableStream(initialData, deferred), init);

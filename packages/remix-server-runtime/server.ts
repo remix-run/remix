@@ -465,6 +465,8 @@ async function handleDocumentRequest({
     appState: appState,
     matches: entryMatches,
     routeData,
+    deferredRouteData: {},
+    deferredRouteDataResolvers: {},
   };
 
   let entryContext: EntryContext = {

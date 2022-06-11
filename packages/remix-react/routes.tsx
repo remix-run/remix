@@ -11,6 +11,7 @@ import {
   isRedirectResponse,
 } from "./data";
 import type { Submission } from "./transition";
+import { DeferredResponse } from "./transition";
 import { CatchValue, TransitionRedirect } from "./transition";
 import { prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
@@ -60,7 +61,7 @@ export type RouteDataFunction = {
      * implementation when a load/action is aborted.
      */
     signal: AbortSignal;
-  }): Promise<any> | any;
+  }): Promise<unknown | DeferredResponse | TransitionRedirect | void>;
 };
 
 export interface ClientRoute extends Route {
@@ -148,25 +149,29 @@ async function loadRouteModuleWithBlockingLinks(
 function createLoader(route: EntryRoute, routeModules: RouteModules) {
   let loader: ClientRoute["loader"] = async ({ url, signal, submission }) => {
     if (route.hasLoader) {
-      let [result] = await Promise.all([
+      let [response] = await Promise.all([
         fetchData(url, route.id, signal, submission),
         loadRouteModuleWithBlockingLinks(route, routeModules),
       ]);
 
-      if (result instanceof Error) throw result;
+      if (response instanceof Error) throw response;
 
-      let redirect = await checkRedirect(result);
+      let redirect = await checkRedirect(response);
       if (redirect) return redirect;
 
-      if (isCatchResponse(result)) {
+      if (isCatchResponse(response)) {
         throw new CatchValue(
-          result.status,
-          result.statusText,
-          await extractData(result)
+          response.status,
+          response.statusText,
+          await extractData(response)
         );
       }
 
-      return extractData(result);
+      if (response instanceof DeferredResponse) {
+        return response;
+      }
+
+      return extractData(response);
     } else {
       await loadRouteModuleWithBlockingLinks(route, routeModules);
     }

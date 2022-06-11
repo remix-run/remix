@@ -1,6 +1,10 @@
 import type { AppState } from "./errors";
 import type { RouteManifest, EntryRoute } from "./routes";
-import type { RouteData } from "./routeData";
+import type {
+  DeferredRouteData,
+  DeferredRouteDataResolvers,
+  RouteData,
+} from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import type { RouteModules } from "./routeModules";
 
@@ -9,6 +13,8 @@ export interface EntryContext {
   manifest: AssetsManifest;
   matches: RouteMatch<EntryRoute>[];
   routeData: RouteData;
+  deferredRouteData: DeferredRouteData;
+  deferredRouteDataResolvers: DeferredRouteDataResolvers;
   actionData?: RouteData;
   routeModules: RouteModules;
   serverHandoffString?: string;

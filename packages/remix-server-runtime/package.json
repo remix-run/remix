@@ -26,7 +26,9 @@
   "devDependencies": {
     "@remix-run/web-file": "^3.0.2",
     "@types/jsesc": "^2.5.1",
-    "@types/set-cookie-parser": "^2.4.1"
+    "@types/set-cookie-parser": "^2.4.1",
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0"
   },
   "peerDependencies": {
     "react": ">=16.8",

@@ -7,3 +7,7 @@ export interface RouteData {
 export interface DeferredRouteData {
   [routeId: string]: Record<string | number, Promise<unknown>>;
 }
+
+export interface DeferredRouteDataResolvers {
+  [routeId: string]: Record<string | number, (resolve: unknown) => void>;
+}

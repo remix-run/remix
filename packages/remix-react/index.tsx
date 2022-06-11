@@ -29,6 +29,8 @@ export type {
   RemixLinkProps as LinkProps,
 } from "./components";
 export {
+  Deferred,
+  ResolveDeferred,
   Meta,
   Links,
   Scripts,
@@ -37,6 +39,7 @@ export {
   Form,
   PrefetchPageLinks,
   LiveReload,
+  useDeferred,
   useFormAction,
   useSubmit,
   useTransition,
