@@ -67,7 +67,7 @@ export function formatBuildFailure(failure: BuildError) {
   console.error(failure?.message || "An unknown build error occurred");
 }
 
-interface BuildOptions extends Partial<BuildConfig> {
+export interface BuildOptions extends Partial<BuildConfig> {
   onWarning?(message: string, key: string): void;
   onBuildFailure?(failure: Error | esbuild.BuildFailure): void;
 }
