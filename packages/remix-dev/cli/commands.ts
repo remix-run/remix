@@ -23,8 +23,6 @@ import { createApp } from "./create";
 import { getPreferredPackageManager } from "./getPreferredPackageManager";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 
-export * as migrate from "./migrate";
-
 export async function create({
   appTemplate,
   projectDir,

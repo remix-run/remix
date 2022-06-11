@@ -13,6 +13,7 @@ module.exports = {
     "packages/remix-vercel",
     "packages/remix-node",
     "packages/remix-react",
+    "packages/remix-scripts",
     "packages/remix-server-runtime",
   ],
   watchPlugins: [

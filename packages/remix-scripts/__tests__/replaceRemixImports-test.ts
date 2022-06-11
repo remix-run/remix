@@ -5,9 +5,9 @@ import glob from "fast-glob";
 import shell from "shelljs";
 import stripAnsi from "strip-ansi";
 import type { PackageJson } from "type-fest";
+import { readConfig } from "@remix-run/dev/config";
 
 import { run } from "../cli/run";
-import { readConfig } from "../config";
 
 let output: string;
 const ORIGINAL_IO = {
@@ -31,7 +31,7 @@ function mockLog(message: unknown = "", ...rest: Array<unknown>) {
   output += "\n" + stripAnsi(messageString);
 }
 
-const FIXTURE = path.join(__dirname, "fixtures/replace-remix-imports");
+const FIXTURE = path.join(__dirname, "fixtures/replaceRemixImports");
 
 const TEMP_DIR = path.join(
   fse.realpathSync(os.tmpdir()),

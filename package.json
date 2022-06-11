@@ -16,6 +16,7 @@
     "packages/remix-netlify",
     "packages/remix-node",
     "packages/remix-react",
+    "packages/remix-scripts",
     "packages/remix-serve",
     "packages/remix-server-runtime",
     "packages/remix-vercel"

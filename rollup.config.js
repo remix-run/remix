@@ -224,14 +224,84 @@ function remixDev() {
       ],
     },
     {
-      external: (id) => isBareModuleId(id),
-      input: [`${sourceDir}/cli/migrate/migrations/transforms.ts`],
+      external() {
+        return true;
+      },
+      input: `${sourceDir}/server-build.ts`,
       output: {
-        banner: createBanner("@remix-run/dev", version),
-        dir: `${outputDir}/cli/migrate/migrations`,
-        exports: "named",
+        banner: executableBanner + createBanner("@remix-run/dev", version),
+        dir: outputDir,
+        format: "cjs",
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts"],
+        }),
+        nodeResolve({ extensions: [".ts"] }),
+        copyToPlaygrounds(),
+      ],
+    },
+  ];
+}
+
+/** @returns {import("rollup").RollupOptions[]} */
+function remixScripts() {
+  let sourceDir = "packages/remix-scripts";
+  let outputDir = getOutputDir("@remix-run/scripts");
+  let version = getVersion(sourceDir);
+
+  return [
+    {
+      external(id) {
+        return isBareModuleId(id);
+      },
+      input: `${sourceDir}/index.ts`,
+      output: {
+        banner: createBanner("@remix-run/scripts", version),
+        dir: outputDir,
         format: "cjs",
         preserveModules: true,
+        exports: "named",
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts"],
+        }),
+        nodeResolve({ extensions: [".ts"] }),
+        copy({
+          targets: [
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
+          ],
+        }),
+        // Allow dynamic imports in CJS code to allow us to utilize
+        // ESM modules as part of the compiler.
+        {
+          name: "dynamic-import-polyfill",
+          renderDynamicImport() {
+            return {
+              left: "import(",
+              right: ")",
+            };
+          },
+        },
+        copyToPlaygrounds(),
+      ],
+    },
+    {
+      external() {
+        return true;
+      },
+      input: `${sourceDir}/cli.ts`,
+      output: {
+        banner: executableBanner + createBanner("@remix-run/scripts", version),
+        dir: outputDir,
+        format: "cjs",
       },
       plugins: [
         babel({
@@ -244,14 +314,14 @@ function remixDev() {
       ],
     },
     {
-      external() {
-        return true;
-      },
-      input: `${sourceDir}/server-build.ts`,
+      external: (id) => isBareModuleId(id),
+      input: [`${sourceDir}/cli/migrate/migrations/transforms.ts`],
       output: {
-        banner: executableBanner + createBanner("@remix-run/dev", version),
-        dir: outputDir,
+        banner: createBanner("@remix-run/scripts", version),
+        dir: `${outputDir}/cli/migrate/migrations`,
+        exports: "named",
         format: "cjs",
+        preserveModules: true,
       },
       plugins: [
         babel({
@@ -877,6 +947,7 @@ export default function rollup(options) {
     // correct for that deploy target setup
     ...(activeOutputDir === "build" ? remix(options) : []),
     ...remixDev(options),
+    ...remixScripts(options),
     ...remixServerRuntime(options),
     ...remixNode(options),
     ...remixCloudflare(options),
