@@ -6253,7 +6253,7 @@ I feel pretty great about the user experience we've created here. So let's get t
 💿 Once you've done that, run this command from within your project directory:
 
 ```sh
-fly launch
+flyctl launch
 ```
 
 The folks at fly were kind enough to put together a great setup experience. They'll detect your Remix project and ask you a few questions to get you started. Here's my output/choices:
@@ -6292,7 +6292,7 @@ Fly generated a few files for us:
 💿 Now set the `SESSION_SECRET` environment variable by running this command:
 
 ```sh
-fly secrets set SESSION_SECRET=your-secret-here
+flyctl secrets set SESSION_SECRET=your-secret-here
 ```
 
 `your-secret-here` can be whatever you want. It's just a string that's used to encrypt the session cookie. Use a password generator if you like.
@@ -6344,7 +6344,7 @@ With that done, you're ready to deploy.
 💿 Run this command:
 
 ```sh
-fly deploy
+flyctl deploy
 ```
 
 This will build the docker image and deploy it on Fly in the region you selected. It will take a little while. While you wait, you can think of someone you haven't talked to in a while and shoot them a message telling them why you appreciate them.
@@ -6353,7 +6353,7 @@ Great! We're done and you made someone's day! Success!
 
 Your app is now live at `https://<your-app-name>.fly.dev`! You can find that URL in your fly account online as well: [fly.io/apps](https://fly.io/apps).
 
-Any time you make a change, simply run `fly deploy` again to redeploy.
+Any time you make a change, simply run `flyctl deploy` again to redeploy.
 
 ## Conclusion
 
