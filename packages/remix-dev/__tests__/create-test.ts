@@ -632,10 +632,8 @@ describe("the create command", () => {
             "--no-install",
             "--typescript",
           ]);
-          debugger;
           return res;
         } catch (err) {
-          debugger;
           throw err;
         }
       }).rejects.toMatchInlineSnapshot(
