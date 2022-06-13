@@ -2994,7 +2994,7 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[4,23] nocopy
+```tsx filename=app/routes/login.tsx lines=[6,26] nocopy
 // ...
 
 import { db } from "~/utils/db.server";
