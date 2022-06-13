@@ -299,7 +299,7 @@ let githubHandlers: Array<RequestHandler> = [
   rest.get(
     `https://api.github.com/repos/private-org/private-repo/tarball`,
     (req, res, ctx) => {
-      if (req.headers.get("Authorization") === "token valid-token") {
+      if (req.headers.get("Authorization") !== "token valid-token") {
         return res(ctx.status(404));
       }
       req.params.owner = "private-org";

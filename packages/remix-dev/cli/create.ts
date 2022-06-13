@@ -286,15 +286,14 @@ async function downloadAndExtractTarball(
   }
 ): Promise<void> {
   let resourceUrl = url;
-  let headers: Record<string, string> = {};
+  let headers: Record<string, string> = {
+    Authorization: `token ${token}`,
+  };
   if (isGithubReleaseAssetUrl(url)) {
     // We can download the asset via the github api, but first we need to look up the
     // asset id
     let info = getGithubReleaseAssetInfo(url);
-    headers = {
-      Authorization: `token ${token}`,
-      Accept: "application/vnd.github.v3+json",
-    };
+    headers.Accept = "application/vnd.github.v3+json";
     let response = await fetch(
       `https://api.github.com/repos/${info.owner}/${info.name}/releases/tags/${info.tag}`,
       { headers }

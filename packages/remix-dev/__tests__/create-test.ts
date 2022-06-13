@@ -204,7 +204,7 @@ describe("the create command", () => {
     );
   });
 
-  it("succeeds for private GitHub username/repo combo without a valid token", async () => {
+  it("succeeds for private GitHub username/repo combo with a valid token", async () => {
     let originalGithubToken = process.env.GITHUB_TOKEN;
     process.env.GITHUB_TOKEN = "valid-token";
     let projectDir = await getProjectDir("repo");
