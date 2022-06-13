@@ -1288,8 +1288,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       // submission sticks around for optimistic/pending UI.
       if (
         state.transition.type === "actionReload" ||
-        ((location.state as any)?.isRedirect &&
-          (location.state as any)?.type === "action")
+        isActionRedirectLocation(location)
       ) {
         let locationState: Redirects["Action"] = {
           isRedirect: true,
