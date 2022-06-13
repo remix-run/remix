@@ -284,7 +284,7 @@ let githubHandlers: Array<RequestHandler> = [
   rest.get(
     `https://codeload.github.com/private-org/private-repo/tar.gz/:branch`,
     (req, res, ctx) => {
-      if (req.headers.get("Authorization") === "token valid-token") {
+      if (req.headers.get("Authorization") !== "token valid-token") {
         return res(ctx.status(404));
       }
       req.params.owner = "private-org";

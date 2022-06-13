@@ -286,9 +286,10 @@ async function downloadAndExtractTarball(
   }
 ): Promise<void> {
   let resourceUrl = url;
-  let headers: Record<string, string> = {
-    Authorization: `token ${token}`,
-  };
+  let headers: Record<string, string> = {};
+  if (token && new URL(url).host.endsWith("github.com")) {
+    headers.Authorization = `token ${token}`;
+  }
   if (isGithubReleaseAssetUrl(url)) {
     // We can download the asset via the github api, but first we need to look up the
     // asset id
@@ -320,6 +321,13 @@ async function downloadAndExtractTarball(
   let response = await fetch(resourceUrl, { headers });
 
   if (response.status !== 200) {
+    if (token) {
+      throw Error(
+        "🚨 There was a problem fetching the file from GitHub. The request " +
+          `responded with a ${response.status} status. Perhaps your GITHUB_TOKEN ` +
+          "is expired or invalid."
+      );
+    }
     throw Error(
       "🚨 There was a problem fetching the file from GitHub. The request " +
         `responded with a ${response.status} status. Please try again later.`
