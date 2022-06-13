@@ -2055,6 +2055,8 @@ const { getSession, commitSession, destroySession } =
 export { getSession, commitSession, destroySession };
 ```
 
+Please note that using the `createCookieSessionStorage` code above as it stands is NOT recommended. Not only are `expires` and `maxAge` not intended for use together, but using this code would set a specific, one-off time for all future cookies, which would eventually elapse preventing any futher cookies being set!
+
 We recommend setting up your session storage object in `app/sessions.js` so all routes that need to access session data can import from the same spot (also, see our [Route Module Constraints][constraints]).
 
 The input/output to a session storage object are HTTP cookies. `getSession()` retrieves the current session from the incoming request's `Cookie` header, and `commitSession()`/`destroySession()` provide the `Set-Cookie` header for the outgoing response.
