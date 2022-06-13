@@ -16,6 +16,8 @@
     "create-remix": "cli.js"
   },
   "dependencies": {
-    "@remix-run/dev": "1.5.1"
+    "@remix-run/dev": "1.5.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
   }
 }
