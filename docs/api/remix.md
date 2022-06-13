@@ -2042,7 +2042,10 @@ const { getSession, commitSession, destroySession } =
 
       // all of these are optional
       domain: "remix.run",
-      expires: new Date(Date.now() + 60_000),
+      // Expires can also be set (although maxAge overrides it when used in combination).
+      // Note that this method is NOT recommended as `new Date` creates only one date each server deployment, not a dynamic date in the future!
+      //
+      // expires: new Date(Date.now() + 60_000),
       httpOnly: true,
       maxAge: 60,
       path: "/",
@@ -2054,8 +2057,6 @@ const { getSession, commitSession, destroySession } =
 
 export { getSession, commitSession, destroySession };
 ```
-
-Please note that using the `createCookieSessionStorage` code above as it stands is NOT recommended. Not only are `expires` and `maxAge` not intended for use together, but using this code would set a specific, one-off time for all future cookies, which would eventually elapse preventing any futher cookies being set!
 
 We recommend setting up your session storage object in `app/sessions.js` so all routes that need to access session data can import from the same spot (also, see our [Route Module Constraints][constraints]).
 
