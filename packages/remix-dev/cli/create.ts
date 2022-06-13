@@ -424,7 +424,7 @@ interface ReleaseAssetInfo {
   tag: string;
 }
 function getGithubReleaseAssetInfo(browserUrl: string): ReleaseAssetInfo {
-  // for example, https://github.com/deptagency/dash/releases/download/v0.0.1/stack.tar.gz
+  // for example, https://github.com/owner/repository/releases/download/v0.0.1/stack.tar.gz
   let url = new URL(browserUrl);
   let [, owner, name, , , tag, asset] = url.pathname.split("/") as [
     _: string,
@@ -659,6 +659,13 @@ export async function validateTemplate(
             }
           }
           return;
+        case 401:
+          throw Error(
+            "🚨 The template could not be verified because you do are not " +
+              "authorized to access that repository. Please double check the " +
+              "access rights of the repo or consider setting a GITHUB_TOKEN " +
+              "environment variable."
+          );
         case 403:
           throw Error(
             "🚨 The template could not be verified because you do not have " +
