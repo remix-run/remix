@@ -1351,14 +1351,14 @@ type SerializeType<T> = T extends JsonPrimitives
         : k]: SerializeType<T[k]>;
     };
 
-export type UseDataFunction<T extends DataOrFunction> = T extends (
+export type UseDataFunctionReturn<T extends DataOrFunction> = T extends (
   ...args: any[]
 ) => infer Output
   ? Awaited<Output> extends TypedResponse<infer U>
     ? SerializeType<U>
     : SerializeType<Awaited<ReturnType<T>>>
   : SerializeType<Awaited<T>>;
-export function useLoaderData<T = AppData>(): UseDataFunction<T> {
+export function useLoaderData<T = AppData>(): UseDataFunctionReturn<T> {
   return useRemixRouteContext().data;
 }
 
@@ -1367,7 +1367,9 @@ export function useLoaderData<T = AppData>(): UseDataFunction<T> {
  *
  * @see https://remix.run/api/remix#useactiondata
  */
-export function useActionData<T = AppData>(): UseDataFunction<T> | undefined {
+export function useActionData<T = AppData>():
+  | UseDataFunctionReturn<T>
+  | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
   let { actionData } = transitionManager.getState();
