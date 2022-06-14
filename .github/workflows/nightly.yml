@@ -42,23 +42,18 @@ jobs:
 
       - name: ⤴️ Update Version if needed
         id: version
-        shell: bash
         run: |
           # get latest commit sha
           SHA=$(git rev-parse HEAD)
           SHORT_SHA=${SHA::7}
 
-          # set up for reuse
-          NIGHTLY_PREFIX=0.0.0-nightly
-          NIGHTLY_TAG_PREFIX=v${NIGHTLY_PREFIX}-
-
           # get latest nightly tag
-          LATEST_NIGHTLY_TAG=$(git tag --sort=-taggerdate | grep ${NIGHTLY_TAG_PREFIX} | head -n 1)
+          LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-taggerdate | head -n 1)
 
           # check if last commit to dev starts would be the nightly tag we're about to create (minus the date)
           # if it is, we'll skip the nightly creation
           # if not, we'll create a new nightly tag
-          if [[ ${LATEST_NIGHTLY_TAG} == ${NIGHTLY_TAG_PREFIX}${SHORT_SHA}-* ]]; then
+          if [[ ${LATEST_NIGHTLY_TAG} == v0.0.0-nightly-${SHORT_SHA}-* ]]; then
             echo "🛑 Latest nightly tag is the same as the latest commit sha, skipping nightly release"
           else
             git config --local user.email "hello@remix.run"
