@@ -1,8 +1,7 @@
 name: 🚀 Deployment Tests
 
 on:
-  repository_dispatch:
-    types: [release]
+  workflow_call:
 
 jobs:
   arc_deploy:

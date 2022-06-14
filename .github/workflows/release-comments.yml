@@ -1,8 +1,14 @@
 name: 📝 Comment on Release
 
 on:
-  repository_dispatch:
-    types: [release]
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
 
 jobs:
   comment:
@@ -29,4 +35,4 @@ jobs:
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{ github.token }}
-          VERSION: ${{ github.event.client_payload.ref }}
+          VERSION: ${{ inputs.ref }}
