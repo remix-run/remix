@@ -46,7 +46,7 @@ jobs:
 
   comment:
     needs: [manual]
-    name: 🛴 Kick off comment workflow
+    name: 📝 Comment on related issues and pull requests
     if: github.repository == 'remix-run/remix'
     uses: remix-run/remix/.github/workflows/release-comments.yml@main
     with:
