@@ -1,0 +1,6 @@
+{
+  "signIn": {
+    "allowDuplicateEmails": false
+  },
+  "usageMode": "DEFAULT"
+}
