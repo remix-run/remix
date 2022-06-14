@@ -1,8 +1,5 @@
 {
-  "name": "remix-example-google-analytics",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "remix build",

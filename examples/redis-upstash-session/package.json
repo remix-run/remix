@@ -1,8 +1,5 @@
 {
-  "name": "remix-example-redis-upstash-session",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "remix build",

@@ -1,8 +1,5 @@
 {
-  "name": "remix-example-newsletter-signup",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "remix build",

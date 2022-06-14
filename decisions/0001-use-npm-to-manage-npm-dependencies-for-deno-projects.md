@@ -50,7 +50,7 @@ That means that specifying peer dependencies becomes tedious and error-prone as 
 
 - determine which dependencies themselves depend on `react` (or other similar peer dependency), even if indirectly.
 - manually figure out which `react` version works across _all_ of these dependencies
-- set that version for `react` as a query parameter in _all_ or the URLs for the identified dependencies
+- set that version for `react` as a query parameter in _all_ of the URLs for the identified dependencies
 
 If any dependencies change (added, removed, version change),
 the user must repeat all of these steps again.

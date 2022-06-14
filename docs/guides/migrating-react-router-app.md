@@ -7,7 +7,7 @@ description: Migrating your React Router app to Remix can be done all at once or
 
 # Migrating your React Router App to Remix
 
-Millions of React applications deployed worldwide are powered by [React Router](https://reactrouter.com/). Chances are you've shipped a few of them! Because Remix is built on top of React Router, we wave worked to make migration an easy process you can work through iteratively to avoid huge refactors.
+Millions of React applications deployed worldwide are powered by [React Router](https://reactrouter.com/). Chances are you've shipped a few of them! Because Remix is built on top of React Router, we have worked to make migration an easy process you can work through iteratively to avoid huge refactors.
 
 If you aren't already using React Router, we think there are several compelling reasons to reconsider! History management, dynamic path matching, nested routing, and much more. Take a look at the [React Router docs](https://reactrouter.com/docs/en/v6/getting-started/concepts) and see all what we have to offer.
 
@@ -159,7 +159,7 @@ export default function Root() {
 
 Notice a few things here:
 
-- We got rid of the `noscript` tag. We're server rendering now, which means users who disable JavaScript will still be able to see our app (and over time, as you make [a few tweaks to improve progressive enahancement](../pages/philosophy#progressive-enhancement), much of your app should still work).
+- We got rid of the `noscript` tag. We're server rendering now, which means users who disable JavaScript will still be able to see our app (and over time, as you make [a few tweaks to improve progressive enhancement](../pages/philosophy#progressive-enhancement), much of your app should still work).
 - Inside of the root element we render an `Outlet` component from `@remix-run/react`. This is the same component that you would normally use to render your matched route in a React Router app; it serves the same function here, but it's adapter for the router in Remix.
 
 <docs-warning><strong>Important:</strong> be sure to delete the `index.html` from your `public` directory after you've created your root route. Keeping the file around may cause your server to send that HTML instead of your Remix app when accessing the `/` route.</docs-warning>

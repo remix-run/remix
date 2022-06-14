@@ -1,8 +1,5 @@
 {
-  "name": "remix-example-image-resize",
   "private": true,
-  "description": "A image resize example",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "remix build",

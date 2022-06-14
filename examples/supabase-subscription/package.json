@@ -1,8 +1,5 @@
 {
-  "name": "remix-example-supabase-subscription",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
