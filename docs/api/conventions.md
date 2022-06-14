@@ -139,7 +139,7 @@ The `serverBuildTarget` can be one of the following:
 
 ### serverDependenciesToBundle
 
-A list of regex patterns that determined if a module is transpiled and included in the server bundle. This can be useful when consuming ESM only packages in a CJS build.
+A list of regex patterns that determines if a module is transpiled and included in the server bundle. This can be useful when consuming ESM only packages in a CJS build.
 
 For example, the `unified` ecosystem is all ESM-only. Let's also say we're using a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be able to consume those packages in a CJS app without having to use dynamic imports:
 
@@ -178,7 +178,7 @@ There are a few conventions that Remix uses you should be aware of.
 
 Setting up routes in Remix is as simple as creating files in your `app` directory. These are the conventions you should know to understand how routing in Remix works.
 
-Please note that you can use either `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication (and because we ❤️ TypeScript).
+Please note that you can use either `.js`, `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication (and because we ❤️ TypeScript).
 
 #### Root Layout Route
 
@@ -546,7 +546,7 @@ export default function SomeRouteComponent() {
 
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Single</a>: <a href="https://www.youtube.com/watch?v=NXqEP_PsPNc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Loading data into components</a></docs-success>
 
-Each route can define a "loader" function that will be called on the server before rendering to provide data to the route.
+Each route can define a "loader" function that will be called on the server before rendering to provide data to the route. You may think of this as a "GET" request handler in that you should not be reading the body of the request; that is the job of an [`action`](#action).
 
 ```js
 import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
@@ -894,7 +894,11 @@ See also:
 Each route can define its own HTTP headers. One of the common headers is the `Cache-Control` header that indicates to browser and CDN caches where and for how long a page is able to be cached.
 
 ```tsx
-export function headers({ loaderHeaders, parentHeaders }) {
+export function headers({
+  actionHeaders,
+  loaderHeaders,
+  parentHeaders,
+}) {
   return {
     "X-Stretchy-Pants": "its for fun",
     "Cache-Control": "max-age=300, s-maxage=3600",
@@ -902,7 +906,7 @@ export function headers({ loaderHeaders, parentHeaders }) {
 }
 ```
 
-Usually your data is a better indicator of your cache duration than your route module (data tends to be more dynamic than markup), so the loader's headers are passed in to `headers()` too:
+Usually your data is a better indicator of your cache duration than your route module (data tends to be more dynamic than markup), so the `action`'s & `loader`'s headers are passed in to `headers()` too:
 
 ```tsx
 export function headers({ loaderHeaders }) {
@@ -912,7 +916,7 @@ export function headers({ loaderHeaders }) {
 }
 ```
 
-Note: `loaderHeaders` is an instance of the [Web Fetch API][headers] `Headers` class.
+Note: `actionHeaders` & `loaderHeaders` are an instance of the [Web Fetch API][headers] `Headers` class.
 
 Because Remix has nested routes, there's a battle of the headers to be won when nested routes match. In this case, the deepest route wins. Consider these files in the routes directory:
 

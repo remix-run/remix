@@ -35,15 +35,13 @@ npx create-remix --template remix-run/indie-stack blog-tutorial
 
 ```
 ? Do you want me to run `npm install`? Yes
-...
-? Do you want to run the build/tests/etc to verify things are setup properly? Yes
 ```
-
-<docs-info>Running the verify script is optional, but handy.</docs-info>
 
 You can read more about the stacks available in [the stacks docs](/pages/stacks).
 
 We're using [the Indie stack](https://github.com/remix-run/indie-stack), which is a full application ready to deploy to [fly.io](https://fly.io). This includes development tools as well as production-ready authentication and persistence. Don't worry if you're unfamiliar with the tools used, we'll walk you through things as we go.
+
+<docs-info>Note, you can definitely start with "Just the basics" instead by running `npx create-remix` without the `--template` flag. The generated project is much more minimal that way. However, some bits of the tutorial will be different for you and you'll have to configure things for deployment manually.</docs-info>
 
 💿 Now, open the project that was generated in your preferred editor and check the instructions in the `README.md` file. Feel free to read over this. We'll get to the deployment bit later in the tutorial.
 
@@ -222,7 +220,7 @@ export const loader = async () => {
 };
 
 export default function Posts() {
-  const { posts } = useLoaderData() as LoaderData;
+  const { posts } = useLoaderData<LoaderData>();
   return (
     <main>
       <h1>Posts</h1>
@@ -551,7 +549,7 @@ export const loader: LoaderFunction = async ({
 };
 
 export default function PostSlug() {
-  const { post } = useLoaderData() as LoaderData;
+  const { post } = useLoaderData<LoaderData>();
   return (
     <main className="mx-auto max-w-4xl">
       <h1 className="my-6 border-b-2 text-center text-3xl">
@@ -601,7 +599,7 @@ export const loader: LoaderFunction = async ({
 };
 
 export default function PostSlug() {
-  const { post, html } = useLoaderData() as LoaderData;
+  const { post, html } = useLoaderData<LoaderData>();
   return (
     <main className="mx-auto max-w-4xl">
       <h1 className="my-6 border-b-2 text-center text-3xl">
@@ -657,7 +655,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function PostAdmin() {
-  const { posts } = useLoaderData() as LoaderData;
+  const { posts } = useLoaderData<LoaderData>();
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">
@@ -739,7 +737,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function PostAdmin() {
-  const { posts } = useLoaderData() as LoaderData;
+  const { posts } = useLoaderData<LoaderData>();
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">

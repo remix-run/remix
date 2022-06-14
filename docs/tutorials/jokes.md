@@ -1437,7 +1437,7 @@ node_modules
 .env
 ```
 
-<docs-warning>If your database gets messed up, you can always delete the `prisma/dev.db` file and run `npx prisma db push` again.</docs-warning>
+<docs-warning>If your database gets messed up, you can always delete the `prisma/dev.db` file and run `npx prisma db push` again. Remember to also restart your dev server with `npm run dev`.</docs-warning>
 
 Next, we're going to write a little file that will "seed" our database with test data. Again, this isn't really remix-specific stuff, so I'll just give this to you (don't worry, we'll get back to remix soon):
 
@@ -2173,7 +2173,7 @@ We're going to handroll our own authentication from scratch. Don't worry, I prom
 
 ### Preparing the database
 
-<docs-warning>Remember, if your database gets messed up, you can always delete the `prisma/dev.db` file and run `npx prisma db push` again.</docs-warning>
+<docs-warning>Remember, if your database gets messed up, you can always delete the `prisma/dev.db` file and run `npx prisma db push` again. Remember to also restart your dev server with `npm run dev`.</docs-warning>
 
 Let's start by showing you our updated `prisma/schema.prisma` file. 💿 Go ahead and update your `prisma/schema.prisma` file to look like this:
 
@@ -2994,7 +2994,15 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[18] nocopy
+```tsx filename=app/routes/login.tsx lines=[6,26] nocopy
+// ...
+
+import { db } from "~/utils/db.server";
+import {
+  login,
+  createUserSession,
+} from "~/utils/session.server";
+
 // ...
 
 export const action: ActionFunction = async ({

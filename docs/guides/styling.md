@@ -84,7 +84,7 @@ Remix makes writing plain CSS a viable option even for apps with a lot of UI. In
 
 - how and when to load CSS, so it was usually all loaded on every page
 - if the class names and selectors you were using were accidentally styling other UI in the app
-- if some rules were even used anymore as the CSS source code grew over time
+- if some rules weren't even used anymore as the CSS source code grew over time
 
 Remix alleviates these issues with route-based stylesheets. Nested routes can each add their own stylesheets to the page and Remix will automatically prefetch, load, and unload them with the route. When the scope of concern is limited to just the active routes, the risks of these problems are reduced significantly. The only chances for conflicts are with the parent routes' styles (and even then, you will likely see the conflict since the parent route is also rendering).
 
@@ -415,7 +415,8 @@ npx tailwindcss init
 
 Now we can tell it which files to generate classes from:
 
-```js filename=tailwind.config.js lines=[2]
+```js filename=tailwind.config.js lines=[3]
+/** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./app/**/*.{ts,tsx,jsx,js}"],
   theme: {
@@ -447,7 +448,10 @@ Update the package scripts to generate the Tailwind file during dev and for the 
 Finally, import the generated CSS file into your app:
 
 ```tsx filename=app/root.tsx
+import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+
 // ...
+
 import styles from "./tailwind.css";
 
 export const links: LinksFunction = () => [

@@ -3,10 +3,11 @@ import fse from "fs-extra";
 import os from "os";
 import stripAnsi from "strip-ansi";
 import type { PackageJson } from "type-fest";
-import { spawnSync } from "child_process";
-import { PowerShell } from "node-powershell";
+import shell from "shelljs";
+import glob from "fast-glob";
 
 import { run } from "../cli/run";
+import { readConfig } from "../config";
 
 let output: string;
 const ORIGINAL_IO = {
@@ -73,6 +74,7 @@ const replaceRemixImports = async (projectDir: string) => {
 describe("`replace-remix-imports` migration", () => {
   it("runs successfully", async () => {
     let projectDir = makeApp();
+    let config = await readConfig(projectDir);
     await replaceRemixImports(projectDir);
 
     expect(output).toContain("detected `@remix-run/node`");
@@ -97,18 +99,15 @@ describe("`replace-remix-imports` migration", () => {
     expect(packageJson.scripts).not.toContain("postinstall");
 
     expect(output).toContain("✅ Your Remix imports look good!");
-    if (process.platform === "win32") {
-      let res =
-        await PowerShell.$`Get-ChildItem ${projectDir} | Select-String 'from "remix"'`;
-      let err = res.stderr?.toString("utf-8");
-      let out = res.stdout?.toString("utf-8");
-      expect(err).toBeFalsy();
-      expect(out).toBeFalsy();
-    } else {
-      let { status } = spawnSync("grep", ["-nri", 'from "remix"', projectDir]);
-      // `grep` exits with status code `1` when no matches are found
-      expect(status).toBe(1);
-    }
+
+    let files = glob.sync("**/*.@(ts|tsx|js|jsx)", {
+      cwd: config.appDirectory,
+      absolute: true,
+    });
+    let result = shell.grep("-l", 'from "remix"', files);
+    expect(result.stdout.trim()).toBe("");
+    expect(result.stderr).toBeNull();
+    expect(result.code).toBe(0);
 
     expect(output).toContain("successfully migrated");
     expect(output).toContain("npm install");
