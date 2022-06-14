@@ -58,7 +58,7 @@ jobs:
           # check if last commit to dev starts would be the nightly tag we're about to create (minus the date)
           # if it is, we'll skip the nightly creation
           # if not, we'll create a new nightly tag
-          if [[ $LATEST_NIGHTLY_TAG == ${NIGHTLY_TAG_PREFIX}${SHORT_SHA}-* ]]; then
+          if [[ ${LATEST_NIGHTLY_TAG} == ${NIGHTLY_TAG_PREFIX}${SHORT_SHA}-* ]]; then
             echo "🛑 Latest nightly tag is the same as the latest commit sha, skipping nightly release"
           else
             git config --local user.email "hello@remix.run"
