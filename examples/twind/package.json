@@ -7,9 +7,9 @@
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/node": "1.6.0-pre.0",
-    "@remix-run/react": "1.6.0-pre.0",
-    "@remix-run/serve": "1.6.0-pre.0",
+    "@remix-run/node": "1.6.0",
+    "@remix-run/react": "1.6.0",
+    "@remix-run/serve": "1.6.0",
     "@twind/preset-autoprefix": "1.0.0-next.38",
     "@twind/preset-tailwind": "1.0.0-next.38",
     "@twind/with-remix": "1.0.0-next.38",
@@ -19,8 +19,8 @@
     "twind": "^1.0.0-next.32"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.6.0-pre.0",
-    "@remix-run/eslint-config": "1.6.0-pre.0",
+    "@remix-run/dev": "1.6.0",
+    "@remix-run/eslint-config": "1.6.0",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
     "eslint": "^8.10.0",
