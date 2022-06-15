@@ -1289,19 +1289,14 @@ export default function JokesRoute() {
 
 <summary>app/routes/index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx lines=[2,16-31]
+```tsx filename=app/routes/index.tsx lines=[2,11-26]
 import type { LinksFunction } from "@remix-run/node";
 import { Link } from "@remix-run/react";
 
 import stylesUrl from "~/styles/index.css";
 
 export const links: LinksFunction = () => {
-  return [
-    {
-      rel: "stylesheet",
-      href: stylesUrl,
-    },
-  ];
+  return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
 export default function IndexRoute() {
