@@ -463,7 +463,7 @@ body {
 
 <summary>app/routes/index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx lines=[1, 3, 5-7]
+```tsx filename=app/routes/index.tsx lines=[1,3,5-7]
 import type { LinksFunction } from "@remix-run/node";
 
 import stylesUrl from "~/styles/index.css";
