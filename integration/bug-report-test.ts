@@ -49,10 +49,13 @@ test.beforeAll(async () => {
     files: {
       "app/routes/index.jsx": js`
         import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+        import { useLoaderData } from "@remix-run/react";
+        
 
-        export function loader() {
-          return json("pizza");
+        export async function loader() {
+          const resp = await fetch('https://reqres.in/api/users?page=2');
+        
+          return (resp instanceof Response) ? 'is an instance of global Response' : 'is not an instance of global Response';
         }
 
         export default function Index() {
@@ -60,15 +63,8 @@ test.beforeAll(async () => {
           return (
             <div>
               {data}
-              <Link to="/burgers">Other Route</Link>
             </div>
           )
-        }
-      `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -87,16 +83,16 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
+test("returned variable from fetch() should be instance of global Response", async ({ page }) => {
+  // let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+  expect(await response.text()).toMatch('is not an instance of global Response');
 
   // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  // await app.goto("/");
+  // await app.clickLink("/burgers");
+  // expect(await app.getHtml()).toMatch("cheeseburger");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
