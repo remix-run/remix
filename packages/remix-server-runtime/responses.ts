@@ -45,7 +45,7 @@ export const json: JsonFunction = (data, init = {}) => {
 export type RedirectFunction = (
   url: string,
   init?: number | ResponseInit
-) => Response;
+) => TypedResponse<never>;
 
 /**
  * A redirect response. Sets the status code and the `Location` header.
@@ -67,7 +67,7 @@ export const redirect: RedirectFunction = (url, init = 302) => {
   return new Response(null, {
     ...responseInit,
     headers,
-  });
+  }) as TypedResponse<never>;
 };
 
 export function isResponse(value: any): value is Response {

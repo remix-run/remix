@@ -17,6 +17,14 @@ describe("useLoaderData", () => {
     isEqual<response, any>(true);
   });
 
+  it("infers type regardless of redirect", () => {
+    type Loader = (
+      args: any
+    ) => TypedResponse<{ id: string }> | TypedResponse<never>;
+    type response = UseDataFunctionReturn<Loader>;
+    isEqual<response, { id: string }>(true);
+  });
+
   it("supports Response-returning loader", () => {
     type Loader = (args: any) => TypedResponse<{ hello: string }>;
     type response = UseDataFunctionReturn<Loader>;
