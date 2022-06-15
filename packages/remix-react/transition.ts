@@ -17,6 +17,7 @@ const DEFERRED_PROMISE_PREFIX = "__deferred_promise:";
 
 export class DeferredResponse extends Response {
   public deferred: Record<string, Promise<unknown>> = {};
+
   private deferredResolvers: Record<string, (data: unknown) => void> = {};
   private reader: ReadableStreamReader<Uint8Array>;
   private buffer: Uint8Array[] = [];
@@ -558,6 +559,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let { routes } = init;
 
   let pendingNavigationController: AbortController | undefined;
+  let pendingNavigationDeferredControllers: AbortController[] = [];
   let fetchControllers = new Map<string, AbortController>();
   let incrementingLoadId = 0;
   let navigationLoadId = -1;
@@ -1476,8 +1478,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let [deferredLoaderData, monitorDeferred] = makeDeferredLoaderData(
       getState,
       update,
-      results,
-      matches
+      results
     );
 
     update({
@@ -1495,13 +1496,23 @@ export function createTransitionManager(init: TransitionManagerInit) {
       fetchers: abortedIds ? new Map(state.fetchers) : state.fetchers,
     });
 
-    monitorDeferred(controller.signal);
+    let deferredController = new AbortController();
+    if (controller.signal.aborted) {
+      deferredController.abort();
+    }
+    pendingNavigationDeferredControllers.push(deferredController);
+    monitorDeferred(deferredController.signal);
   }
 
   function abortNormalNavigation() {
     if (pendingNavigationController) {
       console.debug(`[transition] aborting pending navigation`);
       pendingNavigationController.abort();
+    }
+    if (pendingNavigationDeferredControllers.length > 0) {
+      let toAbort = pendingNavigationDeferredControllers;
+      pendingNavigationDeferredControllers = [];
+      toAbort.forEach((controller) => controller.abort());
     }
   }
 
@@ -1875,8 +1886,7 @@ function makeLoaderData(
 function makeDeferredLoaderData(
   getState: () => TransitionManagerState,
   update: (updates: Partial<TransitionManagerState>) => void,
-  results: DataResult[],
-  matches: ClientMatch[]
+  results: DataResult[]
 ): [DeferredRouteData, (signal: AbortSignal) => void] {
   let state = getState();
   let deferredLoaderData = { ...state.deferredLoaderData };
@@ -1921,6 +1931,7 @@ function makeDeferredLoaderData(
               },
             };
 
+            if (signal.aborted) return;
             update({
               deferredLoaderData: newDeferredLoaderData,
               loaderData: newLoaderData,
