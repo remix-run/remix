@@ -1,8 +1,5 @@
 {
-  "name": "remix-example-tailwindcss",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "run-s build:*",
@@ -15,21 +12,21 @@
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/node": "1.5.1",
-    "@remix-run/react": "1.5.1",
-    "@remix-run/serve": "1.5.1",
+    "@remix-run/node": "1.6.0",
+    "@remix-run/react": "1.6.0",
+    "@remix-run/serve": "1.6.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.5.1",
-    "@remix-run/eslint-config": "1.5.1",
+    "@remix-run/dev": "1.6.0",
+    "@remix-run/eslint-config": "1.6.0",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
     "eslint": "^8.10.0",
     "npm-run-all": "^4.1.5",
     "prettier-plugin-tailwindcss": "^0.1.8",
-    "tailwindcss": "^3.0.23",
+    "tailwindcss": "^3.1.0",
     "typescript": "^4.6.2"
   },
   "engines": {

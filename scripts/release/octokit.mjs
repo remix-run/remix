@@ -17,6 +17,9 @@ const octokit = new Octokit({ auth: GITHUB_TOKEN });
 
 const gql = String.raw;
 
+/**
+ * @param {{ owner: string; repo: string; lastRelease: string }} args
+ */
 export async function prsMergedSinceLast({
   owner,
   repo,
@@ -30,6 +33,7 @@ export async function prsMergedSinceLast({
 
   let sorted = releases
     .sort((a, b) => {
+      // @ts-ignore
       return new Date(b.published_at) - new Date(a.published_at);
     })
     .filter((release) => {
@@ -105,6 +109,9 @@ export async function prsMergedSinceLast({
   };
 }
 
+/**
+ * @param {{ owner: string, repo: string, pr: number, version: string }} args
+ */
 export async function commentOnPullRequest({ owner, repo, pr, version }) {
   await octokit.issues.createComment({
     owner,
@@ -114,6 +121,9 @@ export async function commentOnPullRequest({ owner, repo, pr, version }) {
   });
 }
 
+/**
+ * @param {{ owner: string, repo: string, issue: number, version: string }} args
+ */
 export async function commentOnIssue({ owner, repo, issue, version }) {
   await octokit.issues.createComment({
     owner,
@@ -123,6 +133,12 @@ export async function commentOnIssue({ owner, repo, issue, version }) {
   });
 }
 
+/**
+ * @param {string} prHtmlUrl
+ * @param {Array<{ number: number }>} [nodes]
+ * @param {*} [after]
+ * @returns {Promise<Array<{ number: number }>>}
+ */
 async function getIssuesLinkedToPullRequest(prHtmlUrl, nodes = [], after) {
   let res = await graphqlWithAuth(
     gql`
@@ -159,6 +175,11 @@ async function getIssuesLinkedToPullRequest(prHtmlUrl, nodes = [], after) {
   return nodes;
 }
 
+/**
+ * @param {string} prHtmlUrl
+ * @param {string | null} prBody
+ * @returns {Promise<any>}
+ */
 export async function getIssuesClosedByPullRequests(prHtmlUrl, prBody) {
   let linked = await getIssuesLinkedToPullRequest(prHtmlUrl);
   if (!prBody) return linked;
@@ -181,6 +202,11 @@ export async function getIssuesClosedByPullRequests(prHtmlUrl, prBody) {
   return [...linked, ...issues.filter((issue) => issue !== null)];
 }
 
+/**
+ * @param {string} string
+ * @param {string[]} substrings
+ * @returns {boolean}
+ */
 function checkIfStringStartsWith(string, substrings) {
   return substrings.some((substr) => string.startsWith(substr));
 }

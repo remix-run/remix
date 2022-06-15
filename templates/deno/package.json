@@ -1,15 +1,15 @@
 {
-  "name": "remix-template-deno",
   "private": true,
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
+    "deploy": "deployctl deploy --prod --include=build,public --project=<your deno deploy project> ./build/index.js",
     "dev": "remix build && run-p dev:*",
-    "dev:remix": "remix watch",
     "dev:deno": "cross-env NODE_ENV=development deno run --unstable --watch --allow-net --allow-read --allow-env ./build/index.js",
-    "start": "cross-env NODE_ENV=production deno run --unstable --allow-net --allow-read --allow-env ./build/index.js",
-    "lint": "deno lint --ignore=node_modules",
-    "format": "deno fmt --ignore=node_modules"
+    "dev:remix": "remix watch",
+    "format": "deno fmt --ignore=node_modules,build,public/build",
+    "lint": "deno lint --ignore=node_modules,build,public/build",
+    "start": "cross-env NODE_ENV=production deno run --unstable --allow-net --allow-read --allow-env ./build/index.js"
   },
   "dependencies": {
     "@remix-run/deno": "*",

@@ -1485,11 +1485,12 @@
   resolved "https://registry.npmjs.org/@kwsites/promise-deferred/-/promise-deferred-1.1.1.tgz"
   integrity sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw==
 
-"@mcansh/remark-definition-links@1.0.0":
-  version "1.0.0"
-  resolved "https://registry.npmjs.org/@mcansh/remark-definition-links/-/remark-definition-links-1.0.0.tgz#b29b267484517c327b2a153e533056f2586f45dc"
-  integrity sha512-aNaWemOECyJallrlqIS5kJhrX5yZrPs7sO1df4DyamzKLuJNW1FP38MDibHgLcB/XiMuuJobESPNAvFExxLxUQ==
+"@mcansh/remark-definition-links@2.1.0":
+  version "2.1.0"
+  resolved "https://registry.npmjs.org/@mcansh/remark-definition-links/-/remark-definition-links-2.1.0.tgz#ff643a5961ced0f652c502009a5498cae4da6df9"
+  integrity sha512-yb5sdgmTL80mIHhUQnKOfFjhnvxueDWiSbBwG4Skcw7U4d6whV53XOHSe333GnDXzNtLp3PoAxsOtnDFOY7isg==
   dependencies:
+    "@sindresorhus/slugify" "2.1.0"
     unified "^10.1.2"
     unist-util-visit "^4.1.0"
 
@@ -1797,6 +1798,22 @@
   version "4.2.0"
   resolved "https://registry.npmjs.org/@sindresorhus/is/-/is-4.2.0.tgz"
   integrity sha512-VkE3KLBmJwcCaVARtQpfuKcKv8gcBmUubrfHGF84dXuuW6jgsRYxPtzcIhPyK9WAPpRt2/xY6zkD9MnRaJzSyw==
+
+"@sindresorhus/slugify@2.1.0":
+  version "2.1.0"
+  resolved "https://registry.npmjs.org/@sindresorhus/slugify/-/slugify-2.1.0.tgz#1e252117008cd1121e4cdea9fc67767dd1653d25"
+  integrity sha512-gU3Gdm/V167BmUwIn8APHZ3SeeRVRUSOdXxnt7Q/JkUHLXaaTA/prYmoRumwsSitJZWUDYMzDWdWgrOdvE8IRQ==
+  dependencies:
+    "@sindresorhus/transliterate" "^1.0.0"
+    escape-string-regexp "^5.0.0"
+
+"@sindresorhus/transliterate@^1.0.0":
+  version "1.5.0"
+  resolved "https://registry.npmjs.org/@sindresorhus/transliterate/-/transliterate-1.5.0.tgz#841109db51fe3158787c42a91c45c3ffea7589be"
+  integrity sha512-/sfSkoNelLq5riqNRp5uBjHIKBi1MWZk9ubRT1WiBQuTfmDf7BeQkph2DJzRB83QagMPHk2VDjuvpy0VuwyzdA==
+  dependencies:
+    escape-string-regexp "^5.0.0"
+    lodash.deburr "^4.1.0"
 
 "@sinonjs/commons@^1.7.0":
   version "1.8.3"
@@ -2156,6 +2173,13 @@
   version "0.0.29"
   resolved "https://registry.npmjs.org/@types/json5/-/json5-0.0.29.tgz"
   integrity sha1-7ihweulOEdK4J7y+UnC86n8+ce4=
+
+"@types/jsonfile@^6.1.0":
+  version "6.1.0"
+  resolved "https://registry.yarnpkg.com/@types/jsonfile/-/jsonfile-6.1.0.tgz#c413d113ae28619f418b8a6ce7a1dec29e8f8a1c"
+  integrity sha512-zQPywzif9EycCkvECjYT9dbbttT0dkk657zcLb/803ZOXHsBA963jzEPF/Jnh1zOdBbgFJvUE8kcvZverAoK1w==
+  dependencies:
+    "@types/node" "*"
 
 "@types/keyv@*":
   version "3.1.3"
@@ -7328,6 +7352,11 @@ lodash.debounce@^4.0.8:
   version "4.0.8"
   resolved "https://registry.npmjs.org/lodash.debounce/-/lodash.debounce-4.0.8.tgz"
   integrity sha1-gteb/zCmfEAF/9XiUVMArZyk168=
+
+lodash.deburr@^4.1.0:
+  version "4.1.0"
+  resolved "https://registry.npmjs.org/lodash.deburr/-/lodash.deburr-4.1.0.tgz#ddb1bbb3ef07458c0177ba07de14422cb033ff9b"
+  integrity sha512-m/M1U1f3ddMCs6Hq2tAsYThTBDaAKFDX3dwDo97GEYzamXi9SqUpjWi/Rrj/gf3X2n8ktwgZrlP1z6E3v/IExQ==
 
 lodash.merge@^4.6.2:
   version "4.6.2"

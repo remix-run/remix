@@ -1,8 +1,5 @@
 {
-  "name": "remix-template-express",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "remix build",

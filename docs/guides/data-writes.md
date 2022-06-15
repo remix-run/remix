@@ -15,9 +15,9 @@ Many times people reach for global state management libraries in React like redu
 
 There are a few ways to call an action and get the routes to revalidate:
 
-- [`<Form>`][1]
-- [`useSubmit()`][2]
-- [`useFetcher()`][3]
+- [`<Form>`][form]
+- [`useSubmit()`][use-submit]
+- [`useFetcher()`][use-fetcher]
 
 This guide only covers `<Form>`. We suggest you read the docs for the other two after this guide to get a sense of how to use them. Most of this guide applies to `useSubmit` but `useFetcher` is a bit different.
 
@@ -516,16 +516,17 @@ From your components perspective, all that happened was the `useTransition` hook
 
 ## See also
 
-- [Form][1]
-- [useTransition][4]
-- [Actions][5]
-- [Loaders][6]
-- [`useSubmit()`][2]
-- [`useFetcher()`][3]
+- [Form][form-2]
+- [useTransition][use-transition]
+- [Actions][actions]
+- [Loaders][loaders]
+- [`useSubmit()`][use-submit]
+- [`useFetcher()`][use-fetcher]
 
-[1]: ../api/remix#form
-[2]: ../api/remix#usesubmit
-[3]: ../api/remix#usefetcher
-[4]: ../api/remix#usetransition
-[5]: ../api/conventions#action
-[6]: ../api/conventions#loader
+[form]: ../api/remix#form
+[use-submit]: ../api/remix#usesubmit
+[use-fetcher]: ../api/remix#usefetcher
+[form-2]: ../api/remix#form
+[use-transition]: ../api/remix#usetransition
+[actions]: ../api/conventions#action
+[loaders]: ../api/conventions#loader

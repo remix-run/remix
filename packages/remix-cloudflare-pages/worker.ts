@@ -28,10 +28,8 @@ export function createRequestHandler<Env = any>({
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return (context) => {
-    let loadContext =
-      typeof getLoadContext === "function"
-        ? getLoadContext(context)
-        : undefined;
+    let loadContext = getLoadContext?.(context);
+
     return handleRequest(context.request, loadContext);
   };
 }

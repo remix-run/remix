@@ -2,7 +2,7 @@ import path from "node:path";
 import fsp from "node:fs/promises";
 import { read } from "to-vfile";
 import { remark } from "remark";
-import { remarkReferenceLinksBottom } from "@mcansh/remark-definition-links";
+import { remarkDefinitionLinks } from "@mcansh/remark-definition-links";
 import remarkFrontmatter from "remark-frontmatter";
 import remarkGfm from "remark-gfm";
 import glob from "glob";
@@ -24,8 +24,8 @@ async function main() {
           tightDefinitions: true,
         },
       })
+      .use(remarkDefinitionLinks)
       .use(remarkGfm)
-      .use(remarkReferenceLinksBottom)
       .use(remarkFrontmatter, ["yaml", "toml"])
       .process(await read(file));
 

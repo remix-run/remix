@@ -5,7 +5,7 @@ order: 2
 
 # Server Adapters
 
-Idiomatic Remix apps can generally be deployed anywhere because Remix adapt's the server's request/response to the [Web Fetch API][developer.mozilla-1]. It does this through adapters. We maintain a few adapters:
+Idiomatic Remix apps can generally be deployed anywhere because Remix adapt's the server's request/response to the [Web Fetch API][web-fetch-api]. It does this through adapters. We maintain a few adapters:
 
 - `@remix-run/architect`
 - `@remix-run/cloudflare-pages`
@@ -168,4 +168,4 @@ addEventListener("fetch", (event) => {
 });
 ```
 
-[developer.mozilla-1]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+[web-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API

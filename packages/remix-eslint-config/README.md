@@ -2,7 +2,7 @@
 
 This package includes a shareable ESLint config for Remix projects.
 
-This package is new, but eventually we will include it as a dependency in projects bootstrapped with `create-remix` so that no configuration in necessary for those apps.
+If you create your app with `create-remix` no additional configuration is necessary.
 
 ## Installation
 

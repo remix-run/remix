@@ -15,7 +15,7 @@ When it comes to open source, there are many different kinds of contributions th
 
 If you'd like to contribute something—whether it's a bug fix to scratch your own itch or a typo in the docs—we'd be happy to have your contribution. We need you to "sign" a contributor license agreement (CLA) first that assigns us ownership so we are able to include it in this software.
 
-When you start a pull request, the remix-cla-bot will prompt you to review the [CLA][github-1] and sign it by adding your name to `contributors.yml`.
+When you start a pull request, the remix-cla-bot will prompt you to review the [CLA][cla] and sign it by adding your name to `contributors.yml`.
 
 ## Setup
 
@@ -26,7 +26,7 @@ Before you can contribute to the codebase, you will need to fork the repo. This 
 
 The following steps will get you setup to contribute changes to this repo:
 
-1. Fork the repo (click the <kbd>Fork</kbd> button at the top right of [this page][github-2])
+1. Fork the repo (click the <kbd>Fork</kbd> button at the top right of [this page][this-page])
 
 2. Clone your fork locally
 
@@ -39,13 +39,13 @@ The following steps will get you setup to contribute changes to this repo:
    git checkout dev
    ```
 
-3. Install dependencies by running `yarn`. Remix uses [`yarn` (version 1)][classic.yarnpkg-1], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
+3. Install dependencies by running `yarn`. Remix uses [`yarn` (version 1)][yarn-version-1], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
 
 4. Verify you've got everything set up for local development by running `yarn test`
 
 ## Think You Found a Bug?
 
-Please send a PR with a failing test. There are instructions in [`integration/bug-report-test.ts`][github-3]
+Please send a PR with a failing test. There are instructions in [`integration/bug-report-test.ts`][integration-bug-report-test-ts]
 
 ## Proposing New or Changed API?
 
@@ -55,7 +55,7 @@ But hey, who are we to tell you how to spend your time? Go ahead and build the f
 
 ## Issue Not Getting Attention?
 
-If you need a bug fixed and nobody is fixing it, your best bet is to provide a fix for it and make a [pull request][help.github-1]. Open source code belongs to all of us, and it's all of our responsibility to push it forward.
+If you need a bug fixed and nobody is fixing it, your best bet is to provide a fix for it and make a [pull request][pull-request]. Open source code belongs to all of us, and it's all of our responsibility to push it forward.
 
 ## Making a Pull Request?
 
@@ -98,7 +98,7 @@ All commits that change or add to the API must be done in a pull request that al
 
 Remix uses a monorepo to host code for multiple packages. These packages live in the `packages` directory.
 
-We use [Yarn workspaces][classic.yarnpkg-2] to manage installation of dependencies and running various scripts. To get everything installed, make sure you have [Yarn (version 1) installed][classic.yarnpkg-1], and then run `yarn` or `yarn install` from the repo root.
+We use [Yarn workspaces][yarn-workspaces] to manage installation of dependencies and running various scripts. To get everything installed, make sure you have [Yarn (version 1) installed][yarn-version-1-installed], and then run `yarn` or `yarn install` from the repo root.
 
 ### Building
 
@@ -141,9 +141,10 @@ This repo maintains separate branches for different purposes. They will look som
 
 There may be other branches for various features and experimentation, but all of the magic happens from these branches.
 
-[github-1]: https://github.com/remix-run/remix/blob/main/CLA.md
-[github-2]: https://github.com/remix-run/remix
-[classic.yarnpkg-1]: https://classic.yarnpkg.com/lang/en/docs/install
-[github-3]: https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts
-[help.github-1]: https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request
-[classic.yarnpkg-2]: https://classic.yarnpkg.com/en/docs/workspaces/
+[cla]: https://github.com/remix-run/remix/blob/main/CLA.md
+[this-page]: https://github.com/remix-run/remix
+[yarn-version-1]: https://classic.yarnpkg.com/lang/en/docs/install
+[integration-bug-report-test-ts]: https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts
+[pull-request]: https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request
+[yarn-workspaces]: https://classic.yarnpkg.com/en/docs/workspaces/
+[yarn-version-1-installed]: https://classic.yarnpkg.com/lang/en/docs/install

@@ -64,7 +64,7 @@ export async function loader({ request }) {
 
 ## How do I handle multiple forms in one route?
 
-[Watch on YouTube][www.youtube-1]
+[Watch on YouTube][watch-on-you-tube]
 
 In HTML, forms can post to any URL with the action prop and the app will navigate there:
 
@@ -236,4 +236,4 @@ Error boundaries render when your application throws an error and you had no clu
 
 Catch boundaries render when you decide in a loader that you can't proceed down the happy path to render the UI you want (auth required, record not found, etc.), so you throw a response and let some catch boundary up the tree handle it.
 
-[www.youtube-1]: https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix
+[watch-on-you-tube]: https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix
