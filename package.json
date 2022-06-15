@@ -26,6 +26,7 @@
     "clean": "git clean -fdX .",
     "dev": "yarn build && yarn --cwd ./fixtures/gists-app/ dev",
     "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint:fix",
+    "format:deno": "deno fmt integration/helpers/deno-template packages/remix-deno templates/deno",
     "license": "node ./scripts/license.js",
     "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx,.md .",
     "lint:fix": "yarn lint --fix",
