@@ -32,7 +32,15 @@ jobs:
         uses: bahmutov/npm-install@v1
 
       - name: 👔 Format
-        run: npm run format --if-present
+        run: yarn format --if-present
+
+      - name: 🦕 Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
+      - name: 👔 Format Deno files
+        run: yarn format:deno --if-present
 
       - name: 💪 Commit
         run: |
