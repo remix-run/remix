@@ -1,6 +1,6 @@
 {
-  "include": ["**/*"],
-  "exclude": ["__tests__", "./compiler/shims/*"],
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["__tests__", "node_modules", "./compiler/shims/*"],
   "compilerOptions": {
     "lib": ["ES2019", "DOM.Iterable"],
     "target": "ES2019",
