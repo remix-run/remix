@@ -51,7 +51,7 @@ export async function serveStaticFiles(
     cacheControl?: string | ((url: URL) => string);
     publicDir?: string;
     assetsPublicPath?: string;
-  }
+  },
 ) {
   const url = new URL(request.url);
 
