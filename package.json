@@ -29,6 +29,7 @@
     "format:deno": "deno fmt integration/helpers/deno-template packages/remix-deno templates/deno",
     "license": "node ./scripts/license.js",
     "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx,.md .",
+    "lint:deno": "deno lint integration/helpers/deno-template packages/remix-deno templates/deno",
     "lint:fix": "yarn lint --fix",
     "playground:new": "node ./scripts/playground/new.js",
     "publish": "node ./scripts/publish.js",
