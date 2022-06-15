@@ -87,7 +87,7 @@ test("returned variable from fetch() should be instance of global Response", asy
   // let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch('is not an instance of global Response');
+  expect(await response.text()).toMatch('is an instance of global Response');
 
   // If you need to test interactivity use the `app`
   // await app.goto("/");
