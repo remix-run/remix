@@ -405,7 +405,7 @@ Soon we'll add a database that stores our jokes by an ID, so let's add one more 
 
 `/jokes/:jokeId`
 
-Here the parameter `$jokeId` can be anything, and we can lookup that part of the URL up in the database to display the right joke. To make a parameterized route, we use the `$` character in the filename. ([Read more about the convention here][read-more-about-the-convention-here]).
+Here the parameter `$jokeId` can be anything, and we can lookup that part of the URL up in the database to display the right joke. To make a parameterized route, we use the `$` character in the filename. ([Read more about the convention here][the-route-filename-convention]).
 
 💿 Create a new route at `app/routes/jokes/$jokeId.tsx`. Don't worry too much about what it displays for now (we don't have a database set up yet!):
 
@@ -457,7 +457,7 @@ body {
 }
 ```
 
-💿 Now update `app/routes/index.tsx` to import that css file. Then add a `links` export (as described in [the documentation][the-documentation]) to add that link to the page.
+💿 Now update `app/routes/index.tsx` to import that css file. Then add a `links` export (as described in [the documentation][links]) to add that link to the page.
 
 <details>
 
@@ -479,7 +479,7 @@ export default function IndexRoute() {
 
 </details>
 
-Now if you go to [`/`][] you may be a bit disappointed. Our beautiful styles aren't applied! Well, you may recall that in the `app/root.tsx` we're the ones rendering _everything_ about our app. From the `<html>` to the `</html>`. That means if something doesn't show up in there, it's not going to show up at all!
+Now if you go to [`/`][http-localhost-3000] you may be a bit disappointed. Our beautiful styles aren't applied! Well, you may recall that in the `app/root.tsx` we're the ones rendering _everything_ about our app. From the `<html>` to the `</html>`. That means if something doesn't show up in there, it's not going to show up at all!
 
 So we need some way to get the `link` exports from all active routes and add `<link />` tags for all of them. Luckily, Remix makes this easy for us by providing a convenience [`<Links />`][links-2] component.
 
@@ -515,7 +515,7 @@ export default function App() {
 
 </details>
 
-Great, now check [`/`][-2] again and it should be nice and styled for you:
+Great, now check [`/`][http-localhost-3000]] again and it should be nice and styled for you:
 
 ![The homepage with a purple gradient background and white text with the words "Hello Index Route"][the-homepage-with-a-purple-gradient-background-and-white-text-with-the-words-hello-index-route]
 
@@ -2918,7 +2918,7 @@ Wahoo! We got the user! Now we need to put that user's ID into the session. We'r
 - sets the `userId` field on the session
 - redirects to the given route setting the `Set-Cookie` header (via the cookie storage `commitSession` function)
 
-Note: If you need a hand, there's a small example of how the whole basic flow goes in [the session docs][the-session-docs]. Once you have that, you'll want to use it in `app/routes/login.tsx` to set the session and redirect to the `/jokes` route.
+Note: If you need a hand, there's a small example of how the whole basic flow goes in [the session docs][here-are-the-docs]. Once you have that, you'll want to use it in `app/routes/login.tsx` to set the session and redirect to the `/jokes` route.
 
 <details>
 
@@ -3044,13 +3044,13 @@ And if you check the cookies section of the [Application tab][application-tab] t
 
 ![DevTools Application tab showing ][dev-tools-application-tab-showing]
 
-And now every request the browser makes to our server will include that cookie (we don't have to do anything on the client, [this is how cookies work][this-is-how-cookies-work]):
+And now every request the browser makes to our server will include that cookie (we don't have to do anything on the client, [this is how cookies work][http-cookies]):
 
 ![Request headers showing the Cookie][request-headers-showing-the-cookie]
 
 So we can now check whether the user is authenticated on the server by reading that header to get the `userId` we had set into it. To test this out, let's fix the `/jokes/new` route by adding the `jokesterId` field to `db.joke.create` call.
 
-<docs-info>Remember to check [the docs][the-docs] to learn how to get the session from the request</docs-info>
+<docs-info>Remember to check [the docs][here-are-the-docs] to learn how to get the session from the request</docs-info>
 
 💿 Update `app/utils/session.server.ts` to get the `userId` from the session. In my solution I create three functions: `getUserSession(request: Request)`, `getUserId(request: Request)` and `requireUserId(request: Request, redirectTo: string)`.
 
@@ -5669,7 +5669,7 @@ There are reasons to include JavaScript on the page. For example, some common UI
 
 Ok, so let's load JavaScript on this page now 😆
 
-💿 Use Remix's [`<Scripts />` component][scripts-component] component to load all the JavaScript files in `app/root.tsx`.
+💿 Use Remix's [`<Scripts />` component][meta-component] component to load all the JavaScript files in `app/root.tsx`.
 
 <details>
 
@@ -6384,15 +6384,10 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [a-random-joke-on-the-jokes-page-i-was-wondering-why-the-frisbee-was-getting-bigger-then-it-hit-me]: /jokes-tutorial/img/random-joke.png
 [jokes-new]: http://localhost:3000/jokes/new
 [a-new-joke-form]: /jokes-tutorial/img/new-joke.png
-[read-more-about-the-convention-here]: ../api/conventions#route-filenames
 [jokes-anything-you-want]: http://localhost:3000/jokes/hippos
 [a-new-joke-form-2]: /jokes-tutorial/img/param-route.png
 [links]: ../api/conventions#links
-[the-documentation]: ../api/conventions#links
-
-[]: http://localhost:3000
 [links-2]: ../api/remix#link
-[-2]: http://localhost:3000/
 [the-homepage-with-a-purple-gradient-background-and-white-text-with-the-words-hello-index-route]: /jokes-tutorial/img/homepage-styles.png
 [the-jokes-page-with-no-background-gradient]: /jokes-tutorial/img/jokes-no-styles.png
 [check-out-the-mdn-page-for-link]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
@@ -6432,15 +6427,12 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [login-form-with-errors]: /jokes-tutorial/img/login-form-with-errors.png
 [here-are-the-docs]: ../api/remix#sessions
 [create-cookie-session-storage]: ../api/remix#createcookiesessionstorage
-[the-session-docs]: ../api/remix#sessions
 [network-tab]: https://developer.chrome.com/docs/devtools/network/reference/
 [login]: http://localhost:3000/login
 [dev-tools-network-tab-showing-a-set-cookie-header-on-the-post-response]: /jokes-tutorial/img/network-tab-set-cookie.png
 [application-tab]: https://developer.chrome.com/docs/devtools/storage/cookies/
 [dev-tools-application-tab-showing]: /jokes-tutorial/img/application-tab-cookies.png
-[this-is-how-cookies-work]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies
 [request-headers-showing-the-cookie]: /jokes-tutorial/img/cookie-header-on-request.png
-[the-docs]: ../api/remix#sessions
 [destroy-session]: ../api/remix#using-sessions
 [csrf]: https://developer.mozilla.org/en-US/docs/Glossary/CSRF
 [jokes-page-nice-and-designed]: /jokes-tutorial/img/random-joke-designed.png
@@ -6464,7 +6456,6 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [escaping-special-characters-here]: ../api/conventions#escaping-special-characters
 [xml-document-for-rss-feed]: /jokes-tutorial/img/jokes-rss-feed.png
 [network-tab-indicating-no-java-script-is-loaded]: /jokes-tutorial/img/no-javascript.png
-[scripts-component]: ../api/remix#meta-links-scripts
 [network-tab-showing-java-script-loaded]: /jokes-tutorial/img/yes-javascript.png
 [browser-console-showing-the-log-of-a-server-side-error]: /jokes-tutorial/img/server-side-error-in-browser.png
 [form]: ../api/remix#form

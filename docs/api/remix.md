@@ -1738,7 +1738,7 @@ The `UploadHandler` function accepts a number of parameters about the file:
 | filename    | string                    | The name of the file that the user selected for upload (like `rickroll.mp4`) |
 | contentType | string                    | The content type of the file (like `videomp4`)                               |
 
-Your job is to do whatever you need with the `data` and return a value that's a valid [`FormData`][form-data] value: [`File`][file], `string`, or `undefined` to skip adding it to the resulting FormData.
+Your job is to do whatever you need with the `data` and return a value that's a valid [`FormData`][form-data] value: [`File`][the-browser-file-api], `string`, or `undefined` to skip adding it to the resulting FormData.
 
 ### Upload Handler Composition
 
@@ -1874,7 +1874,7 @@ cookie.serialize(userPrefs);
 cookie.serialize(userPrefs, { sameSite: "strict" });
 ```
 
-Please read [more info about these attributes][more-info-about-these-attributes] to get a better understanding of what they do.
+Please read [more info about these attributes][several-attributes] to get a better understanding of what they do.
 
 ### Signing cookies
 
@@ -1933,7 +1933,7 @@ const cookie = createCookie("cookie-name", {
 });
 ```
 
-To learn more about each attribute, please see the [MDN Set-Cookie docs][mdn-set-cookie-docs].
+To learn more about each attribute, please see the [MDN Set-Cookie docs][several-attributes].
 
 ### `isCookie`
 
@@ -2706,11 +2706,8 @@ export default function CompanyRoute() {
 [http-verb]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [the-browser-file-api]: https://developer.mozilla.org/en-US/docs/Web/API/File
-[file]: https://developer.mozilla.org/en-US/docs/Web/API/File
 [cookie]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies
 [several-attributes]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes
-[more-info-about-these-attributes]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes
-[mdn-set-cookie-docs]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes
 [cross-site-request-forgery]: https://developer.mozilla.org/en-US/docs/Glossary/CSRF
 [cloudflare-kv]: https://developers.cloudflare.com/workers/learning/how-kv-works
 [amazon-dynamo-db]: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/

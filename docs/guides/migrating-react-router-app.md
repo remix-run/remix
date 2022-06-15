@@ -497,7 +497,7 @@ We also do not yet support CSS Modules, as that requires compiler integration an
 
 ### Route `links` exports
 
-In Remix, stylesheets can only be loaded from route component files. Importing them does not do anything magical with your styles, rather it returns a URL that can be used to load the stylesheet as you see fit. You can render the stylesheet directly in your component or use our [`links` export][links-export].
+In Remix, stylesheets can only be loaded from route component files. Importing them does not do anything magical with your styles, rather it returns a URL that can be used to load the stylesheet as you see fit. You can render the stylesheet directly in your component or use our [`links` export][see-our-docs-on-route-links-for-more-information].
 
 Let's move our app's stylesheet and a few other assets to the `links` function in our root route:
 
@@ -633,7 +633,6 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [command-line]: https://react-svgr.com/docs/cli/
 [online-playground]: https://react-svgr.com/playground/
 [read-more-about-route-styles-and-why-remix-does-things-a-bit-differently]: #route-stylesheets
-[links-export]: ../api/conventions#links
 [page-link-descriptor-object]: ../api/conventions#pagelinkdescriptor
 [react-helmet]: https://www.npmjs.com/package/react-helmet
 [remix-philosophy]: ../pages/philosophy

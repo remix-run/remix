@@ -516,7 +516,7 @@ From your components perspective, all that happened was the `useTransition` hook
 
 ## See also
 
-- [Form][form-2]
+- [Form][form]
 - [useTransition][use-transition]
 - [Actions][actions]
 - [Loaders][loaders]
@@ -526,7 +526,6 @@ From your components perspective, all that happened was the `useTransition` hook
 [form]: ../api/remix#form
 [use-submit]: ../api/remix#usesubmit
 [use-fetcher]: ../api/remix#usefetcher
-[form-2]: ../api/remix#form
 [use-transition]: ../api/remix#usetransition
 [actions]: ../api/conventions#action
 [loaders]: ../api/conventions#loader

@@ -98,7 +98,7 @@ All commits that change or add to the API must be done in a pull request that al
 
 Remix uses a monorepo to host code for multiple packages. These packages live in the `packages` directory.
 
-We use [Yarn workspaces][yarn-workspaces] to manage installation of dependencies and running various scripts. To get everything installed, make sure you have [Yarn (version 1) installed][yarn-version-1-installed], and then run `yarn` or `yarn install` from the repo root.
+We use [Yarn workspaces][yarn-workspaces] to manage installation of dependencies and running various scripts. To get everything installed, make sure you have [Yarn (version 1) installed][yarn-version-1], and then run `yarn` or `yarn install` from the repo root.
 
 ### Building
 
@@ -147,4 +147,3 @@ There may be other branches for various features and experimentation, but all of
 [integration-bug-report-test-ts]: https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts
 [pull-request]: https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request
 [yarn-workspaces]: https://classic.yarnpkg.com/en/docs/workspaces/
-[yarn-version-1-installed]: https://classic.yarnpkg.com/lang/en/docs/install
