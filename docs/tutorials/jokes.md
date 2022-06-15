@@ -1289,7 +1289,7 @@ export default function JokesRoute() {
 
 <summary>app/routes/index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx lines=[1,4,6-13]
+```tsx filename=app/routes/index.tsx lines=[2,16-31]
 import type { LinksFunction } from "@remix-run/node";
 import { Link } from "@remix-run/react";
 
@@ -1304,7 +1304,7 @@ export const links: LinksFunction = () => {
   ];
 };
 
-export default function Index() {
+export default function IndexRoute() {
   return (
     <div className="container">
       <div className="content">
@@ -5085,7 +5085,7 @@ export const meta: MetaFunction = () => ({
     "Remix jokes app. Learn Remix and laugh at the same time!",
 });
 
-export default function Index() {
+export default function IndexRoute() {
   return (
     <div className="container">
       <div className="content">
