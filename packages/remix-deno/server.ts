@@ -20,14 +20,13 @@ export function createRequestHandler<Context = unknown>({
   mode?: string;
   getLoadContext?: (request: Request) => Promise<Context> | Context;
 }) {
-  const remixHandler = createRemixRequestHandler(build, mode);
+  const handleRequest = createRemixRequestHandler(build, mode);
+
   return async (request: Request) => {
     try {
-      const loadContext = getLoadContext
-        ? await getLoadContext(request)
-        : undefined;
+      const loadContext = await getLoadContext?.(request);
 
-      return await remixHandler(request, loadContext);
+      return handleRequest(request, loadContext);
     } catch (e) {
       console.error(e);
 
@@ -52,7 +51,7 @@ export async function serveStaticFiles(
     cacheControl?: string | ((url: URL) => string);
     publicDir?: string;
     assetsPublicPath?: string;
-  },
+  }
 ) {
   const url = new URL(request.url);
 
