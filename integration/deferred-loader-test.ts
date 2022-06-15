@@ -123,7 +123,7 @@ test.beforeAll(async () => {
             <div>
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
-              <Deferred data={bar} errorBoundary={<div>Oh, no!</div>}>
+              <Deferred data={bar} errorElement={<div>Oh, no!</div>}>
                 <DeferredComponent />
               </Deferred>
             </div>

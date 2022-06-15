@@ -397,7 +397,7 @@ export interface DeferredProps<Data>
   extends Omit<React.SuspenseProps, "children"> {
   children: React.ReactNode | DeferredResolveRenderFunction<Data>;
   data: Data;
-  errorBoundary?: React.ReactNode;
+  errorElement?: React.ReactNode;
   nonce?: string;
 }
 
@@ -406,7 +406,7 @@ const js = String.raw;
 export function Deferred<Data = any>({
   children,
   data,
-  errorBoundary,
+  errorElement,
   fallback,
   nonce,
 }: DeferredProps<Data>) {
@@ -431,7 +431,7 @@ export function Deferred<Data = any>({
       }}
     >
       <React.Suspense fallback={fallback}>
-        <DeferredErrorBoundary errorBoundary={errorBoundary} nonce={nonce}>
+        <DeferredErrorBoundary errorElement={errorElement} nonce={nonce}>
           {typeof children === "function" ? (
             <ResolveDeferred
               children={children as DeferredResolveRenderFunction<Data>}
@@ -495,11 +495,11 @@ export function ResolveDeferred<Data>({
 
 function DeferredErrorBoundary({
   children,
-  errorBoundary,
+  errorElement,
   nonce,
 }: {
   children: React.ReactNode;
-  errorBoundary?: React.ReactNode;
+  errorElement?: React.ReactNode;
   nonce?: string;
 }) {
   let ctx = React.useContext(deferredContext);
@@ -526,13 +526,13 @@ function DeferredErrorBoundary({
 
   if (data instanceof Error) {
     if (
-      typeof errorBoundary === "undefined" &&
+      typeof errorElement === "undefined" &&
       typeof document !== "undefined"
     ) {
       throw data;
     }
 
-    child = errorBoundary;
+    child = errorElement;
   }
 
   return (
