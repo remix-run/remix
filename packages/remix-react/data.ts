@@ -10,7 +10,7 @@ export type FormEncType =
   | "application/x-www-form-urlencoded"
   | "multipart/form-data";
 
-export function isCatchResponse(response: any): boolean {
+export function isCatchResponse(response: any): response is Response {
   return (
     response instanceof Response &&
     response.headers.get("X-Remix-Catch") != null
@@ -50,7 +50,7 @@ export async function fetchData(
     response = new DeferredResponse(response);
   }
 
-  if (isErrorResponse(response)) {
+  if (response instanceof Response && isErrorResponse(response)) {
     let data = await response.json();
     let error = new Error(data.message);
     error.stack = data.stack;
@@ -60,15 +60,15 @@ export async function fetchData(
   return response;
 }
 
-export async function extractData(response: Response): Promise<AppData> {
+export async function extractData(
+  response: Response | DeferredResponse
+): Promise<AppData> {
+  if (response instanceof DeferredResponse) return response;
   // This same algorithm is used on the server to interpret load
   // results when we render the HTML page.
   let contentType = response.headers.get("Content-Type");
 
-  if (
-    (contentType && /\bapplication\/json\b/.test(contentType)) ||
-    response instanceof DeferredResponse
-  ) {
+  if (contentType && /\bapplication\/json\b/.test(contentType)) {
     return response.json();
   }
 

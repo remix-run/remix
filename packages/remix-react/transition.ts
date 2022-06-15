@@ -13,65 +13,60 @@ import invariant from "./invariant";
 //#region Types and Utils
 ////////////////////////////////////////////////////////////////////////////////
 
+export class DeferredResponse {
+  constructor(public response: Response) {}
+}
+
 const DEFERRED_PROMISE_PREFIX = "__deferred_promise:";
 
-export class DeferredResponse extends Response {
-  public deferred: Record<string, Promise<unknown>> = {};
-
-  private deferredResolvers: Record<string, (data: unknown) => void> = {};
-  private reader: ReadableStreamReader<Uint8Array>;
-  private buffer: Uint8Array[] = [];
-  private sections: string[] = [];
-
-  constructor(response: Response) {
-    super(null, response);
-
-    invariant(response.body, "Response body is required.");
-
-    this.reader = response.body.getReader();
+export async function parseDataFromDeferredReadableStream(
+  body: ReadableStream<Uint8Array> | null | undefined
+) {
+  if (!body) {
+    return { initialData: undefined, deferred: {} };
   }
 
-  async json<T>(): Promise<T> {
-    // Read the first section from the response
-    let section = await this.readStreamSection();
-    if (!section) throw new Error("No initial deferred data found.");
-    let data = JSON.parse(section);
+  let reader = body.getReader();
 
-    // Setup deferred data and resolvers for later
-    if (typeof data === "object" && data !== null) {
-      for (let [eventKey, value] of Object.entries(data)) {
-        if (
-          typeof value !== "string" ||
-          !value.startsWith(DEFERRED_PROMISE_PREFIX)
-        ) {
-          continue;
+  let buffer: Uint8Array[] = [];
+  let sections: string[] = [];
+  let readStreamSection = async () => {
+    if (sections.length > 0) return sections.shift();
+
+    let encoder = new TextEncoder();
+    let decoder = new TextDecoder();
+    for (
+      let chunk = await reader.read();
+      !chunk.done;
+      chunk = await reader.read()
+    ) {
+      buffer.push(chunk.value);
+
+      try {
+        let bufferedString = decoder.decode(mergeArrays(...buffer));
+        let splitSections = bufferedString.split("\n\n");
+        buffer = [encoder.encode(splitSections.slice(1).join("\n\n"))];
+        let trimmedSection = splitSections[0].trim();
+        if (trimmedSection) {
+          sections.push(trimmedSection);
+          break;
         }
-
-        this.deferred[eventKey] = new Promise<any>((resolve) => {
-          this.deferredResolvers[eventKey] = (value: unknown) => {
-            resolve(value);
-            delete this.deferredResolvers[eventKey];
-          };
-        });
+      } catch (error) {
+        console.error(error);
+        continue;
       }
     }
+    return sections.shift();
+  };
 
-    this.readTheRestOfTheResponse().catch((error: unknown) => {
-      // Reject any existing deferred promises if something blows up
-      for (let [key, resolver] of Object.entries(this.deferredResolvers)) {
-        resolver(error);
-        delete this.deferredResolvers[key];
-      }
-    });
+  let deferred: Record<string, Promise<unknown>> = {};
+  let deferredResolvers: Record<string, (data: unknown) => void> = {};
 
-    return data;
-  }
-
-  private async readTheRestOfTheResponse() {
+  let readTheRestOfTheResponse = async () => {
     for (
-      let section = await this.readStreamSection();
+      let section = await readStreamSection();
       section;
-      section = await this.readStreamSection()
+      section = await readStreamSection()
     ) {
       let [event, ...sectionDataStrings] = section.split(":");
       let sectionDataString = sectionDataStrings.join(":");
@@ -79,9 +74,9 @@ export class DeferredResponse extends Response {
       let data = JSON.parse(sectionDataString);
       if (event === "data") {
         for (let [key, value] of Object.entries(data)) {
-          if (this.deferredResolvers[key]) {
-            this.deferredResolvers[key](value);
-            delete this.deferredResolvers[key];
+          if (deferredResolvers[key]) {
+            deferredResolvers[key](value);
+            delete deferredResolvers[key];
           }
         }
       } else if (event === "error") {
@@ -90,48 +85,53 @@ export class DeferredResponse extends Response {
         >) {
           let err = new Error(value.message);
           err.stack = value.stack;
-          if (this.deferredResolvers[key]) {
-            this.deferredResolvers[key](err);
-            delete this.deferredResolvers[key];
+          if (deferredResolvers[key]) {
+            deferredResolvers[key](err);
+            delete deferredResolvers[key];
           }
         }
       }
     }
 
     // Reject any existing deferred promises as we are done with the response
-    for (let [key, resolver] of Object.entries(this.deferredResolvers)) {
-      delete this.deferredResolvers[key];
+    for (let [key, resolver] of Object.entries(deferredResolvers)) {
+      delete deferredResolvers[key];
       resolver(new Error("Response stream ended."));
     }
-  }
+  };
 
-  private async readStreamSection() {
-    if (this.sections.length > 0) return this.sections.shift();
+  let initialSection = await readStreamSection();
+  if (!initialSection) throw new Error("No initial deferred data found.");
+  let initialData = JSON.parse(initialSection);
 
-    let decoder = new TextDecoder();
-    for (
-      let chunk = await this.reader.read();
-      !chunk.done;
-      chunk = await this.reader.read()
-    ) {
-      this.buffer.push(chunk.value);
-
-      try {
-        let bufferedString = decoder.decode(mergeArrays(...this.buffer));
-        let sections = bufferedString.split("\n\n");
-        if (sections.length <= 1) {
-          continue;
-        }
-        this.buffer = [];
-        this.sections.push(...sections.filter((s) => s.length > 0));
-        break;
-      } catch {
+  // Setup deferred data and resolvers for later
+  if (typeof initialData === "object" && initialData !== null) {
+    for (let [eventKey, value] of Object.entries(initialData)) {
+      if (
+        typeof value !== "string" ||
+        !value.startsWith(DEFERRED_PROMISE_PREFIX)
+      ) {
         continue;
       }
-    }
 
-    return this.sections.shift();
+      deferred[eventKey] = new Promise<any>((resolve) => {
+        deferredResolvers[eventKey] = (value: unknown) => {
+          resolve(value);
+          delete deferredResolvers[eventKey];
+        };
+      });
+    }
   }
+
+  readTheRestOfTheResponse().catch((error: unknown) => {
+    // Reject any existing deferred promises if something blows up
+    for (let [key, resolver] of Object.entries(deferredResolvers)) {
+      resolver(error);
+      delete deferredResolvers[key];
+    }
+  });
+
+  return { initialData, deferred };
 }
 
 function mergeArrays(...arrays: Uint8Array[]) {
@@ -1592,8 +1592,11 @@ async function callLoader(match: ClientMatch, url: URL, signal: AbortSignal) {
     let value = response;
     let deferred: Record<string, Promise<unknown>> | undefined;
     if (response instanceof DeferredResponse) {
-      value = await response.json();
-      deferred = response.deferred;
+      let parsed = await parseDataFromDeferredReadableStream(
+        response.response.body
+      );
+      value = parsed.initialData;
+      deferred = parsed.deferred;
     }
 
     return { match, value, deferred };

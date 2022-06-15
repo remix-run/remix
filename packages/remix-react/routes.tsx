@@ -156,7 +156,8 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
 
       if (response instanceof Error) throw response;
 
-      let redirect = await checkRedirect(response);
+      let redirect =
+        response instanceof Response && (await checkRedirect(response));
       if (redirect) return redirect;
 
       if (isCatchResponse(response)) {
@@ -195,7 +196,7 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
       throw result;
     }
 
-    let redirect = await checkRedirect(result);
+    let redirect = result instanceof Response && (await checkRedirect(result));
     if (redirect) return redirect;
 
     await loadRouteModuleWithBlockingLinks(route, routeModules);
