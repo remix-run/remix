@@ -15,7 +15,7 @@ This tutorial uses TypeScript. Remix can definitely be used without TypeScript. 
 
 Click this button to create a [Gitpod][gitpod] workspace with the project set up and ready to run in VS Code or JetBrains either directly in the browser or on the desktop.
 
-[![Gitpod Ready-to-Code][gitpod-ready-to-code]][]
+[![Gitpod Ready-to-Code][gitpod-ready-to-code]][gitpod-ready-to-code-image]
 
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
@@ -1147,8 +1147,7 @@ That's it for today! Here are some bits of homework to implement if you wanna go
 We hope you love Remix! 💿 👋
 
 [gitpod]: https://gitpod.io
-
-[]: https://gitpod.io/#https://github.com/remix-run/indie-stack
+[gitpod-ready-to-code-image]: https://gitpod.io/#https://github.com/remix-run/indie-stack
 [gitpod-ready-to-code]: https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod
 [node-js]: https://nodejs.org
 [npm]: https://www.npmjs.com

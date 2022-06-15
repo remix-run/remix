@@ -515,7 +515,7 @@ export default function App() {
 
 </details>
 
-Great, now check [`/`][http-localhost-3000]] again and it should be nice and styled for you:
+Great, now check [`/`][http-localhost-3000-2] again and it should be nice and styled for you:
 
 ![The homepage with a purple gradient background and white text with the words "Hello Index Route"][the-homepage-with-a-purple-gradient-background-and-white-text-with-the-words-hello-index-route]
 
@@ -6388,6 +6388,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [a-new-joke-form-2]: /jokes-tutorial/img/param-route.png
 [links]: ../api/conventions#links
 [links-2]: ../api/remix#link
+[http-localhost-3000-2]: http://localhost:3000/
 [the-homepage-with-a-purple-gradient-background-and-white-text-with-the-words-hello-index-route]: /jokes-tutorial/img/homepage-styles.png
 [the-jokes-page-with-no-background-gradient]: /jokes-tutorial/img/jokes-no-styles.png
 [check-out-the-mdn-page-for-link]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
