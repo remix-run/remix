@@ -24,7 +24,6 @@
     "bug-report-test": "playwright test --config ./integration/playwright.config.ts integration/bug-report-test.ts",
     "build": "rollup -c && tsc -b",
     "clean": "git clean -fdX .",
-    "dev": "yarn build && yarn --cwd ./fixtures/gists-app/ dev",
     "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint:fix",
     "format:deno": "deno fmt integration/helpers/deno-template packages/remix-deno templates/deno --ignore=packages/remix-deno/node_modules",
     "license": "node ./scripts/license.js",
