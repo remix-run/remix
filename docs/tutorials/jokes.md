@@ -1342,7 +1342,7 @@ You can use any persistence solution you like with Remix; [Firebase][firebase], 
 
 <docs-info>The prisma team has built [a VSCode extension][a-vs-code-extension] you might find quite helpful when working on the prisma schema.</docs-info>
 
-In this tutorial we're going to use our own [SQLite][sq-lite] database. Essentially, it's a database that lives in a file on your computer, is surprisingly capable, and best of all it's supported by [Prisma][prisma-2], our favorite database ORM! It's a great place to start if you're not sure what database to use.
+In this tutorial we're going to use our own [SQLite][sq-lite] database. Essentially, it's a database that lives in a file on your computer, is surprisingly capable, and best of all it's supported by [Prisma][prisma], our favorite database ORM! It's a great place to start if you're not sure what database to use.
 
 There are two packages that we need to get started:
 
@@ -6403,7 +6403,6 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [postgre-sql]: https://www.postgresql.org/
 [a-vs-code-extension]: https://marketplace.visualstudio.com/items?itemName=Prisma.prisma
 [sq-lite]: https://sqlite.org/index.html
-[prisma-2]: https://www.prisma.io
 [their-docs]: https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference
 [loader]: ../api/conventions#loader
 [use-loader-data]: ../api/remix#useloaderdata
