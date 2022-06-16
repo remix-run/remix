@@ -146,4 +146,4 @@ There may be other branches for various features and experimentation, but all of
 [yarn-version-1]: https://classic.yarnpkg.com/lang/en/docs/install
 [integration-bug-report-test-ts]: https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts
 [pull-request]: https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request
-[yarn-workspaces]: https://classic.yarnpkg.com/en/docs/workspaces/
+[yarn-workspaces]: https://classic.yarnpkg.com/en/docs/workspaces

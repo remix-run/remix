@@ -2710,6 +2710,6 @@ export default function CompanyRoute() {
 [several-attributes]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes
 [cross-site-request-forgery]: https://developer.mozilla.org/en-US/docs/Glossary/CSRF
 [cloudflare-kv]: https://developers.cloudflare.com/workers/learning/how-kv-works
-[amazon-dynamo-db]: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/
+[amazon-dynamo-db]: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide
 [use-loader-data]: #useloaderdata
 [use-matches]: #usematches

@@ -1162,6 +1162,6 @@ We hope you love Remix! 💿 👋
 [http-localhost-3000-posts-admin]: http://localhost:3000/posts/admin
 [mdn-io-request]: https://mdn.io/request
 [mdn-io-request-form-data]: https://mdn.io/request.formData
-[disable-java-script]: https://developer.chrome.com/docs/devtools/javascript/disable/
+[disable-java-script]: https://developer.chrome.com/docs/devtools/javascript/disable
 [the-optimistic-ui-guide]: /guides/optimistic-ui
 [somewhere]: https://www.youtube.com/watch?v=dQw4w9WgXcQ

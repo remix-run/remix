@@ -53,6 +53,6 @@ Here are some other technologies to help speed up your servers:
 [remix-cloudflare-workers-demo]: https://remix-cloudflare-demo.jacob-ebey.workers.dev
 [kv]: https://developers.cloudflare.com/workers/learning/how-kv-works
 [durable-objects]: https://blog.cloudflare.com/introducing-workers-durable-objects
-[fauna-db]: https://fauna.com/
+[fauna-db]: https://fauna.com
 [lru-cache]: https://www.npmjs.com/package/lru-cache
 [redis]: https://www.npmjs.com/package/redis

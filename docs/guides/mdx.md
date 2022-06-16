@@ -159,6 +159,6 @@ exports.mdx = async (filename) => {
 };
 ```
 
-[mdx]: https://mdxjs.com/
-[yaml]: https://yaml.org/
+[mdx]: https://mdxjs.com
+[yaml]: https://yaml.org
 [mdx-bundler]: https://github.com/kentcdodds/mdx-bundler

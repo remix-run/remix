@@ -1485,10 +1485,10 @@
   resolved "https://registry.npmjs.org/@kwsites/promise-deferred/-/promise-deferred-1.1.1.tgz"
   integrity sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw==
 
-"@mcansh/remark-definition-links@2.4.0":
-  version "2.4.0"
-  resolved "https://registry.npmjs.org/@mcansh/remark-definition-links/-/remark-definition-links-2.4.0.tgz#03978f838b26c19f3b230bd5e98f0f8c9f22f54f"
-  integrity sha512-8jco9a1dUkIbw74eIe328djGxMkpGwPDBL9iIUSNtaTrs0LqPRdRv9n+t74AyPnwOmkSYAv3c5dmve5KUKY1aQ==
+"@mcansh/remark-definition-links@2.4.1":
+  version "2.4.1"
+  resolved "https://registry.npmjs.org/@mcansh/remark-definition-links/-/remark-definition-links-2.4.1.tgz#1bd45d90fcb0a6dc64c3e16a4770acbaad1ea94c"
+  integrity sha512-SMlxBrpraic11Fu+Aw6V7jh6edIShh7Ijzg1nevaUFjh1tB9hTYyIkYRXQ45w729MFoTmSNg0b/leVQcdUKr0A==
   dependencies:
     "@sindresorhus/slugify" "2.1.0"
     unified "^10.1.2"

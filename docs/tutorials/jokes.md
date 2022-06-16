@@ -479,7 +479,7 @@ export default function IndexRoute() {
 
 </details>
 
-Now if you go to [http://localhost:3000][http-localhost-3000] you may be a bit disappointed. Our beautiful styles aren't applied! Well, you may recall that in the `app/root.tsx` we're the ones rendering _everything_ about our app. From the `<html>` to the `</html>`. That means if something doesn't show up in there, it's not going to show up at all!
+Now if you go to [`/`][http-localhost-3000] you may be a bit disappointed. Our beautiful styles aren't applied! Well, you may recall that in the `app/root.tsx` we're the ones rendering _everything_ about our app. From the `<html>` to the `</html>`. That means if something doesn't show up in there, it's not going to show up at all!
 
 So we need some way to get the `link` exports from all active routes and add `<link />` tags for all of them. Luckily, Remix makes this easy for us by providing a convenience [`<Links />`][links-2] component.
 
@@ -515,7 +515,7 @@ export default function App() {
 
 </details>
 
-Great, now check [http://localhost:3000][http-localhost-3000] again and it should be nice and styled for you:
+Great, now check [`/`][http-localhost-3000] again and it should be nice and styled for you:
 
 ![The homepage with a purple gradient background and white text with the words "Hello Index Route"][the-homepage-with-a-purple-gradient-background-and-white-text-with-the-words-hello-index-route]
 
@@ -6360,25 +6360,25 @@ Any time you make a change, simply run `fly deploy` again to redeploy.
 Phew! And there we have it. If you made it through this whole thing then I'm really impressed ([tweet your success][tweet-your-success])! There's a lot to Remix and we've only gotten you started. Good luck on the rest of your Remix journey!
 
 [remix-jokes]: https://remix-jokes.lol
-[mdn]: https://developer.mozilla.org/en-US/
+[mdn]: https://developer.mozilla.org/en-US
 [prisma]: https://www.prisma.io
-[code-sandbox]: https://codesandbox.com/
+[code-sandbox]: https://codesandbox.com
 [node-js]: https://nodejs.org
 [npm]: https://www.npmjs.com
-[vs-code]: https://code.visualstudio.com/
+[vs-code]: https://code.visualstudio.com
 [fly-io]: https://fly.io
 [java-script-to-know-for-react]: https://kentcdodds.com/blog/javascript-to-know-for-react
 [the-beginner-s-guide-to-react]: https://kcd.im/beginner-react
 [the-http-api]: https://developer.mozilla.org/en-US/docs/Web/HTTP
 [the-basic-example]: https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/basic
-[express]: https://expressjs.com/
+[express]: https://expressjs.com
 [hydrate]: https://reactjs.org/docs/react-dom.html#hydrate
 [http-localhost-3000]: http://localhost:3000
 [bare-bones-hello-world-app]: /jokes-tutorial/img/bare-bones.png
 [remix-config-js]: ../api/conventions#remixconfigjs
 [route-module]: ../api/conventions#route-module-api
 [the-route-filename-convention]: ../api/conventions#route-filenames
-[react-router]: https://reactrouter.com/
+[react-router]: https://reactrouter.com
 [a-greeting-from-the-index-route]: /jokes-tutorial/img/index-route-greeting.png
 [jokes]: http://localhost:3000/jokes
 [a-random-joke-on-the-jokes-page-i-was-wondering-why-the-frisbee-was-getting-bigger-then-it-hit-me]: /jokes-tutorial/img/random-joke.png
@@ -6391,16 +6391,16 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [the-homepage-with-a-purple-gradient-background-and-white-text-with-the-words-hello-index-route]: /jokes-tutorial/img/homepage-styles.png
 [the-jokes-page-with-no-background-gradient]: /jokes-tutorial/img/jokes-no-styles.png
 [check-out-the-mdn-page-for-link]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
-[styled-components]: https://www.styled-components.com/
-[tailwind]: https://tailwindcss.com/
-[firebase]: https://firebase.google.com/
-[supabase]: https://supabase.com/
-[airtable]: https://www.airtable.com/
-[hasura]: https://hasura.io/
-[google-spreadsheets]: https://www.google.com/sheets/about/
-[cloudflare-workers-kv]: https://www.cloudflare.com/products/workers-kv/
+[styled-components]: https://www.styled-components.com
+[tailwind]: https://tailwindcss.com
+[firebase]: https://firebase.google.com
+[supabase]: https://supabase.com
+[airtable]: https://www.airtable.com
+[hasura]: https://hasura.io
+[google-spreadsheets]: https://www.google.com/sheets/about
+[cloudflare-workers-kv]: https://www.cloudflare.com/products/workers-kv
 [fauna]: https://fauna.com/features
-[postgre-sql]: https://www.postgresql.org/
+[postgre-sql]: https://www.postgresql.org
 [a-vs-code-extension]: https://marketplace.visualstudio.com/items?itemName=Prisma.prisma
 [sq-lite]: https://sqlite.org/index.html
 [their-docs]: https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference
@@ -6426,10 +6426,10 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [login-form-with-errors]: /jokes-tutorial/img/login-form-with-errors.png
 [here-are-the-docs]: ../api/remix#sessions
 [create-cookie-session-storage]: ../api/remix#createcookiesessionstorage
-[network-tab]: https://developer.chrome.com/docs/devtools/network/reference/
+[network-tab]: https://developer.chrome.com/docs/devtools/network/reference
 [login]: http://localhost:3000/login
 [dev-tools-network-tab-showing-a-set-cookie-header-on-the-post-response]: /jokes-tutorial/img/network-tab-set-cookie.png
-[application-tab]: https://developer.chrome.com/docs/devtools/storage/cookies/
+[application-tab]: https://developer.chrome.com/docs/devtools/storage/cookies
 [dev-tools-application-tab-showing]: /jokes-tutorial/img/application-tab-cookies.png
 [request-headers-showing-the-cookie]: /jokes-tutorial/img/cookie-header-on-request.png
 [destroy-session]: ../api/remix#using-sessions
@@ -6459,8 +6459,8 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [browser-console-showing-the-log-of-a-server-side-error]: /jokes-tutorial/img/server-side-error-in-browser.png
 [form]: ../api/remix#form
 [guide-on-optimistic-ui]: ../guides/optimistic-ui
-[install-fly]: https://fly.io/docs/hands-on/installing/
-[sign-up-for-an-account]: https://fly.io/docs/hands-on/sign-up/
+[install-fly]: https://fly.io/docs/hands-on/installing
+[sign-up-for-an-account]: https://fly.io/docs/hands-on/sign-up
 [their-blog-article]: https://fly.io/blog/free-postgres/#a-note-about-credit-cards
 [fly-io-apps]: https://fly.io/apps
 [tweet-your-success]: https://twitter.com/intent/tweet?text=I%20went%20through%20the%20whole%20remix.run%20jokes%20tutorial!%20%F0%9F%92%BF%20And%20now%20I%20love%20@remix_run!&url=https://remix.run/tutorials/jokes

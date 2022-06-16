@@ -170,8 +170,8 @@ Instead we recommend keeping all of your environment variables on the server (al
    ```
 
 [dotenv]: https://www.npmjs.com/package/dotenv
-[netlify]: https://docs.netlify.com/configure-builds/environment-variables/
-[fly-io]: https://fly.io/docs/reference/secrets/
+[netlify]: https://docs.netlify.com/configure-builds/environment-variables
+[fly-io]: https://fly.io/docs/reference/secrets
 [cloudflare-pages]: https://developers.cloudflare.com/pages/platform/build-configuration/#environment-variables
 [cloudflare-workers]: https://developers.cloudflare.com/workers/platform/environment-variables
 [vercel]: https://vercel.com/docs/environment-variables

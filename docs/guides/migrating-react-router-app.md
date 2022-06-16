@@ -611,7 +611,7 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 - [Frequently asked questions][frequently-asked-questions]
 - [Common "gotchas"][common-gotchas]
 
-[react-router]: https://reactrouter.com/
+[react-router]: https://reactrouter.com
 [react-router-docs]: https://reactrouter.com/docs/en/v6/getting-started/concepts
 [migration-guide-from-v5-to-v6]: https://reactrouter.com/docs/en/v6/upgrading/v5
 [backwards-compatibility-package]: https://www.npmjs.com/package/react-router-dom-v5-compat
@@ -626,12 +626,12 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [react-lazy]: https://reactjs.org/docs/code-splitting.html#reactlazy
 [react-suspense]: https://reactjs.org/docs/react-api.html#reactsuspense
 [client-only-approach]: #client-only-components
-[loadable-components]: https://loadable-components.com/docs/loadable-vs-react-lazy/
+[loadable-components]: https://loadable-components.com/docs/loadable-vs-react-lazy
 [docs-on-configuration]: ../api/conventions#remixconfigjs
 [see-our-docs-on-route-links-for-more-information]: ../api/conventions#links
-[react-svgr]: https://react-svgr.com/
-[command-line]: https://react-svgr.com/docs/cli/
-[online-playground]: https://react-svgr.com/playground/
+[react-svgr]: https://react-svgr.com
+[command-line]: https://react-svgr.com/docs/cli
+[online-playground]: https://react-svgr.com/playground
 [read-more-about-route-styles-and-why-remix-does-things-a-bit-differently]: #route-stylesheets
 [page-link-descriptor-object]: ../api/conventions#pagelinkdescriptor
 [react-helmet]: https://www.npmjs.com/package/react-helmet
