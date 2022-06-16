@@ -20,10 +20,6 @@ function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
         } from "@remix-run/react";
 
         export default function Root() {
-          const styles =
-          'a:hover { color: red; } a:hover:after { content: " (hovered)"; }' +
-          'a:focus { color: green; } a:focus:after { content: " (focused)"; }';
-
           return (
             <html lang="en">
               <head>
@@ -31,7 +27,6 @@ function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
                 <Links />
               </head>
               <body>
-                <style>{styles}</style>
                 <h1>Root</h1>
                 <nav id="nav">
                   <Link to="/with-loader" prefetch="${mode}">
@@ -52,7 +47,7 @@ function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
 
       "app/routes/index.jsx": js`
         export default function() {
-          return <h2 className="index">Index</h2>;
+          return <h2>Index</h2>;
         }
       `,
 
@@ -61,13 +56,13 @@ function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
           return { message: 'data from the loader' };
         }
         export default function() {
-          return <h2 className="with-loader">With Loader</h2>;
+          return <h2>With Loader</h2>;
         }
       `,
 
       "app/routes/without-loader.jsx": js`
         export default function() {
-          return <h2 className="without-loader">Without Loader</h2>;
+          return <h2>Without Loader</h2>;
         }
       `,
     },
@@ -93,7 +88,7 @@ test.describe("prefetch=none", () => {
 
   test("does not add prefetch tags on hydration", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/");
+    await app.goto("/", true);
     expect(await page.locator("#nav link").count()).toBe(0);
   });
 });
@@ -119,7 +114,7 @@ test.describe("prefetch=render", () => {
 
   test("adds prefetch tags on hydration", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/");
+    await app.goto("/", true);
     // Both data and asset fetch for /with-loader
     await page.waitForSelector(
       "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']",
@@ -161,13 +156,13 @@ test.describe("prefetch=intent (hover)", () => {
 
   test("does not add prefetch tags on hydration", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/");
+    await app.goto("/", true);
     expect(await page.locator("#nav link").count()).toBe(0);
   });
 
   test("adds prefetch tags on hover", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/");
+    await app.goto("/", true);
     await page.hover("a[href='/with-loader']");
     await page.waitForSelector(
       "#nav link[rel='prefetch'][as='fetch'][href='/with-loader?_data=routes%2Fwith-loader']",
@@ -186,28 +181,6 @@ test.describe("prefetch=intent (hover)", () => {
       { state: "attached" }
     );
     expect(await page.locator("#nav link").count()).toBe(1);
-  });
-
-  test("removes prefetch tags after navigating to/from the page", async ({
-    page,
-  }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/");
-
-    // Links added on hover
-    await page.hover("a[href='/with-loader']");
-    await page.waitForSelector("#nav link", { state: "attached" });
-    expect(await page.locator("#nav link").count()).toBe(2);
-
-    // Links removed upon navigating to the page
-    await page.click("a[href='/with-loader']");
-    await page.waitForSelector("h2.with-loader", { state: "attached" });
-    expect(await page.locator("#nav link").count()).toBe(0);
-
-    // Links stay removed upon navigating away from the page
-    await page.click("a[href='/without-loader']");
-    await page.waitForSelector("h2.without-loader", { state: "attached" });
-    expect(await page.locator("#nav link").count()).toBe(0);
   });
 });
 
@@ -232,13 +205,13 @@ test.describe("prefetch=intent (focus)", () => {
 
   test("does not add prefetch tags on hydration", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/");
+    await app.goto("/", true);
     expect(await page.locator("#nav link").count()).toBe(0);
   });
 
   test("adds prefetch tags on focus", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/");
+    await app.goto("/", true);
     // This click is needed to transfer focus to the main window, allowing
     // subsequent focus events to fire
     await page.click("body");
