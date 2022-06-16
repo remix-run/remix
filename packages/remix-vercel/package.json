@@ -22,7 +22,7 @@
     "supertest": "^6.1.5"
   },
   "peerDependencies": {
-    "@vercel/node": "^1.8.3 || ^2.0.0"
+    "@vercel/node": "^1.8.3 || ^2.2.0"
   },
   "engines": {
     "node": ">=14"
