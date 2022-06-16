@@ -1,8 +1,14 @@
-import { RestEndpointMethodTypes } from "@octokit/rest";
-import semver from "semver";
-import { PR_FILES_STARTS_WITH, DEV_BRANCH, DEFAULT_BRANCH } from "./constants";
+import type { RestEndpointMethodTypes } from "@octokit/rest";
+import * as semver from "semver";
+
+import {
+  PR_FILES_STARTS_WITH,
+  NIGHTLY_BRANCH,
+  DEFAULT_BRANCH,
+} from "./constants";
 import { gql, graphqlWithAuth, octokit } from "./octokit";
-import { checkIfStringStartsWith, MinimalTag, sortByDate } from "./utils";
+import type { MinimalTag } from "./utils";
+import { checkIfStringStartsWith, sortByDate } from "./utils";
 
 type PullRequest =
   RestEndpointMethodTypes["pulls"]["list"]["response"]["data"][number];
@@ -38,7 +44,7 @@ export async function prsMergedSinceLastTag({
     previousTag,
     currentTag,
     currentTag.isPrerelease && previousTag.isPrerelease
-      ? DEV_BRANCH
+      ? NIGHTLY_BRANCH
       : DEFAULT_BRANCH
   );
 
