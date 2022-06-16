@@ -40,6 +40,8 @@ What's nice about throwing a response is that code in your loader _stops executi
 
 Throwing also ensures that your route component doesn't render if the loader wasn't successful. Your route components only have to consider the "happy path". They don't need pending states, error states, or in our case here, not-found states.
 
+Note, you must have a default route component exported on every child route for the `CatchBoundary` to propogate properly (e.g. no redirects in loaders, etc.).
+
 ## Root Catch Boundary
 
 You probably already have one at the root of your app. This will handle all thrown responses that weren't handled in a nested route (more on that in a sec). Here's a sample:
