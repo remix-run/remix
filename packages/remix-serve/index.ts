@@ -1,7 +1,10 @@
 import express from "express";
 import compression from "compression";
 import morgan from "morgan";
-import { createRequestHandler } from "@remix-run/express";
+import {
+  createCompressionFilter,
+  createRequestHandler,
+} from "@remix-run/express";
 
 export function createApp(buildPath: string, mode = "production") {
   let app = express();
@@ -10,22 +13,7 @@ export function createApp(buildPath: string, mode = "production") {
 
   app.use(
     compression({
-      filter(req) {
-        // No compression for html document requests to allow for streaming
-        if (
-          req.headers["accept"] &&
-          req.headers["accept"].indexOf("text/html") !== -1
-        ) {
-          return false;
-        }
-
-        // No compression for _data requests to allow for streaming
-        if (req.query._data) {
-          return false;
-        }
-
-        return true;
-      },
+      filter: createCompressionFilter(),
     })
   );
 
