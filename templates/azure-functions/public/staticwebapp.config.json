@@ -1,11 +1,13 @@
 {
   "routes": [
     {
-      "route": "/",
-      "rewrite": "/api/azure"
+      "route": "/build/*"
     },
     {
-      "route": "/index.html",
+      "route": "/favicon.ico"
+    },
+    {
+      "route": "/*",
       "rewrite": "/api/azure"
     }
   ],

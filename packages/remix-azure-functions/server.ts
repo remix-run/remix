@@ -41,7 +41,7 @@ export function createRequestHandler({
 
   return async (_context: Context, req: HttpRequest) => {
     let request = createRemixRequest(req);
-    let loadContext = getLoadContext ? getLoadContext(req) : undefined;
+    let loadContext = getLoadContext?.(req);
 
     let response = (await handleRequest(
       request as unknown as Request,
