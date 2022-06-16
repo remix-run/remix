@@ -10,7 +10,7 @@
     "format": "deno fmt --ignore=node_modules,build,public/build",
     "lint": "deno lint --ignore=node_modules,build,public/build",
     "start": "cross-env NODE_ENV=production deno run --unstable --allow-net --allow-read --allow-env --no-check ./build/index.js",
-    "typecheck": "deno check --import-map .vscode/resolve_npm_imports.json server.ts app/*.tsx app/*/*.tsx"
+    "typecheck": "deno check --import-map .vscode/resolve_npm_imports.json server.ts app/*.ts* app/*/*.ts*"
   },
   "dependencies": {
     "@remix-run/deno": "*",
