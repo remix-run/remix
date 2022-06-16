@@ -60,7 +60,7 @@ jobs:
             git config --local user.name "Remix Run Bot"
 
             DATE=$(date '+%Y%m%d')
-            NEXT_VERSION=${NIGHTLY_TAG_PREFIX}${SHORT_SHA}-${DATE}
+            NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}-${DATE}
             echo ::set-output name=NEXT_VERSION::${NEXT_VERSION}
 
             git checkout -b nightly/${NEXT_VERSION}
