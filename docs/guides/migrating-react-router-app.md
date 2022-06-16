@@ -176,7 +176,7 @@ Lastly, in your root `App` component (the one that would have been mounted to th
 
 Remix needs routes beyond the root route to know what to render in `<Outlet />`. Fortunately you already render `<Route>` components in your app, and Remix can use those as you migrate to use our [routing conventions][routing-conventions].
 
-To start, create a new directory in `app` called `routes`. In that directory, create a file called `$.jsx`. This is called [a **catch-all route**][a] and it will be useful to let your old app handle routes that you haven't moved into the `routes` directory yet.
+To start, create a new directory in `app` called `routes`. In that directory, create a file called `$.jsx`. This is called [a **catch-all route**][a-catch-all-route] and it will be useful to let your old app handle routes that you haven't moved into the `routes` directory yet.
 
 Inside of your `$.jsx` file, all we need to do is export the code from our old root `App`:
 
@@ -617,7 +617,7 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [backwards-compatibility-package]: https://www.npmjs.com/package/react-router-dom-v5-compat
 [a-few-tweaks-to-improve-progressive-enhancement]: ../pages/philosophy#progressive-enhancement
 [routing-conventions]: ./routing.md
-[a]: ./routing#splats
+[a-catch-all-route]: ./routing#splats
 [hydration-mismatch]: https://reactjs.org/docs/react-dom.html#hydrate
 [loader-data]: ../api/conventions#loader
 [client-only-component]: https://github.com/sergiodxa/remix-utils/blob/main/src/react/client-only.tsx
