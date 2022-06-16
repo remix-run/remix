@@ -50,6 +50,8 @@ import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
 import type { Transition, Fetcher, Submission } from "./transition";
 
+const IS_SSR = typeof document === "undefined";
+
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
 
@@ -378,7 +380,7 @@ export function RemixRoute({ id }: { id: string }) {
 const DEFERRED_PROMISE_PREFIX = "__deferred_promise:";
 
 const deferredContext = React.createContext<
-  undefined | { data: unknown; key?: string; requiresSerialization: boolean }
+  undefined | { data: unknown; key?: string }
 >(undefined);
 
 // TODO: update comment
@@ -413,11 +415,16 @@ export function Deferred<Data = any>({
   let { routeDataDeferred } = useRemixEntryContext();
   let { id } = useRemixRouteContext();
 
+  // When deferred is used, we receive a string that indicates that
+  // this is key is a deferred promise. We use this to know where
+  // to grab the running promise from.
   let suspenseDataKey: string | undefined = undefined;
   if (typeof data === "string" && data.startsWith(DEFERRED_PROMISE_PREFIX)) {
     suspenseDataKey = data.slice(DEFERRED_PROMISE_PREFIX.length);
   }
 
+  // If we have a suspenseDataKey, we need to grab the promise from the
+  // running promise map.
   if (suspenseDataKey) {
     data = routeDataDeferred[id][suspenseDataKey] as unknown as Data;
   }
@@ -427,7 +434,6 @@ export function Deferred<Data = any>({
       value={{
         data,
         key: suspenseDataKey,
-        requiresSerialization: !!suspenseDataKey,
       }}
     >
       <React.Suspense fallback={fallback}>
@@ -441,6 +447,13 @@ export function Deferred<Data = any>({
           )}
         </DeferredErrorBoundary>
       </React.Suspense>
+      {/* 
+        When we have an in-flight deferred promise, we need to keep track of it to
+        know when it resolves. Since we can't serialize a promise over the network
+        we store it on the remix context. We store a map of promises keyed by the
+        route id and deferred key. We also store a resolve function that is used by
+        the DeferredHydrationScript to ultimately resolve the promise.
+       */}
       {suspenseDataKey && (
         <script
           nonce={nonce}
@@ -509,7 +522,12 @@ function DeferredErrorBoundary({
   let child = children;
 
   let promise = data as Promise<unknown>;
+  // If the deferred data is a promise we suspend at this point.
   if (typeof promise === "object" && promise.then) {
+    // We also need to store the resolved data / error on the context for SSR.
+    // On page transitions the transition manager takes care of reconciling the
+    // resolved data with the route data and re-rendering, but SSR we can't do
+    // that so we have to just store it on the context for immediate usage.
     throw promise.then(
       (value) => {
         if (ctx) {
@@ -524,10 +542,20 @@ function DeferredErrorBoundary({
     );
   }
 
+  // If there is an error we render the error element.
   if (data instanceof Error) {
+    // If we don't have an errorElement we re-throw the
+    // error to bubble it up the component stack to the
+    // closest boundary. We can't just throw on the server
+    // though as we've already sent the parent components
+    // to the browser. In this case we don't render anything
+    // and reconcile the UX on the client. This means inline
+    // boundaries will be SSR'd, while errors that need to
+    // bubble will bubble on the client as parent components
+    // need to re-render.
     if (
       typeof errorElement === "undefined" &&
-      typeof document !== "undefined"
+      !IS_SSR
     ) {
       throw data;
     }
@@ -547,10 +575,11 @@ function DeferredHydrationScript({ nonce }: { nonce?: string }) {
   let { id } = useRemixRouteContext();
   let ctx = React.useContext(deferredContext);
   invariant(ctx, "Deferred must be used inside a DeferredProvider");
-  let { data, key, requiresSerialization } = ctx;
+  let { data, key } = ctx;
 
-  if (!requiresSerialization || !key) return null;
+  if (!key) return null;
 
+  // Serialize the data / error for transmission to the client.
   let pre = "",
     value;
   if (data instanceof Error) {
@@ -562,6 +591,8 @@ function DeferredHydrationScript({ nonce }: { nonce?: string }) {
     value = JSON.stringify(data);
   }
 
+  // This script uses the resolve function stored on the remix context
+  // to resolve the deferred promise based on the resolved data / error.
   return (
     <script
       nonce={nonce}
@@ -1396,7 +1427,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         }
       }
 
-      if (typeof document === "undefined") {
+      if (IS_SSR) {
         throw new Error(
           "You are calling submit during the server render. " +
             "Try calling submit within a `useEffect` or callback instead."
