@@ -3,6 +3,7 @@ import type { Octokit as OctokitType } from "@octokit/rest";
 import { paginateRest } from "@octokit/plugin-paginate-rest";
 import { throttling } from "@octokit/plugin-throttling";
 import { graphql } from "@octokit/graphql";
+
 import { GITHUB_TOKEN } from "./constants";
 
 export const graphqlWithAuth = graphql.defaults({

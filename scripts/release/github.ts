@@ -178,7 +178,7 @@ async function getMergedPRsBetweenTags(
   });
 
   let merged = pulls.data.filter((pull) => {
-    if (!pull.merged_at) return;
+    if (!pull.merged_at) return false;
     let mergedDate = new Date(pull.merged_at);
     return mergedDate > startTag.date && mergedDate < endTag.date;
   });
@@ -198,7 +198,6 @@ async function getMergedPRsBetweenTags(
   return [...nodes, ...merged];
 }
 
-// TODO: only fetch until we get to the last stable
 async function getAllTags(owner: string, repo: string) {
   let tags = await octokit.paginate(octokit.rest.repos.listTags, {
     owner,
@@ -234,7 +233,7 @@ export async function getIssuesClosedByPullRequests(
    * https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword
    */
   let regex =
-    /([close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved]*.?\s+).?#([0-9]+)/gi;
+    /(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s#([0-9]+)/gi;
   let matches = prBody.match(regex);
   if (!matches) return linkedIssues.map((issue) => issue.number);
 
