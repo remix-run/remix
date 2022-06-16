@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@types/supertest": "^2.0.10",
-    "@vercel/node": "^2.0.1",
+    "@vercel/node": "^2.2.0",
     "@vercel/node-bridge": "^3.0.0",
     "node-mocks-http": "^1.10.1",
     "supertest": "^6.1.5"
