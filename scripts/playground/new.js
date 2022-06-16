@@ -12,7 +12,7 @@ createNewProject(process.argv[2]);
 async function createNewProject(name = `playground-${Date.now()}`) {
   let projectDir = path.join(__dirname, "../../playground", name);
   let localTemplate = path.join(__dirname, "template.local");
-  let hasLocalTemplate = await fse.exists(localTemplate);
+  let hasLocalTemplate = fse.existsSync(localTemplate);
   if (hasLocalTemplate) {
     console.log(`ℹ️  Using local template: ${localTemplate}`);
   } else {
@@ -51,7 +51,7 @@ async function createNewProject(name = `playground-${Date.now()}`) {
   });
 
   let relativeProjectDir = projectDir.replace(process.cwd(), ".");
-  let hasInit = await fse.exists(path.join(projectDir, "remix.init"));
+  let hasInit = fse.existsSync(path.join(projectDir, "remix.init"));
   if (hasInit) {
     console.log("🎬  Running Remix Init...");
     execSync(`node ./node_modules/@remix-run/dev/cli init`, {

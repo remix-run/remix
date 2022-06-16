@@ -28,7 +28,7 @@ async function createNewApp() {
   });
 }
 
-try {
+async function createAndDeployApp() {
   // create a new remix app
   await createNewApp();
 
@@ -66,11 +66,30 @@ try {
     throw new Error(`Failed to deploy app: ${deployCommand.stderr}`);
   }
 
-  // run cypress against the deployed server
+  // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, url);
-
-  process.exit(0);
-} catch (error) {
-  console.error(error);
-  process.exit(1);
 }
+
+async function destroyApp() {
+  let result = await fetch(
+    // using force will also delete bindings/durable objects
+    `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${APP_NAME}?force=true`,
+    {
+      method: "DELETE",
+      headers: {
+        "X-Auth-Email": process.env.CLOUDFLARE_EMAIL,
+        "X-Auth-Key": process.env.CLOUDFLARE_GLOBAL_API_KEY,
+      },
+    }
+  );
+  let json = await result.json();
+  console.log(`[DESTROY_APP]`, json);
+}
+
+createAndDeployApp()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(destroyApp);

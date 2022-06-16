@@ -14,6 +14,7 @@ import sortPackageJSON from "sort-package-json";
 import * as colors from "../colors";
 import packageJson from "../package.json";
 import { convertTemplateToJavaScript } from "./convert-to-javascript";
+import { getPreferredPackageManager } from "./getPreferredPackageManager";
 
 const remixDevPackageVersion = packageJson.version;
 
@@ -22,7 +23,6 @@ interface CreateAppArgs {
   projectDir: string;
   remixVersion?: string;
   installDeps: boolean;
-  packageManager: "npm" | "yarn" | "pnpm";
   useTypeScript: boolean;
   githubToken?: string;
   debug?: boolean;
@@ -33,7 +33,6 @@ export async function createApp({
   projectDir,
   remixVersion = remixDevPackageVersion,
   installDeps,
-  packageManager,
   useTypeScript = true,
   githubToken = process.env.GITHUB_TOKEN,
   debug,
@@ -192,11 +191,19 @@ export async function createApp({
   appPkg = sortPackageJSON(appPkg);
   await fse.writeJSON(pkgJsonPath, appPkg, { spaces: 2 });
 
-  if (!useTypeScript) {
+  if (
+    !useTypeScript &&
+    fse.existsSync(path.join(projectDir, "tsconfig.json"))
+  ) {
+    let spinner = ora("Converting template to JavaScript…").start();
     await convertTemplateToJavaScript(projectDir);
+    spinner.stop();
+    spinner.clear();
   }
 
   if (installDeps) {
+    let packageManager = getPreferredPackageManager();
+
     let npmConfig = execSync(
       `${packageManager} config get @remix-run:registry`,
       {
@@ -212,8 +219,8 @@ export async function createApp({
     }
 
     execSync(`${packageManager} install`, {
-      stdio: "inherit",
       cwd: projectDir,
+      stdio: "inherit",
     });
   }
 }

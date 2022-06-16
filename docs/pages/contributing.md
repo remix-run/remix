@@ -39,7 +39,10 @@ The following steps will get you setup to contribute changes to this repo:
    ```
 
 3. Install dependencies by running `yarn`. Remix uses [`yarn` (version 1)](https://classic.yarnpkg.com/lang/en/docs/install), so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
-4. Verify you've got everything set up for local development by running `yarn test`
+
+4. Install `playwright` to be able to run tests properly by running `npx playwright install` or [use visual studio plugin](https://playwright.dev/docs/intro#using-the-vs-code-extension)
+
+5. Verify you've got everything set up for local development by running `yarn test`
 
 ## Think You Found a Bug?
 

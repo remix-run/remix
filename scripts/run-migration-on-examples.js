@@ -2,6 +2,9 @@ const { execSync } = require("child_process");
 const { readdir, stat } = require("fs/promises");
 const { join } = require("path");
 
+/**
+ * @param {string} migration
+ */
 const main = async (migration) => {
   if (!migration) {
     console.error("Please specify a migration to run");

@@ -103,8 +103,8 @@ R E M I X
 
 ? Where would you like to create your app? remix-jokes
 ? What type of app do you want to create? Just the basics
-? Where do you want to deploy? Choose Remix if you're unsure, it's easy to change deployment targets. Remix
- App Server
+? Where do you want to deploy? Choose Remix App Server if you're unsure,
+it's easy to change deployment targets. Remix App Server
 ? TypeScript or JavaScript? TypeScript
 ? Do you want me to run `npm install`? Yes
 ```
@@ -463,7 +463,7 @@ body {
 
 <summary>app/routes/index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx lines=[1, 3, 5-7]
+```tsx filename=app/routes/index.tsx lines=[1,3,5-7]
 import type { LinksFunction } from "@remix-run/node";
 
 import stylesUrl from "~/styles/index.css";
@@ -1289,22 +1289,17 @@ export default function JokesRoute() {
 
 <summary>app/routes/index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx lines=[1,4,6-13]
+```tsx filename=app/routes/index.tsx lines=[2,11-26]
 import type { LinksFunction } from "@remix-run/node";
 import { Link } from "@remix-run/react";
 
 import stylesUrl from "~/styles/index.css";
 
 export const links: LinksFunction = () => {
-  return [
-    {
-      rel: "stylesheet",
-      href: stylesUrl,
-    },
-  ];
+  return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
-export default function Index() {
+export default function IndexRoute() {
   return (
     <div className="container">
       <div className="content">
@@ -5085,7 +5080,7 @@ export const meta: MetaFunction = () => ({
     "Remix jokes app. Learn Remix and laugh at the same time!",
 });
 
-export default function Index() {
+export default function IndexRoute() {
   return (
     <div className="container">
       <div className="content">

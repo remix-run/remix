@@ -70,6 +70,10 @@ run().then(
   }
 );
 
+/**
+ * @param {string} packageName
+ * @param {(json: import('type-fest').PackageJson) => any} transform
+ */
 async function updatePackageConfig(packageName, transform) {
   let file = path.join(buildDir, "@remix-run", packageName, "package.json");
   let json = await jsonfile.readFile(file);

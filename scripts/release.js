@@ -148,6 +148,9 @@ async function initBump(git) {
     .filter((tag) => tag.startsWith("v" + versionFromBranch))
     .sort((a, b) => (a > b ? -1 : a < b ? 1 : 0))[0];
   let nextVersion = semver.inc(currentVersion, "prerelease");
+  if (!nextVersion) {
+    throw Error(`Invalid semver version: ${currentVersion}`);
+  }
   return nextVersion;
 }
 
@@ -242,6 +245,7 @@ async function gitMerge(from, to, opts = {}) {
     summary = await git.merge([from]);
   } catch (err) {
     savedError = err;
+    // @ts-ignore
     summary = err.git;
   }
 
@@ -284,7 +288,7 @@ async function gitPull(branch) {
 }
 
 /**
- * @param {string} currentVersion
+ * @param {string | undefined} currentVersion
  * @param {string} givenVersion
  * @param {string | undefined} [prereleaseId]
  */
@@ -383,7 +387,7 @@ function ensureLatestReleaseBranch(branch, git) {
 
 /**
  * @param {string} branch
- * @returns {string | undefined}
+ * @returns {string}
  */
 function getVersionFromReleaseBranch(branch) {
   return branch.slice(branch.indexOf("-") + 2);

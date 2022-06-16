@@ -10,6 +10,7 @@ on:
       - v*
     paths-ignore:
       - "docs/**"
+      - "scripts/**"
       - "**/README.md"
   pull_request:
     paths-ignore:
@@ -64,6 +65,14 @@ jobs:
 
       - name: 🔬 Lint
         run: yarn lint
+
+      - name: 🦕 Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
+      - name: 🔬 Lint deno files
+        run: yarn lint:deno
 
   test:
     name: "🧪 Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }})"

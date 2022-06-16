@@ -46,12 +46,22 @@ jobs:
 
   comment:
     needs: [manual]
-    name: 🛴 Kick off comment and deployment test workflows
+    name: 📝 Comment on related issues and pull requests
     if: github.repository == 'remix-run/remix'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.NIGHTLY_PAT }}
-          event-type: release
-          client-payload: '{ "ref": "${{ github.ref }}", "version": "${{ github.ref_name }}" }'
+    uses: remix-run/remix/.github/workflows/release-comments.yml@main
+    with:
+      ref: ${{ github.ref }}
+
+  deployments:
+    needs: [manual]
+    name: 🚀 Deployment Tests
+    if: github.repository == 'remix-run/remix'
+    uses: remix-run/remix/.github/workflows/deployments.yml@main
+
+  stacks:
+    needs: [manual]
+    name: 🥞 Remix Stacks Test
+    if: github.repository == 'remix-run/remix'
+    uses: remix-run/remix/.github/workflows/stacks.yml@main
+    with:
+      version: ${{ github.ref_name }}
