@@ -44,7 +44,7 @@ test.describe("compiler", () => {
           import * as path from "path";
 
           export let loader = () => {
-            return path.join("test", "file.txt");
+            return path.join("test", "file.txt").replace(/\\/g, "/");
           }
 
           export default function BuiltIns() {
@@ -56,7 +56,7 @@ test.describe("compiler", () => {
           import * as path from "path";
 
           export default function BuiltIns() {
-            return <div id="built-ins-polyfill">{path.join("test", "file.txt")}</div>;
+            return <div id="built-ins-polyfill">{path.join("test", "file.txt").replace(/\\/g, "/")}</div>;
           }
         `,
         "app/routes/esm-only-pkg.jsx": js`
@@ -189,7 +189,7 @@ test.describe("compiler", () => {
 
     // rendered the page instead of the error boundary
     expect(await app.getHtml("#built-ins")).toBe(
-      `<div id="built-ins">test${path.sep}file.txt</div>`
+      `<div id="built-ins">test/file.txt</div>`
     );
 
     let routeModule = await fixture.getBrowserAsset(
