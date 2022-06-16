@@ -46,15 +46,15 @@ export async function fetchData(
   let response: Response | DeferredResponse = await fetch(url.href, init);
   let contentType = response.headers.get("Content-Type");
 
-  if (contentType && contentType.match(/text\/remix-deferred/)) {
-    response = new DeferredResponse(response);
-  }
-
-  if (response instanceof Response && isErrorResponse(response)) {
+  if (isErrorResponse(response)) {
     let data = await response.json();
     let error = new Error(data.message);
     error.stack = data.stack;
     return error;
+  }
+
+  if (contentType && contentType.match(/text\/remix-deferred/)) {
+    response = new DeferredResponse(response);
   }
 
   return response;

@@ -149,15 +149,16 @@ async function loadRouteModuleWithBlockingLinks(
 function createLoader(route: EntryRoute, routeModules: RouteModules) {
   let loader: ClientRoute["loader"] = async ({ url, signal, submission }) => {
     if (route.hasLoader) {
-      let [response] = await Promise.all([
+      let [result] = await Promise.all([
         fetchData(url, route.id, signal, submission),
         loadRouteModuleWithBlockingLinks(route, routeModules),
       ]);
 
-      if (response instanceof Error) throw response;
+      if (result instanceof Error) throw result;
 
-      let redirect =
-        response instanceof Response && (await checkRedirect(response));
+      let response =
+        result instanceof DeferredResponse ? result.response : result;
+      let redirect = await checkRedirect(response);
       if (redirect) return redirect;
 
       if (isCatchResponse(response)) {
@@ -168,8 +169,8 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
         );
       }
 
-      if (response instanceof DeferredResponse) {
-        return response;
+      if (result instanceof DeferredResponse) {
+        return result;
       }
 
       return extractData(response);
@@ -196,7 +197,9 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
       throw result;
     }
 
-    let redirect = result instanceof Response && (await checkRedirect(result));
+    let redirect = await checkRedirect(
+      result instanceof DeferredResponse ? result.response : result
+    );
     if (redirect) return redirect;
 
     await loadRouteModuleWithBlockingLinks(route, routeModules);

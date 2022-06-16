@@ -30,32 +30,47 @@ export async function parseDataFromDeferredReadableStream(
 
   let buffer: Uint8Array[] = [];
   let sections: string[] = [];
+  let closed = false;
   let readStreamSection = async () => {
     if (sections.length > 0) return sections.shift();
 
     let encoder = new TextEncoder();
     let decoder = new TextDecoder();
-    for (
+
+    while (!closed && sections.length === 0) {
       let chunk = await reader.read();
-      !chunk.done;
-      chunk = await reader.read()
-    ) {
+      if (chunk.done) {
+        closed = true;
+        break;
+      }
       buffer.push(chunk.value);
 
       try {
         let bufferedString = decoder.decode(mergeArrays(...buffer));
-        let splitSections = bufferedString.split("\n\n");
-        buffer = [encoder.encode(splitSections.slice(1).join("\n\n"))];
-        let trimmedSection = splitSections[0].trim();
-        if (trimmedSection) {
-          sections.push(trimmedSection);
+        let splitSections = bufferedString.split("\n\n", 2);
+        if (splitSections.length === 2) {
+          sections.push(splitSections[0]);
+          buffer = [encoder.encode(splitSections[1])];
+        }
+
+        if (sections.length > 0) {
           break;
         }
-      } catch (error) {
-        console.error(error);
+      } catch {
         continue;
       }
     }
+
+    if (sections.length > 0) {
+      return sections.shift();
+    }
+
+    if (buffer.length > 0) {
+      let bufferedString = decoder.decode(mergeArrays(...buffer));
+      sections = bufferedString.split("\n\n");
+      buffer = [];
+    }
+
     return sections.shift();
   };
 

@@ -293,7 +293,6 @@ test("errored deferred data renders route boundary on transition", async ({
   page,
 }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // await app.poke(120, "/");
   await app.goto("/");
   await app.clickLink("/deferred-error-no-boundary");
   let text = await app.getHtml();
