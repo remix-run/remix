@@ -164,17 +164,15 @@ async function getMergedPRsBetweenTags(
   page: number = 1,
   nodes: Array<PullRequest> = []
 ): Promise<Array<PullRequest>> {
-  let count = 100;
-
   let pulls = await octokit.pulls.list({
     owner,
     repo,
     state: "closed",
     sort: "updated",
     direction: "desc",
-    per_page: count,
+    per_page: 100,
     page,
-    baseRef,
+    base: baseRef,
   });
 
   let merged = pulls.data.filter((pull) => {
@@ -198,6 +196,7 @@ async function getMergedPRsBetweenTags(
   return [...nodes, ...merged];
 }
 
+// TODO: we might be able to get away with just getting up until the "latest" tag
 async function getAllTags(owner: string, repo: string) {
   let tags = await octokit.paginate(octokit.rest.repos.listTags, {
     owner,
