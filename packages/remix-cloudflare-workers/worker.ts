@@ -36,8 +36,7 @@ export function createRequestHandler({
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return (event: FetchEvent) => {
-    let loadContext =
-      typeof getLoadContext === "function" ? getLoadContext(event) : undefined;
+    let loadContext = getLoadContext?.(event);
 
     return handleRequest(event.request, loadContext);
   };

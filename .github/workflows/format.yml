@@ -31,11 +31,16 @@ jobs:
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
 
-      - name: 🤌 Update Example and Template names
-        run: node scripts/patchup-example-names.mjs
-
       - name: 👔 Format
-        run: npm run format --if-present
+        run: yarn format
+
+      - name: 🦕 Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
+      - name: 👔 Format Deno files
+        run: yarn format:deno
 
       - name: 💪 Commit
         run: |

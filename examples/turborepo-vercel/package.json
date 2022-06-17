@@ -1,5 +1,4 @@
 {
-  "name": "remix-example-turborepo-vercel",
   "private": true,
   "workspaces": [
     "apps/*",
