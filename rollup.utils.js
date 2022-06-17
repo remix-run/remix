@@ -8,6 +8,7 @@ const fse = require("fs-extra");
 const executableBanner = "#!/usr/bin/env node\n";
 const defaultBuildDir = "build";
 const buildDir = getBuildDir();
+const packagesDir = path.join(__dirname, "packages");
 
 function getBuildDir() {
   if (!process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
@@ -80,7 +81,10 @@ function copyToPlaygrounds() {
       if (!process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
         let playgroundsDir = path.join(__dirname, "playground");
         let playgrounds = await fs.promises.readdir(playgroundsDir);
-        let writtenDir = path.join(process.cwd(), options.dir);
+        let writtenDir = path.join(
+          process.cwd(),
+          options.dir || path.dirname(options.file)
+        );
         for (let playground of playgrounds) {
           let playgroundDir = path.join(playgroundsDir, playground);
           if (!fse.statSync(playgroundDir).isDirectory()) {
@@ -111,11 +115,7 @@ function copyToPlaygrounds() {
  */
 function index({ sourceDir, packageName, format }) {
   let version = getVersion(sourceDir);
-  let outputDir = path.join(
-    buildDir,
-    "node_modules",
-    packageName.replace("/", path.sep)
-  );
+  let outputDir = getOutputDir(packagesDir);
   return {
     external: (id) => isBareModuleId(id),
     input: path.join(sourceDir, "index.ts"),
@@ -155,11 +155,7 @@ function index({ sourceDir, packageName, format }) {
  */
 function cli({ sourceDir, packageName }) {
   let version = getVersion(sourceDir);
-  let outputDir = path.join(
-    buildDir,
-    "node_modules",
-    packageName.replace("/", path.sep)
-  );
+  let outputDir = getOutputDir(packagesDir);
   return {
     external: (id) => !id.endsWith(path.join(sourceDir, "cli.ts")),
     input: path.join(sourceDir, "cli.ts"),
@@ -199,11 +195,7 @@ function cli({ sourceDir, packageName }) {
  */
 function magicExports({ sourceDir, packageName, format }) {
   let version = getVersion(sourceDir);
-  let outputDir = path.join(
-    buildDir,
-    "node_modules",
-    packageName.replace("/", path.sep)
-  );
+  let outputDir = getOutputDir(packagesDir);
   return {
     external: () => true,
     input: path.join(sourceDir, "magicExports", "remix.ts"),
@@ -228,15 +220,89 @@ function magicExports({ sourceDir, packageName, format }) {
   };
 }
 
+/**
+ * @param {string} packageName
+ * @returns {string}
+ */
+function getPackageRoot(packageName) {
+  return packageName.startsWith("@remix-run/")
+    ? path.join(packagesDir, `remix-${packageName.slice(11)}`)
+    : path.join(packagesDir, packageName);
+}
+
+/**
+ * @param {string} packageName
+ * @returns {string}
+ */
+function getOutputDir(packageName) {
+  if (packageName === "dev") {
+    let packageRoot = getPackageRoot(packageName);
+    return path.join(packageRoot, "dist");
+  }
+  return path.join(
+    buildDir,
+    "node_modules",
+    packageName.replace("/", path.sep)
+  );
+}
+
+/**
+ * Determine the relevant directories for a rollup build, relative to the
+ * current working directory and taking REMIX_LOCAL_BUILD_DIRECTORY into account
+ *
+ * ROOT_DIR     Root directory for the react-router repo SOURCE_DIR   Source
+ * package directory we will read input files from OUTPUT_DIR   Destination
+ * directory to write rollup output to
+ *
+ * @param {string} packageName  npm package name (i.e., @remix-run/router)
+ * @param {string} [folderName] folder name (i.e., router). Defaults to package name
+ */
+function getBuildDirectories(packageName, folderName) {
+  let ROOT_DIR = __dirname;
+  let SOURCE_DIR = folderName
+    ? path.join(packagesDir, folderName)
+    : getPackageRoot(packageName);
+
+  // Update if we're not running from root
+  if (process.cwd() !== __dirname) {
+    ROOT_DIR = path.dirname(path.dirname(process.cwd()));
+    SOURCE_DIR = process.cwd();
+  }
+
+  let OUTPUT_DIR = path.join(SOURCE_DIR, "dist");
+
+  if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
+    try {
+      let nodeModulesDir = path.join(
+        process.cwd(),
+        process.env.REMIX_LOCAL_BUILD_DIRECTORY,
+        "node_modules"
+      );
+      fse.readdirSync(nodeModulesDir);
+      OUTPUT_DIR = path.join(nodeModulesDir, ...packageName.split("/"), "dist");
+    } catch (e) {
+      console.error(
+        "Oops! You pointed REMIX_LOCAL_BUILD_DIRECTORY to a directory that " +
+          "does not have a node_modules/ folder. Please `npm install` in that " +
+          "directory and try again."
+      );
+      process.exit(1);
+    }
+  }
+
+  return { ROOT_DIR, SOURCE_DIR, OUTPUT_DIR };
+}
+
 module.exports = {
   buildDir,
+  cli,
   copyToPlaygrounds,
   createBanner,
   defaultBuildDir,
   executableBanner,
+  getBuildDirectories,
   getVersion,
-  isBareModuleId,
   index,
-  cli,
+  isBareModuleId,
   magicExports,
 };
