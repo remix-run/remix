@@ -46,9 +46,7 @@ export function createRequestHandler<
       return;
     }
     try {
-      let loadContext = getLoadContext
-        ? await getLoadContext(request, context)
-        : context;
+      let loadContext = (await getLoadContext?.(request, context)) || context;
 
       let response = await remixHandler(request, loadContext);
       if (response.status === 404) {
