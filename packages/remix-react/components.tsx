@@ -1321,11 +1321,11 @@ export function useMatches(): RouteMatch[] {
  * @see https://remix.run/api/remix#useloaderdata
  */
 
-// matches any function
 export type TypedResponse<T> = Response & {
   json(): Promise<T>;
 };
-type DataFunction = (...args: any[]) => any;
+
+type DataFunction = (...args: any[]) => any; // matches any function
 type DataOrFunction = AppData | DataFunction;
 type JsonPrimitives = string | number | boolean | null;
 type NonJsonPrimitives = undefined | Function | symbol;
