@@ -38,14 +38,24 @@ export async function prsMergedSinceLastTag({
     tags
   );
 
+  /**
+    nightly > nightly => 'dev'
+    nightly > stable => 'main'
+    stable > nightly => 'dev'
+   */
+  let baseRef =
+    currentTag.isPrerelease && previousTag.isPrerelease
+      ? NIGHTLY_BRANCH
+      : currentTag.isPrerelease && !previousTag.isPrerelease
+      ? NIGHTLY_BRANCH
+      : DEFAULT_BRANCH;
+
   let prs = await getMergedPRsBetweenTags(
     owner,
     repo,
     previousTag,
     currentTag,
-    currentTag.isPrerelease && previousTag.isPrerelease
-      ? NIGHTLY_BRANCH
-      : DEFAULT_BRANCH
+    baseRef
   );
 
   let prsThatTouchedFiles = await getPullRequestWithFiles(owner, repo, prs);
