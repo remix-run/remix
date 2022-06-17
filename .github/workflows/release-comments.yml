@@ -36,5 +36,5 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{ github.token }}
           VERSION: ${{ inputs.ref }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          DEFAULT_BRANCH: "main"
           NIGHTLY_BRANCH: "dev"
