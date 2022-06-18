@@ -6,11 +6,11 @@ To use run `npm run watch` to build and watch for remix changes and `npm run sta
 
 ## Preview
 
-Open this example on [CodeSandbox](https://codesandbox.com):
+Open this example on [CodeSandbox](https://codesandbox.io/s/fervent-kate-co1cgn):
 
 <!-- TODO: update this link to the path for your example: -->
 
-[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/template)
+[![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/fervent-kate-co1cgn)
 
 ## Example
 We use @feathersjs/cli to autogenerate a basic feathers project which will act as our server and serve our remix frontend
@@ -33,4 +33,5 @@ For number two, we simply do the same thing done in the socket.io example and se
 
 ## Related Links
 
-Link to documentation or other related examples.
+* [feathersjs](https://feathersjs.com)
+* [socket.io example](https://github.com/remix-run/remix/tree/main/examples/socket.io)
