@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "bug-report-test": "playwright test --config ./integration/playwright.config.ts integration/bug-report-test.ts",
-    "build": "rollup -c && tsc -b",
+    "build": "rollup -c && tsc -b && node scripts/copy-builds.js",
     "clean": "git clean -fdX .",
     "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint:fix",
     "format:deno": "deno fmt integration/helpers/deno-template packages/remix-deno templates/deno --ignore=packages/remix-deno/node_modules",
@@ -84,6 +84,7 @@
     "eslint-plugin-markdown": "^2.2.1",
     "eslint-plugin-prefer-let": "^3.0.1",
     "express": "^4.17.1",
+    "fast-glob": "^3.2.11",
     "jest": "^27.5.1",
     "jest-watch-select-projects": "^2.0.0",
     "jest-watch-typeahead": "^0.6.5",
