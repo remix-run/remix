@@ -13,7 +13,7 @@
     "declaration": true,
     "emitDeclarationOnly": true,
 
-    "outDir": "../../build/node_modules/create-remix",
+    "outDir": "./dist",
     "rootDir": "."
   }
 }

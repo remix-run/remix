@@ -27,7 +27,15 @@
     "@types/cookie-signature": "^1.0.3",
     "@types/source-map-support": "^0.5.4"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }

@@ -1,15 +1,14 @@
 /* eslint-disable no-restricted-globals */
-const { index, magicExports } = require("../../rollup.utils");
-
-let sourceDir = __dirname;
-let packageName = "@remix-run/server-runtime";
+const { getBuildInfo, index, magicExports } = require("../../rollup.utils");
+const { name: packageName } = require("./package.json");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
+  let buildInfo = getBuildInfo(packageName);
   return [
-    index({ sourceDir, packageName, format: "cjs" }),
-    index({ sourceDir, packageName, format: "esm" }),
-    magicExports({ sourceDir, packageName, format: "cjs"}),
-    magicExports({ sourceDir, packageName, format: "esm"}),
+    index({ format: "cjs", ...buildInfo }),
+    index({ format: "esm", ...buildInfo }),
+    magicExports({ format: "cjs", ...buildInfo }),
+    magicExports({ format: "esm", ...buildInfo }),
   ];
 };

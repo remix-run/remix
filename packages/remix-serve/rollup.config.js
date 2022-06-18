@@ -1,17 +1,19 @@
 const path = require("path");
 
-const { cli, index } = require("../../rollup.utils");
-
-let sourceDir = __dirname;
-let packageName = "@remix-run/serve";
+const { cli, getBuildInfo, index } = require("../../rollup.utils");
+const { name: packageName } = require("./package.json");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
+  let buildInfo = getBuildInfo(packageName);
   return [
     {
-      ...index({ sourceDir, packageName, format: "cjs" }),
-      input: [path.join(sourceDir, "index.ts"), path.join(sourceDir, "env.ts")],
+      ...index({ format: "cjs", ...buildInfo }),
+      input: [
+        path.join(buildInfo.sourceDir, "index.ts"),
+        path.join(buildInfo.sourceDir, "env.ts"),
+      ],
     },
-    cli({ sourceDir, packageName }),
+    cli(buildInfo),
   ];
 };

@@ -1,4 +1,3 @@
-/* eslint-disable import/no-extraneous-dependencies */
 const path = require("path");
 const babel = require("@rollup/plugin-babel").default;
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
@@ -6,32 +5,55 @@ const copy = require("rollup-plugin-copy");
 
 const {
   cli,
-  buildDir,
   copyToPlaygrounds,
   createBanner,
-  executableBanner,
-  getVersion,
+  EXECUTABLE_BANNER,
+  getBuildInfo,
   isBareModuleId,
+  REPO_ROOT_DIR,
 } = require("../../rollup.utils");
-
-let sourceDir = __dirname;
-let packageName = "@remix-run/dev";
+const { name: packageName, version } = require("./package.json");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  let outputDir = path.join(buildDir, "node_modules", packageName);
-  let version = getVersion(sourceDir);
+  let buildInfo = getBuildInfo(packageName);
+  let { outputDir, packageRoot, sourceDir } = buildInfo;
+  let sourcePackageRoot = __dirname;
+  let copyTargets = [
+    {
+      src: path.join(REPO_ROOT_DIR, "LICENSE.md"),
+      dest: packageRoot,
+    },
+    {
+      src: path.join(sourceDir, "compiler", "shims"),
+      dest: path.join(outputDir, "compiler"),
+    },
+  ];
+
+  if (sourcePackageRoot !== packageRoot) {
+    copyTargets.push({
+      src: path.join(sourceDir, "package.json"),
+      dest: packageRoot,
+    });
+    copyTargets.push({
+      src: path.join(sourceDir, "CHANGELOG.md"),
+      dest: packageRoot,
+    });
+    copyTargets.push({
+      src: path.join(sourceDir, "README.md"),
+      dest: packageRoot,
+    });
+  }
 
   return [
     {
       external(id, parent) {
         if (
           id === "../package.json" &&
-          parent === path.resolve(__dirname, path.join("cli", "create.ts"))
+          parent === path.resolve(sourceDir, path.join("cli", "create.ts"))
         ) {
           return true;
         }
-
         return isBareModuleId(id);
       },
       input: path.join(sourceDir, "index.ts"),
@@ -50,19 +72,9 @@ module.exports = function rollup() {
           rootMode: "upward",
         }),
         nodeResolve({ extensions: [".ts"] }),
-        copy({
-          targets: [
-            { src: "LICENSE.md", dest: outputDir },
-            { src: path.join(sourceDir, "package.json"), dest: outputDir },
-            { src: path.join(sourceDir, "README.md"), dest: outputDir },
-            {
-              src: path.join(sourceDir, "compiler", "shims"),
-              dest: path.join(outputDir, "compiler"),
-            },
-          ],
-        }),
-        // Allow dynamic imports in CJS code to allow us to utilize
-        // ESM modules as part of the compiler.
+        copy({ targets: copyTargets }),
+        // Allow dynamic imports in CJS code to allow us to utilize ESM modules
+        // as part of the compiler.
         {
           name: "dynamic-import-polyfill",
           renderDynamicImport() {
@@ -75,7 +87,7 @@ module.exports = function rollup() {
         copyToPlaygrounds(),
       ],
     },
-    cli({ sourceDir, packageName }),
+    cli(buildInfo),
     {
       external: (id) => isBareModuleId(id),
       input: path.join(
@@ -110,7 +122,7 @@ module.exports = function rollup() {
       },
       input: path.join(sourceDir, "server-build.ts"),
       output: {
-        banner: executableBanner + createBanner(packageName, version),
+        banner: EXECUTABLE_BANNER + createBanner(packageName, version),
         dir: outputDir,
         format: "cjs",
       },

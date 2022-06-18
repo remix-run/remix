@@ -4,24 +4,41 @@ const babel = require("@rollup/plugin-babel").default;
 const copy = require("rollup-plugin-copy");
 
 const {
-  buildDir,
   copyToPlaygrounds,
   createBanner,
-  getVersion,
+  getBuildInfo,
+  REPO_ROOT_DIR,
 } = require("../../rollup.utils");
-
-let sourceDir = __dirname;
-let packageName = "remix";
+let { name: packageName } = require("./package.json");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  let outputDir = path.join(buildDir, "node_modules", packageName);
-  let version = getVersion(sourceDir);
-
   // Don't blow away remix magic exports on local builds, since they've
   // already been configured by postinstall
   if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
     return [];
+  }
+
+  let sourcePackageRoot = __dirname;
+  let { outputDir, packageRoot, sourceDir, version } =
+    getBuildInfo(packageName);
+
+  let copyTargets = [
+    { src: path.join(REPO_ROOT_DIR, "LICENSE.md"), dest: packageRoot },
+  ];
+  if (sourcePackageRoot !== packageRoot) {
+    copyTargets.push({
+      src: path.join(sourcePackageRoot, "package.json"),
+      dest: packageRoot,
+    });
+    copyTargets.push({
+      src: path.join(sourcePackageRoot, "CHANGELOG.md"),
+      dest: packageRoot,
+    });
+    copyTargets.push({
+      src: path.join(sourcePackageRoot, "README.md"),
+      dest: packageRoot,
+    });
   }
 
   return [
@@ -42,13 +59,7 @@ module.exports = function rollup() {
           extensions: [".ts"],
           rootMode: "upward",
         }),
-        copy({
-          targets: [
-            { src: "LICENSE.md", dest: outputDir },
-            { src: path.join(sourceDir, "package.json"), dest: outputDir },
-            { src: path.join(sourceDir, "README.md"), dest: outputDir },
-          ],
-        }),
+        copy({ targets: copyTargets }),
         copyToPlaygrounds(),
       ],
     },

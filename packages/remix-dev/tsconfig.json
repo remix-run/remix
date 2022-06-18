@@ -1,6 +1,6 @@
 {
   "include": ["**/*"],
-  "exclude": ["__tests__", "./compiler/shims/*"],
+  "exclude": ["dist/**/*", "__tests__", "./compiler/shims/*"],
   "compilerOptions": {
     "lib": ["ES2019", "DOM.Iterable"],
     "target": "ES2019",
@@ -15,7 +15,7 @@
     "emitDeclarationOnly": true,
     "skipLibCheck": true,
 
-    "outDir": "../../build/node_modules/@remix-run/dev",
+    "outDir": "./dist",
     "rootDir": "."
   }
 }

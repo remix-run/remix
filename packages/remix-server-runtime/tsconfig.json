@@ -1,5 +1,5 @@
 {
-  "exclude": ["__tests__"],
+  "exclude": ["dist/**/*", "__tests__"],
   "compilerOptions": {
     "lib": ["ES2019", "DOM", "DOM.Iterable"],
     "target": "ES2019",
@@ -11,7 +11,7 @@
     "declaration": true,
     "emitDeclarationOnly": true,
 
-    "outDir": "../../build/node_modules/@remix-run/server-runtime",
+    "outDir": "./dist",
     "rootDir": ".",
 
     // Avoid naming conflicts between lib.dom.d.ts and globals.ts

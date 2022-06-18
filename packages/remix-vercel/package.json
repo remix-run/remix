@@ -23,7 +23,15 @@
   "peerDependencies": {
     "@vercel/node": "^1.8.3"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }

@@ -11,8 +11,9 @@
     "directory": "packages/remix-cloudflare-pages"
   },
   "license": "MIT",
-  "main": "./index.js",
-  "module": "./esm/index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/index.d.ts",
   "dependencies": {
     "@remix-run/cloudflare": "1.6.0"
   },
@@ -25,5 +26,11 @@
   },
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }

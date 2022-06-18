@@ -12,8 +12,10 @@
     "directory": "packages/remix-dev"
   },
   "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "bin": {
-    "remix": "cli.js"
+    "remix": "./dist/cli.js"
   },
   "dependencies": {
     "@babel/core": "^7.18.2",
@@ -73,5 +75,12 @@
   },
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "compiler/shims/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }

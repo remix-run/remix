@@ -1,11 +1,8 @@
-const { index } = require("../../rollup.utils");
-
-let sourceDir = __dirname;
-let packageName = "@remix-run/netlify";
+const { getBuildInfo, index } = require("../../rollup.utils");
+const { name: packageName } = require("./package.json");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  return [
-    index({ sourceDir, packageName, format: "cjs" }),
-  ];
+  let buildInfo = getBuildInfo(packageName);
+  return [index({ format: "cjs", ...buildInfo })];
 };

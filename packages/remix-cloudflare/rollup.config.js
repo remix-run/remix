@@ -1,13 +1,12 @@
-const { index, magicExports } = require("../../rollup.utils");
-
-let sourceDir = __dirname;
-let packageName = "@remix-run/cloudflare";
+const { getBuildInfo, index, magicExports } = require("../../rollup.utils");
+const { name: packageName } = require("./package.json");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
+  let buildInfo = getBuildInfo(packageName);
   return [
-    index({ sourceDir, packageName, format: "cjs" }),
-    magicExports({ sourceDir, packageName, format: "cjs" }),
-    magicExports({ sourceDir, packageName, format: "esm" }),
+    index({ format: "cjs", ...buildInfo }),
+    magicExports({ format: "cjs", ...buildInfo }),
+    magicExports({ format: "esm", ...buildInfo }),
   ];
 };

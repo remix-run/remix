@@ -5,28 +5,30 @@ const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
 const fse = require("fs-extra");
 
-const executableBanner = "#!/usr/bin/env node\n";
-const defaultBuildDir = "build";
+const EXECUTABLE_BANNER = "#!/usr/bin/env node\n";
+const DEFAULT_BUILD_DIR = "build";
+const REPO_ROOT_DIR = __dirname;
+const PACKAGES_DIR = path.join(REPO_ROOT_DIR, "packages");
 const buildDir = getBuildDir();
-const packagesDir = path.join(__dirname, "packages");
 
 function getBuildDir() {
   if (!process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
-    return path.relative(process.cwd(), path.join(__dirname, defaultBuildDir));
+    return path.relative(
+      process.cwd(),
+      path.join(REPO_ROOT_DIR, DEFAULT_BUILD_DIR)
+    );
   }
-
-  let appDir = path.join(
-    process.cwd(),
+  let appDir = path.resolve(
+    REPO_ROOT_DIR,
     process.env.REMIX_LOCAL_BUILD_DIRECTORY
   );
   try {
     fse.readdirSync(path.join(appDir, "node_modules"));
-    console.log("Writing rollup output to", appDir);
     return appDir;
   } catch (e) {
     console.error(
-      "Oops! You pointed REMIX_LOCAL_BUILD_DIRECTORY to a directory that " +
-        "does not have a node_modules/ folder. Please `npm install` in that " +
+      "Oops! You pointed `REMIX_LOCAL_BUILD_DIRECTORY` to a directory that " +
+        "does not have a `node_modules/` folder. Please `npm install` in that " +
         "directory and try again."
     );
     process.exit(1);
@@ -79,7 +81,7 @@ function copyToPlaygrounds() {
     async writeBundle(options, bundle) {
       // Write to playgrounds for normal builds not using REMIX_LOCAL_BUILD_DIRECTORY
       if (!process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
-        let playgroundsDir = path.join(__dirname, "playground");
+        let playgroundsDir = path.join(REPO_ROOT_DIR, "playground");
         let playgrounds = await fs.promises.readdir(playgroundsDir);
         let writtenDir = path.join(
           process.cwd(),
@@ -91,7 +93,7 @@ function copyToPlaygrounds() {
             continue;
           }
           let destDir = writtenDir.replace(
-            path.join(__dirname, "build"),
+            path.join(REPO_ROOT_DIR, "build"),
             playgroundDir
           );
           await fse.copy(writtenDir, destDir);
@@ -106,16 +108,35 @@ function copyToPlaygrounds() {
 }
 
 /**
- * @param {{
- *  sourceDir: string
- *  packageName: string
- *  format: "cjs" | "esm"
- * }} args
+ * @param {BuildInfo & { format: "cjs" | "esm" }} buildInfo
  * @returns {import("rollup").RollupOptions} Default Rollup configuration for `<sourceDir>/index.ts`
  */
-function index({ sourceDir, packageName, format }) {
-  let version = getVersion(sourceDir);
-  let outputDir = getOutputDir(packagesDir);
+function index({
+  format,
+  outputDir,
+  packageName,
+  packageRoot,
+  sourceDir,
+  version,
+}) {
+  let sourcePackageRoot = getPackageRoot(packageName);
+  let copyTargets = [
+    { src: path.join(REPO_ROOT_DIR, "LICENSE.md"), dest: packageRoot },
+  ];
+  if (sourcePackageRoot !== packageRoot) {
+    copyTargets.push({
+      src: path.join(sourcePackageRoot, "package.json"),
+      dest: packageRoot,
+    });
+    copyTargets.push({
+      src: path.join(sourcePackageRoot, "CHANGELOG.md"),
+      dest: packageRoot,
+    });
+    copyTargets.push({
+      src: path.join(sourcePackageRoot, "README.md"),
+      dest: packageRoot,
+    });
+  }
   return {
     external: (id) => isBareModuleId(id),
     input: path.join(sourceDir, "index.ts"),
@@ -134,35 +155,25 @@ function index({ sourceDir, packageName, format }) {
         rootMode: "upward",
       }),
       nodeResolve({ extensions: [".ts", ".tsx"] }),
-      copy({
-        targets: [
-          { src: "LICENSE.md", dest: outputDir },
-          { src: path.join(sourceDir, "package.json"), dest: outputDir },
-          { src: path.join(sourceDir, "README.md"), dest: outputDir },
-        ],
-      }),
+      copy({ targets: copyTargets }),
       copyToPlaygrounds(),
     ],
   };
 }
 
 /**
- * @param {{
- *  sourceDir: string
- *  packageName: string
- * }} args
+ * @param {BuildInfo} buildInfo
  * @returns {import("rollup").RollupOptions} Default Rollup configuration for `<sourceDir>/cli.ts`
  */
-function cli({ sourceDir, packageName }) {
-  let version = getVersion(sourceDir);
-  let outputDir = getOutputDir(packagesDir);
+function cli({ outputDir, packageName, sourceDir, version }) {
+  let packageRoot = getPackageRoot(packageName);
   return {
     external: (id) => !id.endsWith(path.join(sourceDir, "cli.ts")),
     input: path.join(sourceDir, "cli.ts"),
     output: {
       format: "cjs",
       dir: outputDir,
-      banner: executableBanner + createBanner(packageName, version),
+      banner: EXECUTABLE_BANNER + createBanner(packageName, version),
     },
     plugins: [
       babel({
@@ -174,9 +185,9 @@ function cli({ sourceDir, packageName }) {
       nodeResolve({ extensions: [".ts"] }),
       copy({
         targets: [
-          { src: "LICENSE.md", dest: outputDir },
-          { src: path.join(sourceDir, "package.json"), dest: outputDir },
-          { src: path.join(sourceDir, "README.md"), dest: outputDir },
+          { src: "LICENSE.md", dest: packageRoot },
+          //   { src: path.join(sourceDir, "package.json"), dest: outputDir },
+          //   { src: path.join(sourceDir, "README.md"), dest: outputDir },
         ],
       }),
       copyToPlaygrounds(),
@@ -186,16 +197,10 @@ function cli({ sourceDir, packageName }) {
 
 /**
  * @deprecated New packages should not provide magic exports
- * @param {{
- *  sourceDir: string
- *  packageName: string
- *  format: "cjs" | "esm"
- * }} args
+ * @param {BuildInfo & { format: "cjs" | "esm" }} buildInfo
  * @returns {import("rollup").RollupOptions} Default Rollup configuration for `<sourceDir>/magicExports/remix.ts`
  */
-function magicExports({ sourceDir, packageName, format }) {
-  let version = getVersion(sourceDir);
-  let outputDir = getOutputDir(packagesDir);
+function magicExports({ format, outputDir, packageName, sourceDir, version }) {
   return {
     external: () => true,
     input: path.join(sourceDir, "magicExports", "remix.ts"),
@@ -225,72 +230,42 @@ function magicExports({ sourceDir, packageName, format }) {
  * @returns {string}
  */
 function getPackageRoot(packageName) {
-  return packageName.startsWith("@remix-run/")
-    ? path.join(packagesDir, `remix-${packageName.slice(11)}`)
-    : path.join(packagesDir, packageName);
+  let scope = "@remix-run";
+  return packageName.startsWith(`${scope}/`)
+    ? path.join(PACKAGES_DIR, `remix-${packageName.slice(scope.length + 1)}`)
+    : path.join(PACKAGES_DIR, packageName);
 }
 
 /**
- * @param {string} packageName
- * @returns {string}
- */
-function getOutputDir(packageName) {
-  if (packageName === "dev") {
-    let packageRoot = getPackageRoot(packageName);
-    return path.join(packageRoot, "dist");
-  }
-  return path.join(
-    buildDir,
-    "node_modules",
-    packageName.replace("/", path.sep)
-  );
-}
-
-/**
- * Determine the relevant directories for a rollup build, relative to the
- * current working directory and taking REMIX_LOCAL_BUILD_DIRECTORY into account
+ * Determine the relevant information for a rollup build, relative to the
+ * current working directory and taking `REMIX_LOCAL_BUILD_DIRECTORY` into
+ * account.
  *
- * ROOT_DIR     Root directory for the react-router repo SOURCE_DIR   Source
- * package directory we will read input files from OUTPUT_DIR   Destination
- * directory to write rollup output to
- *
- * @param {string} packageName  npm package name (i.e., @remix-run/router)
- * @param {string} [folderName] folder name (i.e., router). Defaults to package name
+ * @param {string} packageName npm package name (i.e., `@remix-run/react`)
+ * @returns {BuildInfo} Object with the build directories
+ *   - `outputDir`: Destination directory to write rollup output to
+ *   - `packageName`: npm package name (i.e., `@remix-run/react`)
+ *   - `packageRoot`: Destination package root directory
+ *   - `sourceDir`: Source package directory we will read input files from
+ *   - `version`: npm package version
  */
-function getBuildDirectories(packageName, folderName) {
-  let ROOT_DIR = __dirname;
-  let SOURCE_DIR = folderName
-    ? path.join(packagesDir, folderName)
-    : getPackageRoot(packageName);
-
-  // Update if we're not running from root
-  if (process.cwd() !== __dirname) {
-    ROOT_DIR = path.dirname(path.dirname(process.cwd()));
-    SOURCE_DIR = process.cwd();
-  }
-
-  let OUTPUT_DIR = path.join(SOURCE_DIR, "dist");
-
+function getBuildInfo(packageName) {
+  let packageRoot = getPackageRoot(packageName);
+  let version = getVersion(packageRoot);
+  let sourceDir = packageRoot;
+  let outputDir = path.join(packageRoot, "dist");
   if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
-    try {
-      let nodeModulesDir = path.join(
-        process.cwd(),
-        process.env.REMIX_LOCAL_BUILD_DIRECTORY,
-        "node_modules"
-      );
-      fse.readdirSync(nodeModulesDir);
-      OUTPUT_DIR = path.join(nodeModulesDir, ...packageName.split("/"), "dist");
-    } catch (e) {
-      console.error(
-        "Oops! You pointed REMIX_LOCAL_BUILD_DIRECTORY to a directory that " +
-          "does not have a node_modules/ folder. Please `npm install` in that " +
-          "directory and try again."
-      );
-      process.exit(1);
-    }
+    let nodeModulesDir = path.join(packageRoot, "node_modules");
+    packageRoot = path.join(nodeModulesDir, ...packageName.split("/"));
+    outputDir = path.join(packageRoot, "dist");
   }
-
-  return { ROOT_DIR, SOURCE_DIR, OUTPUT_DIR };
+  return {
+    outputDir,
+    packageName,
+    packageRoot,
+    sourceDir,
+    version,
+  };
 }
 
 module.exports = {
@@ -298,11 +273,21 @@ module.exports = {
   cli,
   copyToPlaygrounds,
   createBanner,
-  defaultBuildDir,
-  executableBanner,
-  getBuildDirectories,
+  EXECUTABLE_BANNER,
+  getBuildInfo,
   getVersion,
   index,
   isBareModuleId,
   magicExports,
+  REPO_ROOT_DIR,
 };
+
+/**
+ * @typedef {{
+ *   outputDir: string;
+ *   packageName: string;
+ *   packageRoot: string;
+ *   sourceDir: string;
+ *   version: string;
+ * }} BuildInfo
+ */

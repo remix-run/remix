@@ -12,7 +12,7 @@
     "declaration": true,
     "emitDeclarationOnly": true,
 
-    "outDir": "../../build/node_modules/@remix-run/cloudflare-pages",
+    "outDir": "./dist",
     "rootDir": ".",
 
     // Avoid naming conflicts between history and react-router-dom relying on

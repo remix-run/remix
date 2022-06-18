@@ -25,7 +25,15 @@
     "@types/express": "^4.17.9",
     "@types/morgan": "^1.9.2"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }
