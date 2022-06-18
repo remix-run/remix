@@ -178,8 +178,5 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
 
-      - name: 🏗 Build
-        run: yarn build
-
       - name: 👀 Run Integration Tests
         run: "yarn test:integration"
