@@ -6,17 +6,13 @@ const copy = require("rollup-plugin-copy");
 const fse = require("fs-extra");
 
 const EXECUTABLE_BANNER = "#!/usr/bin/env node\n";
-const DEFAULT_BUILD_DIR = "build";
 const REPO_ROOT_DIR = __dirname;
 const PACKAGES_DIR = path.join(REPO_ROOT_DIR, "packages");
 const buildDir = getBuildDir();
 
 function getBuildDir() {
   if (!process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
-    return path.relative(
-      process.cwd(),
-      path.join(REPO_ROOT_DIR, DEFAULT_BUILD_DIR)
-    );
+    return path.join(REPO_ROOT_DIR, "build");
   }
   let appDir = path.resolve(
     REPO_ROOT_DIR,
@@ -35,6 +31,11 @@ function getBuildDir() {
   }
 }
 
+/**
+ * @param {string} packageName
+ * @param {string} version
+ * @returns
+ */
 function createBanner(packageName, version) {
   return `/**
  * ${packageName} v${version}
@@ -48,14 +49,23 @@ function createBanner(packageName, version) {
  */`;
 }
 
+/**
+ * @param {string} packageDir
+ */
 function getVersion(packageDir) {
   return require(`${packageDir}/package.json`).version;
 }
 
+/**
+ * @param {string} id
+ */
 function isBareModuleId(id) {
   return !id.startsWith(".") && !path.isAbsolute(id);
 }
 
+/**
+ * @param {string} appDir
+ */
 async function triggerLiveReload(appDir) {
   // Tickle live reload by touching the server entry
   // Consider all of entry.server.{tsx,ts,jsx,js} since React may be used
@@ -75,6 +85,10 @@ async function triggerLiveReload(appDir) {
   }
 }
 
+/**
+ *
+ * @returns {import("rollup").Plugin}
+ */
 function copyToPlaygrounds() {
   return {
     name: "copy-to-remix-playground",
@@ -83,9 +97,10 @@ function copyToPlaygrounds() {
       if (!process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
         let playgroundsDir = path.join(REPO_ROOT_DIR, "playground");
         let playgrounds = await fs.promises.readdir(playgroundsDir);
+
         let writtenDir = path.join(
           process.cwd(),
-          options.dir || path.dirname(options.file)
+          options.dir || path.dirname(options.file || "")
         );
         for (let playground of playgrounds) {
           let playgroundDir = path.join(playgroundsDir, playground);
@@ -155,6 +170,7 @@ function index({
         rootMode: "upward",
       }),
       nodeResolve({ extensions: [".ts", ".tsx"] }),
+      // @ts-ignore
       copy({ targets: copyTargets }),
       copyToPlaygrounds(),
     ],
@@ -166,7 +182,6 @@ function index({
  * @returns {import("rollup").RollupOptions} Default Rollup configuration for `<sourceDir>/cli.ts`
  */
 function cli({ outputDir, packageName, sourceDir, version }) {
-  let packageRoot = getPackageRoot(packageName);
   return {
     external: (id) => !id.endsWith(path.join(sourceDir, "cli.ts")),
     input: path.join(sourceDir, "cli.ts"),
@@ -183,13 +198,6 @@ function cli({ outputDir, packageName, sourceDir, version }) {
         rootMode: "upward",
       }),
       nodeResolve({ extensions: [".ts"] }),
-      copy({
-        targets: [
-          { src: "LICENSE.md", dest: packageRoot },
-          //   { src: path.join(sourceDir, "package.json"), dest: outputDir },
-          //   { src: path.join(sourceDir, "README.md"), dest: outputDir },
-        ],
-      }),
       copyToPlaygrounds(),
     ],
   };
@@ -255,7 +263,7 @@ function getBuildInfo(packageName) {
   let sourceDir = packageRoot;
   let outputDir = path.join(packageRoot, "dist");
   if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
-    let nodeModulesDir = path.join(packageRoot, "node_modules");
+    let nodeModulesDir = path.join(buildDir, "node_modules");
     packageRoot = path.join(nodeModulesDir, ...packageName.split("/"));
     outputDir = path.join(packageRoot, "dist");
   }
