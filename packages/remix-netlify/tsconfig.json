@@ -1,5 +1,6 @@
 {
-  "exclude": ["dist/**/*", "__tests__"],
+  "include": ["**/*"],
+  "exclude": ["dist", "__tests__"],
   "compilerOptions": {
     "lib": ["ES2019", "DOM.Iterable"],
     "target": "ES2019",
