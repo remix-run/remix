@@ -29,7 +29,7 @@ let remixPackages = {
  * @param {string} [directory]
  * @returns {string}
  */
-function packageJson(packageName, directory) {
+function packageJson(packageName, directory = "") {
   return path.join(rootDir, directory, packageName, "package.json");
 }
 
@@ -73,9 +73,17 @@ async function prompt(question) {
  */
 async function updatePackageConfig(packageName, transform) {
   let file = packageJson(packageName, "packages");
-  let json = await jsonfile.readFile(file);
-  transform(json);
-  await jsonfile.writeFile(file, json, { spaces: 2 });
+  try {
+    let json = await jsonfile.readFile(file);
+    if (!json) {
+      console.log(`No package.json found for ${packageName}; skipping`);
+      return;
+    }
+    transform(json);
+    await jsonfile.writeFile(file, json, { spaces: 2 });
+  } catch (err) {
+    return;
+  }
 }
 
 /**

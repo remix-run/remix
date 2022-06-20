@@ -5,11 +5,9 @@ import meow from "meow";
 import inquirer from "inquirer";
 import semver from "semver";
 import fse from "fs-extra";
-import ora from "ora";
 
 import * as colors from "../colors";
 import * as commands from "./commands";
-import { convertTemplateToJavaScript } from "./convert-to-javascript";
 import { validateNewProjectPath, validateTemplate } from "./create";
 import { getPreferredPackageManager } from "./getPreferredPackageManager";
 
@@ -42,6 +40,7 @@ ${colors.heading("Options")}:
   --sourcemap         Generate source maps for production
 \`dev\` Options:
   --debug             Attach Node.js inspector
+  --port, -p          Choose the port from which to run your app
 \`routes\` Options:
   --json              Print the routes as JSON
 \`migrate\` Options:
@@ -126,10 +125,13 @@ const npxInterop = {
   pnpm: "pnpm exec",
 };
 
-async function dev(projectDir: string, flags: { debug?: boolean }) {
+async function dev(
+  projectDir: string,
+  flags: { debug?: boolean; port?: number }
+) {
   if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
   if (flags.debug) inspector.open();
-  await commands.dev(projectDir, process.env.NODE_ENV);
+  await commands.dev(projectDir, process.env.NODE_ENV, flags.port);
 }
 
 /**
@@ -157,6 +159,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       install: { type: "boolean" },
       json: { type: "boolean" },
       migration: { type: "string", alias: "m" },
+      port: { type: "number", alias: "p" },
       remixVersion: { type: "string" },
       sourcemap: { type: "boolean" },
       template: { type: "string" },
@@ -300,6 +303,19 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             choices: templateChoices,
           },
           {
+            name: "useTypeScript",
+            type: "list",
+            message: "TypeScript or JavaScript?",
+            default: true,
+            when() {
+              return flags.typescript === undefined;
+            },
+            choices: [
+              { name: "TypeScript", value: true },
+              { name: "JavaScript", value: false },
+            ],
+          },
+          {
             name: "install",
             type: "confirm",
             message: `Do you want me to run \`${packageManager} install\`?`,
@@ -332,40 +348,17 @@ export async function run(argv: string[] = process.argv.slice(2)) {
 
       let installDeps = flags.install !== false && answers.install !== false;
 
+      let useTypeScript = flags.typescript ?? answers.useTypeScript;
+
       await commands.create({
         appTemplate: flags.template || answers.appTemplate,
         projectDir,
         remixVersion: flags.remixVersion,
         installDeps,
-        useTypeScript: flags.typescript !== false,
+        useTypeScript,
         githubToken: process.env.GITHUB_TOKEN,
         debug: flags.debug,
       });
-
-      let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
-
-      if (flags.typescript === undefined && isTypeScript) {
-        let { useTypeScript } = await inquirer.prompt<{
-          useTypeScript: boolean;
-        }>([
-          {
-            name: "useTypeScript",
-            type: "list",
-            message: "TypeScript or JavaScript?",
-            choices: [
-              { name: "TypeScript", value: true },
-              { name: "JavaScript", value: false },
-            ],
-          },
-        ]);
-
-        if (useTypeScript === false) {
-          let spinner = ora("Converting template to JavaScript…").start();
-          await convertTemplateToJavaScript(projectDir);
-          spinner.stop();
-          spinner.clear();
-        }
-      }
 
       let initScriptDir = path.join(projectDir, "remix.init");
       let hasInitScript = await fse.pathExists(initScriptDir);

@@ -61,8 +61,7 @@ export function createRequestHandler({
     let request = apiGatewayVersion === APIGatewayVersion.v1
       ? createRemixRequest(event as APIGatewayProxyEvent)
       : createRemixRequestV2(event as APIGatewayProxyEventV2);
-    let loadContext =
-      typeof getLoadContext === "function" ? getLoadContext(event) : undefined;
+    let loadContext = getLoadContext?.(event);
 
     let response = (await handleRequest(request, loadContext)) as NodeResponse;
 

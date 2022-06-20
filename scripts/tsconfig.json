@@ -1,7 +1,7 @@
 {
   "extends": "../tsconfig.json",
   "include": ["."],
-  "exclude": ["./deployment-test"],
+  "exclude": ["./deployment-test", "./playground/template/**/*"],
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,

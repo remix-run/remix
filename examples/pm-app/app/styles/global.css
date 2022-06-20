@@ -4,12 +4,12 @@
 @import "./_root.css";
 @import "./_utils.css";
 
-/* layout coponents */
+/* layout components */
 @import "./ui/_flex.css";
 @import "./ui/_stack.css";
 @import "./ui/_max-container.css";
 
-/* other ui coponents */
+/* other ui components */
 @import "./ui/_button.css";
 @import "./ui/_token.css";
 @import "./ui/_form.css";
