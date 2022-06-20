@@ -1,4 +1,6 @@
-import type { MetaFunction } from "remix";
+import { withEmotionCache } from "@emotion/react";
+import styled from "@emotion/styled";
+import type { MetaFunction } from "@remix-run/node";
 import {
   Links,
   LiveReload,
@@ -7,13 +9,11 @@ import {
   Scripts,
   ScrollRestoration,
   useCatch,
-} from "remix";
+} from "@remix-run/react";
 import { useContext, useEffect } from "react";
-import { withEmotionCache } from "@emotion/react";
+
 import ServerStyleContext from "./styles/server.context";
 import ClientStyleContext from "./styles/client.context";
-
-import styled from "@emotion/styled";
 
 const Container = styled("div")`
   background-color: #ff0000;

@@ -1,8 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
-import { Provider } from "react-supabase";
-import type { MetaFunction, LoaderFunction } from "remix";
+import type { LoaderFunction, MetaFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
-  json,
   Links,
   LiveReload,
   Meta,
@@ -10,7 +8,9 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
-} from "remix";
+} from "@remix-run/react";
+import { createClient } from "@supabase/supabase-js";
+import { Provider } from "react-supabase";
 
 type LoaderData = {
   ENV: {

@@ -1,5 +1,5 @@
-import { Link } from "remix";
 import styled from "@emotion/styled";
+import { Link } from "@remix-run/react";
 
 const Container = styled("div")`
   background-color: #d6d6d6;

@@ -1,4 +1,4 @@
-import React from "../deps/react.ts";
+import * as React from "react";
 
 export default function Index() {
   return (

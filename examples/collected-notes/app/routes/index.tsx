@@ -1,6 +1,8 @@
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, Link, useLoaderData, useSearchParams } from "@remix-run/react";
 import type { Note, Site } from "collected-notes";
-import type { LoaderFunction } from "remix";
-import { Form, json, Link, useLoaderData, useSearchParams } from "remix";
+
 import { cn, sitePath } from "~/cn.server";
 
 type LoaderData = {

@@ -1,6 +1,6 @@
+import type { MetaFunction } from "@remix-run/node";
+import { Links, LiveReload, Meta, Outlet } from "@remix-run/react";
 import * as React from "react";
-import type { MetaFunction } from "remix";
-import { Links, LiveReload, Meta, Outlet } from "remix";
 
 export const meta: MetaFunction = () => ({
   charset: "utf-8",

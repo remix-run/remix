@@ -62,7 +62,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       });
     }
 
-    if (request.method.toLowerCase() === "head") {
+    if (request.method === "HEAD") {
       return new Response(null, {
         headers: response.headers,
         status: response.status,
@@ -150,10 +150,10 @@ async function handleDataRequest({
     }
 
     if (handleDataRequest) {
-      response = await handleDataRequest(response.clone(), {
+      response = await handleDataRequest(response, {
         context: loadContext,
         params: match.params,
-        request: request.clone(),
+        request,
       });
     }
 
@@ -273,25 +273,30 @@ async function handleDocumentRequest({
   let routeModules = createEntryRouteModules(build.routes);
 
   let matchesToLoad = matches || [];
+
+  // get rid of the action, we don't want to call it's loader either
+  // because we'll be rendering the error/catch boundary, if you can get
+  // access to the loader data in the error/catch boundary then how the heck
+  // is it supposed to deal with thrown responses and/or errors in the loader?
   if (appState.catch) {
     matchesToLoad = getMatchesUpToDeepestBoundary(
-      // get rid of the action, we don't want to call it's loader either
-      // because we'll be rendering the catch boundary, if you can get access
-      // to the loader data in the catch boundary then how the heck is it
-      // supposed to deal with thrown responses?
-      matchesToLoad.slice(0, -1),
+      matchesToLoad,
       "CatchBoundary"
-    );
+    ).slice(0, -1);
   } else if (appState.error) {
     matchesToLoad = getMatchesUpToDeepestBoundary(
-      // get rid of the action, we don't want to call it's loader either
-      // because we'll be rendering the error boundary, if you can get access
-      // to the loader data in the error boundary then how the heck is it
-      // supposed to deal with errors in the loader, too?
-      matchesToLoad.slice(0, -1),
+      matchesToLoad,
       "ErrorBoundary"
-    );
+    ).slice(0, -1);
   }
+
+  let loaderRequest = new Request(request.url, {
+    body: null,
+    headers: request.headers,
+    method: request.method,
+    redirect: request.redirect,
+    signal: request.signal,
+  });
 
   let routeLoaderResults = await Promise.allSettled(
     matchesToLoad.map((match) =>
@@ -299,7 +304,7 @@ async function handleDocumentRequest({
         ? callRouteLoader({
             loadContext,
             match,
-            request,
+            request: loaderRequest,
           })
         : Promise.resolve(undefined)
     )
@@ -457,7 +462,7 @@ async function handleDocumentRequest({
   let handleDocumentRequest = build.entry.module.default;
   try {
     return await handleDocumentRequest(
-      request.clone(),
+      request,
       responseStatusCode,
       responseHeaders,
       entryContext
@@ -477,7 +482,7 @@ async function handleDocumentRequest({
 
     try {
       return await handleDocumentRequest(
-        request.clone(),
+        request,
         responseStatusCode,
         responseHeaders,
         entryContext
@@ -544,26 +549,16 @@ async function handleResourceRequest({
   }
 }
 
-function isActionRequest(request: Request): boolean {
-  let method = request.method.toLowerCase();
-  return (
-    method === "post" ||
-    method === "put" ||
-    method === "patch" ||
-    method === "delete"
-  );
+const validActionMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function isActionRequest({ method }: Request): boolean {
+  return validActionMethods.has(method.toUpperCase());
 }
 
-function isHeadRequest(request: Request): boolean {
-  return request.method.toLowerCase() === "head";
-}
+const validRequestMethods = new Set(["GET", "HEAD", ...validActionMethods]);
 
-function isValidRequestMethod(request: Request): boolean {
-  return (
-    request.method.toLowerCase() === "get" ||
-    isHeadRequest(request) ||
-    isActionRequest(request)
-  );
+function isValidRequestMethod({ method }: Request): boolean {
+  return validRequestMethods.has(method.toUpperCase());
 }
 
 async function errorBoundaryError(error: Error, status: number) {

@@ -1,4 +1,4 @@
-import { createCookieSessionStorage } from "remix";
+import { createCookieSessionStorage } from "@remix-run/node";
 
 import { isTheme } from "./theme-provider";
 import type { Theme } from "./theme-provider";

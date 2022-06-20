@@ -1,4 +1,4 @@
-name: website
+name: 🌐 Website
 
 on:
   schedule:
@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Refresh the docs
-        uses: fjogeleit/http-request-action@v1.9.0
+      - name: 🔄 Refresh the docs
+        uses: fjogeleit/http-request-action@v1
         with:
           url: "${{ secrets.DOCS_REFRESH_URL }}?ref=${{ github.ref }}"
           method: "POST"

@@ -1,6 +1,8 @@
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 import type { HTML } from "collected-notes";
-import type { LoaderFunction } from "remix";
-import { json, useLoaderData } from "remix";
+
 import { cn, sitePath } from "~/cn.server";
 
 type LoaderData = {

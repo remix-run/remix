@@ -1,8 +1,5 @@
 {
-  "name": "remix-template-cloudflare-workers",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "main": "build/index.js",
   "scripts": {
@@ -11,27 +8,26 @@
     "dev:remix": "remix watch",
     "dev:miniflare": "cross-env NODE_ENV=development miniflare ./build/index.js --watch",
     "dev": "remix build && run-p dev:*",
-    "postinstall": "remix setup cloudflare-workers",
     "start": "cross-env NODE_ENV=production miniflare ./build/index.js"
   },
   "dependencies": {
+    "@remix-run/cloudflare": "*",
     "@remix-run/cloudflare-workers": "*",
     "@remix-run/react": "*",
     "cross-env": "^7.0.3",
     "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "remix": "*"
+    "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^2.2.2",
+    "@cloudflare/workers-types": "^3.10.0",
     "@remix-run/dev": "*",
     "@remix-run/eslint-config": "*",
-    "@types/react": "^17.0.24",
-    "@types/react-dom": "^17.0.9",
-    "eslint": "^8.11.0",
-    "miniflare": "^2.1.0",
+    "@types/react": "^17.0.45",
+    "@types/react-dom": "^17.0.17",
+    "eslint": "^8.15.0",
+    "miniflare": "^2.4.0",
     "npm-run-all": "^4.1.5",
-    "typescript": "^4.5.5"
+    "typescript": "^4.6.4"
   },
   "engines": {
     "node": ">=14"

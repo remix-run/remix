@@ -1,0 +1,20 @@
+h1 {
+  padding: 1rem;
+  border-bottom: 1px solid;
+  margin-bottom: 0;
+}
+
+.list-item {
+  padding-left: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.list-item--odd {
+  background: #f8fafc;
+}
+
+.list-item--even {
+  background: #cbd5ff;
+}
