@@ -1,5 +1,6 @@
 const path = require("path");
 const babel = require("@rollup/plugin-babel").default;
+const json = require("@rollup/plugin-json");
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
 
@@ -47,15 +48,7 @@ module.exports = function rollup() {
 
   return [
     {
-      external(id, parent) {
-        if (
-          id === "../package.json" &&
-          parent === path.resolve(sourceDir, path.join("cli", "create.ts"))
-        ) {
-          return true;
-        }
-        return isBareModuleId(id);
-      },
+      external: isBareModuleId,
       input: path.join(sourceDir, "index.ts"),
       output: {
         banner: createBanner(packageName, version),
@@ -65,6 +58,7 @@ module.exports = function rollup() {
         exports: "named",
       },
       plugins: [
+        json(),
         babel({
           babelHelpers: "bundled",
           exclude: /node_modules/,
