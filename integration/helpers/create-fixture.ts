@@ -159,7 +159,7 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
   if (init.setup) {
     spawnSync(
       "node",
-      ["node_modules/@remix-run/dev/cli.js", "setup", init.setup],
+      ["node_modules/@remix-run/dev/dist/cli.js", "setup", init.setup],
       { cwd: projectDir }
     );
   }
@@ -170,7 +170,7 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
 }
 
 function build(projectDir: string, buildStdio?: Writable, sourcemap?: boolean) {
-  let buildArgs = ["node_modules/@remix-run/dev/cli.js", "build"];
+  let buildArgs = ["node_modules/@remix-run/dev/dist/cli.js", "build"];
   if (sourcemap) {
     buildArgs.push("--sourcemap");
   }
