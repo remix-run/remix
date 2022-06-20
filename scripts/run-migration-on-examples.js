@@ -16,7 +16,8 @@ const main = async (migration) => {
     buildPath,
     "node_modules",
     "@remix-run/dev",
-    "dist/cli.js"
+    "dist",
+    "cli.js"
   );
   let examplesPath = join(process.cwd(), "examples");
   let examples = await readdir(examplesPath);

@@ -49,17 +49,20 @@ export async function setupRemix(platform: SetupPlatform): Promise<void> {
   let remixPkgDir = path.dirname(remixPkgJsonFile);
   let platformExportsDir = path.resolve(
     platformPkgJsonFile,
-    "../dist",
+    "..",
+    "dist",
     "magicExports"
   );
   let serverExportsDir = path.resolve(
     serverPkgJsonFile,
-    "../dist",
+    "..",
+    "dist",
     "magicExports"
   );
   let clientExportsDir = path.resolve(
     clientPkgJsonFile,
-    "../dist",
+    "..",
+    "dist",
     "magicExports"
   );
 
