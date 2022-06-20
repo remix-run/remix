@@ -177,6 +177,13 @@ function build(projectDir: string, buildStdio?: Writable, sourcemap?: boolean) {
   let buildSpawn = spawnSync("node", buildArgs, {
     cwd: projectDir,
   });
+
+  // These logs are helpful for debugging. Remove comments if needed.
+  // console.log("STDOUT:");
+  // console.log(buildSpawn.stdout.toString("utf-8"));
+  // console.log("STDERR:");
+  // console.log(buildSpawn.stderr.toString("utf-8"));
+
   if (buildStdio) {
     buildStdio.write(buildSpawn.stdout.toString("utf-8"));
     buildStdio.write(buildSpawn.stderr.toString("utf-8"));
