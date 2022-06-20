@@ -73,7 +73,8 @@ remix watch
 
 ## `remix dev`
 
-The same as `watch`, but also boots the [Remix App Server](serve.md) in development mode if it's installed.
+
+The same as `watch`, but also boots the [Remix App Server][remix-app-server] in development mode if it's installed.
 
 ```sh
 remix dev
@@ -81,7 +82,7 @@ remix dev
 
 ### `remix dev --debug`
 
-Attaches a [Node inspector](https://nodejs.org/en/docs/guides/debugging-getting-started/) to develop your app in debug mode.
+Attaches a [Node inspector][node-inspector] to develop your app in debug mode.
 
 ### `remix dev --port`
 
@@ -94,3 +95,6 @@ remix dev --port 4001
 ```
 
 Alternatively, a port can be assigned to the `PORT` environment variable.
+
+[remix-app-server]: serve.md
+[node-inspector]: https://nodejs.org/en/docs/guides/debugging-getting-started

@@ -4,7 +4,7 @@ title: TypeScript
 
 # TypeScript
 
-Remix seamlessly supports both JavaScript and TypeScript. If you name a file with a `.ts` or `.tsx` extension, it will treat it as TypeScript (`.tsx` is for TypeScript files [with JSX](https://www.typescriptlang.org/docs/handbook/jsx.html) in them). But it isn't required. You can write all your files as `.js` files if you don't want TypeScript.
+Remix seamlessly supports both JavaScript and TypeScript. If you name a file with a `.ts` or `.tsx` extension, it will treat it as TypeScript (`.tsx` is for TypeScript files [with JSX][with-jsx] in them). But it isn't required. You can write all your files as `.js` files if you don't want TypeScript.
 
 The Remix compiler will not do any type checking (it simply removes the types). If you want to do type checking, you'll want to use TypeScript's `tsc` CLI yourself. A common solution is to add a `typecheck` script to your package.json:
 
@@ -75,3 +75,5 @@ Remix has TypeScript type definitions built-in as well. The starter templates cr
 ```
 
 <docs-info>Note that the types referenced in `remix.env.d.ts` will depend on which environment you're running your app in. For example, there are different globals available in Cloudflare</docs-info>
+
+[with-jsx]: https://www.typescriptlang.org/docs/handbook/jsx.html
