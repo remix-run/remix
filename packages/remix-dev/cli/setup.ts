@@ -82,9 +82,12 @@ export async function setupRemix(platform: SetupPlatform): Promise<void> {
     ".js"
   );
 
-  await fse.writeFile(path.join(remixPkgDir, "dist/index.d.ts"), magicTypes);
-  await fse.writeFile(path.join(remixPkgDir, "dist/index.js"), magicCJS);
-  await fse.writeFile(path.join(remixPkgDir, "dist/esm/index.js"), magicESM);
+  await fse.writeFile(path.join(remixPkgDir, "dist", "index.d.ts"), magicTypes);
+  await fse.writeFile(path.join(remixPkgDir, "dist", "index.js"), magicCJS);
+  await fse.writeFile(
+    path.join(remixPkgDir, "dist", "esm", "index.js"),
+    magicESM
+  );
 }
 
 async function combineFilesInDirs(

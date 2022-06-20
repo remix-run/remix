@@ -162,6 +162,12 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
       ["node_modules/@remix-run/dev/dist/cli.js", "setup", init.setup],
       { cwd: projectDir }
     );
+
+    // These logs are helpful for debugging. Remove comments if needed.
+    // console.log("STDOUT:");
+    // console.log(setupSpawn.stdout.toString("utf-8"));
+    // console.log("STDERR:");
+    // console.log(setupSpawn.stderr.toString("utf-8"));
   }
   await writeTestFiles(init, projectDir);
   build(projectDir, init.buildStdio, init.sourcemap);
