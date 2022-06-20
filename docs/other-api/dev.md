@@ -94,11 +94,3 @@ remix dev --port 4001
 ```
 
 Alternatively, a port can be assigned to the `PORT` environment variable.
-
-<aside aria-label="Running multiple instances of Remix">
-<docs-info>
-
-If you are changing the port to run multiple instances of Remix, you must also set unique [websocket ports](../api/conventions#devserverport) via `remix.config.js`, or by setting the `REMIX_DEV_SERVER_WS_PORT` environment variable.
-
-</docs-info>
-</aside>
