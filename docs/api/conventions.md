@@ -66,7 +66,7 @@ The port number to use for the dev websocket server. Defaults to 8002.
 
 This is an array of globs (via [minimatch][minimatch]) that Remix will match to
 files while reading your `app/routes` directory. If a file matches, it will be
-ignored rather that treated like a route module. This is useful for ignoring
+ignored rather than treated like a route module. This is useful for ignoring
 dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
 
 ### publicPath
