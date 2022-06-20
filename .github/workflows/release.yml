@@ -57,7 +57,7 @@ jobs:
     name: 🚀 Deployment Tests
     if: github.repository == 'remix-run/remix'
     uses: remix-run/remix/.github/workflows/deployments.yml@main
-    with:
+    secrets:
       TEST_AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
       TEST_AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
       TEST_CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
