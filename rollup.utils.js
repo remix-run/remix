@@ -4,6 +4,7 @@ const babel = require("@rollup/plugin-babel").default;
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
 const fse = require("fs-extra");
+const { camelCase } = require("lodash");
 
 const EXECUTABLE_BANNER = "#!/usr/bin/env node\n";
 const REPO_ROOT_DIR = __dirname;
@@ -123,7 +124,7 @@ function copyToPlaygrounds() {
 }
 
 /**
- * @param {BuildInfo & { format: "cjs" | "esm" }} buildInfo
+ * @param {BuildInfo & { format: "cjs" | "esm"; magicExports?: MagicExports }} buildInfo
  * @returns {import("rollup").RollupOptions} Default Rollup configuration for `<sourceDir>/index.ts`
  */
 function index({
@@ -133,6 +134,7 @@ function index({
   packageRoot,
   sourceDir,
   version,
+  magicExports,
 }) {
   let sourcePackageRoot = getPackageRoot(packageName);
   let copyTargets = [
@@ -173,7 +175,88 @@ function index({
       // @ts-ignore
       copy({ targets: copyTargets }),
       copyToPlaygrounds(),
-    ],
+      magicExportsPlugin(magicExports, { packageName, version }),
+    ].filter(Boolean),
+  };
+}
+
+/**
+ * @param {MagicExports | undefined} magicExports
+ * @param {Pick<BuildInfo, 'packageName' | 'version'>} buildInfo
+ * @returns {import("rollup").Plugin}
+ */
+function magicExportsPlugin(magicExports, { packageName, version }) {
+  return {
+    name: `${packageName}:generate-magic-exports`,
+    generateBundle() {
+      if (!magicExports) return;
+
+      let typings = "";
+      let esm = "";
+      let cjs = "";
+
+      if (magicExports.vars) {
+        let banner = createBanner(packageName, version);
+        for (let pkgName of Object.keys(magicExports.vars)) {
+          // esm contents
+          if (!esm) {
+            esm = banner + "\n";
+          }
+          let exportList = magicExports.vars[pkgName].join(", ");
+          esm += `export { ${exportList} } from '${pkgName}';\n`;
+          typings += `export { ${exportList} } from '${pkgName}';\n`;
+
+          // cjs contents
+          if (!cjs) {
+            cjs =
+              banner +
+              "\n" +
+              "'use strict';\n" +
+              "Object.defineProperty(exports, '__esModule', { value: true });\n";
+          }
+          let varName = camelCase(
+            pkgName.startsWith("@remix-run/") ? pkgName.slice(11) : pkgName
+          );
+
+          cjs += `var ${varName} = require('${pkgName}');\n`;
+          for (let symbol of magicExports.vars[pkgName]) {
+            cjs +=
+              `Object.defineProperty(exports, '${symbol}', {\n` +
+              "  enumerable: true,\n" +
+              `  get: function () { return ${varName}.${symbol}; }\n` +
+              "});\n";
+          }
+        }
+      }
+
+      if (magicExports.types) {
+        for (let pkgName of Object.keys(magicExports.types)) {
+          let exportList = magicExports.types[pkgName].join(", ");
+          typings += `export type { ${exportList} } from '${pkgName}';\n`;
+        }
+      }
+
+      typings &&
+        this.emitFile({
+          type: "asset",
+          fileName: "magicExports/remix.d.ts",
+          source: typings,
+        });
+
+      cjs &&
+        this.emitFile({
+          type: "asset",
+          fileName: "magicExports/remix.js",
+          source: cjs,
+        });
+
+      esm &&
+        this.emitFile({
+          type: "asset",
+          fileName: "magicExports/esm/remix.js",
+          source: esm,
+        });
+    },
   };
 }
 
@@ -198,36 +281,6 @@ function cli({ outputDir, packageName, sourceDir, version }) {
         rootMode: "upward",
       }),
       nodeResolve({ extensions: [".ts"] }),
-      copyToPlaygrounds(),
-    ],
-  };
-}
-
-/**
- * @deprecated New packages should not provide magic exports
- * @param {BuildInfo & { format: "cjs" | "esm" }} buildInfo
- * @returns {import("rollup").RollupOptions} Default Rollup configuration for `<sourceDir>/magicExports/remix.ts`
- */
-function magicExports({ format, outputDir, packageName, sourceDir, version }) {
-  return {
-    external: () => true,
-    input: path.join(sourceDir, "magicExports", "remix.ts"),
-    output: {
-      banner: createBanner(packageName, version),
-      dir: path.join(
-        outputDir,
-        "magicExports",
-        ...(format === "cjs" ? [] : [format])
-      ),
-      format,
-    },
-    plugins: [
-      babel({
-        babelHelpers: "bundled",
-        exclude: /node_modules/,
-        extensions: [".ts", ".tsx"],
-        rootMode: "upward",
-      }),
       copyToPlaygrounds(),
     ],
   };
@@ -286,7 +339,6 @@ module.exports = {
   getVersion,
   index,
   isBareModuleId,
-  magicExports,
   REPO_ROOT_DIR,
 };
 
@@ -298,4 +350,9 @@ module.exports = {
  *   sourceDir: string;
  *   version: string;
  * }} BuildInfo
+ *
+ * @typedef {{
+ *   vars?: Record<string, string[]>;
+ *   types?: Record<string, string[]>;
+ * }} MagicExports
  */

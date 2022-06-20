@@ -1,12 +1,15 @@
-const { getBuildInfo, index, magicExports } = require("../../rollup.utils");
+const { getBuildInfo, index } = require("../../rollup.utils");
 const { name: packageName } = require("./package.json");
+
+// Re-export everything from this package that is available in `remix`
+const magicExports = {
+  vars: {
+    "@remix-run/cloudflare": ["createCloudflareKVSessionStorage"],
+  },
+};
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
   let buildInfo = getBuildInfo(packageName);
-  return [
-    index({ format: "cjs", ...buildInfo }),
-    magicExports({ format: "cjs", ...buildInfo }),
-    magicExports({ format: "esm", ...buildInfo }),
-  ];
+  return [index({ format: "cjs", magicExports, ...buildInfo })];
 };

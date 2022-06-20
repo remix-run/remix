@@ -12,7 +12,7 @@
   },
   "license": "MIT",
   "bin": {
-    "remix-serve": "cli.js"
+    "remix-serve": "dist/cli.js"
   },
   "dependencies": {
     "@remix-run/express": "1.6.0",

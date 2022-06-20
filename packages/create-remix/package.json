@@ -13,7 +13,7 @@
   },
   "license": "MIT",
   "bin": {
-    "create-remix": "cli.js"
+    "create-remix": "dist/cli.js"
   },
   "dependencies": {
     "@remix-run/dev": "1.6.0"

@@ -15,7 +15,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "remix": "./dist/cli.js"
+    "remix": "dist/cli.js"
   },
   "dependencies": {
     "@babel/core": "^7.18.2",
