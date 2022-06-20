@@ -25,7 +25,7 @@ remix create <projectDir> --template <template>
 
 A valid template can be:
 
-- a directory located in the [`templates` folder of the Remix repository](https://github.com/remix-run/remix/tree/main/templates)
+- a directory located in the [`templates` folder of the Remix repository][templates-folder-of-the-remix-repository]
 - a local file path to a directory of files
 - a local file path to a tarball
 - the name of a `:username/:repo` on GitHub
@@ -73,7 +73,6 @@ remix watch
 
 ## `remix dev`
 
-
 The same as `watch`, but also boots the [Remix App Server][remix-app-server] in development mode if it's installed.
 
 ```sh
@@ -98,3 +97,4 @@ Alternatively, a port can be assigned to the `PORT` environment variable.
 
 [remix-app-server]: serve.md
 [node-inspector]: https://nodejs.org/en/docs/guides/debugging-getting-started
+[templates-folder-of-the-remix-repository]: https://github.com/remix-run/remix/tree/main/templates
