@@ -1,3 +1,4 @@
+import { TextEncoder } from "util";
 import { Action, parsePath } from "history";
 import type { Location, State } from "history";
 
@@ -5,6 +6,7 @@ import type { Submission, TransitionManagerInit } from "../transition";
 import {
   CatchValue,
   createTransitionManager,
+  DeferredResponse,
   TransitionRedirect,
   IDLE_FETCHER,
   IDLE_TRANSITION,
@@ -15,7 +17,7 @@ describe("init", () => {
     let tm = createTransitionManager({
       routes: [
         {
-          element: {},
+          element: {} as any,
           id: "root",
           path: "/",
           ErrorBoundary: {},
@@ -24,6 +26,7 @@ describe("init", () => {
         },
       ],
       location: createLocation("/"),
+      deferredLoaderData: {},
       loaderData: { root: "LOADER DATA" },
       actionData: { root: "ACTION DATA" },
       error: new Error("lol"),
@@ -173,7 +176,7 @@ describe("normal navigation", () => {
     t.navigate.get("/#bar");
     expect(t.getState().location.hash).toBe("");
     expect(t.getState().transition.state).toBe("loading");
-    expect(t.getState().transition.location.hash).toBe("#bar");
+    expect(t.getState().transition.location!.hash).toBe("#bar");
     // await the internal forced async state
     await Promise.resolve();
     expect(t.getState().location.hash).toBe("#bar");
@@ -210,6 +213,7 @@ describe("shouldReload", () => {
       return url.searchParams.get("reload") === "1";
     });
     let tm = createTestTransitionManager("/", {
+      deferredLoaderData: {},
       loaderData: {
         "/": "ROOT",
       },
@@ -220,14 +224,14 @@ describe("shouldReload", () => {
           hasLoader: true,
           loader: rootLoader,
           shouldReload,
-          element: {},
+          element: {} as any,
           module: "",
           children: [
             {
               path: "/",
               id: "index",
               action: () => null,
-              element: {},
+              element: {} as any,
               module: "",
               hasLoader: false,
             },
@@ -237,7 +241,7 @@ describe("shouldReload", () => {
               hasLoader: true,
               loader: childLoader,
               action: () => null,
-              element: {},
+              element: {} as any,
               module: "",
             },
           ],
@@ -258,6 +262,207 @@ describe("shouldReload", () => {
       action: Action.Push,
     });
     expect(rootLoader.mock.calls.length).toBe(1);
+
+    await tm.send({
+      type: "navigation",
+      location: createLocation("/child"),
+      submission: createActionSubmission("/child"),
+      action: Action.Push,
+    });
+
+    let args = shouldReload.mock.calls[2][0];
+    expect(args).toMatchInlineSnapshot(`
+      Object {
+        "params": Object {},
+        "prevUrl": "http://localhost/child?reload=0",
+        "submission": Object {
+          "action": "/child",
+          "encType": "application/x-www-form-urlencoded",
+          "formData": FormData {},
+          "key": "1",
+          "method": "POST",
+        },
+        "url": "http://localhost/child",
+      }
+    `);
+  });
+
+  it("delegates to the route if it should reload or not if deferred resolved", async () => {
+    let rootLoader = jest.fn(
+      () =>
+        new DeferredResponse(
+          new Response("{}\n\n", {
+            headers: { "Content-Type": "text/remix-deferred" },
+          })
+        )
+    );
+    let childLoader = jest.fn(() => "CHILD");
+    let shouldReload = jest.fn(({ url, prevUrl, submission }) => {
+      return url.searchParams.get("reload") === "1";
+    });
+    let tm = createTestTransitionManager("/", {
+      deferredLoaderData: {},
+      loaderData: {
+        "/": {},
+      },
+      routes: [
+        {
+          path: "",
+          id: "root",
+          hasLoader: true,
+          loader: rootLoader,
+          shouldReload,
+          element: {} as any,
+          module: "",
+          children: [
+            {
+              path: "/",
+              id: "index",
+              action: () => null,
+              element: {} as any,
+              module: "",
+              hasLoader: false,
+            },
+            {
+              path: "/child",
+              id: "child",
+              hasLoader: true,
+              loader: childLoader,
+              action: () => null,
+              element: {} as any,
+              module: "",
+            },
+          ],
+        },
+      ],
+    });
+
+    await tm.send({
+      type: "navigation",
+      location: createLocation("/child?reload=1"),
+      action: Action.Push,
+    });
+    expect(rootLoader.mock.calls.length).toBe(1);
+
+    await tm.send({
+      type: "navigation",
+      location: createLocation("/child?reload=0"),
+      action: Action.Push,
+    });
+    expect(rootLoader.mock.calls.length).toBe(1);
+
+    await tm.send({
+      type: "navigation",
+      location: createLocation("/child"),
+      submission: createActionSubmission("/child"),
+      action: Action.Push,
+    });
+
+    expect(rootLoader.mock.calls.length).toBe(2);
+    let args = shouldReload.mock.calls[2][0];
+    expect(args).toMatchInlineSnapshot(`
+      Object {
+        "params": Object {},
+        "prevUrl": "http://localhost/child?reload=0",
+        "submission": Object {
+          "action": "/child",
+          "encType": "application/x-www-form-urlencoded",
+          "formData": FormData {},
+          "key": "1",
+          "method": "POST",
+        },
+        "url": "http://localhost/child",
+      }
+    `);
+  });
+
+  it("does not delegate to the route if it should reload or not if deferred didn't resolve", async () => {
+    let resolveBodyController;
+    let bodyControllerPromise = new Promise<
+      ReadableStreamController<Uint8Array>
+    >((resolve) => {
+      resolveBodyController = resolve;
+    });
+    let encoder = new TextEncoder();
+    let body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(
+          encoder.encode(`{"foo":"__deferred_promise:foo"}\n\n`)
+        );
+        resolveBodyController(controller);
+      },
+    });
+    let resolveRootLoader = async () => {
+      let controller = await bodyControllerPromise;
+      controller.enqueue(encoder.encode(`data:{ "foo": "bar" }\n\n`));
+      controller.close();
+    };
+
+    let rootLoader = jest.fn(
+      () =>
+        new DeferredResponse(
+          new Response(body, {
+            headers: { "Content-Type": "text/remix-deferred" },
+          })
+        )
+    );
+    let childLoader = jest.fn(() => "CHILD");
+    let shouldReload = jest.fn(({ url, prevUrl, submission }) => {
+      return url.searchParams.get("reload") === "1";
+    });
+    let tm = createTestTransitionManager("/", {
+      deferredLoaderData: {},
+      loaderData: {
+        "/": "ROOT",
+      },
+      routes: [
+        {
+          path: "",
+          id: "root",
+          hasLoader: true,
+          loader: rootLoader,
+          shouldReload,
+          element: {} as any,
+          module: "",
+          children: [
+            {
+              path: "/",
+              id: "index",
+              action: () => null,
+              element: {} as any,
+              module: "",
+              hasLoader: false,
+            },
+            {
+              path: "/child",
+              id: "child",
+              hasLoader: true,
+              loader: childLoader,
+              action: () => null,
+              element: {} as any,
+              module: "",
+            },
+          ],
+        },
+      ],
+    });
+
+    console.log(tm.getState());
+
+    await tm.send({
+      type: "navigation",
+      location: createLocation("/child?reload=1"),
+      action: Action.Push,
+    });
+    expect(rootLoader.mock.calls.length).toBe(1);
+    console.log(tm.getState());
+
+    await tm.send({
+      type: "navigation",
+      location: createLocation("/child?reload=0"),
+      action: Action.Push,
+    });
+    expect(rootLoader.mock.calls.length).toBe(2);
 
     await tm.send({
       type: "navigation",
@@ -391,14 +596,14 @@ describe("errors on navigation", () => {
           {
             path: "/",
             id: "parent",
-            element: {},
+            element: {} as any,
             module: "",
             hasLoader: false,
             children: [
               {
                 path: "/child",
                 id: "child",
-                element: {},
+                element: {} as any,
                 module: "",
                 ErrorBoundary: FakeComponent,
                 hasLoader: true,
@@ -415,7 +620,7 @@ describe("errors on navigation", () => {
       });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("child");
-      expect(state.error.message).toBe(ERROR_MESSAGE);
+      expect(state.error!.message).toBe(ERROR_MESSAGE);
     });
   });
 
@@ -428,7 +633,7 @@ describe("errors on navigation", () => {
       let child = {
         path: "/child",
         id: "child",
-        element: {},
+        element: {} as any,
         module: "",
         hasLoader: true,
         loader,
@@ -436,7 +641,7 @@ describe("errors on navigation", () => {
       let parent = {
         path: "/",
         id: "parent",
-        element: {},
+        element: {} as any,
         module: "",
         ErrorBoundary: FakeComponent,
         children: [child],
@@ -453,7 +658,7 @@ describe("errors on navigation", () => {
       });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("parent");
-      expect(state.error.message).toBe(ERROR_MESSAGE);
+      expect(state.error!.message).toBe(ERROR_MESSAGE);
     });
 
     it("clears out the error on new locations", async () => {
@@ -466,21 +671,21 @@ describe("errors on navigation", () => {
           {
             path: "",
             id: "root",
-            element: {},
+            element: {} as any,
             module: "",
             hasLoader: false,
             children: [
               {
                 path: "/",
                 id: "parent",
-                element: {},
+                element: {} as any,
                 module: "",
                 hasLoader: false,
                 children: [
                   {
                     path: "/child",
                     id: "child",
-                    element: {},
+                    element: {} as any,
                     module: "",
                     ErrorBoundary: FakeComponent,
                     hasLoader: true,
@@ -522,6 +727,7 @@ describe("errors on navigation", () => {
     };
 
     let tm = createTestTransitionManager("/", {
+      deferredLoaderData: {},
       loaderData: {
         a: await loaderA(),
       },
@@ -529,7 +735,7 @@ describe("errors on navigation", () => {
         {
           path: "/",
           id: "a",
-          element: {},
+          element: {} as any,
           module: "",
           loader: loaderA,
           hasLoader: true,
@@ -537,7 +743,7 @@ describe("errors on navigation", () => {
             {
               path: "/b",
               id: "b",
-              element: {},
+              element: {} as any,
               module: "",
               loader: loaderB,
               hasLoader: true,
@@ -546,7 +752,7 @@ describe("errors on navigation", () => {
                 {
                   path: "/b/c",
                   id: "c",
-                  element: {},
+                  element: {} as any,
                   module: "",
                   hasLoader: true,
                   loader: loaderC,
@@ -618,7 +824,7 @@ describe("submission navigations", () => {
     expect(t.getState().actionData).toBeUndefined();
 
     await A.action.resolve("A");
-    expect(t.getState().actionData.foo).toBe("A");
+    expect(t.getState().actionData!.foo).toBe("A");
   });
 
   it("reloads all routes after the action", async () => {
@@ -673,7 +879,7 @@ describe("submission navigations", () => {
         {
           path: "/",
           id: "parent",
-          element: {},
+          element: {} as any,
           module: "",
           hasLoader: true,
           loader: () => "PARENT LOADER",
@@ -682,7 +888,7 @@ describe("submission navigations", () => {
             {
               path: "/child",
               id: "child",
-              element: {},
+              element: {} as any,
               module: "",
               ErrorBoundary: FakeComponent,
               hasLoader: true,
@@ -692,7 +898,7 @@ describe("submission navigations", () => {
                 {
                   index: true,
                   id: "childIndex",
-                  element: {},
+                  element: {} as any,
                   module: "",
                   ErrorBoundary: FakeComponent,
                   hasLoader: true,
@@ -740,14 +946,14 @@ describe("action errors", () => {
           {
             path: "/",
             id: "parent",
-            element: {},
+            element: {} as any,
             module: "",
             hasLoader: false,
             children: [
               {
                 path: "/child",
                 id: "child",
-                element: {},
+                element: {} as any,
                 module: "",
                 ErrorBoundary: FakeComponent,
                 hasLoader: false,
@@ -765,7 +971,7 @@ describe("action errors", () => {
       });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("child");
-      expect(state.error.message).toBe(ERROR_MESSAGE);
+      expect(state.error!.message).toBe(ERROR_MESSAGE);
     });
 
     it("loads parent data, but not action data", async () => {
@@ -780,7 +986,7 @@ describe("action errors", () => {
           {
             path: "/",
             id: "parent",
-            element: {},
+            element: {} as any,
             module: "",
             hasLoader: true,
             loader: parentLoader,
@@ -788,7 +994,7 @@ describe("action errors", () => {
               {
                 path: "/child",
                 id: "child",
-                element: {},
+                element: {} as any,
                 module: "",
                 ErrorBoundary: FakeComponent,
                 hasLoader: false,
@@ -825,7 +1031,7 @@ describe("action errors", () => {
           {
             path: "/",
             id: "parent",
-            element: {},
+            element: {} as any,
             module: "",
             ErrorBoundary: FakeComponent,
             hasLoader: false,
@@ -833,7 +1039,7 @@ describe("action errors", () => {
               {
                 path: "/child",
                 id: "child",
-                element: {},
+                element: {} as any,
                 module: "",
                 hasLoader: false,
                 action,
@@ -850,7 +1056,7 @@ describe("action errors", () => {
       });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("parent");
-      expect(state.error.message).toBe(ERROR_MESSAGE);
+      expect(state.error!.message).toBe(ERROR_MESSAGE);
     });
   });
 
@@ -869,7 +1075,7 @@ describe("action errors", () => {
           {
             path: "/",
             id: "root",
-            element: {},
+            element: {} as any,
             module: "",
             ErrorBoundary: FakeComponent,
             hasLoader: false,
@@ -877,7 +1083,7 @@ describe("action errors", () => {
               {
                 path: "/parent",
                 id: "parent",
-                element: {},
+                element: {} as any,
                 module: "",
                 loader: parentLoader,
                 hasLoader: true,
@@ -885,7 +1091,7 @@ describe("action errors", () => {
                   {
                     path: "/parent/child",
                     id: "child",
-                    element: {},
+                    element: {} as any,
                     module: "",
                     action,
                     hasLoader: false,
@@ -906,7 +1112,7 @@ describe("action errors", () => {
       });
       let state = tm.getState();
       expect(state.errorBoundaryId).toBe("root");
-      expect(state.error.message).toBe(ACTION_ERROR_MESSAGE);
+      expect(state.error!.message).toBe(ACTION_ERROR_MESSAGE);
     });
   });
 });
@@ -970,7 +1176,7 @@ describe("transition states", () => {
       // @ts-expect-error
       new URLSearchParams(transition.submission.formData).toString()
     ).toBe("gosh=dang");
-    expect(transition.submission.method).toBe("POST");
+    expect(transition.submission!.method).toBe("POST");
     expect(transition.location).toBe(A.location);
 
     await A.action.resolve("A");
@@ -981,7 +1187,7 @@ describe("transition states", () => {
       // @ts-expect-error
       new URLSearchParams(transition.submission.formData).toString()
     ).toBe("gosh=dang");
-    expect(transition.submission.method).toBe("POST");
+    expect(transition.submission!.method).toBe("POST");
     expect(transition.location).toBe(A.location);
 
     await A.loader.resolve("A");
@@ -1005,7 +1211,7 @@ describe("transition states", () => {
       // @ts-expect-error
       new URLSearchParams(transition.submission.formData).toString()
     ).toBe("gosh=dang");
-    expect(transition.submission.method).toBe("POST");
+    expect(transition.submission!.method).toBe("POST");
     expect(transition.location).toBe(B.location);
 
     await B.loader.resolve("B");
@@ -1026,7 +1232,7 @@ describe("transition states", () => {
       // @ts-expect-error
       new URLSearchParams(transition.submission.formData).toString()
     ).toBe("gosh=dang");
-    expect(transition.submission.method).toBe("GET");
+    expect(transition.submission!.method).toBe("GET");
     expect(transition.location).toBe(A.location);
 
     await A.loader.resolve("A");
@@ -1050,7 +1256,7 @@ describe("transition states", () => {
       // @ts-expect-error
       new URLSearchParams(transition.submission.formData).toString()
     ).toBe("gosh=dang");
-    expect(transition.submission.method).toBe("GET");
+    expect(transition.submission!.method).toBe("GET");
     expect(transition.location).toBe(B.location);
 
     await B.loader.resolve("B");
@@ -1810,6 +2016,287 @@ describe("navigating with inflight fetchers", () => {
   });
 });
 
+function setupDeferred(initialData: Record<string, string | Promise<any>>) {
+  let resolveBodyController;
+  let bodyControllerPromise = new Promise<ReadableStreamController<Uint8Array>>(
+    (resolve) => {
+      resolveBodyController = resolve;
+    }
+  );
+  let encoder = new TextEncoder();
+
+  let pendingKeys: Promise<any>[] = [];
+  let deferredData = Object.entries(initialData).reduce((acc, [k, v]) => {
+    if (v instanceof Promise) {
+      Object.assign(acc, { [k]: `__deferred_promise:${k}` });
+      let promise = v.then(
+        async (data) => {
+          let controller = await bodyControllerPromise;
+          controller.enqueue(
+            encoder.encode(`data:{ "${k}": ${JSON.stringify(data)} }\n\n`)
+          );
+        },
+        async (err) => {
+          let controller = await bodyControllerPromise;
+          let data = {
+            message: err.message,
+            stack: err.stack,
+          };
+          controller.enqueue(
+            encoder.encode(`error:{ "${k}": ${JSON.stringify(data)} }\n\n`)
+          );
+        }
+      );
+      pendingKeys.push(promise);
+    } else {
+      Object.assign(acc, { [k]: v });
+    }
+    return acc;
+  }, {});
+
+  let body = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      controller.enqueue(encoder.encode(`${JSON.stringify(deferredData)}\n\n`));
+      resolveBodyController(controller);
+      await Promise.allSettled(pendingKeys);
+      controller.close();
+    },
+  });
+
+  return new DeferredResponse(
+    new Response(body, {
+      headers: { "Content-Type": "text/remix-deferred" },
+    })
+  );
+}
+
+// eslint-disable-next-line jest/no-focused-tests
+fdescribe("deferred", () => {
+  it("should support returning deferred responses", async () => {
+    let t = setup({ url: "/" });
+
+    let A = await t.navigate.get("/foo");
+
+    let dfd = defer();
+    await A.loader.resolve(
+      setupDeferred({
+        critical: "1",
+        lazy: dfd.promise,
+      })
+    );
+
+    // TODO: Can we get rid of this?
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(t.getState().loaderData).toMatchInlineSnapshot(`
+      Object {
+        "foo": Object {
+          "critical": "1",
+          "lazy": "__deferred_promise:lazy",
+        },
+        "root": "ROOT",
+      }
+    `);
+    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
+      Object {
+        "foo": Object {
+          "lazy": Promise {},
+        },
+      }
+    `);
+    expect(t.getState().transition).toMatchInlineSnapshot(`
+      Object {
+        "location": undefined,
+        "state": "idle",
+        "submission": undefined,
+        "type": "idle",
+      }
+    `);
+
+    await dfd.resolve("2");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(t.getState().loaderData).toMatchInlineSnapshot(`
+      Object {
+        "foo": Object {
+          "critical": "1",
+          "lazy": "2",
+        },
+        "root": "ROOT",
+      }
+    `);
+    expect(t.getState().transition).toMatchInlineSnapshot(`
+      Object {
+        "location": undefined,
+        "state": "idle",
+        "submission": undefined,
+        "type": "idle",
+      }
+    `);
+  });
+
+  it("should cancel outstanding deferreds on a new navigation", async () => {
+    let t = setup({ url: "/" });
+
+    let A = await t.navigate.get("/foo");
+
+    let dfd = defer();
+    await A.loader.resolve(
+      setupDeferred({
+        critical: "1",
+        lazy: dfd.promise,
+      })
+    );
+
+    // TODO: Can we get rid of this?
+    await new Promise((r) => setTimeout(r, 0));
+
+    let B = await t.navigate.get("/bar");
+
+    // During navigation - deferreds remain as promises
+    expect(t.getState().loaderData).toMatchInlineSnapshot(`
+      Object {
+        "foo": Object {
+          "critical": "1",
+          "lazy": "__deferred_promise:lazy",
+        },
+        "root": "ROOT",
+      }
+    `);
+    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
+      Object {
+        "foo": Object {
+          "lazy": Promise {},
+        },
+      }
+    `);
+
+    // But they are frozen - no re-paints on resolve/reject!
+    await dfd.resolve("2");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(t.getState().loaderData).toMatchInlineSnapshot(`
+      Object {
+        "foo": Object {
+          "critical": "1",
+          "lazy": "__deferred_promise:lazy",
+        },
+        "root": "ROOT",
+      }
+    `);
+    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
+      Object {
+        "foo": Object {
+          "lazy": Promise {},
+        },
+      }
+    `);
+
+    await B.loader.resolve("BAR");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(t.getState().loaderData).toEqual({
+      root: "ROOT",
+      bar: "BAR",
+    });
+    expect(t.getState().deferredLoaderData).toEqual({});
+  });
+
+  it("should not cancel outstanding deferreds on reused route", async () => {
+    let rootDfd = defer();
+    console.log("setup");
+    let t = setup({
+      url: "/",
+      rootLoaderOverride() {
+        console.log("calling rootLoaderOverride");
+        return setupDeferred({
+          critical: "1",
+          lazy: rootDfd.promise,
+        });
+      },
+    });
+
+    console.log("navigate foo");
+    let A = await t.navigate.get("/foo?key=value");
+
+    let dfd = defer();
+    await A.loader.resolve(
+      setupDeferred({
+        critical: "3",
+        lazy: dfd.promise,
+      })
+    );
+
+    // TODO: Can we get rid of this?
+    await new Promise((r) => setTimeout(r, 0));
+
+    console.log("navigate bar");
+    let B = await t.navigate.get("/bar?key=value");
+
+    // During navigation - deferreds remain as promises
+    expect(t.getState().loaderData).toMatchInlineSnapshot(`
+      Object {
+        "foo": Object {
+          "critical": "3",
+          "lazy": "__deferred_promise:lazy",
+        },
+        "root": Object {
+          "critical": "1",
+          "lazy": "__deferred_promise:lazy",
+        },
+      }
+    `);
+    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
+      Object {
+        "foo": Object {
+          "lazy": Promise {},
+        },
+        "root": Object {
+          "lazy": Promise {},
+        },
+      }
+    `);
+
+    // But they are frozen - no re-paints on resolve/reject!
+    await rootDfd.resolve("2");
+    await dfd.resolve("4");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(t.getState().loaderData).toMatchInlineSnapshot(`
+      Object {
+        "foo": Object {
+          "critical": "3",
+          "lazy": "__deferred_promise:lazy",
+        },
+        "root": Object {
+          "critical": "1",
+          "lazy": "2",
+        },
+      }
+    `);
+    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
+      Object {
+        "foo": Object {
+          "lazy": Promise {},
+        },
+        "root": Object {},
+      }
+    `);
+
+    await B.loader.resolve("BAR");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(t.getState().loaderData).toEqual({
+      root: {
+        critical: "1",
+        lazy: "2",
+      },
+      bar: "BAR",
+    });
+    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
+      Object {
+        "root": Object {},
+      }
+    `);
+  });
+});
+
 // describe("react-router", () => {
 //   it.todo("replaces pending locations even on a push");
 // });
@@ -1830,7 +2317,7 @@ function defer() {
       await (async () => promise)();
     };
   });
-  return { promise, resolve, reject };
+  return { promise, resolve: resolve!, reject: reject! };
 }
 
 let fakeKey = 0;
@@ -1885,6 +2372,7 @@ function createTestTransitionManager(
   let location = createLocation(pathname);
   return createTransitionManager({
     actionData: undefined,
+    deferredLoaderData: {},
     loaderData: { root: "ROOT" },
     location,
     routes: [],
@@ -1894,7 +2382,15 @@ function createTestTransitionManager(
   });
 }
 
-let setup = ({ url } = { url: "/" }) => {
+let setup = (
+  {
+    url,
+    rootLoaderOverride,
+  }: {
+    url: string;
+    rootLoaderOverride?: () => any | Promise<any>;
+  } = { url: "/" }
+) => {
   incrementingSubmissionKey = 0;
   let guid = 0;
 
@@ -1918,14 +2414,16 @@ let setup = ({ url } = { url: "/" }) => {
     lastRedirect = navigate_(createLocation(href, state));
   });
 
-  let rootLoader = jest.fn(() => "ROOT");
+  let rootLoader = rootLoaderOverride
+    ? jest.fn(rootLoaderOverride)
+    : jest.fn(() => "ROOT");
 
   let createLoader = () => {
     return jest.fn(async ({ signal }: { signal: AbortSignal }) => {
       let myId =
         nextLoaderType === "navigation" ? nextLoaderId : nextLoaderFetchId;
-      signal.onabort = loaderAbortHandlers.get(myId);
-      return loaderDeferreds.get(myId).promise.then(
+      signal.onabort = loaderAbortHandlers.get(myId) as any;
+      return loaderDeferreds.get(myId)!.promise.then(
         (val) => {
           return val;
         },
@@ -1938,8 +2436,8 @@ let setup = ({ url } = { url: "/" }) => {
     return jest.fn(async ({ signal }: { signal: AbortSignal }) => {
       let myType = nextActionType;
       let myId = myType === "navigation" ? nextActionId : nextActionFetchId;
-      signal.onabort = actionAbortHandlers.get(myId);
-      return actionDeferreds.get(myId).promise.then((val) => {
+      signal.onabort = actionAbortHandlers.get(myId) as any;
+      return actionDeferreds.get(myId)!.promise.then((val) => {
         if (myType === "navigation") {
           nextLoaderType = "navigation";
           nextLoaderId = myId;
@@ -1956,7 +2454,7 @@ let setup = ({ url } = { url: "/" }) => {
     {
       path: "",
       id: "root",
-      element: {},
+      element: {} as any,
       module: "",
       ErrorBoundary: FakeComponent,
       CatchBoundary: FakeComponent,
@@ -1969,7 +2467,7 @@ let setup = ({ url } = { url: "/" }) => {
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),
-          element: {},
+          element: {} as any,
           module: "",
         },
         {
@@ -1978,7 +2476,7 @@ let setup = ({ url } = { url: "/" }) => {
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),
-          element: {},
+          element: {} as any,
           module: "",
         },
         {
@@ -1987,7 +2485,7 @@ let setup = ({ url } = { url: "/" }) => {
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),
-          element: {},
+          element: {} as any,
           module: "",
         },
         {
@@ -1996,7 +2494,7 @@ let setup = ({ url } = { url: "/" }) => {
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),
-          element: {},
+          element: {} as any,
           module: "",
         },
         {
@@ -2005,7 +2503,7 @@ let setup = ({ url } = { url: "/" }) => {
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),
-          element: {},
+          element: {} as any,
           module: "",
         },
         {
@@ -2014,7 +2512,7 @@ let setup = ({ url } = { url: "/" }) => {
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),
-          element: {},
+          element: {} as any,
           module: "",
         },
       ],
@@ -2024,6 +2522,7 @@ let setup = ({ url } = { url: "/" }) => {
   let tm = createTestTransitionManager(url, {
     onChange: handleChange,
     onRedirect: handleRedirect,
+    deferredLoaderData: {},
     loaderData: { root: "ROOT" },
     routes,
   });
@@ -2054,12 +2553,12 @@ let setup = ({ url } = { url: "/" }) => {
     loaderAbortHandlers.set(id, loaderAbortHandler);
 
     async function resolveAction(val: any = null) {
-      await actionDeferreds.get(id).resolve(val);
+      await actionDeferreds.get(id)!.resolve(val);
     }
 
     async function resolveLoader(val: any) {
-      await loaderDeferreds.get(id).resolve(val);
-      await onChangeDeferreds.get(id).resolve();
+      await loaderDeferreds.get(id)!.resolve(val);
+      await onChangeDeferreds.get(id)!.resolve();
     }
 
     async function redirectAction(href: string) {
@@ -2077,7 +2576,7 @@ let setup = ({ url } = { url: "/" }) => {
       location,
       submission,
       action: action || Action.Push,
-    }).then(() => onChangeDeferreds.get(id).promise);
+    }).then(() => onChangeDeferreds.get(id)!.promise);
 
     return {
       location,
@@ -2124,35 +2623,35 @@ let setup = ({ url } = { url: "/" }) => {
     loaderAbortHandlers.set(id, loaderAbortHandler);
 
     async function resolveAction(val: any = null) {
-      await actionDeferreds.get(id).resolve(val);
+      await actionDeferreds.get(id)!.resolve(val);
     }
 
     async function resolveLoader(val: any = null) {
-      await loaderDeferreds.get(id).resolve(val);
+      await loaderDeferreds.get(id)!.resolve(val);
       await awaitChange();
     }
 
     async function throwLoaderCatch() {
       await loaderDeferreds
-        .get(id)
+        .get(id)!
         .resolve(new CatchValue(400, "Bad Request", null));
       await awaitChange();
     }
 
     async function throwLoaderError() {
-      await loaderDeferreds.get(id).resolve(new Error("Kaboom!"));
+      await loaderDeferreds.get(id)!.resolve(new Error("Kaboom!"));
       await awaitChange();
     }
 
     async function throwActionCatch() {
       await actionDeferreds
-        .get(id)
+        .get(id)!
         .resolve(new CatchValue(400, "Bad Request", null));
       await awaitChange();
     }
 
     async function throwActionError() {
-      await actionDeferreds.get(id).resolve(new Error("Kaboom!"));
+      await actionDeferreds.get(id)!.resolve(new Error("Kaboom!"));
       await awaitChange();
     }
 
@@ -2167,11 +2666,11 @@ let setup = ({ url } = { url: "/" }) => {
     }
 
     async function awaitChange() {
-      await onChangeDeferreds.get(id).resolve();
+      await onChangeDeferreds.get(id)!.resolve();
     }
 
     tm.send({ type: "fetcher", href, submission, key }).then(
-      () => onChangeDeferreds.get(id).promise
+      () => onChangeDeferreds.get(id)!.promise
     );
 
     return {
