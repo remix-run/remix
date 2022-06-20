@@ -1,12 +1,14 @@
 {
   "extends": "../tsconfig.json",
   "include": ["."],
-  "exclude": ["./deployment-test"],
+  "exclude": ["./deployment-test", "./playground/template/**/*"],
   "compilerOptions": {
     "allowJs": true,
     "checkJs": true,
-    "noEmit": true,
+    "forceConsistentCasingInFileNames": true,
     "moduleResolution": "Node",
+    "noEmit": true,
+    "strict": true,
     "target": "ES2018"
   }
 }

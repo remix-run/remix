@@ -47,10 +47,7 @@ export function createRequestHandler({
 
   return async (req, res) => {
     let request = createRemixRequest(req);
-    let loadContext =
-      typeof getLoadContext === "function"
-        ? getLoadContext(req, res)
-        : undefined;
+    let loadContext = getLoadContext?.(req, res);
 
     let response = (await handleRequest(request, loadContext)) as NodeResponse;
 

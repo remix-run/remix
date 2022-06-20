@@ -46,7 +46,7 @@ async function run(args) {
 }
 
 /**
- * @param {string} currentVersion
+ * @param {string|undefined} currentVersion
  * @param {string} givenVersion
  * @param {string} [prereleaseId]
  * @returns
