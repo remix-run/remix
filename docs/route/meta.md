@@ -68,6 +68,7 @@ export const meta: MetaFunction = () => ({
 `meta` function is passed an object that has following data:
 
 - `data` is whatever exported by `loader` function
+- `actionData` is the data returned by the `action` function
 - `location` is a `window.location`-like object that has some data about the current route
 - `params` is an object containing route params
 - `parentsData` is a hashmap of all the data exported by `loader` functions of current route and all of its parents

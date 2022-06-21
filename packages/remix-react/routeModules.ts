@@ -77,6 +77,7 @@ export interface LinksFunction {
 export interface V1_MetaFunction {
   (args: {
     data: AppData;
+    actionData: AppData;
     parentsData: RouteData;
     params: Params;
     location: Location;
