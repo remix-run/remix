@@ -574,7 +574,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let { routes } = init;
 
   let pendingNavigationController: AbortController | undefined;
-  let pendingNavigationDeferredControllers: AbortController[] = [];
+  // Map of routeId->Abortcontroller for pending deferred returned from loaders
+  let pendingNavigationDeferredControllers: Map<string, AbortController> =
+    new Map();
+  // Set of routeId's for which we cancelled pending deferred's and need to
+  // track until the end of the navigation so we can clear their
+  // deferredLoaderData
+  let cancelledDeferredRouteIds: Set<string> = new Set();
   let fetchControllers = new Map<string, AbortController>();
   let incrementingLoadId = 0;
   let navigationLoadId = -1;
@@ -611,16 +617,33 @@ export function createTransitionManager(init: TransitionManagerInit) {
   };
 
   function update(updates: Partial<TransitionManagerState>) {
+    let overrides: Partial<TransitionManagerState> = {};
+
     if (updates.transition) {
       console.debug(
         `[transition] transition set to ${updates.transition.state}/${updates.transition.type}`
       );
       if (updates.transition === IDLE_TRANSITION) {
         pendingNavigationController = undefined;
+        cancelledDeferredRouteIds.forEach((routeId) => {
+          pendingNavigationDeferredControllers.delete(routeId);
+        });
+
+        // We need to only preserve deferredData that wasn't cancelled, so do a
+        // manual merge here checking for each routeId
+        overrides.deferredLoaderData = [
+          ...Object.entries(state.deferredLoaderData),
+          ...Object.entries(updates.deferredLoaderData || {}),
+        ]
+          .filter(([routeId]) => !cancelledDeferredRouteIds.has(routeId))
+          .reduce<Record<string, any>>(
+            (acc, [routeId, data]) => Object.assign(acc, { [routeId]: data }),
+            {}
+          );
       }
     }
 
-    state = Object.assign({}, state, updates);
+    state = Object.assign({}, state, updates, overrides);
     init.onChange(state);
   }
 
@@ -873,6 +896,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
       state.transition.location || state.location,
       matchesToLoad,
       controller.signal,
+      pendingNavigationDeferredControllers,
+      cancelledDeferredRouteIds,
       maybeActionErrorResult,
       maybeActionCatchResult,
       submission,
@@ -1165,6 +1190,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
     matches: RouteMatch<ClientRoute>[]
   ) {
     abortNormalNavigation();
+    abortPendingDeferredControllers(
+      pendingNavigationDeferredControllers,
+      cancelledDeferredRouteIds
+    );
+
     let transition: TransitionStates["Loading"] = {
       state: "loading",
       type: "normalLoad",
@@ -1422,6 +1452,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
       location,
       matches,
       controller.signal,
+      pendingNavigationDeferredControllers,
+      cancelledDeferredRouteIds,
       maybeActionErrorResult,
       maybeActionCatchResult,
       submission,
@@ -1493,7 +1525,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let [deferredLoaderData, monitorDeferred] = makeDeferredLoaderData(
       getState,
       update,
-      results
+      results,
+      pendingNavigationDeferredControllers
     );
 
     update({
@@ -1511,23 +1544,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
       fetchers: abortedIds ? new Map(state.fetchers) : state.fetchers,
     });
 
-    let deferredController = new AbortController();
-    if (controller.signal.aborted) {
-      deferredController.abort();
-    }
-    pendingNavigationDeferredControllers.push(deferredController);
-    monitorDeferred(deferredController.signal);
+    monitorDeferred();
   }
 
   function abortNormalNavigation() {
     if (pendingNavigationController) {
       console.debug(`[transition] aborting pending navigation`);
       pendingNavigationController.abort();
-    }
-    if (pendingNavigationDeferredControllers.length > 0) {
-      let toAbort = pendingNavigationDeferredControllers;
-      pendingNavigationDeferredControllers = [];
-      toAbort.forEach((controller) => controller.abort());
     }
   }
 
@@ -1573,6 +1596,8 @@ async function callLoaders(
   location: Location,
   matches: ClientMatch[],
   signal: AbortSignal,
+  pendingNavigationDeferredControllers: Map<string, AbortController>,
+  cancelledDeferredRouteIds: Set<string>,
   actionErrorResult?: DataErrorResult,
   actionCatchResult?: DataCatchResult,
   submission?: Submission,
@@ -1591,6 +1616,16 @@ async function callLoaders(
     submissionRouteId,
     fetcher,
     catchBoundaryId
+  );
+
+  // We can't abort these up front like we do for normal navigations because
+  // they're route-specific so we need to wait until we know matchesToLoad so
+  // we can only cancel non-reused routes
+  abortPendingDeferredControllers(
+    pendingNavigationDeferredControllers,
+    cancelledDeferredRouteIds,
+    matches,
+    matchesToLoad
   );
 
   return Promise.all(
@@ -1718,6 +1753,11 @@ function filterMatchesToLoad(
   if (isInRootCatchBoundary) {
     return matches.filter((match) => !!match.route.loader);
   }
+
+  // TODO: (deferred) - need to add handling here that if a prior action
+  // cancelled a pending deferred, we need to skip shouldReload and force
+  // revalidation for the route so it's not stuck in a pending state should
+  // the user opt out via shouldReload.
 
   if (fetcher?.type === "actionReload") {
     return matches.filter(filterByRouteProps);
@@ -1904,8 +1944,9 @@ function makeLoaderData(
 function makeDeferredLoaderData(
   getState: () => TransitionManagerState,
   update: (updates: Partial<TransitionManagerState>) => void,
-  results: DataResult[]
-): [DeferredRouteData, (signal: AbortSignal) => void] {
+  results: DataResult[],
+  pendingNavigationDeferredControllers: Map<string, AbortController>
+): [DeferredRouteData, () => void] {
   let state = getState();
   let deferredLoaderData = { ...state.deferredLoaderData };
   for (let { match, deferred } of results) {
@@ -1915,17 +1956,26 @@ function makeDeferredLoaderData(
       deferredLoaderData[match.route.id],
       deferred
     );
+    let deferredController = new AbortController();
+    pendingNavigationDeferredControllers.set(
+      match.route.id,
+      deferredController
+    );
   }
 
   return [
     deferredLoaderData,
-    (signal) => {
+    () => {
       for (let { match, deferred } of results) {
         if (!deferred) continue;
         for (let [key, promise] of Object.entries(deferred)) {
+          let signal = pendingNavigationDeferredControllers.get(
+            match.route.id
+          )?.signal;
+          if (!signal || signal.aborted) continue;
           deferredLoaderData[match.route.id][key] = promise;
           promise.then((value) => {
-            if (signal.aborted) return;
+            if (signal!.aborted) return;
 
             let state = { ...getState() };
             let {
@@ -1949,7 +1999,7 @@ function makeDeferredLoaderData(
               },
             };
 
-            if (signal.aborted) return;
+            if (signal!.aborted) return;
             update({
               deferredLoaderData: newDeferredLoaderData,
               loaderData: newLoaderData,
@@ -1959,6 +2009,27 @@ function makeDeferredLoaderData(
       }
     },
   ];
+}
+
+function abortPendingDeferredControllers(
+  pendingNavigationDeferredControllers: Map<string, AbortController>,
+  cancelledDeferredRouteIds: Set<string>,
+  matches: ClientMatch[] = [],
+  matchesToLoad: ClientMatch[] = []
+): void {
+  for (let [routeId, controller] of pendingNavigationDeferredControllers) {
+    // Can cancel if this route is no longer matched
+    let isRouteMatched = matches.some((m) => m.route.id === routeId);
+    // Or if this route is about to be reloaded
+    let isRouteLoading = matchesToLoad.some((m) => m.route.id === routeId);
+    // TODO: add boundary handling when we do actions - cancel below boundary
+    let foundBoundaryId = false;
+    if (!isRouteMatched || isRouteLoading || foundBoundaryId) {
+      console.log("Aborting controller for routeId", routeId);
+      controller.abort();
+      cancelledDeferredRouteIds.add(routeId);
+    }
+  }
 }
 
 function isCatchResult(result: DataResult): result is DataCatchResult {
