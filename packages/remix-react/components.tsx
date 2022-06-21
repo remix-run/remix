@@ -1325,7 +1325,7 @@ export type TypedResponse<T> = Response & {
   json(): Promise<T>;
 };
 
-type DataFunction = (...args: any[]) => any; // matches any function
+type DataFunction = (...args: any[]) => unknown; // matches any function
 type DataOrFunction = AppData | DataFunction;
 type JsonPrimitives = string | number | boolean | null;
 type NonJsonPrimitives = undefined | Function | symbol;
@@ -1337,7 +1337,7 @@ type SerializeType<T> = T extends JsonPrimitives
   ? U
   : T extends []
   ? []
-  : T extends [any, ...any[]]
+  : T extends [unknown, ...unknown[]]
   ? {
       [k in keyof T]: T[k] extends NonJsonPrimitives
         ? null
