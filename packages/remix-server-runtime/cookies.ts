@@ -64,10 +64,7 @@ export interface Cookie<Value extends any = any> {
    * Serializes the given value to a string and returns the `Set-Cookie`
    * header.
    */
-  serialize(
-    value: Value | null,
-    options?: CookieSerializeOptions
-  ): Promise<string>;
+  serialize(value: Value, options?: CookieSerializeOptions): Promise<string>;
 }
 
 export type CreateCookieFunction = <Value extends any = any>(
