@@ -785,6 +785,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   function dispose() {
     abortNormalNavigation();
+    abortPendingDeferredControllers(
+      pendingNavigationDeferredControllers,
+      cancelledDeferredRouteIds
+    );
     for (let [, controller] of fetchControllers) {
       controller.abort();
     }
@@ -823,6 +827,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     submission: ActionSubmission,
     match: ClientMatch
   ) {
+    abortPendingDeferredControllers(
+      pendingNavigationDeferredControllers,
+      cancelledDeferredRouteIds
+    );
     let currentFetcher = state.fetchers.get(key);
 
     let fetcher: FetcherStates["SubmittingAction"] = {
@@ -993,6 +1001,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let isLoadingNavigation = state.transition.state === "loading";
     if (isLoadingNavigation && navigationLoadId < landedId) {
       abortNormalNavigation();
+      abortPendingDeferredControllers(
+        pendingNavigationDeferredControllers,
+        cancelledDeferredRouteIds
+      );
       return true;
     }
     return false;
@@ -2032,7 +2044,6 @@ function abortPendingDeferredControllers(
     // TODO: add boundary handling when we do actions - cancel below boundary
     let foundBoundaryId = false;
     if (!isRouteMatched || isRouteLoading || foundBoundaryId) {
-      console.log("Aborting controller for routeId", routeId);
       controller.abort();
       cancelledDeferredRouteIds.add(routeId);
     }

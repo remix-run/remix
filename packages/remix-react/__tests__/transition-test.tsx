@@ -2302,7 +2302,7 @@ describe("deferred", () => {
     expect(fetcher.data).toEqual({ critical: "1", lazy: "2" });
   });
 
-  it.only("cancels pending deferreds on fetcher reloads", async () => {
+  it("cancels pending deferreds on fetcher reloads", async () => {
     let t = setup({ url: "/foo" });
     let key = "key";
 
@@ -2345,7 +2345,99 @@ describe("deferred", () => {
     expect(fetcher.data).toEqual({ critical: "1", lazy: "2" });
   });
 
-  it.todo("cancels pending deferreds on fetcher action submissions");
+  it.only("cancels pending deferreds on fetcher action submissions", async () => {
+    let parentDfd;
+    let rootCall = 1;
+    let t = setup({
+      url: "/",
+      rootLoaderOverride() {
+        parentDfd = defer();
+        return setupDeferred({
+          critical: `CRITICAL ROOT ${rootCall++}`,
+          lazy: parentDfd.promise,
+        });
+      },
+    });
+
+    let A = await t.navigate.get("/foo?a=1");
+
+    let aDfd = defer();
+    await A.loader.resolve(
+      setupDeferred({
+        critical: "CRITICAL A",
+        lazy: aDfd.promise,
+      })
+    );
+    await tick();
+
+    // Fetcher action submission causes all to be cancelled and
+    // ignores shouldRevalidate since the cancelled active deferred means we
+    // are missing data
+    let key = "key";
+    let B = await t.fetch.post("/bar", key);
+    await parentDfd.resolve("Nope!");
+    await aDfd.resolve("Nope!");
+    await tick();
+    expect(t.getState().loaderData).toEqual({
+      root: {
+        critical: "CRITICAL ROOT 1",
+        lazy: "__deferred_promise:lazy",
+      },
+      foo: {
+        critical: "CRITICAL A",
+        lazy: "__deferred_promise:lazy",
+      },
+    });
+
+    await B.action.resolve("ACTION");
+    expect(t.getFetcher(key)).toMatchObject({
+      state: "loading",
+      data: "ACTION",
+    });
+
+    await B.action.resolve("ACTION");
+    let aDfd2 = defer();
+    await B.loader.resolve(
+      setupDeferred({
+        critical: "CRITICAL A 2",
+        lazy: aDfd2.promise,
+      })
+    );
+    await tick();
+
+    expect(t.getState().loaderData).toEqual({
+      root: {
+        critical: "CRITICAL ROOT 2",
+        lazy: "__deferred_promise:lazy",
+      },
+      foo: {
+        critical: "CRITICAL A 2",
+        lazy: "__deferred_promise:lazy",
+      },
+    });
+
+    // TODO: Revisit this...
+    // The rest of this test is really hard to write without a better way
+    // to handle nested routes in setup().
+    // await parentDfd.resolve("Yep!");
+    // await aDfd2.resolve("Yep!");
+    // await tick();
+
+    // expect(t.getState().loaderData).toEqual({
+    //   root: {
+    //     critical: "CRITICAL ROOT 2",
+    //     lazy: "Yep!",
+    //   },
+    //   foo: {
+    //     critical: "CRITICAL A 2",
+    //     lazy: "Yep!",
+    //   },
+    // });
+    // expect(t.getFetcher(key)).toMatchObject({
+    //   state: "idle",
+    //   data: "ACTION",
+    // });
+  });
 });
 
 // describe("react-router", () => {
