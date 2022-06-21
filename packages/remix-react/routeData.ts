@@ -5,7 +5,7 @@ export interface RouteData {
 }
 
 export interface DeferredRouteData {
-  [routeId: string]: Record<string | number, Promise<unknown>> | undefined;
+  [routeId: string]: Record<string | number, Promise<unknown>>;
 }
 
 export interface DeferredRouteDataResolvers {
