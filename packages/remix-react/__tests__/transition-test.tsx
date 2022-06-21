@@ -2071,68 +2071,87 @@ function setupDeferred(initialData: Record<string, string | Promise<any>>) {
 }
 
 // eslint-disable-next-line jest/no-focused-tests
-fdescribe("deferred", () => {
+describe("deferred", () => {
   it("should support returning deferred responses", async () => {
     let t = setup({ url: "/" });
 
     let A = await t.navigate.get("/foo");
-
-    let dfd = defer();
+    let dfdA = defer();
     await A.loader.resolve(
       setupDeferred({
         critical: "1",
-        lazy: dfd.promise,
+        lazy: dfdA.promise,
       })
     );
-
-    // TODO: Can we get rid of this?
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(t.getState().loaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "critical": "1",
-          "lazy": "__deferred_promise:lazy",
-        },
-        "root": "ROOT",
-      }
-    `);
-    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "lazy": Promise {},
-        },
-      }
-    `);
-    expect(t.getState().transition).toMatchInlineSnapshot(`
-      Object {
-        "location": undefined,
-        "state": "idle",
-        "submission": undefined,
-        "type": "idle",
-      }
-    `);
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: "__deferred_promise:lazy",
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().deferredLoaderData).toEqual({
+      foo: {
+        lazy: expect.any(Promise),
+      },
+    });
+    expect(t.getState().transition.state).toBe("idle");
 
-    await dfd.resolve("2");
+    await dfdA.resolve("2");
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(t.getState().loaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "critical": "1",
-          "lazy": "2",
-        },
-        "root": "ROOT",
-      }
-    `);
-    expect(t.getState().transition).toMatchInlineSnapshot(`
-      Object {
-        "location": undefined,
-        "state": "idle",
-        "submission": undefined,
-        "type": "idle",
-      }
-    `);
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: "2",
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().deferredLoaderData).toEqual({
+      foo: {},
+    });
+    expect(t.getState().transition.state).toBe("idle");
+
+    let B = await t.navigate.get("/bar");
+    let dfdB = defer();
+    await B.loader.resolve(
+      setupDeferred({
+        critical: "3",
+        lazy: dfdB.promise,
+      })
+    );
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(t.getState().loaderData).toEqual({
+      bar: {
+        critical: "3",
+        lazy: "__deferred_promise:lazy",
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().deferredLoaderData).toEqual({
+      bar: {
+        lazy: expect.any(Promise),
+      },
+    });
+    expect(t.getState().transition.state).toBe("idle");
+
+    await dfdB.resolve("4");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(t.getState().loaderData).toEqual({
+      bar: {
+        critical: "3",
+        lazy: "4",
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().deferredLoaderData).toEqual({
+      bar: {},
+    });
+    expect(t.getState().transition.state).toBe("idle");
   });
 
   it("should cancel outstanding deferreds on a new navigation", async () => {
@@ -2147,8 +2166,6 @@ fdescribe("deferred", () => {
         lazy: dfd.promise,
       })
     );
-
-    // TODO: Can we get rid of this?
     await new Promise((r) => setTimeout(r, 0));
 
     let B = await t.navigate.get("/bar");
@@ -2202,11 +2219,9 @@ fdescribe("deferred", () => {
 
   it("should not cancel outstanding deferreds on reused route", async () => {
     let rootDfd = defer();
-    console.log("setup");
     let t = setup({
       url: "/",
       rootLoaderOverride() {
-        console.log("calling rootLoaderOverride");
         return setupDeferred({
           critical: "1",
           lazy: rootDfd.promise,
@@ -2214,7 +2229,6 @@ fdescribe("deferred", () => {
       },
     });
 
-    console.log("navigate foo");
     let A = await t.navigate.get("/foo?key=value");
 
     let dfd = defer();
@@ -2224,11 +2238,8 @@ fdescribe("deferred", () => {
         lazy: dfd.promise,
       })
     );
-
-    // TODO: Can we get rid of this?
     await new Promise((r) => setTimeout(r, 0));
 
-    console.log("navigate bar");
     let B = await t.navigate.get("/bar?key=value");
 
     // During navigation - deferreds remain as promises
@@ -2295,6 +2306,130 @@ fdescribe("deferred", () => {
       }
     `);
   });
+
+  it("should cancel outstanding deferreds on 404 navigations", async () => {
+    let t = setup({ url: "/" });
+
+    let A = await t.navigate.get("/foo");
+
+    let dfd = defer();
+    await A.loader.resolve(
+      setupDeferred({
+        critical: "1",
+        lazy: dfd.promise,
+      })
+    );
+    await new Promise((r) => setTimeout(r, 0));
+
+    let B = await t.navigate.get("/not/found");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(t.getState().transition.state).toEqual("idle");
+    expect(t.getState().loaderData).toEqual({
+      root: "ROOT",
+      // This seems to be an outstanding thing in TM - on 404's the previously
+      // non-matched route data doesn't get cleaned up
+      foo: {
+        critical: "1",
+        lazy: "__deferred_promise:lazy",
+      },
+    });
+    expect(t.getState().deferredLoaderData).toEqual({});
+
+    // Resolving doesn't do anything
+    await dfd.resolve("Nope!");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(t.getState().transition.state).toEqual("idle");
+    expect(t.getState().loaderData).toEqual({
+      root: "ROOT",
+      foo: {
+        critical: "1",
+        lazy: "__deferred_promise:lazy",
+      },
+    });
+    expect(t.getState().deferredLoaderData).toEqual({});
+  });
+
+  it("should not cancel outstanding deferreds on hash-only navigations", async () => {
+    let t = setup({ url: "/" });
+
+    let A = await t.navigate.get("/foo");
+
+    let dfd = defer();
+    await A.loader.resolve(
+      setupDeferred({
+        critical: "1",
+        lazy: dfd.promise,
+      })
+    );
+    await new Promise((r) => setTimeout(r, 0));
+
+    let B = await t.navigate.get("/foo#hash");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(t.getState().transition.state).toEqual("idle");
+    expect(t.getState().loaderData).toEqual({
+      root: "ROOT",
+      // This seems to be an outstanding thing in TM - on 404's the previously
+      // non-matched route data doesn't get cleaned up
+      foo: {
+        critical: "1",
+        lazy: "__deferred_promise:lazy",
+      },
+    });
+    expect(t.getState().deferredLoaderData).toEqual({
+      foo: {
+        lazy: expect.any(Promise),
+      },
+    });
+
+    await dfd.resolve("2");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(t.getState().transition.state).toEqual("idle");
+    expect(t.getState().loaderData).toEqual({
+      root: "ROOT",
+      foo: {
+        critical: "1",
+        lazy: "2",
+      },
+    });
+    expect(t.getState().deferredLoaderData).toEqual({
+      foo: {},
+    });
+  });
+
+  it("should handle promise rejections", async () => {
+    let t = setup({ url: "/" });
+    let A = await t.navigate.get("/foo");
+
+    let dfd = defer();
+    await A.loader.resolve(
+      setupDeferred({
+        critical: "1",
+        lazy: dfd.promise,
+      })
+    );
+
+    let err = new Error("Kaboom!");
+    await dfd.reject(err).catch(() => null);
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: err,
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
+      Object {
+        "foo": Object {},
+      }
+    `);
+  });
+
+  it.todo("cancels pending deferreds on action submissions");
+  it.todo("does not support deferred data on fetcher loads");
+  it.todo("cancels pending deferreds on fetcher reloads");
+  it.todo("cancels pending deferreds on fetcher action submissions");
 });
 
 // describe("react-router", () => {
