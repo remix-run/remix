@@ -120,7 +120,7 @@ export function importResolverPlugin(
   return {
     name: "esbuild-plugin-import",
     setup(build) {
-      let filter = /([t|j]sx?|[m|c][t|j]s)$/;
+      let filter = /\.([t|j]sx?|[m|c][t|j]s)$/;
 
       let libraryConfigMap = options.reduce((pre, option) => {
         if (option.libraryName) {
