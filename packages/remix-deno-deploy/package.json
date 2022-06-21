@@ -1,0 +1,30 @@
+{
+  "name": "@remix-run/deno-deploy",
+  "version": "1.6.0",
+  "description": "Deno Deploy server request handler for Remix",
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-deno-deploy"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@remix-run/server-runtime": "1.6.0",
+    "mime": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.9",
+    "@types/supertest": "^2.0.10",
+    "node-mocks-http": "^1.10.1",
+    "supertest": "^6.0.1"
+  },
+  "peerDependencies": {
+    "express": "^4.17.1"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

@@ -8,6 +8,7 @@ module.exports = {
   projects: [
     "packages/remix-dev",
     "packages/remix-architect",
+    "packages/remix-deno-deploy",
     "packages/remix-express",
     "packages/remix-netlify",
     "packages/remix-vercel",

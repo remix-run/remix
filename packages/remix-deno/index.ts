@@ -1,10 +1,4 @@
-import "./globals.ts";
-export { createFileSessionStorage } from "./sessions/fileStorage.ts";
-export {
-  createRequestHandler,
-  createRequestHandlerWithStaticFiles,
-  serveStaticFiles,
-} from "./server.ts";
+export { installGlobals } from "./globals";
 
 export {
   createCookie,
@@ -12,6 +6,14 @@ export {
   createMemorySessionStorage,
   createSessionStorage,
 } from "./implementations.ts";
+
+export { createFileSessionStorage } from "./sessions/fileStorage.ts";
+
+export {
+  createRequestHandler,
+  createRequestHandlerWithStaticFiles,
+  serveStaticFiles,
+} from "@remix-run/deno-deploy";
 
 export {
   createSession,

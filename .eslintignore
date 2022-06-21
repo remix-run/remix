@@ -10,4 +10,5 @@
 # Deno
 integration/helpers/deno-template
 packages/remix-deno
+packages/remix-deno-deploy
 templates/deno

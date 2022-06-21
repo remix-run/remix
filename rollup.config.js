@@ -687,11 +687,34 @@ function getAdapterConfig(adapterName) {
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
+const getDenoDeployAdapterConfig = () => {
+  let sourceDir = "packages/remix-deno-deploy";
+  let outputDir = getOutputDir("@remix-run/deno-deploy");
+
+  return [
+    {
+      input: `${sourceDir}/.empty.js`,
+      plugins: [
+        copy({
+          targets: [
+            { src: `LICENSE.md`, dest: outputDir },
+            { src: `${sourceDir}/**/*`, dest: outputDir },
+          ],
+          gitignore: true,
+        }),
+        copyToPlaygrounds(),
+      ],
+    },
+  ];
+};
+
+/** @returns {import("rollup").RollupOptions[]} */
 function remixServerAdapters() {
   return [
     ...getAdapterConfig("architect"),
     ...getAdapterConfig("cloudflare-pages"),
     ...getAdapterConfig("cloudflare-workers"),
+    ...getDenoDeployAdapterConfig(),
     ...getAdapterConfig("express"),
     ...getAdapterConfig("netlify"),
     ...getAdapterConfig("vercel"),
