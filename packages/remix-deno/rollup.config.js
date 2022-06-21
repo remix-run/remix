@@ -31,6 +31,11 @@ module.exports = function rollup() {
   return [
     {
       input: path.join(sourceDir, ".empty.js"),
+      watch: {
+        // Suppress the "you must provide an output directory" warning when
+        // running in watch mode since we don't care to write the empty bundle
+        skipWrite: true,
+      },
       plugins: [
         copy({ targets: copyTargets, gitignore: true }),
         copyToPlaygrounds(),
