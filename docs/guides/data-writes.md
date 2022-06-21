@@ -292,7 +292,7 @@ You can ship this code as-is. The browser will handle the pending UI and interru
 
 ### Graduate to `<Form>` and add pending UI
 
-Let's use progressive enhancement to make this UX a bit more fancy. By changing it from `<Form reloadDocument>` to `<Form>`, Remix will emulate the browser behavior with `fetch`. It will also give you access to the pending form data so you can build pending UI.
+Let's use progressive enhancement to make this UX a bit more fancy. By changing it from `<form>` to `<Form>`, Remix will emulate the browser behavior with `fetch`. It will also give you access to the pending form data so you can build pending UI.
 
 ```tsx [2, 11]
 import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
