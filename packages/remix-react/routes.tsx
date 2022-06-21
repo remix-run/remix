@@ -61,12 +61,17 @@ export type RouteDataFunction = {
      * implementation when a load/action is aborted.
      */
     signal: AbortSignal;
-  }): Promise<unknown | DeferredResponse | TransitionRedirect | void>;
+  }):
+    | Promise<unknown | DeferredResponse | TransitionRedirect | void>
+    | unknown
+    | DeferredResponse
+    | TransitionRedirect
+    | void;
 };
 
 export interface ClientRoute extends Route {
   loader?: RouteDataFunction;
-  action: RouteDataFunction;
+  action?: RouteDataFunction;
   shouldReload?: ShouldReloadFunction;
   ErrorBoundary?: any;
   CatchBoundary?: any;

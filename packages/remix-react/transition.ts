@@ -544,7 +544,7 @@ function isLoaderSubmissionRedirectLocation(
 
 export class TransitionRedirect {
   location: string;
-  constructor(location: Location | string, public setCookie: boolean) {
+  constructor(location: Location | string, public setCookie: boolean = false) {
     this.location =
       typeof location === "string"
         ? location
@@ -1047,6 +1047,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     fetchControllers.set(key, controller);
     let result = await callLoader(match, createUrl(href), controller.signal);
+
+    result = await resolveDeferredData(result);
+
     fetchControllers.delete(key);
 
     if (controller.signal.aborted) {
@@ -1110,6 +1113,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     fetchControllers.set(key, controller);
     let result = await callLoader(match, createUrl(href), controller.signal);
+
+    result = await resolveDeferredData(result);
 
     if (controller.signal.aborted) return;
     fetchControllers.delete(key);
@@ -1660,6 +1665,8 @@ async function callAction(
   match: ClientMatch,
   signal: AbortSignal
 ): Promise<DataResult> {
+  invariant(match.route.action, `Expected action for ${match.route.id}`);
+
   try {
     let value = await match.route.action({
       url: createUrl(submission.action),
@@ -2030,6 +2037,41 @@ function abortPendingDeferredControllers(
       cancelledDeferredRouteIds.add(routeId);
     }
   }
+}
+
+async function resolveDeferredData({
+  match,
+  value,
+  deferred,
+}: {
+  match: ClientMatch;
+  value: unknown;
+  deferred?: Record<string, Promise<unknown>>;
+}) {
+  let resolvedValue: any = value;
+
+  if (
+    typeof resolvedValue === "object" &&
+    resolvedValue &&
+    typeof deferred === "object"
+  ) {
+    let deferredPromises = Object.entries(deferred).map(
+      async ([key, promise]) => {
+        let resolved = await promise;
+        return { key, resolved };
+      }
+    );
+
+    let resolvedDeferred = await Promise.allSettled(deferredPromises);
+    for (let resolved of resolvedDeferred) {
+      if (resolved.status === "rejected") {
+        return { match, value: resolved.reason };
+      }
+      resolvedValue[resolved.value.key] = resolved.value.resolved;
+    }
+  }
+
+  return { match, value: resolvedValue };
 }
 
 function isCatchResult(result: DataResult): result is DataCatchResult {

@@ -286,207 +286,6 @@ describe("shouldReload", () => {
       }
     `);
   });
-
-  it("delegates to the route if it should reload or not if deferred resolved", async () => {
-    let rootLoader = jest.fn(
-      () =>
-        new DeferredResponse(
-          new Response("{}\n\n", {
-            headers: { "Content-Type": "text/remix-deferred" },
-          })
-        )
-    );
-    let childLoader = jest.fn(() => "CHILD");
-    let shouldReload = jest.fn(({ url, prevUrl, submission }) => {
-      return url.searchParams.get("reload") === "1";
-    });
-    let tm = createTestTransitionManager("/", {
-      deferredLoaderData: {},
-      loaderData: {
-        "/": {},
-      },
-      routes: [
-        {
-          path: "",
-          id: "root",
-          hasLoader: true,
-          loader: rootLoader,
-          shouldReload,
-          element: {} as any,
-          module: "",
-          children: [
-            {
-              path: "/",
-              id: "index",
-              action: () => null,
-              element: {} as any,
-              module: "",
-              hasLoader: false,
-            },
-            {
-              path: "/child",
-              id: "child",
-              hasLoader: true,
-              loader: childLoader,
-              action: () => null,
-              element: {} as any,
-              module: "",
-            },
-          ],
-        },
-      ],
-    });
-
-    await tm.send({
-      type: "navigation",
-      location: createLocation("/child?reload=1"),
-      action: Action.Push,
-    });
-    expect(rootLoader.mock.calls.length).toBe(1);
-
-    await tm.send({
-      type: "navigation",
-      location: createLocation("/child?reload=0"),
-      action: Action.Push,
-    });
-    expect(rootLoader.mock.calls.length).toBe(1);
-
-    await tm.send({
-      type: "navigation",
-      location: createLocation("/child"),
-      submission: createActionSubmission("/child"),
-      action: Action.Push,
-    });
-
-    expect(rootLoader.mock.calls.length).toBe(2);
-    let args = shouldReload.mock.calls[2][0];
-    expect(args).toMatchInlineSnapshot(`
-      Object {
-        "params": Object {},
-        "prevUrl": "http://localhost/child?reload=0",
-        "submission": Object {
-          "action": "/child",
-          "encType": "application/x-www-form-urlencoded",
-          "formData": FormData {},
-          "key": "1",
-          "method": "POST",
-        },
-        "url": "http://localhost/child",
-      }
-    `);
-  });
-
-  it("does not delegate to the route if it should reload or not if deferred didn't resolve", async () => {
-    let resolveBodyController;
-    let bodyControllerPromise = new Promise<
-      ReadableStreamController<Uint8Array>
-    >((resolve) => {
-      resolveBodyController = resolve;
-    });
-    let encoder = new TextEncoder();
-    let body = new ReadableStream<Uint8Array>({
-      start(controller) {
-        controller.enqueue(
-          encoder.encode(`{"foo":"__deferred_promise:foo"}\n\n`)
-        );
-        resolveBodyController(controller);
-      },
-    });
-    let resolveRootLoader = async () => {
-      let controller = await bodyControllerPromise;
-      controller.enqueue(encoder.encode(`data:{ "foo": "bar" }\n\n`));
-      controller.close();
-    };
-
-    let rootLoader = jest.fn(
-      () =>
-        new DeferredResponse(
-          new Response(body, {
-            headers: { "Content-Type": "text/remix-deferred" },
-          })
-        )
-    );
-    let childLoader = jest.fn(() => "CHILD");
-    let shouldReload = jest.fn(({ url, prevUrl, submission }) => {
-      return url.searchParams.get("reload") === "1";
-    });
-    let tm = createTestTransitionManager("/", {
-      deferredLoaderData: {},
-      loaderData: {
-        "/": "ROOT",
-      },
-      routes: [
-        {
-          path: "",
-          id: "root",
-          hasLoader: true,
-          loader: rootLoader,
-          shouldReload,
-          element: {} as any,
-          module: "",
-          children: [
-            {
-              path: "/",
-              id: "index",
-              action: () => null,
-              element: {} as any,
-              module: "",
-              hasLoader: false,
-            },
-            {
-              path: "/child",
-              id: "child",
-              hasLoader: true,
-              loader: childLoader,
-              action: () => null,
-              element: {} as any,
-              module: "",
-            },
-          ],
-        },
-      ],
-    });
-
-    console.log(tm.getState());
-
-    await tm.send({
-      type: "navigation",
-      location: createLocation("/child?reload=1"),
-      action: Action.Push,
-    });
-    expect(rootLoader.mock.calls.length).toBe(1);
-    console.log(tm.getState());
-
-    await tm.send({
-      type: "navigation",
-      location: createLocation("/child?reload=0"),
-      action: Action.Push,
-    });
-    expect(rootLoader.mock.calls.length).toBe(2);
-
-    await tm.send({
-      type: "navigation",
-      location: createLocation("/child"),
-      submission: createActionSubmission("/child"),
-      action: Action.Push,
-    });
-
-    let args = shouldReload.mock.calls[2][0];
-    expect(args).toMatchInlineSnapshot(`
-      Object {
-        "params": Object {},
-        "prevUrl": "http://localhost/child?reload=0",
-        "submission": Object {
-          "action": "/child",
-          "encType": "application/x-www-form-urlencoded",
-          "formData": FormData {},
-          "key": "1",
-          "method": "POST",
-        },
-        "url": "http://localhost/child",
-      }
-    `);
-  });
 });
 
 describe("no route match", () => {
@@ -2083,7 +1882,7 @@ describe("deferred", () => {
         lazy: dfdA.promise,
       })
     );
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
 
     expect(t.getState().loaderData).toEqual({
       foo: {
@@ -2100,7 +1899,7 @@ describe("deferred", () => {
     expect(t.getState().transition.state).toBe("idle");
 
     await dfdA.resolve("2");
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
 
     expect(t.getState().loaderData).toEqual({
       foo: {
@@ -2122,7 +1921,7 @@ describe("deferred", () => {
         lazy: dfdB.promise,
       })
     );
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
 
     expect(t.getState().loaderData).toEqual({
       bar: {
@@ -2139,7 +1938,7 @@ describe("deferred", () => {
     expect(t.getState().transition.state).toBe("idle");
 
     await dfdB.resolve("4");
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
 
     expect(t.getState().loaderData).toEqual({
       bar: {
@@ -2166,7 +1965,7 @@ describe("deferred", () => {
         lazy: dfd.promise,
       })
     );
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
 
     let B = await t.navigate.get("/bar");
 
@@ -2190,7 +1989,7 @@ describe("deferred", () => {
 
     // But they are frozen - no re-paints on resolve/reject!
     await dfd.resolve("2");
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
     expect(t.getState().loaderData).toMatchInlineSnapshot(`
       Object {
         "foo": Object {
@@ -2209,7 +2008,7 @@ describe("deferred", () => {
     `);
 
     await B.loader.resolve("BAR");
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
     expect(t.getState().loaderData).toEqual({
       root: "ROOT",
       bar: "BAR",
@@ -2238,7 +2037,7 @@ describe("deferred", () => {
         lazy: dfd.promise,
       })
     );
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
 
     let B = await t.navigate.get("/bar?key=value");
 
@@ -2269,7 +2068,7 @@ describe("deferred", () => {
     // But they are frozen - no re-paints on resolve/reject!
     await rootDfd.resolve("2");
     await dfd.resolve("4");
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
     expect(t.getState().loaderData).toMatchInlineSnapshot(`
       Object {
         "foo": Object {
@@ -2292,7 +2091,7 @@ describe("deferred", () => {
     `);
 
     await B.loader.resolve("BAR");
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
     expect(t.getState().loaderData).toEqual({
       root: {
         critical: "1",
@@ -2328,10 +2127,10 @@ describe("deferred", () => {
         lazy: dfd.promise,
       })
     );
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
 
     await t.navigate.get("/not/found");
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
 
     expect(t.getState().transition.state).toEqual("idle");
     expect(t.getState().loaderData).toEqual({
@@ -2351,7 +2150,7 @@ describe("deferred", () => {
     // Resolving doesn't do anything
     await rootDfd.resolve("Nope!");
     await dfd.resolve("Nope!");
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
     expect(t.getState().transition.state).toEqual("idle");
     expect(t.getState().loaderData).toEqual({
       root: {
@@ -2378,10 +2177,10 @@ describe("deferred", () => {
         lazy: dfd.promise,
       })
     );
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
 
     let B = await t.navigate.get("/foo#hash");
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
 
     expect(t.getState().transition.state).toEqual("idle");
     expect(t.getState().loaderData).toEqual({
@@ -2400,7 +2199,7 @@ describe("deferred", () => {
     });
 
     await dfd.resolve("2");
-    await new Promise((r) => setTimeout(r, 0));
+    await tick();
     expect(t.getState().transition.state).toEqual("idle");
     expect(t.getState().loaderData).toEqual({
       root: "ROOT",
@@ -2443,8 +2242,109 @@ describe("deferred", () => {
   });
 
   it.todo("cancels pending deferreds on action submissions");
-  it.todo("does not support deferred data on fetcher loads");
-  it.todo("cancels pending deferreds on fetcher reloads");
+
+  it("does not support deferred data on fetcher loads", async () => {
+    let t = setup({ url: "/foo" });
+
+    let A = t.fetch.submitGet("/foo");
+    let fetcher = t.getFetcher(A.key);
+    expect(fetcher.state).toBe("submitting");
+    expect(fetcher.type).toBe("loaderSubmission");
+
+    let dfd = defer();
+    await A.loader.resolve(
+      setupDeferred({
+        critical: "1",
+        lazy: dfd.promise,
+      })
+    );
+    await tick();
+
+    fetcher = t.getFetcher(A.key);
+    expect(fetcher.state).toBe("submitting");
+    expect(fetcher.type).toBe("loaderSubmission");
+
+    await dfd.resolve("2");
+    await tick();
+
+    fetcher = t.getFetcher(A.key);
+    expect(fetcher.state).toBe("idle");
+    expect(fetcher.type).toBe("done");
+    expect(fetcher.data).toEqual({ critical: "1", lazy: "2" });
+  });
+
+  test("loader submission re-fetch", async () => {
+    let t = setup({ url: "/foo" });
+    let key = "key";
+
+    let A = t.fetch.submitGet("/foo", key);
+
+    let dfd = defer();
+    await A.loader.resolve(
+      setupDeferred({
+        critical: "1",
+        lazy: dfd.promise,
+      })
+    );
+    await tick();
+
+    let fetcher = t.getFetcher(A.key);
+    expect(fetcher.state).toBe("submitting");
+    expect(fetcher.type).toBe("loaderSubmission");
+
+    await dfd.resolve("2");
+    await tick();
+
+    t.fetch.submitGet("/foo", key);
+    fetcher = t.getFetcher(key);
+    expect(fetcher.state).toBe("submitting");
+    expect(fetcher.type).toBe("loaderSubmission");
+    expect(fetcher.data).toEqual({ critical: "1", lazy: "2" });
+  });
+
+  it.only("cancels pending deferreds on fetcher reloads", async () => {
+    let t = setup({ url: "/foo" });
+    let key = "key";
+
+    let A = t.fetch.submitGet("/foo", key);
+
+    await A.loader.resolve(
+      setupDeferred({
+        critical: "1",
+        lazy: new Promise(() => {}),
+      })
+    );
+    await tick();
+
+    let fetcher = t.getFetcher(A.key);
+    expect(fetcher.state).toBe("submitting");
+    expect(fetcher.type).toBe("loaderSubmission");
+
+    let B = t.fetch.submitGet("/foo", key);
+
+    let dfd = defer();
+    await B.loader.resolve(
+      setupDeferred({
+        critical: "1",
+        lazy: dfd.promise,
+      })
+    );
+    await tick();
+
+    fetcher = t.getFetcher(B.key);
+    expect(fetcher.state).toBe("submitting");
+    expect(fetcher.type).toBe("loaderSubmission");
+    expect(fetcher.data).toBe(undefined);
+
+    await dfd.resolve("2");
+    await tick();
+
+    fetcher = t.getFetcher(key);
+    expect(fetcher.state).toBe("idle");
+    expect(fetcher.type).toBe("done");
+    expect(fetcher.data).toEqual({ critical: "1", lazy: "2" });
+  });
+
   it.todo("cancels pending deferreds on fetcher action submissions");
 });
 
@@ -2866,3 +2766,7 @@ let setup = (
 };
 
 function FakeComponent() {}
+
+function tick() {
+  return new Promise((r) => setTimeout(r, 0));
+}
