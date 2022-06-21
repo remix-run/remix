@@ -386,6 +386,13 @@ Great, let's get those posts into the database with the seed script:
 npx prisma db seed
 ```
 
+💿 Let's generate a migration file for our schema changes - which will be required if you deploy your application rather than just running in dev mode locally.
+
+```sh
+npx prisma db migrate
+```
+<docs-warning>You'll get the ability to name the migration name, ideally you can refer back to what the changes you made are, so I'd suggest `create-post-model` for the name.</docs-warning>
+
 💿 Now update the `app/models/post.server.ts` file to read from the SQLite database:
 
 ```ts filename=app/models/post.server.ts
