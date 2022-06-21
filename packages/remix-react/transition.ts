@@ -2,7 +2,6 @@
 // and leverage `react-router` here instead
 import { Action } from "history";
 import type { Location } from "history";
-import { tsConstructSignatureDeclaration } from "@babel/types";
 
 import type { DeferredRouteData, RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
@@ -575,8 +574,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let { routes } = init;
 
   let pendingNavigationController: AbortController | undefined;
+  // Map of routeId->Abortcontroller for pending deferred returned from loaders
   let pendingNavigationDeferredControllers: Map<string, AbortController> =
     new Map();
+  // Set of routeId's for which we cancelled pending deferred's and need to
+  // track until the end of the navigation so we can clear their
+  // deferredLoaderData
   let cancelledDeferredRouteIds: Set<string> = new Set();
   let fetchControllers = new Map<string, AbortController>();
   let incrementingLoadId = 0;
@@ -686,11 +689,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
             },
           ];
           console.debug("[transition]   handling not found navigation");
-          // handled
           await handleNotFoundNavigation(location, matches);
         } else if (!submission && isHashChangeOnly(location)) {
           console.debug("[transition]   handling hash change");
-          // handled
           await handleHashChange(location, matches);
         }
         // back/forward button, treat all as normal navigation
@@ -698,7 +699,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
           console.debug(
             "[transition]   handling Action.Pop (back/forward button)"
           );
-          // handled
           await handleLoad(location, matches);
         }
         // <Form method="post | put | delete | patch">
@@ -734,7 +734,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
         // <Link>, navigate()
         else {
           console.debug("[transition]   handling link navigation");
-          // handled
           await handleLoad(location, matches);
         }
 
@@ -1193,9 +1192,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     abortNormalNavigation();
     abortPendingDeferredControllers(
       pendingNavigationDeferredControllers,
-      cancelledDeferredRouteIds,
-      matches,
-      []
+      cancelledDeferredRouteIds
     );
 
     let transition: TransitionStates["Loading"] = {
@@ -2017,14 +2014,14 @@ function makeDeferredLoaderData(
 function abortPendingDeferredControllers(
   pendingNavigationDeferredControllers: Map<string, AbortController>,
   cancelledDeferredRouteIds: Set<string>,
-  matches: ClientMatch[],
-  matchesToLoad: ClientMatch[]
+  matches: ClientMatch[] = [],
+  matchesToLoad: ClientMatch[] = []
 ): void {
   for (let [routeId, controller] of pendingNavigationDeferredControllers) {
     // Can cancel if this route is no longer matched
-    let isRouteMatched = matches?.some((m) => m.route.id === routeId);
+    let isRouteMatched = matches.some((m) => m.route.id === routeId);
     // Or if this route is about to be reloaded
-    let isRouteLoading = matchesToLoad?.some((m) => m.route.id === routeId);
+    let isRouteLoading = matchesToLoad.some((m) => m.route.id === routeId);
     // TODO: add boundary handling when we do actions - cancel below boundary
     let foundBoundaryId = false;
     if (!isRouteMatched || isRouteLoading || foundBoundaryId) {

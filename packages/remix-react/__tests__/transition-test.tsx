@@ -2308,42 +2308,58 @@ describe("deferred", () => {
   });
 
   it("should cancel outstanding deferreds on 404 navigations", async () => {
-    let t = setup({ url: "/" });
+    let rootDfd = defer();
+    let t = setup({
+      url: "/",
+      rootLoaderOverride() {
+        return setupDeferred({
+          critical: "1",
+          lazy: rootDfd.promise,
+        });
+      },
+    });
 
-    let A = await t.navigate.get("/foo");
+    let A = await t.navigate.get("/foo?key=value");
 
     let dfd = defer();
     await A.loader.resolve(
       setupDeferred({
-        critical: "1",
+        critical: "2",
         lazy: dfd.promise,
       })
     );
     await new Promise((r) => setTimeout(r, 0));
 
-    let B = await t.navigate.get("/not/found");
+    await t.navigate.get("/not/found");
     await new Promise((r) => setTimeout(r, 0));
 
     expect(t.getState().transition.state).toEqual("idle");
     expect(t.getState().loaderData).toEqual({
-      root: "ROOT",
+      root: {
+        critical: "1",
+        lazy: "__deferred_promise:lazy",
+      },
       // This seems to be an outstanding thing in TM - on 404's the previously
       // non-matched route data doesn't get cleaned up
       foo: {
-        critical: "1",
+        critical: "2",
         lazy: "__deferred_promise:lazy",
       },
     });
     expect(t.getState().deferredLoaderData).toEqual({});
 
     // Resolving doesn't do anything
+    await rootDfd.resolve("Nope!");
     await dfd.resolve("Nope!");
     await new Promise((r) => setTimeout(r, 0));
     expect(t.getState().transition.state).toEqual("idle");
     expect(t.getState().loaderData).toEqual({
-      root: "ROOT",
-      foo: {
+      root: {
         critical: "1",
+        lazy: "__deferred_promise:lazy",
+      },
+      foo: {
+        critical: "2",
         lazy: "__deferred_promise:lazy",
       },
     });
