@@ -15,9 +15,9 @@ Many times people reach for global state management libraries in React like redu
 
 There are a few ways to call an action and get the routes to revalidate:
 
-- [`<Form>`](../api/remix#form)
-- [`useSubmit()`](../api/remix#usesubmit)
-- [`useFetcher()`](../api/remix#usefetcher)
+- [`<Form>`][form]
+- [`useSubmit()`][use-submit]
+- [`useFetcher()`][use-fetcher]
 
 This guide only covers `<Form>`. We suggest you read the docs for the other two after this guide to get a sense of how to use them. Most of this guide applies to `useSubmit` but `useFetcher` is a bit different.
 
@@ -314,7 +314,7 @@ export default function NewProject() {
 
 If you don't have the time or drive to do the rest of the job here, use `<Form reloadDocument>`. This lets the browser continue to handle the pending UI state (spinner in the favicon of the tab, progress bar in the address bar, etc.) If you simply use `<Form>` without implementing pending UI, the user will have no idea anything is happening when they submit a form.
 
-<docs-info>We recommend always using capital-F Form, and if you want to let the browser handle the pending UI, use the <code>&lt;Form reloadDocument&gt;</code> prop.</docs-info>
+<docs-info>We recommend always using capital-F Form, and if you want to let the browser handle the pending UI, use the <code>\<Form reloadDocument></code> prop.</docs-info>
 
 Now let's add some pending UI so the user has a clue something happened when they submit. There's a hook called `useTransition`. When there is a pending form submission, Remix will give you the serialized version of the form as a <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData">`FormData`</a> object. You'll be most interested in the <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData/get">`formData.get()`</a> method..
 
@@ -516,9 +516,16 @@ From your components perspective, all that happened was the `useTransition` hook
 
 ## See also
 
-- [Form](../api/remix#form)
-- [useTransition](../api/remix#usetransition)
-- [Actions](../api/conventions#action)
-- [Loaders](../api/conventions#loader)
-- [`useSubmit()`](../api/remix#usesubmit)
-- [`useFetcher()`](../api/remix#usefetcher)
+- [Form][form]
+- [useTransition][use-transition]
+- [Actions][actions]
+- [Loaders][loaders]
+- [`useSubmit()`][use-submit]
+- [`useFetcher()`][use-fetcher]
+
+[form]: ../api/remix#form
+[use-submit]: ../api/remix#usesubmit
+[use-fetcher]: ../api/remix#usefetcher
+[use-transition]: ../api/remix#usetransition
+[actions]: ../api/conventions#action
+[loaders]: ../api/conventions#loader

@@ -21,7 +21,7 @@ Server adapters:
 - `@remix-run/netlify`
 - `@remix-run/vercel`
 
-These package provides all the components, hooks, and [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) objects and helpers.
+These package provides all the components, hooks, and [Web Fetch API][web-fetch-api] objects and helpers.
 
 ## Components and Hooks
 
@@ -89,9 +89,9 @@ export default function App() {
 
 You can pass extra props to `<Scripts />` like `<Scripts crossOrigin />` for hosting your static assets on a different server than your app.
 
-The example above renders several `<script />` tags into the resulting HTML. While this usually just works, you might have configured a [content security policy for scripts](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) that prevents these `<script />` tags from being executed. In particular, to support [content security policies with nonce-sources for scripts](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources), the `<Scripts />`, `<LiveReload />` and `<ScrollRestoration />` components support a `nonce` property, e.g.`<Script nonce={nonce}/>`. The provided nonce is subsequently passed to the `<script />` tag rendered into the HTML by these components, allowing the scripts to be executed in accordance with your CSP policy.
+The example above renders several `<script />` tags into the resulting HTML. While this usually just works, you might have configured a [content security policy for scripts][content-security-policy-for-scripts] that prevents these `<script />` tags from being executed. In particular, to support [content security policies with nonce-sources for scripts][content-security-policies-with-nonce-sources-for-scripts], the `<Scripts />`, `<LiveReload />` and `<ScrollRestoration />` components support a `nonce` property, e.g.`<Script nonce={nonce}/>`. The provided nonce is subsequently passed to the `<script />` tag rendered into the HTML by these components, allowing the scripts to be executed in accordance with your CSP policy.
 
-Learn more about `meta` and `links` exports in the [conventions](/api/conventions) documentation.
+Learn more about `meta` and `links` exports in the [conventions][conventions] documentation.
 
 ### `<Link>`
 
@@ -259,7 +259,7 @@ See also:
 
 #### `<Form method>`
 
-This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) to be used: get, post, put, patch, delete. The default is "get".
+This determines the [HTTP verb][http-verb] to be used: get, post, put, patch, delete. The default is "get".
 
 ```tsx
 <Form method="post" />
@@ -293,7 +293,7 @@ If true, it will submit the form with the browser instead of JavaScript, even if
 <Form reloadDocument />
 ```
 
-<docs-info>This is recommended over <code>&lt;form></code></docs-info>
+<docs-info>This is recommended over <code>\<form></code></docs-info>
 
 When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is.
 
@@ -695,7 +695,7 @@ function SubmitButton() {
 
 #### `transition.submission`
 
-Any transition that started from a `<Form>` or `useSubmit` will have your form's submission attached to it. This is primarily useful to build "Optimistic UI" with the `submission.formData` [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) object.
+Any transition that started from a `<Form>` or `useSubmit` will have your form's submission attached to it. This is primarily useful to build "Optimistic UI" with the `submission.formData` [`FormData`][form-data] object.
 
 TODO: Example
 
@@ -1525,7 +1525,7 @@ return new Response(null, {
 
 Allows you to handle multipart forms (file uploads) for your app.
 
-Would be useful to understand [the Browser File API](https://developer.mozilla.org/en-US/docs/Web/API/File) to know how to use this API.
+Would be useful to understand [the Browser File API][the-browser-file-api] to know how to use this API.
 
 It's to be used in place of `request.formData()`.
 
@@ -1738,7 +1738,7 @@ The `UploadHandler` function accepts a number of parameters about the file:
 | filename    | string                    | The name of the file that the user selected for upload (like `rickroll.mp4`) |
 | contentType | string                    | The content type of the file (like `videomp4`)                               |
 
-Your job is to do whatever you need with the `data` and return a value that's a valid [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) value: [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File), `string`, or `undefined` to skip adding it to the resulting FormData.
+Your job is to do whatever you need with the `data` and return a value that's a valid [`FormData`][form-data] value: [`File`][the-browser-file-api], `string`, or `undefined` to skip adding it to the resulting FormData.
 
 ### Upload Handler Composition
 
@@ -1771,7 +1771,7 @@ export const fileUploadHandler: UploadHandler = (args) => {
 
 ## Cookies
 
-A [cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies) is a small piece of information that your server sends someone in a HTTP response that their browser will send back on subsequent requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions][sessions]), shopping carts, user preferences, and many other features that require remembering who is "logged in".
+A [cookie][cookie] is a small piece of information that your server sends someone in a HTTP response that their browser will send back on subsequent requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions][sessions]), shopping carts, user preferences, and many other features that require remembering who is "logged in".
 
 Remix's `Cookie` interface provides a logical, reusable container for cookie metadata.
 
@@ -1853,7 +1853,7 @@ export default function Home() {
 
 ### Cookie attributes
 
-Cookies have [several attributes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes) that control when they expire, how they are accessed, and where they are sent. Any of these attributes may be specified either in `createCookie(name, options)`, or during `serialize()` when the `Set-Cookie` header is generated.
+Cookies have [several attributes][several-attributes] that control when they expire, how they are accessed, and where they are sent. Any of these attributes may be specified either in `createCookie(name, options)`, or during `serialize()` when the `Set-Cookie` header is generated.
 
 ```js
 const cookie = createCookie("user-prefs", {
@@ -1874,7 +1874,7 @@ cookie.serialize(userPrefs);
 cookie.serialize(userPrefs, { sameSite: "strict" });
 ```
 
-Please read [more info about these attributes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes) to get a better understanding of what they do.
+Please read [more info about these attributes][several-attributes] to get a better understanding of what they do.
 
 ### Signing cookies
 
@@ -1933,7 +1933,7 @@ const cookie = createCookie("cookie-name", {
 });
 ```
 
-To learn more about each attribute, please see the [MDN Set-Cookie docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes).
+To learn more about each attribute, please see the [MDN Set-Cookie docs][several-attributes].
 
 ### `isCookie`
 
@@ -2176,7 +2176,7 @@ export default function LogoutRoute() {
 }
 ```
 
-<docs-warning>It's important that you logout (or perform any mutation for that matter) in an `action` and not a `loader`. Otherwise you open your users to [Cross-Site Request Forgery](https://developer.mozilla.org/en-US/docs/Glossary/CSRF) attacks. Also, Remix only re-calls `loaders` when `actions` are called.</docs-warning>
+<docs-warning>It's important that you logout (or perform any mutation for that matter) in an `action` and not a `loader`. Otherwise you open your users to [Cross-Site Request Forgery][cross-site-request-forgery] attacks. Also, Remix only re-calls `loaders` when `actions` are called.</docs-warning>
 
 ### Session Gotchas
 
@@ -2337,7 +2337,7 @@ export { getSession, commitSession, destroySession };
 
 ### `createCloudflareKVSessionStorage` (cloudflare-workers)
 
-For [Cloudflare KV](https://developers.cloudflare.com/workers/learning/how-kv-works) backed sessions, use `createCloudflareKVSessionStorage()`.
+For [Cloudflare KV][cloudflare-kv] backed sessions, use `createCloudflareKVSessionStorage()`.
 
 The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
@@ -2366,7 +2366,7 @@ export { getSession, commitSession, destroySession };
 
 ### `createArcTableSessionStorage` (architect, Amazon DynamoDB)
 
-For [Amazon DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/) backed sessions, use `createArcTableSessionStorage()`.
+For [Amazon DynamoDB][amazon-dynamo-db] backed sessions, use `createArcTableSessionStorage()`.
 
 The advantage of DynamoDB backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
@@ -2551,7 +2551,7 @@ export async function loader({ request }) {
 
 This component is a wrapper around React Router's Outlet with the ability to pass UI state down to nested routes.
 
-<docs-warning>You can use this for loader data, but you don't need to. It's easier to access all loader data in any component via [`useLoaderData`](#useloaderdata) or [`useMatches`](#usematches).</docs-warning>
+<docs-warning>You can use this for loader data, but you don't need to. It's easier to access all loader data in any component via [`useLoaderData`][use-loader-data] or [`useMatches`][use-matches].</docs-warning>
 
 Here's a practical example of when you may want to use this feature. Let's say you've got a list of companies that have invoices and you want to display those companies in an accordion. We'll render our outlet in that accordion, but we want the invoice sorting to be controlled by the parent (so changing companies preserves the invoice sorting). This is a perfect use case for `<Outlet context>`.
 
@@ -2699,3 +2699,17 @@ export default function CompanyRoute() {
 [disabling-javascript]: ../guides/disabling-javascript
 [example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data
 [index query param]: ../guides/routing#what-is-the-index-query-param
+[web-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+[content-security-policy-for-scripts]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
+[content-security-policies-with-nonce-sources-for-scripts]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources
+[conventions]: /api/conventions
+[http-verb]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
+[form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
+[the-browser-file-api]: https://developer.mozilla.org/en-US/docs/Web/API/File
+[cookie]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies
+[several-attributes]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes
+[cross-site-request-forgery]: https://developer.mozilla.org/en-US/docs/Glossary/CSRF
+[cloudflare-kv]: https://developers.cloudflare.com/workers/learning/how-kv-works
+[amazon-dynamo-db]: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide
+[use-loader-data]: #useloaderdata
+[use-matches]: #usematches

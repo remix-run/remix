@@ -5,7 +5,7 @@ order: 1
 
 # Philosophy
 
-We've worked on a lot of different types of websites: static sites for credit card companies, social media platforms, learning management systems, content management systems, and e-commerce to name a few. We've also trained hundreds of development teams with our training company, [React Training](https://reacttraining.com). These teams build websites we all use regularly. Based on our personal development experience and our client's products, we built Remix to be able to handle the dynamic nature of both the front end and the back end of a web project.
+We've worked on a lot of different types of websites: static sites for credit card companies, social media platforms, learning management systems, content management systems, and e-commerce to name a few. We've also trained hundreds of development teams with our training company, [React Training][react-training]. These teams build websites we all use regularly. Based on our personal development experience and our client's products, we built Remix to be able to handle the dynamic nature of both the front end and the back end of a web project.
 
 The Remix philosophy can be summed up in four points:
 
@@ -24,7 +24,7 @@ What you can't make fast is the user's network. The only thing you can do is **d
 
 There are a lot of ways Remix helps you send less stuff over the network and we hope to talk about all of them, but for now here's one: fetching a list of records.
 
-Consider [the Github Gist API](https://api.github.com/gists). This payload is 75kb unpacked and 12kb over the network compressed. If you fetch it in the browser you make the user download all of it. It might look like this:
+Consider [the Github Gist API][the-github-gist-api]. This payload is 75kb unpacked and 12kb over the network compressed. If you fetch it in the browser you make the user download all of it. It might look like this:
 
 ```jsx
 export default function Gists() {
@@ -100,7 +100,7 @@ This drops the payload from 12kB compressed, 75kB total to 1.8kB compressed, 3.8
 
 These technologies have been around for a long time. They're solid. Remix embraces them completely. Combining HTTP Caching, Remix's focus on URLs for assets, dynamic server rendering, and HTML features like `<link rel=prefetch>`, you have all the tools to make your app snappy. Browsers and HTML got really good in the 20+ years we've been using it.
 
-We try to keep the Remix API to a minimum, and instead work with web standards. For example, instead of inventing our own `req/res` API, or even using Node's API, Remix (and your Remix apps) work with the [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) objects. This means as you get good at Remix, you're really just getting good at web standards like [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request), [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response), [`URLSearchParams`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams) and [`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL). All of these are already in your browser, now they're on your server no matter where you deploy to.
+We try to keep the Remix API to a minimum, and instead work with web standards. For example, instead of inventing our own `req/res` API, or even using Node's API, Remix (and your Remix apps) work with the [Web Fetch API][web-fetch-api] objects. This means as you get good at Remix, you're really just getting good at web standards like [`Request`][request], [`Response`][response], [`URLSearchParams`][url-search-params] and [`URL`][url]. All of these are already in your browser, now they're on your server no matter where you deploy to.
 
 When doing data mutations, we augmented HTML forms. When we prefetch data and assets for the next page, we use `<link rel="prefetch">` and let the browser deal with all of the complexity of caching a resource. If the browser has an API for a use case, Remix uses it.
 
@@ -131,3 +131,11 @@ Remix's APIs make it convenient to use the fundamental Browser/HTTP/JavaScript, 
 For example, getting CSS on specific layouts in your app is done with a route module method named `links`, where you return an array of objects with the values of an HTML `<link>` tag. We abstract enough to optimize your app's performance (they're objects so we can dedupe them, preload them), without hiding the underlying technology. Learn how to prefetch assets in Remix with `links`, and you've learned how to prefetch assets in any website.
 
 Get good at Remix, get good at the web.
+
+[react-training]: https://reacttraining.com
+[the-github-gist-api]: https://api.github.com/gists
+[web-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+[request]: https://developer.mozilla.org/en-US/docs/Web/API/Request
+[response]: https://developer.mozilla.org/en-US/docs/Web/API/Response
+[url-search-params]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
+[url]: https://developer.mozilla.org/en-US/docs/Web/API/URL
