@@ -22,8 +22,9 @@ import { serverAssetsManifestPlugin } from "./compiler/plugins/serverAssetsManif
 import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlugin";
 import { serverEntryModulePlugin } from "./compiler/plugins/serverEntryModulePlugin";
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
-import { writeFileSafe } from "./compiler/utils/fs";
 import { urlImportsPlugin } from "./compiler/plugins/urlImportsPlugin";
+import { importResolverPlugin } from "./compiler/plugins/importResolverPlugin";
+import { writeFileSafe } from "./compiler/utils/fs";
 
 // When we build Remix, this shim file is copied directly into the output
 // directory in the same place relative to this file. It is eventually injected
@@ -347,12 +348,22 @@ async function createBrowserBuild(
       path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
   }
 
-  let plugins = [
+  let plugins: esbuild.Plugin[] = [
     urlImportsPlugin(),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
+    importResolverPlugin([
+      {
+        libraryName: "@remix-run/react",
+        libraryDirectory: "",
+        transformToDefaultImport: false,
+        ignoreImports: [/\b(?!LiveReload\b)\w+/],
+        // camel2DashComponentName: true,
+        camel2UnderlineComponentName: true,
+      },
+    ]),
   ];
 
   return esbuild.build({
@@ -418,6 +429,16 @@ function createServerBuild(
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config),
     serverAssetsManifestPlugin(assetsManifestPromiseRef),
+    importResolverPlugin([
+      {
+        libraryName: "@remix-run/react",
+        libraryDirectory: "",
+        transformToDefaultImport: false,
+        ignoreImports: [/\b(?!LiveReload\b)\w+/],
+        // camel2DashComponentName: true,
+        camel2UnderlineComponentName: true,
+      },
+    ]),
     serverBareModulesPlugin(config, dependencies, options.onWarning),
   ];
 
