@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/architect",
-  "version": "1.6.0",
+  "version": "1.6.1-pre.0",
   "description": "Architect server request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -13,7 +13,7 @@
   "license": "MIT",
   "dependencies": {
     "@architect/functions": "^5.0.2",
-    "@remix-run/node": "1.6.0",
+    "@remix-run/node": "1.6.1-pre.0",
     "@types/aws-lambda": "^8.10.82"
   },
   "devDependencies": {
