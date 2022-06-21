@@ -37,33 +37,38 @@ export function serverBareModulesPlugin(
   return {
     name: "server-bare-modules",
     setup(build) {
-      build.onResolve({ filter: /.*/ }, ({ importer, path }) => {
+      build.onResolve({ filter: /.*/ }, ({ importer, path: importPath }) => {
         // If it's not a bare module ID, bundle it.
-        if (!isBareModuleId(resolvePath(path))) {
+        if (!isBareModuleId(resolvePath(importPath))) {
           return undefined;
         }
 
         // To prevent `import xxx from "remix"` from ending up in the bundle
         // we "bundle" remix but the other modules where the code lives.
-        if (path === "remix") {
+        if (importPath === "remix") {
+          return undefined;
+        }
+
+        // force bundle LiveReload into the bundle to prevent issues with process.env variables not being replaced when using unbundled servers
+        if (importPath === "@remix-run/react/livereload") {
           return undefined;
         }
 
         // These are our virtual modules, always bundle them because there is no
         // "real" file on disk to externalize.
         if (
-          path === serverBuildVirtualModule.id ||
-          path === assetsManifestVirtualModule.id
+          importPath === serverBuildVirtualModule.id ||
+          importPath === assetsManifestVirtualModule.id
         ) {
           return undefined;
         }
 
         // Always bundle CSS files so we get immutable fingerprinted asset URLs.
-        if (path.endsWith(".css")) {
+        if (importPath.endsWith(".css")) {
           return undefined;
         }
 
-        let packageName = getNpmPackageName(path);
+        let packageName = getNpmPackageName(importPath);
 
         // Warn if we can't find an import for a package.
         if (
@@ -73,7 +78,7 @@ export function serverBareModulesPlugin(
           !dependencies[packageName]
         ) {
           onWarning(
-            `The path "${path}" is imported in ` +
+            `The path "${importPath}" is imported in ` +
               `${relative(process.cwd(), importer)} but ` +
               `${packageName} is not listed in your package.json dependencies. ` +
               `Did you forget to install it?`,
@@ -92,7 +97,9 @@ export function serverBareModulesPlugin(
         for (let pattern of remixConfig.serverDependenciesToBundle) {
           // bundle it if the path matches the pattern
           if (
-            typeof pattern === "string" ? path === pattern : pattern.test(path)
+            typeof pattern === "string"
+              ? importPath === pattern
+              : pattern.test(importPath)
           ) {
             return undefined;
           }
@@ -104,12 +111,12 @@ export function serverBareModulesPlugin(
           (!remixConfig.serverBuildTarget ||
             remixConfig.serverBuildTarget === "node-cjs")
         ) {
-          warnOnceIfEsmOnlyPackage(packageName, path, onWarning);
+          warnOnceIfEsmOnlyPackage(packageName, importPath, onWarning);
         }
 
         // Externalize everything else if we've gotten here.
         return {
-          path,
+          path: importPath,
           external: true,
         };
       });
