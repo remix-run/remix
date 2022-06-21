@@ -94,18 +94,6 @@ jobs:
         if: steps.version.outputs.NEXT_VERSION
         run: npm run publish
 
-      - name: 🐱 Create GitHub release
-        uses: actions/create-release@v1
-        if: steps.version.outputs.NEXT_VERSION
-        with:
-          draft: false
-          prerelease: true
-          release_name: v${{ steps.version.outputs.NEXT_VERSION }}
-          tag_name: v${{ steps.version.outputs.NEXT_VERSION }}
-        env:
-          # need this token in order to have it trigger the comment and deployment test workflows
-          GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
-
   comment:
     needs: [nightly]
     name: 📝 Comment on related issues and pull requests
