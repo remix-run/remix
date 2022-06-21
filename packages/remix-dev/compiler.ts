@@ -349,21 +349,17 @@ async function createBrowserBuild(
   }
 
   let plugins: esbuild.Plugin[] = [
+    importResolverPlugin([
+      {
+        libraryName: "@remix-run/react",
+        ignoreImports: [/\b(?!LiveReload\b)\w+/],
+      },
+    ]),
     urlImportsPlugin(),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
-    importResolverPlugin([
-      {
-        libraryName: "@remix-run/react",
-        libraryDirectory: "",
-        transformToDefaultImport: false,
-        ignoreImports: [/\b(?!LiveReload\b)\w+/],
-        // camel2DashComponentName: true,
-        camel2UnderlineComponentName: true,
-      },
-    ]),
   ];
 
   return esbuild.build({
@@ -423,22 +419,18 @@ function createServerBuild(
   let isDenoRuntime = config.serverBuildTarget === "deno";
 
   let plugins: esbuild.Plugin[] = [
+    importResolverPlugin([
+      {
+        libraryName: "@remix-run/react",
+        ignoreImports: [/\b(?!LiveReload\b)\w+/],
+      },
+    ]),
     urlImportsPlugin(),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config),
     serverAssetsManifestPlugin(assetsManifestPromiseRef),
-    importResolverPlugin([
-      {
-        libraryName: "@remix-run/react",
-        libraryDirectory: "",
-        transformToDefaultImport: false,
-        ignoreImports: [/\b(?!LiveReload\b)\w+/],
-        // camel2DashComponentName: true,
-        camel2UnderlineComponentName: true,
-      },
-    ]),
     serverBareModulesPlugin(config, dependencies, options.onWarning),
   ];
 

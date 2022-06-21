@@ -50,7 +50,7 @@ export function serverBareModulesPlugin(
         }
 
         // force bundle LiveReload into the bundle to prevent issues with process.env variables not being replaced when using unbundled servers
-        if (importPath === "@remix-run/react/livereload") {
+        if (importPath === "@remix-run/react/live-reload") {
           return undefined;
         }
 
