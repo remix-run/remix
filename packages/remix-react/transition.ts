@@ -574,7 +574,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let { routes } = init;
 
   let pendingNavigationController: AbortController | undefined;
-  // Map of routeId->Abortcontroller for pending deferred returned from loaders
+  // Map of routeId->AbortController for pending deferred returned from loaders
   let pendingNavigationDeferredControllers: Map<string, AbortController> =
     new Map();
   // Set of routeId's for which we cancelled pending deferred's and need to
@@ -625,17 +625,18 @@ export function createTransitionManager(init: TransitionManagerInit) {
       );
       if (updates.transition === IDLE_TRANSITION) {
         pendingNavigationController = undefined;
-        cancelledDeferredRouteIds.forEach((routeId) => {
-          pendingNavigationDeferredControllers.delete(routeId);
-        });
 
-        // We need to only preserve deferredData that wasn't cancelled, so do a
-        // manual merge here checking for each routeId
+        // Preserve deferred data for routes that were not cancelled, or were
+        // cancelled and returned a subsequent deferred() in actionReload
         overrides.deferredLoaderData = [
           ...Object.entries(state.deferredLoaderData),
           ...Object.entries(updates.deferredLoaderData || {}),
         ]
-          .filter(([routeId]) => !cancelledDeferredRouteIds.has(routeId))
+          .filter(
+            ([routeId]) =>
+              !cancelledDeferredRouteIds.has(routeId) ||
+              pendingNavigationDeferredControllers.has(routeId)
+          )
           .reduce<Record<string, any>>(
             (acc, [routeId, data]) => Object.assign(acc, { [routeId]: data }),
             {}
@@ -963,6 +964,14 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let yeetedNavigation = yeetStaleNavigationLoad(loadId);
 
+    let loaderData = makeLoaderData(state, results, matchesToLoad);
+    let [deferredLoaderData, monitorDeferred] = makeDeferredLoaderData(
+      getState,
+      update,
+      results,
+      pendingNavigationDeferredControllers
+    );
+
     // need to do what we would have done when the navigation load completed
     if (yeetedNavigation) {
       let { transition } = state;
@@ -978,7 +987,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
         errorBoundaryId,
         catch: catchVal,
         catchBoundaryId,
-        loaderData: makeLoaderData(state, results, matchesToLoad),
+        loaderData,
+        deferredLoaderData,
         actionData:
           transition.type === "actionReload" ? state.actionData : undefined,
         transition: IDLE_TRANSITION,
@@ -992,9 +1002,12 @@ export function createTransitionManager(init: TransitionManagerInit) {
         fetchers: new Map(state.fetchers),
         error,
         errorBoundaryId,
-        loaderData: makeLoaderData(state, results, matchesToLoad),
+        loaderData,
+        deferredLoaderData,
       });
     }
+
+    monitorDeferred();
   }
 
   function yeetStaleNavigationLoad(landedId: number): boolean {
@@ -1246,6 +1259,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     matches: ClientMatch[]
   ) {
     abortNormalNavigation();
+    abortPendingDeferredControllers(
+      pendingNavigationDeferredControllers,
+      cancelledDeferredRouteIds
+    );
 
     let transition: TransitionStates["SubmittingAction"] = {
       state: "submitting",
@@ -2045,6 +2062,7 @@ function abortPendingDeferredControllers(
     let foundBoundaryId = false;
     if (!isRouteMatched || isRouteLoading || foundBoundaryId) {
       controller.abort();
+      pendingNavigationDeferredControllers.delete(routeId);
       cancelledDeferredRouteIds.add(routeId);
     }
   }
