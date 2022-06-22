@@ -4,6 +4,7 @@ import nodeResolve from "@rollup/plugin-node-resolve";
 import copy from "rollup-plugin-copy";
 import fse from "fs-extra";
 import fs from "fs";
+import camelCase from "lodash/camelCase";
 
 const executableBanner = "#!/usr/bin/env node\n";
 
@@ -64,7 +65,7 @@ function createRemix() {
       external() {
         return true;
       },
-      input: `${sourceDir}/cli.ts`,
+      input: path.join(sourceDir, "cli.ts"),
       output: {
         format: "cjs",
         dir: outputDir,
@@ -79,9 +80,9 @@ function createRemix() {
         nodeResolve({ extensions: [".ts"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: outputDir },
-            { src: `${sourceDir}/package.json`, dest: outputDir },
-            { src: `${sourceDir}/README.md`, dest: outputDir },
+            { src: path.join(sourceDir, "LICENSE.md"), dest: outputDir },
+            { src: path.join(sourceDir, "package.json"), dest: outputDir },
+            { src: path.join(sourceDir, "README.md"), dest: outputDir },
           ],
         }),
         copyToPlaygrounds(),
@@ -101,7 +102,7 @@ function remix() {
       external() {
         return true;
       },
-      input: `${sourceDir}/index.ts`,
+      input: path.join(sourceDir, "index.ts"),
       output: {
         format: "cjs",
         dir: outputDir,
@@ -115,9 +116,9 @@ function remix() {
         }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: outputDir },
-            { src: `${sourceDir}/package.json`, dest: outputDir },
-            { src: `${sourceDir}/README.md`, dest: outputDir },
+            { src: path.join(sourceDir, "LICENSE.md"), dest: outputDir },
+            { src: path.join(sourceDir, "package.json"), dest: outputDir },
+            { src: path.join(sourceDir, "README.md"), dest: outputDir },
           ],
         }),
         copyToPlaygrounds(),
@@ -127,10 +128,10 @@ function remix() {
       external() {
         return true;
       },
-      input: `${sourceDir}/index.ts`,
+      input: path.join(sourceDir, "index.ts"),
       output: {
         banner: createBanner("remix", version),
-        dir: `${outputDir}/esm`,
+        dir: path.join(outputDir, "esm"),
         format: "esm",
       },
       plugins: [
@@ -163,7 +164,7 @@ function remixDev() {
 
         return isBareModuleId(id);
       },
-      input: `${sourceDir}/index.ts`,
+      input: path.join(sourceDir, "index.ts"),
       output: {
         banner: createBanner("@remix-run/dev", version),
         dir: outputDir,
@@ -180,12 +181,12 @@ function remixDev() {
         nodeResolve({ extensions: [".ts"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: outputDir },
-            { src: `${sourceDir}/package.json`, dest: outputDir },
-            { src: `${sourceDir}/README.md`, dest: outputDir },
+            { src: path.join(sourceDir, "LICENSE.md"), dest: outputDir },
+            { src: path.join(sourceDir, "package.json"), dest: outputDir },
+            { src: path.join(sourceDir, "README.md"), dest: outputDir },
             {
-              src: `${sourceDir}/compiler/shims`,
-              dest: `${outputDir}/compiler`,
+              src: path.join(sourceDir, "compiler", "shims"),
+              dest: path.join(outputDir, "compiler"),
             },
           ],
         }),
@@ -207,7 +208,7 @@ function remixDev() {
       external() {
         return true;
       },
-      input: `${sourceDir}/cli.ts`,
+      input: path.join(sourceDir, "cli.ts"),
       output: {
         banner: executableBanner + createBanner("@remix-run/dev", version),
         dir: outputDir,
@@ -225,10 +226,10 @@ function remixDev() {
     },
     {
       external: (id) => isBareModuleId(id),
-      input: [`${sourceDir}/cli/migrate/migrations/transforms.ts`],
+      input: [path.join(sourceDir, "cli/migrate/migrations/transforms.ts")],
       output: {
         banner: createBanner("@remix-run/dev", version),
-        dir: `${outputDir}/cli/migrate/migrations`,
+        dir: path.join(outputDir, "cli/migrate/migrations"),
         exports: "named",
         format: "cjs",
         preserveModules: true,
@@ -247,7 +248,7 @@ function remixDev() {
       external() {
         return true;
       },
-      input: `${sourceDir}/server-build.ts`,
+      input: path.join(sourceDir, "server-build.ts"),
       output: {
         banner: executableBanner + createBanner("@remix-run/dev", version),
         dir: outputDir,
@@ -268,8 +269,9 @@ function remixDev() {
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remixServerRuntime() {
+  let packageName = "@remix-run/server-runtime";
   let sourceDir = "packages/remix-server-runtime";
-  let outputDir = getOutputDir("@remix-run/server-runtime");
+  let outputDir = getOutputDir(packageName);
   let version = getVersion(sourceDir);
 
   return [
@@ -277,9 +279,9 @@ function remixServerRuntime() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${sourceDir}/index.ts`,
+      input: path.join(sourceDir, "index.ts"),
       output: {
-        banner: createBanner("@remix-run/server-runtime", version),
+        banner: createBanner(packageName, version),
         dir: outputDir,
         format: "cjs",
         preserveModules: true,
@@ -294,10 +296,14 @@ function remixServerRuntime() {
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: outputDir },
-            { src: `${sourceDir}/package.json`, dest: outputDir },
-            { src: `${sourceDir}/README.md`, dest: outputDir },
+            { src: path.join(sourceDir, "LICENSE.md"), dest: outputDir },
+            { src: path.join(sourceDir, "package.json"), dest: outputDir },
+            { src: path.join(sourceDir, "README.md"), dest: outputDir },
           ],
+        }),
+        magicExportsPlugin(getMagicExports(packageName), {
+          packageName,
+          version,
         }),
         copyToPlaygrounds(),
       ],
@@ -306,10 +312,10 @@ function remixServerRuntime() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${sourceDir}/index.ts`,
+      input: path.join(sourceDir, "index.ts"),
       output: {
-        banner: createBanner("@remix-run/server-runtime", version),
-        dir: `${outputDir}/esm`,
+        banner: createBanner(packageName, version),
+        dir: path.join(outputDir, "esm"),
         format: "esm",
         preserveModules: true,
       },
@@ -320,44 +326,6 @@ function remixServerRuntime() {
           extensions: [".ts", ".tsx"],
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
-        copyToPlaygrounds(),
-      ],
-    },
-    {
-      external() {
-        return true;
-      },
-      input: `${sourceDir}/magicExports/remix.ts`,
-      output: {
-        banner: createBanner("@remix-run/server-runtime", version),
-        dir: `${outputDir}/magicExports`,
-        format: "cjs",
-      },
-      plugins: [
-        babel({
-          babelHelpers: "bundled",
-          exclude: /node_modules/,
-          extensions: [".ts", ".tsx"],
-        }),
-        copyToPlaygrounds(),
-      ],
-    },
-    {
-      external() {
-        return true;
-      },
-      input: `${sourceDir}/magicExports/remix.ts`,
-      output: {
-        banner: createBanner("@remix-run/server-runtime", version),
-        dir: `${outputDir}/magicExports/esm`,
-        format: "esm",
-      },
-      plugins: [
-        babel({
-          babelHelpers: "bundled",
-          exclude: /node_modules/,
-          extensions: [".ts", ".tsx"],
-        }),
         copyToPlaygrounds(),
       ],
     },
@@ -366,8 +334,9 @@ function remixServerRuntime() {
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remixNode() {
+  let packageName = "@remix-run/node";
   let sourceDir = "packages/remix-node";
-  let outputDir = getOutputDir("@remix-run/node");
+  let outputDir = getOutputDir(packageName);
   let version = getVersion(sourceDir);
 
   return [
@@ -375,9 +344,9 @@ function remixNode() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${sourceDir}/index.ts`,
+      input: path.join(sourceDir, "index.ts"),
       output: {
-        banner: createBanner("@remix-run/node", version),
+        banner: createBanner(packageName, version),
         dir: outputDir,
         format: "cjs",
         preserveModules: true,
@@ -392,48 +361,14 @@ function remixNode() {
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: outputDir },
-            { src: `${sourceDir}/package.json`, dest: outputDir },
-            { src: `${sourceDir}/README.md`, dest: outputDir },
+            { src: path.join(sourceDir, "LICENSE.md"), dest: outputDir },
+            { src: path.join(sourceDir, "package.json"), dest: outputDir },
+            { src: path.join(sourceDir, "README.md"), dest: outputDir },
           ],
         }),
-        copyToPlaygrounds(),
-      ],
-    },
-    {
-      external() {
-        return true;
-      },
-      input: `${sourceDir}/magicExports/remix.ts`,
-      output: {
-        banner: createBanner("@remix-run/node", version),
-        dir: `${outputDir}/magicExports`,
-        format: "cjs",
-      },
-      plugins: [
-        babel({
-          babelHelpers: "bundled",
-          exclude: /node_modules/,
-          extensions: [".ts", ".tsx"],
-        }),
-        copyToPlaygrounds(),
-      ],
-    },
-    {
-      external() {
-        return true;
-      },
-      input: `${sourceDir}/magicExports/remix.ts`,
-      output: {
-        banner: createBanner("@remix-run/node", version),
-        dir: `${outputDir}/magicExports/esm`,
-        format: "esm",
-      },
-      plugins: [
-        babel({
-          babelHelpers: "bundled",
-          exclude: /node_modules/,
-          extensions: [".ts", ".tsx"],
+        magicExportsPlugin(getMagicExports(packageName), {
+          packageName,
+          version,
         }),
         copyToPlaygrounds(),
       ],
@@ -443,8 +378,9 @@ function remixNode() {
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remixCloudflare() {
+  let packageName = "@remix-run/cloudflare";
   let sourceDir = "packages/remix-cloudflare";
-  let outputDir = getOutputDir("@remix-run/cloudflare");
+  let outputDir = getOutputDir(packageName);
   let version = getVersion(sourceDir);
 
   return [
@@ -452,9 +388,9 @@ function remixCloudflare() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${sourceDir}/index.ts`,
+      input: path.join(sourceDir, "index.ts"),
       output: {
-        banner: createBanner("@remix-run/cloudflare", version),
+        banner: createBanner(packageName, version),
         dir: outputDir,
         format: "cjs",
         preserveModules: true,
@@ -469,48 +405,14 @@ function remixCloudflare() {
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: outputDir },
-            { src: `${sourceDir}/package.json`, dest: outputDir },
-            { src: `${sourceDir}/README.md`, dest: outputDir },
+            { src: path.join(sourceDir, "LICENSE.md"), dest: outputDir },
+            { src: path.join(sourceDir, "package.json"), dest: outputDir },
+            { src: path.join(sourceDir, "README.md"), dest: outputDir },
           ],
         }),
-        copyToPlaygrounds(),
-      ],
-    },
-    {
-      external() {
-        return true;
-      },
-      input: `${sourceDir}/magicExports/remix.ts`,
-      output: {
-        banner: createBanner("@remix-run/cloudflare", version),
-        dir: `${outputDir}/magicExports/esm`,
-        format: "esm",
-      },
-      plugins: [
-        babel({
-          babelHelpers: "bundled",
-          exclude: /node_modules/,
-          extensions: [".ts", ".tsx"],
-        }),
-        copyToPlaygrounds(),
-      ],
-    },
-    {
-      external() {
-        return true;
-      },
-      input: `${sourceDir}/magicExports/remix.ts`,
-      output: {
-        banner: createBanner("@remix-run/cloudflare", version),
-        dir: `${outputDir}/magicExports`,
-        format: "cjs",
-      },
-      plugins: [
-        babel({
-          babelHelpers: "bundled",
-          exclude: /node_modules/,
-          extensions: [".ts", ".tsx"],
+        magicExportsPlugin(getMagicExports(packageName), {
+          packageName,
+          version,
         }),
         copyToPlaygrounds(),
       ],
@@ -525,11 +427,11 @@ function remixDeno() {
 
   return [
     {
-      input: `${sourceDir}/.empty.js`,
+      input: path.join(sourceDir, ".empty.js"),
       plugins: [
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: outputDir },
+            { src: path.join(sourceDir, "LICENSE.md"), dest: outputDir },
             { src: `${sourceDir}/**/*`, dest: outputDir },
           ],
           gitignore: true,
@@ -551,10 +453,10 @@ function remixCloudflareWorkers() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${sourceDir}/index.ts`,
+      input: path.join(sourceDir, "index.ts"),
       output: {
         banner: createBanner("@remix-run/cloudflare-workers", version),
-        dir: `${outputDir}/esm`,
+        dir: path.join(outputDir, "esm"),
         format: "esm",
         preserveModules: true,
       },
@@ -582,10 +484,10 @@ function remixCloudflarePages() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${sourceDir}/index.ts`,
+      input: path.join(sourceDir, "index.ts"),
       output: {
         banner: createBanner("@remix-run/cloudflare-pages", version),
-        dir: `${outputDir}/esm`,
+        dir: path.join(outputDir, "esm"),
         format: "esm",
         preserveModules: true,
       },
@@ -602,21 +504,26 @@ function remixCloudflarePages() {
   ];
 }
 
-/** @returns {import("rollup").RollupOptions[]} */
+/**
+ * @param {RemixAdapter} adapterName
+ * @returns {import("rollup").RollupOptions[]}
+ */
 function getAdapterConfig(adapterName) {
+  /** @type {`@remix-run/${RemixAdapter}`} */
   let packageName = `@remix-run/${adapterName}`;
   let sourceDir = `packages/remix-${adapterName}`;
   let outputDir = getOutputDir(packageName);
   let version = getVersion(sourceDir);
 
-  let hasMagicExports = fse.existsSync(`${sourceDir}/magicExports/remix.ts`);
+  // TODO: Remove in v2
+  let magicExports = getMagicExports(packageName);
 
   return [
     {
       external(id) {
         return isBareModuleId(id);
       },
-      input: `${sourceDir}/index.ts`,
+      input: path.join(sourceDir, "index.ts"),
       output: {
         banner: createBanner(packageName, version),
         dir: outputDir,
@@ -633,61 +540,271 @@ function getAdapterConfig(adapterName) {
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: outputDir },
-            { src: `${sourceDir}/package.json`, dest: outputDir },
-            { src: `${sourceDir}/README.md`, dest: outputDir },
+            { src: path.join(sourceDir, "LICENSE.md"), dest: outputDir },
+            { src: path.join(sourceDir, "package.json"), dest: outputDir },
+            { src: path.join(sourceDir, "README.md"), dest: outputDir },
           ],
+        }),
+        magicExportsPlugin(magicExports, {
+          packageName,
+          version,
         }),
         copyToPlaygrounds(),
       ],
     },
-    ...(hasMagicExports
-      ? [
-          {
-            external() {
-              return true;
-            },
-            input: `${sourceDir}/magicExports/remix.ts`,
-            output: {
-              banner: createBanner(packageName, version),
-              dir: `${outputDir}/magicExports`,
-              format: "cjs",
-            },
-            plugins: [
-              babel({
-                babelHelpers: "bundled",
-                exclude: /node_modules/,
-                extensions: [".ts", ".tsx"],
-              }),
-              copyToPlaygrounds(),
-            ],
-          },
-          {
-            external() {
-              return true;
-            },
-            input: `${sourceDir}/magicExports/remix.ts`,
-            output: {
-              banner: createBanner(packageName, version),
-              dir: `${outputDir}/magicExports/esm`,
-              format: "esm",
-            },
-            plugins: [
-              babel({
-                babelHelpers: "bundled",
-                exclude: /node_modules/,
-                extensions: [".ts", ".tsx"],
-              }),
-              copyToPlaygrounds(),
-            ],
-          },
-        ]
-      : []),
   ];
+}
+
+/**
+ * TODO: Remove in v2
+ * @param {RemixPackage} packageName
+ * @returns {MagicExports | null}
+ */
+function getMagicExports(packageName) {
+  // Re-export everything from packages that is available in `remix`
+  /** @type {MagicExports | null} */
+  let magicExports = null;
+  switch (packageName) {
+    case "@remix-run/architect":
+      magicExports = {
+        values: {
+          "@remix-run/architect": ["createArcTableSessionStorage"],
+        },
+        types: {
+          "@remix-run/node": ["UploadHandler", "UploadHandlerPart"],
+        },
+      };
+      break;
+    case "@remix-run/cloudflare-pages":
+      magicExports = {
+        values: {
+          "@remix-run/cloudflare": ["createCloudflareKVSessionStorage"],
+        },
+      };
+      break;
+    case "@remix-run/cloudflare-workers":
+      magicExports = {
+        values: {
+          "@remix-run/cloudflare": ["createCloudflareKVSessionStorage"],
+        },
+      };
+      break;
+    case "@remix-run/cloudflare":
+      magicExports = {
+        values: {
+          "@remix-run/cloudflare": [
+            "createCloudflareKVSessionStorage",
+            "createCookie",
+            "createSessionStorage",
+            "createCookieSessionStorage",
+            "createMemorySessionStorage",
+          ],
+        },
+      };
+      break;
+    case "@remix-run/node":
+      magicExports = {
+        values: {
+          "@remix-run/node": [
+            "createCookie",
+            "createSessionStorage",
+            "createCookieSessionStorage",
+            "createMemorySessionStorage",
+            "createFileSessionStorage",
+            "unstable_createFileUploadHandler",
+            "unstable_createMemoryUploadHandler",
+            "unstable_parseMultipartFormData",
+          ],
+        },
+        types: {
+          "@remix-run/node": ["UploadHandler", "UploadHandlerPart"],
+        },
+      };
+      break;
+    case "@remix-run/react":
+      magicExports = {
+        values: {
+          "@remix-run/react": [
+            "RemixBrowser",
+            "Meta",
+            "Links",
+            "Scripts",
+            "Link",
+            "NavLink",
+            "Form",
+            "PrefetchPageLinks",
+            "ScrollRestoration",
+            "LiveReload",
+            "useFormAction",
+            "useSubmit",
+            "useTransition",
+            "useFetcher",
+            "useFetchers",
+            "useCatch",
+            "useLoaderData",
+            "useActionData",
+            "useBeforeUnload",
+            "useMatches",
+            "RemixServer",
+
+            // react-router-dom exports
+            "Outlet",
+            "useHref",
+            "useLocation",
+            "useNavigate",
+            "useNavigationType",
+            "useOutlet",
+            "useParams",
+            "useResolvedPath",
+            "useSearchParams",
+            "useOutletContext",
+          ],
+        },
+        types: {
+          "@remix-run/react": [
+            "RemixBrowserProps",
+            "FormProps",
+            "SubmitOptions",
+            "SubmitFunction",
+            "FormMethod",
+            "FormEncType",
+            "RemixServerProps",
+            "ShouldReloadFunction",
+            "ThrownResponse",
+            "LinkProps",
+            "NavLinkProps",
+          ],
+        },
+      };
+      break;
+    case "@remix-run/server-runtime":
+      magicExports = {
+        values: {
+          "@remix-run/server-runtime": [
+            "isCookie",
+            "createSession",
+            "isSession",
+            "json",
+            "redirect",
+          ],
+        },
+        types: {
+          "@remix-run/server-runtime": [
+            "ServerBuild",
+            "ServerEntryModule",
+            "HandleDataRequestFunction",
+            "HandleDocumentRequestFunction",
+            "CookieParseOptions",
+            "CookieSerializeOptions",
+            "CookieSignatureOptions",
+            "CookieOptions",
+            "Cookie",
+            "AppLoadContext",
+            "AppData",
+            "EntryContext",
+            "LinkDescriptor",
+            "HtmlLinkDescriptor",
+            "PageLinkDescriptor",
+            "ErrorBoundaryComponent",
+            "ActionFunction",
+            "HeadersFunction",
+            "LinksFunction",
+            "LoaderFunction",
+            "MetaDescriptor",
+            "HtmlMetaDescriptor",
+            "MetaFunction",
+            "RouteComponent",
+            "RouteHandle",
+            "RequestHandler",
+            "SessionData",
+            "Session",
+            "SessionStorage",
+            "SessionIdStorageStrategy",
+          ],
+        },
+      };
+      break;
+  }
+  return magicExports;
+}
+
+/**
+ * TODO: Remove in v2
+ * @param {MagicExports | null} magicExports
+ * @param {{ packageName: string; version: string }} buildInfo
+ * @returns {import("rollup").Plugin}
+ */
+function magicExportsPlugin(magicExports, { packageName, version }) {
+  return {
+    name: `${packageName}:generate-magic-exports`,
+    generateBundle() {
+      if (!magicExports) return;
+
+      let tsContents = "";
+      let cjsContents = "";
+      let esmContents = "";
+      let banner = createBanner(packageName, version);
+
+      if (magicExports.values) {
+        for (let pkgName of Object.keys(magicExports.values)) {
+          if (!esmContents) esmContents = banner + "\n";
+          if (!cjsContents) cjsContents = banner + "\n";
+          if (!tsContents) tsContents = banner + "\n";
+
+          let exportList = magicExports.values[pkgName].join(", ");
+          esmContents += `export { ${exportList} } from '${pkgName}';\n`;
+          tsContents += `export { ${exportList} } from '${pkgName}';\n`;
+
+          let cjsModule = camelCase(
+            pkgName.startsWith("@remix-run/") ? pkgName.slice(11) : pkgName
+          );
+          cjsContents += `var ${cjsModule} = require('${pkgName}');\n`;
+          for (let symbol of magicExports.values[pkgName]) {
+            cjsContents +=
+              `Object.defineProperty(exports, '${symbol}', {\n` +
+              "  enumerable: true,\n" +
+              `  get: function () { return ${cjsModule}.${symbol}; }\n` +
+              "});\n";
+          }
+        }
+      }
+
+      if (magicExports.types) {
+        for (let pkgName of Object.keys(magicExports.types)) {
+          if (!tsContents) tsContents = banner + "\n";
+          let exportList = magicExports.types[pkgName].join(", ");
+          tsContents += `export type { ${exportList} } from '${pkgName}';\n`;
+        }
+      }
+
+      tsContents &&
+        this.emitFile({
+          type: "asset",
+          fileName: path.join("magicExports", "remix.d.ts"),
+          source: tsContents,
+        });
+
+      cjsContents &&
+        this.emitFile({
+          type: "asset",
+          fileName: path.join("magicExports", "remix.js"),
+          source: cjsContents,
+        });
+
+      esmContents &&
+        this.emitFile({
+          type: "asset",
+          fileName: path.join("magicExports", "esm", "remix.js"),
+          source: esmContents,
+        });
+    },
+  };
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remixServerAdapters() {
+  // magicExports: Re-export everything from each package that is available in `remix`
+  // TODO: Remove this in v2 when we get rid of magic exports altogether
   return [
     ...getAdapterConfig("architect"),
     ...getAdapterConfig("cloudflare-pages"),
@@ -700,8 +817,9 @@ function remixServerAdapters() {
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remixReact() {
+  let packageName = "@remix-run/react";
   let sourceDir = "packages/remix-react";
-  let outputDir = getOutputDir("@remix-run/react");
+  let outputDir = getOutputDir(packageName);
   let version = getVersion(sourceDir);
 
   // This CommonJS build of remix-react is for node; both for use in running our
@@ -711,9 +829,9 @@ function remixReact() {
     external(id) {
       return isBareModuleId(id);
     },
-    input: `${sourceDir}/index.tsx`,
+    input: path.join(sourceDir, "index.tsx"),
     output: {
-      banner: createBanner("@remix-run/react", version),
+      banner: createBanner(packageName, version),
       dir: outputDir,
       format: "cjs",
       preserveModules: true,
@@ -728,10 +846,14 @@ function remixReact() {
       nodeResolve({ extensions: [".ts", ".tsx"] }),
       copy({
         targets: [
-          { src: `LICENSE.md`, dest: outputDir },
-          { src: `${sourceDir}/package.json`, dest: outputDir },
-          { src: `${sourceDir}/README.md`, dest: outputDir },
+          { src: path.join(sourceDir, "LICENSE.md"), dest: outputDir },
+          { src: path.join(sourceDir, "package.json"), dest: outputDir },
+          { src: path.join(sourceDir, "README.md"), dest: outputDir },
         ],
+      }),
+      magicExportsPlugin(getMagicExports(packageName), {
+        packageName,
+        version,
       }),
       copyToPlaygrounds(),
     ],
@@ -743,10 +865,10 @@ function remixReact() {
     external(id) {
       return isBareModuleId(id);
     },
-    input: `${sourceDir}/index.tsx`,
+    input: path.join(sourceDir, "index.tsx"),
     output: {
       banner: createBanner("@remix-run/react", version),
-      dir: `${outputDir}/esm`,
+      dir: path.join(outputDir, "esm"),
       format: "esm",
       preserveModules: true,
     },
@@ -761,54 +883,7 @@ function remixReact() {
     ],
   };
 
-  /** @type {import("rollup").RollupOptions[]} */
-  let remixReactMagicExportsCJS = {
-    external() {
-      return true;
-    },
-    input: `${sourceDir}/magicExports/remix.ts`,
-    output: {
-      banner: createBanner("@remix-run/react", version),
-      dir: `${outputDir}/magicExports`,
-      format: "cjs",
-    },
-    plugins: [
-      babel({
-        babelHelpers: "bundled",
-        exclude: /node_modules/,
-        extensions: [".ts", ".tsx"],
-      }),
-      copyToPlaygrounds(),
-    ],
-  };
-
-  /** @type {import("rollup").RollupOptions[]} */
-  let remixReactMagicExportsESM = {
-    external() {
-      return true;
-    },
-    input: `${sourceDir}/magicExports/remix.ts`,
-    output: {
-      banner: createBanner("@remix-run/react", version),
-      dir: `${outputDir}/magicExports/esm`,
-      format: "esm",
-    },
-    plugins: [
-      babel({
-        babelHelpers: "bundled",
-        exclude: /node_modules/,
-        extensions: [".ts", ".tsx"],
-      }),
-      copyToPlaygrounds(),
-    ],
-  };
-
-  return [
-    remixReactCJS,
-    remixReactESM,
-    remixReactMagicExportsCJS,
-    remixReactMagicExportsESM,
-  ];
+  return [remixReactCJS, remixReactESM];
 }
 
 /** @returns {import("rollup").RollupOptions[]} */
@@ -822,7 +897,7 @@ function remixServe() {
       external(id) {
         return isBareModuleId(id);
       },
-      input: [`${sourceDir}/index.ts`, `${sourceDir}/env.ts`],
+      input: [path.join(sourceDir, "index.ts"), path.join(sourceDir, "env.ts")],
       output: {
         banner: createBanner("@remix-run/serve", version),
         dir: outputDir,
@@ -839,9 +914,9 @@ function remixServe() {
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
-            { src: `LICENSE.md`, dest: outputDir },
-            { src: `${sourceDir}/package.json`, dest: outputDir },
-            { src: `${sourceDir}/README.md`, dest: outputDir },
+            { src: path.join(sourceDir, "LICENSE.md"), dest: outputDir },
+            { src: path.join(sourceDir, "package.json"), dest: outputDir },
+            { src: path.join(sourceDir, "README.md"), dest: outputDir },
           ],
         }),
         copyToPlaygrounds(),
@@ -851,7 +926,7 @@ function remixServe() {
       external() {
         return true;
       },
-      input: `${sourceDir}/cli.ts`,
+      input: path.join(sourceDir, "cli.ts"),
       output: {
         banner: executableBanner + createBanner("@remix-run/serve", version),
         dir: outputDir,
@@ -936,3 +1011,11 @@ function copyToPlaygrounds() {
     },
   };
 }
+
+/**
+ * @typedef {Record<"values" | "types", Record<string, string[]>>} MagicExports
+ * @typedef {"architect" | "cloudflare-pages" | "cloudflare-workers" | "express" | "netlify" | "vercel"} RemixAdapter
+ * @typedef {"cloudflare" | "node" | "deno"} RemixRuntime
+ * @typedef {`@remix-run/${RemixAdapter | RemixRuntime | "dev" | "eslint-config" | "react" | "serve" | "server-runtime"}`} ScopedRemixPackage
+ * @typedef {"create-remix" | "remix" | ScopedRemixPackage} RemixPackage
+ */
