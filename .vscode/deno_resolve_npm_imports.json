@@ -5,7 +5,7 @@
   "// Dependency management is done through `npm` and `node_modules/` instead.": "",
   "// Deno-only dependencies may be imported via URL imports (without using import maps).": "",
   "imports": {
-    "@remix-run/server-runtime": "https://esm.sh/@remix-run/server-runtime@1.6.1-pre.0",
+    "@remix-run/server-runtime": "https://esm.sh/@remix-run/server-runtime@1.6.1",
     "mime": "https://esm.sh/mime@3.0.0"
   }
 }
