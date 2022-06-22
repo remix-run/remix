@@ -65,7 +65,7 @@ function createRemix() {
       external() {
         return true;
       },
-      input: path.join(sourceDir, "cli.ts"),
+      input: `${sourceDir}/cli.ts`,
       output: {
         format: "cjs",
         dir: outputDir,
@@ -161,6 +161,7 @@ function remixDev() {
         ) {
           return true;
         }
+
         return isBareModuleId(id);
       },
       input: `${sourceDir}/index.ts`,
@@ -225,7 +226,7 @@ function remixDev() {
     },
     {
       external: (id) => isBareModuleId(id),
-      input: [path.join(sourceDir, "cli/migrate/migrations/transforms.ts")],
+      input: [`${sourceDir}/cli/migrate/migrations/transforms.ts`],
       output: {
         banner: createBanner("@remix-run/dev", version),
         dir: `${outputDir}/cli/migrate/migrations`,
@@ -430,7 +431,7 @@ function remixDeno() {
       plugins: [
         copy({
           targets: [
-            { src: path.join(sourceDir, "LICENSE.md"), dest: outputDir },
+            { src: `LICENSE.md`, dest: outputDir },
             { src: `${sourceDir}/**/*`, dest: outputDir },
           ],
           gitignore: true,
