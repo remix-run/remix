@@ -380,7 +380,7 @@ export function RemixRoute({ id }: { id: string }) {
 const DEFERRED_PROMISE_PREFIX = "__deferred_promise:";
 
 const deferredContext = React.createContext<
-  undefined | { data: unknown; key?: string }
+  undefined | { value: unknown; key?: string }
 >(undefined);
 
 // These are duplicated in the server-runtime at: responses.ts
@@ -395,13 +395,13 @@ export type ResolvedDeferrable<T> = T extends null | undefined
   : T;
 
 export interface DeferredResolveRenderFunction<Data> {
-  (args: { data: ResolvedDeferrable<Data> }): JSX.Element;
+  (data: ResolvedDeferrable<Data>): JSX.Element;
 }
 
 export interface DeferredProps<Data>
   extends Omit<React.SuspenseProps, "children"> {
   children: React.ReactNode | DeferredResolveRenderFunction<Data>;
-  data: Data;
+  value: Data;
   errorElement?: React.ReactNode;
   nonce?: string;
 }
@@ -410,7 +410,7 @@ const js = String.raw;
 
 export function Deferred<Data = any>({
   children,
-  data,
+  value,
   errorElement,
   fallback,
   nonce,
@@ -422,20 +422,20 @@ export function Deferred<Data = any>({
   // this is key is a deferred promise. We use this to know where
   // to grab the running promise from.
   let suspenseDataKey: string | undefined = undefined;
-  if (typeof data === "string" && data.startsWith(DEFERRED_PROMISE_PREFIX)) {
-    suspenseDataKey = data.slice(DEFERRED_PROMISE_PREFIX.length);
+  if (typeof value === "string" && value.startsWith(DEFERRED_PROMISE_PREFIX)) {
+    suspenseDataKey = value.slice(DEFERRED_PROMISE_PREFIX.length);
   }
 
   // If we have a suspenseDataKey, we need to grab the promise from the
   // running promise map.
   if (suspenseDataKey) {
-    data = routeDataDeferred[id][suspenseDataKey] as unknown as Data;
+    value = routeDataDeferred[id][suspenseDataKey] as unknown as Data;
   }
 
   return (
     <deferredContext.Provider
       value={{
-        data,
+        value,
         key: suspenseDataKey,
       }}
     >
@@ -495,7 +495,7 @@ export function Deferred<Data = any>({
 
 export function useDeferred<Data>() {
   let ctx = React.useContext(deferredContext);
-  return ctx?.data as ResolvedDeferrable<Data>;
+  return ctx?.value as ResolvedDeferrable<Data>;
 }
 
 export interface ResolveDeferredProps<Data> {
@@ -506,7 +506,7 @@ export function ResolveDeferred<Data>({
   children,
 }: ResolveDeferredProps<Data>) {
   let data = useDeferred<Data>();
-  return children({ data });
+  return children(data);
 }
 
 function DeferredErrorBoundary({
@@ -520,11 +520,11 @@ function DeferredErrorBoundary({
 }) {
   let ctx = React.useContext(deferredContext);
   invariant(ctx, "Deferred must be used inside a DeferredProvider");
-  let { data } = ctx;
+  let { value } = ctx;
 
   let child = children;
 
-  let promise = data as Promise<unknown>;
+  let promise = value as PromiseLike<unknown>;
   // If the deferred data is a promise we suspend at this point.
   if (typeof promise === "object" && promise.then) {
     // We also need to store the resolved data / error on the context for SSR.
@@ -534,19 +534,19 @@ function DeferredErrorBoundary({
     throw promise.then(
       (value) => {
         if (ctx) {
-          ctx.data = value;
+          ctx.value = value;
         }
       },
       (error) => {
         if (ctx) {
-          ctx.data = error;
+          ctx.value = error;
         }
       }
     );
   }
 
   // If there is an error we render the error element.
-  if (data instanceof Error) {
+  if (value instanceof Error) {
     // If we don't have an errorElement we re-throw the
     // error to bubble it up the component stack to the
     // closest boundary. We can't just throw on the server
@@ -557,7 +557,7 @@ function DeferredErrorBoundary({
     // bubble will bubble on the client as parent components
     // need to re-render.
     if (typeof errorElement === "undefined" && !IS_SSR) {
-      throw data;
+      throw value;
     }
 
     // If a single use defined component is rendered, clone
@@ -567,7 +567,7 @@ function DeferredErrorBoundary({
       errorElement &&
       "type" in errorElement &&
       typeof errorElement.type === "function"
-        ? React.cloneElement(errorElement, { error: data })
+        ? React.cloneElement(errorElement, { error: value })
         : errorElement;
   }
 
@@ -583,20 +583,20 @@ function DeferredHydrationScript({ nonce }: { nonce?: string }) {
   let { id } = useRemixRouteContext();
   let ctx = React.useContext(deferredContext);
   invariant(ctx, "Deferred must be used inside a DeferredProvider");
-  let { data, key } = ctx;
+  let { value, key } = ctx;
 
   if (!key) return null;
 
   // Serialize the data / error for transmission to the client.
-  let pre = "",
-    value;
-  if (data instanceof Error) {
-    pre = `let error = new Error(${JSON.stringify(
-      data.message
-    )});error.stack = ${JSON.stringify(data.stack)};`;
-    value = `error`;
+  let preHydration = "",
+    hydrationValue;
+  if (value instanceof Error) {
+    preHydration = `let error = new Error(${JSON.stringify(
+      value.message
+    )});error.stack = ${JSON.stringify(value.stack)};`;
+    hydrationValue = `error`;
   } else {
-    value = JSON.stringify(data);
+    hydrationValue = JSON.stringify(value);
   }
 
   // This script uses the resolve function stored on the remix context
@@ -606,12 +606,12 @@ function DeferredHydrationScript({ nonce }: { nonce?: string }) {
       nonce={nonce}
       dangerouslySetInnerHTML={{
         __html: js`(() => {
-${pre}
+${preHydration}
 window.__remixContext.deferredRouteData[${JSON.stringify(id)}] = Object.assign(
   {},
   window.__remixContext.deferredRouteData[${JSON.stringify(id)}],
   {
-    [${JSON.stringify(key)}]: ${value},
+    [${JSON.stringify(key)}]: ${hydrationValue},
   }
 );
 window.__remixContext.deferredRouteDataResolvers[${JSON.stringify(

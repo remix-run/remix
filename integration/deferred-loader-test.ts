@@ -23,6 +23,7 @@ test.beforeAll(async () => {
           return (
             <div>
               <Link to="/deferred">Deferred Route</Link>
+              <Link to="/inline-deferred">Inline Deferred Route</Link>
               <Link to="/multiple-deferred">Multiple Deferred Route</Link>
               <Link to="/deferred-error">Deferred Error</Link>
               <Link to="/deferred-error-no-boundary">Deferred Error No Boundary</Link>
@@ -58,6 +59,36 @@ test.beforeAll(async () => {
         }
       `,
 
+      "app/routes/inline-deferred.jsx": js`
+        import * as React from "react";
+        import { deferred } from "@remix-run/node";
+        import { useLoaderData, Link, Deferred } from "@remix-run/react";
+
+        export function loader() {
+          return deferred({
+            foo: "pizza",
+            bar: new Promise(async (resolve, reject) => {
+              resolve("hamburger");
+            }),
+          });
+        }
+
+        export default function Index() {
+          let {foo, bar} = useLoaderData();
+          let [count, setCount] = React.useState(0);
+
+          return (
+            <div>
+              {foo}
+              <button onClick={() => setCount(count + 1)}>{count} Count</button>
+              <Deferred value={bar}>
+                {(deferred) => <div>{deferred}</div>}
+              </Deferred>
+            </div>
+          )
+        }
+      `,
+
       "app/routes/deferred.jsx": js`
         import * as React from "react";
         import { deferred } from "@remix-run/node";
@@ -85,7 +116,7 @@ test.beforeAll(async () => {
             <div>
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
-              <Deferred data={bar}>
+              <Deferred value={bar}>
                 <DeferredComponent />
               </Deferred>
             </div>
@@ -124,7 +155,7 @@ test.beforeAll(async () => {
             <div>
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
-              <Deferred data={bar} errorElement={<DeferredBoundary />}>
+              <Deferred value={bar} errorElement={<DeferredBoundary />}>
                 <DeferredComponent />
               </Deferred>
             </div>
@@ -159,7 +190,7 @@ test.beforeAll(async () => {
             <div>
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
-              <Deferred data={bar}>
+              <Deferred value={bar}>
                 <DeferredComponent />
               </Deferred>
             </div>
@@ -202,10 +233,10 @@ test.beforeAll(async () => {
           return (
             <div>
               {foo}
-              <Deferred data={bar}>
+              <Deferred value={bar}>
                 <DeferredComponent />
               </Deferred>
-              <Deferred data={baz}>
+              <Deferred value={baz}>
                 <DeferredComponent />
               </Deferred>
             </div>
@@ -247,6 +278,25 @@ test("loads deferred data on page transitions", async ({ page }) => {
   expect(text).toMatch("hamburger");
 });
 
+test("loads critical data first with render func", async () => {
+  let response = await fixture.requestDocument("/inline-deferred");
+  let text = await response.text();
+  expect(text).toMatch("pizza");
+  expect(text).toMatch('<div hidden id="S:0"><div>hamburger</div>');
+  expect(text).toMatch(
+    'window.__remixContext.deferredRouteData["routes/inline-deferred"]["bar"]'
+  );
+});
+
+test("loads deferred data on page transitions with render func", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
+  await app.goto("/");
+  await app.clickLink("/inline-deferred");
+  let text = await app.getHtml();
+  expect(text).toMatch("pizza");
+  expect(text).toMatch("hamburger");
+});
+
 test("loads critical data first with multiple deferred", async () => {
   let response = await fixture.requestDocument("/multiple-deferred");
   let text = await response.text();
@@ -265,7 +315,9 @@ test("renders error boundary", async () => {
   let response = await fixture.requestDocument("/deferred-error");
   let text = await response.text();
   expect(text).toMatch("pizza");
-  expect(text).toMatch('<div hidden id="S:0"><div>Deferred Boundary <!-- -->Oh, no!<!-- --></div>');
+  expect(text).toMatch(
+    '<div hidden id="S:0"><div>Deferred Boundary <!-- -->Oh, no!<!-- --></div>'
+  );
   expect(text).toMatch(
     'window.__remixContext.deferredRouteData["routes/deferred-error"]["bar"]'
   );
