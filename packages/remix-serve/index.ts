@@ -6,7 +6,8 @@ import { createRequestHandler } from "@remix-run/express";
 export function createApp(
   buildPath = "/build",
   mode = "production",
-  assetsBuildDirectory = "public/build"
+  assetsBuildDirectory = "public/build",
+  publicPath = "/build"
 ) {
   let app = express();
 
@@ -15,7 +16,7 @@ export function createApp(
   app.use(compression());
 
   app.use(
-    assetsBuildDirectory,
+    publicPath,
     express.static(assetsBuildDirectory, { immutable: true, maxAge: "1y" })
   );
 

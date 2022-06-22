@@ -10,6 +10,7 @@ let args = arg({
   "-s": "--server",
   "--assets": String,
   "-a": "--assets",
+  "--public-path": String,
   "--port": Number,
   "-p": "--port",
   "--help": Boolean,
@@ -20,12 +21,14 @@ if (args["--help"]) {
   console.log(`
   --server: serverBuildPath or serverBuildDirectory in your remix.config.js
   --assets: assetsBuildDirectory in your remix.config.js
+  --public-path: publicPath in your remix.config.js
   --port: port to listen on
   --help: show this help
   `);
 }
 
 let buildPathArg = args["--server"];
+let publicPath = args["--public-path"];
 let assetsBuildDirectory = args["--assets"];
 let port = args["--port"] || process.env.PORT ? Number(process.env.PORT) : 3000;
 if (Number.isNaN(port)) {
@@ -64,7 +67,12 @@ let onListen = () => {
   }
 };
 
-let app = createApp(buildPath, process.env.NODE_ENV, assetsBuildDirectory);
+let app = createApp(
+  buildPath,
+  process.env.NODE_ENV,
+  assetsBuildDirectory,
+  publicPath
+);
 let server = process.env.HOST
   ? app.listen(port, process.env.HOST, onListen)
   : app.listen(port, onListen);
