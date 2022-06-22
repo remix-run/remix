@@ -11,6 +11,7 @@ import {
   IDLE_FETCHER,
   IDLE_TRANSITION,
 } from "../transition";
+import type { ShouldReloadFunction } from "../routeModules";
 
 describe("init", () => {
   it("initializes with initial values", async () => {
@@ -2242,10 +2243,10 @@ describe("deferred", () => {
   });
 
   it("cancels all pending deferreds on action submissions", async () => {
-    // TODO: still need to add some code to ensure shouldReload is not called
-    // and assert via a spy.
     let count = -1;
     let rootDfds = [defer(), defer()];
+    // Return true on the GET navigation and false on the POST
+    let shouldReloadSpy = jest.fn(({ submission }) => submission == null);
     let t = setup({
       url: "/",
       rootLoaderOverride() {
@@ -2255,6 +2256,7 @@ describe("deferred", () => {
           lazy: rootDfds[count].promise,
         });
       },
+      rootShouldReload: shouldReloadSpy,
     });
 
     let A = await t.navigate.get("/foo?key=value");
@@ -2267,6 +2269,8 @@ describe("deferred", () => {
       })
     );
     await new Promise((r) => setTimeout(r, 0));
+    // Called this time due to search params changes
+    expect(shouldReloadSpy).toHaveBeenCalledTimes(1);
 
     let B = await t.navigate.post("/bar?key=value");
 
@@ -2341,6 +2345,9 @@ describe("deferred", () => {
     expect(t.getState().deferredLoaderData).toEqual({
       root: {},
     });
+    // Did not get called a second time since this actionReload execution
+    // cannot be opted out of
+    expect(shouldReloadSpy).toHaveBeenCalledTimes(1);
   });
 
   it("does not support deferred data on fetcher loads", async () => {
@@ -2446,10 +2453,10 @@ describe("deferred", () => {
   });
 
   it("cancels pending deferreds on fetcher action submissions", async () => {
-    // TODO: still need to add some code to ensure shouldReload is not called
-    // and assert via a spy.
     let count = -1;
     let rootDfds = [defer(), defer()];
+    // Return true on the GET navigation and false on the POST
+    let shouldReloadSpy = jest.fn(({ submission }) => submission == null);
     let t = setup({
       url: "/",
       rootLoaderOverride() {
@@ -2459,6 +2466,7 @@ describe("deferred", () => {
           lazy: rootDfds[count].promise,
         });
       },
+      rootShouldReload: shouldReloadSpy,
     });
 
     let A = await t.navigate.get("/foo?a=1");
@@ -2471,6 +2479,8 @@ describe("deferred", () => {
       })
     );
     await tick();
+    // Called this first time due to search param changes
+    expect(shouldReloadSpy).toHaveBeenCalledTimes(1);
 
     // Fetcher action submission causes all to be cancelled and
     // ignores shouldRevalidate since the cancelled active deferred means we
@@ -2535,6 +2545,9 @@ describe("deferred", () => {
       state: "idle",
       data: "ACTION",
     });
+    // Did not get called a second time since this actionReload execution
+    // cannot be opted out of
+    expect(shouldReloadSpy).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -2627,9 +2640,11 @@ let setup = (
   {
     url,
     rootLoaderOverride,
+    rootShouldReload,
   }: {
     url: string;
     rootLoaderOverride?: () => any | Promise<any>;
+    rootShouldReload?: ShouldReloadFunction;
   } = { url: "/" }
 ) => {
   incrementingSubmissionKey = 0;
@@ -2701,6 +2716,7 @@ let setup = (
       CatchBoundary: FakeComponent,
       hasLoader: true,
       loader: rootLoader,
+      ...(rootShouldReload ? { shouldReload: rootShouldReload } : {}),
       children: [
         {
           path: "/",

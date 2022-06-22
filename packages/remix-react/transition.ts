@@ -641,6 +641,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
             (acc, [routeId, data]) => Object.assign(acc, { [routeId]: data }),
             {}
           );
+
+        cancelledDeferredRouteIds.forEach((id) =>
+          cancelledDeferredRouteIds.delete(id)
+        );
       }
     }
 
@@ -1644,6 +1648,7 @@ async function callLoaders(
     state,
     location,
     matches,
+    cancelledDeferredRouteIds,
     actionErrorResult,
     actionCatchResult,
     submission,
@@ -1713,6 +1718,7 @@ function filterMatchesToLoad(
   state: TransitionManagerState,
   location: Location,
   matches: ClientMatch[],
+  cancelledDeferredRouteIds: Set<string>,
   actionErrorResult?: DataErrorResult,
   actionCatchResult?: DataCatchResult,
   submission?: Submission,
@@ -1769,6 +1775,11 @@ function filterMatchesToLoad(
     }
 
     if (isNew(match, index) || matchPathChanged(match, index)) {
+      return true;
+    }
+
+    // If a route had a cancelled deferred, it cannot opt out of revalidation
+    if (cancelledDeferredRouteIds.has(match.route.id)) {
       return true;
     }
 
