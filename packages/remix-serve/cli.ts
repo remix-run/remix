@@ -25,6 +25,7 @@ if (args["--help"]) {
   --port: port to listen on
   --help: show this help
   `);
+  process.exit(0);
 }
 
 let buildPathArg = args["--server"];
