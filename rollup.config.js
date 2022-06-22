@@ -562,11 +562,9 @@ function getAdapterConfig(adapterName) {
  */
 function getMagicExports(packageName) {
   // Re-export everything from packages that is available in `remix`
-  /** @type {MagicExports | null} */
-  let magicExports = null;
   switch (packageName) {
     case "@remix-run/architect":
-      magicExports = {
+      return {
         values: {
           "@remix-run/architect": ["createArcTableSessionStorage"],
         },
@@ -574,23 +572,20 @@ function getMagicExports(packageName) {
           "@remix-run/node": ["UploadHandler", "UploadHandlerPart"],
         },
       };
-      break;
     case "@remix-run/cloudflare-pages":
-      magicExports = {
+      return {
         values: {
           "@remix-run/cloudflare": ["createCloudflareKVSessionStorage"],
         },
       };
-      break;
     case "@remix-run/cloudflare-workers":
-      magicExports = {
+      return {
         values: {
           "@remix-run/cloudflare": ["createCloudflareKVSessionStorage"],
         },
       };
-      break;
     case "@remix-run/cloudflare":
-      magicExports = {
+      return {
         values: {
           "@remix-run/cloudflare": [
             "createCloudflareKVSessionStorage",
@@ -601,9 +596,8 @@ function getMagicExports(packageName) {
           ],
         },
       };
-      break;
     case "@remix-run/node":
-      magicExports = {
+      return {
         values: {
           "@remix-run/node": [
             "createCookie",
@@ -620,9 +614,8 @@ function getMagicExports(packageName) {
           "@remix-run/node": ["UploadHandler", "UploadHandlerPart"],
         },
       };
-      break;
     case "@remix-run/react":
-      magicExports = {
+      return {
         values: {
           "@remix-run/react": [
             "RemixBrowser",
@@ -676,9 +669,8 @@ function getMagicExports(packageName) {
           ],
         },
       };
-      break;
     case "@remix-run/server-runtime":
-      magicExports = {
+      return {
         values: {
           "@remix-run/server-runtime": [
             "isCookie",
@@ -723,9 +715,9 @@ function getMagicExports(packageName) {
           ],
         },
       };
-      break;
+    default:
+      return null;
   }
-  return magicExports;
 }
 
 /**
