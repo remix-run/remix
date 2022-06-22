@@ -15,7 +15,7 @@ export function createApp(
   app.use(compression());
 
   app.use(
-    buildPath,
+    assetsBuildDirectory,
     express.static(assetsBuildDirectory, { immutable: true, maxAge: "1y" })
   );
 
