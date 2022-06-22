@@ -568,9 +568,6 @@ function getMagicExports(packageName) {
         values: {
           "@remix-run/architect": ["createArcTableSessionStorage"],
         },
-        types: {
-          "@remix-run/node": ["UploadHandler", "UploadHandlerPart"],
-        },
       };
     case "@remix-run/cloudflare-pages":
       return {
