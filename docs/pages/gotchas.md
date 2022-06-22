@@ -57,7 +57,7 @@ Even better, send a PR to the project to add `"sideEffects": false` to their pac
 
 Similarly, you may run into the same error if you call a function at the top-level scope of your route module that depends on server-only code.
 
-For example, [Remix upload handlers like `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler`](../api/remix#uploadhandler) use Node globals under the hood and should only be called on the server. You can call either of these functions in a `*.server.js` or `*.server.ts` file, or you can move them into your route's `action` or `loader` function.
+For example, [Remix upload handlers like `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler`][remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler] use Node globals under the hood and should only be called on the server. You can call either of these functions in a `*.server.js` or `*.server.ts` file, or you can move them into your route's `action` or `loader` function.
 
 So instead of doing:
 
@@ -166,3 +166,5 @@ Warning: Did not expect server HTML to contain a <script> in <html>.
 This is a hydration warning from React, and is most likely due to one of your browser extensions injecting scripts into the server-rendered HTML, creating a difference with the resulting HTML.
 
 Check out the page in incognito mode, the warning should disappear.
+
+[remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler]: ../api/remix#uploadhandler

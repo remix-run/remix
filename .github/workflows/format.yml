@@ -31,6 +31,9 @@ jobs:
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
 
+      - name: 🔗 Convert Docs links to references
+        run: node scripts/markdown-references.mjs
+
       - name: 👔 Format
         run: yarn format
 
