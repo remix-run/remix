@@ -9,5 +9,8 @@
     "ui": {
       "enabled": true
     }
+  },
+  "firestore": {
+    "rules": "./firebase-fixtures/firestore.rules"
   }
 }
