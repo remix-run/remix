@@ -1,4 +1,4 @@
-import { TextEncoder, TextDecoder } from "util";
+import { TextDecoder, TextEncoder } from "util";
 import {
   ReadableStream as NodeReadableStream,
   WritableStream as NodeWritableStream,
@@ -36,8 +36,8 @@ declare global {
 
       ReadableStream: typeof ReadableStream;
       WritableStream: typeof WritableStream;
-      TextEncoder: typeof TextEncoder;
       TextDecoder: typeof TextDecoder;
+      TextEncoder: typeof TextEncoder;
     }
   }
 }
@@ -57,7 +57,6 @@ export function installGlobals() {
 
   global.ReadableStream = NodeReadableStream;
   global.WritableStream = NodeWritableStream;
-
-  global.TextEncoder = TextEncoder as unknown as global.TextEncoder;
-  global.TextDecoder = TextDecoder as unknown as global.TextDecoder;
+  global.TextDecoder = TextDecoder as unknown as typeof global.TextDecoder;
+  global.TextEncoder = TextEncoder as unknown as typeof global.TextEncoder;
 }

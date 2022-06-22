@@ -383,13 +383,16 @@ const deferredContext = React.createContext<
   undefined | { data: unknown; key?: string }
 >(undefined);
 
-// TODO: update comment
-// These are duplicated in the server-runtime at: xxxxx
+// These are duplicated in the server-runtime at: responses.ts
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type Deferrable<Data> = unknown;
-export type ResolvedDeferrable<Data> = Data extends Deferrable<infer Data>
+export type Deferrable<T> = {};
+export type ResolvedDeferrable<T> = T extends null | undefined
+  ? T
+  : T extends PromiseLike<infer Data>
   ? Awaited<Data>
-  : Awaited<Data>;
+  : T extends Deferrable<infer Data>
+  ? Awaited<Data>
+  : Awaited<T>;
 
 export interface DeferredResolveRenderFunction<Data> {
   (args: { data: ResolvedDeferrable<Data> }): JSX.Element;
@@ -553,10 +556,7 @@ function DeferredErrorBoundary({
     // boundaries will be SSR'd, while errors that need to
     // bubble will bubble on the client as parent components
     // need to re-render.
-    if (
-      typeof errorElement === "undefined" &&
-      !IS_SSR
-    ) {
+    if (typeof errorElement === "undefined" && !IS_SSR) {
       throw data;
     }
 

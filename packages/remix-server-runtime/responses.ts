@@ -3,10 +3,14 @@ import { serializeError } from "./errors";
 const DEFERRED_PROMISE_PREFIX = "__deferred_promise:";
 
 // eslint-disable-next-line
-export type Deferrable<Data> = unknown;
-export type ResolvedDeferrable<Data> = Data extends Deferrable<infer Data>
+export type Deferrable<T> = {};
+export type ResolvedDeferrable<T> = T extends null | undefined
+  ? T
+  : T extends PromiseLike<infer Data>
   ? Awaited<Data>
-  : Awaited<Data>;
+  : T extends Deferrable<infer Data>
+  ? Awaited<Data>
+  : Awaited<T>;
 
 export interface DeferredResponse extends Response {
   deferred: Record<string | number, Promise<unknown>>;
