@@ -509,7 +509,7 @@ function remixCloudflarePages() {
  * @returns {import("rollup").RollupOptions[]}
  */
 function getAdapterConfig(adapterName) {
-  /** @type {`@remix-run/${RemixAdapter}`} */
+  /** @type {`@remix-run/${RemixPackage}`} */
   let packageName = `@remix-run/${adapterName}`;
   let sourceDir = `packages/remix-${adapterName}`;
   let outputDir = getOutputDir(packageName);
