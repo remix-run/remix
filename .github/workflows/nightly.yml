@@ -98,7 +98,7 @@ jobs:
     needs: [nightly]
     name: 📝 Comment on related issues and pull requests
     if: github.repository == 'remix-run/remix' && needs.nightly.outputs.NEXT_VERSION
-    uses: remix-run/remix/.github/workflows/release-comments.yml@main
+    uses: remix-run/remix/.github/workflows/reusable/release-comments.yml@main
     with:
       ref: "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}"
 
@@ -106,7 +106,7 @@ jobs:
     needs: [nightly]
     name: 🚀 Deployment Tests
     if: github.repository == 'remix-run/remix' && needs.nightly.outputs.NEXT_VERSION
-    uses: remix-run/remix/.github/workflows/deployments.yml@main
+    uses: remix-run/remix/.github/workflows/reusable/deployments.yml@main
     secrets:
       TEST_AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
       TEST_AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
@@ -125,6 +125,6 @@ jobs:
     needs: [nightly]
     name: 🥞 Remix Stacks Test
     if: github.repository == 'remix-run/remix' && needs.nightly.outputs.NEXT_VERSION
-    uses: remix-run/remix/.github/workflows/stacks.yml@main
+    uses: remix-run/remix/.github/workflows/reusable/stacks.yml@main
     with:
       version: "${{ needs.nightly.outputs.NEXT_VERSION }}"
