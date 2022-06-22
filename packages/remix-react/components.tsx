@@ -560,7 +560,15 @@ function DeferredErrorBoundary({
       throw data;
     }
 
-    child = errorElement;
+    // If a single use defined component is rendered, clone
+    // it and pass it an error prop.
+    child =
+      typeof errorElement === "object" &&
+      errorElement &&
+      "type" in errorElement &&
+      typeof errorElement.type === "function"
+        ? React.cloneElement(errorElement, { error: data })
+        : errorElement;
   }
 
   return (

@@ -67,7 +67,6 @@ test.beforeAll(async () => {
           return deferred({
             foo: "pizza",
             bar: new Promise(async (resolve, reject) => {
-              // await new Promise(resolve => setTimeout(resolve, 500));
               resolve("hamburger");
             }),
           });
@@ -103,9 +102,7 @@ test.beforeAll(async () => {
           return deferred({
             foo: "pizza",
             bar: new Promise(async (resolve, reject) => {
-              // await new Promise(resolve => setTimeout(resolve, 500));
-              return reject(new Error("Oh, no!"));
-              resolve("hamburger");
+              reject(new Error("Oh, no!"));
             }),
           });
         }
@@ -113,6 +110,10 @@ test.beforeAll(async () => {
         function DeferredComponent() {
           let deferred = useDeferred();
           return <div>{deferred}</div>;
+        }
+
+        function DeferredBoundary({ error }) {
+          return <div>Deferred Boundary {error.message}</div>;
         }
 
         export default function Index() {
@@ -123,7 +124,7 @@ test.beforeAll(async () => {
             <div>
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
-              <Deferred data={bar} errorElement={<div>Oh, no!</div>}>
+              <Deferred data={bar} errorElement={<DeferredBoundary />}>
                 <DeferredComponent />
               </Deferred>
             </div>
@@ -140,7 +141,7 @@ test.beforeAll(async () => {
           return deferred({
             foo: "pizza",
             bar: new Promise(async (resolve, reject) => {
-              return reject(new Error("Oh, no!"));
+              reject(new Error("Oh, no!"));
             }),
           });
         }
@@ -165,8 +166,8 @@ test.beforeAll(async () => {
           )
         }
 
-        export function ErrorBoundary() {
-          return <div id="error-boundary">Error Boundary</div>;
+        export function ErrorBoundary({ error }) {
+          return <div id="error-boundary">Error Boundary {error.message}</div>;
         }
       `,
 
@@ -264,7 +265,7 @@ test("renders error boundary", async () => {
   let response = await fixture.requestDocument("/deferred-error");
   let text = await response.text();
   expect(text).toMatch("pizza");
-  expect(text).toMatch('<div hidden id="S:0"><div>Oh, no!</div>');
+  expect(text).toMatch('<div hidden id="S:0"><div>Deferred Boundary <!-- -->Oh, no!<!-- --></div>');
   expect(text).toMatch(
     'window.__remixContext.deferredRouteData["routes/deferred-error"]["bar"]'
   );
@@ -277,7 +278,7 @@ test("errored deferred data renders boundary", async ({ page }) => {
   let text = await app.getHtml();
   expect(text).toMatch("pizza");
   expect(text).not.toMatch("hamburger");
-  expect(text).toMatch("Oh, no!");
+  expect(text).toMatch("Deferred Boundary Oh, no!");
 });
 
 test("errored deferred data renders route boundary on hydration", async ({
@@ -286,7 +287,7 @@ test("errored deferred data renders route boundary on hydration", async ({
   let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/deferred-error-no-boundary");
   let boundary = await page.waitForSelector("#error-boundary");
-  expect(await boundary.innerText()).toMatch("Error Boundary");
+  expect(await boundary.innerText()).toMatch("Error Boundary Oh, no!");
 });
 
 test("errored deferred data renders route boundary on transition", async ({
@@ -296,7 +297,7 @@ test("errored deferred data renders route boundary on transition", async ({
   await app.goto("/");
   await app.clickLink("/deferred-error-no-boundary");
   let text = await app.getHtml();
-  expect(text).toMatch("Error Boundary");
+  expect(text).toMatch("Error Boundary Oh, no!");
 });
 
 test("deferred response can redirect on document request", async ({ page }) => {
