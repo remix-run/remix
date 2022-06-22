@@ -740,8 +740,14 @@ function magicExportsPlugin(magicExports, { packageName, version }) {
       if (magicExports.values) {
         for (let pkgName of Object.keys(magicExports.values)) {
           if (!esmContents) esmContents = banner + "\n";
-          if (!cjsContents) cjsContents = banner + "\n";
           if (!tsContents) tsContents = banner + "\n";
+          if (!cjsContents) {
+            cjsContents =
+              banner +
+              "\n" +
+              "'use strict';\n" +
+              "Object.defineProperty(exports, '__esModule', { value: true });\n";
+          }
 
           let exportList = magicExports.values[pkgName].join(", ");
           esmContents += `export { ${exportList} } from '${pkgName}';\n`;
