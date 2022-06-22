@@ -1801,11 +1801,6 @@ function filterMatchesToLoad(
     return matches.filter((match) => !!match.route.loader);
   }
 
-  // TODO: (deferred) - need to add handling here that if a prior action
-  // cancelled a pending deferred, we need to skip shouldReload and force
-  // revalidation for the route so it's not stuck in a pending state should
-  // the user opt out via shouldReload.
-
   if (fetcher?.type === "actionReload") {
     return matches.filter(filterByRouteProps);
   } else if (
