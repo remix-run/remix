@@ -1,6 +1,7 @@
 import path from "path";
 import babel from "@rollup/plugin-babel";
 import nodeResolve from "@rollup/plugin-node-resolve";
+import typescript from "@rollup/plugin-typescript";
 import copy from "rollup-plugin-copy";
 import fse from "fs-extra";
 import fs from "fs";
@@ -78,6 +79,15 @@ function createRemix() {
           exclude: /node_modules/,
           extensions: [".ts"],
         }),
+        typescript({
+          tsconfig: path.join(sourceDir, "tsconfig.json"),
+          noEmitOnError: true,
+          compilerOptions: {
+            outDir: outputDist,
+            declaration: true,
+            emitDeclarationOnly: true,
+          },
+        }),
         nodeResolve({ extensions: [".ts"] }),
         copy({
           targets: [
@@ -115,6 +125,15 @@ function remix() {
           babelHelpers: "bundled",
           exclude: /node_modules/,
           extensions: [".ts"],
+        }),
+        typescript({
+          tsconfig: path.join(sourceDir, "tsconfig.json"),
+          noEmitOnError: true,
+          compilerOptions: {
+            outDir: outputDist,
+            declaration: true,
+            emitDeclarationOnly: true,
+          },
         }),
         copy({
           targets: [
@@ -181,6 +200,15 @@ function remixDev() {
           exclude: /node_modules/,
           extensions: [".ts"],
         }),
+        typescript({
+          tsconfig: path.join(sourceDir, "tsconfig.json"),
+          noEmitOnError: true,
+          compilerOptions: {
+            outDir: outputDist,
+            declaration: true,
+            emitDeclarationOnly: true,
+          },
+        }),
         nodeResolve({ extensions: [".ts"] }),
         copy({
           targets: [
@@ -223,6 +251,15 @@ function remixDev() {
           exclude: /node_modules/,
           extensions: [".ts"],
         }),
+        typescript({
+          tsconfig: path.join(sourceDir, "tsconfig.json"),
+          noEmitOnError: true,
+          compilerOptions: {
+            outDir: outputDist,
+            declaration: true,
+            emitDeclarationOnly: true,
+          },
+        }),
         nodeResolve({ extensions: [".ts"] }),
         copyToPlaygrounds(),
       ],
@@ -243,6 +280,15 @@ function remixDev() {
           exclude: /node_modules/,
           extensions: [".ts"],
         }),
+        typescript({
+          tsconfig: path.join(sourceDir, "tsconfig.json"),
+          noEmitOnError: true,
+          compilerOptions: {
+            outDir: `${outputDist}/cli/migrate/migrations`,
+            declaration: true,
+            emitDeclarationOnly: true,
+          },
+        }),
         nodeResolve({ extensions: [".ts"] }),
         copyToPlaygrounds(),
       ],
@@ -262,6 +308,15 @@ function remixDev() {
           babelHelpers: "bundled",
           exclude: /node_modules/,
           extensions: [".ts"],
+        }),
+        typescript({
+          tsconfig: path.join(sourceDir, "tsconfig.json"),
+          noEmitOnError: true,
+          compilerOptions: {
+            outDir: outputDist,
+            declaration: true,
+            emitDeclarationOnly: true,
+          },
         }),
         nodeResolve({ extensions: [".ts"] }),
         copyToPlaygrounds(),
@@ -296,6 +351,15 @@ function remixServerRuntime() {
           babelHelpers: "bundled",
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
+        }),
+        typescript({
+          tsconfig: path.join(sourceDir, "tsconfig.json"),
+          noEmitOnError: true,
+          compilerOptions: {
+            outDir: outputDist,
+            declaration: true,
+            emitDeclarationOnly: true,
+          },
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
@@ -363,6 +427,15 @@ function remixNode() {
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
         }),
+        typescript({
+          tsconfig: path.join(sourceDir, "tsconfig.json"),
+          noEmitOnError: true,
+          compilerOptions: {
+            outDir: outputDist,
+            declaration: true,
+            emitDeclarationOnly: true,
+          },
+        }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
@@ -407,6 +480,15 @@ function remixCloudflare() {
           babelHelpers: "bundled",
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
+        }),
+        typescript({
+          tsconfig: path.join(sourceDir, "tsconfig.json"),
+          noEmitOnError: true,
+          compilerOptions: {
+            outDir: outputDist,
+            declaration: true,
+            emitDeclarationOnly: true,
+          },
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
@@ -545,6 +627,15 @@ function getAdapterConfig(adapterName) {
           babelHelpers: "bundled",
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
+        }),
+        typescript({
+          tsconfig: path.join(sourceDir, "tsconfig.json"),
+          noEmitOnError: true,
+          compilerOptions: {
+            outDir: outputDist,
+            declaration: true,
+            emitDeclarationOnly: true,
+          },
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
@@ -848,6 +939,15 @@ function remixReact() {
         exclude: /node_modules/,
         extensions: [".ts", ".tsx"],
       }),
+      typescript({
+        tsconfig: path.join(sourceDir, "tsconfig.json"),
+        noEmitOnError: true,
+        compilerOptions: {
+          outDir: outputDist,
+          declaration: true,
+          emitDeclarationOnly: true,
+        },
+      }),
       nodeResolve({ extensions: [".ts", ".tsx"] }),
       copy({
         targets: [
@@ -917,6 +1017,15 @@ function remixServe() {
           exclude: /node_modules/,
           extensions: [".ts", ".tsx"],
         }),
+        typescript({
+          tsconfig: path.join(sourceDir, "tsconfig.json"),
+          noEmitOnError: true,
+          compilerOptions: {
+            outDir: outputDist,
+            declaration: true,
+            emitDeclarationOnly: true,
+          },
+        }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
         copy({
           targets: [
@@ -943,6 +1052,15 @@ function remixServe() {
           babelHelpers: "bundled",
           exclude: /node_modules/,
           extensions: [".ts"],
+        }),
+        typescript({
+          tsconfig: path.join(sourceDir, "tsconfig.json"),
+          noEmitOnError: true,
+          compilerOptions: {
+            outDir: outputDist,
+            declaration: true,
+            emitDeclarationOnly: true,
+          },
         }),
         nodeResolve({ extensions: [".ts"] }),
         copyToPlaygrounds(),

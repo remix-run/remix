@@ -9,11 +9,7 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "strict": true,
-
-    "declaration": true,
-    "emitDeclarationOnly": true,
-
-    "outDir": "../../build/node_modules/@remix-run/cloudflare-pages",
+    "noEmit": true,
     "rootDir": ".",
 
     // Avoid naming conflicts between history and react-router-dom relying on

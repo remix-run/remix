@@ -1,5 +1,4 @@
 {
-  "include": ["**/*"],
   "exclude": ["dist", "__tests__", "./compiler/shims"],
   "compilerOptions": {
     "lib": ["ES2019", "DOM.Iterable"],
@@ -10,12 +9,8 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
-
-    "declaration": true,
-    "emitDeclarationOnly": true,
     "skipLibCheck": true,
-
-    "outDir": "../../build/node_modules/@remix-run/dev",
+    "noEmit": true,
     "rootDir": "."
   }
 }

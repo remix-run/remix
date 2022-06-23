@@ -11,8 +11,10 @@
     "directory": "packages/remix-serve"
   },
   "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "bin": {
-    "remix-serve": "cli.js"
+    "remix-serve": "dist/cli.js"
   },
   "dependencies": {
     "@remix-run/express": "1.6.1",
