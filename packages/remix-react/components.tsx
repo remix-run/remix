@@ -385,7 +385,7 @@ const deferredContext = React.createContext<
 
 // These are duplicated in the server-runtime at: responses.ts
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type Deferrable<T> = never | T;
+export type Deferrable<T> = never | T | Promise<T>;
 export type ResolvedDeferrable<T> = T extends null | undefined
   ? T
   : T extends Deferrable<infer T2>

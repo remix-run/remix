@@ -324,6 +324,77 @@ It must be the last element on the page, right before the `<Scripts/>` tag:
 
 In order to avoid (usually) the client-side routing "scroll flash" on refresh or clicking back into the app from a different domain, this component attempts to restore scroll _before React hydration_. If you render the script anywhere other than the bottom of the document the window will not be tall enough to restore to the correct position.
 
+### `<Deferred>`
+
+This component is responsible for resolving deferred values accessed from [`useLoaderData`][useloaderdata]. This can be thought of as an auto-suspending React `<Suspense>` component and an error boundary that handles hydration all in one.
+
+`<Deferred>` can be used to resolve the deferred value in one of two ways:
+
+Directly as a render function:
+
+```tsx
+<Deferred value={deferredValue}>
+  {(value) => <p>{value}</p>}
+</Deferred>
+```
+
+Or indirectly via the `useDeferred` hook:
+
+```tsx
+function Accessor() {
+  const value = useDeferred();
+  return <p>{value}</p>;
+}
+
+<Deferred value={deferredValue}>
+  <Accessor />
+</Deferred>;
+```
+
+`<Deferred>` is paired with [`deferred()`][deferred] in your loader. Returning a deferred value from your loader will put Remix in streaming mode and allow you to render fallbacks with `<Deferred>`. A full example can be seen here:
+
+```tsx
+import type { Deferrable } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { deferred } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { Deferred, useLoaderData } from "@remix-run/react";
+
+type LoaderData = {
+  message: Deferrable<string>;
+};
+
+export const loader = () => {
+  const messagePromise = new Promise((resolve) => {
+    // DO NOT USE `setTimeout` IN A REAL APP
+    setTimeout(() => resolve("Hello"), 500);
+  });
+
+  return deferred({
+    message: messagePromise,
+  });
+};
+
+export default function Route() {
+  const loaderData = useLoaderData();
+
+  return (
+    <main>
+      <h1>Welcome!</h1>
+      <Deferred
+        value={message}
+        fallback={<p>Loading message...</p>}
+        errorBoundary={<p>Error loading message!</p>}
+      >
+        {(value) => <p>{value.message}</p>}
+      </Deferred>
+    </main>
+  );
+}
+```
+
+## `useDeferred`
+
+This hook returns the resolved data from a `<Deferred>` component. See the [`<Deferred>` docs][deferred] for more information.
+
 ### `useLoaderData`
 
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Single</a>: <a href="https://www.youtube.com/watch?v=NXqEP_PsPNc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Loading data into components</a></docs-success>
@@ -1521,6 +1592,49 @@ return new Response(null, {
 });
 ```
 
+### `deferred` response
+
+This is a shortcut for creating `text/remix-deferred` responses. It assumes you are using `utf-8` encoding.
+
+```ts lines=[2,10]
+import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { deferred } from "@remix-run/node"; // or "@remix-run/cloudflare"
+
+export const loader: LoaderFunction = async () => {
+  const messagePromise = new Promise((resolve) => {
+    // DO NOT USE `setTimeout` IN A REAL APP
+    setTimeout(() => resolve("Hello"), 500);
+  });
+
+  return deferred({
+    message: messagePromise,
+  });
+};
+```
+
+You can also pass a status code and headers:
+
+```ts lines=[11-16]
+export const loader: LoaderFunction = async () => {
+  const messagePromise = new Promise((resolve) => {
+    // DO NOT USE `setTimeout` IN A REAL APP
+    setTimeout(() => resolve("not coffee"), 500);
+  });
+
+  return deferred(
+    {
+      message: messagePromise,
+    },
+    {
+      status: 418,
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    }
+  );
+};
+```
+
 ## `unstable_parseMultipartFormData`
 
 Allows you to handle multipart forms (file uploads) for your app.
@@ -2689,6 +2803,7 @@ export default function CompanyRoute() {
 
 [meta-links-scripts]: #meta-links-scripts
 [form]: #form
+[deferred]: #deferred
 [cookies]: #cookies
 [sessions]: #sessions
 [usefetcher]: #usefetcher
