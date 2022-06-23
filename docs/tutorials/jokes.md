@@ -1585,11 +1585,11 @@ import type { Joke } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
 
-type LoaderData = { users: Array<Joke> };
+type LoaderData = { jokes: Array<Joke> };
 
 export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
-    users: await db.user.findMany(),
+    users: await db.joke.findMany(),
   };
   return json(data);
 };
