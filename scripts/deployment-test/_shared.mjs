@@ -97,11 +97,29 @@ export async function validatePackageVersions(directory) {
     key.startsWith("@remix-run")
   );
 
-  await Promise.all(
-    remixDeps.map((key) => {
+  let settled = await Promise.all(
+    remixDeps.map(async (key) => {
       let version = allDeps[key];
-      let pinnedVersion = version.replace("^", "");
-      return checkUrl(`https://registry.npmjs.org/${key}/${pinnedVersion}`);
+      let pinnedVersion = version.replace(/^\^/, "");
+      let url = `https://registry.npmjs.org/${key}/${pinnedVersion}`;
+      let result = await checkUrl(url);
+      return { ok: result.ok, url, status: result.status };
     })
   );
+
+  let failed = settled.filter((result) => result.ok === false);
+
+  if (failed.length > 0) {
+    return [
+      false,
+      failed
+        .map(
+          (result) =>
+            `${result.url} returned a ${result.status} HTTP status code`
+        )
+        .join("\n"),
+    ];
+  }
+
+  return [true, null];
 }

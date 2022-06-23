@@ -32,9 +32,7 @@ let client = new NetlifyAPI(process.env.NETLIFY_AUTH_TOKEN);
 
 function createNetlifySite() {
   return client.createSite({
-    body: {
-      name: APP_NAME,
-    },
+    body: { name: APP_NAME },
   });
 }
 
@@ -44,7 +42,12 @@ async function createAndDeployApp() {
   await createNewApp();
 
   // validate dependencies are available
-  await validatePackageVersions(PROJECT_DIR);
+  let [valid, errors] = await validatePackageVersions(PROJECT_DIR);
+
+  if (!valid) {
+    console.error(errors);
+    process.exit(1);
+  }
 
   await Promise.all([
     fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),

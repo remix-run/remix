@@ -26,7 +26,12 @@ try {
   await createNewApp();
 
   // validate dependencies are available
-  await validatePackageVersions(PROJECT_DIR);
+  let [valid, errors] = await validatePackageVersions(PROJECT_DIR);
+
+  if (!valid) {
+    console.error(errors);
+    process.exit(1);
+  }
 
   let spawnOpts = getSpawnOpts(PROJECT_DIR);
 
