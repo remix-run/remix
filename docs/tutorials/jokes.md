@@ -1581,11 +1581,11 @@ To _load_ data in a Remix route module, you use a [`loader`][loader]. This is si
 import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import type { User } from "@prisma/client";
+import type { Joke } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
 
-type LoaderData = { users: Array<User> };
+type LoaderData = { users: Array<Joke> };
 
 export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
@@ -1594,12 +1594,12 @@ export const loader: LoaderFunction = async () => {
   return json(data);
 };
 
-export default function Users() {
+export default function Jokes() {
   const data = useLoaderData<LoaderData>();
   return (
     <ul>
-      {data.users.map((user) => (
-        <li key={user.id}>{user.name}</li>
+      {data.jokes.map((joke) => (
+        <li key={joke.id}>{joke.name}</li>
       ))}
     </ul>
   );
