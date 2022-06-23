@@ -1,3 +1,4 @@
+import path from "path";
 import express from "express";
 import compression from "compression";
 import morgan from "morgan";
@@ -6,8 +7,15 @@ import { createRequestHandler } from "@remix-run/express";
 export function createApp(
   buildPath = "/build",
   mode = "production",
-  assetsBuildDirectory = "public/build",
-  publicPath = "/build"
+  {
+    assetsBuildDirectory = "public/build",
+    publicPath = path.dirname(assetsBuildDirectory),
+    browserAssetsPath = "/build",
+  }: {
+    assetsBuildDirectory?: string;
+    publicPath?: string;
+    browserAssetsPath?: string;
+  }
 ) {
   let app = express();
 
@@ -16,11 +24,11 @@ export function createApp(
   app.use(compression());
 
   app.use(
-    publicPath,
+    browserAssetsPath,
     express.static(assetsBuildDirectory, { immutable: true, maxAge: "1y" })
   );
 
-  app.use(express.static("public", { maxAge: "1h" }));
+  app.use(express.static(publicPath, { maxAge: "1h" }));
 
   app.use(morgan("tiny"));
   app.all(

@@ -68,12 +68,10 @@ let onListen = () => {
   }
 };
 
-let app = createApp(
-  buildPath,
-  process.env.NODE_ENV,
-  assetsBuildDirectory,
-  publicPath
-);
+let app = createApp(buildPath, process.env.NODE_ENV, {
+  assetsBuildDirectory: assetsBuildDirectory,
+  browserAssetsPath: publicPath,
+});
 let server = process.env.HOST
   ? app.listen(port, process.env.HOST, onListen)
   : app.listen(port, onListen);
