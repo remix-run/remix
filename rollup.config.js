@@ -685,76 +685,64 @@ function getMagicExports(packageName) {
  * @param {{ packageName: string; version: string }} buildInfo
  * @returns {import("rollup").Plugin}
  */
-function magicExportsPlugin(magicExports, { packageName, version }) {
-  return {
-    name: `${packageName}:generate-magic-exports`,
-    generateBundle() {
-      if (!magicExports) return;
+const magicExportsPlugin = (magicExports, { packageName, version }) => ({
+  name: `${packageName}:generate-magic-exports`,
+  generateBundle() {
+    if (!magicExports) {
+      return;
+    }
 
-      let tsContents = "";
-      let cjsContents = "";
-      let esmContents = "";
-      let banner = createBanner(packageName, version);
+    let banner = createBanner(packageName, version);
+    let esmContents = banner + "\n";
+    let tsContents = banner + "\n";
+    let cjsContents =
+      banner +
+      "\n" +
+      "'use strict';\n" +
+      "Object.defineProperty(exports, '__esModule', { value: true });\n";
 
-      if (magicExports.values) {
-        if (!esmContents) esmContents = banner + "\n";
-        if (!tsContents) tsContents = banner + "\n";
-        if (!cjsContents) {
-          cjsContents =
-            banner +
-            "\n" +
-            "'use strict';\n" +
-            "Object.defineProperty(exports, '__esModule', { value: true });\n";
-        }
+    if (magicExports.values) {
+      let exportList = magicExports.values.join(", ");
+      esmContents += `export { ${exportList} } from '${packageName}';\n`;
+      tsContents += `export { ${exportList} } from '${packageName}';\n`;
 
-        let exportList = magicExports.values.join(", ");
-        esmContents += `export { ${exportList} } from '${packageName}';\n`;
-        tsContents += `export { ${exportList} } from '${packageName}';\n`;
-
-        let cjsModule = camelCase(
-          packageName.startsWith("@remix-run/")
-            ? packageName.slice(11)
-            : packageName
-        );
-        cjsContents += `var ${cjsModule} = require('${packageName}');\n`;
-        for (let symbol of magicExports.values) {
-          cjsContents +=
-            `Object.defineProperty(exports, '${symbol}', {\n` +
-            "  enumerable: true,\n" +
-            `  get: function () { return ${cjsModule}.${symbol}; }\n` +
-            "});\n";
-        }
+      let cjsModule = camelCase(
+        packageName.startsWith("@remix-run/")
+          ? packageName.slice(11)
+          : packageName
+      );
+      cjsContents += `var ${cjsModule} = require('${packageName}');\n`;
+      for (let symbol of magicExports.values) {
+        cjsContents +=
+          `Object.defineProperty(exports, '${symbol}', {\n` +
+          "  enumerable: true,\n" +
+          `  get: function () { return ${cjsModule}.${symbol}; }\n` +
+          "});\n";
       }
+    }
 
-      if (magicExports.types) {
-        if (!tsContents) tsContents = banner + "\n";
-        let exportList = magicExports.types.join(", ");
-        tsContents += `export type { ${exportList} } from '${packageName}';\n`;
-      }
+    if (magicExports.types) {
+      let exportList = magicExports.types.join(", ");
+      tsContents += `export type { ${exportList} } from '${packageName}';\n`;
+    }
 
-      tsContents &&
-        this.emitFile({
-          type: "asset",
-          fileName: path.join("magicExports", "remix.d.ts"),
-          source: tsContents,
-        });
-
-      cjsContents &&
-        this.emitFile({
-          type: "asset",
-          fileName: path.join("magicExports", "remix.js"),
-          source: cjsContents,
-        });
-
-      esmContents &&
-        this.emitFile({
-          type: "asset",
-          fileName: path.join("magicExports", "esm", "remix.js"),
-          source: esmContents,
-        });
-    },
-  };
-}
+    this.emitFile({
+      fileName: path.join("magicExports", "remix.d.ts"),
+      source: tsContents,
+      type: "asset",
+    });
+    this.emitFile({
+      fileName: path.join("magicExports", "remix.js"),
+      source: cjsContents,
+      type: "asset",
+    });
+    this.emitFile({
+      fileName: path.join("magicExports", "esm", "remix.js"),
+      source: esmContents,
+      type: "asset",
+    });
+  },
+});
 
 /** @returns {import("rollup").RollupOptions[]} */
 function remixServerAdapters() {
