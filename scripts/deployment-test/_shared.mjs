@@ -1,5 +1,6 @@
 import path from "path";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 import { sync as spawnSync } from "cross-spawn";
 import jsonfile from "jsonfile";
 import fetch from "node-fetch";
@@ -17,7 +18,8 @@ export let CYPRESS_SOURCE_DIR = path.join(__dirname, "cypress");
 export let CYPRESS_CONFIG = path.join(__dirname, "cypress.json");
 
 export function getAppName(target) {
-  return `remix-deployment-test-${target}`;
+  let sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
+  return `remix-deployment-test-${target}-${sha}`;
 }
 
 export async function updatePackageConfig(directory, transform) {
