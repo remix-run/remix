@@ -11,6 +11,8 @@
     "directory": "packages/remix-architect"
   },
   "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "dependencies": {
     "@architect/functions": "^5.0.2",
     "@remix-run/node": "1.6.1",
@@ -23,5 +25,11 @@
   },
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }

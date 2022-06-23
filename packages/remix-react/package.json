@@ -12,8 +12,9 @@
   },
   "license": "MIT",
   "sideEffects": false,
-  "main": "index.js",
-  "module": "esm/index.js",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "module": "dist/esm/index.js",
   "dependencies": {
     "history": "^5.3.0",
     "react-router-dom": "^6.2.2"
@@ -29,5 +30,11 @@
   },
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }

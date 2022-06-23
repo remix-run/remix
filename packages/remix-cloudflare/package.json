@@ -11,6 +11,8 @@
     "directory": "packages/remix-cloudflare"
   },
   "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.1.3",
     "@remix-run/server-runtime": "1.6.1"
@@ -23,5 +25,11 @@
   },
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }
