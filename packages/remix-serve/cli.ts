@@ -20,11 +20,11 @@ let args = arg({
 
 if (args["--help"]) {
   console.log(`
-  --server: serverBuildPath or serverBuildDirectory in your remix.config.js
-  --assets: assetsBuildDirectory in your remix.config.js
+  -s, --server: serverBuildPath or serverBuildDirectory in your remix.config.js
+  -a, --assets: assetsBuildDirectory in your remix.config.js
   --browser-assets: publicPath in your remix.config.js
   --public-path: "public" directory
-  --port: port to listen on
+  -p, --port: port to listen on
   --help: show this help
   `);
   process.exit(0);
