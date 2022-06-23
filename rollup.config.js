@@ -715,7 +715,7 @@ const magicExportsPlugin = (magicExports, { packageName, version }) => ({
       esmContents += `export { ${exportList} } from '${packageName}';\n`;
       tsContents += `export { ${exportList} } from '${packageName}';\n`;
 
-      let cjsModule = camelCase(packageName.slice('@remix-run/'.length));
+      let cjsModule = camelCase(packageName.slice("@remix-run/".length));
       cjsContents += `var ${cjsModule} = require('${packageName}');\n`;
       for (let symbol of magicExports.values) {
         cjsContents +=
