@@ -85,7 +85,7 @@ function createRemix() {
           compilerOptions: {
             outDir: outputDist,
             declaration: true,
-            emitDeclarationOnly: true,
+            module: "esnext",
           },
         }),
         nodeResolve({ extensions: [".ts"] }),
@@ -132,7 +132,7 @@ function remix() {
           compilerOptions: {
             outDir: outputDist,
             declaration: true,
-            emitDeclarationOnly: true,
+            module: "esnext",
           },
         }),
         copy({
@@ -206,14 +206,14 @@ function remixDev() {
           compilerOptions: {
             outDir: outputDist,
             declaration: true,
-            emitDeclarationOnly: true,
+            module: "esnext",
           },
         }),
         nodeResolve({ extensions: [".ts"] }),
         copy({
           targets: [
             { src: `LICENSE.md`, dest: [outputDir, sourceDir] },
-            { src: `${sourceDir}/package.json`, dest: outputDir },
+            { src: `${sourceDir}/package.json`, dest: [outputDir, outputDist] },
             { src: `${sourceDir}/README.md`, dest: outputDir },
             {
               src: `${sourceDir}/compiler/shims`,
@@ -257,7 +257,7 @@ function remixDev() {
           compilerOptions: {
             outDir: outputDist,
             declaration: true,
-            emitDeclarationOnly: true,
+            module: "esnext",
           },
         }),
         nodeResolve({ extensions: [".ts"] }),
@@ -286,7 +286,7 @@ function remixDev() {
           compilerOptions: {
             outDir: `${outputDist}/cli/migrate/migrations`,
             declaration: true,
-            emitDeclarationOnly: true,
+            module: "esnext",
           },
         }),
         nodeResolve({ extensions: [".ts"] }),
@@ -315,7 +315,7 @@ function remixDev() {
           compilerOptions: {
             outDir: outputDist,
             declaration: true,
-            emitDeclarationOnly: true,
+            module: "esnext",
           },
         }),
         nodeResolve({ extensions: [".ts"] }),
@@ -358,7 +358,7 @@ function remixServerRuntime() {
           compilerOptions: {
             outDir: outputDist,
             declaration: true,
-            emitDeclarationOnly: true,
+            module: "esnext",
           },
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
@@ -433,7 +433,7 @@ function remixNode() {
           compilerOptions: {
             outDir: outputDist,
             declaration: true,
-            emitDeclarationOnly: true,
+            module: "esnext",
           },
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
@@ -487,7 +487,7 @@ function remixCloudflare() {
           compilerOptions: {
             outDir: outputDist,
             declaration: true,
-            emitDeclarationOnly: true,
+            module: "esnext",
           },
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
@@ -634,7 +634,7 @@ function getAdapterConfig(adapterName) {
           compilerOptions: {
             outDir: outputDist,
             declaration: true,
-            emitDeclarationOnly: true,
+            module: "esnext",
           },
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
@@ -945,7 +945,7 @@ function remixReact() {
         compilerOptions: {
           outDir: outputDist,
           declaration: true,
-          emitDeclarationOnly: true,
+          module: "esnext",
         },
       }),
       nodeResolve({ extensions: [".ts", ".tsx"] }),
@@ -1023,7 +1023,7 @@ function remixServe() {
           compilerOptions: {
             outDir: outputDist,
             declaration: true,
-            emitDeclarationOnly: true,
+            module: "esnext",
           },
         }),
         nodeResolve({ extensions: [".ts", ".tsx"] }),
@@ -1059,7 +1059,7 @@ function remixServe() {
           compilerOptions: {
             outDir: outputDist,
             declaration: true,
-            emitDeclarationOnly: true,
+            module: "esnext",
           },
         }),
         nodeResolve({ extensions: [".ts"] }),
