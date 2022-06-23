@@ -33,6 +33,7 @@ export type {
 
 // Remix server runtime packages should re-export these types
 export type {
+  ActionArgs,
   ActionFunction,
   AppData,
   AppLoadContext,
@@ -51,6 +52,7 @@ export type {
   HtmlMetaDescriptor,
   LinkDescriptor,
   LinksFunction,
+  LoaderArgs,
   LoaderFunction,
   MetaDescriptor,
   MetaFunction,
