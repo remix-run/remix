@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "bug-report-test": "playwright test --config ./integration/playwright.config.ts integration/bug-report-test.ts",
-    "build": "rollup -c",
+    "build": "rollup -c && tsc -b",
     "postbuild": "node scripts/copy-build-to-dist.mjs",
     "clean": "git clean -fdX .",
     "clean:build": "node ./scripts/clean-build.mjs",
@@ -42,7 +42,7 @@
     "posttest:integration": "rimraf ./.tmp/integration",
     "test:primary": "jest",
     "version": "node ./scripts/version.js",
-    "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\""
+    "watch": "rollup -c --watch --watch.onEnd=\"tsc -b && node scripts/copy-build-to-dist.mjs\""
   },
   "dependencies": {
     "@babel/core": "^7.17.5",
@@ -59,7 +59,6 @@
     "@playwright/test": "1.20.2",
     "@rollup/plugin-babel": "^5.2.2",
     "@rollup/plugin-node-resolve": "^11.0.1",
-    "@rollup/plugin-typescript": "^8.3.3",
     "@testing-library/cypress": "^8.0.2",
     "@testing-library/jest-dom": "^5.16.2",
     "@testing-library/react": "^12.1.3",

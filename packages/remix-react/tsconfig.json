@@ -9,7 +9,9 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "jsx": "react",
-    "noEmit": true,
-    "rootDir": "."
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": ".",
+    "outDir": "../../build/node_modules/@remix-run/react/dist"
   }
 }
