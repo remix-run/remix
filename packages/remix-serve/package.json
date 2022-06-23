@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/serve",
-  "version": "1.5.1",
+  "version": "0.0.0-experimental-708e229e",
   "description": "Production application server for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -15,7 +15,7 @@
     "remix-serve": "cli.js"
   },
   "dependencies": {
-    "@remix-run/express": "1.5.1",
+    "@remix-run/express": "0.0.0-experimental-708e229e",
     "compression": "^1.7.4",
     "express": "^4.17.1",
     "morgan": "^1.10.0"
