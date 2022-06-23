@@ -1620,12 +1620,13 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[3,5,12,19-21,23-28,31,55-59]
+```tsx filename=app/routes/jokes.tsx lines=[3,4,6,12,19-21,23-28,31,55-59]
 import type {
   LinksFunction,
   LoaderFunction,
+  json,
 } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import type { Joke } from "@prisma/client";
 import {
   Link,
   Outlet,
@@ -1640,7 +1641,7 @@ export const links: LinksFunction = () => {
 };
 
 type LoaderData = {
-  jokeListItems: Array<{ id: string; name: string }>;
+  jokeListItems: Array<Joke>;
 };
 
 export const loader: LoaderFunction = async () => {
