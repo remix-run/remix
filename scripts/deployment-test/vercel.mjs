@@ -48,7 +48,7 @@ async function createVercelProject() {
     body: JSON.stringify({ name: APP_NAME }),
   });
 
-  if (response.status !== 200) {
+  if (!response.ok) {
     throw new Error(`Error creating project: ${response.status}`);
   }
 
@@ -59,7 +59,7 @@ async function createVercelProject() {
 async function getVercelDeploymentUrl(projectId) {
   let response = await vercelClient(`/v8/projects/${projectId}`);
 
-  if (response.status !== 200) {
+  if (!response.ok) {
     throw new Error(`Error fetching project: ${response.status}`);
   }
 
@@ -73,7 +73,7 @@ async function destroyApp() {
   let response = await vercelClient(`/v9/projects/${APP_NAME}`, {
     method: "DELETE",
   });
-  if (response.status !== 200) {
+  if (!response.ok) {
     console.error(`Error destroying project ${APP_NAME}: ${response.status}`);
   } else {
     console.log(`Destroyed app ${APP_NAME}`);

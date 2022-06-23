@@ -84,7 +84,7 @@ export function checkUrl(url) {
   return fetchRetry(url, {
     retryOn: (attempt, error, response) => {
       if (attempt > 10) return false;
-      if (response.status >= 200 && response.status < 400) return false;
+      if (!response.ok) return false;
       return true;
     },
   });
