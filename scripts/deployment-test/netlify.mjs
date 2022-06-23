@@ -89,10 +89,4 @@ async function destroyApp() {
   spawnSync("npx", ["netlify", "sites:delete", siteId, "--force"], spawnOpts);
 }
 
-createAndDeployApp()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  })
-  .finally(destroyApp);
+createAndDeployApp().finally(destroyApp);

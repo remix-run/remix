@@ -105,10 +105,4 @@ function destroyApp() {
   spawnSync("fly", ["apps", "destroy", APP_NAME, "--yes"], spawnOpts);
 }
 
-createAndDeployApp()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  })
-  .finally(destroyApp);
+createAndDeployApp().finally(destroyApp);

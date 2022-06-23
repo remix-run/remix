@@ -110,10 +110,4 @@ async function destroyApp() {
   console.log(`Destroyed app ${APP_NAME}`);
 }
 
-createAndDeployApp()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  })
-  .finally(destroyApp);
+createAndDeployApp().finally(destroyApp);

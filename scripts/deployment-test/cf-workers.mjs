@@ -3,6 +3,7 @@ import { sync as spawnSync } from "cross-spawn";
 import fse from "fs-extra";
 import toml from "@iarna/toml";
 import { createApp } from "@remix-run/dev";
+import fetch from "node-fetch";
 
 import {
   addCypress,
@@ -86,10 +87,4 @@ async function destroyApp() {
   console.log(`[DESTROY_APP]`, json);
 }
 
-createAndDeployApp()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error);
-    process.exit(1);
-  })
-  .finally(destroyApp);
+createAndDeployApp().finally(destroyApp);
