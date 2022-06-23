@@ -39,7 +39,7 @@ export {
   Form,
   PrefetchPageLinks,
   LiveReload,
-  useDeferred,
+  useDeferredData,
   useFormAction,
   useSubmit,
   useTransition,

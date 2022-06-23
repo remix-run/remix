@@ -92,7 +92,7 @@ test.beforeAll(async () => {
       "app/routes/deferred.jsx": js`
         import * as React from "react";
         import { deferred } from "@remix-run/node";
-        import { useLoaderData, Link, Deferred, useDeferred } from "@remix-run/react";
+        import { useLoaderData, Link, Deferred, useDeferredData } from "@remix-run/react";
 
         export function loader() {
           return deferred({
@@ -104,7 +104,7 @@ test.beforeAll(async () => {
         }
 
         function DeferredComponent() {
-          let deferred = useDeferred();
+          let deferred = useDeferredData();
           return <div>{deferred}</div>;
         }
 
@@ -127,7 +127,7 @@ test.beforeAll(async () => {
       "app/routes/deferred-error.jsx": js`
         import * as React from "react";
         import { deferred } from "@remix-run/node";
-        import { useLoaderData, Link, Deferred, useDeferred } from "@remix-run/react";
+        import { useLoaderData, Link, Deferred, useDeferredData } from "@remix-run/react";
 
         export function loader() {
           return deferred({
@@ -139,7 +139,7 @@ test.beforeAll(async () => {
         }
 
         function DeferredComponent() {
-          let deferred = useDeferred();
+          let deferred = useDeferredData();
           return <div>{deferred}</div>;
         }
 
@@ -166,7 +166,7 @@ test.beforeAll(async () => {
       "app/routes/deferred-error-no-boundary.jsx": js`
         import * as React from "react";
         import { deferred } from "@remix-run/node";
-        import { useLoaderData, Link, Deferred, useDeferred } from "@remix-run/react";
+        import { useLoaderData, Link, Deferred, useDeferredData } from "@remix-run/react";
 
         export function loader() {
           return deferred({
@@ -178,7 +178,7 @@ test.beforeAll(async () => {
         }
 
         function DeferredComponent() {
-          let deferred = useDeferred();
+          let deferred = useDeferredData();
           return <div>{deferred}</div>;
         }
 
@@ -205,7 +205,7 @@ test.beforeAll(async () => {
       "app/routes/multiple-deferred.jsx": js`
         import * as React from "react";
         import { deferred } from "@remix-run/node";
-        import { useLoaderData, Link, Deferred, useDeferred } from "@remix-run/react";
+        import { useLoaderData, Link, Deferred, useDeferredData } from "@remix-run/react";
 
         export function loader() {
           return deferred({
@@ -222,7 +222,7 @@ test.beforeAll(async () => {
         }
 
         function DeferredComponent() {
-          let deferred = useDeferred();
+          let deferred = useDeferredData();
           return <div>{deferred}</div>;
         }
 
@@ -288,7 +288,9 @@ test("loads critical data first with render func", async () => {
   );
 });
 
-test("loads deferred data on page transitions with render func", async ({ page }) => {
+test("loads deferred data on page transitions with render func", async ({
+  page,
+}) => {
   let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/");
   await app.clickLink("/inline-deferred");

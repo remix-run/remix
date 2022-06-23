@@ -334,15 +334,15 @@ Directly as a render function:
 
 ```tsx
 <Deferred value={deferredValue}>
-  {(value) => <p>{value}</p>}
+  {(data) => <p>{data}</p>}
 </Deferred>
 ```
 
-Or indirectly via the `useDeferred` hook:
+Or indirectly via the `useDeferredData` hook:
 
 ```tsx
 function Accessor() {
-  const value = useDeferred();
+  const value = useDeferredData();
   return <p>{value}</p>;
 }
 
@@ -391,7 +391,7 @@ export default function Route() {
 }
 ```
 
-## `useDeferred`
+## `useDeferredData`
 
 This hook returns the resolved data from a `<Deferred>` component. See the [`<Deferred>` docs][deferred] for more information.
 

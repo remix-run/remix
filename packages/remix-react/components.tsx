@@ -493,7 +493,7 @@ export function Deferred<Data = any>({
   );
 }
 
-export function useDeferred<Data>() {
+export function useDeferredData<Data>() {
   let ctx = React.useContext(deferredContext);
   return ctx?.value as ResolvedDeferrable<Data>;
 }
@@ -505,7 +505,7 @@ export interface ResolveDeferredProps<Data> {
 export function ResolveDeferred<Data>({
   children,
 }: ResolveDeferredProps<Data>) {
-  let data = useDeferred<Data>();
+  let data = useDeferredData<Data>();
   return children(data);
 }
 
