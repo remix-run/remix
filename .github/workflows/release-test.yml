@@ -18,6 +18,6 @@ on:
 jobs:
   test:
     if: github.repository == 'remix-run/remix'
-    uses: remix-run/remix/.github/workflows/reusable/test.yml@main
+    uses: remix-run/remix/.github/workflows/reusable-test.yml@main
     with:
       node_version: "[14, 16, 18]"
