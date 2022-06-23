@@ -109,6 +109,7 @@ To fix it, add the ESM package to the `serverDependenciesToBundle` option in you
 In our case here we're using the `dot-prop` package, so we would do it like this:
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   serverDependenciesToBundle: ["dot-prop"],
   // ...

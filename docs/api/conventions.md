@@ -12,9 +12,7 @@ A lot of Remix APIs aren't imported from the `"@remix-run/*"` packages, but are 
 This file has a few build and development configuration options, but does not actually run on your server.
 
 ```tsx filename=remix.config.js
-/**
- * @type {import('@remix-run/dev').AppConfig}
- */
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
@@ -66,7 +64,7 @@ The port number to use for the dev websocket server. Defaults to 8002.
 
 This is an array of globs (via [minimatch][minimatch]) that Remix will match to
 files while reading your `app/routes` directory. If a file matches, it will be
-ignored rather that treated like a route module. This is useful for ignoring
+ignored rather than treated like a route module. This is useful for ignoring
 dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
 
 ### publicPath
@@ -143,10 +141,8 @@ A list of regex patterns that determines if a module is transpiled and included 
 
 For example, the `unified` ecosystem is all ESM-only. Let's also say we're using a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be able to consume those packages in a CJS app without having to use dynamic imports:
 
-```ts filename=remix.config.js lines=[10-15]
-/**
- * @type {import('@remix-run/dev').AppConfig}
- */
+```ts filename=remix.config.js lines=[8-13]
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",

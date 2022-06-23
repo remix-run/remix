@@ -55,7 +55,7 @@ ${colors.heading("Values")}:
   - ${colors.arg("remixPlatform")}     \`node\` or \`cloudflare\`
   - ${colors.arg(
     "migration"
-  )}         One of the choices from https://github.com/remix-run/remix/tree/main/packages/remix-dev/cli/migrate/migration-options
+  )}         One of the choices from https://github.com/remix-run/remix/blob/main/packages/remix-dev/cli/migrate/migrations/index.ts
 
 ${colors.heading("Creating a new project")}:
 
@@ -189,7 +189,9 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       // as possible, but inquirer will allow users to retry input rather than
       // stop the process.
       if (flags.template) {
-        await validateTemplate(flags.template);
+        await validateTemplate(flags.template, {
+          githubToken: process.env.GITHUB_TOKEN,
+        });
       }
       if (projectPath) {
         await validateNewProjectPath(projectPath);

@@ -1,8 +1,32 @@
 name: 🚀 Deployment Tests
 
 on:
-  repository_dispatch:
-    types: [release]
+  workflow_call:
+    secrets:
+      TEST_AWS_ACCESS_KEY_ID:
+        required: true
+      TEST_AWS_SECRET_ACCESS_KEY:
+        required: true
+      TEST_CF_ACCOUNT_ID:
+        required: true
+      TEST_CF_GLOBAL_API_KEY:
+        required: true
+      TEST_CF_EMAIL:
+        required: true
+      TEST_CF_PAGES_API_TOKEN:
+        required: true
+      TEST_CF_API_TOKEN:
+        required: true
+      TEST_DENO_DEPLOY_TOKEN:
+        required: true
+      TEST_FLY_TOKEN:
+        required: true
+      TEST_NETLIFY_TOKEN:
+        required: true
+      TEST_VERCEL_TOKEN:
+        required: true
+      TEST_VERCEL_USER_ID:
+        required: true
 
 jobs:
   arc_deploy:
