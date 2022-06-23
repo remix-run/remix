@@ -9,45 +9,43 @@ const PACKAGES_PATH = path.join(ROOT_DIR, "packages");
 copyBuildToDist();
 
 async function copyBuildToDist() {
-  /** @type {string[]} */
-  let filePaths = [];
-  /** @type {string[]} */
-  try {
-    filePaths = (await fse.readdir(BUILD_PATH)).map((file) =>
-      path.join(BUILD_PATH, file)
-    );
-    if (filePaths.length === 0) {
-      throw Error();
-    }
-  } catch (_) {
-    console.error(
-      "No build files found. Run `yarn build` before running this script."
-    );
-    process.exit(1);
-  }
+  /** @type {{ build: string; src: string }[]} */
+  let packages = (await getPackageBuildPaths(BUILD_PATH)).map((buildDir) => {
+    let parentDir = path.basename(path.dirname(buildDir));
+    let dirName = path.basename(buildDir);
+    return {
+      build: buildDir,
+      src: path.join(
+        PACKAGES_PATH,
+        parentDir === "@remix-run" ? `remix-${dirName}` : dirName
+      ),
+    };
+  });
 
-  let packages = await getPackagePaths(filePaths);
   /** @type {Promise<void>[]} */
   let copyQueue = [];
   for (let pkg of packages) {
     try {
-      if (!(await fse.stat(pkg.dest)).isDirectory()) {
+      let srcPath = path.join(pkg.build, "dist");
+      let destPath = path.join(pkg.src, "dist");
+      if (!(await fse.stat(srcPath)).isDirectory()) {
         continue;
       }
-      let destPath = path.join(pkg.dest, "dist");
       copyQueue.push(
-        ensureCleanDir(destPath).then(() => {
+        new Promise((res) => {
           console.log(
             chalk.yellow(
               `  🛠  Copying ${path.relative(
                 ROOT_DIR,
-                pkg.src
+                srcPath
               )} to ${path.relative(ROOT_DIR, destPath)}`
             )
           );
-          return fse.copy(pkg.src, destPath, {
-            recursive: true,
-          });
+          res(
+            fse.copy(srcPath, destPath, {
+              recursive: true,
+            })
+          );
         })
       );
     } catch (e) {}
@@ -61,38 +59,30 @@ async function copyBuildToDist() {
 }
 
 /**
- * @param {string[]} buildFilePaths
- * @returns {Promise<{ src: string; dest: string }[]>} distFilePaths
+ * @param {string} moduleRootDir
+ * @returns {Promise<string[]>}
  */
-async function getPackagePaths(buildFilePaths) {
-  /**  @type {{ src: string; dest: string }[]}    */
-  let packages = [];
-  for (let filePath of buildFilePaths) {
-    if (!(await fse.stat(filePath)).isDirectory()) {
-      continue;
-    }
-    let dirName = path.basename(filePath);
-    if (dirName === "@remix-run") {
-      let childFilePaths = (await fse.readdir(filePath)).map((childFile) =>
-        path.join(filePath, childFile)
-      );
-      packages = packages.concat(await getPackagePaths(childFilePaths));
-    } else {
-      let parentDir = path.basename(path.dirname(filePath));
-      packages.push({
-        src: filePath,
-        dest: path.join(
-          PACKAGES_PATH,
-          parentDir === "@remix-run" ? `remix-${dirName}` : dirName
-        ),
-      });
-    }
-  }
-  return packages;
-}
+async function getPackageBuildPaths(moduleRootDir) {
+  /** @type {string[]} */
+  let packageBuilds = [];
 
-/** @param {string} dirPath */
-async function ensureCleanDir(dirPath) {
-  await fse.ensureDir(dirPath);
-  await fse.emptyDir(dirPath);
+  try {
+    for (let fileName of await fse.readdir(moduleRootDir)) {
+      let moduleDir = path.join(moduleRootDir, fileName);
+      if (!(await fse.stat(moduleDir)).isDirectory()) {
+        continue;
+      }
+      if (path.basename(moduleDir) === "@remix-run") {
+        packageBuilds.push(...(await getPackageBuildPaths(moduleDir)));
+      } else {
+        packageBuilds.push(moduleDir);
+      }
+    }
+    return packageBuilds;
+  } catch (_) {
+    console.error(
+      "No build files found. Run `yarn build` before running this script."
+    );
+    process.exit(1);
+  }
 }
