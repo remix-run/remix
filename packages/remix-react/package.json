@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/react",
-  "version": "1.5.1",
+  "version": "0.0.0-experimental-84a312db",
   "description": "React DOM bindings for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -19,7 +19,7 @@
     "react-router-dom": "^6.2.2"
   },
   "devDependencies": {
-    "@remix-run/node": "1.5.1",
+    "@remix-run/node": "0.0.0-experimental-84a312db",
     "@testing-library/jest-dom": "^5.16.2",
     "@testing-library/react": "^13.3.0",
     "@types/react": "^18.0.12",
