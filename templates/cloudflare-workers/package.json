@@ -1,7 +1,6 @@
 {
   "private": true,
   "sideEffects": false,
-  "main": "build/index.js",
   "scripts": {
     "build": "remix build",
     "deploy": "npm run build && wrangler publish",
