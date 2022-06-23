@@ -562,125 +562,121 @@ function getAdapterConfig(adapterName) {
  */
 function getMagicExports(packageName) {
   // Re-export everything from packages that is available in `remix`
-  switch (packageName) {
-    case "@remix-run/architect":
-      return {
-        values: ["createArcTableSessionStorage"],
-      };
-    case "@remix-run/cloudflare":
-      return {
-        values: [
-          "createCloudflareKVSessionStorage",
-          "createCookie",
-          "createSessionStorage",
-          "createCookieSessionStorage",
-          "createMemorySessionStorage",
-        ],
-      };
-    case "@remix-run/node":
-      return {
-        values: [
-          "createCookie",
-          "createSessionStorage",
-          "createCookieSessionStorage",
-          "createMemorySessionStorage",
-          "createFileSessionStorage",
-          "unstable_createFileUploadHandler",
-          "unstable_createMemoryUploadHandler",
-          "unstable_parseMultipartFormData",
-        ],
-        types: ["UploadHandler", "UploadHandlerPart"],
-      };
-    case "@remix-run/react":
-      return {
-        values: [
-          "RemixBrowser",
-          "Meta",
-          "Links",
-          "Scripts",
-          "Link",
-          "NavLink",
-          "Form",
-          "PrefetchPageLinks",
-          "ScrollRestoration",
-          "LiveReload",
-          "useFormAction",
-          "useSubmit",
-          "useTransition",
-          "useFetcher",
-          "useFetchers",
-          "useCatch",
-          "useLoaderData",
-          "useActionData",
-          "useBeforeUnload",
-          "useMatches",
-          "RemixServer",
+  /** @type {Record<string, MagicExports>} */
+  let magicExportsByPackageName = {
+    "@remix-run/architect": {
+      values: ["createArcTableSessionStorage"],
+    },
+    "@remix-run/cloudflare": {
+      values: [
+        "createCloudflareKVSessionStorage",
+        "createCookie",
+        "createCookieSessionStorage",
+        "createMemorySessionStorage",
+        "createSessionStorage",
+      ],
+    },
+    "@remix-run/node": {
+      values: [
+        "createCookie",
+        "createCookieSessionStorage",
+        "createFileSessionStorage",
+        "createMemorySessionStorage",
+        "createSessionStorage",
+        "unstable_createFileUploadHandler",
+        "unstable_createMemoryUploadHandler",
+        "unstable_parseMultipartFormData",
+      ],
+      types: ["UploadHandler", "UploadHandlerPart"],
+    },
+    "@remix-run/react": {
+      values: [
+        "Form",
+        "Link",
+        "Links",
+        "LiveReload",
+        "Meta",
+        "NavLink",
+        "PrefetchPageLinks",
+        "RemixBrowser",
+        "RemixServer",
+        "Scripts",
+        "ScrollRestoration",
+        "useActionData",
+        "useBeforeUnload",
+        "useCatch",
+        "useFetcher",
+        "useFetchers",
+        "useFormAction",
+        "useLoaderData",
+        "useMatches",
+        "useSubmit",
+        "useTransition",
 
-          // react-router-dom exports
-          "Outlet",
-          "useHref",
-          "useLocation",
-          "useNavigate",
-          "useNavigationType",
-          "useOutlet",
-          "useParams",
-          "useResolvedPath",
-          "useSearchParams",
-          "useOutletContext",
-        ],
-        types: [
-          "RemixBrowserProps",
-          "FormProps",
-          "SubmitOptions",
-          "SubmitFunction",
-          "FormMethod",
-          "FormEncType",
-          "RemixServerProps",
-          "ShouldReloadFunction",
-          "ThrownResponse",
-          "LinkProps",
-          "NavLinkProps",
-        ],
-      };
-    case "@remix-run/server-runtime":
-      return {
-        values: ["isCookie", "createSession", "isSession", "json", "redirect"],
-        types: [
-          "ServerBuild",
-          "ServerEntryModule",
-          "HandleDataRequestFunction",
-          "HandleDocumentRequestFunction",
-          "CookieParseOptions",
-          "CookieSerializeOptions",
-          "CookieSignatureOptions",
-          "CookieOptions",
-          "Cookie",
-          "AppLoadContext",
-          "AppData",
-          "EntryContext",
-          "LinkDescriptor",
-          "HtmlLinkDescriptor",
-          "PageLinkDescriptor",
-          "ErrorBoundaryComponent",
-          "ActionFunction",
-          "HeadersFunction",
-          "LinksFunction",
-          "LoaderFunction",
-          "MetaDescriptor",
-          "HtmlMetaDescriptor",
-          "MetaFunction",
-          "RouteComponent",
-          "RouteHandle",
-          "RequestHandler",
-          "SessionData",
-          "Session",
-          "SessionStorage",
-          "SessionIdStorageStrategy",
-        ],
-      };
-    default:
-      return null;
-  }
+        // react-router-dom exports
+        "Outlet",
+        "useHref",
+        "useLocation",
+        "useNavigate",
+        "useNavigationType",
+        "useOutlet",
+        "useOutletContext",
+        "useParams",
+        "useResolvedPath",
+        "useSearchParams",
+      ],
+      types: [
+        "RemixBrowserProps",
+        "FormProps",
+        "SubmitOptions",
+        "SubmitFunction",
+        "FormMethod",
+        "FormEncType",
+        "RemixServerProps",
+        "ShouldReloadFunction",
+        "ThrownResponse",
+        "LinkProps",
+        "NavLinkProps",
+      ],
+    },
+    "@remix-run/server-runtime": {
+      values: ["createSession", "isCookie", "isSession", "json", "redirect"],
+      types: [
+        "ActionFunction",
+        "AppData",
+        "AppLoadContext",
+        "Cookie",
+        "CookieOptions",
+        "CookieParseOptions",
+        "CookieSerializeOptions",
+        "CookieSignatureOptions",
+        "EntryContext",
+        "ErrorBoundaryComponent",
+        "HandleDataRequestFunction",
+        "HandleDocumentRequestFunction",
+        "HeadersFunction",
+        "HtmlLinkDescriptor",
+        "HtmlMetaDescriptor",
+        "LinkDescriptor",
+        "LinksFunction",
+        "LoaderFunction",
+        "MetaDescriptor",
+        "MetaFunction",
+        "PageLinkDescriptor",
+        "RequestHandler",
+        "RouteComponent",
+        "RouteHandle",
+        "ServerBuild",
+        "ServerEntryModule",
+        "Session",
+        "SessionData",
+        "SessionIdStorageStrategy",
+        "SessionStorage",
+      ],
+    },
+  };
+
+  return magicExportsByPackageName[packageName] || null;
 }
 
 /**
