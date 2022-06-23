@@ -33,7 +33,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 export default function Screen() {
-  const { error } = useLoaderData<LoaderData>();
+  const { error } = useLoaderData() as LoaderData;
 
   return (
     <>

@@ -32,7 +32,7 @@ export const loader: LoaderFunction = async ({ context }) => {
 };
 
 export default function UserEmails() {
-  const { users } = useLoaderData<LoaderData>();
+  const { users } = useLoaderData() as LoaderData;
 
   return (
     <section>

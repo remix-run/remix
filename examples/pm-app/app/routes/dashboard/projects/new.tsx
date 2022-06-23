@@ -106,7 +106,7 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 function NewProject() {
-  const loaderData = useLoaderData<LoaderData>();
+  const loaderData = useLoaderData() as LoaderData;
   const actionData = useActionData<ActionData>() || {};
   const { fieldErrors, fields, formError } = actionData;
   const { allUsers, user } = loaderData;

@@ -218,7 +218,7 @@ export const loader: LoaderFunction = async ({
 };
 
 export default function Product() {
-  const product = useLoaderData<LoaderData>();
+  const product = useLoaderData() as LoaderData;
   return (
     <div>
       <p>Product {product.id}</p>

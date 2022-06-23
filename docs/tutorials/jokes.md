@@ -1595,7 +1595,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function Users() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
   return (
     <ul>
       {data.users.map((user) => (
@@ -1651,7 +1651,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function JokesRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <div className="jokes-layout">
@@ -1784,7 +1784,7 @@ export const loader: LoaderFunction = async ({
 };
 
 export default function JokeRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <div>
@@ -1845,7 +1845,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function JokesIndexRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <div>
@@ -3488,7 +3488,7 @@ export const loader: LoaderFunction = async ({
 };
 
 export default function JokesRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <div className="jokes-layout">
@@ -4319,7 +4319,7 @@ export const loader: LoaderFunction = async ({
 };
 
 export default function JokeRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <div>
@@ -4388,7 +4388,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function JokesIndexRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <div>
@@ -4721,7 +4721,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function JokeRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <div>
@@ -4865,7 +4865,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function JokeRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <div>
@@ -5470,7 +5470,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function JokeRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <div>
@@ -5959,7 +5959,7 @@ export const action: ActionFunction = async ({
 };
 
 export default function JokeRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <JokeDisplay joke={data.joke} isOwner={data.isOwner} />

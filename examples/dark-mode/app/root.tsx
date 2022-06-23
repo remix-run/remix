@@ -39,7 +39,7 @@ export const meta: MetaFunction = () => ({
 });
 
 function App() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
   const [theme] = useTheme();
 
   return (
@@ -61,7 +61,7 @@ function App() {
 }
 
 export default function AppWithProviders() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <ThemeProvider specifiedTheme={data.theme}>

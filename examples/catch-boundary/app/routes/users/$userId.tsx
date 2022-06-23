@@ -33,7 +33,7 @@ export const loader: LoaderFunction = async ({ params }) => {
 };
 
 export default function User() {
-  const { user } = useLoaderData<LoaderData>();
+  const { user } = useLoaderData() as LoaderData;
   return <div>Hi there {user.name}!</div>;
 }
 

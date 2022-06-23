@@ -2592,7 +2592,7 @@ export type ContextType = {
 };
 
 export default function CompaniesRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   const [invoiceSort, setInvoiceSort] =
     React.useState<Sort>("ASC");
@@ -2667,8 +2667,8 @@ export const loader: LoaderFunction = async ({
 };
 
 export default function CompanyRoute() {
-  const data = useLoaderData<LoaderData>();
-  const { invoiceSort } = useOutletContext<ContextType>();
+  const data = useLoaderData() as LoaderData;
+  const { invoiceSort } = useOutletContext() as ContextType;
 
   const sortedInvoices =
     invoiceSort === "ASC"

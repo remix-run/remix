@@ -43,7 +43,7 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 export default function Index() {
-  const loaderData = useLoaderData<LoaderData>();
+  const loaderData = useLoaderData() as LoaderData;
   const actionData = useActionData<ActionData>();
   return (
     <>

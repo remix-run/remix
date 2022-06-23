@@ -51,7 +51,7 @@ export const loader: LoaderFunction = async (_args) => {
  * an array of errors coming back from the GraphQL API.
  */
 export default function CharacterError() {
-  const loader = useLoaderData<LoaderData>();
+  const loader = useLoaderData() as LoaderData;
 
   return (
     <main className="ui-main">

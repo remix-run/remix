@@ -73,12 +73,12 @@ function Document({
 }
 
 export default function App() {
-  const { ENV } = useLoaderData<{
+  const { ENV } = useLoaderData() as {
     user: User | null;
     ENV: {
       SITE_URL: string;
     };
-  }>();
+  };
 
   return (
     <Document ENV={ENV}>

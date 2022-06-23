@@ -74,7 +74,7 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 };
 
 export default function ProjectRoute() {
-  const { project, allUsers, user } = useLoaderData<LoaderData>();
+  const { project, allUsers, user } = useLoaderData() as LoaderData;
   const actionData = useActionData<ActionData>();
 
   const { fieldErrors } = actionData || {};

@@ -118,7 +118,7 @@ export const action: ActionFunction = async ({ request, params }) => {
 };
 
 function TodoListRoute() {
-  const { todoList, project } = useLoaderData<LoaderData>();
+  const { todoList, project } = useLoaderData() as LoaderData;
 
   const fetchers = useFetchers();
   const taskFetcherMap = new Map<string, boolean>();

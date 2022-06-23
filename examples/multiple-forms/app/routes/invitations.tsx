@@ -54,7 +54,7 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 export default function Index() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <div>

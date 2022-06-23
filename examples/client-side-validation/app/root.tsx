@@ -67,7 +67,7 @@ export const loader: LoaderFunction = async () => {
 
 export default function App() {
   const actionData = useActionData();
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <html lang="en">

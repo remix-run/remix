@@ -64,7 +64,7 @@ export const action: ActionFunction = async ({ request, params }) => {
 };
 
 export default function JokeRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return <JokeDisplay joke={data.joke} isOwner={data.isOwner} />;
 }

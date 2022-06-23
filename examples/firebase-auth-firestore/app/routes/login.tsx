@@ -71,7 +71,7 @@ export const action: ActionFunction = async ({ request }) => {
 export default function Login() {
   const [clientAction, setClientAction] = useState<ActionData>();
   const action = useActionData<ActionData>();
-  const restConfig = useLoaderData<LoaderData>();
+  const restConfig = useLoaderData() as LoaderData;
   const submit = useSubmit();
 
   const handleSubmit = useCallback(

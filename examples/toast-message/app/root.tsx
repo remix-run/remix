@@ -45,7 +45,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 export default function App() {
-  const { toastMessage } = useLoaderData<LoaderData>();
+  const { toastMessage } = useLoaderData() as LoaderData;
 
   React.useEffect(() => {
     if (!toastMessage) {

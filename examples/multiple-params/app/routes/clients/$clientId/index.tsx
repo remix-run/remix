@@ -33,7 +33,7 @@ export const loader: LoaderFunction = async ({ params }) => {
 };
 
 export default function ClientIndexRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
   return (
     <div>
       <strong>{data.client.name} Information</strong>

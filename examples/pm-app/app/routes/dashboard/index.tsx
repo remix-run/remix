@@ -41,7 +41,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 export default function DashboardIndex() {
-  const loaderData = useLoaderData<LoaderData>();
+  const loaderData = useLoaderData() as LoaderData;
   const { user, projects } = loaderData;
   const { nameFirst } = user;
   const deleteFetcher = useFetcher();

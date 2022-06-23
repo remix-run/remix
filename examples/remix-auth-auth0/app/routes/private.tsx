@@ -16,7 +16,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 export default function Screen() {
-  const { profile } = useLoaderData<LoaderData>();
+  const { profile } = useLoaderData() as LoaderData;
   return (
     <>
       <Form method="post" action="/logout">

@@ -38,7 +38,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 export default function Index() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
   const [items, setItems] = useState(data.items);
 
   const transition = useTransition();

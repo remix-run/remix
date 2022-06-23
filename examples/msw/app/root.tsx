@@ -30,7 +30,7 @@ export const meta: MetaFunction = () => ({
 });
 
 export default function App() {
-  const loaderData = useLoaderData<LoaderData>();
+  const loaderData = useLoaderData() as LoaderData;
 
   return (
     <html lang="en">

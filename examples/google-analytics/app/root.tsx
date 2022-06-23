@@ -47,7 +47,7 @@ export const meta: MetaFunction = () => ({
 
 export default function App() {
   const location = useLocation();
-  const { gaTrackingId } = useLoaderData<LoaderData>();
+  const { gaTrackingId } = useLoaderData() as LoaderData;
 
   useEffect(() => {
     if (gaTrackingId?.length) {

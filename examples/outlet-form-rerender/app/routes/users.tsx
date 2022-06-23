@@ -18,7 +18,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function Users() {
-  const { users } = useLoaderData<LoaderData>();
+  const { users } = useLoaderData() as LoaderData;
 
   return (
     <div>

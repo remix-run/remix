@@ -60,7 +60,7 @@ function useIsHydrating(queryString: string) {
 }
 
 export default function Index() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   const transition = useTransition();
   const hydrating = useIsHydrating("[data-hydrating-signal]");

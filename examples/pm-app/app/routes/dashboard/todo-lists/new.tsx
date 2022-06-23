@@ -130,7 +130,7 @@ export const action: ActionFunction = async ({ request, context, params }) => {
 
 const NewTodoList: RouteComponent = () => {
   const actionData = useActionData<ActionData>() || {};
-  const { projects } = useLoaderData<LoaderData>();
+  const { projects } = useLoaderData() as LoaderData;
   const [searchParams] = useSearchParams();
   const { fieldErrors, fields, formError } = actionData;
   const [todos, setTodos] = React.useState<TempTodo[]>([]);

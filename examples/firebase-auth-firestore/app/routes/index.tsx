@@ -72,7 +72,7 @@ const TodoComponent: React.FC<{ id: string; title: string }> = (props) => {
 
 export default function Index() {
   const action = useActionData<ActionData>();
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
   const ref = useRef<HTMLInputElement>(null);
   useEffect(() => {
     ref.current?.focus();

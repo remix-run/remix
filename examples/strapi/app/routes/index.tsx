@@ -43,7 +43,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 const Posts: React.FC = () => {
-  const posts = useLoaderData<PostData>();
+  const posts = useLoaderData() as PostData;
 
   return (
     <>

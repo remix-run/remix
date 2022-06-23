@@ -29,7 +29,7 @@ export const loader: LoaderFunction = async ({ params }) => {
 };
 
 export default function User() {
-  const { user } = useLoaderData<LoaderData>();
+  const { user } = useLoaderData() as LoaderData;
   const location = useLocation();
 
   return (

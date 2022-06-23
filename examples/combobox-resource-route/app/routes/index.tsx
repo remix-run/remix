@@ -5,6 +5,7 @@ import {
   ComboboxOption,
   ComboboxPopover,
 } from "@reach/combobox";
+import type { FetcherWithComponents } from "@remix-run/react";
 import { Form, useFetcher, useSearchParams } from "@remix-run/react";
 
 import type { Lang } from "~/models/langs";
@@ -20,7 +21,7 @@ export function links() {
 
 export default function Index() {
   // Set up a fetcher to fetch languages as the user types
-  const langs = useFetcher<Lang[]>();
+  const langs = useFetcher() as FetcherWithComponents<Lang[]>;
 
   // ComboboxInput is just an <input/> in the end, so we can read the submitted
   // value from teh search params when we submit the form (because it's a "get"

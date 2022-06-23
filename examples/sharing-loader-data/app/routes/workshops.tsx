@@ -14,7 +14,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function Workshops() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <div>

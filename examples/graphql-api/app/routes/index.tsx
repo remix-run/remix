@@ -14,7 +14,7 @@ export { loader } from "~/routes/api/characters";
  * a GraphQL API.
  */
 export default function Index() {
-  const loader = useLoaderData<LoaderData>();
+  const loader = useLoaderData() as LoaderData;
   const { data } = loader;
 
   const characters = data.characters.results ?? [];

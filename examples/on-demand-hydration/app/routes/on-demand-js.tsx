@@ -17,7 +17,7 @@ export const handle = {
 };
 
 export default function Screen() {
-  const { withJS } = useLoaderData<LoaderData>();
+  const { withJS } = useLoaderData() as LoaderData;
 
   return (
     <>

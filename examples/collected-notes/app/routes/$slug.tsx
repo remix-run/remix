@@ -17,7 +17,7 @@ export const loader: LoaderFunction = async ({ params }) => {
 };
 
 export default function Screen() {
-  const { body } = useLoaderData<LoaderData>();
+  const { body } = useLoaderData() as LoaderData;
   return (
     <main>
       <article dangerouslySetInnerHTML={{ __html: body }} />

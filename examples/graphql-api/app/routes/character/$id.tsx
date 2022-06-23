@@ -24,7 +24,7 @@ export const loader: LoaderFunction = async (args) => {
  * the Remix loader & route params.
  */
 export default function Character() {
-  const loader = useLoaderData<LoaderData>();
+  const loader = useLoaderData() as LoaderData;
   const { data } = loader;
 
   const character = data.character;

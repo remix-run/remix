@@ -789,13 +789,13 @@ export const loader = async ({ request, params }) => {
 };
 
 export default function InvoiceRoute() {
-  const invoice = useLoaderData<Invoice>();
+  const invoice = useLoaderData() as Invoice;
   return <InvoiceView invoice={invoice} />;
 }
 
 export function CatchBoundary() {
   // this returns { status, statusText, data }
-  const caught = useCatch<ThrownResponses>();
+  const caught = useCatch() as ThrownResponses;
 
   switch (caught.status) {
     case 401:

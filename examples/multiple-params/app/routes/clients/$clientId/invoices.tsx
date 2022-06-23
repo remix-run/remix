@@ -27,7 +27,7 @@ export const loader: LoaderFunction = async ({ params }) => {
 };
 
 export default function ClientRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
   return (
     <div>
       <h3>Invoices</h3>

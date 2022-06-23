@@ -32,7 +32,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 export default function JokesIndexRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <div>

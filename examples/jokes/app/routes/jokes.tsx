@@ -38,7 +38,7 @@ export const links: LinksFunction = () => {
 };
 
 export default function JokesScreen() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData() as LoaderData;
 
   return (
     <div className="jokes-layout">

@@ -26,7 +26,7 @@ export const meta: MetaFunction = () => ({
 });
 
 export default function App() {
-  const { env } = useLoaderData<Window>();
+  const { env } = useLoaderData() as Window;
 
   return (
     <html lang="en">

@@ -25,7 +25,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function Products() {
-  const data = useLoaderData<Post[]>();
+  const data = useLoaderData() as Post[];
 
   return (
     <main>

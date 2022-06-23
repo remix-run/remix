@@ -19,7 +19,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 export default function Screen() {
-  const { email } = useLoaderData<LoaderData>();
+  const { email } = useLoaderData() as LoaderData;
   return (
     <>
       <h1>Hello {email}</h1>

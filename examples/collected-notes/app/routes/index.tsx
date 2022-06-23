@@ -28,7 +28,7 @@ export const loader: LoaderFunction = async ({ request }) => {
 };
 
 export default function Screen() {
-  const { site, notes } = useLoaderData<LoaderData>();
+  const { site, notes } = useLoaderData() as LoaderData;
   const [params] = useSearchParams();
   const term = params.get("term") || "";
   const page = Number(params.get("page") || "1");
