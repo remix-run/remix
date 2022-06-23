@@ -39,7 +39,6 @@ function createNetlifySite() {
 }
 
 let spawnOpts = getSpawnOpts(PROJECT_DIR);
-let siteId = null;
 
 async function createAndDeployApp() {
   await createNewApp();
@@ -63,12 +62,10 @@ async function createAndDeployApp() {
   let site = await createNetlifySite();
   console.log("Site created");
 
-  siteId = site.id;
-
   // deploy to netlify
   let netlifyDeployCommand = spawnSync(
     "npx",
-    ["netlify-cli", "deploy", "--site", site.id, "--prod"],
+    ["netlify", "deploy", "--site", site.id, "--prod"],
     spawnOpts
   );
   if (netlifyDeployCommand.status !== 0) {
@@ -82,11 +79,17 @@ async function createAndDeployApp() {
 }
 
 async function destroyApp() {
-  if (!siteId) {
-    throw new Error("No siteId found");
+  let sites = await client.listSites();
+  let site = sites.find((site) => site.name === APP_NAME);
+  if (!site) {
+    throw new Error("No site found");
   }
 
-  spawnSync("npx", ["netlify", "sites:delete", siteId, "--force"], spawnOpts);
+  spawnSync(
+    "npx",
+    ["netlify", "sites:delete", site.site_id, "--force"],
+    spawnOpts
+  );
 }
 
 createAndDeployApp().finally(destroyApp);
