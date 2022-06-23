@@ -277,10 +277,12 @@ export async function dev(
     next();
   });
   app.use(
-    createApp(config.serverBuildPath, mode, {
-      assetsBuildDirectory: config.assetsBuildDirectory,
-      browserAssetsPath: config.publicPath,
-    })
+    createApp(
+      config.serverBuildPath,
+      mode,
+      config.publicPath,
+      config.assetsBuildDirectory
+    )
   );
 
   let server: Server | null = null;
