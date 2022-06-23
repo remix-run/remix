@@ -565,140 +565,118 @@ function getMagicExports(packageName) {
   switch (packageName) {
     case "@remix-run/architect":
       return {
-        values: {
-          "@remix-run/architect": ["createArcTableSessionStorage"],
-        },
+        values: ["createArcTableSessionStorage"],
       };
     case "@remix-run/cloudflare":
       return {
-        values: {
-          "@remix-run/cloudflare": [
-            "createCloudflareKVSessionStorage",
-            "createCookie",
-            "createSessionStorage",
-            "createCookieSessionStorage",
-            "createMemorySessionStorage",
-          ],
-        },
+        values: [
+          "createCloudflareKVSessionStorage",
+          "createCookie",
+          "createSessionStorage",
+          "createCookieSessionStorage",
+          "createMemorySessionStorage",
+        ],
       };
     case "@remix-run/node":
       return {
-        values: {
-          "@remix-run/node": [
-            "createCookie",
-            "createSessionStorage",
-            "createCookieSessionStorage",
-            "createMemorySessionStorage",
-            "createFileSessionStorage",
-            "unstable_createFileUploadHandler",
-            "unstable_createMemoryUploadHandler",
-            "unstable_parseMultipartFormData",
-          ],
-        },
-        types: {
-          "@remix-run/node": ["UploadHandler", "UploadHandlerPart"],
-        },
+        values: [
+          "createCookie",
+          "createSessionStorage",
+          "createCookieSessionStorage",
+          "createMemorySessionStorage",
+          "createFileSessionStorage",
+          "unstable_createFileUploadHandler",
+          "unstable_createMemoryUploadHandler",
+          "unstable_parseMultipartFormData",
+        ],
+        types: ["UploadHandler", "UploadHandlerPart"],
       };
     case "@remix-run/react":
       return {
-        values: {
-          "@remix-run/react": [
-            "RemixBrowser",
-            "Meta",
-            "Links",
-            "Scripts",
-            "Link",
-            "NavLink",
-            "Form",
-            "PrefetchPageLinks",
-            "ScrollRestoration",
-            "LiveReload",
-            "useFormAction",
-            "useSubmit",
-            "useTransition",
-            "useFetcher",
-            "useFetchers",
-            "useCatch",
-            "useLoaderData",
-            "useActionData",
-            "useBeforeUnload",
-            "useMatches",
-            "RemixServer",
+        values: [
+          "RemixBrowser",
+          "Meta",
+          "Links",
+          "Scripts",
+          "Link",
+          "NavLink",
+          "Form",
+          "PrefetchPageLinks",
+          "ScrollRestoration",
+          "LiveReload",
+          "useFormAction",
+          "useSubmit",
+          "useTransition",
+          "useFetcher",
+          "useFetchers",
+          "useCatch",
+          "useLoaderData",
+          "useActionData",
+          "useBeforeUnload",
+          "useMatches",
+          "RemixServer",
 
-            // react-router-dom exports
-            "Outlet",
-            "useHref",
-            "useLocation",
-            "useNavigate",
-            "useNavigationType",
-            "useOutlet",
-            "useParams",
-            "useResolvedPath",
-            "useSearchParams",
-            "useOutletContext",
-          ],
-        },
-        types: {
-          "@remix-run/react": [
-            "RemixBrowserProps",
-            "FormProps",
-            "SubmitOptions",
-            "SubmitFunction",
-            "FormMethod",
-            "FormEncType",
-            "RemixServerProps",
-            "ShouldReloadFunction",
-            "ThrownResponse",
-            "LinkProps",
-            "NavLinkProps",
-          ],
-        },
+          // react-router-dom exports
+          "Outlet",
+          "useHref",
+          "useLocation",
+          "useNavigate",
+          "useNavigationType",
+          "useOutlet",
+          "useParams",
+          "useResolvedPath",
+          "useSearchParams",
+          "useOutletContext",
+        ],
+        types: [
+          "RemixBrowserProps",
+          "FormProps",
+          "SubmitOptions",
+          "SubmitFunction",
+          "FormMethod",
+          "FormEncType",
+          "RemixServerProps",
+          "ShouldReloadFunction",
+          "ThrownResponse",
+          "LinkProps",
+          "NavLinkProps",
+        ],
       };
     case "@remix-run/server-runtime":
       return {
-        values: {
-          "@remix-run/server-runtime": [
-            "isCookie",
-            "createSession",
-            "isSession",
-            "json",
-            "redirect",
-          ],
-        },
-        types: {
-          "@remix-run/server-runtime": [
-            "ServerBuild",
-            "ServerEntryModule",
-            "HandleDataRequestFunction",
-            "HandleDocumentRequestFunction",
-            "CookieParseOptions",
-            "CookieSerializeOptions",
-            "CookieSignatureOptions",
-            "CookieOptions",
-            "Cookie",
-            "AppLoadContext",
-            "AppData",
-            "EntryContext",
-            "LinkDescriptor",
-            "HtmlLinkDescriptor",
-            "PageLinkDescriptor",
-            "ErrorBoundaryComponent",
-            "ActionFunction",
-            "HeadersFunction",
-            "LinksFunction",
-            "LoaderFunction",
-            "MetaDescriptor",
-            "HtmlMetaDescriptor",
-            "MetaFunction",
-            "RouteComponent",
-            "RouteHandle",
-            "RequestHandler",
-            "SessionData",
-            "Session",
-            "SessionStorage",
-            "SessionIdStorageStrategy",
-          ],
-        },
+        values: ["isCookie", "createSession", "isSession", "json", "redirect"],
+        types: [
+          "ServerBuild",
+          "ServerEntryModule",
+          "HandleDataRequestFunction",
+          "HandleDocumentRequestFunction",
+          "CookieParseOptions",
+          "CookieSerializeOptions",
+          "CookieSignatureOptions",
+          "CookieOptions",
+          "Cookie",
+          "AppLoadContext",
+          "AppData",
+          "EntryContext",
+          "LinkDescriptor",
+          "HtmlLinkDescriptor",
+          "PageLinkDescriptor",
+          "ErrorBoundaryComponent",
+          "ActionFunction",
+          "HeadersFunction",
+          "LinksFunction",
+          "LoaderFunction",
+          "MetaDescriptor",
+          "HtmlMetaDescriptor",
+          "MetaFunction",
+          "RouteComponent",
+          "RouteHandle",
+          "RequestHandler",
+          "SessionData",
+          "Session",
+          "SessionStorage",
+          "SessionIdStorageStrategy",
+        ],
       };
     default:
       return null;
@@ -723,41 +701,39 @@ function magicExportsPlugin(magicExports, { packageName, version }) {
       let banner = createBanner(packageName, version);
 
       if (magicExports.values) {
-        for (let pkgName of Object.keys(magicExports.values)) {
-          if (!esmContents) esmContents = banner + "\n";
-          if (!tsContents) tsContents = banner + "\n";
-          if (!cjsContents) {
-            cjsContents =
-              banner +
-              "\n" +
-              "'use strict';\n" +
-              "Object.defineProperty(exports, '__esModule', { value: true });\n";
-          }
+        if (!esmContents) esmContents = banner + "\n";
+        if (!tsContents) tsContents = banner + "\n";
+        if (!cjsContents) {
+          cjsContents =
+            banner +
+            "\n" +
+            "'use strict';\n" +
+            "Object.defineProperty(exports, '__esModule', { value: true });\n";
+        }
 
-          let exportList = magicExports.values[pkgName].join(", ");
-          esmContents += `export { ${exportList} } from '${pkgName}';\n`;
-          tsContents += `export { ${exportList} } from '${pkgName}';\n`;
+        let exportList = magicExports.values.join(", ");
+        esmContents += `export { ${exportList} } from '${packageName}';\n`;
+        tsContents += `export { ${exportList} } from '${packageName}';\n`;
 
-          let cjsModule = camelCase(
-            pkgName.startsWith("@remix-run/") ? pkgName.slice(11) : pkgName
-          );
-          cjsContents += `var ${cjsModule} = require('${pkgName}');\n`;
-          for (let symbol of magicExports.values[pkgName]) {
-            cjsContents +=
-              `Object.defineProperty(exports, '${symbol}', {\n` +
-              "  enumerable: true,\n" +
-              `  get: function () { return ${cjsModule}.${symbol}; }\n` +
-              "});\n";
-          }
+        let cjsModule = camelCase(
+          packageName.startsWith("@remix-run/")
+            ? packageName.slice(11)
+            : packageName
+        );
+        cjsContents += `var ${cjsModule} = require('${packageName}');\n`;
+        for (let symbol of magicExports.values) {
+          cjsContents +=
+            `Object.defineProperty(exports, '${symbol}', {\n` +
+            "  enumerable: true,\n" +
+            `  get: function () { return ${cjsModule}.${symbol}; }\n` +
+            "});\n";
         }
       }
 
       if (magicExports.types) {
-        for (let pkgName of Object.keys(magicExports.types)) {
-          if (!tsContents) tsContents = banner + "\n";
-          let exportList = magicExports.types[pkgName].join(", ");
-          tsContents += `export type { ${exportList} } from '${pkgName}';\n`;
-        }
+        if (!tsContents) tsContents = banner + "\n";
+        let exportList = magicExports.types.join(", ");
+        tsContents += `export type { ${exportList} } from '${packageName}';\n`;
       }
 
       tsContents &&
@@ -996,7 +972,7 @@ function copyToPlaygrounds() {
 }
 
 /**
- * @typedef {Record<"values" | "types", Record<string, string[]>>} MagicExports
+ * @typedef {Record<"values" | "types", string[]>} MagicExports
  * @typedef {"architect" | "cloudflare-pages" | "cloudflare-workers" | "express" | "netlify" | "vercel"} RemixAdapter
  * @typedef {"cloudflare" | "node" | "deno"} RemixRuntime
  * @typedef {`@remix-run/${RemixAdapter | RemixRuntime | "dev" | "eslint-config" | "react" | "serve" | "server-runtime"}`} ScopedRemixPackage
