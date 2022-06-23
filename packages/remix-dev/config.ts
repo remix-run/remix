@@ -195,6 +195,11 @@ export interface RemixConfig {
   assetsBuildDirectory: string;
 
   /**
+   * the original relative path to the assets build directory
+   */
+  relativeAssetsBuildDirectory: string;
+
+  /**
    * The URL prefix of the public build with a trailing slash.
    */
   publicPath: string;
@@ -346,11 +351,14 @@ export async function readConfig(
     serverBuildPath = path.resolve(rootDirectory, appConfig.serverBuildPath);
   }
 
-  let assetsBuildDirectory = path.resolve(
-    rootDirectory,
+  let assetsBuildDirectory =
     appConfig.assetsBuildDirectory ||
-      appConfig.browserBuildDirectory ||
-      path.join("public", "build")
+    appConfig.browserBuildDirectory ||
+    path.join("public", "build");
+
+  let absoluteAssetsBuildDirectory = path.resolve(
+    rootDirectory,
+    assetsBuildDirectory
   );
 
   let devServerPort =
@@ -408,7 +416,8 @@ export async function readConfig(
     entryServerFile,
     devServerPort,
     devServerBroadcastDelay,
-    assetsBuildDirectory,
+    assetsBuildDirectory: absoluteAssetsBuildDirectory,
+    relativeAssetsBuildDirectory: assetsBuildDirectory,
     publicPath,
     rootDirectory,
     routes,

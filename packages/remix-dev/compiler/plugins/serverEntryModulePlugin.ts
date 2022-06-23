@@ -46,7 +46,7 @@ ${Object.keys(config.routes)
     assetsManifestVirtualModule.id
   )};
   export const assetsBuildDirectory = ${JSON.stringify(
-    config.assetsBuildDirectory
+    config.relativeAssetsBuildDirectory
   )};
   export const publicPath = ${JSON.stringify(config.publicPath)};
   export const entry = { module: entryServer };
