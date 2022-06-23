@@ -11,7 +11,7 @@ let buildPathArg = process.argv[2];
 
 if (!buildPathArg) {
   console.error(`
-    Usage: remix-serve <build-dir>`);
+  Usage: remix-serve <build-dir>`);
   process.exit(1);
 }
 
