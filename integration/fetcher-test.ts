@@ -10,6 +10,7 @@ test.describe("useFetcher", () => {
 
   let CHEESESTEAK = "CHEESESTEAK";
   let LUNCH = "LUNCH";
+  let EMPTY_PLATE = "EMPTY_PLATE";
 
   test.beforeAll(async () => {
     fixture = await createFixture({
@@ -75,7 +76,12 @@ test.describe("useFetcher", () => {
                 }}>
                   submit
                 </button>
-                <pre>{fetcher.data}</pre>
+                <button id="fetcher-reset" type="button" onClick={() => {
+                  fetcher.reset();
+                }}>
+                  reset
+                </button>
+                <pre>{fetcher.data != null ? fetcher.data : "${EMPTY_PLATE}"}</pre>
               </>
             );
           }
@@ -125,8 +131,18 @@ test.describe("useFetcher", () => {
   test("load can hit a loader", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
+    expect(await app.getHtml("pre")).toMatch(EMPTY_PLATE);
     await app.clickElement("#fetcher-load");
     expect(await app.getHtml("pre")).toMatch(LUNCH);
+  });
+
+  test("fetcher can be reset", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickElement("#fetcher-load");
+    expect(await app.getHtml("pre")).toMatch(LUNCH);
+    await app.clickElement("#fetcher-reset");
+    expect(await app.getHtml("pre")).toMatch(EMPTY_PLATE);
   });
 
   test("submit can hit an action", async ({ page }) => {

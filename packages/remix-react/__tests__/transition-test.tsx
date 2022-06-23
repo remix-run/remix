@@ -1260,6 +1260,45 @@ describe("fetcher states", () => {
     expect(fetcher.data).toBe("B DATA");
   });
 
+  test("loader reset while loading", async () => {
+    let t = setup({ url: "/foo" });
+
+    let A = t.fetch.get("/foo");
+    let fetcher = t.getFetcher(A.key);
+    expect(fetcher.state).toBe("loading");
+    expect(fetcher.type).toBe("normalLoad");
+
+    t.resetFetcher(A.key);
+    await A.loader.resolve("A DATA");
+
+    fetcher = t.getFetcher(A.key);
+    expect(fetcher.state).toBe("idle");
+    expect(fetcher.type).toBe("init");
+    expect(fetcher.data).toBe(undefined);
+  });
+
+  test("loader reset after load", async () => {
+    let t = setup({ url: "/foo" });
+
+    let A = t.fetch.get("/foo");
+    let fetcher = t.getFetcher(A.key);
+    expect(fetcher.state).toBe("loading");
+    expect(fetcher.type).toBe("normalLoad");
+
+    await A.loader.resolve("A DATA");
+    fetcher = t.getFetcher(A.key);
+    expect(fetcher.state).toBe("idle");
+    expect(fetcher.type).toBe("done");
+    expect(fetcher.data).toBe("A DATA");
+
+    t.resetFetcher(A.key);
+
+    fetcher = t.getFetcher(A.key);
+    expect(fetcher.state).toBe("idle");
+    expect(fetcher.type).toBe("init");
+    expect(fetcher.data).toBe(undefined);
+  });
+
   test("loader submission fetch", async () => {
     let t = setup({ url: "/foo" });
 
@@ -1505,6 +1544,14 @@ describe("fetcher resubmissions/re-gets", () => {
     t.fetch.get("/foo", key);
     expect(A.loader.abortMock.calls.length).toBe(1);
     expect(B.loader.abortMock.calls.length).toBe(1);
+  });
+
+  it("aborts on reset", async () => {
+    let t = setup();
+    let key = "KEY";
+    let A = t.fetch.submitGet("/foo", key);
+    t.tm.resetFetcher(key);
+    expect(A.loader.abortMock.calls.length).toBe(1);
   });
 
   it("aborts resubmissions action call", async () => {
@@ -2276,6 +2323,7 @@ let setup = ({ url } = { url: "/" }) => {
     fetch,
     getState: tm.getState,
     getFetcher: tm.getFetcher,
+    resetFetcher: tm.resetFetcher,
     handleChange,
     handleRedirect,
     rootLoaderMock: rootLoader.mock,

@@ -1369,6 +1369,15 @@ export function createTransitionManager(init: TransitionManagerInit) {
     fetchControllers.delete(key);
   }
 
+  function resetFetcher(key: string) {
+    console.debug(`[transition] resetting fetcher (key: ${key})`);
+    let fetcher = getFetcher(key);
+    invariant(fetcher, `Expected fetcher: ${key}`);
+    if (fetchControllers.has(key)) abortFetcher(key);
+    setFetcher(key, IDLE_FETCHER);
+    update({ fetchers: new Map(state.fetchers) });
+  }
+
   function markFetchRedirectsDone(): void {
     let doneKeys = [];
     for (let key of fetchRedirectIds) {
@@ -1387,6 +1396,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     getState,
     getFetcher,
     deleteFetcher,
+    resetFetcher,
     dispose,
     get _internalFetchControllers() {
       return fetchControllers;

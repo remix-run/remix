@@ -1382,6 +1382,9 @@ export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
   let [load] = React.useState(() => (href: string) => {
     transitionManager.send({ type: "fetcher", href, key });
   });
+  let [reset] = React.useState(() => () => {
+    transitionManager.resetFetcher(key);
+  });
   let submit = useSubmitImpl(key);
 
   let fetcher = transitionManager.getFetcher<TData>(key);
@@ -1391,6 +1394,7 @@ export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
       Form,
       submit,
       load,
+      reset,
       ...fetcher,
     }),
     [fetcher, Form, submit, load]
