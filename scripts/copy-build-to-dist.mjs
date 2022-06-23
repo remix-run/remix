@@ -3,14 +3,33 @@ import fse from "fs-extra";
 import chalk from "chalk";
 
 const ROOT_DIR = process.cwd();
-const BUILD_PATH = path.join(ROOT_DIR, "build", "node_modules");
 const PACKAGES_PATH = path.join(ROOT_DIR, "packages");
+const DEFAULT_BUILD_PATH = path.join(ROOT_DIR, "build");
+
+let activeOutputDir = DEFAULT_BUILD_PATH;
+if (process.env.REMIX_LOCAL_DEV_OUTPUT_DIRECTORY) {
+  let appDir = path.join(
+    ROOT_DIR,
+    process.env.REMIX_LOCAL_DEV_OUTPUT_DIRECTORY
+  );
+  try {
+    fse.readdirSync(path.join(appDir, "node_modules"));
+  } catch (e) {
+    console.error(
+      "Oops! You pointed `REMIX_LOCAL_DEV_OUTPUT_DIRECTORY` to a directory that " +
+        "does not have a `node_modules` folder. Please `npm install` in that " +
+        "directory and try again."
+    );
+    process.exit(1);
+  }
+  activeOutputDir = appDir;
+}
 
 copyBuildToDist();
 
 async function copyBuildToDist() {
-  /** @type {{ build: string; src: string }[]} */
-  let packages = (await getPackageBuildPaths(BUILD_PATH)).map((buildDir) => {
+  let buildPath = getBuildPath();
+  let packages = (await getPackageBuildPaths(buildPath)).map((buildDir) => {
     let parentDir = path.basename(path.dirname(buildDir));
     let dirName = path.basename(buildDir);
     return {
@@ -32,7 +51,7 @@ async function copyBuildToDist() {
         continue;
       }
       copyQueue.push(
-        new Promise((res) => {
+        (async () => {
           console.log(
             chalk.yellow(
               `  🛠  Copying ${path.relative(
@@ -41,12 +60,10 @@ async function copyBuildToDist() {
               )} to ${path.relative(ROOT_DIR, destPath)}`
             )
           );
-          res(
-            fse.copy(srcPath, destPath, {
-              recursive: true,
-            })
-          );
-        })
+          fse.copy(srcPath, destPath, {
+            recursive: true,
+          });
+        })()
       );
     } catch (e) {}
   }
@@ -85,4 +102,8 @@ async function getPackageBuildPaths(moduleRootDir) {
     );
     process.exit(1);
   }
+}
+
+function getBuildPath() {
+  return path.join(activeOutputDir, "node_modules");
 }
