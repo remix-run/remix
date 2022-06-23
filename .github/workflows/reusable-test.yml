@@ -2,8 +2,8 @@ name: 🧪 Test
 
 on:
   workflow_call:
-    node_version:
-      version:
+    inputs:
+      node_version:
         required: true
         # this is limited to string | boolean | number (https://github.community/t/can-action-inputs-be-arrays/16457)
         # but we want to pass an array, so we'll need to manually stringify it for now
