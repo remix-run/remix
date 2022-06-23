@@ -562,7 +562,7 @@ function getAdapterConfig(adapterName) {
  */
 function getMagicExports(packageName) {
   // Re-export everything from packages that is available in `remix`
-  /** @type {Record<string, MagicExports>} */
+  /** @type {Record<ScopedRemixPackage, MagicExports>} */
   let magicExportsByPackageName = {
     "@remix-run/architect": {
       values: ["createArcTableSessionStorage"],
@@ -682,7 +682,7 @@ function getMagicExports(packageName) {
 /**
  * TODO: Remove in v2
  * @param {MagicExports | null} magicExports
- * @param {{ packageName: string; version: string }} buildInfo
+ * @param {{ packageName: ScopedRemixPackage; version: string }} buildInfo
  * @returns {import("rollup").Plugin}
  */
 const magicExportsPlugin = (magicExports, { packageName, version }) => ({
@@ -706,11 +706,7 @@ const magicExportsPlugin = (magicExports, { packageName, version }) => ({
       esmContents += `export { ${exportList} } from '${packageName}';\n`;
       tsContents += `export { ${exportList} } from '${packageName}';\n`;
 
-      let cjsModule = camelCase(
-        packageName.startsWith("@remix-run/")
-          ? packageName.slice(11)
-          : packageName
-      );
+      let cjsModule = camelCase(packageName.slice('@remix-run/'.length));
       cjsContents += `var ${cjsModule} = require('${packageName}');\n`;
       for (let symbol of magicExports.values) {
         cjsContents +=
