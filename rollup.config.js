@@ -569,18 +569,6 @@ function getMagicExports(packageName) {
           "@remix-run/architect": ["createArcTableSessionStorage"],
         },
       };
-    case "@remix-run/cloudflare-pages":
-      return {
-        values: {
-          "@remix-run/cloudflare": ["createCloudflareKVSessionStorage"],
-        },
-      };
-    case "@remix-run/cloudflare-workers":
-      return {
-        values: {
-          "@remix-run/cloudflare": ["createCloudflareKVSessionStorage"],
-        },
-      };
     case "@remix-run/cloudflare":
       return {
         values: {
