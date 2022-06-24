@@ -332,6 +332,7 @@ Further configuration is optional, but the following may be helpful to optimize 
 Every Remix app accepts a `remix.config.js` file in the project root. While its settings are optional, we recommend you include a few of them for clarity's sake. See the [docs on configuration][docs-on-configuration] for more information about all available options.
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   appDirectory: "app",
   ignoredRouteFiles: ["**/.*"],

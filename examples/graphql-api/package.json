@@ -10,9 +10,9 @@
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/node": "1.6.0",
-    "@remix-run/react": "1.6.0",
-    "@remix-run/serve": "1.6.0",
+    "@remix-run/node": "1.6.1",
+    "@remix-run/react": "1.6.1",
+    "@remix-run/serve": "1.6.1",
     "apollo-server-errors": "^3.3.1",
     "graphql": "^16.4.0",
     "react": "^17.0.2",
@@ -22,8 +22,8 @@
     "@graphql-codegen/cli": "2.6.2",
     "@graphql-codegen/typescript": "^2.4.5",
     "@graphql-codegen/typescript-operations": "^2.3.2",
-    "@remix-run/dev": "1.6.0",
-    "@remix-run/eslint-config": "1.6.0",
+    "@remix-run/dev": "1.6.1",
+    "@remix-run/eslint-config": "1.6.1",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
     "eslint": "^8.10.0",
