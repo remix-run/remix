@@ -7,33 +7,31 @@ const { name: packageName } = require("./package.json");
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
   let buildInfo = getBuildInfo(packageName);
-  let { packageRoot } = getBuildInfo(packageName);
-  let sourcePackageRoot = __dirname;
-  let copyTargets = [
-    { src: path.join(REPO_ROOT_DIR, "LICENSE.md"), dest: packageRoot },
-  ];
-  if (sourcePackageRoot !== packageRoot) {
-    copyTargets.push({
-      src: path.join(sourcePackageRoot, "package.json"),
-      dest: packageRoot,
-    });
-    copyTargets.push({
-      src: path.join(sourcePackageRoot, "CHANGELOG.md"),
-      dest: packageRoot,
-    });
-    copyTargets.push({
-      src: path.join(sourcePackageRoot, "README.md"),
-      dest: packageRoot,
-    });
-  }
-
+  let sourceDir = __dirname;
+  let buildDir = buildInfo.outputDir;
   let cliOptions = cli(buildInfo);
   let plugins = cliOptions.plugins || [];
-  plugins.push(copy({ targets: copyTargets }));
-  return [
-    {
-      ...cliOptions,
-      plugins,
-    },
-  ];
+  plugins.push(
+    copy({
+      targets: [
+        {
+          src: path.join(REPO_ROOT_DIR, "LICENSE.md"),
+          dest: [sourceDir, buildDir],
+        },
+        {
+          src: path.join(sourceDir, "package.json"),
+          dest: buildDir,
+        },
+        {
+          src: path.join(sourceDir, "CHANGELOG.md"),
+          dest: buildDir,
+        },
+        {
+          src: path.join(sourceDir, "README.md"),
+          dest: buildDir,
+        },
+      ],
+    })
+  );
+  return [{ ...cliOptions, plugins }];
 };

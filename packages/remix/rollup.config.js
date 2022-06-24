@@ -19,27 +19,9 @@ module.exports = function rollup() {
     return [];
   }
 
-  let sourcePackageRoot = __dirname;
   let { outputDir, packageRoot, sourceDir, version } =
     getBuildInfo(packageName);
-
-  let copyTargets = [
-    { src: path.join(REPO_ROOT_DIR, "LICENSE.md"), dest: packageRoot },
-  ];
-  if (sourcePackageRoot !== packageRoot) {
-    copyTargets.push({
-      src: path.join(sourcePackageRoot, "package.json"),
-      dest: packageRoot,
-    });
-    copyTargets.push({
-      src: path.join(sourcePackageRoot, "CHANGELOG.md"),
-      dest: packageRoot,
-    });
-    copyTargets.push({
-      src: path.join(sourcePackageRoot, "README.md"),
-      dest: packageRoot,
-    });
-  }
+  let outputDist = path.join(outputDir, "dist");
 
   return [
     {
@@ -49,7 +31,7 @@ module.exports = function rollup() {
       input: path.join(sourceDir, "index.ts"),
       output: {
         format: "cjs",
-        dir: outputDir,
+        dir: outputDist,
         banner: createBanner(packageName, version),
       },
       plugins: [
@@ -59,7 +41,26 @@ module.exports = function rollup() {
           extensions: [".ts"],
           rootMode: "upward",
         }),
-        copy({ targets: copyTargets }),
+        copy({
+          targets: [
+            {
+              src: path.join(REPO_ROOT_DIR, "LICENSE.md"),
+              dest: [packageRoot, outputDir],
+            },
+            {
+              src: path.join(sourceDir, "package.json"),
+              dest: outputDir,
+            },
+            {
+              src: path.join(sourceDir, "CHANGELOG.md"),
+              dest: outputDir,
+            },
+            {
+              src: path.join(sourceDir, "README.md"),
+              dest: outputDir,
+            },
+          ],
+        }),
         copyToPlaygrounds(),
       ],
     },
@@ -70,7 +71,7 @@ module.exports = function rollup() {
       input: path.join(sourceDir, "index.ts"),
       output: {
         banner: createBanner("remix", version),
-        dir: path.join(outputDir, "esm"),
+        dir: path.join(outputDist, "esm"),
         format: "esm",
       },
       plugins: [

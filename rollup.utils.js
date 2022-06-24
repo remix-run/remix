@@ -12,24 +12,24 @@ const PACKAGES_DIR = path.join(REPO_ROOT_DIR, "packages");
 const buildDir = getBuildDir();
 
 function getBuildDir() {
-  if (!process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
-    return path.join(REPO_ROOT_DIR, "build");
-  }
-  let appDir = path.resolve(
-    REPO_ROOT_DIR,
-    process.env.REMIX_LOCAL_BUILD_DIRECTORY
-  );
-  try {
-    fse.readdirSync(path.join(appDir, "node_modules"));
-    return appDir;
-  } catch (e) {
-    console.error(
-      "Oops! You pointed `REMIX_LOCAL_BUILD_DIRECTORY` to a directory that " +
-        "does not have a `node_modules/` folder. Please `npm install` in that " +
-        "directory and try again."
+  if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
+    let appDir = path.resolve(
+      REPO_ROOT_DIR,
+      process.env.REMIX_LOCAL_BUILD_DIRECTORY
     );
-    process.exit(1);
+    try {
+      fse.readdirSync(path.join(appDir, "node_modules"));
+      return appDir;
+    } catch (e) {
+      console.error(
+        "Oops! You pointed `REMIX_LOCAL_BUILD_DIRECTORY` to a directory that " +
+          "does not have a `node_modules` folder. Please `npm install` in that " +
+          "directory and try again."
+      );
+      process.exit(1);
+    }
   }
+  return path.join(REPO_ROOT_DIR, "build");
 }
 
 /**
@@ -136,30 +136,13 @@ function index({
   version,
   magicExports,
 }) {
-  let sourcePackageRoot = getPackageRoot(packageName);
-  let copyTargets = [
-    { src: path.join(REPO_ROOT_DIR, "LICENSE.md"), dest: packageRoot },
-  ];
-  if (sourcePackageRoot !== packageRoot) {
-    copyTargets.push({
-      src: path.join(sourcePackageRoot, "package.json"),
-      dest: packageRoot,
-    });
-    copyTargets.push({
-      src: path.join(sourcePackageRoot, "CHANGELOG.md"),
-      dest: packageRoot,
-    });
-    copyTargets.push({
-      src: path.join(sourcePackageRoot, "README.md"),
-      dest: packageRoot,
-    });
-  }
+  let outputDist = path.join(outputDir, "dist");
   return {
     external: (id) => isBareModuleId(id),
     input: path.join(sourceDir, "index.ts"),
     output: {
       banner: createBanner(packageName, version),
-      dir: format === "cjs" ? outputDir : path.join(outputDir, format),
+      dir: format === "cjs" ? outputDist : path.join(outputDist, format),
       format,
       preserveModules: true,
       exports: "named",
@@ -172,8 +155,26 @@ function index({
         rootMode: "upward",
       }),
       nodeResolve({ extensions: [".ts", ".tsx"] }),
-      // @ts-ignore
-      copy({ targets: copyTargets }),
+      copy({
+        targets: [
+          {
+            src: path.join(REPO_ROOT_DIR, "LICENSE.md"),
+            dest: [packageRoot, outputDir],
+          },
+          {
+            src: path.join(sourceDir, "package.json"),
+            dest: outputDir,
+          },
+          {
+            src: path.join(sourceDir, "CHANGELOG.md"),
+            dest: outputDir,
+          },
+          {
+            src: path.join(sourceDir, "README.md"),
+            dest: outputDir,
+          },
+        ],
+      }),
       copyToPlaygrounds(),
       magicExportsPlugin(magicExports, { packageName, version }),
     ].filter(Boolean),
@@ -265,12 +266,13 @@ function magicExportsPlugin(magicExports, { packageName, version }) {
  * @returns {import("rollup").RollupOptions} Default Rollup configuration for `<sourceDir>/cli.ts`
  */
 function cli({ outputDir, packageName, sourceDir, version }) {
+  let outputDist = path.join(outputDir, "dist");
   return {
     external: (id) => !id.endsWith(path.join(sourceDir, "cli.ts")),
     input: path.join(sourceDir, "cli.ts"),
     output: {
       format: "cjs",
-      dir: outputDir,
+      dir: outputDist,
       banner: EXECUTABLE_BANNER + createBanner(packageName, version),
     },
     plugins: [
@@ -291,9 +293,9 @@ function cli({ outputDir, packageName, sourceDir, version }) {
  * @returns {string}
  */
 function getPackageRoot(packageName) {
-  let scope = "@remix-run";
-  return packageName.startsWith(`${scope}/`)
-    ? path.join(PACKAGES_DIR, `remix-${packageName.slice(scope.length + 1)}`)
+  let scope = "@remix-run/";
+  return packageName.startsWith(scope)
+    ? path.join(PACKAGES_DIR, `remix-${packageName.slice(scope.length)}`)
     : path.join(PACKAGES_DIR, packageName);
 }
 
@@ -314,12 +316,11 @@ function getBuildInfo(packageName) {
   let packageRoot = getPackageRoot(packageName);
   let version = getVersion(packageRoot);
   let sourceDir = packageRoot;
-  let outputDir = path.join(packageRoot, "dist");
-  if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
-    let nodeModulesDir = path.join(buildDir, "node_modules");
-    packageRoot = path.join(nodeModulesDir, ...packageName.split("/"));
-    outputDir = path.join(packageRoot, "dist");
-  }
+  let outputDir = path.join(
+    buildDir,
+    "node_modules",
+    ...packageName.split("/")
+  );
   return {
     outputDir,
     packageName,

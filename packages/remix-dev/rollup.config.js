@@ -19,32 +19,7 @@ const { name: packageName, version } = require("./package.json");
 module.exports = function rollup() {
   let buildInfo = getBuildInfo(packageName);
   let { outputDir, packageRoot, sourceDir } = buildInfo;
-  let sourcePackageRoot = __dirname;
-  let copyTargets = [
-    {
-      src: path.join(REPO_ROOT_DIR, "LICENSE.md"),
-      dest: packageRoot,
-    },
-    {
-      src: path.join(sourceDir, "compiler", "shims"),
-      dest: path.join(outputDir, "compiler"),
-    },
-  ];
-
-  if (sourcePackageRoot !== packageRoot) {
-    copyTargets.push({
-      src: path.join(sourceDir, "package.json"),
-      dest: packageRoot,
-    });
-    copyTargets.push({
-      src: path.join(sourceDir, "CHANGELOG.md"),
-      dest: packageRoot,
-    });
-    copyTargets.push({
-      src: path.join(sourceDir, "README.md"),
-      dest: packageRoot,
-    });
-  }
+  let outputDist = path.join(outputDir, "dist");
 
   return [
     {
@@ -52,7 +27,7 @@ module.exports = function rollup() {
       input: path.join(sourceDir, "index.ts"),
       output: {
         banner: createBanner(packageName, version),
-        dir: outputDir,
+        dir: outputDist,
         format: "cjs",
         preserveModules: true,
         exports: "named",
@@ -66,7 +41,33 @@ module.exports = function rollup() {
           rootMode: "upward",
         }),
         nodeResolve({ extensions: [".ts"] }),
-        copy({ targets: copyTargets }),
+        copy({
+          targets: [
+            {
+              src: path.join(REPO_ROOT_DIR, "LICENSE.md"),
+              dest: [packageRoot, outputDir],
+            },
+            {
+              src: path.join(sourceDir, "compiler", "shims"),
+              dest: [
+                path.join(outputDir, "compiler"),
+                path.join(outputDist, "compiler"),
+              ],
+            },
+            {
+              src: path.join(sourceDir, "package.json"),
+              dest: [outputDir, outputDist],
+            },
+            {
+              src: path.join(sourceDir, "CHANGELOG.md"),
+              dest: outputDir,
+            },
+            {
+              src: path.join(sourceDir, "README.md"),
+              dest: outputDir,
+            },
+          ],
+        }),
         // Allow dynamic imports in CJS code to allow us to utilize ESM modules
         // as part of the compiler.
         {
@@ -93,7 +94,7 @@ module.exports = function rollup() {
       ),
       output: {
         banner: createBanner(packageName, version),
-        dir: path.join(outputDir, "cli", "migrate", "migrations"),
+        dir: path.join(outputDist, "cli", "migrate", "migrations"),
         exports: "named",
         format: "cjs",
         preserveModules: true,
@@ -117,7 +118,7 @@ module.exports = function rollup() {
       input: path.join(sourceDir, "server-build.ts"),
       output: {
         banner: EXECUTABLE_BANNER + createBanner(packageName, version),
-        dir: outputDir,
+        dir: outputDist,
         format: "cjs",
       },
       plugins: [
