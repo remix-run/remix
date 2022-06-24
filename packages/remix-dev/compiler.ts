@@ -477,12 +477,9 @@ async function generateAssetsManifest(
   metafile: esbuild.Metafile
 ): Promise<AssetsManifest> {
   let assetsManifest = await createAssetsManifest(config, metafile);
-  let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
-
-  assetsManifest.url = config.publicPath + filename;
 
   await writeFileSafe(
-    path.join(config.assetsBuildDirectory, filename),
+    path.join(config.assetsBuildDirectory, path.basename(assetsManifest)),
     `window.__remixManifest=${JSON.stringify(assetsManifest)};`
   );
 

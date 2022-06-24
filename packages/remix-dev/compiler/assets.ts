@@ -14,7 +14,7 @@ export interface AssetsManifest {
   version: string;
   // TODO: rename `url` to `path` or something? It isn't a full URL...
   /** Path for this asset manifest file. */
-  url?: string;
+  url: string;
   /** Metadata about the client entry file. */
   entry: {
     /** Path to client entry file. */
@@ -121,7 +121,12 @@ export async function createAssetsManifest(
   optimizeRoutes(routes, entry.imports);
   let version = getHash(JSON.stringify({ entry, routes })).slice(0, 8);
 
-  return { version, entry, routes };
+  return {
+    version,
+    url: config.publicPath + `manifest-${version.toUpperCase()}.js`,
+    entry,
+    routes,
+  };
 }
 
 type ImportsCache = { [routeId: string]: string[] };
