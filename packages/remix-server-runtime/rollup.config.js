@@ -4,17 +4,9 @@ const { name: packageName } = require("./package.json");
 
 // Re-export everything from this package that is available in `remix`
 const magicExports = {
-  values: {
-    "@remix-run/server-runtime": [
-      "createSession",
-      "isCookie",
-      "isSession",
-      "json",
-      "redirect",
-    ],
-  },
-  types: {
-    "@remix-run/server-runtime": [
+  "@remix-run/server-runtime": {
+    values: ["createSession", "isCookie", "isSession", "json", "redirect"],
+    types: [
       "ActionFunction",
       "AppData",
       "AppLoadContext",

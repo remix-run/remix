@@ -190,73 +190,57 @@ function magicExportsPlugin(magicExports, { packageName, version }) {
   return {
     name: `${packageName}:generate-magic-exports`,
     generateBundle() {
-      if (!magicExports) return;
+      if (!magicExports) {
+        return;
+      }
 
-      let typings = "";
-      let esm = "";
-      let cjs = "";
+      let banner = createBanner(packageName, version);
+      let esmContents = banner + "\n";
+      let tsContents = banner + "\n";
+      let cjsContents =
+        banner +
+        "\n" +
+        "'use strict';\n" +
+        "Object.defineProperty(exports, '__esModule', { value: true });\n";
 
-      if (magicExports.values) {
-        let banner = createBanner(packageName, version);
-        for (let pkgName of Object.keys(magicExports.values)) {
-          // esm contents
-          if (!esm) {
-            esm = banner + "\n";
-          }
-          let exportList = magicExports.values[pkgName].join(", ");
-          esm += `export { ${exportList} } from '${pkgName}';\n`;
-          typings += `export { ${exportList} } from '${pkgName}';\n`;
+      for (let pkg in magicExports) {
+        let { values, types } = magicExports[pkg];
+        if (values) {
+          let exportList = values.join(", ");
+          esmContents += `export { ${exportList} } from '${pkg}';\n`;
+          tsContents += `export { ${exportList} } from '${pkg}';\n`;
 
-          // cjs contents
-          if (!cjs) {
-            cjs =
-              banner +
-              "\n" +
-              "'use strict';\n" +
-              "Object.defineProperty(exports, '__esModule', { value: true });\n";
-          }
-          let varName = camelCase(
-            pkgName.startsWith("@remix-run/") ? pkgName.slice(11) : pkgName
-          );
-
-          cjs += `var ${varName} = require('${pkgName}');\n`;
-          for (let symbol of magicExports.values[pkgName]) {
-            cjs +=
+          let cjsModule = camelCase(pkg.slice("@remix-run/".length));
+          cjsContents += `var ${cjsModule} = require('${pkg}');\n`;
+          for (let symbol of values) {
+            cjsContents +=
               `Object.defineProperty(exports, '${symbol}', {\n` +
               "  enumerable: true,\n" +
-              `  get: function () { return ${varName}.${symbol}; }\n` +
+              `  get: function () { return ${cjsModule}.${symbol}; }\n` +
               "});\n";
           }
         }
-      }
-
-      if (magicExports.types) {
-        for (let pkgName of Object.keys(magicExports.types)) {
-          let exportList = magicExports.types[pkgName].join(", ");
-          typings += `export type { ${exportList} } from '${pkgName}';\n`;
+        if (types) {
+          let exportList = types.join(", ");
+          tsContents += `export type { ${exportList} } from '${pkg}';\n`;
         }
       }
 
-      typings &&
-        this.emitFile({
-          type: "asset",
-          fileName: "magicExports/remix.d.ts",
-          source: typings,
-        });
-
-      cjs &&
-        this.emitFile({
-          type: "asset",
-          fileName: "magicExports/remix.js",
-          source: cjs,
-        });
-
-      esm &&
-        this.emitFile({
-          type: "asset",
-          fileName: "magicExports/esm/remix.js",
-          source: esm,
-        });
+      this.emitFile({
+        fileName: path.join("magicExports", "remix.d.ts"),
+        source: tsContents,
+        type: "asset",
+      });
+      this.emitFile({
+        fileName: path.join("magicExports", "remix.js"),
+        source: cjsContents,
+        type: "asset",
+      });
+      this.emitFile({
+        fileName: path.join("magicExports", "esm", "remix.js"),
+        source: esmContents,
+        type: "asset",
+      });
     },
   };
 }
@@ -344,6 +328,7 @@ module.exports = {
 };
 
 /**
+ * @typedef {Record<string, { values?: string[]; types?: string[] }>} MagicExports
  * @typedef {{
  *   outputDir: string;
  *   packageName: string;
@@ -351,9 +336,4 @@ module.exports = {
  *   sourceDir: string;
  *   version: string;
  * }} BuildInfo
- *
- * @typedef {{
- *   values?: Record<string, string[]>;
- *   types?: Record<string, string[]>;
- * }} MagicExports
  */

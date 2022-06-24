@@ -5,8 +5,8 @@ const { name: packageName } = require("./package.json");
 
 // Re-export everything from this package that is available in `remix`
 const magicExports = {
-  values: {
-    "@remix-run/react": [
+  "@remix-run/react": {
+    values: [
       "Form",
       "Link",
       "Links",
@@ -41,9 +41,7 @@ const magicExports = {
       "useResolvedPath",
       "useSearchParams",
     ],
-  },
-  types: {
-    "@remix-run/react": [
+    types: [
       "FormEncType",
       "FormMethod",
       "FormProps",

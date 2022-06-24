@@ -3,8 +3,8 @@ const { name: packageName } = require("./package.json");
 
 // Re-export everything from this package that is available in `remix`
 const magicExports = {
-  values: {
-    "@remix-run/cloudflare": [
+  "@remix-run/cloudflare": {
+    values: [
       "createCloudflareKVSessionStorage",
       "createCookie",
       "createCookieSessionStorage",

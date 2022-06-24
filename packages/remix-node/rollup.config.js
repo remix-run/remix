@@ -3,8 +3,8 @@ const { name: packageName } = require("./package.json");
 
 // Re-export everything from this package that is available in `remix`
 const magicExports = {
-  values: {
-    "@remix-run/node": [
+  "@remix-run/node": {
+    values: [
       "createCookie",
       "createCookieSessionStorage",
       "createFileSessionStorage",
@@ -14,9 +14,7 @@ const magicExports = {
       "unstable_createMemoryUploadHandler",
       "unstable_parseMultipartFormData",
     ],
-  },
-  types: {
-    "@remix-run/node": ["UploadHandler", "UploadHandlerPart"],
+    types: ["UploadHandler", "UploadHandlerPart"],
   },
 };
 
