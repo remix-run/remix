@@ -1,15 +1,14 @@
 /* eslint-disable import/no-extraneous-dependencies */
-const path = require("path");
 const babel = require("@rollup/plugin-babel").default;
-const copy = require("rollup-plugin-copy");
+const path = require("path");
 
 const {
+  copyPublishFiles,
   copyToPlaygrounds,
   createBanner,
-  getBuildInfo,
-  REPO_ROOT_DIR,
+  getOutputDir,
 } = require("../../rollup.utils");
-let { name: packageName } = require("./package.json");
+let { name: packageName, version } = require("./package.json");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
@@ -19,16 +18,17 @@ module.exports = function rollup() {
     return [];
   }
 
-  let { outputDir, packageRoot, sourceDir, version } =
-    getBuildInfo(packageName);
+  let sourceDir = "packages/remix";
+  let outputDir = getOutputDir(packageName);
   let outputDist = path.join(outputDir, "dist");
+  let outputEsmDist = path.join(outputDist, "esm");
 
   return [
     {
       external() {
         return true;
       },
-      input: path.join(sourceDir, "index.ts"),
+      input: `${sourceDir}/index.ts`,
       output: {
         format: "cjs",
         dir: outputDist,
@@ -38,29 +38,9 @@ module.exports = function rollup() {
         babel({
           babelHelpers: "bundled",
           exclude: /node_modules/,
-          extensions: [".ts"],
-          rootMode: "upward",
+          extensions: [".ts", ".tsx"],
         }),
-        copy({
-          targets: [
-            {
-              src: path.join(REPO_ROOT_DIR, "LICENSE.md"),
-              dest: [packageRoot, outputDir],
-            },
-            {
-              src: path.join(sourceDir, "package.json"),
-              dest: outputDir,
-            },
-            {
-              src: path.join(sourceDir, "CHANGELOG.md"),
-              dest: outputDir,
-            },
-            {
-              src: path.join(sourceDir, "README.md"),
-              dest: outputDir,
-            },
-          ],
-        }),
+        copyPublishFiles(packageName),
         copyToPlaygrounds(),
       ],
     },
@@ -68,19 +48,19 @@ module.exports = function rollup() {
       external() {
         return true;
       },
-      input: path.join(sourceDir, "index.ts"),
+      input: `${sourceDir}/index.ts`,
       output: {
-        banner: createBanner("remix", version),
-        dir: path.join(outputDist, "esm"),
         format: "esm",
+        dir: path.join(outputDist, "esm"),
+        banner: createBanner(packageName, version),
       },
       plugins: [
         babel({
           babelHelpers: "bundled",
           exclude: /node_modules/,
-          extensions: [".ts"],
-          rootMode: "upward",
+          extensions: [".ts", ".tsx"],
         }),
+        copyPublishFiles(packageName),
         copyToPlaygrounds(),
       ],
     },

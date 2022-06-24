@@ -1,6 +1,5 @@
 const path = require("path");
 const babel = require("@rollup/plugin-babel").default;
-const json = require("@rollup/plugin-json");
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
 
@@ -8,68 +7,57 @@ const {
   cli,
   copyToPlaygrounds,
   createBanner,
-  EXECUTABLE_BANNER,
-  getBuildInfo,
+  getOutputDir,
   isBareModuleId,
-  REPO_ROOT_DIR,
 } = require("../../rollup.utils");
 const { name: packageName, version } = require("./package.json");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  let buildInfo = getBuildInfo(packageName);
-  let { outputDir, packageRoot, sourceDir } = buildInfo;
+  let sourceDir = "packages/remix-dev";
+  let outputDir = getOutputDir(packageName);
   let outputDist = path.join(outputDir, "dist");
 
   return [
     {
-      external: isBareModuleId,
-      input: path.join(sourceDir, "index.ts"),
+      external(id, parent) {
+        if (
+          id === "../package.json" &&
+          parent === path.resolve(__dirname, "cli/create.ts")
+        ) {
+          return true;
+        }
+
+        return isBareModuleId(id);
+      },
+      input: `${sourceDir}/index.ts`,
       output: {
-        banner: createBanner(packageName, version),
+        banner: createBanner("@remix-run/dev", version),
         dir: outputDist,
         format: "cjs",
         preserveModules: true,
         exports: "named",
       },
       plugins: [
-        json(),
         babel({
           babelHelpers: "bundled",
           exclude: /node_modules/,
           extensions: [".ts"],
-          rootMode: "upward",
         }),
         nodeResolve({ extensions: [".ts"] }),
         copy({
           targets: [
+            { src: `LICENSE.md`, dest: [outputDir, sourceDir] },
+            { src: `${sourceDir}/package.json`, dest: [outputDir, outputDist] },
+            { src: `${sourceDir}/README.md`, dest: outputDir },
             {
-              src: path.join(REPO_ROOT_DIR, "LICENSE.md"),
-              dest: [packageRoot, outputDir],
-            },
-            {
-              src: path.join(sourceDir, "compiler", "shims"),
-              dest: [
-                path.join(outputDir, "compiler"),
-                path.join(outputDist, "compiler"),
-              ],
-            },
-            {
-              src: path.join(sourceDir, "package.json"),
-              dest: [outputDir, outputDist],
-            },
-            {
-              src: path.join(sourceDir, "CHANGELOG.md"),
-              dest: outputDir,
-            },
-            {
-              src: path.join(sourceDir, "README.md"),
-              dest: outputDir,
+              src: `${sourceDir}/compiler/shims`,
+              dest: [`${outputDir}/compiler`, `${outputDist}/compiler`],
             },
           ],
         }),
-        // Allow dynamic imports in CJS code to allow us to utilize ESM modules
-        // as part of the compiler.
+        // Allow dynamic imports in CJS code to allow us to utilize
+        // ESM modules as part of the compiler.
         {
           name: "dynamic-import-polyfill",
           renderDynamicImport() {
@@ -82,19 +70,13 @@ module.exports = function rollup() {
         copyToPlaygrounds(),
       ],
     },
-    cli(buildInfo),
+    cli({ packageName, version }),
     {
       external: (id) => isBareModuleId(id),
-      input: path.join(
-        sourceDir,
-        "cli",
-        "migrate",
-        "migrations",
-        "transforms.ts"
-      ),
+      input: [`${sourceDir}/cli/migrate/migrations/transforms.ts`],
       output: {
-        banner: createBanner(packageName, version),
-        dir: path.join(outputDist, "cli", "migrate", "migrations"),
+        banner: createBanner("@remix-run/dev", version),
+        dir: `${outputDist}/cli/migrate/migrations`,
         exports: "named",
         format: "cjs",
         preserveModules: true,
@@ -104,20 +86,18 @@ module.exports = function rollup() {
           babelHelpers: "bundled",
           exclude: /node_modules/,
           extensions: [".ts"],
-          rootMode: "upward",
         }),
         nodeResolve({ extensions: [".ts"] }),
         copyToPlaygrounds(),
       ],
     },
     {
-      external(id) {
-        // Cannot mark the input module as external
-        return !id.endsWith(path.join(sourceDir, "server-build.ts"));
+      external() {
+        return true;
       },
-      input: path.join(sourceDir, "server-build.ts"),
+      input: `${sourceDir}/server-build.ts`,
       output: {
-        banner: EXECUTABLE_BANNER + createBanner(packageName, version),
+        banner: createBanner("@remix-run/dev", version, true),
         dir: outputDist,
         format: "cjs",
       },
@@ -126,7 +106,6 @@ module.exports = function rollup() {
           babelHelpers: "bundled",
           exclude: /node_modules/,
           extensions: [".ts"],
-          rootMode: "upward",
         }),
         nodeResolve({ extensions: [".ts"] }),
         copyToPlaygrounds(),

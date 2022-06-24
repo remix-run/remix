@@ -1,5 +1,4 @@
-const { index, getBuildInfo } = require("../../rollup.utils");
-const { name: packageName } = require("./package.json");
+const { getAdapterConfig } = require("../../rollup.utils");
 
 // Re-export everything from this package that is available in `remix`
 const magicExports = {
@@ -13,6 +12,5 @@ const magicExports = {
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  let buildInfo = getBuildInfo(packageName);
-  return [index({ format: "cjs", magicExports, ...buildInfo })];
+  return getAdapterConfig("architect", magicExports);
 };

@@ -1,8 +1,6 @@
-const { getBuildInfo, index } = require("../../rollup.utils");
-const { name: packageName } = require("./package.json");
+const { getAdapterConfig } = require("../../rollup.utils");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  let buildInfo = getBuildInfo(packageName);
-  return [index({ format: "cjs", ...buildInfo })];
+  return getAdapterConfig("vercel");
 };
