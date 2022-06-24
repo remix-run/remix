@@ -170,9 +170,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
 
   if (flags.help) showHelp();
   if (flags.version) showVersion();
-  if (flags.template === "typescript" || flags.template === "ts") {
-    flags.template = "remix-ts";
-  }
 
   let command = input[0];
 
@@ -188,11 +185,24 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       // inquirer step-by-step. This not only allows us to catch issues as early
       // as possible, but inquirer will allow users to retry input rather than
       // stop the process.
-      if (flags.template) {
-        await validateTemplate(flags.template, {
-          githubToken: process.env.GITHUB_TOKEN,
-        });
+
+      let {
+        template,
+        token: githubToken,
+        install,
+        typescript,
+        remixVersion,
+        debug,
+      } = flags;
+
+      if (template === "typescript" || template === "ts") {
+        template = "remix-ts";
       }
+
+      if (flags.template) {
+        await validateTemplate(flags.template, { githubToken });
+      }
+
       if (projectPath) {
         await validateNewProjectPath(projectPath);
       }
@@ -255,7 +265,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             message: "What type of app do you want to create?",
             default: "template",
             when() {
-              return flags.template === undefined;
+              return template === undefined;
             },
             choices: [
               {
@@ -310,7 +320,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             message: "TypeScript or JavaScript?",
             default: true,
             when() {
-              return flags.typescript === undefined;
+              return typescript === undefined;
             },
             choices: [
               { name: "TypeScript", value: true },
@@ -322,7 +332,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             type: "confirm",
             message: `Do you want me to run \`${packageManager} install\`?`,
             when() {
-              return flags.install === undefined;
+              return install === undefined;
             },
             default: true,
           },
@@ -348,18 +358,17 @@ export async function run(argv: string[] = process.argv.slice(2)) {
           throw error;
         });
 
-      let installDeps = flags.install !== false && answers.install !== false;
-
-      let useTypeScript = flags.typescript ?? answers.useTypeScript;
+      let installDeps = install !== false && answers.install !== false;
+      let useTypeScript = typescript ?? answers.useTypeScript;
 
       await commands.create({
-        appTemplate: flags.template || answers.appTemplate,
+        appTemplate: template || answers.appTemplate,
         projectDir,
-        remixVersion: flags.remixVersion,
+        remixVersion: remixVersion,
         installDeps,
         useTypeScript,
-        githubToken: flags.token,
-        debug: flags.debug,
+        githubToken,
+        debug,
       });
 
       let initScriptDir = path.join(projectDir, "remix.init");
