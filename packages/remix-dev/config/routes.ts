@@ -22,7 +22,7 @@ export interface ConfigRoute {
 
   /**
    * The unique id for this route, named like its `file` but without the
-   * extension. So `app/routes/gists/$username.jsx` will have an `id` of
+   * extension. For example, `app/routes/gists/$username.jsx` will have an `id` of
    * `routes/gists/$username`.
    */
   id: string;
