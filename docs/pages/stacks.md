@@ -36,7 +36,7 @@ The Remix CLI will help you get started with one of these built-in stacks, but i
 npx create-remix@latest --template my-username/my-repo
 ```
 
-Custom stacks give an enormous amount of power and flexibility and we hope you create your own that suites the preferences of you and your organization (feel free to fork ours!).
+Custom stacks give an enormous amount of power and flexibility, and we hope you create your own that suites the preferences of you and your organization (feel free to fork ours!).
 
 <docs-success>Yes, we do recommend that you name your own stack after a music sub-genre (not "rock" but "indie"!). In the future, we will have a page where you can list your open source stacks for others to learn and discover. For now, please add the <a href="https://github.com/topics/remix-stack"><code>remix-stack</code></a> tag to your repo!</docs-success>
 
@@ -51,10 +51,10 @@ The template option can be any of the following values:
 - A URL to a tarball (e.g. `https://example.com/remix-stack.tar.gz`)
 - A file URL (e.g. `file:///Users/michael/remix-stack.tar.gz`)
 
-Additionally, if your stack is in a private GitHub repo, you can set a GitHub token in the `GITHUB_TOKEN` environment variable:
+Additionally, if your stack is in a private GitHub repo, you can pass a GitHub token via the `--token` cli flag:
 
 ```
-GITHUB_TOKEN=yourtoken npx create-remix@latest --template your-private/repo
+npx create-remix@latest --template your-private/repo --token yourtoken
 ```
 
 The [token just needs `repo` access][repo access token].

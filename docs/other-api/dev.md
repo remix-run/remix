@@ -46,7 +46,7 @@ remix create ./my-app --template https://example.com/remix-template.tar.gz
 <aside aria-label="Private GitHub repo templates">
 <docs-info>
 
-To create a new project from a template in a private GitHub repo, set the `GITHUB_TOKEN` environment variable to a personal access token with access to that repo.
+To create a new project from a template in a private GitHub repo, pass the `--token` flag a personal access token with access to that repo.
 
 </docs-info>
 </aside>
