@@ -205,12 +205,14 @@ export async function createApp({
   if (installDeps) {
     let packageManager = getPreferredPackageManager();
 
-    let npmConfig = execSync(
-      `${packageManager} config get @remix-run:registry`,
-      {
+    let npmConfig;
+    try {
+      npmConfig = execSync(`${packageManager} config get @remix-run:registry`, {
         encoding: "utf8",
-      }
-    );
+      });
+    } catch (error: unknown) {
+      // Yarn throws when it can't find a "@remix-run:registry" configuration setting
+    }
     if (npmConfig?.startsWith("https://npm.remix.run")) {
       throw Error(
         "🚨 Oops! You still have the private Remix registry configured. Please " +
