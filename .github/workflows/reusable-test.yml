@@ -1,0 +1,168 @@
+name: 🧪 Test
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        required: true
+        # this is limited to string | boolean | number (https://github.community/t/can-action-inputs-be-arrays/16457)
+        # but we want to pass an array, so we'll need to manually stringify it for now
+        type: string
+
+jobs:
+  build:
+    name: ⚙️ Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+
+      - name: 📥 Install deps
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
+
+      - name: 🏗 Build
+        run: yarn build
+
+  lint:
+    name: ⬣ Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+
+      - name: 📥 Install deps
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
+
+      - name: 🔬 Lint
+        run: yarn lint
+
+      - name: 🦕 Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
+      - name: 🔬 Lint deno files
+        run: yarn lint:deno
+
+  test:
+    name: "🧪 Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          # - macos-latest
+          - windows-latest
+        node: ${{ fromJSON(inputs.node_version) }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node ${{ matrix.node }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "yarn"
+
+      - name: 📥 Install deps
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
+
+      - name: 🧪 Run Primary Tests
+        run: "yarn test:primary"
+
+  integration:
+    name: "👀 Integration Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ${{ fromJSON(inputs.node_version) }}
+        os:
+          - ubuntu-latest
+          # - macos-latest
+          - windows-latest
+        include:
+          - os: ubuntu-latest
+            playwright_binary_path: ~/.cache/ms-playwright
+          # - os: macos-latest
+          #   playwright_binary_path: ~/Library/Caches/ms-playwright
+          - os: windows-latest
+            playwright_binary_path: '~\\AppData\\Local\\ms-playwright'
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node ${{ matrix.node }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "yarn"
+
+      - name: 📥 Install deps
+        # even though this is called "npm-install" it does use yarn to install
+        # because we have a yarn.lock and caches efficiently.
+        uses: bahmutov/npm-install@v1
+
+      # playwright recommends if you cache the binaries to keep it tied to the version of playwright you are using.
+      # https://playwright.dev/docs/ci#caching-browsers
+      - name: 🕵️‍♂️ Get current Playwright version
+        id: playwright-version
+        shell: bash
+        run: |
+          playwright_version=$(npm info @playwright/test version)
+          echo "::set-output name=version::${playwright_version}"
+
+      - name: 🤖 Cache Playwright binaries
+        uses: actions/cache@v3
+        id: playwright-cache
+        with:
+          path: ${{ matrix.playwright_binary_path }}
+          key: ${{ runner.os }}-${{ runner.arch }}-cache-playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: 🖨️ Playwright info
+        shell: bash
+        run: |
+          echo "OS: ${{ matrix.os }}"
+          echo "Playwright version: ${{ steps.playwright-version.outputs.version }}"
+          echo "Playwright install dir: ${{ matrix.playwright_binary_path }}"
+          echo "Cache key: ${{ runner.os }}-${{ runner.arch }}-cache-playwright-${{ steps.playwright-version.outputs.version }}"
+          echo "Cache hit: ${{ steps.playwright-cache.outputs.cache-hit == 'true' }}"
+
+      - name: 📥 Install Playwright
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps
+
+      - name: 👀 Run Integration Tests
+        run: "yarn test:integration"
