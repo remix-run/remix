@@ -210,7 +210,7 @@ export async function createApp({
       npmConfig = execSync(`${packageManager} config get @remix-run:registry`, {
         encoding: "utf8",
       });
-    } catch (error: unknown) {
+    } catch {
       // Yarn throws when it can't find a "@remix-run:registry" configuration setting
     }
     if (npmConfig?.startsWith("https://npm.remix.run")) {

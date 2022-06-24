@@ -33,6 +33,14 @@
     "react": ">=16.8",
     "react-dom": ">=16.8"
   },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
   "engines": {
     "node": ">=14"
   },
