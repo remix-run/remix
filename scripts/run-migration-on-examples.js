@@ -15,7 +15,8 @@ const main = async (migration) => {
   let cliPath = join(
     buildPath,
     "node_modules",
-    "@remix-run/dev",
+    "@remix-run",
+    "dev",
     "dist",
     "cli.js"
   );

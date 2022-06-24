@@ -1,5 +1,4 @@
 {
-  "include": ["**/*"],
   "exclude": ["dist", "__tests__"],
   "compilerOptions": {
     "lib": ["ES2019", "DOM.Iterable"],
@@ -8,11 +7,9 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "strict": true,
-
     "declaration": true,
     "emitDeclarationOnly": true,
-
-    "outDir": "./dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "outDir": "../../build/node_modules/@remix-run/vercel/dist"
   }
 }

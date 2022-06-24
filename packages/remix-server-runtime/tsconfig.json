@@ -1,5 +1,4 @@
 {
-  "include": ["**/*"],
   "exclude": ["dist", "__tests__"],
   "compilerOptions": {
     "lib": ["ES2019", "DOM", "DOM.Iterable"],
@@ -8,12 +7,10 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "strict": true,
-
     "declaration": true,
     "emitDeclarationOnly": true,
-
-    "outDir": "./dist",
     "rootDir": ".",
+    "outDir": "../../build/node_modules/@remix-run/server-runtime/dist",
 
     // Avoid naming conflicts between lib.dom.d.ts and globals.ts
     "skipLibCheck": true

@@ -5,7 +5,7 @@ description: Remix makes integrating MDX into your project a breeze with built i
 
 # MDX
 
-While we believe that a strong separation of data and display is important, we understand that formats that mix the two such as [MDX](https://mdxjs.com/) (Markdown with embedded JSX components) have become a popular and powerful authoring format for developers.
+While we believe that a strong separation of data and display is important, we understand that formats that mix the two such as [MDX][mdx] (Markdown with embedded JSX components) have become a popular and powerful authoring format for developers.
 
 Remix supports using MDX in two ways:
 
@@ -30,7 +30,7 @@ headers:
 # Hello Content!
 ```
 
-The lines in the document above between the `---` are called "frontmatter". You can think of them like metadata for your document, formatted as [YAML](https://yaml.org/).
+The lines in the document above between the `---` are called "frontmatter". You can think of them like metadata for your document, formatted as [YAML][yaml].
 
 You can reference your frontmatter fields through the global `attributes` variable in your MDX:
 
@@ -134,7 +134,7 @@ export default function Index() {
 }
 ```
 
-Clearly this is not a scalable solution for a blog with thousands of posts. Realistically speaking, writing is hard, so if your blog starts to suffer from too much content, that's an awesome problem to have. If you get to 100 posts (congratulations!), we suggest you rethink your strategy and turn your posts into data stored in a database so that you don't have to rebuild and redeploy your blog every time you fix a typo. You can even keep using MDX with [MDX Bundler](https://github.com/kentcdodds/mdx-bundler).
+Clearly this is not a scalable solution for a blog with thousands of posts. Realistically speaking, writing is hard, so if your blog starts to suffer from too much content, that's an awesome problem to have. If you get to 100 posts (congratulations!), we suggest you rethink your strategy and turn your posts into data stored in a database so that you don't have to rebuild and redeploy your blog every time you fix a typo. You can even keep using MDX with [MDX Bundler][mdx-bundler].
 
 ## Advanced Configuration
 
@@ -158,3 +158,7 @@ exports.mdx = async (filename) => {
   };
 };
 ```
+
+[mdx]: https://mdxjs.com
+[yaml]: https://yaml.org
+[mdx-bundler]: https://github.com/kentcdodds/mdx-bundler

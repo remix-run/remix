@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/react",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "React DOM bindings for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -12,9 +12,9 @@
   },
   "license": "MIT",
   "sideEffects": false,
-  "main": "./dist/index.js",
-  "module": "./dist/esm/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "module": "dist/esm/index.js",
   "dependencies": {
     "history": "^5.3.0",
     "react-router-dom": "^6.2.2"

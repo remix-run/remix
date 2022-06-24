@@ -157,17 +157,19 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     { overwrite: true }
   );
   if (init.setup) {
-    spawnSync(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    let setupSpawn = spawnSync(
       "node",
       ["node_modules/@remix-run/dev/dist/cli.js", "setup", init.setup],
       { cwd: projectDir }
     );
 
     // These logs are helpful for debugging. Remove comments if needed.
-    // console.log("STDOUT:");
-    // console.log(setupSpawn.stdout.toString("utf-8"));
-    // console.log("STDERR:");
-    // console.log(setupSpawn.stderr.toString("utf-8"));
+    // console.log("spawning @remix-run/dev/cli.js `setup`:\n");
+    // console.log("  STDOUT:");
+    // console.log("  " + setupSpawn.stdout.toString("utf-8"));
+    // console.log("  STDERR:");
+    // console.log("  " + setupSpawn.stderr.toString("utf-8"));
   }
   await writeTestFiles(init, projectDir);
   build(projectDir, init.buildStdio, init.sourcemap);
@@ -185,10 +187,11 @@ function build(projectDir: string, buildStdio?: Writable, sourcemap?: boolean) {
   });
 
   // These logs are helpful for debugging. Remove comments if needed.
-  console.log("xx STDOUT:");
-  console.log(buildSpawn.stdout.toString("utf-8"));
-  console.log("xx STDERR:");
-  console.log(buildSpawn.stderr.toString("utf-8"));
+  // console.log("spawning @remix-run/dev/cli.js `build`:\n");
+  // console.log("  STDOUT:");
+  // console.log("  " + buildSpawn.stdout.toString("utf-8"));
+  // console.log("  STDERR:");
+  // console.log(" " + buildSpawn.stderr.toString("utf-8"));
 
   if (buildStdio) {
     buildStdio.write(buildSpawn.stdout.toString("utf-8"));

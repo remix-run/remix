@@ -22,7 +22,7 @@ If your experience with web development is primarily with the JS frameworks in t
 
 ### Local Development
 
-If you're using the `remix dev` server to run your project locally, it has built-in support for [dotenv](https://www.npmjs.com/package/dotenv).
+If you're using the `remix dev` server to run your project locally, it has built-in support for [dotenv][dotenv].
 
 First, create an `.env` file in the root of your project:
 
@@ -74,12 +74,12 @@ Note that `.env` files are only for development. You should not use them in prod
 
 Environment variables when deployed to production will be handled by your host, for example:
 
-- [Netlify](https://docs.netlify.com/configure-builds/environment-variables/)
-- [Fly.io](https://fly.io/docs/reference/secrets/)
-- [Cloudflare Pages](https://developers.cloudflare.com/pages/platform/build-configuration/#environment-variables)
-- [Cloudflare Workers](https://developers.cloudflare.com/workers/platform/environment-variables)
-- [Vercel](https://vercel.com/docs/environment-variables)
-- [Architect](https://arc.codes/docs/en/reference/cli/env)
+- [Netlify][netlify]
+- [Fly.io][fly-io]
+- [Cloudflare Pages][cloudflare-pages]
+- [Cloudflare Workers][cloudflare-workers]
+- [Vercel][vercel]
+- [Architect][architect]
 
 ## Browser Environment Variables
 
@@ -168,3 +168,11 @@ Instead we recommend keeping all of your environment variables on the server (al
      return stripe.redirectToCheckout({ sessionId });
    }
    ```
+
+[dotenv]: https://www.npmjs.com/package/dotenv
+[netlify]: https://docs.netlify.com/configure-builds/environment-variables
+[fly-io]: https://fly.io/docs/reference/secrets
+[cloudflare-pages]: https://developers.cloudflare.com/pages/platform/build-configuration/#environment-variables
+[cloudflare-workers]: https://developers.cloudflare.com/workers/platform/environment-variables
+[vercel]: https://vercel.com/docs/environment-variables
+[architect]: https://arc.codes/docs/en/reference/cli/env
