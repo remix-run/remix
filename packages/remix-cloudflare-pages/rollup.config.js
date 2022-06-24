@@ -39,6 +39,6 @@ module.exports = function rollup() {
         copyToPlaygrounds(),
       ],
     },
-    ...getAdapterConfig("cloudflare-pages"),
+    getAdapterConfig("cloudflare-pages"),
   ];
 };

@@ -9,7 +9,6 @@ const path = require("path");
 const REPO_ROOT_DIR = __dirname;
 
 let activeOutputDir = "build";
-
 if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
   let appDir = path.join(
     REPO_ROOT_DIR,
@@ -135,7 +134,7 @@ function copyToPlaygrounds() {
 /**
  * @param {RemixAdapter} adapterName
  * @param {MagicExports} [magicExports] TODO: Remove in v2
- * @returns {import("rollup").RollupOptions[]}
+ * @returns {import("rollup").RollupOptions}
  */
 function getAdapterConfig(adapterName, magicExports) {
   /** @type {`@remix-run/${RemixPackage}`} */
@@ -145,35 +144,33 @@ function getAdapterConfig(adapterName, magicExports) {
   let outputDist = path.join(outputDir, "dist");
   let version = getVersion(sourceDir);
 
-  return [
-    {
-      external(id) {
-        return isBareModuleId(id);
-      },
-      input: `${sourceDir}/index.ts`,
-      output: {
-        banner: createBanner(packageName, version),
-        dir: outputDist,
-        format: "cjs",
-        preserveModules: true,
-        exports: "auto",
-      },
-      plugins: [
-        babel({
-          babelHelpers: "bundled",
-          exclude: /node_modules/,
-          extensions: [".ts", ".tsx"],
-        }),
-        nodeResolve({ extensions: [".ts", ".tsx"] }),
-        copyPublishFiles(packageName),
-        magicExportsPlugin(magicExports, {
-          packageName,
-          version,
-        }),
-        copyToPlaygrounds(),
-      ],
+  return {
+    external(id) {
+      return isBareModuleId(id);
     },
-  ];
+    input: `${sourceDir}/index.ts`,
+    output: {
+      banner: createBanner(packageName, version),
+      dir: outputDist,
+      format: "cjs",
+      preserveModules: true,
+      exports: "auto",
+    },
+    plugins: [
+      babel({
+        babelHelpers: "bundled",
+        exclude: /node_modules/,
+        extensions: [".ts", ".tsx"],
+      }),
+      nodeResolve({ extensions: [".ts", ".tsx"] }),
+      copyPublishFiles(packageName),
+      magicExportsPlugin(magicExports, {
+        packageName,
+        version,
+      }),
+      copyToPlaygrounds(),
+    ],
+  };
 }
 
 /**
@@ -245,7 +242,7 @@ function magicExportsPlugin(magicExports, { packageName, version }) {
  * @param {{ packageName: string; version: string }} args
  * @returns {import("rollup").RollupOptions}
  */
-function cli({ packageName, version }) {
+function getCliConfig({ packageName, version }) {
   let sourceDir = `packages/${getPackageDirname(packageName)}`;
   let outputDir = getOutputDir(packageName);
   let outputDist = path.join(outputDir, "dist");
@@ -289,11 +286,11 @@ function getPackageDirname(packageName) {
 }
 
 module.exports = {
-  cli,
   copyPublishFiles,
   copyToPlaygrounds,
   createBanner,
   getAdapterConfig,
+  getCliConfig,
   getOutputDir,
   isBareModuleId,
   magicExportsPlugin,

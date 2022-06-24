@@ -4,9 +4,9 @@ const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
 
 const {
-  cli,
   copyToPlaygrounds,
   createBanner,
+  getCliConfig,
   getOutputDir,
   isBareModuleId,
 } = require("../../rollup.utils");
@@ -48,6 +48,6 @@ module.exports = function rollup() {
         copyToPlaygrounds(),
       ],
     },
-    cli({ packageName, version }),
+    getCliConfig({ packageName, version }),
   ];
 };

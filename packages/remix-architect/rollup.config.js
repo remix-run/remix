@@ -12,5 +12,5 @@ const magicExports = {
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  return getAdapterConfig("architect", magicExports);
+  return [getAdapterConfig("architect", magicExports)];
 };
