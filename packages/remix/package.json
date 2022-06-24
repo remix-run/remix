@@ -1,6 +1,6 @@
 {
   "name": "remix",
-  "version": "1.6.1",
+  "version": "0.0.0-nightly-dec8a6d-20220624",
   "description": "A framework for building better websites",
   "homepage": "https://remix.run",
   "bugs": {
