@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/dev",
-  "version": "1.5.1",
+  "version": "1.6.1",
   "description": "Dev tools and CLI for Remix",
   "homepage": "https://remix.run",
   "bugs": {
@@ -12,16 +12,20 @@
     "directory": "packages/remix-dev"
   },
   "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "bin": {
-    "remix": "cli.js"
+    "remix": "dist/cli.js"
   },
   "dependencies": {
-    "@babel/core": "7.17.8",
-    "@babel/plugin-syntax-jsx": "7.16.7",
-    "@babel/preset-typescript": "7.16.7",
+    "@babel/core": "^7.18.2",
+    "@babel/plugin-syntax-jsx": "^7.17.12",
+    "@babel/preset-env": "^7.18.2",
+    "@babel/preset-typescript": "^7.17.12",
     "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
     "@npmcli/package-json": "^2.0.0",
-    "@remix-run/server-runtime": "1.5.1",
+    "@remix-run/server-runtime": "1.6.1",
+    "@yarnpkg/esbuild-plugin-pnp": "^2.0.0",
     "cacache": "^15.0.5",
     "chalk": "^4.1.2",
     "chokidar": "^3.5.1",
@@ -67,10 +71,26 @@
     "esbuild-register": "^3.3.2",
     "msw": "^0.39.2",
     "shelljs": "^0.8.5",
+    "strip-ansi": "^6.0.1",
     "tiny-invariant": "^1.2.0",
     "type-fest": "^2.12.2"
   },
+  "peerDependencies": {
+    "@remix-run/serve": "1.5.1"
+  },
+  "peerDependenciesMeta": {
+    "@remix-run/serve": {
+      "optional": true
+    }
+  },
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "compiler/shims/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }

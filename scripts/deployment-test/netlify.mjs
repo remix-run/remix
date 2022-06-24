@@ -38,7 +38,10 @@ function createNetlifySite() {
   });
 }
 
-try {
+let spawnOpts = getSpawnOpts(PROJECT_DIR);
+let siteId = null;
+
+async function createAndDeployApp() {
   await createNewApp();
 
   // validate dependencies are available
@@ -50,7 +53,6 @@ try {
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
   ]);
 
-  let spawnOpts = getSpawnOpts(PROJECT_DIR);
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
@@ -60,6 +62,8 @@ try {
   // create a new site on netlify
   let site = await createNetlifySite();
   console.log("Site created");
+
+  siteId = site.id;
 
   // deploy to netlify
   let netlifyDeployCommand = spawnSync(
@@ -73,10 +77,22 @@ try {
 
   console.log(`Deployed to ${site.ssl_url}`);
 
+  // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, site.ssl_url);
-
-  process.exit(0);
-} catch (error) {
-  console.error(error);
-  process.exit(1);
 }
+
+async function destroyApp() {
+  if (!siteId) {
+    throw new Error("No siteId found");
+  }
+
+  spawnSync("npx", ["netlify", "sites:delete", siteId, "--force"], spawnOpts);
+}
+
+createAndDeployApp()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  })
+  .finally(destroyApp);

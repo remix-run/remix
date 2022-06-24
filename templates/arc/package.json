@@ -1,8 +1,5 @@
 {
-  "name": "remix-template-arc",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
@@ -20,6 +17,7 @@
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
+    "@architect/architect": "^10.3.3",
     "@remix-run/dev": "*",
     "@remix-run/eslint-config": "*",
     "@types/react": "^17.0.45",

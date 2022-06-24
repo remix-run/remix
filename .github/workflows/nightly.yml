@@ -15,7 +15,7 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     outputs:
-      # allows this to be used in the `comment` job below
+      # allows this to be used in the `comment` job below - will be undefined if there's no release necessary
       NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
     steps:
       - name: 🛑 Cancel Previous Runs
@@ -40,63 +40,91 @@ jobs:
         # because we have a yarn.lock and caches efficiently.
         uses: bahmutov/npm-install@v1
 
-      - name: ⤴️ Update Version
+      - name: ⤴️ Update Version if needed
         id: version
         run: |
-          git config --local user.email "hello@remix.run"
-          git config --local user.name "Remix Run Bot"
-
+          # get latest commit sha
           SHA=$(git rev-parse HEAD)
           SHORT_SHA=${SHA::7}
-          DATE=$(date '+%Y%m%d')
-          NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}-${DATE}
-          echo ::set-output name=NEXT_VERSION::${NEXT_VERSION}
 
-          git checkout -b nightly/${NEXT_VERSION}
+          # get latest nightly tag
+          LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-taggerdate | head -n 1)
 
-          if [ -z "$(git status --porcelain)" ]; then
-            echo "✨"
+          # check if last commit to dev starts would be the nightly tag we're about to create (minus the date)
+          # if it is, we'll skip the nightly creation
+          # if not, we'll create a new nightly tag
+          if [[ ${LATEST_NIGHTLY_TAG} == v0.0.0-nightly-${SHORT_SHA}-* ]]; then
+            echo "🛑 Latest nightly tag is the same as the latest commit sha, skipping nightly release"
           else
-            echo "dirty working directory..."
-            git add .
-            git commit -m "dirty working directory..."
+            git config --local user.email "hello@remix.run"
+            git config --local user.name "Remix Run Bot"
+
+            DATE=$(date '+%Y%m%d')
+            NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}-${DATE}
+            echo ::set-output name=NEXT_VERSION::${NEXT_VERSION}
+
+            git checkout -b nightly/${NEXT_VERSION}
+
+            if [ -z "$(git status --porcelain)" ]; then
+              echo "✨"
+            else
+              echo "dirty working directory..."
+              git add .
+              git commit -m "dirty working directory..."
+            fi
+
+            yarn run version ${NEXT_VERSION} --skip-prompt
           fi
 
-          yarn run version ${NEXT_VERSION} --skip-prompt
-
       - name: 🏗 Build
+        if: steps.version.outputs.NEXT_VERSION
         run: yarn build
 
       - name: 🏷 Push Tag
+        if: steps.version.outputs.NEXT_VERSION
         run: git push origin --tags
 
       - name: 🔐 Setup npm auth
+        if: steps.version.outputs.NEXT_VERSION
         run: |
           echo "registry=https://registry.npmjs.org" >> ~/.npmrc
           echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
 
       - name: 🚀 Publish
+        if: steps.version.outputs.NEXT_VERSION
         run: npm run publish
-
-      - name: 🐱 Create GitHub release
-        uses: actions/create-release@v1
-        with:
-          draft: false
-          prerelease: true
-          release_name: v${{ steps.version.outputs.NEXT_VERSION }}
-          tag_name: v${{ steps.version.outputs.NEXT_VERSION }}
-        env:
-          # need this token in order to have it trigger the comment and deployment test workflows
-          GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
 
   comment:
     needs: [nightly]
-    name: 🛴 Kick off comment and deployment test workflows
-    if: github.repository == 'remix-run/remix'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: peter-evans/repository-dispatch@v2
-        with:
-          token: ${{ secrets.NIGHTLY_PAT }}
-          event-type: release
-          client-payload: '{ "ref": "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}", "version": "${{ needs.nightly.outputs.NEXT_VERSION }}" }'
+    name: 📝 Comment on related issues and pull requests
+    if: github.repository == 'remix-run/remix' && needs.nightly.outputs.NEXT_VERSION
+    uses: remix-run/remix/.github/workflows/release-comments.yml@main
+    with:
+      ref: "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}"
+
+  deployments:
+    needs: [nightly]
+    name: 🚀 Deployment Tests
+    if: github.repository == 'remix-run/remix' && needs.nightly.outputs.NEXT_VERSION
+    uses: remix-run/remix/.github/workflows/deployments.yml@main
+    secrets:
+      TEST_AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
+      TEST_AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
+      TEST_CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
+      TEST_CF_GLOBAL_API_KEY: ${{ secrets.TEST_CF_GLOBAL_API_KEY }}
+      TEST_CF_EMAIL: ${{ secrets.TEST_CF_EMAIL }}
+      TEST_CF_PAGES_API_TOKEN: ${{ secrets.TEST_CF_PAGES_API_TOKEN }}
+      TEST_CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
+      TEST_DENO_DEPLOY_TOKEN: ${{ secrets.TEST_DENO_DEPLOY_TOKEN }}
+      TEST_FLY_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
+      TEST_NETLIFY_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
+      TEST_VERCEL_TOKEN: ${{ secrets.TEST_VERCEL_TOKEN }}
+      TEST_VERCEL_USER_ID: ${{ secrets.TEST_VERCEL_USER_ID }}
+
+  stacks:
+    needs: [nightly]
+    name: 🥞 Remix Stacks Test
+    if: github.repository == 'remix-run/remix' && needs.nightly.outputs.NEXT_VERSION
+    uses: remix-run/remix/.github/workflows/stacks.yml@main
+    with:
+      version: "${{ needs.nightly.outputs.NEXT_VERSION }}"

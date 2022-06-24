@@ -8,7 +8,7 @@ hidden: true
 
 # Remix Docs
 
-Holy smokes you're here! Let's do this. Welcome to the v1 stable release of Remix! Just so we're all clear, this is newly open sourced, so stable means "the API is stable", it doesn’t mean we don't have any bugs 😅 (though, we think we're doing alright). Let us know if you think you found one on [GitHub](https://github.com/remix-run/remix).
+Holy smokes you're here! Let's do this. Welcome to the v1 stable release of Remix! Just so we're all clear, this is newly open sourced, so stable means "the API is stable", it doesn’t mean we don't have any bugs 😅 (though, we think we're doing alright). Let us know if you think you found one on [GitHub][git-hub].
 
 ## Getting Started
 
@@ -62,3 +62,5 @@ We **strongly encourage you** to do one of the tutorials before anything else. R
     </docs-card>
   </a>
 </docs-cards>
+
+[git-hub]: https://github.com/remix-run/remix
