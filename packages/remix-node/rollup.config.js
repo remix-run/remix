@@ -13,6 +13,7 @@ const {
 const { name: packageName, version } = require("./package.json");
 
 // Re-export everything from this package that is available in `remix`
+/** @type {import('../../rollup.utils').MagicExports} */
 const magicExports = {
   "@remix-run/node": {
     values: [

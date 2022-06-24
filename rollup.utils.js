@@ -137,7 +137,7 @@ function copyToPlaygrounds() {
  * @returns {import("rollup").RollupOptions}
  */
 function getAdapterConfig(adapterName, magicExports) {
-  /** @type {`@remix-run/${RemixPackage}`} */
+  /** @type {RemixPackage} */
   let packageName = `@remix-run/${adapterName}`;
   let sourceDir = `packages/remix-${adapterName}`;
   let outputDir = getOutputDir(packageName);
@@ -297,7 +297,7 @@ module.exports = {
 };
 
 /**
- * @typedef {Record<"values" | "types", string[]>} MagicExports
+ * @typedef {Record<string, { values?: string[]; types?: string[] }>} MagicExports
  * @typedef {"architect" | "cloudflare-pages" | "cloudflare-workers" | "express" | "netlify" | "vercel"} RemixAdapter
  * @typedef {"cloudflare" | "node" | "deno"} RemixRuntime
  * @typedef {`@remix-run/${RemixAdapter | RemixRuntime | "dev" | "eslint-config" | "react" | "serve" | "server-runtime"}`} ScopedRemixPackage
