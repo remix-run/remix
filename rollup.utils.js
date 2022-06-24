@@ -196,14 +196,14 @@ function magicExportsPlugin(magicExports, { packageName, version }) {
       let esm = "";
       let cjs = "";
 
-      if (magicExports.vars) {
+      if (magicExports.values) {
         let banner = createBanner(packageName, version);
-        for (let pkgName of Object.keys(magicExports.vars)) {
+        for (let pkgName of Object.keys(magicExports.values)) {
           // esm contents
           if (!esm) {
             esm = banner + "\n";
           }
-          let exportList = magicExports.vars[pkgName].join(", ");
+          let exportList = magicExports.values[pkgName].join(", ");
           esm += `export { ${exportList} } from '${pkgName}';\n`;
           typings += `export { ${exportList} } from '${pkgName}';\n`;
 
@@ -220,7 +220,7 @@ function magicExportsPlugin(magicExports, { packageName, version }) {
           );
 
           cjs += `var ${varName} = require('${pkgName}');\n`;
-          for (let symbol of magicExports.vars[pkgName]) {
+          for (let symbol of magicExports.values[pkgName]) {
             cjs +=
               `Object.defineProperty(exports, '${symbol}', {\n` +
               "  enumerable: true,\n" +
@@ -353,7 +353,7 @@ module.exports = {
  * }} BuildInfo
  *
  * @typedef {{
- *   vars?: Record<string, string[]>;
+ *   values?: Record<string, string[]>;
  *   types?: Record<string, string[]>;
  * }} MagicExports
  */

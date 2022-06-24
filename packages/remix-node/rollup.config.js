@@ -3,13 +3,13 @@ const { name: packageName } = require("./package.json");
 
 // Re-export everything from this package that is available in `remix`
 const magicExports = {
-  vars: {
+  values: {
     "@remix-run/node": [
       "createCookie",
-      "createSessionStorage",
       "createCookieSessionStorage",
-      "createMemorySessionStorage",
       "createFileSessionStorage",
+      "createMemorySessionStorage",
+      "createSessionStorage",
       "unstable_createFileUploadHandler",
       "unstable_createMemoryUploadHandler",
       "unstable_parseMultipartFormData",
