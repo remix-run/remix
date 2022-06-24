@@ -17,6 +17,10 @@
     "@remix-run/server-runtime": "1.6.1",
     "mime": "^3.0.0"
   },
+  "peerDependencies": {
+    "react": ">=16.8",
+    "react-dom": ">=16.8"
+  },
   "engines": {
     "node": ">=14"
   }

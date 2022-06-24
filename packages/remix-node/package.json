@@ -29,6 +29,10 @@
     "@types/cookie-signature": "^1.0.3",
     "@types/source-map-support": "^0.5.4"
   },
+  "peerDependencies": {
+    "react": ">=16.8",
+    "react-dom": ">=16.8"
+  },
   "engines": {
     "node": ">=14"
   },
