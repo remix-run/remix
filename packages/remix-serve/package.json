@@ -17,7 +17,7 @@
     "remix-serve": "dist/cli.js"
   },
   "dependencies": {
-    "@remix-run/express": "1.6.1",
+    "@remix-run/express": "^1.6.1",
     "compression": "^1.7.4",
     "express": "^4.17.1",
     "morgan": "^1.10.0"

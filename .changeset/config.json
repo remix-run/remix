@@ -1,0 +1,29 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@2.0.0/schema.json",
+  "changelog": ["@changesets/cli/changelog", { "repo": "remix-run/remix" }],
+  "commit": false,
+  "fixed": [
+    [
+      "remix",
+      "@remix-run/dev",
+      "@remix-run/eslint-config",
+      "@remix-run/react",
+      "@remix-run/serve"
+    ]
+  ],
+  "linked": [
+    ["@remix-run/server-runtime", "@remix-run/cloudflare"],
+    ["@remix-run/server-runtime", "@remix-run/deno"],
+    ["@remix-run/server-runtime", "@remix-run/node"],
+    ["@remix-run/cloudflare", "@remix-run/cloudflare-pages"],
+    ["@remix-run/cloudflare", "@remix-run/cloudflare-workers"],
+    ["@remix-run/node", "@remix-run/architect"],
+    ["@remix-run/node", "@remix-run/express"],
+    ["@remix-run/node", "@remix-run/netlify"],
+    ["@remix-run/node", "@remix-run/vercel"]
+  ],
+  "access": "public",
+  "baseBranch": "dev",
+  "updateInternalDependencies": "patch",
+  "ignore": []
+}
