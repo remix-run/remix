@@ -12,13 +12,20 @@
     "directory": "packages/create-remix"
   },
   "license": "MIT",
+  "typings": "dist/cli.d.ts",
   "bin": {
-    "create-remix": "cli.js"
+    "create-remix": "dist/cli.js"
   },
   "dependencies": {
     "@remix-run/dev": "1.6.1"
   },
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }

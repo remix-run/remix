@@ -1,4 +1,5 @@
 {
+  "exclude": ["dist", "__tests__"],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2020"],
     "target": "ES2020",
@@ -8,11 +9,9 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "strict": true,
-
     "declaration": true,
     "emitDeclarationOnly": true,
-
-    "outDir": "../../build/node_modules/remix",
-    "rootDir": "."
+    "rootDir": ".",
+    "outDir": "../../build/node_modules/remix/dist"
   }
 }
