@@ -21,7 +21,6 @@ module.exports = function rollup() {
   let sourceDir = "packages/remix";
   let outputDir = getOutputDir(packageName);
   let outputDist = path.join(outputDir, "dist");
-  let outputEsmDist = path.join(outputDist, "esm");
 
   return [
     {
