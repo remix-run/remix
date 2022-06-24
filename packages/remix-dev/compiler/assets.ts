@@ -10,24 +10,36 @@ import { createUrl } from "./utils/url";
 type Route = RemixConfig["routes"][string];
 
 export interface AssetsManifest {
+  /** Hash of the entry and routes described by this manifest. */
   version: string;
+  // TODO: rename `url` to `path` or something? It isn't a full URL...
+  /** Path for this asset manifest file. */
   url?: string;
+  /** Metadata about the client entry file. */
   entry: {
+    /** Path to client entry file. */
     module: string;
+    /** Paths for client entry imports (i.e. chunks imported by the client entry module). */
     imports: string[];
   };
+  /** Flattened map from route ID to route metadata */
   routes: {
-    [routeId: string]: {
-      id: string;
-      parentId?: string;
-      path?: string;
-      index?: boolean;
-      caseSensitive?: boolean;
+    // Omit `file` since asset manifest cares about the location of the built module, not the location of the source module.
+    [routeId: string]: Omit<Route, "file"> & {
+      /** Path to the built module for this route. */
       module: string;
+      /**
+       * A list of paths for modules imported by this route.
+       * Used by the server to know which chunks to fetch for this route.
+       */
       imports?: string[];
+      /** Should be `true` if this route exports a action. */
       hasAction: boolean;
+      /** Should be `true` if this route exports a loader. */
       hasLoader: boolean;
+      /** Should be `true` if this route exports a catch boundary. */
       hasCatchBoundary: boolean;
+      /** Should be `true` if this route exports an error boundary. */
       hasErrorBoundary: boolean;
     };
   };
