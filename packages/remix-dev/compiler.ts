@@ -479,7 +479,7 @@ async function generateAssetsManifest(
   let assetsManifest = await createAssetsManifest(config, metafile);
 
   await writeFileSafe(
-    path.join(config.assetsBuildDirectory, path.basename(assetsManifest)),
+    path.join(config.assetsBuildDirectory, path.basename(assetsManifest.url)),
     `window.__remixManifest=${JSON.stringify(assetsManifest)};`
   );
 
