@@ -1655,7 +1655,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function JokesRoute() {
-  const data = useLoaderData<LoaderData>();35
+  const data = useLoaderData<LoaderData>();
 
   return (
     <div className="jokes-layout">
