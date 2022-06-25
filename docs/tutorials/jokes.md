@@ -1620,20 +1620,23 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[3,4,6,12,19-21,23-28,31,55-59]
+```tsx filename=app/routes/jokes.tsx lines=[3,6,8,16,23-25,27-32,35,59-63]
 import type {
   LinksFunction,
   LoaderFunction,
-  json,
 } from "@remix-run/node";
+
 import type { Joke } from "@prisma/client";
+
+import { json } from "@remix-run/node";
+
 import {
   Link,
   Outlet,
   useLoaderData,
 } from "@remix-run/react";
 
-import { db } from "~/utils/db.server";
+import { db } from "~/utils/db.server"; 
 import stylesUrl from "~/styles/jokes.css";
 
 export const links: LinksFunction = () => {
@@ -1652,7 +1655,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function JokesRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData<LoaderData>();35
 
   return (
     <div className="jokes-layout">
@@ -1708,7 +1711,7 @@ I want to call out something specific in my solution. Here's my loader:
 
 ```tsx lines=[2,8-10]
 type LoaderData = {
-  jokeListItems: Array<Pick<Joke,"id" | "name">>;
+  jokeListItems: Array<{ id: string; name: string }>;
 };
 
 export const loader: LoaderFunction = async () => {
