@@ -1581,25 +1581,25 @@ To _load_ data in a Remix route module, you use a [`loader`][loader]. This is si
 import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import type { Joke } from "@prisma/client";
+import type { Sandwich } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
 
-type LoaderData = { jokes: Array<Joke> };
+type LoaderData = { sandwiches: Array<Sandwich> };
 
 export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
-    users: await db.joke.findMany(),
+    sandwiches: await db.sandwich.findMany(),
   };
   return json(data);
 };
 
-export default function Jokes() {
+export default function Sandwiches() {
   const data = useLoaderData<LoaderData>();
   return (
     <ul>
-      {data.jokes.map((joke) => (
-        <li key={joke.id}>{joke.name}</li>
+      {data.sandwiches.map((sandwich) => (
+        <li key={sandwich.id}>{sandwich.name}</li>
       ))}
     </ul>
   );
