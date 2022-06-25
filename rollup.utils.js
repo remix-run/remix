@@ -133,11 +133,10 @@ function copyToPlaygrounds() {
 
 /**
  * @param {RemixAdapter} adapterName
- * @param {MagicExports} [magicExports] TODO: Remove in v2
  * @returns {import("rollup").RollupOptions}
  */
-function getAdapterConfig(adapterName, magicExports) {
-  /** @type {RemixPackage} */
+function getAdapterConfig(adapterName) {
+  /** @type {`@remix-run/${RemixAdapter}`} */
   let packageName = `@remix-run/${adapterName}`;
   let sourceDir = `packages/remix-${adapterName}`;
   let outputDir = getOutputDir(packageName);
@@ -176,10 +175,10 @@ function getAdapterConfig(adapterName, magicExports) {
  * @returns {import("rollup").Plugin}
  */
 function magicExportsPlugin({ packageName, version }) {
-  let magicExports = getMagicExports(packageName);
   return {
     name: `${packageName}:generate-magic-exports`,
     generateBundle() {
+      let magicExports = getMagicExports(packageName);
       if (!magicExports) {
         return;
       }
@@ -235,7 +234,7 @@ function magicExportsPlugin({ packageName, version }) {
 
 /**
  * TODO: Remove in v2
- * @param {RemixPackage} packageName
+ * @param {ScopedRemixPackage} packageName
  * @returns {MagicExports | null}
  */
 function getMagicExports(packageName) {
@@ -413,7 +412,6 @@ module.exports = {
   createBanner,
   getAdapterConfig,
   getCliConfig,
-  getMagicExports,
   getOutputDir,
   isBareModuleId,
   magicExportsPlugin,
