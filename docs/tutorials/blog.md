@@ -389,7 +389,7 @@ npx prisma db seed
 💿 Let's generate a migration file for our schema changes - which will be required if you deploy your application rather than just running in dev mode locally.
 
 ```sh
-npx prisma db migrate
+npx prisma migrate dev
 ```
 
 <docs-warning>You'll get the ability to name the migration name, ideally you can refer back to what the changes you made are, so I'd suggest `create-post-model` for the name.</docs-warning>
