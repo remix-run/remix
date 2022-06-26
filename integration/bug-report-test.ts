@@ -49,26 +49,25 @@ test.beforeAll(async () => {
     files: {
       "app/routes/index.jsx": js`
         import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+        import { useActionData, Link } from "@remix-run/react";
 
-        export function loader() {
+        export let action = async ({ request }) => {
+          const fdata = await request.formData();
+
           return json("pizza");
-        }
+        };
 
         export default function Index() {
-          let data = useLoaderData();
+          const data = useActionData();
+
           return (
-            <div>
+            <form method="post" action="/?index" encType="multipart/form-data">
+              My Form
               {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
+              <input type="file" name="test" />
+              <button type="submit">Submit</button>
+            </form>
           )
-        }
-      `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -85,16 +84,18 @@ test.afterAll(async () => appFixture.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("request.formData() should not crash when a file is not provided", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+  expect(await response.text()).toMatch("My Form");
 
   // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  await app.clickSubmitButton("/?index");
+
+  let html = await app.getHtml();
+  expect(html).toMatch("pizza");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
