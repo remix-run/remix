@@ -81,11 +81,29 @@ export function runCypress(dir, dev, url) {
 }
 
 export function checkUrl(url) {
+  let retries = 10;
+
+  function wait(attempt) {
+    return Math.pow(2, attempt) * 250; // 250, 500, 1000, 2000
+  }
+
   return fetchRetry(url, {
+    retryDelay: function (attempt, error, response) {
+      return wait(attempt);
+    },
     retryOn: (attempt, error, response) => {
-      if (attempt > 10) return false;
-      if (!response.ok) return false;
-      return true;
+      let currentAttempt = attempt + 1; // `attempt` is 0 based
+      if (currentAttempt > retries) {
+        console.log(`out of retries for ${url}`);
+        return false;
+      }
+
+      if (error !== null || !response.ok) {
+        console.log(
+          `[${currentAttempt}/${retries}] - ${url} - waiting ${wait(attempt)}ms`
+        );
+        return true;
+      }
     },
   });
 }
