@@ -68,18 +68,6 @@ async function getVercelDeploymentUrl(projectId) {
   return project.targets?.production?.url;
 }
 
-async function destroyApp() {
-  console.log(`Destroying app ${APP_NAME}`);
-  let response = await vercelClient(`/v9/projects/${APP_NAME}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) {
-    console.error(`Error destroying project ${APP_NAME}: ${response.status}`);
-  } else {
-    console.log(`Destroyed app ${APP_NAME}`);
-  }
-}
-
 async function createAndDeployApp() {
   await createNewApp();
 
@@ -135,6 +123,18 @@ async function createAndDeployApp() {
 
   // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, fullUrl);
+}
+
+async function destroyApp() {
+  console.log(`Destroying app ${APP_NAME}`);
+  let response = await vercelClient(`/v9/projects/${APP_NAME}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    console.error(`Error destroying project ${APP_NAME}: ${response.status}`);
+  } else {
+    console.log(`Destroyed app ${APP_NAME}`);
+  }
 }
 
 createAndDeployApp().finally(destroyApp);
