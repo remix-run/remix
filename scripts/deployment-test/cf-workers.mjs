@@ -58,7 +58,13 @@ async function createAndDeployApp() {
     pkgJson.save(),
   ]);
 
-  let spawnOpts = getSpawnOpts(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR, {
+    // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
+    CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
+    CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+    CLOUDFLARE_GLOBAL_API_KEY: process.env.CLOUDFLARE_GLOBAL_API_KEY,
+    CLOUDFLARE_EMAIL: process.env.CLOUDFLARE_EMAIL,
+  });
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
@@ -79,17 +85,7 @@ async function createAndDeployApp() {
   spawnSync("npx", ["wrangler", "--version"], spawnOpts);
 
   // deploy the app
-  let deployCommand = spawnSync("npx", ["wrangler", "publish"], {
-    ...spawnOpts,
-    env: {
-      ...spawnOpts.env,
-      // these would be here by default, but I'd rather be explicit
-      CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
-      CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
-      CLOUDFLARE_GLOBAL_API_KEY: process.env.CLOUDFLARE_GLOBAL_API_KEY,
-      CLOUDFLARE_EMAIL: process.env.CLOUDFLARE_EMAIL,
-    },
-  });
+  let deployCommand = spawnSync("npx", ["wrangler", "publish"], spawnOpts);
   if (deployCommand.status !== 0) {
     console.error(deployCommand.error);
     throw new Error("Cloudflare Workers deploy failed");

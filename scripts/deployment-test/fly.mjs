@@ -29,7 +29,11 @@ async function createNewApp() {
   });
 }
 
-let spawnOpts = getSpawnOpts(PROJECT_DIR);
+let spawnOpts = getSpawnOpts(PROJECT_DIR, {
+  // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
+  FLY_API_TOKEN: process.env.FLY_API_TOKEN,
+  HOME: process.env.HOME,
+});
 
 async function createAndDeployApp() {
   // create a new remix app

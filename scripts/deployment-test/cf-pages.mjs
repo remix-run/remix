@@ -30,28 +30,6 @@ async function createNewApp() {
   });
 }
 
-async function getDeploymentUrl() {
-  let result = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects/${APP_NAME}/deployments`,
-    {
-      headers: {
-        "X-Auth-Email": process.env.CLOUDFLARE_EMAIL,
-        "X-Auth-Key": process.env.CLOUDFLARE_GLOBAL_API_KEY,
-      },
-    }
-  );
-
-  let json = await result.json();
-
-  let sorted = json.result.sort((a, b) => {
-    return new Date(b.created_on) - new Date(a.created_on);
-  });
-
-  return sorted[0].url;
-}
-
-let spawnOpts = getSpawnOpts(PROJECT_DIR);
-
 async function createAndDeployApp() {
   // create a new remix app
   await createNewApp();
@@ -80,6 +58,14 @@ async function createAndDeployApp() {
     pkgJson.save(),
   ]);
 
+  let spawnOpts = getSpawnOpts(PROJECT_DIR, {
+    // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
+    CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
+    CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+    CLOUDFLARE_GLOBAL_API_KEY: process.env.CLOUDFLARE_GLOBAL_API_KEY,
+    CLOUDFLARE_EMAIL: process.env.CLOUDFLARE_EMAIL,
+  });
+
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
@@ -98,17 +84,7 @@ async function createAndDeployApp() {
       "--production-branch",
       "main",
     ],
-    {
-      ...spawnOpts,
-      env: {
-        ...spawnOpts.env,
-        // these would be here by default, but I'd rather be explicit
-        CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
-        CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
-        CLOUDFLARE_GLOBAL_API_KEY: process.env.CLOUDFLARE_GLOBAL_API_KEY,
-        CLOUDFLARE_EMAIL: process.env.CLOUDFLARE_EMAIL,
-      },
-    }
+    spawnOpts
   );
 
   if (createCommand.status !== 0) {
@@ -117,18 +93,18 @@ async function createAndDeployApp() {
   }
 
   let deployCommand = spawnSync(
-    `npx wrangler pages publish ./public --project-name ${APP_NAME} --branch main --commit-dirty=true`,
-    {
-      ...spawnOpts,
-      env: {
-        ...spawnOpts.env,
-        // these would be here by default, but I'd rather be explicit
-        CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
-        CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
-        CLOUDFLARE_GLOBAL_API_KEY: process.env.CLOUDFLARE_GLOBAL_API_KEY,
-        CLOUDFLARE_EMAIL: process.env.CLOUDFLARE_EMAIL,
-      },
-    }
+    "npx",
+    [
+      "wrangler",
+      "pages",
+      "publish",
+      "./public",
+      "--project-name",
+      APP_NAME,
+      "--branch",
+      "main",
+    ],
+    spawnOpts
   );
   if (deployCommand.status !== 0) {
     console.error(deployCommand.error);
@@ -137,7 +113,7 @@ async function createAndDeployApp() {
 
   console.log("Successfully created Cloudflare Pages project");
 
-  let appUrl = await getDeploymentUrl();
+  let appUrl = `https://${APP_NAME}.pages.dev`;
 
   await checkUrl(appUrl);
 

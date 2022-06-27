@@ -37,7 +37,10 @@ function createNetlifySite() {
   });
 }
 
-let spawnOpts = getSpawnOpts(PROJECT_DIR);
+let spawnOpts = getSpawnOpts(PROJECT_DIR, {
+  // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
+  NETLIFY_AUTH_TOKEN: process.env.NETLIFY_AUTH_TOKEN,
+});
 
 async function createAndDeployApp() {
   await createNewApp();

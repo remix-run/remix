@@ -73,6 +73,12 @@ async function getVercelDeploymentUrl(projectId) {
   return project.targets?.production?.url;
 }
 
+let spawnOpts = getSpawnOpts(PROJECT_DIR, {
+  // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
+  VERCEL_TOKEN: process.env.VERCEL_TOKEN,
+  VERCEL_ORG_ID: process.env.VERCEL_ORG_ID,
+});
+
 async function createAndDeployApp() {
   await createNewApp();
 
@@ -99,7 +105,6 @@ async function createAndDeployApp() {
     pkgJson.save(),
   ]);
 
-  let spawnOpts = getSpawnOpts(PROJECT_DIR);
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
@@ -109,17 +114,13 @@ async function createAndDeployApp() {
   let project = await createVercelProject();
   console.log("Project created");
 
+  spawnOpts.env.VERCEL_PROJECT_ID = project.id;
+
   // deploy to vercel
   let deployCommand = spawnSync(
     "npx",
-    ["vercel", "deploy", "--prod", "--token", process.env.VERCEL_TOKEN],
-    {
-      ...spawnOpts,
-      env: {
-        ...process.env,
-        VERCEL_PROJECT_ID: project.id,
-      },
-    }
+    ["vercel", "deploy", "--prod"],
+    spawnOpts
   );
   if (deployCommand.status !== 0) {
     console.error(deployCommand.error);

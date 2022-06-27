@@ -74,7 +74,11 @@ async function createAndDeployApp() {
     pkgJson.save(),
   ]);
 
-  let spawnOpts = getSpawnOpts(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR, {
+    // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+  });
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
@@ -90,14 +94,7 @@ async function createAndDeployApp() {
   await fse.writeFile(ARC_CONFIG_PATH, arcParser.stringify(parsed));
 
   // deploy to the staging environment
-  let deployCommand = spawnSync("npx", ["arc", "deploy", "--prune"], {
-    ...spawnOpts,
-    env: {
-      ...spawnOpts.env,
-      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
-      AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
-    },
-  });
+  let deployCommand = spawnSync("npx", ["arc", "deploy", "--prune"], spawnOpts);
   if (deployCommand.status !== 0) {
     console.error(deployCommand.error);
     throw new Error("Architect deploy failed");

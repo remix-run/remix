@@ -47,21 +47,16 @@ export async function addCypress(directory, url) {
   await pkgJson.save();
 }
 
-export function getSpawnOpts(dir) {
+export function getSpawnOpts(dir, env = {}) {
   return {
     cwd: dir,
     stdio: "inherit",
-    env: {
-      PATH: process.env.PATH,
-    },
+    env: { PATH: process.env.PATH, ...env },
   };
 }
 
 export function runCypress(dir, dev, url) {
-  let spawnOpts = {
-    ...getSpawnOpts(dir),
-    env: { ...process.env, CYPRESS_BASE_URL: url },
-  };
+  let spawnOpts = getSpawnOpts(dir, { CYPRESS_BASE_URL: url });
 
   if (dev) {
     let cypressDevCommand = spawnSync(

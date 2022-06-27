@@ -33,7 +33,10 @@ try {
     process.exit(1);
   }
 
-  let spawnOpts = getSpawnOpts(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR, {
+    // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
+    DENO_DEPLOY_TOKEN: process.env.DENO_DEPLOY_TOKEN,
+  });
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
@@ -45,10 +48,11 @@ try {
     "deployctl",
     [
       "deploy",
-      "--prod",
-      "--include=public,build",
       `--project=${DENO_DEPLOY_PROJECT_NAME}`,
       "./build/index.js",
+      "--prod",
+      "--include",
+      "build,public",
     ],
     spawnOpts
   );
