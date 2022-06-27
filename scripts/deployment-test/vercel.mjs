@@ -45,7 +45,11 @@ async function createVercelProject() {
   let response = await vercelClient(`/v9/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: APP_NAME }),
+    body: JSON.stringify({
+      name: APP_NAME,
+      // we need to manually specify, otherwise it will use "other" for deployments
+      framework: "remix",
+    }),
   });
 
   if (!response.ok) {
