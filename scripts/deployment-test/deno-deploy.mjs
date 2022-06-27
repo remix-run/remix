@@ -8,7 +8,7 @@ import {
   validatePackageVersions,
 } from "./_shared.mjs";
 
-let DENO_DEPLOY_PROJECT_NAME = "remix-deno-deploy-test";
+let DENO_DEPLOY_PROJECT_NAME = "remix-deno-deploy-test-1";
 let APP_NAME = getAppName(DENO_DEPLOY_PROJECT_NAME);
 let PROJECT_DIR = getAppDirectory(APP_NAME);
 
@@ -48,11 +48,11 @@ try {
     "deployctl",
     [
       "deploy",
-      `--project=${DENO_DEPLOY_PROJECT_NAME}`,
+      "--project",
+      DENO_DEPLOY_PROJECT_NAME,
       "./build/index.js",
       "--prod",
-      "--include",
-      "build,public",
+      "--include=build,public",
     ],
     spawnOpts
   );

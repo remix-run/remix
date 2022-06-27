@@ -51,7 +51,11 @@ export function getSpawnOpts(dir, env = {}) {
   return {
     cwd: dir,
     stdio: "inherit",
-    env: { PATH: process.env.PATH, ...env },
+    env: {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      ...env,
+    },
   };
 }
 
