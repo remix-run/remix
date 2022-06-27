@@ -3,6 +3,7 @@ import { sync as spawnSync } from "cross-spawn";
 import fse from "fs-extra";
 import fetch from "node-fetch";
 import { createApp } from "@remix-run/dev";
+import PackageJson from "@npmcli/package-json";
 
 import {
   addCypress,
@@ -63,11 +64,20 @@ async function createAndDeployApp() {
     process.exit(1);
   }
 
+  let pkgJson = await PackageJson.load(PROJECT_DIR);
+  pkgJson.update({
+    devDependencies: {
+      ...pkgJson.content.devDependencies,
+      wrangler: "latest",
+    },
+  });
+
   // add cypress to the project
   await Promise.all([
     fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
     fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
+    pkgJson.save(),
   ]);
 
   // install deps
@@ -77,19 +87,48 @@ async function createAndDeployApp() {
   // run cypress against the dev server
   runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
-  let deployCommand = spawnSync(
-    "npx",
+  let createCommand = spawnSync(
+    `npx`,
     [
       "wrangler",
       "pages",
-      "publish",
-      "./public",
-      "--project-name",
+      "project",
+      "create",
       APP_NAME,
-      "--branch",
+      "--production-branch",
       "main",
     ],
-    spawnOpts
+    {
+      ...spawnOpts,
+      env: {
+        ...spawnOpts.env,
+        // these would be here by default, but I'd rather be explicit
+        CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
+        CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+        CLOUDFLARE_GLOBAL_API_KEY: process.env.CLOUDFLARE_GLOBAL_API_KEY,
+        CLOUDFLARE_EMAIL: process.env.CLOUDFLARE_EMAIL,
+      },
+    }
+  );
+
+  if (createCommand.status !== 0) {
+    console.error(createCommand.error);
+    throw new Error("Cloudflare Pages project creation failed");
+  }
+
+  let deployCommand = spawnSync(
+    `npx wrangler pages publish ./public --project-name ${APP_NAME} --branch main --commit-dirty=true`,
+    {
+      ...spawnOpts,
+      env: {
+        ...spawnOpts.env,
+        // these would be here by default, but I'd rather be explicit
+        CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
+        CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+        CLOUDFLARE_GLOBAL_API_KEY: process.env.CLOUDFLARE_GLOBAL_API_KEY,
+        CLOUDFLARE_EMAIL: process.env.CLOUDFLARE_EMAIL,
+      },
+    }
   );
   if (deployCommand.status !== 0) {
     console.error(deployCommand.error);

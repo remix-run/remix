@@ -6,6 +6,7 @@ import arcParser from "@architect/parser";
 import { toLogicalID } from "@architect/utils";
 import { createApp } from "@remix-run/dev";
 import destroy from "@architect/destroy";
+import PackageJson from "@npmcli/package-json";
 
 import {
   addCypress,
@@ -15,7 +16,6 @@ import {
   getAppName,
   getSpawnOpts,
   runCypress,
-  updatePackageConfig,
   validatePackageVersions,
 } from "./_shared.mjs";
 
@@ -34,16 +34,14 @@ async function createNewApp() {
   });
 }
 
-const options = {
+let client = new aws.ApiGatewayV2({
   region: "us-west-2",
   apiVersion: "latest",
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
-};
-
-let client = new aws.ApiGatewayV2(options);
+});
 
 async function getArcDeployment() {
   let deployments = await client.getApis().promise();
@@ -61,13 +59,19 @@ async function createAndDeployApp() {
     process.exit(1);
   }
 
+  let pkgJson = await PackageJson.load(PROJECT_DIR);
+  pkgJson.update({
+    devDependencies: {
+      ...pkgJson.content.devDependencies,
+      "@architect/architect": "latest",
+    },
+  });
+
   await Promise.all([
     fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
     fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
-    updatePackageConfig(PROJECT_DIR, (config) => {
-      config.devDependencies["@architect/architect"] = "latest";
-    }),
+    pkgJson.save(),
   ]);
 
   let spawnOpts = getSpawnOpts(PROJECT_DIR);
@@ -86,7 +90,14 @@ async function createAndDeployApp() {
   await fse.writeFile(ARC_CONFIG_PATH, arcParser.stringify(parsed));
 
   // deploy to the staging environment
-  let deployCommand = spawnSync("npx", ["arc", "deploy", "--prune"], spawnOpts);
+  let deployCommand = spawnSync("npx", ["arc", "deploy", "--prune"], {
+    ...spawnOpts,
+    env: {
+      ...spawnOpts.env,
+      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+      AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+  });
   if (deployCommand.status !== 0) {
     console.error(deployCommand.error);
     throw new Error("Architect deploy failed");

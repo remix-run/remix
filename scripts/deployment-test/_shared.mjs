@@ -2,6 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 import { sync as spawnSync } from "cross-spawn";
+import PackageJson from "@npmcli/package-json";
 import jsonfile from "jsonfile";
 import fetch from "node-fetch";
 import retry from "fetch-retry";
@@ -22,58 +23,57 @@ export function getAppName(target) {
   return `remix-deployment-test-${target}-${sha}`;
 }
 
-export async function updatePackageConfig(directory, transform) {
-  let file = path.join(directory, "package.json");
-  let json = await jsonfile.readFile(file);
-  transform(json);
-  await jsonfile.writeFile(file, json, { spaces: 2 });
-}
-
 export async function addCypress(directory, url) {
   let shared = await jsonfile.readFile(path.join(__dirname, "package.json"));
+  let pkgJson = await PackageJson.load(directory);
 
-  await updatePackageConfig(directory, (config) => {
-    config.devDependencies["start-server-and-test"] =
-      shared.dependencies["start-server-and-test"];
-    config.devDependencies["cypress"] = shared.dependencies["cypress"];
-    config.devDependencies["@testing-library/cypress"] =
-      shared.dependencies["@testing-library/cypress"];
-
-    config.scripts["cy:run"] = "cypress run";
-    config.scripts["cy:open"] = "cypress open";
-    config.scripts["test:e2e:dev"] = `start-server-and-test dev ${url} cy:open`;
-    config.scripts["test:e2e:run"] = `start-server-and-test dev ${url} cy:run`;
+  pkgJson.update({
+    devDependencies: {
+      ...pkgJson.content.devDependencies,
+      "start-server-and-test": shared.dependencies["start-server-and-test"],
+      cypress: shared.dependencies["cypress"],
+      "@testing-library/cypress":
+        shared.dependencies["@testing-library/cypress"],
+    },
+    scripts: {
+      ...pkgJson.content.scripts,
+      "cy:run": "cypress run",
+      "cy:open": "cypress open",
+      "test:e2e:dev": `start-server-and-test dev ${url} cy:open`,
+      "test:e2e:run": `start-server-and-test dev ${url} cy:run`,
+    },
   });
+
+  await pkgJson.save();
 }
 
 export function getSpawnOpts(dir) {
   return {
     cwd: dir,
     stdio: "inherit",
+    env: {
+      PATH: process.env.PATH,
+    },
   };
 }
 
 export function runCypress(dir, dev, url) {
-  let spawnOpts = getSpawnOpts(dir);
-  let cypressSpawnOpts = {
-    ...spawnOpts,
+  let spawnOpts = {
+    ...getSpawnOpts(dir),
     env: { ...process.env, CYPRESS_BASE_URL: url },
   };
+
   if (dev) {
     let cypressDevCommand = spawnSync(
       "npm",
       ["run", "test:e2e:run"],
-      cypressSpawnOpts
+      spawnOpts
     );
     if (cypressDevCommand.status !== 0) {
       throw new Error("Cypress tests failed in development");
     }
   } else {
-    let cypressProdCommand = spawnSync(
-      "npm",
-      ["run", "cy:run"],
-      cypressSpawnOpts
-    );
+    let cypressProdCommand = spawnSync("npm", ["run", "cy:run"], spawnOpts);
     if (cypressProdCommand.status !== 0) {
       throw new Error("Cypress tests failed in production");
     }

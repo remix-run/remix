@@ -3,6 +3,7 @@ import { sync as spawnSync } from "cross-spawn";
 import { NetlifyAPI } from "netlify";
 import fse from "fs-extra";
 import { createApp } from "@remix-run/dev";
+import PackageJson from "@npmcli/package-json";
 
 import {
   addCypress,
@@ -49,10 +50,19 @@ async function createAndDeployApp() {
     process.exit(1);
   }
 
+  let pkgJson = await PackageJson.load(PROJECT_DIR);
+  pkgJson.update({
+    devDependencies: {
+      ...pkgJson.content.devDependencies,
+      "netlify-cli": "latest",
+    },
+  });
+
   await Promise.all([
     fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
     fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
+    pkgJson.save(),
   ]);
 
   spawnSync("npm", ["install"], spawnOpts);

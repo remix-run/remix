@@ -4,6 +4,7 @@ import fse from "fs-extra";
 import toml from "@iarna/toml";
 import { createApp } from "@remix-run/dev";
 import fetch from "node-fetch";
+import PackageJson from "@npmcli/package-json";
 
 import {
   addCypress,
@@ -41,11 +42,20 @@ async function createAndDeployApp() {
     process.exit(1);
   }
 
+  let pkgJson = await PackageJson.load(PROJECT_DIR);
+  pkgJson.update({
+    devDependencies: {
+      ...pkgJson.content.devDependencies,
+      wrangler: "latest",
+    },
+  });
+
   // add cypress to the project
   await Promise.all([
     fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
     fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
+    pkgJson.save(),
   ]);
 
   let spawnOpts = getSpawnOpts(PROJECT_DIR);
@@ -69,7 +79,17 @@ async function createAndDeployApp() {
   spawnSync("npx", ["wrangler", "--version"], spawnOpts);
 
   // deploy the app
-  let deployCommand = spawnSync("npx", ["wrangler", "publish"], spawnOpts);
+  let deployCommand = spawnSync("npx", ["wrangler", "publish"], {
+    ...spawnOpts,
+    env: {
+      ...spawnOpts.env,
+      // these would be here by default, but I'd rather be explicit
+      CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
+      CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+      CLOUDFLARE_GLOBAL_API_KEY: process.env.CLOUDFLARE_GLOBAL_API_KEY,
+      CLOUDFLARE_EMAIL: process.env.CLOUDFLARE_EMAIL,
+    },
+  });
   if (deployCommand.status !== 0) {
     console.error(deployCommand.error);
     throw new Error("Cloudflare Workers deploy failed");
