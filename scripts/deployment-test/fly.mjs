@@ -110,4 +110,18 @@ function destroyApp() {
   spawnSync("fly", ["apps", "destroy", APP_NAME, "--yes"], spawnOpts);
 }
 
-createAndDeployApp().finally(destroyApp);
+async function main() {
+  let exitCode;
+  try {
+    await createAndDeployApp();
+    exitCode = 0;
+  } catch (error) {
+    console.error(error);
+    exitCode = 1;
+  } finally {
+    await destroyApp();
+    process.exit(exitCode);
+  }
+}
+
+main();
