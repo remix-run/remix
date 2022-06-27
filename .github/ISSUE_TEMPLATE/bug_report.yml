@@ -27,6 +27,12 @@ body:
       required: true
   - type: textarea
     attributes:
+      label: Your environment
+      description: Tell us more about your OS, setup, package manager, etc.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
       label: Steps to Reproduce
       description: Steps to reproduce the behavior.
     validations:
