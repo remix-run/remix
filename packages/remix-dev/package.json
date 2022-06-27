@@ -27,6 +27,7 @@
     "@remix-run/server-runtime": "1.6.1",
     "@yarnpkg/esbuild-plugin-pnp": "^2.0.0",
     "cacache": "^15.0.5",
+    "camelcase": "^7.0.0",
     "chalk": "^4.1.2",
     "chokidar": "^3.5.1",
     "dotenv": "^16.0.0",
