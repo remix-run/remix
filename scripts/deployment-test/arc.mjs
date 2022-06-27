@@ -86,13 +86,10 @@ async function createAndDeployApp() {
   await fse.writeFile(ARC_CONFIG_PATH, arcParser.stringify(parsed));
 
   // deploy to the staging environment
-  let arcDeployCommand = spawnSync(
-    "npx",
-    ["arc", "deploy", "--prune"],
-    spawnOpts
-  );
-  if (arcDeployCommand.status !== 0) {
-    throw new Error("Deployment failed");
+  let deployCommand = spawnSync("npx", ["arc", "deploy", "--prune"], spawnOpts);
+  if (deployCommand.status !== 0) {
+    console.error(deployCommand.error);
+    throw new Error("Architect deploy failed");
   }
 
   let deployment = await getArcDeployment();

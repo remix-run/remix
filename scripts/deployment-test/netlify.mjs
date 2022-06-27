@@ -66,12 +66,13 @@ async function createAndDeployApp() {
   console.log("Site created");
 
   // deploy to netlify
-  let netlifyDeployCommand = spawnSync(
+  let deployCommand = spawnSync(
     "npx",
     ["netlify", "deploy", "--site", site.id, "--prod"],
     spawnOpts
   );
-  if (netlifyDeployCommand.status !== 0) {
+  if (deployCommand.status !== 0) {
+    console.error(deployCommand.error);
     throw new Error("Netlify deploy failed");
   }
 

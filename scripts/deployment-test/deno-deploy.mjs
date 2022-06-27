@@ -40,6 +40,7 @@ try {
   spawnSync("npm", ["run", "build"], spawnOpts);
 
   // deploy to deno deploy
+  // note we dont have to install deployctl here as we do it ahead of time in the deployments workflow
   let deployCommand = spawnSync(
     "deployctl",
     [
@@ -52,7 +53,8 @@ try {
     spawnOpts
   );
   if (deployCommand.status !== 0) {
-    throw new Error("Deploying to Deno Deploy failed");
+    console.error(deployCommand.error);
+    throw new Error("Deno Deploy deploy failed");
   }
 
   console.log(`Deployed to ${DENO_DEPLOY_PROJECT_NAME}.deno.dev`);

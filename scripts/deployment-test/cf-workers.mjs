@@ -66,10 +66,13 @@ async function createAndDeployApp() {
   let url = `https://${APP_NAME}.remix--run.workers.dev`;
   console.log(`worker url: ${url}`);
 
+  spawnSync("npx", ["wrangler", "--version"], spawnOpts);
+
   // deploy the app
   let deployCommand = spawnSync("npx", ["wrangler", "publish"], spawnOpts);
   if (deployCommand.status !== 0) {
-    throw new Error(`Failed to deploy app: ${deployCommand.stderr}`);
+    console.error(deployCommand.error);
+    throw new Error("Cloudflare Workers deploy failed");
   }
 
   // run cypress against the deployed app

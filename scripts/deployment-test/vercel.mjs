@@ -100,7 +100,7 @@ async function createAndDeployApp() {
   console.log("Project created");
 
   // deploy to vercel
-  let vercelDeployCommand = spawnSync(
+  let deployCommand = spawnSync(
     "npx",
     ["vercel", "deploy", "--prod", "--token", process.env.VERCEL_TOKEN],
     {
@@ -111,7 +111,8 @@ async function createAndDeployApp() {
       },
     }
   );
-  if (vercelDeployCommand.status !== 0) {
+  if (deployCommand.status !== 0) {
+    console.error(deployCommand.error);
     throw new Error("Vercel deploy failed");
   }
 

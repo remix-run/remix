@@ -77,7 +77,7 @@ async function createAndDeployApp() {
   // run cypress against the dev server
   runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
-  let pagesDeployCommand = spawnSync(
+  let deployCommand = spawnSync(
     "npx",
     [
       "wrangler",
@@ -91,7 +91,8 @@ async function createAndDeployApp() {
     ],
     spawnOpts
   );
-  if (pagesDeployCommand.status !== 0) {
+  if (deployCommand.status !== 0) {
+    console.error(deployCommand.error);
     throw new Error("Cloudflare Pages deploy failed");
   }
 

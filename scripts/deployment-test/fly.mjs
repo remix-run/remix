@@ -51,6 +51,7 @@ async function createAndDeployApp() {
   ]);
 
   // create a new app on fly
+  // note we dont have to install fly here as we do it ahead of time in the deployments workflow
   let flyLaunchCommand = spawnSync(
     "flyctl",
     [
@@ -66,7 +67,8 @@ async function createAndDeployApp() {
     spawnOpts
   );
   if (flyLaunchCommand.status !== 0) {
-    throw new Error(`Failed to launch fly app: ${flyLaunchCommand.stderr}`);
+    console.error(flyLaunchCommand.error);
+    throw new Error("Failed to launch fly app");
   }
 
   // we need to add a PORT env variable to our fly.toml
@@ -89,13 +91,10 @@ async function createAndDeployApp() {
   runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
   // deploy to fly
-  let flyDeployCommand = spawnSync(
-    "fly",
-    ["deploy", "--remote-only"],
-    spawnOpts
-  );
-  if (flyDeployCommand.status !== 0) {
-    throw new Error("Deployment failed");
+  let deployCommand = spawnSync("fly", ["deploy", "--remote-only"], spawnOpts);
+  if (deployCommand.status !== 0) {
+    console.error(deployCommand.error);
+    throw new Error("Fly deploy failed");
   }
 
   // fly deployments can take a little bit to start receiving traffic
