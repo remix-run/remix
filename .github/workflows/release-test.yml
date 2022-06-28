@@ -10,10 +10,6 @@ on:
       - "docs/**"
       - "scripts/**"
       - "**/README.md"
-  pull_request:
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
 
 jobs:
   test:
