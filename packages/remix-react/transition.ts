@@ -969,12 +969,14 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let yeetedNavigation = yeetStaleNavigationLoad(loadId);
 
     let loaderData = makeLoaderData(state, results, matchesToLoad);
-    let [deferredLoaderData, monitorDeferred] = makeDeferredLoaderData(
-      getState,
-      update,
-      results,
-      pendingNavigationDeferredControllers
-    );
+    let deferredLoaderData, monitorDeferred;
+    [results, deferredLoaderData, monitorDeferred] =
+      await makeDeferredLoaderData(
+        getState,
+        update,
+        results,
+        pendingNavigationDeferredControllers
+      );
 
     // need to do what we would have done when the navigation load completed
     if (yeetedNavigation) {
@@ -1076,8 +1078,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     fetchControllers.set(key, controller);
     let result = await callLoader(match, createUrl(href), controller.signal);
-
-    result = await resolveDeferredData(result);
+    result = await resolveDeferredResult(result);
 
     fetchControllers.delete(key);
 
@@ -1142,8 +1143,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     fetchControllers.set(key, controller);
     let result = await callLoader(match, createUrl(href), controller.signal);
-
-    result = await resolveDeferredData(result);
+    result = await resolveDeferredResult(result);
 
     if (controller.signal.aborted) return;
     fetchControllers.delete(key);
@@ -1560,12 +1560,14 @@ export function createTransitionManager(init: TransitionManagerInit) {
       markFetchersDone(abortedIds);
     }
 
-    let [deferredLoaderData, monitorDeferred] = makeDeferredLoaderData(
-      getState,
-      update,
-      results,
-      pendingNavigationDeferredControllers
-    );
+    let deferredLoaderData, monitorDeferred;
+    [results, deferredLoaderData, monitorDeferred] =
+      await makeDeferredLoaderData(
+        getState,
+        update,
+        results,
+        pendingNavigationDeferredControllers
+      );
 
     update({
       location,
@@ -1983,16 +1985,37 @@ function makeLoaderData(
   return loaderData;
 }
 
-function makeDeferredLoaderData(
+async function makeDeferredLoaderData(
   getState: () => TransitionManagerState,
   update: (updates: Partial<TransitionManagerState>) => void,
   results: DataResult[],
   pendingNavigationDeferredControllers: Map<string, AbortController>
-): [DeferredRouteData, () => void] {
+): Promise<[DataResult[], DeferredRouteData, () => void]> {
   let state = getState();
   let deferredLoaderData = { ...state.deferredLoaderData };
-  for (let { match, deferred } of results) {
-    if (!deferred) continue;
+  let resultPromises: Array<DataResult | Promise<DataResult>> = [];
+
+  for (let result of results) {
+    let { match, deferred } = result;
+
+    if (deferred && typeof state.loaderData[match.route.id] !== "undefined") {
+      let deferredController = new AbortController();
+      pendingNavigationDeferredControllers.set(
+        match.route.id,
+        deferredController
+      );
+      resultPromises.push(
+        resolveDeferredResult(result, deferredController.signal)
+      );
+      continue;
+    }
+
+    resultPromises.push(result);
+
+    if (!deferred) {
+      continue;
+    }
+
     deferredLoaderData[match.route.id] = Object.assign(
       {},
       deferredLoaderData[match.route.id],
@@ -2005,16 +2028,21 @@ function makeDeferredLoaderData(
     );
   }
 
+  let finalResults = await Promise.all(resultPromises);
+
   return [
+    finalResults,
     deferredLoaderData,
     () => {
-      for (let { match, deferred } of results) {
+      for (let { match, deferred } of finalResults) {
         if (!deferred) continue;
         for (let [key, promise] of Object.entries(deferred)) {
           let signal = pendingNavigationDeferredControllers.get(
             match.route.id
           )?.signal;
           if (!signal || signal.aborted) continue;
+          deferredLoaderData[match.route.id] =
+            deferredLoaderData[match.route.id] || {};
           deferredLoaderData[match.route.id][key] = promise;
           promise.then((value) => {
             if (signal!.aborted) return;
@@ -2074,39 +2102,62 @@ function abortPendingDeferredControllers(
   }
 }
 
-async function resolveDeferredData({
-  match,
-  value,
-  deferred,
-}: {
-  match: ClientMatch;
-  value: unknown;
-  deferred?: Record<string, Promise<unknown>>;
-}) {
-  let resolvedValue: any = value;
+const DEFERRED_ABORTED_SYMBOL = Symbol("deferred-aborted");
+async function resolveDeferredResult(
+  result: {
+    match: ClientMatch;
+    value: unknown;
+    deferred?: Record<string, Promise<unknown>>;
+  },
+  signal?: AbortSignal
+) {
+  let doResolve = async () => {
+    let { match, value, deferred } = result;
+    let resolvedValue: any = value;
 
-  if (
-    typeof resolvedValue === "object" &&
-    resolvedValue &&
-    typeof deferred === "object"
-  ) {
-    let deferredPromises = Object.entries(deferred).map(
-      async ([key, promise]) => {
-        let resolved = await promise;
-        return { key, resolved };
-      }
-    );
+    if (
+      typeof resolvedValue === "object" &&
+      resolvedValue &&
+      typeof deferred === "object"
+    ) {
+      let deferredPromises = Object.entries(deferred).map(
+        async ([key, promise]) => {
+          let resolved = await promise;
+          return { key, resolved };
+        }
+      );
 
-    let resolvedDeferred = await Promise.allSettled(deferredPromises);
-    for (let resolved of resolvedDeferred) {
-      if (resolved.status === "rejected") {
-        return { match, value: resolved.reason };
+      let resolvedDeferred = await Promise.allSettled(deferredPromises);
+      for (let resolved of resolvedDeferred) {
+        if (resolved.status === "rejected") {
+          return { match, value: resolved.reason };
+        }
+        resolvedValue[resolved.value.key] = resolved.value.resolved;
       }
-      resolvedValue[resolved.value.key] = resolved.value.resolved;
     }
+
+    return { match, value: resolvedValue };
+  };
+
+  let resolveAbort: (s: typeof DEFERRED_ABORTED_SYMBOL) => void;
+  let abortPromise = signal?.aborted
+    ? Promise.resolve(DEFERRED_ABORTED_SYMBOL)
+    : new Promise<typeof DEFERRED_ABORTED_SYMBOL>((resolve) => {
+        resolveAbort = resolve;
+      });
+  let handleAbort = () => {
+    resolveAbort(DEFERRED_ABORTED_SYMBOL);
+  };
+  if (signal && !signal.aborted) {
+    signal.addEventListener("abort", handleAbort);
   }
 
-  return { match, value: resolvedValue };
+  let resolved = await Promise.race([abortPromise, doResolve()]);
+  signal?.removeEventListener("abort", handleAbort);
+  if (resolved === DEFERRED_ABORTED_SYMBOL) {
+    return result;
+  }
+  return resolved;
 }
 
 function isCatchResult(result: DataResult): result is DataCatchResult {
