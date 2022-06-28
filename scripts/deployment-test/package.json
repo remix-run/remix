@@ -10,7 +10,7 @@
     "@architect/utils": "^3.0.4",
     "@cloudflare/wrangler": "latest",
     "@iarna/toml": "^2.2.5",
-    "@remix-run/dev": "1.6.1",
+    "@remix-run/dev": "1.6.2-pre.0",
     "@testing-library/cypress": "^8.0.2",
     "aws-sdk": "^2.1055.0",
     "cypress": "^9.2.0",

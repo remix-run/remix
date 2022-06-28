@@ -5,9 +5,9 @@
   "// Deno-only dependencies may be imported via URL imports (without using import maps).": "",
   "imports": {
     "// `@remix-run/deno` code is already a Deno module, so just get types for it directly from `node_modules/`": "",
-    "@remix-run/deno": "https://esm.sh/@remix-run/deno@1.6.1",
-    "@remix-run/dev/server-build": "https://esm.sh/@remix-run/dev@1.6.1/server-build",
-    "@remix-run/react": "https://esm.sh/@remix-run/react@1.6.1",
+    "@remix-run/deno": "https://esm.sh/@remix-run/deno@1.6.2-pre.0",
+    "@remix-run/dev/server-build": "https://esm.sh/@remix-run/dev@1.6.2-pre.0/server-build",
+    "@remix-run/react": "https://esm.sh/@remix-run/react@1.6.2-pre.0",
     "react": "https://esm.sh/react@17.0.2",
     "react-dom": "https://esm.sh/react-dom@17.0.2",
     "react-dom/server": "https://esm.sh/react-dom@17.0.2/server"
