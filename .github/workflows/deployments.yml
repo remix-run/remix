@@ -53,7 +53,7 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1.8.15
         with:
           working-directory: ./scripts/deployment-test
           useLockFile: false
@@ -90,7 +90,7 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1.8.15
         with:
           working-directory: ./scripts/deployment-test
           useLockFile: false
@@ -128,7 +128,7 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1.8.15
         with:
           working-directory: ./scripts/deployment-test
           useLockFile: false
@@ -165,7 +165,7 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1.8.15
         with:
           working-directory: ./scripts/deployment-test
           useLockFile: false
@@ -207,7 +207,7 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1.8.15
         with:
           working-directory: ./scripts/deployment-test
           useLockFile: false
@@ -245,7 +245,7 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1.8.15
         with:
           working-directory: ./scripts/deployment-test
           useLockFile: false
@@ -280,7 +280,7 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1.8.15
         with:
           working-directory: ./scripts/deployment-test
           useLockFile: false

@@ -25,7 +25,7 @@ jobs:
       - name: 📥 Install deps
         # even though this is called "npm-install" it does use yarn to install
         # because we have a yarn.lock and caches efficiently.
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1.8.15
         with:
           working-directory: ./scripts/release
 

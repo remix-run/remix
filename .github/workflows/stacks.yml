@@ -35,7 +35,7 @@ jobs:
           npx -y create-remix@${{ inputs.version }} ${{ matrix.stack.name }} --template ${{ matrix.stack.repo }} --typescript --no-install
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1.8.15
         with:
           working-directory: ${{ matrix.stack.name }}
           useLockFile: false
@@ -91,7 +91,7 @@ jobs:
         run: unzip ${{ matrix.stack.name }}.zip
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1.8.15
         with:
           working-directory: ${{ matrix.stack.name }}
 
@@ -132,7 +132,7 @@ jobs:
         run: unzip ${{ matrix.stack.name }}.zip
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1.8.15
         with:
           working-directory: ${{ matrix.stack.name }}
 
@@ -173,7 +173,7 @@ jobs:
         run: unzip ${{ matrix.stack.name }}.zip
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1.8.15
         with:
           working-directory: ${{ matrix.stack.name }}
 
@@ -217,7 +217,7 @@ jobs:
         run: unzip ${{ matrix.stack.name }}.zip
 
       - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+        uses: bahmutov/npm-install@v1.8.15
         with:
           working-directory: ${{ matrix.stack.name }}
 
