@@ -5,7 +5,7 @@ import * as fse from "fs-extra";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
-import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
+import { NodeResolvePlugin } from "@esbuild-plugins/node-resolve";
 
 import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
@@ -316,6 +316,12 @@ async function buildEverything(
   }
 }
 
+const yarnPnpCompatibilityPlugin = NodeResolvePlugin({
+  extensions: [".ts", ".js"],
+  onResolved: (resolved) =>
+    resolved.includes("node_modules") ? { external: true } : resolved,
+});
+
 async function createBrowserBuild(
   config: RemixConfig,
   options: BuildOptions & { incremental?: boolean }
@@ -353,8 +359,7 @@ async function createBrowserBuild(
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
-    // Must be placed before NodeModulesPolyfillPlugin, so yarn can resolve polyfills correctly
-    yarnPnpPlugin(),
+    yarnPnpCompatibilityPlugin, // before `NodeModulesPolyfillPlugin`
     NodeModulesPolyfillPlugin(),
   ];
 
@@ -420,7 +425,7 @@ function createServerBuild(
     serverEntryModulePlugin(config),
     serverAssetsManifestPlugin(assetsManifestPromiseRef),
     serverBareModulesPlugin(config, options.onWarning),
-    yarnPnpPlugin(),
+    yarnPnpCompatibilityPlugin,
   ];
 
   if (config.serverPlatform !== "node") {
