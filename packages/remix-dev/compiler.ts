@@ -444,9 +444,11 @@ function createServerBuild(
       minify: options.mode === BuildMode.Production && isCloudflareRuntime,
       // The type of dead code elimination we want to do depends on the
       // minify syntax property: https://github.com/evanw/esbuild/issues/672#issuecomment-1029682369
-      // without this we have dev builds that run fine in production, but
-      // ship server code to the browser, blowing it up due to not optimizing
-      // out imports and module level blocks like `if (process.env.NODE_ENV === "test") {`.
+      // Dev builds are leaving code that should be optimized away in the
+      // bundle causing server / testing code to be shipped to the browser.
+      // These are properly optimized away in prod builds today, and this
+      // PR makes dev mode behave closer to production in terms of dead
+      // code elimination / tree shaking is concerned.
       minifySyntax: true,
       mainFields: isCloudflareRuntime
         ? ["browser", "module", "main"]
