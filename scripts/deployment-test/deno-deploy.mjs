@@ -8,7 +8,7 @@ import {
   validatePackageVersions,
 } from "./_shared.mjs";
 
-let DENO_DEPLOY_PROJECT_NAME = "remix-deno-deploy-test-1";
+let DENO_DEPLOY_PROJECT_NAME = "remix-deno-deploy-test";
 let APP_NAME = getAppName(DENO_DEPLOY_PROJECT_NAME);
 let PROJECT_DIR = getAppDirectory(APP_NAME);
 
