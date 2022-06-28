@@ -1,5 +1,6 @@
 import * as path from "path";
 import type * as esbuild from "esbuild";
+import { memoize } from "lodash/fp";
 
 import type { RemixConfig } from "../config";
 import invariant from "../invariant";
@@ -112,47 +113,35 @@ export async function createAssetsManifest(
   return { version, entry, routes };
 }
 
-type ImportsCache = { [routeId: string]: string[] };
-
 function optimizeRoutes(
   routes: AssetsManifest["routes"],
   entryImports: string[]
 ): void {
-  // This cache is an optimization that allows us to avoid pruning the same
+  // Memoize is an optimization that allows us to avoid pruning the same
   // route's imports more than once.
-  let importsCache: ImportsCache = Object.create(null);
+  let optimizeRouteImports = memoize(function (
+    routeId: string,
+    routes: AssetsManifest["routes"],
+    parentImports: string[]
+  ): string[] {
+    let route = routes[routeId];
 
-  for (let key in routes) {
-    optimizeRouteImports(key, routes, entryImports, importsCache);
-  }
-}
+    if (route.parentId) {
+      let optimized = optimizeRouteImports(route.parentId, routes, parentImports);
+      parentImports = parentImports.concat(optimized);
+    }
 
-function optimizeRouteImports(
-  routeId: string,
-  routes: AssetsManifest["routes"],
-  parentImports: string[],
-  importsCache: ImportsCache
-): string[] {
-  if (importsCache[routeId]) return importsCache[routeId];
+    let urlMissingInParentImports = (url: string) => !parentImports.includes(url);
+    let routeImports = (route.imports || []).filter(urlMissingInParentImports);
 
-  let route = routes[routeId];
+    // Setting `route.imports = undefined` prevents `imports: []` from showing up
+    // in the manifest JSON when there are no imports.
+    route.imports = routeImports.length > 0 ? routeImports : undefined;
 
-  if (route.parentId) {
-    parentImports = parentImports.concat(
-      optimizeRouteImports(route.parentId, routes, parentImports, importsCache)
-    );
-  }
+    return routeImports;
+  });
 
-  let routeImports = (route.imports || []).filter(
-    (url) => !parentImports.includes(url)
-  );
-
-  // Setting `route.imports = undefined` prevents `imports: []` from showing up
-  // in the manifest JSON when there are no imports.
-  route.imports = routeImports.length > 0 ? routeImports : undefined;
-
-  // Cache so the next lookup for this route is faster.
-  importsCache[routeId] = routeImports;
-
-  return routeImports;
+  Object.keys(routes).forEach((key) => {
+    optimizeRouteImports(key, routes, entryImports);
+  });
 }
