@@ -441,7 +441,6 @@ function createServerBuild(
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
-      minify: options.mode === BuildMode.Production && isCloudflareRuntime,
       // The type of dead code elimination we want to do depends on the
       // minify syntax property: https://github.com/evanw/esbuild/issues/672#issuecomment-1029682369
       // Dev builds are leaving code that should be optimized away in the
@@ -450,6 +449,7 @@ function createServerBuild(
       // PR makes dev mode behave closer to production in terms of dead
       // code elimination / tree shaking is concerned.
       minifySyntax: true,
+      minify: options.mode === BuildMode.Production && isCloudflareRuntime,
       mainFields: isCloudflareRuntime
         ? ["browser", "module", "main"]
         : config.serverModuleFormat === "esm"
