@@ -3,7 +3,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
-    "dev": "run-p dev:*",
+    "dev": "run-p \"dev:*\"",
     "dev:remix": "remix dev",
     "dev:strapi": "cd strapi && npm run develop",
     "start": "remix-serve build"
