@@ -34,8 +34,8 @@ jobs:
         run: |
           npx -y create-remix@${{ inputs.version }} ${{ matrix.stack.name }} --template ${{ matrix.stack.repo }} --typescript --no-install
 
-      - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+      - name: 📥 Install deps
+        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the create-remix step
         with:
           working-directory: ${{ matrix.stack.name }}
           useLockFile: false
@@ -90,8 +90,8 @@ jobs:
       - name: 📁 Unzip artifact
         run: unzip ${{ matrix.stack.name }}.zip
 
-      - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+      - name: 📥 Install deps
+        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the unzip step
         with:
           working-directory: ${{ matrix.stack.name }}
 
@@ -131,8 +131,8 @@ jobs:
       - name: 📁 Unzip artifact
         run: unzip ${{ matrix.stack.name }}.zip
 
-      - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+      - name: 📥 Install deps
+        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the unzip step
         with:
           working-directory: ${{ matrix.stack.name }}
 
@@ -172,8 +172,8 @@ jobs:
       - name: 📁 Unzip artifact
         run: unzip ${{ matrix.stack.name }}.zip
 
-      - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+      - name: 📥 Install deps
+        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the unzip step
         with:
           working-directory: ${{ matrix.stack.name }}
 
@@ -216,8 +216,8 @@ jobs:
       - name: 📁 Unzip artifact
         run: unzip ${{ matrix.stack.name }}.zip
 
-      - name: 📥 Download deps
-        uses: bahmutov/npm-install@v1
+      - name: 📥 Install deps
+        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the unzip step
         with:
           working-directory: ${{ matrix.stack.name }}
 

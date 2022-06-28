@@ -27,9 +27,7 @@ jobs:
           cache: "yarn"
 
       - name: 📥 Install deps
-        # even though this is called "npm-install" it does use yarn to install
-        # because we have a yarn.lock and caches efficiently.
-        uses: bahmutov/npm-install@v1
+        run: yarn --frozen-lockfile
 
       - name: 🏗 Build
         run: yarn build
@@ -51,9 +49,7 @@ jobs:
           cache: "yarn"
 
       - name: 📥 Install deps
-        # even though this is called "npm-install" it does use yarn to install
-        # because we have a yarn.lock and caches efficiently.
-        uses: bahmutov/npm-install@v1
+        run: yarn --frozen-lockfile
 
       - name: 🔬 Lint
         run: yarn lint
@@ -91,9 +87,7 @@ jobs:
           cache: "yarn"
 
       - name: 📥 Install deps
-        # even though this is called "npm-install" it does use yarn to install
-        # because we have a yarn.lock and caches efficiently.
-        uses: bahmutov/npm-install@v1
+        run: yarn --frozen-lockfile
 
       - name: 🧪 Run Primary Tests
         run: "yarn test:primary"
@@ -131,9 +125,7 @@ jobs:
           cache: "yarn"
 
       - name: 📥 Install deps
-        # even though this is called "npm-install" it does use yarn to install
-        # because we have a yarn.lock and caches efficiently.
-        uses: bahmutov/npm-install@v1
+        run: yarn --frozen-lockfile
 
       # playwright recommends if you cache the binaries to keep it tied to the version of playwright you are using.
       # https://playwright.dev/docs/ci#caching-browsers
