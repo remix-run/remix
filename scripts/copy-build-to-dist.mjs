@@ -67,6 +67,56 @@ async function copyBuildToDist() {
       );
     } catch (e) {}
   }
+
+  // One-off deep import copies so folks don't need to import from inside of
+  // dist/.  TODO: Remove in v2 and either get rid of the deep import or manage
+  // with the package.json "exports" field
+  let oneOffCopies = [
+    [
+      "build/node_modules/@remix-run/dev/dist/server-build.js",
+      "build/node_modules/@remix-run/dev/server-build.js",
+    ],
+    [
+      "build/node_modules/@remix-run/dev/dist/server-build.d.ts",
+      "build/node_modules/@remix-run/dev/server-build.d.ts",
+    ],
+    [
+      "build/node_modules/@remix-run/dev/dist/server-build.js",
+      "packages/remix-dev/server-build.js",
+    ],
+    [
+      "build/node_modules/@remix-run/dev/dist/server-build.d.ts",
+      "packages/remix-dev/server-build.d.ts",
+    ],
+    [
+      "build/node_modules/@remix-run/node/dist/globals.js",
+      "build/node_modules/@remix-run/node/globals.js",
+    ],
+    [
+      "build/node_modules/@remix-run/node/dist/globals.d.ts",
+      "build/node_modules/@remix-run/node/globals.d.ts",
+    ],
+    [
+      "build/node_modules/@remix-run/node/dist/globals.js",
+      "packages/remix-node/globals.js",
+    ],
+    [
+      "build/node_modules/@remix-run/node/dist/globals.d.ts",
+      "packages/remix-node/globals.d.ts",
+    ],
+  ];
+
+  oneOffCopies.forEach(([srcFile, destFile]) =>
+    copyQueue.push(
+      (async () => {
+        let src = path.relative(ROOT_DIR, path.join(...srcFile.split("/")));
+        let dest = path.relative(ROOT_DIR, path.join(...destFile.split("/")));
+        console.log(chalk.yellow(`  🛠  Copying ${src} to ${dest}`));
+        fse.copy(src, dest);
+      })()
+    )
+  );
+
   await Promise.all(copyQueue);
   console.log(
     chalk.green(

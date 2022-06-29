@@ -34,6 +34,8 @@
   },
   "files": [
     "dist/",
+    "globals.js",
+    "globals.d.ts",
     "CHANGELOG.md",
     "LICENSE.md",
     "README.md"
