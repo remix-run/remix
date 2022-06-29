@@ -67,6 +67,62 @@ async function copyBuildToDist() {
       );
     } catch (e) {}
   }
+
+  // Write an export shim for @remix-run/node/globals types
+  copyQueue.push(
+    (async () => {
+      let dest = path.join(
+        ".",
+        "build",
+        "node_modules",
+        "@remix-run",
+        "node",
+        "globals.d.ts"
+      );
+      console.log(chalk.yellow(`  🛠  Writing globals.d.ts shim to ${dest}`));
+      await fse.writeFile(dest, "export * from './dist/globals.d.ts';");
+    })()
+  );
+
+  // One-off deep import copies so folks don't need to import from inside of
+  // dist/.  TODO: Remove in v2 and either get rid of the deep import or manage
+  // with the package.json "exports" field
+  let oneOffCopies = [
+    // server-build.js built by rollup outside of dist/, need to copy to
+    // packages/ dir outside of dist/
+    [
+      "build/node_modules/@remix-run/dev/server-build.js",
+      "packages/remix-dev/server-build.js",
+    ],
+    // server-build.d.ts only built by tsc to dist/.  Copy outside of dist/
+    // both in build/ and packages/ dir
+    [
+      "build/node_modules/@remix-run/dev/dist/server-build.d.ts",
+      "build/node_modules/@remix-run/dev/server-build.d.ts",
+    ],
+    [
+      "build/node_modules/@remix-run/dev/dist/server-build.d.ts",
+      "packages/remix-dev/server-build.d.ts",
+    ],
+    // globals.d.ts shim written outside of dist/ in above, copy to packages/
+    // dir outside of dist/
+    [
+      "build/node_modules/@remix-run/node/globals.d.ts",
+      "packages/remix-node/globals.d.ts",
+    ],
+  ];
+
+  oneOffCopies.forEach(([srcFile, destFile]) =>
+    copyQueue.push(
+      (async () => {
+        let src = path.relative(ROOT_DIR, path.join(...srcFile.split("/")));
+        let dest = path.relative(ROOT_DIR, path.join(...destFile.split("/")));
+        console.log(chalk.yellow(`  🛠  Copying ${src} to ${dest}`));
+        await fse.copy(src, dest);
+      })()
+    )
+  );
+
   await Promise.all(copyQueue);
   console.log(
     chalk.green(
