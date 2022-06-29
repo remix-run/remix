@@ -68,40 +68,39 @@ async function copyBuildToDist() {
     } catch (e) {}
   }
 
+  // Write an export shim for @remix-run/node/globals types
+  copyQueue.push(
+    (async () => {
+      let dest = "./build/node_modules/@remix-run/node/globals.d.ts";
+      console.log(chalk.yellow(`  🛠  Writing globals.d.ts shim to ${dest}`));
+      await fse.writeFile(dest, "export * from './dist/globals.d.ts';");
+    })()
+  );
+
   // One-off deep import copies so folks don't need to import from inside of
   // dist/.  TODO: Remove in v2 and either get rid of the deep import or manage
   // with the package.json "exports" field
   let oneOffCopies = [
+    // server-build.js built by rollup outside of dist/, need to copy to
+    // package dir outside of dist/
     [
-      "build/node_modules/@remix-run/dev/dist/server-build.js",
       "build/node_modules/@remix-run/dev/server-build.js",
+      "packages/remix-dev/server-build.js",
     ],
+    // server-build.d.ts only built by tsc to dist/.  Copy outside of dist/
+    // both in build and package dir
     [
       "build/node_modules/@remix-run/dev/dist/server-build.d.ts",
       "build/node_modules/@remix-run/dev/server-build.d.ts",
     ],
     [
-      "build/node_modules/@remix-run/dev/dist/server-build.js",
-      "packages/remix-dev/server-build.js",
-    ],
-    [
       "build/node_modules/@remix-run/dev/dist/server-build.d.ts",
       "packages/remix-dev/server-build.d.ts",
     ],
+    // globals.d.ts shim written outside of dist/ in build above, copy to
+    // package dir outside of dist/
     [
-      "build/node_modules/@remix-run/node/dist/globals.js",
-      "build/node_modules/@remix-run/node/globals.js",
-    ],
-    [
-      "build/node_modules/@remix-run/node/dist/globals.d.ts",
       "build/node_modules/@remix-run/node/globals.d.ts",
-    ],
-    [
-      "build/node_modules/@remix-run/node/dist/globals.js",
-      "packages/remix-node/globals.js",
-    ],
-    [
-      "build/node_modules/@remix-run/node/dist/globals.d.ts",
       "packages/remix-node/globals.d.ts",
     ],
   ];
@@ -112,7 +111,7 @@ async function copyBuildToDist() {
         let src = path.relative(ROOT_DIR, path.join(...srcFile.split("/")));
         let dest = path.relative(ROOT_DIR, path.join(...destFile.split("/")));
         console.log(chalk.yellow(`  🛠  Copying ${src} to ${dest}`));
-        fse.copy(src, dest);
+        await fse.copy(src, dest);
       })()
     )
   );
