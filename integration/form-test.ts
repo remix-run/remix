@@ -277,6 +277,36 @@ test.describe("Forms", () => {
             )
           }
         `,
+
+        "app/routes/submitter-formmethod.jsx": js`
+          import { useActionData, useLoaderData, Form } from "@remix-run/react";
+          import { json } from '@remix-run/server-runtime'
+
+          export function action({ request }) {
+            return json(request.method)
+          }
+
+          export function loader({ request }) {
+            return json(request.method)
+          }
+
+          export default function Index() {
+            let actionData = useActionData();
+            let loaderData = useLoaderData();
+            return (
+              <>
+                <Form method="post">
+                  <button type="submit" formMethod="get">Submit with GET</button>
+                </Form>
+                <Form method="get">
+                  <button type="submit" formMethod="post">Submit with POST</button>
+                </Form>
+
+                <pre>{actionData || loaderData}</pre>
+              </>
+            )
+          }
+        `,
       },
     });
 
@@ -573,6 +603,24 @@ test.describe("Forms", () => {
         let el = getElement(html, `#${SPLAT_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
+    });
+  });
+
+  test.describe("with submitter button having `formMethod` attribute", () => {
+    test("submits with GET instead of POST", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/submitter-formmethod");
+      await app.clickElement("text=Submit with GET");
+      await page.waitForLoadState("load");
+      expect(await app.getHtml("pre")).toBe("<pre>GET</pre>");
+    });
+
+    test("submits with POST instead of GET", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/submitter-formmethod");
+      await app.clickElement("text=Submit with POST");
+      await page.waitForLoadState("load");
+      expect(await app.getHtml("pre")).toBe("<pre>POST</pre>");
     });
   });
 });
