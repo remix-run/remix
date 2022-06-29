@@ -48,27 +48,32 @@ test.beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+        import { useActionData, useLoaderData, Form } from "@remix-run/react";
+        import { json } from '@remix-run/server-runtime'
 
-        export function loader() {
-          return json("pizza");
+        export function action({ request }) {
+          return json(request.method)
+        }
+
+        export function loader({ request }) {
+          return json(request.method)
         }
 
         export default function Index() {
-          let data = useLoaderData();
+          let actionData = useActionData();
+          let loaderData = useLoaderData();
           return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
-        }
-      `,
+            <>
+              <Form method="post">
+                <button type="submit" formMethod="get">Submit with GET</button>
+              </Form>
+              <form method="get">
+                <button type="submit" formMethod="post">Submit with POST</button>
+              </form>
 
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+              <pre>{loaderData || actionData}</pre>
+            </>
+          )
         }
       `,
     },
@@ -85,22 +90,17 @@ test.afterAll(async () => appFixture.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("`<Form>` should submit with the method set via the `formmethod` attribute set on the submitter (button)", async ({
+  page,
+}) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
-  // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
-
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+  await app.clickElement("text=Submit with GET");
+  await page.waitForLoadState("load");
+  expect(await app.getHtml("pre")).toBe(`<pre>GET</pre>`);
+  await page.waitForLoadState("load");
+  await app.clickElement("text=Submit with POST");
+  expect(await app.getHtml("pre")).toBe(`<pre>POST</pre>`);
 });
 
 ////////////////////////////////////////////////////////////////////////////////
