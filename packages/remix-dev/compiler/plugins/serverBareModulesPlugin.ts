@@ -68,7 +68,10 @@ export function serverBareModulesPlugin(
         if (
           onWarning &&
           !isNodeBuiltIn(packageName) &&
-          !/\bnode_modules\b/.test(importer)
+          !/\bnode_modules\b/.test(importer) &&
+          // silence spurious warnings when using Yarn PnP until issues with
+          // ambiguous/unsound extraneous dependencies are fixed
+          process.versions.pnp == null
         ) {
           try {
             require.resolve(packageName);
