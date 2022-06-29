@@ -1,25 +1,31 @@
-import type { ActionFunction, LinksFunction, LoaderFunction } from "remix";
+import type {
+  ActionFunction,
+  LinksFunction,
+  LoaderFunction,
+  MetaFunction,
+} from "@remix-run/node";
+import { json } from "@remix-run/node";
 import {
-  json,
   Links,
   LiveReload,
   Meta,
   Scripts,
   ScrollRestoration,
   useActionData,
-  useLoaderData
-} from "remix";
+  useLoaderData,
+} from "@remix-run/react";
 
 import stylesUrl from "./index.css";
 
 export const links: LinksFunction = () => {
-  return [
-    {
-      rel: "stylesheet",
-      href: stylesUrl
-    }
-  ];
+  return [{ rel: "stylesheet", href: stylesUrl }];
 };
+
+export const meta: MetaFunction = () => ({
+  charset: "utf-8",
+  title: "New Remix App",
+  viewport: "width=device-width,initial-scale=1",
+});
 
 export const action: ActionFunction = async ({ request }) => {
   const form = await request.formData();
@@ -56,7 +62,7 @@ export const loader: LoaderFunction = async () => {
     (date.getMonth() + 1)
   ).slice(-2)}-${("00" + (date.getDate() + 1)).slice(-2)}`;
 
-  return { todayString, tomorrowString };
+  return json({ todayString, tomorrowString });
 };
 
 export default function App() {
@@ -66,8 +72,6 @@ export default function App() {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
       </head>
@@ -149,7 +153,6 @@ export default function App() {
                   min="12"
                   max="120"
                   step="1"
-                  pattern="\d+"
                 />
               </label>
             </div>
@@ -160,19 +163,25 @@ export default function App() {
               </label>
             </div>
             <div className="form-control">
-              <label>Text with minLength(10) and maxLength(140)</label>
+              <label htmlFor="text-with-minlength-maxlength">
+                Text with minLength(10) and maxLength(140)
+              </label>
               <textarea
                 name="text-with-minlength-maxlength"
+                id="text-with-minlength-maxlength"
                 minLength={10}
                 maxLength={140}
                 rows={3}
               ></textarea>
             </div>
             <div className="form-control">
-              <label>Date with min(today) and max(tomorrow)</label>
+              <label htmlFor="date-with-min-max">
+                Date with min(today) and max(tomorrow)
+              </label>
               <input
                 type="date"
                 name="date-with-min-max"
+                id="date-with-min-max"
                 min={data.todayString}
                 max={data.tomorrowString}
               />

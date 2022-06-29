@@ -2,7 +2,7 @@ import type {
   User,
   Project as _Project,
   TodoList as _TodoList,
-  Todo
+  Todo,
 } from "@prisma/client";
 
 export type { User, Todo };

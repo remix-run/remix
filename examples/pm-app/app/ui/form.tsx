@@ -18,6 +18,7 @@ const FieldProvider = React.forwardRef<
     </div>
   );
 });
+FieldProvider.displayName = "FieldProvider";
 
 type ResolvedFieldProps =
   | FieldProps
@@ -49,7 +50,7 @@ export function getResolvedFieldProps<T extends ResolvedFieldProps>(
   return {
     ...rest,
     ...props,
-    ...ariaProps
+    ...ariaProps,
   };
 }
 
@@ -133,7 +134,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           {
             "resize-xy": resize === true,
             "resize-x": resize === "x",
-            "resize-y": resize === "y"
+            "resize-y": resize === "y",
           }
         )}
       />
@@ -216,7 +217,7 @@ export {
   Select,
   Label,
   FakeLabel,
-  FieldError
+  FieldError,
 };
 export type {
   FieldProps,
@@ -226,7 +227,7 @@ export type {
   RadioProps,
   SelectProps,
   LabelProps,
-  FakeLabelProps
+  FakeLabelProps,
 };
 
 // Not intended to be exhaustive!

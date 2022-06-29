@@ -5,30 +5,33 @@ order: 1
 
 # Conventions
 
-A lot of Remix APIs aren't imported from the `"remix"` package, but are instead conventions and exports from _your_ application modules. When you `import from "remix"`, _you are calling Remix_, but these APIs are when _Remix calls your code_.
+A lot of Remix APIs aren't imported from the `"@remix-run/*"` packages, but are instead conventions and exports from _your_ application modules. When you `import from "@remix-run/*"`, _you are calling Remix_, but these APIs are when _Remix calls your code_.
 
 ## remix.config.js
 
 This file has a few build and development configuration options, but does not actually run on your server.
 
 ```tsx filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   appDirectory: "app",
   assetsBuildDirectory: "public/build",
-  devServerPort: 8002,
+  ignoredRouteFiles: ["**/.*"],
   publicPath: "/build/",
-  serverBuildDirectory: "build",
   routes(defineRoutes) {
-    return defineRoutes(route => {
+    return defineRoutes((route) => {
       route("/somewhere/cool/*", "catchall.tsx");
     });
-  }
+  },
+  serverBuildPath: "build/index.js",
+  serverBuildTarget: "node-cjs",
 };
 ```
 
 ### appDirectory
 
-The path to the `app` directory, relative to remix.config.js. Defaults to "app".
+The path to the `app` directory, relative to remix.config.js. Defaults to
+`"app"`.
 
 ```js
 // default
@@ -38,17 +41,48 @@ exports.appDirectory = "./app";
 exports.appDirectory = "./elsewhere";
 ```
 
+### assetsBuildDirectory
+
+The path to the browser build, relative to remix.config.js. Defaults to
+"public/build". Should be deployed to static hosting.
+
+### cacheDirectory
+
+The path to a directory Remix can use for caching things in development,
+relative to `remix.config.js`. Defaults to `".cache"`.
+
+### devServerBroadcastDelay
+
+The delay, in milliseconds, before the dev server broadcasts a reload event.
+There is no delay by default.
+
+### devServerPort
+
+The port number to use for the dev websocket server. Defaults to 8002.
+
+### ignoredRouteFiles
+
+This is an array of globs (via [minimatch][minimatch]) that Remix will match to
+files while reading your `app/routes` directory. If a file matches, it will be
+ignored rather than treated like a route module. This is useful for ignoring
+dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
+
+### publicPath
+
+The URL prefix of the browser build with a trailing slash. Defaults to
+`"/build/"`. This is the path the browser will use to find assets.
+
 ### routes
 
 A function for defining custom routes, in addition to those already defined
 using the filesystem convention in `app/routes`. Both sets of routes will be merged.
 
 ```tsx
-exports.routes = async defineRoutes => {
+exports.routes = async (defineRoutes) => {
   // If you need to do async work, do it before calling `defineRoutes`, we use
   // the call stack of `route` inside to set nesting.
 
-  return defineRoutes(route => {
+  return defineRoutes((route) => {
     // A common use for this is catchall routes.
     // - The first argument is the React Router path to match against
     // - The second is the relative filename of the route handler
@@ -64,27 +98,71 @@ exports.routes = async defineRoutes => {
 };
 ```
 
-### assetsBuildDirectory
+### server
 
-The path to the browser build, relative to remix.config.js. Defaults to "public/build". Should be deployed to static hosting.
-
-### publicPath
-
-The URL prefix of the browser build with a trailing slash. Defaults to "/build/". This is the path the browser will use to find assets.
+A server entrypoint, relative to the root directory that becomes your server's
+main module. If specified, Remix will compile this file along with your
+application into a single file to be deployed to your server. This file can use
+either a `.js` or `.ts` file extension.
 
 ### serverBuildDirectory
 
-The path to the server build, relative to remix.config.js. Defaults to "build". This needs to be deployed to your server.
+<docs-warning>This option is deprecated and will likely be removed in a future
+stable release. Use [`serverBuildPath`][server-build-path] instead.</docs-warning>
 
-### devServerPort
+The path to the server build, relative to `remix.config.js`. Defaults to
+"build". This needs to be deployed to your server.
 
-The port number to use for the dev websocket server. Defaults to 8002.
+### serverBuildPath
+
+The path to the server build file, relative to `remix.config.js`. This file
+should end in a `.js` extension and should be deployed to your server.
+
+If omitted, the default build path will be based on your
+[`serverBuildTarget`][server-build-target].
+
+### serverBuildTarget
+
+The target of the server build. Defaults to `"node-cjs"`.
+
+The `serverBuildTarget` can be one of the following:
+
+- [`"arc"`][arc]
+- [`"cloudflare-pages"`][cloudflare-pages]
+- [`"cloudflare-workers"`][cloudflare-workers]
+- [`"deno"`][deno]
+- [`"netlify"`][netlify]
+- [`"node-cjs"`][node-cjs]
+- [`"vercel"`][vercel]
+
+### serverDependenciesToBundle
+
+A list of regex patterns that determines if a module is transpiled and included in the server bundle. This can be useful when consuming ESM only packages in a CJS build.
+
+For example, the `unified` ecosystem is all ESM-only. Let's also say we're using a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be able to consume those packages in a CJS app without having to use dynamic imports:
+
+```ts filename=remix.config.js lines=[8-13]
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  appDirectory: "app",
+  assetsBuildDirectory: "public/build",
+  publicPath: "/build/",
+  serverBuildDirectory: "build",
+  ignoredRouteFiles: ["**/.*"],
+  serverDependenciesToBundle: [
+    /^rehype.*/,
+    /^remark.*/,
+    /^unified.*/,
+    "@sindresorhus/slugify",
+  ],
+};
+```
 
 ## File Name Conventions
 
 There are a few conventions that Remix uses you should be aware of.
 
-<docs-info>[Dilum Sanjaya](https://twitter.com/DilumSanjaya) made [an awesome visualization](https://remix-routing-demo.netlify.app/) of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
+<docs-info>[Dilum Sanjaya][dilum-sanjaya] made [an awesome visualization][an-awesome-visualization] of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
 
 ### Special Files
 
@@ -96,7 +174,7 @@ There are a few conventions that Remix uses you should be aware of.
 
 Setting up routes in Remix is as simple as creating files in your `app` directory. These are the conventions you should know to understand how routing in Remix works.
 
-Please note that you can use either `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication (and because we ❤️ TypeScript).
+Please note that you can use either `.js`, `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication (and because we ❤️ TypeScript).
 
 #### Root Layout Route
 
@@ -109,9 +187,9 @@ app/
 
 The file in `app/root.tsx` is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes:
 
-- You can export a [`loader`](#loader), [`action`](#action), [`meta`](#meta), [`headers`](#headers), or [`links`](#links) function
-- You can export an [`ErrorBoundary`](#errorboundary) or [`CatchBoundary`](#catchboundary)
-- Your default export is the layout component that renders the rest of your app in an [`<Outlet />`](https://reactrouter.com/docs/en/v6/api#outlet)
+- You can export a [`loader`][loader], [`action`][action], [`meta`][meta], [`headers`][headers-2], or [`links`][links] function
+- You can export an [`ErrorBoundary`][error-boundary] or [`CatchBoundary`][catch-boundary]
+- Your default export is the layout component that renders the rest of your app in an [`<Outlet />`][outlet]
 
 #### Basic Routes
 
@@ -174,20 +252,23 @@ For example: `app/routes/blog/$postId.tsx` will match the following URLs:
 - `/blog/once-upon-a-time`
 - `/blog/how-to-ride-a-bike`
 
-On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId` [view example app](https://github.com/remix-run/remix/tree/main/examples/multiple-params)) and all parameters can be accessed within components via [`useParams`](https://reactrouter.com/docs/en/v6/api#useparams) and within loaders/actions via the argument's [`params`](#loader-params) property:
+On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId` [view example app][view-example-app]) and all parameters can be accessed within components via [`useParams`][use-params] and within loaders/actions via the argument's [`params`][params] property:
 
 ```tsx filename=app/routes/blog/$postId.tsx
-import { useParams } from "remix";
-import type { LoaderFunction, ActionFunction } from "remix";
+import { useParams } from "@remix-run/react";
+import type {
+  LoaderFunction,
+  ActionFunction,
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const loader: LoaderFunction = async ({
-  params
+  params,
 }) => {
   console.log(params.postId);
 };
 
 export const action: ActionFunction = async ({
-  params
+  params,
 }) => {
   console.log(params.postId);
 };
@@ -200,7 +281,7 @@ export default function PostRoute() {
 
 Nested routes can also contain dynamic segments by using the `$` character in the parent's directory name. For example, `app/routes/blog/$postId/edit.tsx` might represent the editor page for blog entries.
 
-See the [routing guide](../guides/routing.md) for more information.
+See the [routing guide][routing-guide] for more information.
 
 #### Layout Routes
 
@@ -232,7 +313,7 @@ app/
 
 </details>
 
-In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a route has the same name as its directory (`routes/blog.tsx` and `routes/blog/`), it becomes a layout route for all of the routes inside that directory ("child routes"). Similar to your [root route](#root-layout-route), the parent route should render an `<Outlet />` where the child routes should appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
+In the example above, the `blog.tsx` is a "layout route" for everything within the `blog` directory (`blog/index.tsx` and `blog/categories.tsx`). When a route has the same name as its directory (`routes/blog.tsx` and `routes/blog/`), it becomes a layout route for all of the routes inside that directory ("child routes"). Similar to your [root route][root-route], the parent route should render an `<Outlet />` where the child routes should appear. This is how you can create multiple levels of persistent layout nesting associated with URLs.
 
 #### Pathless Layout Routes
 
@@ -260,7 +341,7 @@ app/
 | ----------------- | -------------------------------------- | ---------------------------- |
 | `/`               | `app/routes/__marketing/index.tsx`     | `app/routes/__marketing.tsx` |
 | `/product`        | `app/routes/__marketing/product.tsx`   | `app/routes/__marketing.tsx` |
-| `/dashboad`       | `app/routes/__app/dashboard.tsx`       | `app/routes/__app.tsx`       |
+| `/dashboard`      | `app/routes/__app/dashboard.tsx`       | `app/routes/__app.tsx`       |
 | `/chance/profile` | `app/routes/__app/$userId/profile.tsx` | `app/routes/__app.tsx`       |
 
 </details>
@@ -271,7 +352,7 @@ For example, all of your marketing pages could be in `app/routes/__marketing/*` 
 
 <docs-warning>Be careful, pathless layout routes introduce the possibility of URL conflicts</docs-warning>
 
-#### Dot Delimeters
+#### Dot Delimiters
 
 <!-- prettier-ignore -->
 ```markdown [8]
@@ -337,17 +418,20 @@ Files that are named `$.tsx` are called "splat" (or "catch-all") routes. These r
 Similar to dynamic route parameters, you can access the value of the matched path on the splat route's `params` with the `"*"` key.
 
 ```tsx filename=app/routes/$.tsx
-import { useParams } from "remix";
-import type { LoaderFunction, ActionFunction } from "remix";
+import { useParams } from "@remix-run/react";
+import type {
+  LoaderFunction,
+  ActionFunction,
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const loader: LoaderFunction = async ({
-  params
+  params,
 }) => {
   console.log(params["*"]);
 };
 
 export const action: ActionFunction = async ({
-  params
+  params,
 }) => {
   console.log(params["*"]);
 };
@@ -360,7 +444,7 @@ export default function PostRoute() {
 
 ### Escaping special characters
 
-Because some characters have special meaning, you must use our escaping syntax if you want those characters to actually appear in the route. For example, if I wanted to make a [Resource Route](../guides/resource-routes) for a `/sitemap.xml`, I could name the file `app/routes/[sitemap.xml].tsx`. So you simply wrap any part of the filename with brackets and that will escape any special characters.
+Because some characters have special meaning, you must use our escaping syntax if you want those characters to actually appear in the route. For example, if I wanted to make a [Resource Route][resource-route] for a `/sitemap.xml`, I could name the file `app/routes/[sitemap.xml].tsx`. So you simply wrap any part of the filename with brackets and that will escape any special characters.
 
 <docs-info>
   Note, you could even do `app/routes/sitemap[.]xml.tsx` if you wanted to only wrap the part that needs to be escaped. It makes no difference. Choose the one you like best.
@@ -372,15 +456,15 @@ Because some characters have special meaning, you must use our escaping syntax i
 
 Remix uses `app/entry.client.tsx` as the entry point for the browser bundle. This module gives you full control over the "hydrate" step after JavaScript loads into the document.
 
-Typically this module uses `ReactDOM.hydrate` to re-hydrate the markup that was already generated on the server in your [server entry module](#entryservertsx).
+Typically this module uses `ReactDOM.hydrate` to re-hydrate the markup that was already generated on the server in your [server entry module][server-entry-module].
 
 Here's a basic example:
 
 ```tsx
-import ReactDOM from "react-dom";
-import Remix from "@remix-run/react/browser";
+import { hydrate } from "react-dom";
+import { RemixBrowser } from "@remix-run/react";
 
-ReactDOM.hydrate(<Remix />, document);
+hydrate(<RemixBrowser />, document);
 ```
 
 This is the first piece of code that runs in the browser. As you can see, you have full control here. You can initialize client side libraries, setup things like `window.history.scrollRestoration`, etc.
@@ -389,19 +473,19 @@ This is the first piece of code that runs in the browser. As you can see, you ha
 
 Remix uses `app/entry.server.tsx` to generate the HTTP response when rendering on the server. The `default` export of this module is a function that lets you create the response, including HTTP status, headers, and HTML, giving you full control over the way the markup is generated and sent to the client.
 
-This module should render the markup for the current page using a `<RemixServer>` element with the `context` and `url` for the current request. This markup will (optionally) be re-hydrated once JavaScript loads in the browser using the [browser entry module](#entryclienttsx).
+This module should render the markup for the current page using a `<RemixServer>` element with the `context` and `url` for the current request. This markup will (optionally) be re-hydrated once JavaScript loads in the browser using the [browser entry module][browser-entry-module].
 
 You can also export an optional `handleDataRequest` function that will allow you to modify the response of a data request. These are the requests that do not render HTML, but rather return the loader and action data to the browser once client side hydration has occurred.
 
 Here's a basic example:
 
 ```tsx
-import ReactDOMServer from "react-dom/server";
+import { renderToString } from "react-dom/server";
 import type {
   EntryContext,
-  HandleDataRequestFunction
-} from "remix";
-import { RemixServer } from "remix";
+  HandleDataRequestFunction,
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { RemixServer } from "@remix-run/react";
 
 export default function handleRequest(
   request: Request,
@@ -409,7 +493,7 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-  const markup = ReactDOMServer.renderToString(
+  const markup = renderToString(
     <RemixServer context={remixContext} url={request.url} />
   );
 
@@ -417,7 +501,7 @@ export default function handleRequest(
 
   return new Response("<!DOCTYPE html>" + markup, {
     status: responseStatusCode,
-    headers: responseHeaders
+    headers: responseHeaders,
   });
 }
 
@@ -437,7 +521,7 @@ export const handleDataRequest: HandleDataRequestFunction =
 
 A route in Remix can be used for many things. Usually they’re used for the user interface of your app, like a React component with server-side lifecycle hooks. But they can also serve as generic routes for any kind of resource (like dynamic CSS or social images).
 
-It's important to read [Route Module Constraints](../other-api/constraints/).
+It's important to read [Route Module Constraints][route-module-constraints].
 
 ### `default` export
 
@@ -456,17 +540,27 @@ export default function SomeRouteComponent() {
 
 ### `loader`
 
-Each route can define a "loader" function that will be called on the server before rendering to provide data to the route.
+<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Single</a>: <a href="https://www.youtube.com/watch?v=NXqEP_PsPNc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Loading data into components</a></docs-success>
 
-```tsx
+Each route can define a "loader" function that will be called on the server before rendering to provide data to the route. You may think of this as a "GET" request handler in that you should not be reading the body of the request; that is the job of an [`action`][action].
+
+```js
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+
 export const loader = async () => {
-  return { ok: true };
+  // The `json` function converts a serializable object into a JSON response
+  // All loaders must return a `Response` object.
+  return json({ ok: true });
 };
+```
 
+```ts
 // Typescript
-import type { LoaderFunction } from "remix";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+
 export const loader: LoaderFunction = async () => {
-  return { ok: true };
+  return json({ ok: true });
 };
 ```
 
@@ -474,19 +568,21 @@ This function is only ever run on the server. On the initial server render it wi
 
 Using the database ORM Prisma as an example:
 
-```tsx [1,4-6,9]
-import { useLoaderData } from "remix";
+```tsx lines=[1-2,6-8,11]
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { useLoaderData } from "@remix-run/react";
+
 import { prisma } from "../db";
 
 export const loader = async () => {
-  return prisma.user.findMany();
+  return json(await prisma.user.findMany());
 };
 
 export default function Users() {
   const data = useLoaderData();
   return (
     <ul>
-      {data.map(user => (
+      {data.map((user) => (
         <li key={user.id}>{user.name}</li>
       ))}
     </ul>
@@ -502,9 +598,11 @@ Remix polyfills the [Web Fetch API][fetch] on the server so you can use `fetch` 
 
 Route params are passed to your loader. If you have a loader at `data/invoices/$invoiceId.tsx` then Remix will parse out the `invoiceId` and pass it to your loader. This is useful for fetching data from an API or database.
 
-```js
+```ts
 // if the user visits /invoices/123
-export const loader: LoaderFunction = ({ params }) => {
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
   params.invoiceId; // "123"
 };
 ```
@@ -516,7 +614,9 @@ This is a [Fetch Request][request] instance with information about the request. 
 Most common cases are reading headers or the URL. You can also use this to read URL [URLSearchParams][urlsearchparams] from the request like so:
 
 ```tsx
-export const loader: LoaderFunction = ({ request }) => {
+export const loader: LoaderFunction = async ({
+  request,
+}) => {
   // read a cookie
   const cookie = request.headers.get("Cookie");
 
@@ -536,7 +636,7 @@ Say your express server (or your serverless function handler) looks something li
 
 ```js filename=some-express-server.js
 const {
-  createRequestHandler
+  createRequestHandler,
 } = require("@remix-run/express");
 
 app.all(
@@ -545,7 +645,7 @@ app.all(
     getLoadContext(req, res) {
       // this becomes the loader context
       return { expressUser: req.user };
-    }
+    },
   })
 );
 ```
@@ -553,42 +653,34 @@ app.all(
 And then your loader can access it.
 
 ```ts filename=routes/some-route.tsx
-export const loader: LoaderFunction = ({ context }) => {
+export const loader: LoaderFunction = async ({
+  context,
+}) => {
   const { expressUser } = context;
   // ...
 };
 ```
 
-#### Returning objects
-
-You can return plain JavaScript objects from your loaders that will be made available to your component by the [`useLoaderData`](./remix#useloaderdata) hook.
-
-```ts
-export const loader = async () => {
-  return { whatever: "you want" };
-};
-```
-
 #### Returning Response Instances
 
-When you return a plain object, Remix turns it into a [Fetch Response][response]. This means you can return them yourself, too.
+You need to return a [Fetch Response][response] from your loader.
 
-```js
+```ts
 export const loader: LoaderFunction = async () => {
   const users = await db.users.findMany();
   const body = JSON.stringify(users);
   return new Response(body, {
     headers: {
-      "Content-Type": "application/json"
-    }
+      "Content-Type": "application/json",
+    },
   });
 };
 ```
 
-Remix provides helpers, like `json`, so you don't have to construct them yourself:
+Using the `json` helper simplifies this so you don't have to construct them yourself, but these two examples are effectively the same!
 
 ```tsx
-import { json } from "remix";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const loader: LoaderFunction = async () => {
   const users = await fakeDb.users.findMany();
@@ -596,16 +688,16 @@ export const loader: LoaderFunction = async () => {
 };
 ```
 
-Between these two examples you can see how `json` just does a little of the work to make your loader a lot cleaner. You usually want to use the `json` helper when you're adding headers or a status code to your response:
+You can see how `json` just does a little of the work to make your loader a lot cleaner. You can also use the `json` helper to add headers or a status code to your response:
 
 ```tsx
-import { json } from "remix";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const loader: LoaderFunction = async ({
-  params
+  params,
 }) => {
   const user = await fakeDb.project.findOne({
-    where: { id: params.id }
+    where: { id: params.id },
   });
 
   if (!user) {
@@ -618,7 +710,7 @@ export const loader: LoaderFunction = async ({
 
 See also:
 
-- [`headers`](#headers)
+- [`headers`][headers-2]
 - [MDN Response Docs][response]
 
 #### Throwing Responses in Loaders
@@ -628,8 +720,8 @@ Along with returning responses, you can also throw Response objects from your lo
 Here is a full example showing how you can create utility functions that throw responses to stop code execution in the loader and move over to an alternative UI.
 
 ```ts filename=app/db.ts
-import { json } from "remix";
-import type { ThrownResponse } from "remix";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { ThrownResponse } from "@remix-run/react";
 
 export type InvoiceNotFoundResponse = ThrownResponse<
   404,
@@ -646,10 +738,11 @@ export function getInvoice(id, user) {
 ```
 
 ```ts filename=app/http.ts
-import { redirect } from "remix";
+import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+
 import { getSession } from "./session";
 
-function requireUserSession(request) {
+export async function requireUserSession(request) {
   const session = await getSession(
     request.headers.get("cookie")
   );
@@ -663,14 +756,14 @@ function requireUserSession(request) {
 ```
 
 ```tsx filename=app/routes/invoice/$invoiceId.tsx
-import { useCatch, useLoaderData } from "remix";
-import type { ThrownResponse } from "remix";
+import { useCatch, useLoaderData } from "@remix-run/react";
+import type { ThrownResponse } from "@remix-run/react";
 
 import { requireUserSession } from "~/http";
 import { getInvoice } from "~/db";
 import type {
   Invoice,
-  InvoiceNotFoundResponse
+  InvoiceNotFoundResponse,
 } from "~/db";
 
 type InvoiceCatchData = {
@@ -687,12 +780,12 @@ export const loader = async ({ request, params }) => {
 
   if (!invoice.userIds.includes(user.id)) {
     const data: InvoiceCatchData = {
-      invoiceOwnerEmail: invoice.owner.email
+      invoiceOwnerEmail: invoice.owner.email,
     };
-    throw new json(data, { status: 401 });
+    throw json(data, { status: 401 });
   }
 
-  return invoice;
+  return json(invoice);
 };
 
 export default function InvoiceRoute() {
@@ -710,8 +803,8 @@ export function CatchBoundary() {
         <div>
           <p>You don't have access to this invoice.</p>
           <p>
-            Contact {invoiceCatch.data.invoiceOwnerEmail} to
-            get access
+            Contact {caught.data.invoiceOwnerEmail} to get
+            access
           </p>
         </div>
       );
@@ -723,14 +816,16 @@ export function CatchBoundary() {
   // This will be caught by the closest `ErrorBoundary`.
   return (
     <div>
-      Something went wrong: {invoiceCatch.status}{" "}
-      {invoiceCatch.statusText}
+      Something went wrong: {caught.status}{" "}
+      {caught.statusText}
     </div>
   );
 }
 ```
 
 ### `action`
+
+<docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=Iv25HAHaFDs&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Data Mutations with Form + action</a> and <a href="https://www.youtube.com/watch?v=w2i-9cYxSdc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Multiple Forms and Single Button Mutations</a></docs-success>
 
 Like `loader`, action is a server only function to handle data mutations and other actions. If a non-GET request is made to your route (POST, PUT, PATCH, DELETE) then the action is called before the loaders.
 
@@ -739,18 +834,20 @@ Actions have the same API as loaders, the only difference is when they are calle
 This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
 ```tsx
-import { redirect, Form } from "remix";
+import { json, redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { Form } from "@remix-run/react";
+
 import { fakeGetTodos, fakeCreateTodo } from "~/utils/db";
 import { TodoList } from "~/components/TodoList";
 
 export async function loader() {
-  return fakeGetTodos();
+  return json(await fakeGetTodos());
 }
 
 export async function action({ request }) {
   const body = await request.formData();
   const todo = await fakeCreateTodo({
-    title: body.get("title")
+    title: body.get("title"),
   });
   return redirect(`/todos/${todo.id}`);
 }
@@ -786,40 +883,45 @@ See also:
 
 - [`<Form>`][form]
 - [`<Form action>`][form action]
+- [`?index` query param][index query param]
 
 ### `headers`
 
 Each route can define its own HTTP headers. One of the common headers is the `Cache-Control` header that indicates to browser and CDN caches where and for how long a page is able to be cached.
 
 ```tsx
-export function headers({ loaderHeaders, parentHeaders }) {
+export function headers({
+  actionHeaders,
+  loaderHeaders,
+  parentHeaders,
+}) {
   return {
     "X-Stretchy-Pants": "its for fun",
-    "Cache-Control": "max-age=300, s-maxage=3600"
+    "Cache-Control": "max-age=300, s-maxage=3600",
   };
 }
 ```
 
-Usually your data is a better indicator of your cache duration than your route module (data tends to be more dynamic than markup), so the loader's headers are passed in to `headers()` too:
+Usually your data is a better indicator of your cache duration than your route module (data tends to be more dynamic than markup), so the `action`'s & `loader`'s headers are passed in to `headers()` too:
 
 ```tsx
 export function headers({ loaderHeaders }) {
   return {
-    "Cache-Control": loaderHeaders.get("Cache-Control")
+    "Cache-Control": loaderHeaders.get("Cache-Control"),
   };
 }
 ```
 
-Note: `loaderHeaders` is an instance of the [Web Fetch API][headers] `Headers` class.
+Note: `actionHeaders` & `loaderHeaders` are an instance of the [Web Fetch API][headers] `Headers` class.
 
 Because Remix has nested routes, there's a battle of the headers to be won when nested routes match. In this case, the deepest route wins. Consider these files in the routes directory:
 
 ```
 ├── users.tsx
 └── users
-    ├── $userId.tsx
-    └── $userId
-        └── profile.tsx
+    ├── $userId.tsx
+    └── $userId
+        └── profile.tsx
 ```
 
 If we are looking at `/users/123/profile` then three routes are rendering:
@@ -857,55 +959,97 @@ export function headers({ loaderHeaders, parentHeaders }) {
   );
 
   return {
-    "Cache-Control": `max-age=${maxAge}`
+    "Cache-Control": `max-age=${maxAge}`,
   };
 }
 ```
 
 All that said, you can avoid this entire problem by _not defining headers in parent routes_ and only in leaf routes. Every layout that can be visited directly will likely have an "index route". If you only define headers on your leaf routes, not your parent routes, you will never have to worry about merging headers.
 
+Note that you can also add headers in your `entry.server` file for things that should be global, for example:
+
+```tsx lines=[16]
+import { renderToString } from "react-dom/server";
+import { RemixServer } from "@remix-run/react";
+import type { EntryContext } from "@remix-run/node"; // or "@remix-run/cloudflare"
+
+export default function handleRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  const markup = renderToString(
+    <RemixServer context={remixContext} url={request.url} />
+  );
+
+  responseHeaders.set("Content-Type", "text/html");
+  responseHeaders.set("X-Powered-By", "Hugs");
+
+  return new Response("<!DOCTYPE html>" + markup, {
+    status: responseStatusCode,
+    headers: responseHeaders,
+  });
+}
+```
+
+Just keep in mind that doing this will apply to _all_ document requests, but does not apply to `data` requests (for client-side transitions for example). For those, use [`handleDataRequest`][handledatarequest].
+
 ### `meta`
 
 The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route besides layout routes (their index route will set the meta).
 
 ```tsx
-import type { MetaFunction } from "remix";
+import type { MetaFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const meta: MetaFunction = () => {
   return {
     title: "Something cool",
     description:
-      "This becomes the nice preview on search results."
+      "This becomes the nice preview on search results.",
   };
 };
 ```
 
-There are a few special cases like `title` renders a `<title>` tag, `og:style` tags will render `<meta property content>`, the rest render `<meta name={key} content={value}/>`.
+<docs-warning>The `meta` function _may_ run on the server (e.g. the initial page load) or the client (e.g. a client navigation), so you cannot access server-specific data like `process.env.NODE_ENV` directly. If you need server-side data in `meta`, get the data in the `loader` and access it via the `meta` function's `data` parameter.</docs-warning>
 
-In the case of nested routes, the meta tags are merged automatically, so parent routes can add meta tags without the child routes needing to copy them.
+There are a few special cases (read about those below). In the case of nested routes, the meta tags are merged automatically, so parent routes can add meta tags without the child routes needing to copy them.
 
 #### `HtmlMetaDescriptor`
 
-This is an object representation and abstraction of a `<meta {...props} />` element and its attributes. [View the MDN docs for the meta API](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta).
+This is an object representation and abstraction of a `<meta {...props}>` element and its attributes. [View the MDN docs for the meta API][view-the-mdn-docs-for-the-meta-api].
 
 The `meta` export from a route should return a single `HtmlMetaDescriptor` object.
 
-Almost every `meta` element takes a `name` and `content` attribute, with the exception of [OpenGraph tags](https://ogp.me/) which use `property` instead of `name`. In either case, the attributes represent a key/value pair for each tag. Each pair in the `HtmlMetaDescriptor` object represents a separate `meta` element, and Remix maps each to the correct attributes for that tag.
+Almost every `meta` element takes a `name` and `content` attribute, with the exception of [OpenGraph tags][open-graph-tags] which use `property` instead of `name`. In either case, the attributes represent a key/value pair for each tag. Each pair in the `HtmlMetaDescriptor` object represents a separate `meta` element, and Remix maps each to the correct attributes for that tag.
 
-The `meta` object can also hold a `title` reference which maps to the [HTML `<title>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/title)
+The `meta` object can also hold a `title` reference which maps to the [HTML `<title>` element][html-title-element].
+
+As a convenience, `charset: "utf-8"` will render a `<meta charset="utf-8">`.
+
+As a last option, you can also pass an object of attribute/value pairs as the value. This can be used as an escape-hatch for meta tags like the [`http-equiv` tag][http-equiv-tag] which uses `http-equiv` instead of `name`.
 
 Examples:
 
 ```tsx
-import type { MetaFunction } from "remix";
+import type { MetaFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
-export const meta: MetaFunction = () => {
-  return {
-    title: "Josie's Shake Shack", // <title>Josie's Shake Shack</title>
-    description: "Delicious shakes", // <meta name="description" content="Delicious shakes">
-    "og:image": "https://josiesshakeshack.com/logo.jpg" // <meta property="og:image" content="https://josiesshakeshack.com/logo.jpg">
-  };
-};
+export const meta: MetaFunction = () => ({
+  // Special cases
+  charset: "utf-8", // <meta charset="utf-8">
+  "og:image": "https://josiesshakeshack.com/logo.jpg", // <meta property="og:image" content="https://josiesshakeshack.com/logo.jpg">
+  title: "Josie's Shake Shack", // <title>Josie's Shake Shack</title>
+
+  // name => content
+  description: "Delicious shakes", // <meta name="description" content="Delicious shakes">
+  viewport: "width=device-width,initial-scale=1", // <meta name="viewport" content="width=device-width,initial-scale=1">
+
+  // <meta {...value}>
+  refresh: {
+    httpEquiv: "refresh",
+    content: "3;url=https://www.mozilla.org",
+  }, // <meta http-equiv="refresh" content="3;url=https://www.mozilla.org">
+});
 ```
 
 #### Page context in `meta` function
@@ -917,30 +1061,47 @@ export const meta: MetaFunction = () => {
 - `params` is an object containing route params
 - `parentsData` is a hashmap of all the data exported by `loader` functions of current route and all of its parents
 
+```tsx
+export const meta: MetaFunction = ({ data, params }) => {
+  if (!data) {
+    return {
+      title: "Missing Shake",
+      description: `There is no shake with the ID of ${params.shakeId}. 😢`,
+    };
+  }
+
+  const { shake } = data as LoaderData;
+  return {
+    title: `${shake.name} milkshake`,
+    description: shake.summary,
+  };
+};
+```
+
 ### `links`
 
 The links function defines which `<link>` elements to add to the page when the user visits a route.
 
 ```tsx
-import type { LinksFunction } from "remix";
+import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 export const links: LinksFunction = () => {
   return [
     {
       rel: "icon",
       href: "/favicon.png",
-      type: "image/png"
+      type: "image/png",
     },
     {
       rel: "stylesheet",
-      href: "https://example.com/some/styles.css"
+      href: "https://example.com/some/styles.css",
     },
     { page: "/users/123" },
     {
       rel: "preload",
       href: "/images/banner.jpg",
-      as: "image"
-    }
+      as: "image",
+    },
   ];
 };
 ```
@@ -956,7 +1117,8 @@ The `links` export from a route should return an array of `HtmlLinkDescriptor` o
 Examples:
 
 ```tsx
-import type { LinksFunction } from "remix";
+import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+
 import stylesHref from "../styles/something.css";
 
 export const links: LinksFunction = () => {
@@ -965,14 +1127,14 @@ export const links: LinksFunction = () => {
     {
       rel: "icon",
       href: "/favicon.png",
-      type: "image/png"
+      type: "image/png",
     },
 
     // add an external stylesheet
     {
       rel: "stylesheet",
       href: "https://example.com/some/styles.css",
-      crossOrigin: "true"
+      crossOrigin: "true",
     },
 
     // add a local stylesheet, remix will fingerprint the file name for
@@ -985,7 +1147,7 @@ export const links: LinksFunction = () => {
     {
       rel: "prefetch",
       as: "image",
-      href: "/img/bunny.jpg"
+      href: "/img/bunny.jpg",
     },
 
     // only prefetch it if they're on a bigger screen
@@ -993,8 +1155,8 @@ export const links: LinksFunction = () => {
       rel: "prefetch",
       as: "image",
       href: "/img/bunny.jpg",
-      media: "(min-width: 1000px)"
-    }
+      media: "(min-width: 1000px)",
+    },
   ];
 };
 ```
@@ -1024,7 +1186,7 @@ A Remix `CatchBoundary` component works just like a route component, but instead
 A `CatchBoundary` component has access to the status code and thrown response data through `useCatch`.
 
 ```tsx
-import { useCatch } from "remix";
+import { useCatch } from "@remix-run/react";
 
 export function CatchBoundary() {
   const caught = useCatch();
@@ -1047,7 +1209,7 @@ An `ErrorBoundary` is a React component that renders whenever there is an error 
 
 **Note:** We use the word "error" to mean an uncaught exception; something you didn't anticipate happening. This is different from other types of "errors" that you are able to recover from easily, for example a 404 error where you can still show something in the user interface to indicate you weren't able to find some data.
 
-A Remix `ErrorBoundary` component works just like normal React [error boundaries](https://reactjs.org/docs/error-boundaries.html), but with a few extra capabilities. When there is an error in your route component, the `ErrorBoundary` will be rendered in its place, nested inside any parent routes. `ErrorBoundary` components also render when there is an error in the `loader` or `action` functions for a route, so all errors for that route may be handled in one spot.
+A Remix `ErrorBoundary` component works just like normal React [error boundaries][error-boundaries], but with a few extra capabilities. When there is an error in your route component, the `ErrorBoundary` will be rendered in its place, nested inside any parent routes. `ErrorBoundary` components also render when there is an error in the `loader` or `action` functions for a route, so all errors for that route may be handled in one spot.
 
 An `ErrorBoundary` component receives one prop: the `error` that occurred.
 
@@ -1070,11 +1232,11 @@ Exporting a handle allows you to create application conventions with the `useMat
 
 ```js
 export const handle = {
-  its: "all yours"
+  its: "all yours",
 };
 ```
 
-This is almost always used on conjunction with `useMatches`. To see what kinds of things you can do with it, refer to [`useMatches`](./remix#usematches) for more information.
+This is almost always used on conjunction with `useMatches`. To see what kinds of things you can do with it, refer to [`useMatches`][use-matches] for more information.
 
 ### unstable_shouldReload
 
@@ -1085,7 +1247,7 @@ This is almost always used on conjunction with `useMatches`. To see what kinds o
 This function lets apps optimize which routes should be reloaded on some client-side transitions.
 
 ```ts
-import type { ShouldReloadFunction } from "remix";
+import type { ShouldReloadFunction } from "@remix-run/react";
 
 export const unstable_shouldReload: ShouldReloadFunction =
   ({
@@ -1099,7 +1261,7 @@ export const unstable_shouldReload: ShouldReloadFunction =
     url,
 
     // the previous URL used to render this page
-    prevUrl
+    prevUrl,
   }) => false; // or `true`;
 ```
 
@@ -1123,13 +1285,13 @@ Here are a couple of common use-cases:
 It's common for root loaders to return data that never changes, like environment variables to be sent to the client app. In these cases you never need the root loader to be called again. For this case, you can simply `return false`.
 
 ```js [10]
-export const loader = () => {
-  return {
+export const loader = async () => {
+  return json({
     ENV: {
       CLOUDINARY_ACCT: process.env.CLOUDINARY_ACCT,
-      STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY
-    }
-  };
+      STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
+    },
+  });
 };
 
 export const unstable_shouldReload = () => false;
@@ -1151,33 +1313,35 @@ Consider these routes:
 And lets say the UI looks something like this:
 
 ```
-┌──────────────────────────────┐
-│    Project: Design Revamp    │
-├────────┬─────────┬───────────┤
-│  Tasks │ Collabs │ >ACTIVITY │
-├────────┴─────────┴───────────┤
-│  Search: _____________       │
-│                              │
-│  - Ryan added an image       │
-│                              │
-│  - Michael commented         │
-│                              │
-└──────────────────────────────┘
++------------------------------+
+|    Project: Design Revamp    |
++------------------------------+
+|  Tasks | Collabs | >ACTIVITY |
++------------------------------+
+|  Search: _____________       |
+|                              |
+|  - Ryan added an image       |
+|                              |
+|  - Michael commented         |
+|                              |
++------------------------------+
 ```
 
-The `$activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
+The `activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
 
-```js [2,7]
-export function loader({ request, params }) {
+```js [2,8]
+export async function loader({ request, params }) {
   const url = new URL(request.url);
-  return exampleDb.activity.findAll({
-    where: {
-      projectId: params.projectId,
-      name: {
-        contains: url.searchParams.get("search")
-      }
-    }
-  });
+  return json(
+    await exampleDb.activity.findAll({
+      where: {
+        projectId: params.projectId,
+        name: {
+          contains: url.searchParams.get("search"),
+        },
+      },
+    })
+  );
 }
 ```
 
@@ -1186,8 +1350,8 @@ This is great for the activity route, but Remix doesn't know if the parent loade
 In this UI, that's wasted bandwidth for the user, your server, and your database because `$projectId.tsx` doesn't use the search params. Consider that our loader for `$projectId.tsx` looks something like this:
 
 ```tsx
-export function loader({ params }) {
-  return fakedb.findProject(params.projectId);
+export async function loader({ params }) {
+  return json(await fakedb.findProject(params.projectId));
 }
 ```
 
@@ -1195,7 +1359,7 @@ We want this loader to be called only if the project has had an update, so we ca
 
 ```tsx
 export function unstable_shouldReload({ submission }) {
-  return submission && submission.method !== "GET";
+  return !!submission && submission.method !== "GET";
 }
 ```
 
@@ -1208,9 +1372,9 @@ You may want to get more granular and reload only for submissions to this projec
 ```tsx
 export function unstable_shouldReload({
   params,
-  submission
+  submission,
 }) {
-  return (
+  return !!(
     submission &&
     submission.action === `/projects/${params.projectId}`
   );
@@ -1230,7 +1394,8 @@ Any files inside the `app` folder can be imported into your modules. Remix will:
 It's most common for stylesheets, but can used for anything.
 
 ```tsx filename=app/routes/root.tsx
-import type { LinksFunction } from "remix";
+import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+
 import styles from "./styles/app.css";
 import banner from "./images/banner.jpg";
 
@@ -1255,4 +1420,41 @@ export default function Page() {
 [urlsearchparams]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [form]: ./remix#form
 [form action]: ./remix#form-action
+[index query param]: ../guides/routing#what-is-the-index-query-param
 [link tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
+[minimatch]: https://www.npmjs.com/package/minimatch
+[handledatarequest]: #entryservertsx
+[server-build-path]: #serverbuildpath
+[server-build-target]: #serverbuildtarget
+[arc]: https://arc.codes
+[cloudflare-pages]: https://pages.cloudflare.com
+[cloudflare-workers]: https://workers.cloudflare.com
+[deno]: https://deno.land
+[netlify]: https://www.netlify.com
+[node-cjs]: https://nodejs.org/en
+[vercel]: https://vercel.com
+[dilum-sanjaya]: https://twitter.com/DilumSanjaya
+[an-awesome-visualization]: https://remix-routing-demo.netlify.app
+[loader]: #loader
+[action]: #action
+[meta]: #meta
+[headers-2]: #headers
+[links]: #links
+[error-boundary]: #errorboundary
+[catch-boundary]: #catchboundary
+[outlet]: https://reactrouter.com/docs/en/v6/api#outlet
+[view-example-app]: https://github.com/remix-run/remix/tree/main/examples/multiple-params
+[use-params]: https://reactrouter.com/docs/en/v6/api#useparams
+[params]: #loader-params
+[routing-guide]: ../guides/routing.md
+[root-route]: #root-layout-route
+[resource-route]: ../guides/resource-routes
+[server-entry-module]: #entryservertsx
+[browser-entry-module]: #entryclienttsx
+[route-module-constraints]: ../guides/constraints
+[view-the-mdn-docs-for-the-meta-api]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta
+[open-graph-tags]: https://ogp.me
+[html-title-element]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/title
+[http-equiv-tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta#attr-http-equiv
+[error-boundaries]: https://reactjs.org/docs/error-boundaries.html
+[use-matches]: ./remix#usematches

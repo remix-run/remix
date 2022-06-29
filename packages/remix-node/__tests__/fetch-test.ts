@@ -1,7 +1,6 @@
 import { PassThrough } from "stream";
 
 import { Request } from "../fetch";
-import { createMemoryUploadHandler } from "../upload/memoryUploadHandler";
 
 let test = {
   source: [
@@ -24,8 +23,8 @@ let test = {
       "Content-Type: application/octet-stream",
       "",
       "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-      "-----------------------------paZqsnEHRufoShdX6fh0lUhXBP4k--"
-    ].join("\r\n")
+      "-----------------------------paZqsnEHRufoShdX6fh0lUhXBP4k--",
+    ].join("\r\n"),
   ],
   boundary: "---------------------------paZqsnEHRufoShdX6fh0lUhXBP4k",
   expected: [
@@ -36,7 +35,7 @@ let test = {
       false,
       false,
       "7bit",
-      "text/plain"
+      "text/plain",
     ],
     [
       "field",
@@ -45,7 +44,7 @@ let test = {
       false,
       false,
       "7bit",
-      "text/plain"
+      "text/plain",
     ],
     [
       "file",
@@ -54,7 +53,7 @@ let test = {
       0,
       "1k_a.dat",
       "7bit",
-      "application/octet-stream"
+      "application/octet-stream",
     ],
     [
       "file",
@@ -63,32 +62,29 @@ let test = {
       0,
       "1k_b.dat",
       "7bit",
-      "application/octet-stream"
-    ]
+      "application/octet-stream",
+    ],
   ],
-  what: "Fields and files"
+  what: "Fields and files",
 };
 
 describe("Request", () => {
-  let uploadHandler = createMemoryUploadHandler({});
-
   it("clones", async () => {
     let body = new PassThrough();
-    test.source.forEach(chunk => body.write(chunk));
+    test.source.forEach((chunk) => body.write(chunk));
+    body.end();
 
     let req = new Request("http://test.com", {
       method: "post",
       body,
       headers: {
-        "Content-Type": "multipart/form-data; boundary=" + test.boundary
-      }
+        "Content-Type": "multipart/form-data; boundary=" + test.boundary,
+      },
     });
 
     let cloned = req.clone();
-    expect(Object.getPrototypeOf(req)).toBe(Object.getPrototypeOf(cloned));
-
-    let formData = await req.formData(uploadHandler);
-    let clonedFormData = await cloned.formData(uploadHandler);
+    let formData = await req.formData();
+    let clonedFormData = await cloned.formData();
 
     expect(formData.get("file_name_0")).toBe("super alpha file");
     expect(clonedFormData.get("file_name_0")).toBe("super alpha file");
@@ -108,4 +104,10 @@ describe("Request", () => {
     expect(file.name).toBe("1k_b.dat");
     expect(file.size).toBe(1023);
   });
+});
+
+describe("fetch", () => {
+  // fetch a gzip-encoded json blob
+  // call res.json() and make sure it's decoded properly
+  it.todo("decodes gzip encoded body");
 });

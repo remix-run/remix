@@ -1,5 +1,6 @@
-import type { LoaderFunction } from "remix";
-import { json } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+
 import { searchLangs } from "~/models/langs";
 
 /**
@@ -25,7 +26,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     // library that caches results in memory, the browser has this ability
     // built-in.
     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
-    headers: { "Cache-Control": "max-age=60" }
+    headers: { "Cache-Control": "max-age=60" },
   });
 };
 

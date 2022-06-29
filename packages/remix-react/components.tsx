@@ -5,7 +5,7 @@ import type {
   FocusEventHandler,
   FormHTMLAttributes,
   MouseEventHandler,
-  TouchEventHandler
+  TouchEventHandler,
 } from "react";
 import * as React from "react";
 import type { Navigator, Params } from "react-router";
@@ -17,7 +17,7 @@ import {
   useRoutes,
   useNavigate,
   useHref,
-  useResolvedPath
+  useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
 
@@ -28,7 +28,7 @@ import {
   RemixRootDefaultErrorBoundary,
   RemixErrorBoundary,
   RemixRootDefaultCatchBoundary,
-  RemixCatchBoundary
+  RemixCatchBoundary,
 } from "./errorBoundaries";
 import invariant from "./invariant";
 import {
@@ -37,14 +37,14 @@ import {
   getModuleLinkHrefs,
   getNewMatchesForLinks,
   getStylesheetPrefetchLinks,
-  isPageLinkDescriptor
+  isPageLinkDescriptor,
 } from "./links";
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml } from "./markup";
 import type { ClientRoute } from "./routes";
 import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
-import type { RouteMatch } from "./routeMatching";
+import type { RouteMatch as BaseRouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
@@ -55,7 +55,7 @@ import type { Transition, Fetcher, Submission } from "./transition";
 
 interface RemixEntryContextType {
   manifest: AssetsManifest;
-  matches: RouteMatch<ClientRoute>[];
+  matches: BaseRouteMatch<ClientRoute>[];
   routeData: { [routeId: string]: RouteData };
   actionData?: RouteData;
   pendingLocation?: Location;
@@ -81,7 +81,7 @@ export function RemixEntry({
   action,
   location: historyLocation,
   navigator: _navigator,
-  static: staticProp = false
+  static: staticProp = false,
 }: {
   context: EntryContext;
   action: Action;
@@ -95,7 +95,7 @@ export function RemixEntry({
     actionData: documentActionData,
     routeModules,
     serverHandoffString,
-    appState: entryComponentDidCatchEmulator
+    appState: entryComponentDidCatchEmulator,
   } = entryContext;
 
   let clientRoutes = React.useMemo(
@@ -116,7 +116,7 @@ export function RemixEntry({
       catch: entryComponentDidCatchEmulator.catch,
       catchBoundaryId: entryComponentDidCatchEmulator.catchBoundaryRouteId,
       onRedirect: _navigator.replace,
-      onChange: state => {
+      onChange: (state) => {
         setClientState({
           catch: state.catch,
           error: state.error,
@@ -124,9 +124,9 @@ export function RemixEntry({
           loaderBoundaryRouteId: state.errorBoundaryId,
           renderBoundaryRouteId: null,
           trackBoundaries: false,
-          trackCatchBoundaries: false
+          trackCatchBoundaries: false,
         });
-      }
+      },
     });
   });
 
@@ -152,7 +152,7 @@ export function RemixEntry({
       type: "navigation",
       location: historyLocation,
       submission: consumeNextNavigationSubmission(),
-      action
+      action,
     });
   }, [transitionManager, historyLocation, action]);
 
@@ -182,7 +182,7 @@ export function RemixEntry({
         clientRoutes,
         routeData: loaderData,
         actionData,
-        transitionManager
+        transitionManager,
       }}
     >
       <RemixErrorBoundary
@@ -253,6 +253,18 @@ export function RemixRoute({ id }: { id: string }) {
   let location = useLocation();
   let { routeData, routeModules, appState } = useRemixEntryContext();
 
+  // This checks prevent cryptic error messages such as: 'Cannot read properties of undefined (reading 'root')'
+  invariant(
+    routeData,
+    "Cannot initialize 'routeData'. This normally occurs when you have server code in your client modules.\n" +
+      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
+  );
+  invariant(
+    routeModules,
+    "Cannot initialize 'routeModules'. This normally occurs when you have server code in your client modules.\n" +
+      "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
+  );
+
   let data = routeData[id];
   let { default: Component, CatchBoundary, ErrorBoundary } = routeModules[id];
   let element = Component ? <Component /> : <DefaultRouteComponent id={id} />;
@@ -280,7 +292,7 @@ export function RemixRoute({ id }: { id: string }) {
           get data() {
             console.error("You cannot `useLoaderData` in a catch boundary.");
             return undefined;
-          }
+          },
         }
       : { id, data };
 
@@ -332,7 +344,7 @@ export function RemixRoute({ id }: { id: string }) {
           get data() {
             console.error("You cannot `useLoaderData` in an error boundary.");
             return undefined;
-          }
+          },
         }
       : { id, data };
 
@@ -362,7 +374,7 @@ export function RemixRoute({ id }: { id: string }) {
 /**
  * Defines the prefetching behavior of the link:
  *
- * - "intent": Default, fetched when the user focuses or hovers the link
+ * - "intent": Fetched when the user focuses or hovers the link
  * - "render": Fetched when the link is rendered
  * - "none": Never fetched
  */
@@ -408,6 +420,7 @@ function usePrefetchBehavior(
   let cancelIntent = () => {
     if (prefetch === "intent") {
       setMaybePrefetch(false);
+      setShouldPrefetch(false);
     }
   };
 
@@ -429,8 +442,8 @@ function usePrefetchBehavior(
       onBlur: composeEventHandlers(onBlur, cancelIntent),
       onMouseEnter: composeEventHandlers(onMouseEnter, setIntent),
       onMouseLeave: composeEventHandlers(onMouseLeave, cancelIntent),
-      onTouchStart: composeEventHandlers(onTouchStart, setIntent)
-    }
+      onTouchStart: composeEventHandlers(onTouchStart, setIntent),
+    },
   ];
 }
 
@@ -439,7 +452,7 @@ function usePrefetchBehavior(
  *
  * @see https://remix.run/api/remix#navlink
  */
-export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
+let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
@@ -459,14 +472,15 @@ export let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
     );
   }
 );
-
+NavLink.displayName = "NavLink";
+export { NavLink };
 /**
  * This component renders an anchor tag and is the primary way the user will
  * navigate around your website.
  *
  * @see https://remix.run/api/remix#link
  */
-export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
+let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
@@ -486,6 +500,8 @@ export let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
     );
   }
 );
+Link.displayName = "Link";
+export { Link };
 
 export function composeEventHandlers<
   EventType extends React.SyntheticEvent | Event
@@ -493,7 +509,7 @@ export function composeEventHandlers<
   theirHandler: ((event: EventType) => any) | undefined,
   ourHandler: (event: EventType) => any
 ): (event: EventType) => any {
-  return event => {
+  return (event) => {
     theirHandler && theirHandler(event);
     if (!event.defaultPrevented) {
       ourHandler(event);
@@ -516,13 +532,46 @@ export function Links() {
 
   return (
     <>
-      {links.map(link =>
-        isPageLinkDescriptor(link) ? (
-          <PrefetchPageLinks key={link.page} {...link} />
-        ) : (
-          <link key={link.rel + link.href} {...link} />
-        )
-      )}
+      {links.map((link) => {
+        if (isPageLinkDescriptor(link)) {
+          return <PrefetchPageLinks key={link.page} {...link} />;
+        }
+
+        let imageSrcSet: string | null = null;
+
+        // In React 17, <link imageSrcSet> and <link imageSizes> will warn
+        // because the DOM attributes aren't recognized, so users need to pass
+        // them in all lowercase to forward the attributes to the node without a
+        // warning. Normalize so that either property can be used in Remix.
+        if ("useId" in React) {
+          if (link.imagesrcset) {
+            link.imageSrcSet = imageSrcSet = link.imagesrcset;
+            delete link.imagesrcset;
+          }
+
+          if (link.imagesizes) {
+            link.imageSizes = link.imagesizes;
+            delete link.imagesizes;
+          }
+        } else {
+          if (link.imageSrcSet) {
+            link.imagesrcset = imageSrcSet = link.imageSrcSet;
+            delete link.imageSrcSet;
+          }
+
+          if (link.imageSizes) {
+            link.imagesizes = link.imageSizes;
+            delete link.imageSizes;
+          }
+        }
+
+        return (
+          <link
+            key={link.rel + (link.href || "") + (imageSrcSet || "")}
+            {...link}
+          />
+        );
+      })}
     </>
   );
 }
@@ -556,7 +605,7 @@ export function PrefetchPageLinks({
   );
 }
 
-function usePrefetchedStylesheets(matches: RouteMatch<ClientRoute>[]) {
+function usePrefetchedStylesheets(matches: BaseRouteMatch<ClientRoute>[]) {
   let { routeModules } = useRemixEntryContext();
 
   let [styleLinks, setStyleLinks] = React.useState<HtmlLinkDescriptor[]>([]);
@@ -564,7 +613,7 @@ function usePrefetchedStylesheets(matches: RouteMatch<ClientRoute>[]) {
   React.useEffect(() => {
     let interrupted: boolean = false;
 
-    getStylesheetPrefetchLinks(matches, routeModules).then(links => {
+    getStylesheetPrefetchLinks(matches, routeModules).then((links) => {
       if (!interrupted) setStyleLinks(links);
     });
 
@@ -581,7 +630,7 @@ function PrefetchPageLinksImpl({
   matches: nextMatches,
   ...linkProps
 }: PrefetchPageDescriptor & {
-  matches: RouteMatch<ClientRoute>[];
+  matches: BaseRouteMatch<ClientRoute>[];
 }) {
   let location = useLocation();
   let { matches, manifest } = useRemixEntryContext();
@@ -612,13 +661,13 @@ function PrefetchPageLinksImpl({
 
   return (
     <>
-      {dataHrefs.map(href => (
+      {dataHrefs.map((href) => (
         <link key={href} rel="prefetch" as="fetch" href={href} {...linkProps} />
       ))}
-      {moduleHrefs.map(href => (
+      {moduleHrefs.map((href) => (
         <link key={href} rel="modulepreload" href={href} {...linkProps} />
       ))}
-      {styleLinks.map(link => (
+      {styleLinks.map((link) => (
         // these don't spread `linkProps` because they are full link descriptors
         // already with their own props
         <link key={link.href} {...link} />
@@ -660,24 +709,38 @@ export function Meta() {
   return (
     <>
       {Object.entries(meta).map(([name, value]) => {
+        if (!value) {
+          return null;
+        }
+
+        if (["charset", "charSet"].includes(name)) {
+          return <meta key="charset" charSet={value as string} />;
+        }
+
+        if (name === "title") {
+          return <title key="title">{value}</title>;
+        }
+
         // Open Graph tags use the `property` attribute, while other meta tags
         // use `name`. See https://ogp.me/
         let isOpenGraphTag = name.startsWith("og:");
-        return name === "title" ? (
-          <title key="title">{value}</title>
-        ) : Array.isArray(value) ? (
-          value.map(content =>
-            isOpenGraphTag ? (
-              <meta key={name + content} property={name} content={content} />
-            ) : (
-              <meta key={name + content} name={name} content={content} />
-            )
-          )
-        ) : isOpenGraphTag ? (
-          <meta key={name} property={name} content={value} />
-        ) : (
-          <meta key={name} name={name} content={value} />
-        );
+        return [value].flat().map((content) => {
+          if (isOpenGraphTag) {
+            return (
+              <meta
+                content={content as string}
+                key={name + content}
+                property={name}
+              />
+            );
+          }
+
+          if (typeof content === "string") {
+            return <meta content={content} name={name} key={name + content} />;
+          }
+
+          return <meta key={name + JSON.stringify(content)} {...content} />;
+        });
       })}
     </>
   );
@@ -717,7 +780,7 @@ export function Scripts(props: ScriptProps) {
     matches,
     pendingLocation,
     clientRoutes,
-    serverHandoffString
+    serverHandoffString,
   } = useRemixEntryContext();
 
   React.useEffect(() => {
@@ -777,7 +840,7 @@ window.__remixRouteModules = {${matches
 
   let routePreloads = matches
     .concat(nextMatches)
-    .map(match => {
+    .map((match) => {
       let route = manifest.routes[match.route.id];
       return (route.imports || []).concat([route.module]);
     })
@@ -787,7 +850,7 @@ window.__remixRouteModules = {${matches
 
   return (
     <>
-      {dedupe(preloads).map(path => (
+      {dedupe(preloads).map((path) => (
         <link
           key={path}
           rel="modulepreload"
@@ -822,8 +885,8 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
   /**
    * Normal `<form encType>`.
    *
-   * Note: Remix only supports `application/x-www-form-urlencoded` right now
-   * but will soon support `multipart/form-data` as well.
+   * Note: Remix defaults to `application/x-www-form-urlencoded` and also
+   * supports `multipart/form-data`.
    */
   encType?: FormEncType;
 
@@ -854,15 +917,17 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
  *
  * @see https://remix.run/api/remix#form
  */
-export let Form = React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
+let Form = React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
   return <FormImpl {...props} ref={ref} />;
 });
+Form.displayName = "Form";
+export { Form };
 
 interface FormImplProps extends FormProps {
   fetchKey?: string;
 }
 
-export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
+let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
   (
     {
       reloadDocument = false,
@@ -879,71 +944,26 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     let submit = useSubmitImpl(fetchKey);
     let formMethod: FormMethod =
       method.toLowerCase() === "get" ? "get" : "post";
-    let formAction = useFormAction(action, formMethod);
-    let formRef = React.useRef<HTMLFormElement>();
-    let ref = useComposedRefs(forwardedRef, formRef);
-
-    // When calling `submit` on the form element itself, we don't get data from
-    // the button that submitted the event. For example:
-    //
-    //   <Form>
-    //     <button name="something" value="whatever">Submit</button>
-    //   </Form>
-    //
-    // formData.get("something") should be "whatever", but we don't get that
-    // unless we call submit on the clicked button itself.
-    //
-    // To figure out which button triggered the submit, we'll attach a click
-    // event listener to the form. The click event is always triggered before
-    // the submit event (even when submitting via keyboard when focused on
-    // another form field, yeeeeet) so we should have access to that button's
-    // data for use in the submit handler.
-    let clickedButtonRef = React.useRef<any>();
-
-    React.useEffect(() => {
-      let form = formRef.current;
-      if (!form) return;
-
-      function handleClick(event: MouseEvent) {
-        if (!(event.target instanceof Element)) return;
-        let submitButton = event.target.closest<
-          HTMLButtonElement | HTMLInputElement
-        >("button,input[type=submit]");
-
-        if (
-          submitButton &&
-          submitButton.form === form &&
-          submitButton.type === "submit"
-        ) {
-          clickedButtonRef.current = submitButton;
-        }
-      }
-
-      window.addEventListener("click", handleClick);
-      return () => {
-        window.removeEventListener("click", handleClick);
-      };
-    }, []);
+    let formAction = useFormAction(action);
 
     return (
       <form
-        ref={ref}
+        ref={forwardedRef}
         method={formMethod}
         action={formAction}
         encType={encType}
         onSubmit={
           reloadDocument
             ? undefined
-            : event => {
+            : (event) => {
                 onSubmit && onSubmit(event);
                 if (event.defaultPrevented) return;
                 event.preventDefault();
 
-                submit(clickedButtonRef.current || event.currentTarget, {
-                  method,
-                  replace
-                });
-                clickedButtonRef.current = null;
+                let submitter = (event as unknown as HTMLSubmitEvent)
+                  .nativeEvent.submitter as HTMLFormSubmitter | null;
+
+                submit(submitter || event.currentTarget, { method, replace });
               }
         }
         {...props}
@@ -951,16 +971,16 @@ export let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     );
   }
 );
+FormImpl.displayName = "FormImpl";
+export { FormImpl };
 
-function isActionRequestMethod(method: string): boolean {
-  method = method.toLowerCase();
-  return (
-    method === "post" ||
-    method === "put" ||
-    method === "patch" ||
-    method === "delete"
-  );
-}
+type HTMLSubmitEvent = React.BaseSyntheticEvent<
+  SubmitEvent,
+  Event,
+  HTMLFormElement
+>;
+
+type HTMLFormSubmitter = HTMLButtonElement | HTMLInputElement;
 
 /**
  * Resolves a `<form action>` path relative to the current route.
@@ -969,6 +989,7 @@ function isActionRequestMethod(method: string): boolean {
  */
 export function useFormAction(
   action = ".",
+  // TODO: Remove method param in v2 as it's no longer needed and is a breaking change
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
@@ -976,7 +997,7 @@ export function useFormAction(
   let search = path.search;
   let isIndexRoute = id.endsWith("/index");
 
-  if (action === "." && isIndexRoute && isActionRequestMethod(method)) {
+  if (action === "." && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 
@@ -1053,6 +1074,9 @@ export function useSubmit(): SubmitFunction {
   return useSubmitImpl();
 }
 
+let defaultMethod = "get";
+let defaultEncType = "application/x-www-form-urlencoded";
+
 export function useSubmitImpl(key?: string): SubmitFunction {
   let navigate = useNavigate();
   let defaultAction = useFormAction();
@@ -1070,9 +1094,13 @@ export function useSubmitImpl(key?: string): SubmitFunction {
           options as any
         ).submissionTrigger;
 
-        method = options.method || target.method;
-        action = options.action || target.action;
-        encType = options.encType || target.enctype;
+        method =
+          options.method || target.getAttribute("method") || defaultMethod;
+        action =
+          options.action || target.getAttribute("action") || defaultAction;
+        encType =
+          options.encType || target.getAttribute("enctype") || defaultEncType;
+
         formData = new FormData(target);
 
         if (submissionTrigger && submissionTrigger.name) {
@@ -1092,11 +1120,20 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         // <button>/<input type="submit"> may override attributes of <form>
 
         method =
-          options.method || target.getAttribute("formmethod") || form.method;
+          options.method ||
+          target.getAttribute("formmethod") ||
+          form.getAttribute("method") ||
+          defaultMethod;
         action =
-          options.action || target.getAttribute("formaction") || form.action;
+          options.action ||
+          target.getAttribute("formaction") ||
+          form.getAttribute("action") ||
+          defaultAction;
         encType =
-          options.encType || target.getAttribute("formenctype") || form.enctype;
+          options.encType ||
+          target.getAttribute("formenctype") ||
+          form.getAttribute("enctype") ||
+          defaultEncType;
         formData = new FormData(form);
 
         // Include name + value from a <button>
@@ -1132,7 +1169,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         }
       }
 
-      if (typeof window === "undefined") {
+      if (typeof document === "undefined") {
         throw new Error(
           "You are calling submit during the server render. " +
             "Try calling submit within a `useEffect` or callback instead."
@@ -1157,7 +1194,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         action: url.pathname + url.search,
         method: method.toUpperCase(),
         encType,
-        key: Math.random().toString(36).substr(2, 8)
+        key: Math.random().toString(36).substr(2, 8),
       };
 
       if (key) {
@@ -1165,7 +1202,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
           type: "fetcher",
           href: submission.action,
           submission,
-          key
+          key,
         });
       } else {
         setNextNavigationSubmission(submission);
@@ -1224,18 +1261,45 @@ export function useBeforeUnload(callback: () => any): void {
   }, [callback]);
 }
 
+export interface RouteMatch<T extends undefined | { [key: string]: any }> {
+  /**
+   * The id of the matched route
+   */
+  id: string;
+  /**
+   * The pathname of the matched route
+   */
+  pathname: string;
+  /**
+   * The dynamic parameters of the matched route
+   *
+   * @see https://remix.run/docs/api/conventions#dynamic-route-parameters
+   */
+  params: Params<string>;
+  /**
+   * Any route data associated with the matched route
+   */
+  data: RouteData;
+  /**
+   * The exported `handle` object of the matched route.
+   *
+   * @see https://remix.run/docs/api/conventions#handle
+   */
+  handle: T;
+}
+
 /**
  * Returns the current route matches on the page. This is useful for creating
  * layout abstractions with your current routes.
  *
  * @see https://remix.run/api/remix#usematches
  */
-export function useMatches<T = any>(): Match<T>[] {
+export function useMatches<T>(): RouteMatch<T>[] {
   let { matches, routeData, routeModules } = useRemixEntryContext();
 
   return React.useMemo(
     () =>
-      matches.map(match => {
+      matches.map((match) => {
         let { pathname, params } = match;
         return {
           id: match.route.id,
@@ -1244,19 +1308,11 @@ export function useMatches<T = any>(): Match<T>[] {
           data: routeData[match.route.id],
           // if the module fails to load or an error/response is thrown, the module
           // won't be defined.
-          handle: routeModules[match.route.id]?.handle
+          handle: routeModules[match.route.id]?.handle,
         };
       }),
     [matches, routeData, routeModules]
   );
-}
-
-export interface Match<T = any> {
-  id: string;
-  pathname: string;
-  params: Params<string>;
-  data: RouteData;
-  handle: T;
 }
 
 /**
@@ -1292,17 +1348,23 @@ export function useTransition(): Transition {
 }
 
 function createFetcherForm(fetchKey: string) {
-  return React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
-    // TODO: make ANOTHER form w/o a fetchKey prop
-    return <FormImpl {...props} ref={ref} fetchKey={fetchKey} />;
-  });
+  let FetcherForm = React.forwardRef<HTMLFormElement, FormProps>(
+    (props, ref) => {
+      // TODO: make ANOTHER form w/o a fetchKey prop
+      return <FormImpl {...props} ref={ref} fetchKey={fetchKey} />;
+    }
+  );
+  FetcherForm.displayName = "fetcher.Form";
+  return FetcherForm;
 }
 
 let fetcherId = 0;
 
-type FetcherWithComponents<TData> = Fetcher<TData> & {
-  Form: ReturnType<typeof createFetcherForm>;
-  submit: ReturnType<typeof useSubmitImpl>;
+export type FetcherWithComponents<TData> = Fetcher<TData> & {
+  Form: React.ForwardRefExoticComponent<
+    FormProps & React.RefAttributes<HTMLFormElement>
+  >;
+  submit: SubmitFunction;
   load: (href: string) => void;
 };
 
@@ -1329,7 +1391,7 @@ export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
       Form,
       submit,
       load,
-      ...fetcher
+      ...fetcher,
     }),
     [fetcher, Form, submit, load]
   );
@@ -1358,60 +1420,53 @@ export function useFetchers(): Fetcher[] {
 
 // Dead Code Elimination magic for production builds.
 // This way devs don't have to worry about doing the NODE_ENV check themselves.
+// If running an un-bundled server outside of `remix dev` you will still need
+// to set the REMIX_DEV_SERVER_WS_PORT manually.
 export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
-        port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002)
+        port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
+        nonce = undefined,
       }: {
         port?: number;
+        /**
+         * @deprecated this property is no longer relevant.
+         */
+        nonce?: string;
       }) {
-        let setupLiveReload = ((port: number) => {
-          let protocol = location.protocol === "https:" ? "wss:" : "ws:";
-          let host = location.hostname;
-          let socketPath = `${protocol}//${host}:${port}/socket`;
-
-          let ws = new WebSocket(socketPath);
-          ws.onmessage = message => {
-            let event = JSON.parse(message.data);
-            if (event.type === "LOG") {
-              console.log(event.message);
-            }
-            if (event.type === "RELOAD") {
-              console.log("💿 Reloading window ...");
-              window.location.reload();
-            }
-          };
-          ws.onerror = error => {
-            console.log("Remix dev asset server web socket error:");
-            console.error(error);
-          };
-        }).toString();
-
+        let js = String.raw;
         return (
           <script
+            nonce={nonce}
             suppressHydrationWarning
             dangerouslySetInnerHTML={{
-              __html: `(${setupLiveReload})(${JSON.stringify(port)})`
+              __html: js`
+                (() => {
+                  let protocol = location.protocol === "https:" ? "wss:" : "ws:";
+                  let host = location.hostname;
+                  let socketPath = protocol + "//" + host + ":" + ${String(
+                    port
+                  )} + "/socket";
+
+                  let ws = new WebSocket(socketPath);
+                  ws.onmessage = (message) => {
+                    let event = JSON.parse(message.data);
+                    if (event.type === "LOG") {
+                      console.log(event.message);
+                    }
+                    if (event.type === "RELOAD") {
+                      console.log("💿 Reloading window ...");
+                      window.location.reload();
+                    }
+                  };
+                  ws.onerror = (error) => {
+                    console.log("Remix dev asset server web socket error:");
+                    console.error(error);
+                  };
+                })();
+              `,
             }}
           />
         );
       };
-
-function useComposedRefs<RefValueType = any>(
-  ...refs: Array<React.Ref<RefValueType> | null | undefined>
-): React.RefCallback<RefValueType> {
-  return React.useCallback(node => {
-    for (let ref of refs) {
-      if (ref == null) continue;
-      if (typeof ref === "function") {
-        ref(node);
-      } else {
-        try {
-          (ref as React.MutableRefObject<RefValueType>).current = node!;
-        } catch (_) {}
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, refs);
-}

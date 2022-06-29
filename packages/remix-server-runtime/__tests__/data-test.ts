@@ -19,11 +19,11 @@ describe("loaders", () => {
           id: routeId,
           path: "/random",
           module: {
-            loader
-          }
-        }
+            loader,
+          },
+        },
       },
-      entry: { module: {} }
+      entry: { module: {} },
     } as unknown as ServerBuild;
 
     let handler = createRequestHandler(build, {});
@@ -32,8 +32,8 @@ describe("loaders", () => {
       "http://example.com/random?_data=routes/random&foo=bar",
       {
         headers: {
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
       }
     );
 
@@ -45,8 +45,8 @@ describe("loaders", () => {
     let loader = async ({ request }) => {
       throw new Response("null", {
         headers: {
-          "Content-type": "application/json"
-        }
+          "Content-type": "application/json",
+        },
       });
     };
 
@@ -57,11 +57,11 @@ describe("loaders", () => {
           id: routeId,
           path: "/random",
           module: {
-            loader
-          }
-        }
+            loader,
+          },
+        },
       },
-      entry: { module: {} }
+      entry: { module: {} },
     } as unknown as ServerBuild;
 
     let handler = createRequestHandler(build, {});
@@ -70,8 +70,8 @@ describe("loaders", () => {
       "http://example.com/random?_data=routes/random&foo=bar",
       {
         headers: {
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
       }
     );
 
@@ -91,11 +91,11 @@ describe("loaders", () => {
           id: routeId,
           path: "/random",
           module: {
-            loader
-          }
-        }
+            loader,
+          },
+        },
       },
-      entry: { module: {} }
+      entry: { module: {} },
     } as unknown as ServerBuild;
 
     let handler = createRequestHandler(build, {});
@@ -104,8 +104,8 @@ describe("loaders", () => {
       "http://example.com/random?_data=routes/random&index&foo=bar",
       {
         headers: {
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
       }
     );
 
@@ -125,11 +125,11 @@ describe("loaders", () => {
           id: routeId,
           path: "/random",
           module: {
-            loader
-          }
-        }
+            loader,
+          },
+        },
       },
-      entry: { module: {} }
+      entry: { module: {} },
     } as unknown as ServerBuild;
 
     let handler = createRequestHandler(build, {});
@@ -138,8 +138,8 @@ describe("loaders", () => {
       "http://example.com/random?_data=routes/random&index&foo=bar&index=test",
       {
         headers: {
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
       }
     );
 
@@ -160,18 +160,26 @@ describe("loaders", () => {
       route: {
         id: routeId,
         module: {
-          loader
-        }
-      }
+          loader,
+        },
+      },
     } as unknown as RouteMatch<ServerRoute>;
 
+    let possibleError: any;
     try {
-      await callRouteLoader({ request, match, loadContext: {} });
+      possibleError = await callRouteLoader({
+        request,
+        match,
+        loadContext: {},
+      });
     } catch (error) {
-      expect(error.message).toMatchInlineSnapshot(
-        '"You defined a loader for route \\"routes/random\\" but didn\'t return anything from your `loader` function. Please return a value or `null`."'
-      );
+      possibleError = error;
     }
+
+    expect(possibleError).toBeInstanceOf(Error);
+    expect(possibleError.message).toMatchInlineSnapshot(
+      '"You defined a loader for route \\"routes/random\\" but didn\'t return anything from your `loader` function. Please return a value or `null`."'
+    );
   });
 });
 
@@ -189,17 +197,25 @@ describe("actions", () => {
       route: {
         id: routeId,
         module: {
-          action
-        }
-      }
+          action,
+        },
+      },
     } as unknown as RouteMatch<ServerRoute>;
 
+    let possibleError: any;
     try {
-      await callRouteAction({ request, match, loadContext: {} });
+      possibleError = await callRouteAction({
+        request,
+        match,
+        loadContext: {},
+      });
     } catch (error) {
-      expect(error.message).toMatchInlineSnapshot(
-        '"You defined an action for route \\"routes/random\\" but didn\'t return anything from your `action` function. Please return a value or `null`."'
-      );
+      possibleError = error;
     }
+
+    expect(possibleError).toBeInstanceOf(Error);
+    expect(possibleError.message).toMatchInlineSnapshot(
+      '"You defined an action for route \\"routes/random\\" but didn\'t return anything from your `action` function. Please return a value or `null`."'
+    );
   });
 });

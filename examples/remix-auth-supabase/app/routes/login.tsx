@@ -1,5 +1,7 @@
-import type { ActionFunction, LoaderFunction } from "remix";
-import { Form, json, useLoaderData } from "remix";
+import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, useLoaderData } from "@remix-run/react";
+
 import { authenticator, sessionStorage, supabaseStrategy } from "~/auth.server";
 
 type LoaderData = {
@@ -9,13 +11,13 @@ type LoaderData = {
 export const action: ActionFunction = async ({ request }) => {
   await authenticator.authenticate("sb", request, {
     successRedirect: "/private",
-    failureRedirect: "/login"
+    failureRedirect: "/login",
   });
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
   await supabaseStrategy.checkSession(request, {
-    successRedirect: "/private"
+    successRedirect: "/private",
   });
 
   const session = await sessionStorage.getSession(

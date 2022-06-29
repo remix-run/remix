@@ -1,3 +1,5 @@
+import path from "path";
+import fs from "fs";
 import { builtinModules } from "module";
 import { isAbsolute, relative } from "path";
 import type { Plugin } from "esbuild";
@@ -5,8 +7,9 @@ import type { Plugin } from "esbuild";
 import type { RemixConfig } from "../../config";
 import {
   serverBuildVirtualModule,
-  assetsManifestVirtualModule
+  assetsManifestVirtualModule,
 } from "../virtualModules";
+import { createMatchPath } from "../utils/tsconfig";
 
 /**
  * A plugin responsible for resolving bare module ids based on server target.
@@ -15,15 +18,27 @@ import {
  */
 export function serverBareModulesPlugin(
   remixConfig: RemixConfig,
-  dependencies: Record<string, string>,
   onWarning?: (warning: string, key: string) => void
 ): Plugin {
+  let isDenoRuntime = remixConfig.serverBuildTarget === "deno";
+
+  // Resolve paths according to tsconfig paths property
+  let matchPath = isDenoRuntime ? undefined : createMatchPath();
+  function resolvePath(id: string) {
+    if (!matchPath) {
+      return id;
+    }
+    return (
+      matchPath(id, undefined, undefined, [".ts", ".tsx", ".js", ".jsx"]) || id
+    );
+  }
+
   return {
     name: "server-bare-modules",
     setup(build) {
       build.onResolve({ filter: /.*/ }, ({ importer, path }) => {
         // If it's not a bare module ID, bundle it.
-        if (!isBareModuleId(path)) {
+        if (!isBareModuleId(resolvePath(path))) {
           return undefined;
         }
 
@@ -33,7 +48,7 @@ export function serverBareModulesPlugin(
           return undefined;
         }
 
-        // These are our virutal modules, always bundle them because there is no
+        // These are our virtual modules, always bundle them because there is no
         // "real" file on disk to externalize.
         if (
           path === serverBuildVirtualModule.id ||
@@ -53,32 +68,26 @@ export function serverBareModulesPlugin(
         if (
           onWarning &&
           !isNodeBuiltIn(packageName) &&
-          !/\bnode_modules\b/.test(importer) &&
-          !builtinModules.includes(packageName) &&
-          !dependencies[packageName]
+          !/\bnode_modules\b/.test(importer)
         ) {
-          onWarning(
-            `The path "${path}" is imported in ` +
-              `${relative(process.cwd(), importer)} but ` +
-              `${packageName} is not listed in your package.json dependencies. ` +
-              `Did you forget to install it?`,
-            packageName
-          );
+          try {
+            require.resolve(packageName);
+          } catch (error) {
+            onWarning(
+              `The path "${path}" is imported in ` +
+                `${relative(process.cwd(), importer)} but ` +
+                `${packageName} is not listed in your package.json dependencies. ` +
+                `Did you forget to install it?`,
+              packageName
+            );
+          }
         }
 
         switch (remixConfig.serverBuildTarget) {
           // Always bundle everything for cloudflare.
           case "cloudflare-pages":
           case "cloudflare-workers":
-            return undefined;
-          // Map node externals to deno std libs and bundle everything else.
           case "deno":
-            if (isNodeBuiltIn(packageName)) {
-              return {
-                path: `https://deno.land/std/node/${packageName}/mod.ts`,
-                external: true
-              };
-            }
             return undefined;
         }
 
@@ -91,13 +100,22 @@ export function serverBareModulesPlugin(
           }
         }
 
+        if (
+          onWarning &&
+          !isNodeBuiltIn(packageName) &&
+          (!remixConfig.serverBuildTarget ||
+            remixConfig.serverBuildTarget === "node-cjs")
+        ) {
+          warnOnceIfEsmOnlyPackage(packageName, path, onWarning);
+        }
+
         // Externalize everything else if we've gotten here.
         return {
           path,
-          external: true
+          external: true,
         };
       });
-    }
+    },
   };
 }
 
@@ -113,5 +131,79 @@ function getNpmPackageName(id: string): string {
 }
 
 function isBareModuleId(id: string): boolean {
-  return !id.startsWith(".") && !id.startsWith("~") && !isAbsolute(id);
+  return !id.startsWith("node:") && !id.startsWith(".") && !isAbsolute(id);
+}
+
+function warnOnceIfEsmOnlyPackage(
+  packageName: string,
+  fullImportPath: string,
+  onWarning: (msg: string, key: string) => void
+) {
+  try {
+    let packageDir = resolveModuleBasePath(packageName, fullImportPath);
+    let packageJsonFile = path.join(packageDir, "package.json");
+
+    if (!fs.existsSync(packageJsonFile)) {
+      console.log(packageJsonFile, `does not exist`);
+      return;
+    }
+    let pkg = JSON.parse(fs.readFileSync(packageJsonFile, "utf-8"));
+
+    let subImport = fullImportPath.slice(packageName.length + 1);
+
+    if (pkg.type === "module") {
+      let isEsmOnly = true;
+      if (pkg.exports) {
+        if (!subImport) {
+          if (pkg.exports.require) {
+            isEsmOnly = false;
+          } else if (pkg.exports["."]?.require) {
+            isEsmOnly = false;
+          }
+        } else if (pkg.exports[`./${subImport}`]?.require) {
+          isEsmOnly = false;
+        }
+      }
+
+      if (isEsmOnly) {
+        onWarning(
+          `${packageName} is possibly an ESM only package and should be bundled with ` +
+            `"serverDependenciesToBundle in remix.config.js.`,
+          packageName + ":esm-only"
+        );
+      }
+    }
+  } catch (error: unknown) {
+    // module not installed
+    // we warned earlier if a package is used without being in package.json
+    // if the build fails, the reason will be right there
+  }
+}
+
+// https://github.com/nodejs/node/issues/33460#issuecomment-919184789
+// adapted to use the fullImportPath to resolve sub packages like @heroicons/react/solid
+function resolveModuleBasePath(packageName: string, fullImportPath: string) {
+  let moduleMainFilePath = require.resolve(fullImportPath);
+
+  let packageNameParts = packageName.split("/");
+
+  let searchForPathSection;
+
+  if (packageName.startsWith("@") && packageNameParts.length > 1) {
+    let [org, mod] = packageNameParts;
+    searchForPathSection = `node_modules${path.sep}${org}${path.sep}${mod}`;
+  } else {
+    let [mod] = packageNameParts;
+    searchForPathSection = `node_modules${path.sep}${mod}`;
+  }
+
+  let lastIndex = moduleMainFilePath.lastIndexOf(searchForPathSection);
+
+  if (lastIndex === -1) {
+    throw new Error(
+      `Couldn't resolve the base path of "${packageName}". Searched inside the resolved main file path "${moduleMainFilePath}" using "${searchForPathSection}"`
+    );
+  }
+
+  return moduleMainFilePath.slice(0, lastIndex + searchForPathSection.length);
 }

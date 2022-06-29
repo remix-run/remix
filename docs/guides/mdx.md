@@ -5,7 +5,7 @@ description: Remix makes integrating MDX into your project a breeze with built i
 
 # MDX
 
-While we believe that a strong separation of data and display is important, we understand that formats that mix the two such as [MDX](https://mdxjs.com/) (Markdown with embedded JSX components) have become a popular and powerful authoring format for developers.
+While we believe that a strong separation of data and display is important, we understand that formats that mix the two such as [MDX][mdx] (Markdown with embedded JSX components) have become a popular and powerful authoring format for developers.
 
 Remix supports using MDX in two ways:
 
@@ -30,7 +30,7 @@ headers:
 # Hello Content!
 ```
 
-The lines in the document above between the `---` are called "frontmatter". You can think of them like metadata for your document, formatted as [YAML](https://yaml.org/).
+The lines in the document above between the `---` are called "frontmatter". You can think of them like metadata for your document, formatted as [YAML][yaml].
 
 You can reference your frontmatter fields through the global `attributes` variable in your MDX:
 
@@ -76,7 +76,7 @@ When you `import` a `.mdx` file, the exports of the module are:
 ```tsx
 import Component, {
   attributes,
-  filename
+  filename,
 } from "./first-post.mdx";
 ```
 
@@ -87,7 +87,8 @@ The following example demonstrates how you might build a simple blog with MDX, i
 In `app/routes/index.jsx`:
 
 ```tsx
-import { Link, useLoaderData } from "remix";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { Link, useLoaderData } from "@remix-run/react";
 
 // Import all your posts from the app/routes/posts directory. Since these are
 // regular route modules, they will all be available for individual viewing
@@ -99,20 +100,20 @@ import * as postC from "./posts/c.md";
 function postFromModule(mod) {
   return {
     slug: mod.filename.replace(/\.mdx?$/, ""),
-    ...mod.attributes.meta
+    ...mod.attributes.meta,
   };
 }
 
-export function loader() {
+export async function loader() {
   // Return metadata about each of the posts for display on the index page.
   // Referencing the posts here instead of in the Index component down below
   // lets us avoid bundling the actual posts themselves in the bundle for the
   // index page.
-  return [
+  return json([
     postFromModule(postA),
     postFromModule(postB),
-    postFromModule(postC)
-  ];
+    postFromModule(postC),
+  ]);
 }
 
 export default function Index() {
@@ -120,7 +121,7 @@ export default function Index() {
 
   return (
     <ul>
-      {posts.map(post => (
+      {posts.map((post) => (
         <li key={post.slug}>
           <Link to={post.slug}>{post.title}</Link>
           {post.description ? (
@@ -133,7 +134,7 @@ export default function Index() {
 }
 ```
 
-Clearly this is not a scalable solution for a blog with thousands of posts. Realistically speaking, writing is hard, so if your blog starts to suffer from too much content, that's an awesome problem to have. If you get to 100 posts (congratulations!), we suggest you rethink your strategy and turn your posts into data stored in a database so that you don't have to rebuild and redeploy your blog every time you fix a typo. You can even keep using MDX with [MDX Bundler](https://github.com/kentcdodds/mdx-bundler).
+Clearly this is not a scalable solution for a blog with thousands of posts. Realistically speaking, writing is hard, so if your blog starts to suffer from too much content, that's an awesome problem to have. If you get to 100 posts (congratulations!), we suggest you rethink your strategy and turn your posts into data stored in a database so that you don't have to rebuild and redeploy your blog every time you fix a typo. You can even keep using MDX with [MDX Bundler][mdx-bundler].
 
 ## Advanced Configuration
 
@@ -141,19 +142,23 @@ If you wish to configure your own remark plugins you can do so through the `remi
 
 ```js
 const {
-  remarkMdxFrontmatter
+  remarkMdxFrontmatter,
 } = require("remark-mdx-frontmatter");
 
 // can be an sync / async function or an object
-exports.mdx = async filename => {
+exports.mdx = async (filename) => {
   const [rehypeHighlight, remarkToc] = await Promise.all([
-    import("rehype-highlight").then(mod => mod.default),
-    import("remark-toc").then(mod => mod.default)
+    import("rehype-highlight").then((mod) => mod.default),
+    import("remark-toc").then((mod) => mod.default),
   ]);
 
   return {
     remarkPlugins: [remarkToc],
-    rehypePlugins: [rehypeHighlight]
+    rehypePlugins: [rehypeHighlight],
   };
 };
 ```
+
+[mdx]: https://mdxjs.com
+[yaml]: https://yaml.org
+[mdx-bundler]: https://github.com/kentcdodds/mdx-bundler

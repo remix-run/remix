@@ -4,7 +4,7 @@ import { canUseDOM } from "~/utils";
 export function useFocusOnFormError({
   formError,
   fieldErrors,
-  formRef
+  formRef,
 }: {
   formError: any;
   fieldErrors: Record<string, any> | null | undefined;

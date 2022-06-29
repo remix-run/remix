@@ -1,13 +1,16 @@
-# Welcome to Remix!
+# @remix-run/deno
 
-[Remix](https://remix.run) is a web framework that helps you build better websites with React.
+This package contains a Deno module that provides abstractions for Remix.
 
-To get started, open a new shell and run:
+For more, see the [Remix docs](https://remix.run/docs/).
+
+## Install
+
+Installation is done via `npm`, but the code itself is Deno source code. Read
+more about
+[why we use `npm` to manage dependencies for Deno projects](https://github.com/remix-run/remix/blob/main/decisions/0001-use-npm-to-manage-npm-dependencies-for-deno-projects.md)
+in Remix.
 
 ```sh
-$ npx create-remix@latest
+npm install @remix-run/deno
 ```
-
-Then follow the prompts you see in your terminal.
-
-For more information about Remix, [visit remix.run](https://remix.run)!

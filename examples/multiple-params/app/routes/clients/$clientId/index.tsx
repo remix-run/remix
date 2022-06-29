@@ -1,5 +1,7 @@
-import { json, useLoaderData } from "remix";
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
+
 import type { Client } from "~/db";
 import { getClient } from "~/db";
 
@@ -10,13 +12,13 @@ type LoaderData = {
 export const loader: LoaderFunction = async ({ params }) => {
   if (!params.clientId) {
     throw new Response(`No client ID provided`, {
-      status: 404
+      status: 404,
     });
   }
   const client = await getClient(params.clientId);
   if (!client) {
     throw new Response(`No client found by ID ${params.clientId}`, {
-      status: 404
+      status: 404,
     });
   }
 
@@ -24,8 +26,8 @@ export const loader: LoaderFunction = async ({ params }) => {
     client: {
       id: client.id,
       email: client.email,
-      name: client.name
-    }
+      name: client.name,
+    },
   };
   return json(data);
 };

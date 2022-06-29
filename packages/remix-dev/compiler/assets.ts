@@ -48,8 +48,8 @@ export async function createAssetsManifest(
     imports: esbuild.Metafile["outputs"][string]["imports"]
   ): string[] {
     return imports
-      .filter(im => im.kind === "import-statement")
-      .map(im => resolveUrl(im.path));
+      .filter((im) => im.kind === "import-statement")
+      .map((im) => resolveUrl(im.path));
   }
 
   let entryClientFile = path.resolve(
@@ -73,12 +73,15 @@ export async function createAssetsManifest(
     if (!output.entryPoint) continue;
 
     let entryPointFile = path.resolve(
-      output.entryPoint.replace(/(^browser-route-module:|\?browser$)/g, "")
+      output.entryPoint.replace(
+        /(^browser-route-module:|^pnp:|\?browser$)/g,
+        ""
+      )
     );
     if (entryPointFile === entryClientFile) {
       entry = {
         module: resolveUrl(key),
-        imports: resolveImports(output.imports)
+        imports: resolveImports(output.imports),
       };
       // Only parse routes otherwise dynamic imports can fall into here and fail the build
     } else if (output.entryPoint.startsWith("browser-route-module:")) {
@@ -96,7 +99,7 @@ export async function createAssetsManifest(
         hasAction: sourceExports.includes("action"),
         hasLoader: sourceExports.includes("loader"),
         hasCatchBoundary: sourceExports.includes("CatchBoundary"),
-        hasErrorBoundary: sourceExports.includes("ErrorBoundary")
+        hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
       };
     }
   }
@@ -141,7 +144,7 @@ function optimizeRouteImports(
   }
 
   let routeImports = (route.imports || []).filter(
-    url => !parentImports.includes(url)
+    (url) => !parentImports.includes(url)
   );
 
   // Setting `route.imports = undefined` prevents `imports: []` from showing up

@@ -1,13 +1,15 @@
+import { test, expect } from "@playwright/test";
+
 import { createFixture, js } from "./helpers/create-fixture";
 import type { Fixture } from "./helpers/create-fixture";
 
-describe("Server Entry", () => {
+test.describe("Server Entry", () => {
   let fixture: Fixture;
 
-  const DATA_HEADER_NAME = "X-Macaroni-Salad";
-  const DATA_HEADER_VALUE = "Smoked Mozarella";
+  let DATA_HEADER_NAME = "X-Macaroni-Salad";
+  let DATA_HEADER_VALUE = "Smoked Mozarella";
 
-  beforeAll(async () => {
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/entry.server.jsx": js`
@@ -28,12 +30,12 @@ describe("Server Entry", () => {
           export default function () {
             return <div/>
           }
-        `
-      }
+        `,
+      },
     });
   });
 
-  it("can manipulate a data response", async () => {
+  test("can manipulate a data response", async () => {
     let response = await fixture.requestData("/", "routes/index");
     expect(response.headers.get(DATA_HEADER_NAME)).toBe(DATA_HEADER_VALUE);
   });

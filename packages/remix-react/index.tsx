@@ -1,24 +1,32 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
+export type {
+  Location,
+  NavigateFunction,
+  Params,
+  Path,
+} from "react-router-dom";
 export {
+  Outlet,
   useHref,
   useLocation,
   useNavigate,
   useNavigationType,
   useOutlet,
+  useOutletContext,
   useParams,
   useResolvedPath,
   useSearchParams,
-  Outlet,
-  useOutletContext
 } from "react-router-dom";
 
 export type {
+  FetcherWithComponents,
   FormProps,
+  RouteMatch,
   SubmitOptions,
   SubmitFunction,
   RemixNavLinkProps as NavLinkProps,
-  RemixLinkProps as LinkProps
+  RemixLinkProps as LinkProps,
 } from "./components";
 export {
   Meta,
@@ -37,7 +45,7 @@ export {
   useLoaderData,
   useActionData,
   useBeforeUnload,
-  useMatches
+  useMatches,
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";
@@ -52,3 +60,5 @@ export { ScrollRestoration } from "./scroll-restoration";
 
 export type { RemixServerProps } from "./server";
 export { RemixServer } from "./server";
+
+export type { Fetcher } from "./transition";

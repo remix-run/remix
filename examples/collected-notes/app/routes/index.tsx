@@ -1,6 +1,8 @@
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, Link, useLoaderData, useSearchParams } from "@remix-run/react";
 import type { Note, Site } from "collected-notes";
-import type { LoaderFunction } from "remix";
-import { Form, json, Link, useLoaderData, useSearchParams } from "remix";
+
 import { cn, sitePath } from "~/cn.server";
 
 type LoaderData = {
@@ -19,7 +21,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     hasSearch
       ? cn.search(sitePath, term, page, "public_site")
       : cn.latestNotes(sitePath, page, "public_site"),
-    cn.site(sitePath)
+    cn.site(sitePath),
   ]);
 
   return json<LoaderData>({ notes, site });
@@ -45,7 +47,7 @@ export default function Screen() {
       </Form>
 
       <ul>
-        {notes.map(note => {
+        {notes.map((note) => {
           return (
             <li key={note.id}>
               <a href={note.path}>{note.title}</a>
@@ -54,7 +56,7 @@ export default function Screen() {
                 {new Date(note.created_at).toLocaleDateString("en", {
                   year: "numeric",
                   month: "long",
-                  day: "2-digit"
+                  day: "2-digit",
                 })}
               </time>
             </li>

@@ -9,7 +9,7 @@ const {
   ensureCleanWorkingDirectory,
   getPackageVersion,
   prompt,
-  incrementRemixVersion
+  incrementRemixVersion,
 } = require("./utils");
 
 const releaseTypes = ["patch", "minor", "major"];
@@ -18,7 +18,7 @@ run(process.argv.slice(2)).then(
   () => {
     process.exit(0);
   },
-  error => {
+  (error) => {
     console.error(chalk.red(error));
     process.exit(1);
   }
@@ -120,6 +120,12 @@ async function run(args) {
  */
 async function initStart(givenVersion, git) {
   ensureDevBranch(git.initialBranch);
+
+  if (releaseTypes.includes(givenVersion)) {
+    givenVersion = `pre${givenVersion}`;
+  }
+
+  /** @type {string | null} */
   let nextVersion = semver.valid(givenVersion);
   if (nextVersion == null) {
     nextVersion = getNextVersion(
@@ -127,6 +133,7 @@ async function initStart(givenVersion, git) {
       givenVersion
     );
   }
+
   return nextVersion;
 }
 
@@ -138,9 +145,12 @@ async function initBump(git) {
   ensureLatestReleaseBranch(git.initialBranch, git);
   let versionFromBranch = getVersionFromReleaseBranch(git.initialBranch);
   let currentVersion = git.tags
-    .filter(tag => tag.startsWith("v" + versionFromBranch))
+    .filter((tag) => tag.startsWith("v" + versionFromBranch))
     .sort((a, b) => (a > b ? -1 : a < b ? 1 : 0))[0];
   let nextVersion = semver.inc(currentVersion, "prerelease");
+  if (!nextVersion) {
+    throw Error(`Invalid semver version: ${currentVersion}`);
+  }
   return nextVersion;
 }
 
@@ -191,7 +201,6 @@ Run ${chalk.bold(`git push origin ${releaseBranch} --follow-tags`)}`)
  */
 async function execBump(nextVersion, git) {
   ensureReleaseBranch(git.initialBranch);
-  await gitMerge("main", git.initialBranch, { pullFirst: true });
   await incrementRemixVersion(nextVersion);
   // TODO: After testing a few times, execute git push as a part of the flow and
   // remove the silly message
@@ -236,6 +245,7 @@ async function gitMerge(from, to, opts = {}) {
     summary = await git.merge([from]);
   } catch (err) {
     savedError = err;
+    // @ts-ignore
     summary = err.git;
   }
 
@@ -278,7 +288,7 @@ async function gitPull(branch) {
 }
 
 /**
- * @param {string} currentVersion
+ * @param {string | undefined} currentVersion
  * @param {string} givenVersion
  * @param {string | undefined} [prereleaseId]
  */
@@ -307,7 +317,7 @@ function getCurrentBranch() {
  */
 function hasMergeConflicts(output) {
   let lines = output.trim().split("\n");
-  return lines.some(line => /^CONFLICT\s/.test(line));
+  return lines.some((line) => /^CONFLICT\s/.test(line));
 }
 
 /**
@@ -316,7 +326,7 @@ function hasMergeConflicts(output) {
  */
 function mergeFailed(output) {
   let lines = output.trim().split("\n");
-  return lines.some(line => /^Automatic merge failed;\s/.test(line));
+  return lines.some((line) => /^Automatic merge failed;\s/.test(line));
 }
 
 /**
@@ -364,8 +374,9 @@ function ensureReleaseBranch(branch) {
 function ensureLatestReleaseBranch(branch, git) {
   let versionFromBranch = ensureReleaseBranch(branch);
   let taggedVersions = git.tags
-    .filter(tag => /^v\d/.test(tag))
-    .sort(semver.compare)[0];
+    .filter((tag) => /^v\d/.test(tag))
+    .sort(semver.compare);
+
   let latestTaggedVersion = taggedVersions[taggedVersions.length - 1];
   if (semver.compare(latestTaggedVersion, versionFromBranch) > 0) {
     throw Error(
@@ -376,28 +387,35 @@ function ensureLatestReleaseBranch(branch, git) {
 
 /**
  * @param {string} branch
- * @returns {string | undefined}
+ * @returns {string}
  */
-const getVersionFromReleaseBranch = branch => branch.split("/")[1]?.slice(1);
+function getVersionFromReleaseBranch(branch) {
+  return branch.slice(branch.indexOf("-") + 2);
+}
 
 /**
  * @param {string} version
  */
-const getVersionTag = version => (version.startsWith("v") ? "" : "v") + version;
+function getVersionTag(version) {
+  return (version.startsWith("v") ? "" : "v") + version;
+}
 
 /**
  * @param {string} version
  */
-const getReleaseBranch = version =>
-  `release/${getVersionTag(
+function getReleaseBranch(version) {
+  return `release-${getVersionTag(
     version.includes("-") ? version.slice(0, version.indexOf("-")) : version
   )}`;
+}
 
 /**
  * @param {string[]} tags
  * @param {string} version
  */
-const versionExists = (tags, version) => tags.includes(getVersionTag(version));
+function versionExists(tags, version) {
+  return tags.includes(getVersionTag(version));
+}
 
 /**
  * @typedef {{ tags: string[]; initialBranch: string }} GitAttributes

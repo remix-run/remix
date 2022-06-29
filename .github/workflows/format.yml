@@ -1,4 +1,4 @@
-name: Format
+name: 👔 Format
 
 on:
   push:
@@ -12,26 +12,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Cancel Previous Runs
+      - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
 
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GH_BOT_TOKEN }}
+          token: ${{ secrets.FORMAT_PAT }}
 
-      - name: Use Node.js
-        uses: actions/setup-node@v2
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
         with:
-          node-version: 14
+          node-version-file: ".nvmrc"
+          cache: "yarn"
 
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
+      - name: 📥 Install deps
+        run: yarn --frozen-lockfile
 
-      - name: Format
-        run: npm run format --if-present
+      - name: 🔗 Convert Docs links to references
+        run: node scripts/markdown-references.mjs
 
-      - name: Commit
+      - name: 👔 Format
+        run: yarn format
+
+      - name: 🦕 Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
+      - name: 👔 Format Deno files
+        run: yarn format:deno
+
+      - name: 💪 Commit
         run: |
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
@@ -41,6 +53,6 @@ jobs:
             echo "💿 no formatting changed"
             exit 0
           fi
-          git commit -m "chore: format" -m "formatted $GITHUB_SHA"
+          git commit -m "chore: format"
           git push
           echo "💿 pushed formatting changes https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"

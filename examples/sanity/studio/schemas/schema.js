@@ -31,6 +31,6 @@ export default createSchema({
     plotSummary,
     plotSummaries,
     castMember,
-    crewMember
-  ])
+    crewMember,
+  ]),
 });

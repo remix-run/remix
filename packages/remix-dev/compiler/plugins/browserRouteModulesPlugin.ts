@@ -14,7 +14,7 @@ const browserSafeRouteExports: { [name: string]: boolean } = {
   handle: true,
   links: true,
   meta: true,
-  unstable_shouldReload: true
+  unstable_shouldReload: true,
 };
 
 /**
@@ -37,16 +37,16 @@ export function browserRouteModulesPlugin(
         new Map()
       );
 
-      build.onResolve({ filter: suffixMatcher }, args => {
+      build.onResolve({ filter: suffixMatcher }, (args) => {
         return {
           path: args.path,
-          namespace: "browser-route-module"
+          namespace: "browser-route-module",
         };
       });
 
       build.onLoad(
         { filter: suffixMatcher, namespace: "browser-route-module" },
-        async args => {
+        async (args) => {
           let theExports;
           let file = args.path.replace(suffixMatcher, "");
           let route = routesByFile.get(file);
@@ -56,28 +56,31 @@ export function browserRouteModulesPlugin(
 
             theExports = (
               await getRouteModuleExportsCached(config, route.id)
-            ).filter(ex => !!browserSafeRouteExports[ex]);
+            ).filter((ex) => !!browserSafeRouteExports[ex]);
           } catch (error: any) {
             return {
               errors: [
                 {
                   text: error.message,
-                  pluginName: "browser-route-module"
-                }
-              ]
+                  pluginName: "browser-route-module",
+                },
+              ],
             };
           }
-          let spec =
-            theExports.length > 0 ? `{ ${theExports.join(", ")} }` : "*";
-          let contents = `export ${spec} from ${JSON.stringify(file)};`;
+
+          let contents = "module.exports = {};";
+          if (theExports.length !== 0) {
+            let spec = `{ ${theExports.join(", ")} }`;
+            contents = `export ${spec} from ${JSON.stringify(file)};`;
+          }
 
           return {
             contents,
             resolveDir: path.dirname(file),
-            loader: "js"
+            loader: "js",
           };
         }
       );
-    }
+    },
   };
 }

@@ -1,5 +1,5 @@
+import { useMatches } from "@remix-run/react";
 import { useMemo } from "react";
-import { useMatches } from "remix";
 
 /**
  * This base hook is used in other hooks to quickly search for specific data
@@ -12,7 +12,7 @@ export function useMatchesData(
 ): Record<string, unknown> | undefined {
   const matchingRoutes = useMatches();
   const route = useMemo(
-    () => matchingRoutes.find(route => route.id === id),
+    () => matchingRoutes.find((route) => route.id === id),
     [matchingRoutes, id]
   );
   return route?.data;

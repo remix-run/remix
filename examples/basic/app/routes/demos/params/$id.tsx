@@ -1,5 +1,6 @@
-import { json, useCatch, useLoaderData } from "remix";
-import type { LoaderFunction, MetaFunction } from "remix";
+import type { LoaderFunction, MetaFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { useCatch, useLoaderData } from "@remix-run/react";
 
 // The `$` in route filenames becomes a pattern that's parsed from the URL and
 // passed to your loaders so you can look up data.
@@ -34,7 +35,7 @@ export const loader: LoaderFunction = async ({ params }) => {
   // but otherwise the record was found, user has access, so we can do whatever
   // else we needed to in the loader and return the data. (This is boring, we're
   // just gonna return the params.id).
-  return { param: params.id };
+  return json({ param: params.id });
 };
 
 export default function ParamDemo() {
@@ -75,6 +76,7 @@ export function CatchBoundary() {
           {caught.status} {caught.statusText}
         </p>
       );
+      break;
   }
 
   return (
@@ -107,6 +109,6 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 export const meta: MetaFunction = ({ data }) => {
   return {
-    title: data ? `Param: ${data.param}` : "Oops..."
+    title: data ? `Param: ${data.param}` : "Oops...",
   };
 };

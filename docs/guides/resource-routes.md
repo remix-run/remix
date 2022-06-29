@@ -21,8 +21,8 @@ If a route doesn't export a default component, it can be used as a Resource Rout
 For example, consider a UI Route that renders a report, note the link:
 
 ```tsx lines=[10-12] filename=app/routes/reports/$id.js
-export function loader({ params }) {
-  return getReport(params.id);
+export async function loader({ params }) {
+  return json(await getReport(params.id));
 }
 
 export default function Report() {
@@ -42,14 +42,14 @@ export default function Report() {
 It's linking to a PDF version of the page. To make this work we can create a Resource Route below it. Notice that it has no component: that makes it a Resource Route.
 
 ```tsx filename=app/routes/reports/$id/pdf.ts
-export function loader({ params }) {
+export async function loader({ params }) {
   const report = await getReport(params.id);
   const pdf = await generateReportPDF(report);
   return new Response(pdf, {
     status: 200,
     headers: {
-      "Content-Type": "application/pdf"
-    }
+      "Content-Type": "application/pdf",
+    },
   });
 }
 ```
@@ -75,10 +75,10 @@ app/routes/reports/$id/pdf.ts
 
 # with a file extension
 # /reports/123.pdf
-app/routes/reports/$id/[.pdf].ts
+app/routes/reports/$id[.pdf].ts
 
 # or like this, the resulting URL is the same
-app/routes/reports/$id.[.pdf].ts
+app/routes/reports/$id[.]pdf.ts
 ```
 
 ## Handling different request methods
@@ -86,9 +86,12 @@ app/routes/reports/$id.[.pdf].ts
 To handle `GET` requests export a loader function:
 
 ```ts
-import type { LoaderFunction } from "remix";
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
-export const loader: LoaderFunction = ({ request }) => {
+export const loader: LoaderFunction = async ({
+  request,
+}) => {
   // handle "GET" request
 
   return json({ success: true }, 200);
@@ -98,9 +101,11 @@ export const loader: LoaderFunction = ({ request }) => {
 To handle `POST`, `PUT`, `PATCH` or `DELETE` requests export an action function:
 
 ```ts
-import type { ActionFunction } from "remix";
+import type { ActionFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 
-export const action: ActionFunction = ({ request }) => {
+export const action: ActionFunction = async ({
+  request,
+}) => {
   switch (request.method) {
     case "POST": {
       /* handle "POST" */
@@ -123,11 +128,12 @@ export const action: ActionFunction = ({ request }) => {
 Resource routes can be used to handle webhooks. For example, you can create a webhook that receives notifications from GitHub when a new commit is pushed to a repository:
 
 ```ts
-import { ActionFunction, json } from "remix";
+import type { ActionFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import crypto from "crypto";
 
 export const action: ActionFunction = async ({
-  request
+  request,
 }) => {
   if (request.method !== "POST") {
     return json({ message: "Method not allowed" }, 405);

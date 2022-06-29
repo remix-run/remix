@@ -12,7 +12,8 @@
  * Further improvements could be done by implementing ETags, but that is out of scope for this demo.
  */
 
-import type { LoaderFunction } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+
 import type { Params } from "react-router";
 
 import path from "path";
@@ -75,7 +76,7 @@ function streamingResize(
   height: number | undefined,
   fit: keyof FitEnum
 ) {
-  // create the sharp transform pipline
+  // create the sharp transform pipeline
   // https://sharp.pixelplumbing.com/api-resize
   // you can also add watermarks, sharpen, blur, etc.
   const sharpTransforms = sharp()
@@ -83,11 +84,11 @@ function streamingResize(
       width,
       height,
       fit,
-      position: sharp.strategy.attention // will try to crop the image and keep the most interesting parts
+      position: sharp.strategy.attention, // will try to crop the image and keep the most interesting parts
     })
     .jpeg({
       mozjpeg: true, // use mozjpeg defaults, = smaller images
-      quality: 80
+      quality: 80,
     });
   // sharp also has other image formats, just comment out .jpeg and make sure to change the Content-Type header below
   // .avif({
@@ -110,8 +111,8 @@ function streamingResize(
   return new Response(passthroughStream as any, {
     headers: {
       "Content-Type": "image/jpeg",
-      "Cache-Control": "public, max-age=31536000, immutable"
-    }
+      "Cache-Control": "public, max-age=31536000, immutable",
+    },
   });
 }
 
@@ -156,18 +157,18 @@ function handleError(error: unknown) {
       status: 404,
       headers: {
         "Content-Type": "text/plain",
-        "Cache-Control": "no-cache, no-store, must-revalidate"
-      }
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+      },
     });
   }
 
-  // if there is an error proccessing the image, we return a 500 error
+  // if there is an error processing the image, we return a 500 error
   return new Response(errorT.message, {
     status: 500,
     statusText: errorT.message,
     headers: {
       "Content-Type": "text/plain",
-      "Cache-Control": "no-cache, no-store, must-revalidate"
-    }
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+    },
   });
 }

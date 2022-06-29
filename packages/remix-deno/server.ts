@@ -1,10 +1,9 @@
+import * as path from "https://deno.land/std@0.128.0/path/mod.ts";
+import mime from "mime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
 import type { ServerBuild } from "@remix-run/server-runtime";
-// @ts-expect-error
-import * as path from "https://deno.land/std/path/mod.ts";
-import { getType } from "mime";
 
-function defaultCacheControl(url: URL, assetsPublicPath: string = "/build/") {
+function defaultCacheControl(url: URL, assetsPublicPath = "/build/") {
   if (url.pathname.startsWith(assetsPublicPath)) {
     return "public, max-age=31536000, immutable";
   } else {
@@ -15,21 +14,20 @@ function defaultCacheControl(url: URL, assetsPublicPath: string = "/build/") {
 export function createRequestHandler<Context = unknown>({
   build,
   mode,
-  getLoadContext
+  getLoadContext,
 }: {
   build: ServerBuild;
   mode?: string;
   getLoadContext?: (request: Request) => Promise<Context> | Context;
 }) {
-  let remixHandler = createRemixRequestHandler(build, {}, mode);
+  const handleRequest = createRemixRequestHandler(build, mode);
+
   return async (request: Request) => {
     try {
-      let loadContext = getLoadContext
-        ? await getLoadContext(request)
-        : undefined;
+      const loadContext = await getLoadContext?.(request);
 
-      return await remixHandler(request, loadContext);
-    } catch (e: any) {
+      return handleRequest(request, loadContext);
+    } catch (e) {
       console.error(e);
 
       return new Response("Internal Error", { status: 500 });
@@ -37,22 +35,28 @@ export function createRequestHandler<Context = unknown>({
   };
 }
 
+class FileNotFoundError extends Error {
+  constructor(filePath: string) {
+    super(`No such file or directory: ${filePath}`);
+  }
+}
+
 export async function serveStaticFiles(
   request: Request,
   {
     cacheControl,
     publicDir = "./public",
-    assetsPublicPath = "/build/"
+    assetsPublicPath = "/build/",
   }: {
     cacheControl?: string | ((url: URL) => string);
     publicDir?: string;
     assetsPublicPath?: string;
-  }
+  },
 ) {
-  let url = new URL(request.url);
+  const url = new URL(request.url);
 
-  let headers = new Headers();
-  let contentType = getType(url.pathname);
+  const headers = new Headers();
+  const contentType = mime.getType(url.pathname);
   if (contentType) {
     headers.set("Content-Type", contentType);
   }
@@ -65,9 +69,16 @@ export async function serveStaticFiles(
     headers.set("Cache-Control", defaultCacheControl(url, assetsPublicPath));
   }
 
-  let file = await Deno.readFile(path.join(publicDir, url.pathname));
-
-  return new Response(file, { headers });
+  const filePath = path.join(publicDir, url.pathname);
+  try {
+    const file = await Deno.readFile(filePath);
+    return new Response(file, { headers });
+  } catch (error) {
+    if (error.code === "EISDIR" || error.code === "ENOENT") {
+      throw new FileNotFoundError(filePath);
+    }
+    throw error;
+  }
 }
 
 export function createRequestHandlerWithStaticFiles<Context = unknown>({
@@ -76,8 +87,8 @@ export function createRequestHandlerWithStaticFiles<Context = unknown>({
   getLoadContext,
   staticFiles = {
     publicDir: "./public",
-    assetsPublicPath: "/build/"
-  }
+    assetsPublicPath: "/build/",
+  },
 }: {
   build: ServerBuild;
   mode?: string;
@@ -88,13 +99,13 @@ export function createRequestHandlerWithStaticFiles<Context = unknown>({
     assetsPublicPath?: string;
   };
 }) {
-  let remixHandler = createRequestHandler({ build, mode, getLoadContext });
+  const remixHandler = createRequestHandler({ build, mode, getLoadContext });
 
   return async (request: Request) => {
     try {
       return await serveStaticFiles(request, staticFiles);
-    } catch (error: any) {
-      if (error.code !== "EISDIR" && error.code !== "ENOENT") {
+    } catch (error) {
+      if (!(error instanceof FileNotFoundError)) {
         throw error;
       }
     }

@@ -1,5 +1,7 @@
-import type { LoaderFunction } from "remix";
-import { Form, json, useLoaderData } from "remix";
+import type { LoaderFunction } from "@remix-run/node";
+import { json } from "@remix-run/node";
+import { Form, useLoaderData } from "@remix-run/react";
+
 import { auth, sessionStorage } from "~/auth.server";
 
 type LoaderData = {
@@ -20,7 +22,7 @@ export default function Screen() {
 
   return (
     <Form method="post" action="/auth/github">
-      {error && <div>{error.message}</div>}
+      {error ? <div>{error.message}</div> : null}
       <button>Sign In with GitHub</button>
     </Form>
   );
