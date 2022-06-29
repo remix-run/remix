@@ -71,7 +71,14 @@ async function copyBuildToDist() {
   // Write an export shim for @remix-run/node/globals types
   copyQueue.push(
     (async () => {
-      let dest = "./build/node_modules/@remix-run/node/globals.d.ts";
+      let dest = path.join(
+        ".",
+        "build",
+        "node_modules",
+        "@remix-run",
+        "node",
+        "globals.d.ts"
+      );
       console.log(chalk.yellow(`  🛠  Writing globals.d.ts shim to ${dest}`));
       await fse.writeFile(dest, "export * from './dist/globals.d.ts';");
     })()
@@ -82,13 +89,13 @@ async function copyBuildToDist() {
   // with the package.json "exports" field
   let oneOffCopies = [
     // server-build.js built by rollup outside of dist/, need to copy to
-    // package dir outside of dist/
+    // packages/ dir outside of dist/
     [
       "build/node_modules/@remix-run/dev/server-build.js",
       "packages/remix-dev/server-build.js",
     ],
     // server-build.d.ts only built by tsc to dist/.  Copy outside of dist/
-    // both in build and package dir
+    // both in build/ and packages/ dir
     [
       "build/node_modules/@remix-run/dev/dist/server-build.d.ts",
       "build/node_modules/@remix-run/dev/server-build.d.ts",
@@ -97,8 +104,8 @@ async function copyBuildToDist() {
       "build/node_modules/@remix-run/dev/dist/server-build.d.ts",
       "packages/remix-dev/server-build.d.ts",
     ],
-    // globals.d.ts shim written outside of dist/ in build above, copy to
-    // package dir outside of dist/
+    // globals.d.ts shim written outside of dist/ in above, copy to packages/
+    // dir outside of dist/
     [
       "build/node_modules/@remix-run/node/globals.d.ts",
       "packages/remix-node/globals.d.ts",
