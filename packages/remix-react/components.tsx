@@ -1138,7 +1138,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
 
         // Include name + value from a <button>
         if (target.name) {
-          formData.set(target.name, target.value);
+          formData.append(target.name, target.value);
         }
       } else {
         if (isHtmlElement(target)) {

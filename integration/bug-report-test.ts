@@ -48,33 +48,27 @@ test.beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/index.jsx": js`
-        import { useLoaderData, useSubmit, Form } from "@remix-run/react";
+        import { json } from "@remix-run/node";
+        import { useLoaderData, Link } from "@remix-run/react";
 
-        export function loader({ request }) {
-          let url = new URL(request.url);
-          return url.searchParams.toString()
+        export function loader() {
+          return json("pizza");
         }
 
         export default function Index() {
-          let submit = useSubmit();
-          let handleClick = event => submit(nativeEvent.submitter || e.currentTarget)
           let data = useLoaderData();
           return (
-            <Form>
-              <input type="text" name="tasks" defaultValue="first" />
-              <input type="text" name="tasks" defaultValue="second" />
-
-              <button type="submit" name="tasks" value="">
-                Add Task
-              </button>
-
-              <button onClick={handleClick} name="tasks" value="third">
-                Prepare Third Task
-              </button>
-
-              <pre>{data}</pre>
-            </Form>
+            <div>
+              {data}
+              <Link to="/burgers">Other Route</Link>
+            </div>
           )
+        }
+      `,
+
+      "app/routes/burgers.jsx": js`
+        export default function Index() {
+          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -91,28 +85,22 @@ test.afterAll(async () => appFixture.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("<Form> submits the submitter's value appended to the form data", async ({
-  page,
-}) => {
+test("[description of what you expect it to do]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  await app.goto("/");
-  await app.clickElement("text=Add Task");
-  await page.waitForLoadState("load");
-  expect(await app.getHtml("pre")).toBe(
-    `<pre>tasks=first&amp;tasks=second&amp;tasks=</pre>`
-  );
-});
+  // You can test any request your app might get using `fixture`.
+  let response = await fixture.requestDocument("/");
+  expect(await response.text()).toMatch("pizza");
 
-test("`useSubmit()` returned function submits the submitter's value appended to the form data", async ({
-  page,
-}) => {
-  let app = new PlaywrightFixture(appFixture, page);
+  // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickElement("text=Prepare Third Task");
-  await page.waitForLoadState("load");
-  expect(await app.getHtml("pre")).toBe(
-    `<pre>tasks=first&amp;tasks=second&amp;tasks=third</pre>`
-  );
+  await app.clickLink("/burgers");
+  expect(await app.getHtml()).toMatch("cheeseburger");
+
+  // If you're not sure what's going on, you can "poke" the app, it'll
+  // automatically open up in your browser for 20 seconds, so be quick!
+  // await app.poke(20);
+
+  // Go check out the other tests to see what else you can do.
 });
 
 ////////////////////////////////////////////////////////////////////////////////
