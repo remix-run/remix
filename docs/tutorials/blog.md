@@ -694,7 +694,7 @@ export default function PostAdmin() {
 }
 ```
 
-You should recognize several of the things we're doing in there from what we've done so far. Note this time we did not want to use a relative links so our `to` prop begins with a leading slash "/posts/${post.slug}". With that, you should have a decent looking page with the posts on the left and a placeholder on the right.
+You should recognize several of the things we're doing in there from what we've done so far. Note this time we did not want to use a relative link so our `to` prop begins with a leading slash "/posts/${post.slug}". With that, you should have a decent looking page with the posts on the left and a placeholder on the right.
 Now, if you click on the Admin link, it'll take you to [http://localhost:3000/posts/admin][http-localhost-3000-posts-admin].
 
 ### Index Routes
