@@ -160,13 +160,11 @@ module.exports = {
 
 ### watchPaths
 
-A function for defining custom directories to watch while running [remix dev](https://remix.run/docs/en/v1/other-api/dev#remix-dev), in addition to [`appDirectory`](#appDirectory).
+A function for defining custom directories to watch while running [remix dev][remix-dev], in addition to [`appDirectory`][app-directory].
 
 ```tsx
 exports.watchPaths = async () => {
-  return [
-      "/some/path/*"
-  ];
+  return ["/some/path/*"];
 };
 ```
 
@@ -1470,3 +1468,5 @@ export default function Page() {
 [http-equiv-tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta#attr-http-equiv
 [error-boundaries]: https://reactjs.org/docs/error-boundaries.html
 [use-matches]: ./remix#usematches
+[remix-dev]: https://remix.run/docs/en/v1/other-api/dev#remix-dev
+[app-directory]: #appDirectory
