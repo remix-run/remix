@@ -8,7 +8,7 @@ order: 3
 
 Remix Stacks is a feature of the Remix CLI that allows you to generate a Remix project quickly and easily. There are several built-in and official stacks that are full blown applications. You can also make your own (read more below).
 
-[Read the feature announcement blog post](/blog/remix-stacks) and [watch Remix Stacks videos on YouTube](https://www.youtube.com/playlist?list=PLXoynULbYuEC8-gJCqyXo94RufAvSA6R3).
+[Read the feature announcement blog post][read-the-feature-announcement-blog-post] and [watch Remix Stacks videos on YouTube][watch-remix-stacks-videos-on-you-tube].
 
 The built-in official stacks come ready with common things you need for a production application including:
 
@@ -20,9 +20,9 @@ The built-in official stacks come ready with common things you need for a produc
 
 What you're left with is everything completely set up for you to just get to work building whatever amazing web experience you want to build with Remix. Here are the built-in official stacks:
 
-- [The Blues Stack](https://github.com/remix-run/blues-stack): Deployed to the edge (distributed) with a long-running Node.js server and PostgreSQL database. Intended for large and fast production-grade applications serving millions of users.
-- [The Indie Stack](https://github.com/remix-run/indie-stack): Deployed to a long-running Node.js server with a persistent SQLite database. This stack is great for websites with dynamic data that you control (blogs, marketing, content sites). It's also a perfect, low-complexity bootstrap for MVPs, prototypes, and proof-of-concepts that can later be updated to the Blues stack easily.
-- [The Grunge Stack](https://github.com/remix-run/grunge-stack): Deployed to a serverless function running Node.js with DynamoDB for persistance. Intended for folks who want to deploy a production-grade application on AWS infrastructure serving millions of users.
+- [The Blues Stack][the-blues-stack]: Deployed to the edge (distributed) with a long-running Node.js server and PostgreSQL database. Intended for large and fast production-grade applications serving millions of users.
+- [The Indie Stack][the-indie-stack]: Deployed to a long-running Node.js server with a persistent SQLite database. This stack is great for websites with dynamic data that you control (blogs, marketing, content sites). It's also a perfect, low-complexity bootstrap for MVPs, prototypes, and proof-of-concepts that can later be updated to the Blues stack easily.
+- [The Grunge Stack][the-grunge-stack]: Deployed to a serverless function running Node.js with DynamoDB for persistence. Intended for folks who want to deploy a production-grade application on AWS infrastructure serving millions of users.
 
 Yes, these are named after music genres. 🤘 Rock on.
 
@@ -36,7 +36,7 @@ The Remix CLI will help you get started with one of these built-in stacks, but i
 npx create-remix@latest --template my-username/my-repo
 ```
 
-Custom stacks give an enormous amount of power and flexibility and we hope you create your own that suites the preferences of you and your organization (feel free to fork ours!).
+Custom stacks give an enormous amount of power and flexibility, and we hope you create your own that suites the preferences of you and your organization (feel free to fork ours!).
 
 <docs-success>Yes, we do recommend that you name your own stack after a music sub-genre (not "rock" but "indie"!). In the future, we will have a page where you can list your open source stacks for others to learn and discover. For now, please add the <a href="https://github.com/topics/remix-stack"><code>remix-stack</code></a> tag to your repo!</docs-success>
 
@@ -51,10 +51,10 @@ The template option can be any of the following values:
 - A URL to a tarball (e.g. `https://example.com/remix-stack.tar.gz`)
 - A file URL (e.g. `file:///Users/michael/remix-stack.tar.gz`)
 
-Additionally, if your stack is in a private GitHub repo, you can set a GitHub token in the `GITHUB_TOKEN` environment variable:
+Additionally, if your stack is in a private GitHub repo, you can pass a GitHub token via the `--token` cli flag:
 
 ```
-GITHUB_TOKEN=yourtoken npx create-remix@latest --template your-private/repo
+npx create-remix@latest --template your-private/repo --token yourtoken
 ```
 
 The [token just needs `repo` access][repo access token].
@@ -86,3 +86,8 @@ If there's a `tsconfig.json` file in the root of the project, the Remix CLI will
 
 [repo access token]: https://github.com/settings/tokens/new?description=Remix%20Private%20Stack%20Access&scopes=repo
 [inquirer]: https://npm.im/inquirer
+[read-the-feature-announcement-blog-post]: /blog/remix-stacks
+[watch-remix-stacks-videos-on-you-tube]: https://www.youtube.com/playlist?list=PLXoynULbYuEC8-gJCqyXo94RufAvSA6R3
+[the-blues-stack]: https://github.com/remix-run/blues-stack
+[the-indie-stack]: https://github.com/remix-run/indie-stack
+[the-grunge-stack]: https://github.com/remix-run/grunge-stack

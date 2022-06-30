@@ -25,13 +25,15 @@ export async function getSession(request: Request) {
   return sessionStorage.getSession(cookie);
 }
 
-export async function getUserId(request: Request): Promise<string | undefined> {
+export async function getUserId(
+  request: Request
+): Promise<User["id"] | undefined> {
   let session = await getSession(request);
   let userId = session.get(USER_SESSION_KEY);
   return userId;
 }
 
-export async function getUser(request: Request): Promise<null | User> {
+export async function getUser(request: Request) {
   let userId = await getUserId(request);
   if (userId === undefined) return null;
 
@@ -44,7 +46,7 @@ export async function getUser(request: Request): Promise<null | User> {
 export async function requireUserId(
   request: Request,
   redirectTo: string = new URL(request.url).pathname
-): Promise<string> {
+) {
   let userId = await getUserId(request);
   if (!userId) {
     let searchParams = new URLSearchParams([["redirectTo", redirectTo]]);

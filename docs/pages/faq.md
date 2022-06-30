@@ -7,7 +7,7 @@ description: Frequently Asked Questions about Remix
 
 ## How can I have a parent route loader validate the user and protect all child routes?
 
-You can't 😅. During a client side transition, to make your app as speedy as possible, Remix will call all of your loaders _in parallel_, in separate fetch requests. Each one of them needs to have it's own authentication check.
+You can't 😅. During a client side transition, to make your app as speedy as possible, Remix will call all of your loaders _in parallel_, in separate fetch requests. Each one of them needs to have its own authentication check.
 
 This is probably not different than what you were doing before Remix, it might just be more obvious now. Outside of Remix, when you make multiple fetches to your "API Routes", each of those endpoints needs to validate the user session. In other words, Remix route loaders are their own "API Route" and must be treated as such.
 
@@ -17,7 +17,7 @@ We recommend you create a function that validates the user session that can be a
 import {
   createCookieSessionStorage,
   redirect,
-} from "@remix-run/{runtime}";
+} from "@remix-run/node"; // or "@remix-run/cloudflare"
 
 // somewhere you've got a session storage
 const { getSession } = createCookieSessionStorage();
@@ -64,7 +64,7 @@ export async function loader({ request }) {
 
 ## How do I handle multiple forms in one route?
 
-[Watch on YouTube](https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix)
+[Watch on YouTube][watch-on-you-tube]
 
 In HTML, forms can post to any URL with the action prop and the app will navigate there:
 
@@ -228,9 +228,12 @@ Again, `formData.getAll()` is often all you need, we encourage you to give it a 
 
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [query-string]: https://www.npmjs.com/package/query-string
+[ramda]: https://www.npmjs.com/package/ramda
 
 ## What's the difference between `CatchBoundary` & `ErrorBoundary`?
 
 Error boundaries render when your application throws an error and you had no clue it was going to happen. Most apps just go blank or have spinners spin forever. In remix the error boundary renders and you have granular control over it.
 
 Catch boundaries render when you decide in a loader that you can't proceed down the happy path to render the UI you want (auth required, record not found, etc.), so you throw a response and let some catch boundary up the tree handle it.
+
+[watch-on-you-tube]: https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix

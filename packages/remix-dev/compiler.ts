@@ -5,6 +5,7 @@ import * as fse from "fs-extra";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
+import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
 
 import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
@@ -23,6 +24,7 @@ import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlu
 import { serverEntryModulePlugin } from "./compiler/plugins/serverEntryModulePlugin";
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
 import { writeFileSafe } from "./compiler/utils/fs";
+import { urlImportsPlugin } from "./compiler/plugins/urlImportsPlugin";
 
 // When we build Remix, this shim file is copied directly into the output
 // directory in the same place relative to this file. It is eventually injected
@@ -347,22 +349,14 @@ async function createBrowserBuild(
   }
 
   let plugins = [
+    urlImportsPlugin(),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
+    // Must be placed before NodeModulesPolyfillPlugin, so yarn can resolve polyfills correctly
+    yarnPnpPlugin(),
     NodeModulesPolyfillPlugin(),
   ];
-
-  if (config.serverBuildTarget === "deno") {
-    // @ts-expect-error
-    let { cache } = await import("esbuild-plugin-cache");
-    plugins.unshift(
-      cache({
-        importmap: {},
-        directory: path.join(config.cacheDirectory, "http-import-cache"),
-      })
-    );
-  }
 
   return esbuild.build({
     entryPoints,
@@ -400,8 +394,6 @@ function createServerBuild(
   options: Required<BuildOptions> & { incremental?: boolean },
   assetsManifestPromiseRef: AssetsManifestPromiseRef
 ): Promise<esbuild.BuildResult> {
-  let dependencies = getAppDependencies(config);
-
   let stdin: esbuild.StdinOptions | undefined;
   let entryPoints: string[] | undefined;
 
@@ -418,13 +410,17 @@ function createServerBuild(
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
     config.serverBuildTarget ?? ""
   );
+  let isDenoRuntime = config.serverBuildTarget === "deno";
+
   let plugins: esbuild.Plugin[] = [
+    urlImportsPlugin(),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config),
     serverAssetsManifestPlugin(assetsManifestPromiseRef),
-    serverBareModulesPlugin(config, dependencies, options.onWarning),
+    serverBareModulesPlugin(config, options.onWarning),
+    yarnPnpPlugin(),
   ];
 
   if (config.serverPlatform !== "node") {
@@ -438,10 +434,22 @@ function createServerBuild(
       entryPoints,
       outfile: config.serverBuildPath,
       write: false,
-      conditions: isCloudflareRuntime ? ["worker"] : undefined,
+      conditions: isCloudflareRuntime
+        ? ["worker"]
+        : isDenoRuntime
+        ? ["deno", "worker"]
+        : undefined,
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
+      // The type of dead code elimination we want to do depends on the
+      // minify syntax property: https://github.com/evanw/esbuild/issues/672#issuecomment-1029682369
+      // Dev builds are leaving code that should be optimized away in the
+      // bundle causing server / testing code to be shipped to the browser.
+      // These are properly optimized away in prod builds today, and this
+      // PR makes dev mode behave closer to production in terms of dead
+      // code elimination / tree shaking is concerned.
+      minifySyntax: true,
       minify: options.mode === BuildMode.Production && isCloudflareRuntime,
       mainFields: isCloudflareRuntime
         ? ["browser", "module", "main"]

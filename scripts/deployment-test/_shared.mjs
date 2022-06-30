@@ -1,11 +1,11 @@
-import crypto from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
-import { execSync } from "child_process";
 import { sync as spawnSync } from "cross-spawn";
 import jsonfile from "jsonfile";
 import fetch from "node-fetch";
-import retry from "retry";
+import retry from "fetch-retry";
+
+let fetchRetry = retry(fetch);
 
 let __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -17,9 +17,7 @@ export let CYPRESS_SOURCE_DIR = path.join(__dirname, "cypress");
 export let CYPRESS_CONFIG = path.join(__dirname, "cypress.json");
 
 export function getAppName(target) {
-  let sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
-  let unique = crypto.randomBytes(2).toString("hex");
-  return `remix-${target}-${sha}-${unique}`;
+  return `remix-deployment-test-${target}`;
 }
 
 export async function updatePackageConfig(directory, transform) {
@@ -81,22 +79,12 @@ export function runCypress(dir, dev, url) {
 }
 
 export function checkUrl(url) {
-  let operation = retry.operation({ retries: 10 });
-
-  return new Promise((resolve, reject) => {
-    operation.attempt(async () => {
-      try {
-        let response = await fetch(url);
-        if (response.status >= 200 && response.status < 400) {
-          resolve(`${url} responded with status ${response.status}`);
-        } else {
-          throw new Error(`${url} responded with status ${response.status}`);
-        }
-      } catch (error) {
-        console.error(error);
-        reject(operation.retry(error));
-      }
-    });
+  return fetchRetry(url, {
+    retryOn: (attempt, error, response) => {
+      if (attempt > 10) return false;
+      if (response.status >= 200 && response.status < 400) return false;
+      return true;
+    },
   });
 }
 

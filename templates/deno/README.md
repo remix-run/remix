@@ -1,69 +1,128 @@
-# Remix Deno Template
+# Remix + Deno
 
-⚠️ EXPERIMENTAL ⚠️
+Welcome to the Deno template for Remix! 🦕
+
+For more, check out the [Remix docs](https://remix.run/docs).
 
 ## Install
 
 ```sh
-npx create-remix@latest --template <path/to/this/template>
+npx create-remix@latest --template deno
 ```
 
-## Scripts
+## Managing dependencies
 
-```sh
-npm run build
-```
+Read about
+[how we recommend to manage dependencies for Remix projects using Deno](https://github.com/remix-run/remix/blob/main/decisions/0001-use-npm-to-manage-npm-dependencies-for-deno-projects.md).
 
-```sh
-npm run start
-```
+- ✅ You should use `npm` to install NPM packages
+  ```sh
+  npm install react
+  ```
+  ```ts
+  import { useState } from "react";
+  ```
+- ✅ You may use inlined URL imports or
+  [deps.ts](https://deno.land/manual/examples/manage_dependencies#managing-dependencies)
+  for Deno modules.
+  ```ts
+  import { copy } from "https://deno.land/std@0.138.0/streams/conversion.ts";
+  ```
+- ❌ Do not use
+  [import maps](https://deno.land/manual/linking_to_external_code/import_maps).
+
+## Development
+
+From your terminal:
 
 ```sh
 npm run dev
 ```
 
-## 🚧 Under construction 🚧
+This starts your app in development mode, rebuilding assets on file changes.
 
-This section details temporary scaffolding for the Remix Deno template.
-All of this scaffolding is planned for removal at a later date.
+### Type hints
 
-### `package.json`
+This template provides type hinting to VS Code via a
+[dedicated import map](./.vscode/resolve_npm_imports.json).
 
-A `package.json` is included for now so that `remix` CLI (from `@remix-run/dev`) can run the Remix compiler.
+To get types in another editor, use an extension for Deno that supports import
+maps and point your editor to `./.vscode/resolve_npm_imports.json`.
 
-In the future, we could provide a stand-alone executable for the Remix compiler OR `npx remix`, and we would remove the `package.json` file from this Deno template.
+For more, see
+[our decision doc for interop between Deno and NPM](https://github.com/remix-run/remix/blob/main/decisions/0001-use-npm-to-manage-npm-dependencies-for-deno-projects.md#vs-code-type-hints).
 
-### Local `remix-deno` package
+## Production
 
-For now, we are inlining Remix's `@remix-run/deno` package into `remix-deno` to enable faster experimentation and development.
+First, build your app for production:
 
-In the future, this template would not include the `remix-deno` directory at all.
-Instead, users could import from `@remix-run/deno` (exact URL TBD).
+```sh
+npm run build
+```
 
-## 🐞 Known issues 🐞
+Then run the app in production mode:
 
-### `dev` does not live reload
+```sh
+npm start
+```
 
-Deno server is not currently configured to live reload when `--watch` detects changes, requiring a manual refresh in the browser for non-server changes (e.g. changing JSX content).
+## Deployment
 
-To enable live reload, `@remix-run/react` must be built with `NODE_ENV=development`.
-To do so with `esm.sh`, `?dev` must be added to all imports that depend on React.
-However, bundling the React development build for `esm.sh` (`https://esm.sh/react@17.0.2?dev`) runs into an [esbuild bug](https://github.com/evanw/esbuild/issues/2099).
+Building the Deno app (`npm run build`) results in two outputs:
 
-Need a better way to switch from development to production mode than adding/removing `?dev` for all React-dependent imports.
-Also, need esbuild bug to be resolved.
+- `build/` (server bundle)
+- `public/build/` (browser bundle)
 
-### Pinned React imports
+You can deploy these bundles to any host that runs Deno, but here we'll focus on
+deploying to [Deno Deploy](https://deno.com/deploy).
 
-For all React-related imports (including `@remix-run/*` imports), we append `?pin=v68` to the URL.
-This is the only reliable way we were able to guarantee that only one copy of React would be present in the browser.
+## Setting up Deno Deploy
 
-No plans on how to address this yet.
+1. [Sign up](https://dash.deno.com/signin) for Deno Deploy.
 
-### @remix-run/dev/server-build
+2. [Create a new Deno Deploy project](https://dash.deno.com/new) for this app.
 
-The `@remix-run/dev/server-build` import within `server.ts` (`import * as build from '@remix-run/dev/server-build'`) is a special import for the Remix compiler that points to the built server entry point (typically within `./build`).
+3. Replace `<your deno deploy project>` in the `deploy` script in `package.json`
+   with your Deno Deploy project name:
 
-The `vscode_deno` plugin complains about this import with a red squiggly underline as Deno cannot resolve this special import.
+```json
+{
+  "scripts": {
+    "deploy": "deployctl deploy --project=<your deno deploy project> --include=.cache,build,public ./build/index.js"
+  }
+}
+```
 
-No plans on how to address this yet.
+4. [Create a personal access token](https://dash.deno.com/account) for the Deno
+   Deploy API and export it as `DENO_DEPLOY_TOKEN`:
+
+```sh
+export DENO_DEPLOY_TOKEN=<your Deno Deploy API token>
+```
+
+You may want to add this to your `rc` file (e.g. `.bashrc` or `.zshrc`) to make
+it available for new terminal sessions, but make sure you don't commit this
+token into `git`. If you want to use this token in GitHub Actions, set it as a
+GitHub secret.
+
+5. Install the Deno Deploy CLI,
+   [`deployctl`](https://github.com/denoland/deployctl):
+
+```sh
+deno install --allow-read --allow-write --allow-env --allow-net --allow-run --no-check -r -f https://deno.land/x/deploy/deployctl.ts
+```
+
+6. If you have previously installed the Deno Deploy CLI, you should update it to
+   the latest version:
+
+```sh
+deployctl upgrade
+```
+
+### Deploying to Deno Deploy
+
+After you've set up Deno Deploy, run:
+
+```sh
+npm run deploy
+```
