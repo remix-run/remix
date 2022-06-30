@@ -80,7 +80,7 @@ async function copyBuildToDist() {
         "globals.d.ts"
       );
       console.log(chalk.yellow(`  🛠  Writing globals.d.ts shim to ${dest}`));
-      await fse.writeFile(dest, "export * from './dist/globals.d.ts';");
+      await fse.writeFile(dest, "export * from './dist/globals';");
     })()
   );
 
