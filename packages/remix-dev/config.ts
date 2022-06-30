@@ -151,7 +151,10 @@ export interface AppConfig {
   /**
    * A function for defining custom directories to watch while running `remix dev`, in addition to `appDirectory`.
    */
-  watchPaths?: () => Promise<string | string[]>;
+  watchPaths?:
+    | string
+    | string[]
+    | (() => Promise<string | string[]> | string | string[]);
 }
 
 /**
@@ -406,10 +409,16 @@ export async function readConfig(
   }
 
   let watchPaths: string[] = [];
-  if (appConfig.watchPaths) {
+  if (typeof appConfig.watchPaths === "function") {
     let directories = await appConfig.watchPaths();
     watchPaths = watchPaths.concat(
       Array.isArray(directories) ? directories : [directories]
+    );
+  } else if (appConfig.watchPaths) {
+    watchPaths = watchPaths.concat(
+      Array.isArray(appConfig.watchPaths)
+        ? appConfig.watchPaths
+        : [appConfig.watchPaths]
     );
   }
 
