@@ -151,7 +151,7 @@ export interface AppConfig {
   /**
    * A function for defining custom directories to watch while running `remix dev`, in addition to `appDirectory`.
    */
-  watchDirectories?: () => Promise<string | string[]>;
+  watchPaths?: () => Promise<string | string[]>;
 }
 
 /**
@@ -259,7 +259,7 @@ export interface RemixConfig {
   /**
    * A list of directories to watch.
    */
-   watchDirectories: string[];
+  watchPaths: string[];
 }
 
 /**
@@ -405,10 +405,12 @@ export async function readConfig(
     }
   }
 
-  let watchDirectories: string[] = [];
-  if (appConfig.watchDirectories) {
-    let directories = await appConfig.watchDirectories();
-    watchDirectories = watchDirectories.concat(Array.isArray(directories) ? directories : [directories]);
+  let watchPaths: string[] = [];
+  if (appConfig.watchPaths) {
+    let directories = await appConfig.watchPaths();
+    watchPaths = watchPaths.concat(
+      Array.isArray(directories) ? directories : [directories]
+    );
   }
 
   let serverBuildTargetEntryModule = `export * from ${JSON.stringify(
@@ -437,7 +439,7 @@ export async function readConfig(
     serverEntryPoint: customServerEntryPoint,
     serverDependenciesToBundle,
     mdx,
-    watchDirectories,
+    watchPaths,
   };
 }
 

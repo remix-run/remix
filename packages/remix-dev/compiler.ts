@@ -222,8 +222,8 @@ export async function watch(
     toWatch.push(config.serverEntryPoint);
   }
   
-  config.watchDirectories?.forEach((directory) => {
-    toWatch.push(directory);
+  config.watchPaths?.forEach((watchPath) => {
+    toWatch.push(watchPath);
   });
 
   let watcher = chokidar

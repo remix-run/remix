@@ -158,12 +158,12 @@ module.exports = {
 };
 ```
 
-### watchDirectories
+### watchPaths
 
 A function for defining custom directories to watch while running [remix dev](https://remix.run/docs/en/v1/other-api/dev#remix-dev), in addition to [`appDirectory`](#appDirectory).
 
 ```tsx
-exports.watchDirectories = async () => {
+exports.watchPaths = async () => {
   return [
       "/some/path/*"
   ];

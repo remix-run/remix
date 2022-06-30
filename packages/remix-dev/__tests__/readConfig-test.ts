@@ -48,7 +48,7 @@ describe("readConfig", () => {
         "serverMode": "production",
         "serverModuleFormat": "cjs",
         "serverPlatform": "node",
-        "watchDirectories": Array [],
+        "watchPaths": Array [],
       }
     `
     );
