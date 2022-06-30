@@ -158,6 +158,18 @@ module.exports = {
 };
 ```
 
+### watchPaths
+
+A function for defining custom directories to watch while running [remix dev](https://remix.run/docs/en/v1/other-api/dev#remix-dev), in addition to [`appDirectory`](#appDirectory).
+
+```tsx
+exports.watchPaths = async () => {
+  return [
+      "/some/path/*"
+  ];
+};
+```
+
 ## File Name Conventions
 
 There are a few conventions that Remix uses you should be aware of.
