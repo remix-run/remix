@@ -1446,7 +1446,7 @@ export default function Page() {
 [view-example-app]: https://github.com/remix-run/remix/tree/main/examples/multiple-params
 [use-params]: https://reactrouter.com/docs/en/v6/api#useparams
 [params]: #loader-params
-[routing-guide]: ../guides/routing.md
+[routing-guide]: ../guides/routing
 [root-route]: #root-layout-route
 [resource-route]: ../guides/resource-routes
 [server-entry-module]: #entryservertsx
