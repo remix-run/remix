@@ -15,7 +15,7 @@ import { URLSearchParams } from "url";
 import { isBinaryType } from "../binaryTypes";
 
 export function createRemixRequest(event: APIGatewayProxyEvent): NodeRequest {
-  let host = event.headers["x-forwarded-host"] || event.headers.host;
+  let host = event.headers["x-forwarded-host"] || event.headers.Host;
   let scheme = process.env.ARC_SANDBOX ? "http" : "https";
 
   let rawQueryString = new URLSearchParams(event.queryStringParameters as Record<string, string>).toString();
