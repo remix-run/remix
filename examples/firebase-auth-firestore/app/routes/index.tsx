@@ -34,18 +34,21 @@ export type ActionData = {
 export const action: ActionFunction = async ({ request }) => {
   const { uid } = await requireAuth(request);
   const form = await request.formData();
-  if (request.method === "POST") {
+  const action = form.get("action");
+  if (action === "create") {
     const title = form.get("title");
-    if (typeof title !== "string")
+    if (typeof title !== "string" || title.length === 0) {
       return json<ActionData>({ error: "title is required" }, { status: 400 });
+    }
 
     await addTodo(uid, title);
     return redirect("/");
   }
-  if (request.method === "DELETE") {
+  if (action === "delete") {
     const id = form.get("id");
-    if (typeof id !== "string")
+    if (typeof id !== "string") {
       return json<ActionData>({ error: "id is required" }, { status: 400 });
+    }
     await removeTodo(uid, id);
     return redirect("/");
   }
@@ -56,10 +59,12 @@ const TodoComponent: React.FC<{ id: string; title: string }> = (props) => {
   const fetcher = useFetcher();
   return (
     <li>
-      <fetcher.Form method="delete">
+      <fetcher.Form method="post">
         <input type="hidden" name="id" value={props.id} />
         <span>{props.title}</span>
-        <button type="submit">Delete</button>
+        <button type="submit" name="action" value="delete">
+          Delete
+        </button>
       </fetcher.Form>
     </li>
   );
@@ -82,7 +87,9 @@ export default function Index() {
       <Form method="post">
         <h2>Create new Todo:</h2>
         <input ref={ref} name="title" type="text" placeholder="Get Milk" />
-        <button type="submit">Create</button>
+        <button type="submit" name="action" value="create">
+          Create
+        </button>
       </Form>
       <ul>
         {data.todos.map((todo) => (

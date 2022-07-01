@@ -21,7 +21,7 @@ type ActionData = {
 };
 
 export const action: ActionFunction = async ({ request }) => {
-  // Using `FormData` with TypeScript can be a little inconvinient:
+  // Using `FormData` with TypeScript can be a little inconvenient:
   //
   //     const formData = await request.formData();
   //     const name = formData.get("name");

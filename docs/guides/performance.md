@@ -8,7 +8,7 @@ title: Performance
 
 Instead of prescribing a precise architecture with all of its constraints like SSG, Remix is designed to encourage you to leverage the performance characteristics of distributed computing.
 
-The fastest thing to send to a user is, of course, a static document on a CDN that's close to the user. Until recently, servers pretty much only ran in one region of the world, which made for slow responses everywhere else. This is perhaps one reason SSG gained so much popularity, it allowed developers to essentially "cache" their data into HTML documents and then distribute them across the world. It comes with a lot of tradeoffs too: build times, build complexity, duplicate websites for translations, can't use it for authenticated user experiences, can't use it for very large and dynamic data sources (like our project [unpkg.com](https://unpkg.com)!) to name a few.
+The fastest thing to send to a user is, of course, a static document on a CDN that's close to the user. Until recently, servers pretty much only ran in one region of the world, which made for slow responses everywhere else. This is perhaps one reason SSG gained so much popularity, it allowed developers to essentially "cache" their data into HTML documents and then distribute them across the world. It comes with a lot of tradeoffs too: build times, build complexity, duplicate websites for translations, can't use it for authenticated user experiences, can't use it for very large and dynamic data sources (like our project [unpkg.com][unpkg-com]!) to name a few.
 
 ## The Edge
 
@@ -22,7 +22,7 @@ With distributed servers and databases running at the edge, it's now possible to
 
 This very website has a time to first byte that's hard to beat. For most people in the world it's under 100ms. We can fix a typo in the docs and within a minute or two the site is updated across the world without a rebuild, without a redeploy, and without HTTP caching.
 
-We accomplished this with distributed systems. The app runs in several regions on [Fly](https://fly.io) around the world so it's close to you. Each instance has its own SQLite database. When the app boots, it fetches tarballs from the Remix source repository on GitHub, processes the markdown docs into HTML and then inserts them into the SQLite database.
+We accomplished this with distributed systems. The app runs in several regions on [Fly][fly] around the world so it's close to you. Each instance has its own SQLite database. When the app boots, it fetches tarballs from the Remix source repository on GitHub, processes the markdown docs into HTML and then inserts them into the SQLite database.
 
 The code involved is actually really similar to what a Gatsby site might do at build time in `gatsby-node.js` or `getStaticProps` in Next.js. The idea is to take the slow parts (fetching docs from GitHub, processing markdown) and cache it (SSG caches into HTML, this website caches into SQLite on the server).
 
@@ -32,11 +32,11 @@ But this is just one approach that we wanted to explore.
 
 ## Cloudflare Workers
 
-[Remix Cloudflare Workers Demo](https://remix-cloudflare-demo.jacob-ebey.workers.dev)
+[Remix Cloudflare Workers Demo][remix-cloudflare-workers-demo]
 
 Cloudflare has been pushing the boundaries of edge computing for a while now and Remix is positioned to take full advantage of it. You can see our demo's response times are the same as serving static files but the features it demonstrates are definitely not static!
 
-Not only does Cloudflare run the app close to the user, they also have persistent storage systems like [KV](https://developers.cloudflare.com/workers/learning/how-kv-works) and [Durable Objects](https://blog.cloudflare.com/introducing-workers-durable-objects) to allow SSG-level speed without the handcuffs of coupling data to deploys and bespoke incremental builder backends.
+Not only does Cloudflare run the app close to the user, they also have persistent storage systems like [KV][kv] and [Durable Objects][durable-objects] to allow SSG-level speed without the handcuffs of coupling data to deploys and bespoke incremental builder backends.
 
 There are other similar platforms that we've got plans to support soon.
 
@@ -44,6 +44,15 @@ There are other similar platforms that we've got plans to support soon.
 
 Here are some other technologies to help speed up your servers:
 
-- [FaunaDB](https://fauna.com/) - a distributed database that runs close to your users
-- [LRU Cache](https://www.npmjs.com/package/lru-cache) - in memory cache that automatically clears out more space when it gets full
-- [Redis](https://www.npmjs.com/package/redis) - tried and true server-side cache
+- [FaunaDB][fauna-db] - a distributed database that runs close to your users
+- [LRU Cache][lru-cache] - in memory cache that automatically clears out more space when it gets full
+- [Redis][redis] - tried and true server-side cache
+
+[unpkg-com]: https://unpkg.com
+[fly]: https://fly.io
+[remix-cloudflare-workers-demo]: https://remix-cloudflare-demo.jacob-ebey.workers.dev
+[kv]: https://developers.cloudflare.com/workers/learning/how-kv-works
+[durable-objects]: https://blog.cloudflare.com/introducing-workers-durable-objects
+[fauna-db]: https://fauna.com
+[lru-cache]: https://www.npmjs.com/package/lru-cache
+[redis]: https://www.npmjs.com/package/redis
