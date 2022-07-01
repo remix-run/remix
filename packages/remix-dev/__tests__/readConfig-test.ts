@@ -32,6 +32,7 @@ describe("readConfig", () => {
         "entryServerFile": "entry.server.tsx",
         "mdx": undefined,
         "publicPath": "/build/",
+        "relativeAssetsBuildDirectory": "public/build",
         "rootDirectory": Any<String>,
         "routes": Object {
           "root": Object {
