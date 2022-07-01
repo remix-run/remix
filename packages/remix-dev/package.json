@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/dev",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "description": "Dev tools and CLI for Remix",
   "homepage": "https://remix.run",
   "bugs": {
@@ -12,8 +12,10 @@
     "directory": "packages/remix-dev"
   },
   "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "bin": {
-    "remix": "cli.js"
+    "remix": "dist/cli.js"
   },
   "dependencies": {
     "@babel/core": "^7.18.2",
@@ -22,7 +24,8 @@
     "@babel/preset-typescript": "^7.17.12",
     "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
     "@npmcli/package-json": "^2.0.0",
-    "@remix-run/server-runtime": "1.6.1",
+    "@remix-run/server-runtime": "1.6.2",
+    "@yarnpkg/esbuild-plugin-pnp": "^2.0.0",
     "cacache": "^15.0.5",
     "chalk": "^4.1.2",
     "chokidar": "^3.5.1",
@@ -72,7 +75,22 @@
     "tiny-invariant": "^1.2.0",
     "type-fest": "^2.12.2"
   },
+  "peerDependencies": {
+    "@remix-run/serve": "1.6.2"
+  },
+  "peerDependenciesMeta": {
+    "@remix-run/serve": {
+      "optional": true
+    }
+  },
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "compiler/shims/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }

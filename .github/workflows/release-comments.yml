@@ -20,14 +20,12 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "yarn"
+          cache: "npm"
+          cache-dependency-path: scripts/release/package-lock.json
 
       - name: 📥 Install deps
-        # even though this is called "npm-install" it does use yarn to install
-        # because we have a yarn.lock and caches efficiently.
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: ./scripts/release
+        run: npm ci
+        working-directory: ./scripts/release
 
       - name: 📝 Comment on issues
         working-directory: ./scripts/release
