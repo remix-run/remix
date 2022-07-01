@@ -44,6 +44,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: ./scripts/deployment-test/package.json # no lockfile, key caching off package.json
 
       # some deployment targets require the latest version of npm
       # TODO: remove this eventually when the default version we get
@@ -53,10 +55,8 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: ./scripts/deployment-test
-          useLockFile: false
+        run: npm install
+        working-directory: ./scripts/deployment-test
 
       - name: 🚀 Deploy to Arc
         run: node ./arc.mjs
@@ -81,6 +81,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: ./scripts/deployment-test/package.json # no lockfile, key caching off package.json
 
       # some deployment targets require the latest version of npm
       # TODO: remove this eventually when the default version we get
@@ -90,10 +92,8 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: ./scripts/deployment-test
-          useLockFile: false
+        run: npm install
+        working-directory: ./scripts/deployment-test
 
       - name: 🚀 Deploy to Cloudflare Pages
         run: node ./cf-pages.mjs
@@ -119,6 +119,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: ./scripts/deployment-test/package.json # no lockfile, key caching off package.json
 
       # some deployment targets require the latest version of npm
       # TODO: remove this eventually when the default version we get
@@ -128,10 +130,8 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: ./scripts/deployment-test
-          useLockFile: false
+        run: npm install
+        working-directory: ./scripts/deployment-test
 
       - name: 🚀 Deploy to Cloudflare Workers
         run: node ./cf-workers.mjs
@@ -156,6 +156,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: ./scripts/deployment-test/package.json # no lockfile, key caching off package.json
 
       # some deployment targets require the latest version of npm
       # TODO: remove this eventually when the default version we get
@@ -165,10 +167,8 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: ./scripts/deployment-test
-          useLockFile: false
+        run: npm install
+        working-directory: ./scripts/deployment-test
 
       - name: 🦕 Install Deno
         uses: denoland/setup-deno@v1
@@ -198,6 +198,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: ./scripts/deployment-test/package.json # no lockfile, key caching off package.json
 
       # some deployment targets require the latest version of npm
       # TODO: remove this eventually when the default version we get
@@ -207,10 +209,8 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: ./scripts/deployment-test
-          useLockFile: false
+        run: npm install
+        working-directory: ./scripts/deployment-test
 
       - name: 🎈 Install the Fly CLI
         run: curl -L https://fly.io/install.sh | FLYCTL_INSTALL=/usr/local sh
@@ -236,6 +236,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: ./scripts/deployment-test/package.json # no lockfile, key caching off package.json
 
       # some deployment targets require the latest version of npm
       # TODO: remove this eventually when the default version we get
@@ -245,10 +247,8 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: ./scripts/deployment-test
-          useLockFile: false
+        run: npm install
+        working-directory: ./scripts/deployment-test
 
       - name: 🚀 Deploy to Netlify
         run: node ./netlify.mjs
@@ -271,6 +271,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: ./scripts/deployment-test/package.json # no lockfile, key caching off package.json
 
       # some deployment targets require the latest version of npm
       # TODO: remove this eventually when the default version we get
@@ -280,10 +282,8 @@ jobs:
         working-directory: ./scripts/deployment-test
 
       - name: 📥 Install deployment-test deps
-        uses: bahmutov/npm-install@v1
-        with:
-          working-directory: ./scripts/deployment-test
-          useLockFile: false
+        run: npm install
+        working-directory: ./scripts/deployment-test
 
       - name: 🚀 Deploy to Vercel
         run: node ./vercel.mjs

@@ -35,7 +35,7 @@ export async function createApp({
   remixVersion = remixDevPackageVersion,
   installDeps,
   useTypeScript = true,
-  githubToken = process.env.GITHUB_TOKEN,
+  githubToken,
   debug,
 }: CreateAppArgs) {
   /**
@@ -330,7 +330,7 @@ async function downloadAndExtractTarball(
     if (token) {
       throw Error(
         "🚨 There was a problem fetching the file from GitHub. The request " +
-          `responded with a ${response.status} status. Perhaps your GITHUB_TOKEN ` +
+          `responded with a ${response.status} status. Perhaps your \`--token\`` +
           "is expired or invalid."
       );
     }
@@ -639,10 +639,13 @@ export async function validateTemplate(
         method = "GET";
       }
       try {
-        response = await fetch(apiUrl, {
-          method,
-          headers: { Authorization: `token ${options?.githubToken}` },
-        });
+        let headers: Record<string, string> = {};
+        if (options?.githubToken) {
+          headers = {
+            Authorization: `token ${options.githubToken}`,
+          };
+        }
+        response = await fetch(apiUrl, { method, headers });
       } catch (_) {
         throw Error(
           "🚨 There was a problem fetching the template. Please ensure you " +
@@ -674,10 +677,9 @@ export async function validateTemplate(
           return;
         case 401:
           throw Error(
-            "🚨 The template could not be verified because you do are not " +
+            "🚨 The template could not be verified because you are not " +
               "authorized to access that repository. Please double check the " +
-              "access rights of the repo or consider setting a GITHUB_TOKEN " +
-              "environment variable."
+              "access rights of the repo or consider passing a `--token`"
           );
         case 403:
           throw Error(

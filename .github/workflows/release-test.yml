@@ -3,20 +3,17 @@ name: 🧪 Test
 on:
   push:
     branches:
-      - main
-      - dev
+      - release-*
+    tags-ignore:
+      - v*
     paths-ignore:
       - "docs/**"
       - "scripts/**"
       - "**/README.md"
-  pull_request:
-    paths-ignore:
-      - "docs/**"
-      - "**/*.md"
 
 jobs:
   test:
     if: github.repository == 'remix-run/remix'
     uses: remix-run/remix/.github/workflows/reusable-test.yml@main
     with:
-      node_version: '["latest"]'
+      node_version: "[14, 16, 18]"
