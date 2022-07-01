@@ -103,7 +103,7 @@
     "remark": "14.0.2",
     "remark-frontmatter": "4.0.1",
     "remark-gfm": "3.0.1",
-    "rollup": "^2.36.1",
+    "rollup": "^2.75.7",
     "rollup-plugin-copy": "^3.3.0",
     "semver": "^7.3.4",
     "simple-git": "^3.2.4",
