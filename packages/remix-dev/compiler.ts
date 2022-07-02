@@ -15,6 +15,7 @@ import type { AssetsManifest } from "./compiler/assets";
 import { createAssetsManifest } from "./compiler/assets";
 import { getAppDependencies } from "./compiler/dependencies";
 import { loaders } from "./compiler/loaders";
+import { browserBareModulesPlugin } from "./compiler/plugins/browserBareModulesPlugin";
 import { browserRouteModulesPlugin } from "./compiler/plugins/browserRouteModulesPlugin";
 import { emptyModulesPlugin } from "./compiler/plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./compiler/plugins/mdx";
@@ -360,6 +361,7 @@ async function createBrowserBuild(
     // Must be placed before NodeModulesPolyfillPlugin, so yarn can resolve polyfills correctly
     yarnPnpPlugin(),
     NodeModulesPolyfillPlugin(),
+    browserBareModulesPlugin(),
   ];
 
   return esbuild.build({

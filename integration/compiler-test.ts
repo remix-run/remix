@@ -87,6 +87,19 @@ test.describe("compiler", () => {
             return <div id="package-with-submodule">{submodule()}</div>;
           }
         `,
+        "app/routes/side-effects.jsx": js`
+          import { useLoaderData } from "@remix-run/react";
+          import sideeffects from "side-effects-pkg";
+
+          export function loader() {
+            return sideeffects();
+          }
+
+          export default function PackageWithSubModule() {
+            let loaderData = useLoaderData();
+            return <div id="side-effects">{loaderData}</div>;
+          }
+        `,
         "remix.config.js": js`
           let { getDependenciesToBundle } = require("@remix-run/dev");
           module.exports = {
@@ -154,6 +167,15 @@ test.describe("compiler", () => {
             return "package-with-submodule";
           }
         `,
+        "node_modules/side-effects-pkg/package.json": json({
+          main: "./index.js",
+        }),
+        "node_modules/side-effects-pkg/index.js": js`
+          console.log("THE SIDE EFFECTS PACKAGE");
+          module.exports = function sideEffects() {
+            return "side-effects-pkg";
+          }
+        `,
       },
     });
 
@@ -191,12 +213,26 @@ test.describe("compiler", () => {
     expect(await app.getHtml("#built-ins")).toBe(
       `<div id="built-ins">test${path.sep}file.txt</div>`
     );
-
+    
     let routeModule = await fixture.getBrowserAsset(
       fixture.build.assets.routes["routes/built-ins"].module
-    );
-    // does not include `import bla from "path"` in the output bundle
-    expect(routeModule).not.toMatch(/from\s*"path/);
+      );
+      // does not include `import bla from "path"` in the output bundle
+      expect(routeModule).not.toMatch(/from\s*"path/);
+    });
+    
+    test.only("removes side-effects from browser build when module is just used in the loader", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      let res = await app.goto("/side-effects", true);
+      expect(res.status()).toBe(200); // server rendered fine
+      
+      expect(await app.getHtml("#side-effects")).toBe(
+        `<div id="side-effects">side-effects-pkg</div>`
+      );
+      let routeModule = await fixture.getBrowserAsset(
+        fixture.build.assets.routes["routes/side-effects"].module
+      );
+      expect(routeModule).not.toMatch(/THE SIDE EFFECTS PACKAGE/);
   });
 
   test("bundles node built-ins polyfill for client bundle when used in client code", async ({
