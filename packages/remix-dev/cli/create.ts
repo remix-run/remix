@@ -639,13 +639,10 @@ export async function validateTemplate(
         method = "GET";
       }
       try {
-        let headers: Record<string, string> = {};
-        if (options?.githubToken) {
-          headers = {
-            Authorization: `token ${options.githubToken}`,
-          };
-        }
-        response = await fetch(apiUrl, { method, headers });
+        response = await fetch(apiUrl, {
+          method,
+          headers: { Authorization: `token ${options?.githubToken}` },
+        });
       } catch (_) {
         throw Error(
           "🚨 There was a problem fetching the template. Please ensure you " +
@@ -677,7 +674,7 @@ export async function validateTemplate(
           return;
         case 401:
           throw Error(
-            "🚨 The template could not be verified because you are not " +
+            "🚨 The template could not be verified because you do are not " +
               "authorized to access that repository. Please double check the " +
               "access rights of the repo or consider passing a `--token`"
           );

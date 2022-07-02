@@ -147,14 +147,6 @@ export interface AppConfig {
    * in a CJS build.
    */
   serverDependenciesToBundle?: Array<string | RegExp>;
-
-  /**
-   * A function for defining custom directories to watch while running `remix dev`, in addition to `appDirectory`.
-   */
-  watchPaths?:
-    | string
-    | string[]
-    | (() => Promise<string | string[]> | string | string[]);
 }
 
 /**
@@ -258,11 +250,6 @@ export interface RemixConfig {
    * in a CJS build.
    */
   serverDependenciesToBundle: Array<string | RegExp>;
-
-  /**
-   * A list of directories to watch.
-   */
-  watchPaths: string[];
 }
 
 /**
@@ -408,20 +395,6 @@ export async function readConfig(
     }
   }
 
-  let watchPaths: string[] = [];
-  if (typeof appConfig.watchPaths === "function") {
-    let directories = await appConfig.watchPaths();
-    watchPaths = watchPaths.concat(
-      Array.isArray(directories) ? directories : [directories]
-    );
-  } else if (appConfig.watchPaths) {
-    watchPaths = watchPaths.concat(
-      Array.isArray(appConfig.watchPaths)
-        ? appConfig.watchPaths
-        : [appConfig.watchPaths]
-    );
-  }
-
   let serverBuildTargetEntryModule = `export * from ${JSON.stringify(
     serverBuildVirtualModule.id
   )};`;
@@ -448,7 +421,6 @@ export async function readConfig(
     serverEntryPoint: customServerEntryPoint,
     serverDependenciesToBundle,
     mdx,
-    watchPaths,
   };
 }
 

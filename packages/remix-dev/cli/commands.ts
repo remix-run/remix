@@ -56,13 +56,7 @@ export async function create({
   spinner.clear();
 }
 
-type InitFlags = {
-  deleteScript?: boolean;
-};
-export async function init(
-  projectDir: string,
-  { deleteScript = true }: InitFlags = {}
-) {
+export async function init(projectDir: string) {
   let initScriptDir = path.join(projectDir, "remix.init");
   let initScript = path.resolve(initScriptDir, "index.js");
 
@@ -85,9 +79,7 @@ export async function init(
   try {
     await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
 
-    if (deleteScript) {
-      await fse.remove(initScriptDir);
-    }
+    await fse.remove(initScriptDir);
   } catch (error) {
     if (error instanceof Error) {
       error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
@@ -299,8 +291,7 @@ export async function dev(
             process.env.HOST ||
             Object.values(os.networkInterfaces())
               .flat()
-              .find((ip) => String(ip?.family).includes("4") && !ip?.internal)
-              ?.address;
+              .find((ip) => ip?.family === "IPv4" && !ip.internal)?.address;
 
           if (!address) {
             console.log(`Remix App Server started at http://localhost:${port}`);
