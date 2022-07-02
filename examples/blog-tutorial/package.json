@@ -2,10 +2,10 @@
   "private": true,
   "sideEffects": false,
   "scripts": {
-    "build": "run-s 'build:*'",
+    "build": "run-s \"build:*\"",
     "build:css": "npm run generate:css -- --minify",
     "build:remix": "remix build",
-    "dev": "run-p 'dev:*'",
+    "dev": "run-p \"dev:*\"",
     "dev:css": "npm run generate:css -- --watch",
     "dev:remix": "node --require ./mocks ./node_modules/.bin/remix dev",
     "format": "prettier --write .",
@@ -19,7 +19,7 @@
     "pretest:e2e:run": "npm run build",
     "test:e2e:run": "cross-env PORT=8811 start-server-and-test start:mocks http://localhost:8811 'cypress run'",
     "typecheck": "tsc -b && tsc -b cypress",
-    "validate": "run-p 'test -- --run' lint typecheck test:e2e:run"
+    "validate": "run-p \"test -- --run\" lint typecheck test:e2e:run"
   },
   "prettier": {},
   "eslintIgnore": [
