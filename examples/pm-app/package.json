@@ -13,7 +13,7 @@
     "db:check": "docker ps",
     "build:css": "postcss app/styles --base app/styles --dir app/dist/styles --env production",
     "build:remix": "remix build",
-    "build": "run-s build:*",
+    "build": "run-s \"build:*\"",
     "typecheck": "tsc -b",
     "deploy": "flyctl deploy",
     "start": "node server/index.js"
