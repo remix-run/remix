@@ -34,8 +34,8 @@ jobs:
         run: |
           npx -y create-remix@${{ inputs.version }} ${{ matrix.stack.name }} --template ${{ matrix.stack.repo }} --typescript --no-install
 
-      - name: ⎔ Setup dependency caching
-        uses: actions/setup-node@v3
+      - name: 📥 Install deps
+        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the create-remix step
         with:
           cache: npm
           cache-dependency-path: ${{ matrix.stack.name }}/package.json
@@ -89,8 +89,8 @@ jobs:
       - name: 📁 Unzip artifact
         run: unzip ${{ matrix.stack.name }}.zip
 
-      - name: ⎔ Setup node and dependency caching
-        uses: actions/setup-node@v3
+      - name: 📥 Install deps
+        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the unzip step
         with:
           node-version: 16
           cache: npm
@@ -131,8 +131,8 @@ jobs:
       - name: 📁 Unzip artifact
         run: unzip ${{ matrix.stack.name }}.zip
 
-      - name: ⎔ Setup node and dependency caching
-        uses: actions/setup-node@v3
+      - name: 📥 Install deps
+        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the unzip step
         with:
           node-version: 16
           cache: npm
@@ -173,8 +173,8 @@ jobs:
       - name: 📁 Unzip artifact
         run: unzip ${{ matrix.stack.name }}.zip
 
-      - name: ⎔ Setup node and dependency caching
-        uses: actions/setup-node@v3
+      - name: 📥 Install deps
+        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the unzip step
         with:
           node-version: 16
           cache: npm
@@ -218,8 +218,8 @@ jobs:
       - name: 📁 Unzip artifact
         run: unzip ${{ matrix.stack.name }}.zip
 
-      - name: ⎔ Setup node and dependency caching
-        uses: actions/setup-node@v3
+      - name: 📥 Install deps
+        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the unzip step
         with:
           node-version: 16
           cache: npm
