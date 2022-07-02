@@ -22,7 +22,11 @@ export function emptyModulesPlugin(
           // naming conventions with different semantics.
           resolved.startsWith(config.appDirectory)
         ) {
-          return { path: args.path, namespace: "empty-module" };
+          return {
+            path: args.path,
+            namespace: "empty-module",
+            sideEffects: false,
+          };
         }
       });
 

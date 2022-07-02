@@ -41,6 +41,7 @@ export function browserRouteModulesPlugin(
         return {
           path: args.path,
           namespace: "browser-route-module",
+          sideEffects: false,
         };
       });
 
