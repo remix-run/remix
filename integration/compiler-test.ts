@@ -221,7 +221,7 @@ test.describe("compiler", () => {
       expect(routeModule).not.toMatch(/from\s*"path/);
     });
     
-    test.only("removes side-effects from browser build when module is just used in the loader", async ({ page }) => {
+    test("removes side-effects from browser build when module is just used in the loader", async ({ page }) => {
       let app = new PlaywrightFixture(appFixture, page);
       let res = await app.goto("/side-effects", true);
       expect(res.status()).toBe(200); // server rendered fine
