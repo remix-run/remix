@@ -88,6 +88,12 @@ If you're planning on using CodeSandbox, you can use [the Basic example][the-bas
 npx create-remix@latest
 ```
 
+<docs-info>
+
+This may ask you whether you want to install the following packages `create-remix@latest`. To run the command, enter `y`. It will only be installed the first time to run the setup script.
+
+</docs-info>
+
 Once the setup script has run, it'll ask you a few questions. We'll call our app "remix-jokes", choose "Just the basics", then the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
 
 ```
