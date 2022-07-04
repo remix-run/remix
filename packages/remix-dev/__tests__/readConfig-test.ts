@@ -25,6 +25,7 @@ describe("readConfig", () => {
       Object {
         "appDirectory": Any<String>,
         "assetsBuildDirectory": Any<String>,
+        "browserBuildTarget": undefined,
         "cacheDirectory": Any<String>,
         "devServerBroadcastDelay": 0,
         "devServerPort": Any<Number>,

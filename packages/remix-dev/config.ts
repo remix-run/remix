@@ -1,6 +1,7 @@
 import * as path from "path";
 import * as fse from "fs-extra";
 import getPort from "get-port";
+import type { CommonOptions } from "esbuild";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -16,6 +17,8 @@ export interface RemixMdxConfig {
 export type RemixMdxConfigFunction = (
   filename: string
 ) => Promise<RemixMdxConfig | undefined> | RemixMdxConfig | undefined;
+
+export type BrowserBuildTarget = CommonOptions["target"];
 
 export type ServerBuildTarget =
   | "node-cjs"
@@ -76,6 +79,10 @@ export interface AppConfig {
    * "public/build".
    */
   assetsBuildDirectory?: string;
+  /**
+   * The target of the browser build. Documentation: https://esbuild.github.io/api/#target.
+   */
+  browserBuildTarget?: BrowserBuildTarget;
 
   /**
    * The path to the browser build, relative to remix.config.js. Defaults to
@@ -192,6 +199,11 @@ export interface RemixConfig {
   routes: RouteManifest;
 
   /**
+   * The target of the browser build.
+   */
+  browserBuildTarget?: BrowserBuildTarget;
+
+  /**
    * The path to the server build file. This file should end in a `.js`. Defaults
    * are based on {@link ServerConfig.serverBuildTarget}.
    */
@@ -294,6 +306,7 @@ export async function readConfig(
   }
 
   let customServerEntryPoint = appConfig.server;
+  let browserBuildTarget = appConfig.browserBuildTarget;
   let serverBuildTarget: ServerBuildTarget | undefined =
     appConfig.serverBuildTarget;
   let serverModuleFormat: ServerModuleFormat =
@@ -439,6 +452,7 @@ export async function readConfig(
     publicPath,
     rootDirectory,
     routes,
+    browserBuildTarget,
     serverBuildPath,
     serverMode,
     serverModuleFormat,

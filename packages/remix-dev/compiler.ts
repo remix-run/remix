@@ -370,6 +370,7 @@ async function createBrowserBuild(
     external: externals,
     inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
     loader: loaders,
+    target: config.browserBuildTarget,
     bundle: true,
     logLevel: "silent",
     splitting: true,
