@@ -1620,18 +1620,15 @@ import type {
   LinksFunction,
   LoaderFunction,
 } from "@remix-run/node";
-
 import type { Joke } from "@prisma/client";
-
 import { json } from "@remix-run/node";
-
 import {
   Link,
   Outlet,
   useLoaderData,
 } from "@remix-run/react";
 
-import { db } from "~/utils/db.server"; 
+import { db } from "~/utils/db.server";
 import stylesUrl from "~/styles/jokes.css";
 
 export const links: LinksFunction = () => {
