@@ -4,12 +4,11 @@
   "private": true,
   "scripts": {},
   "dependencies": {
-    "@architect/architect": "latest",
-    "@architect/destroy": "latest",
+    "@architect/destroy": "^3.0.3",
     "@architect/parser": "^5.0.2",
     "@architect/utils": "^3.0.4",
-    "@cloudflare/wrangler": "latest",
     "@iarna/toml": "^2.2.5",
+    "@npmcli/package-json": "^2.0.0",
     "@remix-run/dev": "1.6.2",
     "@testing-library/cypress": "^8.0.2",
     "aws-sdk": "^2.1055.0",
@@ -17,11 +16,8 @@
     "fetch-retry": "^5.0.2",
     "fs-extra": "^10.0.0",
     "netlify": "^10.1.1",
-    "netlify-cli": "latest",
     "node-fetch": "^2.6.1",
     "semver": "^7.3.5",
-    "start-server-and-test": "^1.14.0",
-    "vercel": "latest",
-    "wrangler": "latest"
+    "start-server-and-test": "^1.14.0"
   }
 }
