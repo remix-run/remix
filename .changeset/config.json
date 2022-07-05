@@ -8,20 +8,21 @@
       "@remix-run/dev",
       "@remix-run/eslint-config",
       "@remix-run/react",
-      "@remix-run/serve"
+      "@remix-run/serve",
+
+      "@remix-run/server-runtime",
+      "@remix-run/cloudflare",
+      "@remix-run/node",
+
+      "@remix-run/deno",
+      "@remix-run/cloudflare-pages",
+      "@remix-run/cloudflare-workers",
+      "@remix-run/express",
+      "@remix-run/netlify",
+      "@remix-run/vercel"
     ]
   ],
-  "linked": [
-    ["@remix-run/server-runtime", "@remix-run/cloudflare"],
-    ["@remix-run/server-runtime", "@remix-run/deno"],
-    ["@remix-run/server-runtime", "@remix-run/node"],
-    ["@remix-run/cloudflare", "@remix-run/cloudflare-pages"],
-    ["@remix-run/cloudflare", "@remix-run/cloudflare-workers"],
-    ["@remix-run/node", "@remix-run/architect"],
-    ["@remix-run/node", "@remix-run/express"],
-    ["@remix-run/node", "@remix-run/netlify"],
-    ["@remix-run/node", "@remix-run/vercel"]
-  ],
+  "linked": [],
   "access": "public",
   "baseBranch": "dev",
   "updateInternalDependencies": "patch",
