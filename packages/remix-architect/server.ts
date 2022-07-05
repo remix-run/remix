@@ -64,10 +64,14 @@ export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
   let isFormData = event.headers["content-type"]?.includes(
     "multipart/form-data"
   );
+  // Note: No current way to abort these for Architect, but our router expects
+  // requests to contain a signal so it can detect aborted requests
+  let controller = new AbortController();
 
   return new NodeRequest(url.href, {
     method: event.requestContext.http.method,
     headers: createRemixHeaders(event.headers, event.cookies),
+    signal: controller.signal,
     body:
       event.body && event.isBase64Encoded
         ? isFormData
