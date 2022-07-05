@@ -90,7 +90,7 @@ npx create-remix@latest
 
 <docs-info>
 
-This may ask you whether you want to install the following packages `create-remix@latest`. To run the command, enter `y`. It will only be installed the first time to run the setup script.
+This may ask you whether you want to install `create-remix@latest`. Enter `y`. It will only be installed the first time to run the setup script.
 
 </docs-info>
 
