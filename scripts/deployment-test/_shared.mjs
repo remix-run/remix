@@ -84,8 +84,9 @@ export function runCypress(dir, dev, url) {
 export function checkUrl(url) {
   let retries = 10;
 
+  // exponential backoff for retries, maxes out at 10 seconds
   function wait(attempt) {
-    return Math.pow(2, attempt) * 250; // 250, 500, 1000, 2000
+    return Math.min(Math.pow(2, attempt) * 250, 10_000); // 250, 500, 1000, 2000, 4000, 8000, 10000
   }
 
   return fetchRetry(url, {
