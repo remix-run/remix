@@ -14,10 +14,13 @@ jobs:
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
 
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
         with:
+          # checkout using a custom token so that we can push later on
           token: ${{ secrets.FORMAT_PAT }}
 
       - name: ⎔ Setup node

@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
@@ -80,6 +82,8 @@ jobs:
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
 
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
@@ -122,6 +126,8 @@ jobs:
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
 
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
@@ -164,6 +170,8 @@ jobs:
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
 
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
@@ -209,6 +217,8 @@ jobs:
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
 
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
