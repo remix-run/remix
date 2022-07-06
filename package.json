@@ -110,7 +110,7 @@
     "sort-package-json": "^1.54.0",
     "strip-indent": "^3.0.0",
     "to-vfile": "7.2.3",
-    "type-fest": "^2.11.1",
+    "type-fest": "^2.15.0",
     "typescript": "^4.5.5"
   },
   "engines": {
