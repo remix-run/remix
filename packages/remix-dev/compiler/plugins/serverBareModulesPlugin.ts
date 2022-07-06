@@ -76,7 +76,7 @@ export function serverBareModulesPlugin(
             onWarning(
               `The path "${path}" is imported in ` +
                 `${relative(process.cwd(), importer)} but ` +
-                `${packageName} was not found in your node_modules. ` +
+                `"${path}" was not found in your node_modules. ` +
                 `Did you forget to install it?`,
               packageName
             );
