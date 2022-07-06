@@ -1,6 +1,5 @@
-import React, { useContext, useEffect } from "react";
 import { withEmotionCache } from "@emotion/react";
-import { ThemeProvider } from "@theme-ui/core";
+import type { MetaFunction } from "@remix-run/node";
 import {
   Links,
   LiveReload,
@@ -9,7 +8,9 @@ import {
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
-import type { MetaFunction, LinksFunction } from "@remix-run/node"; // Depends on the runtime you choose
+import { ThemeProvider } from "@theme-ui/core";
+import type { ReactNode } from "react";
+import { useContext, useEffect } from "react";
 
 import { ServerStyleContext, ClientStyleContext } from "./styles/context";
 
@@ -19,10 +20,9 @@ export const meta: MetaFunction = () => ({
   viewport: "width=device-width,initial-scale=1",
 });
 
-interface DocumentProps {
-  children: React.ReactNode;
-}
-
+type DocumentProps = {
+  children: ReactNode;
+};
 const Document = withEmotionCache(
   ({ children }: DocumentProps, emotionCache) => {
     const serverStyleData = useContext(ServerStyleContext);
@@ -40,7 +40,7 @@ const Document = withEmotionCache(
       });
       // reset cache to reapply global styles
       clientStyleData?.reset();
-    }, []);
+    }, [clientStyleData, emotionCache.sheet]);
 
     return (
       <html lang="en">
@@ -55,6 +55,7 @@ const Document = withEmotionCache(
             />
           ))}
         </head>
+
         <body>
           {children}
           <ScrollRestoration />
