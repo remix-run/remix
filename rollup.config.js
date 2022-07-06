@@ -651,6 +651,7 @@ function getMagicExports(packageName) {
     "@remix-run/server-runtime": {
       values: ["createSession", "isCookie", "isSession", "json", "redirect"],
       types: [
+        "ActionArgs",
         "ActionFunction",
         "AppData",
         "AppLoadContext",
@@ -668,6 +669,7 @@ function getMagicExports(packageName) {
         "HtmlMetaDescriptor",
         "LinkDescriptor",
         "LinksFunction",
+        "LoaderArgs",
         "LoaderFunction",
         "MetaDescriptor",
         "MetaFunction",
