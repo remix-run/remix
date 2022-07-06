@@ -1339,7 +1339,7 @@ type NonJsonPrimitives = undefined | Function | symbol;
 type SerializeType<T> = T extends JsonPrimitives
   ? T
   : T extends NonJsonPrimitives
-  ? undefined
+  ? never
   : T extends { toJSON(): infer U }
   ? U
   : T extends []
