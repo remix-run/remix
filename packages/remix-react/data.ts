@@ -40,7 +40,7 @@ export async function fetchData(
 
   let init: RequestInit = submission
     ? getActionInit(submission, signal)
-    : { credentials: "same-origin", signal };
+    : { credentials: "same-origin", signal, referrer: document.referrer };
 
   let response = await fetch(url.href, init);
 
@@ -93,5 +93,6 @@ function getActionInit(
     signal,
     credentials: "same-origin",
     headers,
+    referrer: document.referrer,
   };
 }
