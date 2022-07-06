@@ -1,18 +1,18 @@
-import React, { createContext } from "react";
+import { createContext } from "react";
 
-export interface ServerStyleContextData {
+export type ServerStyleContextData = {
   key: string;
-  ids: Array<string>;
+  ids: string[];
   css: string;
-}
+};
 
 export const ServerStyleContext = createContext<
   ServerStyleContextData[] | null
 >(null);
 
-export interface ClientStyleContextData {
+export type ClientStyleContextData = {
   reset: () => void;
-}
+};
 
 export const ClientStyleContext = createContext<ClientStyleContextData | null>(
   null
