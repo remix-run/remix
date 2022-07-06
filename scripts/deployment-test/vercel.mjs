@@ -119,7 +119,7 @@ async function createAndDeployApp() {
   // deploy to vercel
   let deployCommand = spawnSync(
     "npx",
-    ["vercel", "deploy", "--prod"],
+    ["vercel", "deploy", "--prod", "--token", process.env.VERCEL_TOKEN],
     spawnOpts
   );
   if (deployCommand.status !== 0) {
