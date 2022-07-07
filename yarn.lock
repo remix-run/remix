@@ -2572,10 +2572,10 @@
   resolved "https://registry.npmjs.org/@xmldom/xmldom/-/xmldom-0.7.5.tgz"
   integrity sha512-V3BIhmY36fXZ1OtVcI9W+FxQqxVLsPKcNjWigIaa81dLC9IolJl5Mt4Cvhmr0flUnjSpTdrbMTSbXqYqV5dT6A==
 
-"@yarnpkg/esbuild-plugin-pnp@^2.0.0":
-  version "2.0.1"
-  resolved "https://registry.yarnpkg.com/@yarnpkg/esbuild-plugin-pnp/-/esbuild-plugin-pnp-2.0.1.tgz#120faad903d40e8f000ed3c9db9f9055c9612800"
-  integrity sha512-M8nYJr8S0riwy4Jgm3ja88m5ZfW6zZSV8fgLtO1mXpwTg0tD9ki1ShPOSm9DEbicc350TVf+k/jVNh6v1xApCw==
+"@yarnpkg/esbuild-plugin-pnp@3.0.0-rc.11":
+  version "3.0.0-rc.11"
+  resolved "https://registry.yarnpkg.com/@yarnpkg/esbuild-plugin-pnp/-/esbuild-plugin-pnp-3.0.0-rc.11.tgz#5cd829662b916a3dbbdc5a76913380f1913d2b65"
+  integrity sha512-uwTdgbw9XIisx7oxqHrX7GFjsObxo5EhUYGjIg17TdHyAqgwZV6Ca7rqTjKZryLFoxkCFyMloxkclyze0onpQQ==
   dependencies:
     tslib "^1.13.0"
 
