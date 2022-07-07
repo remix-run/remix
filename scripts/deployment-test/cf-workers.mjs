@@ -3,6 +3,8 @@ import { sync as spawnSync } from "cross-spawn";
 import fse from "fs-extra";
 import toml from "@iarna/toml";
 import { createApp } from "@remix-run/dev";
+import fetch from "node-fetch";
+import PackageJson from "@npmcli/package-json";
 
 import {
   addCypress,
@@ -33,16 +35,36 @@ async function createAndDeployApp() {
   await createNewApp();
 
   // validate dependencies are available
-  await validatePackageVersions(PROJECT_DIR);
+  let [valid, errors] = await validatePackageVersions(PROJECT_DIR);
+
+  if (!valid) {
+    console.error(errors);
+    process.exit(1);
+  }
+
+  let pkgJson = await PackageJson.load(PROJECT_DIR);
+  pkgJson.update({
+    devDependencies: {
+      ...pkgJson.content.devDependencies,
+      wrangler: "latest",
+    },
+  });
 
   // add cypress to the project
   await Promise.all([
     fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
     fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
+    pkgJson.save(),
   ]);
 
-  let spawnOpts = getSpawnOpts(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR, {
+    // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
+    CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
+    CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+    CLOUDFLARE_GLOBAL_API_KEY: process.env.CLOUDFLARE_GLOBAL_API_KEY,
+    CLOUDFLARE_EMAIL: process.env.CLOUDFLARE_EMAIL,
+  });
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
@@ -60,10 +82,13 @@ async function createAndDeployApp() {
   let url = `https://${APP_NAME}.remix--run.workers.dev`;
   console.log(`worker url: ${url}`);
 
+  spawnSync("npx", ["wrangler", "--version"], spawnOpts);
+
   // deploy the app
   let deployCommand = spawnSync("npx", ["wrangler", "publish"], spawnOpts);
   if (deployCommand.status !== 0) {
-    throw new Error(`Failed to deploy app: ${deployCommand.stderr}`);
+    console.error(deployCommand.error);
+    throw new Error("Cloudflare Workers deploy failed");
   }
 
   // run cypress against the deployed app
@@ -86,10 +111,18 @@ async function destroyApp() {
   console.log(`[DESTROY_APP]`, json);
 }
 
-createAndDeployApp()
-  .then(() => process.exit(0))
-  .catch((error) => {
+async function main() {
+  let exitCode;
+  try {
+    await createAndDeployApp();
+    exitCode = 0;
+  } catch (error) {
     console.error(error);
-    process.exit(1);
-  })
-  .finally(destroyApp);
+    exitCode = 1;
+  } finally {
+    await destroyApp();
+    process.exit(exitCode);
+  }
+}
+
+main();

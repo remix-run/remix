@@ -476,7 +476,30 @@ describe("the create command", () => {
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
-    // if you run `remix init` keep around the remix.init directory for future use
+    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
+  });
+
+  it("It keeps the `remix.init` script when using the `--no-delete` flag", async () => {
+    let projectDir = await getProjectDir("remix-init-manual");
+    await run([
+      "create",
+      projectDir,
+      "--template",
+      path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+      "--no-install",
+      "--typescript",
+    ]);
+    expect(output.trim()).toBe(
+      getOptOutOfInstallMessage() +
+        "\n\n" +
+        getSuccessMessage(path.join("<TEMP_DIR>", "remix-init-manual"))
+    );
+
+    output = "";
+    process.chdir(projectDir);
+    await run(["init", "--no-delete"]);
+
+    expect(output).toBe("");
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
   });
 
