@@ -90,7 +90,7 @@ export function createRemixRequest(req: VercelRequest): NodeRequest {
   let init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
-    signal: controller.signal,
+    signal: controller.signal as NodeRequestInit["signal"],
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
