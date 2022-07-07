@@ -125,7 +125,7 @@ export async function loadRouteModule(
   }
 
   try {
-    let routeModule = await import(route.module);
+    let routeModule = await import(/* webpackIgnore: true */ route.module);
     routeModulesCache[route.id] = routeModule;
     return routeModule;
   } catch (error) {
