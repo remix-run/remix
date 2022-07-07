@@ -20,9 +20,7 @@ export interface ThrownResponse<
   data: Data;
 }
 
-// must be type alias due to inference issues on interfaces
-// https://github.com/microsoft/TypeScript/issues/15300
-export type SerializedError = {
+export interface SerializedError {
   message: string;
   stack?: string;
-};
+}

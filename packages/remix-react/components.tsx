@@ -1320,54 +1320,7 @@ export function useMatches(): RouteMatch[] {
  *
  * @see https://remix.run/api/remix#useloaderdata
  */
-
-export type TypedResponse<T> = Response & {
-  json(): Promise<T>;
-};
-
-type DataFunction = (...args: any[]) => unknown; // matches any function
-type DataOrFunction = AppData | DataFunction;
-type JsonPrimitives =
-  | string
-  | number
-  | boolean
-  | String
-  | Number
-  | Boolean
-  | null;
-type NonJsonPrimitives = undefined | Function | symbol;
-type SerializeType<T> = T extends JsonPrimitives
-  ? T
-  : T extends NonJsonPrimitives
-  ? never
-  : T extends { toJSON(): infer U }
-  ? U
-  : T extends []
-  ? []
-  : T extends [unknown, ...unknown[]]
-  ? {
-      [k in keyof T]: T[k] extends NonJsonPrimitives
-        ? null
-        : SerializeType<T[k]>;
-    }
-  : T extends (infer U)[]
-  ? (U extends NonJsonPrimitives ? null : SerializeType<U>)[]
-  : T extends object
-  ? {
-      [k in keyof T as T[k] extends NonJsonPrimitives
-        ? never
-        : k]: SerializeType<T[k]>;
-    }
-  : never;
-
-export type UseDataFunctionReturn<T extends DataOrFunction> = T extends (
-  ...args: any[]
-) => infer Output
-  ? Awaited<Output> extends TypedResponse<infer U>
-    ? SerializeType<U>
-    : SerializeType<Awaited<ReturnType<T>>>
-  : SerializeType<Awaited<T>>;
-export function useLoaderData<T = AppData>(): UseDataFunctionReturn<T> {
+export function useLoaderData<T = AppData>(): T {
   return useRemixRouteContext().data;
 }
 
@@ -1376,9 +1329,7 @@ export function useLoaderData<T = AppData>(): UseDataFunctionReturn<T> {
  *
  * @see https://remix.run/api/remix#useactiondata
  */
-export function useActionData<T = AppData>():
-  | UseDataFunctionReturn<T>
-  | undefined {
+export function useActionData<T = AppData>(): T | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
   let { actionData } = transitionManager.getState();
