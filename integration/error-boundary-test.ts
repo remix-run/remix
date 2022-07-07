@@ -25,6 +25,9 @@ test.describe("ErrorBoundary", () => {
 
   let NOT_FOUND_HREF = "/not/found";
 
+  let META_ERROR = "/meta-error";
+  let LINKS_ERROR = "/links-error";
+
   // packages/remix-react/errorBoundaries.tsx
   let INTERNAL_ERROR_BOUNDARY_HEADING = "Application Error";
 
@@ -102,6 +105,12 @@ test.describe("ErrorBoundary", () => {
                 <Link to="${NO_BOUNDARY_RENDER}">
                   ${NO_BOUNDARY_RENDER}
                 </Link>
+                <Link to="${META_ERROR}">
+                  ${META_ERROR}
+                </Link>
+                <Link to="${LINKS_ERROR}">
+                  ${LINKS_ERROR}
+                </Link>
               </div>
             )
           }
@@ -158,6 +167,26 @@ test.describe("ErrorBoundary", () => {
           export function loader() {
             throw new Error("Kaboom!")
           }
+          export default function () {
+            return <div/>
+          }
+        `,
+
+        [`app/routes${LINKS_ERROR}.jsx`]: js`
+          export function links() {
+            throw new Error("Kaboom!")
+          }
+
+          export default function () {
+            return <div/>
+          }
+        `,
+
+        [`app/routes${META_ERROR}.jsx`]: js`
+          export function meta() {
+            throw new Error("Kaboom!")
+          }
+
           export default function () {
             return <div/>
           }
@@ -405,6 +434,36 @@ test.describe("ErrorBoundary", () => {
     await app.clickLink(HAS_BOUNDARY_RENDER);
     await page.waitForSelector(`text=${OWN_BOUNDARY_TEXT}`);
     expect(await app.getHtml("main")).toMatch(OWN_BOUNDARY_TEXT);
+  });
+
+  test("ssr renders error boundary when meta throws", async () => {
+    let res = await fixture.requestDocument(META_ERROR);
+    expect(res.status).toBe(500);
+    expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);
+  });
+
+  test("script transition renders error boundary when meta throws", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickLink(META_ERROR);
+    expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
+  });
+
+  test("ssr renders error boundary when links function throws", async () => {
+    let res = await fixture.requestDocument(LINKS_ERROR);
+    expect(res.status).toBe(500);
+    expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);
+  });
+
+  test("script transition renders error boundary when links function throws", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickLink(LINKS_ERROR);
+    expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
   test("uses correct error boundary on server action errors in nested routes", async ({
