@@ -107,7 +107,7 @@ export default function GlobalNav() {
     <nav>
       <Link to="/dashboard">Dashboard</Link>{" "}
       <Link to="/account">Account</Link>{" "}
-      <Link to="/support">Dashboard</Link>
+      <Link to="/support">Support</Link>
     </nav>
   );
 }

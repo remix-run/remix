@@ -2,10 +2,10 @@
   "private": true,
   "sideEffects": false,
   "scripts": {
-    "build": "run-s build:*",
+    "build": "run-s \"build:*\"",
     "build:css": "npm run generate:css -- --minify",
     "build:remix": "remix build",
-    "dev": "run-p dev:*",
+    "dev": "run-p \"dev:*\"",
     "dev:css": "npm run generate:css -- --watch",
     "dev:remix": "node --require ./mocks ./node_modules/.bin/remix dev",
     "format": "prettier --write .",

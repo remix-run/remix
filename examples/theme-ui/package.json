@@ -3,27 +3,26 @@
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
-    "dev": "run-p \"dev:*\"",
-    "dev:remix": "remix dev",
-    "dev:strapi": "cd strapi && npm run develop",
+    "dev": "remix dev",
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/node": "1.6.3",
-    "@remix-run/react": "1.6.3",
-    "@remix-run/serve": "1.6.3",
-    "marked": "^4.0.12",
+    "@emotion/cache": "^11.7.1",
+    "@emotion/react": "^11.8.1",
+    "@emotion/server": "^11.4.0",
+    "@remix-run/node": "1.6.2",
+    "@remix-run/react": "1.6.2",
+    "@remix-run/serve": "1.6.2",
+    "@theme-ui/core": "^0.14.6",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.6.3",
-    "@remix-run/eslint-config": "1.6.3",
-    "@types/marked": "^4.0.2",
+    "@remix-run/dev": "1.6.2",
+    "@remix-run/eslint-config": "1.6.2",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
     "eslint": "^8.10.0",
-    "npm-run-all": "^4.1.5",
     "typescript": "^4.6.2"
   },
   "engines": {
