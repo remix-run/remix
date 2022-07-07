@@ -8,10 +8,7 @@ const DEFAULT_BUILD_PATH = path.join(ROOT_DIR, "build");
 
 let activeOutputDir = DEFAULT_BUILD_PATH;
 if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
-  let appDir = path.join(
-    ROOT_DIR,
-    process.env.REMIX_LOCAL_BUILD_DIRECTORY
-  );
+  let appDir = path.join(ROOT_DIR, process.env.REMIX_LOCAL_BUILD_DIRECTORY);
   try {
     fse.readdirSync(path.join(appDir, "node_modules"));
   } catch (e) {
