@@ -1,14 +1,12 @@
 {
   "name": "remix-playground",
   "private": true,
-  "description": "",
-  "license": "",
   "sideEffects": false,
   "scripts": {
-    "build": "run-s build:*",
+    "build": "run-s \"build:*\"",
     "build:css": "npm run generate:css -- --minify",
     "build:remix": "node ./node_modules/@remix-run/dev/cli build",
-    "dev": "run-p dev:*",
+    "dev": "run-p \"dev:*\"",
     "dev:server": "cross-env NODE_ENV=development node --inspect --require ./node_modules/dotenv/config ./server.js",
     "dev:remix": "cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/cli watch",
     "dev:css": "cross-env NODE_ENV=development npm run generate:css -- --watch",
@@ -48,7 +46,7 @@
     "npm-run-all": "^4.1.5",
     "postcss": "^8.4.13",
     "prisma": "^3.13.0",
-    "tailwindcss": "^3.0.24",
+    "tailwindcss": "^3.1.0",
     "ts-node": "^10.7.0",
     "tsconfig-paths": "^4.0.0",
     "typescript": "^4.6.4"

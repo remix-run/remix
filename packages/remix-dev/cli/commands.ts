@@ -17,9 +17,10 @@ import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
-import { createApp } from "./create";
 import { loadEnv } from "../env";
 import { log } from "../logging";
+import { createApp } from "./create";
+import { getPreferredPackageManager } from "./getPreferredPackageManager";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 
 export * as migrate from "./migrate";
@@ -29,7 +30,6 @@ export async function create({
   projectDir,
   remixVersion,
   installDeps,
-  packageManager,
   useTypeScript,
   githubToken,
   debug,
@@ -38,7 +38,6 @@ export async function create({
   projectDir: string;
   remixVersion?: string;
   installDeps: boolean;
-  packageManager: "npm" | "yarn" | "pnpm";
   useTypeScript: boolean;
   githubToken?: string;
   debug?: boolean;
@@ -49,7 +48,6 @@ export async function create({
     projectDir,
     remixVersion,
     installDeps,
-    packageManager,
     useTypeScript,
     githubToken,
     debug,
@@ -58,35 +56,37 @@ export async function create({
   spinner.clear();
 }
 
-export async function init(
-  projectDir: string,
-  packageManager: "npm" | "yarn" | "pnpm"
-) {
+export async function init(projectDir: string) {
   let initScriptDir = path.join(projectDir, "remix.init");
   let initScript = path.resolve(initScriptDir, "index.js");
+
+  if (!(await fse.pathExists(initScript))) {
+    return;
+  }
+
   let initPackageJson = path.resolve(initScriptDir, "package.json");
-
   let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
+  let packageManager = getPreferredPackageManager();
 
-  if (await fse.pathExists(initScript)) {
-    if (await fse.pathExists(initPackageJson)) {
-      execSync(`${packageManager} install`, {
-        stdio: "ignore",
-        cwd: initScriptDir,
-      });
-    }
+  if (await fse.pathExists(initPackageJson)) {
+    execSync(`${packageManager} install`, {
+      cwd: initScriptDir,
+      stdio: "ignore",
+    });
+  }
 
-    let initFn = require(initScript);
-    try {
-      await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
-    } catch (error) {
-      if (error instanceof Error) {
-        error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
-          error.message
-        }`;
-      }
-      throw error;
+  let initFn = require(initScript);
+  try {
+    await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
+
+    await fse.remove(initScriptDir);
+  } catch (error) {
+    if (error instanceof Error) {
+      error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
+        error.message
+      }`;
     }
+    throw error;
   }
 }
 
@@ -237,7 +237,11 @@ export async function watch(
   });
 }
 
-export async function dev(remixRoot: string, modeArg?: string) {
+export async function dev(
+  remixRoot: string,
+  modeArg?: string,
+  portArg?: number
+) {
   let createApp: typeof createAppType;
   let express: typeof Express;
   try {
@@ -258,7 +262,11 @@ export async function dev(remixRoot: string, modeArg?: string) {
   await loadEnv(config.rootDirectory);
 
   let port = await getPort({
-    port: process.env.PORT ? Number(process.env.PORT) : makeRange(3000, 3100),
+    port: portArg
+      ? Number(portArg)
+      : process.env.PORT
+      ? Number(process.env.PORT)
+      : makeRange(3000, 3100),
   });
 
   if (config.serverEntryPoint) {

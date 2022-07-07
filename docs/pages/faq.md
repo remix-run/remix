@@ -64,7 +64,7 @@ export async function loader({ request }) {
 
 ## How do I handle multiple forms in one route?
 
-[Watch on YouTube](https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix)
+[Watch on YouTube][watch-on-you-tube]
 
 In HTML, forms can post to any URL with the action prop and the app will navigate there:
 
@@ -235,3 +235,5 @@ Again, `formData.getAll()` is often all you need, we encourage you to give it a 
 Error boundaries render when your application throws an error and you had no clue it was going to happen. Most apps just go blank or have spinners spin forever. In remix the error boundary renders and you have granular control over it.
 
 Catch boundaries render when you decide in a loader that you can't proceed down the happy path to render the UI you want (auth required, record not found, etc.), so you throw a response and let some catch boundary up the tree handle it.
+
+[watch-on-you-tube]: https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix

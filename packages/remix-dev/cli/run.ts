@@ -5,25 +5,11 @@ import meow from "meow";
 import inquirer from "inquirer";
 import semver from "semver";
 import fse from "fs-extra";
-import ora from "ora";
 
 import * as colors from "../colors";
 import * as commands from "./commands";
-import { convertTemplateToJavaScript } from "./convert-to-javascript";
 import { validateNewProjectPath, validateTemplate } from "./create";
-
-/**
- * Determine which package manager the user prefers.
- *
- * npm, Yarn and pnpm set the user agent environment variable
- * that can be used to determine which package manager ran
- * the command.
- */
-const getPreferredPackageManager = () =>
-  ((process.env.npm_config_user_agent ?? "").split("/")[0] || "npm") as
-    | "npm"
-    | "yarn"
-    | "pnpm";
+import { getPreferredPackageManager } from "./getPreferredPackageManager";
 
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
@@ -54,6 +40,7 @@ ${colors.heading("Options")}:
   --sourcemap         Generate source maps for production
 \`dev\` Options:
   --debug             Attach Node.js inspector
+  --port, -p          Choose the port from which to run your app
 \`routes\` Options:
   --json              Print the routes as JSON
 \`migrate\` Options:
@@ -68,7 +55,7 @@ ${colors.heading("Values")}:
   - ${colors.arg("remixPlatform")}     \`node\` or \`cloudflare\`
   - ${colors.arg(
     "migration"
-  )}         One of the choices from https://github.com/remix-run/remix/tree/main/packages/remix-dev/cli/migrate/migration-options
+  )}         One of the choices from https://github.com/remix-run/remix/blob/main/packages/remix-dev/cli/migrate/migrations/index.ts
 
 ${colors.heading("Creating a new project")}:
 
@@ -89,8 +76,7 @@ ${colors.heading("Creating a new project")}:
   $ remix create my-app --template https://example.com/remix-template.tar.gz
 
   To create a new project from a template in a private GitHub repo,
-  set the \`GITHUB_TOKEN\` environment variable to a personal access
-  token with access to that repo.
+  pass the \`token\` flag with a personal access token with access to that repo.
 
 ${colors.heading("Initialize a project:")}:
 
@@ -138,6 +124,15 @@ const npxInterop = {
   pnpm: "pnpm exec",
 };
 
+async function dev(
+  projectDir: string,
+  flags: { debug?: boolean; port?: number }
+) {
+  if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
+  if (flags.debug) inspector.open();
+  await commands.dev(projectDir, process.env.NODE_ENV, flags.port);
+}
+
 /**
  * Programmatic interface for running the Remix CLI with the given command line
  * arguments.
@@ -163,19 +158,18 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       install: { type: "boolean" },
       json: { type: "boolean" },
       migration: { type: "string", alias: "m" },
+      port: { type: "number", alias: "p" },
       remixVersion: { type: "string" },
       sourcemap: { type: "boolean" },
       template: { type: "string" },
       typescript: { type: "boolean" },
       version: { type: "boolean", alias: "v" },
+      token: { type: "string" },
     },
   });
 
   if (flags.help) showHelp();
   if (flags.version) showVersion();
-  if (flags.template === "typescript" || flags.template === "ts") {
-    flags.template = "remix-ts";
-  }
 
   let command = input[0];
 
@@ -191,9 +185,24 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       // inquirer step-by-step. This not only allows us to catch issues as early
       // as possible, but inquirer will allow users to retry input rather than
       // stop the process.
-      if (flags.template) {
-        await validateTemplate(flags.template);
+
+      let {
+        template,
+        token: githubToken,
+        install,
+        typescript,
+        remixVersion,
+        debug,
+      } = flags;
+
+      if (template === "typescript" || template === "ts") {
+        template = "remix-ts";
       }
+
+      if (flags.template) {
+        await validateTemplate(flags.template, { githubToken });
+      }
+
       if (projectPath) {
         await validateNewProjectPath(projectPath);
       }
@@ -242,7 +251,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         return;
       }
 
-      let pm = getPreferredPackageManager();
+      let packageManager = getPreferredPackageManager();
       let answers = await inquirer
         .prompt<{
           appType: "template" | "stack";
@@ -256,7 +265,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             message: "What type of app do you want to create?",
             default: "template",
             when() {
-              return flags.template === undefined;
+              return template === undefined;
             },
             choices: [
               {
@@ -300,17 +309,30 @@ export async function run(argv: string[] = process.argv.slice(2)) {
               return answers.appType === "template";
             },
             message:
-              "Where do you want to deploy? Choose Remix if you're unsure; " +
+              "Where do you want to deploy? Choose Remix App Server if you're unsure; " +
               "it's easy to change deployment targets.",
             loop: false,
             choices: templateChoices,
           },
           {
+            name: "useTypeScript",
+            type: "list",
+            message: "TypeScript or JavaScript?",
+            default: true,
+            when() {
+              return typescript === undefined;
+            },
+            choices: [
+              { name: "TypeScript", value: true },
+              { name: "JavaScript", value: false },
+            ],
+          },
+          {
             name: "install",
             type: "confirm",
-            message: `Do you want me to run \`${pm} install\`?`,
+            message: `Do you want me to run \`${packageManager} install\`?`,
             when() {
-              return flags.install === undefined;
+              return install === undefined;
             },
             default: true,
           },
@@ -322,7 +344,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
                 "🚨 Your terminal doesn't support interactivity; using default " +
                   "configuration.\n\n" +
                   "If you'd like to use different settings, try passing them " +
-                  `as arguments. Run \`${pm} create remix@latest --help\` to see ` +
+                  `as arguments. Run \`${packageManager} create remix@latest --help\` to see ` +
                   "available options."
               )
             );
@@ -336,51 +358,25 @@ export async function run(argv: string[] = process.argv.slice(2)) {
           throw error;
         });
 
-      let installDeps = flags.install !== false && answers.install !== false;
+      let installDeps = install !== false && answers.install !== false;
+      let useTypeScript = typescript ?? answers.useTypeScript;
 
       await commands.create({
-        appTemplate: flags.template || answers.appTemplate,
+        appTemplate: template || answers.appTemplate,
         projectDir,
-        remixVersion: flags.remixVersion,
+        remixVersion: remixVersion,
         installDeps,
-        packageManager: pm,
-        useTypeScript: flags.typescript !== false,
-        githubToken: process.env.GITHUB_TOKEN,
-        debug: flags.debug,
+        useTypeScript,
+        githubToken,
+        debug,
       });
-
-      let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
-
-      if (flags.typescript === undefined && isTypeScript) {
-        let { useTypeScript } = await inquirer.prompt<{
-          useTypeScript: boolean;
-        }>([
-          {
-            name: "useTypeScript",
-            type: "list",
-            message: "TypeScript or JavaScript?",
-            choices: [
-              { name: "TypeScript", value: true },
-              { name: "JavaScript", value: false },
-            ],
-          },
-        ]);
-
-        if (useTypeScript === false) {
-          let spinner = ora("Converting template to JavaScript…").start();
-          await convertTemplateToJavaScript(projectDir);
-          spinner.stop();
-          spinner.clear();
-        }
-      }
 
       let initScriptDir = path.join(projectDir, "remix.init");
       let hasInitScript = await fse.pathExists(initScriptDir);
       if (hasInitScript) {
         if (installDeps) {
           console.log("💿 Running remix.init script");
-          await commands.init(projectDir, pm);
-          await fse.remove(initScriptDir);
+          await commands.init(projectDir);
         } else {
           console.log();
           console.log(
@@ -388,7 +384,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
               "💿 You've opted out of installing dependencies so we won't run the " +
                 path.join("remix.init", "index.js") +
                 " script for you just yet. Once you've installed " +
-                `dependencies, you can run it manually with \`${npxInterop[pm]} remix init\``
+                `dependencies, you can run it manually with \`${npxInterop[packageManager]} remix init\``
             )
           );
           console.log();
@@ -414,10 +410,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     }
     case "init":
-      await commands.init(
-        input[1] || process.env.REMIX_ROOT || process.cwd(),
-        getPreferredPackageManager()
-      );
+      await commands.init(input[1] || process.env.REMIX_ROOT || process.cwd());
       break;
     case "routes":
       await commands.routes(input[1], flags.json ? "json" : "jsx");
@@ -435,23 +428,17 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     case "migrate": {
       let { projectDir, migrationId } = await commands.migrate.resolveInput(
-        {
-          projectId: input[1],
-          migrationId: flags.migration,
-        },
+        { migrationId: flags.migration, projectId: input[1] },
         flags
       );
-      await commands.migrate.run({ migrationId, projectDir, flags });
+      await commands.migrate.run({ flags, migrationId, projectDir });
       break;
     }
     case "dev":
-      if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
-      if (flags.debug) inspector.open();
-      await commands.dev(input[1], process.env.NODE_ENV);
+      await dev(input[1], flags);
       break;
     default:
       // `remix ./my-project` is shorthand for `remix dev ./my-project`
-      if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
-      await commands.dev(input[0], process.env.NODE_ENV);
+      await dev(input[0], flags);
   }
 }

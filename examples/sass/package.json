@@ -2,24 +2,24 @@
   "private": true,
   "sideEffects": false,
   "scripts": {
-    "build": "run-s build:*",
+    "build": "run-s \"build:*\"",
     "build:css": "sass styles/:app/styles/ --style=compressed",
     "build:remix": "remix build",
-    "dev": "run-p dev:*",
+    "dev": "run-p \"dev:*\"",
     "dev:css": "sass styles/:app/styles/ --watch ",
     "dev:remix": "remix dev",
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/node": "1.5.1",
-    "@remix-run/react": "1.5.1",
-    "@remix-run/serve": "1.5.1",
+    "@remix-run/node": "1.6.2",
+    "@remix-run/react": "1.6.2",
+    "@remix-run/serve": "1.6.2",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.5.1",
-    "@remix-run/eslint-config": "1.5.1",
+    "@remix-run/dev": "1.6.2",
+    "@remix-run/eslint-config": "1.6.2",
     "@types/react": "^17.0.39",
     "@types/react-dom": "^17.0.13",
     "eslint": "^8.10.0",

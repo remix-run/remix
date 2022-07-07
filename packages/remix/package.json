@@ -1,18 +1,28 @@
 {
   "name": "remix",
+  "version": "1.6.2",
   "description": "A framework for building better websites",
-  "version": "1.5.1",
   "homepage": "https://remix.run",
-  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
     "directory": "packages/remix"
   },
-  "bugs": {
-    "url": "https://github.com/remix-run/remix/issues"
+  "license": "MIT",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "module": "dist/esm/index.js",
+  "engines": {
+    "node": ">=14"
   },
-  "main": "index.js",
-  "module": "esm/index.js",
-  "sideEffects": false
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }

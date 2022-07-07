@@ -1,18 +1,20 @@
 {
   "name": "@remix-run/server-runtime",
+  "version": "1.6.2",
   "description": "Server runtime for Remix",
-  "version": "1.5.1",
-  "license": "MIT",
-  "main": "./index.js",
-  "module": "./esm/index.js",
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
     "directory": "packages/remix-server-runtime"
   },
-  "bugs": {
-    "url": "https://github.com/remix-run/remix/issues"
-  },
+  "license": "MIT",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "module": "dist/esm/index.js",
   "dependencies": {
     "@types/cookie": "^0.4.0",
     "@web3-storage/multipart-parser": "^1.0.0",
@@ -22,14 +24,22 @@
     "set-cookie-parser": "^2.4.8",
     "source-map": "^0.7.3"
   },
-  "peerDependencies": {
-    "react": ">=16.8",
-    "react-dom": ">=16.8"
-  },
   "devDependencies": {
     "@remix-run/web-file": "^3.0.2",
     "@types/jsesc": "^2.5.1",
     "@types/set-cookie-parser": "^2.4.1"
   },
-  "sideEffects": false
+  "peerDependencies": {
+    "react": ">=16.8",
+    "react-dom": ">=16.8"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }
