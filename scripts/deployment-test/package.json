@@ -17,7 +17,7 @@
     "fs-extra": "^10.0.0",
     "netlify": "^10.1.1",
     "node-fetch": "^2.6.1",
-    "semver": "^7.3.5",
+    "semver": "^7.3.7",
     "start-server-and-test": "^1.14.0"
   }
 }
