@@ -41,7 +41,11 @@
     "test:integration": "playwright test --config ./integration/playwright.config.ts",
     "posttest:integration": "rimraf ./.tmp/integration",
     "test:primary": "jest",
+    "changeset": "changeset",
+    "changeset:version": "changeset version",
+    "changeset:release": "changeset publish",
     "version": "node ./scripts/version.js",
+    "version:experimental": "node scripts ./scripts/version experimental",
     "watch": "rollup -c --watch --watch.onEnd=\"tsc -b && node scripts/copy-build-to-dist.mjs\""
   },
   "dependencies": {
@@ -51,6 +55,8 @@
     "@babel/preset-env": "^7.18.6",
     "@babel/preset-react": "^7.18.6",
     "@babel/preset-typescript": "^7.18.6",
+    "@changesets/changelog-github": "0.4.5",
+    "@changesets/cli": "^2.23.0",
     "@mcansh/remark-definition-links": "2.4.1",
     "@octokit/core": "^3.6.0",
     "@octokit/graphql": "^4.8.0",
