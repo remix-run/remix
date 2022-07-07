@@ -263,6 +263,7 @@ function getCliConfig({ packageName, version }) {
         extensions: [".ts"],
       }),
       nodeResolve({ extensions: [".ts"] }),
+      copyPublishFiles(packageName),
       copyToPlaygrounds(),
     ],
   };
