@@ -24,7 +24,7 @@
     "@babel/preset-typescript": "^7.18.6",
     "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
     "@npmcli/package-json": "^2.0.0",
-    "@remix-run/server-runtime": "^1.6.4",
+    "@remix-run/server-runtime": "1.6.4",
     "@yarnpkg/esbuild-plugin-pnp": "3.0.0-rc.11",
     "arg": "^5.0.1",
     "cacache": "^15.0.5",

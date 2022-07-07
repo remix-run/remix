@@ -15,7 +15,7 @@
   "typings": "dist/index.d.ts",
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.1.3",
-    "@remix-run/server-runtime": "^1.6.4"
+    "@remix-run/server-runtime": "1.6.4"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^3.4.0"

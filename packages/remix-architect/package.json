@@ -15,7 +15,7 @@
   "typings": "dist/index.d.ts",
   "dependencies": {
     "@architect/functions": "^5.0.2",
-    "@remix-run/node": "^1.6.4",
+    "@remix-run/node": "1.6.4",
     "@types/aws-lambda": "^8.10.82"
   },
   "devDependencies": {
