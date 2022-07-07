@@ -19,7 +19,7 @@ Click this button to create a [Gitpod][gitpod] workspace with the project set up
 
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
-- [Node.js][node-js] 14 or greater
+- [Node.js][node-js] version (^12.22.0, ^14.17.0, or >=16.0.0)
 - [npm][npm] 7 or greater
 - A code editor
 
