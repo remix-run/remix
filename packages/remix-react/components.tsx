@@ -399,7 +399,7 @@ interface PrefetchHandlers {
 function usePrefetchBehavior(
   prefetch: PrefetchBehavior,
   theirElementProps: PrefetchHandlers
-) {
+): [boolean, Required<PrefetchHandlers>] {
   let [maybePrefetch, setMaybePrefetch] = React.useState(false);
   let [shouldPrefetch, setShouldPrefetch] = React.useState(false);
   let { onFocus, onBlur, onMouseEnter, onMouseLeave, onTouchStart } =
