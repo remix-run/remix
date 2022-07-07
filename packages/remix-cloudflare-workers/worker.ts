@@ -17,9 +17,7 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cl
  * You can think of this as an escape hatch that allows you to pass
  * environment/platform-specific values through to your loader/action.
  */
-export interface GetLoadContextFunction {
-  (event: FetchEvent): AppLoadContext;
-}
+export type GetLoadContextFunction = (event: FetchEvent) => AppLoadContext;
 
 export type RequestHandler = ReturnType<typeof createRequestHandler>;
 
