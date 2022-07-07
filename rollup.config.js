@@ -252,11 +252,20 @@ function remixDev() {
         return true;
       },
       input: `${sourceDir}/server-build.ts`,
-      output: {
-        banner: executableBanner + createBanner("@remix-run/dev", version),
-        dir: outputDist,
-        format: "cjs",
-      },
+      output: [
+        {
+          // TODO: Remove deep import support in v2 or move to package.json
+          // "exports" field
+          banner: executableBanner + createBanner("@remix-run/dev", version),
+          dir: outputDir,
+          format: "cjs",
+        },
+        {
+          banner: executableBanner + createBanner("@remix-run/dev", version),
+          dir: outputDist,
+          format: "cjs",
+        },
+      ],
       plugins: [
         babel({
           babelHelpers: "bundled",

@@ -5,7 +5,7 @@ order: 1
 
 # Conventions
 
-A lot of Remix APIs aren't imported from the `"@remix-run/*"` packages, but are instead conventions and exports from _your_ application modules. When you `import from "@remix-run/*"`, _you are calling Remix_, but these APIs are when _Remix calls your code_.
+A lot of Remix APIs aren't imported from the `"@remix-run/*"` packages, but are instead conventions and exports from _your_ application modules. When you `import from "@remix-run/*"`, _you are calling Remix_, but these APIs are consumed when _Remix calls your code_.
 
 ## remix.config.js
 
@@ -1456,7 +1456,7 @@ export default function Page() {
 [view-example-app]: https://github.com/remix-run/remix/tree/main/examples/multiple-params
 [use-params]: https://reactrouter.com/docs/en/v6/api#useparams
 [params]: #loader-params
-[routing-guide]: ../guides/routing.md
+[routing-guide]: ../guides/routing
 [root-route]: #root-layout-route
 [resource-route]: ../guides/resource-routes
 [server-entry-module]: #entryservertsx
