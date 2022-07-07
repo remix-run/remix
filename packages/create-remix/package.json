@@ -1,6 +1,6 @@
 {
   "name": "create-remix",
-  "version": "1.6.4-pre.0",
+  "version": "1.6.4-pre.1",
   "description": "Create a new Remix app",
   "homepage": "https://remix.run",
   "bugs": {
@@ -17,7 +17,7 @@
     "create-remix": "dist/cli.js"
   },
   "dependencies": {
-    "@remix-run/dev": "1.6.4-pre.0"
+    "@remix-run/dev": "1.6.4-pre.1"
   },
   "engines": {
     "node": ">=14"
