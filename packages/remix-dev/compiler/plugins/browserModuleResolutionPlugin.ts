@@ -5,13 +5,16 @@ import { CachedInputFileSystem, ResolverFactory } from "enhanced-resolve";
 
 import { createMatchPath } from "../utils/tsconfig";
 import { loaders } from "../loaders";
+import type { RemixConfig } from "../../config";
 
 /**
- * A plugin responsible for resolving bare module ids based on server target.
- * This includes externalizing for node based plaforms, and bundling for single file
- * environments such as cloudflare.
+ * A plugin responsible for resolving modules for the browser build.
+ * This includes marking everything as side-effect false unless
+ * explicitly marked as side-effect true.
  */
-export function browserBareModulesPlugin(): Plugin {
+export function browserModuleResolutionPlugin(
+  remixConfig: RemixConfig
+): Plugin {
   // Resolve paths according to tsconfig paths property
   let matchPath = createMatchPath();
   function resolvePath(id: string) {
@@ -45,17 +48,28 @@ export function browserBareModulesPlugin(): Plugin {
 
         // Attempt to resolve everything else to it's source
         finalPath = await new Promise<string>((resolve, reject) => {
-          resolver.resolve({}, resolveDir, finalPath, {}, (error, resolvedPath) => {
-            if (error || !resolvedPath) return resolve(finalPath);
-            resolve(resolvedPath);
-          });
+          resolver.resolve(
+            {},
+            resolveDir,
+            finalPath,
+            {},
+            (error, resolvedPath) => {
+              if (error || !resolvedPath) return resolve(finalPath);
+              resolve(resolvedPath);
+            }
+          );
         });
+
+        let sideEffects = remixConfig.clientDependenciesWithSideEffects.some(
+          (pattern) =>
+            typeof pattern === "string" ? path === pattern : pattern.test(path)
+        );
 
         // Mark as side-effect free to prevent esbuild from bundling it
         // if it's only used in a server context
         return {
           path: finalPath,
-          sideEffects: false,
+          sideEffects,
         };
       });
     },

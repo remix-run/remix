@@ -19,6 +19,37 @@ test.describe("compiler", () => {
     fixture = await createFixture({
       setup: "node",
       files: {
+        "app/entry.client.tsx": js`
+          import "polyfill-side-effects-pkg";
+          import { RemixBrowser } from "@remix-run/react";
+          import { hydrate } from "react-dom";
+          
+          hydrate(<RemixBrowser />, document);        
+        `,
+        "app/entry.server.tsx": js`
+          import "polyfill-side-effects-pkg";
+          import type { EntryContext } from "@remix-run/node";
+          import { RemixServer } from "@remix-run/react";
+          import { renderToString } from "react-dom/server";
+
+          export default function handleRequest(
+            request: Request,
+            responseStatusCode: number,
+            responseHeaders: Headers,
+            remixContext: EntryContext
+          ) {
+            let markup = renderToString(
+              <RemixServer context={remixContext} url={request.url} />
+            );
+
+            responseHeaders.set("Content-Type", "text/html");
+
+            return new Response("<!DOCTYPE html>" + markup, {
+              status: responseStatusCode,
+              headers: responseHeaders,
+            });
+          }
+        `,
         "app/fake.server.js": js`
           export const hello = "server";
         `,
@@ -37,6 +68,11 @@ test.describe("compiler", () => {
           export default function Index() {
             let hasRightModule = fake === (typeof document === "undefined" ? "server" : "client");
             return <div id="index">{String(hasRightModule)}</div>
+          }
+        `,
+        "app/routes/polyfilled.jsx": js`
+          export default function Polyfilled() {
+            return <div id="polyfilled">{testFunc()}</div>
           }
         `,
         "app/routes/built-ins.jsx": js`
@@ -108,6 +144,7 @@ test.describe("compiler", () => {
               "esm-only-single-export",
               ...getDependenciesToBundle("esm-only-exports-pkg"),
             ],
+            clientDependenciesWithSideEffects: ["polyfill-side-effects-pkg"]
           };
         `,
         "node_modules/esm-only-pkg/package.json": json({
@@ -176,6 +213,12 @@ test.describe("compiler", () => {
             return "side-effects-pkg";
           }
         `,
+        "node_modules/polyfill-side-effects-pkg/package.json": json({
+          main: "./index.js",
+        }),
+        "node_modules/polyfill-side-effects-pkg/index.js": js`
+          global.testFunc = () => "Hello, World!";
+        `,
       },
     });
 
@@ -202,6 +245,15 @@ test.describe("compiler", () => {
     expect(await app.getHtml("#index")).toBe('<div id="index">true</div>');
   });
 
+  test("allows side-effects when specified in config", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/polyfilled", true);
+    expect(res.status()).toBe(200);
+    expect(await app.getHtml("#polyfilled")).toBe(
+      '<div id="polyfilled">Hello, World!</div>'
+    );
+  });
+
   test("removes node built-ins from client bundle when used in just loader", async ({
     page,
   }) => {
@@ -213,26 +265,28 @@ test.describe("compiler", () => {
     expect(await app.getHtml("#built-ins")).toBe(
       `<div id="built-ins">test${path.sep}file.txt</div>`
     );
-    
+
     let routeModule = await fixture.getBrowserAsset(
       fixture.build.assets.routes["routes/built-ins"].module
-      );
-      // does not include `import bla from "path"` in the output bundle
-      expect(routeModule).not.toMatch(/from\s*"path/);
-    });
-    
-    test("removes side-effects from browser build when module is just used in the loader", async ({ page }) => {
-      let app = new PlaywrightFixture(appFixture, page);
-      let res = await app.goto("/side-effects", true);
-      expect(res.status()).toBe(200); // server rendered fine
-      
-      expect(await app.getHtml("#side-effects")).toBe(
-        `<div id="side-effects">side-effects-pkg</div>`
-      );
-      let routeModule = await fixture.getBrowserAsset(
-        fixture.build.assets.routes["routes/side-effects"].module
-      );
-      expect(routeModule).not.toMatch(/THE SIDE EFFECTS PACKAGE/);
+    );
+    // does not include `import bla from "path"` in the output bundle
+    expect(routeModule).not.toMatch(/from\s*"path/);
+  });
+
+  test("removes side-effects from browser build when module is just used in the loader", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/side-effects", true);
+    expect(res.status()).toBe(200); // server rendered fine
+
+    expect(await app.getHtml("#side-effects")).toBe(
+      `<div id="side-effects">side-effects-pkg</div>`
+    );
+    let routeModule = await fixture.getBrowserAsset(
+      fixture.build.assets.routes["routes/side-effects"].module
+    );
+    expect(routeModule).not.toMatch(/THE SIDE EFFECTS PACKAGE/);
   });
 
   test("bundles node built-ins polyfill for client bundle when used in client code", async ({

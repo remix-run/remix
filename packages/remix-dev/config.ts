@@ -155,6 +155,14 @@ export interface AppConfig {
     | string
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
+
+  /**
+   * A list of patterns that determine if a module contains side-effects. By default
+   * all modules are considered to be side-effect free, this is to guarantee that
+   * server modules are not included in the browser bundle. For modules that rely
+   * on side-effects such as core-js, this is your escape hatch.
+   */
+  clientDependenciesWithSideEffects?: Array<string | RegExp>;
 }
 
 /**
@@ -263,6 +271,14 @@ export interface RemixConfig {
    * A list of directories to watch.
    */
   watchPaths: string[];
+
+  /**
+   * A list of patterns that determine if a module contains side-effects. By default
+   * all modules are considered to be side-effect free, this is to guarantee that
+   * server modules are not included in the browser bundle. For modules that rely
+   * on side-effects such as core-js, this is your escape hatch.
+   */
+  clientDependenciesWithSideEffects: Array<string | RegExp>;
 }
 
 /**
@@ -428,6 +444,9 @@ export async function readConfig(
 
   let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
 
+  let clientDependenciesWithSideEffects =
+    appConfig.clientDependenciesWithSideEffects || [];
+
   return {
     appDirectory,
     cacheDirectory,
@@ -447,6 +466,7 @@ export async function readConfig(
     serverBuildTargetEntryModule,
     serverEntryPoint: customServerEntryPoint,
     serverDependenciesToBundle,
+    clientDependenciesWithSideEffects,
     mdx,
     watchPaths,
   };
