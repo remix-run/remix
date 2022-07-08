@@ -351,49 +351,7 @@ function Accessor() {
 </Deferred>;
 ```
 
-`<Deferred>` is paired with [`deferred()`][deferred] in your loader. Returning a deferred value from your loader will put Remix in streaming mode and allow you to render fallbacks with `<Deferred>`. A full example can be seen here:
-
-```tsx
-import type { Deferrable } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import { deferred } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import { Deferred, useLoaderData } from "@remix-run/react";
-
-type LoaderData = {
-  message: Deferrable<string>;
-};
-
-export const loader = () => {
-  const messagePromise = new Promise((resolve) => {
-    // DO NOT USE `setTimeout` IN A REAL APP
-    setTimeout(() => resolve("Hello"), 500);
-  });
-
-  return deferred({
-    message: messagePromise,
-  });
-};
-
-export default function Route() {
-  const loaderData = useLoaderData();
-
-  return (
-    <main>
-      <h1>Welcome!</h1>
-      <Deferred
-        value={message}
-        fallback={<p>Loading message...</p>}
-        errorBoundary={<p>Error loading message!</p>}
-      >
-        {(value) => <p>{value.message}</p>}
-      </Deferred>
-    </main>
-  );
-}
-```
-
-## `useDeferredData`
-
-This hook returns the resolved data from a `<Deferred>` component. See the [`<Deferred>` docs][deferred] for more information.
+`<Deferred>` is paired with [`deferred()`][deferred-response] in your loader. Returning a deferred value from your loader will put Remix in streaming mode and allow you to render fallbacks with `<Deferred>`. A full example can be seen in the [streaming guide][streaming-guide]:
 
 ### `useLoaderData`
 
@@ -414,6 +372,10 @@ export default function Invoices() {
   // ...
 }
 ```
+
+### `useDeferredData`
+
+This hook returns the resolved data from a `<Deferred>` component. See the [`<Deferred>` docs][deferred] for more information.
 
 ### `useActionData`
 
@@ -1596,34 +1558,30 @@ return new Response(null, {
 
 This is a shortcut for creating `text/remix-deferred` responses. It assumes you are using `utf-8` encoding.
 
-```ts lines=[2,10]
+```ts lines=[2,7,9]
 import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
 import { deferred } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { getTheAnswer } from "hitchhikers-guide";
 
 export const loader: LoaderFunction = async () => {
-  const messagePromise = new Promise((resolve) => {
-    // DO NOT USE `setTimeout` IN A REAL APP
-    setTimeout(() => resolve("Hello"), 500);
-  });
+  // notice, no `await` on this:
+  const answerPromise = getTheAnswer();
 
   return deferred({
-    message: messagePromise,
+    answer: answerPromise,
   });
 };
 ```
 
 You can also pass a status code and headers:
 
-```ts lines=[11-16]
+```ts lines=[8-13]
 export const loader: LoaderFunction = async () => {
-  const messagePromise = new Promise((resolve) => {
-    // DO NOT USE `setTimeout` IN A REAL APP
-    setTimeout(() => resolve("not coffee"), 500);
-  });
+  const answerPromise = getTheAnswer();
 
   return deferred(
     {
-      message: messagePromise,
+      answer: answerPromise,
     },
     {
       status: 418,
@@ -2804,6 +2762,7 @@ export default function CompanyRoute() {
 [meta-links-scripts]: #meta-links-scripts
 [form]: #form
 [deferred]: #deferred
+[deferred-response]: #deferred-response
 [cookies]: #cookies
 [sessions]: #sessions
 [usefetcher]: #usefetcher
@@ -2816,3 +2775,4 @@ export default function CompanyRoute() {
 [disabling-javascript]: ../guides/disabling-javascript
 [example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data
 [index query param]: ../guides/routing#what-is-the-index-query-param
+[streaming-guide]: ../guildes/streaming
