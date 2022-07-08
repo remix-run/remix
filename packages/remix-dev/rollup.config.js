@@ -96,11 +96,20 @@ module.exports = function rollup() {
         return true;
       },
       input: `${sourceDir}/server-build.ts`,
-      output: {
-        banner: createBanner("@remix-run/dev", version, true),
-        dir: outputDist,
-        format: "cjs",
-      },
+      output: [
+        {
+          // TODO: Remove deep import support in v2 or move to package.json
+          // "exports" field
+          banner: createBanner("@remix-run/dev", version, true),
+          dir: outputDir,
+          format: "cjs",
+        },
+        {
+          banner: createBanner("@remix-run/dev", version, true),
+          dir: outputDist,
+          format: "cjs",
+        },
+      ],
       plugins: [
         babel({
           babelHelpers: "bundled",
