@@ -64,6 +64,7 @@
     "@octokit/rest": "^18.12.0",
     "@playwright/test": "1.20.2",
     "@rollup/plugin-babel": "^5.2.2",
+    "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^11.0.1",
     "@testing-library/cypress": "^8.0.2",
     "@testing-library/jest-dom": "^5.16.2",
