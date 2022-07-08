@@ -1,6 +1,6 @@
 {
   "include": ["**/*.ts"],
-  "exclude": ["**/node_modules/**"],
+  "exclude": ["dist", "**/node_modules/**"],
   "compilerOptions": {
     "lib": ["ES2019"],
     "target": "ES2019",
@@ -11,11 +11,9 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "resolveJsonModule": true,
-
     "declaration": true,
     "emitDeclarationOnly": true,
-
-    "outDir": "../../build/node_modules/create-remix",
-    "rootDir": "."
+    "rootDir": ".",
+    "outDir": "../../build/node_modules/create-remix/dist"
   }
 }

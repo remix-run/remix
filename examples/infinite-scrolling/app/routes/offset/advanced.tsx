@@ -92,10 +92,10 @@ export default function Index() {
     if (!hydrating) return;
     if (!parentRef.current) return;
 
-    const inifiniteScrollTop = sessionStorage.getItem("infiniteScrollTop");
-    if (!inifiniteScrollTop) return;
+    const infiniteScrollTop = sessionStorage.getItem("infiniteScrollTop");
+    if (!infiniteScrollTop) return;
 
-    parentRef.current.scrollTop = Number(inifiniteScrollTop);
+    parentRef.current.scrollTop = Number(infiniteScrollTop);
 
     return () => {
       sessionStorage.removeItem("infiniteScrollTop");

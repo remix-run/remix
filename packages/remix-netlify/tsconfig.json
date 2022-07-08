@@ -1,6 +1,6 @@
 {
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["__tests__", "**/node_modules/**"],
+  "exclude": ["dist", "__tests__", "**/node_modules/**"],
   "compilerOptions": {
     "lib": ["ES2019", "DOM.Iterable"],
     "target": "ES2019",
@@ -9,11 +9,9 @@
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "strict": true,
-
     "declaration": true,
     "emitDeclarationOnly": true,
-
-    "outDir": "../../build/node_modules/@remix-run/netlify",
-    "rootDir": "."
+    "rootDir": ".",
+    "outDir": "../../build/node_modules/@remix-run/netlify/dist"
   }
 }

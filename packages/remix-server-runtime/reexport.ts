@@ -34,12 +34,14 @@ export type {
 export type { Deferrable, ResolvedDeferrable } from "./responses";
 
 export type {
+  ActionArgs,
   ActionFunction,
   DataFunctionArgs,
   ErrorBoundaryComponent,
   HeadersFunction,
   HtmlMetaDescriptor,
   LinksFunction,
+  LoaderArgs,
   LoaderFunction,
   MetaDescriptor,
   MetaFunction,

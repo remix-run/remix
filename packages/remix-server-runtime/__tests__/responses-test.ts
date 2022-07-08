@@ -1,4 +1,6 @@
+import type { TypedResponse } from "../index";
 import { deferred, json, redirect } from "../index";
+import { isEqual } from "./utils";
 
 const DEFERRED_PROMISE_PREFIX = "__deferred_promise:";
 
@@ -101,7 +103,7 @@ describe("deferred", () => {
     expect(await response.deferred.baz).toEqual(await data.baz);
 
     expect(response.body).toBeDefined();
-    let reader = response.body.getReader();
+    let reader = response.body!.getReader();
     let decoder = new TextDecoder();
     let decodedChunks: string[] = [];
     for (
@@ -161,7 +163,7 @@ describe("deferred", () => {
     expect(await response.deferred.baz).toEqual({ sub: "value" });
 
     expect(response.body).toBeDefined();
-    let reader = response.body.getReader();
+    let reader = response.body!.getReader();
     let decoder = new TextDecoder();
     let decodedChunks: string[] = [];
     for (
@@ -259,6 +261,20 @@ describe("json", () => {
   it("accepts status as a second parameter", () => {
     let response = json({}, 201);
     expect(response.status).toEqual(201);
+  });
+
+  it("infers input type", async () => {
+    let response = json({ hello: "remix" });
+    isEqual<typeof response, TypedResponse<{ hello: string }>>(true);
+    let result = await response.json();
+    expect(result).toMatchObject({ hello: "remix" });
+  });
+
+  it("disallows unserializables", () => {
+    // @ts-expect-error
+    expect(() => json(124n)).toThrow();
+    // @ts-expect-error
+    expect(() => json({ field: 124n })).toThrow();
   });
 });
 
