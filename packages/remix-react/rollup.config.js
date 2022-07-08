@@ -12,61 +12,6 @@ const {
 } = require("../../rollup.utils");
 const { name: packageName, version } = require("./package.json");
 
-// Re-export everything from this package that is available in `remix`
-/** @type {import('../../rollup.utils').MagicExports} */
-const magicExports = {
-  "@remix-run/react": {
-    values: [
-      "Form",
-      "Link",
-      "Links",
-      "LiveReload",
-      "Meta",
-      "NavLink",
-      "PrefetchPageLinks",
-      "RemixBrowser",
-      "RemixServer",
-      "Scripts",
-      "ScrollRestoration",
-      "useActionData",
-      "useBeforeUnload",
-      "useCatch",
-      "useFetcher",
-      "useFetchers",
-      "useFormAction",
-      "useLoaderData",
-      "useMatches",
-      "useSubmit",
-      "useTransition",
-
-      // react-router-dom exports
-      "Outlet",
-      "useHref",
-      "useLocation",
-      "useNavigate",
-      "useNavigationType",
-      "useOutlet",
-      "useOutletContext",
-      "useParams",
-      "useResolvedPath",
-      "useSearchParams",
-    ],
-    types: [
-      "FormEncType",
-      "FormMethod",
-      "FormProps",
-      "LinkProps",
-      "NavLinkProps",
-      "RemixBrowserProps",
-      "RemixServerProps",
-      "ShouldReloadFunction",
-      "SubmitFunction",
-      "SubmitOptions",
-      "ThrownResponse",
-    ],
-  },
-};
-
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
   let sourceDir = "packages/remix-react";
@@ -102,10 +47,7 @@ module.exports = function rollup() {
           { src: `${sourceDir}/README.md`, dest: outputDir },
         ],
       }),
-      magicExportsPlugin(magicExports, {
-        packageName,
-        version,
-      }),
+      magicExportsPlugin({ packageName, version }),
       copyToPlaygrounds(),
     ],
   };

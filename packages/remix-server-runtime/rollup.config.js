@@ -13,46 +13,6 @@ const {
 } = require("../../rollup.utils");
 const { name: packageName, version } = require("./package.json");
 
-// Re-export everything from this package that is available in `remix`
-/** @type {import('../../rollup.utils').MagicExports} */
-const magicExports = {
-  "@remix-run/server-runtime": {
-    values: ["createSession", "isCookie", "isSession", "json", "redirect"],
-    types: [
-      "ActionFunction",
-      "AppData",
-      "AppLoadContext",
-      "Cookie",
-      "CookieOptions",
-      "CookieParseOptions",
-      "CookieSerializeOptions",
-      "CookieSignatureOptions",
-      "EntryContext",
-      "ErrorBoundaryComponent",
-      "HandleDataRequestFunction",
-      "HandleDocumentRequestFunction",
-      "HeadersFunction",
-      "HtmlLinkDescriptor",
-      "HtmlMetaDescriptor",
-      "LinkDescriptor",
-      "LinksFunction",
-      "LoaderFunction",
-      "MetaDescriptor",
-      "MetaFunction",
-      "PageLinkDescriptor",
-      "RequestHandler",
-      "RouteComponent",
-      "RouteHandle",
-      "ServerBuild",
-      "ServerEntryModule",
-      "Session",
-      "SessionData",
-      "SessionIdStorageStrategy",
-      "SessionStorage",
-    ],
-  },
-};
-
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
   let sourceDir = "packages/remix-server-runtime";
@@ -86,10 +46,7 @@ module.exports = function rollup() {
             { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
-        magicExportsPlugin(magicExports, {
-          packageName,
-          version,
-        }),
+        magicExportsPlugin({ packageName, version }),
         copyToPlaygrounds(),
       ],
     },

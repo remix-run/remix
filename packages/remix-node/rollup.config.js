@@ -12,24 +12,6 @@ const {
 } = require("../../rollup.utils");
 const { name: packageName, version } = require("./package.json");
 
-// Re-export everything from this package that is available in `remix`
-/** @type {import('../../rollup.utils').MagicExports} */
-const magicExports = {
-  "@remix-run/node": {
-    values: [
-      "createCookie",
-      "createCookieSessionStorage",
-      "createFileSessionStorage",
-      "createMemorySessionStorage",
-      "createSessionStorage",
-      "unstable_createFileUploadHandler",
-      "unstable_createMemoryUploadHandler",
-      "unstable_parseMultipartFormData",
-    ],
-    types: ["UploadHandler", "UploadHandlerPart"],
-  },
-};
-
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
   let sourceDir = "packages/remix-node";
@@ -63,10 +45,7 @@ module.exports = function rollup() {
             { src: `${sourceDir}/README.md`, dest: outputDir },
           ],
         }),
-        magicExportsPlugin(magicExports, {
-          packageName,
-          version,
-        }),
+        magicExportsPlugin({ packageName, version }),
         copyToPlaygrounds(),
       ],
     },

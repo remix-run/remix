@@ -164,10 +164,7 @@ function getAdapterConfig(adapterName, magicExports) {
       }),
       nodeResolve({ extensions: [".ts", ".tsx"] }),
       copyPublishFiles(packageName),
-      magicExportsPlugin(magicExports, {
-        packageName,
-        version,
-      }),
+      magicExportsPlugin({ packageName, version }),
       copyToPlaygrounds(),
     ],
   };
@@ -175,11 +172,11 @@ function getAdapterConfig(adapterName, magicExports) {
 
 /**
  * TODO: Remove in v2
- * @param {MagicExports | undefined} magicExports
- * @param {{ packageName: ScopedRemixPackage; version: string }} args
+ * @param {{ packageName: ScopedRemixPackage; version: string }} buildInfo
  * @returns {import("rollup").Plugin}
  */
-function magicExportsPlugin(magicExports, { packageName, version }) {
+function magicExportsPlugin({ packageName, version }) {
+  let magicExports = getMagicExports(packageName);
   return {
     name: `${packageName}:generate-magic-exports`,
     generateBundle() {
@@ -196,27 +193,25 @@ function magicExportsPlugin(magicExports, { packageName, version }) {
         "'use strict';\n" +
         "Object.defineProperty(exports, '__esModule', { value: true });\n";
 
-      for (let pkg in magicExports) {
-        let { values, types } = magicExports[pkg];
-        if (values) {
-          let exportList = values.join(", ");
-          esmContents += `export { ${exportList} } from '${pkg}';\n`;
-          tsContents += `export { ${exportList} } from '${pkg}';\n`;
+      if (magicExports.values) {
+        let exportList = magicExports.values.join(", ");
+        esmContents += `export { ${exportList} } from '${packageName}';\n`;
+        tsContents += `export { ${exportList} } from '${packageName}';\n`;
 
-          let cjsModule = camelCase(pkg.slice("@remix-run/".length));
-          cjsContents += `var ${cjsModule} = require('${pkg}');\n`;
-          for (let symbol of values) {
-            cjsContents +=
-              `Object.defineProperty(exports, '${symbol}', {\n` +
-              "  enumerable: true,\n" +
-              `  get: function () { return ${cjsModule}.${symbol}; }\n` +
-              "});\n";
-          }
+        let cjsModule = camelCase(packageName.slice("@remix-run/".length));
+        cjsContents += `var ${cjsModule} = require('${packageName}');\n`;
+        for (let symbol of magicExports.values) {
+          cjsContents +=
+            `Object.defineProperty(exports, '${symbol}', {\n` +
+            "  enumerable: true,\n" +
+            `  get: function () { return ${cjsModule}.${symbol}; }\n` +
+            "});\n";
         }
-        if (types) {
-          let exportList = types.join(", ");
-          tsContents += `export type { ${exportList} } from '${pkg}';\n`;
-        }
+      }
+
+      if (magicExports.types) {
+        let exportList = magicExports.types.join(", ");
+        tsContents += `export type { ${exportList} } from '${packageName}';\n`;
       }
 
       this.emitFile({
@@ -236,6 +231,132 @@ function magicExportsPlugin(magicExports, { packageName, version }) {
       });
     },
   };
+}
+
+/**
+ * TODO: Remove in v2
+ * @param {RemixPackage} packageName
+ * @returns {MagicExports | null}
+ */
+function getMagicExports(packageName) {
+  // Re-export everything from packages that is available in `remix`
+  /** @type {Record<ScopedRemixPackage, MagicExports>} */
+  let magicExportsByPackageName = {
+    "@remix-run/architect": {
+      values: ["createArcTableSessionStorage"],
+    },
+    "@remix-run/cloudflare": {
+      values: [
+        "createCloudflareKVSessionStorage",
+        "createCookie",
+        "createCookieSessionStorage",
+        "createMemorySessionStorage",
+        "createSessionStorage",
+      ],
+    },
+    "@remix-run/node": {
+      values: [
+        "createCookie",
+        "createCookieSessionStorage",
+        "createFileSessionStorage",
+        "createMemorySessionStorage",
+        "createSessionStorage",
+        "unstable_createFileUploadHandler",
+        "unstable_createMemoryUploadHandler",
+        "unstable_parseMultipartFormData",
+      ],
+      types: ["UploadHandler", "UploadHandlerPart"],
+    },
+    "@remix-run/react": {
+      values: [
+        "Form",
+        "Link",
+        "Links",
+        "LiveReload",
+        "Meta",
+        "NavLink",
+        "PrefetchPageLinks",
+        "RemixBrowser",
+        "RemixServer",
+        "Scripts",
+        "ScrollRestoration",
+        "useActionData",
+        "useBeforeUnload",
+        "useCatch",
+        "useFetcher",
+        "useFetchers",
+        "useFormAction",
+        "useLoaderData",
+        "useMatches",
+        "useSubmit",
+        "useTransition",
+
+        // react-router-dom exports
+        "Outlet",
+        "useHref",
+        "useLocation",
+        "useNavigate",
+        "useNavigationType",
+        "useOutlet",
+        "useOutletContext",
+        "useParams",
+        "useResolvedPath",
+        "useSearchParams",
+      ],
+      types: [
+        "RemixBrowserProps",
+        "FormProps",
+        "SubmitOptions",
+        "SubmitFunction",
+        "FormMethod",
+        "FormEncType",
+        "RemixServerProps",
+        "ShouldReloadFunction",
+        "ThrownResponse",
+        "LinkProps",
+        "NavLinkProps",
+      ],
+    },
+    "@remix-run/server-runtime": {
+      values: ["createSession", "isCookie", "isSession", "json", "redirect"],
+      types: [
+        "ActionArgs",
+        "ActionFunction",
+        "AppData",
+        "AppLoadContext",
+        "Cookie",
+        "CookieOptions",
+        "CookieParseOptions",
+        "CookieSerializeOptions",
+        "CookieSignatureOptions",
+        "EntryContext",
+        "ErrorBoundaryComponent",
+        "HandleDataRequestFunction",
+        "HandleDocumentRequestFunction",
+        "HeadersFunction",
+        "HtmlLinkDescriptor",
+        "HtmlMetaDescriptor",
+        "LinkDescriptor",
+        "LinksFunction",
+        "LoaderArgs",
+        "LoaderFunction",
+        "MetaDescriptor",
+        "MetaFunction",
+        "PageLinkDescriptor",
+        "RequestHandler",
+        "RouteComponent",
+        "RouteHandle",
+        "ServerBuild",
+        "ServerEntryModule",
+        "Session",
+        "SessionData",
+        "SessionIdStorageStrategy",
+        "SessionStorage",
+      ],
+    },
+  };
+
+  return magicExportsByPackageName[packageName] || null;
 }
 
 /**
@@ -292,6 +413,7 @@ module.exports = {
   createBanner,
   getAdapterConfig,
   getCliConfig,
+  getMagicExports,
   getOutputDir,
   isBareModuleId,
   magicExportsPlugin,
