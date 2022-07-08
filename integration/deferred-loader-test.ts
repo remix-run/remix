@@ -318,7 +318,7 @@ test("renders error boundary", async () => {
   let text = await response.text();
   expect(text).toMatch("pizza");
   expect(text).toMatch(
-    '<div hidden id="S:0"><div>Deferred Boundary <!-- -->Oh, no!<!-- --></div>'
+    '<div hidden id="S:0"><div>Deferred Boundary'
   );
   expect(text).toMatch(
     'window.__remixContext.deferredRouteData["routes/deferred-error"]["bar"]'

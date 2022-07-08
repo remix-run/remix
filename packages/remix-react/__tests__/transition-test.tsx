@@ -1,4 +1,4 @@
-import { TextEncoder } from "util";
+import { TextDecoder, TextEncoder } from "util";
 import { Action, parsePath } from "history";
 import type { Location, State } from "history";
 
@@ -12,6 +12,12 @@ import {
   IDLE_TRANSITION,
 } from "../transition";
 import type { ShouldReloadFunction } from "../routeModules";
+
+// TODO: Figure out why the setup isn't polyfilling these.
+// @ts-ignore
+global.TextDecoder = TextDecoder;
+// @ts-ignore
+global.TextEncoder = TextEncoder;
 
 describe("init", () => {
   it("initializes with initial values", async () => {
