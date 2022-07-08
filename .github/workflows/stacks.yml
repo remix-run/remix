@@ -34,11 +34,15 @@ jobs:
         run: |
           npx -y create-remix@${{ inputs.version }} ${{ matrix.stack.name }} --template ${{ matrix.stack.repo }} --typescript --no-install
 
-      - name: 📥 Install deps
-        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the create-remix step
+      - name: ⎔ Setup dependency caching
+        uses: actions/setup-node@v3
         with:
-          working-directory: ${{ matrix.stack.name }}
-          useLockFile: false
+          cache: npm
+          cache-dependency-path: ${{ matrix.stack.name }}/package.json
+
+      - name: 📥 Install deps
+        run: npm install
+        working-directory: ${{ matrix.stack.name }}
 
       - name: Run `remix init`
         run: |
@@ -77,11 +81,6 @@ jobs:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
 
-      - name: ⎔ Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16
-
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
         with:
@@ -90,10 +89,16 @@ jobs:
       - name: 📁 Unzip artifact
         run: unzip ${{ matrix.stack.name }}.zip
 
-      - name: 📥 Install deps
-        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the unzip step
+      - name: ⎔ Setup node and dependency caching
+        uses: actions/setup-node@v3
         with:
-          working-directory: ${{ matrix.stack.name }}
+          node-version: 16
+          cache: npm
+          cache-dependency-path: ${{ matrix.stack.name }}/package.json
+
+      - name: 📥 Install deps
+        run: npm install
+        working-directory: ${{ matrix.stack.name }}
 
       - name: 🔬 Lint
         run: |
@@ -118,11 +123,6 @@ jobs:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
 
-      - name: ⎔ Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16
-
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
         with:
@@ -131,10 +131,16 @@ jobs:
       - name: 📁 Unzip artifact
         run: unzip ${{ matrix.stack.name }}.zip
 
-      - name: 📥 Install deps
-        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the unzip step
+      - name: ⎔ Setup node and dependency caching
+        uses: actions/setup-node@v3
         with:
-          working-directory: ${{ matrix.stack.name }}
+          node-version: 16
+          cache: npm
+          cache-dependency-path: ${{ matrix.stack.name }}/package.json
+
+      - name: 📥 Install deps
+        run: npm install
+        working-directory: ${{ matrix.stack.name }}
 
       - name: 🔎 Type check
         run: |
@@ -159,11 +165,6 @@ jobs:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
 
-      - name: ⎔ Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16
-
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
         with:
@@ -172,10 +173,16 @@ jobs:
       - name: 📁 Unzip artifact
         run: unzip ${{ matrix.stack.name }}.zip
 
-      - name: 📥 Install deps
-        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the unzip step
+      - name: ⎔ Setup node and dependency caching
+        uses: actions/setup-node@v3
         with:
-          working-directory: ${{ matrix.stack.name }}
+          node-version: 16
+          cache: npm
+          cache-dependency-path: ${{ matrix.stack.name }}/package.json
+
+      - name: 📥 Install deps
+        run: npm install
+        working-directory: ${{ matrix.stack.name }}
 
       - name: ⚡ Run vitest
         run: |
@@ -203,11 +210,6 @@ jobs:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.1
 
-      - name: ⎔ Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16
-
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
         with:
@@ -216,10 +218,16 @@ jobs:
       - name: 📁 Unzip artifact
         run: unzip ${{ matrix.stack.name }}.zip
 
-      - name: 📥 Install deps
-        uses: bahmutov/npm-install@v1 # more fine grained control than actions/setup-node@v3 caching, i.e. package.json doesn't exist until after the unzip step
+      - name: ⎔ Setup node and dependency caching
+        uses: actions/setup-node@v3
         with:
-          working-directory: ${{ matrix.stack.name }}
+          node-version: 16
+          cache: npm
+          cache-dependency-path: ${{ matrix.stack.name }}/package.json
+
+      - name: 📥 Install deps
+        run: npm install
+        working-directory: ${{ matrix.stack.name }}
 
       - name: 🐳 Docker compose
         if: ${{ matrix.stack.name == 'blues' }}

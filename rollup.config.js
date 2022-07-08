@@ -10,16 +10,16 @@ const executableBanner = "#!/usr/bin/env node\n";
 
 let activeOutputDir = "build";
 
-if (process.env.REMIX_LOCAL_DEV_OUTPUT_DIRECTORY) {
+if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
   let appDir = path.join(
     process.cwd(),
-    process.env.REMIX_LOCAL_DEV_OUTPUT_DIRECTORY
+    process.env.REMIX_LOCAL_BUILD_DIRECTORY
   );
   try {
     fse.readdirSync(path.join(appDir, "node_modules"));
   } catch (e) {
     console.error(
-      "Oops! You pointed REMIX_LOCAL_DEV_OUTPUT_DIRECTORY to a directory that " +
+      "Oops! You pointed REMIX_LOCAL_BUILD_DIRECTORY to a directory that " +
         "does not have a node_modules/ folder. Please `npm install` in that " +
         "directory and try again."
     );
@@ -252,11 +252,20 @@ function remixDev() {
         return true;
       },
       input: `${sourceDir}/server-build.ts`,
-      output: {
-        banner: executableBanner + createBanner("@remix-run/dev", version),
-        dir: outputDist,
-        format: "cjs",
-      },
+      output: [
+        {
+          // TODO: Remove deep import support in v2 or move to package.json
+          // "exports" field
+          banner: executableBanner + createBanner("@remix-run/dev", version),
+          dir: outputDir,
+          format: "cjs",
+        },
+        {
+          banner: executableBanner + createBanner("@remix-run/dev", version),
+          dir: outputDist,
+          format: "cjs",
+        },
+      ],
       plugins: [
         babel({
           babelHelpers: "bundled",
@@ -651,6 +660,7 @@ function getMagicExports(packageName) {
     "@remix-run/server-runtime": {
       values: ["createSession", "isCookie", "isSession", "json", "redirect"],
       types: [
+        "ActionArgs",
         "ActionFunction",
         "AppData",
         "AppLoadContext",
@@ -668,6 +678,7 @@ function getMagicExports(packageName) {
         "HtmlMetaDescriptor",
         "LinkDescriptor",
         "LinksFunction",
+        "LoaderArgs",
         "LoaderFunction",
         "MetaDescriptor",
         "MetaFunction",
