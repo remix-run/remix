@@ -2775,4 +2775,4 @@ export default function CompanyRoute() {
 [disabling-javascript]: ../guides/disabling-javascript
 [example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data
 [index query param]: ../guides/routing#what-is-the-index-query-param
-[streaming-guide]: ../guildes/streaming
+[streaming-guide]: ../guides/streaming
