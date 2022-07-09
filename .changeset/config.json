@@ -5,6 +5,7 @@
   "fixed": [
     [
       "remix",
+      "@remix-run/deferred",
       "@remix-run/dev",
       "@remix-run/eslint-config",
       "@remix-run/react",

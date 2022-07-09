@@ -2,7 +2,6 @@ import { serializeError } from "./errors";
 
 const DEFERRED_PROMISE_PREFIX = "__deferred_promise:";
 
-// eslint-disable-next-line
 export type Deferrable<T> = never | T | Promise<T>;
 export type ResolvedDeferrable<T> = T extends null | undefined
   ? T

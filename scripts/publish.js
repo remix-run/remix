@@ -35,6 +35,7 @@ async function run() {
   // Publish all @remix-run/* packages
   for (let name of [
     "dev",
+    "deferred", // publish before server-runtime
     "server-runtime", // publish before platforms
     "cloudflare",
     "cloudflare-pages",
