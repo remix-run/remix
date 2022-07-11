@@ -78,7 +78,7 @@ export function serverBareModulesPlugin(
                 `${relative(process.cwd(), importer)} but ` +
                 `"${path}" was not found in your node_modules. ` +
                 `Did you forget to install it?`,
-              packageName
+              path
             );
           }
         }
