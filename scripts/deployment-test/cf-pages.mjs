@@ -1,11 +1,9 @@
 import path from "path";
-import { execSync } from "child_process";
 import { sync as spawnSync } from "cross-spawn";
-import { Octokit } from "@octokit/rest";
 import fse from "fs-extra";
 import fetch from "node-fetch";
 import { createApp } from "@remix-run/dev";
-import retry from "retry";
+import PackageJson from "@npmcli/package-json";
 
 import {
   addCypress,
@@ -32,139 +30,41 @@ async function createNewApp() {
   });
 }
 
-async function createCloudflareProject() {
-  let promise = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACCOUNT_ID}/pages/projects`,
-    {
-      method: "POST",
-      headers: {
-        "X-Auth-Email": process.env.CF_EMAIL,
-        "X-Auth-Key": process.env.CF_GLOBAL_API_KEY,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: APP_NAME,
-        source: {
-          type: "github",
-          config: {
-            owner: "remixautomatedtests",
-            repo_name: APP_NAME,
-            production_branch: "main",
-            pr_comments_enabled: true,
-            deployments_enabled: true,
-          },
-        },
-        build_config: {
-          build_command: "npm run build",
-          destination_dir: "public",
-          root_dir: "",
-          fast_builds: true,
-        },
-      }),
-    }
-  );
-
-  if (!promise.ok) {
-    if (promise.headers.get("Content-Type").includes("application/json")) {
-      console.error(await promise.json());
-    }
-    throw new Error(`Failed to create Cloudflare Pages project`);
-  }
-}
-
-async function createCloudflareDeployment() {
-  let promise = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACCOUNT_ID}/pages/projects/${APP_NAME}/deployments`,
-    {
-      method: "POST",
-      headers: {
-        "X-Auth-Email": process.env.CF_EMAIL,
-        "X-Auth-Key": process.env.CF_GLOBAL_API_KEY,
-      },
-    }
-  );
-
-  if (!promise.ok) {
-    if (promise.headers.get("Content-Type").includes("application/json")) {
-      console.error(await promise.json());
-    }
-    throw new Error(`Failed to create Cloudflare Pages project`);
-  }
-
-  let deployment = await promise.json();
-
-  return deployment.result.id;
-}
-
-function checkDeploymentStatus() {
-  let operation = retry.operation({ retries: 20 });
-  let url = `https://api.cloudflare.com/client/v4/accounts/${process.env.CF_ACCOUNT_ID}/pages/projects/${APP_NAME}/deployments`;
-
-  return new Promise((resolve, reject) => {
-    operation.attempt(async (currentAttempt) => {
-      console.log(`Checking deployment status; attempt ${currentAttempt}`);
-      let response = await fetch(url, {
-        headers: {
-          "X-Auth-Email": process.env.CF_EMAIL,
-          "X-Auth-Key": process.env.CF_GLOBAL_API_KEY,
-        },
-      });
-
-      if (response.status >= 200 && response.status < 400) {
-        let data = await response.json();
-        let deployment = data.result[0];
-        let latest = deployment.latest_stage;
-        if (latest.name === "deploy" && latest.status === "success") {
-          resolve("Pages deployed successfully");
-        } else {
-          let message = `Deployment not complete; latest stage: ${latest.name}/${latest.status}`;
-          console.error(message);
-          operation.retry(new Error(message));
-        }
-      } else {
-        let message = `URL responded with status ${response.status}`;
-        console.error(message);
-        operation.retry(new Error(message));
-      }
-    });
-  });
-}
-
-let octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-
-async function createRepoIfNeeded() {
-  let repo = await octokit.repos.createForAuthenticatedUser({ name: APP_NAME });
-  return repo.data;
-}
-
-let currentGitUser = {};
-
-try {
-  currentGitUser = {
-    email: execSync("git config --get user.email").toString().trim(),
-    name: execSync("git config --get user.name").toString().trim(),
-  };
-} catch {
-  // git user not set
-}
-
-let spawnOpts = getSpawnOpts(PROJECT_DIR);
-
-try {
+async function createAndDeployApp() {
   // create a new remix app
   await createNewApp();
 
   // validate dependencies are available
-  await validatePackageVersions(PROJECT_DIR);
+  let [valid, errors] = await validatePackageVersions(PROJECT_DIR);
+
+  if (!valid) {
+    console.error(errors);
+    process.exit(1);
+  }
+
+  let pkgJson = await PackageJson.load(PROJECT_DIR);
+  pkgJson.update({
+    devDependencies: {
+      ...pkgJson.content.devDependencies,
+      wrangler: "latest",
+    },
+  });
 
   // add cypress to the project
   await Promise.all([
     fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
-
     fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
-
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
+    pkgJson.save(),
   ]);
+
+  let spawnOpts = getSpawnOpts(PROJECT_DIR, {
+    // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
+    CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
+    CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+    CLOUDFLARE_GLOBAL_API_KEY: process.env.CLOUDFLARE_GLOBAL_API_KEY,
+    CLOUDFLARE_EMAIL: process.env.CLOUDFLARE_EMAIL,
+  });
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
@@ -173,77 +73,81 @@ try {
   // run cypress against the dev server
   runCypress(PROJECT_DIR, true, CYPRESS_DEV_URL);
 
-  // create a new github repo
-  let repo = await createRepoIfNeeded(APP_NAME);
-
-  spawnSync("git", ["init"], spawnOpts);
-  spawnSync(
-    "git",
-    ["config", "--global", "user.email", "hello@remix.run"],
-    spawnOpts
-  );
-  spawnSync(
-    "git",
-    ["config", "--global", "user.name", "Remix Run Bot"],
-    spawnOpts
-  );
-  spawnSync("git", ["branch", "-m", "main"], spawnOpts);
-  spawnSync("git", ["add", "."], spawnOpts);
-  spawnSync("git", ["commit", "-m", "initial commit"], spawnOpts);
-  spawnSync(
-    "git",
+  let createCommand = spawnSync(
+    `npx`,
     [
-      "remote",
-      "add",
-      "origin",
-      `https://${process.env.GITHUB_TOKEN}@github.com/${repo.full_name}.git`,
+      "wrangler",
+      "pages",
+      "project",
+      "create",
+      APP_NAME,
+      "--production-branch",
+      "main",
     ],
     spawnOpts
   );
-  spawnSync("git", ["push", "origin", "main"], spawnOpts);
 
-  await createCloudflareProject();
-  await createCloudflareDeployment();
+  if (createCommand.status !== 0) {
+    console.error(createCommand.error);
+    throw new Error("Cloudflare Pages project creation failed");
+  }
+
+  let deployCommand = spawnSync(
+    "npx",
+    [
+      "wrangler",
+      "pages",
+      "publish",
+      "./public",
+      "--project-name",
+      APP_NAME,
+      "--branch",
+      "main",
+    ],
+    spawnOpts
+  );
+  if (deployCommand.status !== 0) {
+    console.error(deployCommand.error);
+    throw new Error("Cloudflare Pages deploy failed");
+  }
+
   console.log("Successfully created Cloudflare Pages project");
-
-  // wait for deployment to complete
-  await checkDeploymentStatus();
 
   let appUrl = `https://${APP_NAME}.pages.dev`;
 
   await checkUrl(appUrl);
 
-  // run cypress against the Cloudflare Pages server
+  // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, appUrl);
-
-  if (currentGitUser.email && currentGitUser.name) {
-    spawnSync(
-      "git",
-      ["config", "--global", "user.email", currentGitUser.email],
-      spawnOpts
-    );
-    spawnSync(
-      "git",
-      ["config", "--global", "user.name", currentGitUser.name],
-      spawnOpts
-    );
-  }
-
-  process.exit(0);
-} catch (error) {
-  if (currentGitUser.email && currentGitUser.name) {
-    spawnSync(
-      "git",
-      ["config", "--global", "user.email", currentGitUser.email],
-      spawnOpts
-    );
-    spawnSync(
-      "git",
-      ["config", "--global", "user.name", currentGitUser.name],
-      spawnOpts
-    );
-  }
-
-  console.error(error);
-  process.exit(1);
 }
+
+async function destroyApp() {
+  let result = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/pages/projects/${APP_NAME}`,
+    {
+      method: "DELETE",
+      headers: {
+        "X-Auth-Email": process.env.CLOUDFLARE_EMAIL,
+        "X-Auth-Key": process.env.CLOUDFLARE_GLOBAL_API_KEY,
+      },
+    }
+  );
+  let json = await result.json();
+  console.log(`[DESTROY_APP]`, json);
+}
+
+async function main() {
+  let exitCode;
+  try {
+    await createAndDeployApp();
+    exitCode = 0;
+  } catch (error) {
+    console.error(error);
+    exitCode = 1;
+  } finally {
+    await destroyApp();
+    process.exit(exitCode);
+  }
+}
+
+main();

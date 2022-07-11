@@ -10,7 +10,6 @@ This example features how to use [Stitches](https://stitches.dev/) with Remix.
 - app/
   - styles/
     - client.context.tsx
-    - server.context.tsx
     - stitches.config.ts
   - entry.client.tsx
   - entry.server.tsx
@@ -18,13 +17,11 @@ This example features how to use [Stitches](https://stitches.dev/) with Remix.
 ```
 
 1. `client.context.tsx` - Keeps the client context of styles and to reset styles sheets after every interaction into the state.
-2. `server.context.tsx` - Keeps the server context mounted on `entry.server.tsx`
-   with the Stitches sheets.
-3. `stitches.config.ts` - Keeps the Stitches configuration that is shared into
+2. `stitches.config.ts` - Keeps the Stitches configuration that is shared into
    the project.
-4. `entry.client.tsx` - Every time that styles update and be re-injected it sets the
+3. `entry.client.tsx` - Every time that styles update and be re-injected it sets the
    Stitches sheet to a React state.
-5. `entry.server.tsx` - Create the markup with the styles injected to serve on the server response.
+4. `entry.server.tsx` - Create the markup with the styles injected to serve on the server response.
 
 ## Preview
 

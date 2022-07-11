@@ -53,10 +53,7 @@ export function createRequestHandler({
   ) => {
     try {
       let request = createRemixRequest(req);
-      let loadContext =
-        typeof getLoadContext === "function"
-          ? getLoadContext(req, res)
-          : undefined;
+      let loadContext = getLoadContext?.(req, res);
 
       let response = (await handleRequest(
         request,
@@ -105,7 +102,7 @@ export function createRemixRequest(req: express.Request): NodeRequest {
   let init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
-    signal: controller.signal,
+    signal: controller.signal as NodeRequestInit["signal"],
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {

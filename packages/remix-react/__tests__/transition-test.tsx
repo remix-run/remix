@@ -199,6 +199,56 @@ describe("normal navigation", () => {
     expect(t.getState().location).toBe(B.location);
     expect(t.getState().loaderData.baz).toBe("B");
   });
+
+  it("reloads all routes if X-Remix-Revalidate was set in a loader redirect header", async () => {
+    let t = setup();
+
+    let A = await t.navigate.get("/foo");
+    expect(t.getState().transition.state).toBe("loading");
+    expect(t.getState().transition.location?.pathname).toBe("/foo");
+    expect(t.getState().loaderData).toMatchObject({
+      root: "ROOT",
+    });
+    expect(t.rootLoaderMock.calls.length).toBe(0);
+
+    let B = await A.loader.redirect("/bar", true);
+    expect(t.getState().transition.state).toBe("loading");
+    expect(t.getState().transition.location?.pathname).toBe("/bar");
+    expect(t.getState().loaderData).toMatchObject({
+      root: "ROOT",
+    });
+    expect(t.rootLoaderMock.calls.length).toBe(1);
+
+    await B.loader.resolve("BAR");
+    expect(t.getState().transition.state).toBe("idle");
+    expect(t.getState().location.pathname).toBe("/bar");
+    expect(t.getState().loaderData).toMatchObject({
+      root: "ROOT",
+      bar: "BAR",
+    });
+  });
+
+  it("reloads all routes if X-Remix-Revalidate was set in a loader redirect header (chained redirects)", async () => {
+    let t = setup();
+
+    let A = await t.navigate.get("/foo");
+    expect(t.rootLoaderMock.calls.length).toBe(0); // Reused on navigation
+
+    let B = await A.loader.redirect("/bar", true);
+    expect(t.rootLoaderMock.calls.length).toBe(1);
+
+    // No cookie on second redirect
+    let C = await B.loader.redirect("/baz");
+    expect(t.rootLoaderMock.calls.length).toBe(2);
+    await C.loader.resolve("BAZ");
+
+    expect(t.getState().transition.state).toBe("idle");
+    expect(t.getState().location.pathname).toBe("/baz");
+    expect(t.getState().loaderData).toMatchObject({
+      root: "ROOT",
+      baz: "BAZ",
+    });
+  });
 });
 
 describe("shouldReload", () => {
@@ -652,6 +702,25 @@ describe("submission navigations", () => {
         "root": "ROOT",
       }
     `);
+  });
+
+  it("reloads all routes after action redirect (chained redirects)", async () => {
+    let t = setup();
+    let A = await t.navigate.post("/foo");
+    expect(t.rootLoaderMock.calls.length).toBe(0);
+
+    let B = await A.action.redirect("/bar");
+    expect(t.rootLoaderMock.calls.length).toBe(1);
+
+    let C = await B.loader.redirect("/baz");
+    expect(t.rootLoaderMock.calls.length).toBe(2);
+
+    await C.loader.resolve("BAZ");
+    expect(t.getState().transition.state).toBe("idle");
+    expect(t.getState().loaderData).toEqual({
+      baz: "BAZ",
+      root: "ROOT",
+    });
   });
 
   it("removes action data at new locations", async () => {
@@ -2061,13 +2130,13 @@ let setup = ({ url } = { url: "/" }) => {
       await onChangeDeferreds.get(id).resolve();
     }
 
-    async function redirectAction(href: string) {
-      await resolveAction(new TransitionRedirect(href));
+    async function redirectAction(href: string, setCookie = false) {
+      await resolveAction(new TransitionRedirect(href, setCookie));
       return lastRedirect;
     }
 
-    async function redirectLoader(href: string) {
-      await resolveLoader(new TransitionRedirect(href));
+    async function redirectLoader(href: string, setCookie = false) {
+      await resolveLoader(new TransitionRedirect(href, setCookie));
       return lastRedirect;
     }
 

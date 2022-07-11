@@ -3,6 +3,7 @@ import { sync as spawnSync } from "cross-spawn";
 import fse from "fs-extra";
 import fetch from "node-fetch";
 import { createApp } from "@remix-run/dev";
+import PackageJson from "@npmcli/package-json";
 
 import {
   addCypress,
@@ -42,48 +43,68 @@ function vercelClient(input, init) {
 }
 
 async function createVercelProject() {
-  let promise = await vercelClient(`/v8/projects`, {
+  let response = await vercelClient(`/v9/projects`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      framework: "remix",
       name: APP_NAME,
+      // we need to manually specify, otherwise it will use "other" for deployments
+      framework: "remix",
     }),
   });
 
-  if (promise.status !== 200) {
-    throw new Error(`Error creating project: ${promise.status}`);
+  if (!response.ok) {
+    throw new Error(`Error creating project: ${response.status}`);
   }
 
-  let project = await promise.json();
+  let project = await response.json();
   return project;
 }
 
 async function getVercelDeploymentUrl(projectId) {
-  let promise = await vercelClient(`/v8/projects/${projectId}`);
+  let response = await vercelClient(`/v8/projects/${projectId}`);
 
-  if (promise.status !== 200) {
-    throw new Error(`Error fetching project: ${promise.status}`);
+  if (!response.ok) {
+    throw new Error(`Error fetching project: ${response.status}`);
   }
 
-  let project = await promise.json();
+  let project = await response.json();
 
   return project.targets?.production?.url;
 }
 
-try {
+let spawnOpts = getSpawnOpts(PROJECT_DIR, {
+  // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
+  VERCEL_TOKEN: process.env.VERCEL_TOKEN,
+  VERCEL_ORG_ID: process.env.VERCEL_ORG_ID,
+});
+
+async function createAndDeployApp() {
   await createNewApp();
 
   // validate dependencies are available
-  await validatePackageVersions(PROJECT_DIR);
+  let [valid, errors] = await validatePackageVersions(PROJECT_DIR);
+
+  if (!valid) {
+    console.error(errors);
+    process.exit(1);
+  }
+
+  let pkgJson = await PackageJson.load(PROJECT_DIR);
+  pkgJson.update({
+    devDependencies: {
+      ...pkgJson.content.devDependencies,
+      vercel: "latest",
+    },
+  });
 
   await Promise.all([
     fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
     fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
+    pkgJson.save(),
   ]);
 
-  let spawnOpts = getSpawnOpts(PROJECT_DIR);
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
@@ -93,16 +114,16 @@ try {
   let project = await createVercelProject();
   console.log("Project created");
 
+  spawnOpts.env.VERCEL_PROJECT_ID = project.id;
+
   // deploy to vercel
-  let vercelDeployCommand = spawnSync(
+  let deployCommand = spawnSync(
     "npx",
     ["vercel", "deploy", "--prod", "--token", process.env.VERCEL_TOKEN],
-    {
-      ...spawnOpts,
-      env: { ...process.env, VERCEL_PROJECT_ID: project.id },
-    }
+    spawnOpts
   );
-  if (vercelDeployCommand.status !== 0) {
+  if (deployCommand.status !== 0) {
+    console.error(deployCommand.error);
     throw new Error("Vercel deploy failed");
   }
 
@@ -116,10 +137,34 @@ try {
 
   console.log(`Deployed to ${fullUrl}`);
 
+  // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, fullUrl);
-
-  process.exit(0);
-} catch (error) {
-  console.error(error);
-  process.exit(1);
 }
+
+async function destroyApp() {
+  console.log(`Destroying app ${APP_NAME}`);
+  let response = await vercelClient(`/v9/projects/${APP_NAME}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    console.error(`Error destroying project ${APP_NAME}: ${response.status}`);
+  } else {
+    console.log(`Destroyed app ${APP_NAME}`);
+  }
+}
+
+async function main() {
+  let exitCode;
+  try {
+    await createAndDeployApp();
+    exitCode = 0;
+  } catch (error) {
+    console.error(error);
+    exitCode = 1;
+  } finally {
+    await destroyApp();
+    process.exit(exitCode);
+  }
+}
+
+main();
