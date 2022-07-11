@@ -364,11 +364,13 @@ test.describe("compiler", () => {
         });
       });
 
+      let importer = path.join("app", "routes", "index.jsx");
+
       expect(buildOutput).toContain(
-        `The path "some-not-installed-module" is imported in app/routes/index.jsx but "some-not-installed-module" was not found in your node_modules. Did you forget to install it?`
+        `The path "some-not-installed-module" is imported in ${importer} but "some-not-installed-module" was not found in your node_modules. Did you forget to install it?`
       );
       expect(buildOutput).toContain(
-        `The path "some-not-installed-module/sub" is imported in app/routes/index.jsx but "some-not-installed-module/sub" was not found in your node_modules. Did you forget to install it?`
+        `The path "some-not-installed-module/sub" is imported in ${importer} but "some-not-installed-module/sub" was not found in your node_modules. Did you forget to install it?`
       );
     });
   });
