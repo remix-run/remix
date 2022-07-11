@@ -933,7 +933,7 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
       reloadDocument = false,
       replace = false,
       method = "get",
-      action = ".",
+      action,
       encType = "application/x-www-form-urlencoded",
       fetchKey,
       onSubmit,
@@ -988,16 +988,37 @@ type HTMLFormSubmitter = HTMLButtonElement | HTMLInputElement;
  * @see https://remix.run/api/remix#useformaction
  */
 export function useFormAction(
-  action = ".",
+  action?: string,
   // TODO: Remove method param in v2 as it's no longer needed and is a breaking change
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
-  let path = useResolvedPath(action);
+
+  // The documented behavior of a form without an explicit action prop is:
+  // -  Forms without an action prop (<Form method="post">) will automatically
+  //    post to the same route within which they are rendered.
+  //
+  // The problem with setting the default action to `.` is that
+  // `useResolvedPath(".")` excludes search params. This is the intended
+  // behavior of useResolvedPath, but it's unexpected for forms without an
+  // action prop since the search params are an important part of the current
+  // location, and the action function should receive those in the request URL.
+  //
+  // If the action prop is omitted, we'll append the current route's search
+  // string to the current location if it exists. If the action is explicitly
+  // set to `.` it will resolve without the search params to match the intended
+  // behavior of useResolvedPath, resolving the same URL as `<Link to="." />`
+  // https://github.com/remix-run/remix/issues/927
+  let { search: currentSearch } = useLocation();
+  let actionIsCurrentRoute = action === undefined || action === ".";
+  let path = useResolvedPath(
+    action === undefined ? { pathname: ".", search: currentSearch } : action
+  );
+
   let search = path.search;
   let isIndexRoute = id.endsWith("/index");
 
-  if (action === "." && isIndexRoute) {
+  if (actionIsCurrentRoute && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 
