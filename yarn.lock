@@ -2585,23 +2585,23 @@
     "@typescript-eslint/types" "5.12.1"
     eslint-visitor-keys "^3.0.0"
 
-"@vercel/build-utils@4.2.1":
-  version "4.2.1"
-  resolved "https://registry.npmjs.org/@vercel/build-utils/-/build-utils-4.2.1.tgz#9476aaacafd5afbd2fe467a4153d1e0b7ec20ec8"
-  integrity sha512-T0w/xzDpDhqrSmguKIVEjpnF7lY5IdcpJnI1UrZoi0r3ft/jaM7X+a+7X9Wk7z/IHuA6e/xqjVgFRnrvS84Gsw==
+"@vercel/build-utils@5.0.1":
+  version "5.0.1"
+  resolved "https://registry.npmjs.org/@vercel/build-utils/-/build-utils-5.0.1.tgz#d5e7fe5e11f0320c5aca4d99c23b3c10465e3cdb"
+  integrity sha512-+fZl9xZiI+7tGTdE7vblizpNfuNMHBzKJBOvNaC9uVqajQosD0KEWLf1hFRVnzHfKYLkbwmW94g4bBZHgkYAeQ==
 
 "@vercel/node-bridge@3.0.0", "@vercel/node-bridge@^3.0.0":
   version "3.0.0"
   resolved "https://registry.npmjs.org/@vercel/node-bridge/-/node-bridge-3.0.0.tgz#443655b74713ec65531726fb5a30c5c528c804bf"
   integrity sha512-TNQK6cufwrhd8ASDk5YHHenH8Xhp9sY8xUjOTKnQQI37KLk+Sw2HlHhT5rzUFN23ahosUlkY8InwtYUmSNb9kw==
 
-"@vercel/node@^2.3.3":
-  version "2.3.3"
-  resolved "https://registry.npmjs.org/@vercel/node/-/node-2.3.3.tgz#f2d6863ce543f901fff9bc193850b1a040e9f4c0"
-  integrity sha512-lCgiONXiDTK6fbfNnG3c3rZts0SwJFScux0i8u7o6o8TITXlYoojhJWd+WSsQRlaMYBciMXbEDdnNwdd7qbAow==
+"@vercel/node@^2.4.2":
+  version "2.4.2"
+  resolved "https://registry.npmjs.org/@vercel/node/-/node-2.4.2.tgz#5a2b112851db0003e4b0973b33240746077146b0"
+  integrity sha512-4U1W3TH94KbrA6Wg0ixH7XNk787GuqzhnK1UBLQb/YwcGE0R3TemrndYnZgWsin5Ie1Qt1bjRw2TpLftQhg7pQ==
   dependencies:
     "@types/node" "*"
-    "@vercel/build-utils" "4.2.1"
+    "@vercel/build-utils" "5.0.1"
     "@vercel/node-bridge" "3.0.0"
     "@vercel/static-config" "2.0.1"
     edge-runtime "1.0.1"
