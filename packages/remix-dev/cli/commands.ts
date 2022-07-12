@@ -56,7 +56,13 @@ export async function create({
   spinner.clear();
 }
 
-export async function init(projectDir: string) {
+type InitFlags = {
+  deleteScript?: boolean;
+};
+export async function init(
+  projectDir: string,
+  { deleteScript = true }: InitFlags = {}
+) {
   let initScriptDir = path.join(projectDir, "remix.init");
   let initScript = path.resolve(initScriptDir, "index.js");
 
@@ -79,7 +85,9 @@ export async function init(projectDir: string) {
   try {
     await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
 
-    await fse.remove(initScriptDir);
+    if (deleteScript) {
+      await fse.remove(initScriptDir);
+    }
   } catch (error) {
     if (error instanceof Error) {
       error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
@@ -279,7 +287,14 @@ export async function dev(
     purgeAppRequireCache(config.serverBuildPath);
     next();
   });
-  app.use(createApp(config.serverBuildPath, mode));
+  app.use(
+    createApp(
+      config.serverBuildPath,
+      mode,
+      config.publicPath,
+      config.assetsBuildDirectory
+    )
+  );
 
   let server: Server | null = null;
 

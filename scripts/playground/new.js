@@ -54,7 +54,7 @@ async function createNewProject(name = `playground-${Date.now()}`) {
   let hasInit = fse.existsSync(path.join(projectDir, "remix.init"));
   if (hasInit) {
     console.log("🎬  Running Remix Init...");
-    execSync(`node ./node_modules/@remix-run/dev/cli init`, {
+    execSync(`node ./node_modules/@remix-run/dev/dist/cli init`, {
       stdio: "inherit",
       cwd: projectDir,
     });

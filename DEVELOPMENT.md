@@ -118,7 +118,7 @@ By default, the Remix `rollup` build will strip any `console.debug` calls to avo
 REMIX_DEBUG=true yarn watch
 ```
 
-**`REMIX_LOCAL_DEV_OUTPUT_DIRECTORY`**
+**`REMIX_LOCAL_BUILD_DIRECTORY`**
 
 When developing Remix locally, you often need to go beyond unit/integration tests and test your changes in a local Remix application. The easiest way to do this is to run your local Remix build and use this environment variable to direct `rollup` to write the output files directly into the local Remix application's `node_modules` folder. Then you just need to restart your local Remix application server to pick up the changes.
 
@@ -129,7 +129,7 @@ cd my-remix-app
 npm run dev
 
 # Tab 2 - remix repository
-REMIX_LOCAL_DEV_OUTPUT_DIRECTORY=../my-remix-app yarn watch
+REMIX_LOCAL_BUILD_DIRECTORY=../my-remix-app yarn watch
 ```
 
 Now - any time you make changes in the Remix repository, they will be written out to the appropriate locations in `../my-remix-app/node_modules` and you can restart the `npm run dev` command to pick them up 🎉.
