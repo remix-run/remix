@@ -76,4 +76,135 @@ Remix has TypeScript type definitions built-in as well. The starter templates cr
 
 <docs-info>Note that the types referenced in `remix.env.d.ts` will depend on which environment you're running your app in. For example, there are different globals available in Cloudflare</docs-info>
 
+## Type Utilities
+
+Remix's built-in inference between `loader` function + `useLoaderData` generic and the `action` function + `useActionData` generic is quite good and you shouldn't often have to use thse utilities. That said they can be quite handy in some cases which is why they are exported.
+
+### `UseDataFunctionReturn`
+
+Use this to get the type you'll get out of a `useLoaderData` or `useActionData` (basically, what the client will get as a result of what the `loader` or `action` function return):
+
+```tsx lines=[31]
+import { getCats } from "~/models/cats.server";
+
+export const loader: LoaderFunction = () => {
+  return json({ cats: await getCats() });
+};
+
+export const action: ActionFunction = () => {
+  return json({ error: "Not yet implemented" });
+};
+
+export default function CatsRoute() {
+  const data = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+  return (
+    <>
+      <Cats cats={data.cats} />
+      <Form method="post">
+        {/* TODO: implement this form */}
+        <button type="submit">Submit</button>
+        {actionData.error ? (
+          <p>{actionData.error}</p>
+        ) : null}
+      </Form>
+    </>
+  );
+}
+
+function Cats({
+  cats,
+}: {
+  cats: UseDataFunctionReturn<typeof loader>["cats"];
+}) {
+  return (
+    <ul>
+      {cats.map((cat) => (
+        <li key={cat.id}>{cat.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### `Deferrable`
+
+This is if you need to define something as possibly deferred:
+
+```tsx lines=[18]
+export const loader: LoaderFunction = () => {
+  return deferred({ pancake: getPancake() });
+};
+
+export default function PancakeRoute() {
+  const { pancake } = useLoaderData<typeof loader>();
+  return (
+    <div>
+      <h1>Here is your pancake</h1>
+      <Pancake pancake={pancake} />
+    </div>
+  );
+}
+
+function Pancake({
+  pancake,
+}: {
+  pancake: Deferrable<Pancake>;
+}) {
+  return (
+    <Deferred
+      value={pancake}
+      fallback="Loading pancake..."
+      errorBoundary="Oh no."
+    >
+      {(pancake) => (
+        <img src={pancake.img} alt={pancake.description} />
+      )}
+    </Deferred>
+  );
+}
+```
+
+### `ResolvedDeferrable`
+
+This is useful when you're utilizing the `useDeferredData()` hook to un-defer a deferrable:
+
+```tsx lines=[24]
+export const loader: LoaderFunction = () => {
+  return deferred({ tvShows: getTvShows() });
+};
+
+export default function TvShowsRoute() {
+  const data = useLoaderData<typeof loader>();
+  return (
+    <div>
+      <h1>Here are your shows</h1>
+      <Deferred
+        value={data.tvShows}
+        fallback="Loading shows..."
+        errorBoundary="Oh no."
+      >
+        {(tvShows) => <TvShowList tvShows={tvShows} />}
+      </Deferred>
+    </div>
+  );
+}
+
+function TvShowList({
+  tvShows,
+}: {
+  tvShows: ResolvedDeferrable<
+    UseDataFunctionReturn<typeof loader>["tvShows"]
+  >;
+}) {
+  return (
+    <ul>
+      {tvShows.map((tvShow) => (
+        <li key={tvShow.id}>{tvShow.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
 [with-jsx]: https://www.typescriptlang.org/docs/handbook/jsx.html
