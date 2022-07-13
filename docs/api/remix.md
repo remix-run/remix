@@ -10,6 +10,7 @@ React: `@remix-run/react`
 Server runtimes:
 
 - `@remix-run/cloudflare`
+- `@remix-run/deno`
 - `@remix-run/node`
 
 Server adapters:
@@ -27,7 +28,7 @@ These package provides all the components, hooks, and [Web Fetch API][web-fetch-
 
 ### `<Links>`, `<LiveReload>`, `<Meta>`, `<Scripts>`, `<ScrollRestoration>`
 
-These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
+These components are to be used once inside your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
 ```tsx
 import type {
