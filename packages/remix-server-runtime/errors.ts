@@ -60,12 +60,14 @@ export interface ThrownResponse<T = any> {
 // must be type alias due to inference issues on interfaces
 // https://github.com/microsoft/TypeScript/issues/15300
 export type SerializedError = {
+  name: string;
   message: string;
   stack?: string;
 };
 
 export async function serializeError(error: Error): Promise<SerializedError> {
   return {
+    name: error.name,
     message: error.message,
     stack: error.stack,
   };

@@ -3,6 +3,10 @@ import { ServerMode } from "../mode";
 import type { ServerBuild } from "../build";
 import { mockServerBuild } from "./utils";
 
+class CustomError extends Error {
+  name = "CustomError"
+}
+
 function spyConsole() {
   // https://github.com/facebook/react/issues/7047
   let spy: any = {};
@@ -421,7 +425,7 @@ describe("shared server runtime", () => {
 
     test("data request calls loader and responds with generic message and error header", async () => {
       let rootLoader = jest.fn(() => {
-        throw new Error("test");
+        throw new CustomError("test");
       });
       let testAction = jest.fn(() => {
         return "root";
@@ -444,8 +448,10 @@ describe("shared server runtime", () => {
       });
 
       let result = await handler(request);
+      let data = await result.json();
       expect(result.status).toBe(500);
-      expect((await result.json()).message).toBe("Unexpected Server Error");
+      expect(data.name).toBe("Error");
+      expect(data.message).toBe("Unexpected Server Error");
       expect(result.headers.get("X-Remix-Error")).toBe("yes");
       expect(rootLoader.mock.calls.length).toBe(1);
       expect(testAction.mock.calls.length).toBe(0);
@@ -455,7 +461,7 @@ describe("shared server runtime", () => {
       let message =
         "data request loader error logged to console once in dev mode";
       let rootLoader = jest.fn(() => {
-        throw new Error(message);
+        throw new CustomError(message);
       });
       let testAction = jest.fn(() => {
         return "root";
@@ -478,8 +484,10 @@ describe("shared server runtime", () => {
       });
 
       let result = await handler(request);
+      let data = await result.json();
       expect(result.status).toBe(500);
-      expect((await result.json()).message).toBe(message);
+      expect(data.name).toBe('CustomError');
+      expect(data.message).toBe(message);
       expect(result.headers.get("X-Remix-Error")).toBe("yes");
       expect(rootLoader.mock.calls.length).toBe(1);
       expect(testAction.mock.calls.length).toBe(0);
@@ -554,7 +562,7 @@ describe("shared server runtime", () => {
         return "root";
       });
       let testAction = jest.fn(() => {
-        throw new Error("test");
+        throw new CustomError("test");
       });
       let build = mockServerBuild({
         root: {
@@ -574,8 +582,10 @@ describe("shared server runtime", () => {
       });
 
       let result = await handler(request);
+      let data = await result.json();
       expect(result.status).toBe(500);
-      expect((await result.json()).message).toBe("Unexpected Server Error");
+      expect(data.name).toBe("Error");
+      expect(data.message).toBe("Unexpected Server Error");
       expect(result.headers.get("X-Remix-Error")).toBe("yes");
       expect(rootLoader.mock.calls.length).toBe(0);
       expect(testAction.mock.calls.length).toBe(1);
@@ -588,7 +598,7 @@ describe("shared server runtime", () => {
         return "root";
       });
       let testAction = jest.fn(() => {
-        throw new Error(message);
+        throw new CustomError(message);
       });
       let build = mockServerBuild({
         root: {
@@ -608,8 +618,10 @@ describe("shared server runtime", () => {
       });
 
       let result = await handler(request);
+      let data = await result.json();
       expect(result.status).toBe(500);
-      expect((await result.json()).message).toBe(message);
+      expect(data.name).toBe('CustomError');
+      expect(data.message).toBe(message);
       expect(result.headers.get("X-Remix-Error")).toBe("yes");
       expect(rootLoader.mock.calls.length).toBe(0);
       expect(testAction.mock.calls.length).toBe(1);
@@ -1325,7 +1337,7 @@ describe("shared server runtime", () => {
         return "root";
       });
       let testAction = jest.fn(() => {
-        throw new Error("test");
+        throw new CustomError("test");
       });
       let testLoader = jest.fn(() => {
         return "test";
@@ -1360,6 +1372,7 @@ describe("shared server runtime", () => {
       expect(calls.length).toBe(1);
       let entryContext = calls[0][3];
       expect(entryContext.appState.error).toBeTruthy();
+      expect(entryContext.appState.error.name).toBe("CustomError");
       expect(entryContext.appState.error.message).toBe("test");
       expect(entryContext.appState.loaderBoundaryRouteId).toBe("routes/test");
       expect(entryContext.routeData).toEqual({
