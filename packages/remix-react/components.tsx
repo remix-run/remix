@@ -399,7 +399,7 @@ interface PrefetchHandlers {
 function usePrefetchBehavior(
   prefetch: PrefetchBehavior,
   theirElementProps: PrefetchHandlers
-) {
+): [boolean, Required<PrefetchHandlers>] {
   let [maybePrefetch, setMaybePrefetch] = React.useState(false);
   let [shouldPrefetch, setShouldPrefetch] = React.useState(false);
   let { onFocus, onBlur, onMouseEnter, onMouseLeave, onTouchStart } =
@@ -1320,7 +1320,54 @@ export function useMatches(): RouteMatch[] {
  *
  * @see https://remix.run/api/remix#useloaderdata
  */
-export function useLoaderData<T = AppData>(): T {
+
+export type TypedResponse<T> = Response & {
+  json(): Promise<T>;
+};
+
+type DataFunction = (...args: any[]) => unknown; // matches any function
+type DataOrFunction = AppData | DataFunction;
+type JsonPrimitives =
+  | string
+  | number
+  | boolean
+  | String
+  | Number
+  | Boolean
+  | null;
+type NonJsonPrimitives = undefined | Function | symbol;
+type SerializeType<T> = T extends JsonPrimitives
+  ? T
+  : T extends NonJsonPrimitives
+  ? never
+  : T extends { toJSON(): infer U }
+  ? U
+  : T extends []
+  ? []
+  : T extends [unknown, ...unknown[]]
+  ? {
+      [k in keyof T]: T[k] extends NonJsonPrimitives
+        ? null
+        : SerializeType<T[k]>;
+    }
+  : T extends (infer U)[]
+  ? (U extends NonJsonPrimitives ? null : SerializeType<U>)[]
+  : T extends object
+  ? {
+      [k in keyof T as T[k] extends NonJsonPrimitives
+        ? never
+        : k]: SerializeType<T[k]>;
+    }
+  : never;
+
+export type UseDataFunctionReturn<T extends DataOrFunction> = T extends (
+  ...args: any[]
+) => infer Output
+  ? Awaited<Output> extends TypedResponse<infer U>
+    ? SerializeType<U>
+    : SerializeType<Awaited<ReturnType<T>>>
+  : SerializeType<Awaited<T>>;
+export function useLoaderData<T = AppData>(): UseDataFunctionReturn<T> {
   return useRemixRouteContext().data;
 }
 
@@ -1329,7 +1376,9 @@ export function useLoaderData<T = AppData>(): T {
  *
  * @see https://remix.run/api/remix#useactiondata
  */
-export function useActionData<T = AppData>(): T | undefined {
+export function useActionData<T = AppData>():
+  | UseDataFunctionReturn<T>
+  | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
   let { actionData } = transitionManager.getState();
@@ -1442,7 +1491,7 @@ export const LiveReload =
             suppressHydrationWarning
             dangerouslySetInnerHTML={{
               __html: js`
-                (() => {
+                function remixLiveReloadConnect(config) {
                   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
                   let socketPath = protocol + "//" + host + ":" + ${String(
@@ -1460,11 +1509,27 @@ export const LiveReload =
                       window.location.reload();
                     }
                   };
+                  ws.onopen = () => {
+                    if (config && typeof config.onOpen === "function") {
+                      config.onOpen();
+                    }
+                  };
+                  ws.onclose = (error) => {
+                    console.log("Remix dev asset server web socket closed. Reconnecting...");
+                    setTimeout(
+                      () =>
+                        remixLiveReloadConnect({
+                          onOpen: () => window.location.reload(),
+                        }),
+                      1000
+                    );
+                  };
                   ws.onerror = (error) => {
                     console.log("Remix dev asset server web socket error:");
                     console.error(error);
                   };
-                })();
+                }
+                remixLiveReloadConnect();
               `,
             }}
           />

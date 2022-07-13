@@ -222,6 +222,10 @@ export async function watch(
     toWatch.push(config.serverEntryPoint);
   }
 
+  config.watchPaths?.forEach((watchPath) => {
+    toWatch.push(watchPath);
+  });
+
   let watcher = chokidar
     .watch(toWatch, {
       persistent: true,
@@ -353,9 +357,8 @@ async function createBrowserBuild(
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
-    // Must be placed before NodeModulesPolyfillPlugin, so yarn can resolve polyfills correctly
-    yarnPnpPlugin(),
     NodeModulesPolyfillPlugin(),
+    yarnPnpPlugin(),
   ];
 
   return esbuild.build({

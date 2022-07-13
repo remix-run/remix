@@ -5,7 +5,7 @@ order: 1
 
 # Conventions
 
-A lot of Remix APIs aren't imported from the `"@remix-run/*"` packages, but are instead conventions and exports from _your_ application modules. When you `import from "@remix-run/*"`, _you are calling Remix_, but these APIs are when _Remix calls your code_.
+A lot of Remix APIs aren't imported from the `"@remix-run/*"` packages, but are instead conventions and exports from _your_ application modules. When you `import from "@remix-run/*"`, _you are calling Remix_, but these APIs are consumed when _Remix calls your code_.
 
 ## remix.config.js
 
@@ -155,6 +155,16 @@ module.exports = {
     /^unified.*/,
     "@sindresorhus/slugify",
   ],
+};
+```
+
+### watchPaths
+
+A function for defining custom directories to watch while running [remix dev][remix-dev], in addition to [`appDirectory`][app-directory].
+
+```tsx
+exports.watchPaths = async () => {
+  return ["/some/path/*"];
 };
 ```
 
@@ -1011,6 +1021,8 @@ export const meta: MetaFunction = () => {
 };
 ```
 
+<docs-warning>The `meta` function _may_ run on the server (e.g. the initial page load) or the client (e.g. a client navigation), so you cannot access server-specific data like `process.env.NODE_ENV` directly. If you need server-side data in `meta`, get the data in the `loader` and access it via the `meta` function's `data` parameter.</docs-warning>
+
 There are a few special cases (read about those below). In the case of nested routes, the meta tags are merged automatically, so parent routes can add meta tags without the child routes needing to copy them.
 
 #### `HtmlMetaDescriptor`
@@ -1444,7 +1456,7 @@ export default function Page() {
 [view-example-app]: https://github.com/remix-run/remix/tree/main/examples/multiple-params
 [use-params]: https://reactrouter.com/docs/en/v6/api#useparams
 [params]: #loader-params
-[routing-guide]: ../guides/routing.md
+[routing-guide]: ../guides/routing
 [root-route]: #root-layout-route
 [resource-route]: ../guides/resource-routes
 [server-entry-module]: #entryservertsx
@@ -1456,3 +1468,5 @@ export default function Page() {
 [http-equiv-tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta#attr-http-equiv
 [error-boundaries]: https://reactjs.org/docs/error-boundaries.html
 [use-matches]: ./remix#usematches
+[remix-dev]: https://remix.run/docs/en/v1/other-api/dev#remix-dev
+[app-directory]: #appDirectory

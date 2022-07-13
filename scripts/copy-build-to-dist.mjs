@@ -7,16 +7,13 @@ const PACKAGES_PATH = path.join(ROOT_DIR, "packages");
 const DEFAULT_BUILD_PATH = path.join(ROOT_DIR, "build");
 
 let activeOutputDir = DEFAULT_BUILD_PATH;
-if (process.env.REMIX_LOCAL_DEV_OUTPUT_DIRECTORY) {
-  let appDir = path.join(
-    ROOT_DIR,
-    process.env.REMIX_LOCAL_DEV_OUTPUT_DIRECTORY
-  );
+if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
+  let appDir = path.join(ROOT_DIR, process.env.REMIX_LOCAL_BUILD_DIRECTORY);
   try {
     fse.readdirSync(path.join(appDir, "node_modules"));
   } catch (e) {
     console.error(
-      "Oops! You pointed `REMIX_LOCAL_DEV_OUTPUT_DIRECTORY` to a directory that " +
+      "Oops! You pointed `REMIX_LOCAL_BUILD_DIRECTORY` to a directory that " +
         "does not have a `node_modules` folder. Please `npm install` in that " +
         "directory and try again."
     );
@@ -67,6 +64,62 @@ async function copyBuildToDist() {
       );
     } catch (e) {}
   }
+
+  // Write an export shim for @remix-run/node/globals types
+  copyQueue.push(
+    (async () => {
+      let dest = path.join(
+        ".",
+        "build",
+        "node_modules",
+        "@remix-run",
+        "node",
+        "globals.d.ts"
+      );
+      console.log(chalk.yellow(`  🛠  Writing globals.d.ts shim to ${dest}`));
+      await fse.writeFile(dest, "export * from './dist/globals';");
+    })()
+  );
+
+  // One-off deep import copies so folks don't need to import from inside of
+  // dist/.  TODO: Remove in v2 and either get rid of the deep import or manage
+  // with the package.json "exports" field
+  let oneOffCopies = [
+    // server-build.js built by rollup outside of dist/, need to copy to
+    // packages/ dir outside of dist/
+    [
+      "build/node_modules/@remix-run/dev/server-build.js",
+      "packages/remix-dev/server-build.js",
+    ],
+    // server-build.d.ts only built by tsc to dist/.  Copy outside of dist/
+    // both in build/ and packages/ dir
+    [
+      "build/node_modules/@remix-run/dev/dist/server-build.d.ts",
+      "build/node_modules/@remix-run/dev/server-build.d.ts",
+    ],
+    [
+      "build/node_modules/@remix-run/dev/dist/server-build.d.ts",
+      "packages/remix-dev/server-build.d.ts",
+    ],
+    // globals.d.ts shim written outside of dist/ in above, copy to packages/
+    // dir outside of dist/
+    [
+      "build/node_modules/@remix-run/node/globals.d.ts",
+      "packages/remix-node/globals.d.ts",
+    ],
+  ];
+
+  oneOffCopies.forEach(([srcFile, destFile]) =>
+    copyQueue.push(
+      (async () => {
+        let src = path.relative(ROOT_DIR, path.join(...srcFile.split("/")));
+        let dest = path.relative(ROOT_DIR, path.join(...destFile.split("/")));
+        console.log(chalk.yellow(`  🛠  Copying ${src} to ${dest}`));
+        await fse.copy(src, dest);
+      })()
+    )
+  );
+
   await Promise.all(copyQueue);
   console.log(
     chalk.green(
@@ -91,7 +144,11 @@ async function getPackageBuildPaths(moduleRootDir) {
       }
       if (path.basename(moduleDir) === "@remix-run") {
         packageBuilds.push(...(await getPackageBuildPaths(moduleDir)));
-      } else {
+      } else if (
+        /node_modules\/@remix-run\//.test(moduleDir) ||
+        /node_modules\/create-remix/.test(moduleDir) ||
+        /node_modules\/remix/.test(moduleDir)
+      ) {
         packageBuilds.push(moduleDir);
       }
     }
