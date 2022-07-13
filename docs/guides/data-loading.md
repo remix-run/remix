@@ -229,8 +229,40 @@ export default function Product() {
 ```
 
 ## Cloudflare KV
+If you picked Cloudflare Pages as your environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource. To start with local development, you need to add a ```--kv``` parameter with a name of your namespace to the package.json task, so it would look like this:
 
-If you picked Cloudflare Workers as your environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource. You'll need to [do some configuration][cloudflare-kv-setup] but then you can access the data from your loaders:
+```"dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public --kv PRODUCTS_KV"```
+
+This enable you to use the PRODUCTS_KV in a loader context:
+```tsx
+import type { LoaderFunction } from "@remix-run/cloudflare"; // or "@remix-run/node"
+import { json } from "@remix-run/cloudflare"; // or "@remix-run/node"
+import { useLoaderData } from "@remix-run/react";
+
+export const loader: LoaderFunction = async ({
+  context, params,
+}) => {
+  return json(
+    await PRODUCTS_KV.get(`product-${params.productId}`, {
+      type: "json",
+    })
+  );
+};
+
+export default function Product() {
+  const product = useLoaderData();
+  return (
+    <div>
+      <p>{} Products</p>
+      {/* ... */}
+    </div>
+  );
+}
+```
+
+
+
+For Cloudflare Workers environment you'll need to [do some configuration][cloudflare-kv-setup] but then you can access the data from your loaders:
 
 ```tsx filename=app/routes/products/$productId.tsx
 import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
