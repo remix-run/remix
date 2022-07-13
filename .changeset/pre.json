@@ -19,5 +19,10 @@
     "@remix-run/server-runtime": "1.6.4",
     "@remix-run/vercel": "1.6.4"
   },
-  "changesets": []
+  "changesets": [
+    "blue-starfishes-study",
+    "fast-yaks-whisper",
+    "slimy-avocados-tickle",
+    "yellow-flowers-trade"
+  ]
 }
