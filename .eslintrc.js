@@ -5,4 +5,12 @@ module.exports = {
     "plugin:markdown/recommended",
   ],
   plugins: ["markdown"],
+  overrides: [
+    {
+      files: ["rollup.config.js"],
+      rules: {
+        "import/no-extraneous-dependencies": 0,
+      },
+    },
+  ],
 };
