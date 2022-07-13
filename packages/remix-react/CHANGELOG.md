@@ -4,4 +4,4 @@
 
 ### Patch Changes
 
-- 2d46b9133: feat(remix-react): add WebSocket reconnect to `LiveReload`
+- Add WebSocket reconnect to `LiveReload` (2d46b9133)

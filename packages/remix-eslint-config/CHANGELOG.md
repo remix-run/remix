@@ -4,4 +4,4 @@
 
 ### Patch Changes
 
-- Bug fix: Use `require.resolve` when importing `@babel/preset-react` (465b7fae0)
+- Use `require.resolve` when importing `@babel/preset-react` (465b7fae0)

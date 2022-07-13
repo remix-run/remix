@@ -4,5 +4,5 @@
 
 ### Patch Changes
 
-- 6ddea10c8: feat(remix-vercel): add support for `@vercel/node` v2
+- Add support for `@vercel/node` v2 (6ddea10c8)
   - @remix-run/node@1.6.5-pre.0
