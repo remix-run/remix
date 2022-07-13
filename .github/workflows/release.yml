@@ -38,9 +38,6 @@ jobs:
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
-      - name: 🏗 Build
-        run: yarn build
-
       - name: 🔐 Setup npm auth
         run: |
           echo "registry=https://registry.npmjs.org" >> ~/.npmrc
