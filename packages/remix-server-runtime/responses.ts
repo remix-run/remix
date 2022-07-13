@@ -1,81 +1,11 @@
-import { serializeError } from "./errors";
-
-const DEFERRED_PROMISE_PREFIX = "__deferred_promise:";
-
-export type Deferrable<T> = never | T | Promise<T>;
-export type ResolvedDeferrable<T> = T extends null | undefined
-  ? T
-  : T extends Deferrable<infer T2>
-  ? T2 extends PromiseLike<infer T3>
-    ? T3
-    : T2
-  : T;
+import {
+  CONTENT_TYPE as DEFERRED_CONTENT_TYPE,
+  createDeferredReadableStream,
+  getDeferrableData,
+} from "@remix-run/deferred";
 
 export interface DeferredResponse extends Response {
-  deferred: Record<string | number, Promise<unknown>>;
-}
-
-function createDeferredReadableStream(
-  initialData: unknown,
-  deferred: Record<string, Promise<unknown>>
-) {
-  let encoder = new TextEncoder();
-
-  return new ReadableStream({
-    // TODO: Figure out how to properly type this.
-    async start(controller: any) {
-      // Send the initial data
-      controller.enqueue(encoder.encode(JSON.stringify(initialData) + "\n\n"));
-
-      // Watch all the deferred keys for resolution
-      await Promise.all(
-        Object.entries(deferred).map(async ([key, promise]) => {
-          await promise.then(
-            (result) => {
-              // Send the resolved data
-              controller.enqueue(
-                encoder.encode(
-                  "data:" + JSON.stringify({ [key]: result }) + "\n\n"
-                )
-              );
-            },
-            async (error) => {
-              // Send the error
-              controller.enqueue(
-                encoder.encode(
-                  "error:" +
-                    JSON.stringify({ [key]: await serializeError(error) }) +
-                    "\n\n"
-                )
-              );
-            }
-          );
-        })
-      );
-
-      controller.close();
-    },
-  });
-}
-
-function getDataForDeferred(data: unknown) {
-  let deferred: Record<string, Promise<unknown>> = {};
-  let initialData = data;
-  if (typeof data === "object" && data !== null && !Array.isArray(data)) {
-    let dataWithoutPromises = {} as Record<string | number, unknown>;
-
-    for (let [key, value] of Object.entries(data)) {
-      if (typeof value?.then === "function") {
-        deferred[key] = value;
-        dataWithoutPromises[key] = DEFERRED_PROMISE_PREFIX + key;
-      } else {
-        dataWithoutPromises[key] = value;
-      }
-    }
-
-    initialData = dataWithoutPromises;
-  }
-  return { initialData, deferred };
+  deferredData?: Record<string | number, Promise<unknown>>;
 }
 
 export type DeferredFunction = <Data>(
@@ -99,24 +29,24 @@ export const deferred: DeferredFunction = (data, init = {}) => {
     // support cache-control headers. Browsers force the cache to be `no-store`
     //
     // spec: https://html.spec.whatwg.org/multipage/server-sent-events.html
-    headers.set("Content-Type", "text/remix-deferred; charset=utf-8");
+    headers.set("Content-Type", `${DEFERRED_CONTENT_TYPE}; charset=utf-8`);
   }
 
   class DeferredResponseImplementation extends Response {
-    public deferred: Record<string | number, Promise<unknown>>;
-    private initialData: unknown;
+    public deferredData?: Record<string | number, Promise<unknown>>;
+    private criticalData: unknown;
 
     constructor(data: unknown, init?: ResponseInit) {
-      let { deferred, initialData } = getDataForDeferred(data);
+      let deferrableData = getDeferrableData(data);
 
-      super(createDeferredReadableStream(initialData, deferred), init);
+      super(createDeferredReadableStream(deferrableData), init);
 
-      this.deferred = deferred;
-      this.initialData = initialData;
+      this.deferredData = deferrableData.deferredData;
+      this.criticalData = deferrableData.criticalData;
     }
 
     async json<T>(): Promise<T> {
-      return this.initialData as T;
+      return this.criticalData as T;
     }
   }
 
@@ -198,7 +128,7 @@ export function isResponse(value: any): value is Response {
 export function isDeferredResponse(
   response: Response
 ): response is DeferredResponse {
-  return typeof (response as DeferredResponse).deferred === "object";
+  return "deferredData" in response;
 }
 
 const redirectStatusCodes = new Set([301, 302, 303, 307, 308]);

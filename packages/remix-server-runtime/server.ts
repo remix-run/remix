@@ -384,7 +384,7 @@ async function handleDocumentRequest({
       loaderStatusCodes.push(response.status);
 
       if (isDeferredResponse(response)) {
-        deferredRouteData[match.route.id] = response.deferred;
+        deferredRouteData[match.route.id] = response.deferredData;
       }
 
       if (isCatch) {

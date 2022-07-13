@@ -861,7 +861,7 @@ function remixDeferred() {
     external(id) {
       return isBareModuleId(id);
     },
-    input: `${sourceDir}/index.tsx`,
+    input: `${sourceDir}/index.ts`,
     output: {
       banner: createBanner(packageName, version),
       dir: outputDist,
@@ -897,7 +897,7 @@ function remixDeferred() {
     external(id) {
       return isBareModuleId(id);
     },
-    input: `${sourceDir}/index.tsx`,
+    input: `${sourceDir}/index.ts`,
     output: {
       banner: createBanner("@remix-run/react", version),
       dir: `${outputDist}/esm`,
@@ -1021,28 +1021,28 @@ function copyToPlaygrounds() {
   return {
     name: "copy-to-remix-playground",
     async writeBundle(options, bundle) {
-      if (activeOutputDir === "build") {
-        let playgroundsDir = path.join(__dirname, "playground");
-        let playgrounds = await fs.promises.readdir(playgroundsDir);
-        let writtenDir = path.join(__dirname, options.dir);
-        for (let playground of playgrounds) {
-          let playgroundDir = path.join(playgroundsDir, playground);
-          if (!fse.statSync(playgroundDir).isDirectory()) {
-            continue;
-          }
-          let destDir = writtenDir.replace(
-            path.join(__dirname, "build"),
-            playgroundDir
-          );
-          await fse.ensureDir(destDir);
-          await fse.copy(writtenDir, destDir);
-          await triggerLiveReload(playgroundDir);
-        }
-      } else {
-        // If we're not building to "build" then trigger live reload on our
-        // external "playground" app
-        await triggerLiveReload(activeOutputDir);
-      }
+      // if (activeOutputDir === "build") {
+      //   let playgroundsDir = path.join(__dirname, "playground");
+      //   let playgrounds = await fs.promises.readdir(playgroundsDir);
+      //   let writtenDir = path.join(__dirname, options.dir);
+      //   for (let playground of playgrounds) {
+      //     let playgroundDir = path.join(playgroundsDir, playground);
+      //     if (!fse.statSync(playgroundDir).isDirectory()) {
+      //       continue;
+      //     }
+      //     let destDir = writtenDir.replace(
+      //       path.join(__dirname, "build"),
+      //       playgroundDir
+      //     );
+      //     await fse.ensureDir(destDir);
+      //     await fse.copy(writtenDir, destDir);
+      //     await triggerLiveReload(playgroundDir);
+      //   }
+      // } else {
+      //   // If we're not building to "build" then trigger live reload on our
+      //   // external "playground" app
+      //   await triggerLiveReload(activeOutputDir);
+      // }
     },
   };
 }

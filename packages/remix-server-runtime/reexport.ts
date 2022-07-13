@@ -1,3 +1,5 @@
+export type { Deferrable, ResolvedDeferrable } from "@remix-run/deferred";
+
 export type {
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
@@ -30,8 +32,6 @@ export type {
   LinkDescriptor,
   PageLinkDescriptor,
 } from "./links";
-
-export type { Deferrable, ResolvedDeferrable } from "./responses";
 
 export type {
   ActionArgs,
