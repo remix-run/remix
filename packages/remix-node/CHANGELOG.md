@@ -4,10 +4,10 @@
 
 ### Patch Changes
 
-- 842f2d860: We enhanced the type signatures of `loader`/`action` and `useLoaderData`/`useActionData` to make it possible to infer the data type from return type of its related server function.
+- We enhanced the type signatures of `loader`/`action` and `useLoaderData`/`useActionData` to make it possible to infer the data type from return type of its related server function.
 
   ```tsx
-  import { LoaderArgs } from "@remix-run/node";
+  import type { LoaderArgs } from "@remix-run/node";
 
   export async function loader(args: LoaderArgs) {
     return json({ greeting: "Hello!" }); // TypedResponse<{ greeting: string }>
@@ -21,7 +21,7 @@
 
   See the discussion in #1254 for more context.
 
-- Updated dependencies [842f2d860]
+- Updated dependencies
   - @remix-run/server-runtime@1.6.5-pre.1
 
 ## 1.6.5-pre.0
