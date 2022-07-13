@@ -3,4 +3,4 @@
 "@remix-run/react": patch
 ---
 
-feat(remix-react): add WebSocket reconnect to `LiveReload`
+Add WebSocket reconnect to `LiveReload`
