@@ -260,7 +260,7 @@ export default function PackageRoute() {
 ```
 
 <details>
-  <summary>Alternatively, you can use the `useDeferredValue` hook:</summary>
+  <summary>Alternatively, you can use the `useDeferredData` hook:</summary>
 
 If you're not jazzed about bringing back render props, you can use a hook, but you'll have to break things out into another component:
 
@@ -285,7 +285,7 @@ export default function PackageRoute() {
 }
 
 function PackageLocation() {
-  const packageLocation = useDeferredValue();
+  const packageLocation = useDeferredData();
   return (
     <p>
       Your package is at {packageLocation.latitude} lat and{" "}
@@ -337,9 +337,25 @@ export const loader: LoaderFunction = ({
 
 That `shouldDeferPackageLocation` could be implemented to check the user making the request, whether the package location data is in a cache, the status of an A/B test, or whatever else you want. This is pretty sweet 🍭
 
-## When to not use streaming
+Also, because this happens at request time (even on client transitions), makes use of the URL via nested routing (rather than requiring you to render before you know what data to fetch), and it's all just regular HTTP, we can prefetch and cache the response! Meaning client-side transitions can be _much_ faster (in fact, there are plenty of situations when the user may never be presented with the fallback at all).
 
-TODO: Talk about no streaming on action reloads.
+## FAQ
+
+### Why not defer everything by default?
+
+The Remix defer API is another lever Remix offers to give you a nice way to choose between trade-offs. Do you want a better TTFB (Time to first byte)? Defer stuff. Do you want a low CLS (Content Layout Shift)? Don't defer stuff. You want a better TTFB, but also want a lower CLS? Defer just the slow and unimportant stuff.
+
+It's all trade-offs, and what's neat about the API design is that it's well suited for you to do easy experimentation to see which trade-offs lead to better results for your real-world key indicators.
+
+### When does the fallback render?
+
+The `<Deferred />` `fallback` prop only renders on the initial render of the `<Deferred />` component. It will not render the fallback if props change. Effectively, this means that you will not get a fallback rendered when a user submits a form and loader data is revalidated and you will not get a fallback rendered when the user navigates to the same route with different params (in the context of our above example, if the user selects from a list of packages on the left to find their location on the right).
+
+This may feel counter-intuitive at first, but stay with us, we really thought this through and it's important that it works this way. Let's imagine a world without the deferred API. For those scenarios you're probably going to want to implement Optimistic UI for form submissions/revalidation and some Pending UI for sibling route navigations.
+
+When you decide you'd like to try the trade-offs of `deferred`, we don't want you to have to change or remove those optimizations because we want you to be able to easily switch between deferring some data and not deferring it. So we ensure that your existing pending states work the same way. If we didn't do this, then you could experience what we call "Popcorn UI" where submissions of data trigger the fallback loading state instead of the optimistic UI you'd worked hard on.
+
+So just keep this in mind: **Deferred is 100% only about the initial load of a route.** And that applies the same way whether that load is a server render or a client transition.
 
 [link]: ../api/remix#link
 [usefetcher]: ../api/remix#usefetcher

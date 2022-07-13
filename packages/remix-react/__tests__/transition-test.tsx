@@ -2401,7 +2401,7 @@ describe("deferred", () => {
           lazy: rootDfds[count].promise,
         });
       },
-      rootShouldReload: shouldReloadSpy,
+      shouldReloads: { root: shouldReloadSpy },
     });
 
     let A = t.navigate.get("/foo?key=value");
@@ -2607,7 +2607,7 @@ describe("deferred", () => {
           lazy: rootDfds[count].promise,
         });
       },
-      rootShouldReload: shouldReloadSpy,
+      shouldReloads: { root: shouldReloadSpy },
     });
 
     let A = t.navigate.get("/foo?a=1");
@@ -2685,6 +2685,38 @@ describe("deferred", () => {
     });
     // Did not get called a second time since this actionReload execution
     // cannot be opted out of
+    expect(shouldReloadSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("removes pending deferreds on successful resolution to re-enable shouldReload on fetch submissions", async () => {
+    let shouldReloadSpy = jest.fn(() => false);
+    let t = setup({ url: "/", shouldReloads: { foo: shouldReloadSpy } });
+
+    let A = t.navigate.get("/foo");
+    let dfdA = defer();
+    await A.loader.resolve(
+      setupDeferred({
+        value: dfdA.promise,
+      })
+    );
+    await dfdA.resolve("A");
+    expect(t.getState().loaderData).toEqual({
+      root: "ROOT",
+      foo: {
+        value: "A",
+      },
+    });
+    expect(shouldReloadSpy).toHaveBeenCalledTimes(0);
+
+    // Navigate to the same URL forcing a revalidation, which foo can opt out of
+    let B = t.fetch.post("/bar");
+    await B.action.resolve("FETCH ACTION");
+    expect(t.getState().loaderData).toEqual({
+      root: "ROOT",
+      foo: {
+        value: "A",
+      },
+    });
     expect(shouldReloadSpy).toHaveBeenCalledTimes(1);
   });
 });
@@ -2780,12 +2812,12 @@ let setup = (
   {
     url,
     rootLoaderOverride,
-    rootShouldReload,
+    shouldReloads,
     initialLoaderData,
   }: {
     url: string;
     rootLoaderOverride?: () => any | Promise<any>;
-    rootShouldReload?: ShouldReloadFunction;
+    shouldReloads?: Record<string, ShouldReloadFunction>;
     initialLoaderData?: any;
   } = { url: "/" }
 ) => {
@@ -2858,7 +2890,7 @@ let setup = (
       CatchBoundary: FakeComponent,
       hasLoader: true,
       loader: rootLoader,
-      ...(rootShouldReload ? { shouldReload: rootShouldReload } : {}),
+      ...(shouldReloads?.root ? { shouldReload: shouldReloads?.root } : {}),
       children: [
         {
           path: "/",
@@ -2866,6 +2898,9 @@ let setup = (
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),
+          ...(shouldReloads?.index
+            ? { shouldReload: shouldReloads?.index }
+            : {}),
           element: {} as any,
           module: "",
         },
@@ -2875,6 +2910,7 @@ let setup = (
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),
+          ...(shouldReloads?.foo ? { shouldReload: shouldReloads?.foo } : {}),
           element: {} as any,
           module: "",
         },
@@ -2884,6 +2920,9 @@ let setup = (
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),
+          ...(shouldReloads?.foobar
+            ? { shouldReload: shouldReloads?.foobar }
+            : {}),
           element: {} as any,
           module: "",
         },
@@ -2893,6 +2932,7 @@ let setup = (
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),
+          ...(shouldReloads?.bar ? { shouldReload: shouldReloads?.bar } : {}),
           element: {} as any,
           module: "",
         },
@@ -2902,6 +2942,7 @@ let setup = (
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),
+          ...(shouldReloads?.baz ? { shouldReload: shouldReloads?.baz } : {}),
           element: {} as any,
           module: "",
         },
@@ -2911,6 +2952,9 @@ let setup = (
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),
+          ...(shouldReloads?.param
+            ? { shouldReload: shouldReloads?.param }
+            : {}),
           element: {} as any,
           module: "",
         },

@@ -351,7 +351,7 @@ function Accessor() {
 </Deferred>;
 ```
 
-`<Deferred>` is paired with [`deferred()`][deferred-response] in your loader. Returning a deferred value from your loader will put Remix in streaming mode and allow you to render fallbacks with `<Deferred>`. A full example can be found in the [streaming guide][streaming-guide]:
+`<Deferred>` is paired with [`deferred()`][deferred-response] in your loader. Returning a deferred value from your loader will put Remix in streaming mode and allow you to render fallbacks with `<Deferred>`. A full example can be found in the [streaming guide][streaming-guide].
 
 ### `useLoaderData`
 
