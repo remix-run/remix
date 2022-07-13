@@ -4,4 +4,4 @@
 
 ### Patch Changes
 
-- 465b7fae0: fix(remix-eslint-config): use `require.resolve` when importing `@babel/preset-react`
+- Bug fix: Use `require.resolve` when importing `@babel/preset-react` (465b7fae0)
