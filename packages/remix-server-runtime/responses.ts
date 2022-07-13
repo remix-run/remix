@@ -4,14 +4,21 @@ import {
   getDeferrableData,
 } from "@remix-run/deferred";
 
-export interface DeferredResponse extends Response {
-  deferredData?: Record<string | number, Promise<unknown>>;
-}
+// must be a type since this is a subtype of response
+// interfaces must conform to the types they extend
+export type TypedResponse<T extends unknown = unknown> = Response & {
+  json(): Promise<T>;
+};
 
-export type DeferredFunction = <Data>(
+export type DeferredResponse<Data extends unknown = unknown> =
+  TypedResponse<Data> & {
+    deferredData: Record<string | number, Promise<unknown>>;
+  };
+
+export type DeferredFunction = <Data extends unknown = unknown>(
   data: Data,
   init?: number | ResponseInit
-) => DeferredResponse;
+) => DeferredResponse<Data>;
 
 /**
  * This is a shortcut for creating `text/remix-deferred` responses. Converts `data`
@@ -33,7 +40,7 @@ export const deferred: DeferredFunction = (data, init = {}) => {
   }
 
   class DeferredResponseImplementation extends Response {
-    public deferredData?: Record<string | number, Promise<unknown>>;
+    public deferredData: Record<string | number, Promise<unknown>>;
     private criticalData: unknown;
 
     constructor(data: unknown, init?: ResponseInit) {
@@ -41,7 +48,7 @@ export const deferred: DeferredFunction = (data, init = {}) => {
 
       super(createDeferredReadableStream(deferrableData), init);
 
-      this.deferredData = deferrableData.deferredData;
+      this.deferredData = deferrableData.deferredData || {};
       this.criticalData = deferrableData.criticalData;
     }
 
@@ -60,12 +67,6 @@ export type JsonFunction = <Data extends unknown>(
   data: Data,
   init?: number | ResponseInit
 ) => TypedResponse<Data>;
-
-// must be a type since this is a subtype of response
-// interfaces must conform to the types they extend
-export type TypedResponse<T extends unknown = unknown> = Response & {
-  json(): Promise<T>;
-};
 
 /**
  * This is a shortcut for creating `application/json` responses. Converts `data`

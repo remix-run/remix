@@ -6,6 +6,7 @@ import type {
   FormHTMLAttributes,
   MouseEventHandler,
   TouchEventHandler,
+  SuspenseProps,
 } from "react";
 import * as React from "react";
 import type { Navigator, Params } from "react-router";
@@ -20,6 +21,7 @@ import {
   useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
+import type { Deferrable, ResolvedDeferrable } from "@remix-run/deferred";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
@@ -383,23 +385,12 @@ const deferredContext = React.createContext<
   undefined | { value: unknown; key?: string }
 >(undefined);
 
-// These are duplicated in the server-runtime at: responses.ts
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export type Deferrable<T> = never | T | Promise<T>;
-export type ResolvedDeferrable<T> = T extends null | undefined
-  ? T
-  : T extends Deferrable<infer T2>
-  ? T2 extends PromiseLike<infer T3>
-    ? T3
-    : T2
-  : T;
-
 export interface DeferredResolveRenderFunction<Data> {
   (data: ResolvedDeferrable<Data>): JSX.Element;
 }
 
-export interface DeferredProps<Data>
-  extends Omit<React.SuspenseProps, "children"> {
+export interface DeferredProps<Data> {
+  fallbackElement?: SuspenseProps["fallback"];
   children: React.ReactNode | DeferredResolveRenderFunction<Data>;
   value: Data;
   errorElement?: React.ReactNode;
@@ -412,7 +403,7 @@ export function Deferred<Data = any>({
   children,
   value,
   errorElement,
-  fallback,
+  fallbackElement,
   nonce,
 }: DeferredProps<Data>) {
   let { routeDataDeferred } = useRemixEntryContext();
@@ -439,7 +430,7 @@ export function Deferred<Data = any>({
         key: suspenseDataKey,
       }}
     >
-      <React.Suspense fallback={fallback}>
+      <React.Suspense fallback={fallbackElement}>
         <DeferredErrorBoundary errorElement={errorElement} nonce={nonce}>
           {typeof children === "function" ? (
             <ResolveDeferred
@@ -1592,7 +1583,9 @@ export type TypedResponse<T> = Response & {
 };
 
 type DataFunction = (...args: any[]) => unknown; // matches any function
+
 type DataOrFunction = AppData | DataFunction;
+
 type JsonPrimitives =
   | string
   | number
@@ -1601,8 +1594,10 @@ type JsonPrimitives =
   | Number
   | Boolean
   | null;
+
 type NonJsonPrimitives = undefined | Function | symbol;
-type SerializeType<T> = T extends JsonPrimitives
+
+type SerializeType<T, UseDeferred = false> = T extends JsonPrimitives
   ? T
   : T extends NonJsonPrimitives
   ? never
@@ -1621,8 +1616,14 @@ type SerializeType<T> = T extends JsonPrimitives
   : T extends object
   ? {
       [k in keyof T as T[k] extends NonJsonPrimitives
-        ? never
-        : k]: SerializeType<T[k]>;
+        ? UseDeferred extends true
+          ? k
+          : never
+        : k]: UseDeferred extends true
+        ? T[k] extends Deferrable<unknown>
+          ? Deferrable<ResolvedDeferrable<T[k]>>
+          : SerializeType<T[k]>
+        : SerializeType<T[k]>;
     }
   : never;
 
@@ -1633,6 +1634,7 @@ export type UseDataFunctionReturn<T extends DataOrFunction> = T extends (
     ? SerializeType<U>
     : SerializeType<Awaited<ReturnType<T>>>
   : SerializeType<Awaited<T>>;
+
 export function useLoaderData<T = AppData>(): UseDataFunctionReturn<T> {
   return useRemixRouteContext().data;
 }

@@ -1,7 +1,7 @@
 export const CONTENT_TYPE = "text/remix-deferred";
 export const DEFERRED_VALUE_PLACEHOLDER_PREFIX = "__deferred_promise:";
 
-export type Deferrable<T> = never | T | Promise<T>;
+export type Deferrable<T> = `__deferred_promise:${string}` | Promise<T>;
 export type ResolvedDeferrable<T> = T extends null | undefined
   ? T
   : T extends Deferrable<infer T2>
