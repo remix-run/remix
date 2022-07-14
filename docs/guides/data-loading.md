@@ -235,7 +235,7 @@ If you picked Cloudflare Pages as your environment, [Cloudflare Key Value][cloud
 "dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public --kv PRODUCTS_KV"
 ```
 
-This enable you to use the `PRODUCTS_KV` in a loader context:
+This enables you to use the `PRODUCTS_KV` in a loader context (KV stores are added to loader context automatically by the Cloudflare Pages adapter):
 ```tsx
 import type { LoaderFunction } from "@remix-run/cloudflare"; // or "@remix-run/node"
 import { json } from "@remix-run/cloudflare"; // or "@remix-run/node"
