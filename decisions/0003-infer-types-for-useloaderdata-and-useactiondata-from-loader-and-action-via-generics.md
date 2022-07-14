@@ -182,7 +182,7 @@ type MyLoaderData = {/*...*/}
 
 export default function Route() {
   let dataGeneric = useLoaderData<MyLoaderData>() // <-- will be deprecated
-  let dataCast = useLoaderData() as MyLoaderData // <-- will be deprecated
+  let dataCast = useLoaderData() as MyLoaderData // <- use this instead
 }
 ```
 
