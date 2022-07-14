@@ -1,8 +1,8 @@
 {
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["dist", "__tests__", "**/node_modules/**"],
+  "exclude": ["dist", "__tests__", "node_modules"],
   "compilerOptions": {
-    "lib": ["ES2019"],
+    "lib": ["DOM", "ES2019"],
     "target": "ES2019",
     "types": ["@cloudflare/workers-types"],
 
