@@ -16,7 +16,7 @@ const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 interface FixtureInit {
   buildStdio?: Writable;
   sourcemap?: boolean;
-  files: { [filename: string]: string };
+  files?: { [filename: string]: string };
   template?: "cf-template" | "deno-template" | "node-template";
   setup?: "node" | "cloudflare";
 }
@@ -133,7 +133,9 @@ export async function createAppFixture(fixture: Fixture) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-export async function createFixtureProject(init: FixtureInit): Promise<string> {
+export async function createFixtureProject(
+  init: FixtureInit = {}
+): Promise<string> {
   let template = init.template ?? "node-template";
   let integrationTemplateDir = path.join(__dirname, template);
   let projectName = `remix-${template}-${Math.random().toString(32).slice(2)}`;
@@ -147,7 +149,6 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     { overwrite: true }
   );
   if (init.setup) {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     let setupSpawn = spawnSync(
       "node",
       ["node_modules/@remix-run/dev/dist/cli.js", "setup", init.setup],
@@ -178,9 +179,7 @@ function build(projectDir: string, buildStdio?: Writable, sourcemap?: boolean) {
   if (sourcemap) {
     buildArgs.push("--sourcemap");
   }
-  let buildSpawn = spawnSync("node", buildArgs, {
-    cwd: projectDir,
-  });
+  let buildSpawn = spawnSync("node", buildArgs, { cwd: projectDir });
 
   // These logs are helpful for debugging. Remove comments if needed.
   // console.log("spawning @remix-run/dev/cli.js `build`:\n");
@@ -188,24 +187,25 @@ function build(projectDir: string, buildStdio?: Writable, sourcemap?: boolean) {
   // console.log("  " + buildSpawn.stdout.toString("utf-8"));
   // console.log("  STDERR:");
   // console.log("  " + buildSpawn.stderr.toString("utf-8"));
-  if (buildSpawn.error || buildSpawn.status) {
-    console.error(buildSpawn.stderr.toString("utf-8"));
-    throw buildSpawn.error || new Error(`Build failed, check the output above`);
-  }
 
   if (buildStdio) {
     buildStdio.write(buildSpawn.stdout.toString("utf-8"));
     buildStdio.write(buildSpawn.stderr.toString("utf-8"));
     buildStdio.end();
   }
+
+  if (buildSpawn.error || buildSpawn.status) {
+    console.error(buildSpawn.stderr.toString("utf-8"));
+    throw buildSpawn.error || new Error(`Build failed, check the output above`);
+  }
 }
 
 async function writeTestFiles(init: FixtureInit, dir: string) {
   await Promise.all(
-    Object.keys(init.files).map(async (filename) => {
+    Object.keys(init.files ?? {}).map(async (filename) => {
       let filePath = path.join(dir, filename);
       await fse.ensureDir(path.dirname(filePath));
-      await fse.writeFile(filePath, stripIndent(init.files[filename]));
+      await fse.writeFile(filePath, stripIndent(init.files![filename]));
     })
   );
 }

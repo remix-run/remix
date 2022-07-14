@@ -44,7 +44,7 @@
     "test:primary": "jest",
     "changeset": "changeset",
     "changeset:version": "changeset version",
-    "changeset:release": "changeset publish",
+    "changeset:release": "yarn build && changeset publish",
     "version": "node ./scripts/version.js",
     "version:experimental": "node scripts ./scripts/version experimental",
     "watch": "rollup -c --watch --watch.onEnd=\"tsc -b && node scripts/copy-build-to-dist.mjs\""
@@ -65,6 +65,7 @@
     "@octokit/rest": "^18.12.0",
     "@playwright/test": "1.20.2",
     "@rollup/plugin-babel": "^5.2.2",
+    "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^11.0.1",
     "@testing-library/cypress": "^8.0.2",
     "@testing-library/jest-dom": "^5.16.2",

@@ -6,7 +6,12 @@ import {
   createRequestHandler,
 } from "@remix-run/express";
 
-export function createApp(buildPath: string, mode = "production") {
+export function createApp(
+  buildPath: string,
+  mode = "production",
+  publicPath = "/build/",
+  assetsBuildDirectory = "public/build/"
+) {
   let app = express();
 
   app.disable("x-powered-by");
@@ -18,8 +23,8 @@ export function createApp(buildPath: string, mode = "production") {
   );
 
   app.use(
-    "/build",
-    express.static("public/build", { immutable: true, maxAge: "1y" })
+    publicPath,
+    express.static(assetsBuildDirectory, { immutable: true, maxAge: "1y" })
   );
 
   app.use(express.static("public", { maxAge: "1h" }));
