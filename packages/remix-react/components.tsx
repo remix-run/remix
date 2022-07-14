@@ -386,12 +386,12 @@ const deferredContext = React.createContext<
 >(undefined);
 
 export interface DeferredResolveRenderFunction<Data> {
-  (data: ResolvedDeferrable<Data>): JSX.Element;
+  (data: ResolvedDeferrable<Data>): React.ReactNode;
 }
 
 export interface DeferredProps<Data> {
   fallbackElement?: SuspenseProps["fallback"];
-  children: React.ReactNode | DeferredResolveRenderFunction<Data>;
+  children?: React.ReactNode | DeferredResolveRenderFunction<Data>;
   value: Data;
   errorElement?: React.ReactNode;
   nonce?: string;
@@ -495,9 +495,9 @@ export interface ResolveDeferredProps<Data> {
 
 export function ResolveDeferred<Data>({
   children,
-}: ResolveDeferredProps<Data>) {
+}: ResolveDeferredProps<Data>): JSX.Element {
   let data = useDeferredData<Data>();
-  return children(data);
+  return children(data) as JSX.Element;
 }
 
 function DeferredErrorBoundary({
@@ -505,7 +505,7 @@ function DeferredErrorBoundary({
   errorElement,
   nonce,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   errorElement?: React.ReactNode;
   nonce?: string;
 }) {
@@ -1582,6 +1582,10 @@ export type TypedResponse<T> = Response & {
   json(): Promise<T>;
 };
 
+export type DeferredResponse<T> = TypedResponse<T> & {
+  deferredData: Record<string | number, Promise<unknown>>;
+};
+
 type DataFunction = (...args: any[]) => unknown; // matches any function
 
 type DataOrFunction = AppData | DataFunction;
@@ -1630,7 +1634,9 @@ type SerializeType<T, UseDeferred = false> = T extends JsonPrimitives
 export type UseDataFunctionReturn<T extends DataOrFunction> = T extends (
   ...args: any[]
 ) => infer Output
-  ? Awaited<Output> extends TypedResponse<infer U>
+  ? Awaited<Output> extends DeferredResponse<infer U>
+    ? SerializeType<U, true>
+    : Awaited<Output> extends TypedResponse<infer U>
     ? SerializeType<U>
     : SerializeType<Awaited<ReturnType<T>>>
   : SerializeType<Awaited<T>>;
