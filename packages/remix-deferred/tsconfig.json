@@ -15,7 +15,7 @@
     "skipLibCheck": true,
 
     "rootDir": ".",
-    "outDir": "../../build/node_modules/@remix-run/react/dist",
+    "outDir": "../../build/node_modules/@remix-run/deferred/dist",
     "composite": true
   }
 }
