@@ -229,6 +229,7 @@ export default function Product() {
 ```
 
 ## Cloudflare KV
+
 If you picked Cloudflare Pages as your environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource. To start with local development, you need to add a `--kv` parameter with a name of your namespace to the package.json task, so it would look like this:
 
 ```
@@ -236,18 +237,23 @@ If you picked Cloudflare Pages as your environment, [Cloudflare Key Value][cloud
 ```
 
 This enables you to use the `PRODUCTS_KV` in a loader context (KV stores are added to loader context automatically by the Cloudflare Pages adapter):
+
 ```tsx
 import type { LoaderFunction } from "@remix-run/cloudflare"; // or "@remix-run/node"
 import { json } from "@remix-run/cloudflare"; // or "@remix-run/node"
 import { useLoaderData } from "@remix-run/react";
 
 export const loader: LoaderFunction = async ({
-  context, params,
+  context,
+  params,
 }) => {
   return json(
-    await context.PRODUCTS_KV.get(`product-${params.productId}`, {
-      type: "json",
-    })
+    await context.PRODUCTS_KV.get(
+      `product-${params.productId}`,
+      {
+        type: "json",
+      }
+    )
   );
 };
 
@@ -261,8 +267,6 @@ export default function Product() {
   );
 }
 ```
-
-
 
 For Cloudflare Workers environment you'll need to [do some configuration][cloudflare-kv-setup] but then you can access the data from your loaders. You also don't use context to access namespace, so the loader function would look like this:
 
