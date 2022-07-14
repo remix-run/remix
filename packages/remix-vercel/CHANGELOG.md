@@ -1,5 +1,13 @@
 # @remix-run/vercel
 
+## 1.6.5
+
+### Patch Changes
+
+- 6ddea10c8: Add support for `@vercel/node` v2
+- Updated dependencies [842f2d860]
+  - @remix-run/node@1.6.5
+
 ## 1.6.5-pre.1
 
 ### Patch Changes

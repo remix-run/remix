@@ -1,5 +1,11 @@
 # @remix-run/eslint-config
 
+## 1.6.5
+
+### Patch Changes
+
+- 465b7fae0: Use `require.resolve` when importing `@babel/preset-react`
+
 ## 1.6.5-pre.1
 
 ## 1.6.5-pre.0
