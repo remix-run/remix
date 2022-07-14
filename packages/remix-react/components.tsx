@@ -811,7 +811,7 @@ window.__remixRouteModules = {${matches
           suppressHydrationWarning
           dangerouslySetInnerHTML={createHtml(contextScript)}
         />
-        <script {...props} src={manifest.url} />
+        <script {...props} src={manifest.url} defer />
         <script
           {...props}
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
