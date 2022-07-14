@@ -1,4 +1,3 @@
-// TODO rename file
 # Infer types for `useLoaderData` and `useActionData` from `loader` and `action` via generics
 
 Date: 2022-07-11
