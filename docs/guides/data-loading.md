@@ -231,7 +231,9 @@ export default function Product() {
 ## Cloudflare KV
 If you picked Cloudflare Pages as your environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource. To start with local development, you need to add a ```--kv``` parameter with a name of your namespace to the package.json task, so it would look like this:
 
-```"dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public --kv PRODUCTS_KV"```
+```
+"dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public --kv PRODUCTS_KV"
+```
 
 This enable you to use the PRODUCTS_KV in a loader context:
 ```tsx
