@@ -420,7 +420,7 @@ export function Deferred<Data = any>({
   // If we have a suspenseDataKey, we need to grab the promise from the
   // running promise map.
   if (suspenseDataKey) {
-    value = routeDataDeferred[id][suspenseDataKey] as unknown as Data;
+    value = routeDataDeferred[id]![suspenseDataKey] as unknown as Data;
   }
 
   return (

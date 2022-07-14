@@ -2055,7 +2055,7 @@ async function makeDeferredLoaderData(
           if (!signal || signal.aborted) continue;
           deferredLoaderData[match.route.id] =
             deferredLoaderData[match.route.id] || {};
-          deferredLoaderData[match.route.id][key] = promise;
+          deferredLoaderData[match.route.id]![key] = promise;
           promise.then((value) => {
             if (signal!.aborted) return;
 
@@ -2087,7 +2087,8 @@ async function makeDeferredLoaderData(
             });
 
             if (
-              Object.keys(newDeferredLoaderData[match.route.id]).length === 0
+              newDeferredLoaderData[match.route.id] &&
+              Object.keys(newDeferredLoaderData[match.route.id]!).length === 0
             ) {
               // Mark this deferred as no longer pending once we've updated state
               pendingNavigationDeferredControllers.delete(match.route.id);
