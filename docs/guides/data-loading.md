@@ -255,8 +255,8 @@ export default function Product() {
   const product = useLoaderData();
   return (
     <div>
-      <p>{} Products</p>
-      {/* ... */}
+      <p>Product</p>
+      {product.name}
     </div>
   );
 }
