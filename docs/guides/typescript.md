@@ -78,7 +78,7 @@ Remix has TypeScript type definitions built-in as well. The starter templates cr
 
 ## Type Utilities
 
-Remix's built-in inference between `loader` function + `useLoaderData` generic and the `action` function + `useActionData` generic is quite good and you shouldn't often have to use thse utilities. That said they can be quite handy in some cases which is why they are exported.
+Remix's built-in inference between `loader` function + `useLoaderData` generic and the `action` function + `useActionData` generic is quite good and you shouldn't often have to use these utilities. That said they can be quite handy in some cases which is why they are exported.
 
 ### `UseDataFunctionReturn`
 
