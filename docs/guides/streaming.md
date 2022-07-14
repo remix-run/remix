@@ -19,6 +19,7 @@ Imagine a scenario where one of your routes' loaders needs to retrieve some data
 import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
+
 import { getPackageLocation } from "~/models/packages";
 
 type LoaderData = {
@@ -202,19 +203,20 @@ import { hydrateRoot } from "react-dom/client";
 hydrateRoot(document, <RemixBrowser />);
 ```
 
-With just that in place, you're unlikely to see any significant performance improvement. But with that alone you can now use [`React.lazy`][react-lazy] for components that can't server-render 🎉
+With just that in place, you're unlikely to see any significant performance improvement. But with that alone you can now use [`React.lazy`][react-lazy] to SSR components but delay hydration on the client. This can open up network bandwidth for more critical things like styles, images, and fonts leading to a better LCP and TTI.
 
 ### Using `deferred`
 
-With React streaming setup, now you can start adding `Deferred` usage for your slow data requests you'd rather render a fallback UI. Let's do that for our example above:
+With React streaming setup, now you can start adding `Deferred` usage for your slow data requests where you'd rather render a fallback UI. Let's do that for our example above:
 
-```tsx lines=[3,5,10,17,21,32-45]
+```tsx lines=[3,5,6,11,18,23,33-46]
 import type {
   LoaderFunction,
   Deferrable,
 } from "@remix-run/node";
 import { deferred } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { Deferred, useLoaderData } from "@remix-run/react";
+
 import { getPackageLocation } from "~/models/packages";
 
 type LoaderData = {
@@ -242,8 +244,8 @@ export default function PackageRoute() {
       <h1>Let's locate your package</h1>
       <Deferred
         value={data.packageLocation}
-        fallback={<p>Loading package location...</p>}
-        errorBoundary={
+        fallbackElement={<p>Loading package location...</p>}
+        errorElement={
           <p>Error loading package location!</p>
         }
       >
@@ -273,8 +275,8 @@ export default function PackageRoute() {
       <h1>Let's locate your package</h1>
       <Deferred
         value={data.packageLocation}
-        fallback={<p>Loading package location...</p>}
-        errorBoundary={
+        fallbackElement={<p>Loading package location...</p>}
+        errorElement={
           <p>Error loading package location!</p>
         }
       >
@@ -301,7 +303,7 @@ function PackageLocation() {
 
 So rather than waiting for the whole `document -> JavaScript -> hydrate -> request` cycle, with streaming we start the request for the slow data as soon as the document request comes in. This can significantly speed up the user experience.
 
-Additionally, the API that Remix exposes for this is extremely ergonomic. You can literally switch between whether something is going to be derferred based on whether you include the `await` keyword:
+Additionally, the API that Remix exposes for this is extremely ergonomic. You can literally switch between whether something is going to be deferred or not based on whether you include the `await` keyword:
 
 ```tsx
 return deferred<LoaderData>({
@@ -339,6 +341,8 @@ That `shouldDeferPackageLocation` could be implemented to check the user making 
 
 Also, because this happens at request time (even on client transitions), makes use of the URL via nested routing (rather than requiring you to render before you know what data to fetch), and it's all just regular HTTP, we can prefetch and cache the response! Meaning client-side transitions can be _much_ faster (in fact, there are plenty of situations when the user may never be presented with the fallback at all).
 
+Another powerful thing that's not immediately recognizable is if your server can finish loading deferred data before the client can load the javascript and hydrate, the server will stream down the HTML and "pop" it into place before react is even on the page, increasing performance for those on slow networks.
+
 ## FAQ
 
 ### Why not defer everything by default?
@@ -349,7 +353,7 @@ It's all trade-offs, and what's neat about the API design is that it's well suit
 
 ### When does the fallback render?
 
-The `<Deferred />` `fallback` prop only renders on the initial render of the `<Deferred />` component. It will not render the fallback if props change. Effectively, this means that you will not get a fallback rendered when a user submits a form and loader data is revalidated and you will not get a fallback rendered when the user navigates to the same route with different params (in the context of our above example, if the user selects from a list of packages on the left to find their location on the right).
+The `<Deferred />` `fallbackElement` prop only renders on the initial render of the `<Deferred />` component. It will not render the fallback if props change. Effectively, this means that you will not get a fallback rendered when a user submits a form and loader data is revalidated and you will not get a fallback rendered when the user navigates to the same route with different params (in the context of our above example, if the user selects from a list of packages on the left to find their location on the right).
 
 This may feel counter-intuitive at first, but stay with us, we really thought this through and it's important that it works this way. Let's imagine a world without the deferred API. For those scenarios you're probably going to want to implement Optimistic UI for form submissions/revalidation and some Pending UI for sibling route navigations.
 

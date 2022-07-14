@@ -154,7 +154,7 @@ function Pancake({
   return (
     <Deferred
       value={pancake}
-      fallback="Loading pancake..."
+      fallbackElement="Loading pancake..."
       errorBoundary="Oh no."
     >
       {(pancake) => (
@@ -181,7 +181,7 @@ export default function TvShowsRoute() {
       <h1>Here are your shows</h1>
       <Deferred
         value={data.tvShows}
-        fallback="Loading shows..."
+        fallbackElement="Loading shows..."
         errorBoundary="Oh no."
       >
         {(tvShows) => <TvShowList tvShows={tvShows} />}
