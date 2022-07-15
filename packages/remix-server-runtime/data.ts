@@ -3,7 +3,7 @@ import type { ServerRoute } from "./routes";
 import { json, isResponse, isRedirectResponse } from "./responses";
 
 /**
- * An object of arbitrary for route loaders and actions provided by the
+ * An object of unknown type for route loaders and actions provided by the
  * server's `getLoadContext()` function.
  */
 export interface AppLoadContext {
@@ -20,7 +20,7 @@ export async function callRouteAction({
   match,
   request,
 }: {
-  loadContext: unknown;
+  loadContext: AppLoadContext;
   match: RouteMatch<ServerRoute>;
   request: Request;
 }) {
@@ -67,7 +67,7 @@ export async function callRouteLoader({
 }: {
   request: Request;
   match: RouteMatch<ServerRoute>;
-  loadContext: unknown;
+  loadContext: AppLoadContext;
 }) {
   let loader = match.route.module.loader;
 
