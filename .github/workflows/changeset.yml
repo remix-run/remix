@@ -1,0 +1,61 @@
+name: 🦋 Changesets Release
+on:
+  push:
+    branches:
+      - release
+      - "release-*"
+      - "!release-experimental"
+      - "!release-experimental-*"
+      - "!release-manual"
+      - "!release-manual-*"
+
+jobs:
+  release:
+    name: 🦋 Changesets Release
+    # we need to check for `nightly` refs and skip them as we dont want to
+    # double publish a version as it would fail. unfortantely even using curl
+    # and a `repository_dispatch` trigger, actions still aren't ran if a version
+    # is published using the default secrets.GITHUB_TOKEN.
+    if: |
+      github.repository == 'remix-run/remix' &&
+      !contains(github.ref, 'nightly')
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+
+      - name: 📥 Install deps
+        run: yarn --frozen-lockfile
+
+      - name: 🔐 Setup npm auth
+        run: |
+          echo "registry=https://registry.npmjs.org" >> ~/.npmrc
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" >> ~/.npmrc
+
+        # This action has two responsibilities. The first time the workflow runs
+        # (initial push to a `release-*` branch) it will create a new branch and
+        # then open a PR with the related changes for the new version. After the
+        # PR is merged, the workflow will run again and this action will build +
+        # publish to npm.
+      - name: 🚀 PR / Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: yarn run changeset:version
+          commit: "chore: Update version for release"
+          title: "chore: Update version for release"
+          publish: yarn run changeset:release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
