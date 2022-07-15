@@ -108,6 +108,10 @@ Again, the same goes for `useActionData`.
 - Return type of `useLoaderData` and `useActionData` should somehow be inferred from `loader` and `action`, not blindly type cast
 - Return type of `loader` and `action` should be inferred
   - Necessarily, return type of `json` should be inferred from its input
+- No module side-effects (so higher-order functions like `makeLoader` is definitely a no).
+- `json` should allow everything that `JSON.stringify` allows.
+- `json` should allow only what `JSON.stringify` allows.
+- `useLoaderData` should not return anything that `JSON.parse` can't return.
 
 ### Key insight: `loader` and `action` are an _implicit_ inputs
 
