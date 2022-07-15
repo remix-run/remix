@@ -1624,8 +1624,8 @@ type SerializeType<T, UseDeferred = false> = T extends JsonPrimitives
           ? k
           : never
         : k]: UseDeferred extends true
-        ? T[k] extends Deferrable<unknown>
-          ? Deferrable<ResolvedDeferrable<T[k]>>
+        ? T[k] extends PromiseLike<unknown>
+          ? Deferrable<T[k]>
           : SerializeType<T[k]>
         : SerializeType<T[k]>;
     }
