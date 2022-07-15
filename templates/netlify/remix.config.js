@@ -2,7 +2,7 @@
 module.exports = {
   serverBuildTarget: "netlify",
   server:
-    process.NODE_ENV === "production" || process.env.CONTEXT?.length > 0
+    process.env.NETLIFY || process.env.NETLIFY_LOCAL
       ? "./server.js"
       : undefined,
   ignoredRouteFiles: ["**/.*"],
