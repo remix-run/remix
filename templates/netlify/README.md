@@ -30,13 +30,21 @@ netlify init
 
 ## Development
 
-The Netlify CLI starts your app in development mode, rebuilding assets on file changes.
+The Remix dev server starts your app in development mode, rebuilding assets on file changes.
 
 ```sh
 npm run dev
 ```
 
 Open up [http://localhost:3000](http://localhost:3000), and you should be ready to go!
+
+The Netlify CLI starts your app in development mode for testing the serverless server and any custom Netlify functions you've developed.
+
+```sh
+netlify dev
+```
+
+When running the Netlify CLI, file changes will rebuild assets, but you will not see the changes to the page you are on unless you do a browser refresh of the page. The reason being is the serverless version of the server does not support hot module reloading.
 
 ## Deployment
 
