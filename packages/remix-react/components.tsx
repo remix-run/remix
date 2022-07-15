@@ -517,7 +517,7 @@ function DeferredErrorBoundary({
 
   let promise = value as PromiseLike<unknown>;
   // If the deferred data is a promise we suspend at this point.
-  if (typeof promise === "object" && promise.then) {
+  if (promise && typeof promise === "object" && promise.then) {
     // We also need to store the resolved data / error on the context for SSR.
     // On page transitions the transition manager takes care of reconciling the
     // resolved data with the route data and re-rendering, but SSR we can't do
