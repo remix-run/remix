@@ -38,7 +38,7 @@ npm run dev
 
 Open up [http://localhost:3000](http://localhost:3000), and you should be ready to go!
 
-The Netlify CLI starts your app in development mode for testing the serverless server and any custom Netlify functions you've developed.
+The Netlify CLI builds a production version of your Remix App Server and splits it into Netlify Functions that run locally. This includes any custom Netlify functions you've developed. The Netlify CLI runs all of this in its development mode.
 
 ```sh
 netlify dev
