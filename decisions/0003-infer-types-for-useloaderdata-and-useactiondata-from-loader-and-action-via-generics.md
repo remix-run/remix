@@ -9,6 +9,7 @@ Status: accepted
 Goal: End-to-end type safety for `useLoaderData` and `useActionData` with great Developer Experience (DX)
 
 Related discussions:
+
 - [remix-run/remix#1254](https://github.com/remix-run/remix/pull/1254)
 - [remix-run/remix#3276](https://github.com/remix-run/remix/pull/3276)
 
@@ -17,13 +18,17 @@ Related discussions:
 In Remix v1.6.4, types for both `useLoaderData` and `useActionData` are parameterized with a generic:
 
 ```tsx
-type MyLoaderData = {/* ... */}
-type MyActionData = {/* ... */}
+type MyLoaderData = {
+  /* ... */
+};
+type MyActionData = {
+  /* ... */
+};
 
 export default function Route() {
-  let loaderData = useLoaderData<MyLoaderData>()
-  let actionData = useActionData<MyActionData>()
-  return <div>{/* ... */}</div>
+  let loaderData = useLoaderData<MyLoaderData>();
+  let actionData = useActionData<MyActionData>();
+  return <div>{/* ... */}</div>;
 }
 ```
 
@@ -31,12 +36,16 @@ For end-to-end type safety, it is then the user's responsability to make sure th
 
 ```ts
 export const loader: LoaderFunction = () => {
-  return json<MyLoaderData>({/* ... */})
-}
+  return json<MyLoaderData>({
+    /* ... */
+  });
+};
 
 export const action: ActionFunction = () => {
-  return json<MyActionData>({/* ... */})
-}
+  return json<MyActionData>({
+    /* ... */
+  });
+};
 ```
 
 ### Diving into `useLoaderData`'s and `useActionData`'s generics
@@ -46,11 +55,13 @@ Tracing through the `@remix-run/react` source code (v1.6.4), you'll find that `u
 ```ts
 // https://github.com/remix-run/remix/blob/v1.6.4/packages/remix-react/components.tsx#L1370
 export function useLoaderData<T = AppData>(): T {
-  return useRemixRouteContext().data; // 
+  return useRemixRouteContext().data; //
 }
 
 // https://github.com/remix-run/remix/blob/v1.6.4/packages/remix-react/components.tsx#L73
-function useRemixRouteContext(): RemixRouteContextType {/* ... */}
+function useRemixRouteContext(): RemixRouteContextType {
+  /* ... */
+}
 
 // https://github.com/remix-run/remix/blob/v1.6.4/packages/remix-react/components.tsx#L56
 interface RemixRouteContextType {
@@ -65,12 +76,12 @@ export type AppData = any;
 Boiling this down, the code looks like:
 
 ```ts
-let data: any
+let data: any;
 
 // somewhere else, `loader` gets called an sets `data` to some value
 
 function useLoaderData<T>(): T {
-  return data // <-- Typescript casts this `any` to `T`
+  return data; // <-- Typescript casts this `any` to `T`
 }
 ```
 
@@ -88,15 +99,15 @@ Additionally, the current approach encourages users to pass the same type to `js
 
 ```ts
 type MyLoaderData = {
-  birthday: Date
-}
+  birthday: Date;
+};
 
 export const loader: LoaderFunction = () => {
-  return json<MyLoaderData>({ birthday: new Date('February 15, 1992') })
-}
+  return json<MyLoaderData>({ birthday: new Date("February 15, 1992") });
+};
 
 export default function Route() {
-  let { birthday } = useLoaderData<MyLoaderData>()
+  let { birthday } = useLoaderData<MyLoaderData>();
   // ^ `useLoaderData` tricks Typescript into thinking this is a `Date`, when in fact its a `string`!
 }
 ```
@@ -124,12 +135,13 @@ In other words, if `loader` and `useLoaderData` were guaranteed to run in the sa
 
 ```ts
 // _conceptually_ `loader` is an input for `useLoaderData`
-function useLoaderData<Loader extends LoaderFunction>(loader: Loader) {/*...*/}
+function useLoaderData<Loader extends LoaderFunction>(loader: Loader) {
+  /*...*/
+}
 ```
 
 Though `loader` and `useLoaderData` exist together in the same file at development-time, `loader` does not exist at runtime in the browser.
 Without the `loader` argument to infer types from, `useLoaderData` needs a way to learn about `loader`'s type at compile-time.
-
 
 Additionally, `loader` and `useLoaderData` are both managed by Remix across the network.
 While its true that Remix doesn't "own" the network in the strictest sense, having `useLoaderData` return data that does not correspond to its `loader` is an exceedingly rare edge-case.
@@ -148,11 +160,11 @@ Do the same for `action` and `useActionData`.
 ```ts
 export const loader = async (args: LoaderArgs) => {
   // ...
-  return json(/*...*/)
-}
+  return json(/*...*/);
+};
 
 export default function Route() {
-  let data = useLoaderData<typeof loader>()
+  let data = useLoaderData<typeof loader>();
   // ...
 }
 ```
@@ -166,10 +178,12 @@ This hides potential type errors from the user.
 Instead, we'll change the return type to `unknown`.
 
 ```ts
-type MyLoaderData = {/*...*/}
+type MyLoaderData = {
+  /*...*/
+};
 
 export default function Route() {
-  let data = useLoaderData()
+  let data = useLoaderData();
   // ^? unknown
 }
 ```
@@ -182,11 +196,13 @@ Passing in a non-inferred type for `useLoaderData` is hiding an unsafe type cast
 Using the `useLoaderData` in this way will be deprecated in favor of an explicit type cast that clearly communicates the assumptions being made:
 
 ```ts
-type MyLoaderData = {/*...*/}
+type MyLoaderData = {
+  /*...*/
+};
 
 export default function Route() {
-  let dataGeneric = useLoaderData<MyLoaderData>() // <-- will be deprecated
-  let dataCast = useLoaderData() as MyLoaderData // <- use this instead
+  let dataGeneric = useLoaderData<MyLoaderData>(); // <-- will be deprecated
+  let dataCast = useLoaderData() as MyLoaderData; // <- use this instead
 }
 ```
 
@@ -199,17 +215,16 @@ export default function Route() {
 - Return type of `useLoaderData` and `useActionData` will correspond to the JSON _serialized_ types from `json` calls in `loader` and `action`, eliminating a class of errors.
 - `LoaderFunction` and `ActionFunction` should not be used when opting into type inference as they override the inferred return types.[^1]
 
-
 🚨 Users who opt-in to inferred types **MUST** return a `TypedResponse` from `json` and **MUST NOT** return a bare object:
 
 ```ts
 const loader = () => {
   // NO
-  return { hello: "world" }
+  return { hello: "world" };
 
   // YES
-  return json({ hello: "world" })
-}
+  return json({ hello: "world" });
+};
 ```
 
 [^1]: The proposed `satisfies` operator for Typescript would let `LoaderFunction` and `ActionFunction` enforce function types while preserving the narrower inferred return type: https://github.com/microsoft/TypeScript/issues/47920
