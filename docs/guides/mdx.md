@@ -16,7 +16,7 @@ Remix supports using MDX in two ways:
 
 The simplest way to get started with MDX in Remix is to create a route module. Just like `.js` and `.ts` files in your `app/routes` directory, `.mdx` (and `.md`) files will participate in automatic file system based routing.
 
-MDX routes allow you to define `meta`, `headers`, `links`, and `handle` as if they were a code based route:
+MDX routes allow you to define `handle`, `headers`, `links`, and `meta` as if they were a code based route:
 
 ```md
 ---
