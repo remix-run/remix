@@ -100,4 +100,14 @@ describe("type serializer", () => {
     type response = UseDataFunctionReturn<Loader>;
     isEqual<response, { arg: string }>(true);
   });
+
+  it("makes keys optional if the value is undefined", () => {
+    type AppData = {
+      arg1: string;
+      arg2: number | undefined;
+      arg3: undefined;
+    };
+    type response = UseDataFunctionReturn<AppData>;
+    isEqual<response, { arg1: string; arg2?: number }>(true);
+  });
 });
