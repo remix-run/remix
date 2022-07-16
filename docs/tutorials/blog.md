@@ -573,7 +573,7 @@ Quick note on that `invariant` for the params. Because `params` comes from the U
 
 We also have an invariant for the post. We'll handle the `404` case better later. Keep going!
 
-Now let's get that markdown parsed and rendered to HTML to the page. There are a lot of markdown parsers, we'll use "marked" for this tutorial because it's really easy to get working. Please note that you will need to restart your server after installing.
+Now let's get that markdown parsed and rendered to HTML to the page. There are a lot of markdown parsers, we'll use "marked" for this tutorial because it's really easy to get working.
 
 💿 Parse the markdown into HTML
 
@@ -582,6 +582,8 @@ npm add marked
 # if using typescript
 npm add @types/marked -D
 ```
+
+Now that `marked` has been installed, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
 
 ```tsx filename=app/routes/post/$slug.ts lines=[1,10,20-21,25,31]
 import { marked } from "marked";
