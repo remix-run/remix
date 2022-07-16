@@ -9,7 +9,7 @@
     "@architect/utils": "^3.0.4",
     "@iarna/toml": "^2.2.5",
     "@npmcli/package-json": "^2.0.0",
-    "@remix-run/dev": "1.6.2",
+    "@remix-run/dev": "1.6.4",
     "@testing-library/cypress": "^8.0.2",
     "aws-sdk": "^2.1055.0",
     "cypress": "^9.2.0",
@@ -17,7 +17,7 @@
     "fs-extra": "^10.0.0",
     "netlify": "^10.1.1",
     "node-fetch": "^2.6.1",
-    "semver": "^7.3.5",
+    "semver": "^7.3.7",
     "start-server-and-test": "^1.14.0"
   }
 }
