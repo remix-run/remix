@@ -573,7 +573,7 @@ Quick note on that `invariant` for the params. Because `params` comes from the U
 
 We also have an invariant for the post. We'll handle the `404` case better later. Keep going!
 
-Now let's get that markdown parsed and rendered to HTML to the page. There are a lot of markdown parsers, we'll use "marked" for this tutorial because it's really easy to get working.
+Now let's get that markdown parsed and rendered to HTML to the page. There are a lot of markdown parsers, we'll use "marked" for this tutorial because it's really easy to get working. Please note that you will need to restart your server after installing.
 
 💿 Parse the markdown into HTML
 
