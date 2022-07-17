@@ -558,7 +558,7 @@ export const loader: LoaderFunction = async ({
 };
 
 export default function PostSlug() {
-  const { post } = useLoaderData() as LoaderData;
+  const { post } = useLoaderData<LoaderData>();
   return (
     <main className="mx-auto max-w-4xl">
       <h1 className="my-6 border-b-2 text-center text-3xl">
