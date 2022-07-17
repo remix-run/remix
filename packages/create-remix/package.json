@@ -1,6 +1,6 @@
 {
   "name": "create-remix",
-  "version": "1.6.5",
+  "version": "0.0.0-nightly-b2ef490-20220717",
   "description": "Create a new Remix app",
   "homepage": "https://remix.run",
   "bugs": {
@@ -17,7 +17,7 @@
     "create-remix": "dist/cli.js"
   },
   "dependencies": {
-    "@remix-run/dev": "1.6.5"
+    "@remix-run/dev": "0.0.0-nightly-b2ef490-20220717"
   },
   "engines": {
     "node": ">=14"
