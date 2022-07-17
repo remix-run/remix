@@ -583,6 +583,8 @@ npm add marked
 npm add @types/marked -D
 ```
 
+Now that `marked` has been installed, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
+
 ```tsx filename=app/routes/post/$slug.ts lines=[1,10,20-21,25,31]
 import { marked } from "marked";
 import type { LoaderFunction } from "@remix-run/node";
