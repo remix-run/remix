@@ -1651,7 +1651,7 @@ type SerializeTypeImp<T> = T extends JsonPrimitives
         ? null
         : SerializeType<T[k]>;
     }
-  : T extends (infer U)[]
+  : T extends ReadonlyArray<infer U>
   ? (U extends NonJsonPrimitives ? null : SerializeType<U>)[]
   : T extends object
   ? {
