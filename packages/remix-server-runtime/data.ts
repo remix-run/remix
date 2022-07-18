@@ -158,7 +158,10 @@ export async function extractData(
     let data = deferred.criticalData as Record<string | number, unknown>;
     for (let entry of Object.entries(deferred.deferredData)) {
       let key = isArray ? Number(entry[0]) : entry[0];
-      data[key] = await entry[1].then((res) => res).catch((reason) => reason);
+      data[key] = await entry[1].then(
+        (res) => res,
+        (reason) => reason
+      );
     }
     return data;
   }

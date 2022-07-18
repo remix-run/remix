@@ -552,9 +552,10 @@ function prepareRouteData(
     for (let [stringKey, value] of Object.entries(data.deferredData)) {
       let key = isArray ? Number(stringKey) : stringKey;
       deferredLoaderData[routeId].push(key);
-      newData[isArray ? Number(key) : key] = value
-        .then((value) => value)
-        .catch((reason) => reason);
+      newData[isArray ? Number(key) : key] = value.then(
+        (value) => value,
+        (reason) => reason
+      );
     }
     contextData[routeId] = newData;
   }

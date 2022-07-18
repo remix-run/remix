@@ -462,17 +462,12 @@ function DeferredErrorBoundary({
     // On page transitions the transition manager takes care of reconciling the
     // resolved data with the route data and re-rendering, but SSR we can't do
     // that so we have to just store it on the context for immediate usage.
-    throw promise
-      .then((value) => {
-        if (ctx) {
-          ctx.value = value;
-        }
-      })
-      .catch((error) => {
-        if (ctx) {
-          ctx.value = error;
-        }
-      });
+    let storeResult = (value: unknown) => {
+      if (ctx) {
+        ctx.value = value;
+      }
+    };
+    throw promise.then(storeResult, storeResult);
   }
 
   // If there is an error we render the error element.
@@ -1094,7 +1089,7 @@ function DeferredHydrationScript({ promise }: { promise: Promise<unknown> }) {
     let storeResult = (value: unknown) => {
       ctx.result = { value };
     };
-    throw promise.then(storeResult).catch(storeResult);
+    throw promise.then(storeResult, storeResult);
   }
 
   let isError =
