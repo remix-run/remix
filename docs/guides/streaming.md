@@ -168,7 +168,7 @@ export default function handleRequest(
         [callbackName]() {
           let body = new PassThrough();
 
-          responseHeaders.set("Content-Type", "text/html");
+          responseHeaders.set("Content-Type", "text/html; charset=UTF-8");
 
           resolve(
             new Response(body, {
