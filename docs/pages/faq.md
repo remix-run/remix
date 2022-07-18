@@ -114,7 +114,7 @@ export default function Projects() {
             defaultValue={project.name}
           />
         </label>
-        <button type="submit" name="action" value="create">
+        <button type="submit" name="action" value="update">
           Update
         </button>
       </Form>
