@@ -212,7 +212,6 @@ With React streaming setup, now you can start adding `Deferred` usage for your s
 ```tsx lines=[3,5,6,11,18,23,33-46]
 import type {
   LoaderFunction,
-  Deferrable,
 } from "@remix-run/node";
 import { deferred } from "@remix-run/node";
 import { Deferred, useLoaderData } from "@remix-run/react";
@@ -220,7 +219,7 @@ import { Deferred, useLoaderData } from "@remix-run/react";
 import { getPackageLocation } from "~/models/packages";
 
 type LoaderData = {
-  packageLocation: Deferrable<{
+  packageLocation: Promise<{
     latitude: number;
     longitude: number;
   }>;
