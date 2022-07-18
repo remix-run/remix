@@ -370,7 +370,7 @@ export function getNewMatchesForLinks(
         currentMatches[index].params["*"] !== match.params["*"])
     );
   };
-  
+
   // NOTE: keep this mostly up-to-date w/ the transition data diff, but this
   // version doesn't care about submissions
   let newMatches =
