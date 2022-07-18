@@ -78,6 +78,8 @@ Remix takes advantage of React 18's streaming and server-side support for `<Susp
 1. You're data is no longer on a waterfall: document & data (in parallel) -> JavaScript
 2. Your can easily switch between streaming and waiting for the data
 
+![Graphs showing how document and slow data requests sent over the same response significantly speed up the largest contentful paint](https://user-images.githubusercontent.com/12063586/179609347-36bd7d32-c8af-4e24-9e89-06d9abc0a19f.svg)
+
 Let's take a dive into how to accomplish this.
 
 ### Enable React 18 Streaming
@@ -168,7 +170,10 @@ export default function handleRequest(
         [callbackName]() {
           let body = new PassThrough();
 
-          responseHeaders.set("Content-Type", "text/html; charset=UTF-8");
+          responseHeaders.set(
+            "Content-Type",
+            "text/html; charset=UTF-8"
+          );
 
           resolve(
             new Response(body, {
@@ -210,9 +215,7 @@ With just that in place, you're unlikely to see any significant performance impr
 With React streaming setup, now you can start adding `Deferred` usage for your slow data requests where you'd rather render a fallback UI. Let's do that for our example above:
 
 ```tsx lines=[3,5,6,11,18,23,33-46]
-import type {
-  LoaderFunction,
-} from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
 import { deferred } from "@remix-run/node";
 import { Deferred, useLoaderData } from "@remix-run/react";
 
@@ -286,7 +289,8 @@ export default function PackageRoute() {
 }
 
 function PackageLocation() {
-  const packageLocation = useDeferredData<LoaderData["packageLocation"]>();
+  const packageLocation =
+    useDeferredData<LoaderData["packageLocation"]>();
   return (
     <p>
       Your package is at {packageLocation.latitude} lat and{" "}
