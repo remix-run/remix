@@ -4,6 +4,7 @@
   "commit": false,
   "fixed": [
     [
+      "create-remix",
       "remix",
       "@remix-run/dev",
       "@remix-run/eslint-config",
