@@ -286,7 +286,7 @@ export default function PackageRoute() {
 }
 
 function PackageLocation() {
-  const packageLocation = useDeferredData();
+  const packageLocation = useDeferredData<LoaderData["packageLocation"]>();
   return (
     <p>
       Your package is at {packageLocation.latitude} lat and{" "}
