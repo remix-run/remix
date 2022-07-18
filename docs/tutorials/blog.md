@@ -503,7 +503,7 @@ export async function getPost(slug: string) {
 }
 ```
 
-If you see a TypeScript warning, such as `TS2305: Module '"@prisma/client"' has no exported member 'Post'.`, you may need to restart your linter. The easiest way to this is to stop your dev server, and restart it with `npm run dev`.
+If you see a TypeScript warning, such as `TS2305: Module '"@prisma/client"' has no exported member 'Post'.`, you may need to restart your editor.
 
 💿 Use the new `getPost` function in the route
 
