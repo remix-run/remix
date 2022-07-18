@@ -146,6 +146,7 @@ export async function extractData(
       return deferred;
     }
 
+    // TODO: Turn this into a utility in @remix-run/deferred
     if (
       !deferred.criticalData ||
       typeof deferred.criticalData !== "object" ||
