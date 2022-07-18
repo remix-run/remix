@@ -1,5 +1,3 @@
-export type { Deferrable, ResolvedDeferrable } from "@remix-run/deferred";
-
 export type {
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,

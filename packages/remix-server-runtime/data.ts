@@ -1,6 +1,8 @@
+import type { DeferrableData } from "@remix-run/deferred";
+import { parseDeferredReadableStream } from "@remix-run/deferred";
+
 import type { RouteMatch } from "./routeMatching";
 import type { ServerRoute } from "./routes";
-import type { DeferredResponse } from "./responses";
 import {
   json,
   isDeferredResponse,
@@ -72,7 +74,7 @@ export async function callRouteLoader({
   request: Request;
   match: RouteMatch<ServerRoute>;
   loadContext: unknown;
-}): Promise<Response | DeferredResponse> {
+}): Promise<Response> {
   let loader = match.route.module.loader;
 
   if (!loader) {
@@ -134,16 +136,36 @@ function stripDataParam(request: Request) {
   return new Request(url.href, request);
 }
 
-export function extractData(response: Response): Promise<unknown> {
+export async function extractData(
+  response: Response,
+  resolveDeferred = false
+): Promise<unknown | DeferrableData> {
+  if (response.body && isDeferredResponse(response)) {
+    let deferred = await parseDeferredReadableStream(response.body);
+    if (!resolveDeferred) {
+      return deferred;
+    }
+
+    if (
+      !deferred.criticalData ||
+      typeof deferred.criticalData !== "object" ||
+      !deferred.deferredData
+    ) {
+      return deferred.criticalData;
+    }
+
+    let isArray = Array.isArray(deferred.criticalData);
+    let data = deferred.criticalData as Record<string | number, unknown>;
+    for (let entry of Object.entries(deferred.deferredData)) {
+      let key = isArray ? Number(entry[0]) : entry[0];
+      data[key] = await entry[1].then((res) => res).catch((reason) => reason);
+    }
+    return data;
+  }
+
   let contentType = response.headers.get("Content-Type");
 
-  if (
-    contentType &&
-    (/\bapplication\/json\b/.test(contentType) ||
-      // Deferred responses synchronously resolve the initial data and makes
-      // it available through the `json()` method.
-      isDeferredResponse(response))
-  ) {
+  if (contentType && /\bapplication\/json\b/.test(contentType)) {
     return response.json();
   }
 

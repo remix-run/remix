@@ -265,7 +265,7 @@ test("loads critical data first", async () => {
   expect(text).toMatch("pizza");
   expect(text).toMatch('<div hidden id="S:0"><div>hamburger</div>');
   expect(text).toMatch(
-    'window.__remixContext.deferredRouteData["routes/deferred"]["bar"]'
+    'window.__remixContext.routeData["routes/deferred"]["bar"]'
   );
 });
 
@@ -284,7 +284,7 @@ test("loads critical data first with render func", async () => {
   expect(text).toMatch("pizza");
   expect(text).toMatch('<div hidden id="S:0"><div>hamburger</div>');
   expect(text).toMatch(
-    'window.__remixContext.deferredRouteData["routes/inline-deferred"]["bar"]'
+    'window.__remixContext.routeData["routes/inline-deferred"]["bar"]'
   );
 });
 
@@ -305,11 +305,11 @@ test("loads critical data first with multiple deferred", async () => {
   expect(text).toMatch("pizza");
   expect(text).toMatch('<div hidden id="S:0"><div>hamburger</div>');
   expect(text).toMatch(
-    'window.__remixContext.deferredRouteData["routes/multiple-deferred"]["bar"]'
+    'window.__remixContext.routeData["routes/multiple-deferred"]["bar"]'
   );
   expect(text).toMatch('<div hidden id="S:1"><div>soup</div>');
   expect(text).toMatch(
-    'window.__remixContext.deferredRouteData["routes/multiple-deferred"]["baz"]'
+    'window.__remixContext.routeData["routes/multiple-deferred"]["baz"]'
   );
 });
 
@@ -317,11 +317,9 @@ test("renders error boundary", async () => {
   let response = await fixture.requestDocument("/deferred-error");
   let text = await response.text();
   expect(text).toMatch("pizza");
+  expect(text).toMatch('<div hidden id="S:0"><div>Deferred Boundary');
   expect(text).toMatch(
-    '<div hidden id="S:0"><div>Deferred Boundary'
-  );
-  expect(text).toMatch(
-    'window.__remixContext.deferredRouteData["routes/deferred-error"]["bar"]'
+    'window.__remixContext.routeData["routes/deferred-error"]["bar"]'
   );
 });
 

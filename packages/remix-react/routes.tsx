@@ -11,7 +11,6 @@ import {
   isRedirectResponse,
 } from "./data";
 import type { Submission } from "./transition";
-import { DeferredResponse } from "./transition";
 import { CatchValue, TransitionRedirect } from "./transition";
 import { prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
@@ -62,9 +61,8 @@ export type RouteDataFunction = {
      */
     signal: AbortSignal;
   }):
-    | Promise<unknown | DeferredResponse | TransitionRedirect | void>
+    | Promise<unknown | TransitionRedirect | void>
     | unknown
-    | DeferredResponse
     | TransitionRedirect
     | void;
 };
@@ -161,24 +159,18 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
 
       if (result instanceof Error) throw result;
 
-      let response =
-        result instanceof DeferredResponse ? result.response : result;
-      let redirect = await checkRedirect(response);
+      let redirect = await checkRedirect(result);
       if (redirect) return redirect;
 
-      if (isCatchResponse(response)) {
+      if (isCatchResponse(result)) {
         throw new CatchValue(
-          response.status,
-          response.statusText,
-          await extractData(response)
+          result.status,
+          result.statusText,
+          await extractData(result, true)
         );
       }
 
-      if (result instanceof DeferredResponse) {
-        return result;
-      }
-
-      return extractData(response);
+      return extractData(result);
     } else {
       await loadRouteModuleWithBlockingLinks(route, routeModules);
     }
@@ -202,9 +194,7 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
       throw result;
     }
 
-    let redirect = await checkRedirect(
-      result instanceof DeferredResponse ? result.response : result
-    );
+    let redirect = await checkRedirect(result);
     if (redirect) return redirect;
 
     await loadRouteModuleWithBlockingLinks(route, routeModules);

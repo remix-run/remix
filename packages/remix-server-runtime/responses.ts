@@ -10,10 +10,10 @@ export type TypedResponse<T extends unknown = unknown> = Response & {
   json(): Promise<T>;
 };
 
-export type DeferredResponse<Data extends unknown = unknown> =
-  TypedResponse<Data> & {
-    deferredData: Record<string | number, Promise<unknown>>;
-  };
+export type DeferredResponse<T extends unknown = unknown> = TypedResponse<T> & {
+  // allows discriminating between deferred and non-deferred responses
+  __deferred?: never;
+};
 
 export type DeferredFunction = <Data extends unknown = unknown>(
   data: Data,
@@ -39,25 +39,8 @@ export const deferred: DeferredFunction = (data, init = {}) => {
     headers.set("Content-Type", `${DEFERRED_CONTENT_TYPE}; charset=utf-8`);
   }
 
-  class DeferredResponseImplementation extends Response {
-    public deferredData: Record<string | number, Promise<unknown>>;
-    private criticalData: unknown;
-
-    constructor(data: unknown, init?: ResponseInit) {
-      let deferrableData = getDeferrableData(data);
-
-      super(createDeferredReadableStream(deferrableData), init);
-
-      this.deferredData = deferrableData.deferredData || {};
-      this.criticalData = deferrableData.criticalData;
-    }
-
-    async json<T>(): Promise<T> {
-      return this.criticalData as T;
-    }
-  }
-
-  return new DeferredResponseImplementation(data, {
+  let deferrableData = getDeferrableData(data);
+  return new Response(createDeferredReadableStream(deferrableData), {
     ...responseInit,
     headers,
   });
@@ -126,10 +109,9 @@ export function isResponse(value: any): value is Response {
   );
 }
 
-export function isDeferredResponse(
-  response: Response
-): response is DeferredResponse {
-  return "deferredData" in response;
+export function isDeferredResponse(response: Response): boolean {
+  let contentType = response.headers.get("Content-Type");
+  return !!contentType && /\btext\/remix-deferred\b/.test(contentType);
 }
 
 const redirectStatusCodes = new Set([301, 302, 303, 307, 308]);

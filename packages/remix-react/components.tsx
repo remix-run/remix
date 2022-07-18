@@ -21,10 +21,9 @@ import {
   useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
-import type { Deferrable, ResolvedDeferrable } from "@remix-run/deferred";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
-import type { EntryContext, AssetsManifest } from "./entry";
+import type { EntryContext, DeferredLoaderData, AssetsManifest } from "./entry";
 import type { AppState, SerializedError } from "./errors";
 import {
   RemixRootDefaultErrorBoundary,
@@ -45,7 +44,7 @@ import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml } from "./markup";
 import type { ClientRoute } from "./routes";
 import { createClientRoutes } from "./routes";
-import type { RouteData, DeferredRouteData } from "./routeData";
+import type { RouteData } from "./routeData";
 import type { RouteMatch as BaseRouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
@@ -61,7 +60,7 @@ interface RemixEntryContextType {
   manifest: AssetsManifest;
   matches: BaseRouteMatch<ClientRoute>[];
   routeData: RouteData;
-  routeDataDeferred: DeferredRouteData;
+  deferredLoaderData?: DeferredLoaderData;
   actionData?: unknown;
   pendingLocation?: Location;
   appState: AppState;
@@ -97,7 +96,7 @@ export function RemixEntry({
   let {
     manifest,
     routeData: documentLoaderData,
-    deferredRouteData: documentDeferredLoaderData,
+    deferredLoaderData: documentDeferredLoaderData,
     actionData: documentActionData,
     routeModules,
     serverHandoffString,
@@ -118,7 +117,6 @@ export function RemixEntry({
       routes: clientRoutes,
       actionData: documentActionData,
       loaderData: documentLoaderData,
-      deferredLoaderData: documentDeferredLoaderData,
       location: historyLocation,
       catch: entryComponentDidCatchEmulator.catch,
       catchBoundaryId: entryComponentDidCatchEmulator.catchBoundaryRouteId,
@@ -148,7 +146,7 @@ export function RemixEntry({
     return { ..._navigator, push };
   }, [_navigator, transitionManager]);
 
-  let { location, matches, loaderData, deferredLoaderData, actionData } =
+  let { location, matches, loaderData, actionData } =
     transitionManager.getState();
 
   // Send new location to the transition manager
@@ -188,7 +186,7 @@ export function RemixEntry({
         serverHandoffString,
         clientRoutes,
         routeData: loaderData,
-        routeDataDeferred: deferredLoaderData,
+        deferredLoaderData: documentDeferredLoaderData,
         actionData,
         transitionManager,
       }}
@@ -379,14 +377,12 @@ export function RemixRoute({ id }: { id: string }) {
 ////////////////////////////////////////////////////////////////////////////////
 // Public API
 
-const DEFERRED_PROMISE_PREFIX = "__deferred_promise:";
-
-const deferredContext = React.createContext<
-  undefined | { value: unknown; key?: string }
->(undefined);
+const deferredContext = React.createContext<undefined | { value?: unknown }>(
+  undefined
+);
 
 export interface DeferredResolveRenderFunction<Data> {
-  (data: ResolvedDeferrable<Data>): React.ReactNode;
+  (data: Awaited<Data>): React.ReactNode;
 }
 
 export interface DeferredProps<Data> {
@@ -404,34 +400,15 @@ export function Deferred<Data = any>({
   value,
   errorElement,
   fallbackElement,
-  nonce,
 }: DeferredProps<Data>) {
-  let { routeDataDeferred } = useRemixEntryContext();
-  let { id } = useRemixRouteContext();
-
-  // When deferred is used, we receive a string that indicates that
-  // this is key is a deferred promise. We use this to know where
-  // to grab the running promise from.
-  let suspenseDataKey: string | undefined = undefined;
-  if (typeof value === "string" && value.startsWith(DEFERRED_PROMISE_PREFIX)) {
-    suspenseDataKey = value.slice(DEFERRED_PROMISE_PREFIX.length);
-  }
-
-  // If we have a suspenseDataKey, we need to grab the promise from the
-  // running promise map.
-  if (suspenseDataKey) {
-    value = routeDataDeferred[id]![suspenseDataKey] as unknown as Data;
-  }
-
   return (
     <deferredContext.Provider
       value={{
         value,
-        key: suspenseDataKey,
       }}
     >
       <React.Suspense fallback={fallbackElement}>
-        <DeferredErrorBoundary errorElement={errorElement} nonce={nonce}>
+        <DeferredErrorBoundary errorElement={errorElement}>
           {typeof children === "function" ? (
             <ResolveDeferred
               children={children as DeferredResolveRenderFunction<Data>}
@@ -441,52 +418,13 @@ export function Deferred<Data = any>({
           )}
         </DeferredErrorBoundary>
       </React.Suspense>
-      {/* 
-        When we have an in-flight deferred promise, we need to keep track of it to
-        know when it resolves. Since we can't serialize a promise over the network
-        we store it on the remix context. We store a map of promises keyed by the
-        route id and deferred key. We also store a resolve function that is used by
-        the DeferredHydrationScript to ultimately resolve the promise.
-       */}
-      {suspenseDataKey && (
-        <script
-          nonce={nonce}
-          dangerouslySetInnerHTML={{
-            __html: js`(() => {
-  var promise, resolver;
-  promise = new Promise((resolve) => {
-    resolver = resolve;
-  });
-  window.__remixContext = window.__remixContext || { deferredRouteData: {}, deferredRouteDataResolvers: {} };
-  window.__remixContext.deferredRouteData[${JSON.stringify(
-    id
-  )}] = Object.assign(
-    {},
-    window.__remixContext.deferredRouteData[${JSON.stringify(id)}],
-    {
-      [${JSON.stringify(suspenseDataKey)}]: promise,
-    }
-  );
-  window.__remixContext.deferredRouteDataResolvers[${JSON.stringify(
-    id
-  )}] = Object.assign(
-    {},
-    window.__remixContext.deferredRouteDataResolvers[${JSON.stringify(id)}],
-    {
-      [${JSON.stringify(suspenseDataKey)}]: resolver
-    }
-  );
-})();`,
-          }}
-        />
-      )}
     </deferredContext.Provider>
   );
 }
 
 export function useDeferredData<Data>() {
   let ctx = React.useContext(deferredContext);
-  return ctx?.value as ResolvedDeferrable<Data>;
+  return ctx?.value as Awaited<Data>;
 }
 
 export interface ResolveDeferredProps<Data> {
@@ -503,11 +441,9 @@ export function ResolveDeferred<Data>({
 function DeferredErrorBoundary({
   children,
   errorElement,
-  nonce,
 }: {
   children?: React.ReactNode;
   errorElement?: React.ReactNode;
-  nonce?: string;
 }) {
   let ctx = React.useContext(deferredContext);
   invariant(ctx, "Deferred must be used inside a DeferredProvider");
@@ -515,25 +451,28 @@ function DeferredErrorBoundary({
 
   let child = children;
 
-  let promise = value as PromiseLike<unknown>;
+  let promise = value as Promise<unknown>;
   // If the deferred data is a promise we suspend at this point.
-  if (promise && typeof promise === "object" && promise.then) {
+  if (
+    promise &&
+    typeof promise === "object" &&
+    typeof promise.then === "function"
+  ) {
     // We also need to store the resolved data / error on the context for SSR.
     // On page transitions the transition manager takes care of reconciling the
     // resolved data with the route data and re-rendering, but SSR we can't do
     // that so we have to just store it on the context for immediate usage.
-    throw promise.then(
-      (value) => {
+    throw promise
+      .then((value) => {
         if (ctx) {
           ctx.value = value;
         }
-      },
-      (error) => {
+      })
+      .catch((error) => {
         if (ctx) {
           ctx.value = error;
         }
-      }
-    );
+      });
   }
 
   // If there is an error we render the error element.
@@ -554,68 +493,15 @@ function DeferredErrorBoundary({
     // If a single use defined component is rendered, clone
     // it and pass it an error prop.
     child =
-      typeof errorElement === "object" &&
       errorElement &&
+      typeof errorElement === "object" &&
       "type" in errorElement &&
       typeof errorElement.type === "function"
         ? React.cloneElement(errorElement, { error: value })
         : errorElement;
   }
 
-  return (
-    <>
-      {child}
-      <DeferredHydrationScript nonce={nonce} />
-    </>
-  );
-}
-
-function DeferredHydrationScript({ nonce }: { nonce?: string }) {
-  let { id } = useRemixRouteContext();
-  let ctx = React.useContext(deferredContext);
-  invariant(ctx, "Deferred must be used inside a DeferredProvider");
-  let { value, key } = ctx;
-
-  if (!key) return null;
-
-  // Serialize the data / error for transmission to the client.
-  let preHydration = "",
-    hydrationValue;
-  if (value instanceof Error) {
-    preHydration = `let error = new Error(${JSON.stringify(
-      value.message
-    )});error.stack = ${JSON.stringify(value.stack)};`;
-    hydrationValue = `error`;
-  } else {
-    hydrationValue = JSON.stringify(value);
-  }
-
-  // This script uses the resolve function stored on the remix context
-  // to resolve the deferred promise based on the resolved data / error.
-  return (
-    <script
-      nonce={nonce}
-      dangerouslySetInnerHTML={{
-        __html: js`(() => {
-${preHydration}
-window.__remixContext.deferredRouteData[${JSON.stringify(id)}] = Object.assign(
-  {},
-  window.__remixContext.deferredRouteData[${JSON.stringify(id)}],
-  {
-    [${JSON.stringify(key)}]: ${hydrationValue},
-  }
-);
-window.__remixContext.deferredRouteDataResolvers[${JSON.stringify(
-          id
-        )}][${JSON.stringify(key)}](
-  window.__remixContext.deferredRouteData[${JSON.stringify(
-    id
-  )}][${JSON.stringify(key)}]
-);
-})();`,
-      }}
-    />
-  );
+  return <>{child}</>;
 }
 
 /**
@@ -1029,6 +915,8 @@ export function Scripts(props: ScriptProps) {
     matches,
     pendingLocation,
     clientRoutes,
+    routeData,
+    deferredLoaderData,
     serverHandoffString,
   } = useRemixEntryContext();
 
@@ -1038,8 +926,37 @@ export function Scripts(props: ScriptProps) {
 
   let initialScripts = React.useMemo(() => {
     let contextScript = serverHandoffString
-      ? `window.__remixContext = Object.assign({}, ${serverHandoffString}, window.__remixContext);`
+      ? js`window.__remixContext = Object.assign({}, ${serverHandoffString}, window.__remixContext);`
       : "";
+    if (serverHandoffString && deferredLoaderData && routeData) {
+      contextScript += js`window.__remixDeferredResolvers={};`;
+      for (let [routeId, deferredKeys] of Object.entries(deferredLoaderData)) {
+        if (!routeData[routeId] || typeof routeData[routeId] !== "object") {
+          continue;
+        }
+        contextScript += js`window.__remixDeferredResolvers[${JSON.stringify(
+          routeId
+        )}]={};`;
+        for (let key of deferredKeys) {
+          if (!routeData[routeId][key]?.then) {
+            continue;
+          }
+
+          contextScript += "(() => {";
+          contextScript += js`let p,r;`;
+          contextScript += js`p=new Promise((j=>{r=j;}));`;
+          contextScript += js`window.__remixDeferredResolvers[${JSON.stringify(
+            routeId
+          )}][${JSON.stringify(key)}]=r;`;
+          contextScript += js`window.__remixContext.routeData[${JSON.stringify(
+            routeId
+          )}][${JSON.stringify(key)}]=p;`;
+          contextScript += "})();";
+        }
+      }
+    }
+    // TODO: Add deferred scripts inside suspense to trigger hydration on
+    // the client by resolving the window.__remixDeferredResolvers
 
     let routeModulesScript = `${matches
       .map(
@@ -1116,7 +1033,99 @@ import(${JSON.stringify(manifest.entry.module)});`;
         />
       ))}
       {isHydrated ? null : initialScripts}
+      <DeferredHydrationScripts />
     </>
+  );
+}
+
+function DeferredHydrationScripts() {
+  let { routeData, deferredLoaderData } = useRemixEntryContext();
+
+  let scripts = React.useMemo<null | React.ReactNode[]>(() => {
+    if (!deferredLoaderData) {
+      return null;
+    }
+
+    let scripts: React.ReactNode[] = [];
+    for (let [routeId, deferredKeys] of Object.entries(
+      deferredLoaderData || {}
+    )) {
+      if (!routeData[routeId] || typeof routeData[routeId] !== "object") {
+        continue;
+      }
+
+      for (let key of deferredKeys) {
+        scripts.push(
+          <React.Suspense key={`${routeId}[${key}]`}>
+            <DeferredHydrationScriptContext.Provider
+              value={{ result: undefined, routeId, key }}
+            >
+              <DeferredHydrationScript promise={routeData[routeId][key]} />
+            </DeferredHydrationScriptContext.Provider>
+          </React.Suspense>
+        );
+      }
+    }
+
+    return scripts;
+  }, [deferredLoaderData, routeData]);
+
+  return <>{scripts}</>;
+}
+
+const DeferredHydrationScriptContext = React.createContext<{
+  result: { value: unknown } | undefined;
+  routeId: string;
+  key: string | number;
+}>({ result: undefined, routeId: "", key: "" });
+
+function DeferredHydrationScript({ promise }: { promise: Promise<unknown> }) {
+  let ctx = React.useContext(DeferredHydrationScriptContext);
+
+  if (
+    !promise ||
+    typeof promise !== "object" ||
+    typeof promise.then !== "function"
+  ) {
+    ctx.result = { value: promise };
+  }
+
+  if (typeof ctx.result === "undefined") {
+    let storeResult = (value: unknown) => {
+      ctx.result = { value };
+    };
+    throw promise.then(storeResult).catch(storeResult);
+  }
+
+  let isError =
+    ctx.result.value &&
+    typeof ctx.result.value === "object" &&
+    ctx.result.value instanceof Error;
+  let error = ctx.result.value as Error;
+
+  let script = "(() => {";
+  if (isError) {
+    script += js`let v=new Error(${JSON.stringify(error.message)});`;
+    script += js`v.stack=${JSON.stringify(error.stack)};`;
+  } else {
+    // TODO: Don't use JSON.stringify for the value, it's not safe
+    script += js`let v=${JSON.stringify(ctx.result.value)};`;
+  }
+  script += js`window.__remixContext.routeData[${JSON.stringify(
+    ctx.routeId
+  )}][${JSON.stringify(ctx.key)}]=v;`;
+  script += js`window.__remixDeferredResolvers[${JSON.stringify(
+    ctx.routeId
+  )}][${JSON.stringify(ctx.key)}](v);`;
+  script += "})();";
+
+  return (
+    <script
+      suppressHydrationWarning
+      dangerouslySetInnerHTML={{
+        __html: script,
+      }}
+    />
   );
 }
 
@@ -1583,7 +1592,8 @@ export type TypedResponse<T> = Response & {
 };
 
 export type DeferredResponse<T> = TypedResponse<T> & {
-  deferredData: Record<string | number, Promise<unknown>>;
+  // allows discriminating between deferred and non-deferred responses
+  __deferred?: never;
 };
 
 type DataFunction = (...args: any[]) => unknown; // matches any function
@@ -1601,7 +1611,35 @@ type JsonPrimitives =
 
 type NonJsonPrimitives = undefined | Function | symbol;
 
-type SerializeType<T, UseDeferred = false> = T extends JsonPrimitives
+type SerializeType<T, UseDeferred = false> = UseDeferred extends false
+  ? SerializeTypeImp<T>
+  : T extends [unknown, ...unknown[]]
+  ? {
+      [k in keyof T]: T[k] extends PromiseLike<infer U>
+        ? Promise<SerializeTypeImp<Awaited<U>>>
+        : T[k] extends NonJsonPrimitives
+        ? null
+        : SerializeTypeImp<T[k]>;
+    }
+  : T extends (infer U)[]
+  ? (U extends PromiseLike<infer V>
+      ? Promise<SerializeTypeImp<Awaited<V>>>
+      : U extends NonJsonPrimitives
+      ? null
+      : SerializeTypeImp<U>)[]
+  : T extends object
+  ? {
+      [k in keyof T as T[k] extends PromiseLike<unknown>
+        ? k
+        : T[k] extends NonJsonPrimitives
+        ? never
+        : k]: T[k] extends PromiseLike<infer U>
+        ? Promise<SerializeTypeImp<Awaited<U>>>
+        : SerializeTypeImp<T[k]>;
+    }
+  : SerializeTypeImp<T>;
+
+type SerializeTypeImp<T> = T extends JsonPrimitives
   ? T
   : T extends NonJsonPrimitives
   ? never
@@ -1620,14 +1658,8 @@ type SerializeType<T, UseDeferred = false> = T extends JsonPrimitives
   : T extends object
   ? {
       [k in keyof T as T[k] extends NonJsonPrimitives
-        ? UseDeferred extends true
-          ? k
-          : never
-        : k]: UseDeferred extends true
-        ? T[k] extends PromiseLike<unknown>
-          ? Deferrable<T[k]>
-          : SerializeType<T[k]>
-        : SerializeType<T[k]>;
+        ? never
+        : k]: SerializeType<T[k]>;
     }
   : never;
 
@@ -1635,6 +1667,8 @@ export type UseDataFunctionReturn<T extends DataOrFunction> = T extends (
   ...args: any[]
 ) => infer Output
   ? Awaited<Output> extends DeferredResponse<infer U>
+    ? SerializeType<U, true>
+    : Awaited<Output> extends DeferredResponse<infer U>
     ? SerializeType<U, true>
     : Awaited<Output> extends TypedResponse<infer U>
     ? SerializeType<U>

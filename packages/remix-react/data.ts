@@ -1,6 +1,8 @@
+import type { DeferrableData } from "@remix-run/deferred";
+import { parseDeferredReadableStream } from "@remix-run/deferred";
+
 import invariant from "./invariant";
 import type { Submission } from "./transition";
-import { DeferredResponse } from "./transition";
 
 export type AppData = any;
 
@@ -36,15 +38,14 @@ export async function fetchData(
   routeId: string,
   signal: AbortSignal,
   submission?: Submission
-): Promise<Response | DeferredResponse | Error> {
+): Promise<Response | Error> {
   url.searchParams.set("_data", routeId);
 
   let init: RequestInit = submission
     ? getActionInit(submission, signal)
     : { credentials: "same-origin", signal };
 
-  let response: Response | DeferredResponse = await fetch(url.href, init);
-  let contentType = response.headers.get("Content-Type");
+  let response: Response = await fetch(url.href, init);
 
   if (isErrorResponse(response)) {
     let data = await response.json();
@@ -53,20 +54,43 @@ export async function fetchData(
     return error;
   }
 
-  if (contentType && contentType.match(/text\/remix-deferred/)) {
-    response = new DeferredResponse(response);
-  }
-
   return response;
 }
 
 export async function extractData(
-  response: Response | DeferredResponse
-): Promise<AppData> {
-  if (response instanceof DeferredResponse) return response;
+  response: Response,
+  resolveDeferred = false
+): Promise<unknown | DeferrableData> {
   // This same algorithm is used on the server to interpret load
   // results when we render the HTML page.
   let contentType = response.headers.get("Content-Type");
+
+  if (
+    response.body &&
+    contentType &&
+    /\btext\/remix-deferred\b/.test(contentType)
+  ) {
+    let deferred = await parseDeferredReadableStream(response.body);
+    if (!resolveDeferred) {
+      return deferred;
+    }
+
+    if (
+      !deferred.criticalData ||
+      typeof deferred.criticalData !== "object" ||
+      !deferred.deferredData
+    ) {
+      return deferred.criticalData;
+    }
+
+    let isArray = Array.isArray(deferred.criticalData);
+    let data = deferred.criticalData as Record<string | number, unknown>;
+    for (let entry of Object.entries(deferred.deferredData)) {
+      let key = isArray ? Number(entry[0]) : entry[0];
+      data[key] = await entry[1];
+    }
+    return data;
+  }
 
   if (contentType && /\bapplication\/json\b/.test(contentType)) {
     return response.json();

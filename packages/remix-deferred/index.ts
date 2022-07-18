@@ -1,18 +1,11 @@
 export const CONTENT_TYPE = "text/remix-deferred";
 export const DEFERRED_VALUE_PLACEHOLDER_PREFIX = "__deferred_promise:";
 
-export type Deferrable<T> = never | T | Promise<T>;
-export type ResolvedDeferrable<T> = T extends null | undefined
-  ? T
-  : T extends Deferrable<infer T2>
-  ? T2 extends PromiseLike<infer T3>
-    ? T3
-    : T2
-  : T;
-
-export interface DeferrableData {
-  criticalData: unknown;
-  deferredData?: Record<string, Promise<unknown>>;
+export class DeferrableData {
+  constructor(
+    public criticalData: unknown,
+    public deferredData?: Record<string, Promise<unknown>>
+  ) {}
 }
 
 export async function parseDeferredReadableStream(
@@ -98,7 +91,7 @@ export async function parseDeferredReadableStream(
     }
   })();
 
-  return { criticalData, deferredData };
+  return new DeferrableData(criticalData, deferredData);
 }
 
 export function createDeferredReadableStream({
@@ -120,18 +113,18 @@ export function createDeferredReadableStream({
 
       if (deferredData) {
         // Watch all the deferred keys for resolution
-        await Promise.all(
-          Object.entries(deferredData).map(async ([key, promise]) => {
-            await promise.then(
-              (result) => {
+        await Promise.allSettled(
+          Object.entries(deferredData).map(async ([key, promise]) =>
+            promise
+              .then((result) => {
                 // Send the resolved data
                 controller.enqueue(
                   encoder.encode(
                     "data:" + JSON.stringify({ [key]: result }) + "\n\n"
                   )
                 );
-              },
-              async (error) => {
+              })
+              .catch((error) => {
                 // Send the error
                 controller.enqueue(
                   encoder.encode(
@@ -140,9 +133,8 @@ export function createDeferredReadableStream({
                       "\n\n"
                   )
                 );
-              }
-            );
-          })
+              })
+          )
         );
       }
 
@@ -174,7 +166,7 @@ export function getDeferrableData(data: unknown): DeferrableData {
 
     criticalData = dataWithoutPromises;
   }
-  return { criticalData, deferredData };
+  return new DeferrableData(criticalData, deferredData);
 }
 
 // must be type alias due to inference issues on interfaces
@@ -197,12 +189,11 @@ async function* readStreamSections(stream: ReadableStream<Uint8Array>) {
   let buffer: Uint8Array[] = [];
   let sections: string[] = [];
   let closed = false;
+  let encoder = new TextEncoder();
+  let decoder = new TextDecoder();
 
   let readStreamSection = async () => {
     if (sections.length > 0) return sections.shift();
-
-    let encoder = new TextEncoder();
-    let decoder = new TextDecoder();
 
     // Read from the stream until we have at least one complete section to process
     while (!closed && sections.length === 0) {
@@ -217,12 +208,12 @@ async function* readStreamSections(stream: ReadableStream<Uint8Array>) {
       try {
         // Attempt to split off a section from the buffer
         let bufferedString = decoder.decode(mergeArrays(...buffer));
-        let splitSections = bufferedString.split("\n\n", 2);
-        if (splitSections.length === 2) {
+        let splitSections = bufferedString.split("\n\n");
+        if (splitSections.length >= 2) {
           // We have a complete section, so add it to the sections array
-          sections.push(splitSections[0]);
+          sections.push(...splitSections.slice(0, -1));
           // Remove the section from the buffer and store the rest for future processing
-          buffer = [encoder.encode(splitSections[1])];
+          buffer = [encoder.encode(splitSections.slice(-1).join("\n\n"))];
         }
 
         // If we successfully parsed at least one section, break out of reading the stream
@@ -249,7 +240,7 @@ async function* readStreamSections(stream: ReadableStream<Uint8Array>) {
     // without valid data
     if (buffer.length > 0) {
       let bufferedString = decoder.decode(mergeArrays(...buffer));
-      sections = bufferedString.split("\n\n");
+      sections = bufferedString.split("\n\n").filter((s) => s);
       buffer = [];
     }
 
@@ -257,12 +248,10 @@ async function* readStreamSections(stream: ReadableStream<Uint8Array>) {
     return sections.shift();
   };
 
-  for (
-    let section = await readStreamSection();
-    section;
-    section = await readStreamSection()
-  ) {
+  let section = await readStreamSection();
+  while (section) {
     yield section;
+    section = await readStreamSection();
   }
 }
 

@@ -4,7 +4,6 @@ import type { Params } from "react-router-dom";
 
 import type { AppLoadContext, AppData } from "./data";
 import type { LinkDescriptor } from "./links";
-import type { DeferredResponse } from "./responses";
 import type { RouteData } from "./routeData";
 
 export interface RouteModules<RouteModule> {
@@ -69,8 +68,6 @@ export interface LinksFunction {
  */
 export interface LoaderFunction {
   (args: DataFunctionArgs):
-    | Promise<DeferredResponse>
-    | DeferredResponse
     | Promise<Response>
     | Response
     | Promise<AppData>

@@ -1,3 +1,4 @@
+import { getDeferrableData } from "@remix-run/deferred";
 import { Action, parsePath } from "history";
 import type { Location, State } from "history";
 
@@ -5,7 +6,6 @@ import type { Submission, TransitionManagerInit } from "../transition";
 import {
   CatchValue,
   createTransitionManager,
-  DeferredResponse,
   TransitionRedirect,
   IDLE_FETCHER,
   IDLE_TRANSITION,
@@ -26,7 +26,6 @@ describe("init", () => {
         },
       ],
       location: createLocation("/"),
-      deferredLoaderData: {},
       loaderData: { root: "LOADER DATA" },
       actionData: { root: "ACTION DATA" },
       error: new Error("lol"),
@@ -41,7 +40,6 @@ describe("init", () => {
         },
         "catch": undefined,
         "catchBoundaryId": null,
-        "deferredLoaderData": Object {},
         "error": [Error: lol],
         "errorBoundaryId": "root",
         "fetchers": Map {},
@@ -263,7 +261,6 @@ describe("shouldReload", () => {
       return url.searchParams.get("reload") === "1";
     });
     let tm = createTestTransitionManager("/", {
-      deferredLoaderData: {},
       loaderData: {
         "/": "ROOT",
       },
@@ -576,7 +573,6 @@ describe("errors on navigation", () => {
     };
 
     let tm = createTestTransitionManager("/", {
-      deferredLoaderData: {},
       loaderData: {
         a: await loaderA(),
       },
@@ -1885,57 +1881,7 @@ describe("navigating with inflight fetchers", () => {
 });
 
 function setupDeferred(initialData: Record<string, string | Promise<any>>) {
-  let resolveBodyController;
-  let bodyControllerPromise = new Promise<ReadableStreamController<Uint8Array>>(
-    (resolve) => {
-      resolveBodyController = resolve;
-    }
-  );
-  let encoder = new TextEncoder();
-
-  let pendingKeys: Promise<any>[] = [];
-  let deferredData = Object.entries(initialData).reduce((acc, [k, v]) => {
-    if (v instanceof Promise) {
-      Object.assign(acc, { [k]: `__deferred_promise:${k}` });
-      let promise = v.then(
-        async (data) => {
-          let controller = await bodyControllerPromise;
-          controller.enqueue(
-            encoder.encode(`data:{ "${k}": ${JSON.stringify(data)} }\n\n`)
-          );
-        },
-        async (err) => {
-          let controller = await bodyControllerPromise;
-          let data = {
-            message: err.message,
-            stack: err.stack,
-          };
-          controller.enqueue(
-            encoder.encode(`error:{ "${k}": ${JSON.stringify(data)} }\n\n`)
-          );
-        }
-      );
-      pendingKeys.push(promise);
-    } else {
-      Object.assign(acc, { [k]: v });
-    }
-    return acc;
-  }, {});
-
-  let body = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      controller.enqueue(encoder.encode(`${JSON.stringify(deferredData)}\n\n`));
-      resolveBodyController(controller);
-      await Promise.allSettled(pendingKeys);
-      controller.close();
-    },
-  });
-
-  return new DeferredResponse(
-    new Response(body, {
-      headers: { "Content-Type": "text/remix-deferred" },
-    })
-  );
+  return getDeferrableData(initialData);
 }
 
 // eslint-disable-next-line jest/no-focused-tests
@@ -1956,14 +1902,9 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       foo: {
         critical: "1",
-        lazy: "__deferred_promise:lazy",
-      },
-      root: "ROOT",
-    });
-    expect(t.getState().deferredLoaderData).toEqual({
-      foo: {
         lazy: expect.any(Promise),
       },
+      root: "ROOT",
     });
     expect(t.getState().transition.state).toBe("idle");
 
@@ -1976,9 +1917,6 @@ describe("deferred", () => {
         lazy: "2",
       },
       root: "ROOT",
-    });
-    expect(t.getState().deferredLoaderData).toEqual({
-      foo: {},
     });
     expect(t.getState().transition.state).toBe("idle");
 
@@ -1995,14 +1933,9 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       bar: {
         critical: "3",
-        lazy: "__deferred_promise:lazy",
-      },
-      root: "ROOT",
-    });
-    expect(t.getState().deferredLoaderData).toEqual({
-      bar: {
         lazy: expect.any(Promise),
       },
+      root: "ROOT",
     });
     expect(t.getState().transition.state).toBe("idle");
 
@@ -2015,9 +1948,6 @@ describe("deferred", () => {
         lazy: "4",
       },
       root: "ROOT",
-    });
-    expect(t.getState().deferredLoaderData).toEqual({
-      bar: {},
     });
     expect(t.getState().transition.state).toBe("idle");
   });
@@ -2038,48 +1968,29 @@ describe("deferred", () => {
     let B = t.navigate.get("/bar");
 
     // During navigation - deferreds remain as promises
-    expect(t.getState().loaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "critical": "1",
-          "lazy": "__deferred_promise:lazy",
-        },
-        "root": "ROOT",
-      }
-    `);
-    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "lazy": Promise {},
-        },
-      }
-    `);
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
 
     // But they are frozen - no re-paints on resolve/reject!
     await dfd.resolve("2");
-    expect(t.getState().loaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "critical": "1",
-          "lazy": "__deferred_promise:lazy",
-        },
-        "root": "ROOT",
-      }
-    `);
-    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "lazy": Promise {},
-        },
-      }
-    `);
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
 
     await B.loader.resolve("BAR");
     expect(t.getState().loaderData).toEqual({
       root: "ROOT",
       bar: "BAR",
     });
-    expect(t.getState().deferredLoaderData).toEqual({});
   });
 
   it("should not cancel outstanding deferreds on reused route", async () => {
@@ -2110,55 +2021,33 @@ describe("deferred", () => {
     let B = t.navigate.get("/bar?key=value");
 
     // During navigation - deferreds remain as promises
-    expect(t.getState().loaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "critical": "3",
-          "lazy": "__deferred_promise:lazy",
-        },
-        "root": Object {
-          "critical": "ROOT CRITICAL 0",
-          "lazy": "__deferred_promise:lazy",
-        },
-      }
-    `);
-    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "lazy": Promise {},
-        },
-        "root": Object {
-          "lazy": Promise {},
-        },
-      }
-    `);
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "3",
+        lazy: expect.any(Promise),
+      },
+      root: {
+        critical: `ROOT CRITICAL 0`,
+        lazy: expect.any(Promise),
+      },
+    });
 
-    // But they are frozen - no re-paints on resolve/reject!
+    // Root is not frozen - it's a re-used route without param changes
     await rootDfds[0].resolve("2");
+    // But child is frozen - no re-paints on resolve/reject!
     await dfd.resolve("4");
-    expect(t.getState().loaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "critical": "3",
-          "lazy": "__deferred_promise:lazy",
-        },
-        "root": Object {
-          "critical": "ROOT CRITICAL 0",
-          "lazy": "2",
-        },
-      }
-    `);
-    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "lazy": Promise {},
-        },
-        "root": Object {},
-      }
-    `);
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "3",
+        lazy: expect.any(Promise),
+      },
+      root: {
+        critical: `ROOT CRITICAL 0`,
+        lazy: "2",
+      },
+    });
 
     await B.loader.resolve("BAR");
-    await tick();
     expect(t.getState().loaderData).toEqual({
       root: {
         critical: "ROOT CRITICAL 0",
@@ -2166,11 +2055,6 @@ describe("deferred", () => {
       },
       bar: "BAR",
     });
-    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
-      Object {
-        "root": Object {},
-      }
-    `);
   });
 
   it("should buffer deferreds on reused route", async () => {
@@ -2186,38 +2070,22 @@ describe("deferred", () => {
       })
     );
 
-    expect(t.getState().loaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "critical": "1",
-          "lazy": "__deferred_promise:lazy",
-        },
-        "root": "ROOT",
-      }
-    `);
-    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "lazy": Promise {},
-        },
-      }
-    `);
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
 
     await dfd.resolve("2");
-    expect(t.getState().loaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "critical": "1",
-          "lazy": "2",
-        },
-        "root": "ROOT",
-      }
-    `);
-    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {},
-      }
-    `);
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: "2",
+      },
+      root: "ROOT",
+    });
 
     let B = t.navigate.get("/foo");
 
@@ -2229,15 +2097,23 @@ describe("deferred", () => {
       })
     );
 
-    expect(t.getState().loaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {
-          "critical": "1",
-          "lazy": "2",
-        },
-        "root": "ROOT",
-      }
-    `);
+    // Remains in same state until deferred resolves
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: "2",
+      },
+      root: "ROOT",
+    });
+
+    await dfdB.resolve("3");
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "2",
+        lazy: "3",
+      },
+      root: "ROOT",
+    });
   });
 
   it("should cancel outstanding deferreds on 404 navigations", async () => {
@@ -2270,46 +2146,22 @@ describe("deferred", () => {
         critical: "1",
         lazy: "2",
       },
-      // This seems to be an outstanding thing in TM - on 404's the previously
-      // non-matched route data doesn't get cleaned up
       foo: {
         critical: "3",
-        lazy: "__deferred_promise:lazy",
+        lazy: expect.any(Promise),
       },
     });
 
     await t.navigate.get("/not/found");
 
     expect(t.getState().transition.state).toEqual("idle");
-    expect(t.getState().loaderData).toEqual({
-      root: {
-        critical: "1",
-        lazy: "2",
-      },
-      // This seems to be an outstanding thing in TM - on 404's the previously
-      // non-matched route data doesn't get cleaned up
-      foo: {
-        critical: "3",
-        lazy: "__deferred_promise:lazy",
-      },
-    });
-    expect(t.getState().deferredLoaderData).toEqual({});
+    expect(t.getState().loaderData).toEqual({});
 
     // Resolving doesn't do anything
     await rootDfds[1].resolve("Nope!");
     await dfd.resolve("Nope!");
     expect(t.getState().transition.state).toEqual("idle");
-    expect(t.getState().loaderData).toEqual({
-      root: {
-        critical: "1",
-        lazy: "2",
-      },
-      foo: {
-        critical: "3",
-        lazy: "__deferred_promise:lazy",
-      },
-    });
-    expect(t.getState().deferredLoaderData).toEqual({});
+    expect(t.getState().loaderData).toEqual({});
   });
 
   it("should not cancel outstanding deferreds on hash-only navigations", async () => {
@@ -2331,15 +2183,8 @@ describe("deferred", () => {
     expect(t.getState().transition.state).toEqual("idle");
     expect(t.getState().loaderData).toEqual({
       root: "ROOT",
-      // This seems to be an outstanding thing in TM - on 404's the previously
-      // non-matched route data doesn't get cleaned up
       foo: {
         critical: "1",
-        lazy: "__deferred_promise:lazy",
-      },
-    });
-    expect(t.getState().deferredLoaderData).toEqual({
-      foo: {
         lazy: expect.any(Promise),
       },
     });
@@ -2352,9 +2197,6 @@ describe("deferred", () => {
         critical: "1",
         lazy: "2",
       },
-    });
-    expect(t.getState().deferredLoaderData).toEqual({
-      foo: {},
     });
   });
 
@@ -2370,6 +2212,14 @@ describe("deferred", () => {
       })
     );
 
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+
     let err = new Error("Kaboom!");
     await dfd.reject(err).catch(() => null);
     expect(t.getState().loaderData).toEqual({
@@ -2379,11 +2229,6 @@ describe("deferred", () => {
       },
       root: "ROOT",
     });
-    expect(t.getState().deferredLoaderData).toMatchInlineSnapshot(`
-      Object {
-        "foo": Object {},
-      }
-    `);
   });
 
   it("cancels all pending deferreds on action submissions", async () => {
@@ -2422,18 +2267,10 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       root: {
         critical: "CRITICAL ROOT 0",
-        lazy: "__deferred_promise:lazy",
-      },
-      foo: {
-        critical: "CRITICAL FOO",
-        lazy: "__deferred_promise:lazy",
-      },
-    });
-    expect(t.getState().deferredLoaderData).toEqual({
-      root: {
         lazy: expect.any(Promise),
       },
       foo: {
+        critical: "CRITICAL FOO",
         lazy: expect.any(Promise),
       },
     });
@@ -2444,18 +2281,10 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       root: {
         critical: "CRITICAL ROOT 0",
-        lazy: "__deferred_promise:lazy",
-      },
-      foo: {
-        critical: "CRITICAL FOO",
-        lazy: "__deferred_promise:lazy",
-      },
-    });
-    expect(t.getState().deferredLoaderData).toEqual({
-      root: {
         lazy: expect.any(Promise),
       },
       foo: {
+        critical: "CRITICAL FOO",
         lazy: expect.any(Promise),
       },
     });
@@ -2467,18 +2296,10 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       root: {
         critical: "CRITICAL ROOT 0",
-        lazy: "__deferred_promise:lazy",
-      },
-      foo: {
-        critical: "CRITICAL FOO",
-        lazy: "__deferred_promise:lazy",
-      },
-    });
-    expect(t.getState().deferredLoaderData).toEqual({
-      root: {
         lazy: expect.any(Promise),
       },
       foo: {
+        critical: "CRITICAL FOO",
         lazy: expect.any(Promise),
       },
     });
@@ -2632,11 +2453,11 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       root: {
         critical: "CRITICAL ROOT 0",
-        lazy: "__deferred_promise:lazy",
+        lazy: expect.any(Promise),
       },
       foo: {
         critical: "CRITICAL A 0",
-        lazy: "__deferred_promise:lazy",
+        lazy: expect.any(Promise),
       },
     });
 
@@ -2658,11 +2479,11 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       root: {
         critical: "CRITICAL ROOT 0",
-        lazy: "__deferred_promise:lazy",
+        lazy: expect.any(Promise),
       },
       foo: {
         critical: "CRITICAL A 0",
-        lazy: "__deferred_promise:lazy",
+        lazy: expect.any(Promise),
       },
     });
 
@@ -2798,7 +2619,6 @@ function createTestTransitionManager(
   let location = createLocation(pathname);
   return createTransitionManager({
     actionData: undefined,
-    deferredLoaderData: {},
     loaderData: { root: "ROOT" },
     location,
     routes: [],
@@ -2965,7 +2785,6 @@ let setup = (
   let tm = createTestTransitionManager(url, {
     onChange: handleChange,
     onRedirect: handleRedirect,
-    deferredLoaderData: {},
     loaderData: initialLoaderData ? initialLoaderData : { root: "ROOT" },
     routes,
   });

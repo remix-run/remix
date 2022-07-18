@@ -2,9 +2,9 @@
 // and leverage `react-router` here instead
 import { Action } from "history";
 import type { Location } from "history";
-import { parseDeferredReadableStream } from "@remix-run/deferred";
+import { DeferrableData } from "@remix-run/deferred";
 
-import type { DeferredRouteData, RouteData } from "./routeData";
+import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import type { ClientRoute } from "./routes";
 import { matchClientRoutes } from "./routeMatching";
@@ -13,10 +13,6 @@ import invariant from "./invariant";
 ////////////////////////////////////////////////////////////////////////////////
 //#region Types and Utils
 ////////////////////////////////////////////////////////////////////////////////
-
-export class DeferredResponse {
-  constructor(public response: Response) {}
-}
 
 export interface CatchData<T = any> {
   status: number;
@@ -49,13 +45,6 @@ export interface TransitionManagerState {
    * case this may be updated as fresh data loads complete
    */
   loaderData: RouteData;
-
-  /**
-   * Deferred data from the loaders that user sees in the browser. During a transition
-   * this is the "old" data, unless there are multiple pending forms, in which
-   * case this may be updated as fresh data loads complete
-   */
-  deferredLoaderData: DeferredRouteData;
 
   /**
    * Holds the action data for the latest NormalPostSubmission
@@ -104,7 +93,6 @@ export interface TransitionManagerInit {
   routes: ClientRoute[];
   location: Location;
   loaderData: RouteData;
-  deferredLoaderData: DeferredRouteData;
   actionData?: RouteData;
   catch?: CatchData;
   error?: Error;
@@ -265,8 +253,7 @@ type ClientMatch = RouteMatch<ClientRoute>;
 
 type DataResult = {
   match: ClientMatch;
-  value: TransitionRedirect | Error | any;
-  deferred?: Record<string, Promise<unknown>>;
+  value: DeferrableData | TransitionRedirect | Error | unknown;
 };
 
 type DataRedirectResult = {
@@ -282,6 +269,11 @@ type DataErrorResult = {
 type DataCatchResult = {
   match: ClientMatch;
   value: CatchValue;
+};
+
+type DeferredResult = {
+  match: ClientMatch;
+  value: DeferrableData;
 };
 
 export class CatchValue {
@@ -461,7 +453,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let state: TransitionManagerState = {
     location: init.location,
     loaderData: init.loaderData || {},
-    deferredLoaderData: init.deferredLoaderData || {},
     actionData: init.actionData,
     catch: init.catch,
     error: init.error,
@@ -486,9 +477,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
         // Preserve deferred data for active routes that were not cancelled, or
         // were cancelled and are again pending (i.e., returned a subsequent
         // deferred() in actionReload)
-        overrides.deferredLoaderData = [
-          ...Object.entries(state.deferredLoaderData),
-          ...Object.entries(updates.deferredLoaderData || {}),
+        overrides.loaderData = [
+          ...Object.entries(state.loaderData),
+          ...Object.entries(updates.loaderData || {}),
         ]
           .filter(([routeId]) => {
             let isActive = (updates.matches || state.matches).some(
@@ -829,15 +820,21 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
     let yeetedNavigation = yeetStaleNavigationLoad(loadId);
 
-    let loaderData = makeLoaderData(state, results, matchesToLoad);
-    let deferredLoaderData, monitorDeferred;
-    [results, deferredLoaderData, monitorDeferred] =
-      await makeDeferredLoaderData(
-        getState,
-        update,
-        results,
-        pendingNavigationDeferredControllers
-      );
+    let [loaderData, monitorDeferred] = await makeLoaderData(
+      getState,
+      results,
+      matchesToLoad,
+      update,
+      pendingNavigationDeferredControllers
+    );
+    // let deferredLoaderData, monitorDeferred;
+    // [results, deferredLoaderData, monitorDeferred] =
+    //   await makeDeferredLoaderData(
+    //     getState,
+    //     update,
+    //     results,
+    //     pendingNavigationDeferredControllers
+    //   );
 
     // need to do what we would have done when the navigation load completed
     if (yeetedNavigation) {
@@ -855,7 +852,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
         catch: catchVal,
         catchBoundaryId,
         loaderData,
-        deferredLoaderData,
         actionData:
           transition.type === "actionReload" ? state.actionData : undefined,
         transition: IDLE_TRANSITION,
@@ -870,7 +866,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
         error,
         errorBoundaryId,
         loaderData,
-        deferredLoaderData,
       });
     }
 
@@ -939,7 +934,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     fetchControllers.set(key, controller);
     let result = await callLoader(match, createUrl(href), controller.signal);
-    result = await resolveDeferredResult(result);
+    result = await resolveDeferredResult(result, controller.signal);
 
     fetchControllers.delete(key);
 
@@ -1004,7 +999,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let controller = new AbortController();
     fetchControllers.set(key, controller);
     let result = await callLoader(match, createUrl(href), controller.signal);
-    result = await resolveDeferredResult(result);
+    result = await resolveDeferredResult(result, controller.signal);
 
     if (controller.signal.aborted) return;
     fetchControllers.delete(key);
@@ -1416,7 +1411,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     [catchVal, catchBoundaryId] = (await findCatchAndBoundaryId(
       results,
       matches,
-      maybeActionErrorResult
+      maybeActionCatchResult
     )) || [catchVal, catchBoundaryId];
 
     markFetchRedirectsDone();
@@ -1429,14 +1424,13 @@ export function createTransitionManager(init: TransitionManagerInit) {
       markFetchersDone(abortedIds);
     }
 
-    let deferredLoaderData, monitorDeferred;
-    [results, deferredLoaderData, monitorDeferred] =
-      await makeDeferredLoaderData(
-        getState,
-        update,
-        results,
-        pendingNavigationDeferredControllers
-      );
+    let [loaderData, monitorDeferred] = await makeLoaderData(
+      getState,
+      results,
+      matches,
+      update,
+      pendingNavigationDeferredControllers
+    );
 
     update({
       location,
@@ -1445,8 +1439,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       errorBoundaryId,
       catch: catchVal,
       catchBoundaryId,
-      loaderData: makeLoaderData(state, results, matches),
-      deferredLoaderData,
+      loaderData,
       actionData:
         state.transition.type === "actionReload" ? state.actionData : undefined,
       transition: IDLE_TRANSITION,
@@ -1547,19 +1540,8 @@ async function callLoader(match: ClientMatch, url: URL, signal: AbortSignal) {
   invariant(match.route.loader, `Expected loader for ${match.route.id}`);
   try {
     let { params } = match;
-    let response = await match.route.loader({ params, url, signal });
-
-    let value = response;
-    let deferred: Record<string, Promise<unknown>> | undefined;
-    if (response instanceof DeferredResponse) {
-      let parsed = response.response.body
-        ? await parseDeferredReadableStream(response.response.body)
-        : { criticalData: undefined, deferredData: undefined };
-      value = parsed.criticalData;
-      deferred = parsed.deferredData;
-    }
-
-    return { match, value, deferred };
+    let value = await match.route.loader({ params, url, signal });
+    return { match, value };
   } catch (error) {
     return { match, value: error };
   }
@@ -1830,14 +1812,71 @@ function findNearestBoundary(
   return nearestBoundaryId;
 }
 
-function makeLoaderData(
-  state: TransitionManagerState,
+const neverResolvedPromise = new Promise<never>(() => {});
+
+async function makeLoaderData(
+  getState: () => TransitionManagerState,
   results: DataResult[],
-  matches: ClientMatch[]
-) {
+  matches: ClientMatch[],
+  update: (updates: Partial<TransitionManagerState>) => void,
+  pendingNavigationDeferredControllers: Map<string, AbortController>
+): Promise<[RouteData, () => void]> {
+  let state = getState();
   let newData: RouteData = {};
-  for (let { match, value } of results) {
+  let toMonitor:
+    | Record<
+        string | number,
+        Record<
+          string | number,
+          { signal: AbortSignal; promise: Promise<unknown> }
+        >
+      >
+    | undefined;
+
+  for (let result of results) {
+    let { match, value } = result;
     newData[match.route.id] = value;
+
+    if (isDeferredResult(result)) {
+      let { criticalData, deferredData } = result.value;
+      let isArray = Array.isArray(criticalData);
+      let bufferDeferred =
+        typeof state.loaderData[match.route.id] !== "undefined";
+
+      let deferredController = new AbortController();
+      pendingNavigationDeferredControllers.set(
+        match.route.id,
+        deferredController
+      );
+
+      let mergedData = criticalData as Record<string | number, unknown>;
+
+      if (criticalData && deferredData) {
+        for (let entry of Object.entries(deferredData)) {
+          let key = isArray ? Number(entry[0]) : entry[0];
+
+          let wrappedPromise = wrapDeferredPromise(
+            entry[1],
+            deferredController.signal
+          );
+          mergedData[key] = bufferDeferred
+            ? await wrappedPromise
+            : wrappedPromise;
+
+          if (bufferDeferred) continue;
+
+          toMonitor = toMonitor || {};
+          toMonitor[match.route.id] =
+            toMonitor[match.route.id] || (isArray ? {} : []);
+          toMonitor[match.route.id][key] = {
+            signal: deferredController.signal,
+            promise: wrappedPromise,
+          };
+        }
+      }
+
+      newData[match.route.id] = mergedData;
+    }
   }
 
   let loaderData: RouteData = {};
@@ -1851,110 +1890,35 @@ function makeLoaderData(
     }
   }
 
-  return loaderData;
-}
+  let monitorDeferred = () => {
+    if (!toMonitor) return;
 
-async function makeDeferredLoaderData(
-  getState: () => TransitionManagerState,
-  update: (updates: Partial<TransitionManagerState>) => void,
-  results: DataResult[],
-  pendingNavigationDeferredControllers: Map<string, AbortController>
-): Promise<[DataResult[], DeferredRouteData, () => void]> {
-  let state = getState();
-  let deferredLoaderData = { ...state.deferredLoaderData };
-  let resultPromises: Array<DataResult | Promise<DataResult>> = [];
+    for (let [routeId, entries] of Object.entries(toMonitor)) {
+      let isArray = Array.isArray(loaderData[routeId]);
 
-  for (let result of results) {
-    let { match, deferred } = result;
+      let promises = [];
+      for (let entry of Object.entries(entries)) {
+        let key = isArray ? Number(entry[0]) : entry[0];
+        let { signal, promise } = entry[1];
+        let storeResultInState = (resultOrReason: unknown) => {
 
-    if (deferred && typeof state.loaderData[match.route.id] !== "undefined") {
-      let deferredController = new AbortController();
-      pendingNavigationDeferredControllers.set(
-        match.route.id,
-        deferredController
-      );
-      resultPromises.push(
-        resolveDeferredResult(result, deferredController.signal)
-      );
-      continue;
-    }
-
-    resultPromises.push(result);
-
-    if (!deferred) {
-      continue;
-    }
-
-    deferredLoaderData[match.route.id] = Object.assign(
-      {},
-      deferredLoaderData[match.route.id],
-      deferred
-    );
-    let deferredController = new AbortController();
-    pendingNavigationDeferredControllers.set(
-      match.route.id,
-      deferredController
-    );
-  }
-
-  let finalResults = await Promise.all(resultPromises);
-
-  return [
-    finalResults,
-    deferredLoaderData,
-    () => {
-      for (let { match, deferred } of finalResults) {
-        if (!deferred) continue;
-        for (let [key, promise] of Object.entries(deferred)) {
-          let signal = pendingNavigationDeferredControllers.get(
-            match.route.id
-          )?.signal;
-          if (!signal || signal.aborted) continue;
-          deferredLoaderData[match.route.id] =
-            deferredLoaderData[match.route.id] || {};
-          deferredLoaderData[match.route.id]![key] = promise;
-          promise.then((value) => {
-            if (signal!.aborted) return;
-
-            let state = { ...getState() };
-            let {
-              [match.route.id]: { [key]: _, ...routeDeferredLoaderData } = {},
-              ...deferredLoaderData
-            } = state.deferredLoaderData;
-
-            let newDeferredLoaderData = {
-              ...deferredLoaderData,
-              [match.route.id]: routeDeferredLoaderData,
-            };
-
-            let { [match.route.id]: routeLoaderData, ...loaderData } =
-              state.loaderData;
-
-            let newLoaderData = {
-              ...loaderData,
-              [match.route.id]: {
-                ...routeLoaderData,
-                [key]: value,
-              },
-            };
-
-            update({
-              deferredLoaderData: newDeferredLoaderData,
-              loaderData: newLoaderData,
-            });
-
-            if (
-              newDeferredLoaderData[match.route.id] &&
-              Object.keys(newDeferredLoaderData[match.route.id]!).length === 0
-            ) {
-              // Mark this deferred as no longer pending once we've updated state
-              pendingNavigationDeferredControllers.delete(match.route.id);
-            }
-          });
-        }
+          if (signal.aborted) return;
+          let state = getState();
+          let newLoaderData = { ...state.loaderData };
+          newLoaderData[routeId][key] = resultOrReason;
+          update({ loaderData: newLoaderData });
+        };
+        promises.push(promise.then(storeResultInState, storeResultInState));
       }
-    },
-  ];
+
+      Promise.allSettled(promises).then(() => {
+        // Mark this deferred as no longer pending once we've updated state
+        pendingNavigationDeferredControllers.delete(routeId);
+      });
+    }
+  };
+
+  return [loaderData, monitorDeferred];
 }
 
 function abortPendingDeferredControllers(
@@ -1976,25 +1940,38 @@ function abortPendingDeferredControllers(
   }
 }
 
+async function wrapDeferredPromise(
+  promise: Promise<unknown>,
+  signal?: AbortSignal
+) {
+  let handleAbort = (res: unknown) => {
+    if (signal && signal.aborted) {
+      return neverResolvedPromise;
+    }
+    return res;
+  };
+  return promise.then(handleAbort, handleAbort);
+}
+
 const DEFERRED_ABORTED_SYMBOL = Symbol("deferred-aborted");
 async function resolveDeferredResult(
   result: {
     match: ClientMatch;
     value: unknown;
-    deferred?: Record<string, Promise<unknown>>;
   },
   signal?: AbortSignal
 ) {
   let doResolve = async () => {
-    let { match, value, deferred } = result;
+    let { match, value } = result;
     let resolvedValue: any = value;
 
-    if (
-      typeof resolvedValue === "object" &&
-      resolvedValue &&
-      typeof deferred === "object"
-    ) {
-      let deferredPromises = Object.entries(deferred).map(
+    if (value && value instanceof DeferrableData) {
+      resolvedValue = value.criticalData;
+      if (!value.deferredData) {
+        return { match, value: value.criticalData };
+      }
+
+      let deferredPromises = Object.entries(value.deferredData).map(
         async ([key, promise]) => {
           let resolved = await promise;
           return { key, resolved };
@@ -2034,11 +2011,19 @@ async function resolveDeferredResult(
   return resolved;
 }
 
+function isDeferredResult(result: DataResult): result is DeferredResult {
+  return (
+    typeof result.value === "object" &&
+    !!result.value &&
+    result.value instanceof DeferrableData
+  );
+}
+
 function isCatchResult(result: DataResult): result is DataCatchResult {
   return result.value instanceof CatchValue;
 }
 
-function isErrorResult(result: DataResult) {
+function isErrorResult(result: DataResult): result is DataErrorResult {
   return result.value instanceof Error;
 }
 
