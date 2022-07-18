@@ -503,6 +503,8 @@ export async function getPost(slug: string) {
 }
 ```
 
+If you see a TypeScript warning, such as `TS2305: Module '"@prisma/client"' has no exported member 'Post'.`, you may need to restart your editor.
+
 💿 Use the new `getPost` function in the route
 
 ```tsx filename=app/routes/posts/$slug.tsx lines=[5,10-11,15,19]
