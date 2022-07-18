@@ -2,7 +2,7 @@ import * as path from "path";
 import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import * as fse from "fs-extra";
-import { debounce } from "lodash/fp";
+import { debounce } from "lodash";
 import chokidar from "chokidar";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
@@ -147,7 +147,7 @@ export async function watch(
     serverBuild = undefined;
   }
 
-  let restartBuilders = debounce(500, async (newConfig?: RemixConfig) => {
+  let restartBuilders = debounce(async (newConfig?: RemixConfig) => {
     disposeBuilders();
     try {
       newConfig = await readConfig(config.rootDirectory);
@@ -166,9 +166,9 @@ export async function watch(
     if (onRebuildFinish) onRebuildFinish();
     browserBuild = builders[0];
     serverBuild = builders[1];
-  });
+  }, 500);
 
-  let rebuildEverything = debounce(100, async () => {
+  let rebuildEverything = debounce(async () => {
     if (onRebuildStart) onRebuildStart();
 
     if (!browserBuild?.rebuild || !serverBuild?.rebuild) {
@@ -215,7 +215,7 @@ export async function watch(
       onBuildFailure(err);
     });
     if (onRebuildFinish) onRebuildFinish();
-  });
+  }, 100);
 
   let toWatch = [config.appDirectory];
   if (config.serverEntryPoint) {

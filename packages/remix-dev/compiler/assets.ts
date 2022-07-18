@@ -1,6 +1,6 @@
 import * as path from "path";
 import type * as esbuild from "esbuild";
-import { memoize } from "lodash/fp";
+import { memoize } from "lodash";
 
 import type { RemixConfig } from "../config";
 import invariant from "../invariant";
@@ -117,31 +117,35 @@ function optimizeRoutes(
   routes: AssetsManifest["routes"],
   entryImports: string[]
 ): void {
-  // Memoize is an optimization that allows us to avoid pruning the same
-  // route's imports more than once.
-  let optimizeRouteImports = memoize(function (
-    routeId: string,
-    routes: AssetsManifest["routes"],
-    parentImports: string[]
-  ): string[] {
-    let route = routes[routeId];
-
-    if (route.parentId) {
-      let optimized = optimizeRouteImports(route.parentId, routes, parentImports);
-      parentImports = parentImports.concat(optimized);
-    }
-
-    let urlMissingInParentImports = (url: string) => !parentImports.includes(url);
-    let routeImports = (route.imports || []).filter(urlMissingInParentImports);
-
-    // Setting `route.imports = undefined` prevents `imports: []` from showing up
-    // in the manifest JSON when there are no imports.
-    route.imports = routeImports.length > 0 ? routeImports : undefined;
-
-    return routeImports;
-  });
-
   Object.keys(routes).forEach((key) => {
-    optimizeRouteImports(key, routes, entryImports);
+    memoizedOptimizeRouteImports(key, routes, entryImports);
   });
+}
+
+// Memoize is an optimization that allows us to avoid pruning the same
+// route's imports more than once, with the first argument as cache key.
+let memoizedOptimizeRouteImports = memoize(optimizeRouteImports);
+
+function optimizeRouteImports(
+  routeId: string,
+  routes: AssetsManifest["routes"],
+  parentImports: string[]
+): string[] {
+  let route = routes[routeId];
+
+  if (route.parentId) {
+    parentImports = parentImports.concat(
+      memoizedOptimizeRouteImports(route.parentId, routes, parentImports)
+    );
+  }
+
+  let routeImports = (route.imports || []).filter(
+    (url) => !parentImports.includes(url)
+  );
+
+  // Setting `route.imports = undefined` prevents `imports: []` from showing up
+  // in the manifest JSON when there are no imports.
+  route.imports = routeImports.length > 0 ? routeImports : undefined;
+
+  return routeImports;
 }
