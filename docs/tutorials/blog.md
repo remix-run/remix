@@ -19,9 +19,9 @@ Click this button to create a [Gitpod][gitpod] workspace with the project set up
 
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
-- [Node.js][node-js] version (^12.22.0, ^14.17.0, or >=16.0.0)
+- [Node.js][node-js] version (^14.17.0, or >=16.0.0)
 - [npm][npm] 7 or greater
-- A code editor
+- A code editor ([VSCode][vs-code] is a nice one)
 
 ## Creating the project
 
@@ -1161,6 +1161,7 @@ We hope you love Remix! 💿 👋
 [gitpod-ready-to-code]: https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod
 [node-js]: https://nodejs.org
 [npm]: https://www.npmjs.com
+[vs-code]: https://code.visualstudio.com
 [the-stacks-docs]: /pages/stacks
 [the-indie-stack]: https://github.com/remix-run/indie-stack
 [fly-io]: https://fly.io
