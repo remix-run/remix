@@ -354,6 +354,7 @@ export function getNewMatchesForLinks(
   mode: "data" | "assets"
 ): RouteMatch<ClientRoute>[] {
   let path = parsePathPatch(page);
+
   let isNew = (match: RouteMatch<ClientRoute>, index: number) => {
     if (!currentMatches[index]) return true;
     return match.route.id !== currentMatches[index].route.id;
@@ -369,6 +370,7 @@ export function getNewMatchesForLinks(
         currentMatches[index].params["*"] !== match.params["*"])
     );
   };
+  
   // NOTE: keep this mostly up-to-date w/ the transition data diff, but this
   // version doesn't care about submissions
   let newMatches =
