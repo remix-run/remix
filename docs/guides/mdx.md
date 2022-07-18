@@ -87,7 +87,7 @@ The following example demonstrates how you might build a simple blog with MDX, i
 In `app/routes/index.jsx`:
 
 ```tsx
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { Link, useLoaderData } from "@remix-run/react";
 
 // Import all your posts from the app/routes/posts directory. Since these are
