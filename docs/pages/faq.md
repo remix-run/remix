@@ -17,7 +17,7 @@ We recommend you create a function that validates the user session that can be a
 import {
   createCookieSessionStorage,
   redirect,
-} from "@remix-run/node"; // or "@remix-run/cloudflare"
+} from "@remix-run/node"; // or cloudflare/deno
 
 // somewhere you've got a session storage
 const { getSession } = createCookieSessionStorage();
