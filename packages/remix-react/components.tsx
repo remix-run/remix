@@ -950,8 +950,6 @@ export function Scripts(props: ScriptProps) {
         }
       }
     }
-    // TODO: Add deferred scripts inside suspense to trigger hydration on
-    // the client by resolving the window.__remixDeferredResolvers
 
     let routeModulesScript = `${matches
       .map(
