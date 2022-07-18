@@ -386,11 +386,10 @@ export interface DeferredResolveRenderFunction<Data> {
 }
 
 export interface DeferredProps<Data> {
-  fallbackElement?: SuspenseProps["fallback"];
   children?: React.ReactNode | DeferredResolveRenderFunction<Data>;
-  value: Data;
   errorElement?: React.ReactNode;
-  nonce?: string;
+  fallbackElement?: SuspenseProps["fallback"];
+  value: Data;
 }
 
 const js = String.raw;
@@ -438,6 +437,9 @@ export function ResolveDeferred<Data>({
   return children(data) as JSX.Element;
 }
 
+// TODO: turn into a react error boundary to allow catching errors
+// in things like React.lazy component loading while still re-throwing
+// when no errorElement is provided.
 function DeferredErrorBoundary({
   children,
   errorElement,
@@ -467,6 +469,9 @@ function DeferredErrorBoundary({
         ctx.value = value;
       }
     };
+    // TODO: Do we need to handle only subscribing once here?
+    // How are race conditions handled?
+    // Look into data libs like react-fetch
     throw promise.then(storeResult, storeResult);
   }
 

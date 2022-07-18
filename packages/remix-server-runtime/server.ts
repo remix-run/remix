@@ -461,7 +461,6 @@ async function handleDocumentRequest({
   let entryContext: EntryContext = {
     ...serverHandoff,
     routeData: contextRouteData,
-    deferredLoaderData,
     manifest: build.assets,
     routeModules,
     serverHandoffString: createServerHandoffString(serverHandoff),
