@@ -7,7 +7,11 @@ const publish = process.env.CI || args.includes("--publish");
 exec("yarn", ["rollup", "-c"])
   .then(() => tsc && exec("yarn", ["tsc", "-b"]))
   .then(() => publish && exec("node", ["scripts/copy-build-to-dist.mjs"]))
-  .then(() => process.exit(0));
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
 
 /**
  * @param {string} command
