@@ -57,7 +57,7 @@ You'll find links to the sections of the tutorial in the navbar (top of the page
 
 You can follow along with this tutorial on [CodeSandbox][code-sandbox] (a fantastic in-browser editor) or locally on your own computer. If you use the CodeSandbox approach then all you need is a good internet connection and a modern browser. If you run things locally then you're going to need some things installed:
 
-- [Node.js][node-js] version (^12.22.0, ^14.17.0, or >=16.0.0)
+- [Node.js][node-js] version (^14.17.0, or >=16.0.0)
 - [npm][npm] 7 or greater
 - A code editor ([VSCode][vs-code] is a nice one)
 

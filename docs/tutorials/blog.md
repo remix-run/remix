@@ -7,9 +7,11 @@ order: 1
 
 We're going to be short on words and quick on code in this quickstart. If you're looking to see what Remix is all about in 15 minutes, this is it.
 
-<docs-info>💿 Hey I'm Derrick the Remix Compact Disc 👋 Whenever you're supposed to _do_ something you'll see me</docs-info>
+<docs-info>Work through this tutorial with Kent in <a target="_blank" rel="noopener noreferrer" href="https://rmx.as/egghead-course">this free Egghead.io course</a></docs-info>
 
 This tutorial uses TypeScript. Remix can definitely be used without TypeScript. We feel most productive when writing TypeScript, but if you'd prefer to skip the TypeScript syntax, feel free to write your code in JavaScript.
+
+<docs-info>💿 Hey I'm Derrick the Remix Compact Disc 👋 Whenever you're supposed to _do_ something you'll see me</docs-info>
 
 ## Prerequisites
 
@@ -19,9 +21,9 @@ Click this button to create a [Gitpod][gitpod] workspace with the project set up
 
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
-- [Node.js][node-js] version (^12.22.0, ^14.17.0, or >=16.0.0)
+- [Node.js][node-js] version (^14.17.0, or >=16.0.0)
 - [npm][npm] 7 or greater
-- A code editor
+- A code editor ([VSCode][vs-code] is a nice one)
 
 ## Creating the project
 
@@ -503,6 +505,8 @@ export async function getPost(slug: string) {
 }
 ```
 
+If you see a TypeScript warning, such as `TS2305: Module '"@prisma/client"' has no exported member 'Post'.`, you may need to restart your editor.
+
 💿 Use the new `getPost` function in the route
 
 ```tsx filename=app/routes/posts/$slug.tsx lines=[5,10-11,15,19]
@@ -582,6 +586,8 @@ npm add marked
 # if using typescript
 npm add @types/marked -D
 ```
+
+Now that `marked` has been installed, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
 
 ```tsx filename=app/routes/post/$slug.ts lines=[1,10,20-21,25,31]
 import { marked } from "marked";
@@ -1159,6 +1165,7 @@ We hope you love Remix! 💿 👋
 [gitpod-ready-to-code]: https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod
 [node-js]: https://nodejs.org
 [npm]: https://www.npmjs.com
+[vs-code]: https://code.visualstudio.com
 [the-stacks-docs]: /pages/stacks
 [the-indie-stack]: https://github.com/remix-run/indie-stack
 [fly-io]: https://fly.io
