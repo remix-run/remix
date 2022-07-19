@@ -6,7 +6,6 @@ import type {
   FormHTMLAttributes,
   MouseEventHandler,
   TouchEventHandler,
-  SuspenseProps,
 } from "react";
 import * as React from "react";
 import type { Navigator, Params } from "react-router";
@@ -21,6 +20,7 @@ import {
   useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
+import jsesc from "jsesc";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, DeferredLoaderData, AssetsManifest } from "./entry";
@@ -379,7 +379,6 @@ export function RemixRoute({ id }: { id: string }) {
 
 type DeferredContext = {
   value?: unknown;
-  promise?: Promise<unknown>;
 };
 const deferredContext = React.createContext<undefined | DeferredContext>(
   undefined
@@ -476,21 +475,16 @@ class DeferredErrorBoundary extends React.Component<
       typeof valuePromise === "object" &&
       typeof valuePromise.then === "function"
     ) {
-      if (ctx.promise !== valuePromise) {
-        // We also need to store the resolved data / error on the context for SSR.
-        // On page transitions the transition manager takes care of reconciling the
-        // resolved data with the route data and re-rendering, but SSR we can't do
-        // that so we have to just store it on the context for immediate usage.
-        let storeResult = (value: unknown) => {
-          if (ctx) {
-            ctx.promise = undefined;
-            ctx.value = value;
-          }
-        };
-        ctx.promise = valuePromise.then(storeResult, storeResult);
-        ctx.value = ctx.promise;
-      }
-      throw ctx.promise;
+      // We also need to store the resolved data / error on the context for SSR.
+      // On page transitions the transition manager takes care of reconciling the
+      // resolved data with the route data and re-rendering, but SSR we can't do
+      // that so we have to just store it on the context for immediate usage.
+      let storeResult = (value: unknown) => {
+        if (ctx) {
+          ctx.value = value;
+        }
+      };
+      throw valuePromise.then(storeResult, storeResult);
     }
 
     // If there is an error we render the error element.
@@ -945,7 +939,7 @@ export function Scripts(props: ScriptProps) {
 
   let initialScripts = React.useMemo(() => {
     let contextScript = serverHandoffString
-      ? js`window.__remixContext = Object.assign({}, ${serverHandoffString}, window.__remixContext);`
+      ? js`window.__remixContext = ${serverHandoffString};`
       : "";
     if (serverHandoffString && deferredLoaderData && routeData) {
       contextScript += js`window.__remixDeferredResolvers={};`;
@@ -1126,7 +1120,7 @@ function DeferredHydrationScript({ promise }: { promise: Promise<unknown> }) {
     script += js`v.stack=${JSON.stringify(error.stack)};`;
   } else {
     // TODO: Don't use JSON.stringify for the value, it's not safe
-    script += js`let v=${JSON.stringify(ctx.result.value)};`;
+    script += js`let v=${jsesc(ctx.result.value, { es6: true })};`;
   }
   script += js`window.__remixContext.routeData[${JSON.stringify(
     ctx.routeId
