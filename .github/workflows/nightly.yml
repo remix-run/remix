@@ -79,7 +79,7 @@ jobs:
 
       - name: 🏗 Build
         if: steps.version.outputs.NEXT_VERSION
-        run: yarn build --tsc --publish
+        run: yarn build
 
       - name: 🏷 Push Tag
         if: steps.version.outputs.NEXT_VERSION
