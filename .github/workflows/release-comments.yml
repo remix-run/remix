@@ -1,10 +1,13 @@
-name: 📝 Comment on Release
+name: Comment on Release
 
 on:
   workflow_call:
     inputs:
       ref:
         required: true
+        type: string
+      packageVersionToFollow:
+        required: false
         type: string
 
 jobs:
@@ -15,6 +18,8 @@ jobs:
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
@@ -27,7 +32,7 @@ jobs:
         run: npm ci
         working-directory: ./scripts/release
 
-      - name: 📝 Comment on issues
+      - name: Comment on issues
         working-directory: ./scripts/release
         run: node -r esbuild-register ./comment.ts
         env:
@@ -36,3 +41,4 @@ jobs:
           VERSION: ${{ inputs.ref }}
           DEFAULT_BRANCH: "main"
           NIGHTLY_BRANCH: "dev"
+          PACKAGE_VERSION_TO_FOLLOW: ${{ inputs.packageToWatch }}
