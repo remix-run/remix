@@ -213,8 +213,8 @@ With React streaming setup, now you can start adding `Deferred` usage for your s
 
 ```tsx lines=[1,3,4,9-11,13-15,24-33,38-40]
 import { Suspense } from "react";
-import type { LoaderArgs } from "@remix-run/node";
-import { deferred } from "@remix-run/node";
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { deferred } from "@remix-run/node"; // or cloudflare/deno
 import { Deferred, useLoaderData } from "@remix-run/react";
 
 import { getPackageLocation } from "~/models/packages";
