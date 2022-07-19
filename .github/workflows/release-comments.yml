@@ -1,4 +1,4 @@
-name: Comment on Release
+name: 📝 Comment on Release
 
 on:
   workflow_call:
@@ -32,7 +32,7 @@ jobs:
         run: npm ci
         working-directory: ./scripts/release
 
-      - name: Comment on issues
+      - name: 📝 Comment on issues
         working-directory: ./scripts/release
         run: node -r esbuild-register ./comment.ts
         env:
