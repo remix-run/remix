@@ -81,9 +81,11 @@ test.beforeAll(async () => {
             <div>
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
-              <Deferred value={bar}>
-                {(deferred) => <div>{deferred}</div>}
-              </Deferred>
+              <React.Suspense>
+                <Deferred value={bar}>
+                  {(deferred) => <div>{deferred}</div>}
+                </Deferred>
+              </React.Suspense>
             </div>
           )
         }
@@ -116,9 +118,11 @@ test.beforeAll(async () => {
             <div>
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
-              <Deferred value={bar}>
-                <DeferredComponent />
-              </Deferred>
+              <React.Suspense>
+                <Deferred value={bar}>
+                  <DeferredComponent />
+                </Deferred>
+              </React.Suspense>
             </div>
           )
         }
@@ -155,9 +159,11 @@ test.beforeAll(async () => {
             <div>
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
-              <Deferred value={bar} errorElement={<DeferredBoundary />}>
-                <DeferredComponent />
-              </Deferred>
+              <React.Suspense>
+                <Deferred value={bar} errorElement={<DeferredBoundary />}>
+                  <DeferredComponent />
+                </Deferred>
+              </React.Suspense>
             </div>
           )
         }
@@ -190,9 +196,11 @@ test.beforeAll(async () => {
             <div>
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
-              <Deferred value={bar}>
-                <DeferredComponent />
-              </Deferred>
+              <React.Suspense>
+                <Deferred value={bar}>
+                  <DeferredComponent />
+                </Deferred>
+              </React.Suspense>
             </div>
           )
         }
@@ -233,12 +241,16 @@ test.beforeAll(async () => {
           return (
             <div>
               {foo}
-              <Deferred value={bar}>
-                <DeferredComponent />
-              </Deferred>
-              <Deferred value={baz}>
-                <DeferredComponent />
-              </Deferred>
+              <React.Suspense>
+                <Deferred value={bar}>
+                  <DeferredComponent />
+                </Deferred>
+              </React.Suspense>
+              <React.Suspense>
+                <Deferred value={baz}>
+                  <DeferredComponent />
+                </Deferred>
+              </React.Suspense>
             </div>
           )
         }

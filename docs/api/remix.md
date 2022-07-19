@@ -327,16 +327,18 @@ In order to avoid (usually) the client-side routing "scroll flash" on refresh or
 
 ### `<Deferred>`
 
-This component is responsible for resolving deferred values accessed from [`useLoaderData`][useloaderdata]. This can be thought of as an auto-suspending React `<Suspense>` component and an error boundary that handles hydration all in one.
+This component is responsible for resolving deferred values accessed from [`useLoaderData`][useloaderdata]. This can be thought of as a thin wrapper around React Error Boundaries with support for handling SSR that resolves the data of a deferred loader value.
 
 `<Deferred>` can be used to resolve the deferred value in one of two ways:
 
 Directly as a render function:
 
 ```tsx
-<Deferred value={deferredValue}>
-  {(data) => <p>{data}</p>}
-</Deferred>
+<Suspense>
+  <Deferred value={deferredValue}>
+    {(data) => <p>{data}</p>}
+  </Deferred>
+</Suspense>
 ```
 
 Or indirectly via the `useDeferredData` hook:
@@ -347,12 +349,14 @@ function Accessor() {
   return <p>{value}</p>;
 }
 
-<Deferred value={deferredValue}>
-  <Accessor />
-</Deferred>;
+<Suspense>
+  <Deferred value={deferredValue}>
+    <Accessor />
+  </Deferred>
+</Suspense>;
 ```
 
-`<Deferred>` is paired with [`deferred()`][deferred-response] in your loader. Returning a deferred value from your loader will put Remix in streaming mode and allow you to render fallbacks with `<Deferred>`. A full example can be found in the [streaming guide][streaming-guide].
+`<Deferred>` is paired with [`deferred()`][deferred-response] in your loader. Returning a deferred value from your loader will put Remix in streaming mode and allow you to render fallbacks with `<Suspense>`. A full example can be found in the [streaming guide][streaming-guide].
 
 ### `useLoaderData`
 

@@ -214,50 +214,47 @@ With just that in place, you're unlikely to see any significant performance impr
 
 With React streaming setup, now you can start adding `Deferred` usage for your slow data requests where you'd rather render a fallback UI. Let's do that for our example above:
 
-```tsx lines=[3,5,6,11,18,23,33-46]
-import type { LoaderFunction } from "@remix-run/node";
+```tsx lines=[1,3,4,9-11,13-15,24-33,38-40]
+import { Suspense } from "react";
+import type { LoaderArgs } from "@remix-run/node";
 import { deferred } from "@remix-run/node";
 import { Deferred, useLoaderData } from "@remix-run/react";
 
 import { getPackageLocation } from "~/models/packages";
 
-type LoaderData = {
-  packageLocation: Promise<{
-    latitude: number;
-    longitude: number;
-  }>;
-};
-
-export const loader: LoaderFunction = ({ params }) => {
+export function loader({ params }: LoaderArgs) {
   const packageLocationPromise = getPackageLocation(
     params.packageId
   );
 
-  return deferred<LoaderData>({
+  return deferred({
     packageLocation: packageLocationPromise,
   });
-};
+}
 
 export default function PackageRoute() {
-  const data = useLoaderData() as LoaderData;
+  const data = useLoaderData<typeof loader>();
 
   return (
     <main>
       <h1>Let's locate your package</h1>
-      <Deferred
-        value={data.packageLocation}
-        fallbackElement={<p>Loading package location...</p>}
-        errorElement={
-          <p>Error loading package location!</p>
-        }
+      <Suspense
+        fallback={<p>Loading package location...</p>}
       >
-        {(packageLocation) => (
-          <p>
-            Your package is at {packageLocation.latitude}{" "}
-            lat and {packageLocation.longitude} long.
-          </p>
-        )}
-      </Deferred>
+        <Deferred
+          value={data.packageLocation}
+          errorElement={
+            <p>Error loading package location!</p>
+          }
+        >
+          {(packageLocation) => (
+            <p>
+              Your package is at {packageLocation.latitude}{" "}
+              lat and {packageLocation.longitude} long.
+            </p>
+          )}
+        </Deferred>
+      </Suspense>
     </main>
   );
 }
@@ -268,29 +265,39 @@ export default function PackageRoute() {
 
 If you're not jazzed about bringing back render props, you can use a hook, but you'll have to break things out into another component:
 
-```tsx lines=[14,21]
+```tsx lines=[18,26-31]
+import type { UseDataFunctionReturn } from "@remix-run/react";
+
 export default function PackageRoute() {
-  const data = useLoaderData() as LoaderData;
+  const data = useLoaderData<typeof loader>();
 
   return (
     <main>
       <h1>Let's locate your package</h1>
-      <Deferred
-        value={data.packageLocation}
-        fallbackElement={<p>Loading package location...</p>}
-        errorElement={
-          <p>Error loading package location!</p>
-        }
+      <Suspense
+        fallback={<p>Loading package location...</p>}
       >
-        <PackageLocation />
-      </Deferred>
+        <Deferred
+          value={data.packageLocation}
+          errorElement={
+            <p>Error loading package location!</p>
+          }
+        >
+          <PackageLocation />
+        </Deferred>
+      </Suspense>
     </main>
   );
 }
 
 function PackageLocation() {
   const packageLocation =
-    useDeferredData<LoaderData["packageLocation"]>();
+    useDeferredData<
+      UseDataFunctionReturn<
+        typeof loader
+      >["packageLocation"]
+    >();
+
   return (
     <p>
       Your package is at {packageLocation.latitude} lat and{" "}
@@ -309,7 +316,7 @@ So rather than waiting for the whole `document -> JavaScript -> hydrate -> reque
 Additionally, the API that Remix exposes for this is extremely ergonomic. You can literally switch between whether something is going to be deferred or not based on whether you include the `await` keyword:
 
 ```tsx
-return deferred<LoaderData>({
+return deferred({
   // not deferred:
   packageLocation: await packageLocationPromise,
   // deferred:
@@ -320,10 +327,10 @@ return deferred<LoaderData>({
 Because of this, you can A/B test deferring, or even determine whether to defer based on the user or data being requested:
 
 ```tsx
-export const loader: LoaderFunction = ({
+export async function loader({
   request,
   params,
-}) => {
+}: LoaderArgs) {
   const packageLocationPromise = getPackageLocation(
     params.packageId
   );
@@ -332,12 +339,12 @@ export const loader: LoaderFunction = ({
     params.packageId
   );
 
-  return deferred<LoaderData>({
+  return deferred({
     packageLocation: shouldDefer
       ? packageLocationPromise
       : await packageLocationPromise,
   });
-};
+}
 ```
 
 That `shouldDeferPackageLocation` could be implemented to check the user making the request, whether the package location data is in a cache, the status of an A/B test, or whatever else you want. This is pretty sweet 🍭

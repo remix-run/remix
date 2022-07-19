@@ -377,7 +377,11 @@ export function RemixRoute({ id }: { id: string }) {
 ////////////////////////////////////////////////////////////////////////////////
 // Public API
 
-const deferredContext = React.createContext<undefined | { value?: unknown }>(
+type DeferredContext = {
+  value?: unknown;
+  promise?: Promise<unknown>;
+};
+const deferredContext = React.createContext<undefined | DeferredContext>(
   undefined
 );
 
@@ -388,7 +392,6 @@ export interface DeferredResolveRenderFunction<Data> {
 export interface DeferredProps<Data> {
   children?: React.ReactNode | DeferredResolveRenderFunction<Data>;
   errorElement?: React.ReactNode;
-  fallbackElement?: SuspenseProps["fallback"];
   value: Data;
 }
 
@@ -398,7 +401,6 @@ export function Deferred<Data = any>({
   children,
   value,
   errorElement,
-  fallbackElement,
 }: DeferredProps<Data>) {
   return (
     <deferredContext.Provider
@@ -406,17 +408,9 @@ export function Deferred<Data = any>({
         value,
       }}
     >
-      <React.Suspense fallback={fallbackElement}>
-        <DeferredErrorBoundary errorElement={errorElement}>
-          {typeof children === "function" ? (
-            <ResolveDeferred
-              children={children as DeferredResolveRenderFunction<Data>}
-            />
-          ) : (
-            children
-          )}
-        </DeferredErrorBoundary>
-      </React.Suspense>
+      <DeferredErrorBoundary errorElement={errorElement}>
+        <ResolveDeferred>{children}</ResolveDeferred>
+      </DeferredErrorBoundary>
     </deferredContext.Provider>
   );
 }
@@ -427,81 +421,106 @@ export function useDeferredData<Data>() {
 }
 
 export interface ResolveDeferredProps<Data> {
-  children: DeferredResolveRenderFunction<Data>;
+  children?: React.ReactNode | DeferredResolveRenderFunction<Data>;
 }
 
 export function ResolveDeferred<Data>({
   children,
-}: ResolveDeferredProps<Data>): JSX.Element {
+}: ResolveDeferredProps<Data>) {
   let data = useDeferredData<Data>();
-  return children(data) as JSX.Element;
+  return typeof children === "function" ? (
+    <>{children(data)}</>
+  ) : (
+    <>{children}</>
+  );
 }
 
-// TODO: turn into a react error boundary to allow catching errors
-// in things like React.lazy component loading while still re-throwing
-// when no errorElement is provided.
-function DeferredErrorBoundary({
-  children,
-  errorElement,
-}: {
+type DeferredErrorBoundaryProps = {
   children?: React.ReactNode;
   errorElement?: React.ReactNode;
-}) {
-  let ctx = React.useContext(deferredContext);
-  invariant(ctx, "Deferred must be used inside a DeferredProvider");
-  let { value } = ctx;
+};
 
-  let child = children;
+class DeferredErrorBoundary extends React.Component<
+  DeferredErrorBoundaryProps,
+  { error?: Error }
+> {
+  static contextType = deferredContext;
+  context: DeferredContext | undefined;
 
-  let promise = value as Promise<unknown>;
-  // If the deferred data is a promise we suspend at this point.
-  if (
-    promise &&
-    typeof promise === "object" &&
-    typeof promise.then === "function"
-  ) {
-    // We also need to store the resolved data / error on the context for SSR.
-    // On page transitions the transition manager takes care of reconciling the
-    // resolved data with the route data and re-rendering, but SSR we can't do
-    // that so we have to just store it on the context for immediate usage.
-    let storeResult = (value: unknown) => {
-      if (ctx) {
-        ctx.value = value;
-      }
-    };
-    // TODO: Do we need to handle only subscribing once here?
-    // How are race conditions handled?
-    // Look into data libs like react-fetch
-    throw promise.then(storeResult, storeResult);
+  static getDerivedStateFromError(error: Error) {
+    return { error };
   }
 
-  // If there is an error we render the error element.
-  if (value instanceof Error) {
-    // If we don't have an errorElement we re-throw the
-    // error to bubble it up the component stack to the
-    // closest boundary. We can't just throw on the server
-    // though as we've already sent the parent components
-    // to the browser. In this case we don't render anything
-    // and reconcile the UX on the client. This means inline
-    // boundaries will be SSR'd, while errors that need to
-    // bubble will bubble on the client as parent components
-    // need to re-render.
-    if (typeof errorElement === "undefined" && !IS_SSR) {
-      throw value;
+  constructor(props: DeferredErrorBoundaryProps) {
+    super(props);
+    this.state = {};
+  }
+
+  render() {
+    let ctx = this.context;
+    invariant(ctx, "Deferred must be used inside a DeferredProvider");
+
+    let { value } = ctx;
+    let { children, errorElement } = this.props;
+
+    if (this.state.error) {
+      value = this.state.error;
     }
 
-    // If a single use defined component is rendered, clone
-    // it and pass it an error prop.
-    child =
-      errorElement &&
-      typeof errorElement === "object" &&
-      "type" in errorElement &&
-      typeof errorElement.type === "function"
-        ? React.cloneElement(errorElement, { error: value })
-        : errorElement;
-  }
+    let child = children;
 
-  return <>{child}</>;
+    let valuePromise = value as Promise<unknown>;
+    // If the deferred data is a promise we suspend at this point.
+    if (
+      valuePromise &&
+      typeof valuePromise === "object" &&
+      typeof valuePromise.then === "function"
+    ) {
+      if (ctx.promise !== valuePromise) {
+        // We also need to store the resolved data / error on the context for SSR.
+        // On page transitions the transition manager takes care of reconciling the
+        // resolved data with the route data and re-rendering, but SSR we can't do
+        // that so we have to just store it on the context for immediate usage.
+        let storeResult = (value: unknown) => {
+          if (ctx) {
+            ctx.promise = undefined;
+            ctx.value = value;
+          }
+        };
+        ctx.promise = valuePromise.then(storeResult, storeResult);
+        ctx.value = ctx.promise;
+      }
+      throw ctx.promise;
+    }
+
+    // If there is an error we render the error element.
+    if (value instanceof Error) {
+      // If we don't have an errorElement we re-throw the
+      // error to bubble it up the component stack to the
+      // closest boundary. We can't just throw on the server
+      // though as we've already sent the parent components
+      // to the browser. In this case we don't render anything
+      // and reconcile the UX on the client. This means inline
+      // boundaries will be SSR'd, while errors that need to
+      // bubble will bubble on the client as parent components
+      // need to re-render.
+      if (typeof errorElement === "undefined" && !IS_SSR) {
+        throw value;
+      }
+
+      // If a single use defined component is rendered, clone
+      // it and pass it an error prop.
+      child =
+        errorElement &&
+        typeof errorElement === "object" &&
+        "type" in errorElement &&
+        typeof errorElement.type === "function"
+          ? React.cloneElement(errorElement, { error: value })
+          : errorElement;
+    }
+
+    return <>{child}</>;
+  }
 }
 
 /**

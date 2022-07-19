@@ -16,7 +16,7 @@ With React 18 landing, we are looking to take full advantage of the out-of-order
 
 ### Behavior
 
-The `<Deferred />` fallbackElement prop only renders on the initial render of the `<Deferred />` component. It will not render the fallback if props change. Effectively, this means that you will not get a fallback rendered when a user submits a form and loader data is revalidated and you will not get a fallback rendered when the user navigates to the same route with different params.
+The `<Suspense />` fallback prop only renders on the initial render of the `<Deferred />` component. It will not render the fallback if props change. Effectively, this means that you will not get a fallback rendered when a user submits a form and loader data is revalidated and you will not get a fallback rendered when the user navigates to the same route with different params.
 
 This may feel counter-intuitive at first, but stay with us, we really thought this through and it's important that it works this way. Let's imagine a world without the deferred API. For those scenarios you're probably going to want to implement Optimistic UI for form submissions/revalidation and some Pending UI for sibling route navigations.
 
@@ -46,7 +46,7 @@ Params:
 
 ### React API:
 
-Introduce a new `<Deferred>` component that will resolve the values of the `deferred()` Promises accessed from `useLoaderData()`. This can be thought of as a thin wrapper around `<React.Suspense>` that is responsible for resolving the Promises and rendering the fallback / error states.
+Introduce a new `<Deferred>` component that will resolve the values of the `deferred()` Promises accessed from `useLoaderData()`. This can be thought of as a thin wrapper around React Error Boundaries with support for handling SSR that resolves the data of a deferred loader value.
 
 ## Consequences
 
