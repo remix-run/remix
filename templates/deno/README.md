@@ -76,7 +76,7 @@ Building the Deno app (`npm run build`) results in two outputs:
 You can deploy these bundles to any host that runs Deno, but here we'll focus on
 deploying to [Deno Deploy](https://deno.com/deploy).
 
-## Setting up Deno Deploy
+### Setting up Deno Deploy
 
 1. [Sign up](https://dash.deno.com/signin) for Deno Deploy.
 

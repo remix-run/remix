@@ -242,7 +242,7 @@ export async function getIssuesClosedByPullRequests(
    * https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword
    */
   let regex =
-    /(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s#([0-9]+)/gi;
+    /(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)(:)?\s#([0-9]+)/gi;
   let matches = prBody.match(regex);
   if (!matches) return linkedIssues.map((issue) => issue.number);
 
