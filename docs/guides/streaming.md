@@ -16,8 +16,8 @@ But there's a more nuanced problem that streaming solves. Let's look into that:
 Imagine a scenario where one of your routes' loaders needs to retrieve some data that for one reason or another is quite slow. For example, let's say you're showing the user the location of a package that's being delivered to their home:
 
 ```tsx
-import type { LoaderFunction } from "@remix-run/node";
-import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { getPackageLocation } from "~/models/packages";
