@@ -77,6 +77,12 @@ headers:
   Cache-Control: no-cache
 ---
 
+import styles from "./first-post.css";
+
+export const links = () => [
+  { rel: "stylesheet", href: styles },
+];
+
 export const handle = {
   someData: "abc",
 };
