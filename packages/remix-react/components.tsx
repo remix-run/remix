@@ -379,6 +379,7 @@ export function RemixRoute({ id }: { id: string }) {
 
 type DeferredContext = {
   value?: unknown;
+  refCount: number;
 };
 const deferredContext = React.createContext<undefined | DeferredContext>(
   undefined
@@ -401,10 +402,12 @@ export function Deferred<Data = any>({
   value,
   errorElement,
 }: DeferredProps<Data>) {
+  let [refCount] = React.useState(() => 0);
   return (
     <deferredContext.Provider
       value={{
         value,
+        refCount,
       }}
     >
       <DeferredErrorBoundary errorElement={errorElement}>
@@ -475,12 +478,13 @@ class DeferredErrorBoundary extends React.Component<
       typeof valuePromise === "object" &&
       typeof valuePromise.then === "function"
     ) {
+      let refCount = ++ctx.refCount;
       // We also need to store the resolved data / error on the context for SSR.
       // On page transitions the transition manager takes care of reconciling the
       // resolved data with the route data and re-rendering, but SSR we can't do
       // that so we have to just store it on the context for immediate usage.
       let storeResult = (value: unknown) => {
-        if (ctx) {
+        if (ctx && ctx.refCount === refCount) {
           ctx.value = value;
         }
       };
