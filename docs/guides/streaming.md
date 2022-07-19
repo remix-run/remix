@@ -90,11 +90,11 @@ First, to enable streaming with React 18, you'll update your `entry.server.tsx` 
 import { PassThrough } from "stream";
 import { renderToPipeableStream } from "react-dom/server";
 import { RemixServer } from "@remix-run/react";
-import { Response } from "@remix-run/node";
+import { Response } from "@remix-run/node"; // or cloudflare/deno
 import type {
   EntryContext,
   Headers,
-} from "@remix-run/node";
+} from "@remix-run/node"; // or cloudflare/deno
 
 export default function handleRequest(
   request: Request,
