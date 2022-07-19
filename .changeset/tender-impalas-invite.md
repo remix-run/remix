@@ -3,4 +3,4 @@
 "@remix-run/dev": patch
 ---
 
-Adds support for handle, links, and loader to mdx routes
+Adds support for `handle` and `links` to mdx routes

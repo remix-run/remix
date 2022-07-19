@@ -73,7 +73,6 @@ export const headers = typeof attributes !== "undefined" && attributes.headers;
 export const meta = typeof attributes !== "undefined" && attributes.meta;
 export const handle = typeof attributes !== "undefined" && attributes.handle;
 export const links = typeof attributes === "undefined" ? undefined : () => attributes.links;
-export const loader = typeof attributes === "undefined" ? undefined : () => attributes;
           `;
 
           let compiled = await xdm.compile(fileContents, {
