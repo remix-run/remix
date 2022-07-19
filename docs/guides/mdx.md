@@ -63,6 +63,40 @@ meta:
 You can reference your frontmatter data through "attributes". The title of this post is {attributes.meta.title}!
 ```
 
+### Advanced Example
+
+You can even export all the other things in this module that you can in regular route modules in your mdx files like `loader` and `action`:
+
+```mdx
+---
+meta:
+  title: My First Post
+  description: Isn't this awesome?
+
+headers:
+  Cache-Control: no-cache
+---
+
+export const handle = {
+  someData: "abc",
+};
+
+import { useLoaderData } from "@remix-run/react";
+
+export const loader = async () => {
+  return { mamboNumber: 5 };
+};
+
+export function ComponentUsingData() {
+  const { mamboNumber } = useLoaderData();
+  return <div id="loader">Mambo Number: {mamboNumber}</div>;
+}
+
+# This is some markdown!
+
+<ComponentUsingData />
+```
+
 ## Modules
 
 Besides just route level MDX, you can also import these files anywhere yourself as if it were a regular JavaScript module.
