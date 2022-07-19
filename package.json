@@ -22,8 +22,7 @@
   ],
   "scripts": {
     "bug-report-test": "playwright test --config ./integration/playwright.config.ts integration/bug-report-test.ts",
-    "build": "rollup -c && tsc -b",
-    "postbuild": "node scripts/copy-build-to-dist.mjs",
+    "build": "node scripts/build.mjs",
     "clean": "git clean -fdX .",
     "clean:build": "node ./scripts/clean-build.mjs",
     "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint:fix",
@@ -43,10 +42,10 @@
     "test:primary": "jest",
     "changeset": "changeset",
     "changeset:version": "changeset version",
-    "changeset:release": "yarn build && changeset publish",
+    "changeset:release": "yarn build --tsc --publish && changeset publish",
     "version": "node ./scripts/version.js",
     "version:experimental": "node scripts ./scripts/version experimental",
-    "watch": "rollup -c --watch --watch.onEnd=\"tsc -b && node scripts/copy-build-to-dist.mjs\""
+    "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\""
   },
   "dependencies": {
     "@babel/core": "^7.18.6",
