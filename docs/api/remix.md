@@ -1564,8 +1564,8 @@ return new Response(null, {
 This is a shortcut for creating `text/remix-deferred` responses. It assumes you are using `utf-8` encoding.
 
 ```ts lines=[2,7,9]
-import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import { deferred } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
+import { deferred } from "@remix-run/node"; // or cloudflare/deno
 import { getTheAnswer } from "hitchhikers-guide";
 
 export const loader: LoaderFunction = async () => {
