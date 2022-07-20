@@ -46,7 +46,7 @@ export async function loader() {
 }
 ```
 
-If you're using the `@remix-run/cloudflare-pages` adapter, env variables work a little differently. You'll need to define your local environment variables in the `.dev.vars` file. It has the same syntax as `.env` file mentioned above.
+If you're using the `@remix-run/cloudflare-pages` adapter, env variables work a little differently. Since Cloudflare Pages are powered by Functions, you'll need to define your local environment variables in the [`.dev.vars`](https://developers.cloudflare.com/pages/platform/functions/#adding-environment-variables-locally) file. It has the same syntax as `.env` example file mentioned above.
 
 Then, in your `loader` functions, you can access environment variables directly on `context`:
 
