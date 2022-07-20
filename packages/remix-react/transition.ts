@@ -4,6 +4,7 @@ import { Action } from "history";
 import type { Location } from "history";
 import { DeferrableData } from "@remix-run/deferred";
 
+import type { DeferredLoaderData } from "./entry";
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import type { ClientRoute } from "./routes";
@@ -93,6 +94,7 @@ export interface TransitionManagerInit {
   routes: ClientRoute[];
   location: Location;
   loaderData: RouteData;
+  deferredLoaderData?: DeferredLoaderData;
   actionData?: RouteData;
   catch?: CatchData;
   error?: Error;
@@ -420,7 +422,7 @@ export const IDLE_FETCHER: FetcherStates["Idle"] = {
 //#region createTransitionManager
 ////////////////////////////////////////////////////////////////////////////////
 export function createTransitionManager(init: TransitionManagerInit) {
-  let { routes } = init;
+  let { routes, deferredLoaderData } = init;
 
   let pendingNavigationController: AbortController | undefined;
   // Map of routeId->AbortController for pending deferred returned from loaders
@@ -448,6 +450,45 @@ export function createTransitionManager(init: TransitionManagerInit) {
         route: routes[0],
       },
     ];
+  }
+
+  if (deferredLoaderData) {
+    for (let [routeId, keys] of Object.entries(deferredLoaderData)) {
+      let isArray = Array.isArray(init.loaderData[routeId]);
+      let controller = new AbortController();
+      pendingNavigationDeferredControllers.set(routeId, controller);
+      let signal = controller.signal;
+
+      for (let strKey of keys) {
+        let key = isArray ? Number(strKey) : strKey;
+
+        let promise = init.loaderData[routeId][key];
+        if (
+          !(
+            promise &&
+            (promise instanceof Promise ||
+              (typeof promise === "object" &&
+                "then" in promise &&
+                typeof promise.then === "function"))
+          )
+        ) {
+          continue;
+        }
+
+        let storeResultInState = (resultOrReason: unknown) => {
+          if (signal.aborted) return;
+          let state = getState();
+          let newLoaderData = { ...state.loaderData };
+          newLoaderData[routeId][key] = resultOrReason;
+          update({ loaderData: newLoaderData });
+        };
+
+        init.loaderData[routeId][key] = wrapDeferredPromise(
+          promise,
+          controller.signal
+        ).then(storeResultInState, storeResultInState);
+      }
+    }
   }
 
   let state: TransitionManagerState = {
@@ -1901,7 +1942,6 @@ async function makeLoaderData(
         let key = isArray ? Number(entry[0]) : entry[0];
         let { signal, promise } = entry[1];
         let storeResultInState = (resultOrReason: unknown) => {
-
           if (signal.aborted) return;
           let state = getState();
           let newLoaderData = { ...state.loaderData };
@@ -1942,7 +1982,7 @@ function abortPendingDeferredControllers(
 
 async function wrapDeferredPromise(
   promise: Promise<unknown>,
-  signal?: AbortSignal
+  signal: AbortSignal
 ) {
   let handleAbort = (res: unknown) => {
     if (signal && signal.aborted) {

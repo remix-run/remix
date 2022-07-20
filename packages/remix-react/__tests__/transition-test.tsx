@@ -1880,12 +1880,40 @@ describe("navigating with inflight fetchers", () => {
   });
 });
 
-function setupDeferred(initialData: Record<string, string | Promise<any>>) {
-  return getDeferrableData(initialData);
-}
-
 // eslint-disable-next-line jest/no-focused-tests
 describe("deferred", () => {
+  it("should support resolving initial deferred responses", async () => {
+    let dfd = defer();
+    let t = setup({
+      url: "/",
+      initialLoaderData: {
+        root: "ROOT",
+        index: { critical: "1", lazy: dfd.promise },
+      },
+      initialDeferredLoaderData: {
+        index: ["lazy"],
+      },
+    });
+
+    expect(t.getState().loaderData).toEqual({
+      index: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+
+    await dfd.resolve("2");
+
+    expect(t.getState().loaderData).toEqual({
+      index: {
+        critical: "1",
+        lazy: "2",
+      },
+      root: "ROOT",
+    });
+  });
+
   it("should support returning deferred responses", async () => {
     let t = setup({ url: "/" });
 
@@ -1950,6 +1978,47 @@ describe("deferred", () => {
       root: "ROOT",
     });
     expect(t.getState().transition.state).toBe("idle");
+  });
+
+  it("should cancel initial deferreds on a new navigation", async () => {
+    let dfd = defer();
+    let t = setup({
+      url: "/",
+      initialLoaderData: {
+        root: "ROOT",
+        index: { critical: "1", lazy: dfd.promise },
+      },
+      initialDeferredLoaderData: {
+        index: ["lazy"],
+      },
+    });
+
+    let B = t.navigate.get("/bar");
+
+    // During navigation - deferreds remain as promises
+    expect(t.getState().loaderData).toEqual({
+      index: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+
+    // But they are frozen - no re-paints on resolve/reject!
+    await dfd.resolve("2");
+    expect(t.getState().loaderData).toEqual({
+      index: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+
+    await B.loader.resolve("BAR");
+    expect(t.getState().loaderData).toEqual({
+      root: "ROOT",
+      bar: "BAR",
+    });
   });
 
   it("should cancel outstanding deferreds on a new navigation", async () => {
@@ -2634,11 +2703,13 @@ let setup = (
     rootLoaderOverride,
     shouldReloads,
     initialLoaderData,
+    initialDeferredLoaderData,
   }: {
     url: string;
     rootLoaderOverride?: () => any | Promise<any>;
     shouldReloads?: Record<string, ShouldReloadFunction>;
     initialLoaderData?: any;
+    initialDeferredLoaderData?: Record<string, string[]>;
   } = { url: "/" }
 ) => {
   incrementingSubmissionKey = 0;
@@ -2786,6 +2857,7 @@ let setup = (
     onChange: handleChange,
     onRedirect: handleRedirect,
     loaderData: initialLoaderData ? initialLoaderData : { root: "ROOT" },
+    deferredLoaderData: initialDeferredLoaderData,
     routes,
   });
 
@@ -2975,6 +3047,10 @@ let setup = (
     routes,
   };
 };
+
+function setupDeferred(initialData: Record<string, string | Promise<any>>) {
+  return getDeferrableData(initialData);
+}
 
 function FakeComponent() {}
 
