@@ -111,6 +111,8 @@ describe("remix CLI", () => {
           \`dev\` Options:
             --debug             Attach Node.js inspector
             --port, -p          Choose the port from which to run your app
+          \`init\` Options:
+            --no-delete         Skip deleting the \`remix.init\` script
           \`routes\` Options:
             --json              Print the routes as JSON
           \`migrate\` Options:
@@ -123,7 +125,7 @@ describe("remix CLI", () => {
             - projectDir        The Remix project directory
             - template          The project template to use
             - remixPlatform     \`node\` or \`cloudflare\`
-            - migration         One of the choices from https://github.com/remix-run/remix/tree/main/packages/remix-dev/cli/migrate/migration-options
+            - migration         One of the choices from https://github.com/remix-run/remix/blob/main/packages/remix-dev/cli/migrate/migrations/index.ts
 
           Creating a new project:
 
@@ -144,8 +146,7 @@ describe("remix CLI", () => {
             $ remix create my-app --template https://example.com/remix-template.tar.gz
 
             To create a new project from a template in a private GitHub repo,
-            set the \`GITHUB_TOKEN\` environment variable to a personal access
-            token with access to that repo.
+            pass the \`token\` flag with a personal access token with access to that repo.
 
           Initialize a project::
 

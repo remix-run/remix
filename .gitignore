@@ -1,6 +1,8 @@
 .DS_Store
 
 /build/
+/packages/*/dist/
+/packages/*/LICENSE.md
 node_modules/
 yarn-error.log
 

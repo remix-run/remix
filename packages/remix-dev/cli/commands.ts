@@ -56,34 +56,45 @@ export async function create({
   spinner.clear();
 }
 
-export async function init(projectDir: string) {
+type InitFlags = {
+  deleteScript?: boolean;
+};
+export async function init(
+  projectDir: string,
+  { deleteScript = true }: InitFlags = {}
+) {
   let initScriptDir = path.join(projectDir, "remix.init");
   let initScript = path.resolve(initScriptDir, "index.js");
+
+  if (!(await fse.pathExists(initScript))) {
+    return;
+  }
+
   let initPackageJson = path.resolve(initScriptDir, "package.json");
-
   let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
+  let packageManager = getPreferredPackageManager();
 
-  if (await fse.pathExists(initScript)) {
-    let packageManager = getPreferredPackageManager();
+  if (await fse.pathExists(initPackageJson)) {
+    execSync(`${packageManager} install`, {
+      cwd: initScriptDir,
+      stdio: "ignore",
+    });
+  }
 
-    if (await fse.pathExists(initPackageJson)) {
-      execSync(`${packageManager} install`, {
-        cwd: initScriptDir,
-        stdio: "ignore",
-      });
+  let initFn = require(initScript);
+  try {
+    await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
+
+    if (deleteScript) {
+      await fse.remove(initScriptDir);
     }
-
-    let initFn = require(initScript);
-    try {
-      await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
-    } catch (error) {
-      if (error instanceof Error) {
-        error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
-          error.message
-        }`;
-      }
-      throw error;
+  } catch (error) {
+    if (error instanceof Error) {
+      error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
+        error.message
+      }`;
     }
+    throw error;
   }
 }
 
@@ -276,7 +287,14 @@ export async function dev(
     purgeAppRequireCache(config.serverBuildPath);
     next();
   });
-  app.use(createApp(config.serverBuildPath, mode));
+  app.use(
+    createApp(
+      config.serverBuildPath,
+      mode,
+      config.publicPath,
+      config.assetsBuildDirectory
+    )
+  );
 
   let server: Server | null = null;
 
@@ -288,7 +306,8 @@ export async function dev(
             process.env.HOST ||
             Object.values(os.networkInterfaces())
               .flat()
-              .find((ip) => ip?.family === "IPv4" && !ip.internal)?.address;
+              .find((ip) => String(ip?.family).includes("4") && !ip?.internal)
+              ?.address;
 
           if (!address) {
             console.log(`Remix App Server started at http://localhost:${port}`);

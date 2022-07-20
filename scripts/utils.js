@@ -150,6 +150,9 @@ async function updateRemixVersion(packageName, nextVersion, successMessage) {
       if (config.devDependencies?.[`@remix-run/${pkg}`]) {
         config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
       }
+      if (config.peerDependencies?.[`@remix-run/${pkg}`]) {
+        config.peerDependencies[`@remix-run/${pkg}`] = nextVersion;
+      }
     }
   });
   let logName = packageName.startsWith("remix-")

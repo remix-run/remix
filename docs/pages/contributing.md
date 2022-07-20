@@ -39,9 +39,9 @@ The following steps will get you setup to contribute changes to this repo:
    git checkout dev
    ```
 
-3. Install dependencies by running `yarn`. Remix uses [`yarn` (version 1)][yarn-version-1-2], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
+3. Install dependencies by running `yarn`. Remix uses [Yarn (version 1)][yarn-version-1], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
 
-4. Install `playwright` to be able to run tests properly by running `npx playwright install` or [use visual studio plugin][use-visual-studio-plugin]
+4. Install Playwright to be able to run tests properly by running `npx playwright install`, or [use the Visual Studio Code plugin][vscode-playwright]
 
 5. Verify you've got everything set up for local development by running `yarn test`
 
@@ -149,5 +149,4 @@ There may be other branches for various features and experimentation, but all of
 [integration-bug-report-test-ts]: https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts
 [pull-request]: https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request
 [yarn-workspaces]: https://classic.yarnpkg.com/en/docs/workspaces
-[yarn-version-1-2]: https://classic.yarnpkg.com/lang/en/docs/install
-[use-visual-studio-plugin]: https://playwright.dev/docs/intro#using-the-vs-code-extension
+[vscode-playwright]: https://playwright.dev/docs/intro#using-the-vs-code-extension

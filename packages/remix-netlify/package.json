@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/netlify",
-  "version": "1.6.0",
+  "version": "1.6.5",
   "description": "Netlify server request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -11,16 +11,24 @@
     "directory": "packages/remix-netlify"
   },
   "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
   "dependencies": {
-    "@remix-run/node": "1.6.0"
+    "@remix-run/node": "1.6.5"
   },
   "devDependencies": {
     "@netlify/functions": "^1.0.0"
   },
   "peerDependencies": {
-    "@netlify/functions": "^0.10.0 || ^1.0.0"
+    "@netlify/functions": "^0.10.0 || ^0.11.0 || ^1.0.0"
   },
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }

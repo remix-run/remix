@@ -1,6 +1,9 @@
-import path from "path";
-import { fileURLToPath } from "url";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { execSync } from "node:child_process";
+import crypto from "node:crypto";
 import { sync as spawnSync } from "cross-spawn";
+import PackageJson from "@npmcli/package-json";
 import jsonfile from "jsonfile";
 import fetch from "node-fetch";
 import retry from "fetch-retry";
@@ -17,61 +20,61 @@ export let CYPRESS_SOURCE_DIR = path.join(__dirname, "cypress");
 export let CYPRESS_CONFIG = path.join(__dirname, "cypress.json");
 
 export function getAppName(target) {
-  return `remix-deployment-test-${target}`;
-}
-
-export async function updatePackageConfig(directory, transform) {
-  let file = path.join(directory, "package.json");
-  let json = await jsonfile.readFile(file);
-  transform(json);
-  await jsonfile.writeFile(file, json, { spaces: 2 });
+  let sha = execSync("git rev-parse HEAD").toString().trim().slice(0, 7);
+  let suffix = crypto.randomBytes(4).toString("hex");
+  return `remix-deployment-test-${target}-${sha}-${suffix}`;
 }
 
 export async function addCypress(directory, url) {
   let shared = await jsonfile.readFile(path.join(__dirname, "package.json"));
+  let pkgJson = await PackageJson.load(directory);
 
-  await updatePackageConfig(directory, (config) => {
-    config.devDependencies["start-server-and-test"] =
-      shared.dependencies["start-server-and-test"];
-    config.devDependencies["cypress"] = shared.dependencies["cypress"];
-    config.devDependencies["@testing-library/cypress"] =
-      shared.dependencies["@testing-library/cypress"];
-
-    config.scripts["cy:run"] = "cypress run";
-    config.scripts["cy:open"] = "cypress open";
-    config.scripts["test:e2e:dev"] = `start-server-and-test dev ${url} cy:open`;
-    config.scripts["test:e2e:run"] = `start-server-and-test dev ${url} cy:run`;
+  pkgJson.update({
+    devDependencies: {
+      ...pkgJson.content.devDependencies,
+      "start-server-and-test": shared.dependencies["start-server-and-test"],
+      cypress: shared.dependencies["cypress"],
+      "@testing-library/cypress":
+        shared.dependencies["@testing-library/cypress"],
+    },
+    scripts: {
+      ...pkgJson.content.scripts,
+      "cy:run": "cypress run",
+      "cy:open": "cypress open",
+      "test:e2e:dev": `start-server-and-test dev ${url} cy:open`,
+      "test:e2e:run": `start-server-and-test dev ${url} cy:run`,
+    },
   });
+
+  await pkgJson.save();
 }
 
-export function getSpawnOpts(dir) {
+export function getSpawnOpts(dir, env = {}) {
   return {
     cwd: dir,
     stdio: "inherit",
+    env: {
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      ...env,
+    },
   };
 }
 
 export function runCypress(dir, dev, url) {
-  let spawnOpts = getSpawnOpts(dir);
-  let cypressSpawnOpts = {
-    ...spawnOpts,
-    env: { ...process.env, CYPRESS_BASE_URL: url },
-  };
+  let spawnOpts = getSpawnOpts(dir, { CYPRESS_BASE_URL: url });
+
   if (dev) {
     let cypressDevCommand = spawnSync(
       "npm",
       ["run", "test:e2e:run"],
-      cypressSpawnOpts
+      spawnOpts
     );
     if (cypressDevCommand.status !== 0) {
       throw new Error("Cypress tests failed in development");
     }
   } else {
-    let cypressProdCommand = spawnSync(
-      "npm",
-      ["run", "cy:run"],
-      cypressSpawnOpts
-    );
+    let cypressProdCommand = spawnSync("npm", ["run", "cy:run"], spawnOpts);
     if (cypressProdCommand.status !== 0) {
       throw new Error("Cypress tests failed in production");
     }
@@ -79,11 +82,30 @@ export function runCypress(dir, dev, url) {
 }
 
 export function checkUrl(url) {
+  let retries = 10;
+
+  // exponential backoff for retries, maxes out at 10 seconds
+  function wait(attempt) {
+    return Math.min(Math.pow(2, attempt) * 250, 10_000); // 250, 500, 1000, 2000, 4000, 8000, 10000
+  }
+
   return fetchRetry(url, {
+    retryDelay: function (attempt, error, response) {
+      return wait(attempt);
+    },
     retryOn: (attempt, error, response) => {
-      if (attempt > 10) return false;
-      if (response.status >= 200 && response.status < 400) return false;
-      return true;
+      let currentAttempt = attempt + 1; // `attempt` is 0 based
+      if (currentAttempt > retries) {
+        console.log(`out of retries for ${url}`);
+        return false;
+      }
+
+      if (error !== null || !response.ok) {
+        console.log(
+          `[${currentAttempt}/${retries}] - ${url} - waiting ${wait(attempt)}ms`
+        );
+        return true;
+      }
     },
   });
 }
@@ -97,11 +119,29 @@ export async function validatePackageVersions(directory) {
     key.startsWith("@remix-run")
   );
 
-  await Promise.all(
-    remixDeps.map((key) => {
+  let settled = await Promise.all(
+    remixDeps.map(async (key) => {
       let version = allDeps[key];
-      let pinnedVersion = version.replace("^", "");
-      return checkUrl(`https://registry.npmjs.org/${key}/${pinnedVersion}`);
+      let pinnedVersion = version.replace(/^\^/, "");
+      let url = `https://registry.npmjs.org/${key}/${pinnedVersion}`;
+      let result = await checkUrl(url);
+      return { ok: result.ok, url, status: result.status };
     })
   );
+
+  let failed = settled.filter((result) => result.ok === false);
+
+  if (failed.length > 0) {
+    return [
+      false,
+      failed
+        .map(
+          (result) =>
+            `${result.url} returned a ${result.status} HTTP status code`
+        )
+        .join("\n"),
+    ];
+  }
+
+  return [true, null];
 }
