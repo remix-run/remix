@@ -25,6 +25,12 @@ export type DeferredFunction = <Data extends unknown = unknown>(
  * to JSON for the initial payload, sends down subsequent chunks, and sets the
  * `Content-Type` header.
  *
+ * NOTE: NOTE: Deferred UX goals rely on streaming responses. Some popular hosts
+ * do not support streaming responses. In general, any host build around AWS
+ * Lambda does not support streaming and any bare metal / VM provider will. Make
+ * sure your hosting platform supports before using this API. For more details,
+ * checkout https://remix.run/docs/en/v1/guides/streaming.
+ *
  * @see https://remix.run/api/remix#deferred
  */
 export const deferred: DeferredFunction = (data, init = {}) => {
