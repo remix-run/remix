@@ -8,7 +8,8 @@ import {
   PACKAGE_VERSION_TO_FOLLOW,
 } from "./constants";
 import { gql, graphqlWithAuth, octokit } from "./octokit";
-import { cleanupTagName, MinimalTag } from "./utils";
+import type { MinimalTag } from "./utils";
+import { cleanupTagName } from "./utils";
 import { checkIfStringStartsWith, sortByDate } from "./utils";
 
 type PullRequest =
