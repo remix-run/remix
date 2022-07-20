@@ -117,6 +117,7 @@ export function RemixEntry({
       routes: clientRoutes,
       actionData: documentActionData,
       loaderData: documentLoaderData,
+      deferredLoaderData: documentDeferredLoaderData,
       location: historyLocation,
       catch: entryComponentDidCatchEmulator.catch,
       catchBoundaryId: entryComponentDidCatchEmulator.catchBoundaryRouteId,
