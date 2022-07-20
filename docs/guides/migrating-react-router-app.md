@@ -36,7 +36,7 @@ import App from "./App";
 ReactDOM.render(<App />, document.getElementById("app"));
 ```
 
-Server-rendered React apps are a little different. The browser script is not rendering your app, but is "hydrating" the DOM provided by the server. Hydration is the process of mapping the elements in the DOM to their React component counterparts and setting up event listeners so that your app is interative.
+Server-rendered React apps are a little different. The browser script is not rendering your app, but is "hydrating" the DOM provided by the server. Hydration is the process of mapping the elements in the DOM to their React component counterparts and setting up event listeners so that your app is interactive.
 
 Let's start by creating two new files:
 
@@ -332,6 +332,7 @@ Further configuration is optional, but the following may be helpful to optimize 
 Every Remix app accepts a `remix.config.js` file in the project root. While its settings are optional, we recommend you include a few of them for clarity's sake. See the [docs on configuration][docs-on-configuration] for more information about all available options.
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   appDirectory: "app",
   ignoredRouteFiles: ["**/.*"],

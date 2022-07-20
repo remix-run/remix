@@ -19,7 +19,7 @@ The Remix compiler will automatically remove server code from the browser bundle
 Consider a route module that exports `loader`, `meta`, and a component:
 
 ```tsx
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import PostsView from "../PostsView";
@@ -77,7 +77,7 @@ Simply put, a **side effect** is any code that might _do something_. A **module 
 Taking our code from earlier, we saw how the compiler can remove the exports and their imports that aren't used. But if we add this seemingly harmless line of code your app will break!
 
 ```tsx bad lines=[7]
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import PostsView from "../PostsView";
@@ -124,7 +124,7 @@ The loader is gone but the prisma dependency stayed! Had we logged something har
 To fix this, remove the side effect by simply moving the code _into the loader_.
 
 ```tsx lines=[8]
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import PostsView from "../PostsView";
@@ -154,7 +154,7 @@ Occasionally, the build may have trouble tree-shaking code that should only run 
 Some Remix newcomers try to abstract their loaders with "higher order functions". Something like this:
 
 ```js bad filename=app/http.js
-import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
 export function removeTrailingSlash(loader) {
   return function (arg) {
@@ -188,7 +188,7 @@ You can probably now see that this is a module side effect so the compiler can't
 This type of abstraction is introduced to try to return a response early. Since you can throw a Response in a loader, we can make this simpler and remove the module side effect at the same time so that the server code can be pruned:
 
 ```js filename=app/http.js
-import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
 export function removeTrailingSlash(url) {
   if (url.pathname !== "/" && url.pathname.endsWith("/")) {
@@ -202,7 +202,7 @@ export function removeTrailingSlash(url) {
 And then use it like this:
 
 ```js bad filename=app/root.js
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 
 import { removeTrailingSlash } from "~/http";
 

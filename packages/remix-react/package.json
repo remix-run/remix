@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/react",
-  "version": "1.6.0",
+  "version": "1.6.5",
   "description": "React DOM bindings for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -12,8 +12,9 @@
   },
   "license": "MIT",
   "sideEffects": false,
-  "main": "index.js",
-  "module": "esm/index.js",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "module": "dist/esm/index.js",
   "dependencies": {
     "history": "^5.3.0",
     "react-router-dom": "^6.2.2"
@@ -21,7 +22,9 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^5.16.2",
     "@testing-library/react": "^12.1.3",
-    "abort-controller": "^3.0.0"
+    "abort-controller": "^3.0.0",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2"
   },
   "peerDependencies": {
     "react": ">=16.8",
@@ -29,5 +32,11 @@
   },
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }
