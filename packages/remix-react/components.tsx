@@ -475,13 +475,8 @@ class DeferredErrorBoundary extends React.Component<
 
     let child = children;
 
-    let valuePromise = value as Promise<unknown>;
     // If the deferred data is a promise we suspend at this point.
-    if (
-      valuePromise &&
-      typeof valuePromise === "object" &&
-      typeof valuePromise.then === "function"
-    ) {
+    if (isPromiseLike(value)) {
       let refCount = ++ctx.refCount;
       // We also need to store the resolved data / error on the context for SSR.
       // On page transitions the transition manager takes care of reconciling the
@@ -492,7 +487,7 @@ class DeferredErrorBoundary extends React.Component<
           ctx.value = value;
         }
       };
-      throw valuePromise.then(storeResult, storeResult);
+      throw value.then(storeResult, storeResult);
     }
 
     // If there is an error we render the error element.
@@ -1114,11 +1109,7 @@ function DeferredHydrationScript({
 }) {
   let ctx = React.useContext(DeferredHydrationScriptContext);
 
-  if (
-    !promise ||
-    typeof promise !== "object" ||
-    typeof promise.then !== "function"
-  ) {
+  if (!isPromiseLike(promise)) {
     ctx.result = { value: promise };
   }
 
@@ -1880,3 +1871,15 @@ export const LiveReload =
           />
         );
       };
+
+function isPromiseLike(value: any): value is PromiseLike<unknown> {
+  if (
+    value &&
+    typeof value === "object" &&
+    "then" in value &&
+    typeof value.then === "function"
+  ) {
+    return true;
+  }
+  return false;
+}

@@ -18,20 +18,13 @@ But there's a more nuanced problem that streaming solves. Let's look into that:
 Imagine a scenario where one of your routes' loaders needs to retrieve some data that for one reason or another is quite slow. For example, let's say you're showing the user the location of a package that's being delivered to their home:
 
 ```tsx
-import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { getPackageLocation } from "~/models/packages";
 
-type LoaderData = {
-  packageLocation: {
-    latitude: number;
-    longitude: number;
-  };
-};
-
-export const loader: LoaderFunction = ({ params }) => {
+export async function loader({ params }: LoaderArgs) {
   const packageLocation = await getPackageLocation(
     params.packageId
   );
@@ -42,7 +35,7 @@ export const loader: LoaderFunction = ({ params }) => {
 };
 
 export default function PackageRoute() {
-  const data = useLoaderData() as LoaderData;
+  const data = useLoaderData<typeof loader>();
   const { packageLocation } = data;
 
   return (
@@ -57,18 +50,23 @@ export default function PackageRoute() {
 }
 ```
 
-We'll assume that `getPackageLocation` is slow. This will lead to initial page load times and transitions to that route to take as long as the slowest bit of data. There are a few things you can do to optimize this and improve the user experience:
+We'll assume that `getPackageLocation` is slow. This will lead to initial page load times and transitions to that route to take as long as the slowest bit of data. Before reaching for rendering a fallback we recommend exploring ways to speed up that slow data, though not always possible here are a few things to explore first:
 
 - Speed up the slow thing (😅).
-- Parallelize data loading with `Promise.all` (we have nothing to parallelize in our example, but it might help a bit in other situations).
-- Use the [`prefetch` prop on `<Link />`][link] (only helps client-side transitions, not initial page load).
-- Add caching (not possible/reasonable in some cases).
-- Add a global transition spinner (only helps improve UX client-side transitions).
-- Add a localized skeleton UI (only helps improve UX client-side transitions).
+  - Optimize DB queries.
+  - Add caching (LRU, Redis, etc).
+  - Use a different data source.
+- Load data concurrently loading with `Promise.all` (we have nothing to make concurrent in our example, but it might help a bit in other situations).
+
+If initial page load is not a critical metric for your application, you can also explore the following options that can improve the perceived performance of your application client side only:
+
+- Use the [`prefetch` prop on `<Link />`][link].
+- Add a global transition spinner.
+- Add a localized skeleton UI.
 
 If these approaches don't work well, then you may feel forced to move the slow data out of the Remix loader into a client-side fetch (and show a skeleton fallback UI while loading). In this case you'd render the fallback UI on the server render and fire off the fetch for the data on the client. This is actually not so terrible from a DX standpoint thanks to [`useFetcher`][usefetcher]. And from a UX standpoint this improves the loading experience for both client-side transitions as well as initial page load. So it does seem to solve the problem.
 
-But it's still sub optimal for two reasons:
+But it's still sub-optimal for two reasons:
 
 1. Client-side fetching puts your data request on a waterfall: document -> JavaScript -> data fetch
 2. Your code can't easily switch between client-side fetching and server-side rendering (more on this later).
@@ -77,7 +75,7 @@ But it's still sub optimal for two reasons:
 
 Remix takes advantage of React 18's streaming and server-side support for `<Suspense />` boundaries using the [`deferred` Response][deferred-response] utility and [`<Deferred />`][deferred] component / [`useDeferredData`][usedeferreddata] hook. By using these APIs, you can solve both of these problems:
 
-1. You're data is no longer on a waterfall: document & data (in parallel) -> JavaScript
+1. Your data is no longer on a waterfall: document & data (in parallel) -> JavaScript
 2. Your can easily switch between streaming and waiting for the data
 
 ![Graphs showing how document and slow data requests sent over the same response significantly speed up the largest contentful paint](https://user-images.githubusercontent.com/12063586/179609347-36bd7d32-c8af-4e24-9e89-06d9abc0a19f.svg)
@@ -167,6 +165,7 @@ export default function handleRequest(
       <RemixServer
         context={remixContext}
         url={request.url}
+        serverAbortDelay={ABORT_DELAY}
       />,
       {
         [callbackName]() {
