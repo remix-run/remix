@@ -314,7 +314,6 @@ function getMagicExports(packageName) {
         "SubmitFunction",
         "SubmitOptions",
         "ThrownResponse",
-        "UseDataFunctionReturn",
       ],
     },
     "@remix-run/server-runtime": {
