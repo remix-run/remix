@@ -15,10 +15,6 @@ To that end, please keep in mind [our code of conduct][our-code-of-conduct].
 
 The [Remix Discord server][remix-discord-server] is a great place to have conversations, answer and ask questions, all about Remix.
 
-### StackOverflow
-
-The [`remix.run` tag on StackOverflow][remix-run-tag-on-stack-overflow] is where you can find questions to answer. When asking questions on StackOverflow, be sure to tag your question with `remix.run`.
-
 ### GitHub Discussions
 
 Our [GitHub discussions forum][git-hub-discussions-forum] is a good place to chat about ideas and approaches you can take with Remix.
@@ -68,7 +64,6 @@ There are Remix Meetups all over the world with thousands of members. Some onlin
 
 [our-code-of-conduct]: https://github.com/remix-run/remix/blob/main/CODE_OF_CONDUCT.md
 [remix-discord-server]: https://rmx.as/discord
-[remix-run-tag-on-stack-overflow]: https://stackoverflow.com/questions/tagged/remix.run
 [git-hub-discussions-forum]: https://github.com/remix-run/remix/discussions
 [the-examples-directory]: https://github.com/remix-run/remix/tree/main/examples
 [up-and-running-with-remix]: https://rmx.as/egghead-course
