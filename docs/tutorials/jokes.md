@@ -6368,7 +6368,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [bare-bones-hello-world-app]: /jokes-tutorial/img/bare-bones.png
 [remix-config-js]: ../api/conventions#remixconfigjs
 [route-module]: ../api/conventions#route-module-api
-[the-route-filename-convention]: ../api/conventions#route-filenames
+[the-route-filename-convention]: ../api/conventions#route-file-conventions
 [react-router]: https://reactrouter.com
 [a-greeting-from-the-index-route]: /jokes-tutorial/img/index-route-greeting.png
 [jokes]: http://localhost:3000/jokes
