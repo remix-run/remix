@@ -14,6 +14,7 @@ declare global {
   var __remixContext: EntryContext;
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
+  var __remixServerAbortDelay: number | undefined;
 }
 /* eslint-enable prefer-let/prefer-let */
 
@@ -44,6 +45,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   let entryContext = window.__remixContext;
   entryContext.manifest = window.__remixManifest;
   entryContext.routeModules = window.__remixRouteModules;
+  entryContext.serverAbortDelay = window.__remixServerAbortDelay;
   // In the browser, we don't need this because a) in the case of loader
   // errors we already know the order and b) in the case of render errors
   // React knows the order and handles error boundaries normally.

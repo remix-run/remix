@@ -10,6 +10,7 @@ import type { EntryContext } from "./entry";
 
 export interface RemixServerProps {
   context: EntryContext;
+  serverAbortDelay?: number;
   url: string | URL;
 }
 
@@ -18,7 +19,15 @@ export interface RemixServerProps {
  * `app/entry.server.js`). This component is used to generate the HTML in the
  * response from the server.
  */
-export function RemixServer({ context, url }: RemixServerProps): ReactElement {
+export function RemixServer({
+  context,
+  serverAbortDelay,
+  url,
+}: RemixServerProps): ReactElement {
+  if (typeof serverAbortDelay === "number") {
+    context.serverAbortDelay = serverAbortDelay;
+  }
+
   if (typeof url === "string") {
     url = new URL(url);
   }

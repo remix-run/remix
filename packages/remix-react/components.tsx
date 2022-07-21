@@ -68,6 +68,7 @@ interface RemixEntryContextType {
   serverHandoffString?: string;
   clientRoutes: ClientRoute[];
   transitionManager: ReturnType<typeof createTransitionManager>;
+  serverAbortDelay?: number;
 }
 
 export const RemixEntryContext = React.createContext<
@@ -101,6 +102,7 @@ export function RemixEntry({
     routeModules,
     serverHandoffString,
     appState: entryComponentDidCatchEmulator,
+    serverAbortDelay: documentServerAbortDelay,
   } = entryContext;
 
   let clientRoutes = React.useMemo(
@@ -190,6 +192,7 @@ export function RemixEntry({
         deferredLoaderData: documentDeferredLoaderData,
         actionData,
         transitionManager,
+        serverAbortDelay: documentServerAbortDelay,
       }}
     >
       <RemixErrorBoundary
@@ -936,6 +939,7 @@ export function Scripts(props: ScriptProps) {
     routeData,
     deferredLoaderData,
     serverHandoffString,
+    serverAbortDelay,
   } = useRemixEntryContext();
 
   React.useEffect(() => {
@@ -947,6 +951,10 @@ export function Scripts(props: ScriptProps) {
       ? js`window.__remixContext = ${serverHandoffString};`
       : "";
     if (serverHandoffString && deferredLoaderData && routeData) {
+      contextScript +=
+        typeof serverAbortDelay === "number"
+          ? js`window.__remixServerAbortDelay = ${serverAbortDelay};`
+          : "";
       contextScript += js`window.__remixDeferredResolvers={};`;
       for (let [routeId, deferredKeys] of Object.entries(deferredLoaderData)) {
         if (!routeData[routeId] || typeof routeData[routeId] !== "object") {
@@ -961,11 +969,15 @@ export function Scripts(props: ScriptProps) {
           }
 
           contextScript += "(() => {";
-          contextScript += js`let p,r;`;
-          contextScript += js`p=new Promise((j=>{r=j;}));`;
+          contextScript += js`let p,r,e;`;
+          contextScript += js`p=new Promise(((j,k)=>{r=j;e=k;}));`;
           contextScript += js`window.__remixDeferredResolvers[${JSON.stringify(
             routeId
-          )}][${JSON.stringify(key)}]=r;`;
+          )}][${JSON.stringify(key)}]={r,e};`;
+          if (serverAbortDelay) {
+            let racePromise = js`new Promise((_,e2) => setTimeout(() => {e2(new Error("The render was aborted by the server without a reason."));}, window.__remixServerAbortDelay))`;
+            contextScript += js`p=Promise.race([p, ${racePromise}]);`;
+          }
           contextScript += js`window.__remixContext.routeData[${JSON.stringify(
             routeId
           )}][${JSON.stringify(key)}]=p;`;
@@ -1095,7 +1107,11 @@ const DeferredHydrationScriptContext = React.createContext<{
   key: string | number;
 }>({ result: undefined, routeId: "", key: "" });
 
-function DeferredHydrationScript({ promise }: { promise: Promise<unknown> }) {
+function DeferredHydrationScript({
+  promise,
+}: {
+  promise: PromiseLike<unknown>;
+}) {
   let ctx = React.useContext(DeferredHydrationScriptContext);
 
   if (
@@ -1107,8 +1123,9 @@ function DeferredHydrationScript({ promise }: { promise: Promise<unknown> }) {
   }
 
   if (typeof ctx.result === "undefined") {
-    let storeResult = (value: unknown) => {
-      ctx.result = { value };
+    let storeResult = (resultOrReason: unknown) => {
+      ctx.result = { value: resultOrReason };
+      return resultOrReason;
     };
     throw promise.then(storeResult, storeResult);
   }
@@ -1124,15 +1141,19 @@ function DeferredHydrationScript({ promise }: { promise: Promise<unknown> }) {
     script += js`let v=new Error(${JSON.stringify(error.message)});`;
     script += js`v.stack=${JSON.stringify(error.stack)};`;
   } else {
-    // TODO: Don't use JSON.stringify for the value, it's not safe
     script += js`let v=${jsesc(ctx.result.value, { es6: true })};`;
   }
-  script += js`window.__remixContext.routeData[${JSON.stringify(
-    ctx.routeId
-  )}][${JSON.stringify(ctx.key)}]=v;`;
-  script += js`window.__remixDeferredResolvers[${JSON.stringify(
-    ctx.routeId
-  )}][${JSON.stringify(ctx.key)}](v);`;
+
+  if (isError) {
+    script += js`window.__remixDeferredResolvers[${JSON.stringify(
+      ctx.routeId
+    )}][${JSON.stringify(ctx.key)}].e(v);`;
+  } else {
+    script += js`window.__remixDeferredResolvers[${JSON.stringify(
+      ctx.routeId
+    )}][${JSON.stringify(ctx.key)}].r(v);`;
+  }
+
   script += "})();";
 
   return (
