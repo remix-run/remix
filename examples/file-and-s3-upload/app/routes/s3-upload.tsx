@@ -5,7 +5,7 @@ import {
   unstable_createMemoryUploadHandler as createMemoryUploadHandler,
   unstable_parseMultipartFormData as parseMultipartFormData,
 } from "@remix-run/node";
-import { Form, useActionData } from "@remix-run/react";
+import { useFetcher } from "@remix-run/react";
 import { s3UploadHandler } from "~/utils/s3.server";
 
 type ActionData = {
@@ -25,7 +25,7 @@ export const action: ActionFunction = async ({ request }) => {
   console.log(imgDesc)
   if (!imgSrc) {
     return json({
-      error: "Something went wrong while uploading",
+      errorMsg: "Something went wrong while uploading",
     });
   }
   return json({
@@ -35,25 +35,26 @@ export const action: ActionFunction = async ({ request }) => {
 };
 
 export default function Index() {
-  const data = useActionData<ActionData>();
+  const fetcher = useFetcher<ActionData>();
   return (
     <>
-      <Form method="post" encType="multipart/form-data">
+      <fetcher.Form method="post" encType="multipart/form-data">
         <label htmlFor="img-field">Image to upload</label>
         <input id="img-field" type="file" name="img" accept="image/*" />
         <label htmlFor="img-desc">Image description</label>
         <input id="img-desc" type="text" name="desc" />
         <button type="submit">Upload to S3</button>
-      </Form>
-      {data?.errorMsg && <h2>{data.errorMsg}</h2>}
-      {data?.imgSrc && (
-        <>
+      </fetcher.Form>
+      {fetcher.type === "done" ? (
+        fetcher.data.errorMsg ? (
+          <h2>{fetcher.data.errorMsg}</h2>
+        ) : (
+         <>
           <div>File has been uploaded to S3 and is available under the following URL (if the bucket has public access enabled):</div>
-          <div>{data.imgSrc}</div>
-          <img src={data.imgSrc} alt={data.imgDesc || "Uploaded image from S3"} />
-          
+          <div>{fetcher.data.imgSrc}</div>
+          <img src={fetcher.data.imgSrc} alt={fetcher.data.imgDesc || "Uploaded image from S3"} />
         </>
-      )}
+      )) : null}
     </>
   );
 }
