@@ -18,6 +18,7 @@ export interface EntryContext {
   routeModules: RouteModules<EntryRouteModule>;
   deferredLoaderData?: DeferredLoaderData;
   serverHandoffString?: string;
+  serverAbortDelay?: number;
 }
 
 export type DeferredLoaderData = Record<string, Array<string | number>>;
