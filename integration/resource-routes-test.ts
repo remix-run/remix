@@ -104,7 +104,7 @@ test.describe("loader in an app", () => {
       expect(await page.content()).toContain('{"hello":"world"}');
     });
 
-    test.only("should include imported asset in build", async ({ page }) => {
+    test("should include imported asset in build", async ({ page }) => {
       let app = new PlaywrightFixture(appFixture, page);
       let res = await app.goto("/image.png");
       expect(res.status()).toBe(200);
