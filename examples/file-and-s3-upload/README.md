@@ -20,7 +20,7 @@ The relevent files are:
 - Create an access key pair for an IAM user that has access to the bucket
 - Copy the .env.sample to .env and fill in the S3 bucket, the region as well as the access key and secret key from the IAM user
 
-Note: in order for the image to be displayed after being uploaded to your S3 bucket in this example, the bucket needs to have public access enabled, which is potentially dangerous. 
+Note: in order for the image to be displayed after being uploaded to your S3 bucket in this example, the bucket needs to have public access enabled, which is potentially dangerous.
 
 > :warning: Lambda imposes a [limit of 6MB](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html) on the invocation payload size. If you use this example with Remix running on Lambda, you can only update files with a size smaller than 6MB.
 
