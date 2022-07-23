@@ -263,7 +263,7 @@ The most common scenario is initializing a third party API when your module is i
 
 #### Document Guard
 
-This ensures the library is only initialized if there is a `document`, meaning you're in the browser. We recommend `document` over `window` because server runtimes like Deno has a global `window` available.
+This ensures the library is only initialized if there is a `document`, meaning you're in the browser. We recommend `document` over `window` because server runtimes like Deno have a global `window` available.
 
 ```js [3]
 import firebase from "firebase/app";
