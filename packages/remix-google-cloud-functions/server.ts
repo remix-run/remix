@@ -2,7 +2,7 @@ import type {
   Request as GcfRequest,
   Response as GcfResponse,
 } from "@google-cloud/functions-framework";
-import type { 
+import type {
   AppLoadContext,
   ServerBuild,
   RequestInit as NodeRequestInit,
