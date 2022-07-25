@@ -206,7 +206,7 @@ async function writeTestFiles(init: FixtureInit, dir: string) {
       let filePath = path.join(dir, filename);
       await fse.ensureDir(path.dirname(filePath));
       let file = init.files![filename];
-      if (file === "string") {
+      if (typeof file === "string") {
         await fse.writeFile(filePath, stripIndent(file));
       } else {
         await fse.writeFile(filePath, file);
