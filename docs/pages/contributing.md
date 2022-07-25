@@ -143,6 +143,10 @@ This repo maintains separate branches for different purposes. They will look som
 
 There may be other branches for various features and experimentation, but all of the magic happens from these branches.
 
+## How the heck do nightly releases work?
+
+Nightly releases will run the action files from the `main` branch as scheduled workflows will always use the latest commit to the default branch, signified by [this comment on the nightly action file][nightly-action-comment] and the explicit branch appended to the reuasable workflows in the [postrelease action][postrelease-action], however they clone the `dev` branch during their set up as that's where we want out nightly releases to be cut from. From there, we check if the git sha is the same and only cut a new nightly if something has changed.
+
 [cla]: https://github.com/remix-run/remix/blob/main/CLA.md
 [this-page]: https://github.com/remix-run/remix
 [yarn-version-1]: https://classic.yarnpkg.com/lang/en/docs/install
@@ -150,3 +154,5 @@ There may be other branches for various features and experimentation, but all of
 [pull-request]: https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request
 [yarn-workspaces]: https://classic.yarnpkg.com/en/docs/workspaces
 [vscode-playwright]: https://playwright.dev/docs/intro#using-the-vs-code-extension
+[nightly-action-comment]: https://github.com/remix-run/remix/blob/main/.github/workflows/nightly.yml#L8-L12
+[postrelease-action]: https://github.com/remix-run/remix/blob/main/.github/workflows/postrelease.yml
