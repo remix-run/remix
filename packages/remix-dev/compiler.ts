@@ -530,8 +530,6 @@ async function writeServerBuildResult(
       await fse.writeFile(file.path, file.contents);
       await fse.ensureDir(path.dirname(assetPath));
       await fse.writeFile(assetPath, file.contents);
-      console.log(`Wrote ${file.path}`);
-      console.log(`Wrote ${assetPath}`);
     }
   }
 }
