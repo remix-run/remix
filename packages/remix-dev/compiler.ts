@@ -521,8 +521,17 @@ async function writeServerBuildResult(
       contents = contents.replace(/"route:/gm, '"');
       await fse.writeFile(file.path, contents);
     } else {
+      let assetPath = path.join(
+        config.assetsBuildDirectory,
+        file.path.replace(path.dirname(config.serverBuildPath), "")
+      );
+
       await fse.ensureDir(path.dirname(file.path));
       await fse.writeFile(file.path, file.contents);
+      await fse.ensureDir(path.dirname(assetPath));
+      await fse.writeFile(assetPath, file.contents);
+      console.log(`Wrote ${file.path}`);
+      console.log(`Wrote ${assetPath}`);
     }
   }
 }
