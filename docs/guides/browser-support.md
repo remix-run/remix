@@ -1,5 +1,6 @@
 ---
 title: Browser Support
+toc: false
 ---
 
 # Browser Support
