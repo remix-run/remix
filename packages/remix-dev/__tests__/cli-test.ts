@@ -45,7 +45,7 @@ async function execRemix(
         env: {
           ...process.env,
           NO_COLOR: "1",
-          ...options.env,
+          ...options?.env,
         },
       }
     );
@@ -70,7 +70,7 @@ async function execRemix(
         env: {
           ...process.env,
           NO_COLOR: "1",
-          ...options.env,
+          ...options?.env,
         },
       }
     );
@@ -199,7 +199,13 @@ describe("remix CLI", () => {
           path.resolve(__dirname, "../cli.ts"),
           "create",
         ],
-        { stdio: [null, null, null] }
+        {
+          cwd: TEMP_DIR,
+          env: {
+            NO_COLOR: "1",
+          },
+          stdio: [null, null, null],
+        }
       );
 
       await interactWithShell(proc, [
@@ -224,7 +230,13 @@ describe("remix CLI", () => {
           path.resolve(__dirname, "../cli.ts"),
           "create",
         ],
-        { stdio: [null, null, null] }
+        {
+          cwd: TEMP_DIR,
+          env: {
+            NO_COLOR: "1",
+          },
+          stdio: [null, null, null],
+        }
       );
 
       await interactWithShell(proc, [
@@ -264,7 +276,14 @@ function defer() {
       return rej(reason);
     };
   });
-  return { promise, resolve, reject, state };
+  return {
+    promise,
+    // @ts-expect-error
+    resolve,
+    // @ts-expect-error
+    reject,
+    state,
+  };
 }
 
 async function interactWithShell(
