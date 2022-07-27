@@ -1537,15 +1537,6 @@
   dependencies:
     "@changesets/types" "^5.0.0"
 
-"@changesets/changelog-github@0.4.5":
-  version "0.4.5"
-  resolved "https://registry.yarnpkg.com/@changesets/changelog-github/-/changelog-github-0.4.5.tgz#cbdebcf4bb2fa94635db6fba4a474b4f36e6ce79"
-  integrity sha512-J36QJml3mXYm88PLY2qGepmb7j6LA3NM/wuUy6XBwh14qzVTRek+3Xww5oqeZhpK5lK8ELxGahdhSdYQzMv0kA==
-  dependencies:
-    "@changesets/get-github-info" "^0.5.1"
-    "@changesets/types" "^5.0.0"
-    dotenv "^8.1.0"
-
 "@changesets/cli@^2.23.0":
   version "2.23.0"
   resolved "https://registry.yarnpkg.com/@changesets/cli/-/cli-2.23.0.tgz#e325b2d1b0484188671f684773b8cd5d42d068f1"
@@ -2318,6 +2309,16 @@
     source-map-support "0.4.18"
     stack-utils "2.0.5"
     yazl "2.5.1"
+
+"@remix-run/changelog-github@^0.0.5":
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/@remix-run/changelog-github/-/changelog-github-0.0.5.tgz#d0eecaea45102b35b1c8fd41bb74fd1c38f7f70f"
+  integrity sha512-43tqwUqWqirbv6D9uzo55ASPsCJ61Ein1k/M8qn+Qpros0MmbmuzjLVPmtaxfxfe2ANX0LefLvCD0pAgr1tp4g==
+  dependencies:
+    "@changesets/errors" "^0.1.4"
+    "@changesets/get-github-info" "^0.5.1"
+    "@changesets/types" "^5.0.0"
+    dotenv "^8.1.0"
 
 "@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
