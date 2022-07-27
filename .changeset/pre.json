@@ -19,5 +19,12 @@
     "@remix-run/server-runtime": "1.6.5",
     "@remix-run/vercel": "1.6.5"
   },
-  "changesets": []
+  "changesets": [
+    "famous-schools-shop",
+    "neat-nymphs",
+    "odd-lobsters-study",
+    "olive-pumpkins-kick",
+    "silent-parrots-matter",
+    "weak-icons-matter"
+  ]
 }
