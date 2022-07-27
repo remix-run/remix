@@ -7,7 +7,9 @@ description: Remix makes integrating MDX into your project a breeze with built i
 
 While we believe that a strong separation of data and display is important, we understand that formats that mix the two such as [MDX][mdx] (Markdown with embedded JSX components) have become a popular and powerful authoring format for developers.
 
-Remix supports using MDX in two ways:
+<docs-warning>Rather than compiling your content at build-time like this document demonstrates, it's typically better UX and DX if you do this at runtime via something like <a href="https://github.com/kentcdodds/mdx-bundler">mdx-bundler</a>. It's also much more customizable and powerful. However, if you prefer to do this compilation at build-time, continue reading.</docs-warning>
+
+Remix has built-in support for using MDX at build-time in two ways:
 
 - You can use a `.mdx` file as one of your route modules
 - You can `import` a `.mdx` file into one of your route modules (in `app/routes`)
@@ -127,7 +129,7 @@ The following example demonstrates how you might build a simple blog with MDX, i
 In `app/routes/index.jsx`:
 
 ```tsx
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { Link, useLoaderData } from "@remix-run/react";
 
 // Import all your posts from the app/routes/posts directory. Since these are

@@ -57,7 +57,7 @@ You'll find links to the sections of the tutorial in the navbar (top of the page
 
 You can follow along with this tutorial on [CodeSandbox][code-sandbox] (a fantastic in-browser editor) or locally on your own computer. If you use the CodeSandbox approach then all you need is a good internet connection and a modern browser. If you run things locally then you're going to need some things installed:
 
-- [Node.js][node-js] version (^12.22.0, ^14.17.0, or >=16.0.0)
+- [Node.js][node-js] version (^14.17.0, or >=16.0.0)
 - [npm][npm] 7 or greater
 - A code editor ([VSCode][vs-code] is a nice one)
 
@@ -6368,7 +6368,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [bare-bones-hello-world-app]: /jokes-tutorial/img/bare-bones.png
 [remix-config-js]: ../api/conventions#remixconfigjs
 [route-module]: ../api/conventions#route-module-api
-[the-route-filename-convention]: ../api/conventions#route-filenames
+[the-route-filename-convention]: ../api/conventions#route-file-conventions
 [react-router]: https://reactrouter.com
 [a-greeting-from-the-index-route]: /jokes-tutorial/img/index-route-greeting.png
 [jokes]: http://localhost:3000/jokes

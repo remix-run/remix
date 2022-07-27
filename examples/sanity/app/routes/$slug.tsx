@@ -1,13 +1,25 @@
+import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
+import type { FunctionComponent } from "react";
 import { useState } from "react";
 
-import { getClient } from "~/lib/sanity/getClient";
-import { filterDataToSingleItem } from "~/lib/sanity/filterDataToSingleItem";
-import Preview from "~/components/Preview";
-import { PortableText, urlFor } from "~/lib/sanity/helpers";
+import { Preview } from "~/components";
+import {
+  filterDataToSingleItem,
+  getClient,
+  PortableText,
+  urlFor,
+} from "~/lib/sanity";
 
-export async function loader({ request, params }) {
+type LoaderData = {
+  initialData: unknown;
+  preview: boolean;
+  query: string;
+  queryParams: Record<string, unknown>;
+};
+
+export const loader: LoaderFunction = async ({ params, request }) => {
   const requestUrl = new URL(request?.url);
   const preview =
     requestUrl?.searchParams?.get("preview") ===
@@ -19,17 +31,18 @@ export async function loader({ request, params }) {
   const queryParams = { slug: params.slug };
   const initialData = await getClient(preview).fetch(query, queryParams);
 
-  return json({
+  return json<LoaderData>({
     initialData,
     preview,
     // If `preview` mode is active, we'll need these for live updates
-    query: preview ? query : null,
-    queryParams: preview ? queryParams : null,
+    query: preview ? query : "",
+    queryParams: preview ? queryParams : {},
   });
-}
+};
 
-export default function Movie() {
-  const { initialData, preview, query, queryParams } = useLoaderData();
+const Movie: FunctionComponent = () => {
+  const { initialData, preview, query, queryParams } =
+    useLoaderData<LoaderData>();
 
   // If `preview` mode is active, its component update this state for us
   const [data, setData] = useState(initialData);
@@ -48,20 +61,24 @@ export default function Movie() {
           queryParams={queryParams}
         />
       ) : null}
+
       {/* When working with draft content, optional chain _everything_ */}
       {movie?.title ? <h1>{movie.title}</h1> : null}
+
       {movie?.poster ? (
         <img
           loading="lazy"
-          src={urlFor(movie.poster).width(400).height(200)}
+          src={urlFor(movie.poster).width(400).height(200).toString()}
           width="400"
           height="200"
-          alt={movie?.title ?? ``}
+          alt={movie?.title ?? ""}
         />
       ) : null}
+
       {movie?.overview?.length ? (
-        <PortableText blocks={movie?.overview} />
+        <PortableText value={movie?.overview} />
       ) : null}
     </div>
   );
-}
+};
+export default Movie;

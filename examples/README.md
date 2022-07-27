@@ -6,6 +6,12 @@ Here you'll find various examples of using Remix to accomplish certain tasks. Ea
 
 Also, remember to check out the README!
 
+You can also initialize a new project with any of these examples using the `--template` flag of the `create-remix` CLI. For example:
+
+```
+npx create-remix --template https://github.com/remix-run/remix/tree/main/examples/tailwindcss
+```
+
 Enjoy!
 
 ## Contributing
