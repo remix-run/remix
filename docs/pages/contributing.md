@@ -147,6 +147,10 @@ There may be other branches for various features and experimentation, but all of
 
 Nightly releases will run the action files from the `main` branch as scheduled workflows will always use the latest commit to the default branch, signified by [this comment on the nightly action file][nightly-action-comment] and the explicit branch appended to the reuasable workflows in the [postrelease action][postrelease-action], however they checkout the `dev` branch during their set up as that's where we want our nightly releases to be cut from. From there, we check if the git sha is the same and only cut a new nightly if something has changed.
 
+## End to end testing
+
+For every release of Remix (stable, experimental, nightly, and pre-releases), we will do a complete end-to-end test of Remix apps on each of our official adapters from `create-remix`, all the way to deploying them to production. We do this by by utilizing the official CLIs for Fly, Vercel, Netlify, and Arc (not the official AWS CLI, but :chefkiss: nonetheless). We'll then run some simple Cypress assertions to make sure everything is running properly for both development and the deployed app.
+
 [cla]: https://github.com/remix-run/remix/blob/main/CLA.md
 [this-page]: https://github.com/remix-run/remix
 [yarn-version-1]: https://classic.yarnpkg.com/lang/en/docs/install
