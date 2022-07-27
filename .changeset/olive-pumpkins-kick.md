@@ -3,4 +3,4 @@
 "@remix-run/react": patch
 ---
 
-support undefined unions as optional keys in `UseDataFunctionReturn` type
+Support undefined unions as optional keys in types returned from `useLoaderData` and `useActionData`

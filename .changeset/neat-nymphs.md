@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-support exporting links in mdx files
+Add support for exporting links in `.mdx` files

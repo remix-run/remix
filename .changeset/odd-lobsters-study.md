@@ -3,4 +3,4 @@
 "@remix-run/react": patch
 ---
 
-Allow readonly arrays in SerializeType
+Allow the `ReadonlyArray` type in `SerializeType` for action and loader data
