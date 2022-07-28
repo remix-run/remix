@@ -26,11 +26,6 @@ import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesP
 import { writeFileSafe } from "./compiler/utils/fs";
 import { urlImportsPlugin } from "./compiler/plugins/urlImportsPlugin";
 
-// When we build Remix, this shim file is copied directly into the output
-// directory in the same place relative to this file. It is eventually injected
-// as a source file when building the app.
-const reactShim = path.resolve(__dirname, "compiler/shims/react.ts");
-
 interface BuildConfig {
   mode: BuildMode;
   target: BuildTarget;
@@ -366,7 +361,6 @@ async function createBrowserBuild(
     platform: "browser",
     format: "esm",
     external: externals,
-    inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
     loader: loaders,
     bundle: true,
     logLevel: "silent",
@@ -459,7 +453,6 @@ function createServerBuild(
         ? ["module", "main"]
         : ["main", "module"],
       target: options.target,
-      inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
       loader: loaders,
       bundle: true,
       logLevel: "silent",
