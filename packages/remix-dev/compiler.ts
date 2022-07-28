@@ -382,7 +382,7 @@ async function createBrowserBuild(
       ),
     },
     jsx: "automatic",
-    jsxDev: options.mode === BuildMode.Development,
+    jsxDev: options.mode !== BuildMode.Production,
     plugins,
   });
 }
@@ -471,7 +471,7 @@ function createServerBuild(
         ),
       },
       jsx: "automatic",
-      jsxDev: options.mode === BuildMode.Development,
+      jsxDev: options.mode !== BuildMode.Production,
       plugins,
     })
     .then(async (build) => {
