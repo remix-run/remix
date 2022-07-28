@@ -381,6 +381,8 @@ async function createBrowserBuild(
         config.devServerPort
       ),
     },
+    jsx: "automatic",
+    jsxDev: options.mode === BuildMode.Development,
     plugins,
   });
 }
@@ -468,6 +470,8 @@ function createServerBuild(
           config.devServerPort
         ),
       },
+      jsx: "automatic",
+      jsxDev: options.mode === BuildMode.Development,
       plugins,
     })
     .then(async (build) => {
