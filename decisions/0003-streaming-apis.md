@@ -71,10 +71,14 @@ async function loader() {
 
 The name `defer` was settled on as a corollary to `<script defer>` which essentially tells the browser to _"fetch this script now but don't delay document parsing"_. In a similar vein, with `defer()` we're telling Remix to _"fetch this data now but don't delay the HTTP response"_.
 
-Other names we considered:
-
-- `deferred()` - This is just a bit of a weird word that doesn't have much pre-existing semantic meaning. Is this the `jQuery.Deferred` thing from back in the day? Remix in general wants to avoid needlessly introducing net-new language to an already convoluted landscape!
-- `stream()` - We also thought `stream` might be a good name since that's what the call is telling Remix to do - stream the responses down to the browser. But - this is also potentially misleading because stream is ambiguous in ths case. Developers may mistakenly think that this gives them back a `Stream` instance and they can arbitrarily send multiple chunks of data down to the browser over time. This is not how the current API works - but also seems like a really interesting idea for Remix to consider in the future, so we wanted to keep the `stream()` name available for future use cases.
+<details>
+  <summary>Other considered API names:</summary>
+  <br/>
+  <ul>
+     <li><code>deferred()</code> - This is just a bit of a weird word that doesn't have much pre-existing semantic meaning. Is this the <code>jQuery.Deferred</code> thing from back in the day? Remix in general wants to avoid needlessly introducing net-new language to an already convoluted landscape!</li>
+    <li><code>stream()</code> - We also thought <code>stream</code> might be a good name since that's what the call is telling Remix to do - stream the responses down to the browser. But - this is also potentially misleading because stream is ambiguous in ths case. Developers may mistakenly think that this gives them back a <code>Stream</code> instance and they can arbitrarily send multiple chunks of data down to the browser over time. This is not how the current API works - but also seems like a really interesting idea for Remix to consider in the future, so we wanted to keep the <code>stream()</code> name available for future use cases.</li>
+  </ul>
+</details>
 
 ### Accessing
 
@@ -137,6 +141,12 @@ If you prefer the render props pattern, you can bypass `useAsyncValue()` and jus
 
 If you do not provide an `errorElement`, then promise rejections will bubble up to the nearest Route-level error boundary and be accessible via `useRouteError()`.
 
+<details>
+  <summary>Other considered API names:</summary>
+  <br>
+  <p>We originally implemented this as a <code>&lt;Deferred value={promise} fallback={&lt;Loader /&gt;} errorElement={&lt;MyError/&gt;} /></code>, but eventually we chose to remove the built-in <code>&lt;Suspense&gt;</code> boundary for better composability and eventual use with <code>&lt;SuspenseList&gt;</code>.  Once that was removed, and we were only using a <code>Promise</code> it made sense to move to a generic <code>&lt;Await&gt;</code> component that could be used with <em>any</em> promise, not just those coming from <code>defer()</code> in a <code>loader</code></p>
+</details>
+   
 ## React Router Notes
 
 In React Router, there is generally no need for the `defer()` utility since users can just put raw promises on `loaderData` and hand them to `<Await>`. However, there is one small use-case for which we decided to keep the `defer()` utility around. If a piece of deferred data happens to resolve before the critical data for some reason, the raw-Promise approach would means that we'd encounter a flicker of the fallback state as we throw the Promise to the Suspense boundary to be "unwrapped". For this reason, we provide the `defer()` utility in React Router as well - even though it doesn't need to initiate a streamed response, it can handle auto-unwrapping already-resolved values at render-time.
