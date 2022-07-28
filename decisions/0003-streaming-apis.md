@@ -22,15 +22,15 @@ Streaming in Remix can be thought of as having 3 touch points with corresponding
    1. Return a naked Javascript object with one or more `Promise` values
    2. Use the `defer(object, responseInit)` utility if you need to customize the `Response`
 2. _Accessing_ a streamed response from `useLoaderData`
-   1. No new APIs here - when you return `Promise` from your loader, you'll get a `Promise` from `useLoaderData` 👌
+   1. No new APIs here - when you return an object with `Promise` values or a `defer()` response from your loader, you'll get `Promise` values inside your `useLoaderData` object 👌
 3. _Rendering_ a streamed value (with fallback and error handling) in your component
-   1. You can render a `Promise` with the `<Await resolve={promise}>`
+   1. You can render a `Promise` from `useLoaderData()` with the `<Await resolve={data.promise}>` component
    2. `<Await>` accepts an `errorElement` prop to handle error UI
-   3. `<Await>` should be wrapped with a `<React.Suspense fallback={}>` component to handle your loading UI
+   3. `<Await>` should be wrapped with a `<React.Suspense>` component to handle your loading UI
 
 ## Details
 
-In the spirit of `#useThePlatform` we've chosen to leverage the `Promise` API to represent these "eventually available" values. When Remix receives a `Promise` back from a `loader` it needs to serialize that `Promise` over the network to the client application, prompting Jacob to coin the phrase [_"promise teleportation over the network"_][promise teleportation].
+In the spirit of `#useThePlatform` we've chosen to leverage the `Promise` API to represent these "eventually available" values. When Remix receives an object with `Promise` values or a `defer()` response back from a `loader`, it needs to serialize that `Promise` over the network to the client application (prompting Jacob to coin the phrase [_"promise teleportation over the network"_][promise teleportation] 🔥).
 
 ### Initiating
 
@@ -39,15 +39,19 @@ In order to initiate a streamed response in your `loader`, you can return a JSON
 ```js
 async function loader() {
   return {
+    // Await this, don't stream
     critical: await fetchCriticalData(),
+    // Don't await this - stream it!
     lazy: fetchLazyData(),
   };
 }
 ```
 
-By not using `await` on `fetchLazyData()`, our `loaderData.lazy` value is now a `Promise` and Remix will identify that and handle "teleporting" that promise over the network via a streamed HTTP response. In this simplest case, there is no new API surface needed in Remix.
+By not using `await` on `fetchLazyData()` Remix knows that this value is not ready yet _but eventually will be_ and therefore Remix will leverage a streamed HTTP response allowing it to send up the resolved/rejected value when available. Essentially serializing/teleporting that Promise over the network via a streamed HTTP response. In this simplest case, there is no new API surface needed in Remix.
 
-If, however, the user needs to alter the resulting HTTP `Response` in any way (i.e., send custom headers), then they're stuck because using `json` will automatically send a `Content-Type: application/json` response.
+Note that this will only work with raw JavaScript objects returned from your loader, and Remix will not walk the object recursively, it will only detect root-level Promise values.
+
+If, however, the user needs to alter the resulting HTTP `Response` in any way (i.e., send custom headers), then they're a bit stuck because using `json` will automatically send a `Content-Type: application/json` response.
 
 For this, we decided on a `defer()` utility that will inform Remix that the incoming object has `Promise` values in it and should be handled as a streamed response instead, while still allowing users to pass custom headers:
 
@@ -87,17 +91,20 @@ No new APIs are needed for the "Accessing" stage 🎉. Since we've "teleported" 
 ```js
 function Component() {
   let data = useLoaderData();
+  // data.critical is a resolved value
   // data.lazy is a Promise
 }
 ```
 
 ### Rendering
 
-In order to render your `defer`'d data, Remix provides a new `<Await>` component which handles rendering the resolved value, or propagating the rejected value through an `errorElement` or further upwards to the Route-level error boundaries. In order to access the resolved or rejected values, there are two new hooks that only work in the context of an `<Await>` component - `useAsyncValue()` and `useAsyncError()`.
+In order to render your `Promise` values from `useLoaderData()`, Remix provides a new `<Await>` component which handles rendering the resolved value, or propagating the rejected value through an `errorElement` or further upwards to the Route-level error boundaries. In order to access the resolved or rejected values, there are two new hooks that only work in the context of an `<Await>` component - `useAsyncValue()` and `useAsyncError()`.
+
+This examples shows the full set of render-time APIs:
 
 ```jsx
 function Component() {
-  let data = useLoaderData();
+  let data = useLoaderData(); // data.lazy is a Promise
 
   return (
     <React.Suspense fallback={<p>Loading...</p>}>
@@ -109,15 +116,17 @@ function Component() {
 }
 
 function MyData() {
-  let value = useAsyncValue();
+  let value = useAsyncValue(); // Get the resolved value
   return <p>Resolved: {value}</p>;
 }
 
 function MyError() {
-  let error = useAsyncError();
+  let error = useAsyncError(); // Get the rejected value
   return <p>Error: {error.message}</p>;
 }
 ```
+
+Note that `useAsyncValue` and `useAsyncError` only work in he context of an `<Await>` component.
 
 The `<Await>` name comes from the fact that for these lazily-rendered promises, we're not `await`-ing the promise in our loader, so instead we need to `<Await>` the promise in our render function and provide a fallback UI. The `resolve` prop is intended to mimic how you'd await a resolved value in plain Javascript:
 
@@ -129,7 +138,29 @@ The `<Await>` name comes from the fact that for these lazily-rendered promises, 
 let value = await Promise.resolve(promiseOrValue);
 ```
 
-Just like `Promise.resolve` can accept a promise or a value, `<Await resolve>` can also accept a promise or a value. This is really useful in case you want to AB test deferred responses in the loader - you don't need to change the UI code to render the data.
+Just like `Promise.resolve` can accept a promise or a value, `<Await resolve>` can also accept a promise or a value. This is really useful in case you want to AB test `defer()` responses in the loader - you don't need to change the UI code to render the data.
+
+```jsx
+async function loader({ request }) {
+  let shouldAwait = isUserInTestGroup(request);
+  return {
+    maybeLazy: shouldAwait ? await fetchData() : fetchData(),
+  };
+}
+
+function Component() {
+  let data = useLoaderData();
+
+  // No code forks even if data.maybeLazy is not a Promise!
+  return (
+    <React.Suspense fallback={<p>Loading...</p>}>
+      <Await resolve={data.maybeLazy} errorElement={<MyError />}>
+        <MyData />
+      </Await>
+    </React.Suspense>
+  );
+}
+```
 
 **Additional Notes on `<Await>`**
 
@@ -146,7 +177,7 @@ If you do not provide an `errorElement`, then promise rejections will bubble up 
   <br>
   <p>We originally implemented this as a <code>&lt;Deferred value={promise} fallback={&lt;Loader /&gt;} errorElement={&lt;MyError/&gt;} /></code>, but eventually we chose to remove the built-in <code>&lt;Suspense&gt;</code> boundary for better composability and eventual use with <code>&lt;SuspenseList&gt;</code>.  Once that was removed, and we were only using a <code>Promise</code> it made sense to move to a generic <code>&lt;Await&gt;</code> component that could be used with <em>any</em> promise, not just those coming from <code>defer()</code> in a <code>loader</code></p>
 </details>
-   
+
 ## React Router Notes
 
 In React Router, there is generally no need for the `defer()` utility since users can just put raw promises on `loaderData` and hand them to `<Await>`. However, there is one small use-case for which we decided to keep the `defer()` utility around. If a piece of deferred data happens to resolve before the critical data for some reason, the raw-Promise approach would means that we'd encounter a flicker of the fallback state as we throw the Promise to the Suspense boundary to be "unwrapped". For this reason, we provide the `defer()` utility in React Router as well - even though it doesn't need to initiate a streamed response, it can handle auto-unwrapping already-resolved values at render-time.
