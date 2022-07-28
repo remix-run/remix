@@ -149,7 +149,7 @@ Nightly releases will run the action files from the `main` branch as scheduled w
 
 ## End to end testing
 
-For every release of Remix (stable, experimental, nightly, and pre-releases), we will do a complete end-to-end test of Remix apps on each of our official adapters from `create-remix`, all the way to deploying them to production. We do this by by utilizing the official CLIs for Fly, Vercel, Netlify, and Arc (not the official AWS CLI, but :chefkiss: nonetheless). We'll then run some simple Cypress assertions to make sure everything is running properly for both development and the deployed app.
+For every release of Remix (stable, experimental, nightly, and pre-releases), we will do a complete end-to-end test of Remix apps on each of our official adapters from `create-remix`, all the way to deploying them to production. We do this by by utilizing the default [templates](/templates) and the CLIs for Fly, Vercel, Netlify, and Arc. We'll then run some simple Cypress assertions to make sure everything is running properly for both development and the deployed app.
 
 [cla]: https://github.com/remix-run/remix/blob/main/CLA.md
 [this-page]: https://github.com/remix-run/remix
