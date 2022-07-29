@@ -4,7 +4,9 @@
 
 ### Patch Changes
 
-- Add `index.ts` to `main` field to fix Node resolution issues when running `remix dev` or `remix watch` ([#3868](https://github.com/remix-run/remix/pull/3868))
+- Add `index.ts` to `main` field to fix Node resolution issues when running
+  `remix dev` or `remix watch`
+  ([#3868](https://github.com/remix-run/remix/pull/3868))
 - Updated dependencies:
   - `@remix-run/server-runtime@1.6.6-pre.1`
 
