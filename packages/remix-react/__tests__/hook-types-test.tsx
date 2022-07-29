@@ -1,4 +1,9 @@
+import * as React from "react";
+import type { ActionArgs } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+
 import type { TypedResponse, UseDataFunctionReturn } from "../components";
+import { useActionData } from "../components";
 
 function isEqual<A, B>(
   arg: A extends B ? (B extends A ? true : false) : false
@@ -109,5 +114,37 @@ describe("type serializer", () => {
     };
     type response = UseDataFunctionReturn<AppData>;
     isEqual<response, { arg1: string; arg2?: number }>(true);
+  });
+});
+
+describe("actual usage", () => {
+  it("should support typical action usage", () => {
+    async function action({ request }: ActionArgs) {
+      let formData = await request.formData();
+      let email = formData.get("email");
+      let password = formData.get("password");
+      if (typeof email !== "string" || !email) {
+        return json({ errors: { email: "Email is required" } });
+      }
+      if (typeof password !== "string" || !password) {
+        return json({ errors: { password: "Password is required" } });
+      }
+      return redirect("/hooray");
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    function Component() {
+      let actionData = useActionData<typeof action>();
+
+      React.useEffect(() => {
+        if (actionData?.errors?.email) {
+          // focus email
+        } else if (actionData?.errors?.password) {
+          // focus password
+        }
+      }, [actionData]);
+
+      return <div>UI</div>;
+    }
   });
 });
