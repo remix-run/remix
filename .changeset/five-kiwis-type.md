@@ -3,4 +3,4 @@
 "@remix-run/deno": patch
 ---
 
-add main field to remix-run/deno to prevent false positives for it not being in node_modules
+Add `index.ts` to `main` field to fix Node resolution issues when running `remix dev` or `remix watch`
