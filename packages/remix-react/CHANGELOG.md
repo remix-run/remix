@@ -1,5 +1,14 @@
 # `@remix-run/react`
 
+## 1.6.6-pre.1
+
+## 1.6.6-pre.0
+
+### Patch Changes
+
+- Allow the `ReadonlyArray` type in `SerializeType` for action and loader data ([#3774](https://github.com/remix-run/remix/pull/3774))
+- Support undefined unions as optional keys in types returned from `useLoaderData` and `useActionData` ([#3766](https://github.com/remix-run/remix/pull/3766))
+
 ## 1.6.5
 
 ### Patch Changes

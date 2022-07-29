@@ -20,6 +20,7 @@ import {
   useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
+import type { Merge } from "type-fest";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
@@ -1336,6 +1337,7 @@ type JsonPrimitives =
   | Boolean
   | null;
 type NonJsonPrimitives = undefined | Function | symbol;
+
 type SerializeType<T> = T extends JsonPrimitives
   ? T
   : T extends NonJsonPrimitives
@@ -1350,15 +1352,26 @@ type SerializeType<T> = T extends JsonPrimitives
         ? null
         : SerializeType<T[k]>;
     }
-  : T extends (infer U)[]
+  : T extends ReadonlyArray<infer U>
   ? (U extends NonJsonPrimitives ? null : SerializeType<U>)[]
   : T extends object
-  ? {
-      [k in keyof T as T[k] extends NonJsonPrimitives
-        ? never
-        : k]: SerializeType<T[k]>;
-    }
+  ? SerializeObject<UndefinedOptionals<T>>
   : never;
+
+type SerializeObject<T> = {
+  [k in keyof T as T[k] extends NonJsonPrimitives ? never : k]: SerializeType<
+    T[k]
+  >;
+};
+
+type UndefinedOptionals<T> = Merge<
+  {
+    [k in keyof T as undefined extends T[k] ? never : k]: NonNullable<T[k]>;
+  },
+  {
+    [k in keyof T as undefined extends T[k] ? k : never]?: NonNullable<T[k]>;
+  }
+>;
 
 export type UseDataFunctionReturn<T extends DataOrFunction> = T extends (
   ...args: any[]
