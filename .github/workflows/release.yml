@@ -58,5 +58,5 @@ jobs:
           publish: yarn run changeset:release
           createGithubReleases: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
