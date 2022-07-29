@@ -3,6 +3,7 @@
   "version": "1.6.6-pre.0",
   "description": "Deno platform abstractions for Remix",
   "homepage": "https://remix.run",
+  "main": "./index.ts",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
   },
