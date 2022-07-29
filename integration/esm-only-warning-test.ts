@@ -43,12 +43,14 @@ test.beforeAll(async () => {
         import c from "esm-only-sub-exports";
         import d from "esm-cjs-exports";
 
-        export function loader() {
+        export async function loader() {
+          let { default: e } = await import("esm-only-exports-b");
           return json({
             a: a(),
             b: b(),
             c: c(),
             d: d(),
+            e: e(),
           });
         }
 
@@ -77,6 +79,19 @@ test.beforeAll(async () => {
         },
       }),
       "node_modules/esm-only-exports/index.js": js`
+        export default () => "esm-only-no-exports";
+      `,
+      "node_modules/esm-only-exports-b/package.json": json({
+        name: "esm-only-exports-b",
+        version: "1.0.0",
+        type: "module",
+        main: "index.js",
+        exports: {
+          ".": "./index.js",
+          "./package.json": "./package.json",
+        },
+      }),
+      "node_modules/esm-only-exports-b/index.js": js`
         export default () => "esm-only-no-exports";
       `,
       "node_modules/esm-only-sub-exports/package.json": json({
@@ -142,6 +157,9 @@ test("logs warnings for ESM only packages", async () => {
   );
   expect(buildOutput).toContain(
     "esm-only-exports is possibly an ESM only package"
+  );
+  expect(buildOutput).not.toContain(
+    "esm-only-exports-b is possibly an ESM only package"
   );
   expect(buildOutput).toContain(
     "esm-only-sub-exports is possibly an ESM only package"
