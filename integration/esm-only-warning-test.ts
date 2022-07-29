@@ -42,15 +42,17 @@ test.beforeAll(async () => {
         import b from "esm-only-exports";
         import c from "esm-only-sub-exports";
         import d from "esm-cjs-exports";
+        import e from "cjs-dynamic-import";
 
         export async function loader() {
-          let { default: e } = await import("esm-only-exports-b");
+          let { default: f } = await import("esm-only-exports-b");
           return json({
             a: a(),
             b: b(),
             c: c(),
             d: d(),
             e: e(),
+            f: f(),
           });
         }
 
@@ -92,7 +94,28 @@ test.beforeAll(async () => {
         },
       }),
       "node_modules/esm-only-exports-b/index.js": js`
-        export default () => "esm-only-no-exports";
+        export default () => "esm-only-no-exports-b";
+      `,
+      "node_modules/esm-only-exports-c/package.json": json({
+        name: "esm-only-exports-c",
+        version: "1.0.0",
+        type: "module",
+        main: "index.js",
+        exports: {
+          ".": "./index.js",
+          "./package.json": "./package.json",
+        },
+      }),
+      "node_modules/esm-only-exports-c/index.js": js`
+        export default () => "esm-only-no-exports-c";
+      `,
+      "node_modules/cjs-dynamic-import/package.json": json({
+        name: "cjs-dynamic-import",
+        version: "1.0.0",
+        main: "index.js",
+      }),
+      "node_modules/cjs-dynamic-import/index.js": js`
+        module.exports = async () => "esm-only-no-exports-d" + (await import("esm-only-exports-c")).default();
       `,
       "node_modules/esm-only-sub-exports/package.json": json({
         name: "esm-only-sub-exports",
@@ -160,6 +183,12 @@ test("logs warnings for ESM only packages", async () => {
   );
   expect(buildOutput).not.toContain(
     "esm-only-exports-b is possibly an ESM only package"
+  );
+  expect(buildOutput).not.toContain(
+    "esm-only-exports-c is possibly an ESM only package"
+  );
+  expect(buildOutput).not.toContain(
+    "cjs-dynamic-import is possibly an ESM only package"
   );
   expect(buildOutput).toContain(
     "esm-only-sub-exports is possibly an ESM only package"
