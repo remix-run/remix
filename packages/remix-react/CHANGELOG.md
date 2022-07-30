@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Fix inferred types for `useLoaderData` and `useActionData` to preserve `null`s. Previously, `null` types were being replaced by `never` due to usage of `NonNullable` in `UndefinedOptionals`. Properties that aren't unions with `undefined` are now kept as-is, while properties that _do_ include `undefined` are still made optional, but _only_ remove `undefined` from the property type whereas `NonNullable` also removed `null` types. ([#3879](https://github.com/remix-run/remix/pull/3879))
+- Fix inferred types for `useLoaderData` and `useActionData` to preserve `null` value types ([#3879](https://github.com/remix-run/remix/pull/3879))
 
 ## 1.6.6
 
