@@ -1,8 +1,6 @@
 # `@remix-run/react`
 
-## 1.6.6-pre.1
-
-## 1.6.6-pre.0
+## 1.6.6
 
 ### Patch Changes
 
