@@ -1367,7 +1367,7 @@ type SerializeObject<T> = {
 /*
  * For an object T, if it has any properties that are a union with `undefined`,
  * make those into optional properties instead.
- * 
+ *
  * Example: { a: string | undefined} --> { a?: string}
  */
 type UndefinedOptionals<T extends object> = Merge<
@@ -1377,7 +1377,10 @@ type UndefinedOptionals<T extends object> = Merge<
   },
   {
     // Property _is_ a union with `defined`. Set as optional (via `?`) and remove `undefined` from the union
-    [k in keyof T as undefined extends T[k] ? k : never]?: Exclude<T[k], undefined>;
+    [k in keyof T as undefined extends T[k] ? k : never]?: Exclude<
+      T[k],
+      undefined
+    >;
   }
 >;
 
