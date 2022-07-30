@@ -223,7 +223,7 @@ export const loader = async () => {
 };
 
 export default function Posts() {
-  const { posts } = useLoaderData() as LoaderData;
+  const { posts } = useLoaderData<LoaderData>();
   return (
     <main>
       <h1>Posts</h1>
@@ -562,7 +562,7 @@ export const loader: LoaderFunction = async ({
 };
 
 export default function PostSlug() {
-  const { post } = useLoaderData() as LoaderData;
+  const { post } = useLoaderData<LoaderData>();
   return (
     <main className="mx-auto max-w-4xl">
       <h1 className="my-6 border-b-2 text-center text-3xl">
@@ -614,7 +614,7 @@ export const loader: LoaderFunction = async ({
 };
 
 export default function PostSlug() {
-  const { post, html } = useLoaderData() as LoaderData;
+  const { post, html } = useLoaderData<LoaderData>();
   return (
     <main className="mx-auto max-w-4xl">
       <h1 className="my-6 border-b-2 text-center text-3xl">
@@ -670,7 +670,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function PostAdmin() {
-  const { posts } = useLoaderData() as LoaderData;
+  const { posts } = useLoaderData<LoaderData>();
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">
@@ -752,7 +752,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function PostAdmin() {
-  const { posts } = useLoaderData() as LoaderData;
+  const { posts } = useLoaderData<LoaderData>();
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">
