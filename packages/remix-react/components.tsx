@@ -20,6 +20,7 @@ import {
   useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
+import type { Merge } from "type-fest";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
@@ -1336,6 +1337,7 @@ type JsonPrimitives =
   | Boolean
   | null;
 type NonJsonPrimitives = undefined | Function | symbol;
+
 type SerializeType<T> = T extends JsonPrimitives
   ? T
   : T extends NonJsonPrimitives
@@ -1353,12 +1355,34 @@ type SerializeType<T> = T extends JsonPrimitives
   : T extends ReadonlyArray<infer U>
   ? (U extends NonJsonPrimitives ? null : SerializeType<U>)[]
   : T extends object
-  ? {
-      [k in keyof T as T[k] extends NonJsonPrimitives
-        ? never
-        : k]: SerializeType<T[k]>;
-    }
+  ? SerializeObject<UndefinedOptionals<T>>
   : never;
+
+type SerializeObject<T> = {
+  [k in keyof T as T[k] extends NonJsonPrimitives ? never : k]: SerializeType<
+    T[k]
+  >;
+};
+
+/*
+ * For an object T, if it has any properties that are a union with `undefined`,
+ * make those into optional properties instead.
+ *
+ * Example: { a: string | undefined} --> { a?: string}
+ */
+type UndefinedOptionals<T extends object> = Merge<
+  {
+    // Property is not a union with `undefined`, keep as-is
+    [k in keyof T as undefined extends T[k] ? never : k]: T[k];
+  },
+  {
+    // Property _is_ a union with `defined`. Set as optional (via `?`) and remove `undefined` from the union
+    [k in keyof T as undefined extends T[k] ? k : never]?: Exclude<
+      T[k],
+      undefined
+    >;
+  }
+>;
 
 export type UseDataFunctionReturn<T extends DataOrFunction> = T extends (
   ...args: any[]
