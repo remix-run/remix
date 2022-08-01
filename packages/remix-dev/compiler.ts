@@ -525,9 +525,6 @@ async function writeServerBuildResult(
         config.assetsBuildDirectory,
         file.path.replace(path.dirname(config.serverBuildPath), "")
       );
-
-      await fse.ensureDir(path.dirname(file.path));
-      await fse.writeFile(file.path, file.contents);
       await fse.ensureDir(path.dirname(assetPath));
       await fse.writeFile(assetPath, file.contents);
     }
