@@ -6,7 +6,7 @@ Status: accepted
 
 ## Context
 
-In [Remixing React Router][remixing router], Ryan gives an overview of the work we started out to do in bringing the data APIs from Remix (loaders, actions, fetchers) over to `react-router`. We made _many_ decisions along the way that we'll document here. In some cases we decided to proceed with behavior that is different from that of Remix today, or add net-new behavior that does not currently exist uin Remix. We'll identify those cases as necessary and provide rationale for the divergence and how we plan to support backwards compatibility.
+In [Remixing React Router][remixing router], Ryan gives an overview of the work we started out to do in bringing the data APIs from Remix (loaders, actions, fetchers) over to `react-router`. We made _many_ decisions along the way that we'll document here. In some cases we decided to proceed with behavior that is different from that of Remix today, or add net-new behavior that does not currently exist in Remix. We'll identify those cases as necessary and provide rationale for the divergence and how we plan to support backwards compatibility.
 
 ## Decisions
 
@@ -26,9 +26,9 @@ Now that the router is data-aware, it has to manage _both_ route data loading/mu
 
 This is no longer the case in a data-aware landscape. Now, when a user clicks a link, we need to first tell the router "hey the user _intends_ to go to this location." In response to that the router can initiate some data fetches but during these fetches we're still on the old page! The user is still looking at the old content, and the URL should reflect that. This fits with the "browser emulator" concept as well. If you had a non-JS landscape and a user clicked a link from `/a -> /b` and the server took 5 seconds to send back a response for `/b` - during that time the browser URL bar shows the URL and title for `/a` and a little spinner in the tab. This is exactly how we built the router, it first loads data, then it updates state and tells history to update the URL.
 
-There's one caveat here when it comes to back/forward button usage. When the users navigates back/forward in the history stack we get a `popstate` event _but the URL has already been updated_. So the best we can do there is react to the new URL. This is _not_ what the browser would do in a non-JS world but we really have no choice.
+There's one caveat here when it comes to back/forward button usage. When the user navigates back/forward in the history stack we get a `popstate` event _but the URL has already been updated_. So the best we can do there is react to the new URL. This is _not_ what the browser would do in a non-JS world, but we really have no choice.
 
-All this being said - history is no longer a simple process of "update the URL then tell the router to re-render". History and routing are far more intertwined and behave slightly differently for PUSH/REPLACE than they do for POP navigations. For PUSH/REPLACE we go `router.navigate -> load data -> update state -> update history`, but for POP we `update history -> router.navigate -> load data -> update state`. So in PUSH, the router informs history. But in POP, history informs the router. These nuances made make sense to keep the router as the public API and make history more of an internal implementation detail.
+All this being said - history is no longer a simple process of "update the URL then tell the router to re-render". History and routing are far more intertwined and behave slightly differently for PUSH/REPLACE than they do for POP navigations. For PUSH/REPLACE we go `router.navigate -> load data -> update state -> update history`, but for POP we `update history -> router.navigate -> load data -> update state`. So in PUSH, the router informs history. But in POP, history informs the router. These nuances made sense to keep the router as the public API and make history more of an internal implementation detail.
 
 **2. History is being superseded via the Navigation API**
 
@@ -63,7 +63,7 @@ We plan to export `useNavigation` in Remix and encourage folks to switch, but we
 
 In Remix, the `useTransition` hook returned a Transition object which had a `state` property of `"idle" | "loading" | "submitting"`. It also had a `type` property which represented sort of "sub-states" such as `"normalLoad" | "actionReload" | "loaderRedirect"` etc. In React Router we chose to get rid of the `type` field for 2 reasons:
 
-1. In practice we found that the _vast_ majority of the time al you needed to reference was the `state`
+1. In practice, we found that the _vast_ majority of the time all you needed to reference was the `state`
 2. For scenarios in which you really do need to distinguish, we are pretty sure that in all cases, you can deduce the `type` from `state`, current location (`useLocation`), next location (`useNavigation().location`), and submission info (`useNavigation().formData`).
 
 **`useTransition().submission` is flattened**
@@ -124,7 +124,7 @@ function shouldRevalidate({ defaultShouldRevalidate }) {
 
 ### `<ScrollRestoration getKey>` prop
 
-In Remix, the `<ScrollRestoration>` component made an assumption that we would always restore scroll position based on `location.key`. If the key was the same as a prior location we knew the scroll position for, then we knew you had been there before and we should restore. This works great for back/forward navigations but it's a bit overly restrictive. You cannot choose tgo restore scroll based on anything other than `key`. Twitter has a great implementation of this as you click around in their left nav bar - your tweet feed is always at the same place when you click back to it - even though its a _new_ location in the history stack. This is because they're restoring by pathname here instead of `location.key`. Or maybe you want to maintain scroll position for all routes under a given pathname and you thus want to use a portion of the pathname as the scroll restoration key.
+In Remix, the `<ScrollRestoration>` component made an assumption that we would always restore scroll position based on `location.key`. If the key was the same as a prior location we knew the scroll position for, then we knew you had been there before and we should restore. This works great for back/forward navigations but it's a bit overly restrictive. You cannot choose tgo restore scroll based on anything other than `key`. Twitter has a great implementation of this as you click around in their left nav bar - your tweet feed is always at the same place when you click back to it - even though it's a _new_ location in the history stack. This is because they're restoring by pathname here instead of `location.key`. Or maybe you want to maintain scroll position for all routes under a given pathname and you thus want to use a portion of the pathname as the scroll restoration key.
 
 In React Router we now accept an optional `<ScrollRestoration getKey>` prop where you provide a function that returns the key to use for scroll restoration:
 
@@ -145,7 +145,7 @@ We're ok here since the new prop is optional and defaults to using `location.key
 
 ### `<Link resetScroll="false">` prop
 
-In addition to `<ScrollRestoration>` handling "restoring" scroll position on previously visited routes. It also handles "resetting" scroll position back to the top on _new_ routes. This is not always desireable if you're clicking around inside a tabbed view or something, so we've introduced a new `<Link resetScroll>` prop that lets you disable the scroll reset behavior _for a given navigation_. Note that this "resetting" logic happens if and only if we cannot restore scroll to a previously known location for that scroll restoration key.
+In addition to `<ScrollRestoration>` handling "restoring" scroll position on previously visited routes. It also handles "resetting" scroll position back to the top on _new_ routes. This is not always desirable if you're clicking around inside a tabbed view or something, so we've introduced a new `<Link resetScroll>` prop that lets you disable the scroll reset behavior _for a given navigation_. Note that this "resetting" logic happens if and only if we cannot restore scroll to a previously known location for that scroll restoration key.
 
 ### `useRevalidator()` hook
 
@@ -159,11 +159,11 @@ The differentiation between error and catch prove to be a bit vague over time an
 
 **Backwards Compatibility**
 
-We will handle this in Remix where it's `errorElement` will decide if it should render via the `ErrorBoundary` or `CatchBoundary`.
+We will handle this in Remix where its `errorElement` will decide if it should render via the `ErrorBoundary` or `CatchBoundary`.
 
 ### `Request.signal` instead of `signal` param
 
-We dropped the `signal` parameter to loaders and actions because an incoming `Request` already has it's own signal!
+We dropped the `signal` parameter to loaders and actions because an incoming `Request` already has its own signal!
 
 **Backwards Compatibility**
 
