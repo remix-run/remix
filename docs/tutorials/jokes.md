@@ -1848,7 +1848,7 @@ export default function JokesIndexRoute() {
       <p>Here's a random joke:</p>
       <p>{data.randomJoke.content}</p>
       <Link to={data.randomJoke.id}>
-        "{data.randomJoke.name}" Permalink
+        {data.randomJoke.name} Permalink
       </Link>
     </div>
   );
