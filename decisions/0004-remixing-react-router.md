@@ -50,7 +50,7 @@ We categorize this as a bug fix since fetchers get stale in current Remix apps
 
 This was done for two reasons:
 
-- Avoid confusion with the `useTransition` hook in React 18
+- Avoid confusion with the [`useTransition`][react usetransition] hook in React 18
 - It's more semantically correct because a "navigation" is what you trigger as a result of `router.navigate()` or `useNavigate()`
 
 **Backwards Compatibility**
@@ -104,6 +104,30 @@ But, in Remix we were considering the latter a "submission" such that `useTransi
 
 This will be handled in the deprecated `useTransition` hook along with the backfill of `type` and `submission` properties
 
+### Form automatic replace behavior
+
+When performing POST navigations, you don't want to end up with a duplicate entry in the history stack which makes back-button routing weird when going through the same page twice. This is further complicated in browsers that hang onto the submission info and thus have to prompt you to warn you of re-submitting your data. We'll look at a few examples to demonstrate, but the intention is that the default behavior of the router should ensure that you can't get yourself into this double-history-entry situation when using `<Form method="post">` submission navigations.
+
+Normal POST submissions that do not redirect will use a `REPLACE`:
+
+- User is on `/` (history stack is `[/]`)
+- Navigates to `/login` (history stack is `[/, /login]`)
+- Fills out and submits the `<Form method="post">`
+- Action does not redirect
+  - At this point, if the action returns a non-redirect and we were to PUSH the navigation we'd end up with a history stack of `[/, /login, /login]` and the user would be in a scenario where it would take them 2 back buttons to get "through" the login page from a subsequent route.
+  - To avoid this, when a POST submission does not return a redirect, the router will REPLACE in the history stack, leaving us at `[/, /login]` and avoiding the duplicate history entry
+
+Normal POST submissions that _do_ redirect will use `PUSH` for the redirect:
+
+- User is on `/` (history stack is `[/]`)
+- Navigates to `/login` (history stack is `[/, /login]`)
+- Fills out and submits the `<Form method="post">`
+- Action redirects to `/private`
+  - If we treated this redirect as a REPLACE, we'd be replacing the _initial_ navigation to `/login` since we haven't yet touched history for the POST. This would leave the history stack as `[/, /private]` and we'd lose the fact that we were ever at the login page.
+  - Instead when an action redirects, we'll use a PUSH and in this case the history stack would become `[/, /login, /private]` and the user would be able to navigate back through the login page and to the home page
+
+Note: User's can still be explicit here and use `<Form method="post" replace={shouldReplace}>` and the router will respect the value passed to `replace`.
+
 ### `unstable_shouldReload` stabilized as `shouldRevalidate`
 
 We stabilized the API for when a given route loader should re-run, and changed the name to align with the "revalidation" nomenclature and the `useRevalidator` hook. We also leave more control in the hands of the user here. In Remix there were some cases in which you _could not_ opt out of revalidation and if your method did run you had full control and couldn't necessarily handle one edge case and then say "do what you otherwise would have done".
@@ -153,13 +177,16 @@ This has been a long time coming - see https://github.com/remix-run/remix/discus
 
 ### No distinction between Error and Catch boundaries
 
-TODO: Ryan to fill in some more details here.
+**TODO:** Ryan to fill in some more details here.
 
 The differentiation between error and catch prove to be a bit vague over time and a source of confusion for developers. We chose to go with just a single `errorElement` in the router for simplicity. If you throw anything, it ends up in the error boundary and propagates accordingly.
 
 **Backwards Compatibility**
 
-We will handle this in Remix where its `errorElement` will decide if it should render via the `ErrorBoundary` or `CatchBoundary`.
+We have a few options here. In all cases, Remix v1 will provide an `errorElement` implementation that will need to do some forking to maintain backwards compatibility.
+
+1. We could introduce a new `ErrorElement` in Remix v1 and deprecate `ErrorBoundary`/`CatchBoundary` (and eventually drop them in v2)
+2. We could maintain the same behavior of `ErrorBoundary`/`CatchBoundary` in v1 and plan to drop` CatchBoundary` in v2 and send everything to `ErrorBoundary`
 
 ### `Request.signal` instead of `signal` param
 
@@ -171,3 +198,4 @@ We'll need to re-expose the `request.signal` as a standalone `signal` in Remix
 
 [remixing router]: https://remix.run/blog/remixing-react-router
 [navigation api]: https://developer.chrome.com/docs/web-platform/navigation-api/
+[react usetransition]: https://reactjs.org/docs/hooks-reference.html#usetransition
