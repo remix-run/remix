@@ -42,6 +42,8 @@ export {
   isCookie,
   isSession,
   json,
+  JsonFunction,
+  TypedResponse,
   MaxPartSizeExceededError,
   redirect,
   unstable_composeUploadHandlers,

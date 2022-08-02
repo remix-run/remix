@@ -11,7 +11,7 @@ There are two primary cases where a Remix site should send a 404:
 - The URL doesn't match any routes in the app
 - Your loader didn't find any data
 
-The first case is already handled by Remix, you don't have to do anything. It knows your routes so it knows if nothing matched. The second case is up to you, but it's really easy.
+The first case is already handled by Remix, you don't have to throw a response yourself. It knows your routes so it knows if nothing matched (_consider using a [Splat Route][splat-route] to handle this case_). The second case is up to you, but it's really easy.
 
 ## How to Send a 404
 
@@ -117,3 +117,4 @@ As you can probably tell, this mechanism isn't just limited to 404s. You can thr
 [catch-boundary]: ../api/conventions#catchboundary
 [errors]: errors
 [404-status-code]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+[splat-route]: ./routing#splats

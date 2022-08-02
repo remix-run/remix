@@ -10,6 +10,7 @@ import type { Server } from "http";
 import type * as Express from "express";
 import type { createApp as createAppType } from "@remix-run/serve";
 import getPort, { makeRange } from "get-port";
+import * as esbuild from "esbuild";
 
 import { BuildMode, isBuildMode } from "../build";
 import * as colors from "../colors";
@@ -64,8 +65,17 @@ export async function init(
   { deleteScript = true }: InitFlags = {}
 ) {
   let initScriptDir = path.join(projectDir, "remix.init");
+  let initScriptTs = path.resolve(initScriptDir, "index.ts");
   let initScript = path.resolve(initScriptDir, "index.js");
 
+  if (await fse.pathExists(initScriptTs)) {
+    await esbuild.build({
+      entryPoints: [initScriptTs],
+      format: "cjs",
+      platform: "node",
+      outfile: initScript,
+    });
+  }
   if (!(await fse.pathExists(initScript))) {
     return;
   }
@@ -82,6 +92,9 @@ export async function init(
   }
 
   let initFn = require(initScript);
+  if (typeof initFn !== "function" && initFn.default) {
+    initFn = initFn.default;
+  }
   try {
     await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
 

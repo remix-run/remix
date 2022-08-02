@@ -6,6 +6,9 @@ on:
       ref:
         required: true
         type: string
+      packageVersionToFollow:
+        required: false
+        type: string
 
 jobs:
   comment:
@@ -15,6 +18,8 @@ jobs:
     steps:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
@@ -36,3 +41,4 @@ jobs:
           VERSION: ${{ inputs.ref }}
           DEFAULT_BRANCH: "main"
           NIGHTLY_BRANCH: "dev"
+          PACKAGE_VERSION_TO_FOLLOW: ${{ inputs.packageToWatch }}

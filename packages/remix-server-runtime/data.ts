@@ -11,10 +11,12 @@ import {
 } from "./responses";
 
 /**
- * An object of arbitrary for route loaders and actions provided by the
+ * An object of unknown type for route loaders and actions provided by the
  * server's `getLoadContext()` function.
  */
-export type AppLoadContext = any;
+export interface AppLoadContext {
+  [key: string]: unknown;
+}
 
 /**
  * Data for a route that was returned from a `loader()`.
@@ -26,7 +28,7 @@ export async function callRouteAction({
   match,
   request,
 }: {
-  loadContext: unknown;
+  loadContext?: AppLoadContext;
   match: RouteMatch<ServerRoute>;
   request: Request;
 }): Promise<Response> {
@@ -73,8 +75,8 @@ export async function callRouteLoader({
 }: {
   request: Request;
   match: RouteMatch<ServerRoute>;
-  loadContext: unknown;
-}): Promise<Response> {
+  loadContext?: AppLoadContext;
+}) {
   let loader = match.route.module.loader;
 
   if (!loader) {

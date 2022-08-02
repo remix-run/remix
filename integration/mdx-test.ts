@@ -54,24 +54,41 @@ test.describe("mdx", () => {
         `,
 
         "app/routes/blog/post.mdx": mdx`---
-          meta:
-            title: My First Post
-            description: Isn't this awesome?
-          headers:
-            Cache-Control: no-cache
-          links: [
-            { rel: "stylesheet", href: "app.css" }
-          ]
-          handle:
-            someData: "abc"
-          additionalData: 10
+meta:
+  title: My First Post
+  description: Isn't this awesome?
+headers:
+  Cache-Control: no-cache
 ---
-          # This is some markdown!
-        `,
+
+export const links = () => [
+  { rel: "stylesheet", href: "app.css" }
+]
+
+export const handle = {
+  someData: "abc"
+}
+
+import { useLoaderData } from '@remix-run/react';
+
+export const loader = async () => {
+  return { mamboNumber: 5 };
+};
+
+export function ComponentUsingData() {
+  const { mamboNumber } = useLoaderData();
+
+  return <div id="loader">Mambo Number: {mamboNumber}</div>;
+}
+
+# This is some markdown!
+
+<ComponentUsingData />
+        `.trim(),
 
         "app/routes/basic.mdx": mdx`
-          # This is some basic markdown!
-        `,
+# This is some basic markdown!
+        `.trim(),
       },
     });
     appFixture = await createAppFixture(fixture);
@@ -88,7 +105,7 @@ test.describe("mdx", () => {
     expect(await app.getHtml()).toMatch("This is some basic markdown!");
   });
 
-  test("converts the frontmatter to meta, headers, links, handle, and loader", async ({
+  test("supports links, meta, headers, handle, and loader", async ({
     page,
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
@@ -97,7 +114,7 @@ test.describe("mdx", () => {
       "Isn't this awesome?"
     );
     expect(await app.getHtml("title")).toMatch("My First Post");
-    expect(await app.getHtml("#additionalData")).toMatch("Additional Data: 10");
+    expect(await app.getHtml("#loader")).toMatch(/Mambo Number:.+5/s);
     expect(await app.getHtml("#handle")).toMatch("abc");
     expect(await app.getHtml('link[rel="stylesheet"]')).toMatch("app.css");
   });

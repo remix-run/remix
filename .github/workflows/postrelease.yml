@@ -1,0 +1,45 @@
+name: 🕊 Release
+
+on:
+  push:
+    tags:
+      # only run on `remix` tags
+      - "remix@*"
+
+jobs:
+  comment:
+    needs: [release]
+    name: 📝 Comment on related issues and pull requests
+    if: github.repository == 'remix-run/remix'
+    uses: remix-run/remix/.github/workflows/release-comments.yml@main
+    with:
+      ref: ${{ github.ref }}
+      # this should match the above tag to watch including the trailing "@"
+      packageVersionToFollow: "remix@"
+
+  deployments:
+    needs: [release]
+    name: 🚀 Deployment Tests
+    if: github.repository == 'remix-run/remix'
+    uses: remix-run/remix/.github/workflows/deployments.yml@main
+    secrets:
+      TEST_AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
+      TEST_AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
+      TEST_CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
+      TEST_CF_GLOBAL_API_KEY: ${{ secrets.TEST_CF_GLOBAL_API_KEY }}
+      TEST_CF_EMAIL: ${{ secrets.TEST_CF_EMAIL }}
+      TEST_CF_PAGES_API_TOKEN: ${{ secrets.TEST_CF_PAGES_API_TOKEN }}
+      TEST_CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
+      TEST_DENO_DEPLOY_TOKEN: ${{ secrets.TEST_DENO_DEPLOY_TOKEN }}
+      TEST_FLY_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
+      TEST_NETLIFY_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
+      TEST_VERCEL_TOKEN: ${{ secrets.TEST_VERCEL_TOKEN }}
+      TEST_VERCEL_USER_ID: ${{ secrets.TEST_VERCEL_USER_ID }}
+
+  stacks:
+    needs: [release]
+    name: 🥞 Remix Stacks Test
+    if: github.repository == 'remix-run/remix'
+    uses: remix-run/remix/.github/workflows/stacks.yml@main
+    with:
+      version: ${{ github.ref_name }}
