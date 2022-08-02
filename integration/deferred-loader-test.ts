@@ -11,15 +11,9 @@ test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
       "app/routes/index.jsx": js`
-        import { deferred } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
 
-        export function loader() {
-          return deferred("pizza");
-        }
-
         export default function Index() {
-          let data = useLoaderData();
           return (
             <div>
               <Link to="/deferred">Deferred Route</Link>
@@ -28,25 +22,25 @@ test.beforeAll(async () => {
               <Link to="/deferred-error">Deferred Error</Link>
               <Link to="/deferred-error-no-boundary">Deferred Error No Boundary</Link>
               <Link to="/redirect">Redirect</Link>
-              {data}
             </div>
           )
         }
       `,
 
       "app/routes/redirect.jsx": js`
-        import { deferred } from "@remix-run/node";
+        import { defer } from "@remix-run/node";
         export function loader() {
-          return deferred({food: "pizza"}, { status: 301, headers: { Location: "/?redirected" } });
+          return defer({food: "pizza"}, { status: 301, headers: { Location: "/?redirected" } });
         }
+        export default function Redirect() {return null;}
       `,
 
       "app/routes/object.jsx": js`
-        import { deferred } from "@remix-run/node";
+        import { defer } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
 
         export function loader() {
-          return deferred({data: "pizza"});
+          return defer({data: "pizza"});
         }
 
         export default function Index() {
@@ -61,11 +55,11 @@ test.beforeAll(async () => {
 
       "app/routes/inline-deferred.jsx": js`
         import * as React from "react";
-        import { deferred } from "@remix-run/node";
-        import { useLoaderData, Link, Deferred } from "@remix-run/react";
+        import { defer } from "@remix-run/node";
+        import { useLoaderData, Link, Await } from "@remix-run/react";
 
         export function loader() {
-          return deferred({
+          return defer({
             foo: "pizza",
             bar: new Promise(async (resolve, reject) => {
               resolve("hamburger");
@@ -82,9 +76,9 @@ test.beforeAll(async () => {
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
               <React.Suspense>
-                <Deferred value={bar}>
-                  {(deferred) => <div>{deferred}</div>}
-                </Deferred>
+                <Await resolve={bar}>
+                  {(resolved) => <div>{resolved}</div>}
+                </Await>
               </React.Suspense>
             </div>
           )
@@ -93,11 +87,11 @@ test.beforeAll(async () => {
 
       "app/routes/deferred.jsx": js`
         import * as React from "react";
-        import { deferred } from "@remix-run/node";
-        import { useLoaderData, Link, Deferred, useDeferredData } from "@remix-run/react";
+        import { defer } from "@remix-run/node";
+        import { useLoaderData, Link, Await, useAsyncValue } from "@remix-run/react";
 
         export function loader() {
-          return deferred({
+          return defer({
             foo: "pizza",
             bar: new Promise(async (resolve, reject) => {
               resolve("hamburger");
@@ -106,7 +100,7 @@ test.beforeAll(async () => {
         }
 
         function DeferredComponent() {
-          let deferred = useDeferredData();
+          let deferred = useAsyncValue();
           return <div>{deferred}</div>;
         }
 
@@ -119,9 +113,9 @@ test.beforeAll(async () => {
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
               <React.Suspense>
-                <Deferred value={bar}>
+                <Await resolve={bar}>
                   <DeferredComponent />
-                </Deferred>
+                </Await>
               </React.Suspense>
             </div>
           )
@@ -130,11 +124,11 @@ test.beforeAll(async () => {
 
       "app/routes/deferred-error.jsx": js`
         import * as React from "react";
-        import { deferred } from "@remix-run/node";
-        import { useLoaderData, Link, Deferred, useDeferredData } from "@remix-run/react";
+        import { defer } from "@remix-run/node";
+        import { useLoaderData, Link, Await, useAsyncValue } from "@remix-run/react";
 
         export function loader() {
-          return deferred({
+          return defer({
             foo: "pizza",
             bar: new Promise(async (resolve, reject) => {
               reject(new Error("Oh, no!"));
@@ -143,7 +137,7 @@ test.beforeAll(async () => {
         }
 
         function DeferredComponent() {
-          let deferred = useDeferredData();
+          let deferred = useAsyncValue();
           return <div>{deferred}</div>;
         }
 
@@ -160,9 +154,9 @@ test.beforeAll(async () => {
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
               <React.Suspense>
-                <Deferred value={bar} errorElement={<DeferredBoundary />}>
+                <Await resolve={bar} errorElement={<DeferredBoundary />}>
                   <DeferredComponent />
-                </Deferred>
+                </Await>
               </React.Suspense>
             </div>
           )
@@ -171,11 +165,11 @@ test.beforeAll(async () => {
 
       "app/routes/deferred-error-no-boundary.jsx": js`
         import * as React from "react";
-        import { deferred } from "@remix-run/node";
-        import { useLoaderData, Link, Deferred, useDeferredData } from "@remix-run/react";
+        import { defer } from "@remix-run/node";
+        import { useLoaderData, Link, Await, useAsyncValue } from "@remix-run/react";
 
         export function loader() {
-          return deferred({
+          return defer({
             foo: "pizza",
             bar: new Promise(async (resolve, reject) => {
               reject(new Error("Oh, no!"));
@@ -184,7 +178,7 @@ test.beforeAll(async () => {
         }
 
         function DeferredComponent() {
-          let deferred = useDeferredData();
+          let deferred = useAsyncValue();
           return <div>{deferred}</div>;
         }
 
@@ -197,9 +191,9 @@ test.beforeAll(async () => {
               {foo}
               <button onClick={() => setCount(count + 1)}>{count} Count</button>
               <React.Suspense>
-                <Deferred value={bar}>
+                <Await resolve={bar}>
                   <DeferredComponent />
-                </Deferred>
+                </Await>
               </React.Suspense>
             </div>
           )
@@ -212,11 +206,11 @@ test.beforeAll(async () => {
 
       "app/routes/multiple-deferred.jsx": js`
         import * as React from "react";
-        import { deferred } from "@remix-run/node";
-        import { useLoaderData, Link, Deferred, useDeferredData } from "@remix-run/react";
+        import { defer } from "@remix-run/node";
+        import { useLoaderData, Link, Await, useAsyncValue } from "@remix-run/react";
 
         export function loader() {
-          return deferred({
+          return defer({
             foo: "pizza",
             bar: new Promise(async resolve => {
               // await new Promise(resolve => setTimeout(resolve, 500));
@@ -230,7 +224,7 @@ test.beforeAll(async () => {
         }
 
         function DeferredComponent() {
-          let deferred = useDeferredData();
+          let deferred = useAsyncValue();
           return <div>{deferred}</div>;
         }
 
@@ -242,14 +236,14 @@ test.beforeAll(async () => {
             <div>
               {foo}
               <React.Suspense>
-                <Deferred value={bar}>
+                <Await resolve={bar}>
                   <DeferredComponent />
-                </Deferred>
+                </Await>
               </React.Suspense>
               <React.Suspense>
-                <Deferred value={baz}>
+                <Await resolve={baz}>
                   <DeferredComponent />
-                </Deferred>
+                </Await>
               </React.Suspense>
             </div>
           )
@@ -263,19 +257,11 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => appFixture.close());
 
-test("works the same as json with no promise keys", async () => {
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
-  response = await fixture.requestDocument("/object");
-  expect(await response.text()).toMatch("pizza");
-});
-
 test("loads critical data first", async () => {
   let response = await fixture.requestDocument("/deferred");
   let text = await response.text();
   expect(text).toMatch("pizza");
-  expect(text).toMatch('<div hidden id="S:0"><div>hamburger</div>');
+  expect(text).toMatch("<div>hamburger</div>");
   expect(text).toMatch(
     'window.__remixContext.routeData["routes/deferred"]["bar"]'
   );
@@ -294,7 +280,7 @@ test("loads critical data first with render func", async () => {
   let response = await fixture.requestDocument("/inline-deferred");
   let text = await response.text();
   expect(text).toMatch("pizza");
-  expect(text).toMatch('<div hidden id="S:0"><div>hamburger</div>');
+  expect(text).toMatch("<div>hamburger</div>");
   expect(text).toMatch(
     'window.__remixContext.routeData["routes/inline-deferred"]["bar"]'
   );
@@ -315,11 +301,11 @@ test("loads critical data first with multiple deferred", async () => {
   let response = await fixture.requestDocument("/multiple-deferred");
   let text = await response.text();
   expect(text).toMatch("pizza");
-  expect(text).toMatch('<div hidden id="S:0"><div>hamburger</div>');
+  expect(text).toMatch("<div>hamburger</div>");
   expect(text).toMatch(
     'window.__remixContext.routeData["routes/multiple-deferred"]["bar"]'
   );
-  expect(text).toMatch('<div hidden id="S:1"><div>soup</div>');
+  expect(text).toMatch("<div>soup</div>");
   expect(text).toMatch(
     'window.__remixContext.routeData["routes/multiple-deferred"]["baz"]'
   );
@@ -329,7 +315,7 @@ test("renders error boundary", async () => {
   let response = await fixture.requestDocument("/deferred-error");
   let text = await response.text();
   expect(text).toMatch("pizza");
-  expect(text).toMatch('<div hidden id="S:0"><div>Deferred Boundary');
+  expect(text).toMatch("<div>Deferred Boundary");
   expect(text).toMatch(
     'window.__remixContext.routeData["routes/deferred-error"]["bar"]'
   );
@@ -342,7 +328,8 @@ test("errored deferred data renders boundary", async ({ page }) => {
   let text = await app.getHtml();
   expect(text).toMatch("pizza");
   expect(text).not.toMatch("hamburger");
-  expect(text).toMatch("Deferred Boundary Oh, no!");
+  expect(text).toMatch("Deferred Boundary");
+  expect(text).toMatch("Oh, no!");
 });
 
 test("errored deferred data renders route boundary on hydration", async ({

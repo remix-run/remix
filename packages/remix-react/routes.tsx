@@ -166,11 +166,11 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
         throw new CatchValue(
           result.status,
           result.statusText,
-          await extractData(result, true)
+          await extractData(result, signal, true)
         );
       }
 
-      return extractData(result);
+      return extractData(result, signal);
     } else {
       await loadRouteModuleWithBlockingLinks(route, routeModules);
     }
@@ -203,11 +203,11 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
       throw new CatchValue(
         result.status,
         result.statusText,
-        await extractData(result)
+        await extractData(result, signal)
       );
     }
 
-    return extractData(result);
+    return extractData(result, signal);
   };
 
   return action;

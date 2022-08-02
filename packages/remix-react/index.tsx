@@ -30,8 +30,7 @@ export type {
   UseDataFunctionReturn,
 } from "./components";
 export {
-  Deferred,
-  ResolveDeferred,
+  Await,
   Meta,
   Links,
   Scripts,
@@ -40,7 +39,7 @@ export {
   Form,
   PrefetchPageLinks,
   LiveReload,
-  useDeferredData,
+  useAsyncValue,
   useFormAction,
   useSubmit,
   useTransition,

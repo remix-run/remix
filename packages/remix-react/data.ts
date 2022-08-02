@@ -1,4 +1,4 @@
-import type { DeferrableData } from "@remix-run/deferred";
+import type { DeferredData } from "@remix-run/deferred";
 import { parseDeferredReadableStream } from "@remix-run/deferred";
 
 import invariant from "./invariant";
@@ -59,8 +59,9 @@ export async function fetchData(
 
 export async function extractData(
   response: Response,
+  signal: AbortSignal,
   resolveDeferred = false
-): Promise<unknown | DeferrableData> {
+): Promise<unknown | DeferredData> {
   // This same algorithm is used on the server to interpret load
   // results when we render the HTML page.
   let contentType = response.headers.get("Content-Type");
@@ -75,21 +76,11 @@ export async function extractData(
       return deferred;
     }
 
-    if (
-      !deferred.criticalData ||
-      typeof deferred.criticalData !== "object" ||
-      !deferred.deferredData
-    ) {
-      return deferred.criticalData;
+    if (await deferred.resolveData(signal)) {
+      return deferred;
     }
 
-    let isArray = Array.isArray(deferred.criticalData);
-    let data = deferred.criticalData as Record<string | number, unknown>;
-    for (let entry of Object.entries(deferred.deferredData)) {
-      let key = isArray ? Number(entry[0]) : entry[0];
-      data[key] = await entry[1];
-    }
-    return data;
+    return deferred.unwrappedData;
   }
 
   if (contentType && /\bapplication\/json\b/.test(contentType)) {

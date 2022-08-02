@@ -1,7 +1,7 @@
 import {
   CONTENT_TYPE as DEFERRED_CONTENT_TYPE,
   createDeferredReadableStream,
-  getDeferrableData,
+  DeferredData,
 } from "@remix-run/deferred";
 
 // must be a type since this is a subtype of response
@@ -15,7 +15,9 @@ export type DeferredResponse<T extends unknown = unknown> = TypedResponse<T> & {
   __deferred?: never;
 };
 
-export type DeferredFunction = <Data extends unknown = unknown>(
+export type DeferFunction = <
+  Data extends Record<string, unknown> = Record<string, unknown>
+>(
   data: Data,
   init?: number | ResponseInit
 ) => DeferredResponse<Data>;
@@ -33,7 +35,7 @@ export type DeferredFunction = <Data extends unknown = unknown>(
  *
  * @see https://remix.run/api/remix#deferred
  */
-export const deferred: DeferredFunction = (data, init = {}) => {
+export const defer: DeferFunction = (data, init = {}) => {
   let responseInit = typeof init === "number" ? { status: init } : init;
 
   let headers = new Headers(responseInit.headers);
@@ -45,8 +47,7 @@ export const deferred: DeferredFunction = (data, init = {}) => {
     headers.set("Content-Type", `${DEFERRED_CONTENT_TYPE}; charset=utf-8`);
   }
 
-  let deferrableData = getDeferrableData(data);
-  return new Response(createDeferredReadableStream(deferrableData), {
+  return new Response(createDeferredReadableStream(new DeferredData(data)), {
     ...responseInit,
     headers,
   });

@@ -15,7 +15,7 @@ export {
 
 export {
   createSession,
-  deferred,
+  defer,
   isCookie,
   isSession,
   json,

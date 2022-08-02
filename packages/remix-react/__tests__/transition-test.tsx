@@ -1,4 +1,4 @@
-import { getDeferrableData } from "@remix-run/deferred";
+import { DeferredData } from "@remix-run/deferred";
 import { Action, parsePath } from "history";
 import type { Location, State } from "history";
 
@@ -1881,7 +1881,7 @@ describe("navigating with inflight fetchers", () => {
 });
 
 // eslint-disable-next-line jest/no-focused-tests
-describe("deferred", () => {
+describe.only("deferred", () => {
   it("should support resolving initial deferred responses", async () => {
     let dfd = defer();
     let t = setup({
@@ -1908,10 +1908,15 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       index: {
         critical: "1",
-        lazy: "2",
+        lazy: expect.any(Promise),
       },
       root: "ROOT",
     });
+    console.log(
+      t.getState().loaderData.index.lazy,
+      Object.getOwnPropertyNames(t.getState().loaderData.index.lazy)
+    );
+    expect(t.getState().loaderData.index.lazy._data).toBe("2");
   });
 
   it("should support returning deferred responses", async () => {
@@ -1942,10 +1947,11 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       foo: {
         critical: "1",
-        lazy: "2",
+        lazy: expect.any(Promise),
       },
       root: "ROOT",
     });
+    expect(t.getState().loaderData.foo.lazy._data).toBe("2");
     expect(t.getState().transition.state).toBe("idle");
 
     let B = await t.navigate.get("/bar");
@@ -1973,10 +1979,11 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       bar: {
         critical: "3",
-        lazy: "4",
+        lazy: expect.any(Promise),
       },
       root: "ROOT",
     });
+    expect(t.getState().loaderData.bar.lazy._data).toBe("4");
     expect(t.getState().transition.state).toBe("idle");
   });
 
@@ -2112,18 +2119,20 @@ describe("deferred", () => {
       },
       root: {
         critical: `ROOT CRITICAL 0`,
-        lazy: "2",
+        lazy: expect.any(Promise),
       },
     });
+    expect(t.getState().loaderData.root.lazy._data).toBe("2");
 
     await B.loader.resolve("BAR");
     expect(t.getState().loaderData).toEqual({
       root: {
         critical: "ROOT CRITICAL 0",
-        lazy: "2",
+        lazy: expect.any(Promise),
       },
       bar: "BAR",
     });
+    expect(t.getState().loaderData.root.lazy._data).toBe("2");
   });
 
   it("should buffer deferreds on reused route", async () => {
@@ -2151,10 +2160,11 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       foo: {
         critical: "1",
-        lazy: "2",
+        lazy: expect.any(Promise),
       },
       root: "ROOT",
     });
+    expect(t.getState().loaderData.foo.lazy._data).toBe("2");
 
     let B = t.navigate.get("/foo");
 
@@ -2170,19 +2180,21 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       foo: {
         critical: "1",
-        lazy: "2",
+        lazy: expect.any(Promise),
       },
       root: "ROOT",
     });
+    expect(t.getState().loaderData.foo.lazy._data).toBe("2");
 
     await dfdB.resolve("3");
     expect(t.getState().loaderData).toEqual({
       foo: {
         critical: "2",
-        lazy: "3",
+        lazy: expect.any(Promise),
       },
       root: "ROOT",
     });
+    expect(t.getState().loaderData.foo.lazy._data).toBe("3");
   });
 
   it("should cancel outstanding deferreds on 404 navigations", async () => {
@@ -2213,13 +2225,14 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       root: {
         critical: "1",
-        lazy: "2",
+        lazy: expect.any(Promise),
       },
       foo: {
         critical: "3",
         lazy: expect.any(Promise),
       },
     });
+    expect(t.getState().loaderData.root.lazy._data).toBe("2");
 
     await t.navigate.get("/not/found");
 
@@ -2264,9 +2277,10 @@ describe("deferred", () => {
       root: "ROOT",
       foo: {
         critical: "1",
-        lazy: "2",
+        lazy: expect.any(Promise),
       },
     });
+    expect(t.getState().loaderData.foo.lazy._data).toBe("2");
   });
 
   it("should handle promise rejections", async () => {
@@ -2294,10 +2308,11 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       foo: {
         critical: "1",
-        lazy: err,
+        lazy: expect.any(Promise),
       },
       root: "ROOT",
     });
+    expect(t.getState().loaderData.foo.lazy._error).toBe(err);
   });
 
   it("cancels all pending deferreds on action submissions", async () => {
@@ -2357,6 +2372,8 @@ describe("deferred", () => {
         lazy: expect.any(Promise),
       },
     });
+    expect(t.getState().loaderData.root.lazy._data).toBe(undefined);
+    expect(t.getState().loaderData.foo.lazy._data).toBe(undefined);
 
     // Frozen after during action reload until all deferred
     // are resolved
@@ -2372,16 +2389,19 @@ describe("deferred", () => {
         lazy: expect.any(Promise),
       },
     });
+    expect(t.getState().loaderData.root.lazy._data).toBe(undefined);
+    expect(t.getState().loaderData.foo.lazy._data).toBe(undefined);
 
     await rootDfds[1].resolve("LAZY ROOT 1");
 
     expect(t.getState().loaderData).toEqual({
       root: {
         critical: "CRITICAL ROOT 1",
-        lazy: "LAZY ROOT 1",
+        lazy: expect.any(Promise),
       },
       bar: "BAR",
     });
+    expect(t.getState().loaderData.root.lazy._data).toBe("LAZY ROOT 1");
     // Did not get called a second time since this actionReload execution
     // cannot be opted out of
     expect(shouldReloadSpy).toHaveBeenCalledTimes(1);
@@ -2562,13 +2582,15 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       root: {
         critical: "CRITICAL ROOT 1",
-        lazy: "Yep!",
+        lazy: expect.any(Promise),
       },
       foo: {
         critical: "CRITICAL A 1",
-        lazy: "Yep!",
+        lazy: expect.any(Promise),
       },
     });
+    expect(t.getState().loaderData.root.lazy._data).toBe("Yep!");
+    expect(t.getState().loaderData.foo.lazy._data).toBe("Yep!");
     expect(t.getFetcher(key)).toMatchObject({
       state: "idle",
       data: "ACTION",
@@ -2593,9 +2615,10 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       root: "ROOT",
       foo: {
-        value: "A",
+        value: expect.any(Promise),
       },
     });
+    expect(t.getState().loaderData.foo.value._data).toBe("A");
     expect(shouldReloadSpy).toHaveBeenCalledTimes(0);
 
     // Navigate to the same URL forcing a revalidation, which foo can opt out of
@@ -2604,9 +2627,10 @@ describe("deferred", () => {
     expect(t.getState().loaderData).toEqual({
       root: "ROOT",
       foo: {
-        value: "A",
+        value: expect.any(Promise),
       },
     });
+    expect(t.getState().loaderData.foo.value._data).toBe("A");
     expect(shouldReloadSpy).toHaveBeenCalledTimes(1);
   });
 });
@@ -3049,7 +3073,7 @@ let setup = (
 };
 
 function setupDeferred(initialData: Record<string, string | Promise<any>>) {
-  return getDeferrableData(initialData);
+  return new DeferredData(initialData);
 }
 
 function FakeComponent() {}

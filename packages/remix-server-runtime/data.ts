@@ -1,4 +1,4 @@
-import type { DeferrableData } from "@remix-run/deferred";
+import type { DeferredData } from "@remix-run/deferred";
 import { parseDeferredReadableStream } from "@remix-run/deferred";
 
 import type { RouteMatch } from "./routeMatching";
@@ -138,39 +138,26 @@ function stripDataParam(request: Request) {
 
 export async function extractData(
   response: Response,
+  signal: AbortSignal,
   resolveDeferred = false
-): Promise<unknown | DeferrableData> {
+): Promise<unknown | DeferredData> {
+  let contentType = response.headers.get("Content-Type");
+
+  if (contentType && /\bapplication\/json\b/.test(contentType)) {
+    return response.json();
+  }
+
   if (response.body && isDeferredResponse(response)) {
     let deferred = await parseDeferredReadableStream(response.body);
     if (!resolveDeferred) {
       return deferred;
     }
 
-    // TODO: Turn this into a utility in @remix-run/deferred
-    if (
-      !deferred.criticalData ||
-      typeof deferred.criticalData !== "object" ||
-      !deferred.deferredData
-    ) {
-      return deferred.criticalData;
+    if (await deferred.resolveData(signal)) {
+      return deferred;
     }
 
-    let isArray = Array.isArray(deferred.criticalData);
-    let data = deferred.criticalData as Record<string | number, unknown>;
-    for (let entry of Object.entries(deferred.deferredData)) {
-      let key = isArray ? Number(entry[0]) : entry[0];
-      data[key] = await entry[1].then(
-        (res) => res,
-        (reason) => reason
-      );
-    }
-    return data;
-  }
-
-  let contentType = response.headers.get("Content-Type");
-
-  if (contentType && /\bapplication\/json\b/.test(contentType)) {
-    return response.json();
+    return deferred.unwrappedData;
   }
 
   // What other data types do we need to handle here? What other kinds of

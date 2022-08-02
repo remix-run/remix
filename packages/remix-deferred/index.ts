@@ -1,16 +1,167 @@
 export const CONTENT_TYPE = "text/remix-deferred";
 export const DEFERRED_VALUE_PLACEHOLDER_PREFIX = "__deferred_promise:";
 
-export class DeferrableData {
-  constructor(
-    public criticalData: unknown,
-    public deferredData?: Record<string, Promise<unknown>>
-  ) {}
+export interface TrackedPromise extends Promise<unknown> {
+  _tracked?: boolean;
+  _data?: any;
+  _error?: any;
+}
+
+export class DeferredData {
+  private pendingKeys: Set<string | number> = new Set<string | number>();
+  private cancelled: boolean = false;
+  private subscribers: Set<(aborted: boolean, settledKey?: string) => void> =
+    new Set();
+  data: Record<string, unknown>;
+  deferredKeys: string[];
+
+  constructor(data: Record<string, unknown>) {
+    invariant(
+      data && typeof data === "object" && !Array.isArray(data),
+      "DeferredData only accepts plain objects"
+    );
+    let deferredKeys: string[] = [];
+    this.data = Object.entries(data).reduce((acc, [key, value]) => {
+      let trackedValue = this.trackPromise(key, value);
+      if (isTrackedPromise(trackedValue)) {
+        deferredKeys.push(key);
+      }
+      return Object.assign(acc, {
+        [key]: trackedValue,
+      });
+    }, {});
+    this.deferredKeys = deferredKeys;
+  }
+
+  private trackPromise(
+    key: string,
+    value: Promise<unknown> | unknown
+  ): TrackedPromise | unknown {
+    if (!(value instanceof Promise)) {
+      return value;
+    }
+
+    this.pendingKeys.add(key);
+
+    // We store a little wrapper promise that will be extended with
+    // _data/_error props upon resolve/reject
+    let promise: TrackedPromise = value.then(
+      (data) => this.onSettle(promise, key, null, data as unknown),
+      (error) => this.onSettle(promise, key, error as unknown)
+    );
+    Object.defineProperty(promise, "_tracked", { get: () => true });
+    return promise;
+  }
+
+  private onSettle(
+    promise: TrackedPromise,
+    key: string,
+    error: unknown,
+    data?: unknown
+  ): void {
+    if (this.cancelled) {
+      return;
+    }
+    this.pendingKeys.delete(key);
+
+    if (error) {
+      Object.defineProperty(promise, "_error", { get: () => error });
+    } else {
+      Object.defineProperty(promise, "_data", { get: () => data });
+    }
+
+    for (let subscriber of this.subscribers) {
+      subscriber(false, key);
+    }
+  }
+
+  subscribe(fn: (aborted: boolean, settledKey?: string) => void): () => void {
+    this.subscribers.add(fn);
+    return () => this.subscribers.delete(fn);
+  }
+
+  cancel() {
+    this.cancelled = true;
+    this.pendingKeys.forEach((v, k) => this.pendingKeys.delete(k));
+    for (let subscriber of this.subscribers) {
+      subscriber(true);
+    }
+  }
+
+  async resolveData(signal: AbortSignal) {
+    let aborted = false;
+    if (!this.done) {
+      let onAbort = () => this.cancel();
+      signal.addEventListener("abort", onAbort);
+      aborted = await new Promise((resolve) => {
+        this.subscribe((aborted) => {
+          signal.removeEventListener("abort", onAbort);
+          if (aborted || this.done) {
+            resolve(aborted);
+          }
+        });
+      });
+    }
+    return aborted;
+  }
+
+  get done() {
+    return this.pendingKeys.size === 0;
+  }
+
+  get unwrappedData() {
+    invariant(
+      this.data !== null && this.done,
+      "Can only unwrap data on initialized and settled deferreds"
+    );
+
+    return Object.entries(this.data).reduce(
+      (acc, [key, value]) =>
+        Object.assign(acc, {
+          [key]: unwrapTrackedPromise(value),
+        }),
+      {}
+    );
+  }
+
+  get criticalData() {
+    invariant(
+      this.data !== null,
+      "Can only get critical data on initialized deferreds"
+    );
+
+    return Object.entries(this.data).reduce(
+      (acc, [key, value]) =>
+        Object.assign(acc, {
+          [key]: isTrackedPromise(value)
+            ? DEFERRED_VALUE_PLACEHOLDER_PREFIX + key
+            : value,
+        }),
+      {}
+    );
+  }
+}
+
+function isTrackedPromise(value: any): value is TrackedPromise {
+  return (
+    value instanceof Promise && (value as TrackedPromise)._tracked === true
+  );
+}
+
+function unwrapTrackedPromise(value: any) {
+  if (!isTrackedPromise(value)) {
+    return value;
+  }
+
+  if (value._error) {
+    throw value._error;
+  }
+  return value._data;
 }
 
 export async function parseDeferredReadableStream(
   stream: ReadableStream<Uint8Array>
-): Promise<DeferrableData> {
+): Promise<DeferredData> {
   if (!stream) {
     throw new Error("parseDeferredReadableStream requires stream argument");
   }
@@ -91,82 +242,51 @@ export async function parseDeferredReadableStream(
     }
   })();
 
-  return new DeferrableData(criticalData, deferredData);
+  return new DeferredData({ ...criticalData, ...deferredData });
 }
 
-export function createDeferredReadableStream({
-  criticalData,
-  deferredData,
-}: DeferrableData): ReadableStream<Uint8Array> {
-  if (typeof criticalData === "undefined") {
-    throw new Error(
-      "createDeferredReadableStream requires criticalData to not be undefined"
-    );
-  }
+export function createDeferredReadableStream(
+  deferredData: DeferredData
+): ReadableStream<Uint8Array> {
+  let criticalData = deferredData.criticalData;
 
   let encoder = new TextEncoder();
-
   let stream = new ReadableStream({
     async start(controller) {
       // Send the critical data
       controller.enqueue(encoder.encode(JSON.stringify(criticalData) + "\n\n"));
 
-      if (deferredData) {
-        // Watch all the deferred keys for resolution
-        await Promise.allSettled(
-          Object.entries(deferredData).map(async ([key, promise]) =>
-            promise
-              .then((result) => {
-                // Send the resolved data
-                controller.enqueue(
-                  encoder.encode(
-                    "data:" + JSON.stringify({ [key]: result }) + "\n\n"
-                  )
-                );
-              })
-              .catch((error) => {
-                // Send the error
-                controller.enqueue(
-                  encoder.encode(
-                    "error:" +
-                      JSON.stringify({ [key]: serializeError(error) }) +
-                      "\n\n"
-                  )
-                );
-              })
-          )
-        );
-      }
-
+      let unsubscribe = deferredData.subscribe((aborted, settledKey) => {
+        if (settledKey) {
+          let promise = deferredData.data[settledKey] as TrackedPromise;
+          if ("_error" in promise) {
+            controller.enqueue(
+              encoder.encode(
+                "error:" +
+                  JSON.stringify({
+                    [settledKey]: serializeError(promise._error),
+                  }) +
+                  "\n\n"
+              )
+            );
+          } else {
+            controller.enqueue(
+              encoder.encode(
+                "data:" +
+                  JSON.stringify({ [settledKey]: promise._data ?? null }) +
+                  "\n\n"
+              )
+            );
+          }
+        }
+      });
+      await deferredData.resolveData(new AbortController().signal);
+      unsubscribe();
       controller.close();
     },
   });
 
   return stream;
-}
-
-export function getDeferrableData(data: unknown): DeferrableData {
-  let criticalData = data;
-  let deferredData: Record<string, Promise<unknown>> | undefined;
-  if (typeof data === "object" && data !== null) {
-    let isArrayData = Array.isArray(data);
-    let dataWithoutPromises: Array<unknown> | Record<string | number, unknown> =
-      isArrayData ? [] : {};
-
-    for (let [key, value] of Object.entries(data)) {
-      let dataKey = isArrayData ? Number(key) : (key as unknown as number);
-      if (typeof value?.then === "function") {
-        deferredData = deferredData || {};
-        deferredData[key] = value;
-        dataWithoutPromises[dataKey] = DEFERRED_VALUE_PLACEHOLDER_PREFIX + key;
-      } else {
-        dataWithoutPromises[dataKey] = value;
-      }
-    }
-
-    criticalData = dataWithoutPromises;
-  }
-  return new DeferrableData(criticalData, deferredData);
 }
 
 // must be type alias due to inference issues on interfaces
@@ -265,4 +385,15 @@ function mergeArrays(...arrays: Uint8Array[]) {
     offset += arr.length;
   }
   return out;
+}
+
+function invariant(value: boolean, message?: string): asserts value;
+function invariant<T>(
+  value: T | null | undefined,
+  message?: string
+): asserts value is T;
+function invariant(value: any, message?: string) {
+  if (value === false || value === null || typeof value === "undefined") {
+    throw new Error(message);
+  }
 }

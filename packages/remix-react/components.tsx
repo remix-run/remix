@@ -21,6 +21,7 @@ import {
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
 import jsesc from "jsesc";
+import type { TrackedPromise } from "@remix-run/deferred";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, DeferredLoaderData, AssetsManifest } from "./entry";
@@ -381,143 +382,151 @@ export function RemixRoute({ id }: { id: string }) {
 ////////////////////////////////////////////////////////////////////////////////
 // Public API
 
-type DeferredContext = {
-  value?: unknown;
-  refCount: number;
-};
-const deferredContext = React.createContext<undefined | DeferredContext>(
-  undefined
-);
+export const AwaitContext = React.createContext<TrackedPromise | null>(null);
 
-export interface DeferredResolveRenderFunction<Data> {
-  (data: Awaited<Data>): React.ReactNode;
+export function useAsyncValue(): unknown {
+  let value = React.useContext(AwaitContext);
+  return value?._data;
 }
 
-export interface DeferredProps<Data> {
-  children?: React.ReactNode | DeferredResolveRenderFunction<Data>;
+export interface AwaitResolveRenderFunction {
+  (data: Awaited<any>): JSX.Element;
+}
+
+export interface AwaitProps {
+  children: React.ReactNode | AwaitResolveRenderFunction;
   errorElement?: React.ReactNode;
-  value: Data;
+  resolve: TrackedPromise | any;
 }
 
-const js = String.raw;
-
-export function Deferred<Data = any>({
-  children,
-  value,
-  errorElement,
-}: DeferredProps<Data>) {
-  let [refCount] = React.useState(() => 0);
+/**
+ * Component to use for rendering Promises (usually on loaderData)
+ */
+export function Await({ children, errorElement, resolve }: AwaitProps) {
   return (
-    <deferredContext.Provider
-      value={{
-        value,
-        refCount,
-      }}
-    >
-      <DeferredErrorBoundary errorElement={errorElement}>
-        <ResolveDeferred>{children}</ResolveDeferred>
-      </DeferredErrorBoundary>
-    </deferredContext.Provider>
+    <AwaitErrorBoundary resolve={resolve} errorElement={errorElement}>
+      <ResolveAwait>{children}</ResolveAwait>
+    </AwaitErrorBoundary>
   );
 }
 
-export function useDeferredData<Data>() {
-  let ctx = React.useContext(deferredContext);
-  return ctx?.value as Awaited<Data>;
-}
-
-export interface ResolveDeferredProps<Data> {
-  children?: React.ReactNode | DeferredResolveRenderFunction<Data>;
-}
-
-export function ResolveDeferred<Data>({
-  children,
-}: ResolveDeferredProps<Data>) {
-  let data = useDeferredData<Data>();
-  return typeof children === "function" ? (
-    <>{children(data)}</>
-  ) : (
-    <>{children}</>
-  );
-}
-
-type DeferredErrorBoundaryProps = {
-  children?: React.ReactNode;
+type AwaitErrorBoundaryProps = React.PropsWithChildren<{
   errorElement?: React.ReactNode;
+  resolve: TrackedPromise | any;
+}>;
+
+type AwaitErrorBoundaryState = {
+  error: any;
 };
 
-class DeferredErrorBoundary extends React.Component<
-  DeferredErrorBoundaryProps,
-  { error?: Error }
-> {
-  static contextType = deferredContext;
-  context: DeferredContext | undefined;
+enum AwaitRenderStatus {
+  pending,
+  success,
+  error,
+}
 
-  static getDerivedStateFromError(error: Error) {
+class AwaitErrorBoundary extends React.Component<
+  AwaitErrorBoundaryProps,
+  AwaitErrorBoundaryState
+> {
+  constructor(props: AwaitErrorBoundaryProps) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
     return { error };
   }
 
-  constructor(props: DeferredErrorBoundaryProps) {
-    super(props);
-    this.state = {};
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error(
+      "<Await> caught the following error during render",
+      error,
+      errorInfo
+    );
   }
 
   render() {
-    let ctx = this.context;
-    invariant(ctx, "Deferred must be used inside a DeferredProvider");
+    let { children, errorElement, resolve } = this.props;
 
-    let { value } = ctx;
-    let { children, errorElement } = this.props;
+    let promise: TrackedPromise | null = null;
+    let status: AwaitRenderStatus = AwaitRenderStatus.pending;
 
-    if (this.state.error) {
-      value = this.state.error;
+    if (!(resolve instanceof Promise)) {
+      // Didn't get a promise - provide as a resolved promise
+      status = AwaitRenderStatus.success;
+      promise = Promise.resolve();
+      Object.defineProperty(promise, "_tracked", { get: () => true });
+      Object.defineProperty(promise, "_data", { get: () => resolve });
+    } else if (this.state.error) {
+      // Caught a render error, provide it as a rejected promise
+      status = AwaitRenderStatus.error;
+      let renderError = this.state.error;
+      promise = Promise.reject().catch(() => {}); // Avoid unhandled rejection warnings
+      Object.defineProperty(promise, "_tracked", { get: () => true });
+      Object.defineProperty(promise, "_error", { get: () => renderError });
+    } else if ((resolve as TrackedPromise)._tracked) {
+      // Already tracked promise - check contents
+      promise = resolve;
+      status =
+        promise._error !== undefined
+          ? AwaitRenderStatus.error
+          : promise._data !== undefined
+          ? AwaitRenderStatus.success
+          : AwaitRenderStatus.pending;
+    } else {
+      // Raw (untracked) promise - track it
+      status = AwaitRenderStatus.pending;
+      Object.defineProperty(resolve, "_tracked", { get: () => true });
+      promise = resolve.then(
+        (data: any) =>
+          Object.defineProperty(resolve, "_data", { get: () => data }),
+        (error: any) =>
+          Object.defineProperty(resolve, "_error", { get: () => error })
+      );
     }
 
-    let child = children;
-
-    // If the deferred data is a promise we suspend at this point.
-    if (isPromiseLike(value)) {
-      let refCount = ++ctx.refCount;
-      // We also need to store the resolved data / error on the context for SSR.
-      // On page transitions the transition manager takes care of reconciling the
-      // resolved data with the route data and re-rendering, but SSR we can't do
-      // that so we have to just store it on the context for immediate usage.
-      let storeResult = (value: unknown) => {
-        if (ctx && ctx.refCount === refCount) {
-          ctx.value = value;
-        }
-      };
-      throw value.then(storeResult, storeResult);
+    if (status === AwaitRenderStatus.error && !errorElement) {
+      // No errorElement, throw to the nearest route-level error boundary
+      throw promise._error;
     }
 
-    // If there is an error we render the error element.
-    if (value instanceof Error) {
-      // If we don't have an errorElement we re-throw the
-      // error to bubble it up the component stack to the
-      // closest boundary. We can't just throw on the server
-      // though as we've already sent the parent components
-      // to the browser. In this case we don't render anything
-      // and reconcile the UX on the client. This means inline
-      // boundaries will be SSR'd, while errors that need to
-      // bubble will bubble on the client as parent components
-      // need to re-render.
-      if (typeof errorElement === "undefined" && !IS_SSR) {
-        throw value;
-      }
-
-      // If a single use defined component is rendered, clone
-      // it and pass it an error prop.
-      child =
+    if (status === AwaitRenderStatus.error) {
+      let child =
         errorElement &&
         typeof errorElement === "object" &&
         "type" in errorElement &&
         typeof errorElement.type === "function"
-          ? React.cloneElement(errorElement, { error: value })
+          ? React.cloneElement(errorElement, { error: promise._error })
           : errorElement;
+      // Render via our errorElement
+      return <AwaitContext.Provider value={promise} children={child} />;
     }
 
-    return <>{child}</>;
+    if (status === AwaitRenderStatus.success) {
+      // Render children with resolved value
+      return <AwaitContext.Provider value={promise} children={children} />;
+    }
+
+    // Throw to the suspense boundary
+    throw promise;
   }
+}
+
+/**
+ * @private
+ * Indirection to leverage useAsyncValue for a render-prop API on <Await>
+ */
+function ResolveAwait({
+  children,
+}: {
+  children: React.ReactNode | AwaitResolveRenderFunction;
+}) {
+  let data = useAsyncValue();
+  if (typeof children === "function") {
+    return children(data);
+  }
+  return <>{children}</>;
 }
 
 /**
@@ -915,6 +924,8 @@ type ScriptProps = Omit<
   | "suppressHydrationWarning"
 >;
 
+const js = String.raw;
+
 /**
  * Renders the `<script>` tags needed for the initial render. Bundles for
  * additional routes are loaded later as needed.
@@ -1083,7 +1094,7 @@ function DeferredHydrationScripts() {
             <DeferredHydrationScriptContext.Provider
               value={{ result: undefined, routeId, key }}
             >
-              <DeferredHydrationScript promise={routeData[routeId][key]} />
+              <DeferredHydrationScript resolve={routeData[routeId][key]} />
             </DeferredHydrationScriptContext.Provider>
           </React.Suspense>
         );
@@ -1103,36 +1114,52 @@ const DeferredHydrationScriptContext = React.createContext<{
 }>({ result: undefined, routeId: "", key: "" });
 
 function DeferredHydrationScript({
-  promise,
+  resolve,
 }: {
-  promise: PromiseLike<unknown>;
+  resolve: PromiseLike<unknown>;
 }) {
   let ctx = React.useContext(DeferredHydrationScriptContext);
 
-  if (!isPromiseLike(promise)) {
-    ctx.result = { value: promise };
+  let promise: TrackedPromise | null = null;
+  let status: AwaitRenderStatus = AwaitRenderStatus.pending;
+
+  if (!(resolve instanceof Promise)) {
+    // Didn't get a promise - return early
+    return null;
+  } else if ((resolve as TrackedPromise)._tracked) {
+    // Already tracked promise - check contents
+    promise = resolve;
+    status =
+      promise._error !== undefined
+        ? AwaitRenderStatus.error
+        : promise._data !== undefined
+        ? AwaitRenderStatus.success
+        : AwaitRenderStatus.pending;
+  } else {
+    // Raw (untracked) promise - track it
+    status = AwaitRenderStatus.pending;
+    Object.defineProperty(resolve, "_tracked", { get: () => true });
+    promise = resolve.then(
+      (data: any) =>
+        Object.defineProperty(resolve, "_data", { get: () => data }),
+      (error: any) =>
+        Object.defineProperty(resolve, "_error", { get: () => error })
+    );
   }
 
-  if (typeof ctx.result === "undefined") {
-    let storeResult = (resultOrReason: unknown) => {
-      ctx.result = { value: resultOrReason };
-      return resultOrReason;
-    };
-    throw promise.then(storeResult, storeResult);
+  if (status === AwaitRenderStatus.pending) {
+    throw promise;
   }
 
-  let isError =
-    ctx.result.value &&
-    typeof ctx.result.value === "object" &&
-    ctx.result.value instanceof Error;
-  let error = ctx.result.value as Error;
+  let isError = promise._error !== undefined;
+  let error = promise._error;
 
   let script = "(() => {";
   if (isError) {
     script += js`let v=new Error(${JSON.stringify(error.message)});`;
     script += js`v.stack=${JSON.stringify(error.stack)};`;
   } else {
-    script += js`let v=${jsesc(ctx.result.value, { es6: true })};`;
+    script += js`let v=${jsesc(promise._data, { es6: true })};`;
   }
 
   if (isError) {

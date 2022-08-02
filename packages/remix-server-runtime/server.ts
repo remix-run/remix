@@ -1,4 +1,4 @@
-import { DeferrableData } from "@remix-run/deferred";
+import { DeferredData } from "@remix-run/deferred";
 
 import type { AppLoadContext } from "./data";
 import { callRouteAction, callRouteLoader, extractData } from "./data";
@@ -250,11 +250,19 @@ async function handleDocumentRequest({
         appState.trackCatchBoundaries = false;
         appState.catch = {
           ...actionStatus,
-          data: await extractData(actionResponse, true),
+          data: await extractData(
+            actionResponse,
+            request.signal || new AbortController().signal,
+            true
+          ),
         };
       } else {
         actionData = {
-          [actionMatch.route.id]: await extractData(actionResponse, true),
+          [actionMatch.route.id]: await extractData(
+            actionResponse,
+            request.signal || new AbortController().signal,
+            true
+          ),
         };
       }
     } catch (error: any) {
@@ -382,14 +390,21 @@ async function handleDocumentRequest({
         // If it's a catch response, store it in app state, and bail
         appState.trackCatchBoundaries = false;
         appState.catch = {
-          data: await extractData(response, true),
+          data: await extractData(
+            response,
+            request.signal || new AbortController().signal,
+            true
+          ),
           status: response.status,
           statusText: response.statusText,
         };
         break;
       } else {
         // Extract and store the loader data
-        routeData[match.route.id] = await extractData(response);
+        routeData[match.route.id] = await extractData(
+          response,
+          request.signal || new AbortController().signal
+        );
       }
     }
   }
@@ -524,39 +539,17 @@ function prepareRouteData(
   let deferredLoaderData: DeferredLoaderData | undefined;
 
   for (let [routeId, data] of Object.entries(routeData)) {
-    if (
-      !data ||
-      typeof data !== "object" ||
-      !(data instanceof DeferrableData)
-    ) {
+    if (!data || typeof data !== "object" || !(data instanceof DeferredData)) {
       serializableData[routeId] = data;
       contextData[routeId] = data;
       continue;
     }
 
     deferredLoaderData = deferredLoaderData || {};
-    deferredLoaderData[routeId] = [];
+    deferredLoaderData[routeId] = data.deferredKeys;
 
     serializableData[routeId] = data.criticalData;
-    contextData[routeId] = data.criticalData;
-    if (!data.deferredData) {
-      continue;
-    }
-    let isArray = Array.isArray(data.deferredData);
-    contextData[routeId] = isArray
-      ? [...contextData[routeId]]
-      : { ...contextData[routeId] };
-
-    let newData = contextData[routeId] as Record<string | number, unknown>;
-    for (let [stringKey, value] of Object.entries(data.deferredData)) {
-      let key = isArray ? Number(stringKey) : stringKey;
-      deferredLoaderData[routeId].push(key);
-      newData[isArray ? Number(key) : key] = value.then(
-        (value) => value,
-        (reason) => reason
-      );
-    }
-    contextData[routeId] = newData;
+    contextData[routeId] = data.data;
   }
 
   return [serializableData, contextData, deferredLoaderData];
