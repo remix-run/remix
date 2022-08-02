@@ -51,7 +51,12 @@ import type { RouteMatch as BaseRouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
-import type { Transition, Fetcher, Submission } from "./transition";
+import type {
+  Transition,
+  TransitionManagerState,
+  Fetcher,
+  Submission,
+} from "./transition";
 
 const IS_SSR = typeof document === "undefined";
 
@@ -126,19 +131,24 @@ export function RemixEntry({
       catch: entryComponentDidCatchEmulator.catch,
       catchBoundaryId: entryComponentDidCatchEmulator.catchBoundaryRouteId,
       onRedirect: _navigator.replace,
-      onChange: (state) => {
-        setClientState({
-          catch: state.catch,
-          error: state.error,
-          catchBoundaryRouteId: state.catchBoundaryId,
-          loaderBoundaryRouteId: state.errorBoundaryId,
-          renderBoundaryRouteId: null,
-          trackBoundaries: false,
-          trackCatchBoundaries: false,
-        });
-      },
     });
   });
+
+  React.useEffect(() => {
+    let subscriber = (state: TransitionManagerState) => {
+      setClientState({
+        catch: state.catch,
+        error: state.error,
+        catchBoundaryRouteId: state.catchBoundaryId,
+        loaderBoundaryRouteId: state.errorBoundaryId,
+        renderBoundaryRouteId: null,
+        trackBoundaries: false,
+        trackCatchBoundaries: false,
+      });
+    };
+
+    return transitionManager.subscribe(subscriber);
+  }, [transitionManager]);
 
   // Ensures pushes interrupting pending navigations use replace
   // TODO: Move this to React Router
