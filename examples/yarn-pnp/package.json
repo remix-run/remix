@@ -7,15 +7,15 @@
     "start": "remix-serve build"
   },
   "dependencies": {
-    "@remix-run/node": "1.6.4",
-    "@remix-run/react": "1.6.4",
-    "@remix-run/serve": "1.6.4",
+    "@remix-run/node": "0.0.0-experimental-9c1f53b77",
+    "@remix-run/react": "0.0.0-experimental-9c1f53b77",
+    "@remix-run/serve": "0.0.0-experimental-9c1f53b77",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "~": "link:./app"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.6.4",
+    "@remix-run/dev": "0.0.0-experimental-9c1f53b77",
     "@types/react": "^17.0.24",
     "@types/react-dom": "^17.0.9",
     "typescript": "^4.7.4"
