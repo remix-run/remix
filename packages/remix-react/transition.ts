@@ -2,7 +2,8 @@
 // and leverage `react-router` here instead
 import { Action } from "history";
 import type { Location } from "history";
-import { DeferredData, TrackedPromise } from "@remix-run/deferred";
+import type { TrackedPromise } from "@remix-run/deferred";
+import { DeferredData } from "@remix-run/deferred";
 
 import type { DeferredLoaderData } from "./entry";
 import type { RouteData } from "./routeData";
