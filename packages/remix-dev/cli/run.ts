@@ -24,6 +24,7 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     $ remix build [${colors.arg("projectDir")}]
     $ remix dev [${colors.arg("projectDir")}]
     $ remix routes [${colors.arg("projectDir")}]
+    $ remix watch [${colors.arg("projectDir")}]
     $ remix setup [${colors.arg("remixPlatform")}]
     $ remix migrate [-m ${colors.arg("migration")}] [${colors.arg(
   "projectDir"
@@ -102,6 +103,12 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     $ remix dev
     $ remix dev my-app
     $ remix dev --debug
+
+  ${colors.heading("Start your server separately and watch for changes")}:
+
+    $ # custom server start command, for example:
+	$ node --inspect --require ./node_modules/dotenv/config --require ./mocks ./build/server.js
+    $ remix watch
 
   ${colors.heading("Show all routes in your app")}:
 
