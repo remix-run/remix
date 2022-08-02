@@ -385,25 +385,25 @@ export function RemixRoute({ id }: { id: string }) {
 
 export const AwaitContext = React.createContext<TrackedPromise | null>(null);
 
-export function useAsyncValue(): unknown {
+export function useAsyncValue<T = unknown>(): Awaited<T> {
   let value = React.useContext(AwaitContext);
   return value?._data;
 }
 
-export interface AwaitResolveRenderFunction {
-  (data: Awaited<any>): JSX.Element;
+export interface AwaitResolveRenderFunction<T> {
+  (data: Awaited<T>): JSX.Element;
 }
 
-export interface AwaitProps {
-  children: React.ReactNode | AwaitResolveRenderFunction;
+export interface AwaitProps<T = any> {
+  children: React.ReactNode | AwaitResolveRenderFunction<T>;
   errorElement?: React.ReactNode;
-  resolve: TrackedPromise | any;
+  resolve: T;
 }
 
 /**
  * Component to use for rendering Promises (usually on loaderData)
  */
-export function Await({ children, errorElement, resolve }: AwaitProps) {
+export function Await<T>({ children, errorElement, resolve }: AwaitProps<T>) {
   return (
     <AwaitErrorBoundary resolve={resolve} errorElement={errorElement}>
       <ResolveAwait>{children}</ResolveAwait>
@@ -518,12 +518,12 @@ class AwaitErrorBoundary extends React.Component<
  * @private
  * Indirection to leverage useAsyncValue for a render-prop API on <Await>
  */
-function ResolveAwait({
+function ResolveAwait<T>({
   children,
 }: {
-  children: React.ReactNode | AwaitResolveRenderFunction;
+  children: React.ReactNode | AwaitResolveRenderFunction<T>;
 }) {
-  let data = useAsyncValue();
+  let data = useAsyncValue<T>();
   if (typeof children === "function") {
     return children(data);
   }
