@@ -1160,7 +1160,10 @@ function DeferredHydrationScript({
     script += js`let v=new Error(${JSON.stringify(error.message)});`;
     script += js`v.stack=${JSON.stringify(error.stack)};`;
   } else {
-    script += js`let v=${jsesc(promise._data, { es6: true })};`;
+    script += js`let v=${jsesc(promise._data, {
+      isScriptContext: true,
+      json: true,
+    })};`;
   }
 
   if (isError) {

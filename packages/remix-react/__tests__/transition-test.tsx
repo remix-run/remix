@@ -1881,7 +1881,7 @@ describe("navigating with inflight fetchers", () => {
 });
 
 // eslint-disable-next-line jest/no-focused-tests
-describe.only("deferred", () => {
+describe("deferred", () => {
   it("should support resolving initial deferred responses", async () => {
     let dfd = defer();
     let t = setup({
@@ -2061,12 +2061,78 @@ describe.only("deferred", () => {
       },
       root: "ROOT",
     });
+    expect(t.getState().loaderData.foo.lazy._data).toBe(undefined);
 
     await B.loader.resolve("BAR");
     expect(t.getState().loaderData).toEqual({
       root: "ROOT",
       bar: "BAR",
     });
+  });
+
+  it("should retain existing data on a new navigation", async () => {
+    let t = setup({ url: "/" });
+
+    let A = t.navigate.get("/foo");
+
+    let dfd = defer();
+    await A.loader.resolve(
+      setupDeferred({
+        critical: "1",
+        lazy: dfd.promise,
+      })
+    );
+
+    await dfd.resolve("2");
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.foo.lazy._data).toBe("2");
+
+    t.navigate.get("/foo?2");
+    let B = t.navigate.get("/foo?1");
+
+    // During navigation - deferreds remain as promises
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.foo.lazy._data).toBe("2");
+
+    let dfd2 = defer();
+    await B.loader.resolve(
+      setupDeferred({
+        critical: "3",
+        lazy: dfd2.promise,
+      })
+    );
+    // During navigation - existing data is retained until new deferred is resolved
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.foo.lazy._data).toBe("2");
+
+    await dfd2.resolve("4");
+
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "3",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.foo.lazy._data).toBe("4");
   });
 
   it("should not cancel outstanding deferreds on reused route", async () => {

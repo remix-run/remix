@@ -494,7 +494,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
           })
           .reduce<Record<string, any>>(
             (acc, [routeId, data]) => Object.assign(acc, { [routeId]: data }),
-            {}
+            updates.loaderData || {}
           );
 
         cancelledDeferredRouteIds.forEach((id) =>
@@ -831,6 +831,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
       pendingNavigationDeferredControllers,
       controller.signal
     );
+
+    if (controller.signal.aborted) {
+      console.debug(`[transition] fetcher loaders aborted (key: ${key})`);
+      return;
+    }
 
     // need to do what we would have done when the navigation load completed
     if (yeetedNavigation) {
@@ -1429,6 +1434,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
       controller.signal
     );
 
+    if (controller.signal.aborted) {
+      console.debug("[transition] transition loaders aborted");
+      return;
+    }
+
     update({
       location,
       matches,
@@ -1476,6 +1486,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
   if (deferredLoaderData && typeof document !== "undefined") {
     pendingNavigationController = new AbortController();
+    let signal = pendingNavigationController.signal;
     let results = matches.map<DataResult>((match) => ({
       match,
       value: deferredLoaderData?.[match.route.id]
@@ -1492,6 +1503,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
       pendingNavigationController.signal,
       false
     ).then(([loaderData, monitorDeferred]) => {
+      if (signal.aborted) {
+        return;
+      }
       update({ loaderData });
       monitorDeferred();
     });
@@ -1907,25 +1921,26 @@ async function makeLoaderData(
         deferredController
       );
 
-      toMonitor.push({
-        routeId: match.route.id,
-        deferred,
-        signal: deferredController.signal,
-      });
+      if (bufferDeferred) {
+        await deferred.resolveData(signal);
+      } else {
+        toMonitor.push({
+          routeId: match.route.id,
+          deferred,
+          signal: deferredController.signal,
+        });
+      }
       newData[match.route.id] = wrapDeferredData(
         deferred,
         deferredController.signal
       );
-
-      if (bufferDeferred) {
-        await deferred.resolveData(signal);
-      }
     } else {
       newData[match.route.id] = value;
     }
   }
 
   let loaderData: RouteData = {};
+  state = getState();
   for (let { route } of matches) {
     let value =
       newData[route.id] !== undefined
@@ -1941,7 +1956,9 @@ async function makeLoaderData(
       let unsubscribe = deferred.subscribe((aborted, settledKey) => {
         if (aborted || deferred.done) {
           unsubscribe();
-          pendingNavigationDeferredControllers.delete(routeId);
+          if (!signal.aborted) {
+            pendingNavigationDeferredControllers.delete(routeId);
+          }
         }
         if (!signal.aborted) {
           update({});
