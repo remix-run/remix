@@ -1338,7 +1338,7 @@ type JsonPrimitives =
   | null;
 type NonJsonPrimitives = undefined | Function | symbol;
 
-type SerializeType<T> = T extends JsonPrimitives
+export type SerializeType<T> = T extends JsonPrimitives
   ? T
   : T extends NonJsonPrimitives
   ? never
@@ -1358,7 +1358,7 @@ type SerializeType<T> = T extends JsonPrimitives
   ? SerializeObject<UndefinedOptionals<T>>
   : never;
 
-type SerializeObject<T> = {
+export type SerializeObject<T> = {
   [k in keyof T as T[k] extends NonJsonPrimitives ? never : k]: SerializeType<
     T[k]
   >;
