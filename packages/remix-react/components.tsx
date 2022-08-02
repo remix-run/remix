@@ -1650,10 +1650,11 @@ export type TypedResponse<T> = Response & {
   json(): Promise<T>;
 };
 
-export type DeferredResponse<T> = TypedResponse<T> & {
-  // allows discriminating between deferred and non-deferred responses
-  __deferred?: never;
-};
+export type DeferredResponse<T extends object = Record<string, unknown>> =
+  TypedResponse<T> & {
+    // allows discriminating between deferred and non-deferred responses
+    __deferred?: never;
+  };
 
 type DataFunction = (...args: any[]) => unknown; // matches any function
 
@@ -1670,8 +1671,9 @@ type JsonPrimitives =
 
 type NonJsonPrimitives = undefined | Function | symbol;
 
-// TODO: Re-update type to take into account deferred values
-type SerializeType<T, UseDeferred = false> = T extends JsonPrimitives
+type SerializeType<T> = T extends PromiseLike<unknown>
+  ? never
+  : T extends JsonPrimitives
   ? T
   : T extends NonJsonPrimitives
   ? never
@@ -1691,11 +1693,37 @@ type SerializeType<T, UseDeferred = false> = T extends JsonPrimitives
   ? SerializeObject<UndefinedOptionals<T>>
   : never;
 
-type SerializeObject<T> = {
+type SerializeObject<T extends object> = {
   [k in keyof T as T[k] extends NonJsonPrimitives ? never : k]: SerializeType<
     T[k]
   >;
 };
+
+type SerializeDeferredObject<T extends object> = {
+  [k in keyof T as T[k] extends PromiseLike<unknown>
+    ? k
+    : T[k] extends NonJsonPrimitives
+    ? never
+    : k]: T[k] extends PromiseLike<infer U>
+    ? Promise<SerializeType<Awaited<U>>>
+    : SerializeType<T[k]>;
+};
+
+type SerializeDeferredType<T> = T extends JsonPrimitives
+  ? T
+  : T extends NonJsonPrimitives
+  ? never
+  : T extends { toJSON(): infer U }
+  ? U
+  : T extends []
+  ? never
+  : T extends [unknown, ...unknown[]]
+  ? never
+  : T extends ReadonlyArray<unknown>
+  ? never
+  : T extends object
+  ? SerializeDeferredObject<UndefinedOptionals<T>>
+  : never;
 
 /*
  * For an object T, if it has any properties that are a union with `undefined`,
@@ -1721,12 +1749,14 @@ export type UseDataFunctionReturn<T extends DataOrFunction> = T extends (
   ...args: any[]
 ) => infer Output
   ? Awaited<Output> extends DeferredResponse<infer U>
-    ? SerializeType<U, true>
+    ? SerializeDeferredType<U>
     : Awaited<Output> extends DeferredResponse<infer U>
-    ? SerializeType<U, true>
+    ? SerializeDeferredType<U>
     : Awaited<Output> extends TypedResponse<infer U>
     ? SerializeType<U>
     : SerializeType<Awaited<ReturnType<T>>>
+  : Awaited<T> extends DeferredResponse<infer U>
+  ? SerializeDeferredType<U>
   : SerializeType<Awaited<T>>;
 
 export function useLoaderData<T = AppData>(): UseDataFunctionReturn<T> {
@@ -1897,15 +1927,3 @@ export const LiveReload =
           />
         );
       };
-
-function isPromiseLike(value: any): value is PromiseLike<unknown> {
-  if (
-    value &&
-    typeof value === "object" &&
-    "then" in value &&
-    typeof value.then === "function"
-  ) {
-    return true;
-  }
-  return false;
-}

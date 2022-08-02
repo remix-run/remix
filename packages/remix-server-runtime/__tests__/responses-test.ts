@@ -76,9 +76,7 @@ describe("json", () => {
   });
 
   it("disallows unserializables", () => {
-    // @ts-expect-error
     expect(() => json(124n)).toThrow();
-    // @ts-expect-error
     expect(() => json({ field: 124n })).toThrow();
   });
 });

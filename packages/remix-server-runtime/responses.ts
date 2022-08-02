@@ -10,14 +10,13 @@ export type TypedResponse<T extends unknown = unknown> = Response & {
   json(): Promise<T>;
 };
 
-export type DeferredResponse<T extends unknown = unknown> = TypedResponse<T> & {
-  // allows discriminating between deferred and non-deferred responses
-  __deferred?: never;
-};
+export type DeferredResponse<T extends object = Record<string, unknown>> =
+  TypedResponse<T> & {
+    // allows discriminating between deferred and non-deferred responses
+    __deferred?: never;
+  };
 
-export type DeferFunction = <
-  Data extends Record<string, unknown> = Record<string, unknown>
->(
+export type DeferFunction = <Data extends object = Record<string, unknown>>(
   data: Data,
   init?: number | ResponseInit
 ) => DeferredResponse<Data>;
@@ -47,10 +46,15 @@ export const defer: DeferFunction = (data, init = {}) => {
     headers.set("Content-Type", `${DEFERRED_CONTENT_TYPE}; charset=utf-8`);
   }
 
-  return new Response(createDeferredReadableStream(new DeferredData(data)), {
-    ...responseInit,
-    headers,
-  });
+  return new Response(
+    createDeferredReadableStream(
+      new DeferredData(data as Record<string, unknown>)
+    ),
+    {
+      ...responseInit,
+      headers,
+    }
+  );
 };
 
 export type JsonFunction = <Data extends unknown>(
