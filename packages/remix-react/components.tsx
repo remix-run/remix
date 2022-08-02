@@ -391,7 +391,7 @@ export function useAsyncValue<T = unknown>(): Awaited<T> {
 }
 
 export interface AwaitResolveRenderFunction<T> {
-  (data: Awaited<T>): JSX.Element;
+  (data: Awaited<T>): React.ReactNode;
 }
 
 export interface AwaitProps<T = any> {
@@ -525,7 +525,7 @@ function ResolveAwait<T>({
 }) {
   let data = useAsyncValue<T>();
   if (typeof children === "function") {
-    return children(data);
+    return <>{children(data)}</>;
   }
   return <>{children}</>;
 }
