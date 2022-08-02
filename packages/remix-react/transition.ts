@@ -1492,9 +1492,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
       pendingNavigationController.signal,
       false
     ).then(([loaderData, monitorDeferred]) => {
-      console.log({
-        newLoaderData: Object.getOwnPropertyNames(loaderData.index.lazy),
-      });
       update({ loaderData });
       monitorDeferred();
     });
@@ -1842,7 +1839,6 @@ function wrapDeferredPromise(promise: TrackedPromise, signal: AbortSignal) {
       if (signal.aborted) {
         return neverResolvedPromise;
       }
-      console.log("SETTING WRAPPED", data);
 
       if (promise._tracked) {
         if ("_error" in promise) {
