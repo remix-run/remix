@@ -92,7 +92,7 @@ test("request.formData() should not crash when a file is not provided", async ({
 
   // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickSubmitButton("/?index");
+  await app.clickSubmitButton("/?index"); 
 
   let html = await app.getHtml();
   expect(html).toMatch("pizza");
