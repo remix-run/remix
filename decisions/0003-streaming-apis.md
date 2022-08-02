@@ -18,7 +18,7 @@ It's also worth nothing that even in a single-page-application without SSR-strea
 
 Streaming in Remix can be thought of as having 3 touch points with corresponding APIs:
 
-1. _Initiating_ a streamed response in your `loader` can be done by returning a `defer(object, responseInit?)` call from your `loader` in which some of the keys on `object` are `Promise` objects
+1. _Initiating_ a streamed response in your `loader` can be done by returning a `defer(object)` call from your `loader` in which some of the keys on `object` are `Promise` objects
 2. _Accessing_ a streamed response from `useLoaderData`
    1. No new APIs here - when you return a `defer()` response from your loader, you'll get `Promise` values inside your `useLoaderData` object 👌
 3. _Rendering_ a streamed value (with fallback and error handling) in your component
