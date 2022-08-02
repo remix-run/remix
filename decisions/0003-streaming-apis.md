@@ -18,11 +18,9 @@ It's also worth nothing that even in a single-page-application without SSR-strea
 
 Streaming in Remix can be thought of as having 3 touch points with corresponding APIs:
 
-1. _Initiating_ a streamed response in your `loader` can be done in 2 ways:
-   1. Return a naked Javascript object with one or more `Promise` values
-   2. Use the `defer(object, responseInit)` utility if you need to customize the `Response`
+1. _Initiating_ a streamed response in your `loader` can be done by returning a `defer(object, responseInit?)` call from your `loader` in which some of the keys on `object` are `Promise` objects
 2. _Accessing_ a streamed response from `useLoaderData`
-   1. No new APIs here - when you return an object with `Promise` values or a `defer()` response from your loader, you'll get `Promise` values inside your `useLoaderData` object 👌
+   1. No new APIs here - when you return a `defer()` response from your loader, you'll get `Promise` values inside your `useLoaderData` object 👌
 3. _Rendering_ a streamed value (with fallback and error handling) in your component
    1. You can render a `Promise` from `useLoaderData()` with the `<Await resolve={data.promise}>` component
    2. `<Await>` accepts an `errorElement` prop to handle error UI
@@ -30,56 +28,59 @@ Streaming in Remix can be thought of as having 3 touch points with corresponding
 
 ## Details
 
-In the spirit of `#useThePlatform` we've chosen to leverage the `Promise` API to represent these "eventually available" values. When Remix receives an object with `Promise` values or a `defer()` response back from a `loader`, it needs to serialize that `Promise` over the network to the client application (prompting Jacob to coin the phrase [_"promise teleportation over the network"_][promise teleportation] 🔥).
+In the spirit of `#useThePlatform` we've chosen to leverage the `Promise` API to represent these "eventually available" values. When Remix receives a `defer()` response back from a `loader`, it needs to serialize that `Promise` over the network to the client application (prompting Jacob to coin the phrase [_"promise teleportation over the network"_][promise teleportation] 🔥).
 
 ### Initiating
 
-In order to initiate a streamed response in your `loader`, you can return a JSON object with `Promise` values from your `loader`.
+In order to initiate a streamed response in your `loader`, you can use the `defer()` utility which accepts a JSON object with `Promise` values from your `loader`.
 
 ```js
 async function loader() {
-  return {
+  return defer({
     // Await this, don't stream
     critical: await fetchCriticalData(),
     // Don't await this - stream it!
     lazy: fetchLazyData(),
-  };
+  });
 }
 ```
 
 By not using `await` on `fetchLazyData()` Remix knows that this value is not ready yet _but eventually will be_ and therefore Remix will leverage a streamed HTTP response allowing it to send up the resolved/rejected value when available. Essentially serializing/teleporting that Promise over the network via a streamed HTTP response. In this simplest case, there is no new API surface needed in Remix.
 
-Note that this will only work with raw JavaScript objects returned from your loader, and Remix will not walk the object recursively, it will only detect root-level Promise values.
-
-If, however, the user needs to alter the resulting HTTP `Response` in any way (i.e., send custom headers), then they're a bit stuck because using `json` will automatically send a `Content-Type: application/json` response.
-
-For this, we decided on a `defer()` utility that will inform Remix that the incoming object has `Promise` values in it and should be handled as a streamed response instead, while still allowing users to pass custom headers:
-
-```js
-import { defer } from "@remix-run/server-runtime";
-
-async function loader() {
-  return defer(
-    {
-      critical: await fetchCriticalData(),
-      lazy: fetchLazyData(),
-    },
-    {
-      headers: {
-        "X-My-Custom-Header": "1",
-      },
-    }
-  );
-}
-```
+Just like `json()`, the `defer()` will accept a second optional `responseInit` param that lets you customize the resulting Response
 
 The name `defer` was settled on as a corollary to `<script defer>` which essentially tells the browser to _"fetch this script now but don't delay document parsing"_. In a similar vein, with `defer()` we're telling Remix to _"fetch this data now but don't delay the HTTP response"_.
+
+We decided _not_ to support naked objects due to the ambiguity that would be introduced:
+
+```js
+// NOT streamed
+function loader() {
+  return Promise.resolve(5);
+}
+
+// streamed
+function loader() {
+  return {
+    value: Promise.resolve(5);
+  };
+}
+
+// NOT streamed
+function loader() {
+  return {
+    value: {
+      nested: Promise.resolve(5);
+    }
+  };
+}
+```
 
 <details>
   <summary>Other considered API names:</summary>
   <br/>
   <ul>
-     <li><code>deferred()</code> - This is just a bit of a weird word that doesn't have much pre-existing semantic meaning. Is this the <code>jQuery.Deferred</code> thing from back in the day? Remix in general wants to avoid needlessly introducing net-new language to an already convoluted landscape!</li>
+    <li><code>deferred()</code> - This is just a bit of a weird word that doesn't have much pre-existing semantic meaning. Is this the <code>jQuery.Deferred</code> thing from back in the day? Remix in general wants to avoid needlessly introducing net-new language to an already convoluted landscape!</li>
     <li><code>stream()</code> - We also thought <code>stream</code> might be a good name since that's what the call is telling Remix to do - stream the responses down to the browser. But - this is also potentially misleading because stream is ambiguous in ths case. Developers may mistakenly think that this gives them back a <code>Stream</code> instance and they can arbitrarily send multiple chunks of data down to the browser over time. This is not how the current API works - but also seems like a really interesting idea for Remix to consider in the future, so we wanted to keep the <code>stream()</code> name available for future use cases.</li>
   </ul>
 </details>
@@ -126,7 +127,7 @@ function MyError() {
 }
 ```
 
-Note that `useAsyncValue` and `useAsyncError` only work in he context of an `<Await>` component.
+Note that `useAsyncValue` and `useAsyncError` only work in the context of an `<Await>` component.
 
 The `<Await>` name comes from the fact that for these lazily-rendered promises, we're not `await`-ing the promise in our loader, so instead we need to `<Await>` the promise in our render function and provide a fallback UI. The `resolve` prop is intended to mimic how you'd await a resolved value in plain Javascript:
 
@@ -180,10 +181,8 @@ If you do not provide an `errorElement`, then promise rejections will bubble up 
 
 ## React Router Notes
 
-In React Router, there is generally no need for the `defer()` utility since users can just put raw promises on `loaderData` and hand them to `<Await>`. However, there is one small use-case for which we decided to keep the `defer()` utility around. If a piece of deferred data happens to resolve before the critical data for some reason, the raw-Promise approach would means that we'd encounter a flicker of the fallback state as we throw the Promise to the Suspense boundary to be "unwrapped". For this reason, we provide the `defer()` utility in React Router as well - even though it doesn't need to initiate a streamed response, it can handle auto-unwrapping already-resolved values at render-time.
+With the presence of the `<Await>` component in React Router and because the Promise's don't have to be serialized over the network - you can _technically_ just return raw Promise values on a naked object from your loader. However, this is strongly discouraged because the router will be unaware of these promises and thus won't be able to cancel them if the user navigates away prior to the promise settling.
 
-## Consequences
-
-- Remix will continue to support returning naked JS objects from loaders, and will no longer deprecate these in v2 as originally anticipated. We think this decision was largely based on typing considerations and now that we are inferring `useLoaderData` types more intelligently, this should be less of an issue.
+By forcing users to call the `defer()` utility, we ensure that the router is able to track the in-flight promises and properly cancel them. It also allows us to handle synchronous rendering of promises that resolve prior to other critical data. Without the `defer()` utility these raw Promises would need to be thrown by the `<Await>` component to the `<Suspense>` boundary a single time to unwrap the value, resulting in a UI flicker.
 
 [promise teleportation]: https://twitter.com/ebey_jacob/status/1548817107546095616
