@@ -479,7 +479,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
 
         // Preserve deferred data for active routes that were not cancelled, or
         // were cancelled and are again pending (i.e., returned a subsequent
-        // deferred() in actionReload)
+        // defer() after an action)
         overrides.loaderData = [
           ...Object.entries(state.loaderData),
           ...Object.entries(updates.loaderData || {}),

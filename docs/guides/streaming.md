@@ -73,7 +73,7 @@ But it's still sub-optimal for two reasons:
 
 ## The solution
 
-Remix takes advantage of React 18's streaming and server-side support for `<Suspense />` boundaries using the [`deferred` Response][deferred-response] utility and [`<Deferred />`][deferred] component / [`useDeferredData`][usedeferreddata] hook. By using these APIs, you can solve both of these problems:
+Remix takes advantage of React 18's streaming and server-side support for `<Suspense />` boundaries using the [`deferred` Response][defer] utility and [`<Await />`][await] component / [`useAsyncValue`][useasyncvalue] hook. By using these APIs, you can solve both of these problems:
 
 1. Your data is no longer on a waterfall: document & data (in parallel) -> JavaScript
 2. Your can easily switch between streaming and waiting for the data
@@ -208,15 +208,15 @@ hydrateRoot(document, <RemixBrowser />);
 
 With just that in place, you're unlikely to see any significant performance improvement. But with that alone you can now use [`React.lazy`][react-lazy] to SSR components but delay hydration on the client. This can open up network bandwidth for more critical things like styles, images, and fonts leading to a better LCP and TTI.
 
-### Using `deferred`
+### Using `defer`
 
-With React streaming setup, now you can start adding `Deferred` usage for your slow data requests where you'd rather render a fallback UI. Let's do that for our example above:
+With React streaming setup, now you can start adding `Await` usage for your slow data requests where you'd rather render a fallback UI. Let's do that for our example above:
 
 ```tsx lines=[1,3,4,9-11,13-15,24-33,38-40]
 import { Suspense } from "react";
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
-import { deferred } from "@remix-run/node"; // or cloudflare/deno
-import { Deferred, useLoaderData } from "@remix-run/react";
+import { defer } from "@remix-run/node"; // or cloudflare/deno
+import { Await, useLoaderData } from "@remix-run/react";
 
 import { getPackageLocation } from "~/models/packages";
 
@@ -225,7 +225,7 @@ export function loader({ params }: LoaderArgs) {
     params.packageId
   );
 
-  return deferred({
+  return defer({
     packageLocation: packageLocationPromise,
   });
 }
@@ -239,7 +239,7 @@ export default function PackageRoute() {
       <Suspense
         fallback={<p>Loading package location...</p>}
       >
-        <Deferred
+        <Await
           value={data.packageLocation}
           errorElement={
             <p>Error loading package location!</p>
@@ -251,7 +251,7 @@ export default function PackageRoute() {
               lat and {packageLocation.longitude} long.
             </p>
           )}
-        </Deferred>
+        </Await>
       </Suspense>
     </main>
   );
@@ -259,7 +259,7 @@ export default function PackageRoute() {
 ```
 
 <details>
-  <summary>Alternatively, you can use the `useDeferredData` hook:</summary>
+  <summary>Alternatively, you can use the `useAsyncValue` hook:</summary>
 
 If you're not jazzed about bringing back render props, you can use a hook, but you'll have to break things out into another component:
 
@@ -275,14 +275,14 @@ export default function PackageRoute() {
       <Suspense
         fallback={<p>Loading package location...</p>}
       >
-        <Deferred
-          value={data.packageLocation}
+        <Await
+          resolve={data.packageLocation}
           errorElement={
             <p>Error loading package location!</p>
           }
         >
           <PackageLocation />
-        </Deferred>
+        </Await>
       </Suspense>
     </main>
   );
@@ -290,7 +290,7 @@ export default function PackageRoute() {
 
 function PackageLocation() {
   const packageLocation =
-    useDeferredData<
+    useAsyncValue<
       UseDataFunctionReturn<
         typeof loader
       >["packageLocation"]
@@ -314,7 +314,7 @@ So rather than waiting for the whole `document -> JavaScript -> hydrate -> reque
 Additionally, the API that Remix exposes for this is extremely ergonomic. You can literally switch between whether something is going to be deferred or not based on whether you include the `await` keyword:
 
 ```tsx
-return deferred({
+return defer({
   // not deferred:
   packageLocation: await packageLocationPromise,
   // deferred:
@@ -337,7 +337,7 @@ export async function loader({
     params.packageId
   );
 
-  return deferred({
+  return defer({
     packageLocation: shouldDefer
       ? packageLocationPromise
       : await packageLocationPromise,
@@ -361,17 +361,17 @@ It's all trade-offs, and what's neat about the API design is that it's well suit
 
 ### When does the fallback render?
 
-The `<Deferred />` `fallbackElement` prop only renders on the initial render of the `<Deferred />` component. It will not render the fallback if props change. Effectively, this means that you will not get a fallback rendered when a user submits a form and loader data is revalidated and you will not get a fallback rendered when the user navigates to the same route with different params (in the context of our above example, if the user selects from a list of packages on the left to find their location on the right).
+The `<Suspense />` `fallback` prop only renders on the initial render of the `<Await />` component. It will not render the fallback if props change. Effectively, this means that you will not get a fallback rendered when a user submits a form and loader data is revalidated and you will not get a fallback rendered when the user navigates to the same route with different params (in the context of our above example, if the user selects from a list of packages on the left to find their location on the right).
 
 This may feel counter-intuitive at first, but stay with us, we really thought this through and it's important that it works this way. Let's imagine a world without the deferred API. For those scenarios you're probably going to want to implement Optimistic UI for form submissions/revalidation and some Pending UI for sibling route navigations.
 
-When you decide you'd like to try the trade-offs of `deferred`, we don't want you to have to change or remove those optimizations because we want you to be able to easily switch between deferring some data and not deferring it. So we ensure that your existing pending states work the same way. If we didn't do this, then you could experience what we call "Popcorn UI" where submissions of data trigger the fallback loading state instead of the optimistic UI you'd worked hard on.
+When you decide you'd like to try the trade-offs of `defer`, we don't want you to have to change or remove those optimizations because we want you to be able to easily switch between deferring some data and not deferring it. So we ensure that your existing pending states work the same way. If we didn't do this, then you could experience what we call "Popcorn UI" where submissions of data trigger the fallback loading state instead of the optimistic UI you'd worked hard on.
 
-So just keep this in mind: **Deferred is 100% only about the initial load of a route.** And that applies the same way whether that load is a server render or a client transition.
+So just keep this in mind: **Defer is 100% only about the initial load of a route.** And that applies the same way whether that load is a server render or a client transition.
 
 [link]: ../api/remix#link
 [usefetcher]: ../api/remix#usefetcher
-[deferred-response]: ../api/remix#deferred-response
-[deferred]: ../api/remix#deferred
-[usedeferreddata]: ../api/remix#usedeferreddata
+[defer]: ../api/remix#defer
+[async]: ../api/remix#async
+[useasyncvalue]: ../api/remix#useasyncvalue
 [react-lazy]: https://reactjs.org/docs/code-splitting.html#reactlazy

@@ -1,17 +1,17 @@
 import type { TypedResponse } from "../index";
-import { deferred, json, redirect } from "../index";
+import { defer, json, redirect } from "../index";
 import { isEqual } from "./utils";
 
 describe("deferred", () => {
   it("sets the Content-Type header", () => {
-    let response = deferred({});
+    let response = defer({});
     expect(response.headers.get("Content-Type")).toEqual(
       "text/remix-deferred; charset=utf-8"
     );
   });
 
   it("preserves existing headers, including Content-Type", () => {
-    let response = deferred(
+    let response = defer(
       {},
       {
         headers: {

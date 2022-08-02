@@ -325,38 +325,38 @@ It must be the last element on the page, right before the `<Scripts/>` tag:
 
 In order to avoid (usually) the client-side routing "scroll flash" on refresh or clicking back into the app from a different domain, this component attempts to restore scroll _before React hydration_. If you render the script anywhere other than the bottom of the document the window will not be tall enough to restore to the correct position.
 
-### `<Deferred>`
+### `<Await>`
 
 This component is responsible for resolving deferred values accessed from [`useLoaderData`][useloaderdata]. This can be thought of as a thin wrapper around React Error Boundaries with support for handling SSR that resolves the data of a deferred loader value.
 
-`<Deferred>` can be used to resolve the deferred value in one of two ways:
+`<Await>` can be used to resolve the deferred value in one of two ways:
 
 Directly as a render function:
 
 ```tsx
 <Suspense>
-  <Deferred value={deferredValue}>
+  <Await resolve={deferredValue}>
     {(data) => <p>{data}</p>}
-  </Deferred>
+  </Await>
 </Suspense>
 ```
 
-Or indirectly via the `useDeferredData` hook:
+Or indirectly via the `useAsyncValue` hook:
 
 ```tsx
 function Accessor() {
-  const value = useDeferredData();
+  const value = useAsyncValue();
   return <p>{value}</p>;
 }
 
 <Suspense>
-  <Deferred value={deferredValue}>
+  <Await resolve={deferredValue}>
     <Accessor />
-  </Deferred>
+  </Await>
 </Suspense>;
 ```
 
-`<Deferred>` is paired with [`deferred()`][deferred-response] in your loader. Returning a deferred value from your loader will put Remix in streaming mode and allow you to render fallbacks with `<Suspense>`. A full example can be found in the [streaming guide][streaming-guide].
+`<Await>` is paired with [`defer()`][defer] in your loader. Returning a deferred value from your loader will put Remix in streaming mode and allow you to render fallbacks with `<Suspense>`. A full example can be found in the [streaming guide][streaming-guide].
 
 ### `useLoaderData`
 
@@ -378,9 +378,9 @@ export default function Invoices() {
 }
 ```
 
-### `useDeferredData`
+### `useAsyncValue`
 
-This hook returns the resolved data from a `<Deferred>` component. See the [`<Deferred>` docs][deferred] for more information.
+This hook returns the resolved data from a `<Await>` component. See the [`<Await>` docs][await] for more information.
 
 ### `useActionData`
 
@@ -1559,20 +1559,20 @@ return new Response(null, {
 });
 ```
 
-### `deferred` response
+### `defer`
 
 This is a shortcut for creating `text/remix-deferred` responses. It assumes you are using `utf-8` encoding.
 
 ```ts lines=[2,7,9]
 import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
-import { deferred } from "@remix-run/node"; // or cloudflare/deno
+import { defer } from "@remix-run/node"; // or cloudflare/deno
 import { getTheAnswer } from "hitchhikers-guide";
 
 export const loader: LoaderFunction = async () => {
   // notice, no `await` on this:
   const answerPromise = getTheAnswer();
 
-  return deferred({
+  return defer({
     answer: answerPromise,
   });
 };
@@ -1584,7 +1584,7 @@ You can also pass a status code and headers:
 export const loader: LoaderFunction = async () => {
   const answerPromise = getTheAnswer();
 
-  return deferred(
+  return defer(
     {
       answer: answerPromise,
     },
@@ -2766,8 +2766,8 @@ export default function CompanyRoute() {
 
 [meta-links-scripts]: #meta-links-scripts
 [form]: #form
-[deferred]: #deferred
-[deferred-response]: #deferred-response
+[async]: #async
+[defer]: #defer
 [cookies]: #cookies
 [sessions]: #sessions
 [usefetcher]: #usefetcher

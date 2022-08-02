@@ -14,6 +14,6 @@ New Packages:
 
 New APIs:
 
-- `<Deferred>`: component for resolving deferred content and rendering error states. This can be thought of as a thin wrapper around React Error Boundaries with support for handling SSR that resolves the data of a deferred loader value.
-- `useDeferred()`: hook for indirectly accessing the resolved value from the `<Deferred>` component.
-- `deferred()`: response helper function for creating a `text/remix-deferred` response. THis can be thought of as `json()` with support for promises as immediate values.
+- `<Await>`: component for resolving deferred content and rendering error states. This can be thought of as a thin wrapper around React Error Boundaries with support for handling SSR that resolves the data of a deferred loader value.
+- `useAsyncValue()`: hook for indirectly accessing the resolved value from the `<Await>` component.
+- `defer()`: response helper function for creating a `text/remix-deferred` response. THis can be thought of as `json()` with support for promises as immediate values.
