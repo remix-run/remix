@@ -1,4 +1,4 @@
-export function filterDataToSingleItem(data = [], preview = false) {
+export const filterDataToSingleItem = (data: unknown = [], preview = false) => {
   if (!Array.isArray(data)) {
     return data;
   }
@@ -12,4 +12,4 @@ export function filterDataToSingleItem(data = [], preview = false) {
   }
 
   return data[0];
-}
+};

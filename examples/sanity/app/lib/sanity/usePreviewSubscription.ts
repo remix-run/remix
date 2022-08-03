@@ -1,22 +1,25 @@
+import type { GroqStore } from "@sanity/groq-store";
+import { groqStore } from "@sanity/groq-store";
 import { useEffect, useState } from "react";
 
 import { config } from "./config";
+import type { Subscription } from "@sanity/groq-store/dist/typings/types";
 
-export function usePreviewSubscription(query, subscriptionOptions) {
-  const { params, initialData } = subscriptionOptions;
+type SubscriptionOptions = {
+  initialData: unknown;
+  params: Record<string, unknown>;
+};
+export const usePreviewSubscription = (
+  query: string,
+  { initialData, params }: SubscriptionOptions
+) => {
   const [data, setData] = useState(initialData);
 
   useEffect(() => {
-    let sub;
-    let store;
+    let store: GroqStore | null = null;
+    let sub: Subscription | null = null;
 
-    async function createStore() {
-      // For more details about configuring groq-store see:
-      // https://www.npmjs.com/package/@sanity/groq-store
-      const {
-        default: { groqStore },
-      } = await import("@sanity/groq-store");
-
+    const createStore = async () => {
       const { projectId, dataset } = config;
 
       store = groqStore({
@@ -27,7 +30,7 @@ export function usePreviewSubscription(query, subscriptionOptions) {
         documentLimit: 1000,
       });
 
-      store.subscribe(
+      sub = store.subscribe<unknown>(
         query,
         params ?? {}, // Params
         (err, result) => {
@@ -35,21 +38,28 @@ export function usePreviewSubscription(query, subscriptionOptions) {
             console.error("Oh no, an error:", err);
             return;
           }
+
           setData(result);
         }
       );
-    }
+    };
 
     if (!store) {
       createStore();
     }
 
     return () => {
-      if (sub?.unsubscribe()) sub.unsubscribe();
-      if (store) store.close();
+      if (sub?.unsubscribe) {
+        sub.unsubscribe();
+      }
+
+      if (store) {
+        store.close();
+      }
     };
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { data };
-}
+};
