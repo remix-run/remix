@@ -19,7 +19,7 @@ TypeError: Cannot read properties of undefined (reading 'root')
 For example, you can't import "fs-extra" directly into a route module:
 
 ```jsx bad filename=app/routes/index.jsx lines=[2] nocopy
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import fs from "fs-extra";
 
 export async function loader() {
@@ -40,7 +40,7 @@ export * from "fs-extra";
 And then change our import in the route to the new "wrapper" module:
 
 ```jsx filename=app/routes/index.jsx lines=[3]
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 
 import fs from "../utils/fs-extra.server";
 
@@ -57,12 +57,12 @@ Even better, send a PR to the project to add `"sideEffects": false` to their pac
 
 Similarly, you may run into the same error if you call a function at the top-level scope of your route module that depends on server-only code.
 
-For example, [Remix upload handlers like `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler`](../api/remix#uploadhandler) use Node globals under the hood and should only be called on the server. You can call either of these functions in a `*.server.js` or `*.server.ts` file, or you can move them into your route's `action` or `loader` function.
+For example, [Remix upload handlers like `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler`][remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler] use Node globals under the hood and should only be called on the server. You can call either of these functions in a `*.server.js` or `*.server.ts` file, or you can move them into your route's `action` or `loader` function.
 
 So instead of doing:
 
 ```jsx bad filename=app/routes/some-route.jsx lines=[3-6]
-import { unstable_createFileUploadHandler } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { unstable_createFileUploadHandler } from "@remix-run/node"; // or cloudflare/deno
 
 const uploadHandler = unstable_createFileUploadHandler({
   maxPartSize: 5_000_000,
@@ -77,7 +77,7 @@ export async function action() {
 You should be doing:
 
 ```jsx filename=app/routes/some-route.jsx good lines=[4-7]
-import { unstable_createFileUploadHandler } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { unstable_createFileUploadHandler } from "@remix-run/node"; // or cloudflare/deno
 
 export async function action() {
   const uploadHandler = unstable_createFileUploadHandler({
@@ -109,6 +109,7 @@ To fix it, add the ESM package to the `serverDependenciesToBundle` option in you
 In our case here we're using the `dot-prop` package, so we would do it like this:
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   serverDependenciesToBundle: ["dot-prop"],
   // ...
@@ -166,3 +167,5 @@ Warning: Did not expect server HTML to contain a <script> in <html>.
 This is a hydration warning from React, and is most likely due to one of your browser extensions injecting scripts into the server-rendered HTML, creating a difference with the resulting HTML.
 
 Check out the page in incognito mode, the warning should disappear.
+
+[remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler]: ../api/remix#uploadhandler

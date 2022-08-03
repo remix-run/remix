@@ -27,12 +27,21 @@ jobs:
           cache: "yarn"
 
       - name: 📥 Install deps
-        # even though this is called "npm-install" it does use yarn to install
-        # because we have a yarn.lock and caches efficiently.
-        uses: bahmutov/npm-install@v1
+        run: yarn --frozen-lockfile
+
+      - name: 🔗 Convert Docs links to references
+        run: node scripts/markdown-references.mjs
 
       - name: 👔 Format
-        run: npm run format --if-present
+        run: yarn format
+
+      - name: 🦕 Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
+      - name: 👔 Format Deno files
+        run: yarn format:deno
 
       - name: 💪 Commit
         run: |

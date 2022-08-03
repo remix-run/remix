@@ -39,17 +39,14 @@ export function createRequestHandler({
   mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
-  getLoadContext?: AppLoadContext;
+  getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (event, context) => {
     let request = createRemixRequest(event);
-    let loadContext =
-      typeof getLoadContext === "function"
-        ? getLoadContext(event, context)
-        : undefined;
+    let loadContext = getLoadContext?.(event, context);
 
     let response = (await handleRequest(request, loadContext)) as NodeResponse;
 

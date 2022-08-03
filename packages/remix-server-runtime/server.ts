@@ -82,7 +82,7 @@ async function handleDataRequest({
   serverMode,
 }: {
   handleDataRequest?: HandleDataRequestFunction;
-  loadContext: unknown;
+  loadContext?: AppLoadContext;
   matches: RouteMatch<ServerRoute>[];
   request: Request;
   serverMode: ServerMode;
@@ -180,7 +180,7 @@ async function handleDocumentRequest({
   serverMode,
 }: {
   build: ServerBuild;
-  loadContext: unknown;
+  loadContext?: AppLoadContext;
   matches: RouteMatch<ServerRoute>[] | null;
   request: Request;
   routes: ServerRoute[];
@@ -273,24 +273,21 @@ async function handleDocumentRequest({
   let routeModules = createEntryRouteModules(build.routes);
 
   let matchesToLoad = matches || [];
+
+  // get rid of the action, we don't want to call it's loader either
+  // because we'll be rendering the error/catch boundary, if you can get
+  // access to the loader data in the error/catch boundary then how the heck
+  // is it supposed to deal with thrown responses and/or errors in the loader?
   if (appState.catch) {
     matchesToLoad = getMatchesUpToDeepestBoundary(
-      // get rid of the action, we don't want to call it's loader either
-      // because we'll be rendering the catch boundary, if you can get access
-      // to the loader data in the catch boundary then how the heck is it
-      // supposed to deal with thrown responses?
-      matchesToLoad.slice(0, -1),
+      matchesToLoad,
       "CatchBoundary"
-    );
+    ).slice(0, -1);
   } else if (appState.error) {
     matchesToLoad = getMatchesUpToDeepestBoundary(
-      // get rid of the action, we don't want to call it's loader either
-      // because we'll be rendering the error boundary, if you can get access
-      // to the loader data in the error boundary then how the heck is it
-      // supposed to deal with errors in the loader, too?
-      matchesToLoad.slice(0, -1),
+      matchesToLoad,
       "ErrorBoundary"
-    );
+    ).slice(0, -1);
   }
 
   let loaderRequest = new Request(request.url, {
@@ -519,7 +516,7 @@ async function handleResourceRequest({
   serverMode,
 }: {
   request: Request;
-  loadContext: unknown;
+  loadContext?: AppLoadContext;
   matches: RouteMatch<ServerRoute>[];
   serverMode: ServerMode;
 }): Promise<Response> {

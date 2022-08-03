@@ -1,20 +1,21 @@
-import stream from "stream";
-import { promisify } from "util";
+import { execSync } from "child_process";
 import path from "path";
+import stream from "stream";
+import { fileURLToPath } from "url";
+import { promisify } from "util";
 import fse from "fs-extra";
+import gunzip from "gunzip-maybe";
 import fetch from "node-fetch";
 import ora from "ora";
-import gunzip from "gunzip-maybe";
-import tar from "tar-fs";
 import * as semver from "semver";
-import { fileURLToPath } from "url";
-import { execSync } from "child_process";
 import sortPackageJSON from "sort-package-json";
+import tar from "tar-fs";
 
 import * as colors from "../colors";
+import invariant from "../invariant";
 import packageJson from "../package.json";
-import { convertTemplateToJavaScript } from "./convert-to-javascript";
 import { getPreferredPackageManager } from "./getPreferredPackageManager";
+import { convertToJavaScript } from "./migrate/migrations/convert-to-javascript";
 
 const remixDevPackageVersion = packageJson.version;
 
@@ -34,7 +35,7 @@ export async function createApp({
   remixVersion = remixDevPackageVersion,
   installDeps,
   useTypeScript = true,
-  githubToken = process.env.GITHUB_TOKEN,
+  githubToken,
   debug,
 }: CreateAppArgs) {
   /**
@@ -191,8 +192,14 @@ export async function createApp({
   appPkg = sortPackageJSON(appPkg);
   await fse.writeJSON(pkgJsonPath, appPkg, { spaces: 2 });
 
-  if (!useTypeScript) {
-    await convertTemplateToJavaScript(projectDir);
+  if (
+    !useTypeScript &&
+    fse.existsSync(path.join(projectDir, "tsconfig.json"))
+  ) {
+    let spinner = ora("Migrating template to JavaScript…").start();
+    await convertToJavaScript(projectDir, { interactive: false });
+    spinner.stop();
+    spinner.clear();
   }
 
   if (installDeps) {
@@ -236,7 +243,8 @@ async function extractLocalTarball(
     throw Error(
       "🚨 There was a problem extracting the file from the provided template.\n\n" +
         `  Template filepath: \`${filePath}\`\n` +
-        `  Destination directory: \`${projectDir}\``
+        `  Destination directory: \`${projectDir}\`\n` +
+        `  ${err}`
     );
   }
 }
@@ -284,12 +292,49 @@ async function downloadAndExtractTarball(
     filePath?: string | null;
   }
 ): Promise<void> {
-  let response = await fetch(
-    url,
-    token ? { headers: { Authorization: `token ${token}` } } : {}
-  );
+  let resourceUrl = url;
+  let headers: Record<string, string> = {};
+  if (token && new URL(url).host.endsWith("github.com")) {
+    headers.Authorization = `token ${token}`;
+  }
+  if (isGithubReleaseAssetUrl(url)) {
+    // We can download the asset via the github api, but first we need to look up the
+    // asset id
+    let info = getGithubReleaseAssetInfo(url);
+    headers.Accept = "application/vnd.github.v3+json";
+    let response = await fetch(
+      `https://api.github.com/repos/${info.owner}/${info.name}/releases/tags/${info.tag}`,
+      { headers }
+    );
+    if (response.status !== 200) {
+      throw Error(
+        "🚨 There was a problem fetching the file from GitHub. The request " +
+          `responded with a ${response.status} status. Please try again later.`
+      );
+    }
+    let body = await response.json();
+    let assetId: number | undefined = body?.assets?.find(
+      (a: any) => a?.browser_download_url === url
+    )?.id;
+    if (!assetId) {
+      throw Error(
+        "🚨 There was a problem fetching the file from GitHub. No asset was " +
+          "found at that url. Please try again later."
+      );
+    }
+    resourceUrl = `https://api.github.com/repos/${info.owner}/${info.name}/releases/assets/${assetId}`;
+    headers.Accept = "application/octet-stream";
+  }
+  let response = await fetch(resourceUrl, { headers });
 
   if (response.status !== 200) {
+    if (token) {
+      throw Error(
+        "🚨 There was a problem fetching the file from GitHub. The request " +
+          `responded with a ${response.status} status. Perhaps your \`--token\`` +
+          "is expired or invalid."
+      );
+    }
     throw Error(
       "🚨 There was a problem fetching the file from GitHub. The request " +
         `responded with a ${response.status} status. Please try again later.`
@@ -380,6 +425,40 @@ function getGithubUrl(info: Omit<RepoInfo, "url">) {
   return url;
 }
 
+function isGithubReleaseAssetUrl(url: string) {
+  return (
+    url.startsWith("https://github.com") && url.includes("/releases/download/")
+  );
+}
+interface ReleaseAssetInfo {
+  browserUrl: string;
+  owner: string;
+  name: string;
+  asset: string;
+  tag: string;
+}
+function getGithubReleaseAssetInfo(browserUrl: string): ReleaseAssetInfo {
+  // for example, https://github.com/owner/repository/releases/download/v0.0.1/stack.tar.gz
+  let url = new URL(browserUrl);
+  let [, owner, name, , , tag, asset] = url.pathname.split("/") as [
+    _: string,
+    Owner: string,
+    Name: string,
+    Releases: string,
+    Download: string,
+    Tag: string,
+    AssetFilename: string
+  ];
+
+  return {
+    browserUrl,
+    owner,
+    name,
+    asset,
+    tag,
+  };
+}
+
 function getRepoInfo(validatedGithubUrl: string): RepoInfo {
   if (isGithubRepoShorthand(validatedGithubUrl)) {
     let [owner, name] = validatedGithubUrl.split("/");
@@ -465,7 +544,10 @@ function isRemixTemplate(input: string) {
   ].includes(input);
 }
 
-export async function validateTemplate(input: string) {
+export async function validateTemplate(
+  input: string,
+  options?: { githubToken: string | undefined }
+) {
   // If a template string matches one of the choices in our interactive prompt,
   // we can skip all fetching and manual validation.
   if (isRemixStack(input)) {
@@ -488,9 +570,21 @@ export async function validateTemplate(input: string) {
     }
     case "remoteTarball": {
       let spinner = ora("Validating the template file…").start();
+      let apiUrl = input;
+      let method = "HEAD";
+      let headers: Record<string, string> = {};
+      if (isGithubReleaseAssetUrl(input)) {
+        let info = getGithubReleaseAssetInfo(input);
+        apiUrl = `https://api.github.com/repos/${info.owner}/${info.name}/releases/tags/${info.tag}`;
+        headers = {
+          Authorization: `token ${options?.githubToken}`,
+          Accept: "application/vnd.github.v3+json",
+        };
+        method = "GET";
+      }
       let response;
       try {
-        response = await fetch(input, { method: "HEAD" });
+        response = await fetch(apiUrl, { method, headers });
       } catch (_) {
         throw Error(
           "🚨 There was a problem verifying the template file. Please ensure " +
@@ -502,6 +596,17 @@ export async function validateTemplate(input: string) {
 
       switch (response.status) {
         case 200:
+          if (isGithubReleaseAssetUrl(input)) {
+            let body = await response.json();
+            if (
+              !body?.assets?.some((a: any) => a?.browser_download_url === input)
+            ) {
+              throw Error(
+                "🚨 The template file could not be verified. Please double check " +
+                  "the URL and try again."
+              );
+            }
+          }
           return;
         case 404:
           throw Error(
@@ -518,10 +623,30 @@ export async function validateTemplate(input: string) {
     }
     case "repo": {
       let spinner = ora("Validating the template repo…").start();
-      let { url, filePath } = getRepoInfo(input);
+      let { branch, filePath, owner, name } = getRepoInfo(input);
       let response;
+      let apiUrl = `https://api.github.com/repos/${owner}/${name}`;
+      let method = "HEAD";
+      if (branch) {
+        apiUrl += `/git/trees/${branch}?recursive=1`;
+      }
+      if (filePath) {
+        // When filePath is present, we need to examine the response json to see
+        // if that path exists in the repo.
+        invariant(
+          branch,
+          "Expecting branch to be present when specifying a path."
+        );
+        method = "GET";
+      }
       try {
-        response = await fetch(url, { method: "HEAD" });
+        let headers: Record<string, string> = {};
+        if (options?.githubToken) {
+          headers = {
+            Authorization: `token ${options.githubToken}`,
+          };
+        }
+        response = await fetch(apiUrl, { method, headers });
       } catch (_) {
         throw Error(
           "🚨 There was a problem fetching the template. Please ensure you " +
@@ -533,7 +658,30 @@ export async function validateTemplate(input: string) {
 
       switch (response.status) {
         case 200:
+          if (filePath && filePath !== "/") {
+            // if a filePath is included there must also be a branch, because of how github structures
+            // their URLs. That means the api results list all files and directories
+            let filesWithinRepo = await response.json();
+            if (
+              !filesWithinRepo?.tree?.some(
+                (file: any) => file?.path === filePath && file?.type === "tree"
+              )
+            ) {
+              throw Error(
+                "🚨 The template could not be verified. The GitHub repository was found, but did " +
+                  "not seem to contain anything at that path. " +
+                  "Please double check that the filepath points to a directory in the repo " +
+                  "and try again."
+              );
+            }
+          }
           return;
+        case 401:
+          throw Error(
+            "🚨 The template could not be verified because you are not " +
+              "authorized to access that repository. Please double check the " +
+              "access rights of the repo or consider passing a `--token`"
+          );
         case 403:
           throw Error(
             "🚨 The template could not be verified because you do not have " +

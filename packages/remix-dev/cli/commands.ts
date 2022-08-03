@@ -10,6 +10,7 @@ import type { Server } from "http";
 import type * as Express from "express";
 import type { createApp as createAppType } from "@remix-run/serve";
 import getPort, { makeRange } from "get-port";
+import * as esbuild from "esbuild";
 
 import { BuildMode, isBuildMode } from "../build";
 import * as colors from "../colors";
@@ -56,34 +57,57 @@ export async function create({
   spinner.clear();
 }
 
-export async function init(projectDir: string) {
+type InitFlags = {
+  deleteScript?: boolean;
+};
+export async function init(
+  projectDir: string,
+  { deleteScript = true }: InitFlags = {}
+) {
   let initScriptDir = path.join(projectDir, "remix.init");
+  let initScriptTs = path.resolve(initScriptDir, "index.ts");
   let initScript = path.resolve(initScriptDir, "index.js");
+
+  if (await fse.pathExists(initScriptTs)) {
+    await esbuild.build({
+      entryPoints: [initScriptTs],
+      format: "cjs",
+      platform: "node",
+      outfile: initScript,
+    });
+  }
+  if (!(await fse.pathExists(initScript))) {
+    return;
+  }
+
   let initPackageJson = path.resolve(initScriptDir, "package.json");
-
   let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
+  let packageManager = getPreferredPackageManager();
 
-  if (await fse.pathExists(initScript)) {
-    let packageManager = getPreferredPackageManager();
+  if (await fse.pathExists(initPackageJson)) {
+    execSync(`${packageManager} install`, {
+      cwd: initScriptDir,
+      stdio: "ignore",
+    });
+  }
 
-    if (await fse.pathExists(initPackageJson)) {
-      execSync(`${packageManager} install`, {
-        cwd: initScriptDir,
-        stdio: "ignore",
-      });
+  let initFn = require(initScript);
+  if (typeof initFn !== "function" && initFn.default) {
+    initFn = initFn.default;
+  }
+  try {
+    await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
+
+    if (deleteScript) {
+      await fse.remove(initScriptDir);
     }
-
-    let initFn = require(initScript);
-    try {
-      await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
-    } catch (error) {
-      if (error instanceof Error) {
-        error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
-          error.message
-        }`;
-      }
-      throw error;
+  } catch (error) {
+    if (error instanceof Error) {
+      error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
+        error.message
+      }`;
     }
+    throw error;
   }
 }
 
@@ -234,7 +258,11 @@ export async function watch(
   });
 }
 
-export async function dev(remixRoot: string, modeArg?: string) {
+export async function dev(
+  remixRoot: string,
+  modeArg?: string,
+  portArg?: number
+) {
   let createApp: typeof createAppType;
   let express: typeof Express;
   try {
@@ -255,7 +283,11 @@ export async function dev(remixRoot: string, modeArg?: string) {
   await loadEnv(config.rootDirectory);
 
   let port = await getPort({
-    port: process.env.PORT ? Number(process.env.PORT) : makeRange(3000, 3100),
+    port: portArg
+      ? Number(portArg)
+      : process.env.PORT
+      ? Number(process.env.PORT)
+      : makeRange(3000, 3100),
   });
 
   if (config.serverEntryPoint) {
@@ -268,7 +300,14 @@ export async function dev(remixRoot: string, modeArg?: string) {
     purgeAppRequireCache(config.serverBuildPath);
     next();
   });
-  app.use(createApp(config.serverBuildPath, mode));
+  app.use(
+    createApp(
+      config.serverBuildPath,
+      mode,
+      config.publicPath,
+      config.assetsBuildDirectory
+    )
+  );
 
   let server: Server | null = null;
 
@@ -280,7 +319,8 @@ export async function dev(remixRoot: string, modeArg?: string) {
             process.env.HOST ||
             Object.values(os.networkInterfaces())
               .flat()
-              .find((ip) => ip?.family === "IPv4" && !ip.internal)?.address;
+              .find((ip) => String(ip?.family).includes("4") && !ip?.internal)
+              ?.address;
 
           if (!address) {
             console.log(`Remix App Server started at http://localhost:${port}`);

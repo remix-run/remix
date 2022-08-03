@@ -20,21 +20,17 @@ If your experience with web development is primarily with the JS frameworks in t
 
 ## Server Environment Variables
 
-Environment variables on your server will be handled by your host, for example:
+### Local Development
 
-- [Netlify](https://docs.netlify.com/configure-builds/environment-variables/)
-- [Fly.io](https://fly.io/docs/reference/secrets/)
-- [Cloudflare Workers](https://developers.cloudflare.com/workers/platform/environment-variables)
-- [Vercel](https://vercel.com/docs/environment-variables)
-- [Architect](https://arc.codes/docs/en/reference/cli/env)
+If you're using the `remix dev` server to run your project locally, it has built-in support for [dotenv][dotenv].
 
-If your host doesn't have any conventions for environment variables during development, the `remix dev` server can help out as it provides built-in support for [dotenv](https://www.npmjs.com/package/dotenv).
-
-If you're using the `remix dev` server, you can do this very quickly:
+First, create an `.env` file in the root of your project:
 
 ```sh
 touch .env
 ```
+
+<docs-error>Do not commit your <code>.env</code> file to git, the point is that it contains secrets!</docs-error>
 
 Edit your `.env` file.
 
@@ -50,9 +46,28 @@ export async function loader() {
 }
 ```
 
-Note that `dotenv` is only for development, you should not use it in production, so Remix doesn't load these when running `remix serve`. You'll need to follow your host's guides on adding secrets to your production server.
+If you're using the `@remix-run/cloudflare-pages` adapter, env variables work a little differently. Since Cloudflare Pages are powered by Functions, you'll need to define your local environment variables in the [`.dev.vars`][dev-vars] file. It has the same syntax as `.env` example file mentioned above.
 
-<docs-error>Do not commit your <code>.env</code> file to git, the point is that it contains secrets!</docs-error>
+Then, in your `loader` functions, you can access environment variables directly on `context`:
+
+```js
+export const loader = async ({ context }) => {
+  console.log(context.SOME_SECRET);
+};
+```
+
+Note that `.env` files are only for development. You should not use them in production, so Remix doesn't load them when running `remix serve`. You'll need to follow your host's guides on adding secrets to your production server, via the links below.
+
+### Production
+
+Environment variables when deployed to production will be handled by your host, for example:
+
+- [Netlify][netlify]
+- [Fly.io][fly-io]
+- [Cloudflare Pages][cloudflare-pages]
+- [Cloudflare Workers][cloudflare-workers]
+- [Vercel][vercel]
+- [Architect][architect]
 
 ## Browser Environment Variables
 
@@ -141,3 +156,12 @@ Instead we recommend keeping all of your environment variables on the server (al
      return stripe.redirectToCheckout({ sessionId });
    }
    ```
+
+[dotenv]: https://www.npmjs.com/package/dotenv
+[netlify]: https://docs.netlify.com/configure-builds/environment-variables
+[fly-io]: https://fly.io/docs/reference/secrets
+[cloudflare-pages]: https://developers.cloudflare.com/pages/platform/build-configuration/#environment-variables
+[cloudflare-workers]: https://developers.cloudflare.com/workers/platform/environment-variables
+[vercel]: https://vercel.com/docs/environment-variables
+[architect]: https://arc.codes/docs/en/reference/cli/env
+[dev-vars]: https://developers.cloudflare.com/pages/platform/functions/#adding-environment-variables-locally

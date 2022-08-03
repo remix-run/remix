@@ -1217,7 +1217,9 @@ export function createTransitionManager(init: TransitionManagerInit) {
     invariant(
       state.transition.type === "actionSubmission" ||
         // loader redirected during action reload
-        state.transition.type === "actionReload",
+        state.transition.type === "actionReload" ||
+        // loader redirected during action redirect
+        state.transition.type === "actionRedirect",
       `Unexpected transition: ${JSON.stringify(state.transition)}`
     );
     let { submission } = state.transition;
@@ -1284,7 +1286,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
       // loader redirected during an action reload, treat it like an
       // actionRedirect instead so that all the loaders get called again and the
       // submission sticks around for optimistic/pending UI.
-      if (state.transition.type === "actionReload") {
+      if (
+        state.transition.type === "actionReload" ||
+        isActionRedirectLocation(location)
+      ) {
         let locationState: Redirects["Action"] = {
           isRedirect: true,
           type: "action",
@@ -1302,7 +1307,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
         let locationState: Redirects["Loader"] = {
           isRedirect: true,
           type: "loader",
-          setCookie: redirect.setCookie,
+          // If we're in the middle of a setCookie redirect, we need to preserve
+          // the flag so we handle revalidations across multi-redirect scenarios
+          setCookie:
+            redirect.setCookie || (location.state as any)?.setCookie === true,
         };
         init.onRedirect(redirect.location, locationState);
       }

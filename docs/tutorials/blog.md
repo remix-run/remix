@@ -7,21 +7,23 @@ order: 1
 
 We're going to be short on words and quick on code in this quickstart. If you're looking to see what Remix is all about in 15 minutes, this is it.
 
-<docs-info>💿 Hey I'm Derrick the Remix Compact Disc 👋 Whenever you're supposed to _do_ something you'll see me</docs-info>
+<docs-info>Work through this tutorial with Kent in <a target="_blank" rel="noopener noreferrer" href="https://rmx.as/egghead-course">this free Egghead.io course</a></docs-info>
 
 This tutorial uses TypeScript. Remix can definitely be used without TypeScript. We feel most productive when writing TypeScript, but if you'd prefer to skip the TypeScript syntax, feel free to write your code in JavaScript.
 
+<docs-info>💿 Hey I'm Derrick the Remix Compact Disc 👋 Whenever you're supposed to _do_ something you'll see me</docs-info>
+
 ## Prerequisites
 
-Click this button to create a [Gitpod](https://gitpod.io) workspace with the project set up and ready to run in VS Code or JetBrains either directly in the browser or on the desktop.
+Click this button to create a [Gitpod][gitpod] workspace with the project set up and ready to run in VS Code or JetBrains either directly in the browser or on the desktop.
 
-[![Gitpod Ready-to-Code](https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/remix-run/indie-stack)
+[![Gitpod Ready-to-Code][gitpod-ready-to-code]][gitpod-ready-to-code-image]
 
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
-- [Node.js](https://nodejs.org) 14 or greater
-- [npm](https://www.npmjs.com) 7 or greater
-- A code editor
+- [Node.js][node-js] version (^14.17.0, or >=16.0.0)
+- [npm][npm] 7 or greater
+- A code editor ([VSCode][vs-code] is a nice one)
 
 ## Creating the project
 
@@ -35,15 +37,13 @@ npx create-remix --template remix-run/indie-stack blog-tutorial
 
 ```
 ? Do you want me to run `npm install`? Yes
-...
-? Do you want to run the build/tests/etc to verify things are setup properly? Yes
 ```
 
-<docs-info>Running the verify script is optional, but handy.</docs-info>
+You can read more about the stacks available in [the stacks docs][the-stacks-docs].
 
-You can read more about the stacks available in [the stacks docs](/pages/stacks).
+We're using [the Indie stack][the-indie-stack], which is a full application ready to deploy to [fly.io][fly-io]. This includes development tools as well as production-ready authentication and persistence. Don't worry if you're unfamiliar with the tools used, we'll walk you through things as we go.
 
-We're using [the Indie stack](https://github.com/remix-run/indie-stack), which is a full application ready to deploy to [fly.io](https://fly.io). This includes development tools as well as production-ready authentication and persistence. Don't worry if you're unfamiliar with the tools used, we'll walk you through things as we go.
+<docs-info>Note, you can definitely start with "Just the basics" instead by running `npx create-remix` without the `--template` flag. The generated project is much more minimal that way. However, some bits of the tutorial will be different for you and you'll have to configure things for deployment manually.</docs-info>
 
 💿 Now, open the project that was generated in your preferred editor and check the instructions in the `README.md` file. Feel free to read over this. We'll get to the deployment bit later in the tutorial.
 
@@ -53,7 +53,7 @@ We're using [the Indie stack](https://github.com/remix-run/indie-stack), which i
 npm run dev
 ```
 
-💿 Open up [http://localhost:3000](http://localhost:3000), the app should be running.
+💿 Open up [http://localhost:3000][http-localhost-3000], the app should be running.
 
 If you want, take a minute and poke around the UI a bit. Feel free to create an account and create/delete some notes to get an idea of what's available in the UI out of the box.
 
@@ -79,13 +79,14 @@ Go ahead and copy/paste this:
 You can put it anywhere you like. I stuck it right above the icons of all the technologies used in the stack:
 
 <!-- TODO: once the website can deploy properly, update this to use our self-hosted version of this image -->
+
 <!-- ![Screenshot of the app showing the blog post link](/blog-tutorial/blog-post-link.png) -->
 
-![Screenshot of the app showing the blog post link](https://user-images.githubusercontent.com/1500684/160208939-34fe20ed-3146-4f4b-a68a-d82284339c47.png)
+![Screenshot of the app showing the blog post link][screenshot-of-the-app-showing-the-blog-post-link]
 
 <docs-info>You may have noticed we're using <a href="https://tailwindcss.com">tailwind</a> classes.</docs-info>
 
-The Remix Indie stack has [tailwind](https://tailwindcss.com) support pre-configured. If you'd prefer to not use tailwind, you're welcome to remove it and use something else. Learn more about your styling options with Remix in [the styling guide](/guides/styling).
+The Remix Indie stack has [tailwind][tailwind] support pre-configured. If you'd prefer to not use tailwind, you're welcome to remove it and use something else. Learn more about your styling options with Remix in [the styling guide][the-styling-guide].
 
 Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
@@ -303,7 +304,7 @@ export const loader = async () => {
 
 ## Pulling from a data source
 
-With the Indie Stack, we've got a SQLite database already set up and configured for us, so let's update our Database Schema to handle SQLite. We're using [Prisma](https://prisma.io) to interact with the database, so we'll update that schema and Prisma will take care of updating our database to match the schema for us (as well as generating and running the necessary SQL commands for the migration).
+With the Indie Stack, we've got a SQLite database already set up and configured for us, so let's update our Database Schema to handle SQLite. We're using [Prisma][prisma] to interact with the database, so we'll update that schema and Prisma will take care of updating our database to match the schema for us (as well as generating and running the necessary SQL commands for the migration).
 
 <docs-info>You do not have to use Prisma when using Remix. Remix works great with whatever existing database or data persistence services you're currently using.</docs-info>
 
@@ -386,6 +387,14 @@ Great, let's get those posts into the database with the seed script:
 ```
 npx prisma db seed
 ```
+
+💿 Let's generate a migration file for our schema changes - which will be required if you deploy your application rather than just running in dev mode locally.
+
+```sh
+npx prisma migrate dev
+```
+
+<docs-warning>You'll get the ability to name the migration name, ideally you can refer back to what the changes you made are, so I'd suggest `create-post-model` for the name.</docs-warning>
 
 💿 Now update the `app/models/post.server.ts` file to read from the SQLite database:
 
@@ -496,6 +505,8 @@ export async function getPost(slug: string) {
 }
 ```
 
+If you see a TypeScript warning, such as `TS2305: Module '"@prisma/client"' has no exported member 'Post'.`, you may need to restart your editor.
+
 💿 Use the new `getPost` function in the route
 
 ```tsx filename=app/routes/posts/$slug.tsx lines=[5,10-11,15,19]
@@ -575,6 +586,8 @@ npm add marked
 # if using typescript
 npm add @types/marked -D
 ```
+
+Now that `marked` has been installed, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
 
 ```tsx filename=app/routes/post/$slug.ts lines=[1,10,20-21,25,31]
 import { marked } from "marked";
@@ -688,7 +701,7 @@ export default function PostAdmin() {
 ```
 
 You should recognize several of the things we're doing in there from what we've done so far. With that, you should have a decent looking page with the posts on the left and a placeholder on the right.
-Now, if you click on the Admin link, it'll take you to [http://localhost:3000/posts/admin](http://localhost:3000/posts/admin).
+Now, if you click on the Admin link, it'll take you to [http://localhost:3000/posts/admin][http-localhost-3000-posts-admin].
 
 ### Index Routes
 
@@ -884,7 +897,7 @@ export const action = async ({ request }) => {
 
 That's it. Remix (and the browser) will take care of the rest. Click the submit button and watch the sidebar that lists our posts update automatically.
 
-In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and don't forget, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN! [mdn.io/request](https://mdn.io/request) [mdn.io/request.formData](https://mdn.io/request.formData).
+In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and don't forget, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN! [mdn.io/request][mdn-io-request] [mdn.io/request.formData][mdn-io-request-form-data].
 
 TypeScript is mad again, let's add some types.
 
@@ -1075,7 +1088,7 @@ export const action: ActionFunction = async ({
 
 ## Progressive Enhancement
 
-For some real fun, [disable JavaScript](https://developer.chrome.com/docs/devtools/javascript/disable/) in your dev tools and try it out. Because Remix is built on the fundamentals of HTTP and HTML, this whole thing works without JavaScript in the browser 🤯 But that's not the point. What's cool about it is that this means our UI is resilient to network issues. But we really _like_ having JavaScript in the browser and there are a lot of cool things we can do when we've got it, so make sure to re-enable JavaScript before continuing, because we're going to need it to _progressively enhance_ the user experience next.
+For some real fun, [disable JavaScript][disable-java-script] in your dev tools and try it out. Because Remix is built on the fundamentals of HTTP and HTML, this whole thing works without JavaScript in the browser 🤯 But that's not the point. What's cool about it is that this means our UI is resilient to network issues. But we really _like_ having JavaScript in the browser and there are a lot of cool things we can do when we've got it, so make sure to re-enable JavaScript before continuing, because we're going to need it to _progressively enhance_ the user experience next.
 
 Let's slow this down and add some "pending UI" to our form.
 
@@ -1137,12 +1150,33 @@ That's it for today! Here are some bits of homework to implement if you wanna go
 
 **Update/Delete posts:** make an `/admin/$slug.tsx` page for your posts. This should open an edit page for the post that allows you to update the post or even delete it. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts/$slug.tsx` and `app/routes/posts/admin/new.tsx`. You just gotta put it together.
 
-**Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly and if the tweet is deleted it reverts back to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Optimistic UI guide](/guides/optimistic-ui).
+**Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly and if the tweet is deleted it reverts back to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Optimistic UI guide][the-optimistic-ui-guide].
 
-**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip, if you want to make it so you're the only one who can make posts, then simply check the user's email in your loaders and actions and if it's not yours redirect them [somewhere](https://www.youtube.com/watch?v=dQw4w9WgXcQ) 😈
+**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip, if you want to make it so you're the only one who can make posts, then simply check the user's email in your loaders and actions and if it's not yours redirect them [somewhere][somewhere] 😈
 
-**Customize the app:** If you're happy with tailwind, keep it around, otherwise, check [the styling guide](/guides/styling) to learn of other options. Remove the `Notes` model and routes, etc. Whatever you want to make this thing yours.
+**Customize the app:** If you're happy with tailwind, keep it around, otherwise, check [the styling guide][the-styling-guide] to learn of other options. Remove the `Notes` model and routes, etc. Whatever you want to make this thing yours.
 
 **Deploy the app:** Check the README of your project. It has instructions you can follow to get your app deployed to Fly.io. Then you can actually start blogging!
 
 We hope you love Remix! 💿 👋
+
+[gitpod]: https://gitpod.io
+[gitpod-ready-to-code-image]: https://gitpod.io/#https://github.com/remix-run/indie-stack
+[gitpod-ready-to-code]: https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod
+[node-js]: https://nodejs.org
+[npm]: https://www.npmjs.com
+[vs-code]: https://code.visualstudio.com
+[the-stacks-docs]: /pages/stacks
+[the-indie-stack]: https://github.com/remix-run/indie-stack
+[fly-io]: https://fly.io
+[http-localhost-3000]: http://localhost:3000
+[screenshot-of-the-app-showing-the-blog-post-link]: https://user-images.githubusercontent.com/1500684/160208939-34fe20ed-3146-4f4b-a68a-d82284339c47.png
+[tailwind]: https://tailwindcss.com
+[the-styling-guide]: /guides/styling
+[prisma]: https://prisma.io
+[http-localhost-3000-posts-admin]: http://localhost:3000/posts/admin
+[mdn-io-request]: https://mdn.io/request
+[mdn-io-request-form-data]: https://mdn.io/request.formData
+[disable-java-script]: https://developer.chrome.com/docs/devtools/javascript/disable
+[the-optimistic-ui-guide]: /guides/optimistic-ui
+[somewhere]: https://www.youtube.com/watch?v=dQw4w9WgXcQ

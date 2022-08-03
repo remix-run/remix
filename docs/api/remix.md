@@ -10,6 +10,7 @@ React: `@remix-run/react`
 Server runtimes:
 
 - `@remix-run/cloudflare`
+- `@remix-run/deno`
 - `@remix-run/node`
 
 Server adapters:
@@ -21,19 +22,19 @@ Server adapters:
 - `@remix-run/netlify`
 - `@remix-run/vercel`
 
-These package provides all the components, hooks, and [Web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) objects and helpers.
+These package provides all the components, hooks, and [Web Fetch API][web-fetch-api] objects and helpers.
 
 ## Components and Hooks
 
 ### `<Links>`, `<LiveReload>`, `<Meta>`, `<Scripts>`, `<ScrollRestoration>`
 
-These components are to be used once inside of your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
+These components are to be used once inside your root route (`root.tsx`). They include everything Remix figured out or built in order for your page to render properly.
 
 ```tsx
 import type {
   LinksFunction,
   MetaFunction,
-} from "@remix-run/node"; // or "@remix-run/cloudflare"
+} from "@remix-run/node"; // or cloudflare/deno
 import {
   Links,
   LiveReload,
@@ -89,9 +90,9 @@ export default function App() {
 
 You can pass extra props to `<Scripts />` like `<Scripts crossOrigin />` for hosting your static assets on a different server than your app.
 
-The example above renders several `<script />` tags into the resulting HTML. While this usually just works, you might have configured a [content security policy for scripts](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) that prevents these `<script />` tags from being executed. In particular, to support [content security policies with nonce-sources for scripts](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources), the `<Scripts />`, `<LiveReload />` and `<ScrollRestoration />` components support a `nonce` property, e.g.`<Script nonce={nonce}/>`. The provided nonce is subsequently passed to the `<script />` tag rendered into the HTML by these components, allowing the scripts to be executed in accordance with your CSP policy.
+The example above renders several `<script />` tags into the resulting HTML. While this usually just works, you might have configured a [content security policy for scripts][content-security-policy-for-scripts] that prevents these `<script />` tags from being executed. In particular, to support [content security policies with nonce-sources for scripts][content-security-policies-with-nonce-sources-for-scripts], the `<Scripts />`, `<LiveReload />` and `<ScrollRestoration />` components support a `nonce` property, e.g.`<Script nonce={nonce}/>`. The provided nonce is subsequently passed to the `<script />` tag rendered into the HTML by these components, allowing the scripts to be executed in accordance with your CSP policy.
 
-Learn more about `meta` and `links` exports in the [conventions](/api/conventions) documentation.
+Learn more about `meta` and `links` exports in the [conventions][conventions] documentation.
 
 ### `<Link>`
 
@@ -107,7 +108,7 @@ export default function GlobalNav() {
     <nav>
       <Link to="/dashboard">Dashboard</Link>{" "}
       <Link to="/account">Account</Link>{" "}
-      <Link to="/support">Dashboard</Link>
+      <Link to="/support">Support</Link>
     </nav>
   );
 }
@@ -259,7 +260,7 @@ See also:
 
 #### `<Form method>`
 
-This determines the [HTTP verb](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods) to be used: get, post, put, patch, delete. The default is "get".
+This determines the [HTTP verb][http-verb] to be used: get, post, put, patch, delete. The default is "get".
 
 ```tsx
 <Form method="post" />
@@ -293,7 +294,7 @@ If true, it will submit the form with the browser instead of JavaScript, even if
 <Form reloadDocument />
 ```
 
-<docs-info>This is recommended over <code>&lt;form></code></docs-info>
+<docs-info>This is recommended over <code>\<form></code></docs-info>
 
 When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call different actions depending on what the current URL is.
 
@@ -331,7 +332,7 @@ In order to avoid (usually) the client-side routing "scroll flash" on refresh or
 This hook returns the JSON parsed data from your route loader function.
 
 ```tsx lines=[2,9]
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 export async function loader() {
@@ -349,7 +350,7 @@ export default function Invoices() {
 This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
 ```tsx lines=[2,11,20]
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useActionData, Form } from "@remix-run/react";
 
 export async function action({ request }) {
@@ -377,7 +378,7 @@ export default function Invoices() {
 The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
 
 ```tsx lines=[22, 31, 39-41, 45-47]
-import { redirect, json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { redirect, json } from "@remix-run/node"; // or cloudflare/deno
 import { Form, useActionData } from "@remix-run/react";
 
 export async function action({ request }) {
@@ -522,7 +523,7 @@ Returns the function that may be used to submit a `<form>` (or some raw `FormDat
 This is useful whenever you need to programmatically submit a form. For example, you may wish to save a user preferences form whenever any field changes.
 
 ```tsx filename=app/routes/prefs.tsx lines=[2,14,18]
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useSubmit, useTransition } from "@remix-run/react";
 
 export async function loader() {
@@ -695,7 +696,7 @@ function SubmitButton() {
 
 #### `transition.submission`
 
-Any transition that started from a `<Form>` or `useSubmit` will have your form's submission attached to it. This is primarily useful to build "Optimistic UI" with the `submission.formData` [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) object.
+Any transition that started from a `<Form>` or `useSubmit` will have your form's submission attached to it. This is primarily useful to build "Optimistic UI" with the `submission.formData` [`FormData`][form-data] object.
 
 TODO: Example
 
@@ -812,7 +813,7 @@ This is the type of state the fetcher is in. It's like `fetcher.state`, but more
 
   - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded.
   - **actionRedirect** - The action from an "actionSubmission" returned a redirect and the page is transitioning to the new location.
-  - **load** - A route's loader is being called without a submission (`fetcher.load()`).
+  - **normalLoad** - A route's loader is being called without a submission (`fetcher.load()`).
 
 #### `fetcher.submission`
 
@@ -1431,8 +1432,8 @@ function SomeForm() {
 This is a shortcut for creating `application/json` responses. It assumes you are using `utf-8` encoding.
 
 ```ts lines=[2,6]
-import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 
 export const loader: LoaderFunction = async () => {
   // So you can write this:
@@ -1468,8 +1469,8 @@ export const loader: LoaderFunction = async () => {
 This is shortcut for sending 30x responses.
 
 ```ts lines=[2,8]
-import type { ActionFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { ActionFunction } from "@remix-run/node"; // or cloudflare/deno
+import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
 export const action: ActionFunction = async () => {
   const userSession = await getUserSessionOrWhatever();
@@ -1525,7 +1526,7 @@ return new Response(null, {
 
 Allows you to handle multipart forms (file uploads) for your app.
 
-Would be useful to understand [the Browser File API](https://developer.mozilla.org/en-US/docs/Web/API/File) to know how to use this API.
+Would be useful to understand [the Browser File API][the-browser-file-api] to know how to use this API.
 
 It's to be used in place of `request.formData()`.
 
@@ -1611,17 +1612,17 @@ export const action: ActionFunction = async ({
 
 **Options:**
 
-| Property           | Type               | Default                         | Description                                                                                                                                               |
-| ------------------ | ------------------ | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| avoidFileConflicts | boolean            | true                            | Avoid file conflicts by appending a timestamp on the end of the filename if it already exists on disk                                                     |
-| directory          | string \| Function | os.tmpdir()                     | The directory to write the upload.                                                                                                                        |
-| file               | Function           | () => `upload_${random}.${ext}` | The name of the file in the directory. Can be a relative path, the directory structure will be created if it does not exist.                              |
-| maxPartSize        | number             | 3000000                         | The maximum upload size allowed (in bytes). If the size is exceeded a MaxPartSizeExceededError will be thrown.                                            |
-| filter             | Function           | OPTIONAL                        | A function you can write to prevent a file upload from being saved based on filename, mimetype, or encoding. Return `false` and the file will be ignored. |
+| Property           | Type               | Default                         | Description                                                                                                                                                     |
+| ------------------ | ------------------ | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| avoidFileConflicts | boolean            | true                            | Avoid file conflicts by appending a timestamp on the end of the filename if it already exists on disk                                                           |
+| directory          | string \| Function | os.tmpdir()                     | The directory to write the upload.                                                                                                                              |
+| file               | Function           | () => `upload_${random}.${ext}` | The name of the file in the directory. Can be a relative path, the directory structure will be created if it does not exist.                                    |
+| maxPartSize        | number             | 3000000                         | The maximum upload size allowed (in bytes). If the size is exceeded a MaxPartSizeExceededError will be thrown.                                                  |
+| filter             | Function           | OPTIONAL                        | A function you can write to prevent a file upload from being saved based on filename, content type, or field name. Return `false` and the file will be ignored. |
 
-The function API for `file` and `directory` are the same. They accept an `object` and return a `string`. The object it accepts has `filename`, `encoding`, and `mimetype` (all strings).The `string` returned is the path.
+The function API for `file` and `directory` are the same. They accept an `object` and return a `string`. The object it accepts has `filename`, `name`, and `contentType` (all strings). The `string` returned is the path.
 
-The `filter` function accepts an `object` and returns a `boolean` (or a promise that resolves to a `boolean`). The object it accepts has the `filename`, `encoding`, and `mimetype` (all strings). The `boolean` returned is `true` if you want to handle that file stream.
+The `filter` function accepts an `object` and returns a `boolean` (or a promise that resolves to a `boolean`). The object it accepts has the `filename`, `name`, and `contentType` (all strings). The `boolean` returned is `true` if you want to handle that file stream.
 
 #### `unstable_createMemoryUploadHandler`
 
@@ -1650,7 +1651,7 @@ export const action: ActionFunction = async ({
 
 ### Custom `uploadHandler`
 
-Most of the time, you'll probably want to proxy the file stream to a file host.
+Most of the time, you'll probably want to proxy the file to a file host.
 
 **Example:**
 
@@ -1731,23 +1732,22 @@ export const action: ActionFunction = async ({
 
 The `UploadHandler` function accepts a number of parameters about the file:
 
-| Property | Type     | Description                                                                  |
-| -------- | -------- | ---------------------------------------------------------------------------- |
-| name     | string   | The field name (comes from your HTML form field "name" value)                |
-| stream   | Readable | The stream of the file bytes                                                 |
-| filename | string   | The name of the file that the user selected for upload (like `rickroll.mp4`) |
-| encoding | string   | The encoding of the file (like `7bit`)                                       |
-| mimetype | string   | The mimetype of the file (like `video/mp4`)                                  |
+| Property    | Type                      | Description                                                                  |
+| ----------- | ------------------------- | ---------------------------------------------------------------------------- |
+| name        | string                    | The field name (comes from your HTML form field "name" value)                |
+| data        | AsyncIterable<Uint8Array> | The iterable of the file bytes                                               |
+| filename    | string                    | The name of the file that the user selected for upload (like `rickroll.mp4`) |
+| contentType | string                    | The content type of the file (like `videomp4`)                               |
 
-Your job is to do whatever you need with the `stream` and return a value that's a valid [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) value: [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File), `string`, or `undefined`.
+Your job is to do whatever you need with the `data` and return a value that's a valid [`FormData`][form-data] value: [`File`][the-browser-file-api], `string`, or `undefined` to skip adding it to the resulting FormData.
 
 ### Upload Handler Composition
 
 We have the built-in `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler` and we also expect more upload handler utilities to be developed in the future. If you have a form that needs to use different upload handlers, you can compose them together with a custom handler, here's a theoretical example:
 
 ```tsx filename=file-upload-handler.server.tsx
-import type { UploadHandler } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import { unstable_createFileUploadHandler } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { UploadHandler } from "@remix-run/node"; // or cloudflare/deno
+import { unstable_createFileUploadHandler } from "@remix-run/node"; // or cloudflare/deno
 import { createCloudinaryUploadHandler } from "some-handy-remix-util";
 
 export const standardFileUploadHandler =
@@ -1765,15 +1765,14 @@ export const fileUploadHandler: UploadHandler = (args) => {
     return standardFileUploadHandler(args);
   } else if (args.name === "eventBanner") {
     return cloudinaryUploadHandler(args);
-  } else {
-    args.stream.resume();
   }
+  return undefined;
 };
 ```
 
 ## Cookies
 
-A [cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies) is a small piece of information that your server sends someone in a HTTP response that their browser will send back on subsequent requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions][sessions]), shopping carts, user preferences, and many other features that require remembering who is "logged in".
+A [cookie][cookie] is a small piece of information that your server sends someone in a HTTP response that their browser will send back on subsequent requests. This technique is a fundamental building block of many interactive websites that adds state so you can build authentication (see [sessions][sessions]), shopping carts, user preferences, and many other features that require remembering who is "logged in".
 
 Remix's `Cookie` interface provides a logical, reusable container for cookie metadata.
 
@@ -1788,7 +1787,7 @@ Let's say you have a banner on your e-commerce site that prompts users to check 
 First, create a cookie:
 
 ```js filename=app/cookies.js
-import { createCookie } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { createCookie } from "@remix-run/node"; // or cloudflare/deno
 
 export const userPrefs = createCookie("user-prefs", {
   maxAge: 604_800, // one week
@@ -1800,7 +1799,7 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
 ```tsx filename=app/routes/index.tsx lines=[4,8-9,15-16,20]
-import { json, redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { userPrefs } from "~/cookies";
@@ -1855,7 +1854,7 @@ export default function Home() {
 
 ### Cookie attributes
 
-Cookies have [several attributes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes) that control when they expire, how they are accessed, and where they are sent. Any of these attributes may be specified either in `createCookie(name, options)`, or during `serialize()` when the `Set-Cookie` header is generated.
+Cookies have [several attributes][several-attributes] that control when they expire, how they are accessed, and where they are sent. Any of these attributes may be specified either in `createCookie(name, options)`, or during `serialize()` when the `Set-Cookie` header is generated.
 
 ```js
 const cookie = createCookie("user-prefs", {
@@ -1876,7 +1875,7 @@ cookie.serialize(userPrefs);
 cookie.serialize(userPrefs, { sameSite: "strict" });
 ```
 
-Please read [more info about these attributes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes) to get a better understanding of what they do.
+Please read [more info about these attributes][several-attributes] to get a better understanding of what they do.
 
 ### Signing cookies
 
@@ -1920,7 +1919,7 @@ export async function loader({ request }) {
 Creates a logical container for managing a browser cookie from the server.
 
 ```ts
-import { createCookie } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { createCookie } from "@remix-run/node"; // or cloudflare/deno
 
 const cookie = createCookie("cookie-name", {
   // all of these are optional defaults that can be overridden at runtime
@@ -1935,14 +1934,14 @@ const cookie = createCookie("cookie-name", {
 });
 ```
 
-To learn more about each attribute, please see the [MDN Set-Cookie docs](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes).
+To learn more about each attribute, please see the [MDN Set-Cookie docs][several-attributes].
 
 ### `isCookie`
 
 Returns `true` if an object is a Remix cookie container.
 
 ```ts
-import { isCookie } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { isCookie } from "@remix-run/node"; // or cloudflare/deno
 const cookie = createCookie("user-prefs");
 console.log(isCookie(cookie));
 // true
@@ -2034,7 +2033,7 @@ This is an example of a cookie session storage:
 
 ```js filename=app/sessions.js
 // app/sessions.js
-import { createCookieSessionStorage } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { createCookieSessionStorage } from "@remix-run/node"; // or cloudflare/deno
 
 const { getSession, commitSession, destroySession } =
   createCookieSessionStorage({
@@ -2044,7 +2043,10 @@ const { getSession, commitSession, destroySession } =
 
       // all of these are optional
       domain: "remix.run",
-      expires: new Date(Date.now() + 60_000),
+      // Expires can also be set (although maxAge overrides it when used in combination).
+      // Note that this method is NOT recommended as `new Date` creates only one date on each server deployment, not a dynamic date in the future!
+      //
+      // expires: new Date(Date.now() + 60_000),
       httpOnly: true,
       maxAge: 60,
       path: "/",
@@ -2066,7 +2068,7 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 A login form might look something like this:
 
 ```tsx filename=app/routes/login.js lines=[4,7-9,11,16,20,26-28,39,44,49,54]
-import { json, redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { getSession, commitSession } from "../sessions";
@@ -2178,7 +2180,7 @@ export default function LogoutRoute() {
 }
 ```
 
-<docs-warning>It's important that you logout (or perform any mutation for that matter) in an `action` and not a `loader`. Otherwise you open your users to [Cross-Site Request Forgery](https://developer.mozilla.org/en-US/docs/Glossary/CSRF) attacks. Also, Remix only re-calls `loaders` when `actions` are called.</docs-warning>
+<docs-warning>It's important that you logout (or perform any mutation for that matter) in an `action` and not a `loader`. Otherwise you open your users to [Cross-Site Request Forgery][cross-site-request-forgery] attacks. Also, Remix only re-calls `loaders` when `actions` are called.</docs-warning>
 
 ### Session Gotchas
 
@@ -2193,7 +2195,7 @@ TODO:
 Returns `true` if an object is a Remix session.
 
 ```js
-import { isSession } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { isSession } from "@remix-run/node"; // or cloudflare/deno
 
 const sessionData = { foo: "bar" };
 const session = createSession(sessionData, "remix-session");
@@ -2208,7 +2210,7 @@ Remix makes it easy to store sessions in your own database if needed. The `creat
 The following example shows how you could do this using a generic database client:
 
 ```js
-import { createSessionStorage } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { createSessionStorage } from "@remix-run/node"; // or cloudflare/deno
 
 function createDatabaseSessionStorage({
   cookie,
@@ -2265,7 +2267,7 @@ The main advantage of cookie session storage is that you don't need any addition
 The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be committed. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strategies you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
 
 ```js
-import { createCookieSessionStorage } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { createCookieSessionStorage } from "@remix-run/node"; // or cloudflare/deno
 
 const { getSession, commitSession, destroySession } =
   createCookieSessionStorage({
@@ -2289,7 +2291,7 @@ This storage keeps all the cookie information in your server's memory.
 import {
   createCookie,
   createMemorySessionStorage,
-} from "@remix-run/node"; // or "@remix-run/cloudflare"
+} from "@remix-run/node"; // or cloudflare/deno
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
@@ -2313,12 +2315,11 @@ The advantage of file-backed sessions is that only the session ID is stored in t
 
 <docs-info>If you are deploying to a serverless function, ensure you have access to a persistent file system. They usually don't have one without extra configuration.</docs-info>
 
-```js
-// app/sessions.js
+```js filename=app/sesions.js
 import {
   createCookie,
   createFileSessionStorage,
-} from "@remix-run/node";
+} from "@remix-run/node"; // or cloudflare/deno
 
 // In this example the Cookie is created separately.
 const sessionCookie = createCookie("__session", {
@@ -2339,7 +2340,7 @@ export { getSession, commitSession, destroySession };
 
 ### `createCloudflareKVSessionStorage` (cloudflare-workers)
 
-For [Cloudflare KV](https://developers.cloudflare.com/workers/learning/how-kv-works) backed sessions, use `createCloudflareKVSessionStorage()`.
+For [Cloudflare KV][cloudflare-kv] backed sessions, use `createCloudflareKVSessionStorage()`.
 
 The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
@@ -2368,7 +2369,7 @@ export { getSession, commitSession, destroySession };
 
 ### `createArcTableSessionStorage` (architect, Amazon DynamoDB)
 
-For [Amazon DynamoDB](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/) backed sessions, use `createArcTableSessionStorage()`.
+For [Amazon DynamoDB][amazon-dynamo-db] backed sessions, use `createArcTableSessionStorage()`.
 
 The advantage of DynamoDB backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
@@ -2471,7 +2472,7 @@ Now we can read the message in a loader.
 <docs-info>You must commit the session whenever you read a `flash`. This is different than you might be used to where some type of middleware automatically sets the cookie header for you.</docs-info>
 
 ```jsx
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import {
   Meta,
   Links,
@@ -2553,12 +2554,12 @@ export async function loader({ request }) {
 
 This component is a wrapper around React Router's Outlet with the ability to pass UI state down to nested routes.
 
-<docs-warning>You can use this for loader data, but you don't need to. It's easier to access all loader data in any component via [`useLoaderData`](#useloaderdata) or [`useMatches`](#usematches).</docs-warning>
+<docs-warning>You can use this for loader data, but you don't need to. It's easier to access all loader data in any component via [`useLoaderData`][use-loader-data] or [`useMatches`][use-matches].</docs-warning>
 
 Here's a practical example of when you may want to use this feature. Let's say you've got a list of companies that have invoices and you want to display those companies in an accordion. We'll render our outlet in that accordion, but we want the invoice sorting to be controlled by the parent (so changing companies preserves the invoice sorting). This is a perfect use case for `<Outlet context>`.
 
 ```tsx filename=app/routes/companies.tsx lines=[5,28-31,36-44,53-57,68]
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import {
   useLoaderData,
   useParams,
@@ -2643,8 +2644,8 @@ This hook returns the context from the `<Outlet />` that rendered you.
 Continuing from the `<Outlet context />` example above, here's what the child route could do to use the sort order.
 
 ```tsx filename=app/routes/companies/$companyId.tsx lines=[5,8,25,27-30]
-import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import {
   useLoaderData,
   useOutletContext,
@@ -2701,3 +2702,17 @@ export default function CompanyRoute() {
 [disabling-javascript]: ../guides/disabling-javascript
 [example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data
 [index query param]: ../guides/routing#what-is-the-index-query-param
+[web-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+[content-security-policy-for-scripts]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
+[content-security-policies-with-nonce-sources-for-scripts]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/Sources#sources
+[conventions]: /api/conventions
+[http-verb]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
+[form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
+[the-browser-file-api]: https://developer.mozilla.org/en-US/docs/Web/API/File
+[cookie]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies
+[several-attributes]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Set-Cookie#attributes
+[cross-site-request-forgery]: https://developer.mozilla.org/en-US/docs/Glossary/CSRF
+[cloudflare-kv]: https://developers.cloudflare.com/workers/learning/how-kv-works
+[amazon-dynamo-db]: https://docs.aws.amazon.com/amazondynamodb/latest/developerguide
+[use-loader-data]: #useloaderdata
+[use-matches]: #usematches

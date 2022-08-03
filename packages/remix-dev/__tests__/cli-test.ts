@@ -1,8 +1,8 @@
 import childProcess from "child_process";
-import fse from "fs-extra";
 import os from "os";
 import path from "path";
 import util from "util";
+import fse from "fs-extra";
 import semver from "semver";
 
 let DOWN = "\x1B\x5B\x42";
@@ -110,6 +110,9 @@ describe("remix CLI", () => {
             --sourcemap         Generate source maps for production
           \`dev\` Options:
             --debug             Attach Node.js inspector
+            --port, -p          Choose the port from which to run your app
+          \`init\` Options:
+            --no-delete         Skip deleting the \`remix.init\` script
           \`routes\` Options:
             --json              Print the routes as JSON
           \`migrate\` Options:
@@ -122,7 +125,7 @@ describe("remix CLI", () => {
             - projectDir        The Remix project directory
             - template          The project template to use
             - remixPlatform     \`node\` or \`cloudflare\`
-            - migration         One of the choices from https://github.com/remix-run/remix/tree/main/packages/remix-dev/cli/migrate/migration-options
+            - migration         One of the choices from https://github.com/remix-run/remix/blob/main/packages/remix-dev/cli/migrate/migrations/index.ts
 
           Creating a new project:
 
@@ -143,8 +146,7 @@ describe("remix CLI", () => {
             $ remix create my-app --template https://example.com/remix-template.tar.gz
 
             To create a new project from a template in a private GitHub repo,
-            set the \`GITHUB_TOKEN\` environment variable to a personal access
-            token with access to that repo.
+            pass the \`token\` flag with a personal access token with access to that repo.
 
           Initialize a project::
 
@@ -204,8 +206,8 @@ describe("remix CLI", () => {
         { question: /Where.*create.*app/i, type: [projectDir, ENTER] },
         { question: /What type of app/i, answer: /basics/i },
         { question: /Where.*deploy/i, answer: /express/i },
-        { question: /install/i, type: ["n", ENTER] },
         { question: /typescript or javascript/i, answer: /typescript/i },
+        { question: /install/i, type: ["n", ENTER] },
       ]);
     });
 
@@ -229,27 +231,20 @@ describe("remix CLI", () => {
         { question: /Where.*create.*app/i, type: [projectDir, ENTER] },
         { question: /What type of app/i, answer: /basics/i },
         { question: /Where.*deploy/i, answer: /express/i },
-        { question: /install/i, type: ["n", ENTER] },
         { question: /typescript or javascript/i, answer: /javascript/i },
+        { question: /install/i, type: ["n", ENTER] },
       ]);
 
-      expect(
-        fse.existsSync(path.join(projectDir, "package.json"))
-      ).toBeTruthy();
+      expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
       expect(
         fse.existsSync(path.join(projectDir, "app/root.jsx"))
       ).toBeTruthy();
-      expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
       expect(
         fse.existsSync(path.join(projectDir, "tsconfig.json"))
       ).toBeFalsy();
       expect(
         fse.existsSync(path.join(projectDir, "jsconfig.json"))
       ).toBeTruthy();
-      let pkgJSON = JSON.parse(
-        fse.readFileSync(path.join(projectDir, "package.json"), "utf-8")
-      );
-      expect(Object.keys(pkgJSON.devDependencies)).not.toContain("typescript");
     });
   });
 });

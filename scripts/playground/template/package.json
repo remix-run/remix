@@ -3,12 +3,12 @@
   "private": true,
   "sideEffects": false,
   "scripts": {
-    "build": "run-s build:*",
+    "build": "run-s \"build:*\"",
     "build:css": "npm run generate:css -- --minify",
-    "build:remix": "node ./node_modules/@remix-run/dev/cli build",
-    "dev": "run-p dev:*",
+    "build:remix": "node ./node_modules/@remix-run/dev/dist/cli build",
+    "dev": "run-p \"dev:*\"",
     "dev:server": "cross-env NODE_ENV=development node --inspect --require ./node_modules/dotenv/config ./server.js",
-    "dev:remix": "cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/cli watch",
+    "dev:remix": "cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/dist/cli watch",
     "dev:css": "cross-env NODE_ENV=development npm run generate:css -- --watch",
     "generate:css": "tailwindcss -o ./app/styles/tailwind.css",
     "setup": "prisma migrate dev",
@@ -30,8 +30,8 @@
     "express": "^4.18.1",
     "get-port": "^6.1.2",
     "morgan": "^1.10.0",
-    "react": "^18.1.0",
-    "react-dom": "^18.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "tiny-invariant": "^1.2.0"
   },
   "devDependencies": {
@@ -39,17 +39,17 @@
     "@remix-run/dev": "^1.4.3",
     "@types/bcryptjs": "^2.4.2",
     "@types/node": "^17.0.31",
-    "@types/react": "^17.0.44",
-    "@types/react-dom": "^17.0.16",
+    "@types/react": "^18.0.15",
+    "@types/react-dom": "^18.0.6",
     "autoprefixer": "^10.4.7",
     "cross-env": "^7.0.3",
     "npm-run-all": "^4.1.5",
     "postcss": "^8.4.13",
     "prisma": "^3.13.0",
-    "tailwindcss": "^3.0.24",
+    "tailwindcss": "^3.1.0",
     "ts-node": "^10.7.0",
     "tsconfig-paths": "^4.0.0",
-    "typescript": "^4.6.4"
+    "typescript": "^4.7.4"
   },
   "engines": {
     "node": ">=14"

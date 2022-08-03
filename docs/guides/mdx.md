@@ -5,9 +5,11 @@ description: Remix makes integrating MDX into your project a breeze with built i
 
 # MDX
 
-While we believe that a strong separation of data and display is important, we understand that formats that mix the two such as [MDX](https://mdxjs.com/) (Markdown with embedded JSX components) have become a popular and powerful authoring format for developers.
+While we believe that a strong separation of data and display is important, we understand that formats that mix the two such as [MDX][mdx] (Markdown with embedded JSX components) have become a popular and powerful authoring format for developers.
 
-Remix supports using MDX in two ways:
+<docs-warning>Rather than compiling your content at build-time like this document demonstrates, it's typically better UX and DX if you do this at runtime via something like <a href="https://github.com/kentcdodds/mdx-bundler">mdx-bundler</a>. It's also much more customizable and powerful. However, if you prefer to do this compilation at build-time, continue reading.</docs-warning>
+
+Remix has built-in support for using MDX at build-time in two ways:
 
 - You can use a `.mdx` file as one of your route modules
 - You can `import` a `.mdx` file into one of your route modules (in `app/routes`)
@@ -30,7 +32,7 @@ headers:
 # Hello Content!
 ```
 
-The lines in the document above between the `---` are called "frontmatter". You can think of them like metadata for your document, formatted as [YAML](https://yaml.org/).
+The lines in the document above between the `---` are called "frontmatter". You can think of them like metadata for your document, formatted as [YAML][yaml].
 
 You can reference your frontmatter fields through the global `attributes` variable in your MDX:
 
@@ -63,6 +65,46 @@ meta:
 You can reference your frontmatter data through "attributes". The title of this post is {attributes.meta.title}!
 ```
 
+### Advanced Example
+
+You can even export all the other things in this module that you can in regular route modules in your mdx files like `loader` and `action`:
+
+```mdx
+---
+meta:
+  title: My First Post
+  description: Isn't this awesome?
+
+headers:
+  Cache-Control: no-cache
+---
+
+import styles from "./first-post.css";
+
+export const links = () => [
+  { rel: "stylesheet", href: styles },
+];
+
+export const handle = {
+  someData: "abc",
+};
+
+import { useLoaderData } from "@remix-run/react";
+
+export const loader = async () => {
+  return { mamboNumber: 5 };
+};
+
+export function ComponentUsingData() {
+  const { mamboNumber } = useLoaderData();
+  return <div id="loader">Mambo Number: {mamboNumber}</div>;
+}
+
+# This is some markdown!
+
+<ComponentUsingData />
+```
+
 ## Modules
 
 Besides just route level MDX, you can also import these files anywhere yourself as if it were a regular JavaScript module.
@@ -87,7 +129,7 @@ The following example demonstrates how you might build a simple blog with MDX, i
 In `app/routes/index.jsx`:
 
 ```tsx
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { Link, useLoaderData } from "@remix-run/react";
 
 // Import all your posts from the app/routes/posts directory. Since these are
@@ -134,7 +176,7 @@ export default function Index() {
 }
 ```
 
-Clearly this is not a scalable solution for a blog with thousands of posts. Realistically speaking, writing is hard, so if your blog starts to suffer from too much content, that's an awesome problem to have. If you get to 100 posts (congratulations!), we suggest you rethink your strategy and turn your posts into data stored in a database so that you don't have to rebuild and redeploy your blog every time you fix a typo. You can even keep using MDX with [MDX Bundler](https://github.com/kentcdodds/mdx-bundler).
+Clearly this is not a scalable solution for a blog with thousands of posts. Realistically speaking, writing is hard, so if your blog starts to suffer from too much content, that's an awesome problem to have. If you get to 100 posts (congratulations!), we suggest you rethink your strategy and turn your posts into data stored in a database so that you don't have to rebuild and redeploy your blog every time you fix a typo. You can even keep using MDX with [MDX Bundler][mdx-bundler].
 
 ## Advanced Configuration
 
@@ -158,3 +200,7 @@ exports.mdx = async (filename) => {
   };
 };
 ```
+
+[mdx]: https://mdxjs.com
+[yaml]: https://yaml.org
+[mdx-bundler]: https://github.com/kentcdodds/mdx-bundler

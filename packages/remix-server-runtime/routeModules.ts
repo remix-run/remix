@@ -15,9 +15,12 @@ export interface RouteModules<RouteModule> {
  */
 export interface DataFunctionArgs {
   request: Request;
-  context: AppLoadContext;
+  context?: AppLoadContext;
   params: Params;
 }
+
+export type LoaderArgs = DataFunctionArgs;
+export type ActionArgs = DataFunctionArgs;
 
 /**
  * A function that handles data mutations for a route.

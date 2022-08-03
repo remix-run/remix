@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/cloudflare-pages",
-  "version": "1.5.1",
+  "version": "1.6.7",
   "description": "Cloudflare Pages request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -11,10 +11,11 @@
     "directory": "packages/remix-cloudflare-pages"
   },
   "license": "MIT",
-  "main": "./index.js",
-  "module": "./esm/index.js",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "module": "dist/esm/index.js",
   "dependencies": {
-    "@remix-run/cloudflare": "1.5.1"
+    "@remix-run/cloudflare": "1.6.7"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^3.4.0",
@@ -25,5 +26,11 @@
   },
   "engines": {
     "node": ">=14"
-  }
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }

@@ -40,7 +40,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
 - Any **module side effects** will remain in place! This may cause problems, but should probably be avoided anyway.
 
   ```ts [3-6]
-  import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+  import { json } from "@remix-run/node"; // or cloudflare/deno
 
   // this starts running the moment the module is imported
   setInterval(() => {
@@ -52,6 +52,8 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
   }
   ```
 
-  If you need to write your code in a way that has these types of module side-effects, you should set up your own [@remix-run/express](adapter#createrequesthandler) server and a tool in development like pm2-dev or nodemon to restart the server on file changes instead.
+  If you need to write your code in a way that has these types of module side-effects, you should set up your own [@remix-run/express][remix-run-express] server and a tool in development like pm2-dev or nodemon to restart the server on file changes instead.
 
 In production this doesn't happen. The server boots up and that's the end of it.
+
+[remix-run-express]: adapter#createrequesthandler
