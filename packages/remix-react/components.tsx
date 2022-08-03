@@ -68,7 +68,7 @@ interface RemixEntryContextType {
   matches: BaseRouteMatch<ClientRoute>[];
   routeData: RouteData;
   deferredLoaderData?: DeferredLoaderData;
-  actionData?: unknown;
+  actionData?: RouteData;
   pendingLocation?: Location;
   appState: AppState;
   routeModules: RouteModules;
@@ -889,7 +889,7 @@ export function Meta() {
         }
 
         if (name === "title") {
-          return <title key="title">{value as string}</title>;
+          return <title key="title">{String(value)}</title>;
         }
 
         // Open Graph tags use the `property` attribute, while other meta tags

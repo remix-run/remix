@@ -5,6 +5,7 @@
     "lib": ["DOM", "DOM.Iterable", "ES2020"],
     "target": "ES2020",
     "module": "ES2020",
+    "skipLibCheck": true,
 
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
