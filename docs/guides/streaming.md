@@ -32,7 +32,7 @@ export async function loader({ params }: LoaderArgs) {
   return json<LoaderData>({
     packageLocation,
   });
-};
+}
 
 export default function PackageRoute() {
   const data = useLoaderData<typeof loader>();
@@ -240,7 +240,7 @@ export default function PackageRoute() {
         fallback={<p>Loading package location...</p>}
       >
         <Await
-          value={data.packageLocation}
+          resolve={data.packageLocation}
           errorElement={
             <p>Error loading package location!</p>
           }
