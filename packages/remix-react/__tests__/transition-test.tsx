@@ -30,7 +30,6 @@ describe("init", () => {
       actionData: { root: "ACTION DATA" },
       error: new Error("lol"),
       errorBoundaryId: "root",
-      onChange: () => {},
       onRedirect: () => {},
     });
     expect(tm.getState()).toMatchInlineSnapshot(`
@@ -1882,6 +1881,76 @@ describe("navigating with inflight fetchers", () => {
 
 // eslint-disable-next-line jest/no-focused-tests
 describe("deferred", () => {
+  it("should support returning deferred responses", async () => {
+    let t = setup({ url: "/" });
+
+    let A = await t.navigate.get("/foo");
+    let dfdA = defer();
+    await A.loader.resolve(
+      setupDeferred({
+        critical: "1",
+        lazy: dfdA.promise,
+      })
+    );
+
+    // In idle state when initial data is resolved
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.foo.lazy._data).toBe(undefined);
+    expect(t.getState().transition.state).toBe("idle");
+
+    await dfdA.resolve("2");
+
+    // Resolves deferred data
+    expect(t.getState().loaderData).toEqual({
+      foo: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.foo.lazy._data).toBe("2");
+    expect(t.getState().transition.state).toBe("idle");
+
+    // Navigate to new route
+    let B = await t.navigate.get("/bar");
+    let dfdB = defer();
+    await B.loader.resolve(
+      setupDeferred({
+        critical: "3",
+        lazy: dfdB.promise,
+      })
+    );
+
+    // In idle state when initial data is resolved
+    expect(t.getState().loaderData).toEqual({
+      bar: {
+        critical: "3",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().transition.state).toBe("idle");
+
+    await dfdB.resolve("4");
+
+    // Resolves deferred data
+    expect(t.getState().loaderData).toEqual({
+      bar: {
+        critical: "3",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.bar.lazy._data).toBe("4");
+    expect(t.getState().transition.state).toBe("idle");
+  });
+
   it("should support resolving initial deferred responses", async () => {
     let dfd = defer();
     let t = setup({
@@ -1895,6 +1964,7 @@ describe("deferred", () => {
       },
     });
 
+    // In idle state when page loads with SSR'd critical data
     expect(t.getState().loaderData).toEqual({
       index: {
         critical: "1",
@@ -1902,9 +1972,12 @@ describe("deferred", () => {
       },
       root: "ROOT",
     });
+    expect(t.getState().loaderData.index.lazy._data).toBe(undefined);
+    expect(t.getState().transition.state).toBe("idle");
 
     await dfd.resolve("2");
 
+    // Resolves deferred data
     expect(t.getState().loaderData).toEqual({
       index: {
         critical: "1",
@@ -1912,79 +1985,7 @@ describe("deferred", () => {
       },
       root: "ROOT",
     });
-    console.log(
-      t.getState().loaderData.index.lazy,
-      Object.getOwnPropertyNames(t.getState().loaderData.index.lazy)
-    );
     expect(t.getState().loaderData.index.lazy._data).toBe("2");
-  });
-
-  it("should support returning deferred responses", async () => {
-    let t = setup({ url: "/" });
-
-    let A = await t.navigate.get("/foo");
-    let dfdA = defer();
-    await A.loader.resolve(
-      setupDeferred({
-        critical: "1",
-        lazy: dfdA.promise,
-      })
-    );
-    await tick();
-
-    expect(t.getState().loaderData).toEqual({
-      foo: {
-        critical: "1",
-        lazy: expect.any(Promise),
-      },
-      root: "ROOT",
-    });
-    expect(t.getState().transition.state).toBe("idle");
-
-    await dfdA.resolve("2");
-    await tick();
-
-    expect(t.getState().loaderData).toEqual({
-      foo: {
-        critical: "1",
-        lazy: expect.any(Promise),
-      },
-      root: "ROOT",
-    });
-    expect(t.getState().loaderData.foo.lazy._data).toBe("2");
-    expect(t.getState().transition.state).toBe("idle");
-
-    let B = await t.navigate.get("/bar");
-    let dfdB = defer();
-    await B.loader.resolve(
-      setupDeferred({
-        critical: "3",
-        lazy: dfdB.promise,
-      })
-    );
-    await tick();
-
-    expect(t.getState().loaderData).toEqual({
-      bar: {
-        critical: "3",
-        lazy: expect.any(Promise),
-      },
-      root: "ROOT",
-    });
-    expect(t.getState().transition.state).toBe("idle");
-
-    await dfdB.resolve("4");
-    await tick();
-
-    expect(t.getState().loaderData).toEqual({
-      bar: {
-        critical: "3",
-        lazy: expect.any(Promise),
-      },
-      root: "ROOT",
-    });
-    expect(t.getState().loaderData.bar.lazy._data).toBe("4");
-    expect(t.getState().transition.state).toBe("idle");
   });
 
   it("should cancel initial deferreds on a new navigation", async () => {
@@ -2002,7 +2003,7 @@ describe("deferred", () => {
 
     let B = t.navigate.get("/bar");
 
-    // During navigation - deferreds remain as promises
+    // During navigation - deferreds remain as unresolved promises
     expect(t.getState().loaderData).toEqual({
       index: {
         critical: "1",
@@ -2010,6 +2011,7 @@ describe("deferred", () => {
       },
       root: "ROOT",
     });
+    expect(t.getState().loaderData.index.lazy._data).toBe(undefined);
 
     // But they are frozen - no re-paints on resolve/reject!
     await dfd.resolve("2");
@@ -2020,8 +2022,10 @@ describe("deferred", () => {
       },
       root: "ROOT",
     });
+    expect(t.getState().loaderData.index.lazy._data).toBe(undefined);
 
     await B.loader.resolve("BAR");
+    // Resolves final navigation data whe done
     expect(t.getState().loaderData).toEqual({
       root: "ROOT",
       bar: "BAR",
@@ -2051,6 +2055,7 @@ describe("deferred", () => {
       },
       root: "ROOT",
     });
+    expect(t.getState().loaderData.foo.lazy._data).toBe(undefined);
 
     // But they are frozen - no re-paints on resolve/reject!
     await dfd.resolve("2");
@@ -2064,6 +2069,7 @@ describe("deferred", () => {
     expect(t.getState().loaderData.foo.lazy._data).toBe(undefined);
 
     await B.loader.resolve("BAR");
+    // Resolves final navigation data whe done
     expect(t.getState().loaderData).toEqual({
       root: "ROOT",
       bar: "BAR",
@@ -2083,6 +2089,7 @@ describe("deferred", () => {
       })
     );
 
+    // Resolves initial navigation
     await dfd.resolve("2");
     expect(t.getState().loaderData).toEqual({
       foo: {
@@ -2096,7 +2103,7 @@ describe("deferred", () => {
     t.navigate.get("/foo?2");
     let B = t.navigate.get("/foo?1");
 
-    // During navigation - deferreds remain as promises
+    // During navigation - deferreds remain as resolved promises
     expect(t.getState().loaderData).toEqual({
       foo: {
         critical: "1",
@@ -2125,6 +2132,7 @@ describe("deferred", () => {
 
     await dfd2.resolve("4");
 
+    // Resolves final navigation data whe done
     expect(t.getState().loaderData).toEqual({
       foo: {
         critical: "3",
@@ -2781,7 +2789,6 @@ function createTestTransitionManager(
     loaderData: { root: "ROOT" },
     location,
     routes: [],
-    onChange() {},
     onRedirect() {},
     ...init,
   });
@@ -2944,12 +2951,12 @@ let setup = (
   ];
 
   let tm = createTestTransitionManager(url, {
-    onChange: handleChange,
     onRedirect: handleRedirect,
     loaderData: initialLoaderData ? initialLoaderData : { root: "ROOT" },
     deferredLoaderData: initialDeferredLoaderData,
     routes,
   });
+  tm.subscribe(handleChange);
 
   let navigate_ = (
     location: Location | string,

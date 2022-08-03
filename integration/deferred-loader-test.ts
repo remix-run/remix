@@ -69,12 +69,10 @@ test.beforeAll(async () => {
 
         export default function Index() {
           let {foo, bar} = useLoaderData();
-          let [count, setCount] = React.useState(0);
 
           return (
             <div>
               {foo}
-              <button onClick={() => setCount(count + 1)}>{count} Count</button>
               <React.Suspense>
                 <Await resolve={bar}>
                   {(resolved) => <div>{resolved}</div>}
@@ -106,12 +104,10 @@ test.beforeAll(async () => {
 
         export default function Index() {
           let {foo, bar} = useLoaderData();
-          let [count, setCount] = React.useState(0);
 
           return (
             <div>
               {foo}
-              <button onClick={() => setCount(count + 1)}>{count} Count</button>
               <React.Suspense>
                 <Await resolve={bar}>
                   <DeferredComponent />
@@ -147,12 +143,10 @@ test.beforeAll(async () => {
 
         export default function Index() {
           let {foo, bar} = useLoaderData();
-          let [count, setCount] = React.useState(0);
 
           return (
             <div>
               {foo}
-              <button onClick={() => setCount(count + 1)}>{count} Count</button>
               <React.Suspense>
                 <Await resolve={bar} errorElement={<DeferredBoundary />}>
                   <DeferredComponent />
@@ -184,12 +178,10 @@ test.beforeAll(async () => {
 
         export default function Index() {
           let {foo, bar} = useLoaderData();
-          let [count, setCount] = React.useState(0);
 
           return (
             <div>
               {foo}
-              <button onClick={() => setCount(count + 1)}>{count} Count</button>
               <React.Suspense>
                 <Await resolve={bar}>
                   <DeferredComponent />
@@ -321,7 +313,7 @@ test("renders error boundary", async () => {
   );
 });
 
-test("errored deferred data renders boundary", async ({ page }) => {
+test("errored deferred data renders error element", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/");
   await app.clickLink("/deferred-error");
@@ -332,7 +324,7 @@ test("errored deferred data renders boundary", async ({ page }) => {
   expect(text).toMatch("Oh, no!");
 });
 
-test("errored deferred data renders route boundary on hydration", async ({
+test("deferred errored renders route boundary on hydration", async ({
   page,
 }) => {
   let app = new PlaywrightFixture(appFixture, page);
@@ -341,7 +333,7 @@ test("errored deferred data renders route boundary on hydration", async ({
   expect(await boundary.innerText()).toMatch("Error Boundary Oh, no!");
 });
 
-test("errored deferred data renders route boundary on transition", async ({
+test("deferred error renders route boundary on transition", async ({
   page,
 }) => {
   let app = new PlaywrightFixture(appFixture, page);
