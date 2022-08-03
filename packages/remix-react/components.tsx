@@ -994,36 +994,26 @@ export function useFormAction(
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
+  let resolvedPath = useResolvedPath(action ?? ".");
 
-  // The documented behavior of a form without an explicit action prop is:
-  // -  Forms without an action prop (<Form method="post">) will automatically
-  //    post to the same route within which they are rendered.
-  //
-  // The problem with setting the default action to `.` is that
-  // `useResolvedPath(".")` excludes search params. This is the intended
-  // behavior of useResolvedPath, but it's unexpected for forms without an
-  // action prop since the search params are an important part of the current
-  // location, and the action function should receive those in the request URL.
-  //
-  // If the action prop is omitted, we'll append the current route's search
-  // string to the current location if it exists. If the action is explicitly
-  // set to `.` it will resolve without the search params to match the intended
-  // behavior of useResolvedPath, resolving the same URL as `<Link to="." />`
+  // Previously we set the default action to ".". The problem with this is that
+  // `useResolvedPath(".")` excludes search params and the hash of the resolved
+  // URL. This is the intended behavior of when "." is specifically provided as
+  // the form action, but inconsistent w/ browsers when the action is omitted.
   // https://github.com/remix-run/remix/issues/927
-  let { search: currentSearch } = useLocation();
-  let actionIsCurrentRoute = action === undefined || action === ".";
-  let path = useResolvedPath(
-    action === undefined ? { pathname: ".", search: currentSearch } : action
-  );
+  let location = useLocation();
+  let { search, hash } = resolvedPath;
+  if (action === undefined) {
+    search = location.search;
+    hash = location.hash;
+  }
 
-  let search = path.search;
   let isIndexRoute = id.endsWith("/index");
-
-  if (actionIsCurrentRoute && isIndexRoute) {
+  if ((action === undefined || action === ".") && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 
-  return path.pathname + search;
+  return resolvedPath.pathname + search + hash;
 }
 
 export interface SubmitOptions {
