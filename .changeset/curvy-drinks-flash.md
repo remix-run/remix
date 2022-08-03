@@ -2,4 +2,4 @@
 "@remix-run/react": patch
 ---
 
-When an action is omitted from`<Form>`or`useFormAction`, the resolved action would be the current location but the search string was omitted. This was a bug, and the search params will now be included in the form's action attribute.
+Previously, if an `action` was omitted from `<Form>` or `useFormAction`, the action value would default to `"."`. This is incorrect, as `"."` should resolve based on the current _path_, but an empty action resolves relative to the current _URL_ (including the search and hash values). We've fixed this to differentiate between the two.
