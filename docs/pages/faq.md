@@ -17,7 +17,7 @@ We recommend you create a function that validates the user session that can be a
 import {
   createCookieSessionStorage,
   redirect,
-} from "@remix-run/node"; // or "@remix-run/cloudflare"
+} from "@remix-run/node"; // or cloudflare/deno
 
 // somewhere you've got a session storage
 const { getSession } = createCookieSessionStorage();
@@ -114,7 +114,7 @@ export default function Projects() {
             defaultValue={project.name}
           />
         </label>
-        <button type="submit" name="action" value="create">
+        <button type="submit" name="action" value="update">
           Update
         </button>
       </Form>

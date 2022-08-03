@@ -3,7 +3,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
-    "dev": "remix build && run-p dev:*",
+    "dev": "remix build && run-p \"dev:*\"",
     "dev:node": "cross-env NODE_ENV=development nodemon ./server.js --watch ./server.js",
     "dev:remix": "remix watch",
     "start": "cross-env NODE_ENV=production node ./server.js"
@@ -22,12 +22,12 @@
   "devDependencies": {
     "@remix-run/dev": "*",
     "@remix-run/eslint-config": "*",
-    "@types/react": "^17.0.45",
+    "@types/react": "^17.0.47",
     "@types/react-dom": "^17.0.17",
-    "eslint": "^8.15.0",
-    "nodemon": "^2.0.16",
+    "eslint": "^8.20.0",
+    "nodemon": "^2.0.19",
     "npm-run-all": "^4.1.5",
-    "typescript": "^4.6.4"
+    "typescript": "^4.7.4"
   },
   "engines": {
     "node": ">=14"

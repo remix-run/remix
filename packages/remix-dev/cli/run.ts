@@ -160,9 +160,13 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "-h": "--help",
       "--install": Boolean,
       "--no-install": Boolean,
+      "--interactive": Boolean,
+      "--no-interactive": Boolean,
       "--json": Boolean,
       "--migration": String,
       "-m": "--migration",
+      "--port": Number,
+      "-p": "--port",
       "--remix-version": String,
       "--sourcemap": Boolean,
       "--template": String,
@@ -201,6 +205,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
   if (args["--no-install"]) {
     flags.install = false;
   }
+  if (args["--no-interactive"]) {
+    flags.interactive = false;
+  }
+  flags.interactive = flags.interactive ?? require.main === module;
   if (args["--no-typescript"]) {
     flags.typescript = false;
   }

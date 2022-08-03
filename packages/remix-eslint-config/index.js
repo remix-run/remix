@@ -26,7 +26,7 @@ const config = {
     requireConfigFile: false,
     ecmaVersion: "latest",
     babelOptions: {
-      presets: ["@babel/preset-react"],
+      presets: [require.resolve("@babel/preset-react")],
     },
   },
   env: {

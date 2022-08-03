@@ -1,4 +1,4 @@
-import { REF, OWNER, REPO, PR_FILES_STARTS_WITH } from "./constants";
+import { VERSION, OWNER, REPO, PR_FILES_STARTS_WITH } from "./constants";
 import {
   commentOnIssue,
   commentOnPullRequest,
@@ -8,14 +8,14 @@ import {
 import { getGitHubUrl } from "./utils";
 
 async function commentOnIssuesAndPrsAboutRelease() {
-  if (REF.includes("experimental")) {
+  if (VERSION.includes("experimental")) {
     return;
   }
 
   let { merged, previousTag } = await prsMergedSinceLastTag({
     owner: OWNER,
     repo: REPO,
-    githubRef: REF,
+    githubRef: VERSION,
   });
 
   let suffix = merged.length === 1 ? "" : "s";
@@ -23,7 +23,7 @@ async function commentOnIssuesAndPrsAboutRelease() {
   console.log(
     `Found ${merged.length} PR${suffix} merged ` +
       `that touched \`${prFilesDirs}\` since ` +
-      `previous release (current: ${REF}, previous: ${previousTag})`
+      `previous release (current: ${VERSION}, previous: ${previousTag})`
   );
 
   let promises: Array<ReturnType<typeof commentOnIssue>> = [];
@@ -37,7 +37,7 @@ async function commentOnIssuesAndPrsAboutRelease() {
         owner: OWNER,
         repo: REPO,
         pr: pr.number,
-        version: REF,
+        version: VERSION,
       })
     );
 
@@ -59,7 +59,7 @@ async function commentOnIssuesAndPrsAboutRelease() {
           issue: issueNumber,
           owner: OWNER,
           repo: REPO,
-          version: REF,
+          version: VERSION,
         })
       );
     }
