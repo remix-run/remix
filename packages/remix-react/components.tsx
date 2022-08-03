@@ -803,7 +803,9 @@ export function Scripts(props: ScriptProps) {
       .join("\n")}
 window.__remixRouteModules = {${matches
       .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
-      .join(",")}};`;
+      .join(",")}};
+      
+import(${JSON.stringify(manifest.entry.module)});`;
 
     return (
       <>
@@ -811,14 +813,15 @@ window.__remixRouteModules = {${matches
           {...props}
           suppressHydrationWarning
           dangerouslySetInnerHTML={createHtml(contextScript)}
+          type={undefined}
         />
-        <script {...props} src={manifest.url} />
+        <script {...props} type={undefined} src={manifest.url} />
         <script
           {...props}
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
+          async
         />
-        <script {...props} src={manifest.entry.module} type="module" />
       </>
     );
     // disabled deps array because we are purposefully only rendering this once
@@ -851,6 +854,11 @@ window.__remixRouteModules = {${matches
 
   return (
     <>
+      <link
+        rel="modulepreload"
+        href={manifest.entry.module}
+        crossOrigin={props.crossOrigin}
+      />
       {dedupe(preloads).map((path) => (
         <link
           key={path}
