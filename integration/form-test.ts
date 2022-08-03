@@ -396,7 +396,7 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/inbox");
       });
 
-      test("no action resolves to action w/ search params", async ({
+      test("no action resolves to URL including search params", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -466,7 +466,7 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/blog/abc");
       });
 
-      test("no action resolves to action w/ search params", async ({
+      test("no action resolves to URL including search params", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -536,7 +536,7 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/blog");
       });
 
-      test("no action resolves to action w/ search params", async ({
+      test("no action resolves to URL including search params", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -606,7 +606,7 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/blog");
       });
 
-      test("no action resolves to action w/ search params", async ({
+      test("no action resolves to URL including search params", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -676,7 +676,7 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/projects");
       });
 
-      test("no action resolves to action w/ search params", async ({
+      test("no action resolves to URL including search params", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
