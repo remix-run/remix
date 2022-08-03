@@ -296,7 +296,7 @@ export async function readConfig(
       appConfig = appConfigModule?.default || appConfig;
     } catch (error) {
       throw new Error(
-        `Error loading Remix config in ${configFile}\n${String(error)}`
+        `Error loading Remix config at ${configFile}\n${String(error)}`
       );
     }
   }
@@ -484,7 +484,7 @@ const configExts = [".js", ".cjs", ".mjs"];
 function findConfig(dir: string, basename: string): string | undefined {
   for (let ext of configExts) {
     let file = path.resolve(dir, basename + ext);
-    if (fse.existsSync(file)) return path.relative(dir, file);
+    if (fse.existsSync(file)) return file;
   }
 
   return undefined;
