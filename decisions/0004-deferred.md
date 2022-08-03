@@ -6,7 +6,7 @@ title: 0004 - Deferred API
 
 Date: 2022-06-29
 
-Status: accepted | open to change
+Status: accepted
 
 ## Context
 
@@ -33,7 +33,7 @@ Introduces a new response helper called `defer()` that's similar to the existing
 Definition:
 
 ```ts
-export type DeferredFunction = <Data extends unknown = unknown>(
+export type DeferFunction = <Data extends unknown = unknown>(
   data: Data,
   init?: number | ResponseInit
 ) => DeferredResponse<Data>;
