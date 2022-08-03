@@ -386,7 +386,7 @@ test.describe("Forms", () => {
 
   test.describe("<Form> action", () => {
     test.describe("in a static route", () => {
-      test("no action resolves relative to the current route", async ({
+      test("no action resolves relative to the closest route", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -396,7 +396,7 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/inbox");
       });
 
-      test("no action resolves relative to the current route w/ search params", async ({
+      test("no action resolves to action w/ search params", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -416,11 +416,19 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/about");
       });
 
-      test("'.' action resolves relative to the current route", async ({
+      test("'.' action resolves relative to the closest route", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
         await app.goto("/inbox");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${STATIC_ROUTE_CURRENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/inbox");
+      });
+
+      test("'.' excludes search params", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/inbox?foo=bar");
         let html = await app.getHtml();
         let el = getElement(html, `#${STATIC_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/inbox");
@@ -448,7 +456,7 @@ test.describe("Forms", () => {
     });
 
     test.describe("in a dynamic route", () => {
-      test("no action resolves relative to the current route", async ({
+      test("no action resolves relative to the closest route", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -458,7 +466,7 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/blog/abc");
       });
 
-      test("no action resolves relative to the current route w/ search params", async ({
+      test("no action resolves to action w/ search params", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -478,11 +486,19 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/about");
       });
 
-      test("'.' action resolves relative to the current route", async ({
+      test("'.' action resolves relative to the closest route", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
         await app.goto("/blog/abc");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${DYNAMIC_ROUTE_CURRENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/blog/abc");
+      });
+
+      test("'.' excludes search params", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog/abc?foo=bar");
         let html = await app.getHtml();
         let el = getElement(html, `#${DYNAMIC_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/blog/abc");
@@ -510,7 +526,7 @@ test.describe("Forms", () => {
     });
 
     test.describe("in an index route", () => {
-      test("no action resolves relative to the current route", async ({
+      test("no action resolves relative to the closest route", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -520,7 +536,7 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/blog");
       });
 
-      test("no action resolves relative to the current route w/ search params", async ({
+      test("no action resolves to action w/ search params", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -540,11 +556,19 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/about");
       });
 
-      test("'.' action resolves relative to the current route", async ({
+      test("'.' action resolves relative to the closest route", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
         await app.goto("/blog");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${INDEX_ROUTE_CURRENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/blog");
+      });
+
+      test("'.' excludes search params", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog?foo=bar");
         let html = await app.getHtml();
         let el = getElement(html, `#${INDEX_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/blog");
@@ -572,7 +596,7 @@ test.describe("Forms", () => {
     });
 
     test.describe("in a layout route", () => {
-      test("no action resolves relative to the current route", async ({
+      test("no action resolves relative to the closest route", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -582,7 +606,7 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/blog");
       });
 
-      test("no action resolves relative to the current route w/ search params", async ({
+      test("no action resolves to action w/ search params", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -602,11 +626,19 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/about");
       });
 
-      test("'.' action resolves relative to the current route", async ({
+      test("'.' action resolves relative to the closest route", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
         await app.goto("/blog");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${LAYOUT_ROUTE_CURRENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/blog");
+      });
+
+      test("'.' excludes search params", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog?foo=bar");
         let html = await app.getHtml();
         let el = getElement(html, `#${LAYOUT_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/blog");
@@ -634,7 +666,7 @@ test.describe("Forms", () => {
     });
 
     test.describe("in a splat route", () => {
-      test("no action resolves relative to the current route", async ({
+      test("no action resolves relative to the closest route", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -644,7 +676,7 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/projects");
       });
 
-      test("no action resolves relative to the current route w/ search params", async ({
+      test("no action resolves to action w/ search params", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
@@ -664,11 +696,19 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/about");
       });
 
-      test("'.' action resolves relative to the current route", async ({
+      test("'.' action resolves relative to the closest route", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
         await app.goto("/projects/blarg");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${SPLAT_ROUTE_CURRENT_ACTION}`);
+        expect(el.attr("action")).toMatch("/projects");
+      });
+
+      test("'.' excludes search params", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/projects/blarg?foo=bar");
         let html = await app.getHtml();
         let el = getElement(html, `#${SPLAT_ROUTE_CURRENT_ACTION}`);
         expect(el.attr("action")).toMatch("/projects");
