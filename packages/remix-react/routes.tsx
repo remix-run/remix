@@ -203,7 +203,7 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
       throw new CatchValue(
         result.status,
         result.statusText,
-        await extractData(result, signal)
+        await extractData(result, signal, true)
       );
     }
 
