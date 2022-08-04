@@ -1,6 +1,6 @@
 {
   "include": ["**/*.ts"],
-  "exclude": ["dist", "__tests__"],
+  "exclude": ["dist", "__tests__", "node_modules"],
   "compilerOptions": {
     "lib": ["ES2019"],
     "target": "ES2019",
