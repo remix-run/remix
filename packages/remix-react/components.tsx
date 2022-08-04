@@ -21,6 +21,7 @@ import {
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
 import type { Merge } from "type-fest";
+import { createPath } from "history";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
@@ -994,7 +995,7 @@ export function useFormAction(
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
-  let resolvedPath = useResolvedPath(action ?? ".");
+  let resolvedPath = useResolvedPath(action || ".");
 
   // Previously we set the default action to ".". The problem with this is that
   // `useResolvedPath(".")` excludes search params and the hash of the resolved
@@ -1013,7 +1014,7 @@ export function useFormAction(
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 
-  return resolvedPath.pathname + search + hash;
+  return createPath({ pathname: resolvedPath.pathname, search, hash });
 }
 
 export interface SubmitOptions {
