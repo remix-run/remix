@@ -5,7 +5,8 @@ const config: PlaywrightTestConfig = {
   testDir: ".",
   testMatch: ["**/*-test.ts"],
   /* Maximum time one test can run for. */
-  timeout: 30_000,
+  timeout: process.platform === "win32" ? 60_000 : 30_000,
+  fullyParallel: true,
   expect: {
     /* Maximum time expect() should wait for the condition to be met. */
     timeout: 5_000,
