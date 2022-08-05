@@ -47,6 +47,7 @@ beforeEach(async () => {
   await fse.remove(TEMP_DIR);
   await fse.ensureDir(TEMP_DIR);
 });
+
 afterEach(async () => {
   console.log = ORIGINAL_IO.log;
   console.warn = ORIGINAL_IO.warn;
