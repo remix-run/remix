@@ -268,6 +268,11 @@ export interface RemixConfig {
    * A list of directories to watch.
    */
   watchPaths: string[];
+
+  /**
+   * The path for the tsconfig file, if present on the root directory.
+   */
+  tsconfigPath: string | undefined;
 }
 
 /**
@@ -436,6 +441,15 @@ export async function readConfig(
 
   let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
 
+  // When tsconfigPath is undefined, the default "tsconfig.json" is not
+  // found in the root directory.
+  let tsconfigDefaultFilename = "tsconfig.json"
+  let tsconfigPath: string | undefined = undefined
+
+  if (fse.existsSync(path.resolve(rootDirectory, tsconfigDefaultFilename))) {
+    tsconfigPath = path.resolve(rootDirectory, tsconfigDefaultFilename)
+  }
+
   return {
     appDirectory,
     cacheDirectory,
@@ -458,6 +472,7 @@ export async function readConfig(
     serverDependenciesToBundle,
     mdx,
     watchPaths,
+    tsconfigPath,
   };
 }
 
