@@ -57,7 +57,7 @@ import type { Transition, Fetcher, Submission } from "./transition";
 interface RemixEntryContextType {
   manifest: AssetsManifest;
   matches: BaseRouteMatch<ClientRoute>[];
-  routeData: { [routeId: string]: RouteData };
+  routeData: RouteData;
   actionData?: RouteData;
   pendingLocation?: Location;
   appState: AppState;
@@ -719,7 +719,7 @@ export function Meta() {
         }
 
         if (name === "title") {
-          return <title key="title">{value}</title>;
+          return <title key="title">{String(value)}</title>;
         }
 
         // Open Graph tags use the `property` attribute, while other meta tags
