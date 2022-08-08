@@ -1663,7 +1663,7 @@ export type TypedResponse<T> = Response & {
 export type DeferredResponse<T extends object = Record<string, unknown>> =
   TypedResponse<T> & {
     // allows discriminating between deferred and non-deferred responses
-    __deferred?: never;
+    __deferred: never;
   };
 
 type DataFunction = (...args: any[]) => unknown; // matches any function
@@ -1679,11 +1679,9 @@ type JsonPrimitives =
   | Boolean
   | null;
 
-type NonJsonPrimitives = undefined | Function | symbol;
+type NonJsonPrimitives = Promise<unknown> | undefined | Function | symbol;
 
-type SerializeType<T> = T extends PromiseLike<unknown>
-  ? never
-  : T extends JsonPrimitives
+type SerializeType<T> = T extends JsonPrimitives
   ? T
   : T extends NonJsonPrimitives
   ? never

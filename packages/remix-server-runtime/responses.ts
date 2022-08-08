@@ -13,10 +13,10 @@ export type TypedResponse<T extends unknown = unknown> = Response & {
 export type DeferredResponse<T extends object = Record<string, unknown>> =
   TypedResponse<T> & {
     // allows discriminating between deferred and non-deferred responses
-    __deferred?: never;
+    __deferred: never;
   };
 
-export type DeferFunction = <Data extends object = Record<string, unknown>>(
+export type DeferFunction = <Data extends Record<PropertyKey, unknown>>(
   data: Data,
   init?: number | ResponseInit
 ) => DeferredResponse<Data>;
@@ -34,7 +34,10 @@ export type DeferFunction = <Data extends object = Record<string, unknown>>(
  *
  * @see https://remix.run/api/remix#deferred
  */
-export const defer: DeferFunction = (data, init = {}) => {
+export const defer: DeferFunction = <Data extends Record<PropertyKey, unknown>>(
+  data: Data,
+  init: number | ResponseInit = {}
+) => {
   let responseInit = typeof init === "number" ? { status: init } : init;
 
   let headers = new Headers(responseInit.headers);
@@ -54,7 +57,7 @@ export const defer: DeferFunction = (data, init = {}) => {
       ...responseInit,
       headers,
     }
-  );
+  ) as DeferredResponse<Data>;
 };
 
 export type JsonFunction = <Data extends unknown>(

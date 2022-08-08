@@ -90,7 +90,12 @@ describe("type serializer", () => {
   });
 
   it("transforms unserializables to never in objects", () => {
-    type AppData = { arg1: Function; arg2: symbol; arg3: undefined };
+    type AppData = {
+      arg1: Function;
+      arg2: symbol;
+      arg3: undefined;
+      arg4: Promise<unknown>;
+    };
     type response = UseDataFunctionReturn<AppData>;
     isEqual<response, {}>(true);
   });
@@ -189,7 +194,7 @@ describe("type serializer", () => {
       type T = { dob: Promise<Date>; parent: T };
       type AppData = DeferredResponse<T>;
       type SerializeParentAppData = {
-        dob: never;
+        dob?: never;
         parent: SerializeParentAppData;
       };
       type SerializedAppData = {
