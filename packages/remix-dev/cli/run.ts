@@ -106,9 +106,11 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
 
   ${colors.heading("Start your server separately and watch for changes")}:
 
-    $ # custom server start command, for example:
-	$ node --inspect --require ./node_modules/dotenv/config --require ./mocks ./build/server.js
-    $ remix watch
+    # custom server start command, for example:
+      $ remix watch
+
+      # in a separate tab:
+      $ node --inspect --require ./node_modules/dotenv/config --require ./mocks ./build/server.js
 
   ${colors.heading("Show all routes in your app")}:
 
