@@ -796,7 +796,8 @@ export function Scripts(props: ScriptProps) {
     let routeModulesScript = `${matches
       .map(
         (match, index) =>
-          `import * as route${index} from ${JSON.stringify(
+          `import ${JSON.stringify(manifest.url)};
+import * as route${index} from ${JSON.stringify(
             manifest.routes[match.route.id].module
           )};`
       )
@@ -815,7 +816,6 @@ import(${JSON.stringify(manifest.entry.module)});`;
           dangerouslySetInnerHTML={createHtml(contextScript)}
           type={undefined}
         />
-        <script {...props} type={undefined} src={manifest.url} />
         <script
           {...props}
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
