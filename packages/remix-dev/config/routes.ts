@@ -54,6 +54,13 @@ export interface DefineRouteOptions {
    * Should be `true` if this is an index route that does not allow child routes.
    */
   index?: boolean;
+
+  /**
+   * Should be a optional unique id string for this route, named like its `file`
+   * but without the extension. Use this optional param if you need to aggregate two
+   * or more routes to the same route file.
+   */
+  id?: string;
 }
 
 interface DefineRouteChildren {
@@ -137,11 +144,13 @@ export function defineRoutes(
       options = optionsOrChildren || {};
     }
 
+    let id = createRouteId(file);
+
     let route: ConfigRoute = {
       path: path ? path : undefined,
       index: options.index ? true : undefined,
       caseSensitive: options.caseSensitive ? true : undefined,
-      id: createRouteId(file),
+      id: options.id ? `${options.id}--${id}` : id,
       parentId:
         parentRoutes.length > 0
           ? parentRoutes[parentRoutes.length - 1].id

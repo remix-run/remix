@@ -87,4 +87,14 @@ describe("defineRoutes", () => {
       }
     `);
   });
+
+  it("allows multiple routes with the same route module", () => {
+    let routes = defineRoutes((route) => {
+      route("/user/:id", "routes/index.tsx", { id: "user-by-id" });
+      route("/user", "routes/index.tsx", { id: "user" });
+      route("/other", "routes/other-route.tsx");
+    });
+
+    expect(Object.entries(routes)).toHaveLength(3);
+  });
 });
