@@ -49,7 +49,12 @@ import type { RouteMatch as BaseRouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
-import type { Transition, Fetcher, Submission } from "./transition";
+import type {
+  Transition,
+  TransitionManagerState,
+  Fetcher,
+  Submission,
+} from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
@@ -117,19 +122,24 @@ export function RemixEntry({
       catch: entryComponentDidCatchEmulator.catch,
       catchBoundaryId: entryComponentDidCatchEmulator.catchBoundaryRouteId,
       onRedirect: _navigator.replace,
-      onChange: (state) => {
-        setClientState({
-          catch: state.catch,
-          error: state.error,
-          catchBoundaryRouteId: state.catchBoundaryId,
-          loaderBoundaryRouteId: state.errorBoundaryId,
-          renderBoundaryRouteId: null,
-          trackBoundaries: false,
-          trackCatchBoundaries: false,
-        });
-      },
     });
   });
+
+  React.useEffect(() => {
+    let subscriber = (state: TransitionManagerState) => {
+      setClientState({
+        catch: state.catch,
+        error: state.error,
+        catchBoundaryRouteId: state.catchBoundaryId,
+        loaderBoundaryRouteId: state.errorBoundaryId,
+        renderBoundaryRouteId: null,
+        trackBoundaries: false,
+        trackCatchBoundaries: false,
+      });
+    };
+
+    return transitionManager.subscribe(subscriber);
+  }, [transitionManager]);
 
   // Ensures pushes interrupting pending navigations use replace
   // TODO: Move this to React Router
@@ -1139,7 +1149,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
 
         // Include name + value from a <button>
         if (target.name) {
-          formData.set(target.name, target.value);
+          formData.append(target.name, target.value);
         }
       } else {
         if (isHtmlElement(target)) {
