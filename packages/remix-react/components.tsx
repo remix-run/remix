@@ -1014,13 +1014,13 @@ export function useFormAction(
   // https://github.com/remix-run/remix/issues/927
   let location = useLocation();
   let { search, hash } = resolvedPath;
-  if (action === undefined) {
+  if (action == null) {
     search = location.search;
     hash = location.hash;
   }
 
   let isIndexRoute = id.endsWith("/index");
-  if ((action === undefined || action === ".") && isIndexRoute) {
+  if ((action == null || action === ".") && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 
