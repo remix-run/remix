@@ -13,6 +13,7 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         stack:
           - repo: "remix-run/indie-stack"
@@ -69,6 +70,7 @@ jobs:
     needs: [setup]
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         stack:
           - repo: "remix-run/indie-stack"
@@ -111,6 +113,7 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         stack:
           - repo: "remix-run/indie-stack"
@@ -153,6 +156,7 @@ jobs:
     needs: [setup]
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         stack:
           - repo: "remix-run/indie-stack"
@@ -195,6 +199,7 @@ jobs:
     needs: [setup]
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         stack:
           - repo: "remix-run/indie-stack"
