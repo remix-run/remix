@@ -139,7 +139,6 @@ test("Expect exceptions thrown when cross posting routes are caught by an error 
   page,
 }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
   await app.goto("/form");
   await app.clickSubmitButton(TARGET_ROUTE);
   expect(await app.getHtml()).toMatch("[target] ErrorBoundary");
