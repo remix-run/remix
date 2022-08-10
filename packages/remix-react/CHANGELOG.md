@@ -1,8 +1,12 @@
 # `@remix-run/react`
 
-## 1.6.6-pre.1
+## 1.6.7
 
-## 1.6.6-pre.0
+### Patch Changes
+
+- Fix inferred types for `useLoaderData` and `useActionData` to preserve `null` value types ([#3879](https://github.com/remix-run/remix/pull/3879))
+
+## 1.6.6
 
 ### Patch Changes
 

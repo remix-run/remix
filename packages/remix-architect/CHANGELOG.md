@@ -1,18 +1,18 @@
 # `@remix-run/architect`
 
-## 1.6.6-pre.1
+## 1.6.7
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/node@1.6.6-pre.1`
+  - `@remix-run/node@1.6.7`
 
-## 1.6.6-pre.0
+## 1.6.6
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/node@1.6.6-pre.0`
+  - `@remix-run/node@1.6.6`
 
 ## 1.6.5
 

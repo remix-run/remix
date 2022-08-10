@@ -14,7 +14,7 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 
 This example shows how to use the built-in HTML5 validation features.
 
-Check [app/routes/example.tsx](app/root.tsx) to see the client-side validation in action.
+Check [app/root.tsx](app/root.tsx) to see the client-side validation in action.
 
 ## Related Links
 
