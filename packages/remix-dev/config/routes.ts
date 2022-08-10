@@ -56,9 +56,9 @@ export interface DefineRouteOptions {
   index?: boolean;
 
   /**
-   * Should be a optional unique id string for this route, named like its `file`
-   * but without the extension. Use this optional param if you need to aggregate two
-   * or more routes to the same route file.
+   * An optional unique id string for this route, appended to the file name e.g:
+   * `<file-name>--<id>`. Use this if you need to aggregate two or more routes
+   * with the same route file.
    */
   id?: string;
 }
