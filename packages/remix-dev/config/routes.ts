@@ -56,9 +56,9 @@ export interface DefineRouteOptions {
   index?: boolean;
 
   /**
-   * An optional unique id string for this route, appended to the file name e.g:
-   * `<file-name>--<id>`. Use this if you need to aggregate two or more routes
-   * with the same route file.
+   * An optional unique id string for this route, that will be appended to the file
+   * name e.g: `<file-name>--<id>`. Use this if you need to aggregate two or more
+   * routes with the same route file.
    */
   id?: string;
 }
@@ -144,13 +144,13 @@ export function defineRoutes(
       options = optionsOrChildren || {};
     }
 
-    let id = createRouteId(file);
+    let fileId = createRouteId(file);
 
     let route: ConfigRoute = {
       path: path ? path : undefined,
       index: options.index ? true : undefined,
       caseSensitive: options.caseSensitive ? true : undefined,
-      id: options.id ? `${options.id}--${id}` : id,
+      id: options.id ? `${fileId}--${options.id}` : fileId,
       parentId:
         parentRoutes.length > 0
           ? parentRoutes[parentRoutes.length - 1].id
