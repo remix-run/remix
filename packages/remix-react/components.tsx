@@ -21,6 +21,7 @@ import {
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
 import type { Merge } from "type-fest";
+import { createPath } from "history";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
@@ -944,7 +945,7 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
       reloadDocument = false,
       replace = false,
       method = "get",
-      action = ".",
+      action,
       encType = "application/x-www-form-urlencoded",
       fetchKey,
       onSubmit,
@@ -999,20 +1000,31 @@ type HTMLFormSubmitter = HTMLButtonElement | HTMLInputElement;
  * @see https://remix.run/api/remix#useformaction
  */
 export function useFormAction(
-  action = ".",
+  action?: string,
   // TODO: Remove method param in v2 as it's no longer needed and is a breaking change
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
-  let path = useResolvedPath(action);
-  let search = path.search;
-  let isIndexRoute = id.endsWith("/index");
+  let resolvedPath = useResolvedPath(action ?? ".");
 
-  if (action === "." && isIndexRoute) {
+  // Previously we set the default action to ".". The problem with this is that
+  // `useResolvedPath(".")` excludes search params and the hash of the resolved
+  // URL. This is the intended behavior of when "." is specifically provided as
+  // the form action, but inconsistent w/ browsers when the action is omitted.
+  // https://github.com/remix-run/remix/issues/927
+  let location = useLocation();
+  let { search, hash } = resolvedPath;
+  if (action == null) {
+    search = location.search;
+    hash = location.hash;
+  }
+
+  let isIndexRoute = id.endsWith("/index");
+  if ((action == null || action === ".") && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 
-  return path.pathname + search;
+  return createPath({ pathname: resolvedPath.pathname, search, hash });
 }
 
 export interface SubmitOptions {
