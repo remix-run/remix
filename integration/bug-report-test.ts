@@ -40,6 +40,8 @@ let appFixture: AppFixture;
 //    ```
 ////////////////////////////////////////////////////////////////////////////////
 
+const TARGET_ROUTE = "/target";
+
 test.beforeAll(async () => {
   fixture = await createFixture({
     ////////////////////////////////////////////////////////////////////////////
@@ -71,6 +73,36 @@ test.beforeAll(async () => {
           return <div>cheeseburger</div>;
         }
       `,
+
+      "app/routes/form.jsx": js`
+        import { Form } from "@remix-run/react";
+
+        export const ErrorBoundary = ({ error }) => {
+          return <div>[form] ErrorBoundary</div>
+        }
+
+        export default function Index() {
+          return (
+            <Form method="post" action="${TARGET_ROUTE}">
+              <button formAction="${TARGET_ROUTE}">Submit</button>
+            </Form>
+          )
+        }
+      `,
+
+      "app/routes/target.jsx": js`
+        export const ErrorBoundary = ({ error }) => {
+          return <div>[target] ErrorBoundary</div>
+        }
+        
+        export const action = () => {
+          throw new Error('[target] threw the error')
+        }
+
+        export default function Index() {
+          return <div>Target</div>
+        }   
+      `,
     },
   });
 
@@ -101,6 +133,16 @@ test("[description of what you expect it to do]", async ({ page }) => {
   // await app.poke(20);
 
   // Go check out the other tests to see what else you can do.
+});
+
+test("Expect exceptions thrown when cross posting routes are caught by an error boundary", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
+  // You can test any request your app might get using `fixture`.
+  await app.goto("/form");
+  await app.clickSubmitButton(TARGET_ROUTE);
+  expect(await app.getHtml()).toMatch("[target] ErrorBoundary");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
