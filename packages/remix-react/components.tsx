@@ -1005,7 +1005,7 @@ export function useFormAction(
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
-  let resolvedPath = useResolvedPath(action || ".");
+  let resolvedPath = useResolvedPath(action ?? ".");
 
   // Previously we set the default action to ".". The problem with this is that
   // `useResolvedPath(".")` excludes search params and the hash of the resolved
