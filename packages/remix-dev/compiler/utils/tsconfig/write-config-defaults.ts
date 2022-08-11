@@ -68,11 +68,9 @@ export function writeConfigDefaults(configPath: string) {
   let requiredChanges = [];
 
   if (!("include" in fullConfig)) {
-    if (configType === "jsconfig.json") {
-      config.include = ["**/*.js", "**/*.jsx"];
-    } else {
-      config.include = ["remix.env.d.ts", "**/*.ts", "**/*.tsx"];
-    }
+    config.include = configType === "jsconfig.json"
+      ? ["**/*.js", "**/*.jsx"]
+      : ["remix.env.d.ts", "**/*.ts", "**/*.tsx"];
     suggestedChanges.push(
       colors.blue("include") +
         " was set to " +
