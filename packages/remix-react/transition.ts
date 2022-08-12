@@ -507,7 +507,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
       }
     }
 
-    state = Object.assign({}, state, updates);
+    state = Object.assign({}, state, updates, overrides);
 
     for (let subscriber of subscribers.values()) {
       subscriber(state);

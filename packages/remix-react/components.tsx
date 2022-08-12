@@ -20,7 +20,6 @@ import {
   useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
-import jsesc from "jsesc";
 import type { TrackedPromise } from "@remix-run/deferred";
 import type { Merge } from "type-fest";
 import { createPath } from "history";
@@ -44,7 +43,7 @@ import {
   isPageLinkDescriptor,
 } from "./links";
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
-import { createHtml } from "./markup";
+import { createHtml, escapeHtml } from "./markup";
 import type { ClientRoute } from "./routes";
 import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
@@ -1171,10 +1170,7 @@ function DeferredHydrationScript({
     script += js`let v=new Error(${JSON.stringify(error.message)});`;
     script += js`v.stack=${JSON.stringify(error.stack)};`;
   } else {
-    script += js`let v=${jsesc(promise._data, {
-      isScriptContext: true,
-      json: true,
-    })};`;
+    script += js`let v=${escapeHtml(JSON.stringify(promise._data))};`;
   }
 
   if (isError) {
