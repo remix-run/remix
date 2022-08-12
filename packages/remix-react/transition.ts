@@ -1975,9 +1975,6 @@ async function makeLoaderData(
             pendingNavigationDeferredControllers.delete(routeId);
           }
         }
-        if (!signal.aborted) {
-          update({});
-        }
       });
     }
   };
