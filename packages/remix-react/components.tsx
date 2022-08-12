@@ -707,7 +707,7 @@ export function Meta() {
 
     let routeModule = routeModules[routeId];
 
-    if (routeModule.meta) {
+    if (routeModule?.meta) {
       let routeMeta =
         typeof routeModule.meta === "function"
           ? routeModule.meta({ data, parentsData, params, location })
@@ -804,7 +804,10 @@ export function Scripts(props: ScriptProps) {
       ? `window.__remixContext = ${serverHandoffString};`
       : "";
 
-    let routeModulesScript = `${matches
+    let matchesWithModules = matches.filter(
+      (match) => manifest.routes[match.route.id]
+    );
+    let routeModulesScript = `${matchesWithModules
       .map(
         (match, index) =>
           `import ${JSON.stringify(manifest.url)};
@@ -813,7 +816,7 @@ import * as route${index} from ${JSON.stringify(
           )};`
       )
       .join("\n")}
-window.__remixRouteModules = {${matches
+window.__remixRouteModules = {${matchesWithModules
       .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
       .join(",")}};
 
@@ -857,7 +860,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
     .concat(nextMatches)
     .map((match) => {
       let route = manifest.routes[match.route.id];
-      return (route.imports || []).concat([route.module]);
+      return route ? (route.imports || []).concat([route.module]) : [];
     })
     .flat(1);
 

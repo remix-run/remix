@@ -10,7 +10,7 @@ import { ServerMode, isServerMode } from "./mode";
 import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
 import type { ServerRoute } from "./routes";
-import { createRoutes } from "./routes";
+import { createHierarchicalRoutes } from "./routes";
 import { json, isRedirectResponse, isCatchResponse } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
@@ -28,7 +28,11 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   build,
   mode
 ) => {
-  let routes = createRoutes(build.routes);
+  let routes = createHierarchicalRoutes<
+    Omit<ServerRoute, "children">,
+    ServerRoute
+  >(build.routes, (route) => ({ ...route, children: [] }));
+
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
 
   return async function requestHandler(request, loadContext = {}) {
@@ -300,7 +304,7 @@ async function handleDocumentRequest({
 
   let routeLoaderResults = await Promise.allSettled(
     matchesToLoad.map((match) =>
-      match.route.module.loader
+      match.route.module?.loader
         ? callRouteLoader({
             loadContext,
             match,
@@ -352,10 +356,10 @@ async function handleDocumentRequest({
     }
 
     // Track the boundary ID's for the loaders
-    if (match.route.module.CatchBoundary) {
+    if (match.route.module?.CatchBoundary) {
       appState.catchBoundaryRouteId = match.route.id;
     }
-    if (match.route.module.ErrorBoundary) {
+    if (match.route.module?.ErrorBoundary) {
       appState.loaderBoundaryRouteId = match.route.id;
     }
 

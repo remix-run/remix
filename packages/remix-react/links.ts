@@ -232,7 +232,7 @@ export function getLinksForMatches(
   let descriptors = matches
     .map((match): LinkDescriptor[] => {
       let module = routeModules[match.route.id];
-      return module.links?.() || [];
+      return module?.links?.() || [];
     })
     .flat(1);
 
@@ -434,6 +434,9 @@ export function getModuleLinkHrefs(
     matches
       .map((match) => {
         let route = manifestPatch.routes[match.route.id];
+        if (!route) {
+          return [];
+        }
         let hrefs = [route.module];
         if (route.imports) {
           hrefs = hrefs.concat(route.imports);
@@ -455,6 +458,9 @@ function getCurrentPageModulePreloadHrefs(
     matches
       .map((match) => {
         let route = manifest.routes[match.route.id];
+        if (!route) {
+          return [];
+        }
         let hrefs = [route.module];
 
         if (route.imports) {
