@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Make MDX builds deterministic
+Updated the compiler to make MDX builds deterministic (and a little faster!)
