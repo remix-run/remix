@@ -19,5 +19,13 @@
     "@remix-run/server-runtime": "1.6.7",
     "@remix-run/vercel": "1.6.7"
   },
-  "changesets": []
+  "changesets": [
+    "afraid-peaches-accept",
+    "curvy-drinks-flash",
+    "four-ladybugs-wait",
+    "great-pumas-act",
+    "nasty-cars-care",
+    "purple-ligers-drive",
+    "slow-apples-pretend"
+  ]
 }
