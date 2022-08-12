@@ -740,15 +740,15 @@ export function Meta() {
           if (isOpenGraphTag) {
             return (
               <meta
+                property={name}
                 content={content as string}
                 key={name + content}
-                property={name}
               />
             );
           }
 
           if (typeof content === "string") {
-            return <meta content={content} name={name} key={name + content} />;
+            return <meta name={name} content={content} key={name + content} />;
           }
 
           return <meta key={name + JSON.stringify(content)} {...content} />;
