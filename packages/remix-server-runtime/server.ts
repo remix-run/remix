@@ -110,7 +110,7 @@ async function handleDataRequest({
       match = getRequestMatch(url, matches);
 
       response = await callRouteAction({
-        loadContext,
+        loadContext: loadContext ?? {},
         match,
         request: request,
       });
@@ -129,7 +129,7 @@ async function handleDataRequest({
       }
       match = tempMatch;
 
-      response = await callRouteLoader({ loadContext, match, request });
+      response = await callRouteLoader({ loadContext: loadContext ?? {}, match, request });
     }
 
     if (isRedirectResponse(response)) {
@@ -151,7 +151,7 @@ async function handleDataRequest({
 
     if (handleDataRequest) {
       response = await handleDataRequest(response, {
-        context: loadContext,
+        context: loadContext ?? {},
         params: match.params,
         request,
       });
@@ -225,7 +225,7 @@ async function handleDocumentRequest({
 
     try {
       actionResponse = await callRouteAction({
-        loadContext,
+        loadContext: loadContext ?? {},
         match: actionMatch,
         request: request,
       });
@@ -302,7 +302,7 @@ async function handleDocumentRequest({
     matchesToLoad.map((match) =>
       match.route.module.loader
         ? callRouteLoader({
-            loadContext,
+            loadContext: loadContext ?? {},
             match,
             request: loaderRequest,
           })
@@ -524,9 +524,9 @@ async function handleResourceRequest({
 
   try {
     if (isActionRequest(request)) {
-      return await callRouteAction({ match, loadContext, request });
+      return await callRouteAction({ match, loadContext: loadContext ?? {}, request });
     } else {
-      return await callRouteLoader({ match, loadContext, request });
+      return await callRouteLoader({ match, loadContext: loadContext ?? {}, request });
     }
   } catch (error: any) {
     if (serverMode !== ServerMode.Test) {
