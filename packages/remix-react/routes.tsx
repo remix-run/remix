@@ -233,6 +233,11 @@ interface BaseOutputRoute {
 }
 
 /**
+ * NOTE: This function is duplicated in remix-dev, remix-react, and
+ * remix-server-runtime so if you make changes please make them in all 3
+ * locations. We'll look into DRY-ing this up after we layer Remix on top of
+ * react-router@6.4
+ *
  * Generic reusable function to convert a manifest into a react-router style
  * route hierarchy.  For use in server-side and client-side route creation,
  * as well and `remix routes` to keep them all in sync.
@@ -285,6 +290,7 @@ export function createHierarchicalRoutes<
             otherPathRoutes.push(r);
           }
         });
+        // TODO: Need to figure out this typing error :/
         let folderRoute: OutputRoute = {
           id: `folder:routes/${path}`,
           path,
