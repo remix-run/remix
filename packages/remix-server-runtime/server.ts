@@ -61,7 +61,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         loadContext,
         matches,
         request,
-        routes,
+        rootRoute: routes[0],
         serverMode,
       });
     }
@@ -180,14 +180,14 @@ async function handleDocumentRequest({
   loadContext,
   matches,
   request,
-  routes,
+  rootRoute,
   serverMode,
 }: {
   build: ServerBuild;
   loadContext: AppLoadContext;
   matches: RouteMatch<ServerRoute>[] | null;
   request: Request;
-  routes: ServerRoute[];
+  rootRoute?: ServerRoute;
   serverMode?: ServerMode;
 }): Promise<Response> {
   let url = new URL(request.url);
@@ -414,13 +414,12 @@ async function handleDocumentRequest({
   if (!renderableMatches) {
     renderableMatches = [];
 
-    let root = routes[0];
-    if (root?.module.CatchBoundary) {
+    if (rootRoute?.module.CatchBoundary) {
       appState.catchBoundaryRouteId = "root";
       renderableMatches.push({
         params: {},
         pathname: "",
-        route: routes[0],
+        route: rootRoute,
       });
     }
   }
