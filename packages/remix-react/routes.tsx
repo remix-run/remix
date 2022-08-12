@@ -226,10 +226,10 @@ interface BaseManifestRoute {
   parentId?: string;
 }
 
-interface BaseOutputRoute {
+interface BaseHierarchyRoute {
   id: string;
   path?: string;
-  children?: BaseOutputRoute[];
+  children?: BaseHierarchyRoute[];
 }
 
 /**
@@ -252,17 +252,17 @@ interface BaseOutputRoute {
  */
 export function createHierarchicalRoutes<
   ManifestRoute extends BaseManifestRoute,
-  OutputRoute extends BaseOutputRoute
+  HierarchyRoute extends BaseHierarchyRoute
 >(
   manifest: Record<string, ManifestRoute>,
-  createRoute: (r: ManifestRoute) => OutputRoute
+  createRoute: (r: ManifestRoute) => HierarchyRoute
 ) {
   function recurse(parentId?: string) {
     let routes = Object.values(manifest).filter(
       (route) => route.parentId === parentId
     );
 
-    let children: OutputRoute[] = [];
+    let children: HierarchyRoute[] = [];
     let pathCounts: Record<string, number> = {};
 
     for (let route of routes) {
@@ -281,8 +281,8 @@ export function createHierarchicalRoutes<
     // from the new parent now
     Object.entries(pathCounts).forEach(([path, count]) => {
       if (count > 1) {
-        let otherPathRoutes: OutputRoute[] = [];
-        let dupPathRoutes: OutputRoute[] = [];
+        let otherPathRoutes: HierarchyRoute[] = [];
+        let dupPathRoutes: HierarchyRoute[] = [];
         children.forEach((r) => {
           if (r.path === path) {
             dupPathRoutes.push(r);
@@ -291,7 +291,7 @@ export function createHierarchicalRoutes<
           }
         });
         // TODO: Need to figure out this typing error :/
-        let folderRoute: OutputRoute = {
+        let folderRoute: HierarchyRoute = {
           id: `folder:routes/${path}`,
           path,
           children: dupPathRoutes.map((r) => ({ ...r, path: undefined })),
