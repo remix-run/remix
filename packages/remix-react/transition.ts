@@ -104,7 +104,9 @@ export interface TransitionManagerInit {
   onRedirect: (to: string, state?: any) => void;
 }
 
-type TransitionManagerSubscriber = (state: TransitionManagerState) => void;
+export type TransitionManagerSubscriber = (
+  state: TransitionManagerState
+) => void;
 
 export interface Submission {
   action: string;
@@ -505,7 +507,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
       }
     }
 
-    state = Object.assign({}, state, updates, overrides);
+    state = Object.assign({}, state, updates);
+
     for (let subscriber of subscribers.values()) {
       subscriber(state);
     }

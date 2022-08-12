@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/cloudflare-pages",
-  "version": "1.6.7",
+  "version": "1.6.8",
   "description": "Cloudflare Pages request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -15,7 +15,7 @@
   "typings": "dist/index.d.ts",
   "module": "dist/esm/index.js",
   "dependencies": {
-    "@remix-run/cloudflare": "1.6.7"
+    "@remix-run/cloudflare": "1.6.8"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^3.4.0",

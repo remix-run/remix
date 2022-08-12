@@ -23,6 +23,7 @@ import type { LinkProps, NavLinkProps } from "react-router-dom";
 import jsesc from "jsesc";
 import type { TrackedPromise } from "@remix-run/deferred";
 import type { Merge } from "type-fest";
+import { createPath } from "history";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, DeferredLoaderData, AssetsManifest } from "./entry";
@@ -899,15 +900,15 @@ export function Meta() {
           if (isOpenGraphTag) {
             return (
               <meta
+                property={name}
                 content={content as string}
                 key={name + content}
-                property={name}
               />
             );
           }
 
           if (typeof content === "string") {
-            return <meta content={content} name={name} key={name + content} />;
+            return <meta name={name} content={content} key={name + content} />;
           }
 
           return <meta key={name + JSON.stringify(content)} {...content} />;
@@ -1006,7 +1007,8 @@ export function Scripts(props: ScriptProps) {
     let routeModulesScript = `${matches
       .map(
         (match, index) =>
-          `import * as route${index} from ${JSON.stringify(
+          `import ${JSON.stringify(manifest.url)};
+import * as route${index} from ${JSON.stringify(
             manifest.routes[match.route.id].module
           )};`
       )
@@ -1025,7 +1027,6 @@ import(${JSON.stringify(manifest.entry.module)});`;
           dangerouslySetInnerHTML={createHtml(contextScript)}
           type={undefined}
         />
-        <script {...props} type={undefined} src={manifest.url} />
         <script
           {...props}
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
@@ -1268,7 +1269,7 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
       reloadDocument = false,
       replace = false,
       method = "get",
-      action = ".",
+      action,
       encType = "application/x-www-form-urlencoded",
       fetchKey,
       onSubmit,
@@ -1323,20 +1324,31 @@ type HTMLFormSubmitter = HTMLButtonElement | HTMLInputElement;
  * @see https://remix.run/api/remix#useformaction
  */
 export function useFormAction(
-  action = ".",
+  action?: string,
   // TODO: Remove method param in v2 as it's no longer needed and is a breaking change
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
-  let path = useResolvedPath(action);
-  let search = path.search;
-  let isIndexRoute = id.endsWith("/index");
+  let resolvedPath = useResolvedPath(action ?? ".");
 
-  if (action === "." && isIndexRoute) {
+  // Previously we set the default action to ".". The problem with this is that
+  // `useResolvedPath(".")` excludes search params and the hash of the resolved
+  // URL. This is the intended behavior of when "." is specifically provided as
+  // the form action, but inconsistent w/ browsers when the action is omitted.
+  // https://github.com/remix-run/remix/issues/927
+  let location = useLocation();
+  let { search, hash } = resolvedPath;
+  if (action == null) {
+    search = location.search;
+    hash = location.hash;
+  }
+
+  let isIndexRoute = id.endsWith("/index");
+  if ((action == null || action === ".") && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 
-  return path.pathname + search;
+  return createPath({ pathname: resolvedPath.pathname, search, hash });
 }
 
 export interface SubmitOptions {
@@ -1473,7 +1485,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
 
         // Include name + value from a <button>
         if (target.name) {
-          formData.set(target.name, target.value);
+          formData.append(target.name, target.value);
         }
       } else {
         if (isHtmlElement(target)) {
