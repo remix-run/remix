@@ -2,4 +2,4 @@
 "@remix-run/react": patch
 ---
 
-Add subscribe method to transition manager to allow subscribing and un-subscribing for React 18 strict mode compliance.
+Added a subscribe method to the transition manager, which allows subscribing and unsubscribing for React 18 strict mode compliance

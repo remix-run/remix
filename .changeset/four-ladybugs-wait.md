@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Allow importing `.sql` files as text
+Added support for importing `.sql` files as text content

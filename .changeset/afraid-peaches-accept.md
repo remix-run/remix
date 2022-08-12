@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Add support for .mjs and .cjs remix.config files.
+Added support for `.mjs` and `.cjs` file extensions for `remix.config`

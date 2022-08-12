@@ -1,11 +1,9 @@
 ---
-"@remix-run/netlify": minor
-"@remix-run/server-runtime": minor
+"@remix-run/netlify": patch
+"@remix-run/server-runtime": patch
 ---
 
-Type safety for load context.
-
-Change `AppLoadContext` to be an interface mapping `string` to `unknown`, allowing users to extend it via:
+We've added type safety for load context. `AppLoadContext` is now an an interface mapping `string` to `unknown`, allowing users to extend it via module augmentation:
 
 ```ts
 declare module "@remix-run/server-runtime" {
