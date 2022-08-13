@@ -55,6 +55,8 @@ npm run dev
 
 💿 Open up [http://localhost:3000][http-localhost-3000], the app should be running.
 
+<docs-warning>The .env.example file needs to be manually renamed to .env(Don't check it into git!) in order for the app to start</docs-warning>
+
 If you want, take a minute and poke around the UI a bit. Feel free to create an account and create/delete some notes to get an idea of what's available in the UI out of the box.
 
 ## Your First Route
