@@ -16,7 +16,7 @@ Google Cloud SDK setup and login is required.
 
 1. Install the Google Cloud SDK:
 
-[Quickstart: Install the Google Cloud CLI  \|  Google Cloud CLI Documentation](https://cloud.google.com/sdk/docs/install-sdk?hl=en)
+[Quickstart: Install the Google Cloud CLI  \|  Google Cloud CLI Documentation](https://cloud.google.com/sdk/docs/install-sdk)
 
 ex: homebrew
 
@@ -34,6 +34,8 @@ gcloud auth login
 
 By default, the runtime starts your application by running node server.js. If you specify a start script in your package.json file, the runtime runs the specified start script instead.
 
+[Application startup - Google Cloud](https://cloud.google.com/appengine/docs/standard/nodejs/runtime#application_startup)
+
 After the build is complete, deploy to the Google App Engine environment.
 
 ```bash
@@ -44,7 +46,11 @@ npm run build
 gcloud app deploy
 ```
 
-[Application startup - Google Cloud](https://cloud.google.com/appengine/docs/standard/nodejs/runtime#application_startup)
+Preview:
+
+```bash
+$ gcloud app browse --service remix-app
+```
 
 ## Settings
 
