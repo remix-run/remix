@@ -1,0 +1,24 @@
+# ref https://cloud.google.com/appengine/docs/standard/python/config/appref
+env: standard
+
+runtime: nodejs16
+
+instance_class: F2
+
+service: remix-app
+
+handlers:
+  - url: /build
+    static_dir: public/build
+  - url: /(.*\.(gif|png|jpg|ico|txt|svg))$
+    static_files: public/\1
+    upload: public/.*\.(gif|png|jpg|ico|txt|svg)$
+  - url: /.*
+    script: auto
+    secure: always
+
+env_variables:
+  NODE_ENV: 'production'
+
+automatic_scaling:
+  min_instances: 0
