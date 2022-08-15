@@ -2,6 +2,7 @@ import type { Transform } from "jscodeshift";
 
 import { checkNoDifferentImportTypesCombined } from "./checkNoDifferentImportTypesCombined";
 import { createExportExpressionStatementFromExportDefaultDeclaration } from "./createExportExpressionStatementFromExportDefaultDeclaration";
+import { createExportExpressionStatementFromExportNamedDeclaration } from "./createExportExpressionStatementFromExportNamedDeclaration";
 import { createImportExpressionStatement } from "./createImportExpressionStatement";
 import { createVariableDeclarationIdentifier } from "./createVariableDeclarationIdentifier";
 import { createVariableDeclarationObjectPattern } from "./createVariableDeclarationObjectPattern";
@@ -12,9 +13,11 @@ const transform: Transform = (file, api, options) => {
 
   let allImportDeclarations = root.find(j.ImportDeclaration);
   let allExportDefaultDeclarations = root.find(j.ExportDefaultDeclaration);
+  let allExportNamedDeclarations = root.find(j.ExportNamedDeclaration);
   if (
     allImportDeclarations.length === 0 &&
-    allExportDefaultDeclarations.length === 0
+    allExportDefaultDeclarations.length === 0 &&
+    allExportNamedDeclarations.length === 0
   ) {
     // This transform doesn't need to run if there are no ES imports/exports
     return null;
@@ -64,6 +67,16 @@ const transform: Transform = (file, api, options) => {
       createExportExpressionStatementFromExportDefaultDeclaration(
         j,
         exportDefaultDeclaration.node
+      )
+    );
+  });
+
+  allExportNamedDeclarations.forEach((exportNamedDeclaration) => {
+    // export class Foo {} || export const foo = bar || export function foo() {}
+    j(exportNamedDeclaration).replaceWith(
+      createExportExpressionStatementFromExportNamedDeclaration(
+        j,
+        exportNamedDeclaration.node
       )
     );
   });

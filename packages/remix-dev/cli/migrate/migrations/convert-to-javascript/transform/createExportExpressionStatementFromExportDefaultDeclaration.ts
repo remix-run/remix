@@ -35,7 +35,6 @@ export const createExportExpressionStatementFromExportDefaultDeclaration = (
     exportDefaultDeclaration.declaration.type === "ExportDeclaration" ||
     exportDefaultDeclaration.declaration.type === "ExportDefaultDeclaration" ||
     exportDefaultDeclaration.declaration.type === "ExportNamedDeclaration" ||
-    exportDefaultDeclaration.declaration.type === "FunctionDeclaration" ||
     exportDefaultDeclaration.declaration.type === "ImportDeclaration" ||
     exportDefaultDeclaration.declaration.type === "InterfaceDeclaration" ||
     exportDefaultDeclaration.declaration.type === "MethodDefinition" ||
@@ -68,9 +67,9 @@ export const createExportExpressionStatementFromExportDefaultDeclaration = (
   let expressionKind =
     exportDefaultDeclaration.declaration.type === "ClassDeclaration"
       ? j.classExpression.from(exportDefaultDeclaration.declaration)
-      : // : exportDefaultDeclaration.declaration.type === "FunctionDeclaration"
-        // ? j.functionExpression.from(exportDefaultDeclaration.declaration)
-        exportDefaultDeclaration.declaration;
+      : exportDefaultDeclaration.declaration.type === "FunctionDeclaration"
+        ? j.functionExpression.from(exportDefaultDeclaration.declaration)
+      :  exportDefaultDeclaration.declaration;
   return j.expressionStatement(
     j.assignmentExpression(
       "=",

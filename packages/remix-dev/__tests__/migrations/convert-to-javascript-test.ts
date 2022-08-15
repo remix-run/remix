@@ -109,12 +109,22 @@ const checkMigrationRanSuccessfully = async (projectDir: string) => {
   expect(exportDefaultResult.stdout.trim()).toBe("");
   expect(exportDefaultResult.stderr).toBeNull();
   expect(exportDefaultResult.code).toBe(0);
-
+  let exportClassResult = shell.grep("-l", 'export class "', JSFiles);
+  expect(exportClassResult.stdout.trim()).toBe("");
+  expect(exportClassResult.stderr).toBeNull();
+  expect(exportClassResult.code).toBe(0);
+  let exportConstResult = shell.grep("-l", 'export const "', JSFiles);
+  expect(exportConstResult.stdout.trim()).toBe("");
+  expect(exportConstResult.stderr).toBeNull();
+  expect(exportConstResult.code).toBe(0);
+  let exportFunctionResult = shell.grep("-l", 'export function "', JSFiles);
+  expect(exportFunctionResult.stdout.trim()).toBe("");
+  expect(exportFunctionResult.stderr).toBeNull();
+  expect(exportFunctionResult.code).toBe(0);
   let rootRouteContent = await readFile(
     path.join(projectDir, "app", "root.jsx"),
     "utf-8"
   );
-
   expect(rootRouteContent).not.toContain('require("@remix-run/react")');
 };
 
