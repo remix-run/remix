@@ -1,4 +1,6 @@
 {
+  "name": "ui",
+  "version": "0.0.0",
   "private": true,
   "sideEffects": false,
   "main": "./dist/index.js",
