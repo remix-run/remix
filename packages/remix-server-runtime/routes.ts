@@ -1,4 +1,3 @@
-import invariant from "./invariant";
 import type { ServerRouteModule } from "./routeModules";
 
 export interface RouteManifest<Route> {
