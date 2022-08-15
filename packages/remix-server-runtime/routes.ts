@@ -35,6 +35,7 @@ export interface ServerRoute extends Route {
 // https://github.com/remix-run/react-router/issues/9145
 interface BaseManifestRoute {
   id: string;
+  index?: boolean;
   path?: string;
   parentId?: string;
 }
@@ -76,41 +77,41 @@ export function createHierarchicalRoutes<
     );
 
     let children: HierarchyRoute[] = [];
-    let pathCounts: Record<string, number> = {};
+
+    // Our manifest flattens index routes and their paths into a single
+    // per-route-file entry, so we use this to track which index routes need
+    // to be split back into a hierarchical pattern
+    let indexRoutesWithPath: string[] = [];
 
     for (let route of routes) {
-      // Track in case we find duplicate paths and the same level, indicating
-      // we need to insert a folder route
-      if (route.path) {
-        pathCounts[route.path] = (pathCounts[route.path] || 0) + 1;
+      if (route.index && route.path) {
+        indexRoutesWithPath.push(route.path);
       }
       let hierarchicalRoute = createRoute(route);
       hierarchicalRoute.children = recurse(route.id);
       children.push(hierarchicalRoute);
     }
 
-    // If we found any duplicate paths, create a new folder-route and nest
-    // the duplicate entires under that without paths since they inherit
-    // from the new parent now
-    Object.entries(pathCounts).forEach(([path, count]) => {
-      if (count > 1) {
-        let otherPathRoutes: HierarchyRoute[] = [];
-        let dupPathRoutes: HierarchyRoute[] = [];
-        children.forEach((r) => {
-          if (r.path === path) {
-            dupPathRoutes.push(r);
-          } else {
-            otherPathRoutes.push(r);
-          }
-        });
-        // TODO: Need to figure out this typing error :/
-        let folderRoute: HierarchyRoute = {
-          id: `folder:routes/${path}`,
-          path,
-          children: dupPathRoutes.map((r) => ({ ...r, path: undefined })),
-        };
-        children = [...otherPathRoutes, folderRoute];
-      }
+    // For each index route that _also_ had a path, create a new parent route
+    // for the path and nest the index route and any other matching path routes
+    indexRoutesWithPath.forEach((path) => {
+      let otherPathRoutes: HierarchyRoute[] = [];
+      let dupPathRoutes: HierarchyRoute[] = [];
+      children.forEach((r) => {
+        if (r.path === path) {
+          dupPathRoutes.push(r);
+        } else {
+          otherPathRoutes.push(r);
+        }
+      });
+      // TODO: Need to figure out this typing error :/
+      // @ts-expect-error
+      let folderRoute: HierarchyRoute = {
+        id: `routes/${path}`,
+        path,
+        children: dupPathRoutes.map((r) => ({ ...r, path: undefined })),
+      };
+      children = [...otherPathRoutes, folderRoute];
     });
 
     return children;
