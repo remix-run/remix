@@ -2,3 +2,10 @@ node_modules
 build
 dist
 .turbo
+.vercel
+.cache
+.env
+.output
+apps/**/public/build
+apps/**/api/index.js
+apps/**/api/index.js.map
