@@ -1,4 +1,4 @@
-name: 🕊 Release
+name: 🕊 Post-release
 
 on:
   push:

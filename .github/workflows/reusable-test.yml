@@ -1,4 +1,4 @@
-name: 🧪 Test
+name: 🧪 Test (shared)
 
 on:
   workflow_call:
