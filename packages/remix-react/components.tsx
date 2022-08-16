@@ -860,7 +860,10 @@ import(${JSON.stringify(manifest.entry.module)});`;
     .concat(nextMatches)
     .map((match) => {
       let route = manifest.routes[match.route.id];
-      return route ? (route.imports || []).concat([route.module]) : [];
+      if (!route) {
+        return [];
+      }
+      return (route.imports || []).concat([route.module]);
     })
     .flat(1);
 
