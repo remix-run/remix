@@ -53,7 +53,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         handleDataRequest: build.entry.module.handleDataRequest,
         serverMode,
       });
-    } else if (matches && !matches[matches.length - 1].route.module.default) {
+    } else if (matches && !matches[matches.length - 1].route.module?.default) {
       response = await handleResourceRequest({
         request,
         loadContext,
@@ -612,7 +612,7 @@ function getMatchesUpToDeepestBoundary(
   let deepestBoundaryIndex: number = -1;
 
   matches.forEach((match, index) => {
-    if (match.route.module[key]) {
+    if (match.route.module?.[key]) {
       deepestBoundaryIndex = index;
     }
   });
