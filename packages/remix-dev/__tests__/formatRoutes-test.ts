@@ -4,12 +4,6 @@ import {
   RoutesFormat,
 } from "../config/format";
 
-function createHierarchyRoute(route) {
-  let { id, path, file, index } = route;
-  // lazy way to remove undefined values from output :)
-  return JSON.parse(JSON.stringify({ id, path, file, index }));
-}
-
 describe("createHierarchicalRoutes", () => {
   test("adds parent route for index routes with path", () => {
     let manifestRoutes = {
@@ -28,6 +22,13 @@ describe("createHierarchicalRoutes", () => {
         file: "routes/nested/index.tsx",
       },
     };
+
+    function createHierarchyRoute(id: string, path: string | undefined) {
+      let { file, index } = manifestRoutes[id] || {};
+      // lazy way to remove undefined values from output :)
+      return JSON.parse(JSON.stringify({ id, path, file, index }));
+    }
+
     expect(createHierarchicalRoutes(manifestRoutes, createHierarchyRoute))
       .toMatchInlineSnapshot(`
       Array [
@@ -83,6 +84,13 @@ describe("createHierarchicalRoutes", () => {
         file: "routes/nested/__pathless/foo.tsx",
       },
     };
+
+    function createHierarchyRoute(id: string, path: string | undefined) {
+      let { file, index } = manifestRoutes[id] || {};
+      // lazy way to remove undefined values from output :)
+      return JSON.parse(JSON.stringify({ id, path, file, index }));
+    }
+
     expect(createHierarchicalRoutes(manifestRoutes, createHierarchyRoute))
       .toMatchInlineSnapshot(`
       Array [
@@ -145,6 +153,13 @@ describe("createHierarchicalRoutes", () => {
         file: "routes/nested/index.tsx",
       },
     };
+
+    function createHierarchyRoute(id: string, path: string | undefined) {
+      let { file, index } = manifestRoutes[id] || {};
+      // lazy way to remove undefined values from output :)
+      return JSON.parse(JSON.stringify({ id, path, file, index }));
+    }
+
     expect(createHierarchicalRoutes(manifestRoutes, createHierarchyRoute))
       .toMatchInlineSnapshot(`
       Array [
@@ -194,7 +209,7 @@ describe("createHierarchicalRoutes", () => {
   test("creates hierarchy for non-index route structures", () => {
     let manifestRoutes = {
       root: { path: "", id: "root", file: "root.tsx" },
-      "routes/parent1.tsx": {
+      "routes/parent1": {
         path: "parent1",
         id: "routes/parent1",
         parentId: "root",
@@ -206,7 +221,7 @@ describe("createHierarchicalRoutes", () => {
         parentId: "routes/parent1",
         file: "routes/parent1/child1.tsx",
       },
-      "routes/parent2.tsx": {
+      "routes/parent2": {
         path: "parent2",
         id: "routes/parent2",
         parentId: "root",
@@ -219,6 +234,13 @@ describe("createHierarchicalRoutes", () => {
         file: "routes/parent2/child2.tsx",
       },
     };
+
+    function createHierarchyRoute(id: string, path: string | undefined) {
+      let { file, index } = manifestRoutes[id] || {};
+      // lazy way to remove undefined values from output :)
+      return JSON.parse(JSON.stringify({ id, path, file, index }));
+    }
+
     expect(createHierarchicalRoutes(manifestRoutes, createHierarchyRoute))
       .toMatchInlineSnapshot(`
       Array [

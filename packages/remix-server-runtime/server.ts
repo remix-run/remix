@@ -28,10 +28,15 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   build,
   mode
 ) => {
-  let routes = createHierarchicalRoutes<
-    Omit<ServerRoute, "children">,
-    ServerRoute
-  >(build.routes, (route) => ({ ...route, children: [] }));
+  let routes = createHierarchicalRoutes<ServerRoute>(
+    build.routes,
+    (id, path) => ({
+      ...(build.routes[id] || {}),
+      id,
+      path,
+      children: [],
+    })
+  );
 
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
 

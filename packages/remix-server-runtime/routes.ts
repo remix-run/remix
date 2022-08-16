@@ -62,33 +62,29 @@ type BaseHierarchyRoute<T> = T & {
  * @returns
  */
 export function createHierarchicalRoutes<
-  ManifestRoute extends BaseManifestRoute,
   HierarchyRoute extends Omit<BaseHierarchyRoute<unknown>, "children">
 >(
-  manifest: Record<string, ManifestRoute>,
-  createRoute: (r: ManifestRoute) => HierarchyRoute
+  manifest: Record<string, BaseManifestRoute>,
+  createRoute: (id: string, path: string | undefined) => HierarchyRoute
 ): HierarchyRoute[] {
   function recurse(parentId?: string) {
-    let routes = Object.values(manifest).filter(
-      (route) => route.parentId === parentId
-    );
-
-    let children: HierarchyRoute[] = [];
-
     // Our manifest flattens index routes and their paths into a single
     // per-route-file entry, so we use this to track which index routes need
     // to be split back into a hierarchical pattern
     let indexRoutesWithPath: string[] = [];
+    let children: HierarchyRoute[] = [];
 
-    for (let route of routes) {
-      if (route.index && route.path) {
-        indexRoutesWithPath.push(route.path);
+    Object.values(manifest).forEach((route) => {
+      if (route.parentId == parentId) {
+        if (route.index && route.path) {
+          indexRoutesWithPath.push(route.path);
+        }
+        children.push({
+          ...createRoute(route.id, route.path),
+          children: recurse(route.id),
+        });
       }
-      children.push({
-        ...createRoute(route),
-        children: recurse(route.id),
-      });
-    }
+    });
 
     // For each index route that _also_ had a path, create a new parent route
     // for the path and nest the index route and any other matching path routes
@@ -103,10 +99,7 @@ export function createHierarchicalRoutes<
         }
       });
       let folderRoute = {
-        ...createRoute({
-          id: `routes/${path}`,
-          path,
-        } as ManifestRoute),
+        ...createRoute(`routes/${path}`, path),
         children: dupPathRoutes.map((r) => ({ ...r, path: undefined })),
       };
       children = [...otherPathRoutes, folderRoute];
