@@ -30,8 +30,6 @@ export interface ServerRoute extends Route {
   module: ServerRouteModule;
 }
 
-// https://github.com/remix-run/remix/discussions/3014
-// https://github.com/remix-run/react-router/issues/9145
 interface BaseManifestRoute {
   id: string;
   index?: boolean;
@@ -103,11 +101,11 @@ export function createHierarchicalRoutes<
           otherPathRoutes.push(r);
         }
       });
-      // TODO: Need to figure out this typing error :/
-      // @ts-expect-error
-      let folderRoute: HierarchyRoute = {
-        id: `routes/${path}`,
-        path,
+      let folderRoute = {
+        ...createRoute({
+          id: `routes/${path}`,
+          path,
+        } as ManifestRoute),
         children: dupPathRoutes.map((r) => ({ ...r, path: undefined })),
       };
       children = [...otherPathRoutes, folderRoute];

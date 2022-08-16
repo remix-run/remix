@@ -14,6 +14,7 @@ import type { Submission } from "./transition";
 import { CatchValue, TransitionRedirect } from "./transition";
 import { prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
+import { Outlet } from ".";
 
 export interface RouteManifest<Route> {
   [routeId: string]: Route;
@@ -84,7 +85,9 @@ export function createClientRoute(
 ): ClientRoute {
   return {
     caseSensitive: !!entryRoute.caseSensitive,
-    element: <Component id={entryRoute.id} />,
+    // If this route doesn't have a module, then it's an inserted parent path
+    // route, and it should just render it's children through an outlet
+    element: entryRoute.module ? <Component id={entryRoute.id} /> : <Outlet />,
     id: entryRoute.id,
     path: entryRoute.path,
     index: entryRoute.index,
@@ -291,11 +294,11 @@ export function createHierarchicalRoutes<
           otherPathRoutes.push(r);
         }
       });
-      // TODO: Need to figure out this typing error :/
-      // @ts-expect-error
-      let folderRoute: HierarchyRoute = {
-        id: `routes/${path}`,
-        path,
+      let folderRoute = {
+        ...createRoute({
+          id: `routes/${path}`,
+          path,
+        } as ManifestRoute),
         children: dupPathRoutes.map((r) => ({ ...r, path: undefined })),
       };
       children = [...otherPathRoutes, folderRoute];
