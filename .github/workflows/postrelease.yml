@@ -14,8 +14,8 @@ jobs:
     uses: remix-run/remix/.github/workflows/release-comments.yml@main
     with:
       ref: ${{ github.ref }}
-      # this should match the above tag to watch including the trailing "@"
-      packageVersionToFollow: "remix@"
+      # this should match the above tag to watch not including the trailing "@"
+      packageVersionToFollow: "remix"
 
   deployments:
     needs: [release]
