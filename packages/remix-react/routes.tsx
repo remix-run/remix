@@ -230,11 +230,11 @@ interface BaseManifestRoute {
   parentId?: string;
 }
 
-interface BaseHierarchyRoute {
+type BaseHierarchyRoute<T> = T & {
   id: string;
   path?: string;
-  children?: BaseHierarchyRoute[];
-}
+  children?: BaseHierarchyRoute<T>[];
+};
 
 /**
  * NOTE: This function is duplicated in remix-dev, remix-react, and
@@ -256,11 +256,11 @@ interface BaseHierarchyRoute {
  */
 export function createHierarchicalRoutes<
   ManifestRoute extends BaseManifestRoute,
-  HierarchyRoute extends BaseHierarchyRoute
+  HierarchyRoute extends Omit<BaseHierarchyRoute<unknown>, "children">
 >(
   manifest: Record<string, ManifestRoute>,
   createRoute: (r: ManifestRoute) => HierarchyRoute
-) {
+): HierarchyRoute[] {
   function recurse(parentId?: string) {
     let routes = Object.values(manifest).filter(
       (route) => route.parentId === parentId
@@ -277,9 +277,10 @@ export function createHierarchicalRoutes<
       if (route.index && route.path) {
         indexRoutesWithPath.push(route.path);
       }
-      let hierarchicalRoute = createRoute(route);
-      hierarchicalRoute.children = recurse(route.id);
-      children.push(hierarchicalRoute);
+      children.push({
+        ...createRoute(route),
+        children: recurse(route.id),
+      });
     }
 
     // For each index route that _also_ had a path, create a new parent route
