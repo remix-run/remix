@@ -1025,17 +1025,17 @@ export function useFormAction(
   let isIndexRoute = id.endsWith("/index");
 
   if (action == null) {
+    search = location.search;
+    hash = location.hash;
+
     // When grabbing search params from the URL, remove the automatically
-    // inserted index param so we match the useResolvedPath search behavior
+    // inserted ?index param so we match the useResolvedPath search behavior
     // which would not include ?index
     if (isIndexRoute) {
-      let params = new URLSearchParams(location.search);
+      let params = new URLSearchParams(search);
       params.delete("index");
       search = params.toString() ? `?${params.toString()}` : "";
-    } else {
-      search = location.search;
     }
-    hash = location.hash;
   }
 
   if ((action == null || action === ".") && isIndexRoute) {
