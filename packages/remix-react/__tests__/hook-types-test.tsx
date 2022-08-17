@@ -1,4 +1,4 @@
-import type { TypedResponse, UseDataFunctionReturn } from "../components";
+import type { TypedResponse, UseDataFunctionReturn } from "../serialize";
 
 function isEqual<A, B>(
   arg: A extends B ? (B extends A ? true : false) : false
