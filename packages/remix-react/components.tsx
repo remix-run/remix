@@ -1362,7 +1362,7 @@ export type TypedResponse<T> = Response & {
 
 type DataFunction = (...args: any[]) => unknown; // matches any function
 type DataOrFunction = AppData | DataFunction;
-type JsonPrimitives =
+type JsonPrimitive =
   | string
   | number
   | boolean
@@ -1370,11 +1370,11 @@ type JsonPrimitives =
   | Number
   | Boolean
   | null;
-type NonJsonPrimitives = undefined | Function | symbol;
+type NonJsonPrimitive = undefined | Function | symbol;
 
-type SerializeType<T> = T extends JsonPrimitives
+type SerializeType<T> = T extends JsonPrimitive
   ? T
-  : T extends NonJsonPrimitives
+  : T extends NonJsonPrimitive
   ? never
   : T extends { toJSON(): infer U }
   ? U
@@ -1382,18 +1382,18 @@ type SerializeType<T> = T extends JsonPrimitives
   ? []
   : T extends [unknown, ...unknown[]]
   ? {
-      [k in keyof T]: T[k] extends NonJsonPrimitives
+      [k in keyof T]: T[k] extends NonJsonPrimitive
         ? null
         : SerializeType<T[k]>;
     }
   : T extends ReadonlyArray<infer U>
-  ? (U extends NonJsonPrimitives ? null : SerializeType<U>)[]
+  ? (U extends NonJsonPrimitive ? null : SerializeType<U>)[]
   : T extends object
   ? SerializeObject<UndefinedOptionals<T>>
   : never;
 
 type SerializeObject<T> = {
-  [k in keyof T as T[k] extends NonJsonPrimitives ? never : k]: SerializeType<
+  [k in keyof T as T[k] extends NonJsonPrimitive ? never : k]: SerializeType<
     T[k]
   >;
 };
