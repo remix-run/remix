@@ -55,7 +55,7 @@ import type {
   Fetcher,
   Submission,
 } from "./transition";
-import type { UseDataFunctionReturn } from "./serialize";
+import type { SerializeFrom } from "./serialize";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
@@ -1361,7 +1361,7 @@ export function useMatches(): RouteMatch[] {
  *
  * @see https://remix.run/api/remix#useloaderdata
  */
-export function useLoaderData<T = AppData>(): UseDataFunctionReturn<T> {
+export function useLoaderData<T = AppData>(): SerializeFrom<T> {
   return useRemixRouteContext().data;
 }
 
@@ -1370,9 +1370,7 @@ export function useLoaderData<T = AppData>(): UseDataFunctionReturn<T> {
  *
  * @see https://remix.run/api/remix#useactiondata
  */
-export function useActionData<T = AppData>():
-  | UseDataFunctionReturn<T>
-  | undefined {
+export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
   let { actionData } = transitionManager.getState();

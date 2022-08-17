@@ -62,11 +62,10 @@ export type TypedResponse<T extends unknown = unknown> = Response & {
 
 type ArbitraryFunction = (...args: any[]) => unknown;
 
-export type UseDataFunctionReturn<T extends AppData | ArbitraryFunction> =
-  Serialize<
-    T extends (...args: any[]) => infer Output
-      ? Awaited<Output> extends TypedResponse<infer U>
-        ? U
-        : Awaited<Output>
-      : Awaited<T>
-  >;
+export type SerializeFrom<T extends AppData | ArbitraryFunction> = Serialize<
+  T extends (...args: any[]) => infer Output
+    ? Awaited<Output> extends TypedResponse<infer U>
+      ? U
+      : Awaited<Output>
+    : Awaited<T>
+>;
