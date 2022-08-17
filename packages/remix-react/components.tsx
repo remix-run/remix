@@ -1373,23 +1373,18 @@ type JsonPrimitive =
 type NonJsonPrimitive = undefined | Function | symbol;
 
 type IsAny<T> = 0 extends 1 & T ? true : false;
-type Serialize<T> = IsAny<T> extends true
-  ? any
-  : T extends JsonPrimitive
-  ? T
-  : T extends NonJsonPrimitive
-  ? never
-  : T extends { toJSON(): infer U }
-  ? U
-  : T extends []
-  ? []
-  : T extends [unknown, ...unknown[]]
-  ? SerializeTuple<T>
-  : T extends ReadonlyArray<infer U>
-  ? (U extends NonJsonPrimitive ? null : Serialize<U>)[]
-  : T extends object
-  ? SerializeObject<UndefinedToOptional<T>>
-  : never;
+
+// prettier-ignore
+type Serialize<T> =
+  IsAny<T> extends true ? any :
+  T extends JsonPrimitive ? T :
+  T extends NonJsonPrimitive ? never :
+  T extends { toJSON(): infer U } ? U :
+  T extends [] ? [] :
+  T extends [unknown, ...unknown[]] ? SerializeTuple<T> :
+  T extends ReadonlyArray<infer U> ? (U extends NonJsonPrimitive ? null : Serialize<U>)[] :
+  T extends object ? SerializeObject<UndefinedToOptional<T>> :
+  never;
 
 /** JSON serialize [tuples](https://www.typescriptlang.org/docs/handbook/2/objects.html#tuple-types) */
 type SerializeTuple<T extends [unknown, ...unknown[]]> = {
