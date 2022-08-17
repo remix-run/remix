@@ -6,8 +6,14 @@ describe("createRequestHandler", () => {
     let handler = createRequestHandler({
       routes: {
         root: {
+          id: "root",
+          path: "/",
+          module: {},
+        },
+        "routes/test": {
           id: "routes/test",
-          path: "/test",
+          path: "test",
+          parentId: "root",
           module: {
             loader: ({ request }) => json(request.headers.get("X-Foo")),
           } as any,
