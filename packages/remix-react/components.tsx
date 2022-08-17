@@ -1372,7 +1372,10 @@ type JsonPrimitive =
   | null;
 type NonJsonPrimitive = undefined | Function | symbol;
 
-type Serialize<T> = T extends JsonPrimitive
+type IsAny<T> = 0 extends 1 & T ? true : false;
+type Serialize<T> = IsAny<T> extends true
+  ? any
+  : T extends JsonPrimitive
   ? T
   : T extends NonJsonPrimitive
   ? never
