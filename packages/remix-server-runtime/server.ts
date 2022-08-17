@@ -31,7 +31,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   let routes = createRoutes(build.routes);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
 
-  return async function requestHandler(request, loadContext) {
+  return async function requestHandler(request, loadContext = {}) {
     let url = new URL(request.url);
     let matches = matchServerRoutes(routes, url.pathname);
 
@@ -82,7 +82,7 @@ async function handleDataRequest({
   serverMode,
 }: {
   handleDataRequest?: HandleDataRequestFunction;
-  loadContext?: AppLoadContext;
+  loadContext: AppLoadContext;
   matches: RouteMatch<ServerRoute>[];
   request: Request;
   serverMode: ServerMode;
@@ -110,7 +110,7 @@ async function handleDataRequest({
       match = getRequestMatch(url, matches);
 
       response = await callRouteAction({
-        loadContext: loadContext ?? {},
+        loadContext,
         match,
         request: request,
       });
@@ -129,7 +129,7 @@ async function handleDataRequest({
       }
       match = tempMatch;
 
-      response = await callRouteLoader({ loadContext: loadContext ?? {}, match, request });
+      response = await callRouteLoader({ loadContext, match, request });
     }
 
     if (isRedirectResponse(response)) {
@@ -151,7 +151,7 @@ async function handleDataRequest({
 
     if (handleDataRequest) {
       response = await handleDataRequest(response, {
-        context: loadContext ?? {},
+        context: loadContext,
         params: match.params,
         request,
       });
@@ -180,7 +180,7 @@ async function handleDocumentRequest({
   serverMode,
 }: {
   build: ServerBuild;
-  loadContext?: AppLoadContext;
+  loadContext: AppLoadContext;
   matches: RouteMatch<ServerRoute>[] | null;
   request: Request;
   routes: ServerRoute[];
@@ -225,7 +225,7 @@ async function handleDocumentRequest({
 
     try {
       actionResponse = await callRouteAction({
-        loadContext: loadContext ?? {},
+        loadContext,
         match: actionMatch,
         request: request,
       });
@@ -302,7 +302,7 @@ async function handleDocumentRequest({
     matchesToLoad.map((match) =>
       match.route.module.loader
         ? callRouteLoader({
-            loadContext: loadContext ?? {},
+            loadContext,
             match,
             request: loaderRequest,
           })
@@ -516,7 +516,7 @@ async function handleResourceRequest({
   serverMode,
 }: {
   request: Request;
-  loadContext?: AppLoadContext;
+  loadContext: AppLoadContext;
   matches: RouteMatch<ServerRoute>[];
   serverMode: ServerMode;
 }): Promise<Response> {
@@ -524,9 +524,9 @@ async function handleResourceRequest({
 
   try {
     if (isActionRequest(request)) {
-      return await callRouteAction({ match, loadContext: loadContext ?? {}, request });
+      return await callRouteAction({ match, loadContext, request });
     } else {
-      return await callRouteLoader({ match, loadContext: loadContext ?? {}, request });
+      return await callRouteLoader({ match, loadContext, request });
     }
   } catch (error: any) {
     if (serverMode !== ServerMode.Test) {
