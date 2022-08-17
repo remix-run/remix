@@ -62,6 +62,12 @@ export type TypedResponse<T extends unknown = unknown> = Response & {
 
 type ArbitraryFunction = (...args: any[]) => unknown;
 
+/**
+ * Infer JSON serialized data type returned by a loader or action.
+ *
+ * For example:
+ * `type LoaderData = SerializeFrom<typeof loader>`
+ */
 export type SerializeFrom<T extends AppData | ArbitraryFunction> = Serialize<
   T extends (...args: any[]) => infer Output
     ? Awaited<Output> extends TypedResponse<infer U>
