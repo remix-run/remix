@@ -816,7 +816,7 @@ import * as route${index} from ${JSON.stringify(
 window.__remixRouteModules = {${matches
       .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
       .join(",")}};
-      
+
 import(${JSON.stringify(manifest.entry.module)});`;
 
     return (
@@ -1022,12 +1022,22 @@ export function useFormAction(
   // https://github.com/remix-run/remix/issues/927
   let location = useLocation();
   let { search, hash } = resolvedPath;
+  let isIndexRoute = id.endsWith("/index");
+
   if (action == null) {
     search = location.search;
     hash = location.hash;
+
+    // When grabbing search params from the URL, remove the automatically
+    // inserted ?index param so we match the useResolvedPath search behavior
+    // which would not include ?index
+    if (isIndexRoute) {
+      let params = new URLSearchParams(search);
+      params.delete("index");
+      search = params.toString() ? `?${params.toString()}` : "";
+    }
   }
 
-  let isIndexRoute = id.endsWith("/index");
   if ((action == null || action === ".") && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
