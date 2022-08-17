@@ -1372,7 +1372,7 @@ type JsonPrimitive =
   | null;
 type NonJsonPrimitive = undefined | Function | symbol;
 
-type SerializeType<T> = T extends JsonPrimitive
+type Serialize<T> = T extends JsonPrimitive
   ? T
   : T extends NonJsonPrimitive
   ? never
@@ -1384,18 +1384,16 @@ type SerializeType<T> = T extends JsonPrimitive
   ? {
       [k in keyof T]: T[k] extends NonJsonPrimitive
         ? null
-        : SerializeType<T[k]>;
+        : Serialize<T[k]>;
     }
   : T extends ReadonlyArray<infer U>
-  ? (U extends NonJsonPrimitive ? null : SerializeType<U>)[]
+  ? (U extends NonJsonPrimitive ? null : Serialize<U>)[]
   : T extends Record<PropertyKey, unknown>
   ? SerializeObject<UndefinedOptionals<T>>
   : never;
 
 type SerializeObject<T extends Record<PropertyKey, unknown>> = {
-  [k in keyof T as T[k] extends NonJsonPrimitive ? never : k]: SerializeType<
-    T[k]
-  >;
+  [k in keyof T as T[k] extends NonJsonPrimitive ? never : k]: Serialize<T[k]>;
 };
 
 /*
@@ -1418,7 +1416,7 @@ type UndefinedOptionals<T extends Record<PropertyKey, unknown>> = Merge<
   }
 >;
 
-export type UseDataFunctionReturn<T extends DataOrFunction> = SerializeType<
+export type UseDataFunctionReturn<T extends DataOrFunction> = Serialize<
   T extends (...args: any[]) => infer Output
     ? Awaited<Output> extends TypedResponse<infer U>
       ? U
