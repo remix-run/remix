@@ -1418,13 +1418,13 @@ type UndefinedOptionals<T extends object> = Merge<
   }
 >;
 
-export type UseDataFunctionReturn<T extends DataOrFunction> = T extends (
-  ...args: any[]
-) => infer Output
-  ? Awaited<Output> extends TypedResponse<infer U>
-    ? SerializeType<U>
-    : SerializeType<Awaited<ReturnType<T>>>
-  : SerializeType<Awaited<T>>;
+export type UseDataFunctionReturn<T extends DataOrFunction> = SerializeType<
+  T extends (...args: any[]) => infer Output
+    ? Awaited<Output> extends TypedResponse<infer U>
+      ? U
+      : Awaited<Output>
+    : Awaited<T>
+>;
 
 /**
  * Returns the JSON parsed data from the current route's `loader`.
