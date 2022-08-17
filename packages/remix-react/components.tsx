@@ -1356,12 +1356,6 @@ export function useMatches(): RouteMatch[] {
   );
 }
 
-/**
- * Returns the JSON parsed data from the current route's `loader`.
- *
- * @see https://remix.run/api/remix#useloaderdata
- */
-
 export type TypedResponse<T> = Response & {
   json(): Promise<T>;
 };
@@ -1431,6 +1425,12 @@ export type UseDataFunctionReturn<T extends DataOrFunction> = T extends (
     ? SerializeType<U>
     : SerializeType<Awaited<ReturnType<T>>>
   : SerializeType<Awaited<T>>;
+
+/**
+ * Returns the JSON parsed data from the current route's `loader`.
+ *
+ * @see https://remix.run/api/remix#useloaderdata
+ */
 export function useLoaderData<T = AppData>(): UseDataFunctionReturn<T> {
   return useRemixRouteContext().data;
 }
