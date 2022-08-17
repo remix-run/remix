@@ -1381,17 +1381,16 @@ type Serialize<T> = T extends JsonPrimitive
   : T extends []
   ? []
   : T extends [unknown, ...unknown[]]
-  ? {
-      [k in keyof T]: T[k] extends NonJsonPrimitive
-        ? null
-        : Serialize<T[k]>;
-    }
+  ? SerializeTuple<T>
   : T extends ReadonlyArray<infer U>
   ? (U extends NonJsonPrimitive ? null : Serialize<U>)[]
   : T extends Record<PropertyKey, unknown>
   ? SerializeObject<UndefinedToOptional<T>>
   : never;
 
+type SerializeTuple<T extends [unknown, ...unknown[]]> = {
+  [k in keyof T]: T[k] extends NonJsonPrimitive ? null : Serialize<T[k]>;
+};
 type SerializeObject<T extends Record<PropertyKey, unknown>> = {
   [k in keyof T as T[k] extends NonJsonPrimitive ? never : k]: Serialize<T[k]>;
 };
