@@ -24,7 +24,7 @@ export function getGitHubUrl(type: "pull" | "issue", number: number) {
 
 export function cleanupTagName(tagName: string) {
   if (PACKAGE_VERSION_TO_FOLLOW) {
-    let regex = new RegExp(`^${PACKAGE_VERSION_TO_FOLLOW}`);
+    let regex = new RegExp(`^${PACKAGE_VERSION_TO_FOLLOW}@`);
     return tagName.replace(regex, "");
   }
 
