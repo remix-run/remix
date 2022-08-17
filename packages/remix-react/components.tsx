@@ -1389,7 +1389,7 @@ type Serialize<T> = T extends JsonPrimitive
   : T extends ReadonlyArray<infer U>
   ? (U extends NonJsonPrimitive ? null : Serialize<U>)[]
   : T extends Record<PropertyKey, unknown>
-  ? SerializeObject<UndefinedOptionals<T>>
+  ? SerializeObject<UndefinedToOptional<T>>
   : never;
 
 type SerializeObject<T extends Record<PropertyKey, unknown>> = {
@@ -1402,7 +1402,7 @@ type SerializeObject<T extends Record<PropertyKey, unknown>> = {
  *
  * Example: { a: string | undefined} --> { a?: string}
  */
-type UndefinedOptionals<T extends Record<PropertyKey, unknown>> = Merge<
+type UndefinedToOptional<T extends Record<PropertyKey, unknown>> = Merge<
   {
     // Property is not a union with `undefined`, keep as-is
     [k in keyof T as undefined extends T[k] ? never : k]: T[k];
