@@ -12,6 +12,10 @@ type JsonPrimitive =
   | null;
 type NonJsonPrimitive = undefined | Function | symbol;
 
+/*
+ * `any` is the only type that can let you equate `0` with `1`
+ * See https://stackoverflow.com/a/49928360/1490091
+ */
 type IsAny<T> = 0 extends 1 & T ? true : false;
 
 // prettier-ignore
