@@ -1387,14 +1387,17 @@ type Serialize<T> = IsAny<T> extends true
   ? SerializeTuple<T>
   : T extends ReadonlyArray<infer U>
   ? (U extends NonJsonPrimitive ? null : Serialize<U>)[]
-  : T extends Record<PropertyKey, unknown>
+  : T extends object
   ? SerializeObject<UndefinedToOptional<T>>
   : never;
 
+/** JSON serialize [tuples](https://www.typescriptlang.org/docs/handbook/2/objects.html#tuple-types) */
 type SerializeTuple<T extends [unknown, ...unknown[]]> = {
   [k in keyof T]: T[k] extends NonJsonPrimitive ? null : Serialize<T[k]>;
 };
-type SerializeObject<T extends Record<PropertyKey, unknown>> = {
+
+/** JSON serialize objects (not including arrays) and classes */
+type SerializeObject<T extends object> = {
   [k in keyof T as T[k] extends NonJsonPrimitive ? never : k]: Serialize<T[k]>;
 };
 
@@ -1404,7 +1407,7 @@ type SerializeObject<T extends Record<PropertyKey, unknown>> = {
  *
  * Example: { a: string | undefined} --> { a?: string}
  */
-type UndefinedToOptional<T extends Record<PropertyKey, unknown>> = Merge<
+type UndefinedToOptional<T extends object> = Merge<
   {
     // Property is not a union with `undefined`, keep as-is
     [k in keyof T as undefined extends T[k] ? never : k]: T[k];
