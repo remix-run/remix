@@ -21,6 +21,7 @@ import {
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
 import { createPath } from "history";
+import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
@@ -55,7 +56,6 @@ import type {
   Fetcher,
   Submission,
 } from "./transition";
-import type { SerializeFrom } from "./serialize";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry

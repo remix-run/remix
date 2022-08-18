@@ -1,6 +1,7 @@
 import type { Merge } from "type-fest";
 
 import type { AppData } from "./data";
+import type { TypedResponse } from "./responses";
 
 type JsonPrimitive =
   | string
@@ -59,10 +60,6 @@ type UndefinedToOptional<T extends object> = Merge<
     >;
   }
 >;
-
-export type TypedResponse<T extends unknown = unknown> = Response & {
-  json(): Promise<T>;
-};
 
 type ArbitraryFunction = (...args: any[]) => unknown;
 
