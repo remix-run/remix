@@ -20,8 +20,8 @@ import {
   useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
-import type { Merge } from "type-fest";
 import { createPath } from "history";
+import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
@@ -1361,77 +1361,7 @@ export function useMatches(): RouteMatch[] {
  *
  * @see https://remix.run/api/remix#useloaderdata
  */
-
-export type TypedResponse<T> = Response & {
-  json(): Promise<T>;
-};
-
-type DataFunction = (...args: any[]) => unknown; // matches any function
-type DataOrFunction = AppData | DataFunction;
-type JsonPrimitives =
-  | string
-  | number
-  | boolean
-  | String
-  | Number
-  | Boolean
-  | null;
-type NonJsonPrimitives = undefined | Function | symbol;
-
-type SerializeType<T> = T extends JsonPrimitives
-  ? T
-  : T extends NonJsonPrimitives
-  ? never
-  : T extends { toJSON(): infer U }
-  ? U
-  : T extends []
-  ? []
-  : T extends [unknown, ...unknown[]]
-  ? {
-      [k in keyof T]: T[k] extends NonJsonPrimitives
-        ? null
-        : SerializeType<T[k]>;
-    }
-  : T extends ReadonlyArray<infer U>
-  ? (U extends NonJsonPrimitives ? null : SerializeType<U>)[]
-  : T extends object
-  ? SerializeObject<UndefinedOptionals<T>>
-  : never;
-
-type SerializeObject<T> = {
-  [k in keyof T as T[k] extends NonJsonPrimitives ? never : k]: SerializeType<
-    T[k]
-  >;
-};
-
-/*
- * For an object T, if it has any properties that are a union with `undefined`,
- * make those into optional properties instead.
- *
- * Example: { a: string | undefined} --> { a?: string}
- */
-type UndefinedOptionals<T extends object> = Merge<
-  {
-    // Property is not a union with `undefined`, keep as-is
-    [k in keyof T as undefined extends T[k] ? never : k]: T[k];
-  },
-  {
-    // Property _is_ a union with `defined`. Set as optional (via `?`) and remove `undefined` from the union
-    [k in keyof T as undefined extends T[k] ? k : never]?: Exclude<
-      T[k],
-      undefined
-    >;
-  }
->;
-
-export type UseDataFunctionReturn<T extends DataOrFunction> = T extends (
-  ...args: any[]
-) => infer Output
-  ? Awaited<Output> extends TypedResponse<infer U>
-    ? SerializeType<U>
-    : SerializeType<Awaited<ReturnType<T>>>
-  : SerializeType<Awaited<T>>;
-export function useLoaderData<T = AppData>(): UseDataFunctionReturn<T> {
+export function useLoaderData<T = AppData>(): SerializeFrom<T> {
   return useRemixRouteContext().data;
 }
 
@@ -1440,9 +1370,7 @@ export function useLoaderData<T = AppData>(): UseDataFunctionReturn<T> {
  *
  * @see https://remix.run/api/remix#useactiondata
  */
-export function useActionData<T = AppData>():
-  | UseDataFunctionReturn<T>
-  | undefined {
+export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
   let { actionData } = transitionManager.getState();
