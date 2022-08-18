@@ -65,6 +65,6 @@ export type {
   SignFunction,
   TypedResponse,
   UnsignFunction,
-  UploadHandlerPart,
   UploadHandler,
+  UploadHandlerPart,
 } from "@remix-run/server-runtime";

@@ -12,9 +12,10 @@ Each runtime package (@remix-run/cloudflare,@remix-run/deno,@remix-run/node) now
 infer the JSON-serialized return type of loaders and actions.
 
 Example:
+
 ```ts
-type MyLoaderData = SerializeFrom<typeof loader>
-type MyActionData = SerializeFrom<typeof action>
+type MyLoaderData = SerializeFrom<typeof loader>;
+type MyActionData = SerializeFrom<typeof action>;
 ```
 
 This is what `useLoaderData<typeof loader>` and `useActionData<typeof action>` use under-the-hood.
