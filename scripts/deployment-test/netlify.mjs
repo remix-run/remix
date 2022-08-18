@@ -81,7 +81,7 @@ async function createAndDeployApp() {
   // deploy to netlify
   let deployCommand = spawnSync(
     "npx",
-    ["netlify", "deploy", "--site", site.id, "--prod"],
+    ["netlify", "deploy", "--site", site.id, "--prod", "--build"],
     spawnOpts
   );
   if (deployCommand.status !== 0) {
