@@ -22,15 +22,15 @@ The high level approach is as follows
 6.  Handle `@remix-run/react` in a short-lived feature branch
     1.  server render without hydration (replace `EntryContext` with `RemixContext`)
     2.  client-side hydration
-    3.  backwards compatible changes
-    4.  deploy
+    3.  add backwards compatibility changes
+7.  Deploy `@remix-run/react` changes once comfortable
 
 ## Details
 
 There are 2 main areas where we have to make changes:
 
 1. Handling server-side requests in `@remix-run/server-runtime` (mainly in the `server.ts` file)
-2. Handling client-side hydration + routing in `@remix-run/react` (mainly in the `components.ts` file)
+2. Handling client-side hydration + routing in `@remix-run/react` (mainly in the `components.ts`, `server.ts` and `browser.ts` files)
 
 Since these are separated by the network chasm, we can actually implement these independent of one another for smaller merges, iterative development, and easier rollbacks should something go wrong.
 
@@ -42,6 +42,57 @@ There's two primary reasons it makes sense to handle the server-side data-fetchi
 2. It's easier to implement in a feature-flagged manner since we're on the server and bundle size is not a concern
 
 We can do this on the server using the [strangler pattern][strangler-pattern] so that we can confirm the new approach is functionally equivalent to the old approach. Depending on how far we take it, we can assert this through unit tests, integration tests, as well as run-time feature flags if desired.
+
+For example, pseudo code for this might look like the following, where we enable via a flag during local development and potentially unit/integration tests. We can throw exceptions anytime the new static handler results in different SSR data. Once we're confident, we delete the current code and remove the flag conditional.
+
+```js
+function handleDocumentRequest({ request })) {
+  let appState: AppState = {
+    trackBoundaries: true,
+    trackCatchBoundaries: true,
+    catchBoundaryRouteId: null,
+    renderBoundaryRouteId: null,
+    loaderBoundaryRouteId: null,
+    error: undefined,
+    catch: undefined,
+  };
+
+  // ... do all the current stuff
+
+  let serverHandoff = {
+    actionData,
+    appState: appState,
+    matches: entryMatches,
+    routeData,
+  };
+
+  let entryContext: EntryContext = {
+    ...serverHandoff,
+    manifest: build.assets,
+    routeModules,
+    serverHandoffString: createServerHandoffString(serverHandoff),
+  };
+
+  // If the flag is enabled, process the request again with the new static
+  // handler and confirm we get the same data on the other side
+  if (process.env.ENABLE_REMIX_ROUTER) {
+    let context = await staticHandler.query(request);
+
+    // Note: == only used for brevity ;)
+    assert(entryContext.matches === context.matches);
+    assert(entryContext.routeData === context.loaderData);
+    assert(entryContext.actionData === context.actionData);
+
+    if (catchBoundaryRouteId) {
+      assert(context.errors[catchBoundaryRouteId] === catch)
+    }
+
+    if (loaderBoundaryRouteId) {
+      assert(context.errors[loaderBoundaryRouteId] === error)
+    }
+  }
+}
+```
 
 We can also split this into iterative approaches on the server too, and do `handleResourceRequest`, `handleDataRequest`, and `handleDocumentRequest` independently (either just implementation or implementation + release). Doing them in that order would also likely go from least to most complex.
 
