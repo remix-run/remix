@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/netlify",
-  "version": "1.6.7",
+  "version": "1.6.8",
   "description": "Netlify server request handler for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -14,7 +14,7 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "dependencies": {
-    "@remix-run/node": "1.6.7"
+    "@remix-run/node": "1.6.8"
   },
   "devDependencies": {
     "@netlify/functions": "^1.0.0"

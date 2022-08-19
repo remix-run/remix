@@ -2806,10 +2806,10 @@
     ast-types "^0.14.1"
     recast "^0.20.3"
 
-"@types/jsesc@^2.5.1":
-  version "2.5.1"
-  resolved "https://registry.npmjs.org/@types/jsesc/-/jsesc-2.5.1.tgz"
-  integrity sha512-9VN+6yxLOPLOav+7PwjZbxiID2bVaeq0ED4qSQmdQTdjnXJSaCVKTR58t15oqH1H5t8Ng2ZX1SabJVoN9Q34bw==
+"@types/jsesc@^3.0.1":
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/@types/jsesc/-/jsesc-3.0.1.tgz#ed1720ae08eae2f64341452e1693a84324029d99"
+  integrity sha512-F2g93pJlhV0RlW9uSUAM/hIxywlwlZcuRB/nZ82GaMPaO8mdexYbJ8Qt3UGbUS1M19YFQykEetrWW004M+vPCg==
 
 "@types/json-schema@*", "@types/json-schema@^7.0.9":
   version "7.0.9"

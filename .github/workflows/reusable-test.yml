@@ -1,4 +1,4 @@
-name: 🧪 Test
+name: 🧪 Test (shared)
 
 on:
   workflow_call:
@@ -137,7 +137,7 @@ jobs:
         id: playwright-version
         shell: bash
         run: |
-          playwright_version=$(npm info @playwright/test version)
+          playwright_version=$(node -e "console.log(require('@playwright/test/package.json').version)")
           echo "::set-output name=version::${playwright_version}"
 
       - name: 🤖 Cache Playwright binaries

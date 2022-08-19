@@ -1,11 +1,11 @@
-name: 🧪 Test
+name: 🧪 Test (release)
 
 on:
   push:
     branches:
       - release-*
-    tags-ignore:
-      - v*
+    tags:
+      - "v0.0.0-nightly-*"
     paths-ignore:
       - "docs/**"
       - "scripts/**"

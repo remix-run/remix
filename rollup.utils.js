@@ -120,7 +120,7 @@ function copyToPlaygrounds() {
             path.join(REPO_ROOT_DIR, "build"),
             playgroundDir
           );
-          await fse.copy(writtenDir, destDir);
+          fse.copySync(writtenDir, destDir);
           await triggerLiveReload(playgroundDir);
         }
       } else {
