@@ -1072,7 +1072,7 @@ export const meta: MetaFunction = () => ({
 - `parentsData` is a hashmap of all the data exported by `loader` functions of current route and all of its parents
 
 ```tsx
-export const meta: MetaFunction = ({ data, params }) => {
+export const meta: MetaFunction<typeof loader> = ({ data, params }) => {
   if (!data) {
     return {
       title: "Missing Shake",
@@ -1080,12 +1080,40 @@ export const meta: MetaFunction = ({ data, params }) => {
     };
   }
 
-  const { shake } = data as LoaderData;
+  const { shake } = data;
   return {
     title: `${shake.name} milkshake`,
     description: shake.summary,
   };
 };
+```
+
+To infer types for `parentsData`, provide a mapping from the route's file path (relative to `app/`) to that route loader type:
+
+```tsx
+// app/routes/sales.tsx
+const loader = () => {
+  return json({ salesCount: 1074 })
+}
+export type Loader = typeof loader
+
+```
+
+```tsx
+import type { Loader as SalesLoader } from "../../sales"
+
+const loader = () => {
+  return json({ name: "Customer name" })
+}
+
+const meta: MetaFunction<typeof loader, {
+  "routes/sales": SalesLoader,
+}> = ({ data, parentsData }) => {
+  const { name } = data
+  //      ^? string
+  const { salesCount } = parentsData["routes/sales"]
+  //      ^? number
+}
 ```
 
 ### `links`
