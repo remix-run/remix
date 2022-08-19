@@ -75,16 +75,23 @@ We can also split this into iterative approaches on the server too, and do `hand
       2. Create this alongside `EntryContext` assert the values match
    4. If we catch an error during render, we'll have tracked the boundaries on `staticHandlerContext` and can use `getStaticContextFromError` to get a new context for the second pass (note the need to re-call `differentiateCatchVersusErrorBoundaries`)
 
-</details>
-
 ### Do the UI rendering layer second
 
 The rendering layer in `@remix-run/react` is a bit more of a whole-sale replacement and comes with backwards-compatibility concerns, so it makes sense to do second. However, we can still do this iteratively, we just can't deploy iteratively since the SSR and client HTML need to stay synced.First, we can focus on getting the SSR document rendered properly without `<Scripts/>`. Then second we'll add in client-side hydration.
 
-_TODO...Still in progress_
+The main changes here include:
+
+- Removal of `RemixEntry` and it's context in favor of a new `RemixContext.Provider` wrapping `DataStaticRouter`/`DataBrowserRouter`
+  - All this context needs are the remix-specific aspects(`manifest`, `routeModules`)
+  - Everything else from the old RemixEntryContext is now in the router contexts (and `staticHandlerContext` during SSR)
+- Some aspects of `@remix-run/react`'s `components.tsx` file are now fully redundant and can be removed completely in favor of re-exporting from `react-router-dom`:
+  - `Form`, `useFormAction`, `useSubmit`, `useMatches`, `useFetchers`
+- Other aspects are largely redundant but need some Remix-specific things, so these will require some adjustments:
+  - `Link`, `useLoaderData`, `useActionData`, `useTransition`, `useFetcher`
 
 #### Backwards Compatibility Notes
 
+- `useLoaderData`/`useActionData` need to retain their generics, and are not currently generic in `react-router`
 - `useTransition` needs `submission` and `type` added
   - `<Form method="get">` no longer goes into a "submitting" state in `react-router-dom`
 - `useFetcher` needs `type` added
@@ -92,12 +99,6 @@ _TODO...Still in progress_
   - Can we use it if it's there but prefer `shouldRevalidate`?
 - Distinction between error and catch boundaries
 - `Request.signal` - continue to send separate `signal` param
-
-#### Implementation approach
-
-_TODO...Still in progress_
-
-## Consequences
 
 [remixing-react-router]: https://remix.run/blog/remixing-react-router
 [strangler-pattern]: https://martinfowler.com/bliki/StranglerFigApplication.html
