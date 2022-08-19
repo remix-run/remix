@@ -40,6 +40,36 @@ test.describe("`useSubmit()` returned function", () => {
           )
         }
       `,
+        
+        "app/routes/duplicate.jsx": js`
+        import { useLoaderData, useSubmit } from "@remix-run/react";
+
+        export function loader({ request }) {
+          let url = new URL(request.url);
+          return url.searchParams.toString()
+        }
+
+        export default function Index() {
+          let submit = useSubmit();
+          let handleClick = event => {
+            event.preventDefault()
+            submit(event.nativeEvent.submitter || event.currentTarget)
+          }
+          let data = useLoaderData();
+          return (
+            <form>
+              <input type="text" name="tasks" defaultValue="first" />
+              <input type="text" name="tasks" defaultValue="second" />
+
+              <button onClick={handleClick} name="tasks" value="second">
+                Prepare Third Task
+              </button>
+
+              <pre>{data}</pre>
+            </form>
+          )
+        }
+      `,
       },
     });
 
@@ -59,6 +89,19 @@ test.describe("`useSubmit()` returned function", () => {
     await page.waitForLoadState("load");
     expect(await app.getHtml("pre")).toBe(
       `<pre>tasks=first&amp;tasks=second&amp;tasks=third</pre>`
+    );
+  });
+
+  // IN ORDER TO AVOID DUPLICATED VALUE ON SAFARI
+  test("doesn't submits the submitter's value duplicated to the form data", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickElement("text=Prepare Third Task");
+    await page.waitForLoadState("load");
+    expect(await app.getHtml("pre")).toBe(
+      `<pre>tasks=first&amp;tasks=second</pre>`
     );
   });
 });

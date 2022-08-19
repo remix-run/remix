@@ -320,6 +320,29 @@ test.describe("Forms", () => {
             )
           }
         `,
+
+        "app/routes/submitter-duplicate.jsx": js`
+          import { useLoaderData, Form } from "@remix-run/react";
+
+          export function loader({ request }) {
+            let url = new URL(request.url);
+            return url.searchParams.toString()
+          }
+
+          export default function() {
+            let data = useLoaderData();
+            return (
+              <Form>
+                <input type="text" name="tasks" defaultValue="first" />
+                <input type="text" name="tasks" defaultValue="second" />
+                <button type="submit" name="tasks" value="second">
+                  Add Task
+                </button>
+                <pre>{data}</pre>
+              </Form>
+            )
+          }
+        `
       },
     });
 
@@ -768,6 +791,19 @@ test.describe("Forms", () => {
     await page.waitForLoadState("load");
     expect(await app.getHtml("pre")).toBe(
       `<pre>tasks=first&amp;tasks=second&amp;tasks=</pre>`
+    );
+  });
+
+  // IN ORDER TO AVOID DUPLICATED VALUE ON SAFARI
+  test("<Form> doesn't submits the submitter's duplicated value to the form data", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/submitter-duplicate");
+    await app.clickElement("text=Add Task");
+    await page.waitForLoadState("load");
+    expect(await app.getHtml("pre")).toBe(
+      `<pre>tasks=first&amp;tasks=second</pre>`
     );
   });
 });
