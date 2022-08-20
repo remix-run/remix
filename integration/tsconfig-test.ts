@@ -74,6 +74,7 @@ test("shouldn't change suggested config if set", async () => {
     compilerOptions: {
       ...DEFAULT_CONFIG.compilerOptions,
       strict: false,
+      moduleResolution: "NodeNext",
     },
   };
 

@@ -23,7 +23,6 @@ let requiredCompilerOptions: TsConfigJson.CompilerOptions = {
   esModuleInterop: true,
   isolatedModules: true,
   jsx: "react-jsx",
-  moduleResolution: "node",
   noEmit: true,
   resolveJsonModule: true,
 };
@@ -92,6 +91,7 @@ export function writeConfigDefaults(configPath: string) {
       );
     }
   }
+
   for (let key of objectKeys(requiredCompilerOptions)) {
     if (fullConfig.compilerOptions[key] !== requiredCompilerOptions[key]) {
       config.compilerOptions[key] = requiredCompilerOptions[key] as any;
@@ -102,6 +102,31 @@ export function writeConfigDefaults(configPath: string) {
       );
     }
   }
+
+  if (typeof fullConfig.compilerOptions.moduleResolution === "undefined") {
+    fullConfig.compilerOptions.moduleResolution = "node";
+    config.compilerOptions.moduleResolution = "node";
+    suggestedChanges.push(
+      colors.blue("compilerOptions.moduleResolution") +
+        " was set to " +
+        colors.bold(`'node'`)
+    );
+  }
+
+  if (
+    !["node", "node16", "nodenext"].includes(
+      fullConfig.compilerOptions.moduleResolution.toLowerCase()
+    )
+  ) {
+    config.compilerOptions.moduleResolution = "node";
+
+    suggestedChanges.push(
+      colors.blue("compilerOptions.moduleResolution") +
+        " was set to " +
+        colors.bold(`'node'`)
+    );
+  }
+
   if (suggestedChanges.length > 0 || requiredChanges.length > 0) {
     fse.writeFileSync(
       configPath,
