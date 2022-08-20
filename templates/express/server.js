@@ -53,7 +53,7 @@ function purgeRequireCache() {
   // alternatively you can set up nodemon/pm2-dev to restart the server on
   // file changes, but then you'll have to reconnect to databases/etc on each
   // change. We prefer the DX of this, so we've included it for you by default
-  for (let key in require.cache) {
+  for (const key in require.cache) {
     if (key.startsWith(BUILD_DIR)) {
       delete require.cache[key];
     }

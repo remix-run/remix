@@ -15,11 +15,11 @@ export default function handleRequest(
   return new Promise((resolve, reject) => {
     let didError = false;
 
-    let { pipe, abort } = renderToPipeableStream(
+    const { pipe, abort } = renderToPipeableStream(
       <RemixServer context={remixContext} url={request.url} />,
       {
         onShellReady: () => {
-          let body = new PassThrough();
+          const body = new PassThrough();
 
           responseHeaders.set("Content-Type", "text/html");
 
