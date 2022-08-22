@@ -1489,9 +1489,11 @@ export const LiveReload =
     ? () => null
     : function LiveReload({
         port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
+        timeout = 1000,
         nonce = undefined,
       }: {
         port?: number;
+        timeout?: number;
         /**
          * @deprecated this property is no longer relevant.
          */
@@ -1534,7 +1536,7 @@ export const LiveReload =
                         remixLiveReloadConnect({
                           onOpen: () => window.location.reload(),
                         }),
-                      1000
+                      ${String(timeout)}
                     );
                   };
                   ws.onerror = (error) => {

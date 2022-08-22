@@ -65,6 +65,14 @@ describe("<LiveReload />", () => {
         `1234 + "/socket"`
       );
     });
+
+    it("timeout of reload is set to 200ms", () => {
+      LiveReload = require("../components").LiveReload;
+      let { container } = render(<LiveReload timeout={200} />);
+      expect(container.querySelector("script")).toHaveTextContent(
+        "setTimeout( () => remixLiveReloadConnect({ onOpen: () => window.location.reload(), }), 200 );"
+      );
+    });
   });
 });
 
