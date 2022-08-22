@@ -8,22 +8,32 @@ Status: proposed
 
 Now that we're almost done [Remixing React Router][remixing-react-router] and will be shipping `react-router@6.4.0` shortly, it's time for us to start thinking about how we can layer Remix on top of the latest React Router. This will allow us to delete a _bunch_ of code from Remix for handling the Data APIs. This document aims to discuss the changes we foresee making and some potential iterative implementation approaches to avoid a big-bang merge.
 
+From an iterative-release viewpoint, there's 4 separate "functional" aspects to consider here:
+
+1. Server data loading
+2. Server react component rendering
+3. Client hydration
+4. Client data loading
+
+(1) can be implemented and deployed in isolation. (2) and (3) need to happen together since the contexts/components need to match. And (4) comes for free since the loaders/actions will be included on the routes we create in (3).
+
 ## Decision
 
 The high level approach is as follows
 
-1.  Update `handleResourceRequest` to use `createStaticHandler` behind an ENV flag
-    1.  Get unit and integration tests asserting both flows?
-2.  Update `handleDataRequest` in the same manner
-3.  Update `handleDocumentRequest` in the same manner
-    1.  Confirm unit and integration tests are all passing
-4.  Write new `RemixContext` data into `EntryContext` and remove old flow
-5.  Deploy `@remix-run/server-runtime` changes once comfortable
-6.  Handle `@remix-run/react` in a short-lived feature branch
+1.  SSR data loading
+    1.  Update `handleResourceRequest` to use `createStaticHandler` behind an ENV flag
+        1.  Get unit and integration tests asserting both flows?
+    2.  Update `handleDataRequest` in the same manner
+    3.  Update `handleDocumentRequest` in the same manner
+        1.  Confirm unit and integration tests are all passing
+    4.  Write new `RemixContext` data into `EntryContext` and remove old flow
+2.  Deploy `@remix-run/server-runtime` changes once comfortable
+3.  Handle `@remix-run/react` in a short-lived feature branch
     1.  server render without hydration (replace `EntryContext` with `RemixContext`)
     2.  client-side hydration
     3.  add backwards compatibility changes
-7.  Deploy `@remix-run/react` changes once comfortable
+4.  Deploy `@remix-run/react` changes once comfortable
 
 ## Details
 
