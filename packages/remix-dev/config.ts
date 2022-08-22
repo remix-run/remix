@@ -457,11 +457,14 @@ export async function readConfig(
 
   // When tsconfigPath is undefined, the default "tsconfig.json" is not
   // found in the root directory.
-  let tsconfigDefaultFilename = "tsconfig.json"
-  let tsconfigPath: string | undefined = undefined
+  let tsconfigPath: string | undefined;
+  let rootTsconfig = path.resolve(rootDirectory, "tsconfig.json");
+  let rootJsConfig = path.resolve(rootDirectory, "jsconfig.json");
 
-  if (fse.existsSync(path.resolve(rootDirectory, tsconfigDefaultFilename))) {
-    tsconfigPath = path.resolve(rootDirectory, tsconfigDefaultFilename)
+  if (fse.existsSync(rootTsconfig)) {
+    tsconfigPath = rootTsconfig;
+  } else if (fse.existsSync(rootJsConfig)) {
+    tsconfigPath = rootJsConfig;
   }
 
   return {
