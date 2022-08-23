@@ -1,6 +1,6 @@
 import path from "path";
 import { sync as spawnSync } from "cross-spawn";
-import aws from "aws-sdk";
+import AWS from "aws-sdk";
 import fse from "fs-extra";
 import arcParser from "@architect/parser";
 import { toLogicalID } from "@architect/utils";
@@ -34,17 +34,19 @@ async function createNewApp() {
   });
 }
 
-let client = new aws.ApiGatewayV2({
+let options = {
   region: "us-west-2",
   apiVersion: "latest",
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
-});
+};
+
+let apiGateway = new AWS.ApiGatewayV2(options);
 
 async function getArcDeployment() {
-  let deployments = await client.getApis().promise();
+  let deployments = await apiGateway.getApis().promise();
   return deployments.Items.find((item) => item.Name === AWS_STACK_NAME);
 }
 
@@ -111,13 +113,18 @@ async function createAndDeployApp() {
 
 async function destroyApp() {
   console.log(`Destroying app ${APP_NAME}`);
-  destroy({
-    appname: APP_NAME,
-    env: "staging",
-    // use true to also remove the s3 bucket
-    force: true,
-  });
-  console.log(`Destroyed app ${APP_NAME}`);
+
+  try {
+    process.env.AWS_REGION = options.region;
+    await destroy({
+      appname: APP_NAME,
+      env: "staging",
+      force: true,
+    });
+    console.log(`Destroyed app ${APP_NAME}`);
+  } catch (error) {
+    console.error(`Failed to destroy app ${APP_NAME}`);
+  }
 }
 
 async function main() {
