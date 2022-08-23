@@ -791,6 +791,7 @@ test.describe("Forms", () => {
     await app.goto("/submitter");
     await app.clickElement("text=Add Task");
     await page.waitForLoadState("load");
+    // TODO: remove after playwright ships safari 16
     if (browserName === "webkit") {
       expect(await app.getHtml("pre")).toBe(
         `<pre>tasks=first&amp;tasks=second&amp;tasks=&amp;tasks=</pre>`
