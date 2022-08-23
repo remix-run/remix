@@ -785,13 +785,16 @@ test.describe("Forms", () => {
 
   test("<Form> submits the submitter's value appended to the form data", async ({
     page,
+    browserName,
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/submitter");
     await app.clickElement("text=Add Task");
     await page.waitForLoadState("load");
     expect(await app.getHtml("pre")).toBe(
-      `<pre>tasks=first&amp;tasks=second&amp;tasks=</pre>`
+      browserName === "webkit"
+        ? `<pre>tasks=first&amp;tasks=second&amp;tasks=&amp;tasks=</pre>`
+        : `<pre>tasks=first&amp;tasks=second&amp;tasks=</pre>`
     );
   });
 });
