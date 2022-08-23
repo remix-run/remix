@@ -29,6 +29,8 @@ MSW currently does not support intercepting requests made by [undici](https://un
 - [handlers](./mocks/handlers.js) - describes the HTTP mocks
 - [root](./app/root.tsx)
 - [package.json](./package.json)
+- [entry.server.tsx](./app/entry.server.tsx) - runs the listener in the same process as the action/loaders
+
 
 ## Related Links
 

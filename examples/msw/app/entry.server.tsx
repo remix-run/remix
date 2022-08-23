@@ -8,6 +8,11 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
+  const useMocks = process.env.WITH_MOCKS === 'true';
+  if (useMocks) {
+    require('../mocks')
+  }
+
   const markup = renderToString(
     <RemixServer context={remixContext} url={request.url} />
   );
