@@ -149,7 +149,7 @@ jobs:
         id: playwright-cache
         with:
           path: ${{ matrix.playwright_binary_path }}
-          key: ${{ runner.os }}-${{ runner.arch }}-cache-playwright-${{ steps.playwright-version.outputs.version }}
+          key: ${{ runner.os }}-${{ runner.arch }}-${{ matrix.browser }}-cache-playwright-${{ steps.playwright-version.outputs.version }}
 
       - name: 🖨️ Playwright info
         shell: bash
