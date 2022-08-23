@@ -97,7 +97,7 @@ jobs:
         run: "yarn test:primary"
 
   integration:
-    name: "👀 Integration Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }})"
+    name: "👀 Integration Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }}) Browser: ${{ matrix.browser }}"
     strategy:
       fail-fast: false
       matrix:
