@@ -307,6 +307,42 @@ test.describe("Forms", () => {
             )
           }
         `,
+
+        "app/routes/form-method.jsx": js`
+          import { useActionData, Form, json } from "remix";
+          export function action({ request }) {
+            return json(request.method)
+          }
+          export default function() {
+            let actionData = useActionData();
+            return (
+              <>
+                <Form method="post">
+                  <button type="submit">Submit</button>
+                </Form>
+                <pre>{actionData}</pre>
+              </>
+            )
+          }
+        `,
+
+        "app/routes/button-form-method.jsx": js`
+          import { useActionData, Form, json } from "remix";
+          export function action({ request }) {
+            return json(request.method)
+          }
+          export default function() {
+            let actionData = useActionData();
+            return (
+              <>
+                <Form>
+                  <button type="submit" formMethod="post">Submit</button>
+                </Form>
+                <pre>{actionData}</pre>
+              </>
+            )
+          }
+        `,
       },
     });
 
@@ -621,6 +657,22 @@ test.describe("Forms", () => {
       await app.clickElement("text=Submit with POST");
       await page.waitForLoadState("load");
       expect(await app.getHtml("pre")).toBe("<pre>POST</pre>");
+    });
+
+    test('uses the form "method" attribute', async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/form-method");
+      await app.clickElement("button");
+      await page.waitForLoadState("load");
+      expect(await app.getHtml("pre")).toMatch("POST");
+    });
+  
+    test('uses the button "formmethod" attribute', async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/button-form-method");
+      await app.clickElement("button");
+      await page.waitForLoadState("load");
+      expect(await app.getHtml("pre")).toMatch("POST");
     });
   });
 });
