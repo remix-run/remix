@@ -131,6 +131,9 @@ jobs:
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
+      - name: 📥 Install playwright deps
+        run: npx playwright install-deps
+
       # playwright recommends if you cache the binaries to keep it tied to the version of playwright you are using.
       # https://playwright.dev/docs/ci#caching-browsers
       - name: 🕵️‍♂️ Get current Playwright version
