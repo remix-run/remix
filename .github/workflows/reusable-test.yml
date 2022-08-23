@@ -106,6 +106,10 @@ jobs:
           - ubuntu-latest
           # - macos-latest
           - windows-latest
+        browser:
+          - chromium
+          # - firefox
+          - webkit
         include:
           - os: ubuntu-latest
             playwright_binary_path: ~/.cache/ms-playwright
@@ -160,5 +164,5 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
 
-      - name: 👀 Run Integration Tests
-        run: "yarn test:integration"
+      - name: 👀 Run Integration Tests ${{ matrix.browser }}
+        run: "yarn test:integration --project=${{ matrix.browser }}"
