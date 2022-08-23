@@ -5,9 +5,11 @@ import {
   PR_FILES_STARTS_WITH,
   NIGHTLY_BRANCH,
   DEFAULT_BRANCH,
+  PACKAGE_VERSION_TO_FOLLOW,
 } from "./constants";
 import { gql, graphqlWithAuth, octokit } from "./octokit";
 import type { MinimalTag } from "./utils";
+import { cleanupTagName } from "./utils";
 import { checkIfStringStartsWith, sortByDate } from "./utils";
 
 type PullRequest =
@@ -43,20 +45,38 @@ export async function prsMergedSinceLastTag({
     nightly > stable => 'main'
     stable > nightly => 'dev'
    */
-  let baseRef =
-    currentTag.isPrerelease && previousTag.isPrerelease
-      ? NIGHTLY_BRANCH
-      : currentTag.isPrerelease && !previousTag.isPrerelease
-      ? NIGHTLY_BRANCH
-      : DEFAULT_BRANCH;
+  let prs: Awaited<ReturnType<typeof getMergedPRsBetweenTags>> = [];
 
-  let prs = await getMergedPRsBetweenTags(
-    owner,
-    repo,
-    previousTag,
-    currentTag,
-    baseRef
-  );
+  // if both the current and previous tags are prereleases
+  // we can just get the PRs for the "dev" branch
+  // but if one of them is stable, we should wind up all of them from both the main and dev branches
+  if (currentTag.isPrerelease && previousTag.isPrerelease) {
+    prs = await getMergedPRsBetweenTags(
+      owner,
+      repo,
+      previousTag,
+      currentTag,
+      NIGHTLY_BRANCH
+    );
+  } else {
+    let [nightly, stable] = await Promise.all([
+      getMergedPRsBetweenTags(
+        owner,
+        repo,
+        previousTag,
+        currentTag,
+        NIGHTLY_BRANCH
+      ),
+      getMergedPRsBetweenTags(
+        owner,
+        repo,
+        previousTag,
+        currentTag,
+        DEFAULT_BRANCH
+      ),
+    ]);
+    prs = nightly.concat(stable);
+  }
 
   let prsThatTouchedFiles = await getPullRequestWithFiles(owner, repo, prs);
 
@@ -103,13 +123,22 @@ function getPreviousTagFromCurrentTag(
   currentTag: MinimalTag;
 } {
   let validTags = tags
+    .filter((tag) => {
+      // if we have a `PACKAGE_VERSION_TO_FOLLOW`
+      // we only want to get the tags related to it
+      if (PACKAGE_VERSION_TO_FOLLOW) {
+        return tag.name.startsWith(PACKAGE_VERSION_TO_FOLLOW);
+      }
+      return true;
+    })
     .map((tag) => {
-      let isPrerelease = semver.prerelease(tag.name) !== null;
+      let tagName = cleanupTagName(tag.name);
+      let isPrerelease = semver.prerelease(tagName) !== null;
 
       if (!tag.commit.committer?.date) return null;
 
       return {
-        tag: tag.name,
+        tag: tagName,
         date: new Date(tag.commit.committer.date),
         isPrerelease,
       };
@@ -242,7 +271,7 @@ export async function getIssuesClosedByPullRequests(
    * https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword
    */
   let regex =
-    /(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s#([0-9]+)/gi;
+    /(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)(:)?\s#([0-9]+)/gi;
   let matches = prBody.match(regex);
   if (!matches) return linkedIssues.map((issue) => issue.number);
 

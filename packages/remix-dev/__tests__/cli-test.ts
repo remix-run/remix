@@ -1,9 +1,11 @@
 import childProcess from "child_process";
-import fse from "fs-extra";
 import os from "os";
 import path from "path";
 import util from "util";
+import fse from "fs-extra";
 import semver from "semver";
+
+import { jestTimeout } from "./setupAfterEnv";
 
 let DOWN = "\x1B\x5B\x42";
 let ENTER = "\x0D";
@@ -94,6 +96,7 @@ describe("remix CLI", () => {
             $ remix build [projectDir]
             $ remix dev [projectDir]
             $ remix routes [projectDir]
+            $ remix watch [projectDir]
             $ remix setup [remixPlatform]
             $ remix migrate [-m migration] [projectDir]
 
@@ -111,6 +114,8 @@ describe("remix CLI", () => {
           \`dev\` Options:
             --debug             Attach Node.js inspector
             --port, -p          Choose the port from which to run your app
+          \`init\` Options:
+            --no-delete         Skip deleting the \`remix.init\` script
           \`routes\` Options:
             --json              Print the routes as JSON
           \`migrate\` Options:
@@ -166,6 +171,14 @@ describe("remix CLI", () => {
             $ remix dev
             $ remix dev my-app
             $ remix dev --debug
+
+          Start your server separately and watch for changes:
+
+            # custom server start command, for example:
+            $ remix watch
+
+            # in a separate tab:
+            $ node --inspect --require ./node_modules/dotenv/config --require ./mocks ./build/server.js
 
           Show all routes in your app:
 
@@ -233,23 +246,16 @@ describe("remix CLI", () => {
         { question: /install/i, type: ["n", ENTER] },
       ]);
 
-      expect(
-        fse.existsSync(path.join(projectDir, "package.json"))
-      ).toBeTruthy();
+      expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
       expect(
         fse.existsSync(path.join(projectDir, "app/root.jsx"))
       ).toBeTruthy();
-      expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
       expect(
         fse.existsSync(path.join(projectDir, "tsconfig.json"))
       ).toBeFalsy();
       expect(
         fse.existsSync(path.join(projectDir, "jsconfig.json"))
       ).toBeTruthy();
-      let pkgJSON = JSON.parse(
-        fse.readFileSync(path.join(projectDir, "package.json"), "utf-8")
-      );
-      expect(Object.keys(pkgJSON.devDependencies)).not.toContain("typescript");
     });
   });
 });
@@ -348,7 +354,7 @@ async function interactWithShell(
       proc.kill();
       deferred.reject({ status: "timeout", stdout, stderr });
     }
-  }, 10_000);
+  }, jestTimeout);
 
   await deferred.promise;
   clearTimeout(timeout);

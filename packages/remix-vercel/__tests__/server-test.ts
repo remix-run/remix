@@ -1,6 +1,6 @@
 import supertest from "supertest";
 import { createRequest } from "node-mocks-http";
-import { createServerWithHelpers } from "@vercel/node/dist/helpers";
+import { createServerWithHelpers } from "@vercel/node-bridge/helpers";
 import type { VercelRequest } from "@vercel/node";
 import {
   createRequestHandler as createRemixRequestHandler,

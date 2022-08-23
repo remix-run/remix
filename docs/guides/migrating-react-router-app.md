@@ -36,7 +36,7 @@ import App from "./App";
 ReactDOM.render(<App />, document.getElementById("app"));
 ```
 
-Server-rendered React apps are a little different. The browser script is not rendering your app, but is "hydrating" the DOM provided by the server. Hydration is the process of mapping the elements in the DOM to their React component counterparts and setting up event listeners so that your app is interative.
+Server-rendered React apps are a little different. The browser script is not rendering your app, but is "hydrating" the DOM provided by the server. Hydration is the process of mapping the elements in the DOM to their React component counterparts and setting up event listeners so that your app is interactive.
 
 Let's start by creating two new files:
 

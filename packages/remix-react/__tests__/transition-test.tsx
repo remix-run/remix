@@ -28,7 +28,6 @@ describe("init", () => {
       actionData: { root: "ACTION DATA" },
       error: new Error("lol"),
       errorBoundaryId: "root",
-      onChange: () => {},
       onRedirect: () => {},
     });
     expect(tm.getState()).toMatchInlineSnapshot(`
@@ -1956,7 +1955,6 @@ function createTestTransitionManager(
     loaderData: { root: "ROOT" },
     location,
     routes: [],
-    onChange() {},
     onRedirect() {},
     ...init,
   });
@@ -2090,11 +2088,11 @@ let setup = ({ url } = { url: "/" }) => {
   ];
 
   let tm = createTestTransitionManager(url, {
-    onChange: handleChange,
     onRedirect: handleRedirect,
     loaderData: { root: "ROOT" },
     routes,
   });
+  tm.subscribe(handleChange);
 
   let navigate_ = (
     location: Location | string,

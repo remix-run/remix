@@ -20,6 +20,7 @@ const binaryTypes = [
   "font/woff",
   "font/woff2",
   // Images
+  "image/avif",
   "image/bmp",
   "image/gif",
   "image/jpeg",

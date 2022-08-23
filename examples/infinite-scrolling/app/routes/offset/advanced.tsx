@@ -141,10 +141,13 @@ export default function Index() {
       return;
     }
     if (neededStart !== start) {
-      setSearchParams({
-        start: String(neededStart),
-        limit: LIMIT.toString(),
-      });
+      setSearchParams(
+        {
+          start: String(neededStart),
+          limit: LIMIT.toString(),
+        },
+        { replace: true }
+      );
     }
   }, [start, neededStart, setSearchParams]);
 

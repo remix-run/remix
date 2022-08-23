@@ -1,4 +1,4 @@
-name: 🧪 Test
+name: 🧪 Test (shared)
 
 on:
   workflow_call:
@@ -6,8 +6,12 @@ on:
       node_version:
         required: true
         # this is limited to string | boolean | number (https://github.community/t/can-action-inputs-be-arrays/16457)
-        # but we want to pass an array, so we'll need to manually stringify it for now
+        # but we want to pass an array (node_version: "[14, 16, 18]"),
+        # so we'll need to manually stringify it for now
         type: string
+
+env:
+  CI: true
 
 jobs:
   build:
@@ -133,7 +137,7 @@ jobs:
         id: playwright-version
         shell: bash
         run: |
-          playwright_version=$(npm info @playwright/test version)
+          playwright_version=$(node -e "console.log(require('@playwright/test/package.json').version)")
           echo "::set-output name=version::${playwright_version}"
 
       - name: 🤖 Cache Playwright binaries

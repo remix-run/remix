@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: "0 7 * * *" # every day at 12AM PST
 
+env:
+  CI: true
+
 jobs:
   # HEADS UP! this "nightly" job will only ever run on the `main` branch due to it being a cron job,
   # and the last commit on main will be what github shows as the trigger
