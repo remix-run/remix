@@ -791,10 +791,14 @@ test.describe("Forms", () => {
     await app.goto("/submitter");
     await app.clickElement("text=Add Task");
     await page.waitForLoadState("load");
-    expect(await app.getHtml("pre")).toBe(
-      browserName === "webkit"
-        ? `<pre>tasks=first&amp;tasks=second&amp;tasks=&amp;tasks=</pre>`
-        : `<pre>tasks=first&amp;tasks=second&amp;tasks=</pre>`
-    );
+    if (browserName === "webkit") {
+      expect(await app.getHtml("pre")).toBe(
+        `<pre>tasks=first&amp;tasks=second&amp;tasks=&amp;tasks=</pre>`
+      );
+    } else {
+      expect(await app.getHtml("pre")).toBe(
+        `<pre>tasks=first&amp;tasks=second&amp;tasks=</pre>`
+      );
+    }
   });
 });
