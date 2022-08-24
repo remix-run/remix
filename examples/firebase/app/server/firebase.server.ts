@@ -72,7 +72,22 @@ const signInWithPassword = async (email: string, password: string) => {
   return signInResponse;
 };
 
+const signInWithIdp = async (token: string, providerId: string) => {
+  const signInResponse = await firebaseRest.signInWithIdp(
+    token,
+    providerId,
+    restConfig
+  );
+
+  if (firebaseRest.isError(signInResponse)) {
+    throw new Error(signInResponse.error.message);
+  }
+
+  return signInResponse;
+};
+
 export const auth = {
   server: getServerAuth(),
   signInWithPassword,
+  signInWithIdp,
 };

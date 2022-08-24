@@ -40,6 +40,11 @@ export const signInWithToken = async (idToken: string) => {
   return sessionCookie;
 };
 
+export const signInWithIdp = async (token: string, providerId: string) => {
+  const { idToken } = await auth.signInWithIdp(token, providerId);
+  return signInWithToken(idToken);
+};
+
 export const signUp = async (name: string, email: string, password: string) => {
   await auth.server.createUser({
     email,

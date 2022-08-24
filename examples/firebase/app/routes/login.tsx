@@ -20,6 +20,7 @@ import { getRestConfig } from "~/server/firebase.server";
 interface LoaderData {
   apiKey: string;
   domain: string;
+  GOOGLE_CLIENT_ID?: string;
 }
 export const loader: LoaderFunction = async ({ request }) => {
   const session = await getSession(request.headers.get("cookie"));
@@ -31,7 +32,10 @@ export const loader: LoaderFunction = async ({ request }) => {
     return redirect("/", { headers });
   }
   const { apiKey, domain } = getRestConfig();
-  return json<LoaderData>({ apiKey, domain }, { headers });
+  return json<LoaderData>(
+    { apiKey, domain, GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID },
+    { headers }
+  );
 };
 
 interface ActionData {
@@ -73,6 +77,8 @@ export default function Login() {
   const action = useActionData<ActionData>();
   const restConfig = useLoaderData<LoaderData>();
   const submit = useSubmit();
+
+  const { GOOGLE_CLIENT_ID } = restConfig;
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
@@ -117,6 +123,17 @@ export default function Login() {
           Login
         </button>
       </form>
+      <p>
+        <a
+          href={`https://accounts.google.com/o/oauth2/v2/auth\
+?response_type=code\
+&client_id=${GOOGLE_CLIENT_ID}\
+&redirect_uri=http://localhost:3000/auth/google\
+&scope=openid%20email%20profile`}
+        >
+          Login with Google
+        </a>
+      </p>
       <p>
         Do you want to <Link to="/join">join</Link>?
       </p>

@@ -31,7 +31,14 @@ When the SERVICE_ACCOUNT and CLIENT_CONFIG environment variables have not been s
 
 When you run `npm run emulators`, an initial user is created with credentials `user@example.com:password`. This can be configured in `firebase-fixtures/auth/accounts.json` or via the emulator UI.
 
-## Auth (`app/server/auth.server.ts`)
+## Integration with Google Sign-in Provider
+
+- In the [Firebase Console](https://console.firebase.google.com), navigate to Authentication > Sign-in method > Add new provider > Google. Make a note of the client ID and secret and add them to the .env file.
+- In the [Google Cloud Credentials Console](https://console.cloud.google.com/apis/credentials), select the Web client (under OAuth 2.0 Client IDs) and add `http://localhost:3000/auth/google` and `https://<projectid>.firebaseapp.com/auth/google` as authorised redirects.
+
+## Details
+
+### Auth (`app/server/auth.server.ts`)
 
 `signIn` returns a Firebase session-cookie-string, when sign-in is successfull. Then Remix `cookieSessionStorage` is used to set, read and destroy it.
 
