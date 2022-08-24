@@ -23,27 +23,7 @@
       "@remix-run/vercel"
     ]
   ],
-  "linked": [
-    [
-      "create-remix",
-      "remix",
-      "@remix-run/dev",
-      "@remix-run/eslint-config",
-      "@remix-run/react",
-      "@remix-run/serve",
-
-      "@remix-run/server-runtime",
-      "@remix-run/cloudflare",
-      "@remix-run/node",
-
-      "@remix-run/deno",
-      "@remix-run/cloudflare-pages",
-      "@remix-run/cloudflare-workers",
-      "@remix-run/express",
-      "@remix-run/netlify",
-      "@remix-run/vercel"
-    ]
-  ],
+  "linked": [],
   "access": "public",
   "baseBranch": "dev",
   "updateInternalDependencies": "patch",
