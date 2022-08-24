@@ -1,10 +1,6 @@
 import type { CompressionFilter } from "compression";
 
-const noCompressContentTypeDefaults = [
-  /text\/html/,
-  /text\/remix-deferred/,
-  /text\/event-stream/,
-];
+const noCompressContentTypeDefaults: RegExp[] = [];
 
 export interface CreateCompressionFilterOptions {
   /**
