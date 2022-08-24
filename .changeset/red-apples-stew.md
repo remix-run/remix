@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Fix import -> require conversion of the convert-to-js migration
+Fixed a bug in the `import` to `require` conversion in the CLI's `.ts` to `.js` migration script
