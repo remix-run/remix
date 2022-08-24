@@ -2,4 +2,4 @@
 "@remix-run/node": patch
 ---
 
-Fix fileStorage session delete so it doesn't destroy the entire session directory when destroying an empty file session.
+Fixed a bug when destroying `fileStorage` sessions to prevent deleting entire session directories
