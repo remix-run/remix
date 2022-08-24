@@ -12,6 +12,7 @@ on:
 
 env:
   CI: true
+  CYPRESS_INSTALL_BINARY: 0
 
 jobs:
   build:
