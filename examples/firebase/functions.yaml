@@ -1,0 +1,6 @@
+specVersion: v1alpha1
+endpoints:
+  remix:
+    platform: gcfv2
+    entryPoint: remix
+    httpsTrigger: {}

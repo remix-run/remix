@@ -10,7 +10,7 @@ See the screen recording at `./screen_recording.gif` or Open this example on [Co
 
 [![Open in CodeSandbox](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/firebase)
 
-## Example
+## Running locally
 
 To run it, you need to either:
 
@@ -31,7 +31,17 @@ When the SERVICE_ACCOUNT and CLIENT_CONFIG environment variables have not been s
 
 When you run `npm run emulators`, an initial user is created with credentials `user@example.com:password`. This can be configured in `firebase-fixtures/auth/accounts.json` or via the emulator UI.
 
-## Auth (`app/server/auth.server.ts`)
+## Deploying
+
+1. Follow the "Run against a Firebase Project" steps above if not done already
+2. Install the Firebase CLI with `npm i -g firebase-tools`
+3. Log in to the CLI with `firebase login`
+4. Run `firebase use --add` and choose the Firebase project you want to deploy to
+5. Deploy with `firebase deploy`
+
+## Details
+
+### Auth (`app/server/auth.server.ts`)
 
 `signIn` returns a Firebase session-cookie-string, when sign-in is successfull. Then Remix `cookieSessionStorage` is used to set, read and destroy it.
 
@@ -39,7 +49,7 @@ When you run `npm run emulators`, an initial user is created with credentials `u
 
 `requireAuth` uses `firebase-admin` to verify the session cookie. When this check fails, it throws a `redirect` to the login page. Use this method to protect loaders and actions. The returned `UserRecord` can be handy to request or manipulate data from the Firestore for this user.
 
-## Firestore (`app/server/db.server.ts`)
+### Firestore (`app/server/db.server.ts`)
 
 Requests to the Firestore are made using the `firebase-admin`-SDK. You need to check validity of your requests manually, since `firestore.rules` don't apply to admin requests.
 
