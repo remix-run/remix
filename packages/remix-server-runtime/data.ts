@@ -24,7 +24,7 @@ export async function callRouteAction({
   match: RouteMatch<ServerRoute>;
   request: Request;
 }) {
-  let action = match.route.module.action;
+  let action = match.route.module?.action;
 
   if (!action) {
     let response = new Response(null, { status: 405 });
@@ -69,7 +69,7 @@ export async function callRouteLoader({
   match: RouteMatch<ServerRoute>;
   loadContext: AppLoadContext;
 }) {
-  let loader = match.route.module.loader;
+  let loader = match.route.module?.loader;
 
   if (!loader) {
     throw new Error(

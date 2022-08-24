@@ -192,7 +192,7 @@ async function handleDocumentRequest({
   loadContext: AppLoadContext;
   matches: RouteMatch<ServerRoute>[] | null;
   request: Request;
-  rootRoute?: ServerRoute;
+  rootRoute: ServerRoute;
   serverMode?: ServerMode;
 }): Promise<Response> {
   let url = new URL(request.url);
@@ -419,7 +419,7 @@ async function handleDocumentRequest({
   if (!renderableMatches) {
     renderableMatches = [];
 
-    if (rootRoute?.module.CatchBoundary) {
+    if (rootRoute.module?.CatchBoundary) {
       appState.catchBoundaryRouteId = "root";
       renderableMatches.push({
         params: {},

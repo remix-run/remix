@@ -8,6 +8,7 @@ import type {
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
 import type { RouteModules, EntryRouteModule } from "./routeModules";
+import invariant from "./invariant";
 
 export interface EntryContext {
   appState: AppState;
@@ -44,7 +45,9 @@ export function createEntryRouteModules(
   manifest: ServerRouteManifest
 ): RouteModules<EntryRouteModule> {
   return Object.keys(manifest).reduce((memo, routeId) => {
-    memo[routeId] = manifest[routeId].module;
+    let routeModule = manifest[routeId].module;
+    invariant(routeModule, "No module found in server manifest route");
+    memo[routeId] = routeModule;
     return memo;
   }, {} as RouteModules<EntryRouteModule>);
 }

@@ -27,7 +27,10 @@ export interface EntryRoute extends Route {
 
 export interface ServerRoute extends Route {
   children: ServerRoute[];
-  module: ServerRouteModule;
+  // Note: When accessed from the manifest, we will always have a module, but
+  // once we convert these into a hierarchy we may not
+  // (see createHierarchicalRoutes)
+  module?: ServerRouteModule;
 }
 
 interface BaseManifestRoute {
