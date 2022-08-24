@@ -415,6 +415,15 @@ describe("no route match", () => {
                 "module": "",
                 "path": "/p/:param",
               },
+              Object {
+                "action": [MockFunction],
+                "element": Object {},
+                "hasLoader": true,
+                "id": "slug",
+                "loader": [MockFunction],
+                "module": "",
+                "path": "/s/*",
+              },
             ],
             "element": Object {},
             "hasLoader": true,
@@ -1988,6 +1997,146 @@ describe("deferred", () => {
     expect(t.getState().loaderData.index.lazy._data).toBe("2");
   });
 
+  it("triggers fallbacks on param change", async () => {
+    let dfd = defer();
+    let t = setup({
+      url: "/p/a",
+      initialLoaderData: {
+        root: "ROOT",
+        param: { critical: "1", lazy: dfd.promise },
+      },
+      initialDeferredLoaderData: {
+        param: ["lazy"],
+      },
+    });
+
+    // In idle state when page loads with SSR'd critical data
+    expect(t.getState().loaderData).toEqual({
+      param: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.param.lazy._data).toBe(undefined);
+    expect(t.getState().transition.state).toBe("idle");
+
+    await dfd.resolve("2");
+
+    // Resolves deferred data
+    expect(t.getState().loaderData).toEqual({
+      param: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.param.lazy._data).toBe("2");
+
+    let B = t.navigate.get("/p/b");
+
+    let dfd2 = defer();
+    await B.loader.resolve(
+      setupDeferred({
+        critical: "3",
+        lazy: dfd2.promise,
+      })
+    );
+
+    // In idle state when page loads with new critical data
+    expect(t.getState().loaderData).toEqual({
+      param: {
+        critical: "3",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.param.lazy._data).toBe(undefined);
+    expect(t.getState().transition.state).toBe("idle");
+
+    await dfd2.resolve("4");
+
+    // Resolves deferred data
+    expect(t.getState().loaderData).toEqual({
+      param: {
+        critical: "3",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.param.lazy._data).toBe("4");
+  });
+
+  it("triggers fallbacks on slug change", async () => {
+    let dfd = defer();
+    let t = setup({
+      url: "/s/a",
+      initialLoaderData: {
+        root: "ROOT",
+        slug: { critical: "1", lazy: dfd.promise },
+      },
+      initialDeferredLoaderData: {
+        slug: ["lazy"],
+      },
+    });
+
+    // In idle state when page loads with SSR'd critical data
+    expect(t.getState().loaderData).toEqual({
+      slug: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.slug.lazy._data).toBe(undefined);
+    expect(t.getState().transition.state).toBe("idle");
+
+    await dfd.resolve("2");
+
+    // Resolves deferred data
+    expect(t.getState().loaderData).toEqual({
+      slug: {
+        critical: "1",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.slug.lazy._data).toBe("2");
+
+    let B = t.navigate.get("/s/b");
+
+    let dfd2 = defer();
+    await B.loader.resolve(
+      setupDeferred({
+        critical: "3",
+        lazy: dfd2.promise,
+      })
+    );
+
+    // In idle state when page loads with new critical data
+    expect(t.getState().loaderData).toEqual({
+      slug: {
+        critical: "3",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.slug.lazy._data).toBe(undefined);
+    expect(t.getState().transition.state).toBe("idle");
+
+    await dfd2.resolve("4");
+
+    // Resolves deferred data
+    expect(t.getState().loaderData).toEqual({
+      slug: {
+        critical: "3",
+        lazy: expect.any(Promise),
+      },
+      root: "ROOT",
+    });
+    expect(t.getState().loaderData.slug.lazy._data).toBe("4");
+  });
+
   it("should cancel initial deferreds on a new navigation", async () => {
     let dfd = defer();
     let t = setup({
@@ -2937,6 +3086,18 @@ let setup = (
         {
           path: "/p/:param",
           id: "param",
+          hasLoader: true,
+          loader: createLoader(),
+          action: createAction(),
+          ...(shouldReloads?.param
+            ? { shouldReload: shouldReloads?.param }
+            : {}),
+          element: {} as any,
+          module: "",
+        },
+        {
+          path: "/s/*",
+          id: "slug",
           hasLoader: true,
           loader: createLoader(),
           action: createAction(),

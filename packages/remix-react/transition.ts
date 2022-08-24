@@ -833,8 +833,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let [loaderData, monitorDeferred] = await makeLoaderData(
       getState,
       results,
+      state.matches,
       matchesToLoad,
-      update,
       pendingNavigationDeferredControllers,
       controller.signal
     );
@@ -1435,8 +1435,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     let [loaderData, monitorDeferred] = await makeLoaderData(
       getState,
       results,
+      state.matches,
       matches,
-      update,
       pendingNavigationDeferredControllers,
       controller.signal
     );
@@ -1504,8 +1504,8 @@ export function createTransitionManager(init: TransitionManagerInit) {
     makeLoaderData(
       getState,
       results,
+      state.matches,
       matches,
-      update,
       pendingNavigationDeferredControllers,
       pendingNavigationController.signal,
       false
@@ -1616,6 +1616,17 @@ async function callAction(
   }
 }
 
+function isNewRouteInstance(currentMatch: ClientMatch, match: ClientMatch) {
+  return (
+    // param change for this match, /users/123 -> /users/456
+    currentMatch.pathname !== match.pathname ||
+    // splat param changed, which is not present in match.path
+    // e.g. /files/images/avatar.jpg -> files/finances.xls
+    (currentMatch.route.path?.endsWith("*") &&
+      currentMatch.params["*"] !== match.params["*"])
+  );
+}
+
 function filterMatchesToLoad(
   state: TransitionManagerState,
   location: Location,
@@ -1658,17 +1669,6 @@ function filterMatchesToLoad(
     return match.route.id !== state.matches[index].route.id;
   };
 
-  let matchPathChanged = (match: ClientMatch, index: number) => {
-    return (
-      // param change, /users/123 -> /users/456
-      state.matches[index].pathname !== match.pathname ||
-      // splat param changed, which is not present in match.path
-      // e.g. /files/images/avatar.jpg -> files/finances.xls
-      (state.matches[index].route.path?.endsWith("*") &&
-        state.matches[index].params["*"] !== match.params["*"])
-    );
-  };
-
   let url = createUrl(createHref(location));
 
   let filterByRouteProps = (match: ClientMatch, index: number) => {
@@ -1676,7 +1676,10 @@ function filterMatchesToLoad(
       return false;
     }
 
-    if (isNew(match, index) || matchPathChanged(match, index)) {
+    if (
+      isNew(match, index) ||
+      isNewRouteInstance(state.matches[index], match)
+    ) {
       return true;
     }
 
@@ -1729,7 +1732,7 @@ function filterMatchesToLoad(
     return (
       match.route.loader &&
       (isNew(match, index) ||
-        matchPathChanged(match, index) ||
+        isNewRouteInstance(state.matches[index], match) ||
         (location.state as any)?.setCookie)
     );
   });
@@ -1907,8 +1910,8 @@ function wrapDeferredData(deferred: DeferredData, signal: AbortSignal) {
 async function makeLoaderData(
   getState: () => TransitionManagerState,
   results: DataResult[],
+  currentMatches: ClientMatch[],
   matches: ClientMatch[],
-  update: (updates: Partial<TransitionManagerState>) => void,
   pendingNavigationDeferredControllers: Map<string, AbortController>,
   signal: AbortSignal,
   shouldBuffer: boolean = true
@@ -1927,8 +1930,16 @@ async function makeLoaderData(
     if (isDeferredResult(result)) {
       let deferred = result.value;
 
+      let currentMatch = currentMatches.find(
+        (m) => m.route.id === match.route.id
+      );
       let bufferDeferred =
-        shouldBuffer && typeof state.loaderData[match.route.id] !== "undefined";
+        shouldBuffer &&
+        !!currentMatch &&
+        !isNewRouteInstance(currentMatch, match) &&
+        typeof state.loaderData[match.route.id] !== "undefined";
+
+      console.log({ bufferDeferred });
 
       let deferredController = new AbortController();
       pendingNavigationDeferredControllers.set(
