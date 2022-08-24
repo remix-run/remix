@@ -21,6 +21,7 @@
     "type-fest": "^2.17.0"
   },
   "devDependencies": {
+    "@remix-run/server-runtime": "*",
     "@testing-library/jest-dom": "^5.16.2",
     "@testing-library/react": "^13.3.0",
     "abort-controller": "^3.0.0",
