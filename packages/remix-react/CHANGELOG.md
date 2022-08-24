@@ -1,5 +1,16 @@
 # `@remix-run/react`
 
+## 1.7.0-pre.0
+
+### Minor Changes
+
+- We've added a new type: `SerializeFrom`. This is used to infer the ([#4013](https://github.com/remix-run/remix/pull/4013))
+  JSON-serialized return type of loaders and actions.
+
+### Patch Changes
+
+- Unblock hydration via async module scripts. ([#3918](https://github.com/remix-run/remix/pull/3918))
+
 ## 1.6.8
 
 ### Patch Changes
