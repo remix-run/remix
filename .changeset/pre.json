@@ -19,5 +19,15 @@
     "@remix-run/server-runtime": "1.6.8",
     "@remix-run/vercel": "1.6.8"
   },
-  "changesets": []
+  "changesets": [
+    "four-numbers-end",
+    "four-poets-stare",
+    "gold-mice-pretend",
+    "green-crabs-join",
+    "neat-beds-unite",
+    "red-apples-stew",
+    "stupid-houses-sing",
+    "wild-meals-beg",
+    "wordle-is-weird"
+  ]
 }
