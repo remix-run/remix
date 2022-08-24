@@ -17,6 +17,6 @@ on:
 jobs:
   test:
     if: github.repository == 'remix-run/remix'
-    uses: remix-run/remix/.github/workflows/reusable-test.yml@main
+    uses: ./.github/workflows/reusable-test.yml
     with:
       node_version: '["latest"]'
