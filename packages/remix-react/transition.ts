@@ -1939,8 +1939,6 @@ async function makeLoaderData(
         !isNewRouteInstance(currentMatch, match) &&
         typeof state.loaderData[match.route.id] !== "undefined";
 
-      console.log({ bufferDeferred });
-
       let deferredController = new AbortController();
       pendingNavigationDeferredControllers.set(
         match.route.id,
