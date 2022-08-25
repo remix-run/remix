@@ -1,6 +1,6 @@
 import { VERSION, OWNER, REPO, PR_FILES_STARTS_WITH } from "./constants";
 import {
-  commentOnIssue,
+  commentOnAndCloseIssue,
   commentOnPullRequest,
   getIssuesClosedByPullRequests,
   prsMergedSinceLastTag,
@@ -53,9 +53,11 @@ async function commentOnIssuesAndPrsAboutRelease() {
         continue;
       }
       issuesCommentedOn.add(issueNumber);
-      console.log(`commenting on issue ${getGitHubUrl("issue", issueNumber)}`);
+      console.log(
+        `commenting on and closing issue ${getGitHubUrl("issue", issueNumber)}`
+      );
       promises.push(
-        commentOnIssue({
+        commentOnAndCloseIssue({
           issue: issueNumber,
           owner: OWNER,
           repo: REPO,
