@@ -102,6 +102,7 @@ jobs:
     uses: remix-run/remix/.github/workflows/release-comments.yml@main
     with:
       ref: "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}"
+      packageVersionToFollow: "remix"
 
   deployments:
     needs: [nightly]
