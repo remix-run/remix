@@ -37,7 +37,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
   }
   ```
 
-  If you need a work around for preserving cache in development, you can store it in the global variable.
+  If you need a workaround for preserving cache in development, you can store it in the global variable.
 
   ```ts lines=[1-9] 
   // since the cache is stored in global it will only 
