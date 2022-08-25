@@ -185,6 +185,9 @@ test.describe("Forms", () => {
 
         "app/routes/blog/index.jsx": js`
           import { Form } from "@remix-run/react";
+          export function action() {
+            return { ok: true };
+          }
           export default function() {
             return (
               <>
@@ -616,6 +619,27 @@ test.describe("Forms", () => {
         let el = getElement(html, `#${INDEX_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
+
+      test("does not repeatedly add index params on submissions", async ({
+        page,
+      }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/blog");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
+        expect(el.attr("action")).toBe("/blog?index");
+        expect(app.page.url()).toMatch(/\/blog$/);
+
+        await app.clickElement(`#${INDEX_ROUTE_NO_ACTION} button`);
+        el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
+        expect(el.attr("action")).toBe("/blog?index");
+        expect(app.page.url()).toMatch(/\/blog\?index$/);
+
+        await app.clickElement(`#${INDEX_ROUTE_NO_ACTION} button`);
+        el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
+        expect(el.attr("action")).toBe("/blog?index");
+        expect(app.page.url()).toMatch(/\/blog\?index$/);
+      });
     });
 
     test.describe("in a layout route", () => {
@@ -761,13 +785,21 @@ test.describe("Forms", () => {
 
   test("<Form> submits the submitter's value appended to the form data", async ({
     page,
+    browserName,
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/submitter");
     await app.clickElement("text=Add Task");
     await page.waitForLoadState("load");
-    expect(await app.getHtml("pre")).toBe(
-      `<pre>tasks=first&amp;tasks=second&amp;tasks=</pre>`
-    );
+    // TODO: remove after playwright ships safari 16
+    if (browserName === "webkit") {
+      expect(await app.getHtml("pre")).toBe(
+        `<pre>tasks=first&amp;tasks=second&amp;tasks=&amp;tasks=</pre>`
+      );
+    } else {
+      expect(await app.getHtml("pre")).toBe(
+        `<pre>tasks=first&amp;tasks=second&amp;tasks=</pre>`
+      );
+    }
   });
 });

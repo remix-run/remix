@@ -1,5 +1,6 @@
 .DS_Store
 
+/.env
 /build/
 /packages/*/dist/
 /packages/*/LICENSE.md
