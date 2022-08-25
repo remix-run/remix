@@ -37,6 +37,25 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
   }
   ```
 
+  If you need a work around for preserving cache in development, you can store it in the global variable.
+
+  ```ts [1-9] 
+  // since the cache is stored in global it will only 
+  // be recreated when you restart your dev server.
+  const cache = (() => {
+    if (!global.uniqueCacheName) {
+      global.uniqueCacheName = new Map()
+    }
+
+    return global.uniqueCacheName
+  })
+
+
+  export async function loader({ params }) {
+    // ...
+  }
+  ```
+
 - Any **module side effects** will remain in place! This may cause problems, but should probably be avoided anyway.
 
   ```ts [3-6]
