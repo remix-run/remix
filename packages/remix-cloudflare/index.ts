@@ -1,10 +1,22 @@
 import "./globals";
 
-export {
+import {createWorkersKVSessionStorage} from './sessions/workersKVStorage';
+
+const warn = <T extends Function>(fn: T, message: string): T =>
+  ((...args: unknown[]) => {
+    console.warn(message);
+
+    return fn(...args);
+  }) as unknown as T;
+
+
+/** @deprecated Use `createWorkersKVSessionStorage` instead. */
+export const createCloudflareKVSessionStorage = warn(
   createWorkersKVSessionStorage,
-  // TODO: Deprecate createCloudflareKVSessionStorage
-  createWorkersKVSessionStorage as createCloudflareKVSessionStorage,
-} from "./sessions/workersKVStorage";
+  "`createCloudflareKVSessionStorage` is deprecated. Please use `createWorkersKVSessionStorage` instead.",
+);
+
+export { createWorkersKVSessionStorage } from "./sessions/workersKVStorage";
 
 export {
   createCookie,

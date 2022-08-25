@@ -258,7 +258,7 @@ title: Remix Packages
 
 [Moved →][moved-59]
 
-### `createCloudflareKVSessionStorage` (cloudflare-workers)
+### `createWorkersKVSessionStorage` (Cloudflare Workers)
 
 [Moved →][moved-60]
 
