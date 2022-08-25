@@ -1,5 +1,17 @@
 # `@remix-run/deno`
 
+## 1.7.0
+
+### Minor Changes
+
+- We've added a new type: `SerializeFrom`. This is used to infer the ([#4013](https://github.com/remix-run/remix/pull/4013))
+  JSON-serialized return type of loaders and actions.
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.7.0`
+
 ## 1.6.8
 
 ### Patch Changes
