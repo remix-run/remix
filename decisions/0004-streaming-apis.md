@@ -58,23 +58,23 @@ We decided _not_ to support naked objects due to the ambiguity that would be int
 // been introduced had we chosen to support naked objects :)
 
 // This would NOT be streamed
-function loader() {
+function exampleLoader1() {
   return Promise.resolve(5);
 }
 
 // This WOULD be streamed
-function loader() {
+function exampleLoader2() {
   return {
     value: Promise.resolve(5),
   };
 }
 
 // This would NOT be streamed
-function loader() {
+function exampleLoader3() {
   return {
     value: {
       nested: Promise.resolve(5),
-    }
+    },
   };
 }
 ```
