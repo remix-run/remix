@@ -7,7 +7,7 @@ on:
         required: true
         type: string
       packageVersionToFollow:
-        required: false
+        required: true
         type: string
 
 jobs:
@@ -41,4 +41,4 @@ jobs:
           VERSION: ${{ inputs.ref }}
           DEFAULT_BRANCH: "main"
           NIGHTLY_BRANCH: "dev"
-          PACKAGE_VERSION_TO_FOLLOW: ${{ inputs.packageToWatch }}
+          PACKAGE_VERSION_TO_FOLLOW: ${{ inputs.packageVersionToFollow }}
