@@ -18,7 +18,7 @@ It's also worth nothing that even in a single-page-application without SSR-strea
 
 Streaming in Remix can be thought of as having 3 touch points with corresponding APIs:
 
-1. _Initiating_ a streamed response in your `loader` can be done by returning a `defer(object)` call from your `loader` in which some of the keys on `object` are `Promise` objects
+1. _Initiating_ a streamed response in your `loader` can be done by returning a `defer(object)` call from your `loader` in which some of the keys on `object` are `Promise` instances
 2. _Accessing_ a streamed response from `useLoaderData`
    1. No new APIs here - when you return a `defer()` response from your loader, you'll get `Promise` values inside your `useLoaderData` object 👌
 3. _Rendering_ a streamed value (with fallback and error handling) in your component
@@ -45,28 +45,31 @@ async function loader() {
 }
 ```
 
-By not using `await` on `fetchLazyData()` Remix knows that this value is not ready yet _but eventually will be_ and therefore Remix will leverage a streamed HTTP response allowing it to send up the resolved/rejected value when available. Essentially serializing/teleporting that Promise over the network via a streamed HTTP response. In this simplest case, there is no new API surface needed in Remix.
+By not using `await` on `fetchLazyData()` Remix knows that this value is not ready yet _but eventually will be_ and therefore Remix will leverage a streamed HTTP response allowing it to send up the resolved/rejected value when available. Essentially serializing/teleporting that Promise over the network via a streamed HTTP response.
 
-Just like `json()`, the `defer()` will accept a second optional `responseInit` param that lets you customize the resulting Response
+Just like `json()`, the `defer()` will accept a second optional `responseInit` param that lets you customize the resulting `Response` (i.e., in case you need to set custom headers).
 
 The name `defer` was settled on as a corollary to `<script defer>` which essentially tells the browser to _"fetch this script now but don't delay document parsing"_. In a similar vein, with `defer()` we're telling Remix to _"fetch this data now but don't delay the HTTP response"_.
 
 We decided _not_ to support naked objects due to the ambiguity that would be introduced:
 
 ```js
-// NOT streamed
+// NOT VALID CODE - This is just an example of the ambiguity that would have
+// been introduced had we chosen to support naked objects :)
+
+// This would NOT be streamed
 function loader() {
   return Promise.resolve(5);
 }
 
-// streamed
+// This WOULD be streamed
 function loader() {
   return {
     value: Promise.resolve(5);
   };
 }
 
-// NOT streamed
+// This would NOT be streamed
 function loader() {
   return {
     value: {
@@ -177,6 +180,8 @@ If you do not provide an `errorElement`, then promise rejections will bubble up 
   <summary>Other considered API names:</summary>
   <br>
   <p>We originally implemented this as a <code>&lt;Deferred value={promise} fallback={&lt;Loader /&gt;} errorElement={&lt;MyError/&gt;} /></code>, but eventually we chose to remove the built-in <code>&lt;Suspense&gt;</code> boundary for better composability and eventual use with <code>&lt;SuspenseList&gt;</code>.  Once that was removed, and we were only using a <code>Promise</code> it made sense to move to a generic <code>&lt;Await&gt;</code> component that could be used with <em>any</em> promise, not just those coming from <code>defer()</code> in a <code>loader</code></p>
+
+  <p>We also considered various alternatives for the hook names - most notably `useResolvedValue`/`useRejectedValue`.  However, these were a bit too tightly coupled to the `Promise` nomenclature.  Remember, `Await` supports non-Promise values as well as render-errors, so it would be confusing if `useResolvedValue` was handing you a non-Promise value, or if `useRejectedValue` was handing you a render error from a resolved `Promise`.  `useAsyncValue`/`useAsyncError` better encompasses those scenarios as well.</p>
 </details>
 
 ## React Router Notes
