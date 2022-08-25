@@ -4,13 +4,16 @@ import {
   REPO,
   PR_FILES_STARTS_WITH,
   isNightlyRelease,
+  AWAITING_RELEASE_LABEL,
 } from "./constants";
 import {
+  applyLabel,
   closeIssue,
   commentOnIssue,
   commentOnPullRequest,
   getIssuesClosedByPullRequests,
   prsMergedSinceLastTag,
+  removeLabel,
 } from "./github";
 import { getGitHubUrl } from "./utils";
 
@@ -48,47 +51,44 @@ async function commentOnIssuesAndPrsAboutRelease() {
       })
     );
 
+    if (isNightlyRelease) {
+      promises.push(applyLabel({ owner: OWNER, repo: REPO, issue: pr.number }));
+    } else {
+      promises.push(
+        removeLabel({ owner: OWNER, repo: REPO, issue: pr.number })
+      );
+    }
+
     let issuesClosed = await getIssuesClosedByPullRequests(
       pr.html_url,
       pr.body
     );
 
-    for (let issueNumber of issuesClosed) {
-      if (issuesCommentedOn.has(issueNumber)) {
+    for (let issue of issuesClosed) {
+      if (issuesCommentedOn.has(issue.number)) {
         // we already commented on this issue
         // so we don't need to do it again
         continue;
       }
-      issuesCommentedOn.add(issueNumber);
-      let issueUrl = getGitHubUrl("issue", issueNumber);
+
+      issuesCommentedOn.add(issue.number);
+      let issueUrl = getGitHubUrl("issue", issue.number);
+
+      let options = { owner: OWNER, repo: REPO, issue: issue.number };
 
       if (isNightlyRelease) {
-        console.log(`commenting on ${issueUrl}`);
-        promises.push(
-          commentOnIssue({
-            issue: issueNumber,
-            owner: OWNER,
-            repo: REPO,
-            version: VERSION,
-          })
-        );
+        console.log(`commenting on and applying label to ${issueUrl}`);
+        promises.push(commentOnIssue({ ...options, version: VERSION }));
+        promises.push(applyLabel(options));
       } else {
-        console.log(`commenting on and closing ${issueUrl}`);
-        promises.push(
-          commentOnIssue({
-            issue: issueNumber,
-            owner: OWNER,
-            repo: REPO,
-            version: VERSION,
-          })
-        );
-        promises.push(
-          closeIssue({
-            issue: issueNumber,
-            owner: OWNER,
-            repo: REPO,
-          })
-        );
+        console.log(`commenting on ${issueUrl}`);
+        promises.push(commentOnIssue({ ...options, version: VERSION }));
+
+        if (issue.labels.includes(AWAITING_RELEASE_LABEL)) {
+          console.log(`closing and removing label from ${issueUrl}`);
+          promises.push(closeIssue(options));
+          promises.push(removeLabel(options));
+        }
       }
     }
   }

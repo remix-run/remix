@@ -31,3 +31,4 @@ export const DEFAULT_BRANCH = process.env.DEFAULT_BRANCH;
 export const NIGHTLY_BRANCH = process.env.NIGHTLY_BRANCH;
 export const PR_FILES_STARTS_WITH = ["packages/"];
 export const isNightlyRelease = isNightly(VERSION);
+export const AWAITING_RELEASE_LABEL = "awaiting release";
