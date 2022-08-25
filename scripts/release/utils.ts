@@ -34,3 +34,7 @@ export function cleanupTagName(tagName: string) {
 export function cleanupRef(ref: string) {
   return ref.replace(/^refs\/tags\//, "");
 }
+
+export function isNightly(tagName: string) {
+  return tagName.startsWith("v0.0.0-nightly-");
+}

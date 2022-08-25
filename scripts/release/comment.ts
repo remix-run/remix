@@ -1,6 +1,13 @@
-import { VERSION, OWNER, REPO, PR_FILES_STARTS_WITH } from "./constants";
 import {
-  commentOnAndCloseIssue,
+  VERSION,
+  OWNER,
+  REPO,
+  PR_FILES_STARTS_WITH,
+  isNightlyRelease,
+} from "./constants";
+import {
+  closeIssue,
+  commentOnIssue,
   commentOnPullRequest,
   getIssuesClosedByPullRequests,
   prsMergedSinceLastTag,
@@ -26,7 +33,7 @@ async function commentOnIssuesAndPrsAboutRelease() {
       `previous release (current: ${VERSION}, previous: ${previousTag})`
   );
 
-  let promises: Array<ReturnType<typeof commentOnAndCloseIssue>> = [];
+  let promises: Array<ReturnType<typeof commentOnIssue>> = [];
   let issuesCommentedOn = new Set();
 
   for (let pr of merged) {
@@ -53,17 +60,36 @@ async function commentOnIssuesAndPrsAboutRelease() {
         continue;
       }
       issuesCommentedOn.add(issueNumber);
-      console.log(
-        `commenting on and closing issue ${getGitHubUrl("issue", issueNumber)}`
-      );
-      promises.push(
-        commentOnAndCloseIssue({
-          issue: issueNumber,
-          owner: OWNER,
-          repo: REPO,
-          version: VERSION,
-        })
-      );
+      let issueUrl = getGitHubUrl("issue", issueNumber);
+
+      if (isNightlyRelease) {
+        console.log(`commenting on ${issueUrl}`);
+        promises.push(
+          commentOnIssue({
+            issue: issueNumber,
+            owner: OWNER,
+            repo: REPO,
+            version: VERSION,
+          })
+        );
+      } else {
+        console.log(`commenting on and closing ${issueUrl}`);
+        promises.push(
+          commentOnIssue({
+            issue: issueNumber,
+            owner: OWNER,
+            repo: REPO,
+            version: VERSION,
+          })
+        );
+        promises.push(
+          closeIssue({
+            issue: issueNumber,
+            owner: OWNER,
+            repo: REPO,
+          })
+        );
+      }
     }
   }
 

@@ -364,7 +364,7 @@ export async function commentOnPullRequest({
   });
 }
 
-export async function commentOnAndCloseIssue({
+export async function commentOnIssue({
   owner,
   repo,
   issue,
@@ -375,19 +375,27 @@ export async function commentOnAndCloseIssue({
   issue: number;
   version: string;
 }) {
-  await Promise.all([
-    octokit.issues.createComment({
-      owner,
-      repo,
-      issue_number: issue,
-      body: `🤖 Hello there,\n\nWe just published version \`${version}\` which involves this issue. If you'd like to take it for a test run please try it out and let us know what you think!\n\nThanks!`,
-    }),
+  await octokit.issues.createComment({
+    owner,
+    repo,
+    issue_number: issue,
+    body: `🤖 Hello there,\n\nWe just published version \`${version}\` which involves this issue. If you'd like to take it for a test run please try it out and let us know what you think!\n\nThanks!`,
+  });
+}
 
-    octokit.issues.update({
-      owner,
-      repo,
-      issue_number: issue,
-      state: "closed",
-    }),
-  ]);
+export async function closeIssue({
+  owner,
+  repo,
+  issue,
+}: {
+  owner: string;
+  repo: string;
+  issue: number;
+}) {
+  await octokit.issues.update({
+    owner,
+    repo,
+    issue_number: issue,
+    state: "closed",
+  });
 }
