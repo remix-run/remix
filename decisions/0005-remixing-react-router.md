@@ -185,7 +185,8 @@ The differentiation between error and catch prove to be a bit vague over time an
 
 We have a few options here. In all cases, Remix v1 will provide an `errorElement` implementation that will need to do some forking to maintain backwards compatibility.
 
-1. We could introduce a new `ErrorElement` in Remix v1 and deprecate `ErrorBoundary`/`CatchBoundary` (and eventually drop them in v2)
+1. We could introduce a new `ErrorComponent` in Remix v1 and deprecate `ErrorBoundary`/`CatchBoundary` (and eventually drop them in v2)
+   1. Chose this over `ErrorElement` since the thing being exported has not been through `React.createElement`
 2. We could maintain the same behavior of `ErrorBoundary`/`CatchBoundary` in v1 and plan to drop` CatchBoundary` in v2 and send everything to `ErrorBoundary`
 
 ### `Request.signal` instead of `signal` param
