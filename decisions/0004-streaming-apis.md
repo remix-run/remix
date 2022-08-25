@@ -65,7 +65,7 @@ function loader() {
 // This WOULD be streamed
 function loader() {
   return {
-    value: Promise.resolve(5);
+    value: Promise.resolve(5),
   };
 }
 
@@ -73,7 +73,7 @@ function loader() {
 function loader() {
   return {
     value: {
-      nested: Promise.resolve(5);
+      nested: Promise.resolve(5),
     }
   };
 }
