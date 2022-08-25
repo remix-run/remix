@@ -63,7 +63,6 @@ function exampleLoader1() {
 }
 
 // This WOULD be streamed
-// eslint-disable-next-line
 function exampleLoader2() {
   return {
     value: Promise.resolve(5),
