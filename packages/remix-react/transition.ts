@@ -97,9 +97,12 @@ export interface TransitionManagerInit {
   error?: Error;
   catchBoundaryId?: null | string;
   errorBoundaryId?: null | string;
-  onChange: (state: TransitionManagerState) => void;
   onRedirect: (to: string, state?: any) => void;
 }
+
+export type TransitionManagerSubscriber = (
+  state: TransitionManagerState
+) => void;
 
 export interface Submission {
   action: string;
@@ -422,6 +425,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let navigationLoadId = -1;
   let fetchReloadIds = new Map<string, number>();
   let fetchRedirectIds = new Set<string>();
+  let subscribers = new Set<TransitionManagerSubscriber>();
 
   let matches = matchClientRoutes(routes, init.location);
 
@@ -462,7 +466,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
 
     state = Object.assign({}, state, updates);
-    init.onChange(state);
+
+    for (let subscriber of subscribers.values()) {
+      subscriber(state);
+    }
   }
 
   function getState(): TransitionManagerState {
@@ -1382,7 +1389,15 @@ export function createTransitionManager(init: TransitionManagerInit) {
     markFetchersDone(doneKeys);
   }
 
+  function subscribe(subscriber: TransitionManagerSubscriber) {
+    subscribers.add(subscriber);
+    return () => {
+      subscribers.delete(subscriber);
+    };
+  }
+
   return {
+    subscribe,
     send,
     getState,
     getFetcher,

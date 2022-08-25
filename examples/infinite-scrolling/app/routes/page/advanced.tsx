@@ -143,11 +143,14 @@ export default function Index() {
     }
     const newPage = Math.round(neededStart / limit);
     if (newPage !== page) {
-      setSearchParams({
-        start: String(neededStart),
-        page: String(newPage),
-        limit: LIMIT.toString(),
-      });
+      setSearchParams(
+        {
+          start: String(neededStart),
+          page: String(newPage),
+          limit: LIMIT.toString(),
+        },
+        { replace: true }
+      );
     }
   }, [limit, neededStart, page, setSearchParams]);
 

@@ -57,7 +57,7 @@ You'll find links to the sections of the tutorial in the navbar (top of the page
 
 You can follow along with this tutorial on [CodeSandbox][code-sandbox] (a fantastic in-browser editor) or locally on your own computer. If you use the CodeSandbox approach then all you need is a good internet connection and a modern browser. If you run things locally then you're going to need some things installed:
 
-- [Node.js][node-js] 14 or greater
+- [Node.js][node-js] version (^14.17.0, or >=16.0.0)
 - [npm][npm] 7 or greater
 - A code editor ([VSCode][vs-code] is a nice one)
 
@@ -90,21 +90,16 @@ npx create-remix@latest
 
 <docs-info>
 
-This may ask you whether you want to install `create-remix` to run the command. Enter `y`. It will only be installed temporarily to run the setup script.
+This may ask you whether you want to install `create-remix@latest`. Enter `y`. It will only be installed the first time to run the setup script.
 
 </docs-info>
 
-When the fun Remix animation is finished, it'll ask you a few questions. We'll call our app "remix-jokes", choose "Just the basics", then the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
+Once the setup script has run, it'll ask you a few questions. We'll call our app "remix-jokes", choose "Just the basics", then the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
 
 ```
-R E M I X
-
-💿 Welcome to Remix! Let's get you set up with a new project.
-
 ? Where would you like to create your app? remix-jokes
 ? What type of app do you want to create? Just the basics
-? Where do you want to deploy? Choose Remix App Server if you're unsure,
-it's easy to change deployment targets. Remix App Server
+? Where do you want to deploy? Choose Remix App Server if you're unsure; it's easy to change deployment targets. Remix App Server
 ? TypeScript or JavaScript? TypeScript
 ? Do you want me to run `npm install`? Yes
 ```
@@ -1581,25 +1576,25 @@ To _load_ data in a Remix route module, you use a [`loader`][loader]. This is si
 import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import type { User } from "@prisma/client";
+import type { Sandwich } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
 
-type LoaderData = { users: Array<User> };
+type LoaderData = { sandwiches: Array<Sandwich> };
 
 export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
-    users: await db.user.findMany(),
+    sandwiches: await db.sandwich.findMany(),
   };
   return json(data);
 };
 
-export default function Users() {
+export default function Sandwiches() {
   const data = useLoaderData<LoaderData>();
   return (
     <ul>
-      {data.users.map((user) => (
-        <li key={user.id}>{user.name}</li>
+      {data.sandwiches.map((sandwich) => (
+        <li key={sandwich.id}>{sandwich.name}</li>
       ))}
     </ul>
   );
@@ -1620,11 +1615,12 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[3,5,12,19-21,23-28,31,55-59]
+```tsx filename=app/routes/jokes.tsx lines=[3,6,8,16,23-25,27-32,35,59-63]
 import type {
   LinksFunction,
   LoaderFunction,
 } from "@remix-run/node";
+import type { Joke } from "@prisma/client";
 import { json } from "@remix-run/node";
 import {
   Link,
@@ -1640,7 +1636,7 @@ export const links: LinksFunction = () => {
 };
 
 type LoaderData = {
-  jokeListItems: Array<{ id: string; name: string }>;
+  jokeListItems: Array<Joke>;
 };
 
 export const loader: LoaderFunction = async () => {
@@ -1705,7 +1701,7 @@ And here's what we have with that now:
 
 I want to call out something specific in my solution. Here's my loader:
 
-```tsx lines=[8-10]
+```tsx lines=[2,8-10]
 type LoaderData = {
   jokeListItems: Array<{ id: string; name: string }>;
 };
@@ -6372,7 +6368,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [bare-bones-hello-world-app]: /jokes-tutorial/img/bare-bones.png
 [remix-config-js]: ../api/conventions#remixconfigjs
 [route-module]: ../api/conventions#route-module-api
-[the-route-filename-convention]: ../api/conventions#route-filenames
+[the-route-filename-convention]: ../api/conventions#route-file-conventions
 [react-router]: https://reactrouter.com
 [a-greeting-from-the-index-route]: /jokes-tutorial/img/index-route-greeting.png
 [jokes]: http://localhost:3000/jokes

@@ -24,6 +24,7 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     $ remix build [${colors.arg("projectDir")}]
     $ remix dev [${colors.arg("projectDir")}]
     $ remix routes [${colors.arg("projectDir")}]
+    $ remix watch [${colors.arg("projectDir")}]
     $ remix setup [${colors.arg("remixPlatform")}]
     $ remix migrate [-m ${colors.arg("migration")}] [${colors.arg(
   "projectDir"
@@ -103,6 +104,14 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     $ remix dev my-app
     $ remix dev --debug
 
+  ${colors.heading("Start your server separately and watch for changes")}:
+
+    # custom server start command, for example:
+    $ remix watch
+
+    # in a separate tab:
+    $ node --inspect --require ./node_modules/dotenv/config --require ./mocks ./build/server.js
+
   ${colors.heading("Show all routes in your app")}:
 
     $ remix routes
@@ -160,9 +169,13 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "-h": "--help",
       "--install": Boolean,
       "--no-install": Boolean,
+      "--interactive": Boolean,
+      "--no-interactive": Boolean,
       "--json": Boolean,
       "--migration": String,
       "-m": "--migration",
+      "--port": Number,
+      "-p": "--port",
       "--remix-version": String,
       "--sourcemap": Boolean,
       "--template": String,
@@ -201,6 +214,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
   if (args["--no-install"]) {
     flags.install = false;
   }
+  if (args["--no-interactive"]) {
+    flags.interactive = false;
+  }
+  flags.interactive = flags.interactive ?? require.main === module;
   if (args["--no-typescript"]) {
     flags.typescript = false;
   }
@@ -324,7 +341,8 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             },
             message: "Which Stack do you want? ",
             loop: false,
-            suffix: "(Learn more about these stacks: https://remix.run/stacks)",
+            suffix:
+              "(Learn more about these stacks: 'https://remix.run/stacks')",
             choices: [
               {
                 name: "Blues",

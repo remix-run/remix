@@ -39,7 +39,7 @@ export function createRequestHandler({
   mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
-  getLoadContext?: AppLoadContext;
+  getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);

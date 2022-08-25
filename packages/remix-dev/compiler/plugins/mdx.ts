@@ -39,14 +39,15 @@ export function mdxPlugin(config: RemixConfig): esbuild.Plugin {
         let resolved = path.resolve(args.resolveDir, resolvedPath);
 
         return {
-          path: resolved,
+          path: path.relative(config.appDirectory, resolved),
           namespace: "mdx",
         };
       });
 
       build.onLoad({ filter: /\.mdx?$/ }, async (args) => {
+        let absolutePath = path.join(config.appDirectory, args.path);
         try {
-          let fileContents = await fsp.readFile(args.path, "utf-8");
+          let fileContents = await fsp.readFile(absolutePath, "utf-8");
 
           let rehypePlugins = [];
           let remarkPlugins = [
@@ -71,7 +72,6 @@ export function mdxPlugin(config: RemixConfig): esbuild.Plugin {
 export const filename = ${JSON.stringify(path.basename(args.path))};
 export const headers = typeof attributes !== "undefined" && attributes.headers;
 export const meta = typeof attributes !== "undefined" && attributes.meta;
-export const links = undefined;
           `;
 
           let compiled = await xdm.compile(fileContents, {
@@ -116,7 +116,7 @@ ${remixExports}`;
             errors: errors.length ? errors : undefined,
             warnings: warnings.length ? warnings : undefined,
             contents,
-            resolveDir: path.dirname(args.path),
+            resolveDir: path.dirname(absolutePath),
             loader: getLoaderForFile(args.path),
           };
         } catch (err: any) {

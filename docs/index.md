@@ -55,6 +55,12 @@ We **strongly encourage you** to do one of the tutorials before anything else. R
       <p>GitHub Discussions is also the best place to get help when you're stuck. Other folks can post answers for the next person to see.</p>
     </docs-card>
   </a>
+  <a href="https://github.com/remix-run/remix/tree/main/examples" aria-label="Remix Examples">
+    <docs-card>
+      <h4>Remix Examples</h4>
+      <p>Have a look at the various Remix examples made by the community and carefully reviewed by our team.</p>
+    </docs-card>
+  </a>
   <a href="https://rmx.as/discord" aria-label="Remix Discord">
     <docs-card>
       <h4>Discord Server</h4> 

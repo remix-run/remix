@@ -6,6 +6,7 @@ import arcParser from "@architect/parser";
 import { toLogicalID } from "@architect/utils";
 import { createApp } from "@remix-run/dev";
 import destroy from "@architect/destroy";
+import PackageJson from "@npmcli/package-json";
 
 import {
   addCypress,
@@ -15,7 +16,6 @@ import {
   getAppName,
   getSpawnOpts,
   runCypress,
-  updatePackageConfig,
   validatePackageVersions,
 } from "./_shared.mjs";
 
@@ -34,16 +34,14 @@ async function createNewApp() {
   });
 }
 
-const options = {
+let client = new aws.ApiGatewayV2({
   region: "us-west-2",
   apiVersion: "latest",
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
-};
-
-let client = new aws.ApiGatewayV2(options);
+});
 
 async function getArcDeployment() {
   let deployments = await client.getApis().promise();
@@ -54,18 +52,33 @@ async function createAndDeployApp() {
   await createNewApp();
 
   // validate dependencies are available
-  await validatePackageVersions(PROJECT_DIR);
+  let [valid, errors] = await validatePackageVersions(PROJECT_DIR);
+
+  if (!valid) {
+    console.error(errors);
+    process.exit(1);
+  }
+
+  let pkgJson = await PackageJson.load(PROJECT_DIR);
+  pkgJson.update({
+    devDependencies: {
+      ...pkgJson.content.devDependencies,
+      "@architect/architect": "latest",
+    },
+  });
 
   await Promise.all([
     fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
     fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
-    updatePackageConfig(PROJECT_DIR, (config) => {
-      config.devDependencies["@architect/architect"] = "latest";
-    }),
+    pkgJson.save(),
   ]);
 
-  let spawnOpts = getSpawnOpts(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR, {
+    // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+  });
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
@@ -81,13 +94,10 @@ async function createAndDeployApp() {
   await fse.writeFile(ARC_CONFIG_PATH, arcParser.stringify(parsed));
 
   // deploy to the staging environment
-  let arcDeployCommand = spawnSync(
-    "npx",
-    ["arc", "deploy", "--prune"],
-    spawnOpts
-  );
-  if (arcDeployCommand.status !== 0) {
-    throw new Error("Deployment failed");
+  let deployCommand = spawnSync("npx", ["arc", "deploy", "--prune"], spawnOpts);
+  if (deployCommand.status !== 0) {
+    console.error(deployCommand.error);
+    throw new Error("Architect deploy failed");
   }
 
   let deployment = await getArcDeployment();
@@ -110,10 +120,18 @@ async function destroyApp() {
   console.log(`Destroyed app ${APP_NAME}`);
 }
 
-createAndDeployApp()
-  .then(() => process.exit(0))
-  .catch((error) => {
+async function main() {
+  let exitCode;
+  try {
+    await createAndDeployApp();
+    exitCode = 0;
+  } catch (error) {
     console.error(error);
-    process.exit(1);
-  })
-  .finally(destroyApp);
+    exitCode = 1;
+  } finally {
+    await destroyApp();
+    process.exit(exitCode);
+  }
+}
+
+main();

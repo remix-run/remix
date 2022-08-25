@@ -8,7 +8,7 @@ Remix seamlessly supports both JavaScript and TypeScript. If you name a file wit
 
 The Remix compiler will not do any type checking (it simply removes the types). If you want to do type checking, you'll want to use TypeScript's `tsc` CLI yourself. A common solution is to add a `typecheck` script to your package.json:
 
-```json filename=package.json lines=[11]
+```json filename=package.json lines=[9]
 {
   "name": "remix-app",
   "private": true,
@@ -32,7 +32,7 @@ The Remix compiler will not do any type checking (it simply removes the types). 
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
     "eslint": "^8.11.0",
-    "typescript": "^4.5.5"
+    "typescript": "^4.7.4"
   },
   "engines": {
     "node": ">=14"

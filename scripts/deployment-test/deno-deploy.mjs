@@ -26,28 +26,39 @@ try {
   await createNewApp();
 
   // validate dependencies are available
-  await validatePackageVersions(PROJECT_DIR);
+  let [valid, errors] = await validatePackageVersions(PROJECT_DIR);
 
-  let spawnOpts = getSpawnOpts(PROJECT_DIR);
+  if (!valid) {
+    console.error(errors);
+    process.exit(1);
+  }
+
+  let spawnOpts = getSpawnOpts(PROJECT_DIR, {
+    // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
+    DENO_DEPLOY_TOKEN: process.env.DENO_DEPLOY_TOKEN,
+  });
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
   spawnSync("npm", ["run", "build"], spawnOpts);
 
   // deploy to deno deploy
+  // note we dont have to install deployctl here as we do it ahead of time in the deployments workflow
   let deployCommand = spawnSync(
     "deployctl",
     [
       "deploy",
-      "--prod",
-      "--include=public,build",
-      `--project=${DENO_DEPLOY_PROJECT_NAME}`,
+      "--project",
+      DENO_DEPLOY_PROJECT_NAME,
       "./build/index.js",
+      "--prod",
+      "--include=build,public",
     ],
     spawnOpts
   );
   if (deployCommand.status !== 0) {
-    throw new Error("Deploying to Deno Deploy failed");
+    console.error(deployCommand.error);
+    throw new Error("Deno Deploy deploy failed");
   }
 
   console.log(`Deployed to ${DENO_DEPLOY_PROJECT_NAME}.deno.dev`);

@@ -26,11 +26,6 @@ import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesP
 import { writeFileSafe } from "./compiler/utils/fs";
 import { urlImportsPlugin } from "./compiler/plugins/urlImportsPlugin";
 
-// When we build Remix, this shim file is copied directly into the output
-// directory in the same place relative to this file. It is eventually injected
-// as a source file when building the app.
-const reactShim = path.resolve(__dirname, "compiler/shims/react.ts");
-
 interface BuildConfig {
   mode: BuildMode;
   target: BuildTarget;
@@ -348,8 +343,7 @@ async function createBrowserBuild(
     // All route entry points are virtual modules that will be loaded by the
     // browserEntryPointsPlugin. This allows us to tree-shake server-only code
     // that we don't want to run in the browser (i.e. action & loader).
-    entryPoints[id] =
-      path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
+    entryPoints[id] = config.routes[id].file + "?browser";
   }
 
   let plugins = [
@@ -367,7 +361,6 @@ async function createBrowserBuild(
     platform: "browser",
     format: "esm",
     external: externals,
-    inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
     loader: loaders,
     bundle: true,
     logLevel: "silent",
@@ -388,6 +381,8 @@ async function createBrowserBuild(
         config.devServerPort
       ),
     },
+    jsx: "automatic",
+    jsxDev: options.mode !== BuildMode.Production,
     plugins,
   });
 }
@@ -460,7 +455,6 @@ function createServerBuild(
         ? ["module", "main"]
         : ["main", "module"],
       target: options.target,
-      inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
       loader: loaders,
       bundle: true,
       logLevel: "silent",
@@ -476,6 +470,8 @@ function createServerBuild(
           config.devServerPort
         ),
       },
+      jsx: "automatic",
+      jsxDev: options.mode !== BuildMode.Production,
       plugins,
     })
     .then(async (build) => {
@@ -521,6 +517,9 @@ async function writeServerBuildResult(
       let contents = Buffer.from(file.contents).toString("utf-8");
       contents = contents.replace(/"route:/gm, '"');
       await fse.writeFile(file.path, contents);
+    } else {
+      await fse.ensureDir(path.dirname(file.path));
+      await fse.writeFile(file.path, file.contents);
     }
   }
 }
