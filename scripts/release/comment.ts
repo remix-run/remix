@@ -26,7 +26,7 @@ async function commentOnIssuesAndPrsAboutRelease() {
       `previous release (current: ${VERSION}, previous: ${previousTag})`
   );
 
-  let promises: Array<ReturnType<typeof commentOnIssue>> = [];
+  let promises: Array<ReturnType<typeof commentOnAndCloseIssue>> = [];
   let issuesCommentedOn = new Set();
 
   for (let pr of merged) {
