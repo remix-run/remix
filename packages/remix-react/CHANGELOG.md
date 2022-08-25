@@ -1,6 +1,6 @@
 # `@remix-run/react`
 
-## 1.7.0-pre.0
+## 1.7.0
 
 ### Minor Changes
 
