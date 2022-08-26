@@ -873,7 +873,7 @@ test.describe("Forms", () => {
       });
     })
 
-    test('uses the form "method" attribute', async ({ page }) => {
+    test("uses the form `method` attribute", async ({ page }) => {
       let app = new PlaywrightFixture(appFixture, page);
       await app.goto("/form-method");
       await app.clickElement("button");
@@ -881,7 +881,7 @@ test.describe("Forms", () => {
       expect(await app.getHtml("pre")).toMatch("POST");
     });
   
-    test('uses the button "formmethod" attribute', async ({ page }) => {
+    test("uses the button `formmethod` attribute", async ({ page }) => {
       let app = new PlaywrightFixture(appFixture, page);
       await app.goto("/button-form-method");
       await app.clickElement("button");
