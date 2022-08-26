@@ -854,21 +854,24 @@ test.describe("Forms", () => {
   });
 
   test.describe("with submitter button having `formMethod` attribute", () => {
-    test("submits with GET instead of POST", async ({ page }) => {
-      let app = new PlaywrightFixture(appFixture, page);
-      await app.goto("/submitter-formmethod");
-      await app.clickElement("text=Submit with GET");
-      await page.waitForLoadState("load");
-      expect(await app.getHtml("pre")).toBe("<pre>GET</pre>");
-    });
 
-    test("submits with POST instead of GET", async ({ page }) => {
-      let app = new PlaywrightFixture(appFixture, page);
-      await app.goto("/submitter-formmethod");
-      await app.clickElement("text=Submit with POST");
-      await page.waitForLoadState("load");
-      expect(await app.getHtml("pre")).toBe("<pre>POST</pre>");
-    });
+    test.describe("overrides the form `method` attribute with the button `formmethod` attribute", () => {
+      test("submits with GET instead of POST", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/submitter-formmethod");
+        await app.clickElement("text=Submit with GET");
+        await page.waitForLoadState("load");
+        expect(await app.getHtml("pre")).toBe("<pre>GET</pre>");
+      });
+  
+      test("submits with POST instead of GET", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/submitter-formmethod");
+        await app.clickElement("text=Submit with POST");
+        await page.waitForLoadState("load");
+        expect(await app.getHtml("pre")).toBe("<pre>POST</pre>");
+      });
+    })
 
     test('uses the form "method" attribute', async ({ page }) => {
       let app = new PlaywrightFixture(appFixture, page);
