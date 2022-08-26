@@ -332,7 +332,9 @@ test.describe("Forms", () => {
         `,
 
         "app/routes/form-method.jsx": js`
-          import { useActionData, Form, json } from "remix";
+          import { Form, useActionData } from "@remix-run/react";
+          import { json } from "@remix-run/node";
+
           export function action({ request }) {
             return json(request.method)
           }
