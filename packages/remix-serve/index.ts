@@ -1,10 +1,7 @@
 import express from "express";
 import compression from "compression";
 import morgan from "morgan";
-import {
-  createCompressionFilter,
-  createRequestHandler,
-} from "@remix-run/express";
+import { createRequestHandler } from "@remix-run/express";
 
 export function createApp(
   buildPath: string,
@@ -16,11 +13,7 @@ export function createApp(
 
   app.disable("x-powered-by");
 
-  app.use(
-    compression({
-      filter: createCompressionFilter(),
-    })
-  );
+  app.use(compression());
 
   app.use(
     publicPath,

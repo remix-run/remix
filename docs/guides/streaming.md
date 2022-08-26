@@ -152,15 +152,33 @@ export default function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-  const callbackName = isbot(
-    request.headers.get("user-agent")
-  )
-    ? "onAllReady"
-    : "onShellReady";
+  // If the request is from a bot, we want to wait for the full
+  // response to render before sending it to the client. This
+  // ensures that bots can see the full page content.
+  if (isbot(request.headers.get("user-agent"))) {
+    return serveTheBots(
+      request,
+      responseStatusCode,
+      responseHeaders,
+      remixContext
+    );
+  }
 
+  return serveBrowsers(
+    request,
+    responseStatusCode,
+    responseHeaders,
+    remixContext
+  );
+}
+
+function serveTheBots(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
   return new Promise((resolve, reject) => {
-    let didError = false;
-
     const { pipe, abort } = renderToPipeableStream(
       <RemixServer
         context={remixContext}
@@ -168,25 +186,60 @@ export default function handleRequest(
         serverAbortDelay={ABORT_DELAY}
       />,
       {
-        [callbackName]() {
-          let body = new PassThrough();
-
+        // Use onAllReady to wait for the entire document to be ready
+        onAllReady() {
           responseHeaders.set("Content-Type", "text/html");
+          let body = new PassThrough();
+          pipe(body);
+          resolve(
+            new Response(body, {
+              status: responseStatusCode,
+              headers: responseHeaders,
+            })
+          );
+        },
+        onShellError(err: unknown) {
+          reject(err);
+        },
+      }
+    );
+    setTimeout(abort, ABORT_DELAY);
+  });
+}
 
+function serveBrowsers(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  return new Promise((resolve, reject) => {
+    let didError = false;
+    const { pipe, abort } = renderToPipeableStream(
+      <RemixServer
+        context={remixContext}
+        url={request.url}
+        serverAbortDelay={ABORT_DELAY}
+      />,
+      {
+        // use onShellReady to wait until a suspense boundary is triggered
+        onShellReady() {
+          responseHeaders.set("Content-Type", "text/html");
+          let body = new PassThrough();
+          pipe(body);
           resolve(
             new Response(body, {
               status: didError ? 500 : responseStatusCode,
               headers: responseHeaders,
             })
           );
-          pipe(body);
         },
         onShellError(err: unknown) {
           reject(err);
         },
-        onError(error: unknown) {
+        onError(err: unknown) {
           didError = true;
-          console.error(error);
+          console.error(err);
         },
       }
     );
@@ -263,8 +316,8 @@ export default function PackageRoute() {
 
 If you're not jazzed about bringing back render props, you can use a hook, but you'll have to break things out into another component:
 
-```tsx lines=[18,26-31]
-import type { UseDataFunctionReturn } from "@remix-run/react";
+```tsx lines=[1,18,26-29]
+import type { SerializedFrom } from "@remix-run/node"; // or cloudflare/deno
 
 export default function PackageRoute() {
   const data = useLoaderData<typeof loader>();
@@ -283,7 +336,7 @@ export default function PackageRoute() {
         >
           <PackageLocation />
         </Await>
-      </Suspense>
+      </Suspense> //20
     </main>
   );
 }
@@ -291,9 +344,7 @@ export default function PackageRoute() {
 function PackageLocation() {
   const packageLocation =
     useAsyncValue<
-      UseDataFunctionReturn<
-        typeof loader
-      >["packageLocation"]
+      SerializedFrom<typeof loader>["packageLocation"]
     >();
 
   return (
@@ -311,13 +362,13 @@ function PackageLocation() {
 
 So rather than waiting for the whole `document -> JavaScript -> hydrate -> request` cycle, with streaming we start the request for the slow data as soon as the document request comes in. This can significantly speed up the user experience.
 
-Additionally, the API that Remix exposes for this is extremely ergonomic. You can literally switch between whether something is going to be deferred or not based on whether you include the `await` keyword:
+Remix treats any `Promise` values as deferred data. These will be streamed to the client as each `Promise` resolves. If you'd like to prevent streaming for critical data, just use `await` and it will be included in the initial presentation of the document to the user.
 
 ```tsx
 return defer({
-  // not deferred:
+  // critical data (not deferred):
   packageLocation: await packageLocationPromise,
-  // deferred:
+  // non-critical data (deferred):
   packageLocation: packageLocationPromise,
 });
 ```
@@ -349,7 +400,7 @@ That `shouldDeferPackageLocation` could be implemented to check the user making 
 
 Also, because this happens at request time (even on client transitions), makes use of the URL via nested routing (rather than requiring you to render before you know what data to fetch), and it's all just regular HTTP, we can prefetch and cache the response! Meaning client-side transitions can be _much_ faster (in fact, there are plenty of situations when the user may never be presented with the fallback at all).
 
-Another powerful thing that's not immediately recognizable is if your server can finish loading deferred data before the client can load the javascript and hydrate, the server will stream down the HTML and "pop" it into place before react is even on the page, increasing performance for those on slow networks.
+Another thing that's not immediately recognizable is if your server can finish loading deferred data before the client can load the javascript and hydrate, the server will stream down the HTML and add it to the document _before React hydrates_, thereby increasing performance for those on slow networks. This works even if you never add `<Scripts />` to the page thanks to React 18's support for out-of-order streaming.
 
 ## FAQ
 
