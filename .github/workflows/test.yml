@@ -5,56 +5,18 @@ on:
     branches:
       - main
       - dev
+    paths-ignore:
+      - "docs/**"
+      - "scripts/**"
+      - "**/README.md"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      lint: ${{ steps.filter.outputs.lint }}
-      lint_files: ${{ steps.filter.outputs.lint_files }}
-    steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-
-      - uses: dorny/paths-filter@v2
-        id: filter
-        with:
-          list-files: shell
-          filters: |
-            lint:
-              - added|modified: "docs/**"
-              - added|modified: "scripts/**"
-              - added|modified: "**/*.md"
-
-  filter:
-    needs: [changes]
-    runs-on: ubuntu-latest
-    outputs:
-      DOCS_ONLY: ${{ steps.docs.outputs.DOCS_ONLY }}
-    steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-
-      - id: docs
-        run: |
-          for FILE in ${{ needs.changes.outputs.lint_files }}; do
-            if [[ "$FILE" == "docs/"* || "$FILE" == "scripts/"* || "$FILE" == *.md ]]
-            then
-              echo ::set-output name=DOCS_ONLY::true
-            else
-              echo ::set-output name=DOCS_ONLY::false
-            fi
-          done
-
   test:
-    needs: [filter]
-    if: github.repository == 'remix-run/remix' && needs.filter.outputs.DOCS_ONLY == 'false'
+    if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/reusable-test.yml
     with:
       node_version: '["latest"]'
-
-  lint:
-    needs: [changes]
-    if: github.repository == 'remix-run/remix' && needs.changes.outputs.lint == 'true'
-    uses: ./.github/workflows/lint.yml
