@@ -12,6 +12,7 @@ on:
 
 env:
   CI: true
+  CYPRESS_INSTALL_BINARY: 0
 
 jobs:
   build:
@@ -97,7 +98,7 @@ jobs:
         run: "yarn test:primary"
 
   integration:
-    name: "👀 Integration Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }})"
+    name: "👀 Integration Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }} Browser: ${{ matrix.browser }})"
     strategy:
       fail-fast: false
       matrix:
@@ -106,13 +107,10 @@ jobs:
           - ubuntu-latest
           # - macos-latest
           - windows-latest
-        include:
-          - os: ubuntu-latest
-            playwright_binary_path: ~/.cache/ms-playwright
-          # - os: macos-latest
-          #   playwright_binary_path: ~/Library/Caches/ms-playwright
-          - os: windows-latest
-            playwright_binary_path: '~\\AppData\\Local\\ms-playwright'
+        browser:
+          - chromium
+          # - firefox
+          - webkit
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -131,34 +129,8 @@ jobs:
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
-      # playwright recommends if you cache the binaries to keep it tied to the version of playwright you are using.
-      # https://playwright.dev/docs/ci#caching-browsers
-      - name: 🕵️‍♂️ Get current Playwright version
-        id: playwright-version
-        shell: bash
-        run: |
-          playwright_version=$(node -e "console.log(require('@playwright/test/package.json').version)")
-          echo "::set-output name=version::${playwright_version}"
-
-      - name: 🤖 Cache Playwright binaries
-        uses: actions/cache@v3
-        id: playwright-cache
-        with:
-          path: ${{ matrix.playwright_binary_path }}
-          key: ${{ runner.os }}-${{ runner.arch }}-cache-playwright-${{ steps.playwright-version.outputs.version }}
-
-      - name: 🖨️ Playwright info
-        shell: bash
-        run: |
-          echo "OS: ${{ matrix.os }}"
-          echo "Playwright version: ${{ steps.playwright-version.outputs.version }}"
-          echo "Playwright install dir: ${{ matrix.playwright_binary_path }}"
-          echo "Cache key: ${{ runner.os }}-${{ runner.arch }}-cache-playwright-${{ steps.playwright-version.outputs.version }}"
-          echo "Cache hit: ${{ steps.playwright-cache.outputs.cache-hit == 'true' }}"
-
       - name: 📥 Install Playwright
-        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps
 
-      - name: 👀 Run Integration Tests
-        run: "yarn test:integration"
+      - name: 👀 Run Integration Tests ${{ matrix.browser }}
+        run: "yarn test:integration --project=${{ matrix.browser }}"
