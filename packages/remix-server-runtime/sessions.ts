@@ -42,7 +42,7 @@ export interface Session {
   /**
    * Returns the value for the given `name` in this session.
    */
-  get(name: string): any;
+  get(name: string): unknown;
 
   /**
    * Sets a value in the session for the given `name`.
