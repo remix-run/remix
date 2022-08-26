@@ -303,7 +303,7 @@ test.describe("Forms", () => {
 
         "app/routes/submitter-formmethod.jsx": js`
           import { useActionData, useLoaderData, Form } from "@remix-run/react";
-          import { json } from '@remix-run/server-runtime'
+          import { json } from '@remix-run/node'
 
           export function action({ request }) {
             return json(request.method)
