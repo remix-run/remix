@@ -11,7 +11,7 @@ import {
 import { gql, graphqlWithAuth, octokit } from "./octokit";
 import type { MinimalTag } from "./utils";
 import { cleanupTagName } from "./utils";
-import { checkIfStringStartsWith, sortByDate } from "./utils";
+import { checkIfStringStartsWith } from "./utils";
 
 type PullRequest =
   RestEndpointMethodTypes["pulls"]["list"]["response"]["data"][number];
@@ -130,14 +130,17 @@ function getPreviousTagFromCurrentTag(
       let tagName = cleanupTagName(tag.name);
       let isPrerelease = semver.prerelease(tagName) !== null;
 
-      return {
-        tag: tagName,
-        date: new Date(tag.target.tagger.date),
-        isPrerelease,
-      };
+      let date = tag.target.committer?.date
+        ? new Date(tag.target.committer.date)
+        : tag.target.tagger?.date
+        ? new Date(tag.target.tagger.date)
+        : undefined;
+
+      if (!date) return undefined;
+
+      return { tag: tagName, date, isPrerelease };
     })
-    .filter((v: any): v is MinimalTag => typeof v !== "undefined")
-    .sort(sortByDate);
+    .filter((v: any): v is MinimalTag => typeof v !== "undefined");
 
   let currentTagIndex = validTags.findIndex((tag) => tag.tag === currentTag);
   let currentTagInfo: MinimalTag | undefined = validTags.at(currentTagIndex);
@@ -218,7 +221,10 @@ interface GitHubGraphqlTag {
   name: string;
   target: {
     oid: string;
-    tagger: {
+    committer?: {
+      date: string;
+    };
+    tagger?: {
       date: string;
     };
   };
@@ -245,6 +251,11 @@ async function getTags(owner: string, repo: string) {
               name
               target {
                 oid
+                ... on Commit {
+                  committer {
+                    date
+                  }
+                }
                 ... on Tag {
                   tagger {
                     date

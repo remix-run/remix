@@ -3,11 +3,10 @@ import {
   OWNER,
   REPO,
   PR_FILES_STARTS_WITH,
-  isNightlyRelease,
+  IS_NIGHTLY_RELEASE,
   AWAITING_RELEASE_LABEL,
 } from "./constants";
 import {
-  applyLabel,
   closeIssue,
   commentOnIssue,
   commentOnPullRequest,
@@ -54,7 +53,7 @@ async function commentOnIssuesAndPrsAboutRelease() {
     let prLabels = pr.labels.map((label) => label.name);
     let prIsAwaitingRelease = prLabels.includes(AWAITING_RELEASE_LABEL);
 
-    if (prIsAwaitingRelease) {
+    if (!IS_NIGHTLY_RELEASE && prIsAwaitingRelease) {
       promises.push(
         removeLabel({ owner: OWNER, repo: REPO, issue: pr.number })
       );
@@ -75,7 +74,7 @@ async function commentOnIssuesAndPrsAboutRelease() {
       issuesCommentedOn.add(issue.number);
       let issueUrl = getGitHubUrl("issue", issue.number);
 
-      if (isNightlyRelease || !prIsAwaitingRelease) {
+      if (IS_NIGHTLY_RELEASE || !prIsAwaitingRelease) {
         console.log(`commenting on ${issueUrl}`);
         promises.push(
           commentOnIssue({
