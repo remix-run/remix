@@ -19,7 +19,7 @@ source = "data"
 destination = "/data"
 
 [[services]]
-internal_port = 8_080
+internal_port = 8080
 processes = [ "app" ]
 protocol = "tcp"
 script_checks = [ ]
