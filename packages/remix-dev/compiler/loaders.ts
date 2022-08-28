@@ -25,6 +25,7 @@ export const loaders: { [ext: string]: esbuild.Loader } = {
   ".ogg": "file",
   ".otf": "file",
   ".png": "file",
+  ".psd": "file",
   ".sql": "text",
   ".svg": "file",
   ".ts": "ts",
