@@ -51,9 +51,10 @@ async function commentOnIssuesAndPrsAboutRelease() {
       })
     );
 
-    if (isNightlyRelease) {
-      promises.push(applyLabel({ owner: OWNER, repo: REPO, issue: pr.number }));
-    } else {
+    let prLabels = pr.labels.map((label) => label.name);
+    let prIsAwaitingRelease = prLabels.includes(AWAITING_RELEASE_LABEL);
+
+    if (prIsAwaitingRelease) {
       promises.push(
         removeLabel({ owner: OWNER, repo: REPO, issue: pr.number })
       );
@@ -74,21 +75,29 @@ async function commentOnIssuesAndPrsAboutRelease() {
       issuesCommentedOn.add(issue.number);
       let issueUrl = getGitHubUrl("issue", issue.number);
 
-      let options = { owner: OWNER, repo: REPO, issue: issue.number };
-
-      if (isNightlyRelease) {
-        console.log(`commenting on and applying label to ${issueUrl}`);
-        promises.push(commentOnIssue({ ...options, version: VERSION }));
-        promises.push(applyLabel(options));
-      } else {
+      if (isNightlyRelease || !prIsAwaitingRelease) {
         console.log(`commenting on ${issueUrl}`);
-        promises.push(commentOnIssue({ ...options, version: VERSION }));
-
-        if (issue.labels.includes(AWAITING_RELEASE_LABEL)) {
-          console.log(`closing and removing label from ${issueUrl}`);
-          promises.push(closeIssue(options));
-          promises.push(removeLabel(options));
-        }
+        promises.push(
+          commentOnIssue({
+            owner: OWNER,
+            repo: REPO,
+            issue: issue.number,
+            version: VERSION,
+          })
+        );
+      } else {
+        console.log(`commenting on and closing ${issueUrl}`);
+        promises.push(
+          commentOnIssue({
+            owner: OWNER,
+            repo: REPO,
+            issue: issue.number,
+            version: VERSION,
+          })
+        );
+        promises.push(
+          closeIssue({ owner: OWNER, repo: REPO, issue: issue.number })
+        );
       }
     }
   }

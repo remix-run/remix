@@ -6,8 +6,6 @@ import {
   NIGHTLY_BRANCH,
   DEFAULT_BRANCH,
   PACKAGE_VERSION_TO_FOLLOW,
-  OWNER,
-  REPO,
   AWAITING_RELEASE_LABEL,
 } from "./constants";
 import { gql, graphqlWithAuth, octokit } from "./octokit";
@@ -272,11 +270,11 @@ async function getTags(owner: string, repo: string) {
 export async function getIssuesClosedByPullRequests(
   prHtmlUrl: string,
   prBody: string | null
-): Promise<Array<{ number: number; labels: Array<string> }>> {
+): Promise<Array<{ number: number }>> {
   let linkedIssues = await getIssuesLinkedToPullRequest(prHtmlUrl);
   if (!prBody) {
     return linkedIssues.map((issue) => {
-      return { number: issue.number, labels: issue.labels };
+      return { number: issue.number };
     });
   }
 
@@ -290,7 +288,7 @@ export async function getIssuesClosedByPullRequests(
   let matches = prBody.match(regex);
   if (!matches) {
     return linkedIssues.map((issue) => {
-      return { number: issue.number, labels: issue.labels };
+      return { number: issue.number };
     });
   }
 
@@ -301,33 +299,11 @@ export async function getIssuesClosedByPullRequests(
 
   let issues = await Promise.all(
     issuesMatch.map(async (issue) => {
-      return {
-        number: issue.number,
-        labels: await getIssueLabels(issue.number),
-      };
+      return { number: issue.number };
     })
   );
 
-  return [...linkedIssues, ...issues.filter((issue) => issue !== null)].map(
-    (issue) => {
-      return {
-        number: issue.number,
-        labels: issue.labels,
-      };
-    }
-  );
-}
-
-async function getIssueLabels(number: number) {
-  let issue = await octokit.issues.get({
-    owner: OWNER,
-    repo: REPO,
-    issue_number: number,
-  });
-
-  return issue.data.labels
-    .map((label) => (typeof label === "string" ? label : label.name))
-    .filter((label: any): label is string => typeof label === "string");
+  return [...linkedIssues, ...issues.filter((issue) => issue !== null)];
 }
 
 interface GitHubClosingIssueReference {
@@ -337,15 +313,12 @@ interface GitHubClosingIssueReference {
         endCursor: string;
         hasNextPage: boolean;
       };
-      nodes: Array<{
-        number: number;
-        labels: { nodes: Array<{ name: string }> } | null;
-      }>;
+      nodes: Array<{ number: number }>;
     };
   };
 }
 
-type IssuesLinkedToPullRequest = Array<{ number: number; labels: string[] }>;
+type IssuesLinkedToPullRequest = Array<{ number: number }>;
 
 async function getIssuesLinkedToPullRequest(
   prHtmlUrl: string,
@@ -360,11 +333,6 @@ async function getIssuesLinkedToPullRequest(
             closingIssuesReferences(first: 100, after: $after) {
               nodes {
                 number
-                labels {
-                  nodes {
-                    name
-                  }
-                }
               }
               pageInfo {
                 hasNextPage
@@ -381,10 +349,7 @@ async function getIssuesLinkedToPullRequest(
   let newNodes = res?.resource?.closingIssuesReferences?.nodes ?? [];
   nodes.push(
     ...newNodes.map((node) => {
-      return {
-        number: node.number,
-        labels: node.labels?.nodes?.map((label) => label.name) ?? [],
-      };
+      return { number: node.number };
     })
   );
 
@@ -451,23 +416,6 @@ export async function closeIssue({
     repo,
     issue_number: issue,
     state: "closed",
-  });
-}
-
-export async function applyLabel({
-  owner,
-  repo,
-  issue,
-}: {
-  owner: string;
-  repo: string;
-  issue: number;
-}) {
-  await octokit.issues.addLabels({
-    owner,
-    repo,
-    issue_number: issue,
-    labels: [AWAITING_RELEASE_LABEL],
   });
 }
 
