@@ -1,17 +1,20 @@
 name: 📦 Merged PR
 
 on:
-  push:
-    branches:
-      - dev
+  pull_request:
+    types: [closed]
+
+permissions:
+  pull-requests: write
 
 jobs:
   if_merged:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+    name: Add label to merged PR
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - uses: actions-ecosystem/action-add-labels@v1
         with:
           labels: "awaiting release"
           number: ${{ github.event.pull_request.number }}
-          repo: "remix-run/remix"
+          repo: ${{ github.repository }}
