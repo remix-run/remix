@@ -1,5 +1,31 @@
 # `@remix-run/server-runtime`
 
+## 1.7.0
+
+### Minor Changes
+
+- We've added a new type: `SerializeFrom`. This is used to infer the ([#4013](https://github.com/remix-run/remix/pull/4013))
+  JSON-serialized return type of loaders and actions.
+- `MetaFunction` type can now infer `data` and `parentsData` types from route loaders ([#4022](https://github.com/remix-run/remix/pull/4022))
+
+### Patch Changes
+
+- Improved performance for data serialization at runtime ([#3889](https://github.com/remix-run/remix/pull/3889))
+
+## 1.6.8
+
+### Patch Changes
+
+- We've added type safety for load context. `AppLoadContext` is now an an interface mapping `string` to `unknown`, allowing users to extend it via module augmentation: ([#1876](https://github.com/remix-run/remix/pull/1876))
+
+  ```ts
+  declare module "@remix-run/server-runtime" {
+    interface AppLoadContext {
+      // add custom properties here!
+    }
+  }
+  ```
+
 ## 1.6.7
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.6.7) for an overview of all changes in v1.6.7.

@@ -752,7 +752,7 @@ It is common for Remix newcomers to see this hook and think it is the primary wa
 - [`useActionData`][useactiondata]
 - [`useTransition`][usetransition]
 
-If you're building a highly interactive, "app like" user interface, you will `useFetcher` often.
+If you're building a highly interactive, "app like" user interface, you will use `useFetcher` often.
 
 ```tsx
 import { useFetcher } from "@remix-run/react";

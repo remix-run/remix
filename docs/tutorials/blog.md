@@ -897,7 +897,7 @@ export const action = async ({ request }) => {
 
 That's it. Remix (and the browser) will take care of the rest. Click the submit button and watch the sidebar that lists our posts update automatically.
 
-In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and don't forget, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN! [mdn.io/request][mdn-io-request] [mdn.io/request.formData][mdn-io-request-form-data].
+In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and don't forget, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN! [mdn.io/Request][mdn-io-request] [mdn.io/Request.formData][mdn-io-request-form-data].
 
 TypeScript is mad again, let's add some types.
 
@@ -1175,8 +1175,8 @@ We hope you love Remix! 💿 👋
 [the-styling-guide]: /guides/styling
 [prisma]: https://prisma.io
 [http-localhost-3000-posts-admin]: http://localhost:3000/posts/admin
-[mdn-io-request]: https://mdn.io/request
-[mdn-io-request-form-data]: https://mdn.io/request.formData
+[mdn-io-request]: https://mdn.io/Request
+[mdn-io-request-form-data]: https://mdn.io/Request.formData
 [disable-java-script]: https://developer.chrome.com/docs/devtools/javascript/disable
 [the-optimistic-ui-guide]: /guides/optimistic-ui
 [somewhere]: https://www.youtube.com/watch?v=dQw4w9WgXcQ
