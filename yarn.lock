@@ -2320,6 +2320,11 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
+"@remix-run/router@^0.2.0-pre.8":
+  version "0.2.0-pre.8"
+  resolved "https://registry.yarnpkg.com/@remix-run/router/-/router-0.2.0-pre.8.tgz#8159628e99ccbbb25f7cb164481f635e1370ab8b"
+  integrity sha512-A+1xdIUrvlxSBilO6eDD9N2PIiPy/jRdj47td+sr7uTyD5v6MKsMZd/L70VzTig9oXi0p5Ae4iehE0pJZ/sq2g==
+
 "@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
   resolved "https://registry.npmjs.org/@remix-run/web-blob/-/web-blob-3.0.4.tgz"

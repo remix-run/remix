@@ -121,7 +121,10 @@ describe("shared server runtime", () => {
       });
       let handler = createRequestHandler(build, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "get" });
+      let request = new Request(`${baseUrl}/resource`, {
+        method: "get",
+        signal: new AbortController().signal,
+      });
 
       let result = await handler(request);
       expect(result.status).toBe(200);
@@ -156,7 +159,10 @@ describe("shared server runtime", () => {
       });
       let handler = createRequestHandler(build, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource/sub`, { method: "get" });
+      let request = new Request(`${baseUrl}/resource/sub`, {
+        method: "get",
+        signal: new AbortController().signal,
+      });
 
       let result = await handler(request);
       expect(result.status).toBe(200);
@@ -185,7 +191,10 @@ describe("shared server runtime", () => {
       });
       let handler = createRequestHandler(build, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "get" });
+      let request = new Request(`${baseUrl}/resource`, {
+        method: "get",
+        signal: new AbortController().signal,
+      });
 
       let result = await handler(request);
       expect(result.status).toBe(200);
@@ -207,7 +216,10 @@ describe("shared server runtime", () => {
       });
       let handler = createRequestHandler(build, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "get" });
+      let request = new Request(`${baseUrl}/resource`, {
+        method: "get",
+        signal: new AbortController().signal,
+      });
 
       let result = await handler(request);
       expect(await result.text()).toBe("Unexpected Server Error");
@@ -226,7 +238,10 @@ describe("shared server runtime", () => {
       });
       let handler = createRequestHandler(build, ServerMode.Development);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "get" });
+      let request = new Request(`${baseUrl}/resource`, {
+        method: "get",
+        signal: new AbortController().signal,
+      });
 
       let result = await handler(request);
       expect((await result.text()).includes(error.message)).toBe(true);
@@ -252,7 +267,10 @@ describe("shared server runtime", () => {
       });
       let handler = createRequestHandler(build, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "post" });
+      let request = new Request(`${baseUrl}/resource`, {
+        method: "post",
+        signal: new AbortController().signal,
+      });
 
       let result = await handler(request);
       expect(result.status).toBe(200);
@@ -287,7 +305,10 @@ describe("shared server runtime", () => {
       });
       let handler = createRequestHandler(build, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource/sub`, { method: "post" });
+      let request = new Request(`${baseUrl}/resource/sub`, {
+        method: "post",
+        signal: new AbortController().signal,
+      });
 
       let result = await handler(request);
       expect(result.status).toBe(200);
@@ -316,7 +337,10 @@ describe("shared server runtime", () => {
       });
       let handler = createRequestHandler(build, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "post" });
+      let request = new Request(`${baseUrl}/resource`, {
+        method: "post",
+        signal: new AbortController().signal,
+      });
 
       let result = await handler(request);
       expect(result.status).toBe(200);
@@ -338,7 +362,10 @@ describe("shared server runtime", () => {
       });
       let handler = createRequestHandler(build, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "post" });
+      let request = new Request(`${baseUrl}/resource`, {
+        method: "post",
+        signal: new AbortController().signal,
+      });
 
       let result = await handler(request);
       expect(await result.text()).toBe("Unexpected Server Error");
@@ -357,7 +384,10 @@ describe("shared server runtime", () => {
       });
       let handler = createRequestHandler(build, ServerMode.Development);
 
-      let request = new Request(`${baseUrl}/resource`, { method: "post" });
+      let request = new Request(`${baseUrl}/resource`, {
+        method: "post",
+        signal: new AbortController().signal,
+      });
 
       let result = await handler(request);
       expect((await result.text()).includes(message)).toBe(true);

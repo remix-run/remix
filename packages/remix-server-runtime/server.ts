@@ -9,10 +9,16 @@ import { getDocumentHeaders } from "./headers";
 import { ServerMode, isServerMode } from "./mode";
 import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
-import type { ServerRoute } from "./routes";
+import { createStaticHandlerDataRoutes, ServerRoute } from "./routes";
 import { createRoutes } from "./routes";
 import { json, isRedirectResponse, isCatchResponse } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
+import {
+  AgnosticDataRouteObject,
+  ErrorResponse,
+  unstable_createStaticHandler,
+} from "@remix-run/router";
+import invariant from "./invariant";
 
 export type RequestHandler = (
   request: Request,
@@ -23,6 +29,9 @@ export type CreateRequestHandlerFunction = (
   build: ServerBuild,
   mode?: string
 ) => RequestHandler;
+
+// This can be toggled to true for experimental releases
+const ENABLE_REMIX_ROUTER = true;
 
 export const createRequestHandler: CreateRequestHandlerFunction = (
   build,
@@ -44,13 +53,31 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         handleDataRequest: build.entry.module.handleDataRequest,
         serverMode,
       });
-    } else if (matches && !matches[matches.length - 1].route.module.default) {
+    } else if (
+      matches &&
+      matches[matches.length - 1].route.module.default == null
+    ) {
       response = await handleResourceRequest({
         request,
         loadContext,
         matches,
         serverMode,
       });
+
+      if (ENABLE_REMIX_ROUTER) {
+        let staticHandler = unstable_createStaticHandler(
+          createStaticHandlerDataRoutes(build.routes, loadContext)
+        );
+        let remixRouterResponse = await staticHandler.queryRoute(
+          request,
+          matches[matches.length - 1].route.id
+        );
+
+        assertResponsesMatch(response, remixRouterResponse);
+
+        console.log("Returning Remix Router Resource Request Response");
+        return remixRouterResponse;
+      }
     } else {
       response = await handleDocumentRequest({
         build,
@@ -111,7 +138,9 @@ async function handleDataRequest({
 
       response = await callRouteAction({
         loadContext,
-        match,
+        action: match.route.module.action,
+        routeId: match.route.id,
+        params: match.params,
         request: request,
       });
     } else {
@@ -129,7 +158,13 @@ async function handleDataRequest({
       }
       match = tempMatch;
 
-      response = await callRouteLoader({ loadContext, match, request });
+      response = await callRouteLoader({
+        loadContext,
+        loader: match.route.module.loader,
+        routeId: match.route.id,
+        params: match.params,
+        request,
+      });
     }
 
     if (isRedirectResponse(response)) {
@@ -226,7 +261,9 @@ async function handleDocumentRequest({
     try {
       actionResponse = await callRouteAction({
         loadContext,
-        match: actionMatch,
+        action: actionMatch.route.module.action,
+        routeId: actionMatch.route.id,
+        params: actionMatch.params,
         request: request,
       });
 
@@ -303,7 +340,9 @@ async function handleDocumentRequest({
       match.route.module.loader
         ? callRouteLoader({
             loadContext,
-            match,
+            loader: match.route.module.loader,
+            routeId: match.route.id,
+            params: match.params,
             request: loaderRequest,
           })
         : Promise.resolve(undefined)
@@ -524,9 +563,21 @@ async function handleResourceRequest({
 
   try {
     if (isActionRequest(request)) {
-      return await callRouteAction({ match, loadContext, request });
+      return await callRouteAction({
+        loadContext,
+        action: match.route.module.action,
+        routeId: match.route.id,
+        params: match.params,
+        request,
+      });
     } else {
-      return await callRouteLoader({ match, loadContext, request });
+      return await callRouteLoader({
+        loadContext,
+        loader: match.route.module.loader,
+        routeId: match.route.id,
+        params: match.params,
+        request,
+      });
     }
   } catch (error: any) {
     if (serverMode !== ServerMode.Test) {
@@ -652,4 +703,41 @@ function getRenderableMatches(
   });
 
   return matches.slice(0, lastRenderableIndex + 1);
+}
+
+async function assert(
+  a: Response,
+  b: Response,
+  accessor: (r: Response) => object | Promise<object>,
+  message: string
+) {
+  let aStr = JSON.stringify(await accessor(a));
+  let bStr = JSON.stringify(await accessor(b));
+  if (aStr !== bStr) {
+    console.error(message);
+    console.error("Response 1:\n", aStr);
+    console.error("Response 2:\n", aStr);
+    throw new Error(message);
+  } else {
+    console.log("Repsonses match!");
+    console.log(" ", aStr);
+    console.log(" ", bStr);
+  }
+}
+
+async function assertResponsesMatch(_a: Response, _b: Response) {
+  let a = _a.clone();
+  let b = _b.clone();
+  assert(
+    a,
+    b,
+    (r) => Object.fromEntries(r.headers.entries()),
+    "Headers did not match!"
+  );
+
+  if (a.headers.get("Content-Type")?.startsWith("application/json")) {
+    assert(a, b, (r) => r.json(), "JSON response body did not match!");
+  } else {
+    assert(a, b, (r) => r.text(), "Non-JSON response body did not match!");
+  }
 }

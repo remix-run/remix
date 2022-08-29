@@ -39,7 +39,10 @@ export async function createFixture(init: FixtureInit) {
 
   let requestDocument = async (href: string, init?: RequestInit) => {
     let url = new URL(href, "test://test");
-    let request = new Request(url.toString(), init);
+    let request = new Request(url.toString(), {
+      ...init,
+      signal: new AbortController().signal,
+    });
     return handler(request);
   };
 
