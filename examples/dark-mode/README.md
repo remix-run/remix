@@ -1,6 +1,6 @@
 # Dark Mode Example
 
-This example shows how you can add dark mode theming to your app
+This example shows how you can add dark mode theming to your app. It works even without JavaScript because it uses cookies and it's based on submitting a form.
 
 ## Preview
 
@@ -22,6 +22,9 @@ The Themed component is used to conditionally render two components depending on
 
 ## Related Links
 
+- [Using the &lt;Form&gt; component](https://remix.run/docs/en/v1/api/remix#form)
+- [Using the optimistic UI pattern](https://remix.run/docs/en/v1/guides/optimistic-ui) (updating the UI right away without having to wait for the server to respond)
 - [Creating cookie sessions in the Remix docs](https://remix.run/docs/en/v1/api/remix#createcookiesessionstorage)
-- [useFetcher in the Remix docs](https://remix.run/docs/en/v1/api/remix#usefetcher) (used to tell the server to update the cookie value when the theme changes)
+- [Redirect from the theme route](https://remix.run/docs/en/v1/api/remix#redirect)
 - [Blog post with complete explanation of each part of the code](https://www.mattstobbs.com/remix-dark-mode/)
+  - however, instead of using `useFetcher` we're using a regular form to make it work without JavaScript as well

@@ -40,7 +40,7 @@ export const meta: MetaFunction = () => ({
 
 function App() {
   const data = useLoaderData<LoaderData>();
-  const [theme] = useTheme();
+  const theme = useTheme();
 
   return (
     <html lang="en" className={theme ?? ""}>

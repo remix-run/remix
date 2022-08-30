@@ -6,9 +6,9 @@ import { isTheme } from "~/utils/theme-provider";
 
 export const action: ActionFunction = async ({ request }) => {
   const themeSession = await getThemeSession(request);
-  const requestText = await request.text();
-  const form = new URLSearchParams(requestText);
+  const form = await request.formData();
   const theme = form.get("theme");
+  const redirectTo = new URL(request.url).searchParams.get("redirectTo");
 
   if (!isTheme(theme)) {
     return json({
@@ -18,10 +18,14 @@ export const action: ActionFunction = async ({ request }) => {
   }
 
   themeSession.setTheme(theme);
-  return json(
-    { success: true },
-    { headers: { "Set-Cookie": await themeSession.commit() } }
-  );
+
+  const headers = { "Set-Cookie": await themeSession.commit() };
+
+  if (redirectTo) {
+    return redirect(redirectTo, { headers });
+  } else {
+    return json({ success: true }, { headers });
+  }
 };
 
 export const loader: LoaderFunction = () => redirect("/", { status: 404 });

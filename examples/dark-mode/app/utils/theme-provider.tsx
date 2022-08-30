@@ -1,11 +1,11 @@
-import { useFetcher } from "@remix-run/react";
-import type { Dispatch, ReactNode, SetStateAction } from "react";
+import { Form, useLocation, useTransition } from "@remix-run/react";
+import type { ReactNode } from "react";
+import { useRef } from "react";
 import {
   createContext,
   createElement,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react";
 
@@ -15,13 +15,46 @@ enum Theme {
 }
 const themes: Array<Theme> = Object.values(Theme);
 
-type ThemeContextType = [Theme | null, Dispatch<SetStateAction<Theme | null>>];
+type ThemeContextType = Theme | null;
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const prefersDarkMQ = "(prefers-color-scheme: dark)";
 const getPreferredTheme = () =>
   window.matchMedia(prefersDarkMQ).matches ? Theme.DARK : Theme.LIGHT;
+
+function ThemeProviderWrapper({
+  children,
+  specifiedTheme: initialSpecifiedTheme,
+}: React.ComponentPropsWithRef<typeof ThemeProvider>) {
+  const transition = useTransition();
+  const specifiedTheme = useRef(initialSpecifiedTheme);
+
+  // retrieves the specified theme value optimistically upn submission
+  // rather than waiting for the response from /action/set-theme
+  // because we already know in advance what the new value is going to be
+  if (
+    transition.type === "actionSubmission" &&
+    transition.location.pathname === "/action/set-theme"
+  ) {
+    const themeValue = transition.submission.formData.get("theme");
+    if (isTheme(themeValue)) {
+      specifiedTheme.current = themeValue;
+    } else {
+      console.error(`theme value of ${themeValue} is not a valid theme`);
+    }
+  }
+
+  return (
+    <ThemeProvider
+      // https://beta.reactjs.org/learn/you-might-not-need-an-effect#resetting-all-state-when-a-prop-changes
+      key={specifiedTheme.current}
+      specifiedTheme={specifiedTheme.current}
+    >
+      {children}
+    </ThemeProvider>
+  );
+}
 
 function ThemeProvider({
   children,
@@ -36,7 +69,7 @@ function ThemeProvider({
     // before hydration. Then (during hydration), this code will get the same
     // value that clientThemeCode got so hydration is happy.
     if (specifiedTheme) {
-      if (themes.includes(specifiedTheme)) {
+      if (isTheme(specifiedTheme)) {
         return specifiedTheme;
       } else {
         return null;
@@ -52,43 +85,43 @@ function ThemeProvider({
     return getPreferredTheme();
   });
 
-  const persistTheme = useFetcher();
-  // TODO: remove this when persistTheme is memoized properly
-  const persistThemeRef = useRef(persistTheme);
-  useEffect(() => {
-    persistThemeRef.current = persistTheme;
-  }, [persistTheme]);
-
-  const mountRun = useRef(false);
-
-  useEffect(() => {
-    if (!mountRun.current) {
-      mountRun.current = true;
-      return;
-    }
-    if (!theme) {
-      return;
-    }
-
-    persistThemeRef.current.submit(
-      { theme },
-      { action: "action/set-theme", method: "post" }
-    );
-  }, [theme]);
-
   useEffect(() => {
     const mediaQuery = window.matchMedia(prefersDarkMQ);
     const handleChange = () => {
+      if (specifiedTheme) return;
       setTheme(mediaQuery.matches ? Theme.DARK : Theme.LIGHT);
     };
     mediaQuery.addEventListener("change", handleChange);
     return () => mediaQuery.removeEventListener("change", handleChange);
-  }, []);
+  }, [specifiedTheme]);
 
   return (
-    <ThemeContext.Provider value={[theme, setTheme]}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={theme}>{children}</ThemeContext.Provider>
+  );
+}
+
+function ThemeToggle({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const location = useLocation();
+  const searchParams = new URLSearchParams({ redirectTo: location.pathname });
+
+  return (
+    <Form
+      action={`/action/set-theme?${searchParams}`}
+      method="post"
+      className={className}
+    >
+      <Themed
+        dark={<input type="hidden" name="theme" value={Theme.LIGHT} />}
+        light={<input type="hidden" name="theme" value={Theme.DARK} />}
+      />
+      <button type="submit">{children}</button>
+    </Form>
   );
 }
 
@@ -161,7 +194,7 @@ const themeStylesCode = `
 `;
 
 function ThemeHead({ ssrTheme }: { ssrTheme: boolean }) {
-  const [theme] = useTheme();
+  const theme = useTheme();
 
   return (
     <>
@@ -247,7 +280,7 @@ function Themed({
   light: ReactNode | string;
   initialOnly?: boolean;
 }) {
-  const [theme] = useTheme();
+  const theme = useTheme();
   const [initialTheme] = useState(theme);
   const themeToReference = initialOnly ? initialTheme : theme;
   const serverRenderWithUnknownTheme =
@@ -277,6 +310,7 @@ export {
   Themed,
   ThemeBody,
   ThemeHead,
-  ThemeProvider,
+  ThemeProviderWrapper as ThemeProvider,
+  ThemeToggle,
   useTheme,
 };
