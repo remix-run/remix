@@ -4,7 +4,7 @@ import { useFetcher, useLoaderData, useTransition } from "@remix-run/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useVirtual } from "react-virtual";
 
-import { countItems, getItems } from "~/utils/backend.server";
+import { getItems } from "~/utils/backend.server";
 
 import stylesUrl from "~/styles/index.css";
 
@@ -22,14 +22,12 @@ const getStartLimit = (searchParams: URLSearchParams) => ({
 
 type LoaderData = {
   items: Array<{ id: string; value: string }>;
-  totalItems: number;
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
   const { start, limit } = getStartLimit(new URL(request.url).searchParams);
   const data: LoaderData = {
     items: await getItems({ start, limit }),
-    totalItems: await countItems(),
   };
   return json(data, {
     headers: {
@@ -49,7 +47,7 @@ export default function Index() {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const rowVirtualizer = useVirtual({
-    size: data.totalItems,
+    size: items.length,
     parentRef,
     estimateSize: useCallback(() => 35, []),
     initialRect: { width: 0, height: 800 },

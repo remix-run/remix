@@ -22,7 +22,7 @@
 # - Create a new release for the tag on GitHub to trigger the CI workflow that
 #   will publish the release to npm
 
-name: 🧪 Release (experimental)
+name: 🚀 Release (experimental)
 on:
   push:
     tags:
