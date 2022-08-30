@@ -32,7 +32,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
     }
 
     const record = await fakeDb.stuff.find(params.foo);
-    cache.set(params.foo, res);
+    cache.set(params.foo, record);
     return json(record);
   }
   ```
@@ -52,7 +52,13 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
 
 
   export async function loader({ params }) {
-    // ...
+    if (cache.has(params.foo)) {
+      return json(cache.get(params.foo));
+    }
+
+    const record = await fakeDb.stuff.find(params.foo);
+    cache.set(params.foo, record);
+    return json(record);
   }
   ```
 
