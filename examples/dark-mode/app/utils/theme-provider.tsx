@@ -108,14 +108,10 @@ function ThemeToggle({
   className?: string;
 }) {
   const location = useLocation();
-  const searchParams = new URLSearchParams({ redirectTo: location.pathname });
 
   return (
-    <Form
-      action={`/action/set-theme?${searchParams}`}
-      method="post"
-      className={className}
-    >
+    <Form action="/action/set-theme" method="post" className={className}>
+      <input type="hidden" name="redirectTo" value={location.pathname} />
       <Themed
         dark={<input type="hidden" name="theme" value={Theme.LIGHT} />}
         light={<input type="hidden" name="theme" value={Theme.DARK} />}
