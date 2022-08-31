@@ -1,3 +1,4 @@
+import type { SecureContextOptions } from "tls";
 import * as path from "path";
 import { pathToFileURL } from "url";
 import * as fse from "fs-extra";
@@ -96,6 +97,11 @@ export interface AppConfig {
    * The port number to use for the dev server. Defaults to 8002.
    */
   devServerPort?: number;
+
+  /**
+   * Key and cert to yse fir dev server running on wss.
+   */
+  devServerSecureContextOptions: Pick<SecureContextOptions, 'key' | 'cert'>;
 
   /**
    * The delay, in milliseconds, before the dev server broadcasts a reload
@@ -227,6 +233,11 @@ export interface RemixConfig {
    * The delay before the dev (asset) server broadcasts a reload event.
    */
   devServerBroadcastDelay: number;
+
+  /**
+   * Key and cert to yse fir dev server running on wss.
+   */
+  devServerSecureContextOptions: Pick<SecureContextOptions, 'key' | 'cert'>;
 
   /**
    * Additional MDX remark / rehype plugins.
@@ -407,6 +418,8 @@ export async function readConfig(
       break;
   }
 
+  let devServerSecureContextOptions = appConfig.devServerSecureContextOptions;
+
   let publicPath = addTrailingSlash(appConfig.publicPath || defaultPublicPath);
 
   let rootRouteFile = findEntry(appDirectory, "root");
@@ -473,6 +486,7 @@ export async function readConfig(
     entryClientFile,
     entryServerFile,
     devServerPort,
+    devServerSecureContextOptions,
     devServerBroadcastDelay,
     assetsBuildDirectory: absoluteAssetsBuildDirectory,
     relativeAssetsBuildDirectory: assetsBuildDirectory,
