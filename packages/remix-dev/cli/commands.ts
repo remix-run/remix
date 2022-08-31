@@ -7,6 +7,9 @@ import ora from "ora";
 import prettyMs from "pretty-ms";
 import WebSocket from "ws";
 import type { Server } from "http";
+import type { Server as HTTPSServer } from "https";
+import http from "http";
+import https from "https";
 import type * as Express from "express";
 import type { createApp as createAppType } from "@remix-run/serve";
 import getPort, { makeRange } from "get-port";
@@ -202,7 +205,16 @@ export async function watch(
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
 
-  let wss = new WebSocket.Server({ port: config.devServerPort });
+  let wssServer: Server | HTTPSServer =
+    config.devServerSecureContextOptions
+      ? https.createServer({
+        cert: config.devServerSecureContextOptions.cert,
+        key: config.devServerSecureContextOptions.key,
+      })
+      : http.createServer();
+  wssServer.listen(config.devServerPort);
+  let wss = new WebSocket.Server({ server: wssServer });
+
   function broadcast(event: { type: string; [key: string]: any }) {
     setTimeout(() => {
       wss.clients.forEach((client) => {
