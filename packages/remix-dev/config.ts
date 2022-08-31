@@ -99,7 +99,7 @@ export interface AppConfig {
   devServerPort?: number;
 
   /**
-   * Key and cert to yse fir dev server running on wss.
+   * Key and cert for dev server running on wss.
    */
   devServerSecureContextOptions?: Pick<SecureContextOptions, 'key' | 'cert'>;
 
@@ -235,7 +235,7 @@ export interface RemixConfig {
   devServerBroadcastDelay: number;
 
   /**
-   * Key and cert to yse fir dev server running on wss.
+   * Key and cert for dev server running on wss.
    */
   devServerSecureContextOptions?: Pick<SecureContextOptions, 'key' | 'cert'>;
 
