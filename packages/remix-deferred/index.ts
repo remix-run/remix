@@ -7,6 +7,8 @@ export interface TrackedPromise extends Promise<unknown> {
   _error?: any;
 }
 
+export class AbortedDeferredError extends Error {}
+
 export class DeferredData {
   private pendingKeys: Set<string | number> = new Set<string | number>();
   private cancelled: boolean = false;
@@ -49,6 +51,11 @@ export class DeferredData {
       (data) => this.onSettle(promise, key, null, data as unknown),
       (error) => this.onSettle(promise, key, error as unknown)
     );
+
+    // Register rejection listeners to avoid uncaught promise rejections on
+    // errors or aborted deferred values
+    promise.catch(() => {});
+
     Object.defineProperty(promise, "_tracked", { get: () => true });
     return promise;
   }
@@ -58,21 +65,26 @@ export class DeferredData {
     key: string,
     error: unknown,
     data?: unknown
-  ): void {
+  ): unknown {
     if (this.cancelled) {
-      return;
+      return Promise.reject(new AbortedDeferredError("Deferred data aborted"));
     }
+
     this.pendingKeys.delete(key);
 
     if (error) {
       Object.defineProperty(promise, "_error", { get: () => error });
-    } else {
-      Object.defineProperty(promise, "_data", { get: () => data });
+      for (let subscriber of this.subscribers) {
+        subscriber(false, key);
+      }
+      return Promise.reject(error);
     }
 
+    Object.defineProperty(promise, "_data", { get: () => data });
     for (let subscriber of this.subscribers) {
       subscriber(false, key);
     }
+    return data;
   }
 
   subscribe(fn: (aborted: boolean, settledKey?: string) => void): () => void {
