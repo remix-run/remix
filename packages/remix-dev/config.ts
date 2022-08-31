@@ -101,7 +101,7 @@ export interface AppConfig {
   /**
    * Key and cert to yse fir dev server running on wss.
    */
-  devServerSecureContextOptions: Pick<SecureContextOptions, 'key' | 'cert'>;
+  devServerSecureContextOptions?: Pick<SecureContextOptions, 'key' | 'cert'>;
 
   /**
    * The delay, in milliseconds, before the dev server broadcasts a reload
@@ -237,7 +237,7 @@ export interface RemixConfig {
   /**
    * Key and cert to yse fir dev server running on wss.
    */
-  devServerSecureContextOptions: Pick<SecureContextOptions, 'key' | 'cert'>;
+  devServerSecureContextOptions?: Pick<SecureContextOptions, 'key' | 'cert'>;
 
   /**
    * Additional MDX remark / rehype plugins.
