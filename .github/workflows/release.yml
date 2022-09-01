@@ -13,7 +13,7 @@ jobs:
   release:
     name: 🦋 Changesets Release
     # we need to check for `nightly` refs and skip them as we dont want to
-    # double publish a version as it would fail. unfortantely even using curl
+    # double publish a version as it would fail. unfortunately even using curl
     # and a `repository_dispatch` trigger, actions still aren't ran if a version
     # is published using the default secrets.GITHUB_TOKEN.
     if: |
@@ -28,6 +28,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          token: ${{ secrets.NIGHTLY_PAT }}
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v3

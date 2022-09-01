@@ -3,6 +3,8 @@ name: 📦 Merged PR
 on:
   pull_request:
     types: [closed]
+    branches:
+      - dev
 
 permissions:
   pull-requests: write
