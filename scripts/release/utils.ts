@@ -13,10 +13,6 @@ export interface MinimalTag {
   isPrerelease: boolean;
 }
 
-export function sortByDate(a: MinimalTag, b: MinimalTag) {
-  return b.date.getTime() - a.date.getTime();
-}
-
 export function getGitHubUrl(type: "pull" | "issue", number: number) {
   let segment = type === "pull" ? "pull" : "issues";
   return `https://github.com/${GITHUB_REPOSITORY}/${segment}/${number}`;
