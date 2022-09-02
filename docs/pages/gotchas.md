@@ -34,7 +34,7 @@ export default function SomeRoute() {
 To fix it, move the import into a different module named `*.server.js` or `*.server.ts` and import from there. In our example here, we create a new file at `utils/fs-extra.server.js`:
 
 ```js filename=app/utils/fs-extra.server.js
-export * from "fs-extra";
+export { default } from "fs-extra";
 ```
 
 And then change our import in the route to the new "wrapper" module:
