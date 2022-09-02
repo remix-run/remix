@@ -42,7 +42,7 @@ And then change our import in the route to the new "wrapper" module:
 ```jsx filename=app/routes/index.jsx lines=[3]
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
-import fs from "../utils/fs-extra.server";
+import fs from "~/utils/fs-extra.server";
 
 export async function loader() {
   return json(await fs.pathExists("../some/path"));
