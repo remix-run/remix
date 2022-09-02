@@ -22,6 +22,7 @@ describe("readConfig", () => {
         assetsBuildDirectory: expect.any(String),
         relativeAssetsBuildDirectory: expect.any(String),
         tsconfigPath: expect.any(String),
+        serverEntryFile: expect.any(String),
       },
       `
       Object {
@@ -43,6 +44,7 @@ describe("readConfig", () => {
             "path": "",
           },
         },
+        "serverBuildFile": undefined,
         "serverBuildPath": Any<String>,
         "serverBuildTarget": undefined,
         "serverBuildTargetEntryModule": "export * from \\"@remix-run/dev/server-build\\";",
@@ -53,6 +55,7 @@ describe("readConfig", () => {
         "serverPlatform": "node",
         "tsconfigPath": Any<String>,
         "watchPaths": Array [],
+        "serverEntryFile": undefined,
       }
     `
     );

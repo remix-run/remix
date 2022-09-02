@@ -156,6 +156,14 @@ export interface AppConfig {
     | string
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
+
+  /**
+   * A server entrypoint, relative to the root directory that becomes your
+   * server's main module. If specified, Remix will import this file from
+   * Remix App Server, instead of using the built-in configuration. This
+   * file can use either a `.js` or `.ts` file extension.
+   */
+  serverEntryFile?: string;
 }
 
 /**
@@ -274,6 +282,14 @@ export interface RemixConfig {
    * The path for the tsconfig file, if present on the root directory.
    */
   tsconfigPath: string | undefined;
+
+  /**
+   * A server entrypoint, relative to the root directory that becomes your
+   * server's main module. If specified, Remix will import this file from
+   * Remix App Server, instead of using the built-in configuration. This
+   * file can use either a `.js` or `.ts` file extension.
+   */
+  serverEntryFile?: string;
 }
 
 /**
@@ -318,6 +334,7 @@ export async function readConfig(
   }
 
   let customServerEntryPoint = appConfig.server;
+  let serverEntryFile = appConfig.serverEntryFile;
   let serverBuildTarget: ServerBuildTarget | undefined =
     appConfig.serverBuildTarget;
   let serverModuleFormat: ServerModuleFormat =
@@ -490,6 +507,7 @@ export async function readConfig(
     mdx,
     watchPaths,
     tsconfigPath,
+    serverEntryFile,
   };
 }
 

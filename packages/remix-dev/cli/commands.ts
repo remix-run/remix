@@ -7,8 +7,7 @@ import ora from "ora";
 import prettyMs from "pretty-ms";
 import WebSocket from "ws";
 import type { Server } from "http";
-import type * as Express from "express";
-import type { createApp as createAppType } from "@remix-run/serve";
+import express, { type Express } from "express";
 import getPort, { makeRange } from "get-port";
 import * as esbuild from "esbuild";
 
@@ -202,7 +201,8 @@ export async function watch(
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
 
-  let wss = new WebSocket.Server({ port: config.devServerPort });
+  let { createSocketServer } = getServerEntry(config);
+  let wss = createSocketServer(config.devServerPort);
   function broadcast(event: { type: string; [key: string]: any }) {
     setTimeout(() => {
       wss.clients.forEach((client) => {
@@ -263,25 +263,24 @@ export async function dev(
   modeArg?: string,
   portArg?: number
 ) {
-  let createApp: typeof createAppType;
-  let express: typeof Express;
-  try {
-    // eslint-disable-next-line import/no-extraneous-dependencies
-    let serve = require("@remix-run/serve");
-    createApp = serve.createApp;
-    express = require("express");
-  } catch (err) {
-    throw new Error(
-      "Could not locate @remix-run/serve. Please verify you have it installed " +
-        "to use the dev command."
-    );
-  }
-
   let config = await readConfig(remixRoot);
   let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
 
   await loadEnv(config.rootDirectory);
 
+  if (config.serverEntryPoint) {
+    throw new Error("remix dev is not supported for custom servers.");
+  }
+
+  let { createApp, createServer } = getServerEntry(config);
+  let app = createApp(
+    config.serverBuildPath,
+    mode,
+    config.publicPath,
+    config.assetsBuildDirectory
+  );
+
+  let server: Server | null = null;
   let port = await getPort({
     port: portArg
       ? Number(portArg)
@@ -289,51 +288,10 @@ export async function dev(
       ? Number(process.env.PORT)
       : makeRange(3000, 3100),
   });
-
-  if (config.serverEntryPoint) {
-    throw new Error("remix dev is not supported for custom servers.");
-  }
-
-  let app = express();
-  app.disable("x-powered-by");
-  app.use((_, __, next) => {
-    purgeAppRequireCache(config.serverBuildPath);
-    next();
-  });
-  app.use(
-    createApp(
-      config.serverBuildPath,
-      mode,
-      config.publicPath,
-      config.assetsBuildDirectory
-    )
-  );
-
-  let server: Server | null = null;
-
   try {
     await watch(config, mode, {
       onInitialBuild: () => {
-        let onListen = () => {
-          let address =
-            process.env.HOST ||
-            Object.values(os.networkInterfaces())
-              .flat()
-              .find((ip) => String(ip?.family).includes("4") && !ip?.internal)
-              ?.address;
-
-          if (!address) {
-            console.log(`Remix App Server started at http://localhost:${port}`);
-          } else {
-            console.log(
-              `Remix App Server started at http://localhost:${port} (http://${address}:${port})`
-            );
-          }
-        };
-
-        server = process.env.HOST
-          ? app.listen(port, process.env.HOST, onListen)
-          : app.listen(port, onListen);
+        server = createServer(app, port);
       },
     });
   } finally {
@@ -347,4 +305,88 @@ function purgeAppRequireCache(buildPath: string) {
       delete require.cache[key];
     }
   }
+}
+
+function getServerEntry(config: RemixConfig): {
+  createApp: typeof createDefaultApp;
+  createServer: typeof createDefaultServer;
+  createSocketServer: typeof createDefaultSocketServer;
+} {
+  if (config.serverEntryFile) {
+    let serverEntryFile = config.serverEntryFile;
+    if (config.serverEntryFile?.endsWith(".ts")) {
+      serverEntryFile = path.join(
+        path.dirname(config.serverBuildPath),
+        "server.js"
+      );
+      esbuild.buildSync({
+        entryPoints: [config.serverEntryFile],
+        outfile: serverEntryFile,
+        target: "node16",
+        format: "cjs",
+      });
+    }
+    let entry = require(path.resolve(serverEntryFile));
+    return {
+      createApp: entry.createApp,
+      createServer: entry.createServer ?? createDefaultServer,
+      createSocketServer: entry.createSocketServer ?? createDefaultSocketServer,
+    };
+  }
+  return {
+    createApp: createDefaultApp,
+    createServer: createDefaultServer,
+    createSocketServer: createDefaultSocketServer,
+  };
+}
+function createDefaultApp(
+  buildPath: string,
+  mode = "production",
+  publicPath = "/build/",
+  assetsBuildDirectory = "public/build/"
+) {
+  try {
+    // eslint-disable-next-line import/no-extraneous-dependencies
+    let serve = require("@remix-run/serve");
+    let app = express();
+    app.disable("x-powered-by");
+    app.use((_, __, next) => {
+      purgeAppRequireCache(buildPath);
+      next();
+    });
+    app.use(serve.createApp(buildPath, mode, publicPath, assetsBuildDirectory));
+    return app;
+  } catch (err) {
+    throw new Error(
+      "Could not locate @remix-run/serve. Please verify you have it installed " +
+        "to use the dev command."
+    );
+  }
+}
+function createDefaultServer(app: Express, port: number) {
+  let onListen = () => {
+    let address =
+      process.env.HOST ||
+      Object.values(os.networkInterfaces())
+        .flat()
+        .find((ip) => String(ip?.family).includes("4") && !ip?.internal)
+        ?.address;
+
+    if (!address) {
+      console.log(`Remix App Server started at http://localhost:${port}`);
+    } else {
+      console.log(
+        `Remix App Server started at http://localhost:${port} (http://${address}:${port})`
+      );
+    }
+  };
+
+  let server = process.env.HOST
+    ? app.listen(port, process.env.HOST, onListen)
+    : app.listen(port, onListen);
+  return server;
+}
+function createDefaultSocketServer(port: number) {
+  let wss = new WebSocket.Server({ port });
+  return wss;
 }
