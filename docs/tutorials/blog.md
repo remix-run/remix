@@ -129,7 +129,7 @@ So let's get to it and provide some data to our component.
 
 💿 Make the posts route "loader"
 
-```tsx filename=app/routes/posts/index.tsx lines=[1-2,4-17,20-21]
+```tsx filename=app/routes/posts/index.tsx lines=[1-3,5-18,21-22]
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
@@ -164,7 +164,7 @@ Loaders are the backend "API" for their component and it's already wired up for 
 
 💿 Render links to our posts
 
-```tsx filename=app/routes/posts/index.tsx lines=[2,10-21] nocopy
+```tsx filename=app/routes/posts/index.tsx lines=[3,11-22] nocopy
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
@@ -196,7 +196,7 @@ TypeScript is mad, so let's help it out:
 
 💿 Add the generic argument to `useLoaderData` to help it infer the return type of the loader function.
 
-```tsx filename=app/routes/posts/index.tsx lines=[4-7,9-11,14,29]
+```tsx filename=app/routes/posts/index.tsx lines=[7]
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
@@ -425,7 +425,7 @@ You can click one of your posts and should see the new page.
 
 💿 Add a loader to access the params
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[1-2,4-6,9,13]
+```tsx filename=app/routes/posts/$slug.tsx lines=[1-3,5-7,10,14]
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
@@ -461,14 +461,14 @@ export async function getPosts() {
   return prisma.post.findMany();
 }
 
-export async function getPost(slug?: string) {
+export async function getPost(slug: string) {
   return prisma.post.findUnique({ where: { slug } });
 }
 ```
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[5,10-11,15,19]
+```tsx filename=app/routes/posts/$slug.tsx lines=[5,8-9,13,17]
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
@@ -496,7 +496,7 @@ Check that out! We're now pulling our posts from a data source instead of includ
 
 Let's make TypeScript happy with our code:
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[4,6,9,14,17,19,23]
+```tsx filename=app/routes/posts/$slug.tsx lines=[4,9,12]
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
@@ -541,7 +541,7 @@ npm add @types/marked -D
 
 Now that `marked` has been installed, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
 
-```tsx filename=app/routes/post/$slug.ts lines=[1,10,20-21,25,31]
+```tsx filename=app/routes/post/$slug.ts lines=[1,15-16,20,26]
 import { marked } from "marked";
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
@@ -675,7 +675,7 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 
 💿 Add an outlet to the admin page
 
-```tsx filename=app/routes/posts/admin.tsx lines=[5,42]
+```tsx filename=app/routes/posts/admin.tsx lines=[5,38]
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
@@ -841,9 +841,9 @@ In HTML an input's `name` attribute is sent over the network and available by th
 
 TypeScript is mad again, let's add some types.
 
-💿 Add the types to both files we changed
+💿 Add the types to the file we changed
 
-```tsx filename=app/models/post.server.ts lines=[2,8]
+```tsx filename=app/models/post.server.ts lines=[2,6]
 // ...
 import type { Prisma } from "@prisma/client"
 
@@ -855,35 +855,13 @@ export async function createPost(post: Prisma.PostUncheckedCreateInput) {
 
 ```
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[1,7]
-import type { ActionArgs } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { Form } from "@remix-run/react";
-
-import { createPost } from "~/models/post.server";
-
-export async function action({ request }: ActionArgs) {
-  const formData = await request.formData();
-
-  const title = formData.get("title");
-  const slug = formData.get("slug");
-  const markdown = formData.get("markdown");
-
-  await createPost({ title, slug, markdown });
-
-  return redirect("/posts/admin");
-};
-
-// ...
-```
-
 Whether you're using TypeScript or not, we've got a problem when the user doesn't provide values on some of these fields (and TS is still mad about that call to `createPost`).
 
 Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[2,7-13,23-33]
+```tsx filename=app/routes/posts/admin/new.tsx lines=[2,14-24]
 import type { ActionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form } from "@remix-run/react";
@@ -1019,7 +997,7 @@ Let's slow this down and add some "pending UI" to our form.
 
 💿 Slow down our action with a fake delay
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[5-6]
+```tsx filename=app/routes/posts/admin/new.tsx lines=[3-4]
 // ...
 export async function action({ request }: ActionArgs) {
   // TODO: remove me
