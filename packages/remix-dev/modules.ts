@@ -10,6 +10,10 @@ declare module "*.css" {
   let asset: string;
   export default asset;
 }
+declare module "*.csv" {
+  let asset: string;
+  export default asset;
+}
 declare module "*.eot" {
   let asset: string;
   export default asset;
