@@ -179,7 +179,7 @@ export default function Posts() {
         {posts.map((post) => (
           <li key={post.slug}>
             <Link
-              to={post.slug}
+              to={`/posts/${post.slug}`}
               className="text-blue-600 underline"
             >
               {post.title}
@@ -211,7 +211,7 @@ export default function Posts() {
         {posts.map((post) => (
           <li key={post.slug}>
             <Link
-              to={post.slug}
+              to={`/posts/${post.slug}`}
               className="text-blue-600 underline"
             >
               {post.title}
@@ -625,7 +625,7 @@ export default function PostAdmin() {
             {posts.map((post) => (
               <li key={post.slug}>
                 <Link
-                  to={post.slug}
+                  to={`/posts/${post.slug}`}
                   className="text-blue-600 underline"
                 >
                   {post.title}
@@ -703,7 +703,7 @@ export default function PostAdmin() {
             {posts.map((post) => (
               <li key={post.slug}>
                 <Link
-                  to={post.slug}
+                  to={`/posts/${post.slug}`}
                   className="text-blue-600 underline"
                 >
                   {post.title}
