@@ -44,7 +44,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
   // be recreated when you restart your dev server.
   const cache = (() => {
     if (!global.uniqueCacheName) {
-      global.uniqueCacheName = new Map()
+      global.uniqueCacheName = new Map();
     }
 
     return global.uniqueCacheName
