@@ -47,7 +47,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
       global.uniqueCacheName = new Map();
     }
 
-    return global.uniqueCacheName
+    return global.uniqueCacheName;
   })
 
 
