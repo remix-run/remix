@@ -845,11 +845,13 @@ TypeScript is mad again, let's add some types.
 
 ```tsx filename=app/models/post.server.ts lines=[2,6]
 // ...
-import type { Prisma } from "@prisma/client"
+import type { Post } from "@prisma/client"
 
 // ...
 
-export async function createPost(post: Prisma.PostUncheckedCreateInput) {
+export async function createPost(
+  post: Pick<Post, "slug" | "title" | "markdown">
+) {
   return prisma.post.create({ data: post });
 }
 
