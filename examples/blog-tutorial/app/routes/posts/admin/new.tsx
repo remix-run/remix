@@ -1,28 +1,25 @@
-import type { ActionFunction } from "@remix-run/node";
+import type { ActionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form, useActionData, useTransition } from "@remix-run/react";
 import invariant from "tiny-invariant";
 
 import { createPost } from "~/models/post.server";
 
-type ActionData =
-  | { title: null | string; slug: null | string; markdown: null | string }
-  | undefined;
-export const action: ActionFunction = async ({ request }) => {
+export async function action({ request }: ActionArgs) {
   const formData = await request.formData();
 
   const title = formData.get("title");
   const slug = formData.get("slug");
   const markdown = formData.get("markdown");
 
-  const errors: ActionData = {
+  const errors = {
     title: title ? null : "Title is required",
     slug: slug ? null : "Slug is required",
     markdown: markdown ? null : "Markdown is required",
   };
   const hasErrors = Object.values(errors).some((errorMessage) => errorMessage);
   if (hasErrors) {
-    return json<ActionData>(errors);
+    return json(errors);
   }
 
   invariant(typeof title === "string", "title must be a string");
@@ -32,12 +29,12 @@ export const action: ActionFunction = async ({ request }) => {
   await createPost({ title, slug, markdown });
 
   return redirect("/posts/admin");
-};
+}
 
 const inputClassName = `w-full rounded border border-gray-500 px-2 py-1 text-lg`;
 
 export default function NewPost() {
-  const errors = useActionData();
+  const errors = useActionData<typeof action>();
 
   const transition = useTransition();
   const isCreating = Boolean(transition.submission);
