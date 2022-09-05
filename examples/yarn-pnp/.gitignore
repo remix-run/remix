@@ -1,0 +1,19 @@
+node_modules
+
+/.cache
+/build
+/public/build
+/package-lock.json
+
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Swap the comments on the following lines if you wish to use zero-installs
+# See https://yarnpkg.com/features/zero-installs and
+# https://yarnpkg.com/getting-started/qa#which-files-should-be-gitignored
+.pnp.*
+# !.yarn/cache

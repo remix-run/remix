@@ -1,8 +1,10 @@
 import type { ActionFunction } from "@remix-run/node";
 import {
   json,
-  unstable_createFileUploadHandler,
-  unstable_parseMultipartFormData,
+  unstable_composeUploadHandlers as composeUploadHandlers,
+  unstable_createFileUploadHandler as createFileUploadHandler,
+  unstable_createMemoryUploadHandler as createMemoryUploadHandler,
+  unstable_parseMultipartFormData as parseMultipartFormData,
 } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
 
@@ -12,16 +14,16 @@ type ActionData = {
 };
 
 export const action: ActionFunction = async ({ request }) => {
-  const uploadHandler = unstable_createFileUploadHandler({
-    directory: "public",
-    maxFileSize: 30000,
-  });
-  const formData = await unstable_parseMultipartFormData(
-    request,
-    uploadHandler
+  const uploadHandler = composeUploadHandlers(
+    createFileUploadHandler({
+      directory: "public/uploads",
+      maxPartSize: 30000,
+    }),
+    createMemoryUploadHandler()
   );
+  const formData = await parseMultipartFormData(request, uploadHandler);
   const image = formData.get("img");
-  if (!image) {
+  if (!image || typeof image === "string") {
     return json({
       error: "something wrong",
     });

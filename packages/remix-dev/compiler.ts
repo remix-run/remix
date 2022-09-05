@@ -5,6 +5,7 @@ import * as fse from "fs-extra";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
+import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
 
 import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
@@ -23,11 +24,7 @@ import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlu
 import { serverEntryModulePlugin } from "./compiler/plugins/serverEntryModulePlugin";
 import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
 import { writeFileSafe } from "./compiler/utils/fs";
-
-// When we build Remix, this shim file is copied directly into the output
-// directory in the same place relative to this file. It is eventually injected
-// as a source file when building the app.
-const reactShim = path.resolve(__dirname, "compiler/shims/react.ts");
+import { urlImportsPlugin } from "./compiler/plugins/urlImportsPlugin";
 
 interface BuildConfig {
   mode: BuildMode;
@@ -220,6 +217,10 @@ export async function watch(
     toWatch.push(config.serverEntryPoint);
   }
 
+  config.watchPaths?.forEach((watchPath) => {
+    toWatch.push(watchPath);
+  });
+
   let watcher = chokidar
     .watch(toWatch, {
       persistent: true,
@@ -342,27 +343,17 @@ async function createBrowserBuild(
     // All route entry points are virtual modules that will be loaded by the
     // browserEntryPointsPlugin. This allows us to tree-shake server-only code
     // that we don't want to run in the browser (i.e. action & loader).
-    entryPoints[id] =
-      path.resolve(config.appDirectory, config.routes[id].file) + "?browser";
+    entryPoints[id] = config.routes[id].file + "?browser";
   }
 
   let plugins = [
+    urlImportsPlugin(),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
+    yarnPnpPlugin(),
   ];
-
-  if (config.serverBuildTarget === "deno") {
-    // @ts-expect-error
-    let { cache } = await import("esbuild-plugin-cache");
-    plugins.unshift(
-      cache({
-        importmap: {},
-        directory: path.join(config.cacheDirectory, "http-import-cache"),
-      })
-    );
-  }
 
   return esbuild.build({
     entryPoints,
@@ -370,7 +361,6 @@ async function createBrowserBuild(
     platform: "browser",
     format: "esm",
     external: externals,
-    inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
     loader: loaders,
     bundle: true,
     logLevel: "silent",
@@ -391,6 +381,8 @@ async function createBrowserBuild(
         config.devServerPort
       ),
     },
+    jsx: "automatic",
+    jsxDev: options.mode !== BuildMode.Production,
     plugins,
   });
 }
@@ -400,8 +392,6 @@ function createServerBuild(
   options: Required<BuildOptions> & { incremental?: boolean },
   assetsManifestPromiseRef: AssetsManifestPromiseRef
 ): Promise<esbuild.BuildResult> {
-  let dependencies = getAppDependencies(config);
-
   let stdin: esbuild.StdinOptions | undefined;
   let entryPoints: string[] | undefined;
 
@@ -418,13 +408,17 @@ function createServerBuild(
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
     config.serverBuildTarget ?? ""
   );
+  let isDenoRuntime = config.serverBuildTarget === "deno";
+
   let plugins: esbuild.Plugin[] = [
+    urlImportsPlugin(),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config),
     serverAssetsManifestPlugin(assetsManifestPromiseRef),
-    serverBareModulesPlugin(config, dependencies, options.onWarning),
+    serverBareModulesPlugin(config, options.onWarning),
+    yarnPnpPlugin(),
   ];
 
   if (config.serverPlatform !== "node") {
@@ -438,10 +432,22 @@ function createServerBuild(
       entryPoints,
       outfile: config.serverBuildPath,
       write: false,
-      conditions: isCloudflareRuntime ? ["worker"] : undefined,
+      conditions: isCloudflareRuntime
+        ? ["worker"]
+        : isDenoRuntime
+        ? ["deno", "worker"]
+        : undefined,
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
+      // The type of dead code elimination we want to do depends on the
+      // minify syntax property: https://github.com/evanw/esbuild/issues/672#issuecomment-1029682369
+      // Dev builds are leaving code that should be optimized away in the
+      // bundle causing server / testing code to be shipped to the browser.
+      // These are properly optimized away in prod builds today, and this
+      // PR makes dev mode behave closer to production in terms of dead
+      // code elimination / tree shaking is concerned.
+      minifySyntax: true,
       minify: options.mode === BuildMode.Production && isCloudflareRuntime,
       mainFields: isCloudflareRuntime
         ? ["browser", "module", "main"]
@@ -449,7 +455,6 @@ function createServerBuild(
         ? ["module", "main"]
         : ["main", "module"],
       target: options.target,
-      inject: config.serverBuildTarget === "deno" ? [] : [reactShim],
       loader: loaders,
       bundle: true,
       logLevel: "silent",
@@ -465,6 +470,8 @@ function createServerBuild(
           config.devServerPort
         ),
       },
+      jsx: "automatic",
+      jsxDev: options.mode !== BuildMode.Production,
       plugins,
     })
     .then(async (build) => {
@@ -510,6 +517,9 @@ async function writeServerBuildResult(
       let contents = Buffer.from(file.contents).toString("utf-8");
       contents = contents.replace(/"route:/gm, '"');
       await fse.writeFile(file.path, contents);
+    } else {
+      await fse.ensureDir(path.dirname(file.path));
+      await fse.writeFile(file.path, file.contents);
     }
   }
 }

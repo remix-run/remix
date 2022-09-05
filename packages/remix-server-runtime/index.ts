@@ -1,5 +1,9 @@
 // Default implementations for the Remix server runtime interface
 export { createCookieFactory, isCookie } from "./cookies";
+export {
+  composeUploadHandlers as unstable_composeUploadHandlers,
+  parseMultipartFormData as unstable_parseMultipartFormData,
+} from "./formData";
 export { json, redirect } from "./responses";
 export { createRequestHandler } from "./server";
 export {
@@ -9,6 +13,8 @@ export {
 } from "./sessions";
 export { createCookieSessionStorageFactory } from "./sessions/cookieStorage";
 export { createMemorySessionStorageFactory } from "./sessions/memoryStorage";
+export { createMemoryUploadHandler as unstable_createMemoryUploadHandler } from "./upload/memoryUploadHandler";
+export { MaxPartSizeExceededError } from "./upload/errors";
 
 // Types for the Remix server runtime interface
 export type {
@@ -26,6 +32,7 @@ export type {
 
 // Remix server runtime packages should re-export these types
 export type {
+  ActionArgs,
   ActionFunction,
   AppData,
   AppLoadContext,
@@ -44,13 +51,17 @@ export type {
   HtmlMetaDescriptor,
   LinkDescriptor,
   LinksFunction,
+  LoaderArgs,
   LoaderFunction,
+  MemoryUploadHandlerFilterArgs,
+  MemoryUploadHandlerOptions,
   MetaDescriptor,
   MetaFunction,
   PageLinkDescriptor,
   RequestHandler,
   RouteComponent,
   RouteHandle,
+  SerializeFrom,
   ServerBuild,
   ServerEntryModule,
   Session,
@@ -58,5 +69,8 @@ export type {
   SessionIdStorageStrategy,
   SessionStorage,
   SignFunction,
+  TypedResponse,
   UnsignFunction,
+  UploadHandlerPart,
+  UploadHandler,
 } from "./reexport";

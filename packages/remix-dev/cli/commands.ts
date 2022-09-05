@@ -10,6 +10,7 @@ import type { Server } from "http";
 import type * as Express from "express";
 import type { createApp as createAppType } from "@remix-run/serve";
 import getPort, { makeRange } from "get-port";
+import * as esbuild from "esbuild";
 
 import { BuildMode, isBuildMode } from "../build";
 import * as colors from "../colors";
@@ -17,9 +18,10 @@ import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
-import { createApp } from "./create";
 import { loadEnv } from "../env";
 import { log } from "../logging";
+import { createApp } from "./create";
+import { getPreferredPackageManager } from "./getPreferredPackageManager";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 
 export * as migrate from "./migrate";
@@ -29,7 +31,6 @@ export async function create({
   projectDir,
   remixVersion,
   installDeps,
-  packageManager,
   useTypeScript,
   githubToken,
   debug,
@@ -38,7 +39,6 @@ export async function create({
   projectDir: string;
   remixVersion?: string;
   installDeps: boolean;
-  packageManager: "npm" | "yarn" | "pnpm";
   useTypeScript: boolean;
   githubToken?: string;
   debug?: boolean;
@@ -49,7 +49,6 @@ export async function create({
     projectDir,
     remixVersion,
     installDeps,
-    packageManager,
     useTypeScript,
     githubToken,
     debug,
@@ -58,31 +57,57 @@ export async function create({
   spinner.clear();
 }
 
+type InitFlags = {
+  deleteScript?: boolean;
+};
 export async function init(
   projectDir: string,
-  packageManager: "npm" | "yarn" | "pnpm"
+  { deleteScript = true }: InitFlags = {}
 ) {
   let initScriptDir = path.join(projectDir, "remix.init");
+  let initScriptTs = path.resolve(initScriptDir, "index.ts");
   let initScript = path.resolve(initScriptDir, "index.js");
 
-  let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
-
-  if (await fse.pathExists(initScript)) {
-    execSync(`${packageManager} install`, {
-      stdio: "ignore",
-      cwd: initScriptDir,
+  if (await fse.pathExists(initScriptTs)) {
+    await esbuild.build({
+      entryPoints: [initScriptTs],
+      format: "cjs",
+      platform: "node",
+      outfile: initScript,
     });
-    let initFn = require(initScript);
-    try {
-      await initFn({ rootDirectory: projectDir, isTypeScript });
-    } catch (error) {
-      if (error instanceof Error) {
-        error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
-          error.message
-        }`;
-      }
-      throw error;
+  }
+  if (!(await fse.pathExists(initScript))) {
+    return;
+  }
+
+  let initPackageJson = path.resolve(initScriptDir, "package.json");
+  let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
+  let packageManager = getPreferredPackageManager();
+
+  if (await fse.pathExists(initPackageJson)) {
+    execSync(`${packageManager} install`, {
+      cwd: initScriptDir,
+      stdio: "ignore",
+    });
+  }
+
+  let initFn = require(initScript);
+  if (typeof initFn !== "function" && initFn.default) {
+    initFn = initFn.default;
+  }
+  try {
+    await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
+
+    if (deleteScript) {
+      await fse.remove(initScriptDir);
     }
+  } catch (error) {
+    if (error instanceof Error) {
+      error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
+        error.message
+      }`;
+    }
+    throw error;
   }
 }
 
@@ -144,6 +169,7 @@ export async function build(
 
   let start = Date.now();
   let config = await readConfig(remixRoot);
+  fse.emptyDirSync(config.assetsBuildDirectory);
   await compiler.build(config, {
     mode: mode,
     sourcemap,
@@ -232,7 +258,11 @@ export async function watch(
   });
 }
 
-export async function dev(remixRoot: string, modeArg?: string) {
+export async function dev(
+  remixRoot: string,
+  modeArg?: string,
+  portArg?: number
+) {
   let createApp: typeof createAppType;
   let express: typeof Express;
   try {
@@ -253,7 +283,11 @@ export async function dev(remixRoot: string, modeArg?: string) {
   await loadEnv(config.rootDirectory);
 
   let port = await getPort({
-    port: process.env.PORT ? Number(process.env.PORT) : makeRange(3000, 3100),
+    port: portArg
+      ? Number(portArg)
+      : process.env.PORT
+      ? Number(process.env.PORT)
+      : makeRange(3000, 3100),
   });
 
   if (config.serverEntryPoint) {
@@ -266,7 +300,14 @@ export async function dev(remixRoot: string, modeArg?: string) {
     purgeAppRequireCache(config.serverBuildPath);
     next();
   });
-  app.use(createApp(config.serverBuildPath, mode));
+  app.use(
+    createApp(
+      config.serverBuildPath,
+      mode,
+      config.publicPath,
+      config.assetsBuildDirectory
+    )
+  );
 
   let server: Server | null = null;
 
@@ -278,7 +319,8 @@ export async function dev(remixRoot: string, modeArg?: string) {
             process.env.HOST ||
             Object.values(os.networkInterfaces())
               .flat()
-              .find((ip) => ip?.family === "IPv4" && !ip.internal)?.address;
+              .find((ip) => String(ip?.family).includes("4") && !ip?.internal)
+              ?.address;
 
           if (!address) {
             console.log(`Remix App Server started at http://localhost:${port}`);

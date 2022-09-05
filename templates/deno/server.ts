@@ -1,13 +1,11 @@
 import { serve } from "https://deno.land/std@0.128.0/http/server.ts";
-// Temporary: in the future, import from `@remix-run/deno` at some URL
-import { createRequestHandlerWithStaticFiles } from "./remix-deno/index.ts";
+import { createRequestHandlerWithStaticFiles } from "@remix-run/deno";
 // Import path interpreted by the Remix compiler
 import * as build from "@remix-run/dev/server-build";
 
 const remixHandler = createRequestHandlerWithStaticFiles({
   build,
-  // process.env.NODE_ENV is provided by Remix at compile time
-  mode: process.env.NODE_ENV,
+  mode: Deno.env.get("NODE_ENV"),
   getLoadContext: () => ({}),
 });
 

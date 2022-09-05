@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // All reads and writes are done via firebase-admin, which skips Firebase rules.
+    // This disables public access to all Firestore data.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

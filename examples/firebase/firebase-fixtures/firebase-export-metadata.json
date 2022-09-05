@@ -1,0 +1,7 @@
+{
+  "version": "11.0.1",
+  "auth": {
+    "version": "11.0.1",
+    "path": "auth"
+  }
+}

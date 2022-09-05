@@ -1,7 +1,13 @@
-export type JsonFunction = <Data>(
+export type JsonFunction = <Data extends unknown>(
   data: Data,
   init?: number | ResponseInit
-) => Response;
+) => TypedResponse<Data>;
+
+// must be a type since this is a subtype of response
+// interfaces must conform to the types they extend
+export type TypedResponse<T extends unknown = unknown> = Response & {
+  json(): Promise<T>;
+};
 
 /**
  * This is a shortcut for creating `application/json` responses. Converts `data`
@@ -26,7 +32,7 @@ export const json: JsonFunction = (data, init = {}) => {
 export type RedirectFunction = (
   url: string,
   init?: number | ResponseInit
-) => Response;
+) => TypedResponse<never>;
 
 /**
  * A redirect response. Sets the status code and the `Location` header.
@@ -48,7 +54,7 @@ export const redirect: RedirectFunction = (url, init = 302) => {
   return new Response(null, {
     ...responseInit,
     headers,
-  });
+  }) as TypedResponse<never>;
 };
 
 export function isResponse(value: any): value is Response {
@@ -68,20 +74,4 @@ export function isRedirectResponse(response: Response): boolean {
 
 export function isCatchResponse(response: Response) {
   return response.headers.get("X-Remix-Catch") != null;
-}
-
-export function extractData(response: Response): Promise<unknown> {
-  let contentType = response.headers.get("Content-Type");
-
-  if (contentType && /\bapplication\/json\b/.test(contentType)) {
-    return response.json();
-  }
-
-  // What other data types do we need to handle here? What other kinds of
-  // responses are people going to be returning from their loaders?
-  // - application/x-www-form-urlencoded ?
-  // - multipart/form-data ?
-  // - binary (audio/video) ?
-
-  return response.text();
 }

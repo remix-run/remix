@@ -22,4 +22,4 @@ Many turborepo examples don't build the `ui` package, but if we don't, remix is 
 
 In order for this to work, your Vercel config should look like this:
 
-![Vercel project config](./vercel-project-config-example.png)
+![Vercel project config](./vercel-project-config-example.jpg)

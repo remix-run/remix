@@ -1,0 +1,17 @@
+{
+  "name": "remix-template-deno",
+  "private": true,
+  "sideEffects": false,
+  "dependencies": {
+    "@remix-run/deno": "0.0.0-local-version",
+    "@remix-run/react": "0.0.0-local-version",
+    "react": "0.0.0-local-version",
+    "react-dom": "0.0.0-local-version"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "0.0.0-local-version"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

@@ -335,7 +335,7 @@ export default function ProjectRoute() {
             <p>
               Updating members in this dialog will send a request to the server
               on each change to the autocomplete field. Notice optimistic
-              updates in the bacground UI as you make changes!
+              updates in the background UI as you make changes!
             </p>
           </Note>
         </div>

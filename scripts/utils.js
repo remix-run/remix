@@ -17,7 +17,7 @@ let remixPackages = {
     "netlify",
     "vercel",
   ],
-  runtimes: ["cloudflare", "node"],
+  runtimes: ["cloudflare", "deno", "node"],
   core: ["dev", "server-runtime", "react", "eslint-config"],
   get all() {
     return [...this.adapters, ...this.runtimes, ...this.core, "serve"];
@@ -29,7 +29,7 @@ let remixPackages = {
  * @param {string} [directory]
  * @returns {string}
  */
-function packageJson(packageName, directory) {
+function packageJson(packageName, directory = "") {
   return path.join(rootDir, directory, packageName, "package.json");
 }
 
@@ -73,9 +73,17 @@ async function prompt(question) {
  */
 async function updatePackageConfig(packageName, transform) {
   let file = packageJson(packageName, "packages");
-  let json = await jsonfile.readFile(file);
-  transform(json);
-  await jsonfile.writeFile(file, json, { spaces: 2 });
+  try {
+    let json = await jsonfile.readFile(file);
+    if (!json) {
+      console.log(`No package.json found for ${packageName}; skipping`);
+      return;
+    }
+    transform(json);
+    await jsonfile.writeFile(file, json, { spaces: 2 });
+  } catch (err) {
+    return;
+  }
 }
 
 /**
@@ -142,6 +150,9 @@ async function updateRemixVersion(packageName, nextVersion, successMessage) {
       if (config.devDependencies?.[`@remix-run/${pkg}`]) {
         config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
       }
+      if (config.peerDependencies?.[`@remix-run/${pkg}`]) {
+        config.peerDependencies[`@remix-run/${pkg}`] = nextVersion;
+      }
     }
   });
   let logName = packageName.startsWith("remix-")
@@ -177,6 +188,52 @@ async function updateDeploymentScriptVersion(nextVersion) {
 }
 
 /**
+ * @param {string} importSpecifier
+ * @returns {[string, string]} [packageName, importPath]
+ */
+const getPackageNameFromImportSpecifier = (importSpecifier) => {
+  if (importSpecifier.startsWith("@")) {
+    let [scope, pkg, ...path] = importSpecifier.split("/");
+    return [`${scope}/${pkg}`, path.join("/")];
+  }
+
+  let [pkg, ...path] = importSpecifier.split("/");
+  return [pkg, path.join("/")];
+};
+/**
+ * @param {string} importMapPath
+ * @param {string} nextVersion
+ */
+const updateDenoImportMap = async (importMapPath, nextVersion) => {
+  let { imports, ...json } = await jsonfile.readFile(importMapPath);
+  let remixPackagesFull = remixPackages.all.map(
+    (remixPackage) => `@remix-run/${remixPackage}`
+  );
+
+  let newImports = Object.fromEntries(
+    Object.entries(imports).map(([importName, path]) => {
+      let [packageName, importPath] =
+        getPackageNameFromImportSpecifier(importName);
+
+      return remixPackagesFull.includes(packageName)
+        ? [
+            importName,
+            `https://esm.sh/${packageName}@${nextVersion}${
+              importPath ? `/${importPath}` : ""
+            }`,
+          ]
+        : [importName, path];
+    })
+  );
+
+  return jsonfile.writeFile(
+    importMapPath,
+    { ...json, imports: newImports },
+    { spaces: 2 }
+  );
+};
+
+/**
  * @param {string} nextVersion
  */
 async function incrementRemixVersion(nextVersion) {
@@ -186,6 +243,16 @@ async function incrementRemixVersion(nextVersion) {
   for (let name of remixPackages.all) {
     await updateRemixVersion(`remix-${name}`, nextVersion);
   }
+
+  // Update version numbers in Deno's import maps
+  await Promise.all(
+    [
+      path.join(".vscode", "deno_resolve_npm_imports.json"),
+      path.join("templates", "deno", ".vscode", "resolve_npm_imports.json"),
+    ].map((importMapPath) =>
+      updateDenoImportMap(path.join(rootDir, importMapPath), nextVersion)
+    )
+  );
 
   // Update versions in the examples
   await updateExamplesRemixVersion(nextVersion);

@@ -4,3 +4,5 @@ node_modules
 /build
 /public/build
 .env
+
+/app/routes.d.ts

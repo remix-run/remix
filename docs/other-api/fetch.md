@@ -27,8 +27,8 @@ Rather than pick a server-side API, Remix adopts the Web Fetch API for all http 
 
 While you can use these APIs directly in Remix, you'll typically use response helpers instead:
 
-- [json](../api/remix#json)
-- [redirect](../api/remix#redirect)
+- [json][json]
+- [redirect][redirect]
 
 ## Globally Available
 
@@ -36,4 +36,8 @@ Remix adds `Request`, `Response`, `Headers`, and `fetch` to your loader's global
 
 ## MDN Docs
 
-[https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)
+[https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API][https-developer-mozilla-org-en-us-docs-web-api-fetch-api]
+
+[json]: ../api/remix#json
+[redirect]: ../api/remix#redirect
+[https-developer-mozilla-org-en-us-docs-web-api-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API

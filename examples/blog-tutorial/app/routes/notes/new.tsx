@@ -77,7 +77,7 @@ export default function NewNotePage() {
           />
         </label>
         {actionData?.errors?.title && (
-          <Alert className="pt-1 text-red-700" id="title=error">
+          <Alert className="pt-1 text-red-700" id="title-error">
             {actionData.errors.title}
           </Alert>
         )}
@@ -98,7 +98,7 @@ export default function NewNotePage() {
           />
         </label>
         {actionData?.errors?.body && (
-          <Alert className="pt-1 text-red-700" id="body=error">
+          <Alert className="pt-1 text-red-700" id="body-error">
             {actionData.errors.body}
           </Alert>
         )}

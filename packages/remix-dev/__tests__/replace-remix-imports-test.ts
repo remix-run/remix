@@ -1,11 +1,13 @@
+import os from "os";
 import path from "path";
 import fse from "fs-extra";
-import os from "os";
+import glob from "fast-glob";
+import shell from "shelljs";
 import stripAnsi from "strip-ansi";
 import type { PackageJson } from "type-fest";
-import shell from "shelljs";
 
 import { run } from "../cli/run";
+import { readConfig } from "../config";
 
 let output: string;
 const ORIGINAL_IO = {
@@ -45,6 +47,7 @@ beforeEach(async () => {
   await fse.remove(TEMP_DIR);
   await fse.ensureDir(TEMP_DIR);
 });
+
 afterEach(async () => {
   console.log = ORIGINAL_IO.log;
   console.warn = ORIGINAL_IO.warn;
@@ -72,6 +75,7 @@ const replaceRemixImports = async (projectDir: string) => {
 describe("`replace-remix-imports` migration", () => {
   it("runs successfully", async () => {
     let projectDir = makeApp();
+    let config = await readConfig(projectDir);
     await replaceRemixImports(projectDir);
 
     expect(output).toContain("detected `@remix-run/node`");
@@ -84,11 +88,18 @@ describe("`replace-remix-imports` migration", () => {
     );
     expect(packageJson.dependencies).not.toContain("remix");
     expect(packageJson.devDependencies).not.toContain("remix");
-    expect(packageJson.dependencies["@remix-run/react"]).toBe("1.3.4");
-    expect(packageJson.dependencies["@remix-run/node"]).toBe("1.3.4");
-    expect(packageJson.dependencies["@remix-run/serve"]).toBe("1.3.4");
-    expect(packageJson.devDependencies["@remix-run/dev"]).toBe("1.3.4");
-
+    expect(packageJson.dependencies).toEqual(
+      expect.objectContaining({
+        "@remix-run/node": "1.3.4",
+        "@remix-run/react": "1.3.4",
+        "@remix-run/serve": "1.3.4",
+      })
+    );
+    expect(packageJson.devDependencies).toEqual(
+      expect.objectContaining({
+        "@remix-run/dev": "1.3.4",
+      })
+    );
     expect(output).toContain(
       "🗑  I'm removing `remix setup` from your `postinstall` script."
     );
@@ -96,11 +107,16 @@ describe("`replace-remix-imports` migration", () => {
     expect(packageJson.scripts).not.toContain("postinstall");
 
     expect(output).toContain("✅ Your Remix imports look good!");
-    let { code } = shell.grep("-nri", 'from "remix"', projectDir);
-    // `grep` exits with status code `1` when no matches are found
-    expect(code).toBe(1);
+
+    let files = glob.sync("**/*.@(ts|tsx|js|jsx)", {
+      cwd: config.appDirectory,
+      absolute: true,
+    });
+    let result = shell.grep("-l", 'from "remix"', files);
+    expect(result.stdout.trim()).toBe("");
+    expect(result.stderr).toBeNull();
+    expect(result.code).toBe(0);
 
     expect(output).toContain("successfully migrated");
-    expect(output).toContain("npm install");
-  }, 25_000);
+  }, 200_000);
 });

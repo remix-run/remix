@@ -8,7 +8,7 @@ import type {
   TouchEventHandler,
 } from "react";
 import * as React from "react";
-import type { Navigator } from "react-router";
+import type { Navigator, Params } from "react-router";
 import {
   Router,
   Link as RouterLink,
@@ -20,6 +20,8 @@ import {
   useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
+import { createPath } from "history";
+import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, AssetsManifest } from "./entry";
@@ -44,19 +46,24 @@ import { createHtml } from "./markup";
 import type { ClientRoute } from "./routes";
 import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
-import type { RouteMatch } from "./routeMatching";
+import type { RouteMatch as BaseRouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
 import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
 import { createTransitionManager } from "./transition";
-import type { Transition, Fetcher, Submission } from "./transition";
+import type {
+  Transition,
+  TransitionManagerState,
+  Fetcher,
+  Submission,
+} from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
 
 interface RemixEntryContextType {
   manifest: AssetsManifest;
-  matches: RouteMatch<ClientRoute>[];
-  routeData: { [routeId: string]: RouteData };
+  matches: BaseRouteMatch<ClientRoute>[];
+  routeData: RouteData;
   actionData?: RouteData;
   pendingLocation?: Location;
   appState: AppState;
@@ -116,19 +123,24 @@ export function RemixEntry({
       catch: entryComponentDidCatchEmulator.catch,
       catchBoundaryId: entryComponentDidCatchEmulator.catchBoundaryRouteId,
       onRedirect: _navigator.replace,
-      onChange: (state) => {
-        setClientState({
-          catch: state.catch,
-          error: state.error,
-          catchBoundaryRouteId: state.catchBoundaryId,
-          loaderBoundaryRouteId: state.errorBoundaryId,
-          renderBoundaryRouteId: null,
-          trackBoundaries: false,
-          trackCatchBoundaries: false,
-        });
-      },
     });
   });
+
+  React.useEffect(() => {
+    let subscriber = (state: TransitionManagerState) => {
+      setClientState({
+        catch: state.catch,
+        error: state.error,
+        catchBoundaryRouteId: state.catchBoundaryId,
+        loaderBoundaryRouteId: state.errorBoundaryId,
+        renderBoundaryRouteId: null,
+        trackBoundaries: false,
+        trackCatchBoundaries: false,
+      });
+    };
+
+    return transitionManager.subscribe(subscriber);
+  }, [transitionManager]);
 
   // Ensures pushes interrupting pending navigations use replace
   // TODO: Move this to React Router
@@ -399,7 +411,7 @@ interface PrefetchHandlers {
 function usePrefetchBehavior(
   prefetch: PrefetchBehavior,
   theirElementProps: PrefetchHandlers
-) {
+): [boolean, Required<PrefetchHandlers>] {
   let [maybePrefetch, setMaybePrefetch] = React.useState(false);
   let [shouldPrefetch, setShouldPrefetch] = React.useState(false);
   let { onFocus, onBlur, onMouseEnter, onMouseLeave, onTouchStart } =
@@ -420,6 +432,7 @@ function usePrefetchBehavior(
   let cancelIntent = () => {
     if (prefetch === "intent") {
       setMaybePrefetch(false);
+      setShouldPrefetch(false);
     }
   };
 
@@ -531,13 +544,46 @@ export function Links() {
 
   return (
     <>
-      {links.map((link) =>
-        isPageLinkDescriptor(link) ? (
-          <PrefetchPageLinks key={link.page} {...link} />
-        ) : (
-          <link key={link.rel + link.href} {...link} />
-        )
-      )}
+      {links.map((link) => {
+        if (isPageLinkDescriptor(link)) {
+          return <PrefetchPageLinks key={link.page} {...link} />;
+        }
+
+        let imageSrcSet: string | null = null;
+
+        // In React 17, <link imageSrcSet> and <link imageSizes> will warn
+        // because the DOM attributes aren't recognized, so users need to pass
+        // them in all lowercase to forward the attributes to the node without a
+        // warning. Normalize so that either property can be used in Remix.
+        if ("useId" in React) {
+          if (link.imagesrcset) {
+            link.imageSrcSet = imageSrcSet = link.imagesrcset;
+            delete link.imagesrcset;
+          }
+
+          if (link.imagesizes) {
+            link.imageSizes = link.imagesizes;
+            delete link.imagesizes;
+          }
+        } else {
+          if (link.imageSrcSet) {
+            link.imagesrcset = imageSrcSet = link.imageSrcSet;
+            delete link.imageSrcSet;
+          }
+
+          if (link.imageSizes) {
+            link.imagesizes = link.imageSizes;
+            delete link.imageSizes;
+          }
+        }
+
+        return (
+          <link
+            key={link.rel + (link.href || "") + (imageSrcSet || "")}
+            {...link}
+          />
+        );
+      })}
     </>
   );
 }
@@ -571,7 +617,7 @@ export function PrefetchPageLinks({
   );
 }
 
-function usePrefetchedStylesheets(matches: RouteMatch<ClientRoute>[]) {
+function usePrefetchedStylesheets(matches: BaseRouteMatch<ClientRoute>[]) {
   let { routeModules } = useRemixEntryContext();
 
   let [styleLinks, setStyleLinks] = React.useState<HtmlLinkDescriptor[]>([]);
@@ -596,7 +642,7 @@ function PrefetchPageLinksImpl({
   matches: nextMatches,
   ...linkProps
 }: PrefetchPageDescriptor & {
-  matches: RouteMatch<ClientRoute>[];
+  matches: BaseRouteMatch<ClientRoute>[];
 }) {
   let location = useLocation();
   let { matches, manifest } = useRemixEntryContext();
@@ -684,7 +730,7 @@ export function Meta() {
         }
 
         if (name === "title") {
-          return <title key="title">{value}</title>;
+          return <title key="title">{String(value)}</title>;
         }
 
         // Open Graph tags use the `property` attribute, while other meta tags
@@ -694,15 +740,15 @@ export function Meta() {
           if (isOpenGraphTag) {
             return (
               <meta
+                property={name}
                 content={content as string}
                 key={name + content}
-                property={name}
               />
             );
           }
 
           if (typeof content === "string") {
-            return <meta content={content} name={name} key={name + content} />;
+            return <meta name={name} content={content} key={name + content} />;
           }
 
           return <meta key={name + JSON.stringify(content)} {...content} />;
@@ -761,14 +807,17 @@ export function Scripts(props: ScriptProps) {
     let routeModulesScript = `${matches
       .map(
         (match, index) =>
-          `import * as route${index} from ${JSON.stringify(
+          `import ${JSON.stringify(manifest.url)};
+import * as route${index} from ${JSON.stringify(
             manifest.routes[match.route.id].module
           )};`
       )
       .join("\n")}
 window.__remixRouteModules = {${matches
       .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
-      .join(",")}};`;
+      .join(",")}};
+
+import(${JSON.stringify(manifest.entry.module)});`;
 
     return (
       <>
@@ -776,14 +825,14 @@ window.__remixRouteModules = {${matches
           {...props}
           suppressHydrationWarning
           dangerouslySetInnerHTML={createHtml(contextScript)}
+          type={undefined}
         />
-        <script {...props} src={manifest.url} />
         <script
           {...props}
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
+          async
         />
-        <script {...props} src={manifest.entry.module} type="module" />
       </>
     );
     // disabled deps array because we are purposefully only rendering this once
@@ -816,6 +865,11 @@ window.__remixRouteModules = {${matches
 
   return (
     <>
+      <link
+        rel="modulepreload"
+        href={manifest.entry.module}
+        crossOrigin={props.crossOrigin}
+      />
       {dedupe(preloads).map((path) => (
         <link
           key={path}
@@ -899,7 +953,7 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
       reloadDocument = false,
       replace = false,
       method = "get",
-      action = ".",
+      action,
       encType = "application/x-www-form-urlencoded",
       fetchKey,
       onSubmit,
@@ -954,20 +1008,41 @@ type HTMLFormSubmitter = HTMLButtonElement | HTMLInputElement;
  * @see https://remix.run/api/remix#useformaction
  */
 export function useFormAction(
-  action = ".",
+  action?: string,
   // TODO: Remove method param in v2 as it's no longer needed and is a breaking change
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
-  let path = useResolvedPath(action);
-  let search = path.search;
+  let resolvedPath = useResolvedPath(action ?? ".");
+
+  // Previously we set the default action to ".". The problem with this is that
+  // `useResolvedPath(".")` excludes search params and the hash of the resolved
+  // URL. This is the intended behavior of when "." is specifically provided as
+  // the form action, but inconsistent w/ browsers when the action is omitted.
+  // https://github.com/remix-run/remix/issues/927
+  let location = useLocation();
+  let { search, hash } = resolvedPath;
   let isIndexRoute = id.endsWith("/index");
 
-  if (action === "." && isIndexRoute) {
+  if (action == null) {
+    search = location.search;
+    hash = location.hash;
+
+    // When grabbing search params from the URL, remove the automatically
+    // inserted ?index param so we match the useResolvedPath search behavior
+    // which would not include ?index
+    if (isIndexRoute) {
+      let params = new URLSearchParams(search);
+      params.delete("index");
+      search = params.toString() ? `?${params.toString()}` : "";
+    }
+  }
+
+  if ((action == null || action === ".") && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 
-  return path.pathname + search;
+  return createPath({ pathname: resolvedPath.pathname, search, hash });
 }
 
 export interface SubmitOptions {
@@ -1104,7 +1179,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
 
         // Include name + value from a <button>
         if (target.name) {
-          formData.set(target.name, target.value);
+          formData.append(target.name, target.value);
         }
       } else {
         if (isHtmlElement(target)) {
@@ -1227,13 +1302,40 @@ export function useBeforeUnload(callback: () => any): void {
   }, [callback]);
 }
 
+export interface RouteMatch {
+  /**
+   * The id of the matched route
+   */
+  id: string;
+  /**
+   * The pathname of the matched route
+   */
+  pathname: string;
+  /**
+   * The dynamic parameters of the matched route
+   *
+   * @see https://remix.run/docs/api/conventions#dynamic-route-parameters
+   */
+  params: Params<string>;
+  /**
+   * Any route data associated with the matched route
+   */
+  data: RouteData;
+  /**
+   * The exported `handle` object of the matched route.
+   *
+   * @see https://remix.run/docs/api/conventions#handle
+   */
+  handle: undefined | { [key: string]: any };
+}
+
 /**
  * Returns the current route matches on the page. This is useful for creating
  * layout abstractions with your current routes.
  *
  * @see https://remix.run/api/remix#usematches
  */
-export function useMatches() {
+export function useMatches(): RouteMatch[] {
   let { matches, routeData, routeModules } = useRemixEntryContext();
 
   return React.useMemo(
@@ -1259,7 +1361,7 @@ export function useMatches() {
  *
  * @see https://remix.run/api/remix#useloaderdata
  */
-export function useLoaderData<T = AppData>(): T {
+export function useLoaderData<T = AppData>(): SerializeFrom<T> {
   return useRemixRouteContext().data;
 }
 
@@ -1268,7 +1370,7 @@ export function useLoaderData<T = AppData>(): T {
  *
  * @see https://remix.run/api/remix#useactiondata
  */
-export function useActionData<T = AppData>(): T | undefined {
+export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
   let { actionData } = transitionManager.getState();
@@ -1299,9 +1401,11 @@ function createFetcherForm(fetchKey: string) {
 
 let fetcherId = 0;
 
-type FetcherWithComponents<TData> = Fetcher<TData> & {
-  Form: ReturnType<typeof createFetcherForm>;
-  submit: ReturnType<typeof useSubmitImpl>;
+export type FetcherWithComponents<TData> = Fetcher<TData> & {
+  Form: React.ForwardRefExoticComponent<
+    FormProps & React.RefAttributes<HTMLFormElement>
+  >;
+  submit: SubmitFunction;
   load: (href: string) => void;
 };
 
@@ -1379,7 +1483,7 @@ export const LiveReload =
             suppressHydrationWarning
             dangerouslySetInnerHTML={{
               __html: js`
-                (() => {
+                function remixLiveReloadConnect(config) {
                   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
                   let socketPath = protocol + "//" + host + ":" + ${String(
@@ -1397,11 +1501,27 @@ export const LiveReload =
                       window.location.reload();
                     }
                   };
+                  ws.onopen = () => {
+                    if (config && typeof config.onOpen === "function") {
+                      config.onOpen();
+                    }
+                  };
+                  ws.onclose = (error) => {
+                    console.log("Remix dev asset server web socket closed. Reconnecting...");
+                    setTimeout(
+                      () =>
+                        remixLiveReloadConnect({
+                          onOpen: () => window.location.reload(),
+                        }),
+                      1000
+                    );
+                  };
                   ws.onerror = (error) => {
                     console.log("Remix dev asset server web socket error:");
                     console.error(error);
                   };
-                })();
+                }
+                remixLiveReloadConnect();
               `,
             }}
           />

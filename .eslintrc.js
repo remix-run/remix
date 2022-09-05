@@ -1,3 +1,7 @@
+const OFF = 0;
+const WARN = 1;
+
+/** @type {import('eslint').Linter.Config} */
 module.exports = {
   root: true,
   extends: [
@@ -5,4 +9,20 @@ module.exports = {
     "plugin:markdown/recommended",
   ],
   plugins: ["markdown"],
+  overrides: [
+    {
+      files: ["rollup.config.js"],
+      rules: {
+        "import/no-extraneous-dependencies": OFF,
+      },
+    },
+    {
+      files: ["templates/**/*.*"],
+      rules: {
+        "prefer-const": WARN,
+
+        "prefer-let/prefer-let": OFF,
+      },
+    },
+  ],
 };

@@ -3,10 +3,12 @@ import type { ServerRoute } from "./routes";
 import { json, isResponse, isRedirectResponse } from "./responses";
 
 /**
- * An object of arbitrary for route loaders and actions provided by the
+ * An object of unknown type for route loaders and actions provided by the
  * server's `getLoadContext()` function.
  */
-export type AppLoadContext = any;
+export interface AppLoadContext {
+  [key: string]: unknown;
+}
 
 /**
  * Data for a route that was returned from a `loader()`.
@@ -18,7 +20,7 @@ export async function callRouteAction({
   match,
   request,
 }: {
-  loadContext: unknown;
+  loadContext: AppLoadContext;
   match: RouteMatch<ServerRoute>;
   request: Request;
 }) {
@@ -65,22 +67,22 @@ export async function callRouteLoader({
 }: {
   request: Request;
   match: RouteMatch<ServerRoute>;
-  loadContext: unknown;
+  loadContext: AppLoadContext;
 }) {
   let loader = match.route.module.loader;
 
   if (!loader) {
     throw new Error(
       `You made a ${request.method} request to ${request.url} but did not provide ` +
-        `a \`loader\` for route "${match.route.id}", so there is no way to handle the ` +
-        `request.`
+        `a default component or \`loader\` for route "${match.route.id}", ` +
+        `so there is no way to handle the request.`
     );
   }
 
   let result;
   try {
     result = await loader({
-      request: stripDataParam(stripIndexParam(request.clone())),
+      request: stripDataParam(stripIndexParam(request)),
       context: loadContext,
       params: match.params,
     });

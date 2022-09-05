@@ -2,6 +2,9 @@ const { execSync } = require("child_process");
 const { readdir, stat } = require("fs/promises");
 const { join } = require("path");
 
+/**
+ * @param {string} migration
+ */
 const main = async (migration) => {
   if (!migration) {
     console.error("Please specify a migration to run");
@@ -9,7 +12,14 @@ const main = async (migration) => {
   }
 
   let buildPath = join(__dirname, "../", "build");
-  let cliPath = join(buildPath, "node_modules", "@remix-run/dev", "cli.js");
+  let cliPath = join(
+    buildPath,
+    "node_modules",
+    "@remix-run",
+    "dev",
+    "dist",
+    "cli.js"
+  );
   let examplesPath = join(process.cwd(), "examples");
   let examples = await readdir(examplesPath);
 
