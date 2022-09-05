@@ -22,7 +22,7 @@ Relevant files:
 Leaflet cannot be rendered on the server side, so we're using the `ClientOnly` component to display a skeleton instead.
 It's important to add the `.client.tsx` suffix on `Map` component. Otherwise, a similar error will be displayed:
 
-```js
+```
 Error [ERR_REQUIRE_ESM]: require() of ES Module /remix/examples/leaflet/node_modules/react-leaflet/lib/index.js from /remix/examples/leaflet/build/index.js not supported.
 ```
 

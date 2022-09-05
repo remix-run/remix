@@ -1,4 +1,4 @@
-import { LatLngTuple } from "leaflet";
+import type { LatLngTuple } from "leaflet";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 
 export function Map({ height }: { height: string }) {
