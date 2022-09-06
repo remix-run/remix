@@ -2,7 +2,7 @@
 
 Date: 2022-08-16
 
-Status: proposed
+Status: accepted
 
 ## Context
 
@@ -22,8 +22,8 @@ From an iterative-release viewpoint, there's 4 separate "functional" aspects to 
 The high level approach is as follows
 
 1.  SSR data loading
-    1.  Update `handleResourceRequest` to use `createStaticHandler` behind an ENV flag
-        1.  Get unit and integration tests asserting both flows?
+    1.  Update `handleResourceRequest` to use `createStaticHandler` behind a flag
+        1.  Aim to get unit and integration tests asserting both flows if possible
     2.  Update `handleDataRequest` in the same manner
     3.  Update `handleDocumentRequest` in the same manner
         1.  Confirm unit and integration tests are all passing
@@ -56,6 +56,10 @@ We can do this on the server using the [strangler pattern][strangler-pattern] so
 For example, pseudo code for this might look like the following, where we enable via a flag during local development and potentially unit/integration tests. We can throw exceptions anytime the new static handler results in different SSR data. Once we're confident, we delete the current code and remove the flag conditional.
 
 ```js
+// Runtime-agnostic flag to enable behavior, will always be committed as
+// `false` initially, and toggled to true during local dev
+const ENABLE_REMIX_ROUTER = false;
+
 function handleDocumentRequest({ request })) {
   let appState: AppState = {
     trackBoundaries: true,
@@ -85,7 +89,8 @@ function handleDocumentRequest({ request })) {
 
   // If the flag is enabled, process the request again with the new static
   // handler and confirm we get the same data on the other side
-  if (process.env.ENABLE_REMIX_ROUTER) {
+  if (ENABLE_REMIX_ROUTER) {
+    let staticHandler = unstable_createStaticHandler(routes);
     let context = await staticHandler.query(request);
 
     // Note: == only used for brevity ;)
@@ -106,14 +111,10 @@ function handleDocumentRequest({ request })) {
 
 We can also split this into iterative approaches on the server too, and do `handleResourceRequest`, `handleDataRequest`, and `handleDocumentRequest` independently (either just implementation or implementation + release). Doing them in that order would also likely go from least to most complex.
 
-#### Open Questions
-
-- Plan to do this behind an ENV var to start?
-  - Can we add unit test assertions?
-  - Could we run unit and integration tests with/without the ENV var enabled?
-
 #### Notes
 
+- This can't use `process.env` since the code we're changing is runtime agnostic. We'll go with a local hardcoded variable in `server.ts` for now to avoid runtime-specific ENV variable concerns.
+  - Unit and integration tests may need to have their own copies of this variable as well to remain passing. For example, we have unit tests that assert that a loader is called once for a given route - but when this flag is enabled, that loader will be called twice so we can set up a conditional assertion based on the flag.
 - The `remixContext` sent through `entry.server.ts` will be altered in shape. We consider this an opaque API so not a breaking change.
 
 #### Implementation approach
@@ -126,9 +127,9 @@ We can also split this into iterative approaches on the server too, and do `hand
 4. `handleDataRequest`
    1. This is only slightly more complicated than resource routes, as it needs to handle serializing errors and processing redirects into 204 Responses for the client
 5. `handleDocumentRequest`
-   1. This is the big one. It simplifies down pretty far, but has the biggest surface area for something to not quite match up
+   1. This is the big one. It simplifies down pretty far, but has the biggest surface area where some things don't quite match up
    2. We need to map query "errors" to Remix's definition of error/catch and bubble them upwards accordingly.
-      1. For example, in a URL like `/a/b/c`, if C exports a a `CatchBoundary` but not an ErrorBoundary`, then it'll be represented in the `DataRouteObject`with`hasErrorBoundary=true`since the`@remix-run/router` doesn't distinguish
+      1. For example, in a URL like `/a/b/c`, if C exports a a `CatchBoundary` but not an `ErrorBoundary`, then it'll be represented in the `DataRouteObject` with `hasErrorBoundary=true` since the `@remix-run/router` doesn't distinguish
       2. If C's loader throws an error, the router will "catch" that at C's `errorElement`, but we then need to re-bubble that upwards to the nearest `ErrorBoundary`
       3. See `differentiateCatchVersusErrorBoundaries` in the `brophdawg11/rrr` branch
    3. New `RemixContext`
@@ -138,12 +139,12 @@ We can also split this into iterative approaches on the server too, and do `hand
 
 ### Do the UI rendering layer second
 
-The rendering layer in `@remix-run/react` is a bit more of a whole-sale replacement and comes with backwards-compatibility concerns, so it makes sense to do second. However, we can still do this iteratively, we just can't deploy iteratively since the SSR and client HTML need to stay synced.First, we can focus on getting the SSR document rendered properly without `<Scripts/>`. Then second we'll add in client-side hydration.
+The rendering layer in `@remix-run/react` is a bit more of a whole-sale replacement and comes with backwards-compatibility concerns, so it makes sense to do second. However, we can still do this iteratively, we just can't deploy iteratively since the SSR and client HTML need to stay synced (and associated hooks need to ead crom the same contexts). First, we can focus on getting the SSR document rendered properly without `<Scripts/>`. Then second we'll add in client-side hydration.
 
 The main changes here include:
 
 - Removal of `RemixEntry` and it's context in favor of a new `RemixContext.Provider` wrapping `DataStaticRouter`/`DataBrowserRouter`
-  - All this context needs are the remix-specific aspects(`manifest`, `routeModules`)
+  - All this context needs is the remix-specific aspects (`manifest`, `routeModules`)
   - Everything else from the old RemixEntryContext is now in the router contexts (and `staticHandlerContext` during SSR)
 - Some aspects of `@remix-run/react`'s `components.tsx` file are now fully redundant and can be removed completely in favor of re-exporting from `react-router-dom`:
   - `Form`, `useFormAction`, `useSubmit`, `useMatches`, `useFetchers`
