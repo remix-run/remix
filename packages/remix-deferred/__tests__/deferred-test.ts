@@ -25,7 +25,21 @@ describe("parseDeferredReadableStream", () => {
     );
   });
 
-  it("rejects deferred when error occurs with stream", async () => {
+  it("throws stream errors if it occurs before critical data", async () => {
+    let stream = new ReadableStream({
+      start(controller) {
+        setTimeout(() => {
+          controller.error(new Error("fake network error"));
+        }, 0);
+      },
+    });
+
+    await expect(parseDeferredReadableStream(stream)).rejects.toThrow(
+      "fake network error"
+    );
+  });
+
+  it("rejects deferred when error occurs with stream format", async () => {
     let c = Promise.resolve("c value");
     let deferrable = new DeferredData({ a: "a", b: "b", c });
     let stream = new ReadableStream({
@@ -48,6 +62,33 @@ describe("parseDeferredReadableStream", () => {
     await parsed.resolveData(new AbortController().signal);
     await expect((parsed.data.c as TrackedPromise)._error.message).toEqual(
       "Unexpected end of JSON input"
+    );
+  });
+
+  it("rejects deferred when network like error occurs with stream", async () => {
+    let c = Promise.resolve("c value");
+    let deferrable = new DeferredData({ a: "a", b: "b", c });
+    let stream = new ReadableStream({
+      start(controller) {
+        let encoder = new TextEncoder();
+        controller.enqueue(
+          encoder.encode(JSON.stringify(deferrable.criticalData) + "\n\n")
+        );
+        setTimeout(() => {
+          controller.error(new Error("fake network error"));
+        }, 0);
+      },
+    });
+    let parsed = await parseDeferredReadableStream(stream);
+    expect(parsed.data).toEqual({
+      a: "a",
+      b: "b",
+      c: expect.any(Promise),
+    });
+
+    await parsed.resolveData(new AbortController().signal);
+    await expect((parsed.data.c as TrackedPromise)._error.message).toEqual(
+      "fake network error"
     );
   });
 });

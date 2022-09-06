@@ -7,9 +7,15 @@ export interface TrackedPromise extends Promise<unknown> {
   _error?: any;
 }
 
+export class AbortedDeferredError extends Error {}
+
+export class NeverResolvedDeferredError extends Error {}
+
 export class DeferredData {
   private pendingKeys: Set<string | number> = new Set<string | number>();
-  private cancelled: boolean = false;
+  private controller: AbortController;
+  private abortPromise: Promise<void>;
+  private unlistenAbortSignal: () => void;
   private subscribers: Set<(aborted: boolean, settledKey?: string) => void> =
     new Set();
   data: Record<string, unknown>;
@@ -20,6 +26,18 @@ export class DeferredData {
       data && typeof data === "object" && !Array.isArray(data),
       "DeferredData only accepts plain objects"
     );
+
+    // Set up an AbortController + Promise we can race against to exit early
+    // cancellation
+    let reject: (e: AbortedDeferredError) => void;
+    this.abortPromise = new Promise((_, r) => (reject = r));
+    this.controller = new AbortController();
+    let onAbort = () =>
+      reject(new AbortedDeferredError("Deferred data aborted"));
+    this.unlistenAbortSignal = () =>
+      this.controller.signal.removeEventListener("abort", onAbort);
+    this.controller.signal.addEventListener("abort", onAbort);
+
     let deferredKeys: string[] = [];
     this.data = Object.entries(data).reduce((acc, [key, value]) => {
       let trackedValue = this.trackPromise(key, value);
@@ -45,10 +63,15 @@ export class DeferredData {
 
     // We store a little wrapper promise that will be extended with
     // _data/_error props upon resolve/reject
-    let promise: TrackedPromise = value.then(
+    let promise: TrackedPromise = Promise.race([value, this.abortPromise]).then(
       (data) => this.onSettle(promise, key, null, data as unknown),
       (error) => this.onSettle(promise, key, error as unknown)
     );
+
+    // Register rejection listeners to avoid uncaught promise rejections on
+    // errors or aborted deferred values
+    promise.catch(() => {});
+
     Object.defineProperty(promise, "_tracked", { get: () => true });
     return promise;
   }
@@ -58,21 +81,35 @@ export class DeferredData {
     key: string,
     error: unknown,
     data?: unknown
-  ): void {
-    if (this.cancelled) {
-      return;
+  ): unknown {
+    if (
+      this.controller.signal.aborted &&
+      error instanceof AbortedDeferredError
+    ) {
+      this.unlistenAbortSignal();
+      return Promise.reject(error);
     }
+
     this.pendingKeys.delete(key);
+
+    if (this.done) {
+      // Nothing left to abort!
+      this.unlistenAbortSignal();
+    }
 
     if (error) {
       Object.defineProperty(promise, "_error", { get: () => error });
-    } else {
-      Object.defineProperty(promise, "_data", { get: () => data });
+      for (let subscriber of this.subscribers) {
+        subscriber(false, key);
+      }
+      return Promise.reject(error);
     }
 
+    Object.defineProperty(promise, "_data", { get: () => data });
     for (let subscriber of this.subscribers) {
       subscriber(false, key);
     }
+    return data;
   }
 
   subscribe(fn: (aborted: boolean, settledKey?: string) => void): () => void {
@@ -81,7 +118,7 @@ export class DeferredData {
   }
 
   cancel() {
-    this.cancelled = true;
+    this.controller.abort();
     this.pendingKeys.forEach((v, k) => this.pendingKeys.delete(k));
     for (let subscriber of this.subscribers) {
       subscriber(true);
@@ -172,77 +209,91 @@ export async function parseDeferredReadableStream(
     { resolve: (data: unknown) => void; reject: (error: unknown) => void }
   > = {};
 
-  let sectionReader = readStreamSections(stream);
+  try {
+    let sectionReader = readStreamSections(stream);
 
-  // Read the first section to get the critical data
-  let initialSectionResult = await sectionReader.next();
-  let initialSection = initialSectionResult.value;
-  if (!initialSection) throw new Error("no critical data");
-  let criticalData = JSON.parse(initialSection);
+    // Read the first section to get the critical data
+    let initialSectionResult = await sectionReader.next();
+    let initialSection = initialSectionResult.value;
+    if (!initialSection) throw new Error("no critical data");
+    let criticalData = JSON.parse(initialSection);
 
-  // Setup deferred data and resolvers for later based on the critical data
-  if (typeof criticalData === "object" && criticalData !== null) {
-    for (let [eventKey, value] of Object.entries(criticalData)) {
-      if (
-        typeof value !== "string" ||
-        !value.startsWith(DEFERRED_VALUE_PLACEHOLDER_PREFIX)
-      ) {
-        continue;
+    // Setup deferred data and resolvers for later based on the critical data
+    if (typeof criticalData === "object" && criticalData !== null) {
+      for (let [eventKey, value] of Object.entries(criticalData)) {
+        if (
+          typeof value !== "string" ||
+          !value.startsWith(DEFERRED_VALUE_PLACEHOLDER_PREFIX)
+        ) {
+          continue;
+        }
+
+        deferredData = deferredData || {};
+
+        deferredData[eventKey] = new Promise<any>((resolve, reject) => {
+          deferredResolvers[eventKey] = {
+            resolve: (value: unknown) => {
+              resolve(value);
+              delete deferredResolvers[eventKey];
+            },
+            reject: (error: unknown) => {
+              reject(error);
+              delete deferredResolvers[eventKey];
+            },
+          };
+        });
       }
-
-      deferredData = deferredData || {};
-
-      deferredData[eventKey] = new Promise<any>((resolve, reject) => {
-        deferredResolvers[eventKey] = {
-          resolve: (value: unknown) => {
-            resolve(value);
-            delete deferredResolvers[eventKey];
-          },
-          reject: (error: unknown) => {
-            reject(error);
-            delete deferredResolvers[eventKey];
-          },
-        };
-      });
     }
-  }
 
-  // Read the rest of the stream and resolve deferred promises
-  (async () => {
-    try {
-      for await (let section of sectionReader) {
-        // Determine event type and data
-        let [event, ...sectionDataStrings] = section.split(":");
-        let sectionDataString = sectionDataStrings.join(":");
-        let data = JSON.parse(sectionDataString);
+    // Read the rest of the stream and resolve deferred promises
+    (async () => {
+      try {
+        for await (let section of sectionReader) {
+          // Determine event type and data
+          let [event, ...sectionDataStrings] = section.split(":");
+          let sectionDataString = sectionDataStrings.join(":");
+          let data = JSON.parse(sectionDataString);
 
-        if (event === "data") {
-          for (let [key, value] of Object.entries(data)) {
-            if (deferredResolvers[key]) {
-              deferredResolvers[key].resolve(value);
+          if (event === "data") {
+            for (let [key, value] of Object.entries(data)) {
+              if (deferredResolvers[key]) {
+                deferredResolvers[key].resolve(value);
+              }
             }
-          }
-        } else if (event === "error") {
-          for (let [key, value] of Object.entries(data) as Iterable<
-            [string, SerializedError]
-          >) {
-            let err = new Error(value.message);
-            err.stack = value.stack;
-            if (deferredResolvers[key]) {
-              deferredResolvers[key].reject(err);
+          } else if (event === "error") {
+            for (let [key, value] of Object.entries(data) as Iterable<
+              [string, SerializedError]
+            >) {
+              let err = new Error(value.message);
+              err.stack = value.stack;
+              if (deferredResolvers[key]) {
+                deferredResolvers[key].reject(err);
+              }
             }
           }
         }
-      }
-    } catch (error) {
-      // Reject any existing deferred promises if something blows up
-      for (let resolver of Object.values(deferredResolvers)) {
-        resolver.reject(error);
-      }
-    }
-  })();
 
-  return new DeferredData({ ...criticalData, ...deferredData });
+        for (let [key, resolver] of Object.entries(deferredResolvers)) {
+          resolver.reject(
+            new NeverResolvedDeferredError(`Deferred ${key} was never resolved`)
+          );
+        }
+      } catch (error) {
+        // Reject any existing deferred promises if something blows up
+        for (let resolver of Object.values(deferredResolvers)) {
+          resolver.reject(error);
+        }
+      }
+    })();
+
+    return new DeferredData({ ...criticalData, ...deferredData });
+  } catch (error) {
+    for (let resolver of Object.values(deferredResolvers)) {
+      resolver.reject(error);
+    }
+
+    throw error;
+  }
 }
 
 export function createDeferredReadableStream(

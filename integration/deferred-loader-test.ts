@@ -22,6 +22,7 @@ test.beforeAll(async () => {
               <Link to="/deferred-error">Deferred Error</Link>
               <Link to="/deferred-error-no-boundary">Deferred Error No Boundary</Link>
               <Link to="/redirect">Redirect</Link>
+              <Link to="/direct-promise-access">Direct Promise Access</Link>
             </div>
           )
         }
@@ -48,6 +49,43 @@ test.beforeAll(async () => {
           return (
             <div>
               {data}
+            </div>
+          )
+        }
+      `,
+
+      "app/routes/direct-promise-access.jsx": js`
+        import * as React from "react";
+        import { defer } from "@remix-run/node";
+        import { useLoaderData, Link, Await } from "@remix-run/react";
+
+        export function loader() {
+          return defer({
+            bar: new Promise(async (resolve, reject) => {
+              resolve("hamburger");
+            }),
+          });
+        }
+
+        let count = 0;
+        export default function Index() {
+          let {bar} = useLoaderData();
+
+          React.useEffect(() => {
+            let aborted = false;
+            bar.then((data) => {
+              if (aborted) return;
+              document.getElementById("content").innerHTML = data + " " + (++count);
+              document.getElementById("content").setAttribute("data-done", "");
+            });
+            return () => {
+              aborted = true;
+            };
+          }, [bar]);
+
+          return (
+            <div id="content">
+              Waiting for client hydration....
             </div>
           )
         }
@@ -354,4 +392,23 @@ test("deferred response can redirect on transition", async ({ page }) => {
   await app.goto("/");
   await app.clickLink("/redirect");
   expect(app.page.url()).toMatch("?redirected");
+});
+
+test("can directly access result from deferred promise on document request", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
+  await app.goto("/direct-promise-access");
+  let element = await page.waitForSelector("[data-done]");
+  expect(await element.innerText()).toMatch("hamburger 1");
+});
+
+test.only("can directly access result from deferred promise on transition", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
+  await app.goto("/");
+  await app.clickLink("/direct-promise-access");
+  let element = await page.waitForSelector("[data-done]");
+  expect(await element.innerText()).toMatch("hamburger 1");
 });

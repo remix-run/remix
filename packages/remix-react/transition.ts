@@ -1871,26 +1871,15 @@ function wrapDeferredPromise(promise: TrackedPromise, signal: AbortSignal) {
       if (signal.aborted) {
         return neverResolvedPromise;
       }
-
-      if (promise._tracked) {
-        if ("_error" in promise) {
-          Object.defineProperty(wrapped, "_error", {
-            get: () => promise._error,
-          });
-        }
-        if ("_data" in promise) {
-          Object.defineProperty(wrapped, "_data", { get: () => promise._data });
-        }
-        return;
-      }
-
       Object.defineProperty(wrapped, "_data", { get: () => data });
+      return data;
     },
     (error) => {
       if (signal.aborted) {
         return neverResolvedPromise;
       }
       Object.defineProperty(wrapped, "_error", { get: () => error });
+      return Promise.reject(error);
     }
   );
   Object.defineProperty(wrapped, "_tracked", { get: () => true });
