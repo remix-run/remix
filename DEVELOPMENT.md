@@ -33,76 +33,54 @@ yarn test react --watch
 
 ## Releases
 
-New releases should be created from release branches originating from the `dev`
-branch. To simplify this process, use the `release.js` Node script.
+New releases should be created from release branches originating from `dev`. When you are ready to begin the release process:
 
-```bash
-# Ensure you are on the dev branch
-git checkout dev
+- Check out the `dev` branch.
+- Pull all of the changes from GitHub.
+- Create a new release branch with the `release-` prefix (eg, `git checkout -b release-next`)
+  - **IMPORTANT:** The `release-` prefix is important, as this is what triggers our GitHub CI workflow that will ultimately publish the release.
+  - Branches named `release-experimental` will not trigger our release workflow, as experimental releases handled differently (outlined below).
 
-# This command will create a new release branch, merge all changes from main, and
-# create a prerelease tag.
-yarn release start patch|minor|major
+Changesets will do most of the heavy lifting for our releases. When changes are made to the codebase, an accompanying changeset file should be included to document the change. Those files will dictate how Changesets will version our packages and what shows up in the changelogs.
 
-# At this point you can push to GitHub...
-git push origin/release-<version> --follow-tags
-# ...then publish the pre-release by creating a release in the GitHub UI. Don't
-# forget to check the pre-release checkbox!
+### Starting a new pre-release
 
-# If there are any issues with the pre-release, fix the bugs and commit directly
-# to the release branch. You can iterate with a new pre-release with the following # command, then publish via GitHub the same as before.
-yarn release bump
+- Ensure you are on the new `release-*` branch.
+- Enter Changesets pre-release mode using the `pre` tag: `yarn changeset pre enter pre`.
+- Commit the change and push the the `release-*` branch to GitHub.
+- Wait for the release workflow to finish. The Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs.
+- Review the PR, make any adjustments necessary, and merge it into the `release-*` branch.
+- Once the PR is merged, the release workflow will publish the updated packages to npm.
 
-# Once all tests have passed and the release is ready to be made stable, the following
-# command will create a new stable release tag, merge changes back into the dev branch,
-# and prompt you to push the changes and tags to GitHub
-yarn release finish
-git push origin/release-<version> --follow-tags
-```
+### Incrementing a pre-release
 
-Once the release is finished, you should see tests run in GitHub actions. Assuming there are no issues (you should also run tests locally before pushing) you can trigger publishing by creating a new release in the GitHub UI, this time using the stable release tag.
+You may need to make changes to a pre-release prior to publishing a final stable release. To do so:
 
-After the release process is complete, be sure to merge the release branch back into `dev` and `main` and push both branches to GitHub.
+- Make whatever changes you need.
+- Create a new changeset: `yarn changeset`.
+  - **IMPORTANT:** This is required even if you ultimately don't want to include these changes in the logs. Remember, changelogs can be edited prior to publishing, but the Changeset version script needs to see new changesets in order to create a new version.
+- Commit the changesets and push the the `release-*` branch to GitHub.
+- Wait for the release workflow to finish and the Changesets action to open its PR.
+- Review the PR, make any adjustments necessary, and merge it into the `release-*` branch.
+- Once the PR is merged, the release workflow will publish the updated packages to npm.
 
-### `create-remix`
+### Publishing the stable release
 
-All packages are published together except for `create-remix`, which is
-versioned and published separately. To publish `create-remix`, run the build and
-publish it manually.
+- Exit Changesets pre-release mode: `yarn changeset pre exit`.
+- Commit the deleted pre-release file along with any unpublished changesets, and push the the `release-*` branch to GitHub.
+- Wait for the release workflow to finish. The Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs.
+- Review the PR. We should remove the changelogs for all pre-releases ahead of publishing the stable version. [TODO: We should automate this]
+- Once the PR is merged, the release workflow will publish the updated packages to npm.
 
-```bash
-yarn build
-npm publish build/node_modules/create-remix
-```
+### Experimental releases
 
-### Experimental releases and hot-fixes
+Experimental releases do not need to be branched off of `dev`. Experimental releases can be branched from anywhere as they are not intended for general use.
 
-Experimental releases and hot-fixes do not need to be branched off of `dev`.
-Experimental releases can be branched from anywhere as they are not intended for
-general use. Hot-fixes are typically applied directly to main. In either case,
-the release process here is a bit simpler:
-
-```bash
-# for experimental releases:
-git checkout -b release/experimental
-yarn run version experimental
-yarn run publish
-
-## clean up
-git checkout <previous-branch>
-git branch -d release/experimental
-git push origin --delete release/experimental
-
-# for hot-fix:
-git checkout main
-## fix changes and commit
-git add .
-git commit -m "fix: squashed a super gnarly bug"
-
-## version + publish
-yarn run version patch
-yarn run publish
-```
+- Create a new branch for the release: `git checkout -b release-experimental`.
+- Make whatever changes you need and commit them: `git add . && git commit "experimental changes!"`.
+- Update version numbers and create a release tag: `yarn version:experimental`.
+- Push to GitHub: `git push origin --follow-tags`.
+- Create a new release for the tag on GitHub to trigger the CI workflow that will publish the release to npm. Make sure you check the "prerelease" checkbox so it is not mistaken for a stable release.
 
 ## Local Development Tips and Tricks
 

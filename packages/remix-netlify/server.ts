@@ -65,9 +65,14 @@ export function createRemixRequest(event: HandlerEvent): NodeRequest {
     url = new URL(rawPath, `http://${origin}`);
   }
 
+  // Note: No current way to abort these for Netlify, but our router expects
+  // requests to contain a signal so it can detect aborted requests
+  let controller = new AbortController();
+
   let init: NodeRequestInit = {
     method: event.httpMethod,
     headers: createRemixHeaders(event.multiValueHeaders),
+    signal: controller.signal,
   };
 
   if (event.httpMethod !== "GET" && event.httpMethod !== "HEAD" && event.body) {
