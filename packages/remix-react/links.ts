@@ -330,7 +330,7 @@ export async function getStylesheetPrefetchLinks(
   let links = await Promise.all(
     matches.map(async (match) => {
       let mod = await loadRouteModule(match.route, routeModules);
-      return mod.links ? mod.links() : [];
+      return mod?.links ? mod.links() : [];
     })
   );
 
@@ -416,7 +416,7 @@ export function getDataLinkHrefs(
   let path = parsePathPatch(page);
   return dedupeHrefs(
     matches
-      .filter((match) => manifest.routes[match.route.id].hasLoader)
+      .filter((match) => manifest.routes[match.route.id]?.hasLoader)
       .map((match) => {
         let { pathname, search } = path;
         let searchParams = new URLSearchParams(search);
@@ -434,7 +434,7 @@ export function getModuleLinkHrefs(
     matches
       .map((match) => {
         let route = manifestPatch.routes[match.route.id];
-        if (!route) {
+        if (!route?.module) {
           return [];
         }
         let hrefs = [route.module];
@@ -458,7 +458,7 @@ function getCurrentPageModulePreloadHrefs(
     matches
       .map((match) => {
         let route = manifest.routes[match.route.id];
-        if (!route) {
+        if (!route?.module) {
           return [];
         }
         let hrefs = [route.module];

@@ -11,7 +11,7 @@ import type { RouteData } from "./routeData";
 import type { Submission } from "./transition";
 
 export interface RouteModules {
-  [routeId: string]: RouteModule;
+  [routeId: string]: RouteModule | undefined;
 }
 
 export interface RouteModule {
@@ -119,9 +119,16 @@ export type RouteHandle = any;
 export async function loadRouteModule(
   route: EntryRoute | ClientRoute,
   routeModulesCache: RouteModules
-): Promise<RouteModule> {
-  if (route.id in routeModulesCache) {
-    return routeModulesCache[route.id];
+): Promise<RouteModule | undefined> {
+  if (!route.module) {
+    // This was a module-less parent route inserted to disambiguate between
+    // index and pathless routes
+    return undefined;
+  }
+
+  let cachedModule = routeModulesCache[route.id];
+  if (cachedModule) {
+    return cachedModule;
   }
 
   try {

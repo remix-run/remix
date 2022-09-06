@@ -14,10 +14,9 @@ import type { Submission } from "./transition";
 import { CatchValue, TransitionRedirect } from "./transition";
 import { prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
-import { Outlet } from ".";
 
 export interface RouteManifest<Route> {
-  [routeId: string]: Route;
+  [routeId: string]: Route | undefined;
 }
 
 // NOTE: make sure to change the Route in server-runtime if you change this
@@ -35,7 +34,7 @@ export interface EntryRoute extends Route {
   hasCatchBoundary: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
-  module: string;
+  module?: string;
   parentId?: string;
 }
 
@@ -72,7 +71,7 @@ export interface ClientRoute extends Route {
   CatchBoundary?: any;
   children?: ClientRoute[];
   element: ReactNode;
-  module: string;
+  module?: string;
   hasLoader: boolean;
 }
 
@@ -85,9 +84,7 @@ export function createClientRoute(
 ): ClientRoute {
   return {
     caseSensitive: !!entryRoute?.caseSensitive,
-    // If this route doesn't have a module, then it's an inserted parent path
-    // route, and it should just render it's children through an outlet
-    element: entryRoute.module ? <Component id={entryRoute.id} /> : <Outlet />,
+    element: <Component id={entryRoute.id} />,
     id: entryRoute.id,
     path: entryRoute.path,
     index: entryRoute.index,
@@ -110,7 +107,14 @@ export function createClientRoutes(
     routeManifest,
     (id, path) =>
       createClientRoute(
-        routeManifest[id] || { id, path },
+        routeManifest[id] || {
+          id,
+          path,
+          hasAction: false,
+          hasLoader: false,
+          hasCatchBoundary: false,
+          hasErrorBoundary: false,
+        },
         routeModulesCache,
         Component
       )
@@ -136,7 +140,9 @@ async function loadRouteModuleWithBlockingLinks(
   routeModules: RouteModules
 ) {
   let routeModule = await loadRouteModule(route, routeModules);
-  await prefetchStyleLinks(routeModule);
+  if (routeModule) {
+    await prefetchStyleLinks(routeModule);
+  }
   return routeModule;
 }
 
@@ -262,7 +268,7 @@ type BaseHierarchyRoute<T> = T & {
 export function createHierarchicalRoutes<
   HierarchyRoute extends BaseHierarchyRoute<unknown>
 >(
-  manifest: Record<string, BaseManifestRoute>,
+  manifest: Record<string, BaseManifestRoute | undefined>,
   createRoute: (id: string, path: string | undefined) => HierarchyRoute
 ): HierarchyRoute[] {
   function recurse(parentId?: string) {
@@ -273,7 +279,7 @@ export function createHierarchicalRoutes<
     let children: HierarchyRoute[] = [];
 
     Object.values(manifest).forEach((route) => {
-      if (route.parentId == parentId) {
+      if (route && route.parentId == parentId) {
         if (route.index && route.path) {
           indexRoutesWithPath.push(route.path);
         }

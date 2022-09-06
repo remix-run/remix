@@ -112,9 +112,9 @@ type BaseHierarchyRoute<T> = T & {
  * @returns
  */
 export function createHierarchicalRoutes<
-  HierarchyRoute extends Omit<BaseHierarchyRoute<unknown>, "children">
+  HierarchyRoute extends BaseHierarchyRoute<unknown>
 >(
-  manifest: Record<string, BaseManifestRoute>,
+  manifest: Record<string, BaseManifestRoute | undefined>,
   createRoute: (id: string, path: string | undefined) => HierarchyRoute
 ): HierarchyRoute[] {
   function recurse(parentId?: string) {
@@ -125,7 +125,7 @@ export function createHierarchicalRoutes<
     let children: HierarchyRoute[] = [];
 
     Object.values(manifest).forEach((route) => {
-      if (route.parentId == parentId) {
+      if (route && route.parentId == parentId) {
         if (route.index && route.path) {
           indexRoutesWithPath.push(route.path);
         }

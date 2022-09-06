@@ -18,6 +18,7 @@ import {
   useNavigate,
   useHref,
   useResolvedPath,
+  Outlet,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
 import { createPath } from "history";
@@ -277,8 +278,14 @@ export function RemixRoute({ id }: { id: string }) {
       "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
   );
 
+  let routeModule = routeModules[id];
+
+  if (!routeModule) {
+    return <Outlet />;
+  }
+
   let data = routeData[id];
-  let { default: Component, CatchBoundary, ErrorBoundary } = routeModules[id];
+  let { default: Component, CatchBoundary, ErrorBoundary } = routeModule;
   let element = Component ? <Component /> : <DefaultRouteComponent id={id} />;
 
   let context: RemixRouteContextType = { data, id };
@@ -804,20 +811,24 @@ export function Scripts(props: ScriptProps) {
       ? `window.__remixContext = ${serverHandoffString};`
       : "";
 
-    let matchesWithModules = matches.filter(
-      (match) => manifest.routes[match.route.id]
-    );
-    let routeModulesScript = `${matchesWithModules
-      .map(
-        (match, index) =>
-          `import ${JSON.stringify(manifest.url)};
-import * as route${index} from ${JSON.stringify(
-            manifest.routes[match.route.id].module
-          )};`
-      )
+    let routeModulesScript = `${matches
+      .map((match, index) => {
+        let route = manifest.routes[match.route.id];
+        if (!route?.module) {
+          return "";
+        }
+        return `import ${JSON.stringify(manifest.url)};
+import * as route${index} from ${JSON.stringify(route.module)};`;
+      })
       .join("\n")}
-window.__remixRouteModules = {${matchesWithModules
-      .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
+window.__remixRouteModules = {${matches
+      .map((match, index) => {
+        let route = manifest.routes[match.route.id];
+        if (!route?.module) {
+          return "";
+        }
+        return `${JSON.stringify(match.route.id)}:route${index}`;
+      })
       .join(",")}};
 
 import(${JSON.stringify(manifest.entry.module)});`;
@@ -860,7 +871,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
     .concat(nextMatches)
     .map((match) => {
       let route = manifest.routes[match.route.id];
-      if (!route) {
+      if (!route?.module) {
         return [];
       }
       return (route.imports || []).concat([route.module]);
