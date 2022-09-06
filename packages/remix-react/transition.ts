@@ -1459,6 +1459,7 @@ async function callAction(
   match: ClientMatch,
   signal: AbortSignal
 ): Promise<DataResult> {
+  invariant(match.route.action, `Expected action for ${match.route.id}"`);
   try {
     let value = await match.route.action({
       url: createUrl(submission.action),

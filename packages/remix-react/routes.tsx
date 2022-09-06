@@ -34,7 +34,7 @@ export interface EntryRoute extends Route {
   hasCatchBoundary: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
-  module?: string;
+  module: string;
   parentId?: string;
 }
 
@@ -65,7 +65,7 @@ export type RouteDataFunction = {
 
 export interface ClientRoute extends Route {
   loader?: RouteDataFunction;
-  action: RouteDataFunction;
+  action?: RouteDataFunction;
   shouldReload?: ShouldReloadFunction;
   ErrorBoundary?: any;
   CatchBoundary?: any;
@@ -77,24 +77,38 @@ export interface ClientRoute extends Route {
 
 type RemixRouteComponentType = ComponentType<{ id: string }>;
 
+function isEntryRoute(
+  maybeEntryRoute: EntryRoute | { id: string; path: string | undefined }
+): maybeEntryRoute is EntryRoute {
+  return "module" in maybeEntryRoute;
+}
+
 export function createClientRoute(
-  entryRoute: EntryRoute,
+  entryRoute: EntryRoute | { id: string; path: string | undefined },
   routeModulesCache: RouteModules,
   Component: RemixRouteComponentType
 ): ClientRoute {
+  if (isEntryRoute(entryRoute)) {
+    return {
+      caseSensitive: !!entryRoute?.caseSensitive,
+      element: <Component id={entryRoute.id} />,
+      id: entryRoute.id,
+      path: entryRoute.path,
+      index: entryRoute.index,
+      module: entryRoute.module,
+      loader: createLoader(entryRoute, routeModulesCache),
+      action: createAction(entryRoute, routeModulesCache),
+      shouldReload: createShouldReload(entryRoute, routeModulesCache),
+      ErrorBoundary: entryRoute.hasErrorBoundary,
+      CatchBoundary: entryRoute.hasCatchBoundary,
+      hasLoader: entryRoute.hasLoader,
+    };
+  }
   return {
-    caseSensitive: !!entryRoute?.caseSensitive,
     element: <Component id={entryRoute.id} />,
     id: entryRoute.id,
     path: entryRoute.path,
-    index: entryRoute.index,
-    module: entryRoute.module,
-    loader: createLoader(entryRoute, routeModulesCache),
-    action: createAction(entryRoute, routeModulesCache),
-    shouldReload: createShouldReload(entryRoute, routeModulesCache),
-    ErrorBoundary: entryRoute.hasErrorBoundary,
-    CatchBoundary: entryRoute.hasCatchBoundary,
-    hasLoader: entryRoute.hasLoader,
+    hasLoader: false,
   };
 }
 
@@ -107,14 +121,7 @@ export function createClientRoutes(
     routeManifest,
     (id, path) =>
       createClientRoute(
-        routeManifest[id] || {
-          id,
-          path,
-          hasAction: false,
-          hasLoader: false,
-          hasCatchBoundary: false,
-          hasErrorBoundary: false,
-        },
+        routeManifest[id] || { id, path },
         routeModulesCache,
         Component
       )
