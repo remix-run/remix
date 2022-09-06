@@ -1211,7 +1211,7 @@ function Task({ task }) {
 }
 ```
 
-This awesome for the checkbox, but the sidebar will say 2/4 while the checkboxes show 3/4 when the user clicks on of them!
+This is awesome for the checkbox, but the sidebar will say 2/4 while the checkboxes show 3/4 when the user clicks one of them!
 
 ```
 +-----------------+----------------------------+
