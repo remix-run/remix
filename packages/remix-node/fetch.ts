@@ -61,7 +61,7 @@ export {
   NodeResponse as Response,
 };
 
-export const fetch: typeof webFetch = (
+export const fetch: typeof webFetch = async (
   info: NodeRequestInfo,
   init?: NodeRequestInit
 ) => {
@@ -72,5 +72,7 @@ export const fetch: typeof webFetch = (
     ...init,
   };
 
-  return webFetch(info, init as RequestInit);
+  let webResponse = await webFetch(info, init as RequestInit);
+
+  return new NodeResponse(webResponse.body, webResponse);
 };
