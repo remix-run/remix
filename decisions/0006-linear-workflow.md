@@ -16,8 +16,8 @@ This document will use many of the following Linear terms:
 - **Cycle** - A group of issues aimed to be completed within a given 1-week period (similar to a "sprint" in other Agile workflows)
 - **Project** - A group of issues that comprise a larger scope of work (for example, a new feature)
   - Projects will almost always span multiple Cycles.
-- **Status** - the state of a given Issue (Todo, in progress, done, etc.)
-- **Assignee** - the person the Issue is currently assigned to - this indicates who is expected to take the next action to move the Issue forward
+- **Status** - The state of a given Issue (Todo, In Progress, Done, etc.)
+- **Assignee** - The person the Issue is currently assigned to - this indicates who is expected to take the next action to move the Issue forward
 - **Label** - Linear Issues can be assigned one or more Labels for filtering/searching
 
 ## Decision
@@ -79,6 +79,7 @@ As always, this is not an absolute workflow and there will be exceptions. Here's
 
 - Any idea/bug coming in via Github or Discord (or elsewhere) can be put into an Issue in the **Triage** status for review
 - Michael and Ryan should review the **Triage** Issues on a regular (weekly?) basis and move tickets to **Backlog** or **Canceled**
+  - If tickets are accepted, they should be given appropriate Labels and/or Projects
   - If tickets are rejected, we should provide the rationale in the Linear ticket and on the original source (i.e., github)
 - Michael/Ryan (and team?) will decide what to work on in a given Cycle and move tickets from **Backlog** to **Todo** and assign a proper Cycle
 - All team members should review any tickets assigned to them on a regular (daily?) basis and provide reviews/feedback as needed to keep tickets moving along
