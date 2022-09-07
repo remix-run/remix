@@ -19,5 +19,8 @@
     "@remix-run/server-runtime": "1.7.0",
     "@remix-run/vercel": "1.7.0"
   },
-  "changesets": []
+  "changesets": [
+    "late-jars-wonder",
+    "smooth-buses-approve"
+  ]
 }
