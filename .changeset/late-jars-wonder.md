@@ -2,4 +2,4 @@
 "@remix-run/react": patch
 ---
 
-fix: GET form submissions should replace current search params (#4046)
+Fixed a bug with `GET` form submissions to ensure they replace the current search params, which tracks with the browser's behavior.
