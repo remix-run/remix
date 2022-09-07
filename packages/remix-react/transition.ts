@@ -1864,25 +1864,26 @@ function findNearestBoundary(
   return nearestBoundaryId;
 }
 
-const neverResolvedPromise = new Promise<never>(() => {});
 function wrapDeferredPromise(promise: TrackedPromise, signal: AbortSignal) {
   let wrapped = promise.then(
     async (data) => {
-      if (signal.aborted) {
-        return neverResolvedPromise;
+      if (!signal.aborted) {
+        Object.defineProperty(wrapped, "_data", { get: () => data });
       }
-      Object.defineProperty(wrapped, "_data", { get: () => data });
       return data;
     },
     (error) => {
-      if (signal.aborted) {
-        return neverResolvedPromise;
+      if (!signal.aborted) {
+        Object.defineProperty(wrapped, "_error", { get: () => error });
       }
-      Object.defineProperty(wrapped, "_error", { get: () => error });
       return Promise.reject(error);
     }
   );
   Object.defineProperty(wrapped, "_tracked", { get: () => true });
+
+  // Register rejection listeners to avoid uncaught promise rejections on
+  // errors or aborted deferred values
+  wrapped.catch(() => {});
 
   return wrapped;
 }
