@@ -1,0 +1,23 @@
+{
+  "mode": "pre",
+  "tag": "pre",
+  "initialVersions": {
+    "create-remix": "1.7.0",
+    "remix": "1.7.0",
+    "@remix-run/architect": "1.7.0",
+    "@remix-run/cloudflare": "1.7.0",
+    "@remix-run/cloudflare-pages": "1.7.0",
+    "@remix-run/cloudflare-workers": "1.7.0",
+    "@remix-run/deno": "1.7.0",
+    "@remix-run/dev": "1.7.0",
+    "@remix-run/eslint-config": "1.7.0",
+    "@remix-run/express": "1.7.0",
+    "@remix-run/netlify": "1.7.0",
+    "@remix-run/node": "1.7.0",
+    "@remix-run/react": "1.7.0",
+    "@remix-run/serve": "1.7.0",
+    "@remix-run/server-runtime": "1.7.0",
+    "@remix-run/vercel": "1.7.0"
+  },
+  "changesets": []
+}
