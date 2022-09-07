@@ -39,7 +39,23 @@ export function cssFilePlugin(config: RemixConfig): esbuild.Plugin {
             ".css": "css",
           },
           metafile: true,
-          plugins: [],
+          plugins: [
+            {
+              name: "external-absolute-url",
+              async setup(cssBuild) {
+                cssBuild.onResolve({ filter: /.*/ }, async (args) => {
+                  let { kind, path: resolvePath } = args;
+                  if (kind === "url-token" && path.isAbsolute(resolvePath)) {
+                    return {
+                      path: resolvePath,
+                      external: true,
+                    };
+                  }
+                  return {};
+                });
+              },
+            },
+          ],
         });
 
         let keys = Object.keys(metafile.outputs);
