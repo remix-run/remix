@@ -382,7 +382,7 @@ If you are using TypeScript, you also need to create the `remix.env.d.ts` file i
 
 ```ts filename=remix.env.d.ts
 /// <reference types="@remix-run/dev" />
-/// <reference types="@remix-run/node/globals" />
+/// <reference types="@remix-run/node" />
 ```
 
 ### A note about non-standard imports
