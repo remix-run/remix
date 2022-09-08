@@ -1,28 +1,35 @@
 import * as path from "path";
 import esbuild from "esbuild";
 
+import { BuildMode } from "../../build";
 import type { RemixConfig } from "../../config";
+import type { BuildConfig } from "../../compiler";
 
 /**
  * This plugin loads css files with the "css" loader (bundles and moves assets to assets directory)
  * and exports the url of the css file as its default export.
  */
-export function cssFilePlugin(config: RemixConfig): esbuild.Plugin {
+export function cssFilePlugin(
+  remixConfig: RemixConfig,
+  buildConfig: Partial<BuildConfig>
+): esbuild.Plugin {
   return {
     name: "css-file",
 
     async setup(build) {
       let buildOptions = build.initialOptions;
+      let { mode, sourcemap } = buildConfig;
 
       build.onLoad({ filter: /\.css$/ }, async (args) => {
         let { outfile, outdir, assetNames } = buildOptions;
         let assetDirname = path.dirname(assetNames!);
         let { metafile } = await esbuild.build({
           ...buildOptions,
+          minify: mode === BuildMode.Production,
+          sourcemap,
           minifySyntax: false,
           incremental: false,
           splitting: false,
-          sourcemap: false,
           write: true,
           stdin: undefined,
           outfile: undefined,
@@ -66,7 +73,7 @@ export function cssFilePlugin(config: RemixConfig): esbuild.Plugin {
 
         return {
           contents: `export default "${path.join(
-            config.publicPath,
+            remixConfig.publicPath,
             assetDirname,
             path.basename(entry)
           )}";`,
