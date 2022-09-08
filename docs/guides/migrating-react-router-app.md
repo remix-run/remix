@@ -617,7 +617,7 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [migration-guide-from-v5-to-v6]: https://reactrouter.com/docs/en/v6/upgrading/v5
 [backwards-compatibility-package]: https://www.npmjs.com/package/react-router-dom-v5-compat
 [a-few-tweaks-to-improve-progressive-enhancement]: ../pages/philosophy#progressive-enhancement
-[routing-conventions]: ./routing.md
+[routing-conventions]: ./routing
 [a-catch-all-route]: ./routing#splats
 [hydration-mismatch]: https://reactjs.org/docs/react-dom.html#hydrate
 [loader-data]: ../api/conventions#loader
