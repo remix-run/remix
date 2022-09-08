@@ -14,7 +14,8 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 
 In order for this to work, your Vercel config should look like this:
 
-build command: 
+build command:
+
 ```sh
 cd ../.. && npx turbo run build --scope=remix-app --include-dependencies --no-deps
 ```
