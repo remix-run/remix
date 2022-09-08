@@ -21,6 +21,7 @@ import {
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
 import type { TrackedPromise } from "@remix-run/deferred";
+import { AbortedDeferredError } from "@remix-run/deferred";
 import type { Merge } from "type-fest";
 import { createPath } from "history";
 
@@ -436,6 +437,8 @@ enum AwaitRenderStatus {
   error,
 }
 
+const neverSettledPromise = new Promise(() => {});
+
 class AwaitErrorBoundary extends React.Component<
   AwaitErrorBoundaryProps,
   AwaitErrorBoundaryState
@@ -495,6 +498,14 @@ class AwaitErrorBoundary extends React.Component<
         (error: any) =>
           Object.defineProperty(resolve, "_error", { get: () => error })
       );
+    }
+
+    if (
+      status === AwaitRenderStatus.error &&
+      promise._error instanceof AbortedDeferredError
+    ) {
+      // If the promise was aborted, we want to freeze the UI until the next piece of data is ready
+      throw neverSettledPromise;
     }
 
     if (status === AwaitRenderStatus.error && !errorElement) {

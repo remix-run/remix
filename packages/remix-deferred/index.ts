@@ -9,8 +9,6 @@ export interface TrackedPromise extends Promise<unknown> {
 
 export class AbortedDeferredError extends Error {}
 
-export class NeverResolvedDeferredError extends Error {}
-
 export class DeferredData {
   private pendingKeys: Set<string | number> = new Set<string | number>();
   private controller: AbortController;
@@ -87,6 +85,7 @@ export class DeferredData {
       error instanceof AbortedDeferredError
     ) {
       this.unlistenAbortSignal();
+      Object.defineProperty(promise, "_error", { get: () => error });
       return Promise.reject(error);
     }
 
@@ -275,7 +274,7 @@ export async function parseDeferredReadableStream(
 
         for (let [key, resolver] of Object.entries(deferredResolvers)) {
           resolver.reject(
-            new NeverResolvedDeferredError(`Deferred ${key} was never resolved`)
+            new AbortedDeferredError(`Deferred ${key} will never resolved`)
           );
         }
       } catch (error) {
