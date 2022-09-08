@@ -12,14 +12,11 @@ Open this example on [CodeSandbox](https://codesandbox.com):
 
 ## Example
 
-What makes this different from deploying a normal remix app to Vercel,
-is that Vercel doesn't include files from the root `node_modules` when deploying the app.
-In order to work around this, we take the server build output from `remix` and
-bundle it using `rollup` so that all the necessary dependencies are present when deployed.
-
-Another important thing to note is that the `ui` package needs to be built.
-Many turborepo examples don't build the `ui` package, but if we don't, remix is not able to use it.
-
 In order for this to work, your Vercel config should look like this:
+
+build command: 
+```sh
+cd ../.. && npx turbo run build --scope=remix-app --include-dependencies --no-deps
+```
 
 ![Vercel project config](./vercel-project-config-example.jpg)
