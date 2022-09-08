@@ -299,7 +299,12 @@ export const loader = async () => {
   });
 };
 
+
+export default function Posts() {
+  // You can also update the type as below
+  const { posts } = useLoaderData<LoaderData>();
 // ...
+}
 ```
 
 ## Pulling from a data source
