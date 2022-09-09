@@ -20,7 +20,7 @@ You can further build custom hooks (`useProjects`, `useUser`, etc.) around the `
 No need to use global React contexts anymore to access your React state.
 
 - Check out the [useMatchesData](app/useMatchesData.ts) implementation to see how we use `useMatches`.
-- Check out the [useOptionalUser](app/useOptionalUser.ts) implementation to see how to implement `useMatchesData` internally in custom hooks.
+- Check out the [useOptionalUser](app/useUser.ts) implementation to see how to implement `useMatchesData` internally in custom hooks.
 - Check out the [root](app/root.tsx) loader function, to see that we use loaders to return json data server-side for our routes.
 - Check out the [index](app/routes/index.tsx) route, as an example for how to access loader data of parent and child routes across our application with our custom hooks.
 
