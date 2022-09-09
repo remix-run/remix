@@ -4,6 +4,24 @@ Date: 2022-07-29
 
 Status: accepted
 
+- [Remixing React Router](#remixing-react-router)
+  - [Context](#context)
+  - [Decisions](#decisions)
+    - [Move the bulk of logic to a framework-agnostic router](#move-the-bulk-of-logic-to-a-framework-agnostic-router)
+    - [Inline the `history` library into the router](#inline-the-history-library-into-the-router)
+    - [`fetcher.load()` participates in revalidations](#fetcherload-participates-in-revalidations)
+    - [`useTransition` renamed to `useNavigation`](#usetransition-renamed-to-usenavigation)
+    - [Navigations/Fetchers state structure changes](#navigationsfetchers-state-structure-changes)
+    - [`<Form method="get">` is no longer a "submission"](#form-methodget-is-no-longer-a-submission)
+    - [Form automatic replace behavior](#form-automatic-replace-behavior)
+    - [`unstable_shouldReload` stabilized as `shouldRevalidate`](#unstable_shouldreload-stabilized-as-shouldrevalidate)
+    - [`<ScrollRestoration getKey>` prop](#scrollrestoration-getkey-prop)
+    - [`<Link resetScroll="false">` prop](#link-resetscrollfalse-prop)
+    - [`useRevalidator()` hook](#userevalidator-hook)
+    - [No distinction between Error and Catch boundaries](#no-distinction-between-error-and-catch-boundaries)
+    - [`Request.signal` instead of `signal` param](#requestsignal-instead-of-signal-param)
+    - [React-Router API surface](#react-router-api-surface)
+
 ## Context
 
 In [Remixing React Router][remixing router], Ryan gives an overview of the work we started out to do in bringing the data APIs from Remix (loaders, actions, fetchers) over to `react-router`. We made _many_ decisions along the way that we'll document here. In some cases we decided to proceed with behavior that is different from that of Remix today, or add net-new behavior that does not currently exist in Remix. We'll identify those cases as necessary and provide rationale for the divergence and how we plan to support backwards compatibility.
@@ -197,6 +215,69 @@ We dropped the `signal` parameter to loaders and actions because an incoming `Re
 
 We'll need to re-expose the `request.signal` as a standalone `signal` in Remix
 
+### React-Router API surface
+
+Initially, we chose to align closely with the existing `react-router` APIs and introduced a `<DataBrowserRouter>` component (and it's memory/hash siblings) that would internally read the routes and create a router singleton upon first render. But as time went on we noticed some rough non-obvious foot guns with this approach, so we changed it up in [#9227][remove-singleton-pr]. Here's a few of the headaches it was causing:
+
+- Unit tests were a pain because you need to find a way to reset the singleton in-between tests
+  - We used a `_resetModuleScope` method for our tests
+  - ...but this wasn't't exposed to users who may want to do their own tests around our router
+- The JSX children `<Route>` objects caused non-intuitive behavior based on idiomatic react expectations
+  - Conditional runtime `<Route>`'s wouldn't get picked up
+  - Adding new `<Route>`'s during local dev wouldn't get picked up during HMR
+  - Using external state in your elements doesn't work as one might expect (see [#9225][singleton-state-issue])
+
+Instead, we lifted the singleton out into user-land, so that they create the router singleton and manage it outside the react tree - which is what react 18 is encouraging with `useSyncExternalStore` anyways! This also means that since users create the router - there's no longer any difference in the rendering aspect for memory/browser/hash routers (which only impacts router/history creation) - so we got rid of those and trimmed to a simple `RouterProvider`:
+
+```jsx
+// Before
+function App() {
+  <DataBrowserRouter>
+    <Route path="/" element={<Layout />}>
+      <Route index element={<Home />}>
+    </Route>
+  <DataBrowserRouter>
+}
+// After
+let router = createBrowserRouter([{
+  path: "/",
+  element: <Layout />,
+  children: [{
+    index: true,
+    element: <Home />,
+  }]
+}]);
+function App() {
+  return <RouterProvider router={router} />
+}
+```
+
+If folks still prefer the JSX notation, they can leverage `createRoutesFromElements` (aliased from `createRoutesFromChildren` since they are not "children" in this usage):
+
+```jsx
+let routes = createRoutesFromElements(
+  <Route path="/" element={<Layout />}>
+    <Route index element={<Home />}>
+  </Route>
+);
+let router = createBrowserRouter(routes);
+function App() {
+  return <RouterProvider router={router} />
+}
+```
+
+And now they can also hook into HMR correctly for router disposal:
+
+```
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => router.dispose());
+}
+```
+
+And finally since `<RouterProvider>` accepts a router, it makes unit testing easer since you can create a fresh router with each test.
+
 [remixing router]: https://remix.run/blog/remixing-react-router
 [navigation api]: https://developer.chrome.com/docs/web-platform/navigation-api/
 [react usetransition]: https://reactjs.org/docs/hooks-reference.html#usetransition
+[remove-singleton-pr]: https://github.com/remix-run/react-router/pull/9227
+[singleton-state-issue]: https://github.com/remix-run/react-router/pull/9225
