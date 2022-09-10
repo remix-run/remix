@@ -89,7 +89,7 @@ const responsiveProperties = defineProperties({
 });
 
 // These properties are defined separately from `responsiveProperties`
-// because they're being configuring with different conditions.
+// because they're being configured with different conditions.
 const colorProperties = defineProperties({
   conditions: {
     lightMode: {},
