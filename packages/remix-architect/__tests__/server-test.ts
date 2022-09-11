@@ -290,13 +290,7 @@ describe("architect createRemixRequest", () => {
           "method": "GET",
           "parsedURL": "https://localhost:3333/",
           "redirect": "follow",
-          "signal": AbortSignal {
-            Symbol(kEvents): Map {},
-            Symbol(events.maxEventTargetListeners): 10,
-            Symbol(events.maxEventTargetListenersWarned): false,
-            Symbol(kAborted): false,
-            Symbol(kReason): undefined,
-          },
+          "signal": AbortSignal {},
         },
       }
     `);
