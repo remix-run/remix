@@ -1522,7 +1522,7 @@ return new Response(null, {
 });
 ```
 
-## `unstable_parseMultipartFormData`
+### `unstable_parseMultipartFormData`
 
 Allows you to handle multipart forms (file uploads) for your app.
 
