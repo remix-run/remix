@@ -26,7 +26,7 @@ export function cssFilePlugin(
           minifySyntax: true,
           metafile: true,
           write: true,
-          sourcemap: false,
+          sourcemap: false, // hash depends on sourcemap
           incremental: false,
           splitting: false,
           stdin: undefined,
