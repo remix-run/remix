@@ -63,7 +63,15 @@ export function cssFilePlugin(
         });
 
         return {
-          contents: fse.readFileSync(entry!),
+          /**
+           * Because the css file was written to the output with the above build
+           * we would end up with two css files with different hashes in the output if we use the 'file' loader here.
+           * Thats why we delete the generated css file, so the final css file in the output is the one created by the 'file' loader.
+           */
+          contents: await fse.readFile(entry!).then(async (contents) => {
+            await fse.remove(entry!);
+            return contents;
+          }),
           loader: "file",
         };
       });
