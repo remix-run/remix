@@ -56,11 +56,9 @@ export function cssFilePlugin(
           ],
         });
 
-        let keys = Object.keys(metafile.outputs);
-        let entry = keys.find((key) => {
-          let { entryPoint } = metafile.outputs[key];
-          return !!entryPoint;
-        });
+        let [entry] = Object.entries(metafile.outputs).find(
+          ([, meta]) => meta.entryPoint
+        )!;
 
         return {
           /**
@@ -68,8 +66,8 @@ export function cssFilePlugin(
            * we would end up with two css files with different hashes in the output if we use the 'file' loader here.
            * Thats why we delete the generated css file, so the final css file in the output is the one created by the 'file' loader.
            */
-          contents: await fse.readFile(entry!).then(async (contents) => {
-            await fse.remove(entry!);
+          contents: await fse.readFile(entry).then(async (contents) => {
+            await fse.remove(entry);
             return contents;
           }),
           loader: "file",
