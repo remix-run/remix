@@ -13,7 +13,7 @@ export type TypedResponse<T extends unknown = unknown> = Response & {
 export type DeferredResponse<T extends object = Record<string, unknown>> =
   TypedResponse<T> & {
     // allows discriminating between deferred and non-deferred responses
-    __deferred: never;
+    " $deferred": never;
   };
 
 export type DeferFunction = <Data extends Record<PropertyKey, unknown>>(

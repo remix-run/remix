@@ -28,7 +28,7 @@ export async function callRouteAction({
   match,
   request,
 }: {
-  loadContext?: AppLoadContext;
+  loadContext: AppLoadContext;
   match: RouteMatch<ServerRoute>;
   request: Request;
 }): Promise<Response> {
@@ -75,7 +75,7 @@ export async function callRouteLoader({
 }: {
   request: Request;
   match: RouteMatch<ServerRoute>;
-  loadContext?: AppLoadContext;
+  loadContext: AppLoadContext;
 }) {
   let loader = match.route.module.loader;
 

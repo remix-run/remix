@@ -22,8 +22,8 @@ import {
 import type { LinkProps, NavLinkProps } from "react-router-dom";
 import type { TrackedPromise } from "@remix-run/deferred";
 import { AbortedDeferredError } from "@remix-run/deferred";
-import type { Merge } from "type-fest";
 import { createPath } from "history";
+import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
 import type { EntryContext, DeferredLoaderData, AssetsManifest } from "./entry";
@@ -1026,7 +1026,7 @@ import * as route${index} from ${JSON.stringify(
 window.__remixRouteModules = {${matches
       .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
       .join(",")}};
-      
+
 import(${JSON.stringify(manifest.entry.module)});`;
 
     return (
@@ -1345,12 +1345,22 @@ export function useFormAction(
   // https://github.com/remix-run/remix/issues/927
   let location = useLocation();
   let { search, hash } = resolvedPath;
+  let isIndexRoute = id.endsWith("/index");
+
   if (action == null) {
     search = location.search;
     hash = location.hash;
+
+    // When grabbing search params from the URL, remove the automatically
+    // inserted ?index param so we match the useResolvedPath search behavior
+    // which would not include ?index
+    if (isIndexRoute) {
+      let params = new URLSearchParams(search);
+      params.delete("index");
+      search = params.toString() ? `?${params.toString()}` : "";
+    }
   }
 
-  let isIndexRoute = id.endsWith("/index");
   if ((action == null || action === ".") && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
@@ -1534,13 +1544,19 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       let url = new URL(action, `${protocol}//${host}`);
 
       if (method.toLowerCase() === "get") {
+        // Start with a fresh set of params and wipe out the old params to
+        // match default browser behavior
+        let params = new URLSearchParams();
+        let hasParams = false;
         for (let [name, value] of formData) {
           if (typeof value === "string") {
-            url.searchParams.append(name, value);
+            hasParams = true;
+            params.append(name, value);
           } else {
             throw new Error(`Cannot submit binary form data using GET`);
           }
         }
+        url.search = hasParams ? `?${params.toString()}` : "";
       }
 
       let submission: Submission = {
@@ -1674,119 +1690,7 @@ export function useMatches(): RouteMatch[] {
  *
  * @see https://remix.run/api/remix#useloaderdata
  */
-
-export type TypedResponse<T> = Response & {
-  json(): Promise<T>;
-};
-
-export type DeferredResponse<T extends object = Record<string, unknown>> =
-  TypedResponse<T> & {
-    // allows discriminating between deferred and non-deferred responses
-    __deferred: never;
-  };
-
-type DataFunction = (...args: any[]) => unknown; // matches any function
-
-type DataOrFunction = AppData | DataFunction;
-
-type JsonPrimitives =
-  | string
-  | number
-  | boolean
-  | String
-  | Number
-  | Boolean
-  | null;
-
-type NonJsonPrimitives = Promise<unknown> | undefined | Function | symbol;
-
-type SerializeType<T> = T extends JsonPrimitives
-  ? T
-  : T extends NonJsonPrimitives
-  ? never
-  : T extends { toJSON(): infer U }
-  ? U
-  : T extends []
-  ? []
-  : T extends [unknown, ...unknown[]]
-  ? {
-      [k in keyof T]: T[k] extends NonJsonPrimitives
-        ? null
-        : SerializeType<T[k]>;
-    }
-  : T extends ReadonlyArray<infer U>
-  ? (U extends NonJsonPrimitives ? null : SerializeType<U>)[]
-  : T extends object
-  ? SerializeObject<UndefinedOptionals<T>>
-  : never;
-
-type SerializeObject<T extends object> = {
-  [k in keyof T as T[k] extends NonJsonPrimitives ? never : k]: SerializeType<
-    T[k]
-  >;
-};
-
-type SerializeDeferredObject<T extends object> = {
-  [k in keyof T as T[k] extends PromiseLike<unknown>
-    ? k
-    : T[k] extends NonJsonPrimitives
-    ? never
-    : k]: T[k] extends PromiseLike<infer U>
-    ? Promise<SerializeType<Awaited<U>>>
-    : SerializeType<T[k]>;
-};
-
-type SerializeDeferredType<T> = T extends JsonPrimitives
-  ? T
-  : T extends NonJsonPrimitives
-  ? never
-  : T extends { toJSON(): infer U }
-  ? U
-  : T extends []
-  ? never
-  : T extends [unknown, ...unknown[]]
-  ? never
-  : T extends ReadonlyArray<unknown>
-  ? never
-  : T extends object
-  ? SerializeDeferredObject<UndefinedOptionals<T>>
-  : never;
-
-/*
- * For an object T, if it has any properties that are a union with `undefined`,
- * make those into optional properties instead.
- *
- * Example: { a: string | undefined} --> { a?: string}
- */
-type UndefinedOptionals<T extends object> = Merge<
-  {
-    // Property is not a union with `undefined`, keep as-is
-    [k in keyof T as undefined extends T[k] ? never : k]: T[k];
-  },
-  {
-    // Property _is_ a union with `defined`. Set as optional (via `?`) and remove `undefined` from the union
-    [k in keyof T as undefined extends T[k] ? k : never]?: Exclude<
-      T[k],
-      undefined
-    >;
-  }
->;
-
-export type UseDataFunctionReturn<T extends DataOrFunction> = T extends (
-  ...args: any[]
-) => infer Output
-  ? Awaited<Output> extends DeferredResponse<infer U>
-    ? SerializeDeferredType<U>
-    : Awaited<Output> extends DeferredResponse<infer U>
-    ? SerializeDeferredType<U>
-    : Awaited<Output> extends TypedResponse<infer U>
-    ? SerializeType<U>
-    : SerializeType<Awaited<ReturnType<T>>>
-  : Awaited<T> extends DeferredResponse<infer U>
-  ? SerializeDeferredType<U>
-  : SerializeType<Awaited<T>>;
-
-export function useLoaderData<T = AppData>(): UseDataFunctionReturn<T> {
+export function useLoaderData<T = AppData>(): SerializeFrom<T> {
   return useRemixRouteContext().data;
 }
 
@@ -1795,9 +1699,7 @@ export function useLoaderData<T = AppData>(): UseDataFunctionReturn<T> {
  *
  * @see https://remix.run/api/remix#useactiondata
  */
-export function useActionData<T = AppData>():
-  | UseDataFunctionReturn<T>
-  | undefined {
+export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
   let { actionData } = transitionManager.getState();

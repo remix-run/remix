@@ -1,23 +1,28 @@
 import type {
   DeferredResponse,
   TypedResponse,
-  UseDataFunctionReturn,
-} from "../components";
+} from "@remix-run/server-runtime";
+
+import type { useLoaderData } from "../components";
 
 function isEqual<A, B>(
   arg: A extends B ? (B extends A ? true : false) : false
 ): void {}
 
+// not sure why `eslint` thinks the `T` generic is not used...
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type LoaderData<T> = ReturnType<typeof useLoaderData<T>>;
+
 describe("useLoaderData", () => {
   it("supports plain data type", () => {
     type AppData = { hello: string };
-    type response = UseDataFunctionReturn<AppData>;
+    type response = LoaderData<AppData>;
     isEqual<response, { hello: string }>(true);
   });
 
   it("supports plain Response", () => {
     type Loader = (args: any) => Response;
-    type response = UseDataFunctionReturn<Loader>;
+    type response = LoaderData<Loader>;
     isEqual<response, any>(true);
   });
 
@@ -25,31 +30,31 @@ describe("useLoaderData", () => {
     type Loader = (
       args: any
     ) => TypedResponse<{ id: string }> | TypedResponse<never>;
-    type response = UseDataFunctionReturn<Loader>;
+    type response = LoaderData<Loader>;
     isEqual<response, { id: string }>(true);
   });
 
   it("supports Response-returning loader", () => {
     type Loader = (args: any) => TypedResponse<{ hello: string }>;
-    type response = UseDataFunctionReturn<Loader>;
+    type response = LoaderData<Loader>;
     isEqual<response, { hello: string }>(true);
   });
 
   it("supports async Response-returning loader", () => {
     type Loader = (args: any) => Promise<TypedResponse<{ hello: string }>>;
-    type response = UseDataFunctionReturn<Loader>;
+    type response = LoaderData<Loader>;
     isEqual<response, { hello: string }>(true);
   });
 
   it("supports data-returning loader", () => {
     type Loader = (args: any) => { hello: string };
-    type response = UseDataFunctionReturn<Loader>;
+    type response = LoaderData<Loader>;
     isEqual<response, { hello: string }>(true);
   });
 
   it("supports async data-returning loader", () => {
     type Loader = (args: any) => Promise<{ hello: string }>;
-    type response = UseDataFunctionReturn<Loader>;
+    type response = LoaderData<Loader>;
     isEqual<response, { hello: string }>(true);
   });
 });
@@ -57,26 +62,26 @@ describe("useLoaderData", () => {
 describe("type serializer", () => {
   it("converts Date to string", () => {
     type AppData = { hello: Date };
-    type response = UseDataFunctionReturn<AppData>;
+    type response = LoaderData<AppData>;
     isEqual<response, { hello: string }>(true);
   });
 
   it("supports custom toJSON", () => {
     type AppData = { toJSON(): { data: string[] } };
-    type response = UseDataFunctionReturn<AppData>;
+    type response = LoaderData<AppData>;
     isEqual<response, { data: string[] }>(true);
   });
 
   it("supports recursion", () => {
     type AppData = { dob: Date; parent: AppData };
     type SerializedAppData = { dob: string; parent: SerializedAppData };
-    type response = UseDataFunctionReturn<AppData>;
+    type response = LoaderData<AppData>;
     isEqual<response, SerializedAppData>(true);
   });
 
   it("supports tuples and arrays", () => {
     type AppData = { arr: Date[]; tuple: [string, number, Date]; empty: [] };
-    type response = UseDataFunctionReturn<AppData>;
+    type response = LoaderData<AppData>;
     isEqual<
       response,
       { arr: string[]; tuple: [string, number, string]; empty: [] }
@@ -85,18 +90,13 @@ describe("type serializer", () => {
 
   it("transforms unserializables to null in arrays", () => {
     type AppData = [Function, symbol, undefined];
-    type response = UseDataFunctionReturn<AppData>;
+    type response = LoaderData<AppData>;
     isEqual<response, [null, null, null]>(true);
   });
 
   it("transforms unserializables to never in objects", () => {
-    type AppData = {
-      arg1: Function;
-      arg2: symbol;
-      arg3: undefined;
-      arg4: Promise<unknown>;
-    };
-    type response = UseDataFunctionReturn<AppData>;
+    type AppData = { arg1: Function; arg2: symbol; arg3: undefined };
+    type response = LoaderData<AppData>;
     isEqual<response, {}>(true);
   });
 
@@ -106,7 +106,7 @@ describe("type serializer", () => {
       speak: () => string;
     }
     type Loader = (args: any) => TypedResponse<Test>;
-    type response = UseDataFunctionReturn<Loader>;
+    type response = LoaderData<Loader>;
     isEqual<response, { arg: string }>(true);
   });
 
@@ -116,28 +116,28 @@ describe("type serializer", () => {
       arg2: number | undefined;
       arg3: undefined;
     };
-    type response = UseDataFunctionReturn<AppData>;
+    type response = LoaderData<AppData>;
     isEqual<response, { arg1: string; arg2?: number }>(true);
   });
 
   describe("deferred", () => {
     it("converts Date to string", () => {
       type AppData = DeferredResponse<{ hello: Date }>;
-      type response = UseDataFunctionReturn<AppData>;
+      type response = LoaderData<AppData>;
       isEqual<response, { hello: string }>(true);
     });
 
     it("supports custom toJSON", () => {
-      type AppData = DeferredResponse<{ toJSON(): { data: string[] } }>;
-      type response = UseDataFunctionReturn<AppData>;
-      isEqual<response, { data: string[] }>(true);
+      type AppData = DeferredResponse<{ a: { toJSON(): { data: string[] } } }>;
+      type response = LoaderData<AppData>;
+      isEqual<response, { a: { data: string[] } }>(true);
     });
 
     it("supports recursion", () => {
       type T = { dob: Date; parent: T };
       type AppData = DeferredResponse<T>;
       type SerializedAppData = { dob: string; parent: SerializedAppData };
-      type response = UseDataFunctionReturn<AppData>;
+      type response = LoaderData<AppData>;
       isEqual<response, SerializedAppData>(true);
     });
 
@@ -147,7 +147,7 @@ describe("type serializer", () => {
         tuple: [string, number, Date];
         empty: [];
       }>;
-      type response = UseDataFunctionReturn<AppData>;
+      type response = LoaderData<AppData>;
       isEqual<
         response,
         { arr: string[]; tuple: [string, number, string]; empty: [] }
@@ -160,7 +160,7 @@ describe("type serializer", () => {
         arg2: symbol;
         arg3: undefined;
       }>;
-      type response = UseDataFunctionReturn<AppData>;
+      type response = LoaderData<AppData>;
       isEqual<response, {}>(true);
     });
 
@@ -170,7 +170,7 @@ describe("type serializer", () => {
         speak: () => string;
       }
       type Loader = (args: any) => DeferredResponse<Test>;
-      type response = UseDataFunctionReturn<Loader>;
+      type response = LoaderData<Loader>;
       isEqual<response, { arg: string }>(true);
     });
 
@@ -180,29 +180,14 @@ describe("type serializer", () => {
         arg2: number | undefined;
         arg3: undefined;
       };
-      type response = UseDataFunctionReturn<AppData>;
+      type response = LoaderData<AppData>;
       isEqual<response, { arg1: string; arg2?: number }>(true);
     });
 
     it("converts Promise<Date> to Promise<string>", () => {
       type AppData = DeferredResponse<{ hello: Promise<Date> }>;
-      type response = UseDataFunctionReturn<AppData>;
+      type response = LoaderData<AppData>;
       isEqual<response, { hello: Promise<string> }>(true);
-    });
-
-    it("supports promise recursion", () => {
-      type T = { dob: Promise<Date>; parent: T };
-      type AppData = DeferredResponse<T>;
-      type SerializeParentAppData = {
-        dob?: never;
-        parent: SerializeParentAppData;
-      };
-      type SerializedAppData = {
-        dob: Promise<string>;
-        parent: SerializeParentAppData;
-      };
-      type response = UseDataFunctionReturn<AppData>;
-      isEqual<response, SerializedAppData>(true);
     });
 
     it("supports promise tuples and arrays", () => {
@@ -211,7 +196,7 @@ describe("type serializer", () => {
         tuple: Promise<[string, number, Date]>;
         empty: Promise<[]>;
       }>;
-      type response = UseDataFunctionReturn<AppData>;
+      type response = LoaderData<AppData>;
       isEqual<
         response,
         {
@@ -228,7 +213,7 @@ describe("type serializer", () => {
         arg2: Promise<symbol>;
         arg3: Promise<undefined>;
       }>;
-      type response = UseDataFunctionReturn<AppData>;
+      type response = LoaderData<AppData>;
       isEqual<
         response,
         {
@@ -244,9 +229,9 @@ describe("type serializer", () => {
         arg: string;
         speak: () => string;
       }
-      type LoaderData = { test: Promise<Test> };
-      type Loader = (args: any) => DeferredResponse<LoaderData>;
-      type response = UseDataFunctionReturn<Loader>;
+      type AppData = { test: Promise<Test> };
+      type Loader = (args: any) => DeferredResponse<AppData>;
+      type response = LoaderData<Loader>;
       isEqual<response, { test: Promise<{ arg: string }> }>(true);
     });
 
@@ -256,11 +241,11 @@ describe("type serializer", () => {
         arg2: number | undefined;
         arg3: undefined;
       };
-      type LoaderData = {
+      type AppData = {
         result: Promise<PromiseData>;
       };
-      type Loader = (args: any) => DeferredResponse<LoaderData>;
-      type response = UseDataFunctionReturn<Loader>;
+      type Loader = (args: any) => DeferredResponse<AppData>;
+      type response = LoaderData<Loader>;
       isEqual<response, { result: Promise<{ arg1: string; arg2?: number }> }>(
         true
       );

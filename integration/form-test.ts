@@ -26,6 +26,7 @@ test.describe("Forms", () => {
   let STATIC_ROUTE_PARENT_ACTION = "static-route-parent";
   let STATIC_ROUTE_TOO_MANY_DOTS_ACTION = "static-route-too-many-dots";
   let INDEX_ROUTE_NO_ACTION = "index-route-none";
+  let INDEX_ROUTE_NO_ACTION_POST = "index-route-none-post";
   let INDEX_ROUTE_ABSOLUTE_ACTION = "index-route-abs";
   let INDEX_ROUTE_CURRENT_ACTION = "index-route-cur";
   let INDEX_ROUTE_PARENT_ACTION = "index-route-parent";
@@ -185,10 +186,14 @@ test.describe("Forms", () => {
 
         "app/routes/blog/index.jsx": js`
           import { Form } from "@remix-run/react";
+          export function action() {
+            return { ok: true };
+          }
           export default function() {
             return (
               <>
                 <Form id="${INDEX_ROUTE_NO_ACTION}">
+                  <input type="hidden" name="foo" defaultValue="1" />
                   <button>Submit</button>
                 </Form>
                 <Form id="${INDEX_ROUTE_ABSOLUTE_ACTION}" action="/about">
@@ -201,6 +206,11 @@ test.describe("Forms", () => {
                   <button>Submit</button>
                 </Form>
                 <Form id="${INDEX_ROUTE_TOO_MANY_DOTS_ACTION}" action="../../../../about">
+                  <button>Submit</button>
+                </Form>
+
+                <Form method="post" id="${INDEX_ROUTE_NO_ACTION_POST}">
+                  <input type="hidden" name="bar" defaultValue="2" />
                   <button>Submit</button>
                 </Form>
               </>
@@ -616,6 +626,55 @@ test.describe("Forms", () => {
         let el = getElement(html, `#${INDEX_ROUTE_TOO_MANY_DOTS_ACTION}`);
         expect(el.attr("action")).toMatch("/");
       });
+
+      test("handles search params correctly on GET submissions", async ({
+        page,
+      }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+
+        // Start with a query param
+        await app.goto("/blog?junk=1");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
+        expect(el.attr("action")).toBe("/blog?index&junk=1");
+        expect(app.page.url()).toMatch(/\/blog\?junk=1$/);
+
+        // On submission, we replace existing parameters (reflected in the
+        // form action) with the values from the form data.  We also do not
+        // need to preserve the index param in the URL on GET submissions
+        await app.clickElement(`#${INDEX_ROUTE_NO_ACTION} button`);
+        html = await app.getHtml();
+        el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
+        expect(el.attr("action")).toBe("/blog?index&foo=1");
+        expect(app.page.url()).toMatch(/\/blog\?foo=1$/);
+
+        // Does not append duplicate params on re-submissions
+        await app.clickElement(`#${INDEX_ROUTE_NO_ACTION} button`);
+        html = await app.getHtml();
+        el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
+        expect(el.attr("action")).toBe("/blog?index&foo=1");
+        expect(app.page.url()).toMatch(/\/blog\?foo=1$/);
+      });
+
+      test("handles search params correctly on POST submissions", async ({
+        page,
+      }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+
+        // Start with a query param
+        await app.goto("/blog?junk=1");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${INDEX_ROUTE_NO_ACTION_POST}`);
+        expect(el.attr("action")).toBe("/blog?index&junk=1");
+        expect(app.page.url()).toMatch(/\/blog\?junk=1$/);
+
+        // Form action reflects the current params and change them on submission
+        await app.clickElement(`#${INDEX_ROUTE_NO_ACTION_POST} button`);
+        html = await app.getHtml();
+        el = getElement(html, `#${INDEX_ROUTE_NO_ACTION_POST}`);
+        expect(el.attr("action")).toBe("/blog?index&junk=1");
+        expect(app.page.url()).toMatch(/\/blog\?index&junk=1$/);
+      });
     });
 
     test.describe("in a layout route", () => {
@@ -761,13 +820,21 @@ test.describe("Forms", () => {
 
   test("<Form> submits the submitter's value appended to the form data", async ({
     page,
+    browserName,
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/submitter");
     await app.clickElement("text=Add Task");
     await page.waitForLoadState("load");
-    expect(await app.getHtml("pre")).toBe(
-      `<pre>tasks=first&amp;tasks=second&amp;tasks=</pre>`
-    );
+    // TODO: remove after playwright ships safari 16
+    if (browserName === "webkit") {
+      expect(await app.getHtml("pre")).toBe(
+        `<pre>tasks=first&amp;tasks=second&amp;tasks=&amp;tasks=</pre>`
+      );
+    } else {
+      expect(await app.getHtml("pre")).toBe(
+        `<pre>tasks=first&amp;tasks=second&amp;tasks=</pre>`
+      );
+    }
   });
 });

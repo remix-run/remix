@@ -34,7 +34,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   let routes = createRoutes(build.routes);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
 
-  return async function requestHandler(request, loadContext) {
+  return async function requestHandler(request, loadContext = {}) {
     let url = new URL(request.url);
     let matches = matchServerRoutes(routes, url.pathname);
 
@@ -85,7 +85,7 @@ async function handleDataRequest({
   serverMode,
 }: {
   handleDataRequest?: HandleDataRequestFunction;
-  loadContext?: AppLoadContext;
+  loadContext: AppLoadContext;
   matches: RouteMatch<ServerRoute>[];
   request: Request;
   serverMode: ServerMode;
@@ -166,8 +166,8 @@ async function handleDataRequest({
       console.error(error);
     }
 
-    if (serverMode === ServerMode.Development) {
-      return errorBoundaryError(error as Error, 500);
+    if (serverMode === ServerMode.Development && error instanceof Error) {
+      return errorBoundaryError(error, 500);
     }
 
     return errorBoundaryError(new Error("Unexpected Server Error"), 500);
@@ -183,7 +183,7 @@ async function handleDocumentRequest({
   serverMode,
 }: {
   build: ServerBuild;
-  loadContext?: AppLoadContext;
+  loadContext: AppLoadContext;
   matches: RouteMatch<ServerRoute>[] | null;
   request: Request;
   routes: ServerRoute[];
@@ -562,7 +562,7 @@ async function handleResourceRequest({
   serverMode,
 }: {
   request: Request;
-  loadContext?: AppLoadContext;
+  loadContext: AppLoadContext;
   matches: RouteMatch<ServerRoute>[];
   serverMode: ServerMode;
 }): Promise<Response> {
@@ -617,18 +617,12 @@ async function errorBoundaryError(error: Error, status: number) {
 }
 
 function isIndexRequestUrl(url: URL) {
-  for (let param of url.searchParams.getAll("index")) {
-    // only use bare `?index` params without a value
-    // ✅ /foo?index
-    // ✅ /foo?index&index=123
-    // ✅ /foo?index=123&index
-    // ❌ /foo?index=123
-    if (param === "") {
-      return true;
-    }
-  }
-
-  return false;
+  // only use bare `?index` params without a value
+  // ✅ /foo?index
+  // ✅ /foo?index&index=123
+  // ✅ /foo?index=123&index
+  // ❌ /foo?index=123
+  return url.searchParams.getAll("index").some((param) => param === "");
 }
 
 function getRequestMatch(url: URL, matches: RouteMatch<ServerRoute>[]) {
