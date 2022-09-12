@@ -1,8 +1,8 @@
 import * as path from "path";
+import * as fse from "fs-extra";
 import esbuild from "esbuild";
 
 import { BuildMode } from "../../build";
-import type { RemixConfig } from "../../config";
 import type { BuildConfig } from "../../compiler";
 
 /**
@@ -10,47 +10,39 @@ import type { BuildConfig } from "../../compiler";
  * and exports the url of the css file as its default export.
  */
 export function cssFilePlugin(
-  remixConfig: RemixConfig,
   buildConfig: Partial<BuildConfig>
 ): esbuild.Plugin {
   return {
     name: "css-file",
 
     async setup(build) {
-      let buildOptions = build.initialOptions;
-      let { mode, sourcemap } = buildConfig;
+      let buildOps = build.initialOptions;
 
       build.onLoad({ filter: /\.css$/ }, async (args) => {
-        let { outfile, outdir, assetNames } = buildOptions;
-        let assetDirname = path.dirname(assetNames!);
+        let { outfile, outdir, assetNames } = buildOps;
         let { metafile } = await esbuild.build({
-          ...buildOptions,
-          minify: mode === BuildMode.Production,
-          sourcemap,
-          minifySyntax: false,
+          ...buildOps,
+          minify: buildConfig.mode === BuildMode.Production,
+          minifySyntax: true,
+          metafile: true,
+          write: true,
+          sourcemap: false,
           incremental: false,
           splitting: false,
-          write: true,
           stdin: undefined,
           outfile: undefined,
-          outdir: path.join(
-            outfile ? path.dirname(outfile)! : outdir!,
-            assetDirname
-          ),
+          outdir: outfile ? path.dirname(outfile) : outdir,
+          entryNames: assetNames,
           entryPoints: [args.path],
-          assetNames: "[name]-[hash]",
-          entryNames: "[dir]/[name]-[hash]",
-          publicPath: ".",
           loader: {
-            ...buildOptions.loader,
+            ...buildOps.loader,
             ".css": "css",
           },
-          metafile: true,
           plugins: [
             {
-              name: "external-absolute-url",
-              async setup(cssBuild) {
-                cssBuild.onResolve({ filter: /.*/ }, async (args) => {
+              name: "resolve-absolute",
+              async setup(build) {
+                build.onResolve({ filter: /.*/ }, async (args) => {
                   let { kind, path: resolvePath } = args;
                   if (kind === "url-token" && path.isAbsolute(resolvePath)) {
                     return {
@@ -58,7 +50,6 @@ export function cssFilePlugin(
                       external: true,
                     };
                   }
-                  return {};
                 });
               },
             },
@@ -69,15 +60,11 @@ export function cssFilePlugin(
         let entry = keys.find((key) => {
           let { entryPoint } = metafile.outputs[key];
           return !!entryPoint;
-        })!;
+        });
 
         return {
-          contents: `export default "${path.join(
-            remixConfig.publicPath,
-            assetDirname,
-            path.basename(entry)
-          )}";`,
-          loader: "js",
+          contents: fse.readFileSync(entry!),
+          loader: "file",
         };
       });
     },

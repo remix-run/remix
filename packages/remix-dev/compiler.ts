@@ -348,7 +348,7 @@ async function createBrowserBuild(
   }
 
   let plugins = [
-    cssFilePlugin(config, options),
+    cssFilePlugin(options),
     urlImportsPlugin(),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
@@ -417,7 +417,7 @@ function createServerBuild(
   let isDenoRuntime = config.serverBuildTarget === "deno";
 
   let plugins: esbuild.Plugin[] = [
-    cssFilePlugin(config, options),
+    cssFilePlugin(options),
     urlImportsPlugin(),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
