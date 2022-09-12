@@ -146,6 +146,7 @@ async function loadRouteModuleWithBlockingLinks(
 }
 
 function createLoader(route: EntryRoute, routeModules: RouteModules) {
+
   let loader: ClientRoute["loader"] = async ({ url, signal, submission }) => {
     if (route.hasLoader) {
       let [result] = await Promise.all([
@@ -155,7 +156,7 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
 
       if (result instanceof Error) throw result;
 
-      let redirect = await checkRedirect(result);
+      let redirect = await checkRedirect(url, result);
       if (redirect) return redirect;
 
       if (isCatchResponse(result)) {
@@ -180,7 +181,7 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
     if (!route.hasAction) {
       console.error(
         `Route "${route.id}" does not have an action, but you are trying ` +
-          `to submit to it. To fix this, please add an \`action\` function to the route`
+        `to submit to it. To fix this, please add an \`action\` function to the route`
       );
     }
 
@@ -190,7 +191,7 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
       throw result;
     }
 
-    let redirect = await checkRedirect(result);
+    let redirect = await checkRedirect(url, result);
     if (redirect) return redirect;
 
     await loadRouteModuleWithBlockingLinks(route, routeModules);
@@ -210,8 +211,10 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
 }
 
 async function checkRedirect(
+  fromUrl: URL,
   response: Response
 ): Promise<null | TransitionRedirect> {
+  // Check if it's a redirect coming from Remix
   if (isRedirectResponse(response)) {
     let url = new URL(
       response.headers.get("X-Remix-Redirect")!,
@@ -229,6 +232,16 @@ async function checkRedirect(
       );
     }
   }
+
+  let resUrl = new URL(response.url);
+  // Check if it's a redirect coming from outside of Remix
+  if (fromUrl.pathname != resUrl.pathname) {
+    return new TransitionRedirect(
+      resUrl.pathname + resUrl.search + resUrl.hash,
+      false
+    );
+  }
+
 
   return null;
 }
