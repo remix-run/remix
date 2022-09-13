@@ -155,7 +155,7 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
 
       if (result instanceof Error) throw result;
 
-      let redirect = await checkRedirect(result);
+      let redirect = await checkRedirect(url, result);
       if (redirect) return redirect;
 
       if (isCatchResponse(result)) {
@@ -190,7 +190,7 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
       throw result;
     }
 
-    let redirect = await checkRedirect(result);
+    let redirect = await checkRedirect(url, result);
     if (redirect) return redirect;
 
     await loadRouteModuleWithBlockingLinks(route, routeModules);
@@ -210,6 +210,7 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
 }
 
 async function checkRedirect(
+  fromUrl: URL,
   response: Response
 ): Promise<null | TransitionRedirect> {
   if (isRedirectResponse(response)) {
@@ -228,6 +229,22 @@ async function checkRedirect(
         response.headers.get("X-Remix-Revalidate") !== null
       );
     }
+  }
+
+  let url = new URL(response.url);
+  if (fromUrl.origin !== url.origin) {
+    await new Promise(() => {
+      window.location.replace(url.href);
+    });
+
+    return null;
+  } 
+  
+  if (fromUrl.pathname !== url.pathname) {
+    return new TransitionRedirect(
+      url.pathname + url.search + url.hash,
+      false
+    );
   }
 
   return null;
