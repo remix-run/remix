@@ -146,7 +146,6 @@ async function loadRouteModuleWithBlockingLinks(
 }
 
 function createLoader(route: EntryRoute, routeModules: RouteModules) {
-
   let loader: ClientRoute["loader"] = async ({ url, signal, submission }) => {
     if (route.hasLoader) {
       let [result] = await Promise.all([
@@ -181,7 +180,7 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
     if (!route.hasAction) {
       console.error(
         `Route "${route.id}" does not have an action, but you are trying ` +
-        `to submit to it. To fix this, please add an \`action\` function to the route`
+          `to submit to it. To fix this, please add an \`action\` function to the route`
       );
     }
 
