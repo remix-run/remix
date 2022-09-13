@@ -233,11 +233,18 @@ async function checkRedirect(
     }
   }
 
-  let resUrl = new URL(response.url);
-  // Check if it's a redirect coming from outside of Remix
-  if (fromUrl.pathname != resUrl.pathname) {
+  let url = new URL(response.url);
+  if (fromUrl.origin !== url.origin) {
+    await new Promise(() => {
+      window.location.replace(url.href);
+    });
+
+    return null;
+  } 
+  
+  if (fromUrl.pathname !== url.pathname) {
     return new TransitionRedirect(
-      resUrl.pathname + resUrl.search + resUrl.hash,
+      url.pathname + url.search + url.hash,
       false
     );
   }
