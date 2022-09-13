@@ -17,6 +17,7 @@ export function cssFilePlugin(
 
     async setup(build) {
       let buildOps = build.initialOptions;
+      let deleteDuplicates = new Set<string>();
 
       build.onLoad({ filter: /\.css$/ }, async (args) => {
         let { outfile, outdir, assetNames } = buildOps;
@@ -60,18 +61,24 @@ export function cssFilePlugin(
           ([, meta]) => meta.entryPoint
         )!;
 
+        /**
+         * Because the css file was written to the output with the above build
+         * we would end up with two css files with different hashes in the output if we use the 'file' loader here.
+         * Thats why we delete the generated css file, so the final css file in the output is the one created by the 'file' loader.
+         */
+        deleteDuplicates.add(entry);
+
         return {
-          /**
-           * Because the css file was written to the output with the above build
-           * we would end up with two css files with different hashes in the output if we use the 'file' loader here.
-           * Thats why we delete the generated css file, so the final css file in the output is the one created by the 'file' loader.
-           */
-          contents: await fse.readFile(entry).then(async (contents) => {
-            await fse.remove(entry);
-            return contents;
-          }),
+          contents: await fse.readFile(entry),
           loader: "file",
         };
+      });
+
+      build.onEnd(async () => {
+        await Promise.all(
+          Array.from(deleteDuplicates).map((file) => fse.remove(file))
+        );
+        deleteDuplicates.clear();
       });
     },
   };
