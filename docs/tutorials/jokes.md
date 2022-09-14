@@ -398,7 +398,7 @@ Great, so now going to [`/jokes/new`][jokes-new] should display your form:
 
 Soon we'll add a database that stores our jokes by an ID, so let's add one more route that's a little more unique, a parameterized route:
 
-`/jokes/:jokeId`
+`/jokes/$jokeId`
 
 Here the parameter `$jokeId` can be anything, and we can lookup that part of the URL up in the database to display the right joke. To make a parameterized route, we use the `$` character in the filename. ([Read more about the convention here][the-route-filename-convention]).
 

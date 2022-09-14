@@ -49,7 +49,7 @@ export default function Index() {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const rowVirtualizer = useVirtual({
-    size: data.totalItems,
+    size: items.length,
     parentRef,
     estimateSize: useCallback(() => 35, []),
     initialRect: { width: 0, height: 800 },
