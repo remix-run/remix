@@ -275,13 +275,7 @@ describe("netlify createRemixRequest", () => {
           "method": "GET",
           "parsedURL": "http://localhost:3000/",
           "redirect": "follow",
-          "signal": AbortSignal {
-            Symbol(kEvents): Map {},
-            Symbol(events.maxEventTargetListeners): 10,
-            Symbol(events.maxEventTargetListenersWarned): false,
-            Symbol(kAborted): false,
-            Symbol(kReason): undefined,
-          },
+          "signal": AbortSignal {},
         },
       }
     `);
