@@ -17,17 +17,16 @@ export function cssFilePlugin(
 
     async setup(build) {
       let buildOps = build.initialOptions;
-      let deleteDuplicates = new Set<string>();
 
       build.onLoad({ filter: /\.css$/ }, async (args) => {
         let { outfile, outdir, assetNames } = buildOps;
-        let { metafile } = await esbuild.build({
+        let { metafile, outputFiles } = await esbuild.build({
           ...buildOps,
           minify: buildConfig.mode === BuildMode.Production,
           minifySyntax: true,
           metafile: true,
-          write: true,
-          sourcemap: false, // hash depends on sourcemap
+          write: false,
+          sourcemap: false,
           incremental: false,
           splitting: false,
           stdin: undefined,
@@ -57,28 +56,40 @@ export function cssFilePlugin(
           ],
         });
 
-        let [entry] = Object.entries(metafile.outputs).find(
-          ([, meta]) => meta.entryPoint
+        let { outputs } = metafile!;
+        let entry = Object.keys(outputs).find(
+          (out) => outputs[out].entryPoint
         )!;
+        let entryFile = outputFiles!.find((file) => file.path.endsWith(entry))!;
+        let outputFilesWithoutEntry = outputFiles!.filter(
+          (file) => file !== entryFile
+        );
 
-        /**
-         * Because the css file was written to the output with the above build
-         * we would end up with two css files with different hashes in the output if we use the 'file' loader here.
-         * Thats why we delete the generated css file, so the final css file in the output is the one created by the 'file' loader.
-         */
-        deleteDuplicates.add(entry);
+        // create directories for the assets
+        await Promise.all(
+          outputFilesWithoutEntry.map(({ path: filepath }) =>
+            fse.promises.mkdir(path.dirname(filepath), { recursive: true })
+          )
+        );
+        // write all assets
+        await Promise.all(
+          outputFilesWithoutEntry.map(({ path: filepath, contents }) =>
+            fse.promises.writeFile(filepath, contents)
+          )
+        );
 
         return {
-          contents: await fse.readFile(entry),
+          contents: entryFile.contents,
           loader: "file",
+          // add all css assets to watchFiles
+          watchFiles: Object.values(outputs).reduce((arr, { inputs }) => {
+            let resolvedInputs = Object.keys(inputs).map((input) =>
+              path.resolve(input)
+            );
+            arr.push(...resolvedInputs);
+            return arr;
+          }, [] as string[]),
         };
-      });
-
-      build.onEnd(async () => {
-        await Promise.all(
-          Array.from(deleteDuplicates).map((file) => fse.remove(file))
-        );
-        deleteDuplicates.clear();
       });
     },
   };
