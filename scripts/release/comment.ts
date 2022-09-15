@@ -65,7 +65,14 @@ async function commentOnIssuesAndPrsAboutRelease() {
     }
   }
 
-  await Promise.all(promises);
+  let result = await Promise.allSettled(promises);
+  let rejected = result.filter((r) => r.status === "rejected");
+  if (rejected.length > 0) {
+    console.log(
+      "🚨 failed to comment on some issues/prs - the most likely reason is they were issues that were turned into discussions, which don't have an api to comment with"
+    );
+    console.log(rejected);
+  }
 }
 
 commentOnIssuesAndPrsAboutRelease();
