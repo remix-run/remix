@@ -108,7 +108,7 @@ export async function createApp({
       if (debug) {
         console.log(
           colors.warning(
-            ` 🔍  Using the ${name} example template from the remix-run/remix repo`
+            ` 🔍  Using the ${name} example template from the remix-run/examples repo`
           )
         );
       }
@@ -116,7 +116,7 @@ export async function createApp({
       await downloadAndExtractRepoTarball(
         projectDir,
         getRepoInfo(
-          `https://github.com/remix-run/remix/tree/main/examples/${name}`
+          `https://github.com/remix-run/examples/tree/main/${name}`
         ),
         options
       );
@@ -803,7 +803,7 @@ export function detectTemplateType(template: string): TemplateType | null {
     // ignore FS errors and move on
   }
 
-  // 4. examples/<template> will use an example folder in the Remix repo
+  // 4. examples/<template> will use a folder in the Examples repo
   if (/^examples?\/[\w-]+$/.test(template)) {
     return "example";
   }
