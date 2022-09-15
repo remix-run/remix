@@ -8,8 +8,8 @@ import { createRequestHandler } from "@remix-run/cloudflare";
 
 // Virtual module provided by wrangler
 import manifestJSON from "__STATIC_CONTENT_MANIFEST";
-// Virtual module provided by remix
-import * as remixBuild from "@remix-run/dev/server-build";
+// The build remix app provided by remix build
+import * as remixBuild from "remix-build";
 
 const assetManifest = JSON.parse(manifestJSON);
 

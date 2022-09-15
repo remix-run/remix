@@ -14,7 +14,8 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./app/*"]
+      "~/*": ["./app/*"],
+      "remix-build": ["./build/index.mjs"]
     },
 
     // Remix takes care of building everything in `./app` with `remix build`.

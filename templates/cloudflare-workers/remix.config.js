@@ -1,6 +1,7 @@
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
-  serverBuildTarget: "cloudflare-workers",
+  serverModuleFormat: "esm",
+  serverBuildPath: "build/index.mjs",
   server: "worker/index.ts",
   devServerBroadcastDelay: 1000,
   devServerPort: 8002,
