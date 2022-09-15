@@ -1,6 +1,4 @@
 {
   "extends": ["@remix-run/eslint-config", "@remix-run/eslint-config/node"],
-  "ignorePatterns": [
-    "app/styles/**/*"
-  ]
+  "ignorePatterns": ["app/styles/**/*"]
 }
