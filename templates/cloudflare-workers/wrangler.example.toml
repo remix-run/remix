@@ -1,10 +1,10 @@
-account_id = ""
 name = "remix-cloudflare-workers"
 
 compatibility_date = "2022-09-14"
-compatibility_flags = ["streams_enable_constructors"]
 
 main = "build/index.js"
 
 [site]
 bucket = "./public"
+
+[vars]

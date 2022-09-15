@@ -1,5 +1,5 @@
 {
-  "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"],
+  "include": ["**/*.d.ts", "**/*.ts", "**/*.tsx"],
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2019"],
     "isolatedModules": true,
@@ -11,12 +11,14 @@
     "strict": true,
     "allowJs": true,
     "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
       "~/*": ["./app/*"]
     },
 
-    // Remix takes care of building everything in `remix build`.
+    // Remix takes care of building everything in `./app` with `remix build`.
+    // Wrangler takes care of building everything in `./worker` with `wrangler start` / `wrangler publish`.
     "noEmit": true
   }
 }
