@@ -20,6 +20,7 @@
     "@remix-run/vercel": "1.7.0"
   },
   "changesets": [
+    "cyan-cats-sip",
     "late-jars-wonder",
     "lazy-lions-invent",
     "smooth-buses-approve"
