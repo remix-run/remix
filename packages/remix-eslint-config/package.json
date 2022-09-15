@@ -1,17 +1,17 @@
 {
   "name": "@remix-run/eslint-config",
+  "version": "1.7.0",
   "description": "ESLint configuration for Remix projects",
-  "version": "1.5.1",
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
     "directory": "packages/remix-eslint-config"
   },
-  "bugs": {
-    "url": "https://github.com/remix-run/remix/issues"
-  },
-  "main": "index.js",
   "license": "MIT",
+  "main": "index.js",
   "files": [
     "README.md",
     "index.js",
@@ -23,9 +23,9 @@
     "settings"
   ],
   "dependencies": {
-    "@babel/core": "^7.17.5",
-    "@babel/eslint-parser": "^7.17.0",
-    "@babel/preset-react": "^7.16.7",
+    "@babel/core": "^7.18.6",
+    "@babel/eslint-parser": "^7.18.2",
+    "@babel/preset-react": "^7.18.6",
     "@rushstack/eslint-patch": "^1.1.0",
     "@typescript-eslint/eslint-plugin": "^5.12.1",
     "@typescript-eslint/parser": "^5.12.1",
@@ -41,7 +41,11 @@
     "eslint-plugin-testing-library": "^5.0.5"
   },
   "devDependencies": {
-    "@types/eslint": "^8.4.1"
+    "@types/eslint": "^8.4.1",
+    "eslint": "^8.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "typescript": "^4.7.4"
   },
   "peerDependencies": {
     "eslint": "^8.0.0",

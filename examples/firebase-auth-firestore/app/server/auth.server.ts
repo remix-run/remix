@@ -1,6 +1,5 @@
 import type { Session } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
-import { signInWithEmailAndPassword } from "firebase/auth";
 import type { UserRecord } from "firebase-admin/auth";
 
 import { destroySession, getSession } from "~/sessions";
@@ -29,12 +28,11 @@ export const requireAuth = async (request: Request): Promise<UserRecord> => {
 };
 
 export const signIn = async (email: string, password: string) => {
-  const { user } = await signInWithEmailAndPassword(
-    auth.client,
-    email,
-    password
-  );
-  const idToken = await user.getIdToken();
+  const { idToken } = await auth.signInWithPassword(email, password);
+  return signInWithToken(idToken);
+};
+
+export const signInWithToken = async (idToken: string) => {
   const expiresIn = 1000 * 60 * 60 * 24 * 7; // 1 week
   const sessionCookie = await auth.server.createSessionCookie(idToken, {
     expiresIn,

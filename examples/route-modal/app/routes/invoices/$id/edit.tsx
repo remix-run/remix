@@ -44,7 +44,7 @@ export const loader: LoaderFunction = async ({ params }) => {
 };
 
 export const action: ActionFunction = async ({ request }) => {
-  // Here we can update our dabatase with the updated invoice
+  // Here we can update our database with the updated invoice
 
   // Redirect back to invoice list
   return redirect("/invoices");

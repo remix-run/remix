@@ -2,8 +2,6 @@ import fsp from "fs/promises";
 import path from "path";
 import lambdaTester from "lambda-tester";
 import {
-  // This has been added as a global in node 15+
-  AbortController,
   createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,
 } from "@remix-run/node";
@@ -273,7 +271,7 @@ describe("netlify createRemixRequest", () => {
           "method": "GET",
           "parsedURL": "http://localhost:3000/",
           "redirect": "follow",
-          "signal": null,
+          "signal": AbortSignal {},
         },
       }
     `);
@@ -283,8 +281,7 @@ describe("netlify createRemixRequest", () => {
 describe("sendRemixResponse", () => {
   it("handles regular responses", async () => {
     let response = new NodeResponse("anything");
-    let abortController = new AbortController();
-    let result = await sendRemixResponse(response, abortController);
+    let result = await sendRemixResponse(response);
     expect(result.body).toBe("anything");
   });
 
@@ -297,9 +294,7 @@ describe("sendRemixResponse", () => {
       },
     });
 
-    let abortController = new AbortController();
-
-    let result = await sendRemixResponse(response, abortController);
+    let result = await sendRemixResponse(response);
 
     expect(result.body).toMatch(json);
   });
@@ -314,9 +309,7 @@ describe("sendRemixResponse", () => {
       },
     });
 
-    let abortController = new AbortController();
-
-    let result = await sendRemixResponse(response, abortController);
+    let result = await sendRemixResponse(response);
 
     expect(result.body).toMatch(image.toString("base64"));
   });

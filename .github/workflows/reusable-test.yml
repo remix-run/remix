@@ -1,0 +1,136 @@
+name: 🧪 Test (shared)
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        required: true
+        # this is limited to string | boolean | number (https://github.community/t/can-action-inputs-be-arrays/16457)
+        # but we want to pass an array (node_version: "[14, 16, 18]"),
+        # so we'll need to manually stringify it for now
+        type: string
+
+env:
+  CI: true
+  CYPRESS_INSTALL_BINARY: 0
+
+jobs:
+  build:
+    name: ⚙️ Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+
+      - name: 📥 Install deps
+        run: yarn --frozen-lockfile
+
+      - name: 🏗 Build
+        run: yarn build
+
+  lint:
+    name: ⬣ Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+
+      - name: 📥 Install deps
+        run: yarn --frozen-lockfile
+
+      - name: 🔬 Lint
+        run: yarn lint
+
+      - name: 🦕 Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
+      - name: 🔬 Lint deno files
+        run: yarn lint:deno
+
+  test:
+    name: "🧪 Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          # - macos-latest
+          - windows-latest
+        node: ${{ fromJSON(inputs.node_version) }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node ${{ matrix.node }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "yarn"
+
+      - name: 📥 Install deps
+        run: yarn --frozen-lockfile
+
+      - name: 🧪 Run Primary Tests
+        run: "yarn test:primary"
+
+  integration:
+    name: "👀 Integration Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }} Browser: ${{ matrix.browser }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ${{ fromJSON(inputs.node_version) }}
+        os:
+          - ubuntu-latest
+          # - macos-latest
+          - windows-latest
+        browser:
+          - chromium
+          # - firefox
+          - webkit
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node ${{ matrix.node }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "yarn"
+
+      - name: 📥 Install deps
+        run: yarn --frozen-lockfile
+
+      - name: 📥 Install Playwright
+        run: npx playwright install --with-deps
+
+      - name: 👀 Run Integration Tests ${{ matrix.browser }}
+        run: "yarn test:integration --project=${{ matrix.browser }}"

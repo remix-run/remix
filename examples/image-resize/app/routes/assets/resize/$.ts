@@ -76,7 +76,7 @@ function streamingResize(
   height: number | undefined,
   fit: keyof FitEnum
 ) {
-  // create the sharp transform pipline
+  // create the sharp transform pipeline
   // https://sharp.pixelplumbing.com/api-resize
   // you can also add watermarks, sharpen, blur, etc.
   const sharpTransforms = sharp()
@@ -162,7 +162,7 @@ function handleError(error: unknown) {
     });
   }
 
-  // if there is an error proccessing the image, we return a 500 error
+  // if there is an error processing the image, we return a 500 error
   return new Response(errorT.message, {
     status: 500,
     statusText: errorT.message,

@@ -19,7 +19,7 @@ export const links: LinksFunction = () => {
 };
 
 export const action: ActionFunction = async ({ request }) => {
-  // Here we can update our dabatase with the new invoice
+  // Here we can update our database with the new invoice
 
   // This is just so we can see the transition
   return new Promise((resolve) =>

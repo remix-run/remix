@@ -1,0 +1,12 @@
+{
+  "kind": "identitytoolkit#DownloadAccountResponse",
+  "users": [
+    {
+      "displayName": "Example User",
+      "localId": "example-user-id",
+      "email": "user@example.com",
+      "salt": "fakeSaltpxzWUXbZSfvlQQOvuofg",
+      "passwordHash": "fakeHash:salt=fakeSaltpxzWUXbZSfvlQQOvuofg:password=password"
+    }
+  ]
+}

@@ -5,6 +5,8 @@ import fse from "fs-extra";
 import arcParser from "@architect/parser";
 import { toLogicalID } from "@architect/utils";
 import { createApp } from "@remix-run/dev";
+import destroy from "@architect/destroy";
+import PackageJson from "@npmcli/package-json";
 
 import {
   addCypress,
@@ -14,7 +16,6 @@ import {
   getAppName,
   getSpawnOpts,
   runCypress,
-  updatePackageConfig,
   validatePackageVersions,
 } from "./_shared.mjs";
 
@@ -42,59 +43,42 @@ let client = new aws.ApiGatewayV2({
   },
 });
 
-async function deleteOldestDeployment() {
-  let deployments = await client.getApis().promise();
-
-  // Sort by creation date, oldest first
-  let [deployment] = deployments.Items.sort((a, b) => {
-    return a.CreatedDate > b.CreatedDate ? 1 : -1;
-  });
-
-  let arcName = deployment.Name.toLowerCase();
-  let FAKE_PROJECT_DIR = getAppDirectory(arcName);
-  let spawnOpts = getSpawnOpts(FAKE_PROJECT_DIR);
-
-  console.log(`Deleting deployment ${arcName}`);
-  // create a fake app.arc with the deployment name
-  await fse.ensureDir(FAKE_PROJECT_DIR);
-  await fse.writeFile(
-    path.join(FAKE_PROJECT_DIR, "app.arc"),
-    arcParser.stringify({ app: [arcName] })
-  );
-  let arcDestroyCommand = spawnSync(
-    "npx",
-    ["@architect/architect", "destroy", "--app", arcName, "--force"],
-    spawnOpts
-  );
-  if (arcDestroyCommand.status !== 0) {
-    console.log(arcDestroyCommand.error);
-    throw new Error("🚨 Failed to destroy deployment");
-  }
-
-  await fse.rmdir(FAKE_PROJECT_DIR, { recursive: true });
-}
-
 async function getArcDeployment() {
   let deployments = await client.getApis().promise();
   return deployments.Items.find((item) => item.Name === AWS_STACK_NAME);
 }
 
-try {
+async function createAndDeployApp() {
   await createNewApp();
 
   // validate dependencies are available
-  await validatePackageVersions(PROJECT_DIR);
+  let [valid, errors] = await validatePackageVersions(PROJECT_DIR);
+
+  if (!valid) {
+    console.error(errors);
+    process.exit(1);
+  }
+
+  let pkgJson = await PackageJson.load(PROJECT_DIR);
+  pkgJson.update({
+    devDependencies: {
+      ...pkgJson.content.devDependencies,
+      "@architect/architect": "latest",
+    },
+  });
 
   await Promise.all([
     fse.copy(CYPRESS_SOURCE_DIR, path.join(PROJECT_DIR, "cypress")),
     fse.copy(CYPRESS_CONFIG, path.join(PROJECT_DIR, "cypress.json")),
     addCypress(PROJECT_DIR, CYPRESS_DEV_URL),
-    updatePackageConfig(PROJECT_DIR, (config) => {
-      config.devDependencies["@architect/architect"] = "latest";
-    }),
+    pkgJson.save(),
   ]);
 
-  let spawnOpts = getSpawnOpts(PROJECT_DIR);
+  let spawnOpts = getSpawnOpts(PROJECT_DIR, {
+    // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+  });
 
   // install deps
   spawnSync("npm", ["install"], spawnOpts);
@@ -109,16 +93,11 @@ try {
   parsed.app = [APP_NAME];
   await fse.writeFile(ARC_CONFIG_PATH, arcParser.stringify(parsed));
 
-  await deleteOldestDeployment();
-
   // deploy to the staging environment
-  let arcDeployCommand = spawnSync(
-    "npx",
-    ["arc", "deploy", "--prune"],
-    spawnOpts
-  );
-  if (arcDeployCommand.status !== 0) {
-    throw new Error("Deployment failed");
+  let deployCommand = spawnSync("npx", ["arc", "deploy", "--prune"], spawnOpts);
+  if (deployCommand.status !== 0) {
+    console.error(deployCommand.error);
+    throw new Error("Architect deploy failed");
   }
 
   let deployment = await getArcDeployment();
@@ -126,11 +105,33 @@ try {
     throw new Error("Deployment not found");
   }
 
-  // run cypress against the deployed server
+  // run cypress against the deployed app
   runCypress(PROJECT_DIR, false, deployment.ApiEndpoint);
-
-  process.exit(0);
-} catch (error) {
-  console.error(error);
-  process.exit(1);
 }
+
+async function destroyApp() {
+  console.log(`Destroying app ${APP_NAME}`);
+  destroy({
+    appname: APP_NAME,
+    env: "staging",
+    // use true to also remove the s3 bucket
+    force: true,
+  });
+  console.log(`Destroyed app ${APP_NAME}`);
+}
+
+async function main() {
+  let exitCode;
+  try {
+    await createAndDeployApp();
+    exitCode = 0;
+  } catch (error) {
+    console.error(error);
+    exitCode = 1;
+  } finally {
+    await destroyApp();
+    process.exit(exitCode);
+  }
+}
+
+main();

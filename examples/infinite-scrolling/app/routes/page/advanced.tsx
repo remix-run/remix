@@ -93,10 +93,10 @@ export default function Index() {
     if (!hydrating) return;
     if (!parentRef.current) return;
 
-    const inifiniteScrollTop = sessionStorage.getItem("infiniteScrollTop-page");
-    if (!inifiniteScrollTop) return;
+    const infiniteScrollTop = sessionStorage.getItem("infiniteScrollTop-page");
+    if (!infiniteScrollTop) return;
 
-    parentRef.current.scrollTop = Number(inifiniteScrollTop);
+    parentRef.current.scrollTop = Number(infiniteScrollTop);
 
     return () => {
       sessionStorage.removeItem("infiniteScrollTop");
@@ -143,11 +143,14 @@ export default function Index() {
     }
     const newPage = Math.round(neededStart / limit);
     if (newPage !== page) {
-      setSearchParams({
-        start: String(neededStart),
-        page: String(newPage),
-        limit: LIMIT.toString(),
-      });
+      setSearchParams(
+        {
+          start: String(neededStart),
+          page: String(newPage),
+          limit: LIMIT.toString(),
+        },
+        { replace: true }
+      );
     }
   }, [limit, neededStart, page, setSearchParams]);
 

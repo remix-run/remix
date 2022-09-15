@@ -76,7 +76,7 @@ Remix also supports "runtime" frameworks like styled components where styles are
 
 All this is to say that **we're still researching how best to integrate and work with the frameworks that require compiler integration**. With Remix's unique ability to prefetch, add, and remove CSS for partial UI on the page, we anticipate CSS frameworks will have some new ideas on how to support building actual CSS files to better support Remix and the performance of websites using them.
 
-The two most popular approaches in the Remix community are route-based stylesheets and [Tailwind](https://tailwindcss.com). Both have exceptional performance characteristics. In this document we'll show how to use these two approaches as well as a few more.
+The two most popular approaches in the Remix community are route-based stylesheets and [Tailwind][tailwind]. Both have exceptional performance characteristics. In this document we'll show how to use these two approaches as well as a few more.
 
 ## Regular Stylesheets
 
@@ -254,7 +254,7 @@ Now Remix can prefetch, load, and unload the styles for `button.css`, `primary-b
 An initial reaction to this is that routes have to know more than you want them to. Keep in mind each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
 
 ```tsx filename=app/routes/$category.js lines=[4-8,24-31]
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { TileGrid } from "~/components/tile-grid";
@@ -415,7 +415,8 @@ npx tailwindcss init
 
 Now we can tell it which files to generate classes from:
 
-```js filename=tailwind.config.js lines=[2]
+```js filename=tailwind.config.js lines=[3]
+/** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./app/**/*.{ts,tsx,jsx,js}"],
   theme: {
@@ -431,10 +432,10 @@ Update the package scripts to generate the Tailwind file during dev and for the 
 {
   // ...
   "scripts": {
-    "build": "run-s build:*",
+    "build": "run-s \"build:*\"",
     "build:css": "npm run generate:css -- --minify",
     "build:remix": "remix build",
-    "dev": "run-p dev:*",
+    "dev": "run-p \"dev:*\"",
     "dev:css": "npm run generate:css -- --watch",
     "dev:remix": "remix dev",
     "generate:css": "npx tailwindcss -o ./app/tailwind.css",
@@ -447,7 +448,7 @@ Update the package scripts to generate the Tailwind file during dev and for the 
 Finally, import the generated CSS file into your app:
 
 ```tsx filename=app/root.tsx
-import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 // ...
 
@@ -478,10 +479,10 @@ Then alter how Tailwind is generating your css:
 {
   // ...
   "scripts": {
-    "build": "run-s build:*",
+    "build": "run-s \"build:*\"",
     "build:css": "npm run generate:css -- --minify",
     "build:remix": "remix build",
-    "dev": "run-p dev:*",
+    "dev": "run-p \"dev:*\"",
     "dev:css": "npm run generate:css -- --watch",
     "dev:remix": "remix dev",
     "generate:css": "npx tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css",
@@ -504,14 +505,14 @@ node_modules
 /app/tailwind.css
 ```
 
-If you're using VS Code, it's recommended you install the [Tailwind IntelliSense extension](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) for the best developer experience.
+If you're using VS Code, it's recommended you install the [Tailwind IntelliSense extension][tailwind-intelli-sense-extension] for the best developer experience.
 
 ## Remote Stylesheets
 
 You can load stylesheets from any server, here's an example of loading a modern css reset from unpkg.
 
 ```ts filename=app/root.tsx
-import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const links: LinksFunction = () => {
   return [
@@ -599,7 +600,7 @@ Here's how to set it up:
    Then import like any other css file:
 
    ```tsx filename=root.tsx
-   import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+   import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
    import styles from "./styles/app.css";
 
@@ -688,7 +689,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
 1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
 
    ```tsx filename=app/root.tsx lines=[22-24]
-   import type { MetaFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+   import type { MetaFunction } from "@remix-run/node"; // or cloudflare/deno
    import {
      Links,
      LiveReload,
@@ -729,7 +730,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
    ```tsx filename=entry.server.tsx lines=[4,12,15-20,22-23]
    import { renderToString } from "react-dom/server";
    import { RemixServer } from "@remix-run/react";
-   import type { EntryContext } from "@remix-run/node"; // or "@remix-run/cloudflare"
+   import type { EntryContext } from "@remix-run/node"; // or cloudflare/deno
    import { ServerStyleSheet } from "styled-components";
 
    export default function handleRequest(
@@ -770,3 +771,5 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 [styled-components-example]: https://github.com/remix-run/remix/tree/dev/examples/styled-components
 [examples]: https://github.com/remix-run/remix/tree/dev/examples
 [styled-components-issue]: https://github.com/styled-components/styled-components/issues/3660
+[tailwind]: https://tailwindcss.com
+[tailwind-intelli-sense-extension]: https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss

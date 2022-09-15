@@ -4,7 +4,6 @@ import type { Writable } from "stream";
 import express from "express";
 import getPort from "get-port";
 import stripIndent from "strip-indent";
-import chalk from "chalk";
 import { sync as spawnSync } from "cross-spawn";
 import type { JsonObject } from "type-fest";
 
@@ -17,7 +16,7 @@ const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 interface FixtureInit {
   buildStdio?: Writable;
   sourcemap?: boolean;
-  files: { [filename: string]: string };
+  files?: { [filename: string]: string | Buffer };
   template?: "cf-template" | "deno-template" | "node-template";
   setup?: "node" | "cloudflare";
 }
@@ -35,15 +34,6 @@ export function json(value: JsonObject) {
 export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
   let buildPath = path.resolve(projectDir, "build");
-  if (!fse.existsSync(buildPath)) {
-    throw new Error(
-      chalk.red(
-        `Expected build directory to exist at ${chalk.dim(
-          buildPath
-        )}. The build probably failed. Did you maybe have a syntax error in your test code strings?`
-      )
-    );
-  }
   let app: ServerBuild = await import(buildPath);
   let handler = createRequestHandler(app, "production");
 
@@ -143,7 +133,9 @@ export async function createAppFixture(fixture: Fixture) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-export async function createFixtureProject(init: FixtureInit): Promise<string> {
+export async function createFixtureProject(
+  init: FixtureInit = {}
+): Promise<string> {
   let template = init.template ?? "node-template";
   let integrationTemplateDir = path.join(__dirname, template);
   let projectName = `remix-${template}-${Math.random().toString(32).slice(2)}`;
@@ -157,11 +149,24 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
     { overwrite: true }
   );
   if (init.setup) {
-    spawnSync(
+    let setupSpawn = spawnSync(
       "node",
-      ["node_modules/@remix-run/dev/cli.js", "setup", init.setup],
+      ["node_modules/@remix-run/dev/dist/cli.js", "setup", init.setup],
       { cwd: projectDir }
     );
+
+    // These logs are helpful for debugging. Remove comments if needed.
+    // console.log("spawning @remix-run/dev/cli.js `setup`:\n");
+    // console.log("  STDOUT:");
+    // console.log("  " + setupSpawn.stdout.toString("utf-8"));
+    // console.log("  STDERR:");
+    // console.log("  " + setupSpawn.stderr.toString("utf-8"));
+    if (setupSpawn.error || setupSpawn.status) {
+      console.error(setupSpawn.stderr.toString("utf-8"));
+      throw (
+        setupSpawn.error || new Error(`Setup failed, check the output above`)
+      );
+    }
   }
   await writeTestFiles(init, projectDir);
   build(projectDir, init.buildStdio, init.sourcemap);
@@ -170,26 +175,42 @@ export async function createFixtureProject(init: FixtureInit): Promise<string> {
 }
 
 function build(projectDir: string, buildStdio?: Writable, sourcemap?: boolean) {
-  let buildArgs = ["node_modules/@remix-run/dev/cli.js", "build"];
+  let buildArgs = ["node_modules/@remix-run/dev/dist/cli.js", "build"];
   if (sourcemap) {
     buildArgs.push("--sourcemap");
   }
-  let buildSpawn = spawnSync("node", buildArgs, {
-    cwd: projectDir,
-  });
+  let buildSpawn = spawnSync("node", buildArgs, { cwd: projectDir });
+
+  // These logs are helpful for debugging. Remove comments if needed.
+  // console.log("spawning @remix-run/dev/cli.js `build`:\n");
+  // console.log("  STDOUT:");
+  // console.log("  " + buildSpawn.stdout.toString("utf-8"));
+  // console.log("  STDERR:");
+  // console.log("  " + buildSpawn.stderr.toString("utf-8"));
+
   if (buildStdio) {
     buildStdio.write(buildSpawn.stdout.toString("utf-8"));
     buildStdio.write(buildSpawn.stderr.toString("utf-8"));
     buildStdio.end();
   }
+
+  if (buildSpawn.error || buildSpawn.status) {
+    console.error(buildSpawn.stderr.toString("utf-8"));
+    throw buildSpawn.error || new Error(`Build failed, check the output above`);
+  }
 }
 
 async function writeTestFiles(init: FixtureInit, dir: string) {
   await Promise.all(
-    Object.keys(init.files).map(async (filename) => {
+    Object.keys(init.files ?? {}).map(async (filename) => {
       let filePath = path.join(dir, filename);
       await fse.ensureDir(path.dirname(filePath));
-      await fse.writeFile(filePath, stripIndent(init.files[filename]));
+      let file = init.files![filename];
+      if (typeof file === "string") {
+        await fse.writeFile(filePath, stripIndent(file));
+      } else {
+        await fse.writeFile(filePath, file);
+      }
     })
   );
 }
