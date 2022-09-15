@@ -6361,7 +6361,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [java-script-to-know-for-react]: https://kentcdodds.com/blog/javascript-to-know-for-react
 [the-beginner-s-guide-to-react]: https://kcd.im/beginner-react
 [the-http-api]: https://developer.mozilla.org/en-US/docs/Web/HTTP
-[the-basic-example]: https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/basic
+[the-basic-example]: https://codesandbox.io/s/github/remix-run/examples/tree/main/basic
 [express]: https://expressjs.com
 [hydrate]: https://reactjs.org/docs/react-dom.html#hydrate
 [http-localhost-3000]: http://localhost:3000
