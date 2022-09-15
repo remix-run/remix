@@ -1486,7 +1486,7 @@ export default function Page() {
 [error-boundary]: #errorboundary
 [catch-boundary]: #catchboundary
 [outlet]: https://reactrouter.com/docs/en/v6/api#outlet
-[view-example-app]: https://github.com/remix-run/remix/tree/main/examples/multiple-params
+[view-example-app]: https://github.com/remix-run/examples/tree/main/multiple-params
 [use-params]: https://reactrouter.com/docs/en/v6/api#useparams
 [params]: #loader-params
 [routing-guide]: ../guides/routing

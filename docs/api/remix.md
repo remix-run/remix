@@ -2700,7 +2700,7 @@ export default function CompanyRoute() {
 [constraints]: ../guides/constraints
 [action]: #form-action
 [disabling-javascript]: ../guides/disabling-javascript
-[example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data
+[example-sharing-loader-data]: https://github.com/remix-run/examples/tree/main/sharing-loader-data
 [index query param]: ../guides/routing#what-is-the-index-query-param
 [web-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
 [content-security-policy-for-scripts]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src

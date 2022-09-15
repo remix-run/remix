@@ -308,7 +308,7 @@ function SomeComponent() {
 }
 ```
 
-To simplify this solution, we recommend the using the [`ClientOnly` component][client-only-component] in the [`remix-utils`][remix-utils] community package. An example of its usage can be found in the [`examples` directory of the Remix repo][examples-directory-of-the-remix-repo].
+To simplify this solution, we recommend the using the [`ClientOnly` component][client-only-component] in the [`remix-utils`][remix-utils] community package. An example of its usage can be found in the [`examples` repository][examples-repository].
 
 ### `React.lazy` and `React.Suspense`
 
@@ -623,7 +623,7 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [loader-data]: ../api/conventions#loader
 [client-only-component]: https://github.com/sergiodxa/remix-utils/blob/main/src/react/client-only.tsx
 [remix-utils]: https://www.npmjs.com/package/remix-utils
-[examples-directory-of-the-remix-repo]: https://github.com/remix-run/remix/blob/main/examples/client-only-components/app/routes/index.tsx
+[examples-repository]: https://github.com/remix-run/examples/blob/main/client-only-components/app/routes/index.tsx
 [react-lazy]: https://reactjs.org/docs/code-splitting.html#reactlazy
 [react-suspense]: https://reactjs.org/docs/react-api.html#reactsuspense
 [client-only-approach]: #client-only-components
