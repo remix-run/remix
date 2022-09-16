@@ -6,13 +6,13 @@ export const typescriptConfig = [
     extends: ["plugin:import/typescript"],
     parser: "@typescript-eslint/parser",
     parserOptions: {
-      sourceType: "module",
       ecmaFeatures: {
         jsx: true,
       },
       warnOnUnsupportedTypeScriptVersion: true,
     },
     languageOptions: {
+      sourceType: "module",
       ecmaVersion: 2019,
     },
     plugins: ["@typescript-eslint"],

@@ -16,7 +16,6 @@ export const coreConfig = [
     files: ["**/*.js", "**/*.mjs"],
     parser: "@babel/eslint-parser",
     parserOptions: {
-      sourceType: "module",
       requireConfigFile: false,
       babelOptions: {
         presets: [require.resolve("@babel/preset-react")],
@@ -27,6 +26,7 @@ export const coreConfig = [
       ...commonjsGlobals,
       ...es6Globals,
       ecmaVersion: "latest",
+      sourceType: "module",
     },
     plugins: ["import", "react", "react-hooks", "jsx-a11y"],
     settings: {
