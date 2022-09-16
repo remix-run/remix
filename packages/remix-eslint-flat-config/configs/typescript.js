@@ -1,4 +1,5 @@
 import typescriptParser from "@typescript-eslint/parser";
+import typescriptPlugin from "@typescript-eslint/eslint-plugin";
 
 import { typescriptRules, typescriptJSXRules } from "../rules/typescript";
 
@@ -17,7 +18,7 @@ export const typescriptConfig = [
         warnOnUnsupportedTypeScriptVersion: true,
       },
     },
-    plugins: ["@typescript-eslint"],
+    plugins: [typescriptPlugin],
     rules: typescriptRules,
   },
   {

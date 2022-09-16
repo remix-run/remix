@@ -4,6 +4,10 @@ import {
   es6 as es6Globals,
 } from "globals";
 import babelParser from "@babel/eslint-parser";
+import importPlugin from "eslint-plugin-import";
+import reactPlugin from "eslint-plugin-react";
+import reactHooksPlugin from "eslint-plugin-react-hooks";
+import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
 
 import { coreRules } from "../rules/core";
 import { importRules } from "../rules/import";
@@ -29,7 +33,7 @@ export const coreConfig = [
         },
       },
     },
-    plugins: ["import", "react", "react-hooks", "jsx-a11y"],
+    plugins: [importPlugin, reactPlugin, reactHooksPlugin, jsxA11yPlugin],
     settings: {
       ...reactSettings,
       ...importSettings,

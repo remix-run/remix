@@ -6,6 +6,13 @@ import {
   nodeBuiltin as nodeBuiltinGlobals,
   jest as jestGlobals,
 } from "globals";
+// Plugins used in the internal config should be installed in our
+// repositories. We don't want to ship these as dependencies to consumers
+// who may not use them.
+/* eslint-disable import/no-extraneous-dependencies */
+import nodePlugin from "eslint-plugin-node";
+import preferLetPlugin from "eslint-plugin-prefer-let";
+/* eslint-enable import/no-extraneous-dependencies */
 
 import { coreConfig, testingLibraryConfig } from "./index";
 
@@ -23,8 +30,8 @@ export const internalConfig = [
       // Plugins used in the internal config should be installed in our
       // repositories. We don't want to ship these as dependencies to consumers
       // who may not use them.
-      "node",
-      "prefer-let",
+      nodePlugin,
+      preferLetPlugin,
     ],
     rules: {
       ...coreConfig,
