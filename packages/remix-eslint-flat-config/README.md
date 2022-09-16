@@ -25,6 +25,7 @@ export default [...coreConfig];
 This packages also ships with optional configuration objects for projects that use the following:
 
 - [Node](https://nodejs.org/en/). To use this config, import `nodeConfig`.
+- [Typescript](https://www.typescriptlang.org/). To use this config, import `typescriptConfig`.
 - [Jest](https://jestjs.io/) with [Testing Library](https://testing-library.com). To use this config, import `testingLibraryConfig`.
 
 Then, include the configs by spreading the config into your own `eslint.config.js`, like so:
@@ -33,10 +34,16 @@ Then, include the configs by spreading the config into your own `eslint.config.j
 import {
   coreConfig,
   nodeConfig,
+  typescriptConfig,
   testingLibraryConfig,
 } from "@remix-run/eslint-flat-config";
 
-export default [...coreConfig, ...nodeConfig, ...testingLibraryConfig];
+export default [
+  ...coreConfig,
+  ...typescriptConfig,
+  ...nodeConfig,
+  ...testingLibraryConfig,
+];
 ```
 
 ### Jest + Testing Library
