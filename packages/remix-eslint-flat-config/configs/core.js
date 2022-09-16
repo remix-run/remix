@@ -3,6 +3,7 @@ import {
   commonjs as commonjsGlobals,
   es6 as es6Globals,
 } from "globals";
+import babelParser from "@babel/eslint-parser";
 
 import { coreRules } from "../rules/core";
 import { importRules } from "../rules/import";
@@ -13,20 +14,20 @@ import { reactSettings } from "../settings/react";
 
 export const coreConfig = [
   {
-    files: ["**/*.js", "**/*.mjs"],
-    parser: "@babel/eslint-parser",
-    parserOptions: {
-      requireConfigFile: false,
-      babelOptions: {
-        presets: [require.resolve("@babel/preset-react")],
-      },
-    },
+    files: ["**/*.js"],
     languageOptions: {
       ...browserGlobals,
       ...commonjsGlobals,
       ...es6Globals,
       ecmaVersion: "latest",
       sourceType: "module",
+      parser: babelParser,
+      parserOptions: {
+        requireConfigFile: false,
+        babelOptions: {
+          presets: ["@babel/preset-react"],
+        },
+      },
     },
     plugins: ["import", "react", "react-hooks", "jsx-a11y"],
     settings: {

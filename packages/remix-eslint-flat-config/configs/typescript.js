@@ -1,19 +1,21 @@
+import typescriptParser from "@typescript-eslint/parser";
+
 import { typescriptRules, typescriptJSXRules } from "../rules/typescript";
 
 export const typescriptConfig = [
   {
     files: ["**/*.ts?(x)"],
     extends: ["plugin:import/typescript"],
-    parser: "@typescript-eslint/parser",
-    parserOptions: {
-      ecmaFeatures: {
-        jsx: true,
-      },
-      warnOnUnsupportedTypeScriptVersion: true,
-    },
     languageOptions: {
       sourceType: "module",
       ecmaVersion: 2019,
+      parser: typescriptParser,
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true,
+        },
+        warnOnUnsupportedTypeScriptVersion: true,
+      },
     },
     plugins: ["@typescript-eslint"],
     rules: typescriptRules,
