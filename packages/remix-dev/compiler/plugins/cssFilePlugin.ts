@@ -10,7 +10,7 @@ import type { BuildConfig } from "../../compiler";
  * and exports the url of the css file as its default export.
  */
 export function cssFilePlugin(
-  buildConfig: Partial<BuildConfig>
+  buildConfig: Pick<Partial<BuildConfig>, "mode">
 ): esbuild.Plugin {
   return {
     name: "css-file",
