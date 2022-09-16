@@ -1,19 +1,5 @@
 # `@remix-run/react`
 
-## 1.7.1-pre.2
-
-### Patch Changes
-
-- Lock react-router version ([#4203](https://github.com/remix-run/remix/pull/4203))
-
-## 1.7.1-pre.1
-
-## 1.7.1-pre.0
-
-### Patch Changes
-
-- Fixed a bug with `GET` form submissions to ensure they replace the current search params, which tracks with the browser's behavior. ([#4046](https://github.com/remix-run/remix/pull/4046))
-
 ## 1.7.0
 
 ### Minor Changes
