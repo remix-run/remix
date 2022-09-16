@@ -151,7 +151,7 @@ const reactSpecificExports = {
   ],
 };
 
-module.exports = {
+export {
   defaultAdapterExports,
   defaultRuntimeExports,
   architectSpecificExports,
