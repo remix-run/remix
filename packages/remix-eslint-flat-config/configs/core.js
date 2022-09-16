@@ -18,7 +18,6 @@ export const coreConfig = [
     parserOptions: {
       sourceType: "module",
       requireConfigFile: false,
-      ecmaVersion: "latest",
       babelOptions: {
         presets: [require.resolve("@babel/preset-react")],
       },
@@ -27,6 +26,7 @@ export const coreConfig = [
       ...browserGlobals,
       ...commonjsGlobals,
       ...es6Globals,
+      ecmaVersion: "latest",
     },
     plugins: ["import", "react", "react-hooks", "jsx-a11y"],
     settings: {

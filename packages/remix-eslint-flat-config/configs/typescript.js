@@ -7,11 +7,13 @@ export const typescriptConfig = [
     parser: "@typescript-eslint/parser",
     parserOptions: {
       sourceType: "module",
-      ecmaVersion: 2019,
       ecmaFeatures: {
         jsx: true,
       },
       warnOnUnsupportedTypeScriptVersion: true,
+    },
+    languageOptions: {
+      ecmaVersion: 2019,
     },
     plugins: ["@typescript-eslint"],
     rules: typescriptRules,
