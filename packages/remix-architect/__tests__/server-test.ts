@@ -3,6 +3,10 @@ import path from "path";
 import lambdaTester from "lambda-tester";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import {
+  // This has been added as a global in node 15+, but we expose it here while we
+  // support Node 14
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  AbortController,
   createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,
 } from "@remix-run/node";
