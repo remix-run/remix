@@ -4,9 +4,9 @@ import typescriptPlugin from "@typescript-eslint/eslint-plugin";
 import { typescriptRules, typescriptJSXRules } from "../rules/typescript";
 
 export const typescriptConfig = [
+  "plugin:import/typescript",
   {
     files: ["**/*.ts?(x)"],
-    extends: ["plugin:import/typescript"],
     languageOptions: {
       sourceType: "module",
       ecmaVersion: 2019,
