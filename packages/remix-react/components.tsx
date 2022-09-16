@@ -1221,13 +1221,19 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       let url = new URL(action, `${protocol}//${host}`);
 
       if (method.toLowerCase() === "get") {
+        // Start with a fresh set of params and wipe out the old params to
+        // match default browser behavior
+        let params = new URLSearchParams();
+        let hasParams = false;
         for (let [name, value] of formData) {
           if (typeof value === "string") {
-            url.searchParams.append(name, value);
+            hasParams = true;
+            params.append(name, value);
           } else {
             throw new Error(`Cannot submit binary form data using GET`);
           }
         }
+        url.search = hasParams ? `?${params.toString()}` : "";
       }
 
       let submission: Submission = {
