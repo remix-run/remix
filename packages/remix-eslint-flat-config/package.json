@@ -35,7 +35,8 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-react": "^7.28.0",
     "eslint-plugin-react-hooks": "^4.3.0",
-    "eslint-plugin-testing-library": "^5.0.5"
+    "eslint-plugin-testing-library": "^5.0.5",
+    "globals": "^13.17.0"
   },
   "devDependencies": {
     "@types/eslint": "^8.4.1",

@@ -2,6 +2,11 @@
  * This config is intended for internal Remix projects. It should not be
  * documented nor considered public API in regards to semver considerations.
  */
+import {
+  nodeBuiltin as nodeBuiltinGlobals,
+  jest as jestGlobals,
+} from "globals";
+
 import { coreConfig, testingLibraryConfig } from "./index";
 
 const OFF = 0;
@@ -11,8 +16,8 @@ const ERROR = 2;
 export const internalConfig = [
   {
     files: ["**/*.js"],
-    env: {
-      node: true,
+    languageOptions: {
+      ...nodeBuiltinGlobals,
     },
     plugins: [
       // Plugins used in the internal config should be installed in our
@@ -86,8 +91,8 @@ export const internalConfig = [
   },
   {
     files: ["integration/**/*.*"],
-    env: {
-      "jest/globals": false,
+    languageOptions: {
+      ...jestGlobals,
     },
   },
 ];

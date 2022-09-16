@@ -1,9 +1,11 @@
+import { jest as jestGlobals } from "globals";
+
 import { testingLibraryRules } from "../rules/testing-library";
 
 export const testingLibraryConfig = {
   files: ["**/__tests__/**/*", "**/*.{spec,test}.*"],
-  env: {
-    "jest/globals": true,
+  languageOptions: {
+    ...jestGlobals,
   },
   rules: testingLibraryRules,
 };

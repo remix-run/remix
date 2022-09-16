@@ -1,3 +1,9 @@
+import {
+  browser as browserGlobals,
+  commonjs as commonjsGlobals,
+  es6 as es6Globals,
+} from "globals";
+
 import { coreRules } from "../rules/core";
 import { importRules } from "../rules/import";
 import { reactRules } from "../rules/react";
@@ -17,10 +23,10 @@ export const coreConfig = [
         presets: [require.resolve("@babel/preset-react")],
       },
     },
-    env: {
-      browser: true,
-      commonjs: true,
-      es6: true,
+    languageOptions: {
+      ...browserGlobals,
+      ...commonjsGlobals,
+      ...es6Globals,
     },
     plugins: ["import", "react", "react-hooks", "jsx-a11y"],
     settings: {
