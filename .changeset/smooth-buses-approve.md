@@ -5,4 +5,4 @@
 "@remix-run/vercel": patch
 ---
 
-Abort requests on response close instead of request close.
+Ensured that requests are properly aborted on closing of a `Response` instead of `Request`

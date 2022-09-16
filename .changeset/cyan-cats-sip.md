@@ -3,4 +3,4 @@
 "@remix-run/server-runtime": patch
 ---
 
-Lock react-router version
+Properly locked the dependency on `react-router-dom` to version 6.3.0
