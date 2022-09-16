@@ -3,7 +3,7 @@ import typescriptPlugin from "@typescript-eslint/eslint-plugin";
 
 import { typescriptRules, typescriptJSXRules } from "../rules/typescript";
 
-export const typescriptConfig = [
+export const unstable__typescriptConfig = [
   "plugin:import/typescript",
   {
     files: ["**/*.ts?(x)"],

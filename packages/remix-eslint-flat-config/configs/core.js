@@ -16,7 +16,7 @@ import { jsxA11yRules } from "../rules/jsx-a11y";
 import { importSettings } from "../settings/import";
 import { reactSettings } from "../settings/react";
 
-export const coreConfig = [
+export const unstable__coreConfig = [
   {
     files: ["**/*.js"],
     languageOptions: {
