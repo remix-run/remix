@@ -1703,7 +1703,7 @@ I want to call out something specific in my solution. Here's my loader:
 
 ```tsx lines=[2,8-10]
 type LoaderData = {
-  jokeListItems: Array<{ id: string; name: string }>;
+  jokeListItems: Array<Pick<Joke, 'id' | 'name'>>;
 };
 
 export const loader: LoaderFunction = async () => {
