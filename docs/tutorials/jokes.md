@@ -1615,7 +1615,7 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[3,6,8,16,23-25,27-32,35,59-63]
+```tsx filename=app/routes/jokes.tsx lines=[3,5-6,10,13,20-32,56-60]
 import type {
   LinksFunction,
   LoaderFunction,
