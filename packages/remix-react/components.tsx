@@ -682,7 +682,10 @@ function PrefetchPageLinksImpl({
       {styleLinks.map((link) => (
         // these don't spread `linkProps` because they are full link descriptors
         // already with their own props
-        <link key={link.href} {...link} />
+        <React.Fragment key={link.href}>
+          <link rel="preload" href={link?.href} as="style" />
+          <link {...link} />
+        </React.Fragment>
       ))}
     </>
   );
