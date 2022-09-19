@@ -3,7 +3,7 @@ import type { Submission } from "./transition";
 
 export type AppData = any;
 
-export type FormMethod = "get" | "post" | "put" | "patch" | "delete";
+export type FormMethod = "get" | "post";
 
 export type FormEncType =
   | "application/x-www-form-urlencoded"

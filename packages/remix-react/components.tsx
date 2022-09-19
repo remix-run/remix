@@ -809,11 +809,7 @@ function dedupe(array: any[]) {
 
 export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
   /**
-   * The HTTP verb to use when the form is submit. Supports "get", "post",
-   * "put", "delete", "patch".
-   *
-   * Note: If JavaScript is disabled, you'll need to implement your own "method
-   * override" to support more than just GET and POST.
+   * The HTTP verb to use when the form is submitted. Supports "get" and "post".   
    */
   method?: FormMethod;
 
@@ -993,7 +989,7 @@ export function useFormAction(
 export interface SubmitOptions {
   /**
    * The HTTP method used to submit the form. Overrides `<form method>`.
-   * Defaults to "GET".
+   * Defaults to "get".
    */
   method?: FormMethod;
 
