@@ -671,8 +671,8 @@ Depending on the transition state, the types can be the following:
   - **actionRedirect** - An "actionSubmission" was redirected by the action and the next routes are being loaded
   - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded
   - **fetchActionRedirect** - An action [fetcher][usefetcher] redirected and the next routes are being loaded
-  - **redirect** - A loader from a normal navigation (or redirect) redirected to a new location and the new routes are being loaded
-  - **load** - A normal load from a normal navigation
+  - **normalRedirect** - A loader from a normal navigation (or redirect) redirected to a new location and the new routes are being loaded
+  - **normalLoad** - A normal load from a normal navigation
 
 ```tsx
 function SubmitButton() {
