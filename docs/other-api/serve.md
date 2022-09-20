@@ -32,7 +32,31 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
     }
 
     const record = await fakeDb.stuff.find(params.foo);
-    cache.set(params.foo, res);
+    cache.set(params.foo, record);
+    return json(record);
+  }
+  ```
+
+  If you need a workaround for preserving cache in development, you can store it in the global variable.
+
+  ```ts lines=[1-9]
+  // since the cache is stored in global it will only
+  // be recreated when you restart your dev server.
+  const cache = () => {
+    if (!global.uniqueCacheName) {
+      global.uniqueCacheName = new Map();
+    }
+
+    return global.uniqueCacheName;
+  };
+
+  export async function loader({ params }) {
+    if (cache.has(params.foo)) {
+      return json(cache.get(params.foo));
+    }
+
+    const record = await fakeDb.stuff.find(params.foo);
+    cache.set(params.foo, record);
     return json(record);
   }
   ```
@@ -40,7 +64,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
 - Any **module side effects** will remain in place! This may cause problems, but should probably be avoided anyway.
 
   ```ts [3-6]
-  import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+  import { json } from "@remix-run/node"; // or cloudflare/deno
 
   // this starts running the moment the module is imported
   setInterval(() => {

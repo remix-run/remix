@@ -31,19 +31,25 @@ export type {
   PageLinkDescriptor,
 } from "./links";
 
+export type { TypedResponse } from "./responses";
+
 export type {
+  ActionArgs,
   ActionFunction,
   DataFunctionArgs,
   ErrorBoundaryComponent,
   HeadersFunction,
   HtmlMetaDescriptor,
   LinksFunction,
+  LoaderArgs,
   LoaderFunction,
   MetaDescriptor,
   MetaFunction,
   RouteComponent,
   RouteHandle,
 } from "./routeModules";
+
+export type { SerializeFrom } from "./serialize";
 
 export type { RequestHandler } from "./server";
 

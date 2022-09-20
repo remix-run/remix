@@ -1,4 +1,5 @@
 import * as path from "path";
+import { pathToFileURL } from "url";
 import * as fse from "fs-extra";
 import getPort from "get-port";
 
@@ -7,6 +8,7 @@ import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/virtualModules";
+import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -147,6 +149,14 @@ export interface AppConfig {
    * in a CJS build.
    */
   serverDependenciesToBundle?: Array<string | RegExp>;
+
+  /**
+   * A function for defining custom directories to watch while running `remix dev`, in addition to `appDirectory`.
+   */
+  watchPaths?:
+    | string
+    | string[]
+    | (() => Promise<string | string[]> | string | string[]);
 }
 
 /**
@@ -193,6 +203,11 @@ export interface RemixConfig {
    * The absolute path to the assets build directory.
    */
   assetsBuildDirectory: string;
+
+  /**
+   * the original relative path to the assets build directory
+   */
+  relativeAssetsBuildDirectory: string;
 
   /**
    * The URL prefix of the public build with a trailing slash.
@@ -250,6 +265,16 @@ export interface RemixConfig {
    * in a CJS build.
    */
   serverDependenciesToBundle: Array<string | RegExp>;
+
+  /**
+   * A list of directories to watch.
+   */
+  watchPaths: string[];
+
+  /**
+   * The path for the tsconfig file, if present on the root directory.
+   */
+  tsconfigPath: string | undefined;
 }
 
 /**
@@ -269,15 +294,28 @@ export async function readConfig(
   }
 
   let rootDirectory = path.resolve(remixRoot);
-  let configFile = path.resolve(rootDirectory, "remix.config.js");
+  let configFile = findConfig(rootDirectory, "remix.config");
 
-  let appConfig: AppConfig;
-  try {
-    appConfig = require(configFile);
-  } catch (error) {
-    throw new Error(
-      `Error loading Remix config in ${configFile}\n${String(error)}`
-    );
+  let appConfig: AppConfig = {};
+  if (configFile) {
+    let appConfigModule: any;
+    try {
+      // shout out to next
+      // https://github.com/vercel/next.js/blob/b15a976e11bf1dc867c241a4c1734757427d609c/packages/next/server/config.ts#L748-L765
+      if (process.env.NODE_ENV === "test") {
+        // dynamic import does not currently work inside of vm which
+        // jest relies on so we fall back to require for this case
+        // https://github.com/nodejs/node/issues/35889
+        appConfigModule = require(configFile);
+      } else {
+        appConfigModule = await import(pathToFileURL(configFile).href);
+      }
+      appConfig = appConfigModule?.default || appConfigModule;
+    } catch (error) {
+      throw new Error(
+        `Error loading Remix config at ${configFile}\n${String(error)}`
+      );
+    }
   }
 
   let customServerEntryPoint = appConfig.server;
@@ -346,11 +384,14 @@ export async function readConfig(
     serverBuildPath = path.resolve(rootDirectory, appConfig.serverBuildPath);
   }
 
-  let assetsBuildDirectory = path.resolve(
-    rootDirectory,
+  let assetsBuildDirectory =
     appConfig.assetsBuildDirectory ||
-      appConfig.browserBuildDirectory ||
-      path.join("public", "build")
+    appConfig.browserBuildDirectory ||
+    path.join("public", "build");
+
+  let absoluteAssetsBuildDirectory = path.resolve(
+    rootDirectory,
+    assetsBuildDirectory
   );
 
   let devServerPort =
@@ -395,11 +436,41 @@ export async function readConfig(
     }
   }
 
+  let watchPaths: string[] = [];
+  if (typeof appConfig.watchPaths === "function") {
+    let directories = await appConfig.watchPaths();
+    watchPaths = watchPaths.concat(
+      Array.isArray(directories) ? directories : [directories]
+    );
+  } else if (appConfig.watchPaths) {
+    watchPaths = watchPaths.concat(
+      Array.isArray(appConfig.watchPaths)
+        ? appConfig.watchPaths
+        : [appConfig.watchPaths]
+    );
+  }
+
   let serverBuildTargetEntryModule = `export * from ${JSON.stringify(
     serverBuildVirtualModule.id
   )};`;
 
   let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
+
+  // When tsconfigPath is undefined, the default "tsconfig.json" is not
+  // found in the root directory.
+  let tsconfigPath: string | undefined;
+  let rootTsconfig = path.resolve(rootDirectory, "tsconfig.json");
+  let rootJsConfig = path.resolve(rootDirectory, "jsconfig.json");
+
+  if (fse.existsSync(rootTsconfig)) {
+    tsconfigPath = rootTsconfig;
+  } else if (fse.existsSync(rootJsConfig)) {
+    tsconfigPath = rootJsConfig;
+  }
+
+  if (tsconfigPath) {
+    writeConfigDefaults(tsconfigPath);
+  }
 
   return {
     appDirectory,
@@ -408,7 +479,8 @@ export async function readConfig(
     entryServerFile,
     devServerPort,
     devServerBroadcastDelay,
-    assetsBuildDirectory,
+    assetsBuildDirectory: absoluteAssetsBuildDirectory,
+    relativeAssetsBuildDirectory: assetsBuildDirectory,
     publicPath,
     rootDirectory,
     routes,
@@ -421,6 +493,8 @@ export async function readConfig(
     serverEntryPoint: customServerEntryPoint,
     serverDependenciesToBundle,
     mdx,
+    watchPaths,
+    tsconfigPath,
   };
 }
 
@@ -434,6 +508,17 @@ function findEntry(dir: string, basename: string): string | undefined {
   for (let ext of entryExts) {
     let file = path.resolve(dir, basename + ext);
     if (fse.existsSync(file)) return path.relative(dir, file);
+  }
+
+  return undefined;
+}
+
+const configExts = [".js", ".cjs", ".mjs"];
+
+function findConfig(dir: string, basename: string): string | undefined {
+  for (let ext of configExts) {
+    let file = path.resolve(dir, basename + ext);
+    if (fse.existsSync(file)) return file;
   }
 
   return undefined;

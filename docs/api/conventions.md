@@ -5,7 +5,7 @@ order: 1
 
 # Conventions
 
-A lot of Remix APIs aren't imported from the `"@remix-run/*"` packages, but are instead conventions and exports from _your_ application modules. When you `import from "@remix-run/*"`, _you are calling Remix_, but these APIs are when _Remix calls your code_.
+A lot of Remix APIs aren't imported from the `"@remix-run/*"` packages, but are instead conventions and exports from _your_ application modules. When you `import from "@remix-run/*"`, _you are calling Remix_, but these APIs are consumed when _Remix calls your code_.
 
 ## remix.config.js
 
@@ -158,6 +158,16 @@ module.exports = {
 };
 ```
 
+### watchPaths
+
+A function for defining custom directories to watch while running [remix dev][remix-dev], in addition to [`appDirectory`][app-directory].
+
+```tsx
+exports.watchPaths = async () => {
+  return ["/some/path/*"];
+};
+```
+
 ## File Name Conventions
 
 There are a few conventions that Remix uses you should be aware of.
@@ -259,7 +269,7 @@ import { useParams } from "@remix-run/react";
 import type {
   LoaderFunction,
   ActionFunction,
-} from "@remix-run/node"; // or "@remix-run/cloudflare"
+} from "@remix-run/node"; // or cloudflare/deno
 
 export const loader: LoaderFunction = async ({
   params,
@@ -422,7 +432,7 @@ import { useParams } from "@remix-run/react";
 import type {
   LoaderFunction,
   ActionFunction,
-} from "@remix-run/node"; // or "@remix-run/cloudflare"
+} from "@remix-run/node"; // or cloudflare/deno
 
 export const loader: LoaderFunction = async ({
   params,
@@ -484,7 +494,7 @@ import { renderToString } from "react-dom/server";
 import type {
   EntryContext,
   HandleDataRequestFunction,
-} from "@remix-run/node"; // or "@remix-run/cloudflare"
+} from "@remix-run/node"; // or cloudflare/deno
 import { RemixServer } from "@remix-run/react";
 
 export default function handleRequest(
@@ -545,7 +555,7 @@ export default function SomeRouteComponent() {
 Each route can define a "loader" function that will be called on the server before rendering to provide data to the route. You may think of this as a "GET" request handler in that you should not be reading the body of the request; that is the job of an [`action`][action].
 
 ```js
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 
 export const loader = async () => {
   // The `json` function converts a serializable object into a JSON response
@@ -556,8 +566,8 @@ export const loader = async () => {
 
 ```ts
 // Typescript
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
-import type { LoaderFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
+import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const loader: LoaderFunction = async () => {
   return json({ ok: true });
@@ -569,7 +579,7 @@ This function is only ever run on the server. On the initial server render it wi
 Using the database ORM Prisma as an example:
 
 ```tsx lines=[1-2,6-8,11]
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { prisma } from "../db";
@@ -680,7 +690,7 @@ export const loader: LoaderFunction = async () => {
 Using the `json` helper simplifies this so you don't have to construct them yourself, but these two examples are effectively the same!
 
 ```tsx
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 
 export const loader: LoaderFunction = async () => {
   const users = await fakeDb.users.findMany();
@@ -691,7 +701,7 @@ export const loader: LoaderFunction = async () => {
 You can see how `json` just does a little of the work to make your loader a lot cleaner. You can also use the `json` helper to add headers or a status code to your response:
 
 ```tsx
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 
 export const loader: LoaderFunction = async ({
   params,
@@ -720,7 +730,7 @@ Along with returning responses, you can also throw Response objects from your lo
 Here is a full example showing how you can create utility functions that throw responses to stop code execution in the loader and move over to an alternative UI.
 
 ```ts filename=app/db.ts
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import type { ThrownResponse } from "@remix-run/react";
 
 export type InvoiceNotFoundResponse = ThrownResponse<
@@ -738,7 +748,7 @@ export function getInvoice(id, user) {
 ```
 
 ```ts filename=app/http.ts
-import { redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
 import { getSession } from "./session";
 
@@ -834,7 +844,7 @@ Actions have the same API as loaders, the only difference is when they are calle
 This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
 ```tsx
-import { json, redirect } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { Form } from "@remix-run/react";
 
 import { fakeGetTodos, fakeCreateTodo } from "~/utils/db";
@@ -971,7 +981,7 @@ Note that you can also add headers in your `entry.server` file for things that s
 ```tsx lines=[16]
 import { renderToString } from "react-dom/server";
 import { RemixServer } from "@remix-run/react";
-import type { EntryContext } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { EntryContext } from "@remix-run/node"; // or cloudflare/deno
 
 export default function handleRequest(
   request: Request,
@@ -1000,7 +1010,7 @@ Just keep in mind that doing this will apply to _all_ document requests, but doe
 The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route besides layout routes (their index route will set the meta).
 
 ```tsx
-import type { MetaFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { MetaFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const meta: MetaFunction = () => {
   return {
@@ -1032,7 +1042,7 @@ As a last option, you can also pass an object of attribute/value pairs as the va
 Examples:
 
 ```tsx
-import type { MetaFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { MetaFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const meta: MetaFunction = () => ({
   // Special cases
@@ -1062,7 +1072,10 @@ export const meta: MetaFunction = () => ({
 - `parentsData` is a hashmap of all the data exported by `loader` functions of current route and all of its parents
 
 ```tsx
-export const meta: MetaFunction = ({ data, params }) => {
+export const meta: MetaFunction<typeof loader> = ({
+  data,
+  params,
+}) => {
   if (!data) {
     return {
       title: "Missing Shake",
@@ -1070,11 +1083,41 @@ export const meta: MetaFunction = ({ data, params }) => {
     };
   }
 
-  const { shake } = data as LoaderData;
+  const { shake } = data;
   return {
     title: `${shake.name} milkshake`,
     description: shake.summary,
   };
+};
+```
+
+To infer types for `parentsData`, provide a mapping from the route's file path (relative to `app/`) to that route loader type:
+
+```tsx
+// app/routes/sales.tsx
+const loader = () => {
+  return json({ salesCount: 1074 });
+};
+export type Loader = typeof loader;
+```
+
+```tsx
+import type { Loader as SalesLoader } from "../../sales";
+
+const loader = () => {
+  return json({ name: "Customer name" });
+};
+
+const meta: MetaFunction<
+  typeof loader,
+  {
+    "routes/sales": SalesLoader;
+  }
+> = ({ data, parentsData }) => {
+  const { name } = data;
+  //      ^? string
+  const { salesCount } = parentsData["routes/sales"];
+  //      ^? number
 };
 ```
 
@@ -1083,7 +1126,7 @@ export const meta: MetaFunction = ({ data, params }) => {
 The links function defines which `<link>` elements to add to the page when the user visits a route.
 
 ```tsx
-import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const links: LinksFunction = () => {
   return [
@@ -1117,7 +1160,7 @@ The `links` export from a route should return an array of `HtmlLinkDescriptor` o
 Examples:
 
 ```tsx
-import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 import stylesHref from "../styles/something.css";
 
@@ -1394,7 +1437,7 @@ Any files inside the `app` folder can be imported into your modules. Remix will:
 It's most common for stylesheets, but can used for anything.
 
 ```tsx filename=app/routes/root.tsx
-import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 import styles from "./styles/app.css";
 import banner from "./images/banner.jpg";
@@ -1446,7 +1489,7 @@ export default function Page() {
 [view-example-app]: https://github.com/remix-run/remix/tree/main/examples/multiple-params
 [use-params]: https://reactrouter.com/docs/en/v6/api#useparams
 [params]: #loader-params
-[routing-guide]: ../guides/routing.md
+[routing-guide]: ../guides/routing
 [root-route]: #root-layout-route
 [resource-route]: ../guides/resource-routes
 [server-entry-module]: #entryservertsx
@@ -1458,3 +1501,5 @@ export default function Page() {
 [http-equiv-tag]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta#attr-http-equiv
 [error-boundaries]: https://reactjs.org/docs/error-boundaries.html
 [use-matches]: ./remix#usematches
+[remix-dev]: https://remix.run/docs/en/v1/other-api/dev#remix-dev
+[app-directory]: #appDirectory

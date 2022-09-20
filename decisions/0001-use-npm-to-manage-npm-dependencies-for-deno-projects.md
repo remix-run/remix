@@ -1,7 +1,3 @@
----
-title: 0001 - Use npm to manage NPM dependencies for Deno projects
----
-
 # Use `npm` to manage NPM dependencies for Deno projects
 
 Date: 2022-05-10

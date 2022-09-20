@@ -36,7 +36,7 @@ import App from "./App";
 ReactDOM.render(<App />, document.getElementById("app"));
 ```
 
-Server-rendered React apps are a little different. The browser script is not rendering your app, but is "hydrating" the DOM provided by the server. Hydration is the process of mapping the elements in the DOM to their React component counterparts and setting up event listeners so that your app is interative.
+Server-rendered React apps are a little different. The browser script is not rendering your app, but is "hydrating" the DOM provided by the server. Hydration is the process of mapping the elements in the DOM to their React component counterparts and setting up event listeners so that your app is interactive.
 
 Let's start by creating two new files:
 
@@ -382,7 +382,7 @@ If you are using TypeScript, you also need to create the `remix.env.d.ts` file i
 
 ```ts filename=remix.env.d.ts
 /// <reference types="@remix-run/dev" />
-/// <reference types="@remix-run/node/globals" />
+/// <reference types="@remix-run/node" />
 ```
 
 ### A note about non-standard imports
@@ -617,7 +617,7 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [migration-guide-from-v5-to-v6]: https://reactrouter.com/docs/en/v6/upgrading/v5
 [backwards-compatibility-package]: https://www.npmjs.com/package/react-router-dom-v5-compat
 [a-few-tweaks-to-improve-progressive-enhancement]: ../pages/philosophy#progressive-enhancement
-[routing-conventions]: ./routing.md
+[routing-conventions]: ./routing
 [a-catch-all-route]: ./routing#splats
 [hydration-mismatch]: https://reactjs.org/docs/react-dom.html#hydrate
 [loader-data]: ../api/conventions#loader
