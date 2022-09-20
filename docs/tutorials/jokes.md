@@ -1758,7 +1758,7 @@ const joke = await db.joke.findUnique({
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[4,6,8,10-19,22]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[4,6,8,10-19,22,27-28]
 import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
