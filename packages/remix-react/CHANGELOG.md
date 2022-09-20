@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.7.2-pre.0
+
+### Patch Changes
+
+- Preserve `?index` for fetcher get submissions to index routes ([#4238](https://github.com/remix-run/remix/pull/4238))
+
 ## 1.7.1
 
 ### Patch Changes

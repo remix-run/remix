@@ -19,5 +19,8 @@
     "@remix-run/server-runtime": "1.7.1",
     "@remix-run/vercel": "1.7.1"
   },
-  "changesets": []
+  "changesets": [
+    "seven-bears-listen",
+    "sour-roses-heal"
+  ]
 }
