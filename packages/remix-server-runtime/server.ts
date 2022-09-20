@@ -1,3 +1,5 @@
+import { unstable_createStaticHandler } from "@remix-run/router";
+
 import type { AppLoadContext } from "./data";
 import { callRouteAction, callRouteLoader, extractData } from "./data";
 import type { AppState } from "./errors";
@@ -9,16 +11,11 @@ import { getDocumentHeaders } from "./headers";
 import { ServerMode, isServerMode } from "./mode";
 import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
-import { createStaticHandlerDataRoutes, ServerRoute } from "./routes";
+import type { ServerRoute } from "./routes";
+import { createStaticHandlerDataRoutes } from "./routes";
 import { createRoutes } from "./routes";
 import { json, isRedirectResponse, isCatchResponse } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
-import {
-  AgnosticDataRouteObject,
-  ErrorResponse,
-  unstable_createStaticHandler,
-} from "@remix-run/router";
-import invariant from "./invariant";
 
 export type RequestHandler = (
   request: Request,
@@ -31,7 +28,7 @@ export type CreateRequestHandlerFunction = (
 ) => RequestHandler;
 
 // This can be toggled to true for experimental releases
-const ENABLE_REMIX_ROUTER = true;
+const ENABLE_REMIX_ROUTER = process.env.EXPERIMENTAL_BUILD;
 
 export const createRequestHandler: CreateRequestHandlerFunction = (
   build,
@@ -76,7 +73,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         assertResponsesMatch(response, remixRouterResponse);
 
         console.log("Returning Remix Router Resource Request Response");
-        return remixRouterResponse;
+        response = remixRouterResponse;
       }
     } else {
       response = await handleDocumentRequest({

@@ -3,6 +3,7 @@ const path = require("path");
 const babel = require("@rollup/plugin-babel").default;
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
+const replace = require("@rollup/plugin-replace");
 
 const {
   getOutputDir,
@@ -12,6 +13,15 @@ const {
   magicExportsPlugin,
 } = require("../../rollup.utils");
 const { name: packageName, version } = require("./package.json");
+
+const EXPERIMENTAL_BUILD = !!process.env.EXPERIMENTAL_BUILD;
+
+const replacePlugin = replace({
+  preventAssignment: true,
+  values: {
+    "process.env.EXPERIMENTAL_BUILD": EXPERIMENTAL_BUILD ? "1" : "0",
+  },
+});
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
@@ -25,6 +35,7 @@ module.exports = function rollup() {
         return isBareModuleId(id);
       },
       input: `${sourceDir}/index.ts`,
+      treeshake: "smallest",
       output: {
         banner: createBanner(packageName, version),
         dir: outputDist,
@@ -33,6 +44,7 @@ module.exports = function rollup() {
         exports: "named",
       },
       plugins: [
+        replacePlugin,
         babel({
           babelHelpers: "bundled",
           exclude: /node_modules/,
@@ -55,6 +67,7 @@ module.exports = function rollup() {
         return isBareModuleId(id);
       },
       input: `${sourceDir}/index.ts`,
+      treeshake: "smallest",
       output: {
         banner: createBanner(packageName, version),
         dir: `${outputDist}/esm`,
@@ -62,6 +75,7 @@ module.exports = function rollup() {
         preserveModules: true,
       },
       plugins: [
+        replacePlugin,
         babel({
           babelHelpers: "bundled",
           exclude: /node_modules/,
