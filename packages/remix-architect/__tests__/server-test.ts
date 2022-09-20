@@ -3,7 +3,9 @@ import path from "path";
 import lambdaTester from "lambda-tester";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import {
-  // This has been added as a global in node 15+
+  // This has been added as a global in node 15+, but we expose it here while we
+  // support Node 14
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   AbortController,
   createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,
@@ -292,13 +294,7 @@ describe("architect createRemixRequest", () => {
           "method": "GET",
           "parsedURL": "https://localhost:3333/",
           "redirect": "follow",
-          "signal": AbortSignal {
-            Symbol(kEvents): Map {},
-            Symbol(events.maxEventTargetListeners): 10,
-            Symbol(events.maxEventTargetListenersWarned): false,
-            Symbol(kAborted): false,
-            Symbol(kReason): undefined,
-          },
+          "signal": AbortSignal {},
         },
       }
     `);
