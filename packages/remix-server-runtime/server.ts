@@ -722,7 +722,7 @@ async function assertResponsesMatch(_a: Response, _b: Response) {
   assert(
     a,
     b,
-    (r) => Object.fromEntries(r.headers),
+    (r) => Object.fromEntries(r.headers.entries()),
     "Headers did not match!"
   );
 
