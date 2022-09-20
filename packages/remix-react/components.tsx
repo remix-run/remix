@@ -1238,7 +1238,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         let isIndexAction = new URLSearchParams(url.search)
           .getAll("index")
           .some((v) => v === "");
-        if (isIndexAction) {
+        if (key != null && isIndexAction) {
           hasParams = true;
           params.append("index", "");
         }
