@@ -29,4 +29,4 @@ jobs:
     uses: ./.github/workflows/reusable-test.yml
     with:
       node_version: '["latest"]'
-      experimental_build: '1'
+      enable_react_router: '1'

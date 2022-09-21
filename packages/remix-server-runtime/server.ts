@@ -29,7 +29,7 @@ export type CreateRequestHandlerFunction = (
 ) => RequestHandler;
 
 // This can be toggled to true for experimental releases
-const ENABLE_REMIX_ROUTER = process.env.EXPERIMENTAL_BUILD;
+const ENABLE_REACT_ROUTER = process.env.ENABLE_REACT_ROUTER;
 
 export const createRequestHandler: CreateRequestHandlerFunction = (
   build,
@@ -61,13 +61,13 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
           // handler otherwise the first handler will lock the body for the other.
           // Cloning here allows the new handler to be the stream reader and delegate
           // chunks back to this cloned request.
-          ENABLE_REMIX_ROUTER && request.body ? request.clone() : request,
+          ENABLE_REACT_ROUTER && request.body ? request.clone() : request,
         loadContext,
         matches,
         serverMode,
       });
 
-      if (ENABLE_REMIX_ROUTER) {
+      if (ENABLE_REACT_ROUTER) {
         // TODO: Move up in function context and re-use for all calls to the
         // new functions as they will all need an instance of this handler
         let staticHandler = unstable_createStaticHandler(
