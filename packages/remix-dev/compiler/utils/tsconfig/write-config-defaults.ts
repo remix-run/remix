@@ -118,7 +118,7 @@ export function writeConfigDefaults(configPath: string) {
   if (typeof fullConfig.compilerOptions.moduleResolution === "undefined") {
     fullConfig.compilerOptions.moduleResolution = "node";
     config.compilerOptions.moduleResolution = "node";
-    suggestedChanges.push(
+    requiredChanges.push(
       colors.blue("compilerOptions.moduleResolution") +
         " was set to " +
         colors.bold(`'node'`)
@@ -132,7 +132,7 @@ export function writeConfigDefaults(configPath: string) {
   ) {
     config.compilerOptions.moduleResolution = "node";
 
-    suggestedChanges.push(
+    requiredChanges.push(
       colors.blue("compilerOptions.moduleResolution") +
         " was set to " +
         colors.bold(`'node'`)
