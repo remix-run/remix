@@ -1,3 +1,4 @@
+/// <reference lib="dom.iterable" />
 import { unstable_createStaticHandler } from "@remix-run/router";
 
 import type { AppLoadContext } from "./data";
