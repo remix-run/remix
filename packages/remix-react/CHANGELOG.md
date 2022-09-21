@@ -1,5 +1,23 @@
 # `@remix-run/react`
 
+## 1.7.1
+
+### Patch Changes
+
+- Properly locked the dependency on `react-router-dom` to version 6.3.0 ([#4203](https://github.com/remix-run/remix/pull/4203))
+- Fixed a bug with `GET` form submissions to ensure they replace the current search params, which tracks with the browser's behavior ([#4046](https://github.com/remix-run/remix/pull/4046))
+
+## 1.7.0
+
+### Minor Changes
+
+- We've added a new type: `SerializeFrom`. This is used to infer the ([#4013](https://github.com/remix-run/remix/pull/4013))
+  JSON-serialized return type of loaders and actions.
+
+### Patch Changes
+
+- Unblock hydration via async module scripts. ([#3918](https://github.com/remix-run/remix/pull/3918))
+
 ## 1.6.8
 
 ### Patch Changes
