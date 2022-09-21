@@ -1233,6 +1233,16 @@ export function useSubmitImpl(key?: string): SubmitFunction {
             throw new Error(`Cannot submit binary form data using GET`);
           }
         }
+
+        // Preserve any incoming ?index param for fetcher GET submissions
+        let isIndexAction = new URLSearchParams(url.search)
+          .getAll("index")
+          .some((v) => v === "");
+        if (key != null && isIndexAction) {
+          hasParams = true;
+          params.append("index", "");
+        }
+
         url.search = hasParams ? `?${params.toString()}` : "";
       }
 
