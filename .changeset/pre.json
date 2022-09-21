@@ -20,7 +20,9 @@
     "@remix-run/vercel": "1.7.1"
   },
   "changesets": [
+    "hot-pugs-tie",
     "seven-bears-listen",
+    "silent-olives-tell",
     "sour-roses-heal"
   ]
 }

@@ -1,5 +1,11 @@
 # `@remix-run/eslint-config`
 
+## 1.7.2-pre.1
+
+### Patch Changes
+
+- Update ESLint and plugin dependencies ([`e4ec81c77`](https://github.com/remix-run/remix/commit/e4ec81c77ef9f534450a45c9474ffba6dfd9bd24))
+
 ## 1.7.2-pre.0
 
 ## 1.7.1
