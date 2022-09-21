@@ -3,6 +3,8 @@ import { ServerMode } from "../mode";
 import type { ServerBuild } from "../build";
 import { mockServerBuild } from "./utils";
 
+const EXPERIMENTAL_CALL_MULTIPIER = process.env.EXPERIMENTAL_BUILD ? 2 : 1;
+
 function spyConsole() {
   // https://github.com/facebook/react/issues/7047
   let spy: any = {};
@@ -130,7 +132,9 @@ describe("shared server runtime", () => {
       expect(result.status).toBe(200);
       expect(await result.json()).toBe("resource");
       expect(rootLoader.mock.calls.length).toBe(0);
-      expect(resourceLoader.mock.calls.length).toBe(1);
+      expect(resourceLoader.mock.calls.length).toBe(
+        1 * EXPERIMENTAL_CALL_MULTIPIER
+      );
     });
 
     test("calls sub resource route loader", async () => {
@@ -169,7 +173,7 @@ describe("shared server runtime", () => {
       expect(await result.json()).toBe("sub");
       expect(rootLoader.mock.calls.length).toBe(0);
       expect(resourceLoader.mock.calls.length).toBe(0);
-      expect(subResourceLoader.mock.calls.length).toBe(1);
+      expect(subResourceLoader.mock.calls.length).toBe(1 * EXPERIMENTAL_CALL_MULTIPIER);
     });
 
     test("resource route loader allows thrown responses", async () => {
@@ -200,7 +204,7 @@ describe("shared server runtime", () => {
       expect(result.status).toBe(200);
       expect(await result.text()).toBe("resource");
       expect(rootLoader.mock.calls.length).toBe(0);
-      expect(resourceLoader.mock.calls.length).toBe(1);
+      expect(resourceLoader.mock.calls.length).toBe(1 * EXPERIMENTAL_CALL_MULTIPIER);
     });
 
     test("resource route loader responds with generic error when thrown", async () => {
@@ -245,7 +249,7 @@ describe("shared server runtime", () => {
 
       let result = await handler(request);
       expect((await result.text()).includes(error.message)).toBe(true);
-      expect(spy.console.mock.calls.length).toBe(1);
+      expect(spy.console.mock.calls.length).toBe(1 * EXPERIMENTAL_CALL_MULTIPIER);
     });
 
     test("calls resource route action", async () => {
@@ -276,7 +280,9 @@ describe("shared server runtime", () => {
       expect(result.status).toBe(200);
       expect(await result.json()).toBe("resource");
       expect(rootAction.mock.calls.length).toBe(0);
-      expect(resourceAction.mock.calls.length).toBe(1);
+      expect(resourceAction.mock.calls.length).toBe(
+        1 * EXPERIMENTAL_CALL_MULTIPIER
+      );
     });
 
     test("calls sub resource route action", async () => {
@@ -315,7 +321,7 @@ describe("shared server runtime", () => {
       expect(await result.json()).toBe("sub");
       expect(rootAction.mock.calls.length).toBe(0);
       expect(resourceAction.mock.calls.length).toBe(0);
-      expect(subResourceAction.mock.calls.length).toBe(1);
+      expect(subResourceAction.mock.calls.length).toBe(1 * EXPERIMENTAL_CALL_MULTIPIER);
     });
 
     test("resource route action allows thrown responses", async () => {
@@ -346,7 +352,9 @@ describe("shared server runtime", () => {
       expect(result.status).toBe(200);
       expect(await result.text()).toBe("resource");
       expect(rootAction.mock.calls.length).toBe(0);
-      expect(resourceAction.mock.calls.length).toBe(1);
+      expect(resourceAction.mock.calls.length).toBe(
+        1 * EXPERIMENTAL_CALL_MULTIPIER
+      );
     });
 
     test("resource route action responds with generic error when thrown", async () => {
@@ -391,7 +399,7 @@ describe("shared server runtime", () => {
 
       let result = await handler(request);
       expect((await result.text()).includes(message)).toBe(true);
-      expect(spy.console.mock.calls.length).toBe(1);
+      expect(spy.console.mock.calls.length).toBe(1 * EXPERIMENTAL_CALL_MULTIPIER);
     });
   });
 

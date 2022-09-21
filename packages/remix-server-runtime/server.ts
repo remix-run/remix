@@ -1,4 +1,5 @@
 /// <reference lib="dom.iterable" />
+import type { StaticHandler } from "@remix-run/router";
 import { unstable_createStaticHandler } from "@remix-run/router";
 
 import type { AppLoadContext } from "./data";
@@ -13,8 +14,7 @@ import { ServerMode, isServerMode } from "./mode";
 import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
 import type { ServerRoute } from "./routes";
-import { createStaticHandlerDataRoutes } from "./routes";
-import { createRoutes } from "./routes";
+import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import { json, isRedirectResponse, isCatchResponse } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
@@ -55,27 +55,43 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       matches &&
       matches[matches.length - 1].route.module.default == null
     ) {
-      response = await handleResourceRequest({
-        request,
+      let responsePromise = handleResourceRequest({
+        request:
+          // We need to clone the request here instead of the call to the new
+          // handler otherwise the first handler will lock the body for the other.
+          // Cloning here allows the new handler to be the stream reader and delegate
+          // chunks back to this cloned request.
+          ENABLE_REMIX_ROUTER && request.body ? request.clone() : request,
         loadContext,
         matches,
         serverMode,
       });
 
       if (ENABLE_REMIX_ROUTER) {
+        // TODO: Move up in function context and re-use for all calls to the
+        // new functions as they will all need an instance of this handler
         let staticHandler = unstable_createStaticHandler(
           createStaticHandlerDataRoutes(build.routes, loadContext)
         );
-        let remixRouterResponse = await staticHandler.queryRoute(
-          request,
-          matches[matches.length - 1].route.id
-        );
+
+        let [response, remixRouterResponse] = await Promise.all([
+          responsePromise,
+          handleResourceRequestRR(
+            serverMode,
+            staticHandler,
+            matches.slice(-1)[0].route.id,
+            request
+          ),
+        ]);
 
         assertResponsesMatch(response, remixRouterResponse);
 
         console.log("Returning Remix Router Resource Request Response");
-        response = remixRouterResponse;
+        // response = remixRouterResponse;
+        responsePromise = Promise.resolve(response);
       }
+
+      response = await responsePromise;
     } else {
       response = await handleDocumentRequest({
         build,
@@ -546,6 +562,42 @@ async function handleDocumentRequest({
   }
 }
 
+async function handleResourceRequestRR(
+  serverMode: ServerMode,
+  staticHandler: StaticHandler,
+  routeId: string,
+  request: Request
+) {
+  let response: Response | Error;
+  try {
+    response = await staticHandler.queryRoute(request, routeId);
+  } catch (error) {
+    response = error as Error;
+  }
+
+  if (response instanceof Error) {
+    if (serverMode !== ServerMode.Test) {
+      console.error(response);
+    }
+
+    let message = "Unexpected Server Error";
+
+    if (serverMode === ServerMode.Development) {
+      message += `\n\n${String(response)}`;
+    }
+
+    // Good grief folks, get your act together 😂!
+    return new Response(message, {
+      status: 500,
+      headers: {
+        "Content-Type": "text/plain",
+      },
+    });
+  }
+
+  return response;
+}
+
 async function handleResourceRequest({
   loadContext,
   matches,
@@ -708,18 +760,14 @@ async function assert(
   if (aStr !== bStr) {
     console.error(message);
     console.error("Response 1:\n", aStr);
-    console.error("Response 2:\n", aStr);
+    console.error("Response 2:\n", bStr);
     throw new Error(message);
-  } else {
-    console.log("Repsonses match!");
-    console.log(" ", aStr);
-    console.log(" ", bStr);
   }
 }
 
 async function assertResponsesMatch(_a: Response, _b: Response) {
-  let a = _a.clone();
-  let b = _b.clone();
+  let a = _a.body ? _a.clone() : _a;
+  let b = _b.body ? _b.clone() : _b;
   assert(
     a,
     b,
