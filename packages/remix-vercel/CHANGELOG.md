@@ -1,5 +1,12 @@
 # `@remix-run/vercel`
 
+## 1.7.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.7.2`
+
 ## 1.7.1
 
 ### Patch Changes
