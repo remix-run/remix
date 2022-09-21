@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.7.2-pre.1
+
+### Patch Changes
+
+- Remove unused `type-fest` dependency ([#4246](https://github.com/remix-run/remix/pull/4246))
+
 ## 1.7.2-pre.0
 
 ### Patch Changes
