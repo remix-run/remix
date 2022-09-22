@@ -93,26 +93,21 @@ export async function createAssetsManifest(
         groupedRoute,
         `Cannot get route(s) for entry point ${output.entryPoint}`
       );
-      if (groupedRoute) {
-        for (let route of groupedRoute) {
-          let sourceExports = await getRouteModuleExportsCached(
-            config,
-            route.id
-          );
-          routes[route.id] = {
-            id: route.id,
-            parentId: route.parentId,
-            path: route.path,
-            index: route.index,
-            caseSensitive: route.caseSensitive,
-            module: resolveUrl(key),
-            imports: resolveImports(output.imports),
-            hasAction: sourceExports.includes("action"),
-            hasLoader: sourceExports.includes("loader"),
-            hasCatchBoundary: sourceExports.includes("CatchBoundary"),
-            hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
-          };
-        }
+      for (let route of groupedRoute) {
+        let sourceExports = await getRouteModuleExportsCached(config, route.id);
+        routes[route.id] = {
+          id: route.id,
+          parentId: route.parentId,
+          path: route.path,
+          index: route.index,
+          caseSensitive: route.caseSensitive,
+          module: resolveUrl(key),
+          imports: resolveImports(output.imports),
+          hasAction: sourceExports.includes("action"),
+          hasLoader: sourceExports.includes("loader"),
+          hasCatchBoundary: sourceExports.includes("CatchBoundary"),
+          hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
+        };
       }
     }
   }
