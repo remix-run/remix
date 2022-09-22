@@ -2575,12 +2575,8 @@ import {
 import type { Companies } from "~/utils/companies";
 import { getCompanies } from "~/utils/companies";
 
-type LoaderData = {
-  companies: Array<Companies>;
-};
-
-export const loader: LoaderFunction = async () => {
-  const data: LoaderData = {
+export const loader = async () => {
+  const data = {
     companies: await getCompanies(),
   };
   return json(data);
@@ -2592,7 +2588,7 @@ export type ContextType = {
 };
 
 export default function CompaniesRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData<typeof loader>();
 
   const [invoiceSort, setInvoiceSort] =
     React.useState<Sort>("ASC");
@@ -2644,7 +2640,7 @@ This hook returns the context from the `<Outlet />` that rendered you.
 Continuing from the `<Outlet context />` example above, here's what the child route could do to use the sort order.
 
 ```tsx filename=app/routes/companies/$companyId.tsx lines=[5,8,25,27-30]
-import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import {
   useLoaderData,
@@ -2653,21 +2649,17 @@ import {
 
 import type { ContextType } from "../companies";
 
-type LoaderData = {
-  company: Company;
-};
-
-export const loader: LoaderFunction = async ({
+export const loader = async ({
   params,
-}) => {
-  const data: LoaderData = {
+}: LoaderArgs) => {
+  const data = {
     company: await getCompany(params.companyId),
   };
   return json(data);
 };
 
 export default function CompanyRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData<typeof loader>();
   const { invoiceSort } = useOutletContext<ContextType>();
 
   const sortedInvoices =

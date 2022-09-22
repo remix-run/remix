@@ -203,12 +203,8 @@ type Post = {
   title: string;
 };
 
-type LoaderData = {
-  posts: Array<Post>;
-};
-
 export const loader = async () => {
-  return json<LoaderData>({
+  return json({
     posts: [
       {
         slug: "my-first-post",
@@ -223,7 +219,7 @@ export const loader = async () => {
 };
 
 export default function Posts() {
-  const { posts } = useLoaderData() as LoaderData;
+  const { posts } = useLoaderData<typeof loader>();
   return (
     <main>
       <h1>Posts</h1>
@@ -288,13 +284,8 @@ import { Link, useLoaderData } from "@remix-run/react";
 
 import { getPosts } from "~/models/post.server";
 
-type LoaderData = {
-  // this is a handy way to say: "posts is whatever type getPosts resolves to"
-  posts: Awaited<ReturnType<typeof getPosts>>;
-};
-
 export const loader = async () => {
-  return json<LoaderData>({
+  return json({
     posts: await getPosts(),
   });
 };
@@ -540,7 +531,7 @@ Check that out! We're now pulling our posts from a data source instead of includ
 Let's make TypeScript happy with our code:
 
 ```tsx filename=app/routes/posts/$slug.tsx lines=[4,6,9,14,17,19,23]
-import type { LoaderFunction } from "@remix-run/node";
+import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
@@ -548,21 +539,19 @@ import invariant from "tiny-invariant";
 import type { Post } from "~/models/post.server";
 import { getPost } from "~/models/post.server";
 
-type LoaderData = { post: Post };
-
-export const loader: LoaderFunction = async ({
+export const loader = async ({
   params,
-}) => {
+}: LoaderArgs) => {
   invariant(params.slug, `params.slug is required`);
 
   const post = await getPost(params.slug);
   invariant(post, `Post not found: ${params.slug}`);
 
-  return json<LoaderData>({ post });
+  return json({ post });
 };
 
 export default function PostSlug() {
-  const { post } = useLoaderData() as LoaderData;
+  const { post } = useLoaderData<typeof loader>();
   return (
     <main className="mx-auto max-w-4xl">
       <h1 className="my-6 border-b-2 text-center text-3xl">
@@ -591,7 +580,7 @@ Now that `marked` has been installed, we will need to restart our server. So sto
 
 ```tsx filename=app/routes/post/$slug.ts lines=[1,10,20-21,25,31]
 import { marked } from "marked";
-import type { LoaderFunction } from "@remix-run/node";
+import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
@@ -599,22 +588,20 @@ import invariant from "tiny-invariant";
 import type { Post } from "~/models/post.server";
 import { getPost } from "~/models/post.server";
 
-type LoaderData = { post: Post; html: string };
-
-export const loader: LoaderFunction = async ({
+export const loader = async ({
   params,
-}) => {
+}: LoaderArgs) => {
   invariant(params.slug, `params.slug is required`);
 
   const post = await getPost(params.slug);
   invariant(post, `Post not found: ${params.slug}`);
 
   const html = marked(post.markdown);
-  return json<LoaderData>({ post, html });
+  return json({ post, html });
 };
 
 export default function PostSlug() {
-  const { post, html } = useLoaderData() as LoaderData;
+  const { post, html } = useLoaderData<typeof loader>();
   return (
     <main className="mx-auto max-w-4xl">
       <h1 className="my-6 border-b-2 text-center text-3xl">
@@ -655,22 +642,17 @@ touch app/routes/posts/admin.tsx
 ```
 
 ```tsx filename=app/routes/posts/admin.tsx
-import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 
 import { getPosts } from "~/models/post.server";
 
-type LoaderData = {
-  posts: Awaited<ReturnType<typeof getPosts>>;
-};
-
-export const loader: LoaderFunction = async () => {
+export const loader = async () => {
   return json({ posts: await getPosts() });
 };
 
 export default function PostAdmin() {
-  const { posts } = useLoaderData() as LoaderData;
+  const { posts } = useLoaderData<typeof loader>();
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">
@@ -733,7 +715,6 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 💿 Add an outlet to the admin page
 
 ```tsx filename=app/routes/posts/admin.tsx lines=[5,42]
-import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
   Link,
@@ -743,16 +724,12 @@ import {
 
 import { getPosts } from "~/models/post.server";
 
-type LoaderData = {
-  posts: Awaited<ReturnType<typeof getPosts>>;
-};
-
-export const loader: LoaderFunction = async () => {
+export const loader = async () => {
   return json({ posts: await getPosts() });
 };
 
 export default function PostAdmin() {
-  const { posts } = useLoaderData() as LoaderData;
+  const { posts } = useLoaderData<typeof loader>();
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">
