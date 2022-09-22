@@ -141,12 +141,18 @@ test.describe("meta array syntax", () => {
             json({
               description: "This is a meta page",
               title: "Meta Page",
+              contentType: undefined,
             });
 
           export const meta = ({ data }) => [
             { key: "charset", content: "utf-8" },
             { name: "description", content: data.description },
+            { property: "og:image", content: "https://picsum.photos/300/300" },
+            { property: "og:image:width", content: "300" },
+            { property: "og:image:height", content: "300" },
             { property: "og:image", content: "https://picsum.photos/200/200" },
+            { property: "og:image", content: "https://picsum.photos/500/1000" },
+            { property: "og:image:height", content: "1000" },
             { property: "og:type", content: data.contentType }, // undefined
             { key: "httpEquiv:refresh", httpEquiv: "refresh", content: "3;url=https://www.mozilla.org" },
             { title: data.title },

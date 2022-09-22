@@ -725,38 +725,21 @@ export function Meta() {
 
   return (
     <>
-      {[...meta.entries()].map(([key, value]) => {
-        if (key === "title" && typeof value.content === "string") {
-          return <title key={key}>{value.content}</title>;
+      {Array.from(meta.entries()).map(([key, descriptor]) => {
+        let { name, property, content } = descriptor;
+        if (key === "title" && typeof content === "string") {
+          return <title key={key}>{content}</title>;
         }
-        if (key === "charset" && typeof value.content === "string") {
-          return <meta key={key} charSet={value.content} />;
+        if (key === "charset" && typeof content === "string") {
+          return <meta key={key} charSet={content} />;
         }
-
-        if (name === "title") {
-          return <title key="title">{String(value)}</title>;
+        if (property !== undefined) {
+          return <meta key={key} property={property} content={content} />;
         }
-
-        // Open Graph tags use the `property` attribute, while other meta tags
-        // use `name`. See https://ogp.me/
-        let isOpenGraphTag = name.startsWith("og:");
-        return [value].flat().map((content) => {
-          if (isOpenGraphTag) {
-            return (
-              <meta
-                property={name}
-                content={content as string}
-                key={name + content}
-              />
-            );
-          }
-
-          if (typeof content === "string") {
-            return <meta name={name} content={content} key={name + content} />;
-          }
-
-          return <meta key={name + JSON.stringify(content)} {...content} />;
-        });
+        if (name !== undefined) {
+          return <meta key={key} name={name} content={content} />;
+        }
+        return <meta key={key} {...descriptor} />;
       })}
     </>
   );
@@ -770,9 +753,12 @@ export function processMeta(
   meta: MetaMap,
   routeMeta: HtmlMetaDescriptor | HtmlMetaDescriptor[]
 ) {
+  // normalize routeMeta to array format
   let items: HtmlMetaDescriptor[] = Array.isArray(routeMeta)
     ? routeMeta.map((item) =>
-        item.title ? { key: "title", content: item.title } : item
+        item.title
+          ? { key: "title", content: item.title }
+          : { key: generateKey(item), ...item }
       )
     : Object.entries(routeMeta)
         .map(([key, value]) => {
@@ -789,14 +775,24 @@ export function processMeta(
                 [propertyName]: key,
                 content,
               }))
-            : { key, [propertyName]: key, content: value };
+            : typeof value === "object"
+            ? {
+                key: `${key}.${(value as Record<string, string>)?.content}`,
+                ...(value as Record<string, string>),
+              }
+            : {
+                key: propertyName === "name" ? key : `${key}.${value}`,
+                [propertyName]: key,
+                content: assertString(value),
+              };
         })
         .flat();
 
-  items.forEach((item) => {
-    let [key, value] = computeKey(item);
-    // child routes always override parent routes
-    meta.set(key, value);
+  // add items to the meta map by key (only add if content is defined)
+  items.forEach(({ key, ...rest }) => {
+    if (key && rest && rest.content) {
+      meta.set(key, rest);
+    }
   });
 }
 
@@ -808,20 +804,12 @@ function assertString(value: string | string[]): string {
 }
 
 function generateKey(item: HtmlMetaDescriptor) {
-  console.warn("No key provided to meta", item);
+  if (item.key) return item.key;
+  if (item.title) return "title";
+  if (item.charset || item.charSet) return "charset";
+  if (item.name) return item.name;
+  if (item.property) return `${item.property}.${item.content}`;
   return JSON.stringify(item); // generate a reasonable key
-}
-
-function computeKey(item: HtmlMetaDescriptor): [string, HtmlMetaDescriptor] {
-  let {
-    name,
-    property,
-    title,
-    key = name ?? property ?? title ?? generateKey(item),
-    ...rest
-  } = item;
-
-  return [key, { name, property, title, ...rest }];
 }
 
 /**
