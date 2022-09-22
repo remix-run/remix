@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["browser-route-module:/Users/johnhooks/Projects/remix/examples/blog-tutorial/app/routes/posts/admin/index.tsx?browser", "../../../../../app/routes/posts/admin/index.tsx"],
+  "sourcesContent": ["export { default } from \"/Users/johnhooks/Projects/remix/examples/blog-tutorial/app/routes/posts/admin/index.tsx\";", "import { Link } from \"@remix-run/react\";\n\nexport default function AdminIndex() {\n  return (\n    <p>\n      <Link to=\"new\" className=\"text-blue-600 underline\">\n        Create a New Post\n      </Link>\n    </p>\n  );\n}\n"],
+  "mappings": ";;;;;;;;;AAAA;;;ACAA;AAEe,sBAAsB;AACnC,SACE,oCAAC,KAAD,MACE,oCAAC,MAAD;AAAA,IAAM,IAAG;AAAA,IAAM,WAAU;AAAA,KAA0B;AAAA;",
+  "names": []
+}

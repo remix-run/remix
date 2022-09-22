@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["empty-module:~/session.server"],
+  "sourcesContent": ["module.exports = {};"],
+  "mappings": ";;;;;;AAAA;AAAA;AAAA;AAAA,WAAO,UAAU;AAAA;AAAA;",
+  "names": []
+}

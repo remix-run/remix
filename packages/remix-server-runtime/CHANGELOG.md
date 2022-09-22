@@ -1,5 +1,17 @@
 # `@remix-run/server-runtime`
 
+## 1.7.2
+
+### Patch Changes
+
+- Fix dependency conflicts with `type-fest` ([`87642b71b`](https://github.com/remix-run/remix/commit/87642b71b20880707cf2d9168a113b9dca406ee8))
+
+## 1.7.1
+
+### Patch Changes
+
+- Properly locked the dependency on `react-router-dom` to version 6.3.0 ([#4203](https://github.com/remix-run/remix/pull/4203))
+
 ## 1.7.0
 
 ### Minor Changes

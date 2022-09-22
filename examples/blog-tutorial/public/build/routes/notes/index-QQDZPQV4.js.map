@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["browser-route-module:/Users/johnhooks/Projects/remix/examples/blog-tutorial/app/routes/notes/index.tsx?browser", "../../../../app/routes/notes/index.tsx"],
+  "sourcesContent": ["export { default } from \"/Users/johnhooks/Projects/remix/examples/blog-tutorial/app/routes/notes/index.tsx\";", "import { Link } from \"@remix-run/react\";\n\nexport default function NoteIndexPage() {\n  return (\n    <p>\n      No note selected. Select a note on the left, or{\" \"}\n      <Link to=\"new\" className=\"text-blue-500 underline\">\n        create a new note.\n      </Link>\n    </p>\n  );\n}\n"],
+  "mappings": ";;;;;;;;;AAAA;;;ACAA;AAEe,yBAAyB;AACtC,SACE,oCAAC,KAAD,MAAG,mDAC+C,KAChD,oCAAC,MAAD;AAAA,IAAM,IAAG;AAAA,IAAM,WAAU;AAAA,KAA0B;AAAA;",
+  "names": []
+}

@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["browser-route-module:/Users/johnhooks/Projects/remix/examples/blog-tutorial/app/routes/posts/index.tsx?browser", "../../../../app/routes/posts/index.tsx"],
+  "sourcesContent": ["export { default } from \"/Users/johnhooks/Projects/remix/examples/blog-tutorial/app/routes/posts/index.tsx\";", "import type { LoaderArgs } from \"@remix-run/node\";\nimport { json } from \"@remix-run/node\";\nimport { Link, useLoaderData } from \"@remix-run/react\";\n\nimport { getPosts } from \"~/models/post.server\";\n\nexport async function loader(args: LoaderArgs) {\n  return json({\n    posts: await getPosts(),\n  });\n}\n\nexport default function Posts() {\n  const { posts } = useLoaderData<typeof loader>();\n  return (\n    <main>\n      <h1>Posts</h1>\n      <Link to=\"admin\" className=\"text-red-600 underline\">\n        Admin\n      </Link>\n      <ul>\n        {posts.map((post) => (\n          <li key={post.slug}>\n            <Link to={`/posts/${post.slug}`} className=\"text-blue-600 underline\">\n              {post.title}\n            </Link>\n          </li>\n        ))}\n      </ul>\n    </main>\n  );\n}\n"],
+  "mappings": ";;;;;;;;;;;;;;AAAA;;;ACAA;AAIA,kBAAyB;AAQV,iBAAiB;AAC9B,QAAM,EAAE,UAAU;AAClB,SACE,oCAAC,QAAD,MACE,oCAAC,MAAD,MAAI,UACJ,oCAAC,MAAD;AAAA,IAAM,IAAG;AAAA,IAAQ,WAAU;AAAA,KAAyB,UAGpD,oCAAC,MAAD,MACG,MAAM,IAAI,CAAC,SACV,oCAAC,MAAD;AAAA,IAAI,KAAK,KAAK;AAAA,KACZ,oCAAC,MAAD;AAAA,IAAM,IAAI,UAAU,KAAK;AAAA,IAAQ,WAAU;AAAA,KACxC,KAAK;AAAA;",
+  "names": []
+}
