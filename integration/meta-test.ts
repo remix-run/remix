@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
+import { compareDocumentPosition } from "domutils";
 
 test.describe("meta", () => {
   let fixture: Fixture;
@@ -31,6 +32,10 @@ test.describe("meta", () => {
             description: data.description,
             "og:image": "https://picsum.photos/200/200",
             "og:type": data.contentType, // undefined
+            refresh: {
+              httpEquiv: "refresh",
+              content: "3;url=https://www.mozilla.org",
+            },
             title: data.title,
           });
 
@@ -116,11 +121,16 @@ test.describe("meta", () => {
   });
 });
 
-describe("meta array syntax", () => {
+test.describe("meta array syntax", () => {
   let fixture: Fixture;
-  let app: AppFixture;
+  let appFixture: AppFixture;
 
-  beforeAll(async () => {
+  // disable JS for all tests in this file
+  // to only disable them for some, add another test.describe()
+  // and move the following line there
+  test.use({ javaScriptEnabled: false });
+
+  test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
@@ -171,70 +181,61 @@ describe("meta array syntax", () => {
       },
     });
 
-    app = await createAppFixture(fixture);
+    appFixture = await createAppFixture(fixture);
   });
 
-  afterAll(async () => await app.close());
+  test.afterAll(() => appFixture.close());
 
-  test("empty meta does not render a tag", async () => {
-    let enableJavaScript = await app.disableJavaScript();
-
+  test("empty meta does not render a tag", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
 
     await expect(app.getHtml('meta[property="og:type"]')).rejects.toThrowError(
       'No element matches selector "meta[property="og:type"]"'
     );
-    await enableJavaScript();
   });
 
-  test("meta { charset } adds a <meta charset='utf-8' />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
-
+  test("meta { charset } adds a <meta charset='utf-8' />", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
 
     expect(await app.getHtml('meta[charset="utf-8"]')).toBeTruthy();
-    await enableJavaScript();
   });
 
-  test("meta { title } adds a <title />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
-
+  test("meta { title } adds a <title />", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
 
     expect(await app.getHtml("title")).toBeTruthy();
-    await enableJavaScript();
   });
 
-  test("meta { title } overrides a <title />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
-
+  test("meta { title } overrides a <title />", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
 
     expect(await app.getHtml("title")).toBe("<title>Override Title</title>");
-    await enableJavaScript();
   });
 
-  test("meta { 'og:*' } adds a <meta property='og:*' />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
-
+  test("meta { 'og:*' } adds a <meta property='og:*' />", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
 
     expect(await app.getHtml('meta[property="og:image"]')).toBeTruthy();
-    await enableJavaScript();
   });
 
-  test("meta { description } adds a <meta name='description' />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
-
+  test("meta { description } adds a <meta name='description' />", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
 
     expect(await app.getHtml('meta[name="description"]')).toBeTruthy();
-    await enableJavaScript();
   });
 
-  test("meta { refresh } adds a <meta http-equiv='refresh' content='3;url=https://www.mozilla.org' />", async () => {
-    let enableJavaScript = await app.disableJavaScript();
-
+  test("meta { refresh } adds a <meta http-equiv='refresh' content='3;url=https://www.mozilla.org' />", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
 
     expect(
@@ -242,6 +243,14 @@ describe("meta array syntax", () => {
         'meta[http-equiv="refresh"][content="3;url=https://www.mozilla.org"]'
       )
     ).toBeTruthy();
-    await enableJavaScript();
+  });
+
+  test("meta supports multiple items with same name/property />", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+
+    expect(await app.getElement('meta[property="og:image"]')).toHaveLength(3);
   });
 });

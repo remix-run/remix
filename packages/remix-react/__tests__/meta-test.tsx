@@ -46,9 +46,9 @@ describe("meta", () => {
     // console.log(html);
 
     // title should override the title from the first meta function
-    expect(map.get("title").content).toBe("Updated title");
+    expect(map.get("title")!.content).toBe("Updated title");
     // viewport should be added
-    expect(map.get("viewport").content).toBe(
+    expect(map.get("viewport")!.content).toBe(
       "width=device-width, initial-scale=1"
     );
   });
@@ -63,11 +63,11 @@ function getMeta(data: any, metaFunctions: MetaFunction[]) {
       data,
       parentsData: {},
       params: {},
+      // @ts-expect-error
       location: null,
     });
     if (routeMeta) {
       processMeta(meta, routeMeta);
-      //console.log(meta, routeMeta);
     }
   });
 
