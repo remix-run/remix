@@ -47,6 +47,12 @@ We're using [the Indie stack][the-indie-stack], which is a full application read
 
 💿 Now, open the project that was generated in your preferred editor and check the instructions in the `README.md` file. Feel free to read over this. We'll get to the deployment bit later in the tutorial.
 
+💿 Copy `.env.example` to `.env` to start with a default config:
+
+```sh
+cp .env.example .env
+```
+
 💿 Let's start the dev server:
 
 ```sh
