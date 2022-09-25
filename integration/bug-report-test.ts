@@ -2,7 +2,12 @@ import { test, expect } from "@playwright/test";
 
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  mdx,
+  js,
+} from "./helpers/create-fixture";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
@@ -47,29 +52,16 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+      "app/routes/index.mdx": mdx`
+        import { components } from '~/components/mdx-components';
 
-        export function loader() {
-          return json("pizza");
-        }
-
-        export default function Index() {
-          let data = useLoaderData();
-          return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
-        }
+        # Hello World
       `,
 
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
-        }
+      "app/components/mdx-components.jsx": js`
+        export const components = {
+          h1: (props) => <h1 style={{ color: 'red' }} {...props} />,
+        };
       `,
     },
   });
@@ -85,22 +77,14 @@ test.afterAll(() => appFixture.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("Custom mdx components should change text color", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
 
-  // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  let title = await app.getElement("h1");
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+  expect(await title.text()).toBe("Hello World");
+  expect(await title.css("color")).toBe("red");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
