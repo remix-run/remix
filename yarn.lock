@@ -2491,7 +2491,7 @@
 
 "@remix-run/web-fetch@^4.3.0":
   version "4.3.0"
-  resolved "https://registry.yarnpkg.com/@remix-run/web-fetch/-/web-fetch-4.3.0.tgz#8990c58352ecefed2ea32e13a924c4cc0d7d7328"
+  resolved "https://registry.npmjs.org/@remix-run/web-fetch/-/web-fetch-4.3.0.tgz#8990c58352ecefed2ea32e13a924c4cc0d7d7328"
   integrity sha512-//VynoWVu/hocB0TWfoUZdg6Yy/320cO4r0dN/eZUSM5/rLUGEy+NqAykyY8GKHjYYZimw96kRMFa3aQbwmp8g==
   dependencies:
     "@remix-run/web-blob" "^3.0.4"
@@ -2510,7 +2510,7 @@
 
 "@remix-run/web-form-data@^3.0.3":
   version "3.0.3"
-  resolved "https://registry.yarnpkg.com/@remix-run/web-form-data/-/web-form-data-3.0.3.tgz#f89a7f971aaf1084d2da87affbb7f4e01c32b8ce"
+  resolved "https://registry.npmjs.org/@remix-run/web-form-data/-/web-form-data-3.0.3.tgz#f89a7f971aaf1084d2da87affbb7f4e01c32b8ce"
   integrity sha512-wL4veBtVPazSpXfPMzrbmeV3IxuxCfcQYPerQ8BXRO5ahAEVw23tv7xS+yoX0XDO5j+vpRaSbhHJK1H5gF7eYQ==
   dependencies:
     web-encoding "1.1.5"
