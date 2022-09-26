@@ -115,9 +115,7 @@ export async function createApp({
 
       await downloadAndExtractRepoTarball(
         projectDir,
-        getRepoInfo(
-          `https://github.com/remix-run/examples/tree/main/${name}`
-        ),
+        getRepoInfo(`https://github.com/remix-run/examples/tree/main/${name}`),
         options
       );
       break;
@@ -713,9 +711,9 @@ export async function validateTemplate(
       if (isExample) {
         name = name.split("/")[1];
       }
-      let repoBaseUrl = isExample ?
-        "https://github.com/remix-run/examples/tree/main" :
-        "https://github.com/remix-run/remix/tree/main/templates";
+      let repoBaseUrl = isExample
+        ? "https://github.com/remix-run/examples/tree/main"
+        : "https://github.com/remix-run/remix/tree/main/templates";
       let templateUrl = `${repoBaseUrl}/${name}`;
       let response;
       try {
@@ -743,7 +741,7 @@ export async function validateTemplate(
           throw Error(
             "🚨 The template could not be verified. The server returned a " +
               `response with a ${response.status} status. Please double ` +
-              "check that the template is a valid project directory in " + 
+              "check that the template is a valid project directory in " +
               `${repoBaseUrl} and ` +
               "try again."
           );
