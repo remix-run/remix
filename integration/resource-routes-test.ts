@@ -65,6 +65,31 @@ test.describe("loader in an app", () => {
               });
             };
           `,
+          "app/routes/throw-error.jsx": js`
+            export let loader = () => {
+              throw new Error('Oh noes!')
+            }
+          `,
+          "app/routes/return-response.jsx": js`
+            export let loader = () => {
+              return new Response('Partial', { status: 207 });
+            }
+          `,
+          "app/routes/throw-response.jsx": js`
+            export let loader = () => {
+              throw new Response('Partial', { status: 207 });
+            }
+          `,
+          "app/routes/return-object.jsx": js`
+            export let loader = () => {
+              return { hello: 'world' };
+            }
+          `,
+          "app/routes/throw-object.jsx": js`
+            export let loader = () => {
+              throw { but: 'why' };
+            }
+          `,
         },
       })
     );
@@ -109,5 +134,56 @@ test.describe("loader in an app", () => {
       let res = await app.goto("/image.png");
       expect(res.status()).toBe(200);
     });
+
+    test("should handle errors thrown from resource routes", async ({
+      page,
+    }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      let res = await app.goto("/throw-error");
+      expect(res.status()).toBe(500);
+      // TODO: Is there any way to differentiate this from remix blowing up on
+      // the server?  In dev mode we include the error message in the response,
+      // but tests run against prod mode
+      expect(await res.text()).toEqual("Unexpected Server Error");
+    });
   }
+
+  test("should handle responses returned from resource routes", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/return-response");
+    expect(res.status()).toBe(207);
+    expect(await res.text()).toEqual("Partial");
+  });
+
+  test("should handle responses thrown from resource routes", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/throw-response");
+    expect(res.status()).toBe(207);
+    expect(await res.text()).toEqual("Partial");
+  });
+
+  test("should handle objects returned from resource routes", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/return-object");
+    expect(res.status()).toBe(200);
+    expect(await res.json()).toEqual({ hello: "world" });
+  });
+
+  test("should handle objects thrown from resource routes", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/throw-object");
+    expect(res.status()).toBe(500);
+    // TODO: Is there any way to differentiate this from remix blowing up on
+    // the server?  In dev mode we include the error message in the response,
+    // but tests run against prod mode
+    expect(await res.text()).toEqual("Unexpected Server Error");
+  });
 });

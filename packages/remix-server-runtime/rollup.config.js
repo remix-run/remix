@@ -35,13 +35,16 @@ module.exports = function rollup() {
         return isBareModuleId(id);
       },
       input: `${sourceDir}/index.ts`,
-      treeshake: "smallest",
       output: {
         banner: createBanner(packageName, version),
         dir: outputDist,
         format: "cjs",
         preserveModules: true,
         exports: "named",
+      },
+      treeshake: {
+        // Without this, we don't tree-shake the require('@remix-run/router') :/
+        moduleSideEffects: false,
       },
       plugins: [
         replacePlugin,
@@ -67,12 +70,15 @@ module.exports = function rollup() {
         return isBareModuleId(id);
       },
       input: `${sourceDir}/index.ts`,
-      treeshake: "smallest",
       output: {
         banner: createBanner(packageName, version),
         dir: `${outputDist}/esm`,
         format: "esm",
         preserveModules: true,
+      },
+      treeshake: {
+        // Without this, we don't tree-shake the require('@remix-run/router') :/
+        moduleSideEffects: false,
       },
       plugins: [
         replacePlugin,

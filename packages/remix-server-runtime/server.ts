@@ -10,6 +10,7 @@ import type { EntryContext } from "./entry";
 import { createEntryMatches, createEntryRouteModules } from "./entry";
 import { serializeError } from "./errors";
 import { getDocumentHeaders } from "./headers";
+import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
 import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
@@ -55,13 +56,13 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       matches &&
       matches[matches.length - 1].route.module.default == null
     ) {
-      let responsePromise = handleResourceRequest({
+      response = await handleResourceRequest({
         request:
           // We need to clone the request here instead of the call to the new
           // handler otherwise the first handler will lock the body for the other.
           // Cloning here allows the new handler to be the stream reader and delegate
           // chunks back to this cloned request.
-          ENABLE_REACT_ROUTER && request.body ? request.clone() : request,
+          ENABLE_REACT_ROUTER ? request.clone() : request,
         loadContext,
         matches,
         serverMode,
@@ -74,24 +75,18 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
           createStaticHandlerDataRoutes(build.routes, loadContext)
         );
 
-        let [response, remixRouterResponse] = await Promise.all([
-          responsePromise,
-          handleResourceRequestRR(
-            serverMode,
-            staticHandler,
-            matches.slice(-1)[0].route.id,
-            request
-          ),
-        ]);
+        let remixRouterResponse = await handleResourceRequestRR(
+          serverMode,
+          staticHandler,
+          matches.slice(-1)[0].route.id,
+          request
+        );
 
         assertResponsesMatch(response, remixRouterResponse);
 
         console.log("Returning Remix Router Resource Request Response");
-        // response = remixRouterResponse;
-        responsePromise = Promise.resolve(response);
+        response = remixRouterResponse;
       }
-
-      response = await responsePromise;
     } else {
       response = await handleDocumentRequest({
         build,
@@ -568,22 +563,23 @@ async function handleResourceRequestRR(
   routeId: string,
   request: Request
 ) {
-  let response: Response | Error;
   try {
-    response = await staticHandler.queryRoute(request, routeId);
+    let response = await staticHandler.queryRoute(request, routeId);
+    // Remix should always be returning responses from loaders and actions
+    invariant(
+      response instanceof Response,
+      "Expected a Response to be returned from queryRoute"
+    );
+    return response;
   } catch (error) {
-    response = error as Error;
-  }
-
-  if (response instanceof Error) {
     if (serverMode !== ServerMode.Test) {
-      console.error(response);
+      console.error(error);
     }
 
     let message = "Unexpected Server Error";
 
     if (serverMode === ServerMode.Development) {
-      message += `\n\n${String(response)}`;
+      message += `\n\n${String(error)}`;
     }
 
     // Good grief folks, get your act together 😂!
@@ -594,8 +590,6 @@ async function handleResourceRequestRR(
       },
     });
   }
-
-  return response;
 }
 
 async function handleResourceRequest({
