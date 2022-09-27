@@ -188,10 +188,9 @@ test.beforeAll(async () => {
           const session = await getSession(request.headers.get("Cookie"));
 
           const message = session.get("globalMessage") || null;
-          const csrf = session.get("csrf") || null;
 
           return json(
-            { message, csrf },
+            { message },
             {
               headers: {
                 "Set-Cookie": await commitSession(session),
