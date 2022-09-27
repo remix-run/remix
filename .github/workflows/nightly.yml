@@ -22,7 +22,7 @@ jobs:
       NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
     steps:
       - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
+        uses: styfle/cancel-workflow-action@0.10.0
 
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
@@ -102,6 +102,7 @@ jobs:
     uses: remix-run/remix/.github/workflows/release-comments.yml@main
     with:
       ref: "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}"
+      packageVersionToFollow: "remix"
 
   deployments:
     needs: [nightly]

@@ -3,7 +3,9 @@ import path from "path";
 import lambdaTester from "lambda-tester";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import {
-  // This has been added as a global in node 15+
+  // This has been added as a global in node 15+, but we expose it here while we
+  // support Node 14
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   AbortController,
   createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,
@@ -292,7 +294,7 @@ describe("architect createRemixRequest", () => {
           "method": "GET",
           "parsedURL": "https://localhost:3333/",
           "redirect": "follow",
-          "signal": null,
+          "signal": AbortSignal {},
         },
       }
     `);
@@ -302,8 +304,7 @@ describe("architect createRemixRequest", () => {
 describe("sendRemixResponse", () => {
   it("handles regular responses", async () => {
     let response = new NodeResponse("anything");
-    let abortController = new AbortController();
-    let result = await sendRemixResponse(response, abortController);
+    let result = await sendRemixResponse(response);
     expect(result.body).toBe("anything");
   });
 
@@ -316,9 +317,7 @@ describe("sendRemixResponse", () => {
       },
     });
 
-    let abortController = new AbortController();
-
-    let result = await sendRemixResponse(response, abortController);
+    let result = await sendRemixResponse(response);
 
     expect(result.body).toMatch(json);
   });
@@ -333,9 +332,7 @@ describe("sendRemixResponse", () => {
       },
     });
 
-    let abortController = new AbortController();
-
-    let result = await sendRemixResponse(response, abortController);
+    let result = await sendRemixResponse(response);
 
     expect(result.body).toMatch(image.toString("base64"));
   });
