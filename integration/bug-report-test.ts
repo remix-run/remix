@@ -47,28 +47,214 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+      "app/csrf.tsx": js`
+        import { createContext, ReactNode, useContext } from "react";
 
-        export function loader() {
-          return json("pizza");
+        export interface AuthenticityTokenProviderProps {
+          children: ReactNode;
+          token: string;
         }
+        
+        export interface AuthenticityTokenInputProps {
+          name?: string;
+        }
+        
+        let context = createContext<string | null>(null);
+        
+        /**
+         * Save the Authenticity Token into context
+         */
+        export function AuthenticityTokenProvider({
+          children,
+          token,
+        }: AuthenticityTokenProviderProps) {
+          return <context.Provider value={token}>{children}</context.Provider>;
+        }
+        
+        /**
+         * Get the authenticity token, this should be used to send it in a submit.
+         * @example
+         * let token = useAuthenticityToken();
+         * let submit = useSubmit();
+         * function sendFormWithCode() {
+         *   submit(
+         *     { csrf: token, ...otherData },
+         *     { action: "/action", method: "post" },
+         *   );
+         * }
+         */
+        export function useAuthenticityToken() {
+          let token = useContext(context);
+          if (!token) throw new Error("Missing AuthenticityTokenProvider.");
+          return token;
+        }
+        
+        /**
+         * Render a hidden input with the name csrf and the authenticity token as value.
+         */
+        export function AuthenticityTokenInput({
+          name = "csrf",
+        }: AuthenticityTokenInputProps) {
+          let token = useAuthenticityToken();
+          return <input type="hidden" value={token} name={name} />;
+        }      
+      `,
 
-        export default function Index() {
-          let data = useLoaderData();
+      "app/sessions.ts": js`
+        import { createCookieSessionStorage } from "@remix-run/node"; // or cloudflare/deno
+
+        const { getSession, commitSession, destroySession } =
+          createCookieSessionStorage({
+            // a Cookie from createCookie or the CookieOptions to create one
+            cookie: {
+              name: "__session",
+
+              httpOnly: true,
+              maxAge: 60,
+              path: "/",
+              sameSite: "lax",
+              secrets: ["s3cret1"],
+              secure: true,
+            },
+          });
+
+        export { getSession, commitSession, destroySession };
+      `,
+
+      "app/root.tsx": js`
+        import type { MetaFunction, LoaderFunction } from "@remix-run/node";
+        import {
+          Links,
+          LiveReload,
+          Meta,
+          Outlet,
+          Scripts,
+          ScrollRestoration,
+          useLoaderData,
+        } from "@remix-run/react";
+        import { AuthenticityTokenProvider } from "./csrf";
+        import { json } from "@remix-run/node";
+        import * as crypto from "crypto";
+        import { getSession, commitSession } from "./sessions";
+        
+        export const meta: MetaFunction = () => ({
+          charset: "utf-8",
+          title: "New Remix App",
+          viewport: "width=device-width,initial-scale=1",
+        });
+        
+        export const loader: LoaderFunction = async ({ request }) => {
+          const session = await getSession(request.headers.get("Cookie"));
+        
+          const token = crypto.randomBytes(16).toString("base64");
+          session.set("csrf", token);
+        
+          return json(
+            { csrf: token },
+            { headers: { "Set-Cookie": await commitSession(session) } }
+          );
+        };
+        
+        export default function App() {
+          const data = useLoaderData();
+        
           return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
+            <AuthenticityTokenProvider token={data.csrf}>
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                  <ScrollRestoration />
+                  <Scripts />
+                  <LiveReload />
+                </body>
+              </html>
+            </AuthenticityTokenProvider>
+          );
         }
       `,
 
-      "app/routes/burgers.jsx": js`
+      "app/routes/index.tsx": js`
+        import type { ActionFunction, LoaderFunction } from "@remix-run/node";
+        import { json, redirect } from "@remix-run/node";
+        import { Form, useLoaderData } from "@remix-run/react";
+        import { getSession, commitSession } from "../sessions";
+        import { AuthenticityTokenInput } from "../csrf";
+
+        export const loader: LoaderFunction = async ({ request }) => {
+          const session = await getSession(request.headers.get("Cookie"));
+
+          const message = session.get("globalMessage") || null;
+          const csrf = session.get("csrf") || null;
+
+          return json(
+            { message, csrf },
+            {
+              headers: {
+                "Set-Cookie": await commitSession(session),
+              },
+            }
+          );
+        };
+
+        export const action: ActionFunction = async ({ request }) => {
+          const session = await getSession(request.headers.get("Cookie"));
+
+          if (request instanceof Request && request.bodyUsed) {
+            throw new Error(
+              "The body of the request was read before calling verifyAuthenticityToken. Ensure you clone it before reading it."
+            );
+          }
+          // We clone the request to ensure we don't modify the original request.
+          // This allow us to parse the body of the request and let the original request
+          // still be used and parsed without errors.
+          let formData =
+            request instanceof FormData ? request : await request.clone().formData();
+
+          // if the session doesn't have a csrf token, throw an error
+          if (!session.has("csrf")) {
+            throw new Error("CSRF token not found in session");
+          }
+
+          console.log("session.get(csrf)", session.get("csrf"));
+
+          // if the body doesn't have a csrf token, throw an error
+          if (!formData.get("csrf")) {
+            throw new Error("Can't find CSRF token in body.");
+          }
+
+          console.log("formData.get(csrf)", formData.get("csrf"));
+
+          // if the body csrf token doesn't match the session csrf token, throw an
+          // error
+          if (formData.get("csrf") !== session.get("csrf")) {
+            throw new Error("Can't verify CSRF token authenticity.");
+          }
+
+          session.flash("globalMessage", "hello");
+
+          return redirect("/", {
+            headers: {
+              "Set-Cookie": await commitSession(session),
+            },
+          });
+        };
+
         export default function Index() {
-          return <div>cheeseburger</div>;
+          const { message } = useLoaderData();
+
+          return (
+            <>
+              {message ? <strong>{message}</strong> : null}
+              <Form method="post">
+                <AuthenticityTokenInput />
+                <button type="submit">Submit</button>
+              </Form>
+            </>
+          );
         }
       `,
     },
@@ -87,16 +273,19 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("[submit form]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
 
   // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  await app.clickSubmitButton("/?index");
+
+  // First click will be successful
+  expect(await app.getHtml()).toMatch("hello");
+
+  // Second click will fail
+  await app.clickSubmitButton("/?index");
+  expect(await app.getHtml()).toMatch("hello");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
