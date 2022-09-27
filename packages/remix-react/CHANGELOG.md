@@ -1,5 +1,19 @@
 # `@remix-run/react`
 
+## 1.7.2
+
+### Patch Changes
+
+- Remove unused `type-fest` dependency ([#4246](https://github.com/remix-run/remix/pull/4246))
+- Preserve `?index` for fetcher get submissions to index routes ([#4238](https://github.com/remix-run/remix/pull/4238))
+
+## 1.7.1
+
+### Patch Changes
+
+- Properly locked the dependency on `react-router-dom` to version 6.3.0 ([#4203](https://github.com/remix-run/remix/pull/4203))
+- Fixed a bug with `GET` form submissions to ensure they replace the current search params, which tracks with the browser's behavior ([#4046](https://github.com/remix-run/remix/pull/4046))
+
 ## 1.7.0
 
 ### Minor Changes
