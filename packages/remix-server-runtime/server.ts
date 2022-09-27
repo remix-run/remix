@@ -1,7 +1,6 @@
-/// <reference lib="dom.iterable" />
-import type { StaticHandler } from "@remix-run/router";
-import { unstable_createStaticHandler } from "@remix-run/router";
-
+// TODO: Change import to @remix-run/router
+import type { StaticHandler } from "./router";
+import { unstable_createStaticHandler } from "./router";
 import type { AppLoadContext } from "./data";
 import { callRouteAction, callRouteLoader, extractData } from "./data";
 import type { AppState } from "./errors";
@@ -56,7 +55,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       matches &&
       matches[matches.length - 1].route.module.default == null
     ) {
-      response = await handleResourceRequest({
+      let responsePromise = handleResourceRequest({
         request:
           // We need to clone the request here instead of the call to the new
           // handler otherwise the first handler will lock the body for the other.
@@ -75,18 +74,23 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
           createStaticHandlerDataRoutes(build.routes, loadContext)
         );
 
-        let remixRouterResponse = await handleResourceRequestRR(
-          serverMode,
-          staticHandler,
-          matches.slice(-1)[0].route.id,
-          request
-        );
+        let [response, remixRouterResponse] = await Promise.all([
+          responsePromise,
+          handleResourceRequestRR(
+            serverMode,
+            staticHandler,
+            matches.slice(-1)[0].route.id,
+            request
+          ),
+        ]);
 
         assertResponsesMatch(response, remixRouterResponse);
 
         console.log("Returning Remix Router Resource Request Response");
-        response = remixRouterResponse;
+        responsePromise = Promise.resolve(remixRouterResponse);
       }
+
+      response = await responsePromise;
     } else {
       response = await handleDocumentRequest({
         build,
@@ -760,8 +764,8 @@ async function assert(
 }
 
 async function assertResponsesMatch(_a: Response, _b: Response) {
-  let a = _a.body ? _a.clone() : _a;
-  let b = _b.body ? _b.clone() : _b;
+  let a = _a.clone();
+  let b = _b.clone();
   assert(
     a,
     b,

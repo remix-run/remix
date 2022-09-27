@@ -1,5 +1,5 @@
-import type { AgnosticDataRouteObject } from "@remix-run/router";
-
+// TODO: Change import to @remix-run/router
+import type { AgnosticDataRouteObject } from "./router";
 import type { AppLoadContext } from "./data";
 import { callRouteAction, callRouteLoader } from "./data";
 import type { ServerRouteModule } from "./routeModules";
