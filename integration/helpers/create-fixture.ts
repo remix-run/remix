@@ -6,11 +6,14 @@ import getPort from "get-port";
 import stripIndent from "strip-indent";
 import { sync as spawnSync } from "cross-spawn";
 import type { JsonObject } from "type-fest";
-
-import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
-import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
-import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express";
 import { ServerMode } from "@remix-run/server-runtime/mode";
+
+// @ts-expect-error
+import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
+// @ts-expect-error
+import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
+// @ts-expect-error
+import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 
