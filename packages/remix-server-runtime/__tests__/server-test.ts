@@ -3,7 +3,7 @@ import { ServerMode } from "../mode";
 import type { ServerBuild } from "../build";
 import { mockServerBuild } from "./utils";
 
-const DATA_CALL_MULTIPIER = process.env.ENABLE_REACT_ROUTER ? 2 : 1;
+const DATA_CALL_MULTIPIER = process.env.ENABLE_REMIX_ROUTER ? 2 : 1;
 
 function spyConsole() {
   // https://github.com/facebook/react/issues/7047

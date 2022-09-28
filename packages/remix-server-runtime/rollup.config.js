@@ -14,12 +14,12 @@ const {
 } = require("../../rollup.utils");
 const { name: packageName, version } = require("./package.json");
 
-const ENABLE_REACT_ROUTER = !!process.env.ENABLE_REACT_ROUTER;
+const ENABLE_REMIX_ROUTER = !!process.env.ENABLE_REMIX_ROUTER;
 
 const replacePlugin = replace({
   preventAssignment: true,
   values: {
-    "process.env.ENABLE_REACT_ROUTER": ENABLE_REACT_ROUTER ? "1" : "0",
+    "process.env.ENABLE_REMIX_ROUTER": ENABLE_REMIX_ROUTER ? "1" : "0",
   },
 });
 
