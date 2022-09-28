@@ -1,4 +1,4 @@
-// TODO: Change import to @remix-run/router
+// TODO: RRR - Change import to @remix-run/router
 import type { StaticHandler } from "./router";
 import { unstable_createStaticHandler } from "./router";
 import type { AppLoadContext } from "./data";
@@ -68,8 +68,8 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       });
 
       if (ENABLE_REMIX_ROUTER) {
-        // TODO: Move up in function context and re-use for all calls to the
-        // new functions as they will all need an instance of this handler
+        // TODO: RRR - Move up in function context and re-use for all calls to
+        // the new functions as they will all need an instance of this handler
         let staticHandler = unstable_createStaticHandler(
           createStaticHandlerDataRoutes(build.routes, loadContext)
         );
