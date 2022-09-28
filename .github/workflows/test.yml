@@ -8,10 +8,13 @@ on:
     paths-ignore:
       - "docs/**"
       - "scripts/**"
-      - "**/README.md"
+      - "contributors.yml"
+      - "**/*.md"
   pull_request:
     paths-ignore:
       - "docs/**"
+      - "scripts/**"
+      - "contributors.yml"
       - "**/*.md"
 
 jobs:

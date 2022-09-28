@@ -1,8 +1,4 @@
-import type {
-  ActionFunction,
-  LoaderFunction,
-  MetaFunction,
-} from "@remix-run/node";
+import type { ActionArgs, LoaderArgs, MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form, Link, useActionData, useSearchParams } from "@remix-run/react";
 import * as React from "react";
@@ -11,20 +7,13 @@ import { verifyLogin } from "~/models/user.server";
 import { createUserSession, getUserId } from "~/session.server";
 import { safeRedirect, validateEmail } from "~/utils";
 
-export const loader: LoaderFunction = async ({ request }) => {
+export async function loader({ request }: LoaderArgs) {
   let userId = await getUserId(request);
   if (userId) return redirect("/");
   return json({});
-};
-
-interface ActionData {
-  errors?: {
-    email?: string;
-    password?: string;
-  };
 }
 
-export const action: ActionFunction = async ({ request }) => {
+export async function action({ request }: ActionArgs) {
   let formData = await request.formData();
   let email = formData.get("email");
   let password = formData.get("password");
@@ -32,22 +21,22 @@ export const action: ActionFunction = async ({ request }) => {
   let remember = formData.get("remember");
 
   if (!validateEmail(email)) {
-    return json<ActionData>(
-      { errors: { email: "Email is invalid" } },
+    return json(
+      { errors: { email: "Email is invalid", password: null } },
       { status: 400 }
     );
   }
 
-  if (typeof password !== "string") {
-    return json<ActionData>(
-      { errors: { password: "Password is required" } },
+  if (typeof password !== "string" || password.length === 0) {
+    return json(
+      { errors: { email: null, password: "Password is required" } },
       { status: 400 }
     );
   }
 
   if (password.length < 8) {
-    return json<ActionData>(
-      { errors: { password: "Password is too short" } },
+    return json(
+      { errors: { email: null, password: "Password is too short" } },
       { status: 400 }
     );
   }
@@ -55,8 +44,8 @@ export const action: ActionFunction = async ({ request }) => {
   let user = await verifyLogin(email, password);
 
   if (!user) {
-    return json<ActionData>(
-      { errors: { email: "Invalid email or password" } },
+    return json(
+      { errors: { email: "Invalid email or password", password: null } },
       { status: 400 }
     );
   }
@@ -67,7 +56,7 @@ export const action: ActionFunction = async ({ request }) => {
     remember: remember === "on" ? true : false,
     redirectTo,
   });
-};
+}
 
 export const meta: MetaFunction = () => {
   return {
@@ -78,7 +67,7 @@ export const meta: MetaFunction = () => {
 export default function LoginPage() {
   let [searchParams] = useSearchParams();
   let redirectTo = searchParams.get("redirectTo") || "/notes";
-  let actionData = useActionData() as ActionData;
+  let actionData = useActionData<typeof action>();
   let emailRef = React.useRef<HTMLInputElement>(null);
   let passwordRef = React.useRef<HTMLInputElement>(null);
 
