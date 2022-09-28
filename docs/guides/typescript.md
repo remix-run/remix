@@ -20,18 +20,18 @@ The Remix compiler will not do any type checking (it simply removes the types). 
     "typecheck": "tsc -b"
   },
   "dependencies": {
-    "@remix-run/node": "1.3.4",
-    "@remix-run/react": "1.3.4",
-    "@remix-run/serve": "1.3.4",
+    "@remix-run/node": "latest",
+    "@remix-run/react": "latest",
+    "@remix-run/serve": "latest",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "@remix-run/dev": "1.3.4",
-    "@remix-run/eslint-config": "1.3.4",
+    "@remix-run/dev": "latest",
+    "@remix-run/eslint-config": "latest",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
-    "eslint": "^8.11.0",
+    "eslint": "^8.23.1",
     "typescript": "^4.7.4"
   },
   "engines": {

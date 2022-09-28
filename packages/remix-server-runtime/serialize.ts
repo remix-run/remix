@@ -1,5 +1,3 @@
-import type { Merge } from "type-fest";
-
 import type { AppData } from "./data";
 import type { TypedResponse } from "./responses";
 
@@ -47,19 +45,16 @@ type SerializeObject<T extends object> = {
  *
  * Example: { a: string | undefined} --> { a?: string}
  */
-type UndefinedToOptional<T extends object> = Merge<
-  {
-    // Property is not a union with `undefined`, keep as-is
-    [k in keyof T as undefined extends T[k] ? never : k]: T[k];
-  },
-  {
-    // Property _is_ a union with `defined`. Set as optional (via `?`) and remove `undefined` from the union
-    [k in keyof T as undefined extends T[k] ? k : never]?: Exclude<
-      T[k],
-      undefined
-    >;
-  }
->;
+type UndefinedToOptional<T extends object> = {
+  // Property is not a union with `undefined`, keep as-is
+  [k in keyof T as undefined extends T[k] ? never : k]: T[k];
+} & {
+  // Property _is_ a union with `defined`. Set as optional (via `?`) and remove `undefined` from the union
+  [k in keyof T as undefined extends T[k] ? k : never]?: Exclude<
+    T[k],
+    undefined
+  >;
+};
 
 type ArbitraryFunction = (...args: any[]) => unknown;
 
