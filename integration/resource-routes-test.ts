@@ -1,6 +1,7 @@
 import path from "node:path";
 import fse from "fs-extra";
 import { test, expect } from "@playwright/test";
+import { ServerMode } from "@remix-run/server-runtime/mode";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { AppFixture } from "./helpers/create-fixture";
@@ -91,7 +92,8 @@ test.describe("loader in an app", () => {
             }
           `,
         },
-      })
+      }),
+      ServerMode.Test
     );
   });
 
@@ -141,10 +143,9 @@ test.describe("loader in an app", () => {
       let app = new PlaywrightFixture(appFixture, page);
       let res = await app.goto("/throw-error");
       expect(res.status()).toBe(500);
-      // TODO: Is there any way to differentiate this from remix blowing up on
-      // the server?  In dev mode we include the error message in the response,
-      // but tests run against prod mode
-      expect(await res.text()).toEqual("Unexpected Server Error");
+      expect(await res.text()).toEqual(
+        "Unexpected Server Error\n\nError: Oh noes!"
+      );
     });
   }
 
@@ -181,9 +182,8 @@ test.describe("loader in an app", () => {
     let app = new PlaywrightFixture(appFixture, page);
     let res = await app.goto("/throw-object");
     expect(res.status()).toBe(500);
-    // TODO: Is there any way to differentiate this from remix blowing up on
-    // the server?  In dev mode we include the error message in the response,
-    // but tests run against prod mode
-    expect(await res.text()).toEqual("Unexpected Server Error");
+    expect(await res.text()).toEqual(
+      "Unexpected Server Error\n\n[object Object]"
+    );
   });
 });

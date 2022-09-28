@@ -10,6 +10,7 @@ import type { JsonObject } from "type-fest";
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express";
+import { ServerMode } from "@remix-run/server-runtime/mode";
 
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 
@@ -87,7 +88,7 @@ export async function createFixture(init: FixtureInit) {
   };
 }
 
-export async function createAppFixture(fixture: Fixture) {
+export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
   let startAppServer = async (): Promise<{
     port: number;
     stop: () => Promise<void>;
@@ -96,9 +97,13 @@ export async function createAppFixture(fixture: Fixture) {
       let port = await getPort();
       let app = express();
       app.use(express.static(path.join(fixture.projectDir, "public")));
+
       app.all(
         "*",
-        createExpressHandler({ build: fixture.build, mode: "production" })
+        createExpressHandler({
+          build: fixture.build,
+          mode: mode || "production",
+        })
       );
 
       let server = app.listen(port);

@@ -540,23 +540,7 @@ async function handleDocumentRequest({
         entryContext
       );
     } catch (error: any) {
-      if (serverMode !== ServerMode.Test) {
-        console.error(error);
-      }
-
-      let message = "Unexpected Server Error";
-
-      if (serverMode === ServerMode.Development) {
-        message += `\n\n${String(error)}`;
-      }
-
-      // Good grief folks, get your act together 😂!
-      return new Response(message, {
-        status: 500,
-        headers: {
-          "Content-Type": "text/plain",
-        },
-      });
+      return returnLastResortErrorResponse(error, serverMode);
     }
   }
 }
@@ -576,23 +560,7 @@ async function handleResourceRequestRR(
     );
     return response;
   } catch (error) {
-    if (serverMode !== ServerMode.Test) {
-      console.error(error);
-    }
-
-    let message = "Unexpected Server Error";
-
-    if (serverMode === ServerMode.Development) {
-      message += `\n\n${String(error)}`;
-    }
-
-    // Good grief folks, get your act together 😂!
-    return new Response(message, {
-      status: 500,
-      headers: {
-        "Content-Type": "text/plain",
-      },
-    });
+    return returnLastResortErrorResponse(error, serverMode);
   }
 }
 
@@ -628,23 +596,7 @@ async function handleResourceRequest({
       });
     }
   } catch (error: any) {
-    if (serverMode !== ServerMode.Test) {
-      console.error(error);
-    }
-
-    let message = "Unexpected Server Error";
-
-    if (serverMode === ServerMode.Development) {
-      message += `\n\n${String(error)}`;
-    }
-
-    // Good grief folks, get your act together 😂!
-    return new Response(message, {
-      status: 500,
-      headers: {
-        "Content-Type": "text/plain",
-      },
-    });
+    return returnLastResortErrorResponse(error, serverMode);
   }
 }
 
@@ -778,4 +730,24 @@ async function assertResponsesMatch(_a: Response, _b: Response) {
   } else {
     assert(a, b, (r) => r.text(), "Non-JSON response body did not match!");
   }
+}
+
+function returnLastResortErrorResponse(error: any, serverMode?: ServerMode) {
+  if (serverMode !== ServerMode.Test) {
+    console.error(error);
+  }
+
+  let message = "Unexpected Server Error";
+
+  if (serverMode !== ServerMode.Production) {
+    message += `\n\n${String(error)}`;
+  }
+
+  // Good grief folks, get your act together 😂!
+  return new Response(message, {
+    status: 500,
+    headers: {
+      "Content-Type": "text/plain",
+    },
+  });
 }
