@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { convertRoutesToDataRoutes } from "./utils";
 
 export type {
