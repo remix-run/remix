@@ -1,6 +1,9 @@
 import type { AssetsManifest } from "../compiler/assets";
 import type { RemixConfig } from "../config";
 import type { ReadChannel, WriteChannel } from "./channel";
+import type { Options } from "./options";
+
+// TODO explain that `build` will be incremental (i.e. reuse compiler) if run multiple times
 
 export interface BrowserCompiler {
   // produce ./public/build/
@@ -13,7 +16,8 @@ export interface ServerCompiler {
   dispose: () => void;
 }
 export type CreateCompiler<T extends BrowserCompiler | ServerCompiler> = (
-  config: RemixConfig
+  remixConfig: RemixConfig,
+  options: Options
 ) => T;
 
 export interface RemixCompiler {

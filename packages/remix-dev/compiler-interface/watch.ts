@@ -10,6 +10,7 @@ import { dispose } from "./compiler";
 import { build } from "./build";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
+import type { Options } from "./options";
 
 // TODO error handling for if browser/server builds fail (e.g. syntax error)
 // on___Error callback
@@ -28,6 +29,7 @@ const reloadConfig = async (config: RemixConfig): Promise<RemixConfig> => {
 export const watch = async (
   config: RemixConfig,
   createCompiler: {
+    options: Options; // TODO should options be curried into createCompiler.{browser,server} ?
     browser: CreateCompiler<BrowserCompiler>;
     server: CreateCompiler<ServerCompiler>;
   },
@@ -40,10 +42,14 @@ export const watch = async (
     onFileDeleted?: (file: string) => void;
   } = {}
 ): Promise<() => Promise<void>> => {
-  let compiler = {
-    browser: createCompiler.browser(config),
-    server: createCompiler.server(config),
+  let createRemixCompiler = (remixConfig: RemixConfig) => {
+    let { browser, server, options } = createCompiler;
+    return {
+      browser: browser(remixConfig, options),
+      server: server(remixConfig, options),
+    };
   };
+  let compiler = createRemixCompiler(config);
 
   // initial build
   await build(config, compiler);
@@ -56,10 +62,7 @@ export const watch = async (
     dispose(compiler);
 
     config = await reloadConfig(config);
-    compiler = {
-      browser: createCompiler.browser(config),
-      server: createCompiler.server(config),
-    };
+    compiler = createRemixCompiler(config);
     await build(config, compiler);
     callbacks.onRebuildFinish?.(Date.now() - start);
   };

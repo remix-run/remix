@@ -6,3 +6,4 @@ export type {
 } from "./compiler";
 export { build } from "./build";
 export { watch } from "./watch";
+export type { Options } from "./options";

@@ -1,15 +1,15 @@
 import type { Plugin } from "esbuild";
 import jsesc from "jsesc";
 
-import type { AssetsManifest } from "../compiler/assets";
-import { assetsManifestVirtualModule } from "../compiler/virtualModules";
+import type { AssetsManifest } from "../../../compiler/assets";
+import { assetsManifestVirtualModule } from "../../../compiler/virtualModules";
 
 /**
  * Creates a virtual module called `@remix-run/dev/assets-manifest` that exports
  * the assets manifest. This is used in the server entry module to access the
  * assets manifest in the server build.
  */
-export function serverAssetsManifestPlugin(
+export function assetsManifestPlugin(
   manifestPromise: Promise<AssetsManifest>
 ): Plugin {
   let filter = assetsManifestVirtualModule.filter;
