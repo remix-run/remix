@@ -20,7 +20,7 @@ export function cssFilePlugin(
 
       build.onLoad({ filter: /\.css$/ }, async (args) => {
         let { outfile, outdir, assetNames } = buildOps;
-        let { metafile, outputFiles } = await esbuild.build({
+        let { metafile, outputFiles, warnings, errors } = await esbuild.build({
           ...buildOps,
           minify: buildConfig.mode === BuildMode.Production,
           minifySyntax: true,
@@ -38,6 +38,7 @@ export function cssFilePlugin(
             ...buildOps.loader,
             ".css": "css",
           },
+          // this plugin treats absolute paths in 'url()' css rules as external to prevent breaking changes
           plugins: [
             {
               name: "resolve-absolute",
@@ -56,6 +57,10 @@ export function cssFilePlugin(
           ],
         });
 
+        if (errors) {
+          return { errors };
+        }
+
         let { outputs } = metafile!;
         let entry = Object.keys(outputs).find(
           (out) => outputs[out].entryPoint
@@ -65,16 +70,10 @@ export function cssFilePlugin(
           (file) => file !== entryFile
         );
 
-        // create directories for the assets
-        await Promise.all(
-          outputFilesWithoutEntry.map(({ path: filepath }) =>
-            fse.promises.mkdir(path.dirname(filepath), { recursive: true })
-          )
-        );
         // write all assets
         await Promise.all(
           outputFilesWithoutEntry.map(({ path: filepath, contents }) =>
-            fse.promises.writeFile(filepath, contents)
+            fse.outputFile(filepath, contents)
           )
         );
 
@@ -89,6 +88,7 @@ export function cssFilePlugin(
             arr.push(...resolvedInputs);
             return arr;
           }, [] as string[]),
+          warnings,
         };
       });
     },
