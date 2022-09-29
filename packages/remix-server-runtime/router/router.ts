@@ -1,4 +1,5 @@
 // @ts-nocheck
+// eslint-disable
 
 import type { History, Location, Path, To } from "./history";
 import {

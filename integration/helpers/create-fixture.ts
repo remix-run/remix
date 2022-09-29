@@ -6,7 +6,7 @@ import getPort from "get-port";
 import stripIndent from "strip-indent";
 import { sync as spawnSync } from "cross-spawn";
 import type { JsonObject } from "type-fest";
-import { ServerMode } from "@remix-run/server-runtime/mode";
+import type { ServerMode } from "@remix-run/server-runtime/mode";
 
 // @ts-expect-error
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
