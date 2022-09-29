@@ -13,7 +13,7 @@ import { createMatchPath } from "../utils/tsconfig";
 
 /**
  * A plugin responsible for resolving bare module ids based on server target.
- * This includes externalizing for node based plaforms, and bundling for single file
+ * This includes externalizing for node based platforms, and bundling for single file
  * environments such as cloudflare.
  */
 export function serverBareModulesPlugin(
@@ -23,7 +23,9 @@ export function serverBareModulesPlugin(
   let isDenoRuntime = remixConfig.serverBuildTarget === "deno";
 
   // Resolve paths according to tsconfig paths property
-  let matchPath = isDenoRuntime ? undefined : createMatchPath();
+  let matchPath = isDenoRuntime
+    ? undefined
+    : createMatchPath(remixConfig.tsconfigPath);
   function resolvePath(id: string) {
     if (!matchPath) {
       return id;

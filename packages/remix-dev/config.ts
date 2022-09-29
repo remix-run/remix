@@ -8,6 +8,7 @@ import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/virtualModules";
+import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -269,6 +270,11 @@ export interface RemixConfig {
    * A list of directories to watch.
    */
   watchPaths: string[];
+
+  /**
+   * The path for the tsconfig file, if present on the root directory.
+   */
+  tsconfigPath: string | undefined;
 }
 
 /**
@@ -450,6 +456,22 @@ export async function readConfig(
 
   let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
 
+  // When tsconfigPath is undefined, the default "tsconfig.json" is not
+  // found in the root directory.
+  let tsconfigPath: string | undefined;
+  let rootTsconfig = path.resolve(rootDirectory, "tsconfig.json");
+  let rootJsConfig = path.resolve(rootDirectory, "jsconfig.json");
+
+  if (fse.existsSync(rootTsconfig)) {
+    tsconfigPath = rootTsconfig;
+  } else if (fse.existsSync(rootJsConfig)) {
+    tsconfigPath = rootJsConfig;
+  }
+
+  if (tsconfigPath) {
+    writeConfigDefaults(tsconfigPath);
+  }
+
   return {
     appDirectory,
     cacheDirectory,
@@ -472,6 +494,7 @@ export async function readConfig(
     serverDependenciesToBundle,
     mdx,
     watchPaths,
+    tsconfigPath,
   };
 }
 

@@ -44,7 +44,7 @@
     "changeset:version": "changeset version",
     "changeset:release": "yarn build --tsc --publish && changeset publish",
     "version": "node ./scripts/version.js",
-    "version:experimental": "node scripts ./scripts/version experimental",
+    "version:experimental": "node ./scripts/version.js experimental",
     "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\""
   },
   "dependencies": {
@@ -91,7 +91,7 @@
     "concurrently": "^7.0.0",
     "cross-spawn": "^7.0.3",
     "cypress": "^9.6.0",
-    "eslint": "^8.1.0",
+    "eslint": "^8.23.1",
     "eslint-plugin-markdown": "^2.2.1",
     "eslint-plugin-prefer-let": "^3.0.1",
     "express": "^4.17.1",

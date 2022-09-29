@@ -1320,7 +1320,7 @@ As we work through the rest of the tutorial, you may want to check the class nam
 
 One quick note about CSS. A lot of you folks may be used to using runtime libraries for CSS (like [Styled-Components][styled-components]). While you can use those with Remix, we'd like to encourage you to look into more traditional approaches to CSS. Many of the problems that led to the creation of these styling solutions aren't really problems in Remix, so you can often go with a simpler styling approach.
 
-That said, many Remix users are very happy with [Tailwind][tailwind] and we recommend this approach. Basically, if it can give you a URL (or a CSS file which you can import to get a URL), then it's a generally a good approach because Remix can then leverage the browser platform for caching and loading/unloading.
+That said, many Remix users are very happy with [Tailwind][tailwind] and we recommend this approach. Basically, if it can give you a URL (or a CSS file which you can import to get a URL), then it's generally a good approach because Remix can then leverage the browser platform for caching and loading/unloading.
 
 ## Database
 
@@ -1615,7 +1615,7 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[3,6,8,16,23-25,27-32,35,59-63]
+```tsx filename=app/routes/jokes.tsx lines=[3,5-6,10,13,20-22,24-29,32,56-60]
 import type {
   LinksFunction,
   LoaderFunction,
@@ -1758,7 +1758,7 @@ const joke = await db.joke.findUnique({
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[4,6,8,10-19,22]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[4,6,8,10-19,22,27-28]
 import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
@@ -6361,7 +6361,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [java-script-to-know-for-react]: https://kentcdodds.com/blog/javascript-to-know-for-react
 [the-beginner-s-guide-to-react]: https://kcd.im/beginner-react
 [the-http-api]: https://developer.mozilla.org/en-US/docs/Web/HTTP
-[the-basic-example]: https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/basic
+[the-basic-example]: https://codesandbox.io/s/github/remix-run/examples/tree/main/basic
 [express]: https://expressjs.com
 [hydrate]: https://reactjs.org/docs/react-dom.html#hydrate
 [http-localhost-3000]: http://localhost:3000
