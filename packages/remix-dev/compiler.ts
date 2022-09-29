@@ -5,7 +5,6 @@ import * as fse from "fs-extra";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
-import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
 
 import { BuildMode, BuildTarget } from "./build";
 import type { RemixConfig } from "./config";
@@ -352,7 +351,6 @@ async function createBrowserBuild(
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
-    yarnPnpPlugin(),
   ];
 
   return esbuild.build({
@@ -422,7 +420,6 @@ function createServerBuild(
     serverEntryModulePlugin(config),
     serverAssetsManifestPlugin(assetsManifestPromiseRef),
     serverBareModulesPlugin(config, options.onWarning),
-    yarnPnpPlugin(),
   ];
 
   if (config.serverPlatform !== "node") {
