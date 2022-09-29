@@ -2,7 +2,7 @@
   "include": ["**/*.ts"],
   "exclude": ["dist", "**/node_modules/**"],
   "compilerOptions": {
-    "lib": ["ES2019"],
+    "lib": ["ES2019", "DOM", "DOM.Iterable"],
     "target": "ES2019",
     "module": "CommonJS",
     "skipLibCheck": true,
