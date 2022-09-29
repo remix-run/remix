@@ -47,19 +47,30 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
+      "app/api/client.js": js`
+        import { ConfidentialClientApplication } from '@azure/msal-node';
+        
+        export function getGreeting() {
+          return 'hola'
+        }
+      `,
       "app/routes/index.jsx": js`
         import { json } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
+        import { getGreeting } from '~/api/client'
 
         export function loader() {
-          return json("pizza");
+          return json({
+            greeting: getGreeting(),
+            food: "pizza"
+          });
         }
 
         export default function Index() {
-          let data = useLoaderData();
+          let { greeting, food } = useLoaderData();
           return (
             <div>
-              {data}
+              <span>{greeting} {food}</span>
               <Link to="/burgers">Other Route</Link>
             </div>
           )
@@ -89,7 +100,7 @@ test("[description of what you expect it to do]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+  expect(await response.text()).toMatch("hola");
 
   // If you need to test interactivity use the `app`
   await app.goto("/");
