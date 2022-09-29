@@ -2,6 +2,10 @@ import fsp from "fs/promises";
 import path from "path";
 import lambdaTester from "lambda-tester";
 import {
+  // This has been added as a global in node 15+, but we expose it here while we
+  // support Node 14
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  AbortController,
   createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,
 } from "@remix-run/node";
@@ -271,13 +275,7 @@ describe("netlify createRemixRequest", () => {
           "method": "GET",
           "parsedURL": "http://localhost:3000/",
           "redirect": "follow",
-          "signal": AbortSignal {
-            Symbol(kEvents): Map {},
-            Symbol(events.maxEventTargetListeners): 10,
-            Symbol(events.maxEventTargetListenersWarned): false,
-            Symbol(kAborted): false,
-            Symbol(kReason): undefined,
-          },
+          "signal": AbortSignal {},
         },
       }
     `);

@@ -1,4 +1,5 @@
-import type { TypedResponse } from "../serialize";
+import type { TypedResponse } from "@remix-run/server-runtime";
+
 import type { useLoaderData } from "../components";
 
 function isEqual<A, B>(

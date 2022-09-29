@@ -18,6 +18,10 @@ Here's how it works. The Remix `<Scripts/>` component renders module script tags
 
 Older browsers ignore it because they don't understand the `type`, so no JavaScript is loaded. Links, loaders, forms, and actions still work because they are built on the foundations of HTML, HTTP and browser behavior. Modern browsers will load the scripts, providing enhanced SPA behavior with faster transitions and the enhanced UX of your application code.
 
+## Does Remix implement CSRF protection?
+
+Remix cookies are configured to `SameSite=Lax` by default which is a platform built-in protection against CSRF, if you need to support old browsers (IE11 or older) that doesn't support `SameSite=Lax` you would have to implement CSRF protection yourself or use a library that implements it.
+
 [pe]: https://en.wikipedia.org/wiki/Progressive_enhancement
 [esm-browsers]: https://caniuse.com/es6-module
 [msie]: https://techcommunity.microsoft.com/t5/microsoft-365-blog/microsoft-365-apps-say-farewell-to-internet-explorer-11-and/ba-p/1591666

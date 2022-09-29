@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
+        uses: styfle/cancel-workflow-action@0.10.0
 
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
@@ -37,36 +37,6 @@ jobs:
       - name: 🏗 Build
         run: yarn build
 
-  lint:
-    name: ⬣ Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-
-      - name: ⬇️ Checkout repo
-        uses: actions/checkout@v3
-
-      - name: ⎔ Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version-file: ".nvmrc"
-          cache: "yarn"
-
-      - name: 📥 Install deps
-        run: yarn --frozen-lockfile
-
-      - name: 🔬 Lint
-        run: yarn lint
-
-      - name: 🦕 Install Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: vx.x.x
-
-      - name: 🔬 Lint deno files
-        run: yarn lint:deno
-
   test:
     name: "🧪 Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }})"
     strategy:
@@ -80,7 +50,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
+        uses: styfle/cancel-workflow-action@0.10.0
 
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
@@ -115,7 +85,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
+        uses: styfle/cancel-workflow-action@0.10.0
 
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3

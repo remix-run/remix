@@ -6,6 +6,7 @@
 /packages/*/LICENSE.md
 node_modules/
 yarn-error.log
+tsconfig.tsbuildinfo
 
 /jacob
 /fixtures/cloudflare

@@ -1211,7 +1211,7 @@ function Task({ task }) {
 }
 ```
 
-This awesome for the checkbox, but the sidebar will say 2/4 while the checkboxes show 3/4 when the user clicks on of them!
+This is awesome for the checkbox, but the sidebar will say 2/4 while the checkboxes show 3/4 when the user clicks one of them!
 
 ```
 +-----------------+----------------------------+
@@ -1522,7 +1522,7 @@ return new Response(null, {
 });
 ```
 
-## `unstable_parseMultipartFormData`
+### `unstable_parseMultipartFormData`
 
 Allows you to handle multipart forms (file uploads) for your app.
 
