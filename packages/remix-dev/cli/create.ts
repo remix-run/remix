@@ -23,7 +23,7 @@ const defaultAgent = new ProxyAgent();
 const httpsAgent = new ProxyAgent();
 httpsAgent.protocol = "https:";
 function agent(url: string) {
-  return url.toLowerCase().startsWith("https:") ? httpsAgent : defaultAgent;
+  return new URL(url).protocol === "https:" ? httpsAgent : defaultAgent;
 }
 
 interface CreateAppArgs {
