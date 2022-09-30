@@ -15,6 +15,6 @@
     "rewrite": "/api/azure"
   },
   "platform": {
-    "apiRuntime": "node:16"
+    "apiRuntime": "node:14"
   }
 }

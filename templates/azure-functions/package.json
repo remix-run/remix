@@ -6,20 +6,21 @@
   },
   "dependencies": {
     "@remix-run/azure-functions": "*",
+    "@remix-run/node": "*",
     "@remix-run/react": "*",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@azure/functions": "^3.0.0",
-    "@azure/static-web-apps-cli": "^0.8.3",
+    "@azure/functions": "^3.2.0",
+    "@azure/static-web-apps-cli": "^1.0.2",
     "@remix-run/dev": "*",
     "@remix-run/eslint-config": "*",
     "@remix-run/serve": "*",
-    "@types/react": "^17.0.45",
-    "@types/react-dom": "^17.0.17",
-    "azure-functions-core-tools": "^4.0.4483",
-    "eslint": "^8.15.0",
-    "typescript": "^4.6.4"
+    "@types/react": "^18.0.15",
+    "@types/react-dom": "^18.0.6",
+    "azure-functions-core-tools": "^4.0.4785",
+    "eslint": "^8.23.1",
+    "typescript": "^4.7.4"
   }
 }
