@@ -116,7 +116,7 @@ export async function createApp({
       await downloadAndExtractRepoTarball(
         projectDir,
         getRepoInfo(
-          `https://github.com/remix-run/remix/tree/main/examples/${name}`
+          `https://github.com/remix-run/examples/tree/main/${name}`
         ),
         options
       );
@@ -150,7 +150,12 @@ export async function createApp({
         );
       }
 
-      await downloadAndExtractRepoTarball(projectDir, repoInfo, options);
+      await 
+      
+      
+      
+      
+      (projectDir, repoInfo, options);
       break;
     }
 
@@ -714,6 +719,9 @@ export async function validateTemplate(
       }
       let typeDir = templateType + "s";
       let templateUrl = `https://github.com/remix-run/remix/tree/main/${typeDir}/${name}`;
+      if (templateType === "example") {
+        templateUrl = `https://github.com/remix-run/${typeDir}/tree/main/${name}`;
+      }
       let response;
       try {
         response = await fetch(templateUrl, { method: "HEAD" });
@@ -733,7 +741,7 @@ export async function validateTemplate(
           throw Error(
             "🚨 The template could not be verified. Please double check that " +
               "the template is a valid project directory in " +
-              `https://github.com/remix-run/remix/tree/main/${typeDir} and ` +
+              `${templateUrl} and ` +
               "try again."
           );
         default:
@@ -741,8 +749,7 @@ export async function validateTemplate(
             "🚨 The template could not be verified. The server returned a " +
               `response with a ${response.status} status. Please double ` +
               "check that the template is a valid project directory in " +
-              `https://github.com/remix-run/remix/tree/main/${typeDir} and ` +
-              "try again."
+              `${templateUrl} and try again.`
           );
       }
     }
