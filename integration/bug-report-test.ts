@@ -47,39 +47,35 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/api/client.js": js`
-        import { ConfidentialClientApplication } from '@azure/msal-node';
+      // XXX Remove .server from file for missing polyfill method error
+      "app/api/client.server.js": js`
+        import { AccountInfo } from '@azure/msal-node';
         
-        export function getGreeting() {
-          return 'hola'
+        export function getAccount() {
+          return { name: 'Dora' }
         }
       `,
       "app/routes/index.jsx": js`
         import { json } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
-        import { getGreeting } from '~/api/client'
+        import { getAccount } from "~/api/client.server";
+        import { STATUS_CODES } from "http";
 
         export function loader() {
-          return json({
-            greeting: getGreeting(),
-            food: "pizza"
-          });
+          return json(
+            { name: getAccount().name }, 
+            { status: 200, statusText: STATUS_CODES[200] }
+          );
         }
 
         export default function Index() {
-          let { greeting, food } = useLoaderData();
+          let { name } = useLoaderData();
+          
           return (
             <div>
-              <span>{greeting} {food}</span>
-              <Link to="/burgers">Other Route</Link>
+              <span>{name}</span>
             </div>
           )
-        }
-      `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -98,20 +94,14 @@ test.afterAll(() => appFixture.close());
 
 test("[description of what you expect it to do]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("hola");
+  expect(await response.text()).toMatch("Dora");
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
-
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+  // XXX You can see here a lot of the http polyfill code has been included in the browser bundle
+  let routeModule = await fixture.getBrowserAsset(
+    fixture.build.assets.routes["routes/index"].module
+  );
+  expect(routeModule).not.toMatch('The buffer module from node.js');
 });
 
 ////////////////////////////////////////////////////////////////////////////////
