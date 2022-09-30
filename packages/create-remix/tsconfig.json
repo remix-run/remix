@@ -6,6 +6,7 @@
     "target": "ES2019",
     "module": "CommonJS",
     "skipLibCheck": true,
+    "composite": true,
 
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
