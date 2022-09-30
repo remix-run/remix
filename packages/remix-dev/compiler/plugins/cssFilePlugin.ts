@@ -5,6 +5,11 @@ import esbuild from "esbuild";
 import { BuildMode } from "../../build";
 import type { BuildConfig } from "../../compiler";
 
+const isExtendedLengthPath = /^\\\\\?\\/;
+
+const normalizePathSlashes = (path: string) =>
+  isExtendedLengthPath.test(path) ? path : path.replace(/\\/g, "/");
+
 /**
  * This plugin loads css files with the "css" loader (bundles and moves assets to assets directory)
  * and exports the url of the css file as its default export.
@@ -65,7 +70,9 @@ export function cssFilePlugin(
         let entry = Object.keys(outputs).find(
           (out) => outputs[out].entryPoint
         )!;
-        let entryFile = outputFiles!.find((file) => file.path.endsWith(entry))!;
+        let entryFile = outputFiles!.find((file) =>
+          normalizePathSlashes(file.path).endsWith(normalizePathSlashes(entry))
+        )!;
         let outputFilesWithoutEntry = outputFiles!.filter(
           (file) => file !== entryFile
         );
