@@ -150,12 +150,7 @@ export async function createApp({
         );
       }
 
-      await 
-      
-      
-      
-      
-      (projectDir, repoInfo, options);
+      await downloadAndExtractRepoTarball(projectDir, repoInfo, options);
       break;
     }
 
