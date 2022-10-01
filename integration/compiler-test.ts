@@ -89,12 +89,20 @@ test.describe("compiler", () => {
             return <div id="package-with-submodule">{submodule()}</div>;
           }
         `,
+        "app/routes/package-with-development-production-exports.jsx": js`
+          import exportType from "development-production-exports";
+
+          export default function PackageWithDevelopmentProductionExports() {
+            return <div id="package-with-development-production-exports">{exportType}</div>;
+          }
+        `,
         "remix.config.js": js`
           let { getDependenciesToBundle } = require("@remix-run/dev");
           module.exports = {
             serverDependenciesToBundle: [
               "esm-only-pkg",
               "esm-only-single-export",
+              "development-production-exports",
               ...getDependenciesToBundle("esm-only-exports-pkg"),
             ],
           };
@@ -155,6 +163,22 @@ test.describe("compiler", () => {
           export default function submodule() {
             return "package-with-submodule";
           }
+        `,
+        "node_modules/development-production-exports/package.json": json({
+          name: "development-production-exports",
+          version: "1.0.0",
+          type: "module",
+          exports: {
+            development: "./development.js",
+            production: "./production.js",
+            default: "./production.js",
+          },
+        }),
+        "node_modules/development-production-exports/development.js": js`
+          export default "development";
+        `,
+        "node_modules/development-production-exports/production.js": js`
+          export default "production";
         `,
       },
     });
@@ -263,6 +287,23 @@ test.describe("compiler", () => {
     // rendered the page instead of the error boundary
     expect(await app.getHtml("#package-with-submodule")).toBe(
       '<div id="package-with-submodule">package-with-submodule</div>'
+    );
+  });
+
+  test("bundles packages with package exports for production", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto(
+      "/package-with-development-production-exports",
+      true
+    );
+    expect(res.status()).toBe(200); // server rendered fine
+    // rendered the page instead of the error boundary
+    expect(
+      await app.getHtml("#package-with-development-production-exports")
+    ).toBe(
+      '<div id="package-with-development-production-exports">production</div>'
     );
   });
 

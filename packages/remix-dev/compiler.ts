@@ -388,6 +388,9 @@ async function createBrowserBuild(
     jsx: "automatic",
     jsxDev: options.mode !== BuildMode.Production,
     plugins,
+    conditions: [
+      options.mode === BuildMode.Production ? "production" : "development",
+    ],
   });
 }
 
@@ -429,6 +432,9 @@ function createServerBuild(
     plugins.unshift(NodeModulesPolyfillPlugin());
   }
 
+  let conditionsMode =
+    options.mode === BuildMode.Production ? "production" : "development";
+
   return esbuild
     .build({
       absWorkingDir: config.rootDirectory,
@@ -437,10 +443,10 @@ function createServerBuild(
       outfile: config.serverBuildPath,
       write: false,
       conditions: isCloudflareRuntime
-        ? ["worker"]
+        ? ["worker", conditionsMode]
         : isDenoRuntime
-        ? ["deno", "worker"]
-        : undefined,
+        ? ["deno", "worker", conditionsMode]
+        : [conditionsMode],
       platform: config.serverPlatform,
       format: config.serverModuleFormat,
       treeShaking: true,
