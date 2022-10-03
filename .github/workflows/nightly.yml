@@ -22,7 +22,7 @@ jobs:
       NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
     steps:
       - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.10.0
+        uses: styfle/cancel-workflow-action@0.10.1
 
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
