@@ -385,7 +385,7 @@ export function getNewMatchesForLinks(
           if (isNew(match, index) || matchPathChanged(match, index)) {
             return true;
           }
-          if (match.route.shouldReload && typeof window !== "undefined") {
+          if (match.route.shouldReload && typeof document !== "undefined") {
             return match.route.shouldReload({
               params: match.params,
               prevUrl: new URL(
