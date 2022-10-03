@@ -11,7 +11,7 @@ import { mdxPlugin } from "../../compiler/plugins/mdx";
 import { browserRouteModulesPlugin } from "../../compiler/plugins/browserRouteModulesPlugin";
 import { emptyModulesPlugin } from "../../compiler/plugins/emptyModulesPlugin";
 import { getAppDependencies } from "../../compiler/dependencies";
-import type { Options } from "../../compiler-interface";
+import type { Options } from "../../compiler-kit";
 
 const getExternals = (remixConfig: RemixConfig): string[] => {
   // For the browser build, exclude node built-ins that don't have a

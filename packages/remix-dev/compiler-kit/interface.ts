@@ -1,6 +1,6 @@
 import type { AssetsManifest } from "../compiler/assets";
 import type { RemixConfig } from "../config";
-import type { ReadChannel, WriteChannel } from "./channel";
+import type { ReadChannel, WriteChannel } from "./utils/channel";
 import type { Options } from "./options";
 
 // TODO explain that `build` will be incremental (i.e. reuse compiler) if run multiple times
@@ -24,8 +24,3 @@ export interface RemixCompiler {
   browser: BrowserCompiler;
   server: ServerCompiler;
 }
-
-export const dispose = ({ browser, server }: RemixCompiler) => {
-  browser.dispose();
-  server.dispose();
-};

@@ -2,7 +2,7 @@ import type esbuild from "esbuild";
 import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
 import NodeModulesPolyfillPlugin from "@esbuild-plugins/node-modules-polyfill";
 
-import type { Options } from "../../compiler-interface";
+import type { Options } from "../../compiler-kit";
 import { loaders } from "../../compiler/loaders";
 import { emptyModulesPlugin } from "../../compiler/plugins/emptyModulesPlugin";
 import { mdxPlugin } from "../../compiler/plugins/mdx";
@@ -12,7 +12,7 @@ import { serverRouteModulesPlugin } from "../../compiler/plugins/serverRouteModu
 import { urlImportsPlugin } from "../../compiler/plugins/urlImportsPlugin";
 import type { RemixConfig } from "../../config";
 import { assetsManifestPlugin } from "./plugins/assets-manifest";
-import type { ReadChannel } from "../../compiler-interface/channel";
+import type { ReadChannel } from "../../compiler-kit/utils/channel";
 import type { AssetsManifest } from "../../compiler/assets";
 
 export const createEsbuildConfig = (

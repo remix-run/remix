@@ -3,7 +3,7 @@ export type {
   ServerCompiler,
   CreateCompiler,
   RemixCompiler,
-} from "./compiler";
+} from "./interface";
 export { build } from "./build";
 export { watch } from "./watch";
 export type { Options } from "./options";

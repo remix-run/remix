@@ -7,9 +7,9 @@ import { createAssetsManifest } from "../../compiler/assets";
 import { writeFileSafe } from "../../compiler/utils/fs";
 import type { RemixConfig } from "../../config";
 import { createEsbuildConfig } from "./config";
-import type { BrowserCompiler } from "../../compiler-interface";
-import type { WriteChannel } from "../../compiler-interface/channel";
-import type { CreateCompiler } from "../../compiler-interface/compiler";
+import type { BrowserCompiler } from "../../compiler-kit";
+import type { WriteChannel } from "../../compiler-kit/utils/channel";
+import type { CreateCompiler } from "../../compiler-kit/interface";
 
 async function generateAssetsManifest(
   config: RemixConfig,

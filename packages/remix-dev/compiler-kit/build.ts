@@ -3,8 +3,8 @@ import path from "path";
 
 import type { AssetsManifest } from "../compiler/assets";
 import type { RemixConfig } from "../config";
-import { createChannel } from "./channel";
-import type { RemixCompiler } from "./compiler";
+import { createChannel } from "./utils/channel";
+import type { RemixCompiler } from "./interface";
 
 // TODO error handling for if browser/server builds fail (e.g. syntax error)
 // enumerate different types of errors

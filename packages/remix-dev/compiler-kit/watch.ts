@@ -4,9 +4,9 @@ import chokidar from "chokidar";
 import type {
   BrowserCompiler,
   CreateCompiler,
+  RemixCompiler,
   ServerCompiler,
-} from "./compiler";
-import { dispose } from "./compiler";
+} from "./interface";
 import { build } from "./build";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
@@ -24,6 +24,11 @@ const reloadConfig = async (config: RemixConfig): Promise<RemixConfig> => {
     console.error(error);
     throw error;
   }
+};
+
+const dispose = ({ browser, server }: RemixCompiler) => {
+  browser.dispose();
+  server.dispose();
 };
 
 export const watch = async (

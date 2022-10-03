@@ -1,8 +1,8 @@
 import esbuild from "esbuild";
 
-import type { Options, ServerCompiler } from "../../compiler-interface";
-import type { ReadChannel } from "../../compiler-interface/channel";
-import type { CreateCompiler } from "../../compiler-interface/compiler";
+import type { Options, ServerCompiler } from "../../compiler-kit";
+import type { ReadChannel } from "../../compiler-kit/utils/channel";
+import type { CreateCompiler } from "../../compiler-kit/interface";
 import type { AssetsManifest } from "../../compiler/assets";
 import { createEsbuildConfig } from "./config";
 
