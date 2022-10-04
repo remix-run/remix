@@ -80,9 +80,12 @@ The same as `watch`, but also boots the [Remix App Server][remix-app-server] in 
 remix dev
 ```
 
-### `remix dev --debug`
+### `remix dev --debug [--debug-binding]`
 
-Attaches a [Node inspector][node-inspector] to develop your app in debug mode.
+Attaches a [Node inspector][node-inspector] to develop your app in debug 
+mode. By default, the host is set to `127.0.0.1` and the port is set to 
+`9229`. Using the `--debug-binding` allows you to set a custom host and port.
+For example, `remix dev --debug --debug-binding 0.0.0.0:9229`.
 
 ### `remix dev --port`
 
