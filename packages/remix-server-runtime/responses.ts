@@ -3,6 +3,11 @@ export type JsonFunction = <Data extends unknown>(
   init?: number | ResponseInit
 ) => TypedResponse<Data>;
 
+export type RevalidateFunction = <Data extends unknown>(
+  data?: Data,
+  init?: number | ResponseInit
+) => TypedResponse<Data>;
+
 // must be a type since this is a subtype of response
 // interfaces must conform to the types they extend
 export type TypedResponse<T extends unknown = unknown> = Response & {
@@ -27,6 +32,15 @@ export const json: JsonFunction = (data, init = {}) => {
     ...responseInit,
     headers,
   });
+};
+
+export const revalidate: RevalidateFunction = (data, init = {}) => {
+  let responseInit = typeof init === "number" ? { status: init } : init;
+
+  let headers = new Headers(responseInit.headers);
+  headers.set("X-Remix-Revalidate", "true");
+
+  return json(data, init);
 };
 
 export type RedirectFunction = (
@@ -74,4 +88,8 @@ export function isRedirectResponse(response: Response): boolean {
 
 export function isCatchResponse(response: Response) {
   return response.headers.get("X-Remix-Catch") != null;
+}
+
+export function isRevalidateResponse(response: Response) {
+  return response.headers.get("X-Remix-Revalidate") != null;
 }

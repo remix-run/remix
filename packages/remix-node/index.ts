@@ -41,6 +41,7 @@ export {
   isCookie,
   isSession,
   json,
+  revalidate,
   JsonFunction,
   MaxPartSizeExceededError,
   redirect,

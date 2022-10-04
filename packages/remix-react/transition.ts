@@ -8,6 +8,7 @@ import type { RouteMatch } from "./routeMatching";
 import type { ClientRoute } from "./routes";
 import { matchClientRoutes } from "./routeMatching";
 import invariant from "./invariant";
+import { extractData } from "./data";
 
 ////////////////////////////////////////////////////////////////////////////////
 //#region Types and Utils
@@ -397,6 +398,12 @@ export class TransitionRedirect {
         : location.pathname + location.search;
   }
 }
+export class Revalidated {
+  data: unknown;
+  constructor(data: unknown) {
+    this.data = data;
+  }
+}
 
 export const IDLE_TRANSITION: TransitionStates["Idle"] = {
   state: "idle",
@@ -694,6 +701,33 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
 
     if (await maybeBailOnCatch(match, key, result)) {
+      return;
+    }
+
+    let revalidated = isRevalidatedResult(result);
+    if (revalidated) {
+      let data = await extractData(result.value.data);
+      let doneFetcher: FetcherStates["Done"] = {
+        state: "idle",
+        type: "done",
+        data: data.fetcher,
+        submission: undefined,
+      };
+      setFetcher(key, doneFetcher);
+
+      let results: Array<DataResult> = Object.entries(data.loaders).map(
+        ([routeId, loaderData]) => {
+          return {
+            match: matches?.find((match) => match.route.id === routeId)!,
+            value: loaderData,
+          };
+        }
+      );
+
+      update({
+        fetchers: new Map(state.fetchers),
+        loaderData: makeLoaderData(state, results, state.matches),
+      });
       return;
     }
 
@@ -1587,6 +1621,10 @@ function filterMatchesToLoad(
 
 function isRedirectResult(result: DataResult): result is DataRedirectResult {
   return result.value instanceof TransitionRedirect;
+}
+
+function isRevalidatedResult(result: DataResult): result is DataRedirectResult {
+  return result.value instanceof Revalidated;
 }
 
 function createHref(location: Location | URL) {
