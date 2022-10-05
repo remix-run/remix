@@ -635,7 +635,7 @@ export async function validateTemplate(
               ) &&
               // if the latest is specified, make sure there is an asset
               !body?.assets?.some((a: any) =>
-                a?.browser_download_url?.includes(info.asset)
+                a?.browser_download_url.includes(info.asset)
               )
             ) {
               throw Error(

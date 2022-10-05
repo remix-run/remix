@@ -260,38 +260,13 @@ describe("the create command", () => {
     );
   });
 
-  it("succeeds for links to latest private github release tarballs when including token", async () => {
-    let projectDir = await getProjectDir(
-      "latest-private-release-tarball-with-token"
-    );
-    await run([
-      "create",
-      projectDir,
-      "--template",
-      "https://github.com/private-org/private-repo/releases/latest/download/stack.tar.gz",
-      "--no-install",
-      "--typescript",
-      "--token",
-      "valid-token",
-    ]);
-    expect(output.trim()).toBe(
-      getOptOutOfInstallMessage() +
-        "\n\n" +
-        getSuccessMessage(
-          path.join("<TEMP_DIR>", "latest-private-release-tarball-with-token")
-        )
-    );
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-  });
-
   it("succeeds for private github release tarballs when including token", async () => {
     let projectDir = await getProjectDir("private-release-tarball-with-token");
     await run([
       "create",
       projectDir,
       "--template",
-      "https://example.com/remix-stack.tar.gz",
+      "https://github.com/private-org/private-repo/releases/download/v0.0.1/stack.tar.gz",
       "--no-install",
       "--typescript",
       "--token",
