@@ -998,7 +998,7 @@ export function Scripts(props: ScriptProps) {
 
           contextScript += "(() => {";
           contextScript += js`let p,r,e;`;
-          contextScript += js`p=new Promise(((j,k)=>{r=j;e=k;}));`;
+          contextScript += js`p=new Promise(((j,k)=>{r=v=>{p._data=v;j(v);};e=v=>{p._error=v;k(v);};}));`;
           contextScript += js`window.__remixDeferredResolvers[${JSON.stringify(
             routeId
           )}][${JSON.stringify(key)}]={r,e};`;
@@ -1006,6 +1006,7 @@ export function Scripts(props: ScriptProps) {
             let racePromise = js`new Promise((_,e2) => setTimeout(() => {e2(new Error("The render was aborted by the server without a reason."));}, window.__remixServerAbortDelay))`;
             contextScript += js`p=Promise.race([p, ${racePromise}]);`;
           }
+          contextScript += js`p._tracked=true;`;
           contextScript += js`window.__remixContext.routeData[${JSON.stringify(
             routeId
           )}][${JSON.stringify(key)}]=p;`;
