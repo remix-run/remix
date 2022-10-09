@@ -71,8 +71,9 @@ export function serverBareModulesPlugin(
           onWarning &&
           !isNodeBuiltIn(packageName) &&
           !/\bnode_modules\b/.test(importer) &&
-          // silence spurious warnings when using Yarn PnP until issues with
-          // ambiguous/unsound extraneous dependencies are fixed
+          // Silence spurious warnings when using Yarn PnP. Yarn PnP doesn’t use
+          // a `node_modules` folder to keep its dependencies, so the above check
+          // will always fail.
           process.versions.pnp == null
         ) {
           try {
