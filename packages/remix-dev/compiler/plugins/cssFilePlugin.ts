@@ -62,7 +62,7 @@ export function cssFilePlugin(
           ],
         });
 
-        if (errors) {
+        if (errors && errors.length) {
           return { errors };
         }
 
