@@ -23,3 +23,10 @@ jobs:
     uses: ./.github/workflows/reusable-test.yml
     with:
       node_version: '["latest"]'
+
+  test-experimental:
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/reusable-test.yml
+    with:
+      node_version: '["latest"]'
+      enable_remix_router: "1"

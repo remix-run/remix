@@ -9,10 +9,14 @@ on:
         # but we want to pass an array (node_version: "[14, 16, 18]"),
         # so we'll need to manually stringify it for now
         type: string
+      enable_remix_router:
+        required: false
+        type: string
 
 env:
   CI: true
   CYPRESS_INSTALL_BINARY: 0
+  ENABLE_REMIX_ROUTER: ${{ inputs.enable_remix_router }}
 
 jobs:
   build:
