@@ -867,6 +867,11 @@ import(${JSON.stringify(manifest.entry.module)});`;
     <>
       <link
         rel="modulepreload"
+        href={manifest.url}
+        crossOrigin={props.crossOrigin}
+      />
+      <link
+        rel="modulepreload"
         href={manifest.entry.module}
         crossOrigin={props.crossOrigin}
       />
