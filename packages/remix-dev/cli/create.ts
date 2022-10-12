@@ -7,6 +7,7 @@ import fse from "fs-extra";
 import gunzip from "gunzip-maybe";
 import fetch from "node-fetch";
 import ora from "ora";
+import ProxyAgent from "proxy-agent";
 import * as semver from "semver";
 import sortPackageJSON from "sort-package-json";
 import tar from "tar-fs";
@@ -18,6 +19,12 @@ import { getPreferredPackageManager } from "./getPreferredPackageManager";
 import { convertToJavaScript } from "./migrate/migrations/convert-to-javascript";
 
 const remixDevPackageVersion = packageJson.version;
+const defaultAgent = new ProxyAgent();
+const httpsAgent = new ProxyAgent();
+httpsAgent.protocol = "https:";
+function agent(url: string) {
+  return new URL(url).protocol === "https:" ? httpsAgent : defaultAgent;
+}
 
 interface CreateAppArgs {
   appTemplate: string;
@@ -306,7 +313,10 @@ async function downloadAndExtractTarball(
         ? `https://api.github.com/repos/${info.owner}/${info.name}/releases/latest`
         : `https://api.github.com/repos/${info.owner}/${info.name}/releases/tags/${info.tag}`;
 
-    let response = await fetch(releaseUrl, { headers });
+    let response = await fetch(releaseUrl, {
+      agent: agent("https://api.github.com"),
+      headers,
+    });
 
     if (response.status !== 200) {
       throw Error(
@@ -331,7 +341,10 @@ async function downloadAndExtractTarball(
     resourceUrl = `https://api.github.com/repos/${info.owner}/${info.name}/releases/assets/${assetId}`;
     headers.Accept = "application/octet-stream";
   }
-  let response = await fetch(resourceUrl, { headers });
+  let response = await fetch(resourceUrl, {
+    agent: agent(resourceUrl),
+    headers,
+  });
 
   if (response.status !== 200) {
     if (token) {
@@ -613,7 +626,11 @@ export async function validateTemplate(
       }
       let response;
       try {
-        response = await fetch(apiUrl, { method, headers });
+        response = await fetch(apiUrl, {
+          agent: agent(apiUrl),
+          method,
+          headers,
+        });
       } catch (_) {
         throw Error(
           "🚨 There was a problem verifying the template file. Please ensure " +
@@ -683,7 +700,11 @@ export async function validateTemplate(
             Authorization: `token ${options.githubToken}`,
           };
         }
-        response = await fetch(apiUrl, { method, headers });
+        response = await fetch(apiUrl, {
+          agent: agent(apiUrl),
+          method,
+          headers,
+        });
       } catch (_) {
         throw Error(
           "🚨 There was a problem fetching the template. Please ensure you " +
@@ -756,7 +777,10 @@ export async function validateTemplate(
       let templateUrl = `${repoBaseUrl}/${name}`;
       let response;
       try {
-        response = await fetch(templateUrl, { method: "HEAD" });
+        response = await fetch(templateUrl, {
+          agent: agent(templateUrl),
+          method: "HEAD",
+        });
       } catch (_) {
         throw Error(
           "🚨 There was a problem verifying the template. Please ensure you are " +
