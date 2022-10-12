@@ -15,7 +15,6 @@ test.beforeAll(async () => {
         import { useActionData, useLoaderData, Form } from "@remix-run/react";
 
         export async function action ({ request }) {
-          console.log('action request.signal', request.signal)
           // New event loop causes express request to close
           await new Promise(r => setTimeout(r, 0));
           return json({ aborted: request.signal.aborted });

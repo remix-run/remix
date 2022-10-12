@@ -75,15 +75,13 @@ export function createStaticHandlerDataRoutes(
               loadContext,
             })
         : undefined,
-      action: route.module.action
-        ? (args) =>
-            callRouteAction({
-              ...args,
-              routeId: route.id,
-              action: route.module.action,
-              loadContext,
-            })
-        : undefined,
+      action: (args) =>
+        callRouteAction({
+          ...args,
+          routeId: route.id,
+          action: route.module.action,
+          loadContext,
+        }),
       handle: route.module.handle,
       // TODO: RRR - Implement!
       shouldRevalidate: () => true,
