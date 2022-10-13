@@ -60,8 +60,8 @@ For example, pseudo code for this might look like the following, where we enable
 // `false` initially, and toggled to true during local dev
 const ENABLE_REMIX_ROUTER = false;
 
-function handleDocumentRequest({ request })) {
-  let appState: AppState = {
+async function handleDocumentRequest({ request }) {
+  let appState = {
     trackBoundaries: true,
     trackCatchBoundaries: true,
     catchBoundaryRouteId: null,
@@ -80,7 +80,7 @@ function handleDocumentRequest({ request })) {
     routeData,
   };
 
-  let entryContext: EntryContext = {
+  let entryContext = {
     ...serverHandoff,
     manifest: build.assets,
     routeModules,
@@ -99,11 +99,11 @@ function handleDocumentRequest({ request })) {
     assert(entryContext.actionData === context.actionData);
 
     if (catchBoundaryRouteId) {
-      assert(context.errors[catchBoundaryRouteId] === catch)
+      assert(appState.catch === context.errors[catchBoundaryRouteId]);
     }
 
     if (loaderBoundaryRouteId) {
-      assert(context.errors[loaderBoundaryRouteId] === error)
+      assert(appState.error === context.errors[loaderBoundaryRouteId]);
     }
   }
 }
