@@ -7,6 +7,7 @@ import fse from "fs-extra";
 import gunzip from "gunzip-maybe";
 import fetch from "node-fetch";
 import ora from "ora";
+import ProxyAgent from "proxy-agent";
 import * as semver from "semver";
 import sortPackageJSON from "sort-package-json";
 import tar from "tar-fs";
@@ -18,6 +19,12 @@ import { getPreferredPackageManager } from "./getPreferredPackageManager";
 import { convertToJavaScript } from "./migrate/migrations/convert-to-javascript";
 
 const remixDevPackageVersion = packageJson.version;
+const defaultAgent = new ProxyAgent();
+const httpsAgent = new ProxyAgent();
+httpsAgent.protocol = "https:";
+function agent(url: string) {
+  return new URL(url).protocol === "https:" ? httpsAgent : defaultAgent;
+}
 
 interface CreateAppArgs {
   appTemplate: string;
@@ -300,10 +307,17 @@ async function downloadAndExtractTarball(
     // asset id
     let info = getGithubReleaseAssetInfo(url);
     headers.Accept = "application/vnd.github.v3+json";
-    let response = await fetch(
-      `https://api.github.com/repos/${info.owner}/${info.name}/releases/tags/${info.tag}`,
-      { headers }
-    );
+
+    let releaseUrl =
+      info.tag === "latest"
+        ? `https://api.github.com/repos/${info.owner}/${info.name}/releases/latest`
+        : `https://api.github.com/repos/${info.owner}/${info.name}/releases/tags/${info.tag}`;
+
+    let response = await fetch(releaseUrl, {
+      agent: agent("https://api.github.com"),
+      headers,
+    });
+
     if (response.status !== 200) {
       throw Error(
         "🚨 There was a problem fetching the file from GitHub. The request " +
@@ -311,9 +325,13 @@ async function downloadAndExtractTarball(
       );
     }
     let body = await response.json();
-    let assetId: number | undefined = body?.assets?.find(
-      (a: any) => a?.browser_download_url === url
-    )?.id;
+    // If the release is "latest", the url won't match the download url, so we grab the id from the response
+    let assetId: number | undefined =
+      info.tag === "latest"
+        ? body?.assets?.find((a: any) =>
+            a?.browser_download_url?.includes(info.asset)
+          )?.id
+        : body?.assets?.find((a: any) => a?.browser_download_url === url)?.id;
     if (!assetId) {
       throw Error(
         "🚨 There was a problem fetching the file from GitHub. No asset was " +
@@ -323,7 +341,10 @@ async function downloadAndExtractTarball(
     resourceUrl = `https://api.github.com/repos/${info.owner}/${info.name}/releases/assets/${assetId}`;
     headers.Accept = "application/octet-stream";
   }
-  let response = await fetch(resourceUrl, { headers });
+  let response = await fetch(resourceUrl, {
+    agent: agent(resourceUrl),
+    headers,
+  });
 
   if (response.status !== 200) {
     if (token) {
@@ -424,8 +445,16 @@ function getGithubUrl(info: Omit<RepoInfo, "url">) {
 }
 
 function isGithubReleaseAssetUrl(url: string) {
+  /**
+   * Accounts for the following formats:
+   * https://github.com/owner/repository/releases/download/v0.0.1/stack.tar.gz
+   * ~or~
+   * https://github.com/owner/repository/releases/latest/download/stack.tar.gz
+   */
   return (
-    url.startsWith("https://github.com") && url.includes("/releases/download/")
+    url.startsWith("https://github.com") &&
+    (url.includes("/releases/download/") ||
+      url.includes("/releases/latest/download/"))
   );
 }
 interface ReleaseAssetInfo {
@@ -436,17 +465,29 @@ interface ReleaseAssetInfo {
   tag: string;
 }
 function getGithubReleaseAssetInfo(browserUrl: string): ReleaseAssetInfo {
-  // for example, https://github.com/owner/repository/releases/download/v0.0.1/stack.tar.gz
+  /**
+   * https://github.com/owner/repository/releases/download/v0.0.1/stack.tar.gz
+   * ~or~
+   * https://github.com/owner/repository/releases/latest/download/stack.tar.gz
+   */
+
   let url = new URL(browserUrl);
-  let [, owner, name, , , tag, asset] = url.pathname.split("/") as [
+  let [, owner, name, , downloadOrLatest, tag, asset] = url.pathname.split(
+    "/"
+  ) as [
     _: string,
     Owner: string,
     Name: string,
     Releases: string,
-    Download: string,
+    DownloadOrLatest: string,
     Tag: string,
     AssetFilename: string
   ];
+
+  if (downloadOrLatest === "latest" && tag === "download") {
+    // handle the Github URL quirk for latest releases
+    tag = "latest";
+  }
 
   return {
     browserUrl,
@@ -573,7 +614,10 @@ export async function validateTemplate(
       let headers: Record<string, string> = {};
       if (isGithubReleaseAssetUrl(input)) {
         let info = getGithubReleaseAssetInfo(input);
-        apiUrl = `https://api.github.com/repos/${info.owner}/${info.name}/releases/tags/${info.tag}`;
+        apiUrl =
+          info.tag === "latest"
+            ? `https://api.github.com/repos/${info.owner}/${info.name}/releases/latest`
+            : `https://api.github.com/repos/${info.owner}/${info.name}/releases/tags/${info.tag}`;
         headers = {
           Authorization: `token ${options?.githubToken}`,
           Accept: "application/vnd.github.v3+json",
@@ -582,7 +626,11 @@ export async function validateTemplate(
       }
       let response;
       try {
-        response = await fetch(apiUrl, { method, headers });
+        response = await fetch(apiUrl, {
+          agent: agent(apiUrl),
+          method,
+          headers,
+        });
       } catch (_) {
         throw Error(
           "🚨 There was a problem verifying the template file. Please ensure " +
@@ -595,9 +643,17 @@ export async function validateTemplate(
       switch (response.status) {
         case 200:
           if (isGithubReleaseAssetUrl(input)) {
+            let info = getGithubReleaseAssetInfo(input);
             let body = await response.json();
             if (
-              !body?.assets?.some((a: any) => a?.browser_download_url === input)
+              // if a tag is specified, make sure it exists.
+              !body?.assets?.some(
+                (a: any) => a?.browser_download_url === input
+              ) &&
+              // if the latest is specified, make sure there is an asset
+              !body?.assets?.some((a: any) =>
+                a?.browser_download_url.includes(info.asset)
+              )
             ) {
               throw Error(
                 "🚨 The template file could not be verified. Please double check " +
@@ -644,7 +700,11 @@ export async function validateTemplate(
             Authorization: `token ${options.githubToken}`,
           };
         }
-        response = await fetch(apiUrl, { method, headers });
+        response = await fetch(apiUrl, {
+          agent: agent(apiUrl),
+          method,
+          headers,
+        });
       } catch (_) {
         throw Error(
           "🚨 There was a problem fetching the template. Please ensure you " +
@@ -717,7 +777,10 @@ export async function validateTemplate(
       let templateUrl = `${repoBaseUrl}/${name}`;
       let response;
       try {
-        response = await fetch(templateUrl, { method: "HEAD" });
+        response = await fetch(templateUrl, {
+          agent: agent(templateUrl),
+          method: "HEAD",
+        });
       } catch (_) {
         throw Error(
           "🚨 There was a problem verifying the template. Please ensure you are " +
