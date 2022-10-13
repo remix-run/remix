@@ -131,7 +131,7 @@ describe("the create command", () => {
   }
 
   // this also tests sub directories
-  it("works for examples in the remix repo", async () => {
+  it("works for examples in the examples repo", async () => {
     let projectDir = await getProjectDir("example");
     await run([
       "create",
@@ -266,7 +266,7 @@ describe("the create command", () => {
       "create",
       projectDir,
       "--template",
-      "https://example.com/remix-stack.tar.gz",
+      "https://github.com/private-org/private-repo/releases/download/v0.0.1/stack.tar.gz",
       "--no-install",
       "--typescript",
       "--token",
@@ -810,6 +810,36 @@ describe("the create command", () => {
         `[Error: 🚨 The project directory must be empty to create a new project. Please clear the contents of the directory or choose a different path.]`
       );
       process.chdir(cwd);
+    });
+  });
+
+  describe("supports proxy usage", () => {
+    beforeAll(() => {
+      server.close();
+    });
+    afterAll(() => {
+      server.listen({ onUnhandledRequest: "error" });
+    });
+    it("uses the proxy from env var", async () => {
+      let projectDir = await getProjectDir("template");
+      let err: Error | undefined;
+      let prevProxy = process.env.HTTPS_PROXY;
+      try {
+        process.env.HTTPS_PROXY = "http://127.0.0.1:33128";
+        await run([
+          "create",
+          projectDir,
+          "--template",
+          "grunge-stack",
+          "--no-install",
+          "--typescript",
+        ]);
+      } catch (e) {
+        err = e;
+      } finally {
+        process.env.HTTPS_PROXY = prevProxy;
+      }
+      expect(err?.message).toMatch("127.0.0.1:33");
     });
   });
 });
