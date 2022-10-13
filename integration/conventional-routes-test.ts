@@ -50,8 +50,6 @@ test.beforeAll(async () => {
         }
       `,
       "app/routes/nested/__pathless/foo.jsx": js`
-        import { useMatches } from '@remix-run/react';
-
         export default function Foo() {
           return <h1>Foo</h1>;
         }
