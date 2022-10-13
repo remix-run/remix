@@ -72,7 +72,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
         assertResponsesMatch(response, remixRouterResponse);
 
-        console.log("Returning Remix Router Resource Request Response");
+        console.log("Returning Remix Router Data Request Response");
         responsePromise = Promise.resolve(remixRouterResponse);
       }
 
