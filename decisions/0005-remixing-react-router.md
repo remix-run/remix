@@ -30,7 +30,7 @@ In [Remixing React Router][remixing router], Ryan gives an overview of the work 
 
 ### Move the bulk of logic to a framework-agnostic router
 
-Thankfully this decision was sort of already made by Ryan. Maybe a surprise to some, maybe not, the current transition manager doesn't import or reference `react` or `react-router` a single time. This is by design because the logic being handled has nothing to do with how to render the UI layer. It's all about "what route am I on?", "what route am I going to?", "how do I load data for the next route?", "how do I interrupt ongoing navigations?" etc. None of these decisions actually _care_ about how the route and it's data will eventually be rendered. Instead, the router simply needs to know whether given routes _have_ components and/or error boundaries - but it doesn't need to know about them or how to render them.
+Thankfully this decision was sort of already made by Ryan. Maybe a surprise to some, maybe not, the current transition manager doesn't import or reference `react` or `react-router` a single time. This is by design because the logic being handled has nothing to do with how to render the UI layer. It's all about "what route am I on?", "what route am I going to?", "how do I load data for the next route?", "how do I interrupt ongoing navigations?" etc. None of these decisions actually _care_ about how the route and its data will eventually be rendered. Instead, the router simply needs to know whether given routes _have_ components and/or error boundaries - but it doesn't need to know about them or how to render them.
 
 This is a huge advantage since it's a strict requirement in order to eventually support UI libraries other than React (namely Preact and Vue). So in the end, we have a `@remix-run/router` package with _zero_ dependencies 🔥.
 
@@ -101,7 +101,7 @@ Another area that changes is the `useTransition().submission` property was remov
 
 **Backwards Compatibility**
 
-We plan to remain backwards compatible here in Remix. Very likely we'll expose the `useNavigation` hook and encourage users to move to that. And then `useTransition` will remain in a deprecated state and it will cal `useNavigation` and then backfill the `type` and `submission` properties.
+We plan to remain backwards compatible here in Remix. Very likely we'll expose the `useNavigation` hook and encourage users to move to that. And then `useTransition` will remain in a deprecated state and it will call `useNavigation` and then backfill the `type` and `submission` properties.
 
 ### `<Form method="get">` is no longer a "submission"
 
@@ -116,7 +116,7 @@ Functionally, these two bits of code are identical, with the only difference bei
 </form>
 ```
 
-But, in Remix we were considering the latter a "submission" such that `useTransition().state === "submitting"`. In order to ensure our "navigations" reflect the browser behavior we have changed this in the router such that GET Form submissions result in `useNavigation().state === "loading"`.
+But, in Remix we were considering the latter a "submission" such that `useTransition().state === "submitting"`. In order to ensure our "navigations" reflect the browser behavior, we have changed this in the router such that GET Form submissions result in `useNavigation().state === "loading"`.
 
 **Backwards Compatibility**
 
@@ -148,7 +148,7 @@ Note: User's can still be explicit here and use `<Form method="post" replace={sh
 
 ### `unstable_shouldReload` stabilized as `shouldRevalidate`
 
-We stabilized the API for when a given route loader should re-run, and changed the name to align with the "revalidation" nomenclature and the `useRevalidator` hook. We also leave more control in the hands of the user here. In Remix there were some cases in which you _could not_ opt out of revalidation and if your method did run you had full control and couldn't necessarily handle one edge case and then say "do what you otherwise would have done".
+We stabilized the API for when a given route loader should re-run, and changed the name to align with the "revalidation" nomenclature and the `useRevalidator` hook. We also leave more control in the hands of the user here. In Remix there were some cases in which you _could not_ opt out of revalidation and if your method did run, you had full control and couldn't necessarily handle one edge case and then say "do what you otherwise would have done".
 
 Now, if you provide a `shouldRevalidate` method we will call it during all revalidations and provide you a `defaultShouldRevalidate` boolean value. This allows you to opt out of any revalidation, and also code your own logic to fallback on our default choice:
 
@@ -166,7 +166,9 @@ function shouldRevalidate({ defaultShouldRevalidate }) {
 
 ### `<ScrollRestoration getKey>` prop
 
-In Remix, the `<ScrollRestoration>` component made an assumption that we would always restore scroll position based on `location.key`. If the key was the same as a prior location we knew the scroll position for, then we knew you had been there before and we should restore. This works great for back/forward navigations but it's a bit overly restrictive. You cannot choose to restore scroll based on anything other than `key`. Twitter has a great implementation of this as you click around in their left nav bar - your tweet feed is always at the same place when you click back to it - even though it's a _new_ location in the history stack. This is because they're restoring by pathname here instead of `location.key`. Or maybe you want to maintain scroll position for all routes under a given pathname and you thus want to use a portion of the pathname as the scroll restoration key.
+In Remix, the `<ScrollRestoration>` component made an assumption that we would always restore scroll position based on `location.key`. If the key was the same as a prior location we knew the scroll position for, then we knew you had been there before and we should restore. This works great for back/forward navigations but it's a bit overly restrictive. You cannot choose to restore scroll based on anything other than `key`. 
+
+Twitter has a great implementation of this as you click around in their left nav bar - your tweet feed is always at the same place when you click back to it - even though it's a _new_ location in the history stack. This is because they're restoring by pathname here instead of `location.key`. Or maybe you want to maintain scroll position for all routes under a given pathname and you thus want to use a portion of the pathname as the scroll restoration key.
 
 In React Router we now accept an optional `<ScrollRestoration getKey>` prop where you provide a function that returns the key to use for scroll restoration:
 
@@ -197,7 +199,7 @@ This has been a long time coming - see https://github.com/remix-run/remix/discus
 
 **TODO:** Ryan to fill in some more details here.
 
-The differentiation between error and catch prove to be a bit vague over time and a source of confusion for developers. We chose to go with just a single `errorElement` in the router for simplicity. If you throw anything, it ends up in the error boundary and propagates accordingly.
+The differentiation between error and catch proved to be a bit vague over time and a source of confusion for developers. We chose to go with just a single `errorElement` in the router for simplicity. If you throw anything, it ends up in the error boundary and propagates accordingly.
 
 **Backwards Compatibility**
 
