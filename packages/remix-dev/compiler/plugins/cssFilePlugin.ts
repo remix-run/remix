@@ -4,11 +4,13 @@ import esbuild from "esbuild";
 
 import { BuildMode } from "../../build";
 import type { BuildConfig } from "../../compiler";
+import invariant from "../../invariant";
 
 const isExtendedLengthPath = /^\\\\\?\\/;
 
-const normalizePathSlashes = (path: string) =>
-  isExtendedLengthPath.test(path) ? path : path.replace(/\\/g, "/");
+function normalizePathSlashes(p: string) {
+  return isExtendedLengthPath.test(p) ? p : p.replace(/\\/g, "/");
+}
 
 /**
  * This plugin loads css files with the "css" loader (bundles and moves assets to assets directory)
@@ -66,14 +68,19 @@ export function cssFilePlugin(
           return { errors };
         }
 
-        let { outputs } = metafile!;
-        let entry = Object.keys(outputs).find(
-          (out) => outputs[out].entryPoint
-        )!;
-        let entryFile = outputFiles!.find((file) =>
-          normalizePathSlashes(file.path).endsWith(normalizePathSlashes(entry))
-        )!;
-        let outputFilesWithoutEntry = outputFiles!.filter(
+        invariant(metafile, "metafile is missing");
+        let { outputs } = metafile;
+        let entry = Object.keys(outputs).find((out) => outputs[out].entryPoint);
+        invariant(entry, "entry point not found");
+
+        let normalizedEntry = normalizePathSlashes(entry);
+        let entryFile = outputFiles.find((file) => {
+          return normalizePathSlashes(file.path).endsWith(normalizedEntry);
+        });
+
+        invariant(entryFile, "entry file not found");
+
+        let outputFilesWithoutEntry = outputFiles.filter(
           (file) => file !== entryFile
         );
 
@@ -88,13 +95,16 @@ export function cssFilePlugin(
           contents: entryFile.contents,
           loader: "file",
           // add all css assets to watchFiles
-          watchFiles: Object.values(outputs).reduce((arr, { inputs }) => {
-            let resolvedInputs = Object.keys(inputs).map((input) =>
-              path.resolve(input)
-            );
-            arr.push(...resolvedInputs);
-            return arr;
-          }, [] as string[]),
+          watchFiles: Object.values(outputs).reduce<string[]>(
+            (arr, { inputs }) => {
+              let resolvedInputs = Object.keys(inputs).map((input) => {
+                return path.resolve(input);
+              });
+              arr.push(...resolvedInputs);
+              return arr;
+            },
+            []
+          ),
           warnings,
         };
       });
