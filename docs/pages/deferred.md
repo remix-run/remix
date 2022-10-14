@@ -10,6 +10,25 @@ Remix's "deferred" functionality is a concept that touches many parts of your st
 
 The goal of deferred is to give you an easy way to make tradeoffs between your time-to-first-byte (TTFB) / page transition delay and the completeness of your users first page view.
 
+This is done by allowing you to return promises as keys of your loader response. This looks something like this:
+
+```js
+import { defer } from "@remix-run/node";
+
+export function loader() {
+  let unwaitedPromise = thirdPartyApiCall();
+
+  return defer({
+    // critical data
+    hello: "world",
+    // deferred data
+    deferredKey: unwaitedPromise
+  })
+}
+```
+
+This makes the API for deferring data or not the `await` keyword.
+
 ## `json()` Loaders
 
 Let's start with understanding how Remix handles your standard `return { hello: "world" };` and `return json({ hello: "world" })` responses.
