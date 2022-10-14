@@ -988,7 +988,7 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
                 let submitter = (event as unknown as HTMLSubmitEvent)
                   .nativeEvent.submitter as HTMLFormSubmitter | null;
 
-                submit(submitter || event.currentTarget, { method, replace });
+                submit(submitter || event.currentTarget, { replace });
               }
         }
         {...props}
