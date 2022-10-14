@@ -21,7 +21,6 @@ test.beforeAll(async () => {
         }
 
         export function loader({ request }) {
-          console.log('loader request.signal', request.signal)
           return json({ aborted: request.signal.aborted });
         }
 

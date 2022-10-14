@@ -266,6 +266,11 @@ async function handleDataRequestRR(
 
     return response;
   } catch (error) {
+    if (error instanceof Response) {
+      error.headers.set("X-Remix-Catch", "yes");
+      return error;
+    }
+
     if (serverMode !== ServerMode.Test) {
       console.error(error);
     }
