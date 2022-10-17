@@ -40,6 +40,7 @@ remix create ./my-app --template :username/:repo
 remix create ./my-app --template https://github.com/:username/:repo
 remix create ./my-app --template https://github.com/:username/:repo/tree/:branch
 remix create ./my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
+remix create ./my-app --template https://github.com/:username/:repo/releases/latest/download/:tag.tar.gz
 remix create ./my-app --template https://example.com/remix-template.tar.gz
 ```
 
