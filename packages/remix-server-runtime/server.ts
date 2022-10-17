@@ -267,8 +267,19 @@ async function handleDataRequestRR(
     return response;
   } catch (error) {
     if (error instanceof Response) {
-      error.headers.set("X-Remix-Catch", "yes");
-      return error;
+      // To match existing behavior of remix-thrown responses,
+      // we construct a new one here with a null body and just
+      // the required headers. No remix-throw that surface to
+      // this point will ever have a body. This contrasts with
+      // the new router implementation that has a body under
+      // some conditions.
+      return new Response(null, {
+        status: error.status,
+        statusText: error.statusText,
+        headers: {
+          "X-Remix-Catch": "yes",
+        },
+      });
     }
 
     if (serverMode !== ServerMode.Test) {
@@ -800,13 +811,32 @@ async function assertResponsesMatch(_a: Response, _b: Response) {
             stack: stack ? "yes" : "no",
           };
         },
-        "JSON error response body did not match!"
+        "JSON error response body did not match!\n Response 1:\n" +
+          (await a.clone().text()) +
+          "\nResponse 2:\n" +
+          (await b.clone().text())
       );
     } else {
-      assert(a, b, (r) => r.json(), "JSON response body did not match!");
+      assert(
+        a,
+        b,
+        (r) => r.json(),
+        "JSON response body did not match!\nResponse 1:\n" +
+          (await a.clone().text()) +
+          "\nResponse 2:\n" +
+          (await b.clone().text())
+      );
     }
   } else {
-    assert(a, b, (r) => r.text(), "Non-JSON response body did not match!");
+    assert(
+      a,
+      b,
+      (r) => r.text(),
+      "Non-JSON response body did not match!\nResponse 1:\n" +
+        (await a.clone().text()) +
+        "\nResponse 2:\n" +
+        (await b.clone().text())
+    );
   }
 }
 
