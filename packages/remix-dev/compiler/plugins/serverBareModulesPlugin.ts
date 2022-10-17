@@ -10,6 +10,7 @@ import {
   assetsManifestVirtualModule,
 } from "../virtualModules";
 import { createMatchPath } from "../utils/tsconfig";
+import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
 
 /**
  * A plugin responsible for resolving bare module ids based on server target.
@@ -74,7 +75,7 @@ export function serverBareModulesPlugin(
           // Silence spurious warnings when using Yarn PnP. Yarn PnP doesn’t use
           // a `node_modules` folder to keep its dependencies, so the above check
           // will always fail.
-          process.versions.pnp == null
+          getPreferredPackageManager() !== "yarn"
         ) {
           try {
             require.resolve(path);
