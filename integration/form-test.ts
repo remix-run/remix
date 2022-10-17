@@ -3,7 +3,6 @@ import { test, expect } from "@playwright/test";
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import { getElement, PlaywrightFixture } from "./helpers/playwright-fixture";
-import { ServerMode } from "@remix-run/server-runtime/mode";
 
 test.describe("Forms", () => {
   let fixture: Fixture;
