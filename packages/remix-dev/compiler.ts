@@ -420,7 +420,6 @@ function createServerBuild(
     serverEntryModulePlugin(config),
     serverAssetsManifestPlugin(assetsManifestPromiseRef),
     serverBareModulesPlugin(config, options.onWarning),
-    yarnPnpPlugin(),
   ];
 
   if (config.serverPlatform !== "node") {
