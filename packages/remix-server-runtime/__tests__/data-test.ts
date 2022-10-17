@@ -152,10 +152,7 @@ describe("loaders", () => {
 
     let routeId = "routes/random";
 
-    let request = new Request(
-      "http://example.com/random?_data=routes/random",
-      {}
-    );
+    let request = new Request("http://example.com/random?_data=routes/random");
 
     let match = {
       params: {},
@@ -194,10 +191,7 @@ describe("actions", () => {
 
     let routeId = "routes/random";
 
-    let request = new Request(
-      "http://example.com/random?_data=routes/random",
-      {}
-    );
+    let request = new Request("http://example.com/random?_data=routes/random");
 
     let match = {
       params: {},
