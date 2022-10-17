@@ -125,7 +125,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/resource`, {
         method: "get",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -163,7 +162,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/resource/sub`, {
         method: "get",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -195,7 +193,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/resource`, {
         method: "get",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -220,7 +217,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/resource`, {
         method: "get",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -244,7 +240,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/resource`, {
         method: "get",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -273,7 +268,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/resource`, {
         method: "post",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -311,7 +305,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/resource/sub`, {
         method: "post",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -343,7 +336,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/resource`, {
         method: "post",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -368,7 +360,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/resource`, {
         method: "post",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -392,7 +383,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/resource`, {
         method: "post",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -416,7 +406,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/?_data=routes/index`, {
         method: "get",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -447,7 +436,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/?_data=routes/index`, {
         method: "get",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -479,7 +467,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/test?_data=root`, {
         method: "get",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -514,7 +501,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/test?_data=root`, {
         method: "get",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -548,7 +534,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/test?_data=root`, {
         method: "get",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -581,7 +566,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/test?_data=routes/test`, {
         method: "post",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -613,7 +597,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/test?_data=routes/test`, {
         method: "post",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -648,7 +631,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/test?_data=routes/test`, {
         method: "post",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -682,7 +664,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/test?_data=routes/test`, {
         method: "post",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -715,7 +696,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/?_data=root`, {
         method: "post",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);
@@ -747,7 +727,6 @@ describe("shared server runtime", () => {
 
       let request = new Request(`${baseUrl}/?index&_data=routes/index`, {
         method: "post",
-        signal: new AbortController().signal,
       });
 
       let result = await handler(request);

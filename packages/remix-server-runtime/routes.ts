@@ -67,6 +67,7 @@ export function createStaticHandlerDataRoutes(
           route.module.CatchBoundary != null ||
           route.module.ErrorBoundary != null,
         id: route.id,
+        path: route.path,
         loader: route.module.loader
           ? (args: LoaderFunctionArgs) =>
               callRouteLoader({
@@ -102,7 +103,6 @@ export function createStaticHandlerDataRoutes(
               loadContext,
               route.id
             ),
-            path: route.path,
             ...commonRoute,
           };
     });

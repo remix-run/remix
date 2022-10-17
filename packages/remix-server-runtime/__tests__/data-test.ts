@@ -34,7 +34,6 @@ describe("loaders", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        signal: new AbortController().signal,
       }
     );
 
@@ -73,7 +72,6 @@ describe("loaders", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        signal: new AbortController().signal,
       }
     );
 
@@ -108,7 +106,6 @@ describe("loaders", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        signal: new AbortController().signal,
       }
     );
 
@@ -143,7 +140,6 @@ describe("loaders", () => {
         headers: {
           "Content-Type": "application/json",
         },
-        signal: new AbortController().signal,
       }
     );
 
@@ -156,9 +152,10 @@ describe("loaders", () => {
 
     let routeId = "routes/random";
 
-    let request = new Request("http://example.com/random?_data=routes/random", {
-      signal: new AbortController().signal,
-    });
+    let request = new Request(
+      "http://example.com/random?_data=routes/random",
+      {}
+    );
 
     let match = {
       params: {},
@@ -197,9 +194,10 @@ describe("actions", () => {
 
     let routeId = "routes/random";
 
-    let request = new Request("http://example.com/random?_data=routes/random", {
-      signal: new AbortController().signal,
-    });
+    let request = new Request(
+      "http://example.com/random?_data=routes/random",
+      {}
+    );
 
     let match = {
       params: {},
