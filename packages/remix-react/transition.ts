@@ -576,7 +576,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
         invariant(matches, "No matches found");
         if (fetchControllers.has(key)) abortFetcher(key);
 
-        let match = getFetcherRequestMatch(
+        let match = getRequestMatch(
           new URL(href, window.location.href),
           matches
         );
@@ -630,17 +630,22 @@ export function createTransitionManager(init: TransitionManagerInit) {
     return false;
   }
 
-  function getFetcherRequestMatch(
-    url: URL,
-    matches: RouteMatch<ClientRoute>[]
-  ) {
+  function getRequestMatch(url: URL, matches: ClientMatch[]) {
     let match = matches.slice(-1)[0];
 
-    if (!isIndexRequestUrl(url) && match.route.index) {
-      return matches.slice(-2)[0];
+    if (isIndexRequestUrl(url) && match.route.index) {
+      return match;
     }
 
-    return match;
+    return getPathContributingMatches(matches).slice(-1)[0];
+  }
+
+  function getPathContributingMatches(matches: ClientMatch[]) {
+    return matches.filter(
+      (match, index) =>
+        index === 0 ||
+        (!match.route.index && match.route.path && match.route.path.length > 0)
+    );
   }
 
   async function handleActionFetchSubmission(
@@ -1064,14 +1069,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     // to run on layout/index routes.  We do not want to mutate the eventual
     // matches used for revalidation
     let actionMatches = matches;
-    if (
-      !isIndexRequestUrl(createUrl(submission.action)) &&
-      actionMatches[matches.length - 1].route.index
-    ) {
-      actionMatches = actionMatches.slice(0, -1);
-    }
-
-    let leafMatch = actionMatches.slice(-1)[0];
+    let leafMatch = getRequestMatch(
+      createUrl(submission.action),
+      actionMatches
+    );
     let result = await callAction(submission, leafMatch, controller.signal);
 
     if (controller.signal.aborted) {
@@ -1583,6 +1584,17 @@ function filterMatchesToLoad(
         (location.state as any)?.setCookie)
     );
   });
+}
+
+/**
+ * Filter index and pathless routes when looking for submission targets
+ */
+function getPathContributingMatches(matches: ClientMatch[]) {
+  return matches.filter(
+    (match, index) =>
+      index === 0 ||
+      (!match.route.index && match.route.path && match.route.path.length > 0)
+  );
 }
 
 function isRedirectResult(result: DataResult): result is DataRedirectResult {
