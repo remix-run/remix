@@ -4,11 +4,11 @@ import { unstable_createStaticHandler } from "./router";
 import type { AppLoadContext } from "./data";
 import { callRouteAction, callRouteLoader, extractData } from "./data";
 import type { AppState } from "./errors";
-import type { ServerBuild } from "./build";
+import type { ServerBuild, HandleDocumentRequestFunction } from "./build";
 import type { EntryContext } from "./entry";
 import { createEntryMatches, createEntryRouteModules } from "./entry";
 import { serializeError } from "./errors";
-import { getDocumentHeaders } from "./headers";
+import { getDocumentHeaders, getDocumentHeadersRR } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
 import type { RouteMatch } from "./routeMatching";
@@ -121,14 +121,33 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
       response = await responsePromise;
     } else {
-      response = await handleDocumentRequest({
+      let responsePromise = handleDocumentRequest({
         build,
         loadContext,
         matches,
-        request,
+        request:
+          // We need to clone the request here instead of the call to the new
+          // handler otherwise the first handler will lock the body for the other.
+          // Cloning here allows the new handler to be the stream reader and delegate
+          // chunks back to this cloned request.
+          ENABLE_REMIX_ROUTER ? request.clone() : request,
         routes,
         serverMode,
       });
+
+      if (ENABLE_REMIX_ROUTER) {
+        let [response, remixRouterResponse] = await Promise.all([
+          responsePromise,
+          handleDocumentRequestRR(serverMode, build, staticHandler!, request),
+        ]);
+
+        assertResponsesMatch(response, remixRouterResponse);
+
+        console.log("Returning Remix Router Document Request Response");
+        responsePromise = Promise.resolve(remixRouterResponse);
+      }
+
+      response = await responsePromise;
     }
 
     if (request.method === "HEAD") {
@@ -291,6 +310,119 @@ async function handleDataRequestRR(
     }
 
     return errorBoundaryError(new Error("Unexpected Server Error"), 500);
+  }
+}
+
+async function handleDocumentRequestRR(
+  serverMode: ServerMode,
+  build: ServerBuild,
+  staticHandler: StaticHandler,
+  request: Request
+) {
+  if (request.method === "HEAD") {
+    request = new Request(request, { method: "GET" });
+  }
+  let context = await staticHandler.query(request);
+
+  if (context instanceof Response) {
+    return context;
+  }
+
+  let appState: AppState = {
+    trackBoundaries: true,
+    trackCatchBoundaries: true,
+    catchBoundaryRouteId: null,
+    renderBoundaryRouteId: null,
+    loaderBoundaryRouteId: null,
+  };
+
+  for (let match of context.matches) {
+    let route = match.route as ServerRoute;
+    let id = route.id;
+    let error = context.errors?.[id];
+
+    if (error) {
+      appState.error = await serializeError(error);
+      appState.loaderBoundaryRouteId = id;
+      break;
+    }
+
+    let actionHeaders = context.actionHeaders?.[id];
+    let loaderHeaders = context.loaderHeaders?.[id];
+    if (
+      actionHeaders?.has("X-Remix-Catch") ||
+      loaderHeaders?.has("X-Remix-Catch")
+    ) {
+      appState.loaderBoundaryRouteId = id;
+      appState.catch = {
+        data: context.actionData?.[id] || context.loaderData?.[id],
+        status: context.statusCode,
+        // TODO: Populate this.
+        statusText: "",
+      };
+      break;
+    }
+  }
+
+  let renderableMatches = getRenderableMatches(
+    context.matches as unknown as RouteMatch<ServerRoute>[],
+    appState
+  );
+
+  if (!renderableMatches) {
+    renderableMatches = [];
+
+    let root = staticHandler.dataRoutes[0] as ServerRoute;
+    if (root?.module.CatchBoundary) {
+      appState.catchBoundaryRouteId = "root";
+      renderableMatches.push({
+        params: {},
+        pathname: "",
+        route: staticHandler.dataRoutes[0] as ServerRoute,
+      });
+    }
+  }
+
+  let headers = getDocumentHeadersRR(context, renderableMatches);
+
+  let serverHandoff: Pick<
+    EntryContext,
+    "actionData" | "appState" | "matches" | "routeData"
+  > = {
+    actionData: context.actionData || undefined,
+    appState,
+    matches: createEntryMatches(renderableMatches, build.assets.routes),
+    routeData: context.loaderData || {},
+  };
+
+  let entryContext: EntryContext = {
+    ...serverHandoff,
+    manifest: build.assets,
+    routeModules: createEntryRouteModules(build.routes),
+    serverHandoffString: createServerHandoffString(serverHandoff),
+  };
+
+  let handleDocumentRequestParameters: Parameters<HandleDocumentRequestFunction> =
+    [request, context.statusCode, headers, entryContext];
+
+  let handleDocumentRequestFunction = build.entry.module.default;
+  try {
+    return await handleDocumentRequestFunction(
+      ...handleDocumentRequestParameters
+    );
+  } catch (error) {
+    handleDocumentRequestParameters[1] = 500;
+    appState.trackBoundaries = false;
+    appState.error = await serializeError(error as Error);
+    entryContext.serverHandoffString = createServerHandoffString(serverHandoff);
+
+    try {
+      return await handleDocumentRequestFunction(
+        ...handleDocumentRequestParameters
+      );
+    } catch (error: any) {
+      return returnLastResortErrorResponse(error, serverMode);
+    }
   }
 }
 

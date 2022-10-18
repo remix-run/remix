@@ -3,6 +3,7 @@ import { splitCookiesString } from "set-cookie-parser";
 import type { ServerBuild } from "./build";
 import type { ServerRoute } from "./routes";
 import type { RouteMatch } from "./routeMatching";
+import type { StaticHandlerContext } from "./router";
 
 export function getDocumentHeaders(
   build: ServerBuild,
@@ -33,6 +34,41 @@ export function getDocumentHeaders(
 
     return headers;
   }, new Headers());
+}
+
+export function getDocumentHeadersRR(
+  context: StaticHandlerContext,
+  matches: RouteMatch<ServerRoute>[]
+) {
+  let parentHeaders = new Headers();
+
+  for (let match of matches) {
+    let id = match.route.id;
+    let { headers } = match.route.module || {};
+    if (!headers) continue;
+
+    let loaderHeaders = context.loaderHeaders?.[id] || new Headers();
+    let actionHeaders = context.actionHeaders?.[id] || new Headers();
+
+    let newHeaders = new Headers(
+      typeof headers === "function"
+        ? headers({
+            loaderHeaders,
+            actionHeaders,
+            parentHeaders,
+          })
+        : headers
+    );
+
+    // Automatically preserve Set-Cookie headers that were set either by the
+    // loader or by a parent route.
+    prependCookies(actionHeaders, newHeaders);
+    prependCookies(loaderHeaders, newHeaders);
+    prependCookies(parentHeaders, newHeaders);
+    parentHeaders = newHeaders;
+  }
+
+  return parentHeaders;
 }
 
 function prependCookies(parentHeaders: Headers, childHeaders: Headers): void {
