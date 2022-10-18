@@ -72,19 +72,18 @@ jobs:
         run: "yarn test:primary"
 
   integration:
-    name: "👀 Integration Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }} Browser: ${{ matrix.browser }})"
+    name: "👀 Integration Test: (OS: ${{ matrix.stack.os }} Node: ${{ matrix.node }} Browser: ${{ matrix.stack.browser }})"
     strategy:
       fail-fast: false
       matrix:
         node: ${{ fromJSON(inputs.node_version) }}
-        os:
-          - ubuntu-latest
-          # - macos-latest
-          - windows-latest
-        browser:
-          - chromium
-          # - firefox
-          - webkit
+        stack:
+          - os: "ubuntu-latest"
+            browsers: ["chromium", "firefox"] # match the browsers to playwright projects
+          - os: macos-latest
+            browsers: ["webkit"] # match the browsers to playwright projects
+          - os: windows-latest
+            browsers: ["edge"] # match the browsers to playwright projects
 
     runs-on: ${{ matrix.os }}
     steps:
