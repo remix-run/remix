@@ -266,6 +266,7 @@ test.describe("rendering", () => {
       await app.clickLink(`/${REDIRECT_HASH}`);
     });
 
+    await page.waitForURL(`/${REDIRECT_TARGET}#my-hash`);
     let url = new URL(page.url());
     expect(url.pathname).toBe(`/${REDIRECT_TARGET}`);
     expect(url.hash).toBe(`#my-hash`);
