@@ -241,10 +241,9 @@ test.describe("rendering", () => {
     await app.goto("/");
 
     let responses = app.collectDataResponses();
-    await app.waitForNetworkAfter(async () => {
-      await app.clickLink(`/${REDIRECT}`);
-    });
-    expect(new URL(page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
+
+    await app.clickLink(`/${REDIRECT}`);
+    await page.waitForURL(/\/page/);
 
     expect(
       responses
@@ -262,11 +261,9 @@ test.describe("rendering", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
 
-    await app.waitForNetworkAfter(async () => {
-      await app.clickLink(`/${REDIRECT_HASH}`);
-    });
+    await app.clickLink(`/${REDIRECT_HASH}`);
 
-    await page.waitForURL(`/${REDIRECT_TARGET}#my-hash`);
+    await page.waitForURL(/\/page#my-hash/);
     let url = new URL(page.url());
     expect(url.pathname).toBe(`/${REDIRECT_TARGET}`);
     expect(url.hash).toBe(`#my-hash`);
@@ -275,9 +272,7 @@ test.describe("rendering", () => {
   test("calls changing routes on POP", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto(`/${PAGE}`);
-    await app.waitForNetworkAfter(async () => {
-      await app.clickLink(`/${PAGE}/${CHILD}`);
-    });
+    await app.clickLink(`/${PAGE}/${CHILD}`);
 
     let responses = app.collectDataResponses();
     await app.goBack();
