@@ -766,7 +766,7 @@ function SomeComponent() {
   useEffect(() => {
     fetcher.submit(data, options);
     fetcher.load(href);
-  }, [fetcher]);
+  }, []);
 
   // build UI with these
   fetcher.state;
