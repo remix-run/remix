@@ -19,5 +19,13 @@
     "@remix-run/server-runtime": "1.7.2",
     "@remix-run/vercel": "1.7.2"
   },
-  "changesets": []
+  "changesets": [
+    "curvy-zoos-cough",
+    "five-apricots-happen",
+    "flat-rivers-wait",
+    "large-colts-drop",
+    "lovely-cats-jump",
+    "poor-sloths-whisper",
+    "proud-geese-sin"
+  ]
 }

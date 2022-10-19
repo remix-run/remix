@@ -1,5 +1,13 @@
 # `@remix-run/architect`
 
+## 1.7.3-pre.0
+
+### Patch Changes
+
+- Fixed a bug that affected `.wav` and `.webm` audio file imports ([#4290](https://github.com/remix-run/remix/pull/4290))
+- Updated dependencies:
+  - `@remix-run/node@1.7.3-pre.0`
+
 ## 1.7.2
 
 ### Patch Changes
