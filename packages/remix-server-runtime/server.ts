@@ -310,8 +310,8 @@ function findParentBoundary(
   let route = routes[routeId];
   let isCatch = isRouteErrorResponse(error);
   if (
-    (isCatch && route.module?.CatchBoundary) ||
-    (!isCatch && route.module?.ErrorBoundary) ||
+    (isCatch && route?.module?.CatchBoundary) ||
+    (!isCatch && route?.module?.ErrorBoundary) ||
     !route.parentId
   ) {
     return routeId;
