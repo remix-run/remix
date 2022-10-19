@@ -286,19 +286,7 @@ async function handleDataRequestRR(
     return response;
   } catch (error) {
     if (error instanceof Response) {
-      // To match existing behavior of remix-thrown responses,
-      // we construct a new one here with a null body and just
-      // the required headers. No remix-throw that surface to
-      // this point will ever have a body. This contrasts with
-      // the new router implementation that has a body under
-      // some conditions.
-      return new Response(null, {
-        status: error.status,
-        statusText: error.statusText,
-        headers: {
-          "X-Remix-Catch": "yes",
-        },
-      });
+      return error;
     }
 
     if (serverMode !== ServerMode.Test) {
@@ -319,9 +307,6 @@ async function handleDocumentRequestRR(
   staticHandler: StaticHandler,
   request: Request
 ) {
-  if (request.method === "HEAD") {
-    request = new Request(request, { method: "GET" });
-  }
   let context = await staticHandler.query(request);
 
   if (context instanceof Response) {
@@ -767,6 +752,9 @@ async function handleResourceRequestRR(
     );
     return response;
   } catch (error) {
+    if (error instanceof Response) {
+      return error;
+    }
     return returnLastResortErrorResponse(error, serverMode);
   }
 }

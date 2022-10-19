@@ -75,6 +75,7 @@ export function createStaticHandlerDataRoutes(
                 routeId: route.id,
                 loader: route.module.loader,
                 loadContext,
+                isRemixRouterRequest: true,
               })
           : undefined,
         action: route.module.action
@@ -84,6 +85,7 @@ export function createStaticHandlerDataRoutes(
                 routeId: route.id,
                 action: route.module.action,
                 loadContext,
+                isRemixRouterRequest: true,
               })
           : undefined,
         handle: route.module.handle,

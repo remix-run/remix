@@ -1900,16 +1900,12 @@ export function unstable_createStaticHandler(
     isRouteRequest: boolean
   ): Promise<Omit<StaticHandlerContext, "location"> | Response> {
     invariant(
-      request.method !== "HEAD",
-      "query()/queryRoute() do not support HEAD requests"
-    );
-    invariant(
       request.signal,
       "query()/queryRoute() requests must contain an AbortController signal"
     );
 
     try {
-      if (request.method !== "GET") {
+      if (request.method !== "GET" && request.method !== "HEAD") {
         let result = await submit(
           request,
           matches,
