@@ -7,7 +7,7 @@ toc: false
 
 Remix maintains a few starter templates to help you deploy to various servers right from the start. You should be able to initialize your app and get it live within a couple of minutes.
 
-Running `npx create-remix` will prompt you to pick a deployment target:
+Running `npx create-remix@latest` will prompt you to pick a deployment target:
 
 ```sh
 npx create-remix@latest

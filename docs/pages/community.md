@@ -21,7 +21,7 @@ Our [GitHub discussions forum][git-hub-discussions-forum] is a good place to cha
 
 ## Examples
 
-You can find (and create) examples in the Remix GitHub repo under [the `/examples` directory][the-examples-directory].
+You can find (and create) examples in the [Remix examples repository][the-examples-repository].
 
 ## Courses
 
@@ -65,7 +65,7 @@ There are Remix Meetups all over the world with thousands of members. Some onlin
 [our-code-of-conduct]: https://github.com/remix-run/remix/blob/main/CODE_OF_CONDUCT.md
 [remix-discord-server]: https://rmx.as/discord
 [git-hub-discussions-forum]: https://github.com/remix-run/remix/discussions
-[the-examples-directory]: https://github.com/remix-run/remix/tree/main/examples
+[the-examples-repository]: https://github.com/remix-run/examples
 [up-and-running-with-remix]: https://rmx.as/egghead-course
 [kent-c-dodds]: https://twitter.com/kentcdodds
 [egghead-io]: https://egghead.io
