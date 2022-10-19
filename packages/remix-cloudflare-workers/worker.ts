@@ -10,6 +10,12 @@ import {
 import type { AppLoadContext, ServerBuild } from "@remix-run/cloudflare";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cloudflare";
 
+export type Evt<Env = unknown> = {
+  request: Request
+  waitUntil: (promise: Promise<any>) => void
+  env: Env,
+}
+
 /**
  * A function that returns the value to use as `context` in route `loader` and
  * `action` functions.
@@ -17,7 +23,7 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cl
  * You can think of this as an escape hatch that allows you to pass
  * environment/platform-specific values through to your loader/action.
  */
-export type GetLoadContextFunction = (event: FetchEvent) => AppLoadContext;
+export type GetLoadContextFunction = (event: FetchEvent | Evt) => AppLoadContext;
 
 export type RequestHandler = ReturnType<typeof createRequestHandler>;
 
@@ -36,7 +42,7 @@ export function createRequestHandler({
 }) {
   let handleRequest = createRemixRequestHandler(build, mode);
 
-  return (event: FetchEvent) => {
+  return (event: FetchEvent | Evt) => {
     let loadContext = getLoadContext?.(event);
 
     return handleRequest(event.request, loadContext);
@@ -44,7 +50,7 @@ export function createRequestHandler({
 }
 
 export async function handleAsset(
-  event: FetchEvent,
+  event: FetchEvent | Evt,
   build: ServerBuild,
   options?: Partial<KvAssetHandlerOptions>
 ) {
@@ -111,7 +117,7 @@ export function createEventHandler({
     mode,
   });
 
-  let handleEvent = async (event: FetchEvent) => {
+  let handleEvent = async (event: FetchEvent | Evt) => {
     let response = await handleAsset(event, build);
 
     if (!response) {
@@ -121,20 +127,28 @@ export function createEventHandler({
     return response;
   };
 
-  return (event: FetchEvent) => {
+  return async (event: FetchEvent | Evt) => {
+    const respondWith = (payload: Response) => {
+      if ('respondWith' in event && typeof event.respondWith === 'function') {
+        event.respondWith(payload);
+        return;
+      }
+      return payload;
+    };
+
     try {
-      event.respondWith(handleEvent(event));
+      const response = await handleEvent(event);
+      return respondWith(response);
     } catch (e: any) {
       if (process.env.NODE_ENV === "development") {
-        event.respondWith(
+        return respondWith(
           new Response(e.message || e.toString(), {
             status: 500,
           })
         );
-        return;
       }
 
-      event.respondWith(new Response("Internal Error", { status: 500 }));
+      return respondWith(new Response("Internal Error", { status: 500 }));
     }
   };
 }

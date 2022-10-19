@@ -35,3 +35,29 @@ Once that's done, you should be able to deploy your app:
 ```sh
 npm run deploy
 ```
+
+## Using [ES Module workers](https://blog.cloudflare.com/workers-javascript-modules/)
+
+If you would like to use features like [Durable
+Objects](https://developers.cloudflare.com/workers/learning/using-durable-objects)
+you will need to slightly change the [`worker/index.js`](./worker/index.js)
+file. In ES Module workers we no longer have a `FetchEvent` object and will
+need to generate something similar ourselves instead.
+
+```js
+import { createEventHandler } from "@remix-run/cloudflare-workers";
+
+import * as build from "../build";
+
+const handler = createEventHandler({ build })
+
+export default {
+  fetch(request, env, context) {
+    const event = { request, env, waitUntil: context.waitUntil.bind(waitUntil) };
+    return handler(event);
+  }
+}
+```
+
+**Note**: This will now be the new object passed to you if you add
+a `getLoadContext` function to the `createEventHandler`.
