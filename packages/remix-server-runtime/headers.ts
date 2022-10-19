@@ -37,38 +37,31 @@ export function getDocumentHeaders(
 }
 
 export function getDocumentHeadersRR(
+  build: ServerBuild,
   context: StaticHandlerContext,
   matches: RouteMatch<ServerRoute>[]
 ) {
-  let parentHeaders = new Headers();
-
-  for (let match of matches) {
-    let id = match.route.id;
-    let { headers } = match.route.module || {};
-    if (!headers) continue;
-
+  return matches.reduce((parentHeaders, match, index) => {
+    let { id } = match.route;
+    let routeModule = build.routes[id].module;
     let loaderHeaders = context.loaderHeaders?.[id] || new Headers();
     let actionHeaders = context.actionHeaders?.[id] || new Headers();
-
-    let newHeaders = new Headers(
-      typeof headers === "function"
-        ? headers({
-            loaderHeaders,
-            actionHeaders,
-            parentHeaders,
-          })
-        : headers
+    let headers = new Headers(
+      routeModule.headers
+        ? typeof routeModule.headers === "function"
+          ? routeModule.headers({ loaderHeaders, parentHeaders, actionHeaders })
+          : routeModule.headers
+        : undefined
     );
 
     // Automatically preserve Set-Cookie headers that were set either by the
     // loader or by a parent route.
-    prependCookies(actionHeaders, newHeaders);
-    prependCookies(loaderHeaders, newHeaders);
-    prependCookies(parentHeaders, newHeaders);
-    parentHeaders = newHeaders;
-  }
+    prependCookies(actionHeaders, headers);
+    prependCookies(loaderHeaders, headers);
+    prependCookies(parentHeaders, headers);
 
-  return parentHeaders;
+    return headers;
+  }, new Headers());
 }
 
 function prependCookies(parentHeaders: Headers, childHeaders: Headers): void {

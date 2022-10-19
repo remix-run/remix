@@ -368,7 +368,7 @@ async function handleDocumentRequestRR(
     }
   }
 
-  let headers = getDocumentHeadersRR(context, renderableMatches);
+  let headers = getDocumentHeadersRR(build, context, renderableMatches);
 
   let serverHandoff: Pick<
     EntryContext,
