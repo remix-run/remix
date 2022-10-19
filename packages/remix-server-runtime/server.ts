@@ -14,7 +14,7 @@ import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
 import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
-import type { ServerRoute } from "./routes";
+import type { ServerRoute, ServerRouteManifest } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import { json, isRedirectResponse, isCatchResponse } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
