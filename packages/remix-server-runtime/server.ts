@@ -1,5 +1,6 @@
 // TODO: RRR - Change import to @remix-run/router
-import type { StaticHandler } from "./router";
+import type { StaticHandler, StaticHandlerContext } from "./router";
+import { isRouteErrorResponse } from "./router";
 import { unstable_createStaticHandler } from "./router";
 import type { AppLoadContext } from "./data";
 import { callRouteAction, callRouteLoader, extractData } from "./data";
@@ -301,6 +302,47 @@ async function handleDataRequestRR(
   }
 }
 
+function findParentBoundary(
+  routes: ServerRouteManifest,
+  routeId: string,
+  error: any
+): string {
+  let route = routes[routeId];
+  let isCatch = isRouteErrorResponse(error);
+  if (
+    (isCatch && route.module.CatchBoundary) ||
+    (!isCatch && route.module.ErrorBoundary) ||
+    !route.parentId
+  ) {
+    return routeId;
+  }
+
+  return findParentBoundary(routes, route.parentId, error);
+}
+
+// Re-generate a remix-friendly context.errors structure.  The Router only
+// handles generic errors and does not distinguish error versus catch.  We
+// may have a thrown response tagged to a route that only exports an
+// ErrorBoundary or vice versa.  So we adjust here and ensure that
+// data-loading errors are properly associated with routes that have the right
+// type of boundaries.
+export function differentiateCatchVersusErrorBoundaries(
+  build: ServerBuild,
+  context: StaticHandlerContext
+) {
+  // TODO: This may have issues if multiple things throw?  We may need to walk
+  // bottom up doing this tso higher errors take precedence?
+  if (context.errors) {
+    let errors: Record<string, any> = {};
+    for (let routeId of Object.keys(context.errors)) {
+      let error = context.errors[routeId];
+      let handlingRouteId = findParentBoundary(build.routes, routeId, error);
+      errors[handlingRouteId] = error;
+    }
+    context.errors = errors;
+  }
+}
+
 async function handleDocumentRequestRR(
   serverMode: ServerMode,
   build: ServerBuild,
@@ -313,6 +355,10 @@ async function handleDocumentRequestRR(
     return context;
   }
 
+  // This should properly restructure context.errors to the right Catch/Error
+  // Boundary.
+  differentiateCatchVersusErrorBoundaries(build, context);
+
   let appState: AppState = {
     trackBoundaries: true,
     trackCatchBoundaries: true,
@@ -321,30 +367,23 @@ async function handleDocumentRequestRR(
     loaderBoundaryRouteId: null,
   };
 
+  // Copy staticContext.errors to catch/error boundaries in appState
   for (let match of context.matches) {
     let route = match.route as ServerRoute;
     let id = route.id;
     let error = context.errors?.[id];
 
-    if (error) {
-      appState.error = await serializeError(error);
-      appState.loaderBoundaryRouteId = id;
+    if (!error) {
+      continue;
+    } else if (isRouteErrorResponse(error)) {
+      appState.catchBoundaryRouteId = id;
+      appState.trackCatchBoundaries = false;
+      appState.catch = error;
       break;
-    }
-
-    let actionHeaders = context.actionHeaders?.[id];
-    let loaderHeaders = context.loaderHeaders?.[id];
-    if (
-      actionHeaders?.has("X-Remix-Catch") ||
-      loaderHeaders?.has("X-Remix-Catch")
-    ) {
+    } else {
       appState.loaderBoundaryRouteId = id;
-      appState.catch = {
-        data: context.actionData?.[id] || context.loaderData?.[id],
-        status: context.statusCode,
-        // TODO: Populate this.
-        statusText: "",
-      };
+      appState.trackBoundaries = false;
+      appState.error = await serializeError(error);
       break;
     }
   }
