@@ -310,8 +310,8 @@ function findParentBoundary(
   let route = routes[routeId];
   let isCatch = isRouteErrorResponse(error);
   if (
-    (isCatch && route.module.CatchBoundary) ||
-    (!isCatch && route.module.ErrorBoundary) ||
+    (isCatch && route.module?.CatchBoundary) ||
+    (!isCatch && route.module?.ErrorBoundary) ||
     !route.parentId
   ) {
     return routeId;
@@ -397,7 +397,7 @@ async function handleDocumentRequestRR(
     renderableMatches = [];
 
     let root = staticHandler.dataRoutes[0] as ServerRoute;
-    if (root?.module.CatchBoundary) {
+    if (root?.module?.CatchBoundary) {
       appState.catchBoundaryRouteId = "root";
       renderableMatches.push({
         params: {},
