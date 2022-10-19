@@ -3,4 +3,4 @@
 "@remix-run/dev": patch
 ---
 
-allow setting tsconfig moduleResolution to `node`, `node16`, and `nodenext`
+Add support for setting `moduleResolution` to `node`, `node16` or `nodenext` in `tsconfig.json`.

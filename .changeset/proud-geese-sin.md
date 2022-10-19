@@ -3,4 +3,4 @@
 "@remix-run/node": patch
 ---
 
-Update @remix-run/web-fetch dependency. Fixes `{Request | Response}.clone()` throwing when body is null. Also adds additional Node.js specific types to `fetch()` to allow use of `agent` from `http` and `https`.
+Updated the `@remix-run/web-fetch` dependency. This fixes issues with `{Request | Response}.clone()` throwing when body is `null`. This update also adds additional Node.js-specific types to `fetch()` to support the use of `agent` from `http` and `https`.

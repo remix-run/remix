@@ -3,6 +3,6 @@
 "@remix-run/dev": patch
 ---
 
-add CSS plugin to `esbuild` so that any assets in css files are also copied (and hashed) to the `assetsBuildDirectory`
+Ensure that any assets referenced in CSS files are hashed and copied to the `assetsBuildDirectory`.
 
-currently if you import a css file that has `background: url('./relative.png');` the `relative.png` file is not copied to the build directory, which is a problem when dealing with npm packages that have css files with font files in them like fontsource
+Before this change, a CSS declaration like `background: url('./relative-path/image.png');` that references the file `./relative-path/image.png` will not copy that file to the build directory. This can be a problem if you use a custom build directory, or when dealing with third-party stylesheets in `node_modules` that reference their own relative files.

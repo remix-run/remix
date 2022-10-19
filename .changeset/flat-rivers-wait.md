@@ -3,4 +3,4 @@
 "@remix-run/dev": patch
 ---
 
-fix: write resources imported only by resource routes to `assetsBuildDirectory`
+Add resources imported only by resource routes to `assetsBuildDirectory`

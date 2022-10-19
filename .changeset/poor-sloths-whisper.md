@@ -4,4 +4,4 @@
 "@remix-run/netlify": patch
 ---
 
-fix typo in netlify and architect binaryTypes for wav and webm audio files
+Fixed a bug that affected `.wav` and `.webm` audio file imports
