@@ -35,6 +35,7 @@ function createApp() {
   // TODO: get supertest args into the event
   consumeEventMock.mockImplementationOnce(() => ({ body: "" }));
   let server = createServerWithHelpers(
+    // @ts-expect-error
     createRequestHandler({ build: undefined }),
     mockBridge
   );
