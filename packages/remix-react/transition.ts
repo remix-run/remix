@@ -659,6 +659,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
     return getPathContributingMatches(matches).slice(-1)[0];
   }
 
+  // Filter index and pathless routes when looking for submission targets
   function getPathContributingMatches(matches: ClientMatch[]) {
     return matches.filter(
       (match, index) =>
@@ -1596,17 +1597,6 @@ function filterMatchesToLoad(
         (location.state as any)?.setCookie)
     );
   });
-}
-
-/**
- * Filter index and pathless routes when looking for submission targets
- */
-function getPathContributingMatches(matches: ClientMatch[]) {
-  return matches.filter(
-    (match, index) =>
-      index === 0 ||
-      (!match.route.index && match.route.path && match.route.path.length > 0)
-  );
 }
 
 function isRedirectResult(result: DataResult): result is DataRedirectResult {
