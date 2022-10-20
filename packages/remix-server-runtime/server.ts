@@ -400,7 +400,15 @@ async function handleDocumentRequestRR(
       };
       break;
     } else {
-      appState.loaderBoundaryRouteId = id;
+      // Only assign the boundary id if this module has a boundary.  This
+      // should be true in almost all cases, except for cases in which no
+      // boundaries exist and the router "assigns" the error to the root route
+      // for lack of a better place to put it.  If the root doesn't have an
+      // error boundary, then we leave loaderBoundaryId null to bubble to the
+      // default boundary at render time
+      if (build.routes[id]?.module.ErrorBoundary) {
+        appState.loaderBoundaryRouteId = id;
+      }
       appState.trackBoundaries = false;
       appState.error = await serializeError(error);
       break;
@@ -1010,13 +1018,62 @@ async function assertResponsesMatch(_a: Response, _b: Response) {
     assert(
       a,
       b,
-      (r) => r.text(),
+      async (r) => {
+        let text = await r.text();
+
+        // Strip stack trace from default error boundary HTML
+        if (
+          text.includes(">Application Error</h1>") &&
+          text.includes("💿 Hey developer👋")
+        ) {
+          return stripStackTraceFromDefaultErrorBoundary(text);
+        }
+
+        if (text.includes("<script>window.__remixContext")) {
+          return stripStackTraceFromRemixContext(text);
+        }
+
+        return text;
+      },
       "Non-JSON response body did not match!\nResponse 1:\n" +
         (await a.clone().text()) +
         "\nResponse 2:\n" +
         (await b.clone().text())
     );
   }
+}
+
+function stripStackTraceFromDefaultErrorBoundary(text: string) {
+  let openPreStart = text.indexOf("<pre ");
+  let openPreEnd = text.indexOf('">', openPreStart + 1);
+  let closePre = text.indexOf("</pre>", openPreEnd + 1);
+  let error = text.substring(openPreEnd + 2, closePre);
+  let stackStart = error.indexOf("\n");
+  let errorWithoutStack = error.substring(0, stackStart);
+  return (
+    text.replace(error, "ERROR REMOVED") + "\n\nError:\n" + errorWithoutStack
+  );
+}
+
+function stripStackTraceFromRemixContext(text: string) {
+  let scriptStart = text.indexOf("<script>window.__remixContext");
+  let scriptEnd = text.indexOf("</script>", scriptStart + 1);
+  let scriptContents = text.substring(scriptStart, scriptEnd + 9);
+  let remixContext = JSON.parse(
+    scriptContents
+      .replace("<script>window.__remixContext = ", "")
+      .replace(";</script>", "")
+  );
+  // If we didn't have an error - assert the full document
+  if (!remixContext?.appState?.error?.stack) {
+    return text;
+  }
+
+  // Otherwise remove the stack trace and assert the text/JSON as a
+  // concatenated string
+  remixContext.appState.error.stack = "yes";
+  text = text.replace(scriptContents, "CONTEXT REMOVED");
+  return text + "\n\nContext:\n" + JSON.stringify(remixContext);
 }
 
 function returnLastResortErrorResponse(error: any, serverMode?: ServerMode) {
