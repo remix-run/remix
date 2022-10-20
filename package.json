@@ -38,7 +38,7 @@
     "test": "run-p \"test:*\"",
     "pretest:integration": "yarn build",
     "test:integration": "playwright test --config ./integration/playwright.config.ts",
-    "posttest:integration": "rimraf ./.tmp/integration",
+    "posttest:integration": "node ./integration/helpers/cleanup.mjs",
     "test:primary": "jest",
     "changeset": "changeset",
     "changeset:version": "changeset version",
