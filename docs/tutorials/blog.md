@@ -32,7 +32,7 @@ If you want to follow this tutorial locally on your own computer, it is importan
 💿 Initialize a new Remix project. We'll call ours "blog-tutorial" but you can call it something else if you'd like.
 
 ```sh
-npx create-remix --template remix-run/indie-stack blog-tutorial
+npx create-remix@latest --template remix-run/indie-stack blog-tutorial
 ```
 
 ```
@@ -43,7 +43,7 @@ You can read more about the stacks available in [the stacks docs][the-stacks-doc
 
 We're using [the Indie stack][the-indie-stack], which is a full application ready to deploy to [fly.io][fly-io]. This includes development tools as well as production-ready authentication and persistence. Don't worry if you're unfamiliar with the tools used, we'll walk you through things as we go.
 
-<docs-info>Note, you can definitely start with "Just the basics" instead by running `npx create-remix` without the `--template` flag. The generated project is much more minimal that way. However, some bits of the tutorial will be different for you and you'll have to configure things for deployment manually.</docs-info>
+<docs-info>Note, you can definitely start with "Just the basics" instead by running `npx create-remix@latest` without the `--template` flag. The generated project is much more minimal that way. However, some bits of the tutorial will be different for you and you'll have to configure things for deployment manually.</docs-info>
 
 💿 Now, open the project that was generated in your preferred editor and check the instructions in the `README.md` file. Feel free to read over this. We'll get to the deployment bit later in the tutorial.
 

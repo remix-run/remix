@@ -1,5 +1,12 @@
 # `@remix-run/express`
 
+## 1.7.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.7.3`
+
 ## 1.7.2
 
 ### Patch Changes

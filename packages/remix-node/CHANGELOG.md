@@ -1,5 +1,13 @@
 # `@remix-run/node`
 
+## 1.7.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.7.3`
+  - `@remix-run/web-fetch@4.3.1`
+
 ## 1.7.2
 
 ### Patch Changes
