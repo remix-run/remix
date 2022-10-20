@@ -34,7 +34,10 @@ export async function callRouteAction({
   isRemixRouterRequest?: boolean;
 }) {
   if (!action) {
-    let response = new Response(null, { status: 405 });
+    let response = new Response(null, {
+      status: 405,
+      statusText: "Method Not Allowed",
+    });
     response.headers.set("X-Remix-Catch", "yes");
     return response;
   }

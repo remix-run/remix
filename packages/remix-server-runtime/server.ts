@@ -287,6 +287,16 @@ async function handleDataRequestRR(
     return response;
   } catch (error) {
     if (error instanceof Response) {
+      // Our callRouteLoader/callRouteAction methods ensure we always have
+      // X-Remix-Catch on responses thrown from loaders and actions.  However,
+      // if we never make it to the loader (such as a 404 or 405) then we
+      // Remix Router puts it's own custom header on, which we swap here for
+      // X-Remix-Catch
+      if (error.headers.get("X-Remix-Router-Error") === "yes") {
+        error.headers.delete("X-Remix-Router-Error");
+        error.headers.set("X-Remix-Catch", "yes");
+      }
+
       return error;
     }
 
@@ -307,14 +317,18 @@ function findParentBoundary(
   routeId: string,
   error: any
 ): string {
-  let route = routes[routeId];
+  // Fall back to the root route if we don't match any routes, since Remix
+  // has default error/catch boundary handling.  This handles the case where
+  // react-router doesn't have a matching "root" route to assign the error to
+  // so it returns context.errors = { __shim-404-route__: ErrorResponse }
+  let route = routes[routeId] || routes["root"];
   let isCatch = isRouteErrorResponse(error);
   if (
-    (isCatch && route.module?.CatchBoundary) ||
-    (!isCatch && route.module?.ErrorBoundary) ||
+    (isCatch && route.module.CatchBoundary) ||
+    (!isCatch && route.module.ErrorBoundary) ||
     !route.parentId
   ) {
-    return routeId;
+    return route.id;
   }
 
   return findParentBoundary(routes, route.parentId, error);
@@ -378,7 +392,12 @@ async function handleDocumentRequestRR(
     } else if (isRouteErrorResponse(error)) {
       appState.catchBoundaryRouteId = id;
       appState.trackCatchBoundaries = false;
-      appState.catch = error;
+      appState.catch = {
+        // Order is important for response matching assertions!
+        data: error.data,
+        status: error.status,
+        statusText: error.statusText,
+      };
       break;
     } else {
       appState.loaderBoundaryRouteId = id;
@@ -527,8 +546,9 @@ async function handleDocumentRequest({
         );
         appState.trackCatchBoundaries = false;
         appState.catch = {
-          ...actionStatus,
           data: await extractData(actionResponse),
+          status: actionStatus.status,
+          statusText: actionStatus.statusText,
         };
       } else {
         actionData = {
