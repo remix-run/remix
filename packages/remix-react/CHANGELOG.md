@@ -1,19 +1,10 @@
 # `@remix-run/react`
 
-## 1.7.3-pre.0
+## 1.7.3
 
 ### Patch Changes
 
 - Ensure that `<Form />` respects the `formMethod` attribute set on the submitter element ([#4053](https://github.com/remix-run/remix/pull/4053))
-
-  ```tsx
-  <Form>
-    <button type="submit">GET request</button>
-    <button type="submit" formMethod="post">
-      POST request
-    </button>
-  </Form>
-  ```
 
 ## 1.7.2
 

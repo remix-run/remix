@@ -1,12 +1,12 @@
 # `create-remix`
 
-## 1.7.3-pre.0
+## 1.7.3
 
 ### Patch Changes
 
 - Update `create-remix` to use the new examples repository when using `--template example/<name>` ([#4208](https://github.com/remix-run/remix/pull/4208))
 - Updated dependencies:
-  - `@remix-run/dev@1.7.3-pre.0`
+  - `@remix-run/dev@1.7.3`
 
 ## 1.7.2
 

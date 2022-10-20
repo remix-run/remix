@@ -1,11 +1,11 @@
 # `@remix-run/cloudflare-pages`
 
-## 1.7.3-pre.0
+## 1.7.3
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/cloudflare@1.7.3-pre.0`
+  - `@remix-run/cloudflare@1.7.3`
 
 ## 1.7.2
 
