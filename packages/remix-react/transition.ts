@@ -644,6 +644,11 @@ export function createTransitionManager(init: TransitionManagerInit) {
     return false;
   }
 
+  // Return the correct single match for a route (used for submission
+  // navigations and  and fetchers)
+  // - ?index should try to match the leaf index route
+  // - otherwise it should match the deepest "path contributing" match, which
+  //   ignores index and pathless routes
   function getRequestMatch(url: URL, matches: ClientMatch[]) {
     let match = matches.slice(-1)[0];
 
