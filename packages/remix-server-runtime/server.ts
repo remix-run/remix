@@ -415,6 +415,16 @@ async function handleDocumentRequestRR(
     }
   }
 
+  // If we didn't find a catch boundary we default to the root route,
+  // and if it doesn't have a catch boundary, we fallback to the built-in
+  // catch boundary
+  if (
+    appState.catchBoundaryRouteId === "root" &&
+    !build.routes.root?.module?.CatchBoundary
+  ) {
+    appState.catchBoundaryRouteId = null;
+  }
+
   let renderableMatches = getRenderableMatches(
     context.matches as unknown as RouteMatch<ServerRoute>[],
     appState

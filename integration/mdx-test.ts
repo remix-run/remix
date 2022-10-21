@@ -106,11 +106,6 @@ export function ComponentUsingData() {
   test.only("supports links, meta, headers, handle, and loader", async ({
     page,
   }) => {
-    // block requests for the non-existing app.css requested by test
-    page.route("**/app.css", (route) => {
-      route.abort();
-    });
-
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/blog/post");
     expect(await app.getHtml('meta[name="description"]')).toMatch(
