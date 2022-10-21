@@ -1436,7 +1436,9 @@ export type FetcherWithComponents<TData> = Fetcher<TData> & {
  *
  * @see https://remix.run/api/remix#usefetcher
  */
-export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
+export function useFetcher<TData = any>(): FetcherWithComponents<
+  SerializeFrom<TData>
+> {
   let { transitionManager } = useRemixEntryContext();
 
   let [key] = React.useState(() => String(++fetcherId));
@@ -1446,7 +1448,7 @@ export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
   });
   let submit = useSubmitImpl(key);
 
-  let fetcher = transitionManager.getFetcher<TData>(key);
+  let fetcher = transitionManager.getFetcher<SerializeFrom<TData>>(key);
 
   let fetcherWithComponents = React.useMemo(
     () => ({
