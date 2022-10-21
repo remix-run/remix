@@ -437,6 +437,7 @@ function createServerBuild(
       absWorkingDir: config.rootDirectory,
       stdin,
       entryPoints,
+      external: isCloudflareRuntime ? ["__STATIC_CONTENT_MANIFEST"] : undefined,
       outfile: config.serverBuildPath,
       write: false,
       conditions: isCloudflareRuntime

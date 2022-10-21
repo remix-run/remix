@@ -22,6 +22,9 @@ export function serverBareModulesPlugin(
   onWarning?: (warning: string, key: string) => void
 ): Plugin {
   let isDenoRuntime = remixConfig.serverBuildTarget === "deno";
+  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
+    remixConfig.serverBuildTarget ?? ""
+  );
 
   // Resolve paths according to tsconfig paths property
   let matchPath = isDenoRuntime
@@ -92,12 +95,9 @@ export function serverBareModulesPlugin(
           }
         }
 
-        switch (remixConfig.serverBuildTarget) {
-          // Always bundle everything for cloudflare.
-          case "cloudflare-pages":
-          case "cloudflare-workers":
-          case "deno":
-            return undefined;
+        // Always bundle everything for cloudflare and deno.
+        if (isCloudflareRuntime || isDenoRuntime) {
+          return undefined;
         }
 
         for (let pattern of remixConfig.serverDependenciesToBundle) {
@@ -141,7 +141,12 @@ function getNpmPackageName(id: string): string {
 }
 
 function isBareModuleId(id: string): boolean {
-  return !id.startsWith("node:") && !id.startsWith(".") && !isAbsolute(id);
+  return (
+    !id.startsWith("node:") &&
+    !id.startsWith(".") &&
+    !isAbsolute(id) &&
+    id !== "__STATIC_CONTENT_MANIFEST"
+  );
 }
 
 function warnOnceIfEsmOnlyPackage(
