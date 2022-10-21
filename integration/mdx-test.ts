@@ -103,7 +103,7 @@ export function ComponentUsingData() {
     expect(await app.getHtml()).toMatch("This is some basic markdown!");
   });
 
-  test.only("supports links, meta, headers, handle, and loader", async ({
+  test("supports links, meta, headers, handle, and loader", async ({
     page,
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
