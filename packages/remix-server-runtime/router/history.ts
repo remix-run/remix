@@ -572,7 +572,7 @@ function getUrlBasedHistory(
     }
 
     if (v5Compat && listener) {
-      listener({ action, location });
+      listener({ action, location: history.location });
     }
   }
 
@@ -586,7 +586,7 @@ function getUrlBasedHistory(
     globalHistory.replaceState(historyState, "", url);
 
     if (v5Compat && listener) {
-      listener({ action, location: location });
+      listener({ action, location: history.location });
     }
   }
 
