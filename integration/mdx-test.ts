@@ -17,7 +17,6 @@ test.describe("mdx", () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-        import { json } from "@remix-run/node";
         import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export default function Root() {
@@ -37,10 +36,9 @@ test.describe("mdx", () => {
         `,
 
         "app/routes/blog.jsx": js`
-          import { json } from "@remix-run/node";
           import { useMatches, Outlet } from "@remix-run/react";
 
-          export default function Index() {
+          export default function Blog() {
             const matches = useMatches();
             const mdxMatch = matches[matches.length - 1];
             return (
@@ -105,9 +103,14 @@ export function ComponentUsingData() {
     expect(await app.getHtml()).toMatch("This is some basic markdown!");
   });
 
-  test("supports links, meta, headers, handle, and loader", async ({
+  test.only("supports links, meta, headers, handle, and loader", async ({
     page,
   }) => {
+    // block requests for the non-existing app.css requested by test
+    page.route("**/app.css", (route) => {
+      route.abort();
+    });
+
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/blog/post");
     expect(await app.getHtml('meta[name="description"]')).toMatch(
