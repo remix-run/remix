@@ -382,6 +382,12 @@ async function handleDocumentRequestRR(
   };
 
   // Copy staticContext.errors to catch/error boundaries in appState
+  // Note: Only assign the boundary id if this module has a boundary.  This
+  // should be true in almost all cases, except for cases in which no
+  // boundaries exist and the router "assigns" the catch/error to the root
+  // route for lack of a better place to put it.  If the root doesn't have a
+  // catch/error boundary, then we leave the boundaryId null to bubble to the
+  // default boundary at render time
   for (let match of context.matches) {
     let route = match.route as ServerRoute;
     let id = route.id;
@@ -390,7 +396,9 @@ async function handleDocumentRequestRR(
     if (!error) {
       continue;
     } else if (isRouteErrorResponse(error)) {
-      appState.catchBoundaryRouteId = id;
+      if (build.routes[id]?.module.CatchBoundary) {
+        appState.catchBoundaryRouteId = id;
+      }
       appState.trackCatchBoundaries = false;
       appState.catch = {
         // Order is important for response matching assertions!
@@ -400,12 +408,6 @@ async function handleDocumentRequestRR(
       };
       break;
     } else {
-      // Only assign the boundary id if this module has a boundary.  This
-      // should be true in almost all cases, except for cases in which no
-      // boundaries exist and the router "assigns" the error to the root route
-      // for lack of a better place to put it.  If the root doesn't have an
-      // error boundary, then we leave loaderBoundaryId null to bubble to the
-      // default boundary at render time
       if (build.routes[id]?.module.ErrorBoundary) {
         appState.loaderBoundaryRouteId = id;
       }
@@ -413,16 +415,6 @@ async function handleDocumentRequestRR(
       appState.error = await serializeError(error);
       break;
     }
-  }
-
-  // If we didn't find a catch boundary we default to the root route,
-  // and if it doesn't have a catch boundary, we fallback to the built-in
-  // catch boundary
-  if (
-    appState.catchBoundaryRouteId === "root" &&
-    !build.routes.root?.module?.CatchBoundary
-  ) {
-    appState.catchBoundaryRouteId = null;
   }
 
   let renderableMatches = getRenderableMatches(

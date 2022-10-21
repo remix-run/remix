@@ -476,5 +476,12 @@ test.describe("ErrorBoundary", () => {
       await app.clickSubmitButton(NO_ROOT_BOUNDARY_ACTION_RETURN);
       expect(await app.getHtml("h1")).toMatch(INTERNAL_ERROR_BOUNDARY_HEADING);
     });
+
+    test.skip(
+      "returns a 500 x-remix-error on a data fetch to a path with no loader"
+    );
+    test.skip("returns a 405 x-remix-error on a data fetch with a bad method");
+    test.skip("returns a 404 x-remix-error on a data fetch to a bad path");
+    test.skip("returns a 403 x-remix-error on a data fetch to a bad routeId");
   });
 });
