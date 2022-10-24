@@ -6,6 +6,7 @@ import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
 
 import { type BuildOptions } from "../build";
 import { type RemixConfig } from "../config";
+import { createAssetsManifest, type AssetsManifest } from "./assets";
 import { getAppDependencies } from "./dependencies";
 import { loaders } from "./loaders";
 import { browserRouteModulesPlugin } from "./plugins/browserRouteModulesPlugin";
@@ -13,6 +14,14 @@ import { cssFilePlugin } from "./plugins/cssFilePlugin";
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
+import { type WriteChannel } from "./utils/channel";
+import { writeFileSafe } from "./utils/fs";
+
+export type BrowserCompiler = {
+  // produce ./public/build/
+  compile: (manifestChannel: WriteChannel<AssetsManifest>) => Promise<void>;
+  dispose: () => void;
+};
 
 const getExternals = (remixConfig: RemixConfig): string[] => {
   // For the browser build, exclude node built-ins that don't have a
@@ -33,10 +42,24 @@ const getExternals = (remixConfig: RemixConfig): string[] => {
   return nodeBuiltins.filter((mod) => !dependencies.includes(mod));
 };
 
-export async function createBrowserBuild(
+const writeAssetsManifest = async (
   config: RemixConfig,
-  options: BuildOptions & { incremental?: boolean }
-): Promise<esbuild.BuildResult> {
+  assetsManifest: AssetsManifest
+) => {
+  let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
+
+  assetsManifest.url = config.publicPath + filename;
+
+  await writeFileSafe(
+    path.join(config.assetsBuildDirectory, filename),
+    `window.__remixManifest=${JSON.stringify(assetsManifest)};`
+  );
+};
+
+const createEsbuildConfig = (
+  config: RemixConfig,
+  options: BuildOptions
+): esbuild.BuildOptions | esbuild.BuildIncremental => {
   let entryPoints: esbuild.BuildOptions["entryPoints"] = {
     "entry.client": path.resolve(config.appDirectory, config.entryClientFile),
   };
@@ -57,7 +80,7 @@ export async function createBrowserBuild(
     yarnPnpPlugin(),
   ];
 
-  return esbuild.build({
+  return {
     entryPoints,
     outdir: config.assetsBuildDirectory,
     platform: "browser",
@@ -68,8 +91,6 @@ export async function createBrowserBuild(
     logLevel: "silent",
     splitting: true,
     sourcemap: options.sourcemap,
-    metafile: true,
-    incremental: options.incremental,
     // As pointed out by https://github.com/evanw/esbuild/issues/2440, when tsconfig is set to
     // `undefined`, esbuild will keep looking for a tsconfig.json recursively up. This unwanted
     // behavior can only be avoided by creating an empty tsconfig file in the root directory.
@@ -90,5 +111,33 @@ export async function createBrowserBuild(
     jsx: "automatic",
     jsxDev: options.mode !== "production",
     plugins,
-  });
-}
+  };
+};
+
+export const createBrowserCompiler = (
+  remixConfig: RemixConfig,
+  options: BuildOptions
+): BrowserCompiler => {
+  let compiler: esbuild.BuildIncremental;
+  let esbuildConfig = createEsbuildConfig(remixConfig, options);
+  let compile = async (manifestChannel: WriteChannel<AssetsManifest>) => {
+    let metafile: esbuild.Metafile;
+    if (compiler === undefined) {
+      compiler = await esbuild.build({
+        ...esbuildConfig,
+        metafile: true,
+        incremental: true,
+      });
+      metafile = compiler.metafile!;
+    } else {
+      metafile = (await compiler.rebuild()).metafile!;
+    }
+    let manifest = await createAssetsManifest(remixConfig, metafile);
+    manifestChannel.write(manifest);
+    await writeAssetsManifest(remixConfig, manifest);
+  };
+  return {
+    compile,
+    dispose: () => compiler?.rebuild.dispose(),
+  };
+};

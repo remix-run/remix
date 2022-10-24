@@ -6,24 +6,29 @@ import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
 
 import { type BuildOptions } from "../build";
 import { type RemixConfig } from "../config";
+import { type AssetsManifest } from "./assets";
 import { loaders } from "./loaders";
 import { cssFilePlugin } from "./plugins/cssFilePlugin";
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
-import {
-  type AssetsManifestPromiseRef,
-  serverAssetsManifestPlugin,
-} from "./plugins/serverAssetsManifestPlugin";
+import { serverAssetsManifestPlugin } from "./plugins/serverAssetsManifestPlugin";
 import { serverBareModulesPlugin } from "./plugins/serverBareModulesPlugin";
 import { serverEntryModulePlugin } from "./plugins/serverEntryModulePlugin";
 import { serverRouteModulesPlugin } from "./plugins/serverRouteModulesPlugin";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
+import { type ReadChannel } from "./utils/channel";
 
-export function createServerBuild(
+export type ServerCompiler = {
+  // produce ./build/index.js
+  compile: (manifestChannel: ReadChannel<AssetsManifest>) => Promise<void>;
+  dispose: () => void;
+};
+
+const createEsbuildConfig = (
   config: RemixConfig,
-  options: BuildOptions & { incremental?: boolean },
-  assetsManifestPromiseRef: AssetsManifestPromiseRef
-): Promise<esbuild.BuildResult> {
+  assetsManifestChannel: ReadChannel<AssetsManifest>,
+  options: BuildOptions
+): esbuild.BuildOptions => {
   let stdin: esbuild.StdinOptions | undefined;
   let entryPoints: string[] | undefined;
 
@@ -49,7 +54,7 @@ export function createServerBuild(
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config),
-    serverAssetsManifestPlugin(assetsManifestPromiseRef),
+    serverAssetsManifestPlugin(assetsManifestChannel.read()),
     serverBareModulesPlugin(config, options.onWarning),
     yarnPnpPlugin(),
   ];
@@ -58,66 +63,60 @@ export function createServerBuild(
     plugins.unshift(NodeModulesPolyfillPlugin());
   }
 
-  return esbuild
-    .build({
-      absWorkingDir: config.rootDirectory,
-      stdin,
-      entryPoints,
-      outfile: config.serverBuildPath,
-      write: false,
-      conditions: isCloudflareRuntime
-        ? ["worker"]
-        : isDenoRuntime
-        ? ["deno", "worker"]
-        : undefined,
-      platform: config.serverPlatform,
-      format: config.serverModuleFormat,
-      treeShaking: true,
-      // The type of dead code elimination we want to do depends on the
-      // minify syntax property: https://github.com/evanw/esbuild/issues/672#issuecomment-1029682369
-      // Dev builds are leaving code that should be optimized away in the
-      // bundle causing server / testing code to be shipped to the browser.
-      // These are properly optimized away in prod builds today, and this
-      // PR makes dev mode behave closer to production in terms of dead
-      // code elimination / tree shaking is concerned.
-      minifySyntax: true,
-      minify: options.mode === "production" && isCloudflareRuntime,
-      mainFields: isCloudflareRuntime
-        ? ["browser", "module", "main"]
-        : config.serverModuleFormat === "esm"
-        ? ["module", "main"]
-        : ["main", "module"],
-      target: options.target,
-      loader: loaders,
-      bundle: true,
-      logLevel: "silent",
-      // As pointed out by https://github.com/evanw/esbuild/issues/2440, when tsconfig is set to
-      // `undefined`, esbuild will keep looking for a tsconfig.json recursively up. This unwanted
-      // behavior can only be avoided by creating an empty tsconfig file in the root directory.
-      tsconfig: config.tsconfigPath,
-      incremental: options.incremental,
-      sourcemap: options.sourcemap, // use linked (true) to fix up .map file
-      // The server build needs to know how to generate asset URLs for imports
-      // of CSS and other files.
-      assetNames: "_assets/[name]-[hash]",
-      publicPath: config.publicPath,
-      define: {
-        "process.env.NODE_ENV": JSON.stringify(options.mode),
-        "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-          config.devServerPort
-        ),
-      },
-      jsx: "automatic",
-      jsxDev: options.mode !== "production",
-      plugins,
-    })
-    .then(async (build) => {
-      await writeServerBuildResult(config, build.outputFiles);
-      return build;
-    });
-}
+  return {
+    absWorkingDir: config.rootDirectory,
+    stdin,
+    entryPoints,
+    outfile: config.serverBuildPath,
+    conditions: isCloudflareRuntime
+      ? ["worker"]
+      : isDenoRuntime
+      ? ["deno", "worker"]
+      : undefined,
+    platform: config.serverPlatform,
+    format: config.serverModuleFormat,
+    treeShaking: true,
+    // The type of dead code elimination we want to do depends on the
+    // minify syntax property: https://github.com/evanw/esbuild/issues/672#issuecomment-1029682369
+    // Dev builds are leaving code that should be optimized away in the
+    // bundle causing server / testing code to be shipped to the browser.
+    // These are properly optimized away in prod builds today, and this
+    // PR makes dev mode behave closer to production in terms of dead
+    // code elimination / tree shaking is concerned.
+    minifySyntax: true,
+    minify: options.mode === "production" && isCloudflareRuntime,
+    mainFields: isCloudflareRuntime
+      ? ["browser", "module", "main"]
+      : config.serverModuleFormat === "esm"
+      ? ["module", "main"]
+      : ["main", "module"],
+    target: options.target,
+    loader: loaders,
+    bundle: true,
+    logLevel: "silent",
+    // As pointed out by https://github.com/evanw/esbuild/issues/2440, when tsconfig is set to
+    // `undefined`, esbuild will keep looking for a tsconfig.json recursively up. This unwanted
+    // behavior can only be avoided by creating an empty tsconfig file in the root directory.
+    tsconfig: config.tsconfigPath,
+    incremental: options.incremental,
+    sourcemap: options.sourcemap, // use linked (true) to fix up .map file
+    // The server build needs to know how to generate asset URLs for imports
+    // of CSS and other files.
+    assetNames: "_assets/[name]-[hash]",
+    publicPath: config.publicPath,
+    define: {
+      "process.env.NODE_ENV": JSON.stringify(options.mode),
+      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
+        config.devServerPort
+      ),
+    },
+    jsx: "automatic",
+    jsxDev: options.mode !== "production",
+    plugins,
+  };
+};
 
-export async function writeServerBuildResult(
+async function writeServerBuildResult(
   config: RemixConfig,
   outputFiles: esbuild.OutputFile[]
 ) {
@@ -147,3 +146,25 @@ export async function writeServerBuildResult(
     }
   }
 }
+
+export const createServerCompiler = (
+  remixConfig: RemixConfig,
+  options: BuildOptions
+): ServerCompiler => {
+  let compile = async (manifestChannel: ReadChannel<AssetsManifest>) => {
+    let esbuildConfig = createEsbuildConfig(
+      remixConfig,
+      manifestChannel,
+      options
+    );
+    let { outputFiles } = await esbuild.build({
+      ...esbuildConfig,
+      write: false,
+    });
+    await writeServerBuildResult(remixConfig, outputFiles!);
+  };
+  return {
+    compile,
+    dispose: () => undefined,
+  };
+};
