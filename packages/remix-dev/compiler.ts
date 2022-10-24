@@ -1,11 +1,7 @@
 import * as path from "path";
-import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
-import * as fse from "fs-extra";
 import debounce from "lodash.debounce";
 import chokidar from "chokidar";
-import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
-import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
 
 import type { BuildOptions } from "./build";
 import type { RemixConfig } from "./config";
@@ -13,19 +9,13 @@ import { readConfig } from "./config";
 import { warnOnce } from "./compiler/warnings";
 import type { AssetsManifest } from "./compiler/assets";
 import { createAssetsManifest } from "./compiler/assets";
-import { getAppDependencies } from "./compiler/dependencies";
-import { loaders } from "./compiler/loaders";
-import { browserRouteModulesPlugin } from "./compiler/plugins/browserRouteModulesPlugin";
-import { emptyModulesPlugin } from "./compiler/plugins/emptyModulesPlugin";
-import { mdxPlugin } from "./compiler/plugins/mdx";
 import type { AssetsManifestPromiseRef } from "./compiler/plugins/serverAssetsManifestPlugin";
-import { serverAssetsManifestPlugin } from "./compiler/plugins/serverAssetsManifestPlugin";
-import { serverBareModulesPlugin } from "./compiler/plugins/serverBareModulesPlugin";
-import { serverEntryModulePlugin } from "./compiler/plugins/serverEntryModulePlugin";
-import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesPlugin";
-import { cssFilePlugin } from "./compiler/plugins/cssFilePlugin";
 import { writeFileSafe } from "./compiler/utils/fs";
-import { urlImportsPlugin } from "./compiler/plugins/urlImportsPlugin";
+import {
+  createServerBuild,
+  writeServerBuildResult,
+} from "./compiler/compile-server";
+import { createBrowserBuild } from "./compiler/compile-browser";
 
 function defaultWarningHandler(message: string, key: string) {
   warnOnce(message, key);
@@ -305,181 +295,6 @@ async function buildEverything(
   }
 }
 
-async function createBrowserBuild(
-  config: RemixConfig,
-  options: BuildOptions & { incremental?: boolean }
-): Promise<esbuild.BuildResult> {
-  // For the browser build, exclude node built-ins that don't have a
-  // browser-safe alternative installed in node_modules. Nothing should
-  // *actually* be external in the browser build (we want to bundle all deps) so
-  // this is really just making sure we don't accidentally have any dependencies
-  // on node built-ins in browser bundles.
-  let dependencies = Object.keys(getAppDependencies(config));
-  let externals = nodeBuiltins.filter((mod) => !dependencies.includes(mod));
-  let fakeBuiltins = nodeBuiltins.filter((mod) => dependencies.includes(mod));
-
-  if (fakeBuiltins.length > 0) {
-    throw new Error(
-      `It appears you're using a module that is built in to node, but you installed it as a dependency which could cause problems. Please remove ${fakeBuiltins.join(
-        ", "
-      )} before continuing.`
-    );
-  }
-
-  let entryPoints: esbuild.BuildOptions["entryPoints"] = {
-    "entry.client": path.resolve(config.appDirectory, config.entryClientFile),
-  };
-  for (let id of Object.keys(config.routes)) {
-    // All route entry points are virtual modules that will be loaded by the
-    // browserEntryPointsPlugin. This allows us to tree-shake server-only code
-    // that we don't want to run in the browser (i.e. action & loader).
-    entryPoints[id] = config.routes[id].file + "?browser";
-  }
-
-  let plugins = [
-    cssFilePlugin(options),
-    urlImportsPlugin(),
-    mdxPlugin(config),
-    browserRouteModulesPlugin(config, /\?browser$/),
-    emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
-    NodeModulesPolyfillPlugin(),
-    yarnPnpPlugin(),
-  ];
-
-  return esbuild.build({
-    entryPoints,
-    outdir: config.assetsBuildDirectory,
-    platform: "browser",
-    format: "esm",
-    external: externals,
-    loader: loaders,
-    bundle: true,
-    logLevel: "silent",
-    splitting: true,
-    sourcemap: options.sourcemap,
-    metafile: true,
-    incremental: options.incremental,
-    // As pointed out by https://github.com/evanw/esbuild/issues/2440, when tsconfig is set to
-    // `undefined`, esbuild will keep looking for a tsconfig.json recursively up. This unwanted
-    // behavior can only be avoided by creating an empty tsconfig file in the root directory.
-    tsconfig: config.tsconfigPath,
-    mainFields: ["browser", "module", "main"],
-    treeShaking: true,
-    minify: options.mode === "production",
-    entryNames: "[dir]/[name]-[hash]",
-    chunkNames: "_shared/[name]-[hash]",
-    assetNames: "_assets/[name]-[hash]",
-    publicPath: config.publicPath,
-    define: {
-      "process.env.NODE_ENV": JSON.stringify(options.mode),
-      "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-        config.devServerPort
-      ),
-    },
-    jsx: "automatic",
-    jsxDev: options.mode !== "production",
-    plugins,
-  });
-}
-
-function createServerBuild(
-  config: RemixConfig,
-  options: BuildOptions & { incremental?: boolean },
-  assetsManifestPromiseRef: AssetsManifestPromiseRef
-): Promise<esbuild.BuildResult> {
-  let stdin: esbuild.StdinOptions | undefined;
-  let entryPoints: string[] | undefined;
-
-  if (config.serverEntryPoint) {
-    entryPoints = [config.serverEntryPoint];
-  } else {
-    stdin = {
-      contents: config.serverBuildTargetEntryModule,
-      resolveDir: config.rootDirectory,
-      loader: "ts",
-    };
-  }
-
-  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
-    config.serverBuildTarget ?? ""
-  );
-  let isDenoRuntime = config.serverBuildTarget === "deno";
-
-  let plugins: esbuild.Plugin[] = [
-    cssFilePlugin(options),
-    urlImportsPlugin(),
-    mdxPlugin(config),
-    emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
-    serverRouteModulesPlugin(config),
-    serverEntryModulePlugin(config),
-    serverAssetsManifestPlugin(assetsManifestPromiseRef),
-    serverBareModulesPlugin(config, options.onWarning),
-    yarnPnpPlugin(),
-  ];
-
-  if (config.serverPlatform !== "node") {
-    plugins.unshift(NodeModulesPolyfillPlugin());
-  }
-
-  return esbuild
-    .build({
-      absWorkingDir: config.rootDirectory,
-      stdin,
-      entryPoints,
-      outfile: config.serverBuildPath,
-      write: false,
-      conditions: isCloudflareRuntime
-        ? ["worker"]
-        : isDenoRuntime
-        ? ["deno", "worker"]
-        : undefined,
-      platform: config.serverPlatform,
-      format: config.serverModuleFormat,
-      treeShaking: true,
-      // The type of dead code elimination we want to do depends on the
-      // minify syntax property: https://github.com/evanw/esbuild/issues/672#issuecomment-1029682369
-      // Dev builds are leaving code that should be optimized away in the
-      // bundle causing server / testing code to be shipped to the browser.
-      // These are properly optimized away in prod builds today, and this
-      // PR makes dev mode behave closer to production in terms of dead
-      // code elimination / tree shaking is concerned.
-      minifySyntax: true,
-      minify: options.mode === "production" && isCloudflareRuntime,
-      mainFields: isCloudflareRuntime
-        ? ["browser", "module", "main"]
-        : config.serverModuleFormat === "esm"
-        ? ["module", "main"]
-        : ["main", "module"],
-      target: options.target,
-      loader: loaders,
-      bundle: true,
-      logLevel: "silent",
-      // As pointed out by https://github.com/evanw/esbuild/issues/2440, when tsconfig is set to
-      // `undefined`, esbuild will keep looking for a tsconfig.json recursively up. This unwanted
-      // behavior can only be avoided by creating an empty tsconfig file in the root directory.
-      tsconfig: config.tsconfigPath,
-      incremental: options.incremental,
-      sourcemap: options.sourcemap, // use linked (true) to fix up .map file
-      // The server build needs to know how to generate asset URLs for imports
-      // of CSS and other files.
-      assetNames: "_assets/[name]-[hash]",
-      publicPath: config.publicPath,
-      define: {
-        "process.env.NODE_ENV": JSON.stringify(options.mode),
-        "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
-          config.devServerPort
-        ),
-      },
-      jsx: "automatic",
-      jsxDev: options.mode !== "production",
-      plugins,
-    })
-    .then(async (build) => {
-      await writeServerBuildResult(config, build.outputFiles);
-      return build;
-    });
-}
-
 async function generateAssetsManifest(
   config: RemixConfig,
   metafile: esbuild.Metafile
@@ -495,35 +310,4 @@ async function generateAssetsManifest(
   );
 
   return assetsManifest;
-}
-
-async function writeServerBuildResult(
-  config: RemixConfig,
-  outputFiles: esbuild.OutputFile[]
-) {
-  await fse.ensureDir(path.dirname(config.serverBuildPath));
-
-  for (let file of outputFiles) {
-    if (file.path.endsWith(".js")) {
-      // fix sourceMappingURL to be relative to current path instead of /build
-      let filename = file.path.substring(file.path.lastIndexOf(path.sep) + 1);
-      let escapedFilename = filename.replace(/\./g, "\\.");
-      let pattern = `(//# sourceMappingURL=)(.*)${escapedFilename}`;
-      let contents = Buffer.from(file.contents).toString("utf-8");
-      contents = contents.replace(new RegExp(pattern), `$1${filename}`);
-      await fse.writeFile(file.path, contents);
-    } else if (file.path.endsWith(".map")) {
-      // remove route: prefix from source filenames so breakpoints work
-      let contents = Buffer.from(file.contents).toString("utf-8");
-      contents = contents.replace(/"route:/gm, '"');
-      await fse.writeFile(file.path, contents);
-    } else {
-      let assetPath = path.join(
-        config.assetsBuildDirectory,
-        file.path.replace(path.dirname(config.serverBuildPath), "")
-      );
-      await fse.ensureDir(path.dirname(assetPath));
-      await fse.writeFile(assetPath, file.contents);
-    }
-  }
 }
