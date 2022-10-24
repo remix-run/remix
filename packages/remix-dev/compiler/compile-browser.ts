@@ -14,19 +14,13 @@ import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
 
-///////////////////////////////////////////////////////////////////////////////
-
-export async function createBrowserBuild(
-  config: RemixConfig,
-  options: BuildOptions & { incremental?: boolean }
-): Promise<esbuild.BuildResult> {
+const getExternals = (remixConfig: RemixConfig): string[] => {
   // For the browser build, exclude node built-ins that don't have a
   // browser-safe alternative installed in node_modules. Nothing should
   // *actually* be external in the browser build (we want to bundle all deps) so
   // this is really just making sure we don't accidentally have any dependencies
   // on node built-ins in browser bundles.
-  let dependencies = Object.keys(getAppDependencies(config));
-  let externals = nodeBuiltins.filter((mod) => !dependencies.includes(mod));
+  let dependencies = Object.keys(getAppDependencies(remixConfig));
   let fakeBuiltins = nodeBuiltins.filter((mod) => dependencies.includes(mod));
 
   if (fakeBuiltins.length > 0) {
@@ -36,7 +30,13 @@ export async function createBrowserBuild(
       )} before continuing.`
     );
   }
+  return nodeBuiltins.filter((mod) => !dependencies.includes(mod));
+};
 
+export async function createBrowserBuild(
+  config: RemixConfig,
+  options: BuildOptions & { incremental?: boolean }
+): Promise<esbuild.BuildResult> {
   let entryPoints: esbuild.BuildOptions["entryPoints"] = {
     "entry.client": path.resolve(config.appDirectory, config.entryClientFile),
   };
@@ -62,7 +62,7 @@ export async function createBrowserBuild(
     outdir: config.assetsBuildDirectory,
     platform: "browser",
     format: "esm",
-    external: externals,
+    external: getExternals(config),
     loader: loaders,
     bundle: true,
     logLevel: "silent",
