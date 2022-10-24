@@ -12,7 +12,7 @@ import type { createApp as createAppType } from "@remix-run/serve";
 import getPort, { makeRange } from "get-port";
 import * as esbuild from "esbuild";
 
-import { BuildMode, isBuildMode } from "../build";
+import { parseMode } from "../build";
 import * as colors from "../colors";
 import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
@@ -148,11 +148,11 @@ export async function build(
   modeArg?: string,
   sourcemap: boolean = false
 ): Promise<void> {
-  let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Production;
+  let mode = parseMode(modeArg, "production");
 
   log(`Building Remix app in ${mode} mode...`);
 
-  if (modeArg === BuildMode.Production && sourcemap) {
+  if (modeArg === "production" && sourcemap) {
     console.warn(
       "\n⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️"
     );
@@ -171,7 +171,7 @@ export async function build(
   let config = await readConfig(remixRoot);
   fse.emptyDirSync(config.assetsBuildDirectory);
   await compiler.build(config, {
-    mode: mode,
+    mode,
     sourcemap,
     onBuildFailure: (failure: compiler.BuildError) => {
       compiler.formatBuildFailure(failure);
@@ -193,7 +193,7 @@ export async function watch(
   callbacks?: WatchCallbacks
 ): Promise<void> {
   let { onInitialBuild, onRebuildStart } = callbacks || {};
-  let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
+  let mode = parseMode(modeArg, "development");
   console.log(`Watching Remix app in ${mode} mode...`);
 
   let start = Date.now();
@@ -278,7 +278,7 @@ export async function dev(
   }
 
   let config = await readConfig(remixRoot);
-  let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
+  let mode = parseMode(modeArg, "development");
 
   await loadEnv(config.rootDirectory);
 

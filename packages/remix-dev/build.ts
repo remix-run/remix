@@ -1,33 +1,29 @@
-export enum BuildMode {
-  Development = "development",
-  Production = "production",
-  Test = "test",
-}
+import type * as esbuild from "esbuild";
 
-export function isBuildMode(mode: any): mode is BuildMode {
-  return (
-    mode === BuildMode.Development ||
-    mode === BuildMode.Production ||
-    mode === BuildMode.Test
-  );
-}
+const modes = ["development", "production", "test"] as const;
 
-export enum BuildTarget {
-  Browser = "browser", // TODO: remove
-  Server = "server", // TODO: remove
-  CloudflareWorkers = "cloudflare-workers",
-  Node14 = "node14",
-}
+type Mode = typeof modes[number];
 
-export function isBuildTarget(target: any): target is BuildTarget {
-  return (
-    target === BuildTarget.Browser ||
-    target === BuildTarget.Server ||
-    target === BuildTarget.Node14
-  );
-}
+export const parseMode = (raw: string, fallback?: Mode): Mode => {
+  if ((modes as readonly string[]).includes(raw)) {
+    return raw as Mode;
+  }
+  if (!fallback) {
+    throw Error(`Unrecognized mode: '${raw}'`);
+  }
+  return fallback;
+};
 
-export interface BuildOptions {
-  mode: BuildMode;
-  target: BuildTarget;
-}
+type Target =
+  | "browser" // TODO: remove
+  | "server" // TODO: remove
+  | "cloudflare-workers"
+  | "node14";
+
+export type BuildOptions = {
+  mode: Mode;
+  target: Target;
+  sourcemap: boolean;
+  onWarning?: (message: string, key: string) => void;
+  onBuildFailure?: (failure: Error | esbuild.BuildFailure) => void;
+};

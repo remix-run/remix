@@ -7,7 +7,7 @@ import chokidar from "chokidar";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
 
-import { BuildMode, BuildTarget } from "./build";
+import type { BuildOptions } from "./build";
 import type { RemixConfig } from "./config";
 import { readConfig } from "./config";
 import { warnOnce } from "./compiler/warnings";
@@ -26,12 +26,6 @@ import { serverRouteModulesPlugin } from "./compiler/plugins/serverRouteModulesP
 import { cssFilePlugin } from "./compiler/plugins/cssFilePlugin";
 import { writeFileSafe } from "./compiler/utils/fs";
 import { urlImportsPlugin } from "./compiler/plugins/urlImportsPlugin";
-
-export interface BuildConfig {
-  mode: BuildMode;
-  target: BuildTarget;
-  sourcemap: boolean;
-}
 
 function defaultWarningHandler(message: string, key: string) {
   warnOnce(message, key);
@@ -64,20 +58,15 @@ export function formatBuildFailure(failure: BuildError) {
   console.error(failure?.message || "An unknown build error occurred");
 }
 
-interface BuildOptions extends Partial<BuildConfig> {
-  onWarning?(message: string, key: string): void;
-  onBuildFailure?(failure: Error | esbuild.BuildFailure): void;
-}
-
 export async function build(
   config: RemixConfig,
   {
-    mode = BuildMode.Production,
-    target = BuildTarget.Node14,
+    mode = "production",
+    target = "node14",
     sourcemap = false,
     onWarning = defaultWarningHandler,
     onBuildFailure = defaultBuildFailureHandler,
-  }: BuildOptions = {}
+  }: Partial<BuildOptions> = {}
 ): Promise<void> {
   let assetsManifestPromiseRef: AssetsManifestPromiseRef = {};
 
@@ -90,20 +79,20 @@ export async function build(
   });
 }
 
-interface WatchOptions extends BuildOptions {
+type WatchOptions = Partial<BuildOptions> & {
   onRebuildStart?(): void;
   onRebuildFinish?(): void;
   onFileCreated?(file: string): void;
   onFileChanged?(file: string): void;
   onFileDeleted?(file: string): void;
   onInitialBuild?(): void;
-}
+};
 
 export async function watch(
   config: RemixConfig,
   {
-    mode = BuildMode.Development,
-    target = BuildTarget.Node14,
+    mode = "development",
+    target = "node14",
     sourcemap = true,
     onWarning = defaultWarningHandler,
     onBuildFailure = defaultBuildFailureHandler,
@@ -288,7 +277,7 @@ function isEntryPoint(config: RemixConfig, file: string) {
 async function buildEverything(
   config: RemixConfig,
   assetsManifestPromiseRef: AssetsManifestPromiseRef,
-  options: Required<BuildOptions> & { incremental?: boolean }
+  options: BuildOptions & { incremental?: boolean }
 ): Promise<(esbuild.BuildResult | undefined)[]> {
   try {
     let browserBuildPromise = createBrowserBuild(config, options);
@@ -311,7 +300,7 @@ async function buildEverything(
       serverBuildPromise,
     ]);
   } catch (err) {
-    options.onBuildFailure(err as Error);
+    options.onBuildFailure?.(err as Error);
     return [undefined, undefined];
   }
 }
@@ -376,7 +365,7 @@ async function createBrowserBuild(
     tsconfig: config.tsconfigPath,
     mainFields: ["browser", "module", "main"],
     treeShaking: true,
-    minify: options.mode === BuildMode.Production,
+    minify: options.mode === "production",
     entryNames: "[dir]/[name]-[hash]",
     chunkNames: "_shared/[name]-[hash]",
     assetNames: "_assets/[name]-[hash]",
@@ -388,14 +377,14 @@ async function createBrowserBuild(
       ),
     },
     jsx: "automatic",
-    jsxDev: options.mode !== BuildMode.Production,
+    jsxDev: options.mode !== "production",
     plugins,
   });
 }
 
 function createServerBuild(
   config: RemixConfig,
-  options: Required<BuildOptions> & { incremental?: boolean },
+  options: BuildOptions & { incremental?: boolean },
   assetsManifestPromiseRef: AssetsManifestPromiseRef
 ): Promise<esbuild.BuildResult> {
   let stdin: esbuild.StdinOptions | undefined;
@@ -455,7 +444,7 @@ function createServerBuild(
       // PR makes dev mode behave closer to production in terms of dead
       // code elimination / tree shaking is concerned.
       minifySyntax: true,
-      minify: options.mode === BuildMode.Production && isCloudflareRuntime,
+      minify: options.mode === "production" && isCloudflareRuntime,
       mainFields: isCloudflareRuntime
         ? ["browser", "module", "main"]
         : config.serverModuleFormat === "esm"
@@ -482,7 +471,7 @@ function createServerBuild(
         ),
       },
       jsx: "automatic",
-      jsxDev: options.mode !== BuildMode.Production,
+      jsxDev: options.mode !== "production",
       plugins,
     })
     .then(async (build) => {
