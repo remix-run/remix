@@ -197,17 +197,30 @@ This has been a long time coming - see https://github.com/remix-run/remix/discus
 
 ### No distinction between Error and Catch boundaries
 
-**TODO:** Ryan to fill in some more details here.
+The differentiation between error and catch proved to be a bit vague over time and a source of confusion for developers. We chose to go with just a single `errorElement` in the router for simplicity. If you throw anything, it ends up in the error boundary (available via `useRouteError`) and propagates accordingly. With this approach we leave the control in the developers hands and it's easy to maintain a similar split if desired:
 
-The differentiation between error and catch proved to be a bit vague over time and a source of confusion for developers. We chose to go with just a single `errorElement` in the router for simplicity. If you throw anything, it ends up in the error boundary and propagates accordingly.
+```jsx
+function NewErrorBoundary() {
+  let error = useRouteError();
+
+  if (error instanceof Response) {
+    return <MyOldCatchBoudnary error={error} />;
+  } else {
+    return <MyOldErrorBoundary error={error} />;
+  }
+}
+```
 
 **Backwards Compatibility**
 
-We have a few options here. In all cases, Remix v1 will provide an `errorElement` implementation that will need to do some forking to maintain backwards compatibility.
+We have a few options here. In all cases, Remix v1 will provide an internal `errorElement` implementation that will need to do some forking to maintain backwards compatibility.
 
 1. We could introduce a new `ErrorComponent` in Remix v1 and deprecate `ErrorBoundary`/`CatchBoundary` (and eventually drop them in v2)
    1. Chose this over `ErrorElement` since the thing being exported has not been through `React.createElement`
 2. We could maintain the same behavior of `ErrorBoundary`/`CatchBoundary` in v1 and plan to drop` CatchBoundary` in v2 and send everything to `ErrorBoundary`
+3. Keep the name `ErrorBoundary` and introduce a flag in `remix.config.js` to opt into the new behavior where all errors go to the `ErrorBoundary` and Remix stops separating them out to the catch boundary
+
+The current favorite is likely option 3, which keeps the most semantic naming for Remix v2 while allowing users to start migrating to the new behavior in v1, thus easing their eventual upgrade to Remix v2.
 
 ### `Request.signal` instead of `signal` param
 
