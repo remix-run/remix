@@ -54,6 +54,23 @@ test.beforeAll(async () => {
           return <h1>Foo</h1>;
         }
       `,
+      "app/routes/nested/__pathless2.jsx": js`
+        import { Outlet } from "@remix-run/react";
+
+        export default function Layout() {
+          return (
+            <>
+              <div>Pathless 2 Layout</div>
+              <Outlet />
+            </>
+          );
+        }
+      `,
+      "app/routes/nested/__pathless2/bar.jsx": js`
+        export default function Bar() {
+          return <h1>Bar</h1>;
+        }
+      `,
     },
   });
 
@@ -100,6 +117,16 @@ function runTests() {
     expect(await app.getHtml()).not.toMatch("Index");
     expect(await app.getHtml()).toMatch("Pathless Layout");
     expect(await app.getHtml()).toMatch("Foo");
+    expect(await app.getHtml()).toMatch("Number of matches: 3");
+  });
+
+  // This also asserts that we support multiple sibling pathless route layouts
+  test("displays page inside of second pathless layout", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/nested/bar");
+    expect(await app.getHtml()).not.toMatch("Index");
+    expect(await app.getHtml()).toMatch("Pathless 2 Layout");
+    expect(await app.getHtml()).toMatch("Bar");
     expect(await app.getHtml()).toMatch("Number of matches: 3");
   });
 }
