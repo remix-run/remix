@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.7.3
+
+### Patch Changes
+
+- Ensure that `<Form />` respects the `formMethod` attribute set on the submitter element ([#4053](https://github.com/remix-run/remix/pull/4053))
+
 ## 1.7.2
 
 ### Patch Changes

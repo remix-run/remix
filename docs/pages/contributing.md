@@ -92,7 +92,8 @@ Alternatively, you can run a project completely independently by `cd`-ing into t
 
 ### Docs + Examples
 
-All commits that change or add to the API must be done in a pull request that also updates all relevant examples and docs.
+All commits that change or add to the API must be done in a pull request that also updates all relevant docs.
+If this change also impact our [examples][examples-repository], a subsequent pull request to that repository will be appreciated as well.
 
 ## Development
 
@@ -152,6 +153,7 @@ Nightly releases will run the action files from the `main` branch as scheduled w
 For every release of Remix (stable, experimental, nightly, and pre-releases), we will do a complete end-to-end test of Remix apps on each of our official adapters from `create-remix`, all the way to deploying them to production. We do this by by utilizing the default [templates][templates] and the CLIs for Fly, Vercel, Netlify, and Arc. We'll then run some simple Cypress assertions to make sure everything is running properly for both development and the deployed app.
 
 [cla]: https://github.com/remix-run/remix/blob/main/CLA.md
+[examples-repository]: https://github.com/remix-run/examples
 [this-page]: https://github.com/remix-run/remix
 [yarn-version-1]: https://classic.yarnpkg.com/lang/en/docs/install
 [integration-bug-report-test-ts]: https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts

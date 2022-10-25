@@ -2489,15 +2489,16 @@
     "@remix-run/web-stream" "^1.0.0"
     web-encoding "1.1.5"
 
-"@remix-run/web-fetch@^4.3.0":
-  version "4.3.0"
-  resolved "https://registry.npmjs.org/@remix-run/web-fetch/-/web-fetch-4.3.0.tgz#8990c58352ecefed2ea32e13a924c4cc0d7d7328"
-  integrity sha512-//VynoWVu/hocB0TWfoUZdg6Yy/320cO4r0dN/eZUSM5/rLUGEy+NqAykyY8GKHjYYZimw96kRMFa3aQbwmp8g==
+"@remix-run/web-fetch@^4.3.1":
+  version "4.3.1"
+  resolved "https://registry.npmjs.org/@remix-run/web-fetch/-/web-fetch-4.3.1.tgz#afc88e133bed1a6aecb9d09b1b02127fc844da47"
+  integrity sha512-TOpuJo3jI7/qJAY0yTnvNJRQl4hlWAOHUHYKAbEddcLFLydv+0/WGT6OaIurJKsBFJJTjooe3FbKiP74sUIB/g==
   dependencies:
     "@remix-run/web-blob" "^3.0.4"
     "@remix-run/web-form-data" "^3.0.3"
     "@remix-run/web-stream" "^1.0.3"
     "@web3-storage/multipart-parser" "^1.0.0"
+    abort-controller "^3.0.0"
     data-uri-to-buffer "^3.0.1"
     mrmime "^1.0.0"
 

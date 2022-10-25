@@ -1,5 +1,13 @@
 # `@remix-run/netlify`
 
+## 1.7.3
+
+### Patch Changes
+
+- Fixed a bug that affected `.wav` and `.webm` audio file imports ([#4290](https://github.com/remix-run/remix/pull/4290))
+- Updated dependencies:
+  - `@remix-run/node@1.7.3`
+
 ## 1.7.2
 
 ### Patch Changes
