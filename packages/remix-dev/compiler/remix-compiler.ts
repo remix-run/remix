@@ -1,9 +1,9 @@
-import { type BuildOptions } from "../build";
 import { type RemixConfig } from "../config";
 import { type AssetsManifest } from "./assets";
 import { type BrowserCompiler, createBrowserCompiler } from "./compile-browser";
 import { type ServerCompiler, createServerCompiler } from "./compile-server";
 import { type OnCompileFailure } from "./on-compile-failure";
+import { type CompileOptions } from "./options";
 import { createChannel } from "./utils/channel";
 
 type RemixCompiler = {
@@ -13,7 +13,7 @@ type RemixCompiler = {
 
 export const createRemixCompiler = (
   remixConfig: RemixConfig,
-  options: BuildOptions
+  options: CompileOptions
 ): RemixCompiler => {
   return {
     browser: createBrowserCompiler(remixConfig, options),

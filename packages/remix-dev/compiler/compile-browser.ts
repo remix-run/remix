@@ -4,11 +4,11 @@ import * as esbuild from "esbuild";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
 
-import { type BuildOptions } from "../build";
 import { type RemixConfig } from "../config";
 import { createAssetsManifest, type AssetsManifest } from "./assets";
 import { getAppDependencies } from "./dependencies";
 import { loaders } from "./loaders";
+import { type CompileOptions } from "./options";
 import { browserRouteModulesPlugin } from "./plugins/browserRouteModulesPlugin";
 import { cssFilePlugin } from "./plugins/cssFilePlugin";
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
@@ -58,7 +58,7 @@ const writeAssetsManifest = async (
 
 const createEsbuildConfig = (
   config: RemixConfig,
-  options: BuildOptions
+  options: CompileOptions
 ): esbuild.BuildOptions | esbuild.BuildIncremental => {
   let entryPoints: esbuild.BuildOptions["entryPoints"] = {
     "entry.client": path.resolve(config.appDirectory, config.entryClientFile),
@@ -116,7 +116,7 @@ const createEsbuildConfig = (
 
 export const createBrowserCompiler = (
   remixConfig: RemixConfig,
-  options: BuildOptions
+  options: CompileOptions
 ): BrowserCompiler => {
   let compiler: esbuild.BuildIncremental;
   let esbuildConfig = createEsbuildConfig(remixConfig, options);

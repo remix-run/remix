@@ -4,10 +4,10 @@ import * as fse from "fs-extra";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
 
-import { type BuildOptions } from "../build";
 import { type RemixConfig } from "../config";
 import { type AssetsManifest } from "./assets";
 import { loaders } from "./loaders";
+import { type CompileOptions } from "./options";
 import { cssFilePlugin } from "./plugins/cssFilePlugin";
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
@@ -27,7 +27,7 @@ export type ServerCompiler = {
 const createEsbuildConfig = (
   config: RemixConfig,
   assetsManifestChannel: ReadChannel<AssetsManifest>,
-  options: BuildOptions
+  options: CompileOptions
 ): esbuild.BuildOptions => {
   let stdin: esbuild.StdinOptions | undefined;
   let entryPoints: string[] | undefined;
@@ -148,7 +148,7 @@ async function writeServerBuildResult(
 
 export const createServerCompiler = (
   remixConfig: RemixConfig,
-  options: BuildOptions
+  options: CompileOptions
 ): ServerCompiler => {
   let compile = async (manifestChannel: ReadChannel<AssetsManifest>) => {
     let esbuildConfig = createEsbuildConfig(

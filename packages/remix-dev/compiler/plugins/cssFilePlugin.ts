@@ -2,8 +2,8 @@ import * as path from "path";
 import * as fse from "fs-extra";
 import esbuild from "esbuild";
 
-import type { BuildOptions } from "../../build";
 import invariant from "../../invariant";
+import { type CompileOptions } from "../options";
 
 const isExtendedLengthPath = /^\\\\\?\\/;
 
@@ -16,7 +16,7 @@ function normalizePathSlashes(p: string) {
  * and exports the url of the css file as its default export.
  */
 export function cssFilePlugin(options: {
-  mode: BuildOptions["mode"];
+  mode: CompileOptions["mode"];
 }): esbuild.Plugin {
   return {
     name: "css-file",

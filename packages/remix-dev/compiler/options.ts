@@ -20,7 +20,7 @@ type Target =
   | "cloudflare-workers"
   | "node14";
 
-export type BuildOptions = {
+export type CompileOptions = {
   mode: Mode;
   target: Target;
   sourcemap: boolean;
