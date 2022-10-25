@@ -107,7 +107,7 @@ We plan to remain backwards compatible here in Remix. Very likely we'll expose t
 
 Functionally, these two bits of code are identical, with the only difference being that in the `<form>` case you let the user determine the query value.
 
-```jsx
+```html
 <a href="/search?query=matt">Search</a>
 
 <form action="/search">
@@ -166,13 +166,13 @@ function shouldRevalidate({ defaultShouldRevalidate }) {
 
 ### `<ScrollRestoration getKey>` prop
 
-In Remix, the `<ScrollRestoration>` component made an assumption that we would always restore scroll position based on `location.key`. If the key was the same as a prior location we knew the scroll position for, then we knew you had been there before and we should restore. This works great for back/forward navigations but it's a bit overly restrictive. You cannot choose to restore scroll based on anything other than `key`. 
+In Remix, the `<ScrollRestoration>` component made an assumption that we would always restore scroll position based on `location.key`. If the key was the same as a prior location we knew the scroll position for, then we knew you had been there before and we should restore. This works great for back/forward navigations but it's a bit overly restrictive. You cannot choose to restore scroll based on anything other than `key`.
 
 Twitter has a great implementation of this as you click around in their left nav bar - your tweet feed is always at the same place when you click back to it - even though it's a _new_ location in the history stack. This is because they're restoring by pathname here instead of `location.key`. Or maybe you want to maintain scroll position for all routes under a given pathname and you thus want to use a portion of the pathname as the scroll restoration key.
 
 In React Router we now accept an optional `<ScrollRestoration getKey>` prop where you provide a function that returns the key to use for scroll restoration:
 
-```js
+```ts
 function getKey(location: Location, matches: DataRouteMatch[]) {
   // Restore by pathname on /tweets
   if (location.pathname === "/tweets") {
@@ -233,24 +233,32 @@ Instead, we lifted the singleton out into user-land, so that they create the rou
 
 ```jsx
 // Before
-function App() {
-  <DataBrowserRouter>
-    <Route path="/" element={<Layout />}>
-      <Route index element={<Home />}>
-    </Route>
-  <DataBrowserRouter>
+function OldApp() {
+  return (
+    <DataBrowserRouter>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<Home />} />
+      </Route>
+    </DataBrowserRouter>
+  );
 }
-// After
-let router = createBrowserRouter([{
-  path: "/",
-  element: <Layout />,
-  children: [{
-    index: true,
-    element: <Home />,
-  }]
-}]);
-function App() {
-  return <RouterProvider router={router} />
+
+//After
+let router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    children: [
+      {
+        index: true,
+        element: <Home />,
+      },
+    ],
+  },
+]);
+
+function NewApp() {
+  return <RouterProvider router={router} />;
 }
 ```
 
@@ -259,12 +267,13 @@ If folks still prefer the JSX notation, they can leverage `createRoutesFromEleme
 ```jsx
 let routes = createRoutesFromElements(
   <Route path="/" element={<Layout />}>
-    <Route index element={<Home />}>
+    <Route index element={<Home />} />
   </Route>
 );
 let router = createBrowserRouter(routes);
+
 function App() {
-  return <RouterProvider router={router} />
+  return <RouterProvider router={router} />;
 }
 ```
 
