@@ -98,7 +98,6 @@ const createEsbuildConfig = (
     // `undefined`, esbuild will keep looking for a tsconfig.json recursively up. This unwanted
     // behavior can only be avoided by creating an empty tsconfig file in the root directory.
     tsconfig: config.tsconfigPath,
-    incremental: options.incremental,
     sourcemap: options.sourcemap, // use linked (true) to fix up .map file
     // The server build needs to know how to generate asset URLs for imports
     // of CSS and other files.
