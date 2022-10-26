@@ -16,7 +16,7 @@ Status: accepted
     - [Form automatic replace behavior](#form-automatic-replace-behavior)
     - [`unstable_shouldReload` stabilized as `shouldRevalidate`](#unstable_shouldreload-stabilized-as-shouldrevalidate)
     - [`<ScrollRestoration getKey>` prop](#scrollrestoration-getkey-prop)
-    - [`<Link resetScroll="false">` prop](#link-resetscrollfalse-prop)
+    - [`<Link preventScrollReset>` prop](#link-preventscrollreset-prop)
     - [`useRevalidator()` hook](#userevalidator-hook)
     - [No distinction between Error and Catch boundaries](#no-distinction-between-error-and-catch-boundaries)
     - [`Request.signal` instead of `signal` param](#requestsignal-instead-of-signal-param)
@@ -187,9 +187,9 @@ function getKey(location: Location, matches: DataRouteMatch[]) {
 
 We're ok here since the new prop is optional and defaults to using `location.key`
 
-### `<Link resetScroll="false">` prop
+### `<Link preventScrollReset>` prop
 
-In addition to `<ScrollRestoration>` handling "restoring" scroll position on previously visited routes. It also handles "resetting" scroll position back to the top on _new_ routes. This is not always desirable if you're clicking around inside a tabbed view or something, so we've introduced a new `<Link resetScroll>` prop that lets you disable the scroll reset behavior _for a given navigation_. Note that this "resetting" logic happens if and only if we cannot restore scroll to a previously known location for that scroll restoration key.
+In addition to `<ScrollRestoration>` handling "restoring" scroll position on previously visited routes. It also handles "resetting" scroll position back to the top on _new_ routes. This is not always desirable if you're clicking around inside a tabbed view or something, so we've introduced a new `<Link preventScrollReset>` prop that lets you disable the scroll reset behavior _for a given navigation_. Note that this "resetting" logic happens if and only if we cannot restore scroll to a previously known location for that scroll restoration key.
 
 ### `useRevalidator()` hook
 
