@@ -12,7 +12,6 @@ import type { createApp as createAppType } from "@remix-run/serve";
 import getPort, { makeRange } from "get-port";
 import * as esbuild from "esbuild";
 
-import { parseMode } from "../compiler/options";
 import * as colors from "../colors";
 import * as compiler from "../compiler";
 import type { RemixConfig } from "../config";
@@ -148,7 +147,7 @@ export async function build(
   modeArg?: string,
   sourcemap: boolean = false
 ): Promise<void> {
-  let mode = parseMode(modeArg, "production");
+  let mode = compiler.parseMode(modeArg ?? "", "production");
 
   log(`Building Remix app in ${mode} mode...`);
 
@@ -173,8 +172,8 @@ export async function build(
   await compiler.build(config, {
     mode,
     sourcemap,
-    onBuildFailure: (failure: compiler.BuildError) => {
-      compiler.formatBuildFailure(failure);
+    onBuildFailure: (failure) => {
+      compiler.logCompileFailure(failure);
       throw Error();
     },
   });
@@ -193,7 +192,7 @@ export async function watch(
   callbacks?: WatchCallbacks
 ): Promise<void> {
   let { onInitialBuild, onRebuildStart } = callbacks || {};
-  let mode = parseMode(modeArg, "development");
+  let mode = compiler.parseMode(modeArg ?? "", "development");
   console.log(`Watching Remix app in ${mode} mode...`);
 
   let start = Date.now();
@@ -278,7 +277,7 @@ export async function dev(
   }
 
   let config = await readConfig(remixRoot);
-  let mode = parseMode(modeArg, "development");
+  let mode = compiler.parseMode(modeArg ?? "", "development");
 
   await loadEnv(config.rootDirectory);
 
