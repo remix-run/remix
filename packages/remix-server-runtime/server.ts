@@ -264,6 +264,30 @@ async function handleDataRequestRR(
   routeId: string,
   request: Request
 ) {
+  // let url = new URL(request.url);
+  // Match existing no-match behavior
+  // if (!matches) {
+  //   return errorBoundaryError(
+  //     new Error(`No route matches URL "${url.pathname}"`),
+  //     404
+  //   );
+  // }
+
+  // let match = matches.find((match) => match.route.id === routeId);
+
+  // if (isActionRequest(request) && !match?.route?.module?.action) {
+  //   return new Response(null, {
+  //     status: 405,
+  //     statusText: "Method Not Allowed",
+  //     headers: { "X-Remix-Catch": "yes" },
+  //   });
+  // } else if (!match) {
+  //   return errorBoundaryError(
+  //     new Error(`Route "${routeId}" does not match URL "${url.pathname}"`),
+  //     403
+  //   );
+  // }
+
   try {
     let response = await staticHandler.queryRoute(request, routeId);
 
@@ -296,6 +320,26 @@ async function handleDataRequestRR(
         error.headers.delete("X-Remix-Router-Error");
         error.headers.set("X-Remix-Catch", "yes");
       }
+
+      // let isInternalError = error.headers.get("X-Remix-Router-Error") === "yes";
+      // error.headers.delete("X-Remix-Router-Error");
+
+      // if (!isInternalError) {
+      //   error.headers.set("X-Remix-Error", "yes");
+      // } else if (
+      //   error.status === 404 &&
+      //   (request.method === "GET" || request.method === "HEAD")
+      // ) {
+      //   let url = new URL(request.url);
+      //   return errorBoundaryError(
+      //     new Error(`Route "${routeId}" does not match URL "${url.pathname}"`),
+      //     404
+      //   );
+      // } else if (error.status === 404) {
+      //   error.headers.set("X-Remix-Catch", "yes");
+      // } else {
+      //   error.headers.set("X-Remix-Catch", "yes");
+      // }
 
       return error;
     }
@@ -806,6 +850,8 @@ async function handleDocumentRequest({
   }
 }
 
+// TODO: Check on error in Remix if a loader returns undefined
+
 async function handleResourceRequestRR(
   serverMode: ServerMode,
   staticHandler: StaticHandler,
@@ -813,6 +859,7 @@ async function handleResourceRequestRR(
   request: Request
 ) {
   try {
+    // TODO remove routeId here and no need to match above for new flow
     let response = await staticHandler.queryRoute(request, routeId);
     // Remix should always be returning responses from loaders and actions
     invariant(
