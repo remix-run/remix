@@ -1,25 +1,26 @@
-import * as path from "path";
-import type * as esbuild from "esbuild";
-import debounce from "lodash.debounce";
 import chokidar from "chokidar";
+import debounce from "lodash.debounce";
+import * as path from "path";
 
-import type { BuildOptions } from "./build";
-import type { RemixConfig } from "./config";
-import { readConfig } from "./config";
-import { warnOnce } from "./compiler/warnings";
-import type { AssetsManifest } from "./compiler/assets";
-import { createAssetsManifest } from "./compiler/assets";
-import type { AssetsManifestPromiseRef } from "./compiler/plugins/serverAssetsManifestPlugin";
-import { writeFileSafe } from "./compiler/utils/fs";
-import {
-  createServerBuild,
-  writeServerBuildResult,
-} from "./compiler/compile-server";
-import { createBrowserBuild } from "./compiler/compile-browser";
+import { type RemixConfig, readConfig } from "../config";
+import { logCompileFailure } from "./on-compile-failure";
+import { type CompileOptions } from "./options";
+import { compile, createRemixCompiler, dispose } from "./remix-compiler";
+import { warnOnce } from "./warnings";
 
-type WatchOptions = Partial<BuildOptions> & {
+function isEntryPoint(config: RemixConfig, file: string): boolean {
+  let appFile = path.relative(config.appDirectory, file);
+  let entryPoints = [
+    config.entryClientFile,
+    config.entryServerFile,
+    ...Object.values(config.routes).map((route) => route.file),
+  ];
+  return entryPoints.includes(appFile);
+}
+
+type WatchOptions = Partial<CompileOptions> & {
   onRebuildStart?(): void;
-  onRebuildFinish?(): void;
+  onRebuildFinish?(durationMs: number): void;
   onFileCreated?(file: string): void;
   onFileChanged?(file: string): void;
   onFileDeleted?(file: string): void;
@@ -32,8 +33,8 @@ export async function watch(
     mode = "development",
     target = "node14",
     sourcemap = true,
-    onWarning = defaultWarningHandler,
-    onBuildFailure = defaultBuildFailureHandler,
+    onWarning = warnOnce,
+    onBuildFailure = logCompileFailure,
     onRebuildStart,
     onRebuildFinish,
     onFileCreated,
@@ -42,102 +43,42 @@ export async function watch(
     onInitialBuild,
   }: WatchOptions = {}
 ): Promise<() => Promise<void>> {
-  let options = {
+  let options: CompileOptions = {
     mode,
     target,
     sourcemap,
     onBuildFailure,
     onWarning,
-    incremental: true,
   };
 
-  let assetsManifestPromiseRef: AssetsManifestPromiseRef = {};
-  let [browserBuild, serverBuild] = await buildEverything(
-    config,
-    assetsManifestPromiseRef,
-    options
-  );
+  let compiler = createRemixCompiler(config, options);
 
-  let initialBuildComplete = !!browserBuild && !!serverBuild;
-  if (initialBuildComplete) {
-    onInitialBuild?.();
-  }
+  // initial build
+  await compile(compiler);
+  onInitialBuild?.();
 
-  function disposeBuilders() {
-    browserBuild?.rebuild?.dispose();
-    serverBuild?.rebuild?.dispose();
-    browserBuild = undefined;
-    serverBuild = undefined;
-  }
+  let restart = debounce(async () => {
+    onRebuildStart?.();
+    let start = Date.now();
+    dispose(compiler);
 
-  let restartBuilders = debounce(async (newConfig?: RemixConfig) => {
-    disposeBuilders();
     try {
-      newConfig = await readConfig(config.rootDirectory);
+      config = await readConfig(config.rootDirectory);
     } catch (error) {
       onBuildFailure(error as Error);
       return;
     }
 
-    config = newConfig;
-    if (onRebuildStart) onRebuildStart();
-    let builders = await buildEverything(
-      config,
-      assetsManifestPromiseRef,
-      options
-    );
-    if (onRebuildFinish) onRebuildFinish();
-    browserBuild = builders[0];
-    serverBuild = builders[1];
+    compiler = createRemixCompiler(config, options);
+    await compile(compiler);
+    onRebuildFinish?.(Date.now() - start);
   }, 500);
 
-  let rebuildEverything = debounce(async () => {
-    if (onRebuildStart) onRebuildStart();
-
-    if (!browserBuild?.rebuild || !serverBuild?.rebuild) {
-      disposeBuilders();
-
-      try {
-        [browserBuild, serverBuild] = await buildEverything(
-          config,
-          assetsManifestPromiseRef,
-          options
-        );
-
-        if (!initialBuildComplete) {
-          initialBuildComplete = !!browserBuild && !!serverBuild;
-          if (initialBuildComplete) {
-            onInitialBuild?.();
-          }
-        }
-        if (onRebuildFinish) onRebuildFinish();
-      } catch (err: any) {
-        onBuildFailure(err);
-      }
-      return;
-    }
-
-    // If we get here and can't call rebuild something went wrong and we
-    // should probably blow as it's not really recoverable.
-    let browserBuildPromise = browserBuild.rebuild();
-    let assetsManifestPromise = browserBuildPromise.then((build) =>
-      generateAssetsManifest(config, build.metafile!)
-    );
-
-    // Assign the assetsManifestPromise to a ref so the server build can await
-    // it when loading the @remix-run/dev/assets-manifest virtual module.
-    assetsManifestPromiseRef.current = assetsManifestPromise;
-
-    await Promise.all([
-      assetsManifestPromise,
-      serverBuild
-        .rebuild()
-        .then((build) => writeServerBuildResult(config, build.outputFiles!)),
-    ]).catch((err) => {
-      disposeBuilders();
-      onBuildFailure(err);
-    });
-    if (onRebuildFinish) onRebuildFinish();
+  let rebuild = debounce(async () => {
+    onRebuildStart?.();
+    let start = Date.now();
+    await compile(compiler, { onCompileFailure: onBuildFailure });
+    onRebuildFinish?.(Date.now() - start);
   }, 100);
 
   let toWatch = [config.appDirectory];
@@ -160,102 +101,28 @@ export async function watch(
     })
     .on("error", (error) => console.error(error))
     .on("change", async (file) => {
-      if (onFileChanged) onFileChanged(file);
-      await rebuildEverything();
+      onFileChanged?.(file);
+      await rebuild();
     })
     .on("add", async (file) => {
-      if (onFileCreated) onFileCreated(file);
-      let newConfig: RemixConfig;
+      onFileCreated?.(file);
+
       try {
-        newConfig = await readConfig(config.rootDirectory);
+        config = await readConfig(config.rootDirectory);
       } catch (error) {
         onBuildFailure(error as Error);
         return;
       }
 
-      if (isEntryPoint(newConfig, file)) {
-        await restartBuilders(newConfig);
-      } else {
-        await rebuildEverything();
-      }
+      await (isEntryPoint(config, file) ? restart : rebuild)();
     })
     .on("unlink", async (file) => {
-      if (onFileDeleted) onFileDeleted(file);
-      if (isEntryPoint(config, file)) {
-        await restartBuilders();
-      } else {
-        await rebuildEverything();
-      }
+      onFileDeleted?.(file);
+      await (isEntryPoint(config, file) ? restart : rebuild)();
     });
 
   return async () => {
-    await watcher.close().catch(() => {});
-    disposeBuilders();
+    await watcher.close().catch(() => undefined);
+    dispose(compiler);
   };
-}
-
-function isEntryPoint(config: RemixConfig, file: string) {
-  let appFile = path.relative(config.appDirectory, file);
-
-  if (
-    appFile === config.entryClientFile ||
-    appFile === config.entryServerFile
-  ) {
-    return true;
-  }
-  for (let key in config.routes) {
-    if (appFile === config.routes[key].file) return true;
-  }
-
-  return false;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-async function buildEverything(
-  config: RemixConfig,
-  assetsManifestPromiseRef: AssetsManifestPromiseRef,
-  options: BuildOptions & { incremental?: boolean }
-): Promise<(esbuild.BuildResult | undefined)[]> {
-  try {
-    let browserBuildPromise = createBrowserBuild(config, options);
-    let assetsManifestPromise = browserBuildPromise.then((build) =>
-      generateAssetsManifest(config, build.metafile!)
-    );
-
-    // Assign the assetsManifestPromise to a ref so the server build can await
-    // it when loading the @remix-run/dev/assets-manifest virtual module.
-    assetsManifestPromiseRef.current = assetsManifestPromise;
-
-    let serverBuildPromise = createServerBuild(
-      config,
-      options,
-      assetsManifestPromiseRef
-    );
-
-    return await Promise.all([
-      assetsManifestPromise.then(() => browserBuildPromise),
-      serverBuildPromise,
-    ]);
-  } catch (err) {
-    options.onBuildFailure?.(err as Error);
-    return [undefined, undefined];
-  }
-}
-
-async function generateAssetsManifest(
-  config: RemixConfig,
-  metafile: esbuild.Metafile
-): Promise<AssetsManifest> {
-  let assetsManifest = await createAssetsManifest(config, metafile);
-  let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
-
-  assetsManifest.url = config.publicPath + filename;
-
-  await writeFileSafe(
-    path.join(config.assetsBuildDirectory, filename),
-    `window.__remixManifest=${JSON.stringify(assetsManifest)};`
-  );
-
-  return assetsManifest;
 }
