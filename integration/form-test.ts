@@ -326,13 +326,13 @@ test.describe("Forms", () => {
             return (
               <>
                 <Form method="post">
-                  <button type="submit" formMethod="get">Replace POST with GET</button>
+                  <button type="submit" formMethod="get">Submit with GET</button>
                 </Form>
                 <Form method="get">
-                  <button type="submit" formMethod="post">Replace GET with POST</button>
+                  <button type="submit" formMethod="post">Submit with POST</button>
                 </Form>
                 <Form method="delete">
-                  <button type="submit" formMethod="post">Replace DELETE with POST</button>
+                  <button type="submit" formMethod="post">Submit with DELETE</button>
                 </Form>
 
                 <pre>{actionData || loaderData}</pre>
@@ -342,7 +342,7 @@ test.describe("Forms", () => {
         `,
 
         "app/routes/form-method.jsx": js`
-          import { Form, useActionData, useSearchParams } from "@remix-run/react";
+          import { Form, useActionData } from "@remix-run/react";
           import { json } from "@remix-run/node";
 
           export function action({ request }) {
@@ -350,21 +350,26 @@ test.describe("Forms", () => {
           }
           export default function() {
             let actionData = useActionData();
-            let [searchParams] = useSearchParams();
-            let formMethod = searchParams.get('method') || 'post';
             return (
               <>
-                <Form method={formMethod}>
-                  <button type="submit">Submit</button>
+                <Form method="post">
+                  <button type="submit">Submit with POST</button>
                 </Form>
+                <Form method="get">
+                  <button type="submit">Submit with GET</button>
+                </Form>
+                <Form method="delete">
+                  <button type="submit">Submit with DELETE</button>
+                </Form>
+
                 <pre>{actionData}</pre>
               </>
             )
           }
         `,
 
-        "app/routes/button-form-method.jsx": js`
-          import { Form, useActionData, useSearchParams } from "@remix-run/react";
+        "app/routes/button-formmethod.jsx": js`
+          import { Form, useActionData } from "@remix-run/react";
           import { json } from "@remix-run/node";
 
           export function action({ request }) {
@@ -372,13 +377,14 @@ test.describe("Forms", () => {
           }
           export default function() {
             let actionData = useActionData();
-            let [searchParams] = useSearchParams();
-            let formMethod = searchParams.get('method') || 'post';
             return (
               <>
-                <Form method={formMethod}>
-                  <button type="submit" formMethod="post">Submit</button>
+                <Form method="post">
+                  <button type="submit" formMethod="post">Submit with POST</button>
+                  <button type="submit" formMethod="get">Submit with GET</button>
+                  <button type="submit" formMethod="delete">Submit with DELETE</button>
                 </Form>
+
                 <pre>{actionData}</pre>
               </>
             )
@@ -935,57 +941,63 @@ test.describe("Forms", () => {
     });
   });
 
-  test.describe("with submitter button having `formMethod` attribute", () => {
-    test.describe("overrides the form `method` attribute with the button `formmethod` attribute", () => {
-      test("submits with GET instead of POST", async ({ page }) => {
-        let app = new PlaywrightFixture(appFixture, page);
-        await app.goto("/submitter-formmethod");
-        await app.clickElement("text=Replace POST with GET");
-        await page.waitForLoadState("load");
-        expect(await app.getHtml("pre")).toBe("<pre>GET</pre>");
-      });
-
-      test("submits with POST instead of GET", async ({ page }) => {
-        let app = new PlaywrightFixture(appFixture, page);
-        await app.goto("/submitter-formmethod");
-        await app.clickElement("text=Replace GET with POST");
-        await page.waitForLoadState("load");
-        expect(await app.getHtml("pre")).toBe("<pre>POST</pre>");
-      });
-
-      test("submits with POST instead of DELETE", async ({ page }) => {
-        let app = new PlaywrightFixture(appFixture, page);
-        await app.goto("/submitter-formmethod");
-        await app.clickElement("text=Replace DELETE with POST");
-        await page.waitForLoadState("load");
-        expect(await app.getHtml("pre")).toBe("<pre>POST</pre>");
-      });
-    });
-
-    test("uses the form `method` attribute", async ({ page }) => {
+  test.describe("<Form method='get'><button /></Form>", () => {
+    test("Submits with GET", async ({ page }) => {
       let app = new PlaywrightFixture(appFixture, page);
-      await app.goto("/form-method?method=delete");
-      await app.clickElement("button");
+      await app.goto("/form-method");
+      await app.clickElement("form[method='get'] button");
+      await page.waitForLoadState("load");
+      expect(await app.getHtml("pre")).toMatch("GET");
+    });
+  });
+
+  test.describe("<Form method='post'><button /></Form>", () => {
+    test("Submits with POST", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/form-method");
+      await app.clickElement("form[method='post'] button");
+      await page.waitForLoadState("load");
+      expect(await app.getHtml("pre")).toMatch("POST");
+    });
+  });
+
+  test.describe("<Form method='delete'><button /></Form>", () => {
+    test("Submits with DELETE", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/form-method");
+      await app.clickElement("form[method='delete'] button");
       await page.waitForLoadState("load");
       expect(await app.getHtml("pre")).toMatch("DELETE");
+    });
+  });
 
-      await app.goto("/form-method?method=post");
-      await app.clickElement("button");
+  test.describe("<Form method='post'><button formMethod='get' /></Form>", () => {
+    test("Submits with GET", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/button-formmethod");
+      await app.clickElement("form[method='post'] button[formmethod='get']");
+      await page.waitForLoadState("load");
+      expect(await app.getHtml("pre")).toMatch("GET");
+    });
+  });
+
+  test.describe("<Form method='post'><button formMethod='post' /></Form>", () => {
+    test("Submits with POST", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/button-formmethod");
+      await app.clickElement("form[method='post'] button[formmethod='post']");
       await page.waitForLoadState("load");
       expect(await app.getHtml("pre")).toMatch("POST");
     });
+  });
 
-    test("uses the button `formmethod` attribute", async ({ page }) => {
+  test.describe("<Form method='post'><button formMethod='delete' /></Form>", () => {
+    test("Submits with DELETE", async ({ page }) => {
       let app = new PlaywrightFixture(appFixture, page);
-      await app.goto("/button-form-method?method=get");
-      await app.clickElement("button");
+      await app.goto("/button-formmethod");
+      await app.clickElement("form[method='post'] button[formmethod='delete']");
       await page.waitForLoadState("load");
-      expect(await app.getHtml("pre")).toMatch("POST");
-
-      await app.goto("/button-form-method?method=delete");
-      await app.clickElement("button");
-      await page.waitForLoadState("load");
-      expect(await app.getHtml("pre")).toMatch("POST");
+      expect(await app.getHtml("pre")).toMatch("DELETE");
     });
   });
 
