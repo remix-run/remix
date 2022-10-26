@@ -19,5 +19,9 @@
     "@remix-run/server-runtime": "1.7.3",
     "@remix-run/vercel": "1.7.3"
   },
-  "changesets": []
+  "changesets": [
+    "stupid-games-build",
+    "witty-kiwis-flow",
+    "witty-seahorses-appear"
+  ]
 }
