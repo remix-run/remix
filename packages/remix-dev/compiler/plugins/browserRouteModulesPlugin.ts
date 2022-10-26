@@ -1,7 +1,7 @@
 import type esbuild from "esbuild";
 
 import type { RemixConfig } from "../../config";
-import { getRouteModuleExports } from "../route-exports";
+import { getRouteModuleExports } from "../routeExports";
 import invariant from "../../invariant";
 
 type Route = RemixConfig["routes"][string];

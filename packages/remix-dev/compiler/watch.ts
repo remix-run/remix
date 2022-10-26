@@ -3,9 +3,9 @@ import debounce from "lodash.debounce";
 import * as path from "path";
 
 import { type RemixConfig, readConfig } from "../config";
-import { logCompileFailure } from "./on-compile-failure";
+import { logCompileFailure } from "./onCompileFailure";
 import { type CompileOptions } from "./options";
-import { compile, createRemixCompiler, dispose } from "./remix-compiler";
+import { compile, createRemixCompiler, dispose } from "./remixCompiler";
 import { warnOnce } from "./warnings";
 
 function isEntryPoint(config: RemixConfig, file: string): boolean {

@@ -3,7 +3,7 @@ import type * as esbuild from "esbuild";
 
 import type { RemixConfig } from "../config";
 import invariant from "../invariant";
-import { getRouteModuleExports } from "./route-exports";
+import { getRouteModuleExports } from "./routeExports";
 import { getHash } from "./utils/crypto";
 import { createUrl } from "./utils/url";
 
