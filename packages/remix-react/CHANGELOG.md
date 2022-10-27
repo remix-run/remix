@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 1.7.4
+
+### Patch Changes
+
+- Ignore pathless layout routes in action matches ([#4376](https://github.com/remix-run/remix/pull/4376))
+- You can now infer the type of the `.data` property of `useFetcher` from the return type of your `loader` and `action` functions ([#4392](https://github.com/remix-run/remix/pull/4392))
+- Fixed a bug in `<Form>` that prevented the correct method from being called with non-`POST` submissions ([`b52507861`](https://github.com/remix-run/remix/commit/b5250786164c2632bb239553f33896805103809a))
+
 ## 1.7.3
 
 ### Patch Changes

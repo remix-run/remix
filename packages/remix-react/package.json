@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/react",
-  "version": "1.7.3",
+  "version": "1.7.4",
   "description": "React DOM bindings for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -20,7 +20,7 @@
     "react-router-dom": "6.3.0"
   },
   "devDependencies": {
-    "@remix-run/server-runtime": "1.7.3",
+    "@remix-run/server-runtime": "1.7.4",
     "@testing-library/jest-dom": "^5.16.2",
     "@testing-library/react": "^13.3.0",
     "abort-controller": "^3.0.0",
