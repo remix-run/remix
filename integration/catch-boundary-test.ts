@@ -334,58 +334,6 @@ test.describe("CatchBoundary", () => {
     await page.waitForSelector("#root-boundary");
   });
 
-  test("renders root boundary in document POST without action requests", async () => {
-    let res = await fixture.requestDocument(NO_BOUNDARY_NO_LOADER_OR_ACTION, {
-      method: "post",
-    });
-    expect(res.status).toBe(405);
-    expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);
-  });
-
-  test("renders root boundary in action script transitions without action from other routes", async ({
-    page,
-  }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/");
-    await app.clickSubmitButton(NO_BOUNDARY_NO_LOADER_OR_ACTION);
-    await page.waitForSelector("#root-boundary");
-  });
-
-  test("renders own boundary in document POST without action requests", async () => {
-    let res = await fixture.requestDocument(HAS_BOUNDARY_NO_LOADER_OR_ACTION, {
-      method: "post",
-    });
-    expect(res.status).toBe(405);
-    expect(await res.text()).toMatch(OWN_BOUNDARY_TEXT);
-  });
-
-  test("renders own boundary in action script transitions without action from other routes", async ({
-    page,
-  }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/");
-    await app.clickSubmitButton(HAS_BOUNDARY_NO_LOADER_OR_ACTION);
-    await page.waitForSelector("#boundary-no-loader-or-action");
-  });
-
-  test("renders own boundary in fetcher action submission without action from other routes", async ({
-    page,
-  }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/fetcher-boundary");
-    await app.clickSubmitButton(NO_BOUNDARY_NO_LOADER_OR_ACTION);
-    await page.waitForSelector("#fetcher-boundary");
-  });
-
-  test("renders root boundary in fetcher action submission without action from other routes", async ({
-    page,
-  }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/fetcher-no-boundary");
-    await app.clickSubmitButton(NO_BOUNDARY_NO_LOADER_OR_ACTION);
-    await page.waitForSelector("#root-boundary");
-  });
-
   test("uses correct catch boundary on server action errors", async ({
     page,
   }) => {

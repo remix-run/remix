@@ -521,6 +521,7 @@ async function handleDocumentRequest({
     };
   }
 
+  let errorStatus = 500;
   let actionStatus: { status: number; statusText: string } | undefined;
   let actionData: Record<string, unknown> | undefined;
   let actionMatch: RouteMatch<ServerRoute> | undefined;
@@ -564,6 +565,7 @@ async function handleDocumentRequest({
         };
       }
     } catch (error: any) {
+      errorStatus = isErrorWithStatus(error) ? error.status : 500;
       appState.loaderBoundaryRouteId = getDeepestRouteIdWithBoundary(
         matches,
         "ErrorBoundary"
@@ -671,7 +673,7 @@ async function handleDocumentRequest({
     }
 
     if (error) {
-      loaderStatusCodes.push(500);
+      loaderStatusCodes.push(isErrorWithStatus(error) ? error.status : 500);
       appState.trackBoundaries = false;
       appState.error = await serializeError(error);
 
@@ -740,7 +742,7 @@ async function handleDocumentRequest({
       : loaderStatusCodes.find((status) => status !== 200);
 
   let responseStatusCode = appState.error
-    ? 500
+    ? errorStatus
     : typeof notOkResponse === "number"
     ? notOkResponse
     : appState.catch

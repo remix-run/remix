@@ -4,8 +4,8 @@ import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
 } from "./router";
-import { AppLoadContext, callRouteActionRR, callRouteLoaderRR } from "./data";
-import { callRouteAction, callRouteLoader } from "./data";
+import { type AppLoadContext } from "./data";
+import { callRouteActionRR, callRouteLoaderRR } from "./data";
 import type { ServerRouteModule } from "./routeModules";
 
 export interface RouteManifest<Route> {
