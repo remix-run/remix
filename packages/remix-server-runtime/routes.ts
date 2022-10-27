@@ -4,7 +4,7 @@ import type {
   ActionFunctionArgs,
   LoaderFunctionArgs,
 } from "./router";
-import type { AppLoadContext } from "./data";
+import { AppLoadContext, callRouteActionRR, callRouteLoaderRR } from "./data";
 import { callRouteAction, callRouteLoader } from "./data";
 import type { ServerRouteModule } from "./routeModules";
 
@@ -70,22 +70,18 @@ export function createStaticHandlerDataRoutes(
         path: route.path,
         loader: route.module.loader
           ? (args: LoaderFunctionArgs) =>
-              callRouteLoader({
+              callRouteLoaderRR({
                 ...args,
-                routeId: route.id,
-                loader: route.module.loader,
+                loader: route.module.loader!,
                 loadContext,
-                isRemixRouterRequest: true,
               })
           : undefined,
         action: route.module.action
           ? (args: ActionFunctionArgs) =>
-              callRouteAction({
+              callRouteActionRR({
                 ...args,
-                routeId: route.id,
-                action: route.module.action,
+                action: route.module.action!,
                 loadContext,
-                isRemixRouterRequest: true,
               })
           : undefined,
         handle: route.module.handle,

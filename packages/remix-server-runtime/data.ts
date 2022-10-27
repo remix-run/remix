@@ -1,3 +1,4 @@
+import { ErrorWithStatus } from "./router";
 import { json, isResponse, isRedirectResponse } from "./responses";
 import type {
   ActionFunction,
@@ -34,12 +35,10 @@ export async function callRouteAction({
   isRemixRouterRequest?: boolean;
 }) {
   if (!action) {
-    let response = new Response(null, {
-      status: 405,
-      statusText: "Method Not Allowed",
-    });
-    response.headers.set("X-Remix-Catch", "yes");
-    return response;
+    let msg =
+      `You made a ${request.method} request to ${request.url} but did not provide ` +
+      `an \`action\` for route "${routeId}", so there is no way to handle the request.`;
+    throw new ErrorWithStatus(msg, 405);
   }
 
   let result;
@@ -91,11 +90,10 @@ export async function callRouteLoader({
   isRemixRouterRequest?: boolean;
 }) {
   if (!loader) {
-    throw new Error(
+    let msg =
       `You made a ${request.method} request to ${request.url} but did not provide ` +
-        `a default component or \`loader\` for route "${routeId}", ` +
-        `so there is no way to handle the request.`
-    );
+      `a \`loader\` for route "${routeId}", so there is no way to handle the request.`;
+    throw new ErrorWithStatus(msg, 405);
   }
 
   let result;
@@ -128,6 +126,44 @@ export async function callRouteLoader({
     );
   }
 
+  return isResponse(result) ? result : json(result);
+}
+
+export async function callRouteActionRR({
+  loadContext,
+  action,
+  params,
+  request,
+}: {
+  request: Request;
+  action: ActionFunction;
+  params: DataFunctionArgs["params"];
+  loadContext: AppLoadContext;
+}) {
+  let result = await action({
+    request: stripDataParam(stripIndexParam(request)),
+    context: loadContext,
+    params,
+  });
+  return isResponse(result) ? result : json(result);
+}
+
+export async function callRouteLoaderRR({
+  loadContext,
+  loader,
+  params,
+  request,
+}: {
+  request: Request;
+  loader: LoaderFunction;
+  params: DataFunctionArgs["params"];
+  loadContext: AppLoadContext;
+}) {
+  let result = await loader({
+    request: stripDataParam(stripIndexParam(request)),
+    context: loadContext,
+    params,
+  });
   return isResponse(result) ? result : json(result);
 }
 

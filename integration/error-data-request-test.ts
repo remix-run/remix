@@ -3,14 +3,19 @@ import { test, expect } from "@playwright/test";
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
+const ENABLE_REMIX_ROUTER = !!process.env.ENABLE_REMIX_ROUTER;
+
 test.describe("ErrorBoundary", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
   let _consoleError: any;
+  let errorLogs: string[];
 
   test.beforeAll(async () => {
     _consoleError = console.error;
-    console.error = () => {};
+    console.error = (whatever) => {
+      errorLogs.push(String(whatever));
+    };
 
     fixture = await createFixture({
       files: {
@@ -89,56 +94,42 @@ test.describe("ErrorBoundary", () => {
     appFixture = await createAppFixture(fixture);
   });
 
+  test.beforeEach(async () => {
+    errorLogs = [];
+  });
+
   test.afterAll(async () => {
     console.error = _consoleError;
     await appFixture.close();
   });
 
-  /**
-   * TODO
-   * end state
-   *  - thrown 4xx responses go to catch
-   *    - user thrown and router thrown
-   *  - thrown 5xx responses go to catch
-   *    - user thrown go to catch
-   *    - router thrown go to catch - we don't have any of these use cases currently
-   *  - thrown non responses go to error
-   *
-   * - Make test cases align to above
-   * - Change remix code as needed
-   * - Can we remove X-Remix-Router-Error header entirely?
-   * - Fork off a callRouteLoaderRR and callRouteActionRR function for simplicity
-   *
-   * Eventually in user error boundaries (remix v2)
-   *  - thrown ANYTHING goes to errorElement
-   *    if (useRouteError() instanceof Response) {
-   *      <CatchBoundary>
-   *    } else {
-   *      <ErrorBoundary>
-   *    }
-   */
+  function assertConsoleError(str: string) {
+    expect(errorLogs[0]).toEqual(str);
+    if (ENABLE_REMIX_ROUTER) {
+      expect(errorLogs[1]).toEqual(str);
+    }
+  }
 
-  // test.skip(
-  //   "returns a 500 x-remix-error on a data fetch to a path with no loader"
-  // );
-  // test.skip("returns a 405 x-remix-error on a data fetch with a bad method");
-  // test.skip("returns a 404 x-remix-error on a data fetch to a bad path");
-  // test.skip("returns a 403 x-remix-error on a data fetch to a bad routeId");
-
-  test("returns a 500 x-remix-error on a data fetch to a path with no loader", async () => {
+  test("returns a 405 x-remix-error on a data fetch to a path with no loader", async () => {
     let response = await fixture.requestData("/", "routes/index");
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(405);
     expect(response.headers.get("X-Remix-Error")).toBe("yes");
     expect(await response.text()).toMatch("Unexpected Server Error");
+    assertConsoleError(
+      'Error: You made a GET request to test://test/?_data=routes%2Findex but did not provide a `loader` for route "routes/index", so there is no way to handle the request.'
+    );
   });
 
-  test("returns a 405 x-remix-catch on a data fetch POST to a path with no action", async () => {
-    let response = await fixture.requestData("/", "routes/index", {
+  test("returns a 405 x-remix-error on a data fetch POST to a path with no action", async () => {
+    let response = await fixture.requestData("/?index", "routes/index", {
       method: "POST",
     });
     expect(response.status).toBe(405);
-    expect(response.headers.get("X-Remix-Catch")).toBe("yes");
-    expect(await response.text()).toBe("");
+    expect(response.headers.get("X-Remix-Error")).toBe("yes");
+    expect(await response.text()).toMatch("Unexpected Server Error");
+    assertConsoleError(
+      'Error: You made a POST request to test://test/?index=&_data=routes%2Findex but did not provide an `action` for route "routes/index", so there is no way to handle the request.'
+    );
   });
 
   test("returns a 405 x-remix-error on a data fetch with a bad method", async () => {
@@ -151,43 +142,38 @@ test.describe("ErrorBoundary", () => {
     );
     expect(response.status).toBe(405);
     expect(response.headers.get("X-Remix-Error")).toBe("yes");
-    expect(await response.text()).toMatch(
-      'Invalid request method \\"OPTIONS\\"'
+    expect(await response.text()).toMatch("Unexpected Server Error");
+    assertConsoleError('Error: Invalid request method "OPTIONS"');
+  });
+
+  test("returns a 403 x-remix-error on a data fetch GET to a bad path", async () => {
+    // just headers content-type mismatch but differs from POST below
+    let response = await fixture.requestData("/", "routes/loader-return-json");
+    expect(response.status).toBe(403);
+    expect(response.headers.get("X-Remix-Error")).toBe("yes");
+    expect(await response.text()).toMatch("Unexpected Server Error");
+    assertConsoleError(
+      'Error: Route "routes/loader-return-json" does not match URL "/"'
     );
   });
 
-  // test("returns a 405 x-remix-error on a data fetch POST with a bad method", async () => {
-  //   let response = await fixture.requestData(
-  //     `/${NO_ROOT_BOUNDARY_ACTION}`,
-  //     NO_ROOT_BOUNDARY_ACTION,
-  //     {
-  //       method: "POST",
-  //     }
-  //   );
-  //   expect(response.status).toBe(405);
-  //   expect(response.headers.get("X-Remix-Catch")).toBe("yes");
-  // });
+  test("returns a 403 x-remix-error on a data fetch POST to a bad path", async () => {
+    let response = await fixture.requestData("/", "routes/loader-return-json", {
+      method: "POST",
+    });
+    expect(response.status).toBe(403);
+    expect(response.headers.get("X-Remix-Error")).toBe("yes");
+    expect(await response.text()).toMatch("Unexpected Server Error");
+    assertConsoleError(
+      'Error: Route "routes/loader-return-json" does not match URL "/"'
+    );
+  });
 
-  // test("returns a 403 x-remix-error on a data fetch GET to a bad path", async () => {
-  //   // just headers content-type mismatch but differs from POST below
-  //   let response = await fixture.requestData(
-  //     "/",
-  //     `routes${NO_ROOT_BOUNDARY_LOADER}`
-  //   );
-  //   expect(response.status).toBe(403);
-  //   expect(response.headers.get("X-Remix-Error")).toBe("yes");
-  // });
-
-  // test("returns a 405 x-remix-catch on a data fetch POST to a bad path", async () => {
-  //   let response = await fixture.requestData(
-  //     "/",
-  //     `routes${NO_ROOT_BOUNDARY_LOADER}`,
-  //     {
-  //       method: "POST",
-  //     }
-  //   );
-  //   expect(response.status).toBe(405);
-  //   // This is a catch today and differs from above
-  //   expect(response.headers.get("X-Remix-Catch")).toBe("yes");
-  // });
+  test("returns a 404 x-remix-error on a data fetch to a path with no matches", async () => {
+    let response = await fixture.requestData("/i/match/nothing", "routes/junk");
+    expect(response.status).toBe(404);
+    expect(response.headers.get("X-Remix-Error")).toBe("yes");
+    expect(await response.text()).toMatch("Unexpected Server Error");
+    assertConsoleError('Error: No route matches URL "/i/match/nothing"');
+  });
 });

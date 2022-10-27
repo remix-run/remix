@@ -26,6 +26,7 @@ import type {
 import {
   DeferredData,
   ErrorResponse,
+  ErrorWithStatus,
   ResultType,
   convertRoutesToDataRoutes,
   getPathContributingMatches,
@@ -1922,6 +1923,8 @@ export function unstable_createStaticHandler(
    * from the action/loader, but it may be a primitive or other value as well -
    * and in such cases the calling context should handle that accordingly.
    *
+   * TODO: Add note about thrown ErrorWithStatus
+   *
    * We do respect the throw/return differentiation, so if an action/loader
    * throws, then this method will throw the value.  This is important so we
    * can do proper boundary identification in Remix where a thrown Response
@@ -1937,26 +1940,32 @@ export function unstable_createStaticHandler(
     let matches = matchRoutes(dataRoutes, location);
 
     if (!validRequestMethods.has(request.method)) {
-      throw createRouterErrorResponse(null, {
-        status: 405,
-        statusText: "Method Not Allowed",
-      });
+      throw new ErrorWithStatus(
+        `Invalid request method "${request.method}"`,
+        405
+      );
     } else if (!matches) {
-      throw createRouterErrorResponse(null, {
-        status: 404,
-        statusText: "Not Found",
-      });
+      throw new ErrorWithStatus(
+        `No route matches URL "${location.pathname}"`,
+        404
+      );
     }
 
     let match = routeId
       ? matches.find((m) => m.route.id === routeId)
       : getTargetMatch(matches, location);
 
-    if (!match) {
-      throw createRouterErrorResponse(null, {
-        status: 404,
-        statusText: "Not Found",
-      });
+    if (routeId && !match) {
+      throw new ErrorWithStatus(
+        `Route "${routeId}" does not match URL "${location.pathname}"`,
+        403
+      );
+    } else if (!match) {
+      // This should never hit I don't think?
+      throw new ErrorWithStatus(
+        `No route matches URL "${createPath(location)}"`,
+        404
+      );
     }
 
     let result = await queryImpl(request, location, matches, match);
@@ -2034,12 +2043,15 @@ export function unstable_createStaticHandler(
     isRouteRequest: boolean
   ): Promise<Omit<StaticHandlerContext, "location"> | Response> {
     let result: DataResult;
+
     if (!actionMatch.route.action) {
       if (isRouteRequest) {
-        throw createRouterErrorResponse(null, {
-          status: 405,
-          statusText: "Method Not Allowed",
-        });
+        throw new ErrorWithStatus(
+          `You made a ${request.method} request to ${request.url} but ` +
+            `did not provide an \`action\` for route "${actionMatch.route.id}", ` +
+            `so there is no way to handle the request.`,
+          405
+        );
       }
       result = getMethodNotAllowedResult(request.url);
     } else {
@@ -2155,6 +2167,17 @@ export function unstable_createStaticHandler(
     | Response
   > {
     let isRouteRequest = routeMatch != null;
+
+    // Short circuit if we have no loaders to run (queryRoute())
+    if (isRouteRequest && !routeMatch?.route.loader) {
+      throw new ErrorWithStatus(
+        `You made a ${request.method} request to ${request.url} but ` +
+          `did not provide a \`loader\` for route "${routeMatch?.route.id}", ` +
+          `so there is no way to handle the request.`,
+        405
+      );
+    }
+
     let requestMatches = routeMatch
       ? [routeMatch]
       : getLoaderMatchesUntilBoundary(
@@ -2163,7 +2186,7 @@ export function unstable_createStaticHandler(
         );
     let matchesToLoad = requestMatches.filter((m) => m.route.loader);
 
-    // Short circuit if we have no loaders to run
+    // Short circuit if we have no loaders to run (query())
     if (matchesToLoad.length === 0) {
       return {
         matches,
@@ -2213,19 +2236,6 @@ export function unstable_createStaticHandler(
       ...context,
       matches,
     };
-  }
-
-  function createRouterErrorResponse(
-    body: BodyInit | null | undefined,
-    init: ResponseInit
-  ) {
-    return new Response(body, {
-      ...init,
-      headers: {
-        ...init.headers,
-        "X-Remix-Router-Error": "yes",
-      },
-    });
   }
 
   return {
@@ -2609,6 +2619,12 @@ async function callLoaderOrAction(
     }
 
     if (resultType === ResultType.error) {
+      // TODO: Check if this is breaking for remix.  If the unwrapped data is
+      // of the format { message: string, stack: string } convert it back to
+      // new Error() here.  This might be a non-issue since the Remix client-side
+      // loader implementation might do the unwrapping and converson and throw
+      // new Error in which case we don't come this code path since it's not a
+      // thrown Response.
       return {
         type: resultType,
         error: new ErrorResponse(status, result.statusText, data),

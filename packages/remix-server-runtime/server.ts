@@ -1,6 +1,10 @@
 // TODO: RRR - Change import to @remix-run/router
 import type { StaticHandler, StaticHandlerContext } from "./router";
-import { isRouteErrorResponse } from "./router";
+import {
+  ErrorWithStatus,
+  isErrorWithStatus,
+  isRouteErrorResponse,
+} from "./router";
 import { unstable_createStaticHandler } from "./router";
 import type { AppLoadContext } from "./data";
 import { callRouteAction, callRouteLoader, extractData } from "./data";
@@ -174,26 +178,39 @@ async function handleDataRequest({
   request: Request;
   serverMode: ServerMode;
 }): Promise<Response> {
-  if (!isValidRequestMethod(request)) {
-    return errorBoundaryError(
-      new Error(`Invalid request method "${request.method}"`),
-      405
-    );
-  }
-
-  let url = new URL(request.url);
-
-  if (!matches) {
-    return errorBoundaryError(
-      new Error(`No route matches URL "${url.pathname}"`),
-      404
-    );
-  }
-
   let response: Response;
   let match: RouteMatch<ServerRoute>;
+
   try {
+    if (!isValidRequestMethod(request)) {
+      throw new ErrorWithStatus(
+        `Invalid request method "${request.method}"`,
+        405
+      );
+    }
+
+    let url = new URL(request.url);
+
+    if (!matches) {
+      throw new ErrorWithStatus(`No route matches URL "${url.pathname}"`, 404);
+    }
+
+    let routeId = url.searchParams.get("_data");
+    if (!routeId) {
+      throw new ErrorWithStatus(`Missing route id in ?_data`, 403);
+    }
+
+    let tempMatch = matches.find((match) => match.route.id === routeId);
+    if (!tempMatch) {
+      throw new ErrorWithStatus(
+        `Route "${routeId}" does not match URL "${url.pathname}"`,
+        403
+      );
+    }
+    match = tempMatch;
+
     if (isActionRequest(request)) {
+      // TODO: Can this go away??
       match = getRequestMatch(url, matches);
 
       response = await callRouteAction({
@@ -204,20 +221,6 @@ async function handleDataRequest({
         request: request,
       });
     } else {
-      let routeId = url.searchParams.get("_data");
-      if (!routeId) {
-        return errorBoundaryError(new Error(`Missing route id in ?_data`), 403);
-      }
-
-      let tempMatch = matches.find((match) => match.route.id === routeId);
-      if (!tempMatch) {
-        return errorBoundaryError(
-          new Error(`Route "${routeId}" does not match URL "${url.pathname}"`),
-          403
-        );
-      }
-      match = tempMatch;
-
       response = await callRouteLoader({
         loadContext,
         loader: match.route.module.loader,
@@ -250,11 +253,12 @@ async function handleDataRequest({
       console.error(error);
     }
 
+    let status = isErrorWithStatus(error) ? error.status : 500;
     if (serverMode === ServerMode.Development && error instanceof Error) {
-      return errorBoundaryError(error, 500);
+      return errorBoundaryError(error, status);
     }
 
-    return errorBoundaryError(new Error("Unexpected Server Error"), 500);
+    return errorBoundaryError(new Error("Unexpected Server Error"), status);
   }
 }
 
@@ -264,30 +268,6 @@ async function handleDataRequestRR(
   routeId: string,
   request: Request
 ) {
-  // let url = new URL(request.url);
-  // Match existing no-match behavior
-  // if (!matches) {
-  //   return errorBoundaryError(
-  //     new Error(`No route matches URL "${url.pathname}"`),
-  //     404
-  //   );
-  // }
-
-  // let match = matches.find((match) => match.route.id === routeId);
-
-  // if (isActionRequest(request) && !match?.route?.module?.action) {
-  //   return new Response(null, {
-  //     status: 405,
-  //     statusText: "Method Not Allowed",
-  //     headers: { "X-Remix-Catch": "yes" },
-  //   });
-  // } else if (!match) {
-  //   return errorBoundaryError(
-  //     new Error(`Route "${routeId}" does not match URL "${url.pathname}"`),
-  //     403
-  //   );
-  // }
-
   try {
     let response = await staticHandler.queryRoute(request, routeId);
 
@@ -311,36 +291,7 @@ async function handleDataRequestRR(
     return response;
   } catch (error) {
     if (error instanceof Response) {
-      // Our callRouteLoader/callRouteAction methods ensure we always have
-      // X-Remix-Catch on responses thrown from loaders and actions.  However,
-      // if we never make it to the loader (such as a 404 or 405) then we
-      // Remix Router puts it's own custom header on, which we swap here for
-      // X-Remix-Catch
-      if (error.headers.get("X-Remix-Router-Error") === "yes") {
-        error.headers.delete("X-Remix-Router-Error");
-        error.headers.set("X-Remix-Catch", "yes");
-      }
-
-      // let isInternalError = error.headers.get("X-Remix-Router-Error") === "yes";
-      // error.headers.delete("X-Remix-Router-Error");
-
-      // if (!isInternalError) {
-      //   error.headers.set("X-Remix-Error", "yes");
-      // } else if (
-      //   error.status === 404 &&
-      //   (request.method === "GET" || request.method === "HEAD")
-      // ) {
-      //   let url = new URL(request.url);
-      //   return errorBoundaryError(
-      //     new Error(`Route "${routeId}" does not match URL "${url.pathname}"`),
-      //     404
-      //   );
-      // } else if (error.status === 404) {
-      //   error.headers.set("X-Remix-Catch", "yes");
-      // } else {
-      //   error.headers.set("X-Remix-Catch", "yes");
-      // }
-
+      error.headers.set("X-Remix-Catch", "yes");
       return error;
     }
 
@@ -348,11 +299,12 @@ async function handleDataRequestRR(
       console.error(error);
     }
 
+    let status = isErrorWithStatus(error) ? error.status : 500;
     if (serverMode === ServerMode.Development && error instanceof Error) {
-      return errorBoundaryError(error, 500);
+      return errorBoundaryError(error, status);
     }
 
-    return errorBoundaryError(new Error("Unexpected Server Error"), 500);
+    return errorBoundaryError(new Error("Unexpected Server Error"), status);
   }
 }
 
@@ -559,6 +511,8 @@ async function handleDocumentRequest({
       statusText: "Method Not Allowed",
     };
   } else if (!matches) {
+    // TODO: Double check that we have integration tests asserting that this
+    // is a 404 catch boundary
     appState.trackCatchBoundaries = false;
     appState.catch = {
       data: null,

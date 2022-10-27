@@ -30,11 +30,14 @@ export type {
 
 export {
   AbortedDeferredError,
+  // TODO: Is this supposed to be exported?
   ErrorResponse,
+  ErrorWithStatus,
   defer,
   generatePath,
   getToPathname,
   invariant,
+  isErrorWithStatus,
   isRouteErrorResponse,
   joinPaths,
   json,
