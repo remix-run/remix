@@ -26,6 +26,7 @@ test.describe("Forms", () => {
   let STATIC_ROUTE_PARENT_ACTION = "static-route-parent";
   let STATIC_ROUTE_TOO_MANY_DOTS_ACTION = "static-route-too-many-dots";
   let INDEX_ROUTE_NO_ACTION = "index-route-none";
+  let INDEX_ROUTE_NO_ACTION_POST = "index-route-none-post";
   let INDEX_ROUTE_ABSOLUTE_ACTION = "index-route-abs";
   let INDEX_ROUTE_CURRENT_ACTION = "index-route-cur";
   let INDEX_ROUTE_PARENT_ACTION = "index-route-parent";
@@ -192,6 +193,7 @@ test.describe("Forms", () => {
             return (
               <>
                 <Form id="${INDEX_ROUTE_NO_ACTION}">
+                  <input type="hidden" name="foo" defaultValue="1" />
                   <button>Submit</button>
                 </Form>
                 <Form id="${INDEX_ROUTE_ABSOLUTE_ACTION}" action="/about">
@@ -204,6 +206,11 @@ test.describe("Forms", () => {
                   <button>Submit</button>
                 </Form>
                 <Form id="${INDEX_ROUTE_TOO_MANY_DOTS_ACTION}" action="../../../../about">
+                  <button>Submit</button>
+                </Form>
+
+                <Form method="post" id="${INDEX_ROUTE_NO_ACTION_POST}">
+                  <input type="hidden" name="bar" defaultValue="2" />
                   <button>Submit</button>
                 </Form>
               </>
@@ -301,6 +308,76 @@ test.describe("Forms", () => {
           }
         `,
 
+        "app/routes/submitter-formmethod.jsx": js`
+          import { useActionData, useLoaderData, Form } from "@remix-run/react";
+          import { json } from '@remix-run/node'
+
+          export function action({ request }) {
+            return json(request.method)
+          }
+
+          export function loader({ request }) {
+            return json(request.method)
+          }
+
+          export default function Index() {
+            let actionData = useActionData();
+            let loaderData = useLoaderData();
+            return (
+              <>
+                <Form method="post">
+                  <button type="submit" formMethod="get">Submit with GET</button>
+                </Form>
+                <Form method="get">
+                  <button type="submit" formMethod="post">Submit with POST</button>
+                </Form>
+
+                <pre>{actionData || loaderData}</pre>
+              </>
+            )
+          }
+        `,
+
+        "app/routes/form-method.jsx": js`
+          import { Form, useActionData } from "@remix-run/react";
+          import { json } from "@remix-run/node";
+
+          export function action({ request }) {
+            return json(request.method)
+          }
+          export default function() {
+            let actionData = useActionData();
+            return (
+              <>
+                <Form method="post">
+                  <button type="submit">Submit</button>
+                </Form>
+                <pre>{actionData}</pre>
+              </>
+            )
+          }
+        `,
+
+        "app/routes/button-form-method.jsx": js`
+          import { Form, useActionData } from "@remix-run/react";
+          import { json } from "@remix-run/node";
+
+          export function action({ request }) {
+            return json(request.method)
+          }
+          export default function() {
+            let actionData = useActionData();
+            return (
+              <>
+                <Form>
+                  <button type="submit" formMethod="post">Submit</button>
+                </Form>
+                <pre>{actionData}</pre>
+              </>
+            )
+          }
+        `,
+
         "app/routes/submitter.jsx": js`
           import { useLoaderData, Form } from "@remix-run/react";
 
@@ -342,7 +419,7 @@ test.describe("Forms", () => {
         page.waitForNavigation(),
         app.clickSubmitButton("/get-submission", { wait: false }),
       ]);
-      expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
+      await page.waitForSelector(`pre:has-text("${CHEESESTEAK}")`);
     });
   });
 
@@ -352,7 +429,7 @@ test.describe("Forms", () => {
       // this indirectly tests that clicking SVG children in buttons works
       await app.goto("/get-submission");
       await app.clickSubmitButton("/get-submission");
-      expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
+      await page.waitForSelector(`pre:has-text("${CHEESESTEAK}")`);
     });
   });
 
@@ -363,7 +440,7 @@ test.describe("Forms", () => {
     await app.goto("/get-submission");
     await app.clickElement(`#${FORM_WITH_ACTION_INPUT} button`);
     await page.waitForLoadState("load");
-    expect(await app.getHtml("pre")).toMatch(EAT);
+    await page.waitForSelector(`pre:has-text("${EAT}")`);
   });
 
   test("posts to a loader with button data with click", async ({ page }) => {
@@ -373,7 +450,7 @@ test.describe("Forms", () => {
       page.waitForNavigation(),
       app.clickElement("#buttonWithValue"),
     ]);
-    expect(await app.getHtml("pre")).toMatch(LAKSA);
+    await page.waitForSelector(`pre:has-text("${LAKSA}")`);
   });
 
   test("posts to a loader with button data with keyboard", async ({ page }) => {
@@ -382,23 +459,22 @@ test.describe("Forms", () => {
     await page.focus(`#${KEYBOARD_INPUT}`);
     await page.keyboard.press("Enter");
     await page.waitForLoadState("networkidle");
-    expect(await app.getHtml("pre")).toMatch(LAKSA);
+    await page.waitForSelector(`pre:has-text("${LAKSA}")`);
   });
 
   test("posts with the correct checkbox data", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/get-submission");
     await app.clickElement(`#${CHECKBOX_BUTTON}`);
-    expect(await app.getHtml("pre")).toBe(
-      `<pre>LUNCH=CHEESESTEAK&amp;LUNCH=LAKSA</pre>`
-    );
+    await page.waitForSelector(`pre:has-text("${LAKSA}")`);
+    await page.waitForSelector(`pre:has-text("${CHEESESTEAK}")`);
   });
 
   test("posts button data from outside the form", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/get-submission");
     await app.clickElement(`#${ORPHAN_BUTTON}`);
-    expect(await app.getHtml("pre")).toMatch(SQUID_INK_HOTDOG);
+    await page.waitForSelector(`pre:has-text("${SQUID_INK_HOTDOG}")`);
   });
 
   test("when clicking on a submit button as a descendant of an element that stops propagation on click, still passes the clicked submit button's `name` and `value` props to the request payload", async ({
@@ -620,25 +696,53 @@ test.describe("Forms", () => {
         expect(el.attr("action")).toMatch("/");
       });
 
-      test("does not repeatedly add index params on submissions", async ({
+      test("handles search params correctly on GET submissions", async ({
         page,
       }) => {
         let app = new PlaywrightFixture(appFixture, page);
-        await app.goto("/blog");
+
+        // Start with a query param
+        await app.goto("/blog?junk=1");
         let html = await app.getHtml();
         let el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
-        expect(el.attr("action")).toBe("/blog?index");
-        expect(app.page.url()).toMatch(/\/blog$/);
+        expect(el.attr("action")).toBe("/blog?index&junk=1");
+        expect(app.page.url()).toMatch(/\/blog\?junk=1$/);
 
+        // On submission, we replace existing parameters (reflected in the
+        // form action) with the values from the form data.  We also do not
+        // need to preserve the index param in the URL on GET submissions
         await app.clickElement(`#${INDEX_ROUTE_NO_ACTION} button`);
+        html = await app.getHtml();
         el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
-        expect(el.attr("action")).toBe("/blog?index");
-        expect(app.page.url()).toMatch(/\/blog\?index$/);
+        expect(el.attr("action")).toBe("/blog?index&foo=1");
+        expect(app.page.url()).toMatch(/\/blog\?foo=1$/);
 
+        // Does not append duplicate params on re-submissions
         await app.clickElement(`#${INDEX_ROUTE_NO_ACTION} button`);
+        html = await app.getHtml();
         el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
-        expect(el.attr("action")).toBe("/blog?index");
-        expect(app.page.url()).toMatch(/\/blog\?index$/);
+        expect(el.attr("action")).toBe("/blog?index&foo=1");
+        expect(app.page.url()).toMatch(/\/blog\?foo=1$/);
+      });
+
+      test("handles search params correctly on POST submissions", async ({
+        page,
+      }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+
+        // Start with a query param
+        await app.goto("/blog?junk=1");
+        let html = await app.getHtml();
+        let el = getElement(html, `#${INDEX_ROUTE_NO_ACTION_POST}`);
+        expect(el.attr("action")).toBe("/blog?index&junk=1");
+        expect(app.page.url()).toMatch(/\/blog\?junk=1$/);
+
+        // Form action reflects the current params and change them on submission
+        await app.clickElement(`#${INDEX_ROUTE_NO_ACTION_POST} button`);
+        html = await app.getHtml();
+        el = getElement(html, `#${INDEX_ROUTE_NO_ACTION_POST}`);
+        expect(el.attr("action")).toBe("/blog?index&junk=1");
+        expect(app.page.url()).toMatch(/\/blog\?index&junk=1$/);
       });
     });
 
@@ -783,15 +887,59 @@ test.describe("Forms", () => {
     });
   });
 
+  test.describe("with submitter button having `formMethod` attribute", () => {
+    test.describe("overrides the form `method` attribute with the button `formmethod` attribute", () => {
+      test("submits with GET instead of POST", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/submitter-formmethod");
+        await app.clickElement("text=Submit with GET");
+        await page.waitForLoadState("load");
+        expect(await app.getHtml("pre")).toBe("<pre>GET</pre>");
+      });
+
+      test("submits with POST instead of GET", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/submitter-formmethod");
+        await app.clickElement("text=Submit with POST");
+        await page.waitForLoadState("load");
+        expect(await app.getHtml("pre")).toBe("<pre>POST</pre>");
+      });
+    });
+
+    test("uses the form `method` attribute", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/form-method");
+      await app.clickElement("button");
+      await page.waitForLoadState("load");
+      expect(await app.getHtml("pre")).toMatch("POST");
+    });
+
+    test("uses the button `formmethod` attribute", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/button-form-method");
+      await app.clickElement("button");
+      await page.waitForLoadState("load");
+      expect(await app.getHtml("pre")).toMatch("POST");
+    });
+  });
+
   test("<Form> submits the submitter's value appended to the form data", async ({
     page,
+    browserName,
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/submitter");
     await app.clickElement("text=Add Task");
     await page.waitForLoadState("load");
-    expect(await app.getHtml("pre")).toBe(
-      `<pre>tasks=first&amp;tasks=second&amp;tasks=</pre>`
-    );
+    // TODO: remove after playwright ships safari 16
+    if (browserName === "webkit") {
+      expect(await app.getHtml("pre")).toBe(
+        `<pre>tasks=first&amp;tasks=second&amp;tasks=&amp;tasks=</pre>`
+      );
+    } else {
+      expect(await app.getHtml("pre")).toBe(
+        `<pre>tasks=first&amp;tasks=second&amp;tasks=</pre>`
+      );
+    }
   });
 });

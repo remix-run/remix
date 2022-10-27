@@ -69,20 +69,6 @@ module.exports = {
       },
     },
     {
-      files: [
-        // All examples and docs, including code blocks in .md files
-        "examples/**/*.js?(x)",
-        "examples/**/*.ts?(x)",
-      ],
-      rules: {
-        "import/order": OFF,
-        "no-unused-expressions": OFF,
-        "no-unused-labels": OFF,
-        "no-unused-vars": OFF,
-        "prefer-let/prefer-let": OFF,
-      },
-    },
-    {
       files: ["packages/**/*.*"],
       excludedFiles: "**/__tests__/**/*.*",
       rules: {

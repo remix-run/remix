@@ -1,6 +1,5 @@
 {
   "files": [],
-  "exclude": ["node_modules", "build"],
   "references": [
     { "path": "integration" },
     { "path": "packages/create-remix" },
