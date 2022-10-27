@@ -34,7 +34,7 @@ export async function watch(
     target = "node14",
     sourcemap = true,
     onWarning = warnOnce,
-    onBuildFailure = logCompileFailure,
+    onCompileFailure = logCompileFailure,
     onRebuildStart,
     onRebuildFinish,
     onFileCreated,
@@ -47,7 +47,7 @@ export async function watch(
     mode,
     target,
     sourcemap,
-    onBuildFailure,
+    onCompileFailure,
     onWarning,
   };
 
@@ -65,7 +65,7 @@ export async function watch(
     try {
       config = await readConfig(config.rootDirectory);
     } catch (error) {
-      onBuildFailure(error as Error);
+      onCompileFailure(error as Error);
       return;
     }
 
@@ -77,7 +77,7 @@ export async function watch(
   let rebuild = debounce(async () => {
     onRebuildStart?.();
     let start = Date.now();
-    await compile(compiler, { onCompileFailure: onBuildFailure });
+    await compile(compiler, { onCompileFailure });
     onRebuildFinish?.(Date.now() - start);
   }, 100);
 
@@ -110,7 +110,7 @@ export async function watch(
       try {
         config = await readConfig(config.rootDirectory);
       } catch (error) {
-        onBuildFailure(error as Error);
+        onCompileFailure(error as Error);
         return;
       }
 

@@ -11,7 +11,7 @@ export async function build(
     target = "node14",
     sourcemap = false,
     onWarning = warnOnce,
-    onBuildFailure = logCompileFailure,
+    onCompileFailure = logCompileFailure,
   }: Partial<CompileOptions> = {}
 ): Promise<void> {
   let compiler = createRemixCompiler(config, {
@@ -19,7 +19,7 @@ export async function build(
     target,
     sourcemap,
     onWarning,
-    onBuildFailure,
+    onCompileFailure,
   });
-  await compile(compiler, { onCompileFailure: onBuildFailure });
+  await compile(compiler, { onCompileFailure });
 }

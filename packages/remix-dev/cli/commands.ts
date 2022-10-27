@@ -172,7 +172,7 @@ export async function build(
   await compiler.build(config, {
     mode,
     sourcemap,
-    onBuildFailure: (failure) => {
+    onCompileFailure: (failure) => {
       compiler.logCompileFailure(failure);
       throw Error();
     },

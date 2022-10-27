@@ -25,5 +25,5 @@ export type CompileOptions = {
   target: Target;
   sourcemap: boolean;
   onWarning?: (message: string, key: string) => void;
-  onBuildFailure?: (failure: Error | esbuild.BuildFailure) => void;
+  onCompileFailure?: (failure: Error | esbuild.BuildFailure) => void;
 };
