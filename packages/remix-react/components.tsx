@@ -867,6 +867,11 @@ import(${JSON.stringify(manifest.entry.module)});`;
     <>
       <link
         rel="modulepreload"
+        href={manifest.url}
+        crossOrigin={props.crossOrigin}
+      />
+      <link
+        rel="modulepreload"
         href={manifest.entry.module}
         crossOrigin={props.crossOrigin}
       />
@@ -983,7 +988,13 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
                 let submitter = (event as unknown as HTMLSubmitEvent)
                   .nativeEvent.submitter as HTMLFormSubmitter | null;
 
-                submit(submitter || event.currentTarget, { method, replace });
+                let submitMethod =
+                  (submitter?.formMethod as FormMethod | undefined) || method;
+
+                submit(submitter || event.currentTarget, {
+                  method: submitMethod,
+                  replace,
+                });
               }
         }
         {...props}
@@ -1431,7 +1442,9 @@ export type FetcherWithComponents<TData> = Fetcher<TData> & {
  *
  * @see https://remix.run/api/remix#usefetcher
  */
-export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
+export function useFetcher<TData = any>(): FetcherWithComponents<
+  SerializeFrom<TData>
+> {
   let { transitionManager } = useRemixEntryContext();
 
   let [key] = React.useState(() => String(++fetcherId));
@@ -1441,7 +1454,7 @@ export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
   });
   let submit = useSubmitImpl(key);
 
-  let fetcher = transitionManager.getFetcher<TData>(key);
+  let fetcher = transitionManager.getFetcher<SerializeFrom<TData>>(key);
 
   let fetcherWithComponents = React.useMemo(
     () => ({

@@ -308,6 +308,83 @@ test.describe("Forms", () => {
           }
         `,
 
+        "app/routes/submitter-formmethod.jsx": js`
+          import { useActionData, useLoaderData, Form } from "@remix-run/react";
+          import { json } from '@remix-run/node'
+
+          export function action({ request }) {
+            return json(request.method)
+          }
+
+          export function loader({ request }) {
+            return json(request.method)
+          }
+
+          export default function Index() {
+            let actionData = useActionData();
+            let loaderData = useLoaderData();
+            return (
+              <>
+                <Form method="post">
+                  <button type="submit" formMethod="get">Replace POST with GET</button>
+                </Form>
+                <Form method="get">
+                  <button type="submit" formMethod="post">Replace GET with POST</button>
+                </Form>
+                <Form method="delete">
+                  <button type="submit" formMethod="post">Replace DELETE with POST</button>
+                </Form>
+
+                <pre>{actionData || loaderData}</pre>
+              </>
+            )
+          }
+        `,
+
+        "app/routes/form-method.jsx": js`
+          import { Form, useActionData, useSearchParams } from "@remix-run/react";
+          import { json } from "@remix-run/node";
+
+          export function action({ request }) {
+            return json(request.method)
+          }
+          export default function() {
+            let actionData = useActionData();
+            let [searchParams] = useSearchParams();
+            let formMethod = searchParams.get('method') || 'post';
+            return (
+              <>
+                <Form method={formMethod}>
+                  <button type="submit">Submit</button>
+                </Form>
+                <pre>{actionData}</pre>
+              </>
+            )
+          }
+        `,
+
+        "app/routes/button-form-method.jsx": js`
+          import { Form, useActionData, useSearchParams } from "@remix-run/react";
+          import { json } from "@remix-run/node";
+
+          export function action({ request }) {
+            return json(request.method)
+          }
+          export default function() {
+            let actionData = useActionData();
+            let [searchParams] = useSearchParams();
+            let formMethod = searchParams.get('method') || 'post';
+            return (
+              <>
+                <Form method={formMethod}>
+                  <button type="submit" formMethod="post">Submit</button>
+                </Form>
+                <pre>{actionData}</pre>
+              </>
+            )
+          }
+        `,
+
         "app/routes/submitter.jsx": js`
           import { useLoaderData, Form } from "@remix-run/react";
 
@@ -330,6 +407,47 @@ test.describe("Forms", () => {
             )
           }
         `,
+
+        "app/routes/pathless-layout-parent.jsx": js`
+          import { json } from '@remix-run/server-runtime'
+          import { Form, Outlet, useActionData } from '@remix-run/react'
+
+          export async function action({ request }) {
+            return json({ submitted: true });
+          }
+          export default function () {
+            let data = useActionData();
+            return (
+              <>
+                <Form method="post">
+                  <h1>Pathless Layout Parent</h1>
+                  <button type="submit">Submit</button>
+                </Form>
+                <Outlet />
+                <p>{data?.submitted === true ? 'Submitted - Yes' : 'Submitted - No'}</p>
+              </>
+            );
+          }
+        `,
+
+        "app/routes/pathless-layout-parent/__pathless.jsx": js`
+          import { Outlet } from '@remix-run/react';
+
+          export default function () {
+            return (
+              <>
+                <h2>Pathless Layout</h2>
+                <Outlet />
+              </>
+            );
+          }
+        `,
+
+        "app/routes/pathless-layout-parent/__pathless/index.jsx": js`
+          export default function () {
+            return <h3>Pathless Layout Index</h3>
+          }
+        `,
       },
     });
 
@@ -349,7 +467,7 @@ test.describe("Forms", () => {
         page.waitForNavigation(),
         app.clickSubmitButton("/get-submission", { wait: false }),
       ]);
-      expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
+      await page.waitForSelector(`pre:has-text("${CHEESESTEAK}")`);
     });
   });
 
@@ -359,7 +477,7 @@ test.describe("Forms", () => {
       // this indirectly tests that clicking SVG children in buttons works
       await app.goto("/get-submission");
       await app.clickSubmitButton("/get-submission");
-      expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
+      await page.waitForSelector(`pre:has-text("${CHEESESTEAK}")`);
     });
   });
 
@@ -370,7 +488,7 @@ test.describe("Forms", () => {
     await app.goto("/get-submission");
     await app.clickElement(`#${FORM_WITH_ACTION_INPUT} button`);
     await page.waitForLoadState("load");
-    expect(await app.getHtml("pre")).toMatch(EAT);
+    await page.waitForSelector(`pre:has-text("${EAT}")`);
   });
 
   test("posts to a loader with button data with click", async ({ page }) => {
@@ -380,7 +498,7 @@ test.describe("Forms", () => {
       page.waitForNavigation(),
       app.clickElement("#buttonWithValue"),
     ]);
-    expect(await app.getHtml("pre")).toMatch(LAKSA);
+    await page.waitForSelector(`pre:has-text("${LAKSA}")`);
   });
 
   test("posts to a loader with button data with keyboard", async ({ page }) => {
@@ -389,23 +507,22 @@ test.describe("Forms", () => {
     await page.focus(`#${KEYBOARD_INPUT}`);
     await page.keyboard.press("Enter");
     await page.waitForLoadState("networkidle");
-    expect(await app.getHtml("pre")).toMatch(LAKSA);
+    await page.waitForSelector(`pre:has-text("${LAKSA}")`);
   });
 
   test("posts with the correct checkbox data", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/get-submission");
     await app.clickElement(`#${CHECKBOX_BUTTON}`);
-    expect(await app.getHtml("pre")).toBe(
-      `<pre>LUNCH=CHEESESTEAK&amp;LUNCH=LAKSA</pre>`
-    );
+    await page.waitForSelector(`pre:has-text("${LAKSA}")`);
+    await page.waitForSelector(`pre:has-text("${CHEESESTEAK}")`);
   });
 
   test("posts button data from outside the form", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/get-submission");
     await app.clickElement(`#${ORPHAN_BUTTON}`);
-    expect(await app.getHtml("pre")).toMatch(SQUID_INK_HOTDOG);
+    await page.waitForSelector(`pre:has-text("${SQUID_INK_HOTDOG}")`);
   });
 
   test("when clicking on a submit button as a descendant of an element that stops propagation on click, still passes the clicked submit button's `name` and `value` props to the request payload", async ({
@@ -818,6 +935,60 @@ test.describe("Forms", () => {
     });
   });
 
+  test.describe("with submitter button having `formMethod` attribute", () => {
+    test.describe("overrides the form `method` attribute with the button `formmethod` attribute", () => {
+      test("submits with GET instead of POST", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/submitter-formmethod");
+        await app.clickElement("text=Replace POST with GET");
+        await page.waitForLoadState("load");
+        expect(await app.getHtml("pre")).toBe("<pre>GET</pre>");
+      });
+
+      test("submits with POST instead of GET", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/submitter-formmethod");
+        await app.clickElement("text=Replace GET with POST");
+        await page.waitForLoadState("load");
+        expect(await app.getHtml("pre")).toBe("<pre>POST</pre>");
+      });
+
+      test("submits with POST instead of DELETE", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/submitter-formmethod");
+        await app.clickElement("text=Replace DELETE with POST");
+        await page.waitForLoadState("load");
+        expect(await app.getHtml("pre")).toBe("<pre>POST</pre>");
+      });
+    });
+
+    test("uses the form `method` attribute", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/form-method?method=delete");
+      await app.clickElement("button");
+      await page.waitForLoadState("load");
+      expect(await app.getHtml("pre")).toMatch("DELETE");
+
+      await app.goto("/form-method?method=post");
+      await app.clickElement("button");
+      await page.waitForLoadState("load");
+      expect(await app.getHtml("pre")).toMatch("POST");
+    });
+
+    test("uses the button `formmethod` attribute", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/button-form-method?method=get");
+      await app.clickElement("button");
+      await page.waitForLoadState("load");
+      expect(await app.getHtml("pre")).toMatch("POST");
+
+      await app.goto("/button-form-method?method=delete");
+      await app.clickElement("button");
+      await page.waitForLoadState("load");
+      expect(await app.getHtml("pre")).toMatch("POST");
+    });
+  });
+
   test("<Form> submits the submitter's value appended to the form data", async ({
     page,
     browserName,
@@ -836,5 +1007,25 @@ test.describe("Forms", () => {
         `<pre>tasks=first&amp;tasks=second&amp;tasks=</pre>`
       );
     }
+  });
+
+  test("pathless layout routes are ignored in form actions", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/pathless-layout-parent");
+    let html = await app.getHtml();
+    expect(html).toMatch("Pathless Layout Parent");
+    expect(html).toMatch("Pathless Layout ");
+    expect(html).toMatch("Pathless Layout Index");
+
+    let el = getElement(html, `form`);
+    expect(el.attr("action")).toMatch("/pathless-layout-parent");
+
+    expect(await app.getHtml()).toMatch("Submitted - No");
+    // This submission should ignore the index route and the pathless layout
+    // route above it and hit the action in routes/pathless-layout-parent.jsx
+    await app.clickSubmitButton("/pathless-layout-parent");
+    expect(await app.getHtml()).toMatch("Submitted - Yes");
   });
 });

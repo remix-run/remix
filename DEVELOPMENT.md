@@ -101,7 +101,7 @@ REMIX_DEBUG=true yarn watch
 When developing Remix locally, you often need to go beyond unit/integration tests and test your changes in a local Remix application. The easiest way to do this is to run your local Remix build and use this environment variable to direct `rollup` to write the output files directly into the local Remix application's `node_modules` folder. Then you just need to restart your local Remix application server to pick up the changes.
 
 ```sh
-# Tab 1 - create an run a local remix application
+# Tab 1 - create and run a local remix application
 npx create-remix
 cd my-remix-app
 npm run dev

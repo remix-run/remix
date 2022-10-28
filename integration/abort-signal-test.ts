@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
@@ -15,14 +15,12 @@ test.beforeAll(async () => {
         import { useActionData, useLoaderData, Form } from "@remix-run/react";
 
         export async function action ({ request }) {
-          console.log('action request.signal', request.signal)
           // New event loop causes express request to close
           await new Promise(r => setTimeout(r, 0));
           return json({ aborted: request.signal.aborted });
         }
 
         export function loader({ request }) {
-          console.log('loader request.signal', request.signal)
           return json({ aborted: request.signal.aborted });
         }
 
@@ -52,10 +50,11 @@ test.afterAll(async () => appFixture.close());
 test("should not abort the request in a new event loop", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
   await app.goto("/");
-  expect(await app.getHtml(".action")).toMatch("empty");
-  expect(await app.getHtml(".loader")).toMatch("false");
+  await page.waitForSelector(`.action:has-text("empty")`);
+  await page.waitForSelector(`.loader:has-text("false")`);
 
   await app.clickElement('button[type="submit"]');
-  expect(await app.getHtml(".action")).toMatch("false");
-  expect(await app.getHtml(".loader")).toMatch("false");
+
+  await page.waitForSelector(`.action:has-text("false")`);
+  await page.waitForSelector(`.loader:has-text("false")`);
 });
