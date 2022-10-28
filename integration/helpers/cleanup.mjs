@@ -12,7 +12,7 @@ for (let pathToRemove of pathsToRemove) {
   console.log(`Removing ${path.relative(process.cwd(), pathToRemove)}`);
   let childProcess;
   if (process.platform === "win32") {
-    childProcess = spawn("del", ["/s", "/q", pathToRemove], {
+    childProcess = spawn("rmdir", ["/s", "/q", pathToRemove], {
       stdio: "inherit",
     });
   } else {
