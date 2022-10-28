@@ -19,6 +19,11 @@ interface FileSessionStorageOptions {
    * The directory to use to store session files.
    */
   dir: string;
+  
+  /**
+   * A function passed to `JSON.parse`, this can be used to customize parsing of json data
+   */
+  reviver?: (key: string, value: string) => any;
 }
 
 /**
@@ -32,6 +37,7 @@ interface FileSessionStorageOptions {
 export function createFileSessionStorage({
   cookie,
   dir,
+  reviver = undefined,
 }: FileSessionStorageOptions): SessionStorage {
   return createSessionStorage({
     cookie,
@@ -61,7 +67,7 @@ export function createFileSessionStorage({
     async readData(id) {
       try {
         let file = getFile(dir, id);
-        let content = JSON.parse(await fsp.readFile(file, "utf-8"));
+        let content = JSON.parse(await fsp.readFile(file, "utf-8"), reviver);
         let data = content.data;
         let expires =
           typeof content.expires === "string"
