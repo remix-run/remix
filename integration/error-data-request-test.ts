@@ -116,7 +116,7 @@ test.describe("ErrorBoundary", () => {
     expect(response.headers.get("X-Remix-Error")).toBe("yes");
     expect(await response.text()).toMatch("Unexpected Server Error");
     assertConsoleError(
-      'Error: You made a GET request to test://test/?_data=routes%2Findex but did not provide a `loader` for route "routes/index", so there is no way to handle the request.'
+      'Error: You made a GET request to "/" but did not provide a `loader` for route "routes/index", so there is no way to handle the request.'
     );
   });
 
@@ -128,7 +128,7 @@ test.describe("ErrorBoundary", () => {
     expect(response.headers.get("X-Remix-Error")).toBe("yes");
     expect(await response.text()).toMatch("Unexpected Server Error");
     assertConsoleError(
-      'Error: You made a POST request to test://test/?index=&_data=routes%2Findex but did not provide an `action` for route "routes/index", so there is no way to handle the request.'
+      'Error: You made a POST request to "/" but did not provide an `action` for route "routes/index", so there is no way to handle the request.'
     );
   });
 

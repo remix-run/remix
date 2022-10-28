@@ -250,12 +250,6 @@ test.describe("CatchBoundary", () => {
     await page.waitForSelector("#root-boundary");
   });
 
-  test("invalid request methods", async () => {
-    let res = await fixture.requestDocument("/", { method: "OPTIONS" });
-    expect(res.status).toBe(405);
-    expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);
-  });
-
   test("own boundary, action, document request", async () => {
     let params = new URLSearchParams();
     let res = await fixture.postDocument(HAS_BOUNDARY_ACTION, params);

@@ -1,10 +1,6 @@
 // TODO: RRR - Change import to @remix-run/router
-import type { StaticHandler, StaticHandlerContext } from "./router";
-import {
-  ErrorWithStatus,
-  isErrorWithStatus,
-  isRouteErrorResponse,
-} from "./router";
+import { ErrorResponse, StaticHandler, StaticHandlerContext } from "./router";
+import { isRouteErrorResponse } from "./router";
 import { unstable_createStaticHandler } from "./router";
 import type { AppLoadContext } from "./data";
 import { callRouteAction, callRouteLoader, extractData } from "./data";
@@ -183,28 +179,42 @@ async function handleDataRequest({
 
   try {
     if (!isValidRequestMethod(request)) {
-      throw new ErrorWithStatus(
-        `Invalid request method "${request.method}"`,
-        405
+      throw new ErrorResponse(
+        405,
+        "Method Not Allowed",
+        new Error(`Invalid request method "${request.method}"`),
+        true
       );
     }
 
     let url = new URL(request.url);
 
     if (!matches) {
-      throw new ErrorWithStatus(`No route matches URL "${url.pathname}"`, 404);
+      throw new ErrorResponse(
+        404,
+        "Not Found",
+        new Error(`No route matches URL "${url.pathname}"`),
+        true
+      );
     }
 
     let routeId = url.searchParams.get("_data");
     if (!routeId) {
-      throw new ErrorWithStatus(`Missing route id in ?_data`, 403);
+      throw new ErrorResponse(
+        403,
+        "Forbidden",
+        new Error(`Missing route id in ?_data`),
+        true
+      );
     }
 
     let tempMatch = matches.find((match) => match.route.id === routeId);
     if (!tempMatch) {
-      throw new ErrorWithStatus(
-        `Route "${routeId}" does not match URL "${url.pathname}"`,
-        403
+      throw new ErrorResponse(
+        403,
+        "Forbidden",
+        new Error(`Route "${routeId}" does not match URL "${url.pathname}"`),
+        true
       );
     }
     match = tempMatch;
@@ -249,13 +259,23 @@ async function handleDataRequest({
 
     return response;
   } catch (error: unknown) {
-    if (serverMode !== ServerMode.Test) {
-      console.error(error);
+    let status = 500;
+    let errorInstance = error;
+
+    if (isRouteErrorResponse(error)) {
+      status = error.status;
+      errorInstance = error.error || errorInstance;
     }
 
-    let status = isErrorWithStatus(error) ? error.status : 500;
-    if (serverMode === ServerMode.Development && error instanceof Error) {
-      return errorBoundaryError(error, status);
+    if (serverMode !== ServerMode.Test) {
+      console.error(errorInstance);
+    }
+
+    if (
+      serverMode === ServerMode.Development &&
+      errorInstance instanceof Error
+    ) {
+      return errorBoundaryError(errorInstance, status);
     }
 
     return errorBoundaryError(new Error("Unexpected Server Error"), status);
@@ -295,13 +315,23 @@ async function handleDataRequestRR(
       return error;
     }
 
-    if (serverMode !== ServerMode.Test) {
-      console.error(error);
+    let status = 500;
+    let errorInstance = error;
+
+    if (isRouteErrorResponse(error)) {
+      status = error.status;
+      errorInstance = error.error || errorInstance;
     }
 
-    let status = isErrorWithStatus(error) ? error.status : 500;
-    if (serverMode === ServerMode.Development && error instanceof Error) {
-      return errorBoundaryError(error, status);
+    if (serverMode !== ServerMode.Test) {
+      console.error(errorInstance);
+    }
+
+    if (
+      serverMode === ServerMode.Development &&
+      errorInstance instanceof Error
+    ) {
+      return errorBoundaryError(errorInstance, status);
     }
 
     return errorBoundaryError(new Error("Unexpected Server Error"), status);
@@ -318,7 +348,11 @@ function findParentBoundary(
   // react-router doesn't have a matching "root" route to assign the error to
   // so it returns context.errors = { __shim-404-route__: ErrorResponse }
   let route = routes[routeId] || routes["root"];
-  let isCatch = isRouteErrorResponse(error);
+  // Router-thrown ErrorResponses will have the error instance.  User-thrown
+  // Responses will not have an error. The one exception here is internal 404s
+  // which we handle the same as user-thrown 404s
+  let isCatch =
+    isRouteErrorResponse(error) && (!error.error || error.status === 404);
   if (
     (isCatch && route.module.CatchBoundary) ||
     (!isCatch && route.module.ErrorBoundary) ||
@@ -392,13 +426,37 @@ async function handleDocumentRequestRR(
     if (!error) {
       continue;
     } else if (isRouteErrorResponse(error)) {
+      // Internal Remix errors will throw an ErrorResponse with the actual error
+      if (error.error && error.status !== 404) {
+        if (build.routes[id]?.module.ErrorBoundary) {
+          appState.loaderBoundaryRouteId = id;
+        }
+        appState.trackBoundaries = false;
+        appState.error = await serializeError(error.error);
+
+        if (
+          error.status === 405 &&
+          error.error.message.includes("Invalid request method")
+        ) {
+          // Note: Emptying this out ensures our response matches the Remix-flow
+          // exactly, but functionally both end up using the root error boundary
+          // if it exists.  Might be able to clean this up eventually.
+          context.matches = [];
+        }
+        break;
+      }
+
+      // ErrorResponse's without an error were thrown by the user action/loader
       if (build.routes[id]?.module.CatchBoundary) {
         appState.catchBoundaryRouteId = id;
       }
       appState.trackCatchBoundaries = false;
       appState.catch = {
         // Order is important for response matching assertions!
-        data: error.data,
+        data:
+          error.error && error.status === 404
+            ? error.error.message
+            : error.data,
         status: error.status,
         statusText: error.statusText,
       };
@@ -502,26 +560,29 @@ async function handleDocumentRequest({
     catch: undefined,
   };
 
+  let errorStatus = 500;
+
   if (!isValidRequestMethod(request)) {
     matches = null;
-    appState.trackCatchBoundaries = false;
-    appState.catch = {
-      data: null,
-      status: 405,
-      statusText: "Method Not Allowed",
-    };
+    appState.loaderBoundaryRouteId = routes[0].module.ErrorBoundary
+      ? routes[0].id
+      : null;
+    appState.trackBoundaries = false;
+    errorStatus = 405;
+    appState.error = await serializeError(
+      new Error(`Invalid request method "${request.method}"`)
+    );
   } else if (!matches) {
     // TODO: Double check that we have integration tests asserting that this
     // is a 404 catch boundary
     appState.trackCatchBoundaries = false;
     appState.catch = {
-      data: null,
+      data: `No route matches URL "${new URL(request.url).pathname}"`,
       status: 404,
       statusText: "Not Found",
     };
   }
 
-  let errorStatus = 500;
   let actionStatus: { status: number; statusText: string } | undefined;
   let actionData: Record<string, unknown> | undefined;
   let actionMatch: RouteMatch<ServerRoute> | undefined;
@@ -565,13 +626,18 @@ async function handleDocumentRequest({
         };
       }
     } catch (error: any) {
-      errorStatus = isErrorWithStatus(error) ? error.status : 500;
+      let errorInstance = error;
+      if (isRouteErrorResponse(error)) {
+        errorStatus = error.status;
+        errorInstance = error.error || errorInstance;
+      }
+
       appState.loaderBoundaryRouteId = getDeepestRouteIdWithBoundary(
         matches,
         "ErrorBoundary"
       );
       appState.trackBoundaries = false;
-      appState.error = await serializeError(error);
+      appState.error = await serializeError(errorInstance);
 
       if (serverMode !== ServerMode.Test) {
         console.error(
@@ -673,9 +739,15 @@ async function handleDocumentRequest({
     }
 
     if (error) {
-      loaderStatusCodes.push(isErrorWithStatus(error) ? error.status : 500);
       appState.trackBoundaries = false;
-      appState.error = await serializeError(error);
+
+      if (isRouteErrorResponse(error) && error.error) {
+        loaderStatusCodes.push(error.status);
+        appState.error = await serializeError(error.error);
+      } else {
+        loaderStatusCodes.push(500);
+        appState.error = await serializeError(error);
+      }
 
       if (serverMode !== ServerMode.Test) {
         console.error(
@@ -825,6 +897,9 @@ async function handleResourceRequestRR(
     return response;
   } catch (error) {
     if (error instanceof Response) {
+      // Note: Not functionally required but ensures that our response headers
+      // match identically to what Remix returns
+      error.headers.set("X-Remix-Catch", "yes");
       return error;
     }
     return returnLastResortErrorResponse(error, serverMode);
@@ -974,6 +1049,7 @@ async function assert(
 ) {
   let aStr = JSON.stringify(await accessor(a));
   let bStr = JSON.stringify(await accessor(b));
+
   if (aStr !== bStr) {
     console.error(message);
     message += "\nResponse 1:\n" + aStr + "\nResponse 2:\n" + bStr;
