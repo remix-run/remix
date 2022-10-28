@@ -735,13 +735,21 @@ export function Meta() {
 
         // Open Graph tags use the `property` attribute, while other meta tags
         // use `name`. See https://ogp.me/
+        //
+        // Namespaced attributes:
+        //  - https://ogp.me/#type_music
+        //  - https://ogp.me/#type_video
+        //  - https://ogp.me/#type_article
+        //  - https://ogp.me/#type_book
+        //  - https://ogp.me/#type_profile
+        //
+        // Facebook specific tags begin with `fb:` and also use the `property`
+        // attribute.
+        //
+        // Twitter specific tags begin with `twitter:` but they use `name`, so
+        // they are excluded.
         let isOpenGraphTag =
-          name.startsWith("og:") ||
-          name.startsWith("music:") || // https://ogp.me/#type_music
-          name.startsWith("video:") || // https://ogp.me/#type_video
-          name.startsWith("article:") || // https://ogp.me/#type_article
-          name.startsWith("book:") || // https://ogp.me/#type_book
-          name.startsWith("profile:"); // https://ogp.me/#type_profile
+          /^(og|music|video|article|book|profile|fb):.+$/.test(name);
 
         return [value].flat().map((content) => {
           if (isOpenGraphTag) {

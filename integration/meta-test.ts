@@ -122,6 +122,30 @@ test.describe("meta", () => {
           }
         `,
 
+        "app/routes/fb.jsx": js`
+          export function meta({ data }) {
+            return {
+              "fb:app_id": "54321",
+            };
+          }
+
+          export default function FB() {
+            return <h1>FB App</h1>;
+          }
+        `,
+
+        "app/routes/twitter.jsx": js`
+          export function meta({ data }) {
+            return {
+              "twitter:site": "@chancethedev",
+            };
+          }
+
+          export default function Twitter() {
+            return <h1>Twitter App</h1>;
+          }
+        `,
+
         "app/routes/bogus.jsx": js`
           export function meta({ data }) {
             return {
@@ -289,6 +313,18 @@ test.describe("meta", () => {
     expect(await app.getHtml('meta[property="profile:username"]')).toBeTruthy();
   });
 
+  test("{ 'fb:*' } adds a <meta property='fb:*' />", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/fb");
+    expect(await app.getHtml('meta[property="fb:app_id"]')).toBeTruthy();
+  });
+
+  test("{ 'twitter:*' } adds a <meta name='twitter:*' />", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/twitter");
+    expect(await app.getHtml('meta[name="twitter:site"]')).toBeTruthy();
+  });
+
   test("{ 'article:*' } adds a <meta property='article:*' />", async ({
     page,
   }) => {
@@ -319,7 +355,9 @@ test.describe("meta", () => {
     ).toBeTruthy();
   });
 
-  test("unrecognized key adds a <meta name='[VALUE]' />", async ({ page }) => {
+  test("arbitrary key with : adds a <meta name='[VALUE]' />", async ({
+    page,
+  }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/bogus");
     expect(await app.getHtml('meta[name="bogus:value"]')).toBeTruthy();
