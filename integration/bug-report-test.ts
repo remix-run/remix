@@ -108,7 +108,6 @@ test.beforeAll(async () => {
             // a Cookie from createCookie or the CookieOptions to create one
             cookie: {
               name: "__session",
-
               httpOnly: true,
               maxAge: 60,
               path: "/",
