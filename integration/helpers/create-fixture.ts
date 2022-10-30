@@ -4,7 +4,7 @@ import type { Writable } from "stream";
 import express from "express";
 import getPort from "get-port";
 import stripIndent from "strip-indent";
-import { sync as spawnSync } from "cross-spawn";
+import spawn, { sync as spawnSync } from "cross-spawn";
 import type { JsonObject } from "type-fest";
 import type { ServerMode } from "@remix-run/server-runtime/mode";
 
@@ -140,6 +140,36 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
   };
 
   return start();
+}
+
+export async function createDevServerFixture(fixture: Fixture): Promise<AppFixture> {
+  let port = await getPort();
+  let devSpawn = spawn(
+      "node",
+      ["node_modules/@remix-run/dev/dist/cli.js", "dev", "--port", port.toString()],
+      {cwd: fixture.projectDir}
+  );
+
+  // Wait for dev server to be ready
+  await new Promise<void>((resolve) => {
+    devSpawn.stdout!.on("data", (data) => {
+      let line = data.toString();
+
+      // Remove comments for debugging
+      // console.log(`DEV(${fixture.projectDir.slice(-8)}):`, line.trim());
+
+      if (line.startsWith("Remix App Server started at")) {
+        return resolve();
+      }
+    })
+  });
+
+  return {
+    serverUrl: `http://localhost:${port}`,
+    close: async () => {
+      devSpawn.kill();
+    }
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
