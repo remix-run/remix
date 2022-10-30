@@ -2,6 +2,7 @@ const path = require("path");
 const express = require("express");
 const compression = require("compression");
 const morgan = require("morgan");
+const chokidar = require("chokidar");
 const { createRequestHandler } = require("@remix-run/express");
 
 const BUILD_DIR = path.join(process.cwd(), "build");
@@ -25,12 +26,17 @@ app.use(express.static("public", { maxAge: "1h" }));
 
 app.use(morgan("tiny"));
 
+if (process.env.NODE_ENV === "development") {
+    chokidar.watch(path.join(BUILD_DIR, "index.js")).on('change', () => {
+        purgeRequireCache();
+        require(BUILD_DIR);
+    });
+}
+
 app.all(
   "*",
   process.env.NODE_ENV === "development"
     ? (req, res, next) => {
-        purgeRequireCache();
-
         return createRequestHandler({
           build: require(BUILD_DIR),
           mode: process.env.NODE_ENV,

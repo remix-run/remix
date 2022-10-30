@@ -228,6 +228,7 @@ export async function watch(
     },
     onRebuildFinish() {
       log(`Rebuilt in ${prettyMs(Date.now() - start)}`);
+      purgeAppRequireCache(config.serverBuildPath);
       broadcast({ type: "RELOAD" });
     },
     onFileCreated(file) {
@@ -295,10 +296,6 @@ export async function dev(
 
   let app = express();
   app.disable("x-powered-by");
-  app.use((_, __, next) => {
-    purgeAppRequireCache(config.serverBuildPath);
-    next();
-  });
   app.use(
     createApp(
       config.serverBuildPath,
