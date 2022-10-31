@@ -1,6 +1,6 @@
 // TODO: RRR - Change import to @remix-run/router
-import { ErrorResponse, StaticHandler, StaticHandlerContext } from "./router";
-import { isRouteErrorResponse } from "./router";
+import type { StaticHandler, StaticHandlerContext } from "./router";
+import { ErrorResponse, isRouteErrorResponse } from "./router";
 import { unstable_createStaticHandler } from "./router";
 import type { AppLoadContext } from "./data";
 import { callRouteAction, callRouteLoader, extractData } from "./data";
