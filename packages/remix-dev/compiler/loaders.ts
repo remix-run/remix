@@ -37,6 +37,9 @@ export const loaders: { [ext: string]: esbuild.Loader } = {
   ".woff": "file",
   ".woff2": "file",
   ".zip": "file",
+  ".glb": "file",
+  ".gltf": "file",
+  ".hdr": "file",
 };
 
 export function getLoaderForFile(file: string): esbuild.Loader {

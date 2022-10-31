@@ -112,3 +112,15 @@ declare module "*.zip" {
   let asset: string;
   export default asset;
 }
+declare module "*.glb" {
+  let asset: string;
+  export default asset;
+}
+declare module "*.gltf" {
+  let asset: string;
+  export default asset;
+}
+declare module "*.hdr" {
+  let asset: string;
+  export default asset;
+}
