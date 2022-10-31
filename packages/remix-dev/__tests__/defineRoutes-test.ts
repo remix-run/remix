@@ -97,4 +97,16 @@ describe("defineRoutes", () => {
 
     expect(Object.entries(routes)).toHaveLength(3);
   });
+
+  it("throws an error when one route already exists with the same custom ID", () => {
+    function defineNonUniqueRoutes() {
+      defineRoutes((route) => {
+        route("/user/:id", "routes/index.tsx", { id: "user" });
+        route("/user", "routes/index.tsx", { id: "user" });
+        route("/other", "routes/other-route.tsx");
+      });
+    }
+
+    expect(defineNonUniqueRoutes).toThrow("must be unique");
+  });
 });
