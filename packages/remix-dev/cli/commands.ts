@@ -301,12 +301,12 @@ export async function dev(
     next();
   });
   app.use(
-    createApp(
-      config.serverBuildPath,
+    createApp(config.serverBuildPath, {
       mode,
-      config.publicPath,
-      config.assetsBuildDirectory
-    )
+      basename: config.serverBasename,
+      publicPath: config.publicPath,
+      assetsBuildDirectory: config.assetsBuildDirectory,
+    })
   );
 
   let server: Server | null = null;

@@ -114,8 +114,12 @@ async function copyBuildToDist() {
       (async () => {
         let src = path.relative(ROOT_DIR, path.join(...srcFile.split("/")));
         let dest = path.relative(ROOT_DIR, path.join(...destFile.split("/")));
-        console.log(chalk.yellow(`  🛠  Copying ${src} to ${dest}`));
-        await fse.copy(src, dest);
+        try {
+          await fse.copy(src, dest);
+          console.log(chalk.yellow(`  🛠  Copying ${src} to ${dest}`));
+        } catch (error) {
+          console.log(chalk.red(`  🛠  Error Copying ${src} to ${dest}`));
+        }
       })()
     )
   );

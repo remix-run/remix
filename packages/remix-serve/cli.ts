@@ -35,12 +35,12 @@ let onListen = () => {
 
 let build = require(buildPath);
 
-let app = createApp(
-  buildPath,
-  process.env.NODE_ENV,
-  build.publicPath,
-  build.assetsBuildDirectory
-);
+let app = createApp(buildPath, {
+  mode: process.env.NODE_ENV,
+  basename: build.serverBasename,
+  publicPath: build.publicPath,
+  assetsBuildDirectory: build.assetsBuildDirectory,
+});
 let server = process.env.HOST
   ? app.listen(port, process.env.HOST, onListen)
   : app.listen(port, onListen);
