@@ -2242,7 +2242,7 @@ import { PrismaClient } from "@prisma/client";
 const db = new PrismaClient();
 
 async function seed() {
-  const kody = await db.user.create({
+  await db.user.create({
     data: {
       username: "kody",
       // this is a hashed version of "twixrox"
