@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.7.5-pre.0
+
+### Patch Changes
+
+- Make sure namespaced Open Graph and `fb:app_id` meta data renders the correct attributes on `<meta>` tags ([#4445](https://github.com/remix-run/remix/pull/4445))
+
 ## 1.7.4
 
 ### Patch Changes
