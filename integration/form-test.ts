@@ -361,6 +361,74 @@ test.describe("Forms", () => {
           }
         `,
 
+        "app/routes/form-data.jsx": js`
+          import { Form } from "@remix-run/react";
+
+          export default function() {
+            return (
+              <>
+                <Form action="/outputFormData" id="myform">
+                  {/* the basics */}
+                  <input type="text" name="text" defaultValue="hello" />
+                  <input type="hidden" name="text" value="world" />
+                  <textarea name="text" defaultValue="yay"></textarea>
+                  <button id="go" name="go" value="go!" />
+
+                  {/* radios/checkboxes/selects */}
+                  <input type="radio" name="rad" value="1" />
+                  <input type="radio" name="rad" value="2" defaultChecked />
+                  <input type="radio" name="rad" value="3" />
+                  <input type="checkbox" name="checky" value="1" defaultChecked />
+                  <input type="checkbox" name="checky" value="2" defaultChecked />
+                  <input type="checkbox" name="checky" value="3" />
+                  <select name="selecty" defaultValue="2">
+                    <option>1</option>
+                    <option>2</option>
+                  </select>
+                  <select name="selecty2" multiple defaultValue={["2", "3"]}>
+                    <option>1</option>
+                    <option>2</option>
+                    <option>3</option>
+                  </select>
+
+                  {/* charset inference */}
+                  <input name="_charset_" type="hidden" />
+
+                  {/* unnamed */}
+                  <input defaultValue="skipped" />
+
+                  {/* various disabled things */}
+                  <input name="input-disabled" disabled defaultValue="skipped" />
+                  <select name="select-with-disabled-selected-option" defaultValue="1">
+                    <option disabled>skipped</option>
+                  </select>
+                  <fieldset disabled>
+                    <input name="fieldset-disabled-input" defaultValue="skipped" />
+                    <legend>
+                      {/* this is considered enabled, per the spec */}
+                      <input
+                        name="fieldset-disabled-legend-input-enabled"
+                        defaultValue="1"
+                      />
+                    </legend>
+                  </fieldset>
+
+                  {/* various form ownweship permutations */}
+                  <input name="text" defaultValue="1" />
+                  <input name="text" form="myform" defaultValue="2" />
+                  <input name="text" form="unrelated" defaultValue="skipped" />
+                </Form>
+                <form id="unrelated">
+                  <input name="text" defaultValue="skipped" />
+                  <input name="text" form="myform" defaultValue="3" />
+                </form>
+                <input name="text" defaultValue="skipped" />
+                <input name="text" form="myform" defaultValue="4" />
+              </>
+            );
+          }
+        `,
+
         "app/routes/file-upload.jsx": js`
           import { Form, useSearchParams } from "@remix-run/react";
 
@@ -973,12 +1041,7 @@ test.describe("Forms", () => {
 
     test("submits the submitter's value(s) in tree order in the form data", async ({
       page,
-      javaScriptEnabled,
     }) => {
-      test.fail(
-        Boolean(javaScriptEnabled),
-        "<Form> doesn't serialize submit buttons correctly #4342"
-      );
       let app = new PlaywrightFixture(appFixture, page);
 
       await app.goto("/submitter");
@@ -1009,6 +1072,35 @@ test.describe("Forms", () => {
       await app.clickElement("text=Outside");
       expect((await app.getElement("#formData")).val()).toBe(
         "tasks=outside&tasks=first&tasks=second&tasks=last"
+      );
+    });
+
+    test("serializes form data correctly", async ({ page }) => {
+      // since we construct the form data set ourselves for <Form> submissions, test just
+      // about everything to ensure parity with <form> 😅
+      let app = new PlaywrightFixture(appFixture, page);
+
+      await app.goto("/form-data");
+      await app.clickElement("#go");
+      expect((await app.getElement("#formData")).val()).toBe(
+        new URLSearchParams([
+          ["text", "hello"],
+          ["text", "world"],
+          ["text", "yay"],
+          ["go", "go!"],
+          ["rad", "2"],
+          ["checky", "1"],
+          ["checky", "2"],
+          ["selecty", "2"],
+          ["selecty2", "2"],
+          ["selecty2", "3"],
+          ["_charset_", "UTF-8"],
+          ["fieldset-disabled-legend-input-enabled", "1"],
+          ["text", "1"],
+          ["text", "2"],
+          ["text", "3"],
+          ["text", "4"],
+        ]).toString()
       );
     });
 
