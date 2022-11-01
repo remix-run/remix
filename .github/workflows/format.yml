@@ -13,12 +13,10 @@ jobs:
 
     steps:
       - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.10.0
+        uses: styfle/cancel-workflow-action@0.11.0
 
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.FORMAT_PAT }}
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
@@ -45,8 +43,8 @@ jobs:
 
       - name: 💪 Commit
         run: |
-          git config --local user.email "hello@remix.run"
-          git config --local user.name "Remix Run Bot"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
 
           git add .
           if [ -z "$(git status --porcelain)" ]; then

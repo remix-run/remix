@@ -684,7 +684,7 @@ Running `npm run dev` will run the specified commands in parallel in a single te
 
 You can use CSS-in-JS libraries like Styled Components. Some of them require a "double render" in order to extract the styles from the component tree during the server render. It's unlikely this will affect performance in a significant way; React is pretty fast.
 
-Here's some sample code to show how you might use Styled Components with Remix (you can also [find a runnable example in the Remix examples directory][styled-components-example]):
+Here's some sample code to show how you might use Styled Components with Remix (you can also [find a runnable example in the Remix examples repository][styled-components-example]):
 
 1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
 
@@ -768,8 +768,8 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
 [link]: ../api/remix#link
 [route-module-links]: ../api/conventions#links
-[styled-components-example]: https://github.com/remix-run/remix/tree/dev/examples/styled-components
-[examples]: https://github.com/remix-run/remix/tree/dev/examples
+[styled-components-example]: https://github.com/remix-run/examples/tree/main/styled-components
+[examples]: https://github.com/remix-run/examples
 [styled-components-issue]: https://github.com/styled-components/styled-components/issues/3660
 [tailwind]: https://tailwindcss.com
 [tailwind-intelli-sense-extension]: https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss

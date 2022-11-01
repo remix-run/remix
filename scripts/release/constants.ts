@@ -1,4 +1,4 @@
-import { cleanupRef, cleanupTagName } from "./utils";
+import { cleanupRef, cleanupTagName, isNightly } from "./utils";
 
 if (!process.env.DEFAULT_BRANCH) {
   throw new Error("DEFAULT_BRANCH is required");
@@ -30,3 +30,5 @@ export const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY;
 export const DEFAULT_BRANCH = process.env.DEFAULT_BRANCH;
 export const NIGHTLY_BRANCH = process.env.NIGHTLY_BRANCH;
 export const PR_FILES_STARTS_WITH = ["packages/"];
+export const IS_NIGHTLY_RELEASE = isNightly(VERSION);
+export const AWAITING_RELEASE_LABEL = "awaiting release";
