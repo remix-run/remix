@@ -1,5 +1,39 @@
 # `@remix-run/server-runtime`
 
+## 1.7.4
+
+### Patch Changes
+
+- Ignore pathless layout routes in action matches ([#4376](https://github.com/remix-run/remix/pull/4376))
+
+## 1.7.3
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.7.3) for an overview of all changes in v1.7.3.
+
+## 1.7.2
+
+### Patch Changes
+
+- Fix dependency conflicts with `type-fest` ([`87642b71b`](https://github.com/remix-run/remix/commit/87642b71b20880707cf2d9168a113b9dca406ee8))
+
+## 1.7.1
+
+### Patch Changes
+
+- Properly locked the dependency on `react-router-dom` to version 6.3.0 ([#4203](https://github.com/remix-run/remix/pull/4203))
+
+## 1.7.0
+
+### Minor Changes
+
+- We've added a new type: `SerializeFrom`. This is used to infer the ([#4013](https://github.com/remix-run/remix/pull/4013))
+  JSON-serialized return type of loaders and actions.
+- `MetaFunction` type can now infer `data` and `parentsData` types from route loaders ([#4022](https://github.com/remix-run/remix/pull/4022))
+
+### Patch Changes
+
+- Improved performance for data serialization at runtime ([#3889](https://github.com/remix-run/remix/pull/3889))
+
 ## 1.6.8
 
 ### Patch Changes

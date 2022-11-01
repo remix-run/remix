@@ -1,16 +1,20 @@
+// TODO: RRR - Change import to @remix-run/router
+import type { StaticHandler } from "./router";
+import { unstable_createStaticHandler } from "./router";
 import type { AppLoadContext } from "./data";
 import { callRouteAction, callRouteLoader, extractData } from "./data";
 import type { AppState } from "./errors";
-import type { HandleDataRequestFunction, ServerBuild } from "./build";
+import type { ServerBuild } from "./build";
 import type { EntryContext } from "./entry";
 import { createEntryMatches, createEntryRouteModules } from "./entry";
 import { serializeError } from "./errors";
 import { getDocumentHeaders } from "./headers";
+import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
 import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
 import type { ServerRoute } from "./routes";
-import { createRoutes } from "./routes";
+import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import { json, isRedirectResponse, isCatchResponse } from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
@@ -24,6 +28,9 @@ export type CreateRequestHandlerFunction = (
   mode?: string
 ) => RequestHandler;
 
+// This can be toggled to true for experimental releases
+const ENABLE_REMIX_ROUTER = process.env.ENABLE_REMIX_ROUTER;
+
 export const createRequestHandler: CreateRequestHandlerFunction = (
   build,
   mode
@@ -31,26 +38,88 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   let routes = createRoutes(build.routes);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
 
-  return async function requestHandler(request, loadContext) {
+  return async function requestHandler(request, loadContext = {}) {
     let url = new URL(request.url);
     let matches = matchServerRoutes(routes, url.pathname);
 
+    let staticHandler: StaticHandler;
+    if (ENABLE_REMIX_ROUTER) {
+      staticHandler = unstable_createStaticHandler(
+        createStaticHandlerDataRoutes(build.routes, loadContext)
+      );
+    }
+
     let response: Response;
     if (url.searchParams.has("_data")) {
-      response = await handleDataRequest({
-        request,
+      let responsePromise = handleDataRequest({
+        request:
+          // We need to clone the request here instead of the call to the new
+          // handler otherwise the first handler will lock the body for the other.
+          // Cloning here allows the new handler to be the stream reader and delegate
+          // chunks back to this cloned request.
+          ENABLE_REMIX_ROUTER ? request.clone() : request,
         loadContext,
         matches: matches!,
-        handleDataRequest: build.entry.module.handleDataRequest,
         serverMode,
       });
-    } else if (matches && !matches[matches.length - 1].route.module.default) {
-      response = await handleResourceRequest({
-        request,
+
+      let routeId = url.searchParams.get("_data")!;
+      if (ENABLE_REMIX_ROUTER) {
+        let [response, remixRouterResponse] = await Promise.all([
+          responsePromise,
+          handleDataRequestRR(serverMode, staticHandler!, routeId, request),
+        ]);
+
+        assertResponsesMatch(response, remixRouterResponse);
+
+        console.log("Returning Remix Router Data Request Response");
+        responsePromise = Promise.resolve(remixRouterResponse);
+      }
+
+      response = await responsePromise;
+
+      if (build.entry.module.handleDataRequest) {
+        let match = matches!.find((match) => match.route.id == routeId)!;
+        response = await build.entry.module.handleDataRequest(response, {
+          context: loadContext,
+          params: match.params,
+          request,
+        });
+      }
+    } else if (
+      matches &&
+      matches[matches.length - 1].route.module.default == null
+    ) {
+      let responsePromise = handleResourceRequest({
+        request:
+          // We need to clone the request here instead of the call to the new
+          // handler otherwise the first handler will lock the body for the other.
+          // Cloning here allows the new handler to be the stream reader and delegate
+          // chunks back to this cloned request.
+          ENABLE_REMIX_ROUTER ? request.clone() : request,
         loadContext,
         matches,
         serverMode,
       });
+
+      if (ENABLE_REMIX_ROUTER) {
+        let [response, remixRouterResponse] = await Promise.all([
+          responsePromise,
+          handleResourceRequestRR(
+            serverMode,
+            staticHandler!,
+            matches.slice(-1)[0].route.id,
+            request
+          ),
+        ]);
+
+        assertResponsesMatch(response, remixRouterResponse);
+
+        console.log("Returning Remix Router Resource Request Response");
+        responsePromise = Promise.resolve(remixRouterResponse);
+      }
+
+      response = await responsePromise;
     } else {
       response = await handleDocumentRequest({
         build,
@@ -75,14 +144,12 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 };
 
 async function handleDataRequest({
-  handleDataRequest,
   loadContext,
   matches,
   request,
   serverMode,
 }: {
-  handleDataRequest?: HandleDataRequestFunction;
-  loadContext?: AppLoadContext;
+  loadContext: AppLoadContext;
   matches: RouteMatch<ServerRoute>[];
   request: Request;
   serverMode: ServerMode;
@@ -111,7 +178,9 @@ async function handleDataRequest({
 
       response = await callRouteAction({
         loadContext,
-        match,
+        action: match.route.module.action,
+        routeId: match.route.id,
+        params: match.params,
         request: request,
       });
     } else {
@@ -129,7 +198,13 @@ async function handleDataRequest({
       }
       match = tempMatch;
 
-      response = await callRouteLoader({ loadContext, match, request });
+      response = await callRouteLoader({
+        loadContext,
+        loader: match.route.module.loader,
+        routeId: match.route.id,
+        params: match.params,
+        request,
+      });
     }
 
     if (isRedirectResponse(response)) {
@@ -149,22 +224,70 @@ async function handleDataRequest({
       });
     }
 
-    if (handleDataRequest) {
-      response = await handleDataRequest(response, {
-        context: loadContext,
-        params: match.params,
-        request,
-      });
-    }
-
     return response;
   } catch (error: unknown) {
     if (serverMode !== ServerMode.Test) {
       console.error(error);
     }
 
-    if (serverMode === ServerMode.Development) {
-      return errorBoundaryError(error as Error, 500);
+    if (serverMode === ServerMode.Development && error instanceof Error) {
+      return errorBoundaryError(error, 500);
+    }
+
+    return errorBoundaryError(new Error("Unexpected Server Error"), 500);
+  }
+}
+
+async function handleDataRequestRR(
+  serverMode: ServerMode,
+  staticHandler: StaticHandler,
+  routeId: string,
+  request: Request
+) {
+  try {
+    let response = await staticHandler.queryRoute(request, routeId);
+
+    if (isRedirectResponse(response)) {
+      // We don't have any way to prevent a fetch request from following
+      // redirects. So we use the `X-Remix-Redirect` header to indicate the
+      // next URL, and then "follow" the redirect manually on the client.
+      let headers = new Headers(response.headers);
+      headers.set("X-Remix-Redirect", headers.get("Location")!);
+      headers.delete("Location");
+      if (response.headers.get("Set-Cookie") !== null) {
+        headers.set("X-Remix-Revalidate", "yes");
+      }
+
+      return new Response(null, {
+        status: 204,
+        headers,
+      });
+    }
+
+    return response;
+  } catch (error) {
+    if (error instanceof Response) {
+      // To match existing behavior of remix-thrown responses,
+      // we construct a new one here with a null body and just
+      // the required headers. No remix-throw that surface to
+      // this point will ever have a body. This contrasts with
+      // the new router implementation that has a body under
+      // some conditions.
+      return new Response(null, {
+        status: error.status,
+        statusText: error.statusText,
+        headers: {
+          "X-Remix-Catch": "yes",
+        },
+      });
+    }
+
+    if (serverMode !== ServerMode.Test) {
+      console.error(error);
+    }
+
+    if (serverMode === ServerMode.Development && error instanceof Error) {
+      return errorBoundaryError(error, 500);
     }
 
     return errorBoundaryError(new Error("Unexpected Server Error"), 500);
@@ -180,7 +303,7 @@ async function handleDocumentRequest({
   serverMode,
 }: {
   build: ServerBuild;
-  loadContext?: AppLoadContext;
+  loadContext: AppLoadContext;
   matches: RouteMatch<ServerRoute>[] | null;
   request: Request;
   routes: ServerRoute[];
@@ -226,7 +349,9 @@ async function handleDocumentRequest({
     try {
       actionResponse = await callRouteAction({
         loadContext,
-        match: actionMatch,
+        action: actionMatch.route.module.action,
+        routeId: actionMatch.route.id,
+        params: actionMatch.params,
         request: request,
       });
 
@@ -303,7 +428,9 @@ async function handleDocumentRequest({
       match.route.module.loader
         ? callRouteLoader({
             loadContext,
-            match,
+            loader: match.route.module.loader,
+            routeId: match.route.id,
+            params: match.params,
             request: loaderRequest,
           })
         : Promise.resolve(undefined)
@@ -488,24 +615,27 @@ async function handleDocumentRequest({
         entryContext
       );
     } catch (error: any) {
-      if (serverMode !== ServerMode.Test) {
-        console.error(error);
-      }
-
-      let message = "Unexpected Server Error";
-
-      if (serverMode === ServerMode.Development) {
-        message += `\n\n${String(error)}`;
-      }
-
-      // Good grief folks, get your act together 😂!
-      return new Response(message, {
-        status: 500,
-        headers: {
-          "Content-Type": "text/plain",
-        },
-      });
+      return returnLastResortErrorResponse(error, serverMode);
     }
+  }
+}
+
+async function handleResourceRequestRR(
+  serverMode: ServerMode,
+  staticHandler: StaticHandler,
+  routeId: string,
+  request: Request
+) {
+  try {
+    let response = await staticHandler.queryRoute(request, routeId);
+    // Remix should always be returning responses from loaders and actions
+    invariant(
+      response instanceof Response,
+      "Expected a Response to be returned from queryRoute"
+    );
+    return response;
+  } catch (error) {
+    return returnLastResortErrorResponse(error, serverMode);
   }
 }
 
@@ -516,7 +646,7 @@ async function handleResourceRequest({
   serverMode,
 }: {
   request: Request;
-  loadContext?: AppLoadContext;
+  loadContext: AppLoadContext;
   matches: RouteMatch<ServerRoute>[];
   serverMode: ServerMode;
 }): Promise<Response> {
@@ -524,28 +654,24 @@ async function handleResourceRequest({
 
   try {
     if (isActionRequest(request)) {
-      return await callRouteAction({ match, loadContext, request });
+      return await callRouteAction({
+        loadContext,
+        action: match.route.module.action,
+        routeId: match.route.id,
+        params: match.params,
+        request,
+      });
     } else {
-      return await callRouteLoader({ match, loadContext, request });
+      return await callRouteLoader({
+        loadContext,
+        loader: match.route.module.loader,
+        routeId: match.route.id,
+        params: match.params,
+        request,
+      });
     }
   } catch (error: any) {
-    if (serverMode !== ServerMode.Test) {
-      console.error(error);
-    }
-
-    let message = "Unexpected Server Error";
-
-    if (serverMode === ServerMode.Development) {
-      message += `\n\n${String(error)}`;
-    }
-
-    // Good grief folks, get your act together 😂!
-    return new Response(message, {
-      status: 500,
-      headers: {
-        "Content-Type": "text/plain",
-      },
-    });
+    return returnLastResortErrorResponse(error, serverMode);
   }
 }
 
@@ -571,28 +697,30 @@ async function errorBoundaryError(error: Error, status: number) {
 }
 
 function isIndexRequestUrl(url: URL) {
-  for (let param of url.searchParams.getAll("index")) {
-    // only use bare `?index` params without a value
-    // ✅ /foo?index
-    // ✅ /foo?index&index=123
-    // ✅ /foo?index=123&index
-    // ❌ /foo?index=123
-    if (param === "") {
-      return true;
-    }
-  }
-
-  return false;
+  // only use bare `?index` params without a value
+  // ✅ /foo?index
+  // ✅ /foo?index&index=123
+  // ✅ /foo?index=123&index
+  // ❌ /foo?index=123
+  return url.searchParams.getAll("index").some((param) => param === "");
 }
 
 function getRequestMatch(url: URL, matches: RouteMatch<ServerRoute>[]) {
   let match = matches.slice(-1)[0];
 
-  if (!isIndexRequestUrl(url) && match.route.id.endsWith("/index")) {
-    return matches.slice(-2)[0];
+  if (isIndexRequestUrl(url) && match.route.id.endsWith("/index")) {
+    return match;
   }
 
-  return match;
+  return getPathContributingMatches(matches).slice(-1)[0];
+}
+
+function getPathContributingMatches(matches: RouteMatch<ServerRoute>[]) {
+  return matches.filter(
+    (match, index) =>
+      index === 0 ||
+      (!match.route.index && match.route.path && match.route.path.length > 0)
+  );
 }
 
 function getDeepestRouteIdWithBoundary(
@@ -652,4 +780,90 @@ function getRenderableMatches(
   });
 
   return matches.slice(0, lastRenderableIndex + 1);
+}
+
+async function assert(
+  a: Response,
+  b: Response,
+  accessor: (r: Response) => object | Promise<object>,
+  message: string
+) {
+  let aStr = JSON.stringify(await accessor(a));
+  let bStr = JSON.stringify(await accessor(b));
+  if (aStr !== bStr) {
+    console.error(message);
+    message += "\nResponse 1:\n" + aStr + "\nResponse 2:\n" + bStr;
+    throw new Error(message);
+  }
+}
+
+async function assertResponsesMatch(_a: Response, _b: Response) {
+  let a = _a.clone();
+  let b = _b.clone();
+  assert(
+    a,
+    b,
+    (r) => Object.fromEntries(r.headers.entries()),
+    "Headers did not match!"
+  );
+
+  if (a.headers.get("Content-Type")?.startsWith("application/json")) {
+    if (a.headers.get("X-Remix-Error")) {
+      assert(
+        a,
+        b,
+        async (r) => {
+          let { stack, ...json } = await r.json();
+          return {
+            ...json,
+            stack: stack ? "yes" : "no",
+          };
+        },
+        "JSON error response body did not match!\n Response 1:\n" +
+          (await a.clone().text()) +
+          "\nResponse 2:\n" +
+          (await b.clone().text())
+      );
+    } else {
+      assert(
+        a,
+        b,
+        (r) => r.json(),
+        "JSON response body did not match!\nResponse 1:\n" +
+          (await a.clone().text()) +
+          "\nResponse 2:\n" +
+          (await b.clone().text())
+      );
+    }
+  } else {
+    assert(
+      a,
+      b,
+      (r) => r.text(),
+      "Non-JSON response body did not match!\nResponse 1:\n" +
+        (await a.clone().text()) +
+        "\nResponse 2:\n" +
+        (await b.clone().text())
+    );
+  }
+}
+
+function returnLastResortErrorResponse(error: any, serverMode?: ServerMode) {
+  if (serverMode !== ServerMode.Test) {
+    console.error(error);
+  }
+
+  let message = "Unexpected Server Error";
+
+  if (serverMode !== ServerMode.Production) {
+    message += `\n\n${String(error)}`;
+  }
+
+  // Good grief folks, get your act together 😂!
+  return new Response(message, {
+    status: 500,
+    headers: {
+      "Content-Type": "text/plain",
+    },
+  });
 }
