@@ -1201,12 +1201,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
           target.getAttribute("formenctype") ||
           form.getAttribute("enctype") ||
           defaultEncType;
-        formData = new FormData(form);
-
-        // Include name + value from a <button>
-        if (target.name) {
-          formData.append(target.name, target.value);
-        }
+        formData = buildFormData(form, target);
       } else {
         if (isHtmlElement(target)) {
           throw new Error(
@@ -1298,6 +1293,69 @@ export function useSubmitImpl(key?: string): SubmitFunction {
 
 let nextNavigationSubmission: Submission | undefined;
 
+// track the selected coordinate of an image button, since FormData can't do this (yet); see buildFormData
+const SELECTED_COORDINATE = Symbol();
+interface HTMLImageButtonElement extends HTMLInputElement {
+  [SELECTED_COORDINATE]?: { x: number; y: number };
+}
+// we only ever need one of these on the page, and we don't want it to go away
+if (typeof document !== "undefined") {
+  document.body.addEventListener("click", (e) => {
+    if (isImageButtonElement(e.target)) {
+      e.target[SELECTED_COORDINATE] = { x: e.offsetX, y: e.offsetY };
+    }
+  });
+}
+
+/**
+ * Build the form data set
+ *
+ * FormData doesn't (yet) have a submitter-aware constructor -- see https://github.com/whatwg/xhr/issues/262
+ *
+ * In the meantime, we can temporarily tweak the form during submission to ensure the data set adheres to the spec:
+ * https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#constructing-form-data-set
+ */
+function buildFormData(
+  form: HTMLFormElement,
+  submitter: HTMLButtonElement | HTMLInputElement
+) {
+  let tempFieldContainer = document.createElement("span");
+  submitter.insertAdjacentElement("afterend", tempFieldContainer);
+
+  let isExternalSubmitter = !form.contains(submitter);
+  function addSubmitterTempField(name: string, value: unknown) {
+    let field = document.createElement("input");
+    field.type = "hidden";
+    field.name = name;
+    field.value = String(value);
+    if (isExternalSubmitter) field.setAttribute("form", form.id);
+    tempFieldContainer.insertAdjacentElement("beforeend", field);
+  }
+
+  // disable the submitter, since some browsers (old Safari) unilaterally include it, and we don't want it twice 🙃
+  submitter.disabled = true;
+
+  // inject appropriate hidden field(s) next to the now disabled submitter 💪
+  if (isImageButtonElement(submitter)) {
+    if (submitter[SELECTED_COORDINATE]) {
+      let prefix = submitter.name ? `${submitter.name}.` : "";
+      addSubmitterTempField(`${prefix}x`, submitter[SELECTED_COORDINATE].x);
+      addSubmitterTempField(`${prefix}y`, submitter[SELECTED_COORDINATE].y);
+    }
+  } else if (submitter.name) {
+    addSubmitterTempField(submitter.name, submitter.value);
+  }
+
+  // ok now it should serialize per the spec 😅
+  let formData = new FormData(form);
+
+  // pretend none of this ever happened 🙈
+  tempFieldContainer.remove();
+  submitter.disabled = false;
+
+  return formData;
+}
+
 function setNextNavigationSubmission(submission: Submission) {
   nextNavigationSubmission = submission;
 }
@@ -1322,6 +1380,10 @@ function isFormElement(object: any): object is HTMLFormElement {
 
 function isInputElement(object: any): object is HTMLInputElement {
   return isHtmlElement(object) && object.tagName.toLowerCase() === "input";
+}
+
+function isImageButtonElement(object: any): object is HTMLImageButtonElement {
+  return isInputElement(object) && object.type === "image";
 }
 
 /**
