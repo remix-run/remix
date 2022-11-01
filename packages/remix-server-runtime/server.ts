@@ -30,7 +30,7 @@ export type CreateRequestHandlerFunction = (
 ) => RequestHandler;
 
 // This can be toggled to true for experimental releases
-const ENABLE_REMIX_ROUTER = process.env.ENABLE_REMIX_ROUTER;
+const ENABLE_REMIX_ROUTER = true;
 
 export const createRequestHandler: CreateRequestHandlerFunction = (
   build,

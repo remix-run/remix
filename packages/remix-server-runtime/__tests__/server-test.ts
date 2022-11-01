@@ -3,7 +3,7 @@ import { ServerMode } from "../mode";
 import type { ServerBuild } from "../build";
 import { mockServerBuild } from "./utils";
 
-const ENABLE_REMIX_ROUTER = !!process.env.ENABLE_REMIX_ROUTER;
+const ENABLE_REMIX_ROUTER = true;
 const DATA_CALL_MULTIPIER = ENABLE_REMIX_ROUTER ? 2 : 1;
 
 function spyConsole() {

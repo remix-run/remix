@@ -14,7 +14,7 @@ const {
 } = require("../../rollup.utils");
 const { name: packageName, version } = require("./package.json");
 
-const ENABLE_REMIX_ROUTER = !!process.env.ENABLE_REMIX_ROUTER;
+const ENABLE_REMIX_ROUTER = true;
 
 const replacePlugin = replace({
   preventAssignment: true,

@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
-const ENABLE_REMIX_ROUTER = !!process.env.ENABLE_REMIX_ROUTER;
+const ENABLE_REMIX_ROUTER = true;
 
 test.describe("ErrorBoundary", () => {
   let fixture: Fixture;
