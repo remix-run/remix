@@ -1,5 +1,66 @@
 # `@remix-run/dev`
 
+## 1.7.4
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.7.4`
+  - `@remix-run/serve@1.7.4`
+
+## 1.7.3
+
+### Patch Changes
+
+- Update `create-remix` to use the new examples repository when using `--template example/<name>` ([#4208](https://github.com/remix-run/remix/pull/4208))
+- Add support for setting `moduleResolution` to `node`, `node16` or `nodenext` in `tsconfig.json`. ([#4034](https://github.com/remix-run/remix/pull/4034))
+- Add resources imported only by resource routes to `assetsBuildDirectory` ([#3841](https://github.com/remix-run/remix/pull/3841))
+- Ensure that any assets referenced in CSS files are hashed and copied to the `assetsBuildDirectory`. ([#4130](https://github.com/remix-run/remix/pull/4130))
+- Updated dependencies:
+  - `@remix-run/serve@1.7.3`
+  - `@remix-run/server-runtime@1.7.3`
+
+## 1.7.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.7.2`
+  - `@remix-run/serve@1.7.2`
+
+## 1.7.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.7.1`
+  - `@remix-run/serve@1.7.1`
+
+## 1.7.0
+
+### Minor Changes
+
+- Added support for importing `.gql` and `.graphql` files as plain text ([#3923](https://github.com/remix-run/remix/pull/3923))
+- Added support for importing `.zip` and `.avif` files as resource URLs ([#3985](https://github.com/remix-run/remix/pull/3985))
+
+### Patch Changes
+
+- Removed our compiler's React shim in favor of esbuild's new automatic JSX transform ([#3860](https://github.com/remix-run/remix/pull/3860))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.7.0`
+  - `@remix-run/serve@1.7.0`
+
+## 1.6.8
+
+### Patch Changes
+
+- Added support for `.mjs` and `.cjs` file extensions for `remix.config` ([#3675](https://github.com/remix-run/remix/pull/3675))
+- Added support for importing `.sql` files as text content ([#3190](https://github.com/remix-run/remix/pull/3190))
+- Updated the compiler to make MDX builds deterministic (and a little faster!) ([#3966](https://github.com/remix-run/remix/pull/3966))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.6.8`
+  - `@remix-run/serve@1.6.8`
+
 ## 1.6.7
 
 ### Patch Changes

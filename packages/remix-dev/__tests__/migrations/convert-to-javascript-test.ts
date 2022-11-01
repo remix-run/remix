@@ -44,6 +44,7 @@ const TEMP_DIR = join(
   `remix-tests-${Math.random().toString(32).slice(2)}`
 );
 
+jest.setTimeout(30_000);
 beforeEach(() => {
   output = "";
   console.log = mockLog;
@@ -53,6 +54,7 @@ beforeEach(() => {
   removeSync(TEMP_DIR);
   ensureDirSync(TEMP_DIR);
 });
+
 afterEach(() => {
   console.log = ORIGINAL_IO.log;
   console.warn = ORIGINAL_IO.warn;
@@ -89,17 +91,19 @@ const checkMigrationRanSuccessfully = async (projectDir: string) => {
     cwd: config.rootDirectory,
     ignore: [`./${config.appDirectory}/**/*`],
   });
-  let result = shell.grep("-l", 'from "', JSFiles);
-  expect(result.stdout.trim()).toBe("");
-  expect(result.stderr).toBeNull();
-  expect(result.code).toBe(0);
+  let importResult = shell.grep("-l", 'from "', JSFiles);
+  expect(importResult.stdout.trim()).toBe("");
+  expect(importResult.stderr).toBeNull();
+  expect(importResult.code).toBe(0);
+  let exportDefaultResult = shell.grep("-l", 'export default "', JSFiles);
+  expect(exportDefaultResult.stdout.trim()).toBe("");
+  expect(exportDefaultResult.stderr).toBeNull();
+  expect(exportDefaultResult.code).toBe(0);
 };
 
 const makeApp = () => {
   let projectDir = join(TEMP_DIR, "convert-to-javascript");
-
   copySync(FIXTURE, projectDir);
-
   return projectDir;
 };
 

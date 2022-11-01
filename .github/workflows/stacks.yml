@@ -13,6 +13,7 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         stack:
           - repo: "remix-run/indie-stack"
@@ -23,7 +24,7 @@ jobs:
             name: "grunge"
     steps:
       - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
+        uses: styfle/cancel-workflow-action@0.11.0
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
@@ -69,6 +70,7 @@ jobs:
     needs: [setup]
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         stack:
           - repo: "remix-run/indie-stack"
@@ -79,7 +81,7 @@ jobs:
             name: "grunge"
     steps:
       - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
+        uses: styfle/cancel-workflow-action@0.11.0
 
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
@@ -111,6 +113,7 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         stack:
           - repo: "remix-run/indie-stack"
@@ -121,7 +124,7 @@ jobs:
             name: "grunge"
     steps:
       - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
+        uses: styfle/cancel-workflow-action@0.11.0
 
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
@@ -153,6 +156,7 @@ jobs:
     needs: [setup]
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         stack:
           - repo: "remix-run/indie-stack"
@@ -163,7 +167,7 @@ jobs:
             name: "grunge"
     steps:
       - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
+        uses: styfle/cancel-workflow-action@0.11.0
 
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
@@ -195,6 +199,7 @@ jobs:
     needs: [setup]
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         stack:
           - repo: "remix-run/indie-stack"
@@ -208,7 +213,7 @@ jobs:
             cypress: "npm run dev"
     steps:
       - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
+        uses: styfle/cancel-workflow-action@0.11.0
 
       - name: 🗄️ Restore ${{ matrix.stack.name }}
         uses: actions/download-artifact@v3
