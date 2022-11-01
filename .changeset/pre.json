@@ -19,5 +19,7 @@
     "@remix-run/server-runtime": "1.7.4",
     "@remix-run/vercel": "1.7.4"
   },
-  "changesets": []
+  "changesets": [
+    "khaki-hornets-destroy"
+  ]
 }
