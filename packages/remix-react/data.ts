@@ -66,6 +66,15 @@ export async function extractData(response: Response): Promise<AppData> {
   return response.text();
 }
 
+export function convertFormDataToSearchParams(formData: FormData) {
+  let searchParams = new URLSearchParams();
+  for (let [key, value] of formData.entries()) {
+    // https://html.spec.whatwg.org/multipage/form-control-infrastructure.html#converting-an-entry-list-to-a-list-of-name-value-pairs
+    searchParams.append(key, value instanceof File ? value.name : value);
+  }
+  return searchParams;
+}
+
 function getActionInit(
   submission: Submission,
   signal: AbortSignal
@@ -76,14 +85,7 @@ function getActionInit(
   let body = formData;
 
   if (encType === "application/x-www-form-urlencoded") {
-    body = new URLSearchParams();
-    for (let [key, value] of formData) {
-      invariant(
-        typeof value === "string",
-        `File inputs are not supported with encType "application/x-www-form-urlencoded", please use "multipart/form-data" instead.`
-      );
-      body.append(key, value);
-    }
+    body = convertFormDataToSearchParams(formData);
     headers = { "Content-Type": encType };
   }
 

@@ -24,6 +24,7 @@ import { createPath } from "history";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
+import { convertFormDataToSearchParams } from "./data";
 import type { AssetsManifest, EntryContext, FutureConfig } from "./entry";
 import type { AppState, SerializedError } from "./errors";
 import {
@@ -1360,27 +1361,18 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       if (method.toLowerCase() === "get") {
         // Start with a fresh set of params and wipe out the old params to
         // match default browser behavior
-        let params = new URLSearchParams();
-        let hasParams = false;
-        for (let [name, value] of formData) {
-          if (typeof value === "string") {
-            hasParams = true;
-            params.append(name, value);
-          } else {
-            throw new Error(`Cannot submit binary form data using GET`);
-          }
-        }
+        let params = convertFormDataToSearchParams(formData);
 
         // Preserve any incoming ?index param for fetcher GET submissions
         let isIndexAction = new URLSearchParams(url.search)
           .getAll("index")
           .some((v) => v === "");
         if (key != null && isIndexAction) {
-          hasParams = true;
           params.append("index", "");
         }
 
-        url.search = hasParams ? `?${params.toString()}` : "";
+        let paramsString = params.toString();
+        url.search = paramsString ? `?${paramsString}` : "";
       }
 
       let submission: Submission = {
