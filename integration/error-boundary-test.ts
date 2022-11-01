@@ -180,12 +180,6 @@ test.describe("ErrorBoundary", () => {
           }
         `,
 
-        [`app/routes${NO_BOUNDARY_NO_LOADER_OR_ACTION}.jsx`]: js`
-          export default function Index() {
-            return <div/>
-          }
-        `,
-
         [`app/routes${HAS_BOUNDARY_NO_LOADER_OR_ACTION}.jsx`]: js`
           export function ErrorBoundary() {
             return <div id="boundary-no-loader-or-action">${OWN_BOUNDARY_TEXT}</div>
@@ -473,6 +467,7 @@ test.describe("ErrorBoundary", () => {
   test.describe("if no error boundary exists in the app", () => {
     let NO_ROOT_BOUNDARY_LOADER = "/loader-bad";
     let NO_ROOT_BOUNDARY_ACTION = "/action-bad";
+    let NO_ROOT_BOUNDARY_LOADER_RETURN = "/loader-no-return";
     let NO_ROOT_BOUNDARY_ACTION_RETURN = "/action-no-return";
 
     test.beforeAll(async () => {
@@ -481,20 +476,20 @@ test.describe("ErrorBoundary", () => {
           "app/root.jsx": js`
             import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
-          export default function Root() {
-            return (
-              <html lang="en">
-                <head>
-                  <Meta />
-                  <Links />
-                </head>
-                <body>
-                  <Outlet />
-                  <Scripts />
-                </body>
-              </html>
-            );
-          }
+            export default function Root() {
+              return (
+                <html lang="en">
+                  <head>
+                    <Meta />
+                    <Links />
+                  </head>
+                  <body>
+                    <Outlet />
+                    <Scripts />
+                  </body>
+                </html>
+              );
+            }
           `,
 
           "app/routes/index.jsx": js`
@@ -504,6 +499,7 @@ test.describe("ErrorBoundary", () => {
               return (
                 <div>
                   <h1>Home</h1>
+                  <Link to="${NO_ROOT_BOUNDARY_LOADER_RETURN}">Loader no return</Link>
                   <Form method="post">
                     <button formAction="${NO_ROOT_BOUNDARY_ACTION}" type="submit">
                       Action go boom
@@ -518,8 +514,6 @@ test.describe("ErrorBoundary", () => {
           `,
 
           [`app/routes${NO_ROOT_BOUNDARY_LOADER}.jsx`]: js`
-            import { Link, Form } from "@remix-run/react";
-
             export async function loader() {
               throw Error("BLARGH");
             }
@@ -534,8 +528,6 @@ test.describe("ErrorBoundary", () => {
           `,
 
           [`app/routes${NO_ROOT_BOUNDARY_ACTION}.jsx`]: js`
-            import { Link, Form } from "@remix-run/react";
-
             export async function action() {
               throw Error("YOOOOOOOO WHAT ARE YOU DOING");
             }
@@ -549,8 +541,23 @@ test.describe("ErrorBoundary", () => {
             }
           `,
 
+          [`app/routes${NO_ROOT_BOUNDARY_LOADER_RETURN}.jsx`]: js`
+            import { useLoaderData } from "@remix-run/react";
+
+            export async function loader() {}
+
+            export default function () {
+              let data = useLoaderData();
+              return (
+                <div>
+                  <h1>{data}</h1>
+                </div>
+              )
+            }
+          `,
+
           [`app/routes${NO_ROOT_BOUNDARY_ACTION_RETURN}.jsx`]: js`
-            import { Link, Form, useActionData } from "@remix-run/react";
+            import { useActionData } from "@remix-run/react";
 
             export async function action() {}
 
@@ -583,6 +590,29 @@ test.describe("ErrorBoundary", () => {
       await app.goto("/");
       await app.clickSubmitButton(NO_ROOT_BOUNDARY_ACTION);
       expect(await app.getHtml("h1")).toMatch(INTERNAL_ERROR_BOUNDARY_HEADING);
+    });
+
+    test("bubbles to internal boundary if loader doesn't return (document requests)", async () => {
+      let res = await fixture.requestDocument(NO_ROOT_BOUNDARY_LOADER_RETURN);
+      expect(res.status).toBe(500);
+      expect(await res.text()).toMatch(INTERNAL_ERROR_BOUNDARY_HEADING);
+    });
+
+    test("bubbles to internal boundary if loader doesn't return", async ({
+      page,
+    }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      await app.clickLink(NO_ROOT_BOUNDARY_LOADER_RETURN);
+      expect(await app.getHtml("h1")).toMatch(INTERNAL_ERROR_BOUNDARY_HEADING);
+    });
+
+    test("bubbles to internal boundary if action doesn't return (document requests)", async () => {
+      let res = await fixture.requestDocument(NO_ROOT_BOUNDARY_ACTION_RETURN, {
+        method: "post",
+      });
+      expect(res.status).toBe(500);
+      expect(await res.text()).toMatch(INTERNAL_ERROR_BOUNDARY_HEADING);
     });
 
     test("bubbles to internal boundary if action doesn't return", async ({

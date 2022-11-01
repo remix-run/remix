@@ -1180,10 +1180,6 @@ describe("shared server runtime", () => {
       expect(result.status).toBe(400);
       expect(indexAction.mock.calls.length).toBe(1 * DATA_CALL_MULTIPIER);
       expect(rootLoader.mock.calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      // TODO: Check this out. Seems to be a gap in not being able to let
-      // RR know that a thrown response we catch should be treated the same
-      // as an error in terms of what subsequent loaders are called after an
-      // action throws a response.
       expect(indexLoader.mock.calls.length).toBe(0);
       expect(build.entry.module.default.mock.calls.length).toBe(
         1 * DATA_CALL_MULTIPIER

@@ -220,7 +220,6 @@ async function handleDataRequest({
     match = tempMatch;
 
     if (isActionRequest(request)) {
-      // TODO: Can this go away??
       match = getRequestMatch(url, matches);
 
       response = await callRouteAction({
@@ -346,7 +345,7 @@ function findParentBoundary(
   // Fall back to the root route if we don't match any routes, since Remix
   // has default error/catch boundary handling.  This handles the case where
   // react-router doesn't have a matching "root" route to assign the error to
-  // so it returns context.errors = { __shim-404-route__: ErrorResponse }
+  // so it returns context.errors = { __shim-error-route__: ErrorResponse }
   let route = routes[routeId] || routes["root"];
   // Router-thrown ErrorResponses will have the error instance.  User-thrown
   // Responses will not have an error. The one exception here is internal 404s
@@ -374,17 +373,17 @@ export function differentiateCatchVersusErrorBoundaries(
   build: ServerBuild,
   context: StaticHandlerContext
 ) {
-  // TODO: This may have issues if multiple things throw?  We may need to walk
-  // bottom up doing this tso higher errors take precedence?
-  if (context.errors) {
-    let errors: Record<string, any> = {};
-    for (let routeId of Object.keys(context.errors)) {
-      let error = context.errors[routeId];
-      let handlingRouteId = findParentBoundary(build.routes, routeId, error);
-      errors[handlingRouteId] = error;
-    }
-    context.errors = errors;
+  if (!context.errors) {
+    return;
   }
+
+  let errors: Record<string, any> = {};
+  for (let routeId of Object.keys(context.errors)) {
+    let error = context.errors[routeId];
+    let handlingRouteId = findParentBoundary(build.routes, routeId, error);
+    errors[handlingRouteId] = error;
+  }
+  context.errors = errors;
 }
 
 async function handleDocumentRequestRR(
@@ -399,8 +398,7 @@ async function handleDocumentRequestRR(
     return context;
   }
 
-  // This should properly restructure context.errors to the right Catch/Error
-  // Boundary.
+  // Restructure context.errors to the right Catch/Error Boundary
   differentiateCatchVersusErrorBoundaries(build, context);
 
   let appState: AppState = {
@@ -422,13 +420,18 @@ async function handleDocumentRequestRR(
     let route = match.route as ServerRoute;
     let id = route.id;
     let error = context.errors?.[id];
+    let hasCatchBoundary = build.routes[id]?.module.CatchBoundary != null;
+    let hasErrorBoundary = build.routes[id]?.module.ErrorBoundary != null;
 
     if (!error) {
       continue;
     } else if (isRouteErrorResponse(error)) {
-      // Internal Remix errors will throw an ErrorResponse with the actual error
-      if (error.error && error.status !== 404) {
-        if (build.routes[id]?.module.ErrorBoundary) {
+      // Internal Router errors will throw an ErrorResponse with the actual
+      // error instance, while user-thrown ErrorResponses will not have the
+      // instance.  We also exclude 404s so we can handle them as CatchBoundary
+      // errors so the user has a singular location for 404 UI
+      if (error.internal && error.error && error.status !== 404) {
+        if (hasErrorBoundary) {
           appState.loaderBoundaryRouteId = id;
         }
         appState.trackBoundaries = false;
@@ -447,7 +450,7 @@ async function handleDocumentRequestRR(
       }
 
       // ErrorResponse's without an error were thrown by the user action/loader
-      if (build.routes[id]?.module.CatchBoundary) {
+      if (hasCatchBoundary) {
         appState.catchBoundaryRouteId = id;
       }
       appState.trackCatchBoundaries = false;
@@ -462,7 +465,7 @@ async function handleDocumentRequestRR(
       };
       break;
     } else {
-      if (build.routes[id]?.module.ErrorBoundary) {
+      if (hasErrorBoundary) {
         appState.loaderBoundaryRouteId = id;
       }
       appState.trackBoundaries = false;
@@ -573,8 +576,6 @@ async function handleDocumentRequest({
       new Error(`Invalid request method "${request.method}"`)
     );
   } else if (!matches) {
-    // TODO: Double check that we have integration tests asserting that this
-    // is a 404 catch boundary
     appState.trackCatchBoundaries = false;
     appState.catch = {
       data: `No route matches URL "${new URL(request.url).pathname}"`,
@@ -878,8 +879,6 @@ async function handleDocumentRequest({
   }
 }
 
-// TODO: Check on error in Remix if a loader returns undefined
-
 async function handleResourceRequestRR(
   serverMode: ServerMode,
   staticHandler: StaticHandler,
@@ -887,9 +886,11 @@ async function handleResourceRequestRR(
   request: Request
 ) {
   try {
-    // TODO remove routeId here and no need to match above for new flow
+    // Note we keep the routeId here to align with the Remix handling of
+    // resource routes which doesn't take ?index into account and just takes
+    // the leaf match
     let response = await staticHandler.queryRoute(request, routeId);
-    // Remix should always be returning responses from loaders and actions
+    // callRouteLoader/callRouteAction always return responses
     invariant(
       response instanceof Response,
       "Expected a Response to be returned from queryRoute"

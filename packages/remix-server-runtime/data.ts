@@ -25,14 +25,12 @@ export async function callRouteAction({
   action,
   params,
   request,
-  isRemixRouterRequest,
 }: {
   loadContext: AppLoadContext;
   routeId: string;
   action?: ActionFunction;
   params: DataFunctionArgs["params"];
   request: Request;
-  isRemixRouterRequest?: boolean;
 }) {
   if (!action) {
     let pathname = new URL(request.url).pathname;
@@ -56,11 +54,6 @@ export async function callRouteAction({
 
     if (!isRedirectResponse(error)) {
       error.headers.set("X-Remix-Catch", "yes");
-      // This needs to be thrown so @remix-run/router knows to handle it as an error
-      // and not a successful returned response
-      if (isRemixRouterRequest) {
-        throw error;
-      }
     }
     result = error;
   }
@@ -81,14 +74,12 @@ export async function callRouteLoader({
   loader,
   params,
   request,
-  isRemixRouterRequest,
 }: {
   request: Request;
   routeId: string;
   loader?: LoaderFunction;
   params: DataFunctionArgs["params"];
   loadContext: AppLoadContext;
-  isRemixRouterRequest?: boolean;
 }) {
   if (!loader) {
     let pathname = new URL(request.url).pathname;
@@ -112,11 +103,6 @@ export async function callRouteLoader({
 
     if (!isRedirectResponse(error)) {
       error.headers.set("X-Remix-Catch", "yes");
-      // This needs to be thrown so @remix-run/router knows to handle it as an error
-      // and not a successful returned response
-      if (isRemixRouterRequest) {
-        throw error;
-      }
     }
     result = error;
   }

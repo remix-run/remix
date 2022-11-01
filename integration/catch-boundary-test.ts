@@ -13,10 +13,8 @@ test.describe("CatchBoundary", () => {
 
   let HAS_BOUNDARY_LOADER = "/yes/loader";
   let HAS_BOUNDARY_ACTION = "/yes/action";
-  let HAS_BOUNDARY_NO_LOADER_OR_ACTION = "/yes/no-loader-or-action";
   let NO_BOUNDARY_ACTION = "/no/action";
   let NO_BOUNDARY_LOADER = "/no/loader";
-  let NO_BOUNDARY_NO_LOADER_OR_ACTION = "/no/no-loader-or-action";
 
   let NOT_FOUND_HREF = "/not/found";
 
@@ -64,8 +62,6 @@ test.describe("CatchBoundary", () => {
                 <Form method="post">
                   <button formAction="${HAS_BOUNDARY_ACTION}" type="submit" />
                   <button formAction="${NO_BOUNDARY_ACTION}" type="submit" />
-                  <button formAction="${HAS_BOUNDARY_NO_LOADER_OR_ACTION}" type="submit" />
-                  <button formAction="${NO_BOUNDARY_NO_LOADER_OR_ACTION}" type="submit" />
                 </Form>
 
                 <Link to="${HAS_BOUNDARY_LOADER}">
@@ -74,39 +70,6 @@ test.describe("CatchBoundary", () => {
                 <Link to="${NO_BOUNDARY_LOADER}">
                   ${NO_BOUNDARY_LOADER}
                 </Link>
-              </div>
-            )
-          }
-        `,
-
-        "app/routes/fetcher-boundary.jsx": js`
-          import { useFetcher } from "@remix-run/react";
-          export function CatchBoundary() {
-            return <p id="fetcher-boundary">${OWN_BOUNDARY_TEXT}</p>
-          }
-          export default function() {
-            let fetcher = useFetcher();
-
-            return (
-              <div>
-                <fetcher.Form method="post">
-                  <button formAction="${NO_BOUNDARY_NO_LOADER_OR_ACTION}" type="submit" />
-                </fetcher.Form>
-              </div>
-            )
-          }
-        `,
-
-        "app/routes/fetcher-no-boundary.jsx": js`
-          import { useFetcher } from "@remix-run/react";
-          export default function() {
-            let fetcher = useFetcher();
-
-            return (
-              <div>
-                <fetcher.Form method="post">
-                  <button formAction="${NO_BOUNDARY_NO_LOADER_OR_ACTION}" type="submit" />
-                </fetcher.Form>
               </div>
             )
           }
@@ -144,21 +107,6 @@ test.describe("CatchBoundary", () => {
                 </button>
               </Form>
             )
-          }
-        `,
-
-        [`app/routes${HAS_BOUNDARY_NO_LOADER_OR_ACTION}.jsx`]: js`
-          export function CatchBoundary() {
-            return <div id="boundary-no-loader-or-action">${OWN_BOUNDARY_TEXT}</div>
-          }
-          export default function Index() {
-            return <div/>
-          }
-        `,
-
-        [`app/routes${NO_BOUNDARY_NO_LOADER_OR_ACTION}.jsx`]: js`
-          export default function Index() {
-            return <div/>
           }
         `,
 

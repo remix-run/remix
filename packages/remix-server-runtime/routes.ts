@@ -71,20 +71,18 @@ export function createStaticHandlerDataRoutes(
         loader: route.module.loader
           ? (args: LoaderFunctionArgs) =>
               callRouteLoaderRR({
+                ...args,
                 loadContext,
                 loader: route.module.loader!,
-                params: args.params,
-                request: args.request,
                 routeId: route.id,
               })
           : undefined,
         action: route.module.action
           ? (args: ActionFunctionArgs) =>
               callRouteActionRR({
+                ...args,
                 loadContext,
                 action: route.module.action!,
-                params: args.params,
-                request: args.request,
                 routeId: route.id,
               })
           : undefined,
