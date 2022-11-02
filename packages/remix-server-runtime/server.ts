@@ -71,7 +71,9 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
           handleDataRequestRR(serverMode, staticHandler!, routeId, request),
         ]);
 
-        assertResponsesMatch(response, remixRouterResponse);
+        if (!request.signal.aborted) {
+          assertResponsesMatch(response, remixRouterResponse);
+        }
 
         console.log("Returning Remix Router Data Request Response");
         responsePromise = Promise.resolve(remixRouterResponse);
@@ -114,7 +116,9 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
           ),
         ]);
 
-        assertResponsesMatch(response, remixRouterResponse);
+        if (!request.signal.aborted) {
+          assertResponsesMatch(response, remixRouterResponse);
+        }
 
         console.log("Returning Remix Router Resource Request Response");
         responsePromise = Promise.resolve(remixRouterResponse);
@@ -142,7 +146,9 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
           handleDocumentRequestRR(serverMode, build, staticHandler!, request),
         ]);
 
-        assertResponsesMatch(response, remixRouterResponse);
+        if (!request.signal.aborted) {
+          assertResponsesMatch(response, remixRouterResponse);
+        }
 
         console.log("Returning Remix Router Document Request Response");
         responsePromise = Promise.resolve(remixRouterResponse);
@@ -322,7 +328,7 @@ async function handleDataRequestRR(
       errorInstance = error.error || errorInstance;
     }
 
-    if (serverMode !== ServerMode.Test) {
+    if (serverMode !== ServerMode.Test && !request.signal.aborted) {
       console.error(errorInstance);
     }
 
@@ -392,7 +398,16 @@ async function handleDocumentRequestRR(
   staticHandler: StaticHandler,
   request: Request
 ) {
-  let context = await staticHandler.query(request);
+  let context;
+  try {
+    context = await staticHandler.query(request);
+  } catch (error) {
+    if (!request.signal.aborted && serverMode !== ServerMode.Test) {
+      console.error(error);
+    }
+
+    return new Response(null, { status: 500 });
+  }
 
   if (context instanceof Response) {
     return context;
