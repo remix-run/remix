@@ -57,11 +57,9 @@ This determines the [HTTP verb][http-verb] to be used: get, post, put, patch, de
 <Form method="post" />
 ```
 
-Native `<form>` only supports get and post, so if you want your form to work with JavaScript on or off the page you'll need to stick with those two.
+Although a native `<form>` only supports get and post, Remix can emulate put/patch/delete even when client-side JavaScript is unavailable. It does this by converting forms to "post" and including a `_method` parameter in the form action URL. On the server-side, your actions will see the appropriate method on the request.
 
-Without JavaScript, Remix will turn non-get requests into "post", but you'll still need to instruct your server with a hidden input like `<input type="hidden" name="_method" value="delete" />`. If you always include JavaScript, you don't need to worry about this.
-
-<docs-info>We generally recommend sticking with "get" and "post" because the other verbs are not supported by HTML</docs-info>
+<docs-info>When overriding the form method via `<button formMethod=...>`, only "get" and "post" may be used because the other verbs are not supported by HTML.</docs-info>
 
 ## `encType`
 

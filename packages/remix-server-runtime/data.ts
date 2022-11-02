@@ -32,7 +32,7 @@ export async function callRouteActionRR({
   routeId: string;
 }) {
   let result = await action({
-    request: stripDataParam(stripIndexParam(request)),
+    request: applyMethodOverride(stripDataParam(stripIndexParam(request))),
     context: loadContext,
     params,
   });
@@ -102,4 +102,15 @@ function stripDataParam(request: Request) {
   let url = new URL(request.url);
   url.searchParams.delete("_data");
   return new Request(url.href, request);
+}
+
+function applyMethodOverride(request: Request) {
+  let url = new URL(request.url);
+  let overrideMethod = url.searchParams.get("_method") ?? "";
+  if (!["put", "patch", "delete"].includes(overrideMethod)) return request;
+
+  url.searchParams.delete("_method");
+  return new Request(new Request(url.href, request), {
+    method: overrideMethod,
+  });
 }

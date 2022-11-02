@@ -312,12 +312,14 @@ test.describe("Forms", () => {
           import { Form, useActionData, useLoaderData, useSearchParams } from "@remix-run/react";
           import { json } from "@remix-run/node";
 
-          export function action({ request }) {
-            return json(request.method)
+          export async function action({ request }) {
+            let payload = (await request.formData()).get("payload");
+            return json(request.method + ": " + payload);
           }
 
-          export function loader({ request }) {
-            return json(request.method)
+          export async function loader({ request }) {
+            let payload = new URL(request.url).searchParams.get("payload");
+            return json(request.method + ": " + payload);
           }
 
           export default function() {
@@ -329,6 +331,7 @@ test.describe("Forms", () => {
             return (
               <>
                 <Form method={formMethod}>
+                  <input type="hidden" name="payload" value="data" />
                   <button>Submit</button>
                   <button formMethod={submitterFormMethod}>Submit with {submitterFormMethod}</button>
                 </Form>
@@ -939,16 +942,11 @@ test.describe("Forms", () => {
 
     test.describe("uses the Form `method` attribute", () => {
       FORM_METHODS.forEach((method) => {
-        test(`submits with ${method}`, async ({ page, javaScriptEnabled }) => {
-          test.fail(
-            !javaScriptEnabled && !NATIVE_FORM_METHODS.includes(method),
-            `Native <form> doesn't support method ${method} #4420`
-          );
-
+        test(`submits with ${method}`, async ({ page }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto(`/form-method?method=${method}`);
           await app.clickElement(`text=Submit`);
-          expect(await app.getHtml("pre")).toBe(`<pre>${method}</pre>`);
+          expect(await app.getHtml("pre")).toBe(`<pre>${method}: data</pre>`);
         });
       });
     });
@@ -966,7 +964,9 @@ test.describe("Forms", () => {
             `/form-method?method=${method}&submitterFormMethod=${overrideMethod}`
           );
           await app.clickElement(`text=Submit with ${overrideMethod}`);
-          expect(await app.getHtml("pre")).toBe(`<pre>${overrideMethod}</pre>`);
+          expect(await app.getHtml("pre")).toBe(
+            `<pre>${overrideMethod}: data</pre>`
+          );
         });
       });
     });

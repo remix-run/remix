@@ -1028,11 +1028,13 @@ function dedupe(array: any[]) {
 
 export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
   /**
-   * The HTTP verb to use when the form is submit. Supports "get", "post",
+   * The HTTP verb to use when the form is submitted. Supports "get", "post",
    * "put", "delete", "patch".
    *
-   * Note: If JavaScript is disabled, you'll need to implement your own "method
-   * override" to support more than just GET and POST.
+   * Note: When JavaScript is unavailable, Remix emulates put/patch/delete by
+   * injecting a `_method` parameter into the form action URL and doing a POST.
+   * The server-side handles this transparently, so your actions can always
+   * count on `request.method` matching `<Form method=...>`.
    */
   method?: FormMethod;
 
@@ -1103,7 +1105,7 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
     let submit = useSubmitImpl(fetchKey);
     let formMethod: FormMethod =
       method.toLowerCase() === "get" ? "get" : "post";
-    let formAction = useFormAction(action);
+    let formAction = useFormAction(action, method);
 
     return (
       <form
@@ -1154,7 +1156,6 @@ type HTMLFormSubmitter = HTMLButtonElement | HTMLInputElement;
  */
 export function useFormAction(
   action?: string,
-  // TODO: Remove method param in v2 as it's no longer needed and is a breaking change
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
@@ -1168,21 +1169,28 @@ export function useFormAction(
   let location = useLocation();
   let { search, hash } = resolvedPath;
   let isIndexRoute = id.endsWith("/index");
+  let params = new URLSearchParams(search);
 
   if (action == null) {
     search = location.search;
     hash = location.hash;
+    params = new URLSearchParams(search);
 
     // When grabbing search params from the URL, remove the automatically
     // inserted ?index param so we match the useResolvedPath search behavior
     // which would not include ?index
     if (isIndexRoute) {
-      let params = new URLSearchParams(search);
       params.delete("index");
-      search = params.toString() ? `?${params.toString()}` : "";
     }
   }
 
+  // Emulate additional methods when JavaScript is missing/disabled/pending
+  method = method.toLowerCase() as FormMethod;
+  if (["put", "patch", "delete"].includes(method)) {
+    params.set("_method", method);
+  }
+
+  search = params.toString() ? `?${params.toString()}` : "";
   if ((action == null || action === ".") && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
@@ -1389,6 +1397,9 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         }
 
         url.search = hasParams ? `?${params.toString()}` : "";
+      } else if (["put", "patch", "delete"].includes(method.toLowerCase())) {
+        // remove the method emulation param since it's only needed for non-JS form submissions
+        url.searchParams.delete("_method");
       }
 
       let submission: Submission = {
