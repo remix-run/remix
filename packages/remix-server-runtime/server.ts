@@ -66,6 +66,10 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
       let routeId = url.searchParams.get("_data")!;
       if (ENABLE_REMIX_ROUTER) {
+        // Temporarily assign a header for use in loaders/actions if needed to
+        // avoid duplicate mutations.  Only for testing purposes in the
+        // experimental release.
+        request.headers.set("X-Remix-Router-Request", "yes");
         let [response, remixRouterResponse] = await Promise.all([
           responsePromise,
           handleDataRequestRR(serverMode, staticHandler!, routeId, request),
@@ -106,6 +110,10 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       });
 
       if (ENABLE_REMIX_ROUTER) {
+        // Temporarily assign a header for use in loaders/actions if needed to
+        // avoid duplicate mutations.  Only for testing purposes in the
+        // experimental release.
+        request.headers.set("X-Remix-Router-Request", "yes");
         let [response, remixRouterResponse] = await Promise.all([
           responsePromise,
           handleResourceRequestRR(
@@ -141,6 +149,10 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       });
 
       if (ENABLE_REMIX_ROUTER) {
+        // Temporarily assign a header for use in loaders/actions if needed to
+        // avoid duplicate mutations.  Only for testing purposes in the
+        // experimental release.
+        request.headers.set("X-Remix-Router-Request", "yes");
         let [response, remixRouterResponse] = await Promise.all([
           responsePromise,
           handleDocumentRequestRR(serverMode, build, staticHandler!, request),
