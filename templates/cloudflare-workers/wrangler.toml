@@ -4,6 +4,7 @@ workers_dev = true
 main = "./build/index.js"
 # https://developers.cloudflare.com/workers/platform/compatibility-dates
 compatibility_date = "2022-04-05"
+compatibility_flags = ["streams_enable_constructors"]
 
 [site]
   bucket = "./public"
