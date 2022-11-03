@@ -63,8 +63,9 @@ describe("netlify createRequestHandler", () => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
-      // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
-      // won't ever call through to the real createRequestHandler
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000/foo/bar" }))
         .expectResolve((res) => {
@@ -78,8 +79,9 @@ describe("netlify createRequestHandler", () => {
         return new Response(null, { status: 200 });
       });
 
-      // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
-      // won't ever call through to the real createRequestHandler
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
         .expectResolve((res) => {
@@ -92,8 +94,9 @@ describe("netlify createRequestHandler", () => {
         return new Response(null, { status: 204 });
       });
 
-      // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
-      // won't ever call through to the real createRequestHandler
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
         .expectResolve((res) => {
@@ -120,8 +123,9 @@ describe("netlify createRequestHandler", () => {
         return new Response(null, { headers });
       });
 
-      // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
-      // won't ever call through to the real createRequestHandler
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
         .expectResolve((res) => {

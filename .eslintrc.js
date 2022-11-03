@@ -19,9 +19,8 @@ module.exports = {
     {
       files: ["templates/**/*.*"],
       rules: {
-        "prefer-const": WARN,
-
         "prefer-let/prefer-let": OFF,
+        "prefer-const": WARN,
       },
     },
   ],

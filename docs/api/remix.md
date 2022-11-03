@@ -671,8 +671,8 @@ Depending on the transition state, the types can be the following:
   - **actionRedirect** - An "actionSubmission" was redirected by the action and the next routes are being loaded
   - **actionReload** - The action from an "actionSubmission" returned data and the loaders on the page are being reloaded
   - **fetchActionRedirect** - An action [fetcher][usefetcher] redirected and the next routes are being loaded
-  - **redirect** - A loader from a normal navigation (or redirect) redirected to a new location and the new routes are being loaded
-  - **load** - A normal load from a normal navigation
+  - **normalRedirect** - A loader from a normal navigation (or redirect) redirected to a new location and the new routes are being loaded
+  - **normalLoad** - A normal load from a normal navigation
 
 ```tsx
 function SubmitButton() {
@@ -2256,7 +2256,7 @@ const { getSession, commitSession, destroySession } =
   });
 ```
 
-The `expires` argument to `readData` and `updateData` is the same `Date` at which the cookie itself expires and is no longer valid. You can use this information to automatically purge the session record from your database to save on space, or to ensure that you do not otherwise return any data for old, expired cookies.
+The `expires` argument to `createData` and `updateData` is the same `Date` at which the cookie itself expires and is no longer valid. You can use this information to automatically purge the session record from your database to save on space, or to ensure that you do not otherwise return any data for old, expired cookies.
 
 ### `createCookieSessionStorage`
 
@@ -2700,7 +2700,7 @@ export default function CompanyRoute() {
 [constraints]: ../guides/constraints
 [action]: #form-action
 [disabling-javascript]: ../guides/disabling-javascript
-[example-sharing-loader-data]: https://github.com/remix-run/remix/tree/main/examples/sharing-loader-data
+[example-sharing-loader-data]: https://github.com/remix-run/examples/tree/main/sharing-loader-data
 [index query param]: ../guides/routing#what-is-the-index-query-param
 [web-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
 [content-security-policy-for-scripts]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
