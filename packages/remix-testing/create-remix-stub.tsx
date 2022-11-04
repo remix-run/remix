@@ -2,26 +2,24 @@ import * as React from "react";
 import {
   unstable_createStaticHandler as createStaticHandler,
   matchRoutes,
-  createMemoryHistory,
-} from "@remix-run/server-runtime/dist/router";
+} from "@remix-run/router";
+import { createMemoryHistory } from "history";
+import { RemixEntry } from "@remix-run/react/dist/components";
+import type { MemoryHistory, Update } from "history";
+import type { ShouldReloadFunction } from "@remix-run/react";
+import type {
+  ErrorBoundaryComponent,
+  LinksFunction,
+  MetaFunction,
+} from "@remix-run/server-runtime";
+import { json } from "@remix-run/server-runtime";
 import type {
   InitialEntry,
   StaticHandler,
   LoaderFunction,
   ActionFunction,
   Location,
-  AgnosticRouteMatch,
-  MemoryHistory,
-} from "@remix-run/server-runtime/dist/router";
-import type { Update } from "@remix-run/server-runtime/dist/router/history";
-import { RemixEntry } from "@remix-run/react/dist/components";
-import type { ShouldReloadFunction } from "@remix-run/react";
-import { json } from "@remix-run/server-runtime";
-import type {
-  ErrorBoundaryComponent,
-  LinksFunction,
-  MetaFunction,
-} from "@remix-run/server-runtime";
+} from "@remix-run/router";
 import type { AssetsManifest, EntryContext } from "@remix-run/react/dist/entry";
 import type { RouteData } from "@remix-run/react/dist/routeData";
 import type {
@@ -29,6 +27,7 @@ import type {
   RouteModules,
 } from "@remix-run/react/dist/routeModules";
 import type { EntryRoute, RouteManifest } from "@remix-run/react/dist/routes";
+import type { AgnosticRouteMatch } from "@remix-run/router/dist/utils";
 
 /**
  * Base RouteObject with common props shared by all types of mock routes
@@ -77,19 +76,19 @@ type RemixStubOptions = {
    *  The initial entries in the history stack. This allows you to start a test with
    *  multiple locations already in the history stack (for testing a back navigation, etc.)
    *  The test will default to the last entry in initialEntries if no initialIndex is provided.
-   *  e.g. initialEntries={["/home", "/about", "/contact"]}
+   *  e.g. initialEntries-(["/home", "/about", "/contact"]}
    */
   initialEntries?: InitialEntry[];
 
   /**
    *  Used to set the route's initial loader data.
-   *  e.g. initialLoaderData={{ "/contact": { locale: "en-US" } }
+   *  e.g. initialLoaderData={("/contact": {locale: "en-US" }}
    */
   initialLoaderData?: RouteData;
 
   /**
    *  Used to set the route's initial action data.
-   *  e.g. initialActionData={{ "/login": { errors: { email: "invalid email" } } }
+   *  e.g. initialActionData={("/login": { errors: { email: "invalid email" } }}
    */
   initialActionData?: RouteData;
 
@@ -97,8 +96,8 @@ type RemixStubOptions = {
    * The initial index in the history stack to render. This allows you to start a test at a specific entry.
    * It defaults to the last entry in initialEntries.
    * e.g.
-   *   initialEntries={["/", "/events/123"]}
-   *   initialIndex={1} // start at "/events/123"
+   *   initialEntries: ["/", "/events/123"]
+   *   initialIndex: 1 // start at "/events/123"
    */
   initialIndex?: number;
 };
@@ -211,7 +210,7 @@ function createRouteModules(
   routes: MockRouteObject[],
   routeModules?: RouteModules
 ): RouteModules {
-  return routes.reduce<RouteModules>((modules, route) => {
+  return routes.reduce((modules, route) => {
     if (route.children) {
       createRouteModules(route.children, modules);
     }
@@ -252,7 +251,12 @@ function monkeyPatchFetch(
     let matches = matchRoutes(dataRoutes, url);
     if (matches && matchRoutes.length > 0) {
       let response = await queryRoute(request);
-      return response instanceof Response ? response : json(response);
+
+      if (response instanceof Response) {
+        return response;
+      }
+
+      return json(response);
     }
 
     // if no matches, passthrough to the original fetch as mock routes couldn't handle the request.
