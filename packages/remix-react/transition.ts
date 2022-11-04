@@ -587,7 +587,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
         );
 
         let matches = matchClientRoutes(routes, href);
-        invariant(matches, "No matches found");
+        invariant(matches, `No route matches found for "${href}"`);
         if (fetchControllers.has(key)) abortFetcher(key);
 
         let match = getRequestMatch(
