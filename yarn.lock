@@ -2255,7 +2255,7 @@
     history "^5.3.0"
     react-router-dom "6.3.0"
 
-"@remix-run/router@1.0.3", "@remix-run/router@^1.0.3":
+"@remix-run/router@1.0.3":
   version "1.0.3"
   resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.0.3.tgz#953b88c20ea00d0eddaffdc1b115c08474aa295d"
   integrity sha512-ceuyTSs7PZ/tQqi19YZNBc5X7kj1f8p+4DIyrcIYFY9h+hd1OKm4RqtiWldR9eGEvIiJfsqwM4BsuCtRIuEw6Q==
