@@ -60,7 +60,7 @@ jobs:
 
             DATE=$(date '+%Y%m%d')
             NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}-${DATE}
-            echo ::set-output name=NEXT_VERSION::${NEXT_VERSION}
+            echo "NEXT_VERSION=${NEXT_VERSION}" >> $GITHUB_OUTPUT
 
             git checkout -b nightly/${NEXT_VERSION}
 
