@@ -1,6 +1,6 @@
 import { randomBytes } from "crypto";
 import { createReadStream, createWriteStream, statSync } from "fs";
-import { rm, mkdir, stat as statAsync } from "fs/promises";
+import { promises as fsPromises } from "fs";
 import { tmpdir } from "os";
 import { basename, dirname, extname, resolve as resolvePath } from "path";
 import type { Readable } from "stream";
@@ -64,6 +64,8 @@ export type FileUploadHandlerOptions = {
    */
   filter?(args: FileUploadHandlerFilterArgs): boolean | Promise<boolean>;
 };
+
+const { rm, mkdir, stat: statAsync } = fsPromises;
 
 let defaultFilePathResolver: FileUploadHandlerPathResolver = ({ filename }) => {
   let ext = filename ? extname(filename) : "";
