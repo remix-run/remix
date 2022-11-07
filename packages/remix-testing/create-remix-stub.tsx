@@ -4,9 +4,18 @@ import {
   matchRoutes,
 } from "@remix-run/router";
 import { createMemoryHistory } from "history";
-import { RemixEntry } from "@remix-run/react/dist/components";
+import { RemixEntry } from "@remix-run/react";
+import type {
+  AssetsManifest,
+  EntryContext,
+  RouteData,
+  ShouldReloadFunction,
+  CatchBoundaryComponent,
+  RouteModules,
+  EntryRoute,
+  RouteManifest,
+} from "@remix-run/react";
 import type { MemoryHistory, Update } from "history";
-import type { ShouldReloadFunction } from "@remix-run/react";
 import type {
   ErrorBoundaryComponent,
   LinksFunction,
@@ -20,13 +29,6 @@ import type {
   ActionFunction,
   Location,
 } from "@remix-run/router";
-import type { AssetsManifest, EntryContext } from "@remix-run/react/dist/entry";
-import type { RouteData } from "@remix-run/react/dist/routeData";
-import type {
-  CatchBoundaryComponent,
-  RouteModules,
-} from "@remix-run/react/dist/routeModules";
-import type { EntryRoute, RouteManifest } from "@remix-run/react/dist/routes";
 import type { AgnosticRouteMatch } from "@remix-run/router/dist/utils";
 
 /**
