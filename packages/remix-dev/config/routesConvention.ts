@@ -49,6 +49,10 @@ export function defineConventionalRoutes(
   });
 
   let routeIds = Object.keys(files).sort(byLongestFirst);
+  let parentRouteIds: { [routeId: string]: string | undefined } = {};
+  for (let id of routeIds) {
+    parentRouteIds[id] = findParentRouteId(routeIds, id);
+  }
 
   let uniqueRoutes = new Map<string, string>();
 
@@ -58,7 +62,7 @@ export function defineConventionalRoutes(
     parentId?: string
   ): void {
     let childRouteIds = routeIds.filter(
-      (id) => findParentRouteId(routeIds, id) === parentId
+      (id) => parentRouteIds[id] === parentId
     );
 
     for (let routeId of childRouteIds) {
@@ -86,7 +90,7 @@ export function defineConventionalRoutes(
 
       if (isIndexRoute) {
         let invalidChildRoutes = routeIds.filter(
-          (id) => findParentRouteId(routeIds, id) === routeId
+          (id) => parentRouteIds[id] === routeId
         );
 
         if (invalidChildRoutes.length > 0) {
