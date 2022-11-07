@@ -7,13 +7,13 @@ import { createMemoryHistory } from "history";
 import { RemixEntry } from "@remix-run/react";
 import type {
   AssetsManifest,
-  EntryContext,
-  RouteData,
-  ShouldReloadFunction,
   CatchBoundaryComponent,
-  RouteModules,
+  EntryContext,
   EntryRoute,
+  RouteData,
   RouteManifest,
+  RouteModules,
+  ShouldReloadFunction,
 } from "@remix-run/react";
 import type { MemoryHistory, Update } from "history";
 import type {
