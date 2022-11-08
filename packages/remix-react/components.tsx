@@ -1533,6 +1533,7 @@ export const LiveReload =
                   let socketPath = protocol + "//" + host + ":" + ${String(
                     port
                   )} + "/socket";
+                  let alreadyReloading = false;
 
                   let ws = new WebSocket(socketPath);
                   ws.onmessage = (message) => {
@@ -1542,6 +1543,7 @@ export const LiveReload =
                     }
                     if (event.type === "RELOAD") {
                       console.log("💿 Reloading window ...");
+                      alreadyReloading = true;
                       window.location.reload();
                     }
                   };
@@ -1551,6 +1553,9 @@ export const LiveReload =
                     }
                   };
                   ws.onclose = (error) => {
+                    if (alreadyReloading) {
+                      return;
+                    }
                     console.log("Remix dev asset server web socket closed. Reconnecting...");
                     setTimeout(
                       () =>
