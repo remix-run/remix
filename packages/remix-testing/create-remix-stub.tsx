@@ -218,7 +218,7 @@ function createRouteModules(
     }
 
     if (typeof route.id === "undefined") {
-      throw new Error("Route id must be defined");
+      throw new Error("Route ID must be defined");
     }
 
     modules[route.id] = {
@@ -306,14 +306,28 @@ function convertToEntryRouteMatch(
 // e.g. { "/post/:postId": post } to { "0": post }
 function convertRouteData(
   routes: MockRouteObject[],
-  routeData?: RouteData
+  initialRouteData?: RouteData,
+  routeData: RouteData = {}
 ): RouteData | undefined {
-  if (!routeData) return undefined;
-  return Object.keys(routeData).reduce<RouteData>((data, path) => {
-    let routeId = routes.find((route) => route.path === path)?.id;
-    if (routeId) {
-      data[routeId] = routeData[path];
+  if (!initialRouteData) return undefined;
+  return routes.reduce<RouteData>((data, route) => {
+    if (route.children) {
+      convertRouteData(route.children, initialRouteData, data);
     }
+    // Check if any of the initial route data entries match this route
+    Object.keys(initialRouteData).forEach((routePath) => {
+      if (
+        routePath === route.path ||
+        // Let '/' refer to the root routes data
+        (routePath === "/" && route.id === "0" && !route.path)
+      ) {
+        if (typeof route.id === "undefined") {
+          throw new Error("Route ID must be defined");
+        }
+
+        data[route.id] = initialRouteData[routePath];
+      }
+    });
     return data;
-  }, {});
+  }, routeData);
 }
