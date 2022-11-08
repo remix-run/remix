@@ -2481,6 +2481,12 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
+"@remix-run/deno@1.4.3":
+  version "1.7.5"
+  dependencies:
+    "@remix-run/server-runtime" "1.7.5"
+    mime "^3.0.0"
+
 "@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
   resolved "https://registry.npmjs.org/@remix-run/web-blob/-/web-blob-3.0.4.tgz"
