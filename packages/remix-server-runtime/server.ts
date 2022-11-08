@@ -52,34 +52,18 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
     let response: Response;
     if (url.searchParams.has("_data")) {
-      let responsePromise = handleDataRequest({
-        request:
-          // We need to clone the request here instead of the call to the new
-          // handler otherwise the first handler will lock the body for the other.
-          // Cloning here allows the new handler to be the stream reader and delegate
-          // chunks back to this cloned request.
-          ENABLE_REMIX_ROUTER ? request.clone() : request,
-        loadContext,
-        matches: matches!,
-        serverMode,
-      });
-
       let routeId = url.searchParams.get("_data")!;
+
       if (ENABLE_REMIX_ROUTER) {
-        let [response, remixRouterResponse] = await Promise.all([
-          responsePromise,
-          handleDataRequestRR(serverMode, staticHandler!, routeId, request),
-        ]);
-
-        if (!request.signal.aborted) {
-          assertResponsesMatch(response, remixRouterResponse);
-        }
-
-        console.log("Returning Remix Router Data Request Response");
-        responsePromise = Promise.resolve(remixRouterResponse);
+        response = await handleDataRequestRR(serverMode, staticHandler!, routeId, request);
+      } else {
+        response = await handleDataRequest({
+          request,
+          loadContext,
+          matches: matches!,
+          serverMode,
+        });
       }
-
-      response = await responsePromise;
 
       if (build.entry.module.handleDataRequest) {
         let match = matches!.find((match) => match.route.id == routeId)!;
@@ -93,68 +77,34 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       matches &&
       matches[matches.length - 1].route.module.default == null
     ) {
-      let responsePromise = handleResourceRequest({
-        request:
-          // We need to clone the request here instead of the call to the new
-          // handler otherwise the first handler will lock the body for the other.
-          // Cloning here allows the new handler to be the stream reader and delegate
-          // chunks back to this cloned request.
-          ENABLE_REMIX_ROUTER ? request.clone() : request,
-        loadContext,
-        matches,
-        serverMode,
-      });
-
       if (ENABLE_REMIX_ROUTER) {
-        let [response, remixRouterResponse] = await Promise.all([
-          responsePromise,
-          handleResourceRequestRR(
-            serverMode,
-            staticHandler!,
-            matches.slice(-1)[0].route.id,
-            request
-          ),
-        ]);
-
-        if (!request.signal.aborted) {
-          assertResponsesMatch(response, remixRouterResponse);
-        }
-
-        console.log("Returning Remix Router Resource Request Response");
-        responsePromise = Promise.resolve(remixRouterResponse);
+        response = await handleResourceRequestRR(
+          serverMode,
+          staticHandler!,
+          matches.slice(-1)[0].route.id,
+          request
+        );
+      } else {
+        response = await handleResourceRequest({
+          request,
+          loadContext,
+          matches,
+          serverMode,
+        });
       }
-
-      response = await responsePromise;
     } else {
-      let responsePromise = handleDocumentRequest({
-        build,
-        loadContext,
-        matches,
-        request:
-          // We need to clone the request here instead of the call to the new
-          // handler otherwise the first handler will lock the body for the other.
-          // Cloning here allows the new handler to be the stream reader and delegate
-          // chunks back to this cloned request.
-          ENABLE_REMIX_ROUTER ? request.clone() : request,
-        routes,
-        serverMode,
-      });
-
       if (ENABLE_REMIX_ROUTER) {
-        let [response, remixRouterResponse] = await Promise.all([
-          responsePromise,
-          handleDocumentRequestRR(serverMode, build, staticHandler!, request),
-        ]);
-
-        if (!request.signal.aborted) {
-          assertResponsesMatch(response, remixRouterResponse);
-        }
-
-        console.log("Returning Remix Router Document Request Response");
-        responsePromise = Promise.resolve(remixRouterResponse);
+        response = await handleDocumentRequestRR(serverMode, build, staticHandler!, request)
+      } else {
+        response = await handleDocumentRequest({
+          build,
+          loadContext,
+          matches,
+          request,
+          routes,
+          serverMode,
+        })
       }
-
-      response = await responsePromise;
     }
 
     if (request.method === "HEAD") {
@@ -1065,122 +1015,6 @@ function getRenderableMatches(
   return matches.slice(0, lastRenderableIndex + 1);
 }
 
-async function assert(
-  a: Response,
-  b: Response,
-  accessor: (r: Response) => object | Promise<object>,
-  message: string
-) {
-  let aStr = JSON.stringify(await accessor(a));
-  let bStr = JSON.stringify(await accessor(b));
-
-  if (aStr !== bStr) {
-    console.error(message);
-    message += "\nResponse 1:\n" + aStr + "\nResponse 2:\n" + bStr;
-    throw new Error(message);
-  }
-}
-
-async function assertResponsesMatch(_a: Response, _b: Response) {
-  let a = _a.clone();
-  let b = _b.clone();
-  assert(
-    a,
-    b,
-    (r) => Object.fromEntries(r.headers.entries()),
-    "Headers did not match!"
-  );
-
-  if (a.headers.get("Content-Type")?.startsWith("application/json")) {
-    if (a.headers.get("X-Remix-Error")) {
-      assert(
-        a,
-        b,
-        async (r) => {
-          let { stack, ...json } = await r.json();
-          return {
-            ...json,
-            stack: stack ? "yes" : "no",
-          };
-        },
-        "JSON error response body did not match!\n Response 1:\n" +
-          (await a.clone().text()) +
-          "\nResponse 2:\n" +
-          (await b.clone().text())
-      );
-    } else {
-      assert(
-        a,
-        b,
-        (r) => r.json(),
-        "JSON response body did not match!\nResponse 1:\n" +
-          (await a.clone().text()) +
-          "\nResponse 2:\n" +
-          (await b.clone().text())
-      );
-    }
-  } else {
-    assert(
-      a,
-      b,
-      async (r) => {
-        let text = await r.text();
-
-        // Strip stack trace from default error boundary HTML
-        if (
-          text.includes(">Application Error</h1>") &&
-          text.includes("💿 Hey developer👋")
-        ) {
-          return stripStackTraceFromDefaultErrorBoundary(text);
-        }
-
-        if (text.includes("<script>window.__remixContext")) {
-          return stripStackTraceFromRemixContext(text);
-        }
-
-        return text;
-      },
-      "Non-JSON response body did not match!\nResponse 1:\n" +
-        (await a.clone().text()) +
-        "\nResponse 2:\n" +
-        (await b.clone().text())
-    );
-  }
-}
-
-function stripStackTraceFromDefaultErrorBoundary(text: string) {
-  let openPreStart = text.indexOf("<pre ");
-  let openPreEnd = text.indexOf('">', openPreStart + 1);
-  let closePre = text.indexOf("</pre>", openPreEnd + 1);
-  let error = text.substring(openPreEnd + 2, closePre);
-  let stackStart = error.indexOf("\n");
-  let errorWithoutStack = error.substring(0, stackStart);
-  return (
-    text.replace(error, "ERROR REMOVED") + "\n\nError:\n" + errorWithoutStack
-  );
-}
-
-function stripStackTraceFromRemixContext(text: string) {
-  let scriptStart = text.indexOf("<script>window.__remixContext");
-  let scriptEnd = text.indexOf("</script>", scriptStart + 1);
-  let scriptContents = text.substring(scriptStart, scriptEnd + 9);
-  let remixContext = JSON.parse(
-    scriptContents
-      .replace("<script>window.__remixContext = ", "")
-      .replace(";</script>", "")
-  );
-  // If we didn't have an error - assert the full document
-  if (!remixContext?.appState?.error?.stack) {
-    return text;
-  }
-
-  // Otherwise remove the stack trace and assert the text/JSON as a
-  // concatenated string
-  remixContext.appState.error.stack = "yes";
-  text = text.replace(scriptContents, "CONTEXT REMOVED");
-  return text + "\n\nContext:\n" + JSON.stringify(remixContext);
-}
-
 function returnLastResortErrorResponse(error: any, serverMode?: ServerMode) {
   if (serverMode !== ServerMode.Test) {
     console.error(error);
@@ -1200,3 +1034,120 @@ function returnLastResortErrorResponse(error: any, serverMode?: ServerMode) {
     },
   });
 }
+
+
+// async function assert(
+//   a: Response,
+//   b: Response,
+//   accessor: (r: Response) => object | Promise<object>,
+//   message: string
+// ) {
+//   let aStr = JSON.stringify(await accessor(a));
+//   let bStr = JSON.stringify(await accessor(b));
+
+//   if (aStr !== bStr) {
+//     console.error(message);
+//     message += "\nResponse 1:\n" + aStr + "\nResponse 2:\n" + bStr;
+//     throw new Error(message);
+//   }
+// }
+
+// async function assertResponsesMatch(_a: Response, _b: Response) {
+//   let a = _a.clone();
+//   let b = _b.clone();
+//   assert(
+//     a,
+//     b,
+//     (r) => Object.fromEntries(r.headers.entries()),
+//     "Headers did not match!"
+//   );
+
+//   if (a.headers.get("Content-Type")?.startsWith("application/json")) {
+//     if (a.headers.get("X-Remix-Error")) {
+//       assert(
+//         a,
+//         b,
+//         async (r) => {
+//           let { stack, ...json } = await r.json();
+//           return {
+//             ...json,
+//             stack: stack ? "yes" : "no",
+//           };
+//         },
+//         "JSON error response body did not match!\n Response 1:\n" +
+//           (await a.clone().text()) +
+//           "\nResponse 2:\n" +
+//           (await b.clone().text())
+//       );
+//     } else {
+//       assert(
+//         a,
+//         b,
+//         (r) => r.json(),
+//         "JSON response body did not match!\nResponse 1:\n" +
+//           (await a.clone().text()) +
+//           "\nResponse 2:\n" +
+//           (await b.clone().text())
+//       );
+//     }
+//   } else {
+//     assert(
+//       a,
+//       b,
+//       async (r) => {
+//         let text = await r.text();
+
+//         // Strip stack trace from default error boundary HTML
+//         if (
+//           text.includes(">Application Error</h1>") &&
+//           text.includes("💿 Hey developer👋")
+//         ) {
+//           return stripStackTraceFromDefaultErrorBoundary(text);
+//         }
+
+//         if (text.includes("<script>window.__remixContext")) {
+//           return stripStackTraceFromRemixContext(text);
+//         }
+
+//         return text;
+//       },
+//       "Non-JSON response body did not match!\nResponse 1:\n" +
+//         (await a.clone().text()) +
+//         "\nResponse 2:\n" +
+//         (await b.clone().text())
+//     );
+//   }
+// }
+
+// function stripStackTraceFromDefaultErrorBoundary(text: string) {
+//   let openPreStart = text.indexOf("<pre ");
+//   let openPreEnd = text.indexOf('">', openPreStart + 1);
+//   let closePre = text.indexOf("</pre>", openPreEnd + 1);
+//   let error = text.substring(openPreEnd + 2, closePre);
+//   let stackStart = error.indexOf("\n");
+//   let errorWithoutStack = error.substring(0, stackStart);
+//   return (
+//     text.replace(error, "ERROR REMOVED") + "\n\nError:\n" + errorWithoutStack
+//   );
+// }
+
+// function stripStackTraceFromRemixContext(text: string) {
+//   let scriptStart = text.indexOf("<script>window.__remixContext");
+//   let scriptEnd = text.indexOf("</script>", scriptStart + 1);
+//   let scriptContents = text.substring(scriptStart, scriptEnd + 9);
+//   let remixContext = JSON.parse(
+//     scriptContents
+//       .replace("<script>window.__remixContext = ", "")
+//       .replace(";</script>", "")
+//   );
+//   // If we didn't have an error - assert the full document
+//   if (!remixContext?.appState?.error?.stack) {
+//     return text;
+//   }
+
+//   // Otherwise remove the stack trace and assert the text/JSON as a
+//   // concatenated string
+//   remixContext.appState.error.stack = "yes";
+//   text = text.replace(scriptContents, "CONTEXT REMOVED");
+//   return text + "\n\nContext:\n" + JSON.stringify(remixContext);
+// }

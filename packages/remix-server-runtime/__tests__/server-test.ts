@@ -3,8 +3,7 @@ import { ServerMode } from "../mode";
 import type { ServerBuild } from "../build";
 import { mockServerBuild } from "./utils";
 
-const ENABLE_REMIX_ROUTER = !!process.env.ENABLE_REMIX_ROUTER;
-const DATA_CALL_MULTIPIER = ENABLE_REMIX_ROUTER ? 2 : 1;
+const DATA_CALL_MULTIPIER = 1;
 
 function spyConsole() {
   // https://github.com/facebook/react/issues/7047
@@ -410,7 +409,7 @@ describe("shared server runtime", () => {
       });
 
       let result = await handler(request);
-      expect(result.status).toBe(405);
+      expect(result.status).toBe(500);
       expect(result.headers.get("X-Remix-Error")).toBe("yes");
       expect((await result.json()).message).toBeTruthy();
     });

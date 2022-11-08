@@ -3,8 +3,6 @@ import { test, expect } from "@playwright/test";
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 
-const ENABLE_REMIX_ROUTER = !!process.env.ENABLE_REMIX_ROUTER;
-
 test.describe("ErrorBoundary", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
@@ -105,9 +103,6 @@ test.describe("ErrorBoundary", () => {
 
   function assertConsoleError(str: string) {
     expect(errorLogs[0]).toEqual(str);
-    if (ENABLE_REMIX_ROUTER) {
-      expect(errorLogs[1]).toEqual(str);
-    }
   }
 
   test("returns a 405 x-remix-error on a data fetch to a path with no loader", async () => {
