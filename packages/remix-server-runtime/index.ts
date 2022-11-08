@@ -74,3 +74,6 @@ export type {
   UploadHandlerPart,
   UploadHandler,
 } from "./reexport";
+
+export type { MemoryHistory } from "./router";
+export { createMemoryHistory } from "./router";

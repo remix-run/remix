@@ -3,7 +3,6 @@ import {
   unstable_createStaticHandler as createStaticHandler,
   matchRoutes,
 } from "@remix-run/router";
-import { createMemoryHistory } from "history";
 import { RemixEntry } from "@remix-run/react";
 import type {
   AssetsManifest,
@@ -15,13 +14,13 @@ import type {
   RouteModules,
   ShouldReloadFunction,
 } from "@remix-run/react";
-import type { MemoryHistory, Update } from "history";
 import type {
   ErrorBoundaryComponent,
   LinksFunction,
   MetaFunction,
+  MemoryHistory,
 } from "@remix-run/server-runtime";
-import { json } from "@remix-run/server-runtime";
+import { json, createMemoryHistory } from "@remix-run/server-runtime";
 import type {
   InitialEntry,
   StaticHandler,
@@ -30,6 +29,7 @@ import type {
   Location,
 } from "@remix-run/router";
 import type { AgnosticRouteMatch } from "@remix-run/router/dist/utils";
+import type { Update } from "@remix-run/router/dist/history";
 
 /**
  * Base RouteObject with common props shared by all types of mock routes
