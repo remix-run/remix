@@ -14,19 +14,19 @@ const filesToCopy = [
 const filesToModify = ["app/entry.server.tsx", "app/root.tsx"];
 
 async function modifyFilesForEdge(files, rootDirectory) {
-  let filePaths = files.map((file) => join(rootDirectory, file));
-  let contents = await Promise.all(filePaths.map(fs.readFile));
+  const filePaths = files.map((file) => join(rootDirectory, file));
+  const contents = await Promise.all(filePaths.map(fs.readFile));
 
   await Promise.all(
     contents.map((content, index) => {
-      let newContent = content.replace(/@remix-run\/node/g, "@remix-run/deno");
+      const newContent = content.replace(/@remix-run\/node/g, "@remix-run/deno");
       return fs.WriteFile(filePaths[index], newContent);
     })
   );
 }
 
 async function copyEdgeTemplateFiles(files, rootDirectory) {
-  for (let [file, target] of files) {
+  for (const [file, target] of files) {
     await fs.copyFile(
       join(rootDirectory, "remix.init", file),
       join(rootDirectory, target || file)
@@ -35,8 +35,8 @@ async function copyEdgeTemplateFiles(files, rootDirectory) {
 }
 
 async function updatePackageJsonForEdge(directory) {
-  let packageJson = await PackageJson.load(directory);
-  let { dependencies, ...restOfPackageJson } = packageJson.content;
+  const packageJson = await PackageJson.load(directory);
+  const { dependencies, ...restOfPackageJson } = packageJson.content;
 
   delete dependencies["@remix-run/netlify"];
   dependencies["@remix-run/netlify-edge"] = "*";
@@ -62,7 +62,7 @@ async function main({ rootDirectory }) {
 }
 
 async function shouldUseEdge() {
-  let { edge } = await inquirer.prompt([
+  const { edge } = await inquirer.prompt([
     {
       name: "edge",
       type: "list",
