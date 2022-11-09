@@ -93,7 +93,7 @@ export function serverBareModulesPlugin(
         }
 
         switch (remixConfig.serverBuildTarget) {
-          // Always bundle everything for Cloudflare
+          // Always bundle everything for cloudflare.
           case "cloudflare-pages":
           case "cloudflare-workers":
           case "deno":
