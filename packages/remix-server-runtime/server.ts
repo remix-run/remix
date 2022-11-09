@@ -1036,6 +1036,7 @@ function returnLastResortErrorResponse(error: any, serverMode?: ServerMode) {
 }
 
 
+// TODO: Remove before we "finalize" router migration
 // async function assert(
 //   a: Response,
 //   b: Response,
