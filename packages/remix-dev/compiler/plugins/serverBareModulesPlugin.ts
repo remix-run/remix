@@ -97,12 +97,8 @@ export function serverBareModulesPlugin(
           case "cloudflare-pages":
           case "cloudflare-workers":
           case "deno":
-            return undefined;
           case "netlify-edge":
-            // Do not bundle file URIs
-            if (!path.startsWith("file:")) {
-              return undefined;
-            }
+            return undefined;
         }
 
         for (let pattern of remixConfig.serverDependenciesToBundle) {
