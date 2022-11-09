@@ -18,6 +18,7 @@ import { mdxPlugin } from "./plugins/mdx";
 import { serverAssetsManifestPlugin } from "./plugins/serverAssetsManifestPlugin";
 import { serverBareModulesPlugin } from "./plugins/serverBareModulesPlugin";
 import { serverEntryModulePlugin } from "./plugins/serverEntryModulePlugin";
+import { serverNativeNodeModulesPlugin } from "./plugins/serverNativeNodeModulesPlugin"
 import { serverRouteModulesPlugin } from "./plugins/serverRouteModulesPlugin";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
 
@@ -78,6 +79,9 @@ const createEsbuildConfig = (
   if (config.serverPlatform !== "node") {
     plugins.unshift(NodeModulesPolyfillPlugin());
   }
+  if (config.serverPlatform == "node") {
+    plugins.unshift(serverNativeNodeModulesPlugin());
+  }
 
   return {
     absWorkingDir: config.rootDirectory,
@@ -87,8 +91,8 @@ const createEsbuildConfig = (
     conditions: isCloudflareRuntime
       ? ["worker"]
       : isDenoRuntime
-      ? ["deno", "worker"]
-      : undefined,
+        ? ["deno", "worker"]
+        : undefined,
     platform: config.serverPlatform,
     format: config.serverModuleFormat,
     treeShaking: true,
@@ -104,8 +108,8 @@ const createEsbuildConfig = (
     mainFields: isCloudflareRuntime
       ? ["browser", "module", "main"]
       : config.serverModuleFormat === "esm"
-      ? ["module", "main"]
-      : ["main", "module"],
+        ? ["module", "main"]
+        : ["main", "module"],
     target: options.target,
     loader: loaders,
     bundle: true,
@@ -156,6 +160,15 @@ async function writeServerBuildResult(
       let contents = Buffer.from(file.contents).toString("utf-8");
       contents = contents.replace(/"route:/gm, '"');
       await fse.writeFile(file.path, contents);
+    } else if (file.path.endsWith(".node")) {
+      // Check for and make _assets folder if it does not exist in the directory
+      // I suspect this is usually done elsewhere
+      let parentFolderPath = path.dirname(file.path);
+      if (!fse.existsSync(parentFolderPath)) {
+        fse.mkdirSync(parentFolderPath, { recursive: true });
+      }
+
+      await fse.writeFile(file.path, file.contents)
     } else {
       let assetPath = path.join(
         config.assetsBuildDirectory,

@@ -27,6 +27,7 @@ export const loaders: { [ext: string]: esbuild.Loader } = {
   ".mov": "file",
   ".mp3": "file",
   ".mp4": "file",
+  ".node": "file",
   ".ogg": "file",
   ".otf": "file",
   ".png": "file",
