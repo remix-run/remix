@@ -1,10 +1,6 @@
-import type { ServerBuild } from "@remix-run/server-runtime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-
-// This can be replaced with the full context type when that is published
-interface BaseContext {
-  next: (options?: { sendConditionalRequest?: boolean }) => Promise<Response>;
-}
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/deno";
+import type { ServerBuild } from "@remix-run/deno";
+import type { Context } from "@netlify/edge-functions";
 
 /**
  * A function that returns the value to use as `context` in route `loader` and
@@ -13,17 +9,17 @@ interface BaseContext {
  * You can think of this as an escape hatch that allows you to pass
  * environment/platform-specific values through to your loader/action.
  */
-export type GetLoadContextFunction<Context extends BaseContext = BaseContext> =
-  (request: Request, context: Context) => Promise<Context> | Context;
+export type GetLoadContextFunction = (
+  request: Request,
+  context: Context
+) => Promise<Context> | Context;
 
-export type RequestHandler<Context extends BaseContext = BaseContext> = (
+export type RequestHandler = (
   request: Request,
   context: Context
 ) => Promise<Response | void>;
 
-export function createRequestHandler<
-  Context extends BaseContext = BaseContext
->({
+export function createRequestHandler({
   build,
   mode,
   getLoadContext,
@@ -31,7 +27,7 @@ export function createRequestHandler<
   build: ServerBuild;
   mode?: string;
   getLoadContext?: GetLoadContextFunction;
-}): RequestHandler<Context> {
+}): RequestHandler {
   let remixHandler = createRemixRequestHandler(build, mode);
 
   let assetPath = build.assets.url.split("/").slice(0, -1).join("/");

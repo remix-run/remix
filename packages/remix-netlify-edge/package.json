@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/netlify-edge",
   "description": "Netlify Edge platform abstractions for Remix",
-  "version": "1.4.3",
+  "version": "1.7.5",
   "license": "MIT",
   "types": "./index.d.ts",
   "repository": {
@@ -13,6 +13,9 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@remix-run/deno": "1.4.3"
+    "@remix-run/deno": "1.7.5"
+  },
+  "devDependencies": {
+    "@netlify/edge-functions": "^2.0.0"
   }
 }
