@@ -1,5 +1,5 @@
-import type { ServerBuild } from "@remix-run/server-runtime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import type { ServerBuild } from "@remix-run/deno";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/deno";
 
 // This can be replaced with the full context type when that is published
 interface BaseContext {
