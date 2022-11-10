@@ -158,14 +158,7 @@ export interface AppConfig {
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
 
-  features?: {
-    /**
-     * A flag to opt-in to the updated route `meta` API for v2.
-     *
-     * @see https://github.com/remix-run/remix/discussions/4462
-     */
-    v2_meta?: boolean;
-  };
+  features?: { [key: string]: unknown }; // TODO: This type will change when we start adding features
 }
 
 /**
@@ -285,14 +278,7 @@ export interface RemixConfig {
    */
   tsconfigPath: string | undefined;
 
-  features: {
-    /**
-     * A flag to opt-in to the updated route `meta` API for v2.
-     *
-     * @see https://github.com/remix-run/remix/discussions/4462
-     */
-    v2_meta: boolean;
-  };
+  features: { [key: string]: unknown }; // TODO: This type will change when we start adding features
 }
 
 /**
