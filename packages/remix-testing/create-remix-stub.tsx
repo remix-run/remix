@@ -1,77 +1,28 @@
 import * as React from "react";
-import {
-  unstable_createStaticHandler as createStaticHandler,
-  matchRoutes,
-} from "@remix-run/router";
-import { RemixEntry } from "@remix-run/react";
 import type {
   AssetsManifest,
-  CatchBoundaryComponent,
   EntryContext,
   EntryRoute,
   RouteData,
   RouteManifest,
   RouteModules,
-  ShouldReloadFunction,
 } from "@remix-run/react";
+import { RemixEntry } from "@remix-run/react";
 import type {
-  ErrorBoundaryComponent,
-  LinksFunction,
-  MetaFunction,
-  MemoryHistory,
-} from "@remix-run/server-runtime";
-import { json, createMemoryHistory } from "@remix-run/server-runtime";
-import type {
+  AgnosticRouteMatch,
+  AgnosticRouteObject,
   InitialEntry,
-  StaticHandler,
-  LoaderFunction,
-  ActionFunction,
   Location,
-} from "@remix-run/router";
-import type { AgnosticRouteMatch } from "@remix-run/router/dist/utils";
-import type { Update } from "@remix-run/router/dist/history";
-
-/**
- * Base RouteObject with common props shared by all types of mock routes
- */
-type BaseMockRouteObject = {
-  id?: string;
-  caseSensitive?: boolean;
-  path?: string;
-  element?: React.ReactNode | null;
-  loader?: LoaderFunction;
-  action?: ActionFunction;
-  links?: LinksFunction;
-  meta?: MetaFunction;
-  handle?: any;
-  CatchBoundary?: CatchBoundaryComponent;
-  ErrorBoundary?: ErrorBoundaryComponent;
-  unstable_shouldReload?: ShouldReloadFunction;
-};
-
-/**
- * Index routes must not have children
- */
-export declare type MockIndexRouteObject = BaseMockRouteObject & {
-  children?: undefined;
-  index: true;
-};
-
-/**
- * Non-index routes may have children, but cannot have index
- */
-export declare type MockNonIndexRouteObject = BaseMockRouteObject & {
-  children?: MockRouteObject[];
-  index?: false;
-};
-
-/**
- * A route object represents a logical route, with (optionally) its child
- * routes organized in a tree-like structure.
- */
-export declare type MockRouteObject =
-  | MockIndexRouteObject
-  | MockNonIndexRouteObject;
+  MemoryHistory,
+  StaticHandler,
+  Update,
+} from "@remix-run/server-runtime";
+import {
+  createMemoryHistory,
+  json,
+  matchRoutes,
+  unstable_createStaticHandler as createStaticHandler,
+} from "@remix-run/server-runtime";
 
 type RemixStubOptions = {
   /**
@@ -104,7 +55,7 @@ type RemixStubOptions = {
   initialIndex?: number;
 };
 
-export function createRemixStub(routes: MockRouteObject[]) {
+export function createRemixStub(routes: AgnosticRouteObject[]) {
   // Setup request handler to handle requests to the mock routes
   let { dataRoutes, queryRoute } = createStaticHandler(routes);
   return function RemixStub({
@@ -159,7 +110,7 @@ export function createRemixStub(routes: MockRouteObject[]) {
 }
 
 function createRemixContext(
-  routes: MockRouteObject[],
+  routes: AgnosticRouteObject[],
   currentLocation: Location,
   initialLoaderData?: RouteData,
   initialActionData?: RouteData
@@ -185,7 +136,7 @@ function createRemixContext(
   };
 }
 
-function createManifest(routes: MockRouteObject[]): AssetsManifest {
+function createManifest(routes: AgnosticRouteObject[]): AssetsManifest {
   return {
     routes: createRouteManifest(routes),
     entry: { imports: [], module: "" },
@@ -195,7 +146,7 @@ function createManifest(routes: MockRouteObject[]): AssetsManifest {
 }
 
 function createRouteManifest(
-  routes: MockRouteObject[],
+  routes: AgnosticRouteObject[],
   manifest?: RouteManifest<EntryRoute>,
   parentId?: string
 ): RouteManifest<EntryRoute> {
@@ -209,7 +160,7 @@ function createRouteManifest(
 }
 
 function createRouteModules(
-  routes: MockRouteObject[],
+  routes: AgnosticRouteObject[],
   routeModules?: RouteModules
 ): RouteModules {
   return routes.reduce((modules, route) => {
@@ -222,13 +173,14 @@ function createRouteModules(
     }
 
     modules[route.id] = {
-      CatchBoundary: route.CatchBoundary,
-      ErrorBoundary: route.ErrorBoundary,
+      CatchBoundary: undefined,
+      ErrorBoundary: undefined,
+      // @ts-ignore
       default: () => <>{route.element}</>,
       handle: route.handle,
-      links: route.links,
-      meta: route.meta,
-      unstable_shouldReload: route.unstable_shouldReload,
+      links: undefined,
+      meta: undefined,
+      unstable_shouldReload: undefined,
     };
     return modules;
   }, routeModules || {});
@@ -273,7 +225,7 @@ function monkeyPatchFetch(
 }
 
 function convertToEntryRoute(
-  route: MockRouteObject,
+  route: AgnosticRouteObject,
   parentId?: string
 ): EntryRoute {
   return {
@@ -285,13 +237,13 @@ function convertToEntryRoute(
     hasAction: !!route.action,
     hasLoader: !!route.loader,
     module: "",
-    hasCatchBoundary: !!route.CatchBoundary,
-    hasErrorBoundary: !!route.ErrorBoundary,
+    hasCatchBoundary: false,
+    hasErrorBoundary: false,
   };
 }
 
 function convertToEntryRouteMatch(
-  routes: AgnosticRouteMatch<string, MockRouteObject>[]
+  routes: AgnosticRouteMatch<string, AgnosticRouteObject>[]
 ) {
   return routes.map((match) => {
     return {
@@ -305,7 +257,7 @@ function convertToEntryRouteMatch(
 // Converts route data from a path based index to a route id index value.
 // e.g. { "/post/:postId": post } to { "0": post }
 function convertRouteData(
-  routes: MockRouteObject[],
+  routes: AgnosticRouteObject[],
   initialRouteData?: RouteData,
   routeData: RouteData = {}
 ): RouteData | undefined {

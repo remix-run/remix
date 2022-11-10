@@ -75,5 +75,17 @@ export type {
   UploadHandler,
 } from "./reexport";
 
-export type { MemoryHistory } from "./router";
-export { createMemoryHistory } from "./router";
+export type {
+  MemoryHistory,
+  InitialEntry,
+  StaticHandler,
+  Location,
+  AgnosticRouteObject,
+} from "./router";
+export {
+  createMemoryHistory,
+  unstable_createStaticHandler,
+  matchRoutes,
+} from "./router";
+export type { Update } from "./router/history";
+export type { AgnosticRouteMatch } from "./router/utils";
