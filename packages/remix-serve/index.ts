@@ -7,7 +7,8 @@ export function createApp(
   buildPath: string,
   mode = "production",
   publicPath = "/build/",
-  assetsBuildDirectory = "public/build/"
+  assetsBuildDirectory = "public/build/",
+  publicAssetsDirectory = "public"
 ) {
   let app = express();
 
@@ -20,7 +21,7 @@ export function createApp(
     express.static(assetsBuildDirectory, { immutable: true, maxAge: "1y" })
   );
 
-  app.use(express.static("public", { maxAge: "1h" }));
+  app.use(express.static(publicAssetsDirectory, { maxAge: "1h" }));
 
   app.use(morgan("tiny"));
   app.all(
