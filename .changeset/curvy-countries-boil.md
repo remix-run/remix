@@ -2,4 +2,4 @@
 "@remix-run/react": patch
 ---
 
-Fixed old browsers compatibility by removing a nullish coalescing operator
+Fixed a regression in the browser build for browsers that don't support the nullish coalescing operator
