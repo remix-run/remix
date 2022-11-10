@@ -155,10 +155,9 @@ export function defineRoutes(
       file,
     };
 
-    if (!!options.id && options.id in routes) {
+    if (route.id in routes) {
       throw new Error(
-        `You tried to define a route with custom id "${options.id}" but one ` +
-          "already exists. Custom route ids must be unique"
+        `Unable to define routes with duplicate route id: "${route.id}"`
       );
     }
 

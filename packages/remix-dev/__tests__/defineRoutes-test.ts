@@ -95,18 +95,72 @@ describe("defineRoutes", () => {
       route("/other", "routes/other-route.tsx");
     });
 
-    expect(Object.entries(routes)).toHaveLength(3);
+    expect(routes).toMatchInlineSnapshot(`
+      Object {
+        "routes/other-route": Object {
+          "caseSensitive": undefined,
+          "file": "routes/other-route.tsx",
+          "id": "routes/other-route",
+          "index": undefined,
+          "parentId": undefined,
+          "path": "/other",
+        },
+        "user": Object {
+          "caseSensitive": undefined,
+          "file": "routes/index.tsx",
+          "id": "user",
+          "index": undefined,
+          "parentId": undefined,
+          "path": "/user",
+        },
+        "user-by-id": Object {
+          "caseSensitive": undefined,
+          "file": "routes/index.tsx",
+          "id": "user-by-id",
+          "index": undefined,
+          "parentId": undefined,
+          "path": "/user/:id",
+        },
+      }
+    `);
   });
 
-  it("throws an error when one route already exists with the same custom ID", () => {
-    function defineNonUniqueRoutes() {
+  it("throws an error on route id collisions", () => {
+    // Two conflicting custom id's
+    let defineNonUniqueRoutes = () => {
       defineRoutes((route) => {
-        route("/user/:id", "routes/index.tsx", { id: "user" });
-        route("/user", "routes/index.tsx", { id: "user" });
+        route("/user/:id", "routes/user.tsx", { id: "user" });
+        route("/user", "routes/user.tsx", { id: "user" });
         route("/other", "routes/other-route.tsx");
       });
-    }
+    };
 
-    expect(defineNonUniqueRoutes).toThrow("must be unique");
+    expect(defineNonUniqueRoutes).toThrowErrorMatchingInlineSnapshot(
+      `"Unable to define routes with duplicate route id: \\"user\\""`
+    );
+
+    // Custom id conflicting with a later-defined auto-generated id
+    defineNonUniqueRoutes = () => {
+      defineRoutes((route) => {
+        route("/user/:id", "routes/user.tsx", { id: "routes/user" });
+        route("/user", "routes/user.tsx");
+      });
+    };
+
+    expect(defineNonUniqueRoutes).toThrowErrorMatchingInlineSnapshot(
+      `"Unable to define routes with duplicate route id: \\"routes/user\\""`
+    );
+
+    // Custom id conflicting with an earlier-defined auto-generated id
+    defineNonUniqueRoutes = () => {
+      defineRoutes((route) => {
+        route("/user", "routes/user.tsx");
+        route("/user/:id", "routes/user.tsx", { id: "routes/user" });
+      });
+    };
+
+    expect(defineNonUniqueRoutes).toThrowErrorMatchingInlineSnapshot(
+      `"Unable to define routes with duplicate route id: \\"routes/user\\""`
+    );
   });
 });
