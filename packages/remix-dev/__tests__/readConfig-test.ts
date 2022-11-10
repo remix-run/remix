@@ -68,13 +68,4 @@ describe("readConfig", () => {
     let newConfig = await readConfig(remixRoot);
     expect(newConfig.devServerPort).toBe(config.devServerPort);
   });
-
-  it("includes feature flags", async () => {
-    let newConfig = await readConfig(remixRoot);
-    expect(newConfig.features).toEqual(
-      expect.objectContaining({
-        v2_meta: expect.any(Boolean),
-      })
-    );
-  });
 });
