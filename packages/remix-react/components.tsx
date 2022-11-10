@@ -71,6 +71,9 @@ interface RemixEntryContextType {
   serverHandoffString?: string;
   clientRoutes: ClientRoute[];
   transitionManager: ReturnType<typeof createTransitionManager>;
+  features: {
+    v2_meta: boolean;
+  };
 }
 
 export const RemixEntryContext = React.createContext<
@@ -195,6 +198,7 @@ export function RemixEntry({
         routeData: loaderData,
         actionData,
         transitionManager,
+        features: entryContext.features,
       }}
     >
       <RemixErrorBoundary

@@ -13,6 +13,9 @@ export interface ServerBuild {
   assets: AssetsManifest;
   publicPath: string;
   assetsBuildDirectory: string;
+  features: {
+    v2_meta: boolean;
+  };
 }
 
 export interface HandleDocumentRequestFunction {
