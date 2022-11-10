@@ -17,9 +17,11 @@ export interface EntryContext {
   actionData?: RouteData;
   routeModules: RouteModules<EntryRouteModule>;
   serverHandoffString?: string;
-  features: {
-    v2_meta: boolean;
-  };
+  features: ConfigFeatures;
+}
+
+export interface ConfigFeatures {
+  v2_meta: boolean;
 }
 
 export interface AssetsManifest {

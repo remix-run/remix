@@ -1,5 +1,5 @@
 import type { DataFunctionArgs } from "./routeModules";
-import type { EntryContext, AssetsManifest } from "./entry";
+import type { AssetsManifest, ConfigFeatures, EntryContext } from "./entry";
 import type { ServerRouteManifest } from "./routes";
 
 /**
@@ -13,9 +13,7 @@ export interface ServerBuild {
   assets: AssetsManifest;
   publicPath: string;
   assetsBuildDirectory: string;
-  features: {
-    v2_meta: boolean;
-  };
+  features: ConfigFeatures;
 }
 
 export interface HandleDocumentRequestFunction {

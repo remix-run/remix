@@ -31,6 +31,10 @@ export type ServerBuildTarget =
 export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
+interface ConfigFeatures {
+  v2_meta: boolean;
+}
+
 /**
  * The user-provided config in `remix.config.js`.
  */
@@ -158,7 +162,7 @@ export interface AppConfig {
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
 
-  features?: { [key: string]: unknown }; // TODO: This type will change when we start adding features
+  features?: Partial<ConfigFeatures>;
 }
 
 /**
@@ -278,7 +282,7 @@ export interface RemixConfig {
    */
   tsconfigPath: string | undefined;
 
-  features: { [key: string]: unknown }; // TODO: This type will change when we start adding features
+  features: ConfigFeatures;
 }
 
 /**
