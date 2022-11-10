@@ -22,6 +22,9 @@ describe("readConfig", () => {
         assetsBuildDirectory: expect.any(String),
         relativeAssetsBuildDirectory: expect.any(String),
         tsconfigPath: expect.any(String),
+        features: {
+          v2_meta: expect.any(Boolean),
+        },
       },
       `
       Object {
@@ -32,6 +35,9 @@ describe("readConfig", () => {
         "devServerPort": Any<Number>,
         "entryClientFile": "entry.client.tsx",
         "entryServerFile": "entry.server.tsx",
+        "features": Object {
+          "v2_meta": Any<Boolean>,
+        },
         "mdx": undefined,
         "publicPath": "/build/",
         "relativeAssetsBuildDirectory": Any<String>,
@@ -61,5 +67,14 @@ describe("readConfig", () => {
   it("returns the same devServerPort value across reloads", async () => {
     let newConfig = await readConfig(remixRoot);
     expect(newConfig.devServerPort).toBe(config.devServerPort);
+  });
+
+  it("includes feature flags", async () => {
+    let newConfig = await readConfig(remixRoot);
+    expect(newConfig.features).toEqual(
+      expect.objectContaining({
+        v2_meta: expect.any(Boolean),
+      })
+    );
   });
 });
