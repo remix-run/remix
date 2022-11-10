@@ -1038,6 +1038,7 @@ export function useFormAction(
   // TODO: Remove method param in v2 as it's no longer needed and is a breaking change
   method: FormMethod = "get"
 ): string {
+  let { manifest } = useRemixEntryContext();
   let { id } = useRemixRouteContext();
   let resolvedPath = useResolvedPath(action ?? ".");
 
@@ -1048,7 +1049,7 @@ export function useFormAction(
   // https://github.com/remix-run/remix/issues/927
   let location = useLocation();
   let { search, hash } = resolvedPath;
-  let isIndexRoute = id.endsWith("/index");
+  let isIndexRoute = manifest.routes[id].index;
 
   if (action == null) {
     search = location.search;

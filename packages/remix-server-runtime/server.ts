@@ -708,7 +708,7 @@ function isIndexRequestUrl(url: URL) {
 function getRequestMatch(url: URL, matches: RouteMatch<ServerRoute>[]) {
   let match = matches.slice(-1)[0];
 
-  if (isIndexRequestUrl(url) && match.route.id.endsWith("/index")) {
+  if (isIndexRequestUrl(url) && match.route.index) {
     return match;
   }
 
