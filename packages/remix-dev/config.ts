@@ -1,4 +1,5 @@
 import * as path from "path";
+import { pathToFileURL } from "url";
 import * as fse from "fs-extra";
 import getPort from "get-port";
 
@@ -7,6 +8,7 @@ import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/virtualModules";
+import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -268,6 +270,11 @@ export interface RemixConfig {
    * A list of directories to watch.
    */
   watchPaths: string[];
+
+  /**
+   * The path for the tsconfig file, if present on the root directory.
+   */
+  tsconfigPath: string | undefined;
 }
 
 /**
@@ -291,9 +298,19 @@ export async function readConfig(
 
   let appConfig: AppConfig = {};
   if (configFile) {
+    let appConfigModule: any;
     try {
-      let appConfigModule = await import(configFile);
-      appConfig = appConfigModule?.default || appConfig;
+      // shout out to next
+      // https://github.com/vercel/next.js/blob/b15a976e11bf1dc867c241a4c1734757427d609c/packages/next/server/config.ts#L748-L765
+      if (process.env.NODE_ENV === "test") {
+        // dynamic import does not currently work inside of vm which
+        // jest relies on so we fall back to require for this case
+        // https://github.com/nodejs/node/issues/35889
+        appConfigModule = require(configFile);
+      } else {
+        appConfigModule = await import(pathToFileURL(configFile).href);
+      }
+      appConfig = appConfigModule?.default || appConfigModule;
     } catch (error) {
       throw new Error(
         `Error loading Remix config at ${configFile}\n${String(error)}`
@@ -439,6 +456,22 @@ export async function readConfig(
 
   let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
 
+  // When tsconfigPath is undefined, the default "tsconfig.json" is not
+  // found in the root directory.
+  let tsconfigPath: string | undefined;
+  let rootTsconfig = path.resolve(rootDirectory, "tsconfig.json");
+  let rootJsConfig = path.resolve(rootDirectory, "jsconfig.json");
+
+  if (fse.existsSync(rootTsconfig)) {
+    tsconfigPath = rootTsconfig;
+  } else if (fse.existsSync(rootJsConfig)) {
+    tsconfigPath = rootJsConfig;
+  }
+
+  if (tsconfigPath) {
+    writeConfigDefaults(tsconfigPath);
+  }
+
   return {
     appDirectory,
     cacheDirectory,
@@ -461,6 +494,7 @@ export async function readConfig(
     serverDependenciesToBundle,
     mdx,
     watchPaths,
+    tsconfigPath,
   };
 }
 

@@ -40,6 +40,7 @@ remix create ./my-app --template :username/:repo
 remix create ./my-app --template https://github.com/:username/:repo
 remix create ./my-app --template https://github.com/:username/:repo/tree/:branch
 remix create ./my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
+remix create ./my-app --template https://github.com/:username/:repo/releases/latest/download/:tag.tar.gz
 remix create ./my-app --template https://example.com/remix-template.tar.gz
 ```
 
@@ -95,6 +96,6 @@ remix dev --port 4001
 
 Alternatively, a port can be assigned to the `PORT` environment variable.
 
-[remix-app-server]: serve.md
+[remix-app-server]: serve
 [node-inspector]: https://nodejs.org/en/docs/guides/debugging-getting-started
 [templates-folder-of-the-remix-repository]: https://github.com/remix-run/remix/tree/main/templates

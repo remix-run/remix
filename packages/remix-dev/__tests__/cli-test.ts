@@ -5,6 +5,8 @@ import util from "util";
 import fse from "fs-extra";
 import semver from "semver";
 
+import { jestTimeout } from "./setupAfterEnv";
+
 let DOWN = "\x1B\x5B\x42";
 let ENTER = "\x0D";
 
@@ -15,6 +17,7 @@ const TEMP_DIR = path.join(
   `remix-tests-${Math.random().toString(32).slice(2)}`
 );
 
+jest.setTimeout(30_000);
 beforeAll(async () => {
   await fse.remove(TEMP_DIR);
   await fse.ensureDir(TEMP_DIR);
@@ -26,7 +29,7 @@ afterAll(async () => {
 
 async function execRemix(
   args: Array<string>,
-  options: Parameters<typeof execFile>[2] = {}
+  options: Exclude<Parameters<typeof execFile>[2], null | undefined> = {}
 ) {
   if (process.platform === "win32") {
     let cp = childProcess.spawnSync(
@@ -94,6 +97,7 @@ describe("remix CLI", () => {
             $ remix build [projectDir]
             $ remix dev [projectDir]
             $ remix routes [projectDir]
+            $ remix watch [projectDir]
             $ remix setup [remixPlatform]
             $ remix migrate [-m migration] [projectDir]
 
@@ -168,6 +172,14 @@ describe("remix CLI", () => {
             $ remix dev
             $ remix dev my-app
             $ remix dev --debug
+
+          Start your server separately and watch for changes:
+
+            # custom server start command, for example:
+            $ remix watch
+
+            # in a separate tab:
+            $ node --inspect --require ./node_modules/dotenv/config --require ./mocks ./build/server.js
 
           Show all routes in your app:
 
@@ -264,7 +276,7 @@ function defer() {
       return rej(reason);
     };
   });
-  return { promise, resolve, reject, state };
+  return { promise, resolve: resolve!, reject: reject!, state };
 }
 
 async function interactWithShell(
@@ -343,7 +355,7 @@ async function interactWithShell(
       proc.kill();
       deferred.reject({ status: "timeout", stdout, stderr });
     }
-  }, 10_000);
+  }, jestTimeout);
 
   await deferred.promise;
   clearTimeout(timeout);

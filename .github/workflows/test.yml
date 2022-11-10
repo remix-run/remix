@@ -8,15 +8,25 @@ on:
     paths-ignore:
       - "docs/**"
       - "scripts/**"
-      - "**/README.md"
+      - "contributors.yml"
+      - "**/*.md"
   pull_request:
     paths-ignore:
       - "docs/**"
+      - "scripts/**"
+      - "contributors.yml"
       - "**/*.md"
 
 jobs:
   test:
     if: github.repository == 'remix-run/remix'
-    uses: remix-run/remix/.github/workflows/reusable-test.yml@main
+    uses: ./.github/workflows/reusable-test.yml
     with:
       node_version: '["latest"]'
+
+  test-experimental:
+    if: github.repository == 'remix-run/remix'
+    uses: ./.github/workflows/reusable-test.yml
+    with:
+      node_version: '["latest"]'
+      enable_remix_router: "1"
