@@ -108,6 +108,9 @@ const createEsbuildConfig = (
       "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
         config.devServerPort
       ),
+      "process.env.REMIX_CONFIG_FEATURES_V2_META": JSON.stringify(
+        config.features.v2_meta
+      ),
     },
     jsx: "automatic",
     jsxDev: options.mode !== "production",
