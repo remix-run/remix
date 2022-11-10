@@ -66,9 +66,10 @@ If you think you've found a bug but don't have the time to send a PR, please fol
 
 1. Create a minimal reproduction of the issue somewhere like Stackblitz, Replit, Codesandbox, etc. that we can visit and observe the bug:
 
-   - https://remix.new makes this really easy
+   - [https://remix.new][https-remix-new] makes this really easy
 
 2. If this is not possible (related to some hosting setup, etc.) please create a GitHub repo that we can run with clear instructions in the README to observe the bug
+
 3. Open an issue and link to the reproduction.
 
 Bug reports without a reproduction will be immediately closed asking for a reproduction.
@@ -123,7 +124,7 @@ To help keep the repositories clean and organized, Collaborators will take the f
 
 - Bug reports without a reproduction will be immediately closed asking for a reproduction.
 - Issues that should be proposals will be converted to a Proposal
-- Questions will be converted to a **Q&A Discussion**
+- Questions will be converted to a **Q\&A Discussion**
 - Issues with valid reproduction will be labeled as **Verified Bugs** and added to the Roadmap by the Admins in the Roadmap Planning Meeting.
 
 ### Pull Requests Tab
@@ -265,3 +266,4 @@ Thanks
 [nightly-action-comment]: https://github.com/remix-run/remix/blob/main/.github/workflows/nightly.yml#L8-L12
 [postrelease-action]: https://github.com/remix-run/remix/blob/main/.github/workflows/postrelease.yml
 [templates]: /templates
+[https-remix-new]: https://remix.new
