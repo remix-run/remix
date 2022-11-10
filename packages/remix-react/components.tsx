@@ -1039,7 +1039,7 @@ export function useFormAction(
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
-  let resolvedPath = useResolvedPath(action ?? ".");
+  let resolvedPath = useResolvedPath(action ? action : ".");
 
   // Previously we set the default action to ".". The problem with this is that
   // `useResolvedPath(".")` excludes search params and the hash of the resolved
@@ -1335,7 +1335,9 @@ function isInputElement(object: any): object is HTMLInputElement {
  *
  * @see https://remix.run/api/remix#usebeforeunload
  */
-export function useBeforeUnload(callback: (event: BeforeUnloadEvent) => any): void {
+export function useBeforeUnload(
+  callback: (event: BeforeUnloadEvent) => any
+): void {
   React.useEffect(() => {
     window.addEventListener("beforeunload", callback);
     return () => {
