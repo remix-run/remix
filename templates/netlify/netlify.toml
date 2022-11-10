@@ -1,6 +1,6 @@
 [build]
 command = "remix build"
-publish = "build"
+publish = "public"
 
 [[redirects]]
 from = "/*"
