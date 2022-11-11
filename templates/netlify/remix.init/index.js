@@ -9,6 +9,7 @@ const filesToCopy = [
   ["edge-server.js", "server.js"],
   ["remix.config-edge.js", "remix.config.js"],
   ["vscode.json", join(".vscode", "settings.json")],
+  ["globals.d.ts", "globals.d.ts"],
 ];
 
 const filesToModify = ["app/entry.server.tsx", "app/root.tsx"];
