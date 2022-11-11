@@ -208,4 +208,4 @@ The above configuration parses markdown to insert [highlight.js][highlightjs] fr
 [yaml]: https://yaml.org
 [mdx-bundler]: https://github.com/kentcdodds/mdx-bundler
 [highlightjs]: https://highlightjs.org/
-[surfacing-styles]: ../styling.md#surfacing-styles
+[surfacing-styles]: ../styling#surfacing-styles
