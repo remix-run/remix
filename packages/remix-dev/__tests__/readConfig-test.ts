@@ -22,7 +22,7 @@ describe("readConfig", () => {
         assetsBuildDirectory: expect.any(String),
         relativeAssetsBuildDirectory: expect.any(String),
         tsconfigPath: expect.any(String),
-        features: {
+        future: {
           v2_meta: expect.any(Boolean),
         },
       },
@@ -35,7 +35,7 @@ describe("readConfig", () => {
         "devServerPort": Any<Number>,
         "entryClientFile": "entry.client.tsx",
         "entryServerFile": "entry.server.tsx",
-        "features": Object {
+        "future": Object {
           "v2_meta": Any<Boolean>,
         },
         "mdx": undefined,

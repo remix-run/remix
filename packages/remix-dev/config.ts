@@ -31,7 +31,7 @@ export type ServerBuildTarget =
 export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
-interface ConfigFeatures {
+interface ConfigFuture {
   v2_meta: boolean;
 }
 
@@ -162,7 +162,7 @@ export interface AppConfig {
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
 
-  features?: Partial<ConfigFeatures>;
+  future?: Partial<ConfigFuture>;
 }
 
 /**
@@ -282,7 +282,7 @@ export interface RemixConfig {
    */
   tsconfigPath: string | undefined;
 
-  features: ConfigFeatures;
+  future: ConfigFuture;
 }
 
 /**
@@ -480,8 +480,8 @@ export async function readConfig(
     writeConfigDefaults(tsconfigPath);
   }
 
-  let features = {
-    v2_meta: appConfig.features?.v2_meta === true,
+  let future = {
+    v2_meta: appConfig.future?.v2_meta === true,
   };
 
   return {
@@ -507,7 +507,7 @@ export async function readConfig(
     mdx,
     watchPaths,
     tsconfigPath,
-    features,
+    future,
   };
 }
 

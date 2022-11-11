@@ -24,7 +24,7 @@ import { createPath } from "history";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
-import type { AssetsManifest, ConfigFeatures, EntryContext } from "./entry";
+import type { AssetsManifest, ConfigFuture, EntryContext } from "./entry";
 import type { AppState, SerializedError } from "./errors";
 import {
   RemixRootDefaultErrorBoundary,
@@ -71,7 +71,7 @@ interface RemixEntryContextType {
   serverHandoffString?: string;
   clientRoutes: ClientRoute[];
   transitionManager: ReturnType<typeof createTransitionManager>;
-  features: ConfigFeatures;
+  future: ConfigFuture;
 }
 
 export const RemixEntryContext = React.createContext<
@@ -196,7 +196,7 @@ export function RemixEntry({
         routeData: loaderData,
         actionData,
         transitionManager,
-        features: entryContext.features,
+        future: entryContext.future,
       }}
     >
       <RemixErrorBoundary

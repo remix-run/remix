@@ -12,10 +12,10 @@ export interface EntryContext {
   actionData?: RouteData;
   routeModules: RouteModules;
   serverHandoffString?: string;
-  features: ConfigFeatures;
+  future: ConfigFuture;
 }
 
-export interface ConfigFeatures {
+export interface ConfigFuture {
   v2_meta: boolean;
 }
 
