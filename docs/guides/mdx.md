@@ -201,6 +201,11 @@ exports.mdx = async (filename) => {
 };
 ```
 
+The above configuration parses markdown to insert [highlight.js][highlightjs] friendly DOM elements. To have the syntax highlighting appear, you need also include a highlight.js css file. See [Surfacing Styles][surfacing-styles].
+
+
 [mdx]: https://mdxjs.com
 [yaml]: https://yaml.org
 [mdx-bundler]: https://github.com/kentcdodds/mdx-bundler
+[highlightjs]: https://highlightjs.org/
+[surfacing-styles]: ../styling.md#surfacing-styles
