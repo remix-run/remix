@@ -45,7 +45,9 @@ const createEsbuildConfig = (
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
     config.serverBuildTarget ?? ""
   );
-  let isDenoRuntime = config.serverBuildTarget === "deno";
+  let isDenoRuntime = config.serverBuildTarget
+    ? ["deno", "netlify-edge"].includes(config.serverBuildTarget)
+    : false;
 
   let plugins: esbuild.Plugin[] = [
     cssFilePlugin(options),
