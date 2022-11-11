@@ -15,12 +15,17 @@ const filesToModify = ["app/entry.server.tsx", "app/root.tsx"];
 
 async function modifyFilesForEdge(files, rootDirectory) {
   const filePaths = files.map((file) => join(rootDirectory, file));
-  const contents = await Promise.all(filePaths.map(fs.readFile));
+  const contents = await Promise.all(
+    filePaths.map((path) => fs.readFile(path, "utf8"))
+  );
 
   await Promise.all(
     contents.map((content, index) => {
-      const newContent = content.replace(/@remix-run\/node/g, "@remix-run/deno");
-      return fs.WriteFile(filePaths[index], newContent);
+      const newContent = content.replace(
+        /@remix-run\/node/g,
+        "@remix-run/deno"
+      );
+      return fs.writeFile(filePaths[index], newContent);
     })
   );
 }
@@ -50,15 +55,19 @@ async function updatePackageJsonForEdge(directory) {
 }
 
 async function main({ rootDirectory }) {
-  if (await shouldUseEdge()) {
-    await fs.mkdir(join(rootDirectory, ".vscode"));
-
-    await Promise.all([
-      copyEdgeTemplateFiles(filesToCopy, rootDirectory),
-      modifyFilesForEdge(filesToModify, rootDirectory),
-      updatePackageJsonForEdge(rootDirectory),
-    ]);
+  if (!(await shouldUseEdge())) {
+    return;
   }
+
+  await Promise.all([
+    fs.mkdir(join(rootDirectory, ".vscode")),
+    copyEdgeTemplateFiles(filesToCopy, rootDirectory),
+  ]);
+
+  await Promise.all([
+    modifyFilesForEdge(filesToModify, rootDirectory),
+    updatePackageJsonForEdge(rootDirectory),
+  ]);
 }
 
 async function shouldUseEdge() {
