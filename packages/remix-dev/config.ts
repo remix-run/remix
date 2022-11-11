@@ -31,7 +31,7 @@ export type ServerBuildTarget =
 export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
-interface ConfigFuture {
+interface FutureConfig {
   v2_meta: boolean;
 }
 
@@ -162,7 +162,7 @@ export interface AppConfig {
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
 
-  future?: Partial<ConfigFuture>;
+  future?: Partial<FutureConfig>;
 }
 
 /**
@@ -282,7 +282,7 @@ export interface RemixConfig {
    */
   tsconfigPath: string | undefined;
 
-  future: ConfigFuture;
+  future: FutureConfig;
 }
 
 /**

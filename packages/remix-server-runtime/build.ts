@@ -1,5 +1,5 @@
 import type { DataFunctionArgs } from "./routeModules";
-import type { AssetsManifest, ConfigFuture, EntryContext } from "./entry";
+import type { AssetsManifest, EntryContext, FutureConfig } from "./entry";
 import type { ServerRouteManifest } from "./routes";
 
 /**
@@ -13,7 +13,7 @@ export interface ServerBuild {
   assets: AssetsManifest;
   publicPath: string;
   assetsBuildDirectory: string;
-  future: ConfigFuture;
+  future: FutureConfig;
 }
 
 export interface HandleDocumentRequestFunction {
