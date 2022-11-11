@@ -2,8 +2,6 @@
 import * as build from "@remix-run/dev/server-build";
 import { createRequestHandler } from "@remix-run/netlify-edge";
 
-globalThis.process ||= { env: Deno.env.toObject() };
-
 export default createRequestHandler({
   build,
   // process.env.NODE_ENV is provided by Remix at compile time
