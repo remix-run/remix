@@ -15,7 +15,12 @@ import type { RouteMatch } from "./routeMatching";
 import { matchServerRoutes } from "./routeMatching";
 import type { ServerRoute } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
-import { json, isRedirectResponse, isCatchResponse } from "./responses";
+import {
+  json,
+  isRedirectResponse,
+  isCatchResponse,
+  isRevalidateResponse,
+} from "./responses";
 import { createServerHandoffString } from "./serverHandoff";
 
 export type RequestHandler = (
@@ -204,6 +209,37 @@ async function handleDataRequest({
         routeId: match.route.id,
         params: match.params,
         request,
+      });
+    }
+
+    if (isRevalidateResponse(response)) {
+      let routeLoaderResults = await Promise.allSettled(
+        matches.map((match) =>
+          match.route.module.loader
+            ? callRouteLoader({
+                loadContext,
+                loader: match.route.module.loader,
+                routeId: match.route.id,
+                params: match.params,
+                request,
+              }).then((r) => r.json())
+            : Promise.resolve(undefined)
+        )
+      );
+      let data: { loaders: Record<string, unknown>; fetcher: unknown } = {
+        loaders: {},
+        fetcher: await extractData(response),
+      };
+      for (let index = 0; index < routeLoaderResults.length; index++) {
+        let result = routeLoaderResults[index];
+        let routeId = matches[index].route.id;
+        data.loaders[routeId] =
+          result.status === "fulfilled" ? result.value : null;
+      }
+      return json(data, {
+        headers: {
+          "X-Remix-Revalidated": "true",
+        },
       });
     }
 

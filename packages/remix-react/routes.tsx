@@ -9,8 +9,10 @@ import {
   fetchData,
   isCatchResponse,
   isRedirectResponse,
+  isRevalidatedResponse,
 } from "./data";
 import type { Submission } from "./transition";
+import { Revalidated } from "./transition";
 import { CatchValue, TransitionRedirect } from "./transition";
 import { prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
@@ -192,6 +194,10 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
 
     let redirect = await checkRedirect(result);
     if (redirect) return redirect;
+
+    if (isRevalidatedResponse(result)) {
+      return new Revalidated(result);
+    }
 
     await loadRouteModuleWithBlockingLinks(route, routeModules);
 

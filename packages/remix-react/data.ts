@@ -30,6 +30,13 @@ export function isRedirectResponse(response: any): boolean {
   );
 }
 
+export function isRevalidatedResponse(response: any): boolean {
+  return (
+    response instanceof Response &&
+    response.headers.get("X-Remix-Revalidated") != null
+  );
+}
+
 export async function fetchData(
   url: URL,
   routeId: string,
