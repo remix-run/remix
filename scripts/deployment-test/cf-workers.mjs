@@ -79,7 +79,7 @@ async function createAndDeployApp() {
   let wranglerToml = toml.parse(wranglerTomlContent);
   wranglerToml.name = APP_NAME;
   await fse.writeFile(wranglerTomlPath, toml.stringify(wranglerToml));
-  let url = `https://${APP_NAME}.remix--run.workers.dev`;
+  let url = `https://${APP_NAME}.remixrun.workers.dev`;
   console.log(`worker url: ${url}`);
 
   spawnSync("npx", ["wrangler", "--version"], spawnOpts);
