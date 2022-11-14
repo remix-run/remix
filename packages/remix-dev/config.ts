@@ -223,9 +223,19 @@ export interface RemixConfig {
   entryClientFile: string;
 
   /**
+   * The absolute path to the entry.client file.
+   */
+  entryClientFilePath: string;
+
+  /**
    * The path to the entry.server file, relative to `config.appDirectory`.
    */
   entryServerFile: string;
+
+  /**
+   * The absolute path to the entry.server file.
+   */
+  entryServerFilePath: string;
 
   /**
    * An object of all available routes, keyed by route id.
@@ -431,15 +441,28 @@ export async function readConfig(
     appConfig.cacheDirectory || ".cache"
   );
 
-  let entryClientFile = findEntry(appDirectory, "entry.client");
-  if (!entryClientFile) {
-    throw new Error(`Missing "entry.client" file in ${appDirectory}`);
-  }
+  let defaultsDirectory = path.resolve(__dirname, "config", "defaults");
+  let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");
+  let defaultEntryServer = path.resolve(defaultsDirectory, "entry.server.tsx");
 
-  let entryServerFile = findEntry(appDirectory, "entry.server");
-  if (!entryServerFile) {
-    throw new Error(`Missing "entry.server" file in ${appDirectory}`);
-  }
+  let userEntryClientFile = findEntry(appDirectory, "entry.client");
+  let userEntryServerFile = findEntry(appDirectory, "entry.server");
+
+  let entryClientFile = userEntryClientFile
+    ? userEntryClientFile
+    : "entry.client.tsx";
+
+  let entryServerFile = userEntryServerFile
+    ? userEntryServerFile
+    : "entry.server.tsx";
+
+  let entryClientFilePath = userEntryClientFile
+    ? path.resolve(appDirectory, userEntryClientFile)
+    : defaultEntryClient;
+
+  let entryServerFilePath = userEntryServerFile
+    ? path.resolve(appDirectory, userEntryServerFile)
+    : defaultEntryServer;
 
   let assetsBuildDirectory =
     appConfig.assetsBuildDirectory ||
@@ -455,7 +478,7 @@ export async function readConfig(
     Number(process.env.REMIX_DEV_SERVER_WS_PORT) ||
     (await getPort({ port: Number(appConfig.devServerPort) || 8002 }));
   // set env variable so un-bundled servers can use it
-  process.env.REMIX_DEV_SERVER_WS_PORT = `${devServerPort}`;
+  process.env.REMIX_DEV_SERVER_WS_PORT = String(devServerPort);
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
   let defaultPublicPath =
@@ -463,12 +486,10 @@ export async function readConfig(
   let publicPath = addTrailingSlash(appConfig.publicPath || defaultPublicPath);
 
   let rootRouteFile = findEntry(appDirectory, "root");
-  if (!rootRouteFile) {
-    throw new Error(`Missing "root" route file in ${appDirectory}`);
-  }
+  let defaultRootRouteFile = path.resolve(defaultsDirectory, "root.tsx");
 
   let routes: RouteManifest = {
-    root: { path: "", id: "root", file: rootRouteFile },
+    root: { path: "", id: "root", file: rootRouteFile || defaultRootRouteFile },
   };
 
   let routesConvention = appConfig.future?.v2_routeConvention
@@ -538,7 +559,9 @@ export async function readConfig(
     appDirectory,
     cacheDirectory,
     entryClientFile,
+    entryClientFilePath,
     entryServerFile,
+    entryServerFilePath,
     devServerPort,
     devServerBroadcastDelay,
     assetsBuildDirectory: absoluteAssetsBuildDirectory,
