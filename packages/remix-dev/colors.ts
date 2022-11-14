@@ -18,6 +18,12 @@ export const logoYellow = safe(chalk.yellowBright);
 export const logoPink = safe(chalk.magentaBright);
 export const logoRed = safe(chalk.redBright);
 
-export const gray = safe(chalk.gray);
-export const blue = safe(chalk.blue);
+// raw styles
 export const bold = safe(chalk.bold);
+
+// raw colors
+export const blue = safe(chalk.blue);
+export const cyan = safe(chalk.cyan);
+export const gray = safe(chalk.gray);
+export const red = safe(chalk.red);
+export const yellow = safe(chalk.yellow);
