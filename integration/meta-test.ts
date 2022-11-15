@@ -419,7 +419,7 @@ test.describe("v2_meta", () => {
             { name: "description", content: data.description },
             { property": "og:image", content: "https://picsum.photos/200/200" },
             { property": "og:type", content: data.contentType }, // undefined
-            { name: httpEquiv: "refresh", content: "3;url=https://www.mozilla.org" },
+            { httpEquiv: "refresh", content: "3;url=https://www.mozilla.org" },
             { title: data.title },
           ];
 
