@@ -55,7 +55,12 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       let routeId = url.searchParams.get("_data")!;
 
       if (ENABLE_REMIX_ROUTER) {
-        response = await handleDataRequestRR(serverMode, staticHandler!, routeId, request);
+        response = await handleDataRequestRR(
+          serverMode,
+          staticHandler!,
+          routeId,
+          request
+        );
       } else {
         response = await handleDataRequest({
           request,
@@ -94,7 +99,12 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       }
     } else {
       if (ENABLE_REMIX_ROUTER) {
-        response = await handleDocumentRequestRR(serverMode, build, staticHandler!, request)
+        response = await handleDocumentRequestRR(
+          serverMode,
+          build,
+          staticHandler!,
+          request
+        );
       } else {
         response = await handleDocumentRequest({
           build,
@@ -103,7 +113,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
           request,
           routes,
           serverMode,
-        })
+        });
       }
     }
 
@@ -462,12 +472,13 @@ async function handleDocumentRequestRR(
 
   let serverHandoff: Pick<
     EntryContext,
-    "actionData" | "appState" | "matches" | "routeData"
+    "actionData" | "appState" | "matches" | "routeData" | "future"
   > = {
     actionData: context.actionData || undefined,
     appState,
     matches: createEntryMatches(renderableMatches, build.assets.routes),
     routeData: context.loaderData || {},
+    future: build.future,
   };
 
   let entryContext: EntryContext = {
@@ -1035,7 +1046,6 @@ function returnLastResortErrorResponse(error: any, serverMode?: ServerMode) {
     },
   });
 }
-
 
 // TODO: Remove before we "finalize" router migration
 // async function assert(
