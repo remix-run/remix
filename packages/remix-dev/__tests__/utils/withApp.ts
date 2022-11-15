@@ -2,6 +2,19 @@ import os from "os";
 import path from "path";
 import fse from "fs-extra";
 
+const retry = async (
+  callback: () => Promise<void>,
+  times: number,
+  delayMs: number = 0
+) => {
+  try {
+    await callback();
+  } catch (error) {
+    if (times === 0) throw error;
+    setTimeout(() => retry(callback, times - 1), delayMs);
+  }
+};
+
 export default async <Result>(
   fixture: string,
   callback: (projectDir: string) => Promise<Result>
@@ -19,6 +32,10 @@ export default async <Result>(
     let result = await callback(projectDir);
     return result;
   } finally {
-    await fse.remove(TEMP_DIR);
+    // Windows sometimes throws `EBUSY: resource busy or locked, rmdir`
+    // errors when attempting to removing the temporary directory.
+    // Retrying a couple times seems to get it to succeed.
+    // See https://github.com/jprichardson/node-fs-extra/issues?q=EBUSY%3A+resource+busy+or+locked%2C+rmdir
+    retry(async () => await fse.remove(TEMP_DIR), 3, 200);
   }
 };
