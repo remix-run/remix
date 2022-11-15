@@ -766,6 +766,7 @@ export async function requireUserSession(request) {
 ```
 
 ```tsx filename=app/routes/invoice/$invoiceId.tsx
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useCatch, useLoaderData } from "@remix-run/react";
 import type { ThrownResponse } from "@remix-run/react";
 
