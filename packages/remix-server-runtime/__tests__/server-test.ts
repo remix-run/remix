@@ -409,7 +409,7 @@ describe("shared server runtime", () => {
       });
 
       let result = await handler(request);
-      expect(result.status).toBe(405);
+      expect(result.status).toBe(400);
       expect(result.headers.get("X-Remix-Error")).toBe("yes");
       expect((await result.json()).message).toBeTruthy();
     });

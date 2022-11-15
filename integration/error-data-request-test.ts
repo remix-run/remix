@@ -105,9 +105,9 @@ test.describe("ErrorBoundary", () => {
     expect(errorLogs[0]).toEqual(str);
   }
 
-  test("returns a 405 x-remix-error on a data fetch to a path with no loader", async () => {
+  test("returns a 400 x-remix-error on a data fetch to a path with no loader", async () => {
     let response = await fixture.requestData("/", "routes/index");
-    expect(response.status).toBe(405);
+    expect(response.status).toBe(400);
     expect(response.headers.get("X-Remix-Error")).toBe("yes");
     expect(await response.text()).toMatch("Unexpected Server Error");
     assertConsoleError(

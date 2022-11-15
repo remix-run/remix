@@ -86,7 +86,7 @@ export async function callRouteLoader({
     let msg =
       `You made a ${request.method} request to "${pathname}" but did not provide ` +
       `a \`loader\` for route "${routeId}", so there is no way to handle the request.`;
-    throw new ErrorResponse(405, "Method Not Allowed", new Error(msg), true);
+    throw new ErrorResponse(400, "Bad Request", new Error(msg), true);
   }
 
   let result;
