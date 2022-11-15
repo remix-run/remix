@@ -25,11 +25,13 @@
     "abort-controller": "^3.0.0",
     "cookie-signature": "^1.1.0",
     "source-map-support": "^0.5.21",
-    "stream-slice": "^0.1.2"
+    "stream-slice": "^0.1.2",
+    "write-file-atomic": "^5.0.0"
   },
   "devDependencies": {
     "@types/cookie-signature": "^1.0.3",
-    "@types/source-map-support": "^0.5.4"
+    "@types/source-map-support": "^0.5.4",
+    "@types/write-file-atomic": "^4.0.0"
   },
   "engines": {
     "node": ">=14"

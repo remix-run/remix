@@ -6,6 +6,7 @@ import type {
   SessionIdStorageStrategy,
   SessionData,
 } from "@remix-run/server-runtime";
+import writeFile from "write-file-atomic";
 
 import { createSessionStorage } from "../implementations";
 
@@ -52,7 +53,7 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
         try {
           let file = getFile(dir, id);
           await fsp.mkdir(path.dirname(file), { recursive: true });
-          await fsp.writeFile(file, content, { encoding: "utf-8", flag: "wx" });
+          await writeFile(file, content, { encoding: "utf-8" });
           return id;
         } catch (error: any) {
           if (error.code !== "EEXIST") throw error;
@@ -86,7 +87,7 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
       let content = JSON.stringify({ data, expires });
       let file = getFile(dir, id);
       await fsp.mkdir(path.dirname(file), { recursive: true });
-      await fsp.writeFile(file, content, "utf-8");
+      await writeFile(file, content, "utf-8");
     },
     async deleteData(id) {
       // Return early if the id is empty, otherwise we'll end up trying to
