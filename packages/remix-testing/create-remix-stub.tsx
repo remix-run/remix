@@ -9,8 +9,9 @@ import type {
 } from "@remix-run/react";
 import { RemixEntry } from "@remix-run/react";
 import type {
+  AgnosticIndexRouteObject,
+  AgnosticNonIndexRouteObject,
   AgnosticRouteMatch,
-  AgnosticRouteObject,
   InitialEntry,
   Location,
   MemoryHistory,
@@ -55,7 +56,19 @@ type RemixStubOptions = {
   initialIndex?: number;
 };
 
-export function createRemixStub(routes: AgnosticRouteObject[]) {
+type IndexRouteObject = AgnosticIndexRouteObject & {
+  element: React.ReactNode;
+  children?: undefined;
+};
+
+type NonIndexRouteObject = AgnosticNonIndexRouteObject & {
+  element: React.ReactNode;
+  children?: RouteObject[];
+};
+
+type RouteObject = IndexRouteObject | NonIndexRouteObject;
+
+export function createRemixStub(routes: RouteObject[]) {
   // Setup request handler to handle requests to the mock routes
   let { dataRoutes, queryRoute } = createStaticHandler(routes);
   return function RemixStub({
@@ -110,7 +123,7 @@ export function createRemixStub(routes: AgnosticRouteObject[]) {
 }
 
 function createRemixContext(
-  routes: AgnosticRouteObject[],
+  routes: RouteObject[],
   currentLocation: Location,
   initialLoaderData?: RouteData,
   initialActionData?: RouteData
@@ -136,7 +149,7 @@ function createRemixContext(
   };
 }
 
-function createManifest(routes: AgnosticRouteObject[]): AssetsManifest {
+function createManifest(routes: RouteObject[]): AssetsManifest {
   return {
     routes: createRouteManifest(routes),
     entry: { imports: [], module: "" },
@@ -146,7 +159,7 @@ function createManifest(routes: AgnosticRouteObject[]): AssetsManifest {
 }
 
 function createRouteManifest(
-  routes: AgnosticRouteObject[],
+  routes: RouteObject[],
   manifest?: RouteManifest<EntryRoute>,
   parentId?: string
 ): RouteManifest<EntryRoute> {
@@ -160,7 +173,7 @@ function createRouteManifest(
 }
 
 function createRouteModules(
-  routes: AgnosticRouteObject[],
+  routes: RouteObject[],
   routeModules?: RouteModules
 ): RouteModules {
   return routes.reduce((modules, route) => {
@@ -168,14 +181,9 @@ function createRouteModules(
       createRouteModules(route.children, modules);
     }
 
-    if (typeof route.id === "undefined") {
-      throw new Error("Route ID must be defined");
-    }
-
-    modules[route.id] = {
+    modules[route.id!] = {
       CatchBoundary: undefined,
       ErrorBoundary: undefined,
-      // @ts-ignore
       default: () => <>{route.element}</>,
       handle: route.handle,
       links: undefined,
@@ -203,7 +211,7 @@ function monkeyPatchFetch(
     // if we have matches, send the request to mock routes via @remix-run/router rather than the normal
     // @remix-run/server-runtime so that stubs can also be used in browser environments.
     let matches = matchRoutes(dataRoutes, url);
-    if (matches && matchRoutes.length > 0) {
+    if (matches && matches.length > 0) {
       let response = await queryRoute(request);
 
       if (response instanceof Response) {
@@ -217,15 +225,11 @@ function monkeyPatchFetch(
     return originalFetch(request, init);
   };
 
-  if (typeof global !== "undefined") {
-    global.fetch = fetchPatch;
-  } else {
-    window.fetch = fetchPatch;
-  }
+  globalThis.fetch = fetchPatch;
 }
 
 function convertToEntryRoute(
-  route: AgnosticRouteObject,
+  route: RouteObject,
   parentId?: string
 ): EntryRoute {
   return {
@@ -243,7 +247,7 @@ function convertToEntryRoute(
 }
 
 function convertToEntryRouteMatch(
-  routes: AgnosticRouteMatch<string, AgnosticRouteObject>[]
+  routes: AgnosticRouteMatch<string, RouteObject>[]
 ) {
   return routes.map((match) => {
     return {
@@ -257,7 +261,7 @@ function convertToEntryRouteMatch(
 // Converts route data from a path based index to a route id index value.
 // e.g. { "/post/:postId": post } to { "0": post }
 function convertRouteData(
-  routes: AgnosticRouteObject[],
+  routes: RouteObject[],
   initialRouteData?: RouteData,
   routeData: RouteData = {}
 ): RouteData | undefined {
@@ -273,11 +277,7 @@ function convertRouteData(
         // Let '/' refer to the root routes data
         (routePath === "/" && route.id === "0" && !route.path)
       ) {
-        if (typeof route.id === "undefined") {
-          throw new Error("Route ID must be defined");
-        }
-
-        data[route.id] = initialRouteData[routePath];
+        data[route.id!] = initialRouteData[routePath];
       }
     });
     return data;
