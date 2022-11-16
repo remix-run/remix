@@ -64,6 +64,18 @@ describe("express createRequestHandler", () => {
       expect(res.headers["x-powered-by"]).toBe("Express");
     });
 
+    it("redirects when multiple slashes", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
+        return new Response(`${new URL(req.url).pathname}`);
+      });
+
+      let request = supertest(createApp());
+      let res = await request.get("//foo///bar///");
+
+      expect(res.status).toBe(302);
+      expect(res.text).toBe("Found. Redirecting to /foo/bar/");
+    });
+
     it("handles null body", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
         return new Response(null, { status: 200 });

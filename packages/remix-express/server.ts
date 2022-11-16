@@ -52,6 +52,9 @@ export function createRequestHandler({
     next: express.NextFunction
   ) => {
     try {
+      let cleanUrl = req.url.replace(/\/+/g, '/');
+      if(req.url !== cleanUrl) return res.redirect(cleanUrl);
+
       let request = createRemixRequest(req, res);
       let loadContext = getLoadContext?.(req, res);
 
