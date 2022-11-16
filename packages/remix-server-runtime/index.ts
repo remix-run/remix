@@ -81,6 +81,8 @@ export type {
   StaticHandler,
   Location,
   AgnosticRouteObject,
+  AgnosticIndexRouteObject,
+  AgnosticNonIndexRouteObject,
 } from "./router";
 export {
   createMemoryHistory,

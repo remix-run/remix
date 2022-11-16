@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/testing",
-  "version": "0.0.0-experimental-5b4bceda6",
-  "description": "Dev tools and CLI for Remix",
+  "version": "1.7.5",
+  "description": "Testing utilities for Remix apps",
   "homepage": "https://remix.run",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -16,8 +16,8 @@
   "typings": "./dist/index.d.ts",
   "module": "./dist/esm/index.js",
   "dependencies": {
-    "@remix-run/react": "0.0.0-experimental-5b4bceda6",
-    "@remix-run/server-runtime": "0.0.0-experimental-5b4bceda6",
+    "@remix-run/react": "1.7.5",
+    "@remix-run/server-runtime": "1.7.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
