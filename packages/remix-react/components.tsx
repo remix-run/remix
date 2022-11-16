@@ -805,8 +805,13 @@ function V2Meta() {
   let meta: V2_HtmlMetaDescriptor[] = [];
   let parentsData: { [routeId: string]: AppData } = {};
 
-  let matchesWithMeta: RouteMatchWithMeta<ClientRoute>[] = [];
+  let matchesWithMeta: RouteMatchWithMeta<ClientRoute>[] = matches.map(
+    (match) => ({ ...match, meta: [] })
+  );
+
+  let index = -1;
   for (let match of matches) {
+    index++;
     let routeId = match.route.id;
     let data = routeData[routeId];
     let params = match.params;
@@ -816,7 +821,7 @@ function V2Meta() {
     let routeMeta: V2_HtmlMetaDescriptor[] | V1_HtmlMetaDescriptor | undefined =
       [];
 
-    if (routeModule.meta) {
+    if (routeModule?.meta) {
       routeMeta =
         typeof routeModule.meta === "function"
           ? routeModule.meta({
@@ -842,13 +847,14 @@ function V2Meta() {
       );
     }
 
-    matchesWithMeta.push({ ...match, meta: routeMeta });
+    matchesWithMeta[index].meta = routeMeta;
+    meta = routeMeta;
     parentsData[routeId] = data;
   }
 
   return (
     <>
-      {meta.map((metaProps) => {
+      {meta.flat().map((metaProps) => {
         if (!metaProps) {
           return null;
         }
@@ -857,13 +863,16 @@ function V2Meta() {
           return <title key="title">{String(metaProps.title)}</title>;
         }
 
-        if ("charset" in metaProps) {
+        if ("charSet" in metaProps || "charset" in metaProps) {
           // TODO: We normalize this for the user in v1, but should we continue
           // to do that? Seems like a nice convenience IMO.
-          metaProps.charSet = metaProps.charset;
-          delete metaProps.charset;
+          return (
+            <meta
+              key="charset"
+              charSet={metaProps.charSet || (metaProps as any).charset}
+            />
+          );
         }
-
         return <meta key={JSON.stringify(metaProps)} {...metaProps} />;
       })}
     </>
