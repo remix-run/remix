@@ -139,12 +139,13 @@ function createRemixContext(
       catchBoundaryRouteId: null,
       renderBoundaryRouteId: null,
       loaderBoundaryRouteId: null,
-      error: undefined,
-      catch: undefined,
+    },
+    future: {
+      v2_meta: false,
     },
     matches: convertToEntryRouteMatch(matches),
     routeData: initialLoaderData || [],
-    manifest: manifest,
+    manifest,
     routeModules: createRouteModules(routes),
   };
 }
