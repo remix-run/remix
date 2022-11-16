@@ -97,12 +97,12 @@ export function createRemixStub(routes: RouteObject[]) {
     React.useLayoutEffect(() => history.listen(dispatch), [history]);
 
     // Convert path based ids in user supplied initial loader/action data to data route ids
-    let loaderData = convertRouteData(dataRoutes, initialLoaderData);
-    let actionData = convertRouteData(dataRoutes, initialActionData);
+    let loaderData = convertRouteData(routes, initialLoaderData);
+    let actionData = convertRouteData(routes, initialActionData);
 
     // Create mock remix context
     let remixContext = createRemixContext(
-      dataRoutes,
+      routes,
       state.location,
       loaderData,
       actionData
