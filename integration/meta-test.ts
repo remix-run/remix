@@ -419,7 +419,6 @@ test.describe("v2_meta", () => {
             { name: "description", content: data.description },
             { property: "og:image", content: "https://picsum.photos/200/200" },
             { property: "og:type", content: data.contentType }, // undefined
-            { httpEquiv: "refresh", content: "3;url=https://www.mozilla.org" },
             { title: data.title },
           ];
 
@@ -456,7 +455,7 @@ test.describe("v2_meta", () => {
 
         "app/routes/music.jsx": js`
           export function meta({ data, matches }) {
-            let rootModule = matches.find(match => match.id === "root");
+            let rootModule = matches.find(match => match.route.id === "root");
             let rootCharSet = rootModule.meta.find(meta => meta.charSet);
             return [
               rootCharSet,
