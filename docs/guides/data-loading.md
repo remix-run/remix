@@ -208,7 +208,7 @@ async function getLoaderData(productId: string | undefined) {
 }
 
 export const loader = async ({ params }: LoaderArgs) => {
- const product = await getLoaderData(params.productId)
+ const product = await getLoaderData(params.productId);
 
   return json({ product });
 };
