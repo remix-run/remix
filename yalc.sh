@@ -15,5 +15,5 @@ packages=(
 'vercel'
 )
 for i in "${packages[@]}"; do
-  yalc publish ./build/node_modules/@remix-run/$i
+  yalc push ./build/node_modules/@remix-run/$i
 done
