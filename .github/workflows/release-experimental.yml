@@ -32,6 +32,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 env:
   CI: true
+  ENABLE_REMIX_ROUTER: 1
 
 jobs:
   release:
