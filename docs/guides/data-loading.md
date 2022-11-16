@@ -208,16 +208,17 @@ async function getLoaderData(productId: string) {
 }
 
 export const loader = async ({ params }: LoaderArgs) => {
-  return json(
-    await getLoaderData(params.productId)
-  );
+  let LoaderData: Awaited<ReturnType<typeof getLoaderData>> | null = null
+  LoaderData = await getLoaderData(`${params.productId}`)
+
+  return json({product: LoaderData});
 };
 
 export default function Product() {
-  const product = useLoaderData<typeof loader>();
+  const { product } = useLoaderData<typeof loader>();
   return (
     <div>
-      <p>Product {product.id}</p>
+      <p>Product {product?.id}</p>
       {/* ... */}
     </div>
   );
