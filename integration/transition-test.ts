@@ -125,15 +125,15 @@ test.describe("rendering", () => {
         `,
 
         "app/routes/gh-1691.jsx": js`
-          import { redirect } from "@remix-run/node";
-          import { Form, useFetcher, useTransition} from "@remix-run/react";
+          import { json, redirect } from "@remix-run/node";
+          import { useFetcher} from "@remix-run/react";
 
-          export const action = async ({ request }) => {
+          export const action = async ( ) => {
             return redirect("/gh-1691");
           };
 
-          export const loader = async ({ request }) => {
-            return {};
+          export const loader = async () => {
+            return json({});
           };
 
           export default function GitHubIssue1691() {
@@ -144,7 +144,7 @@ test.describe("rendering", () => {
                 <span>{fetcher.state}</span>
                 <fetcher.Form method="post">
                   <input type="hidden" name="source" value="fetcher" />
-                  <button type="submit" name="action" value="add">
+                  <button type="submit" name="intent" value="add">
                     Submit
                   </button>
                 </fetcher.Form>
@@ -156,9 +156,17 @@ test.describe("rendering", () => {
         "app/routes/parent.jsx": js`
           import { Outlet, useLoaderData } from "@remix-run/react";
 
-          let count = 0;
-          export const loader = async ({ request }) => {
-            return { count: ++count };
+          if (!global.counts) {
+            global.count = 0;
+            global.counts = new Set();
+          }
+          export const loader = async ({ request, context }) => {
+            let count = global.count;
+            if (!global.counts.has(context)) {
+              counts.add(context);
+              count = ++global.count;
+            }
+            return { count };
           };
 
           export default function Parent() {
@@ -205,14 +213,16 @@ test.describe("rendering", () => {
     await app.goto("/");
     let responses = app.collectDataResponses();
     await app.clickLink(`/${PAGE}`);
+    await page.waitForLoadState("networkidle");
 
     expect(
-      responses.map((res) => new URL(res.url()).searchParams.get("_data"))
-    ).toEqual([`routes/${PAGE}`, `routes/${PAGE}/index`]);
+      responses
+        .map((res) => new URL(res.url()).searchParams.get("_data"))
+        .sort()
+    ).toEqual([`routes/${PAGE}`, `routes/${PAGE}/index`].sort());
 
-    let html = await app.getHtml("main");
-    expect(html).toMatch(PAGE_TEXT);
-    expect(html).toMatch(PAGE_INDEX_TEXT);
+    await page.waitForSelector(`h2:has-text("${PAGE_TEXT}")`);
+    await page.waitForSelector(`h3:has-text("${PAGE_INDEX_TEXT}")`);
   });
 
   test("calls only loaders for changing routes", async ({ page }) => {
@@ -220,14 +230,14 @@ test.describe("rendering", () => {
     await app.goto(`/${PAGE}`);
     let responses = app.collectDataResponses();
     await app.clickLink(`/${PAGE}/${CHILD}`);
+    await page.waitForLoadState("networkidle");
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}/${CHILD}`]);
 
-    let html = await app.getHtml("main");
-    expect(html).toMatch(PAGE_TEXT);
-    expect(html).toMatch(CHILD_TEXT);
+    await page.waitForSelector(`h2:has-text("${PAGE_TEXT}")`);
+    await page.waitForSelector(`h3:has-text("${CHILD_TEXT}")`);
   });
 
   test("loader redirect", async ({ page }) => {
@@ -235,16 +245,21 @@ test.describe("rendering", () => {
     await app.goto("/");
 
     let responses = app.collectDataResponses();
+
     await app.clickLink(`/${REDIRECT}`);
-    expect(new URL(page.url()).pathname).toBe(`/${REDIRECT_TARGET}`);
+    await page.waitForURL(/\/page/);
+    await page.waitForLoadState("networkidle");
 
     expect(
-      responses.map((res) => new URL(res.url()).searchParams.get("_data"))
-    ).toEqual([`routes/${REDIRECT}`, `routes/${PAGE}`, `routes/${PAGE}/index`]);
+      responses
+        .map((res) => new URL(res.url()).searchParams.get("_data"))
+        .sort()
+    ).toEqual(
+      [`routes/${REDIRECT}`, `routes/${PAGE}`, `routes/${PAGE}/index`].sort()
+    );
 
-    let html = await app.getHtml("main");
-    expect(html).toMatch(PAGE_TEXT);
-    expect(html).toMatch(PAGE_INDEX_TEXT);
+    await page.waitForSelector(`h2:has-text("${PAGE_TEXT}")`);
+    await page.waitForSelector(`h3:has-text("${PAGE_INDEX_TEXT}")`);
   });
 
   test("loader redirect with hash", async ({ page }) => {
@@ -253,6 +268,7 @@ test.describe("rendering", () => {
 
     await app.clickLink(`/${REDIRECT_HASH}`);
 
+    await page.waitForURL(/\/page#my-hash/);
     let url = new URL(page.url());
     expect(url.pathname).toBe(`/${REDIRECT_TARGET}`);
     expect(url.hash).toBe(`#my-hash`);
@@ -271,9 +287,8 @@ test.describe("rendering", () => {
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
     ).toEqual([`routes/${PAGE}/index`]);
 
-    let html = await app.getHtml("main");
-    expect(html).toMatch(PAGE_TEXT);
-    expect(html).toMatch(PAGE_INDEX_TEXT);
+    await page.waitForSelector(`h2:has-text("${PAGE_TEXT}")`);
+    await page.waitForSelector(`h3:has-text("${PAGE_INDEX_TEXT}")`);
   });
 
   test("useFetcher state should return to the idle when redirect from an action", async ({
@@ -283,16 +298,18 @@ test.describe("rendering", () => {
     await app.goto("/gh-1691");
     expect(await app.getHtml("span")).toMatch("idle");
 
-    await app.clickSubmitButton("/gh-1691");
-    expect(await app.getHtml("span")).toMatch("idle");
+    await app.waitForNetworkAfter(async () => {
+      await app.clickSubmitButton("/gh-1691");
+    });
+    await page.waitForSelector(`span:has-text("idle")`);
   });
 
   test("fetcher action redirects re-call parent loaders", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/parent/child");
-    expect(await app.getHtml("#parent")).toMatch("1");
+    await page.waitForSelector(`#parent:has-text("1")`);
 
     await app.clickElement("#fetcher-submit-redirect");
-    expect(await app.getHtml("#parent")).toMatch("2");
+    await page.waitForSelector(`#parent:has-text("2")`);
   });
 });

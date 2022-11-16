@@ -39,9 +39,11 @@ The following steps will get you setup to contribute changes to this repo:
    git checkout dev
    ```
 
-3. Install dependencies by running `yarn`. Remix uses [`yarn` (version 1)][yarn-version-1], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
+3. Install dependencies by running `yarn`. Remix uses [Yarn (version 1)][yarn-version-1], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
 
-4. Verify you've got everything set up for local development by running `yarn test`
+4. Install Playwright to be able to run tests properly by running `npx playwright install`, or [use the Visual Studio Code plugin][vscode-playwright]
+
+5. Verify you've got everything set up for local development by running `yarn test`
 
 ## Think You Found a Bug?
 
@@ -90,7 +92,8 @@ Alternatively, you can run a project completely independently by `cd`-ing into t
 
 ### Docs + Examples
 
-All commits that change or add to the API must be done in a pull request that also updates all relevant examples and docs.
+All commits that change or add to the API must be done in a pull request that also updates all relevant docs.
+If this change also impact our [examples][examples-repository], a subsequent pull request to that repository will be appreciated as well.
 
 ## Development
 
@@ -141,9 +144,22 @@ This repo maintains separate branches for different purposes. They will look som
 
 There may be other branches for various features and experimentation, but all of the magic happens from these branches.
 
+## How the heck do nightly releases work?
+
+Nightly releases will run the action files from the `main` branch as scheduled workflows will always use the latest commit to the default branch, signified by [this comment on the nightly action file][nightly-action-comment] and the explicit branch appended to the reuasable workflows in the [postrelease action][postrelease-action], however they checkout the `dev` branch during their set up as that's where we want our nightly releases to be cut from. From there, we check if the git sha is the same and only cut a new nightly if something has changed.
+
+## End to end testing
+
+For every release of Remix (stable, experimental, nightly, and pre-releases), we will do a complete end-to-end test of Remix apps on each of our official adapters from `create-remix`, all the way to deploying them to production. We do this by by utilizing the default [templates][templates] and the CLIs for Fly, Vercel, Netlify, and Arc. We'll then run some simple Cypress assertions to make sure everything is running properly for both development and the deployed app.
+
 [cla]: https://github.com/remix-run/remix/blob/main/CLA.md
+[examples-repository]: https://github.com/remix-run/examples
 [this-page]: https://github.com/remix-run/remix
 [yarn-version-1]: https://classic.yarnpkg.com/lang/en/docs/install
 [integration-bug-report-test-ts]: https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts
 [pull-request]: https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request
 [yarn-workspaces]: https://classic.yarnpkg.com/en/docs/workspaces
+[vscode-playwright]: https://playwright.dev/docs/intro#using-the-vs-code-extension
+[nightly-action-comment]: https://github.com/remix-run/remix/blob/main/.github/workflows/nightly.yml#L8-L12
+[postrelease-action]: https://github.com/remix-run/remix/blob/main/.github/workflows/postrelease.yml
+[templates]: /templates

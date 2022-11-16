@@ -56,7 +56,7 @@ export default function Gists() {
 With Remix, you can filter down the data _on the server_ before sending it to the user:
 
 ```js [3-16]
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import { json } from "@remix-run/node"; // or cloudflare/deno
 
 export async function loader() {
   const res = await fetch("https://api.github.com/gists");

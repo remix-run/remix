@@ -36,7 +36,7 @@ import App from "./App";
 ReactDOM.render(<App />, document.getElementById("app"));
 ```
 
-Server-rendered React apps are a little different. The browser script is not rendering your app, but is "hydrating" the DOM provided by the server. Hydration is the process of mapping the elements in the DOM to their React component counterparts and setting up event listeners so that your app is interative.
+Server-rendered React apps are a little different. The browser script is not rendering your app, but is "hydrating" the DOM provided by the server. Hydration is the process of mapping the elements in the DOM to their React component counterparts and setting up event listeners so that your app is interactive.
 
 Let's start by creating two new files:
 
@@ -308,7 +308,7 @@ function SomeComponent() {
 }
 ```
 
-To simplify this solution, we recommend the using the [`ClientOnly` component][client-only-component] in the [`remix-utils`][remix-utils] community package. An example of its usage can be found in the [`examples` directory of the Remix repo][examples-directory-of-the-remix-repo].
+To simplify this solution, we recommend the using the [`ClientOnly` component][client-only-component] in the [`remix-utils`][remix-utils] community package. An example of its usage can be found in the [`examples` repository][examples-repository].
 
 ### `React.lazy` and `React.Suspense`
 
@@ -332,6 +332,7 @@ Further configuration is optional, but the following may be helpful to optimize 
 Every Remix app accepts a `remix.config.js` file in the project root. While its settings are optional, we recommend you include a few of them for clarity's sake. See the [docs on configuration][docs-on-configuration] for more information about all available options.
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   appDirectory: "app",
   ignoredRouteFiles: ["**/.*"],
@@ -381,7 +382,7 @@ If you are using TypeScript, you also need to create the `remix.env.d.ts` file i
 
 ```ts filename=remix.env.d.ts
 /// <reference types="@remix-run/dev" />
-/// <reference types="@remix-run/node/globals" />
+/// <reference types="@remix-run/node" />
 ```
 
 ### A note about non-standard imports
@@ -612,17 +613,17 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 - [Common "gotchas"][common-gotchas]
 
 [react-router]: https://reactrouter.com
-[react-router-docs]: https://reactrouter.com/docs/en/v6/getting-started/concepts
-[migration-guide-from-v5-to-v6]: https://reactrouter.com/docs/en/v6/upgrading/v5
+[react-router-docs]: https://reactrouter.com/docs/start/concepts
+[migration-guide-from-v5-to-v6]: https://reactrouter.com/docs/upgrading/v5
 [backwards-compatibility-package]: https://www.npmjs.com/package/react-router-dom-v5-compat
 [a-few-tweaks-to-improve-progressive-enhancement]: ../pages/philosophy#progressive-enhancement
-[routing-conventions]: ./routing.md
+[routing-conventions]: ./routing
 [a-catch-all-route]: ./routing#splats
 [hydration-mismatch]: https://reactjs.org/docs/react-dom.html#hydrate
 [loader-data]: ../api/conventions#loader
 [client-only-component]: https://github.com/sergiodxa/remix-utils/blob/main/src/react/client-only.tsx
 [remix-utils]: https://www.npmjs.com/package/remix-utils
-[examples-directory-of-the-remix-repo]: https://github.com/remix-run/remix/blob/main/examples/client-only-components/app/routes/index.tsx
+[examples-repository]: https://github.com/remix-run/examples/blob/main/client-only-components/app/routes/index.tsx
 [react-lazy]: https://reactjs.org/docs/code-splitting.html#reactlazy
 [react-suspense]: https://reactjs.org/docs/react-api.html#reactsuspense
 [client-only-approach]: #client-only-components

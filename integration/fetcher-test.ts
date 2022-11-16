@@ -10,6 +10,10 @@ test.describe("useFetcher", () => {
 
   let CHEESESTEAK = "CHEESESTEAK";
   let LUNCH = "LUNCH";
+  let PARENT_LAYOUT_LOADER = "parent layout loader";
+  let PARENT_LAYOUT_ACTION = "parent layout action";
+  let PARENT_INDEX_LOADER = "parent index loader";
+  let PARENT_INDEX_ACTION = "parent index action";
 
   test.beforeAll(async () => {
     fixture = await createFixture({
@@ -80,6 +84,65 @@ test.describe("useFetcher", () => {
             );
           }
         `,
+
+        "app/routes/parent.jsx": js`
+          import { Outlet } from "@remix-run/react";
+
+          export function action() {
+            return "${PARENT_LAYOUT_ACTION}";
+          };
+
+          export function loader() {
+            return "${PARENT_LAYOUT_LOADER}";
+          };
+
+          export default function Parent() {
+            return <Outlet />;
+          }
+        `,
+
+        "app/routes/parent/index.jsx": js`
+          import { useFetcher } from "@remix-run/react";
+
+          export function action() {
+            return "${PARENT_INDEX_ACTION}";
+          };
+
+          export function loader() {
+            return "${PARENT_INDEX_LOADER}";
+          };
+
+          export default function ParentIndex() {
+            let fetcher = useFetcher();
+
+            return (
+              <>
+                <pre>{fetcher.data}</pre>
+                <button id="load-parent" onClick={() => fetcher.load('/parent')}>
+                  Load parent
+                </button>
+                <button id="load-index" onClick={() => fetcher.load('/parent?index')}>
+                  Load index
+                </button>
+                <button id="submit-empty" onClick={() => fetcher.submit({})}>
+                  Submit empty
+                </button>
+                <button id="submit-parent-get" onClick={() => fetcher.submit({}, { method: 'get', action: '/parent' })}>
+                  Submit parent
+                </button>
+                <button id="submit-index-get" onClick={() => fetcher.submit({}, { method: 'get', action: '/parent?index' })}>
+                  Submit index
+                </button>
+                <button id="submit-parent-post" onClick={() => fetcher.submit({}, { method: 'post', action: '/parent' })}>
+                  Submit parent
+                </button>
+                <button id="submit-index-post" onClick={() => fetcher.submit({}, { method: 'post', action: '/parent?index' })}>
+                  Submit index
+                </button>
+              </>
+            );
+          }
+        `,
       },
     });
 
@@ -105,7 +168,7 @@ test.describe("useFetcher", () => {
         }),
       ]);
 
-      expect(await app.getHtml("pre")).toMatch(LUNCH);
+      await page.waitForSelector(`pre:has-text("${LUNCH}")`);
     });
 
     test("Form can hit an action", async ({ page }) => {
@@ -118,7 +181,7 @@ test.describe("useFetcher", () => {
           method: "post",
         }),
       ]);
-      expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
+      await page.waitForSelector(`pre:has-text("${CHEESESTEAK}")`);
     });
   });
 
@@ -126,20 +189,47 @@ test.describe("useFetcher", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     await app.clickElement("#fetcher-load");
-    expect(await app.getHtml("pre")).toMatch(LUNCH);
+    await page.waitForSelector(`pre:has-text("${LUNCH}")`);
   });
 
   test("submit can hit an action", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     await app.clickElement("#fetcher-submit");
-    expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
+    await page.waitForSelector(`pre:has-text("${CHEESESTEAK}")`);
   });
 
   test("submit can hit an action only route", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/fetcher-action-only-call");
     await app.clickElement("#fetcher-submit");
-    expect(await app.getHtml("pre")).toMatch(CHEESESTEAK);
+    await page.waitForSelector(`pre:has-text("${CHEESESTEAK}")`);
+  });
+
+  test("fetchers handle ?index param correctly", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/parent");
+
+    await app.clickElement("#load-parent");
+    await page.waitForSelector(`pre:has-text("${PARENT_LAYOUT_LOADER}")`);
+
+    await app.clickElement("#load-index");
+    await page.waitForSelector(`pre:has-text("${PARENT_INDEX_LOADER}")`);
+
+    // fetcher.submit({}) defaults to GET for the current Route
+    await app.clickElement("#submit-empty");
+    await page.waitForSelector(`pre:has-text("${PARENT_INDEX_LOADER}")`);
+
+    await app.clickElement("#submit-parent-get");
+    await page.waitForSelector(`pre:has-text("${PARENT_LAYOUT_LOADER}")`);
+
+    await app.clickElement("#submit-index-get");
+    await page.waitForSelector(`pre:has-text("${PARENT_INDEX_LOADER}")`);
+
+    await app.clickElement("#submit-parent-post");
+    await page.waitForSelector(`pre:has-text("${PARENT_LAYOUT_ACTION}")`);
+
+    await app.clickElement("#submit-index-post");
+    await page.waitForSelector(`pre:has-text("${PARENT_INDEX_ACTION}")`);
   });
 });

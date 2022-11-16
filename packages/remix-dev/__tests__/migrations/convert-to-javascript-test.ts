@@ -12,8 +12,8 @@ import shell from "shelljs";
 import stripAnsi from "strip-ansi";
 import type { PackageJson, TsConfigJson } from "type-fest";
 
-import { run } from "../../cli/run";
 import { readConfig } from "../../config";
+import { convertToJavaScript } from "../../cli/migrate/migrations/convert-to-javascript";
 
 let output: string;
 const ORIGINAL_IO = {
@@ -43,6 +43,7 @@ const TEMP_DIR = join(
   `remix-tests-${Math.random().toString(32).slice(2)}`
 );
 
+jest.setTimeout(30_000);
 beforeEach(() => {
   output = "";
   console.log = mockLog;
@@ -52,6 +53,7 @@ beforeEach(() => {
   removeSync(TEMP_DIR);
   ensureDirSync(TEMP_DIR);
 });
+
 afterEach(() => {
   console.log = ORIGINAL_IO.log;
   console.warn = ORIGINAL_IO.warn;
@@ -60,64 +62,59 @@ afterEach(() => {
   removeSync(TEMP_DIR);
 });
 
+const checkMigrationRanSuccessfully = async (projectDir: string) => {
+  let config = await readConfig(projectDir);
+
+  let jsConfigJson: TsConfigJson = readJSONSync(
+    join(projectDir, "jsconfig.json")
+  );
+  expect(jsConfigJson.include).not.toContain("remix.env.d.ts");
+  expect(jsConfigJson.include).not.toContain("**/*.ts");
+  expect(jsConfigJson.include).toContain("**/*.js");
+  expect(jsConfigJson.include).not.toContain("**/*.tsx");
+  expect(jsConfigJson.include).toContain("**/*.jsx");
+
+  let packageJson: PackageJson = readJSONSync(join(projectDir, "package.json"));
+  expect(packageJson.devDependencies).not.toContain("@types/react");
+  expect(packageJson.devDependencies).not.toContain("@types/react-dom");
+  expect(packageJson.devDependencies).not.toContain("typescript");
+  expect(packageJson.scripts).not.toContain("typecheck");
+
+  let TSFiles = glob.sync("**/*.@(ts|tsx)", {
+    cwd: config.rootDirectory,
+    ignore: [`./${config.appDirectory}/**/*`],
+  });
+  expect(TSFiles).toHaveLength(0);
+  let JSFiles = glob.sync("**/*.@(js|jsx)", {
+    absolute: true,
+    cwd: config.rootDirectory,
+    ignore: [`./${config.appDirectory}/**/*`],
+  });
+  let importResult = shell.grep("-l", 'from "', JSFiles);
+  expect(importResult.stdout.trim()).toBe("");
+  expect(importResult.stderr).toBeNull();
+  expect(importResult.code).toBe(0);
+  let exportDefaultResult = shell.grep("-l", 'export default "', JSFiles);
+  expect(exportDefaultResult.stdout.trim()).toBe("");
+  expect(exportDefaultResult.stderr).toBeNull();
+  expect(exportDefaultResult.code).toBe(0);
+};
+
 const makeApp = () => {
   let projectDir = join(TEMP_DIR, "convert-to-javascript");
-
   copySync(FIXTURE, projectDir);
-
   return projectDir;
 };
 
-const runConvertToJavaScriptMigration = (projectDir: string) =>
-  run([
-    "migrate",
-    "--migration",
-    "convert-to-javascript",
-    projectDir,
-    "--force",
-  ]);
-
 describe("`convert-to-javascript` migration", () => {
-  it("runs successfully", async () => {
+  it("runs successfully when ran programmatically", async () => {
     let projectDir = makeApp();
-    let config = await readConfig(projectDir);
 
-    await runConvertToJavaScriptMigration(projectDir);
+    await convertToJavaScript(projectDir, { force: true });
 
-    let jsConfigJson: TsConfigJson = readJSONSync(
-      join(projectDir, "jsconfig.json")
-    );
-    expect(jsConfigJson.include).not.toContain("remix.env.d.ts");
-    expect(jsConfigJson.include).not.toContain("**/*.ts");
-    expect(jsConfigJson.include).toContain("**/*.js");
-    expect(jsConfigJson.include).not.toContain("**/*.tsx");
-    expect(jsConfigJson.include).toContain("**/*.jsx");
+    await checkMigrationRanSuccessfully(projectDir);
 
-    let packageJson: PackageJson = readJSONSync(
-      join(projectDir, "package.json")
-    );
-    expect(packageJson.devDependencies).not.toContain("@types/react");
-    expect(packageJson.devDependencies).not.toContain("@types/react-dom");
-    expect(packageJson.devDependencies).not.toContain("typescript");
-    expect(packageJson.scripts).not.toContain("typecheck");
-
-    expect(output).toContain("✅ Your JavaScript looks good!");
-
-    let TSFiles = glob.sync("**/*.@(ts|tsx)", {
-      cwd: config.rootDirectory,
-      ignore: [`./${config.appDirectory}/**/*`],
-    });
-    expect(TSFiles).toHaveLength(0);
-    let JSFiles = glob.sync("**/*.@(js|jsx)", {
-      absolute: true,
-      cwd: config.rootDirectory,
-      ignore: [`./${config.appDirectory}/**/*`],
-    });
-    let result = shell.grep("-l", 'from "', JSFiles);
-    expect(result.stdout.trim()).toBe("");
-    expect(result.stderr).toBeNull();
-    expect(result.code).toBe(0);
-
-    expect(output).toContain("successfully migrated");
+    expect(output).not.toContain("✅ Your JavaScript looks good!");
+    expect(output).not.toContain("successfully migrated");
   });
 });

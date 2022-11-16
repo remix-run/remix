@@ -6,6 +6,7 @@
     "allowJs": true,
     "checkJs": true,
     "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
     "moduleResolution": "Node",
     "noEmit": true,
     "strict": true,

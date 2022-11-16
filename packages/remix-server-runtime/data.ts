@@ -1,12 +1,18 @@
-import type { RouteMatch } from "./routeMatching";
-import type { ServerRoute } from "./routes";
 import { json, isResponse, isRedirectResponse } from "./responses";
+import type {
+  ActionFunction,
+  DataFunctionArgs,
+  LoaderFunction,
+} from "./routeModules";
+import { ErrorResponse } from "./router";
 
 /**
- * An object of arbitrary for route loaders and actions provided by the
+ * An object of unknown type for route loaders and actions provided by the
  * server's `getLoadContext()` function.
  */
-export type AppLoadContext = any;
+export interface AppLoadContext {
+  [key: string]: unknown;
+}
 
 /**
  * Data for a route that was returned from a `loader()`.
@@ -15,19 +21,23 @@ export type AppData = any;
 
 export async function callRouteAction({
   loadContext,
-  match,
+  routeId,
+  action,
+  params,
   request,
 }: {
-  loadContext: unknown;
-  match: RouteMatch<ServerRoute>;
+  loadContext: AppLoadContext;
+  routeId: string;
+  action?: ActionFunction;
+  params: DataFunctionArgs["params"];
   request: Request;
 }) {
-  let action = match.route.module.action;
-
   if (!action) {
-    let response = new Response(null, { status: 405 });
-    response.headers.set("X-Remix-Catch", "yes");
-    return response;
+    let pathname = new URL(request.url).pathname;
+    let msg =
+      `You made a ${request.method} request to "${pathname}" but did not provide ` +
+      `an \`action\` for route "${routeId}", so there is no way to handle the request.`;
+    throw new ErrorResponse(405, "Method Not Allowed", new Error(msg), true);
   }
 
   let result;
@@ -35,7 +45,7 @@ export async function callRouteAction({
     result = await action({
       request: stripDataParam(stripIndexParam(request)),
       context: loadContext,
-      params: match.params,
+      params,
     });
   } catch (error: unknown) {
     if (!isResponse(error)) {
@@ -50,7 +60,7 @@ export async function callRouteAction({
 
   if (result === undefined) {
     throw new Error(
-      `You defined an action for route "${match.route.id}" but didn't return ` +
+      `You defined an action for route "${routeId}" but didn't return ` +
         `anything from your \`action\` function. Please return a value or \`null\`.`
     );
   }
@@ -60,21 +70,23 @@ export async function callRouteAction({
 
 export async function callRouteLoader({
   loadContext,
-  match,
+  routeId,
+  loader,
+  params,
   request,
 }: {
   request: Request;
-  match: RouteMatch<ServerRoute>;
-  loadContext: unknown;
+  routeId: string;
+  loader?: LoaderFunction;
+  params: DataFunctionArgs["params"];
+  loadContext: AppLoadContext;
 }) {
-  let loader = match.route.module.loader;
-
   if (!loader) {
-    throw new Error(
-      `You made a ${request.method} request to ${request.url} but did not provide ` +
-        `a default component or \`loader\` for route "${match.route.id}", ` +
-        `so there is no way to handle the request.`
-    );
+    let pathname = new URL(request.url).pathname;
+    let msg =
+      `You made a ${request.method} request to "${pathname}" but did not provide ` +
+      `a \`loader\` for route "${routeId}", so there is no way to handle the request.`;
+    throw new ErrorResponse(400, "Bad Request", new Error(msg), true);
   }
 
   let result;
@@ -82,7 +94,7 @@ export async function callRouteLoader({
     result = await loader({
       request: stripDataParam(stripIndexParam(request)),
       context: loadContext,
-      params: match.params,
+      params,
     });
   } catch (error: unknown) {
     if (!isResponse(error)) {
@@ -97,7 +109,65 @@ export async function callRouteLoader({
 
   if (result === undefined) {
     throw new Error(
-      `You defined a loader for route "${match.route.id}" but didn't return ` +
+      `You defined a loader for route "${routeId}" but didn't return ` +
+        `anything from your \`loader\` function. Please return a value or \`null\`.`
+    );
+  }
+
+  return isResponse(result) ? result : json(result);
+}
+
+export async function callRouteActionRR({
+  loadContext,
+  action,
+  params,
+  request,
+  routeId,
+}: {
+  request: Request;
+  action: ActionFunction;
+  params: DataFunctionArgs["params"];
+  loadContext: AppLoadContext;
+  routeId: string;
+}) {
+  let result = await action({
+    request: stripDataParam(stripIndexParam(request)),
+    context: loadContext,
+    params,
+  });
+
+  if (result === undefined) {
+    throw new Error(
+      `You defined an action for route "${routeId}" but didn't return ` +
+        `anything from your \`action\` function. Please return a value or \`null\`.`
+    );
+  }
+
+  return isResponse(result) ? result : json(result);
+}
+
+export async function callRouteLoaderRR({
+  loadContext,
+  loader,
+  params,
+  request,
+  routeId,
+}: {
+  request: Request;
+  loader: LoaderFunction;
+  params: DataFunctionArgs["params"];
+  loadContext: AppLoadContext;
+  routeId: string;
+}) {
+  let result = await loader({
+    request: stripDataParam(stripIndexParam(request)),
+    context: loadContext,
+    params,
+  });
+
+  if (result === undefined) {
+    throw new Error(
+      `You defined a loader for route "${routeId}" but didn't return ` +
         `anything from your \`loader\` function. Please return a value or \`null\`.`
     );
   }

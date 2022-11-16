@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
+        uses: styfle/cancel-workflow-action@0.11.0
 
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
@@ -27,9 +27,7 @@ jobs:
           cache: "yarn"
 
       - name: 📥 Install deps
-        # even though this is called "npm-install" it does use yarn to install
-        # because we have a yarn.lock and caches efficiently.
-        uses: bahmutov/npm-install@v1
+        run: yarn --frozen-lockfile
 
       - name: 🔗 Convert Docs links to references
         run: node scripts/markdown-references.mjs

@@ -1,0 +1,24 @@
+{
+  "include": ["**/*.ts"],
+  "exclude": ["helpers/*-template"],
+  "compilerOptions": {
+    "lib": ["ES2019", "DOM", "DOM.Iterable"],
+    "target": "ES2019",
+    "module": "CommonJS",
+    "skipLibCheck": true,
+
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "resolveJsonModule": true,
+
+    "noEmit": true,
+
+    "rootDir": "."
+  },
+  "references": [
+    { "path": "../packages/remix-express" },
+    { "path": "../packages/remix-react" },
+    { "path": "../packages/remix-server-runtime" }
+  ]
+}

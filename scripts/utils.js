@@ -6,7 +6,6 @@ const jsonfile = require("jsonfile");
 const Confirm = require("prompt-confirm");
 
 let rootDir = path.resolve(__dirname, "..");
-let examplesDir = path.resolve(rootDir, "examples");
 
 let remixPackages = {
   adapters: [
@@ -87,55 +86,6 @@ async function updatePackageConfig(packageName, transform) {
 }
 
 /**
- * @param {string} example
- * @param {(json: import('type-fest').PackageJson) => any} transform
- */
-async function updateExamplesPackageConfig(example, transform) {
-  let file = packageJson(example, "examples");
-  if (!(await fileExists(file))) return;
-
-  let json = await jsonfile.readFile(file);
-  transform(json);
-  await jsonfile.writeFile(file, json, { spaces: 2 });
-}
-
-/**
- * @param {string} nextVersion
- */
-async function updateExamplesRemixVersion(nextVersion) {
-  let examples = await fsp.readdir(examplesDir);
-  if (examples.length > 0) {
-    for (let example of examples) {
-      let stat = await fsp.stat(path.join(examplesDir, example));
-      if (!stat.isDirectory()) continue;
-
-      await updateExamplesPackageConfig(example, (config) => {
-        if (config.dependencies?.["remix"]) {
-          config.dependencies["remix"] = nextVersion;
-        }
-
-        for (let pkg of remixPackages.all) {
-          if (config.dependencies?.[`@remix-run/${pkg}`]) {
-            config.dependencies[`@remix-run/${pkg}`] = nextVersion;
-          }
-          if (config.devDependencies?.[`@remix-run/${pkg}`]) {
-            config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
-          }
-        }
-
-        console.log(
-          chalk.green(
-            `  Updated Remix to version ${chalk.bold(
-              nextVersion
-            )} in ${chalk.bold(example)} example`
-          )
-        );
-      });
-    }
-  }
-}
-
-/**
  * @param {string} packageName
  * @param {string} nextVersion
  * @param {string} [successMessage]
@@ -149,6 +99,9 @@ async function updateRemixVersion(packageName, nextVersion, successMessage) {
       }
       if (config.devDependencies?.[`@remix-run/${pkg}`]) {
         config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
+      }
+      if (config.peerDependencies?.[`@remix-run/${pkg}`]) {
+        config.peerDependencies[`@remix-run/${pkg}`] = nextVersion;
       }
     }
   });
@@ -251,9 +204,6 @@ async function incrementRemixVersion(nextVersion) {
     )
   );
 
-  // Update versions in the examples
-  await updateExamplesRemixVersion(nextVersion);
-
   // Update deployment script `@remix-run/dev` version
   await updateDeploymentScriptVersion(nextVersion);
 
@@ -277,7 +227,6 @@ async function fileExists(filePath) {
 }
 
 exports.rootDir = rootDir;
-exports.examplesDir = examplesDir;
 exports.remixPackages = remixPackages;
 exports.fileExists = fileExists;
 exports.packageJson = packageJson;

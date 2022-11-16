@@ -12,7 +12,14 @@ const main = async (migration) => {
   }
 
   let buildPath = join(__dirname, "../", "build");
-  let cliPath = join(buildPath, "node_modules", "@remix-run/dev", "cli.js");
+  let cliPath = join(
+    buildPath,
+    "node_modules",
+    "@remix-run",
+    "dev",
+    "dist",
+    "cli.js"
+  );
   let examplesPath = join(process.cwd(), "examples");
   let examples = await readdir(examplesPath);
 

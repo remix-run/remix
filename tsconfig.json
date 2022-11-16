@@ -1,7 +1,7 @@
 {
   "files": [],
-  "exclude": ["node_modules"],
   "references": [
+    { "path": "integration" },
     { "path": "packages/create-remix" },
     { "path": "packages/remix" },
     { "path": "packages/remix-architect" },

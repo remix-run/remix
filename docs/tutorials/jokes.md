@@ -57,7 +57,7 @@ You'll find links to the sections of the tutorial in the navbar (top of the page
 
 You can follow along with this tutorial on [CodeSandbox][code-sandbox] (a fantastic in-browser editor) or locally on your own computer. If you use the CodeSandbox approach then all you need is a good internet connection and a modern browser. If you run things locally then you're going to need some things installed:
 
-- [Node.js][node-js] 14 or greater
+- [Node.js][node-js] version (^14.17.0, or >=16.0.0)
 - [npm][npm] 7 or greater
 - A code editor ([VSCode][vs-code] is a nice one)
 
@@ -90,21 +90,16 @@ npx create-remix@latest
 
 <docs-info>
 
-This may ask you whether you want to install `create-remix` to run the command. Enter `y`. It will only be installed temporarily to run the setup script.
+This may ask you whether you want to install `create-remix@latest`. Enter `y`. It will only be installed the first time to run the setup script.
 
 </docs-info>
 
-When the fun Remix animation is finished, it'll ask you a few questions. We'll call our app "remix-jokes", choose "Just the basics", then the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
+Once the setup script has run, it'll ask you a few questions. We'll call our app "remix-jokes", choose "Just the basics", then the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
 
 ```
-R E M I X
-
-💿 Welcome to Remix! Let's get you set up with a new project.
-
 ? Where would you like to create your app? remix-jokes
 ? What type of app do you want to create? Just the basics
-? Where do you want to deploy? Choose Remix App Server if you're unsure,
-it's easy to change deployment targets. Remix App Server
+? Where do you want to deploy? Choose Remix App Server if you're unsure; it's easy to change deployment targets. Remix App Server
 ? TypeScript or JavaScript? TypeScript
 ? Do you want me to run `npm install`? Yes
 ```
@@ -403,7 +398,7 @@ Great, so now going to [`/jokes/new`][jokes-new] should display your form:
 
 Soon we'll add a database that stores our jokes by an ID, so let's add one more route that's a little more unique, a parameterized route:
 
-`/jokes/:jokeId`
+`/jokes/$jokeId`
 
 Here the parameter `$jokeId` can be anything, and we can lookup that part of the URL up in the database to display the right joke. To make a parameterized route, we use the `$` character in the filename. ([Read more about the convention here][the-route-filename-convention]).
 
@@ -463,7 +458,7 @@ body {
 
 <summary>app/routes/index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx lines=[1, 3, 5-7]
+```tsx filename=app/routes/index.tsx lines=[1,3,5-7]
 import type { LinksFunction } from "@remix-run/node";
 
 import stylesUrl from "~/styles/index.css";
@@ -1289,22 +1284,17 @@ export default function JokesRoute() {
 
 <summary>app/routes/index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx lines=[1,4,6-13]
+```tsx filename=app/routes/index.tsx lines=[2,11-26]
 import type { LinksFunction } from "@remix-run/node";
 import { Link } from "@remix-run/react";
 
 import stylesUrl from "~/styles/index.css";
 
 export const links: LinksFunction = () => {
-  return [
-    {
-      rel: "stylesheet",
-      href: stylesUrl,
-    },
-  ];
+  return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
-export default function Index() {
+export default function IndexRoute() {
   return (
     <div className="container">
       <div className="content">
@@ -1330,7 +1320,7 @@ As we work through the rest of the tutorial, you may want to check the class nam
 
 One quick note about CSS. A lot of you folks may be used to using runtime libraries for CSS (like [Styled-Components][styled-components]). While you can use those with Remix, we'd like to encourage you to look into more traditional approaches to CSS. Many of the problems that led to the creation of these styling solutions aren't really problems in Remix, so you can often go with a simpler styling approach.
 
-That said, many Remix users are very happy with [Tailwind][tailwind] and we recommend this approach. Basically, if it can give you a URL (or a CSS file which you can import to get a URL), then it's a generally a good approach because Remix can then leverage the browser platform for caching and loading/unloading.
+That said, many Remix users are very happy with [Tailwind][tailwind] and we recommend this approach. Basically, if it can give you a URL (or a CSS file which you can import to get a URL), then it's generally a good approach because Remix can then leverage the browser platform for caching and loading/unloading.
 
 ## Database
 
@@ -1586,25 +1576,25 @@ To _load_ data in a Remix route module, you use a [`loader`][loader]. This is si
 import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
-import type { User } from "@prisma/client";
+import type { Sandwich } from "@prisma/client";
 
 import { db } from "~/utils/db.server";
 
-type LoaderData = { users: Array<User> };
+type LoaderData = { sandwiches: Array<Sandwich> };
 
 export const loader: LoaderFunction = async () => {
   const data: LoaderData = {
-    users: await db.user.findMany(),
+    sandwiches: await db.sandwich.findMany(),
   };
   return json(data);
 };
 
-export default function Users() {
+export default function Sandwiches() {
   const data = useLoaderData<LoaderData>();
   return (
     <ul>
-      {data.users.map((user) => (
-        <li key={user.id}>{user.name}</li>
+      {data.sandwiches.map((sandwich) => (
+        <li key={sandwich.id}>{sandwich.name}</li>
       ))}
     </ul>
   );
@@ -1625,11 +1615,12 @@ Remix and the `tsconfig.json` you get from the starter template are configured t
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[3,5,12,19-21,23-28,31,55-59]
+```tsx filename=app/routes/jokes.tsx lines=[3,5-6,10,13,20-22,24-29,32,56-60]
 import type {
   LinksFunction,
   LoaderFunction,
 } from "@remix-run/node";
+import type { Joke } from "@prisma/client";
 import { json } from "@remix-run/node";
 import {
   Link,
@@ -1645,7 +1636,7 @@ export const links: LinksFunction = () => {
 };
 
 type LoaderData = {
-  jokeListItems: Array<{ id: string; name: string }>;
+  jokeListItems: Array<Joke>;
 };
 
 export const loader: LoaderFunction = async () => {
@@ -1710,7 +1701,7 @@ And here's what we have with that now:
 
 I want to call out something specific in my solution. Here's my loader:
 
-```tsx lines=[8-10]
+```tsx lines=[2,8-10]
 type LoaderData = {
   jokeListItems: Array<{ id: string; name: string }>;
 };
@@ -1767,7 +1758,7 @@ const joke = await db.joke.findUnique({
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[4,6,8,10-19,22]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[4,6,8,10-19,22,27-28]
 import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
@@ -5085,7 +5076,7 @@ export const meta: MetaFunction = () => ({
     "Remix jokes app. Learn Remix and laugh at the same time!",
 });
 
-export default function Index() {
+export default function IndexRoute() {
   return (
     <div className="container">
       <div className="content">
@@ -6370,14 +6361,14 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [java-script-to-know-for-react]: https://kentcdodds.com/blog/javascript-to-know-for-react
 [the-beginner-s-guide-to-react]: https://kcd.im/beginner-react
 [the-http-api]: https://developer.mozilla.org/en-US/docs/Web/HTTP
-[the-basic-example]: https://codesandbox.io/s/github/remix-run/remix/tree/main/examples/basic
+[the-basic-example]: https://codesandbox.io/s/github/remix-run/examples/tree/main/basic
 [express]: https://expressjs.com
 [hydrate]: https://reactjs.org/docs/react-dom.html#hydrate
 [http-localhost-3000]: http://localhost:3000
 [bare-bones-hello-world-app]: /jokes-tutorial/img/bare-bones.png
 [remix-config-js]: ../api/conventions#remixconfigjs
 [route-module]: ../api/conventions#route-module-api
-[the-route-filename-convention]: ../api/conventions#route-filenames
+[the-route-filename-convention]: ../api/conventions#route-file-conventions
 [react-router]: https://reactrouter.com
 [a-greeting-from-the-index-route]: /jokes-tutorial/img/index-route-greeting.png
 [jokes]: http://localhost:3000/jokes
