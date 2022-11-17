@@ -84,8 +84,8 @@ HTML buttons can send a value, so it's the easiest way to implement this:
 ```jsx filename=app/routes/projects/$id.jsx lines=[3-4,33,39]
 export async function action({ request }) {
   let formData = await request.formData();
-  let action = formData.get("action");
-  switch (action) {
+  let intent = formData.get("intent");
+  switch (intent) {
     case "update": {
       // do your update
       return updateProjectName(formData.get("name"));
@@ -114,28 +114,19 @@ export default function Projects() {
             defaultValue={project.name}
           />
         </label>
-        <button type="submit" name="action" value="update">
+        <button type="submit" name="intent" value="update">
           Update
         </button>
       </Form>
 
       <Form method="post">
-        <button type="submit" name="action" value="delete">
+        <button type="submit" name="intent" value="delete">
           Delete
         </button>
       </Form>
     </>
   );
 }
-```
-
-You can also use a hidden input field:
-
-```jsx lines=[2]
-<Form method="post">
-  <input type="hidden" name="action" value="create" />
-  <button type="submit">Create</button>
-</Form>
 ```
 
 ## How can I have structured data in a form?
