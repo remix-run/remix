@@ -17,6 +17,7 @@ import type {
   MemoryHistory,
   StaticHandler,
   Update,
+  AgnosticDataRouteObject,
 } from "@remix-run/server-runtime";
 import {
   createMemoryHistory,
@@ -72,7 +73,7 @@ export function createRemixStub(routes: RouteObject[]) {
   // Setup request handler to handle requests to the mock routes
   let { dataRoutes, queryRoute } = createStaticHandler(routes);
   return function RemixStub({
-    initialEntries = ["/"],
+    initialEntries,
     initialLoaderData = {},
     initialActionData,
     initialIndex,
@@ -86,23 +87,21 @@ export function createRemixStub(routes: RouteObject[]) {
     }
 
     let history = historyRef.current;
+
     let [state, dispatch] = React.useReducer(
-      (_: Update, update: Update) => update,
-      {
-        action: history.action,
-        location: history.location,
-      }
+      (_current: Update, update: Update) => update,
+      { action: history.action, location: history.location }
     );
 
     React.useLayoutEffect(() => history.listen(dispatch), [history]);
 
     // Convert path based ids in user supplied initial loader/action data to data route ids
-    let loaderData = convertRouteData(routes, initialLoaderData);
-    let actionData = convertRouteData(routes, initialActionData);
+    let loaderData = convertRouteData(dataRoutes, initialLoaderData);
+    let actionData = convertRouteData(dataRoutes, initialActionData);
 
     // Create mock remix context
     let remixContext = createRemixContext(
-      routes,
+      dataRoutes,
       state.location,
       loaderData,
       actionData
@@ -123,7 +122,7 @@ export function createRemixStub(routes: RouteObject[]) {
 }
 
 function createRemixContext(
-  routes: RouteObject[],
+  routes: AgnosticDataRouteObject[],
   currentLocation: Location,
   initialLoaderData?: RouteData,
   initialActionData?: RouteData
@@ -150,7 +149,7 @@ function createRemixContext(
   };
 }
 
-function createManifest(routes: RouteObject[]): AssetsManifest {
+function createManifest(routes: AgnosticDataRouteObject[]): AssetsManifest {
   return {
     routes: createRouteManifest(routes),
     entry: { imports: [], module: "" },
@@ -160,7 +159,7 @@ function createManifest(routes: RouteObject[]): AssetsManifest {
 }
 
 function createRouteManifest(
-  routes: RouteObject[],
+  routes: AgnosticDataRouteObject[],
   manifest?: RouteManifest<EntryRoute>,
   parentId?: string
 ): RouteManifest<EntryRoute> {
@@ -174,7 +173,7 @@ function createRouteManifest(
 }
 
 function createRouteModules(
-  routes: RouteObject[],
+  routes: AgnosticDataRouteObject[],
   routeModules?: RouteModules
 ): RouteModules {
   return routes.reduce((modules, route) => {
@@ -185,6 +184,7 @@ function createRouteModules(
     modules[route.id!] = {
       CatchBoundary: undefined,
       ErrorBoundary: undefined,
+      // @ts-expect-error - types are still `agnostic` here
       default: () => <>{route.element}</>,
       handle: route.handle,
       links: undefined,
@@ -230,7 +230,7 @@ function monkeyPatchFetch(
 }
 
 function convertToEntryRoute(
-  route: RouteObject,
+  route: AgnosticDataRouteObject,
   parentId?: string
 ): EntryRoute {
   return {
@@ -248,7 +248,7 @@ function convertToEntryRoute(
 }
 
 function convertToEntryRouteMatch(
-  routes: AgnosticRouteMatch<string, RouteObject>[]
+  routes: AgnosticRouteMatch<string, AgnosticDataRouteObject>[]
 ) {
   return routes.map((match) => {
     return {
@@ -262,7 +262,7 @@ function convertToEntryRouteMatch(
 // Converts route data from a path based index to a route id index value.
 // e.g. { "/post/:postId": post } to { "0": post }
 function convertRouteData(
-  routes: RouteObject[],
+  routes: AgnosticDataRouteObject[],
   initialRouteData?: RouteData,
   routeData: RouteData = {}
 ): RouteData | undefined {
