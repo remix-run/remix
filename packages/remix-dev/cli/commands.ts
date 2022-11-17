@@ -219,6 +219,19 @@ export async function watch(
     broadcast({ type: "LOG", message });
   }
 
+  // Whenever a (re)build finishes in "watch" mode we update a "touchfile"
+  // which external processes can use as a signal of successful builds
+  // without having to watch all of the same files that remix is
+  // already watching - e.g. nodemon watching just this touchfile can
+  // know when to restart a dev server
+  function touch() {
+    fse.writeFileSync(
+      path.join(config.cacheDirectory, ".watch-touch"),
+      `last successful watch build: ${Date.now()}`,
+      { encoding: "utf-8" }
+    );
+  }
+
   let closeWatcher = await compiler.watch(config, {
     mode,
     onInitialBuild,
@@ -230,6 +243,7 @@ export async function watch(
     onRebuildFinish() {
       log(`Rebuilt in ${prettyMs(Date.now() - start)}`);
       broadcast({ type: "RELOAD" });
+      touch();
     },
     onFileCreated(file) {
       log(`File created: ${path.relative(process.cwd(), file)}`);
@@ -243,6 +257,7 @@ export async function watch(
   });
 
   console.log(`💿 Built in ${prettyMs(Date.now() - start)}`);
+  touch();
 
   let resolve: () => void;
   exitHook(() => {
