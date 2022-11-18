@@ -1,10 +1,10 @@
-const babel = require("@rollup/plugin-babel").default;
-const { camelCase } = require("lodash");
-const copy = require("rollup-plugin-copy");
 const fs = require("fs");
-const fse = require("fs-extra");
-const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const path = require("path");
+const babel = require("@rollup/plugin-babel").default;
+const nodeResolve = require("@rollup/plugin-node-resolve").default;
+const fse = require("fs-extra");
+const { camelCase, upperFirst } = require("lodash");
+const copy = require("rollup-plugin-copy");
 
 const REPO_ROOT_DIR = __dirname;
 
@@ -184,33 +184,69 @@ function magicExportsPlugin({ packageName, version }) {
       }
 
       let banner = createBanner(packageName, version);
+      let moduleName = camelCase(packageName.slice("@remix-run/".length));
       let esmContents = banner + "\n";
       let tsContents = banner + "\n";
       let cjsContents =
         banner +
         "\n" +
         "'use strict';\n" +
-        "Object.defineProperty(exports, '__esModule', { value: true });\n";
+        "Object.defineProperty(exports, '__esModule', { value: true });\n\n";
 
       if (magicExports.values) {
-        let exportList = magicExports.values.join(", ");
-        esmContents += `export { ${exportList} } from '${packageName}';\n`;
-        tsContents += `export { ${exportList} } from '${packageName}';\n`;
+        let deprecationFunctions =
+          // eslint-disable-next-line no-template-curly-in-string
+          "const getDeprecatedMessage = (symbol, packageName) => `All \\`remix\\` exports are considered deprecated as of v1.3.3. Please import \\`${symbol}\\` from \\`${packageName}\\` instead. You can run \\`remix migrate --migration replace-remix-imports\\` to automatically migrate your code.`;\n" +
+          "const warn = (fn, message) => (...args) => {\n" +
+          "  console.warn(message);\n" +
+          "  return fn(...args);\n" +
+          "};\n\n";
 
-        let cjsModule = camelCase(packageName.slice("@remix-run/".length));
-        cjsContents += `var ${cjsModule} = require('${packageName}');\n`;
-        for (let symbol of magicExports.values) {
-          cjsContents +=
-            `Object.defineProperty(exports, '${symbol}', {\n` +
-            "  enumerable: true,\n" +
-            `  get: function () { return ${cjsModule}.${symbol}; }\n` +
-            "});\n";
-        }
+        esmContents +=
+          `import * as ${moduleName} from '${packageName}';\n` +
+          deprecationFunctions;
+        esmContents += magicExports.values
+          .map(
+            (symbol) =>
+              `/** @deprecated Import \`${symbol}\` from \`${packageName}\` instead. */\n` +
+              `const ${symbol} = warn(${moduleName}.${symbol}, getDeprecatedMessage('${symbol}', '${packageName}'));\n`
+          )
+          .join("\n");
+        esmContents += `\nexport { ${magicExports.values.join(", ")} };\n`;
+
+        tsContents += `import * as ${moduleName} from '${packageName}';\n\n`;
+        tsContents += magicExports.values
+          .map(
+            (symbol) =>
+              `/** @deprecated Import \`${symbol}\` from \`${packageName}\` instead. */\n` +
+              `export declare const ${symbol}: typeof ${moduleName}.${symbol};\n`
+          )
+          .join("\n");
+
+        cjsContents +=
+          `var ${moduleName} = require('${packageName}');\n` +
+          deprecationFunctions;
+        cjsContents += magicExports.values
+          .map(
+            (symbol) =>
+              `/** @deprecated Import \`${symbol}\` from \`${packageName}\` instead. */\n` +
+              `const ${symbol} = warn(${moduleName}.${symbol}, getDeprecatedMessage('${symbol}', '${packageName}'));\n` +
+              `exports.${symbol} = ${symbol};\n`
+          )
+          .join("\n");
       }
 
       if (magicExports.types) {
-        let exportList = magicExports.types.join(", ");
-        tsContents += `export type { ${exportList} } from '${packageName}';\n`;
+        let typesModuleName = `${upperFirst(moduleName)}Types`;
+
+        tsContents += `import * as ${typesModuleName} from '${packageName}';\n\n`;
+        tsContents += magicExports.types
+          .map(
+            (symbol) =>
+              `/** @deprecated Import type \`${symbol}\` from \`${packageName}\` instead. */\n` +
+              `export declare type ${symbol} = ${typesModuleName}.${symbol};\n`
+          )
+          .join("\n");
       }
 
       this.emitFile({
