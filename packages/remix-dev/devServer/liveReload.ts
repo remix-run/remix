@@ -4,9 +4,9 @@ import path from "path";
 import prettyMs from "pretty-ms";
 import WebSocket from "ws";
 
+import { createChannel } from "../channel";
 import type { WatchOptions } from "../compiler";
 import { watch } from "../compiler";
-import { createChannel } from "../compiler/utils/channel";
 import type { RemixConfig } from "../config";
 
 const relativePath = (file: string) => path.relative(process.cwd(), file);
