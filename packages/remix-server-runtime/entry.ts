@@ -1,22 +1,12 @@
-import type { AppState } from "./errors";
-import type {
-  RouteManifest,
-  ServerRouteManifest,
-  EntryRoute,
-  ServerRoute,
-} from "./routes";
-import type { RouteData } from "./routeData";
-import type { RouteMatch } from "./routeMatching";
+import type { RouteManifest, ServerRouteManifest, EntryRoute } from "./routes";
 import type { RouteModules, EntryRouteModule } from "./routeModules";
+import type { StaticHandlerContext } from "./router";
 
 export interface EntryContext {
-  appState: AppState;
   manifest: AssetsManifest;
-  matches: RouteMatch<EntryRoute>[];
-  routeData: RouteData;
-  actionData?: RouteData;
   routeModules: RouteModules<EntryRouteModule>;
   serverHandoffString?: string;
+  staticHandlerContext: StaticHandlerContext;
   future: FutureConfig;
 }
 
@@ -32,17 +22,6 @@ export interface AssetsManifest {
   routes: RouteManifest<EntryRoute>;
   url: string;
   version: string;
-}
-
-export function createEntryMatches(
-  matches: RouteMatch<ServerRoute>[],
-  routes: RouteManifest<EntryRoute>
-): RouteMatch<EntryRoute>[] {
-  return matches.map((match) => ({
-    params: match.params,
-    pathname: match.pathname,
-    route: routes[match.route.id],
-  }));
 }
 
 export function createEntryRouteModules(
