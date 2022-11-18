@@ -196,7 +196,7 @@ function magicExportsPlugin({ packageName, version }) {
       if (magicExports.values) {
         let deprecationFunctions =
           // eslint-disable-next-line no-template-curly-in-string
-          "const getDeprecatedMessage = (symbol, packageName) => `All \\`remix\\` exports are considered deprecated as of v1.3.3. Please import \\`${symbol}\\` from \\`${packageName}\\` instead. You can run \\`remix migrate --migration replace-remix-imports\\` to automatically migrate your code.`;\n" +
+          "const getDeprecatedMessage = (symbol, packageName) => `All \\`remix\\` exports are considered deprecated as of v1.3.3. Please import \\`${symbol}\\` from \\`${packageName}\\` instead. Run \\`npx @remix-run/dev@latest codemod replace-remix-magic-imports\\` to automatically migrate your code.`;\n" +
           "const warn = (fn, message) => (...args) => {\n" +
           "  console.warn(message);\n" +
           "  return fn(...args);\n" +
