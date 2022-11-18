@@ -148,12 +148,58 @@ async function loadRouteModuleWithBlockingLinks(
 function createLoader(route: EntryRoute, routeModules: RouteModules) {
   let loader: ClientRoute["loader"] = async ({ url, signal, submission }) => {
     if (route.hasLoader) {
-      let [result] = await Promise.all([
-        fetchData(url, route.id, signal, submission),
-        loadRouteModuleWithBlockingLinks(route, routeModules),
-      ]);
+      let routeModulePromise = loadRouteModuleWithBlockingLinks(
+        route,
+        routeModules
+      );
+      try {
+        let result = await fetchData(url, route.id, signal, submission);
 
-      if (result instanceof Error) throw result;
+        if (result instanceof Error) throw result;
+
+        let redirect = await checkRedirect(result);
+        if (redirect) return redirect;
+
+        if (isCatchResponse(result)) {
+          throw new CatchValue(
+            result.status,
+            result.statusText,
+            await extractData(result)
+          );
+        }
+
+        return extractData(result);
+      } finally {
+        await routeModulePromise;
+      }
+    } else {
+      await loadRouteModuleWithBlockingLinks(route, routeModules);
+    }
+  };
+
+  return loader;
+}
+
+function createAction(route: EntryRoute, routeModules: RouteModules) {
+  let action: ClientRoute["action"] = async ({ url, signal, submission }) => {
+    let routeModulePromise = await loadRouteModuleWithBlockingLinks(
+      route,
+      routeModules
+    );
+
+    try {
+      if (!route.hasAction) {
+        console.error(
+          `Route "${route.id}" does not have an action, but you are trying ` +
+            `to submit to it. To fix this, please add an \`action\` function to the route`
+        );
+      }
+
+      let result = await fetchData(url, route.id, signal, submission);
+
+      if (result instanceof Error) {
+        throw result;
+      }
 
       let redirect = await checkRedirect(result);
       if (redirect) return redirect;
@@ -167,43 +213,9 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
       }
 
       return extractData(result);
-    } else {
-      await loadRouteModuleWithBlockingLinks(route, routeModules);
+    } finally {
+      await routeModulePromise;
     }
-  };
-
-  return loader;
-}
-
-function createAction(route: EntryRoute, routeModules: RouteModules) {
-  let action: ClientRoute["action"] = async ({ url, signal, submission }) => {
-    if (!route.hasAction) {
-      console.error(
-        `Route "${route.id}" does not have an action, but you are trying ` +
-          `to submit to it. To fix this, please add an \`action\` function to the route`
-      );
-    }
-
-    let result = await fetchData(url, route.id, signal, submission);
-
-    if (result instanceof Error) {
-      throw result;
-    }
-
-    let redirect = await checkRedirect(result);
-    if (redirect) return redirect;
-
-    await loadRouteModuleWithBlockingLinks(route, routeModules);
-
-    if (isCatchResponse(result)) {
-      throw new CatchValue(
-        result.status,
-        result.statusText,
-        await extractData(result)
-      );
-    }
-
-    return extractData(result);
   };
 
   return action;
