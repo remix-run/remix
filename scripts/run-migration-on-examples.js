@@ -31,10 +31,9 @@ const main = async (codemod) => {
       return;
     }
 
-    execSync(
-      `node ${cliPath} codemod ${codemod} --force ${examplePath}`,
-      { stdio: "inherit" }
-    );
+    execSync(`node ${cliPath} codemod ${codemod} --force ${examplePath}`, {
+      stdio: "inherit",
+    });
   });
 };
 
