@@ -3,11 +3,11 @@ const { readdir, stat } = require("fs/promises");
 const { join } = require("path");
 
 /**
- * @param {string} migration
+ * @param {string} codemod
  */
-const main = async (migration) => {
-  if (!migration) {
-    console.error("Please specify a migration to run");
+const main = async (codemod) => {
+  if (!codemod) {
+    console.error("Please specify a codemod to run");
     process.exit(1);
   }
 
@@ -32,7 +32,7 @@ const main = async (migration) => {
     }
 
     execSync(
-      `node ${cliPath} migrate --migration ${migration} --force ${examplePath}`,
+      `node ${cliPath} codemod ${codemod} --force ${examplePath}`,
       { stdio: "inherit" }
     );
   });
