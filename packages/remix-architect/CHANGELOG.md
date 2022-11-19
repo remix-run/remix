@@ -1,5 +1,19 @@
 # `@remix-run/architect`
 
+## 1.8.0-pre.0
+
+### Minor Changes
+
+- Importing functions and types from the `remix` package is deprecated, and all ([#3284](https://github.com/remix-run/remix/pull/3284))
+  exported modules will be removed in the next major release. For more details,
+  [see the release notes for 1.4.0](https://github.com/remix-run/remix/releases/tag/v1.4.0)
+  where these changes were first announced.
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.8.0-pre.0`
+
 ## 1.7.6
 
 ### Patch Changes

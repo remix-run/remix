@@ -19,5 +19,16 @@
     "@remix-run/server-runtime": "1.7.6",
     "@remix-run/vercel": "1.7.6"
   },
-  "changesets": []
+  "changesets": [
+    "beige-planes-type",
+    "calm-eels-invite",
+    "happy-flies-own",
+    "khaki-meals-prove",
+    "light-avocados-drop",
+    "long-colts-remain",
+    "moody-cats-relax",
+    "neat-months-run",
+    "purple-baboons-beg",
+    "tricky-bobcats-nail"
+  ]
 }
