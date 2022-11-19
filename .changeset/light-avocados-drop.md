@@ -2,7 +2,7 @@
 "@remix-run/server-runtime": patch
 ---
 
-fix: Properly categorize internal framework-thrown error Responses as error boundary errors
+Properly categorize internal framework-thrown error Responses as error boundary errors
 
 Previously there was some ambiguity around _"thrown Responses go to the `CatchBoundary`"_.
 The `CatchBoundary` exists to give the _user_ a place to handle non-happy path code flows
