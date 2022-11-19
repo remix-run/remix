@@ -1,5 +1,28 @@
 # `@remix-run/dev`
 
+## 2.0.0
+
+### Minor Changes
+
+- Added support for a new route `meta` API to handle arrays of tags instead of an object. For details, check out the [RFC](https://github.com/remix-run/remix/discussions/4462). ([#4610](https://github.com/remix-run/remix/pull/4610))
+
+### Patch Changes
+
+- Added support for feature flags in `remix.config.js` ([#4566](https://github.com/remix-run/remix/pull/4566))
+- Replace migrations with codemods. Specifically, `npx @remix-run/dev migrate` is now `@remix-run/dev codemod`. ([#4572](https://github.com/remix-run/remix/pull/4572))
+
+  Under the hood, codemods are now written via Babel's Visitor API instead of jscodeshift.
+  Also `replace-remix-magic-imports` is now faster as it no longer depends on a network connection
+  and does not incur the overhead of spinning up workers for jscodeshift.
+
+- bump esbuild to fix an issue with spreading props followed by a key as well as a `jsx name collision edge case` when using packages with the name `react` in them, like `@remix-run/react`. ([#4301](https://github.com/remix-run/remix/pull/4301))
+
+  it also utilizies esbuild's native yarn pnp compatibility instead of using `@yarnpkg/esbuild-plugin-pnp`
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@2.0.0`
+  - `@remix-run/serve@2.0.0`
+
 ## 1.7.6
 
 ### Patch Changes
