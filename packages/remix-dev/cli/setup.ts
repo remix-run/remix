@@ -94,7 +94,16 @@ async function combineFilesInDirs(
   dirs: string[],
   ext: string
 ): Promise<string> {
-  let combined = "";
+  let logDeprecationWarning =
+    `console.warn("WARNING: All \`remix\` exports are considered deprecated as of v1.3.3. ` +
+    `All imports should come from their respective packages (i.e., ` +
+    `\`@remix-run/server-runtime\`, \`@remix-run/react\`, etc.). ` +
+    `Run \`npx @remix-run/dev@latest codemod replace-remix-magic-imports\` to ` +
+    `automatically migrate your code.");\n\n`;
+
+  // Don't include the warning in type declarations
+  let combined = ext === ".d.ts" ? "" : logDeprecationWarning;
+
   for (let dir of dirs) {
     let files = await fse.readdir(dir);
     for (let file of files) {
