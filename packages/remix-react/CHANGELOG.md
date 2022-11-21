@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.7.6
+
+### Patch Changes
+
+- Fixed a regression in the browser build for browsers that don't support the nullish coalescing operator ([#4561](https://github.com/remix-run/remix/pull/4561))
+
 ## 1.7.5
 
 ### Patch Changes

@@ -143,6 +143,7 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
 export async function createFixtureProject(
   init: FixtureInit = {}
 ): Promise<string> {
@@ -158,6 +159,7 @@ export async function createFixtureProject(
     path.join(projectDir, "node_modules"),
     { overwrite: true }
   );
+
   if (init.setup) {
     let setupSpawn = spawnSync(
       "node",

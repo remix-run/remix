@@ -32,6 +32,10 @@ export type ServerBuildTarget =
 export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
+interface FutureConfig {
+  v2_meta: boolean;
+}
+
 /**
  * The user-provided config in `remix.config.js`.
  */
@@ -158,6 +162,8 @@ export interface AppConfig {
     | string
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
+
+  future?: Partial<FutureConfig>;
 }
 
 /**
@@ -276,6 +282,8 @@ export interface RemixConfig {
    * The path for the tsconfig file, if present on the root directory.
    */
   tsconfigPath: string | undefined;
+
+  future: FutureConfig;
 }
 
 /**
@@ -477,6 +485,10 @@ export async function readConfig(
     writeConfigDefaults(tsconfigPath);
   }
 
+  let future = {
+    v2_meta: appConfig.future?.v2_meta === true,
+  };
+
   return {
     appDirectory,
     cacheDirectory,
@@ -500,6 +512,7 @@ export async function readConfig(
     mdx,
     watchPaths,
     tsconfigPath,
+    future,
   };
 }
 
