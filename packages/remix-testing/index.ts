@@ -1,1 +1,1 @@
-export { createRemixStub } from "./create-remix-stub";
+export { unstable_createRemixStub } from "./create-remix-stub";
