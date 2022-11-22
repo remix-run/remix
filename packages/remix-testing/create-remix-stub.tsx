@@ -99,14 +99,7 @@ export function createRemixStub(
       { action: history.action, location: history.location }
     );
 
-    React.useLayoutEffect(
-      () =>
-        history.listen((listener) => {
-          console.log({ listener });
-          return dispatch(listener);
-        }),
-      [history]
-    );
+    React.useLayoutEffect(() => history.listen(dispatch), [history]);
 
     // Convert path based ids in user supplied initial loader/action data to data route ids
     let loaderData = convertRouteData(dataRoutes, initialLoaderData);
