@@ -241,7 +241,7 @@ function Routes() {
   // fallback to the root if we don't have a match
 
   // TODO: clientRoutes currently errors here since RR 6.4 dropped signal as a
-  // loader argument.  We'll be adding tat bac in as part of the rendering work.
+  // loader argument.  We'll be adding that back in as part of the rendering work.
   // @ts-expect-error
   let element = useRoutes(clientRoutes) || (clientRoutes[0].element as any);
   return element;
