@@ -88,6 +88,7 @@ export function createRemixStub(
       historyRef.current = createMemoryHistory({
         initialEntries,
         initialIndex,
+        v5Compat: true,
       });
     }
 
@@ -99,6 +100,13 @@ export function createRemixStub(
     );
 
     React.useLayoutEffect(
+      () =>
+        history.listen((listener) => {
+          console.log({ listener });
+          return dispatch(listener);
+        }),
+      [history]
+    );
 
     // Convert path based ids in user supplied initial loader/action data to data route ids
     let loaderData = convertRouteData(dataRoutes, initialLoaderData);
@@ -193,7 +201,7 @@ function createRouteModules(
       CatchBoundary: undefined,
       ErrorBoundary: undefined,
       // @ts-expect-error - types are still `agnostic` here
-      default: () => <>{route.element}</>,
+      default: () => route.element,
       handle: route.handle,
       links: undefined,
       meta: undefined,
@@ -269,6 +277,7 @@ function convertToEntryRouteMatch(
 
 // Converts route data from a path based index to a route id index value.
 // e.g. { "/post/:postId": post } to { "0": post }
+// TODO: may not need
 function convertRouteData(
   routes: AgnosticDataRouteObject[],
   initialRouteData?: RouteData,
