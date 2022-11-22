@@ -1,3 +1,11 @@
+// TODO: RRR - Change import to @remix-run/router
+import type {
+  AgnosticDataRouteObject,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+} from "./router";
+import { type AppLoadContext } from "./data";
+import { callRouteActionRR, callRouteLoaderRR } from "./data";
 import type { ServerRouteModule } from "./routeModules";
 
 export interface RouteManifest<Route> {
@@ -7,7 +15,7 @@ export interface RouteManifest<Route> {
 export type ServerRouteManifest = RouteManifest<Omit<ServerRoute, "children">>;
 
 // NOTE: make sure to change the Route in remix-react if you change this
-interface Route {
+export interface Route {
   index?: boolean;
   caseSensitive?: boolean;
   id: string;
@@ -23,6 +31,7 @@ export interface EntryRoute extends Route {
   hasErrorBoundary: boolean;
   imports?: string[];
   module: string;
+  parentId?: string;
 }
 
 export interface ServerRoute extends Route {
@@ -40,4 +49,62 @@ export function createRoutes(
       ...route,
       children: createRoutes(manifest, id),
     }));
+}
+
+// Convert the Remix ServerManifest into DataRouteObject's for use with
+// createStaticHandler
+export function createStaticHandlerDataRoutes(
+  manifest: ServerRouteManifest,
+  loadContext: AppLoadContext,
+  parentId?: string
+): AgnosticDataRouteObject[] {
+  return Object.values(manifest)
+    .filter((route) => route.parentId === parentId)
+    .map((route) => {
+      let commonRoute = {
+        // Always include root due to default boundaries
+        hasErrorBoundary:
+          route.id === "root" ||
+          route.module.CatchBoundary != null ||
+          route.module.ErrorBoundary != null,
+        id: route.id,
+        path: route.path,
+        loader: route.module.loader
+          ? (args: LoaderFunctionArgs) =>
+              callRouteLoaderRR({
+                ...args,
+                loadContext,
+                loader: route.module.loader!,
+                routeId: route.id,
+              })
+          : undefined,
+        action: route.module.action
+          ? (args: ActionFunctionArgs) =>
+              callRouteActionRR({
+                ...args,
+                loadContext,
+                action: route.module.action!,
+                routeId: route.id,
+              })
+          : undefined,
+        handle: route.module.handle,
+        // TODO: RRR - Implement!
+        shouldRevalidate: () => true,
+      };
+
+      return route.index
+        ? {
+            index: true,
+            ...commonRoute,
+          }
+        : {
+            caseSensitive: route.caseSensitive,
+            children: createStaticHandlerDataRoutes(
+              manifest,
+              loadContext,
+              route.id
+            ),
+            ...commonRoute,
+          };
+    });
 }

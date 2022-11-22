@@ -1,5 +1,63 @@
 # `@remix-run/dev`
 
+## 1.7.6
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/serve@1.7.6`
+  - `@remix-run/server-runtime@1.7.6`
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/serve@1.7.6-pre.0`
+  - `@remix-run/server-runtime@1.7.6-pre.0`
+
+## 1.7.5
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/serve@1.7.5`
+  - `@remix-run/server-runtime@1.7.5`
+
+## 1.7.4
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.7.4`
+  - `@remix-run/serve@1.7.4`
+
+## 1.7.3
+
+### Patch Changes
+
+- Update `create-remix` to use the new examples repository when using `--template example/<name>` ([#4208](https://github.com/remix-run/remix/pull/4208))
+- Add support for setting `moduleResolution` to `node`, `node16` or `nodenext` in `tsconfig.json`. ([#4034](https://github.com/remix-run/remix/pull/4034))
+- Add resources imported only by resource routes to `assetsBuildDirectory` ([#3841](https://github.com/remix-run/remix/pull/3841))
+- Ensure that any assets referenced in CSS files are hashed and copied to the `assetsBuildDirectory`. ([#4130](https://github.com/remix-run/remix/pull/4130))
+- Updated dependencies:
+  - `@remix-run/serve@1.7.3`
+  - `@remix-run/server-runtime@1.7.3`
+
+## 1.7.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.7.2`
+  - `@remix-run/serve@1.7.2`
+
+## 1.7.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.7.1`
+  - `@remix-run/serve@1.7.1`
+
 ## 1.7.0
 
 ### Minor Changes

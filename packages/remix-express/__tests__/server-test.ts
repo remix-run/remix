@@ -32,11 +32,10 @@ function createApp() {
 
   app.all(
     "*",
-    createRequestHandler({
-      // We don't have a real app to test, but it doesn't matter. We
-      // won't ever call through to the real createRequestHandler
-      build: undefined,
-    })
+    // We don't have a real app to test, but it doesn't matter. We won't ever
+    // call through to the real createRequestHandler
+    // @ts-expect-error
+    createRequestHandler({ build: undefined })
   );
 
   return app;
@@ -255,6 +254,7 @@ describe("express createRemixRequest", () => {
           "type": null,
         },
         Symbol(Request internals): Object {
+          "credentials": "same-origin",
           "headers": Headers {
             Symbol(query): Array [
               "cache-control",

@@ -35,6 +35,7 @@ function createApp() {
   // TODO: get supertest args into the event
   consumeEventMock.mockImplementationOnce(() => ({ body: "" }));
   let server = createServerWithHelpers(
+    // @ts-expect-error
     createRequestHandler({ build: undefined }),
     mockBridge
   );
@@ -258,6 +259,7 @@ describe("vercel createRemixRequest", () => {
           "type": null,
         },
         Symbol(Request internals): Object {
+          "credentials": "same-origin",
           "headers": Headers {
             Symbol(query): Array [
               "cache-control",

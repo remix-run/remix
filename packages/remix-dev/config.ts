@@ -8,6 +8,7 @@ import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/virtualModules";
+import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -29,6 +30,10 @@ export type ServerBuildTarget =
 
 export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
+
+interface FutureConfig {
+  v2_meta: boolean;
+}
 
 /**
  * The user-provided config in `remix.config.js`.
@@ -156,6 +161,8 @@ export interface AppConfig {
     | string
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
+
+  future?: Partial<FutureConfig>;
 }
 
 /**
@@ -274,6 +281,8 @@ export interface RemixConfig {
    * The path for the tsconfig file, if present on the root directory.
    */
   tsconfigPath: string | undefined;
+
+  future: FutureConfig;
 }
 
 /**
@@ -467,6 +476,14 @@ export async function readConfig(
     tsconfigPath = rootJsConfig;
   }
 
+  if (tsconfigPath) {
+    writeConfigDefaults(tsconfigPath);
+  }
+
+  let future = {
+    v2_meta: appConfig.future?.v2_meta === true,
+  };
+
   return {
     appDirectory,
     cacheDirectory,
@@ -490,6 +507,7 @@ export async function readConfig(
     mdx,
     watchPaths,
     tsconfigPath,
+    future,
   };
 }
 

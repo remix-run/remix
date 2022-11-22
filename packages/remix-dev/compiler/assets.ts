@@ -3,7 +3,7 @@ import type * as esbuild from "esbuild";
 
 import type { RemixConfig } from "../config";
 import invariant from "../invariant";
-import { getRouteModuleExportsCached } from "./routes";
+import { getRouteModuleExports } from "./routeExports";
 import { getHash } from "./utils/crypto";
 import { createUrl } from "./utils/url";
 
@@ -72,22 +72,20 @@ export async function createAssetsManifest(
     let output = metafile.outputs[key];
     if (!output.entryPoint) continue;
 
-    // When using yarn-pnp, esbuild-plugin-pnp resolves files under the pnp namespace, even entry.client.tsx
-    let entryPointFile = output.entryPoint.replace(/^pnp:/, "");
-    if (path.resolve(entryPointFile) === entryClientFile) {
+    if (path.resolve(output.entryPoint) === entryClientFile) {
       entry = {
         module: resolveUrl(key),
         imports: resolveImports(output.imports),
       };
       // Only parse routes otherwise dynamic imports can fall into here and fail the build
-    } else if (entryPointFile.startsWith("browser-route-module:")) {
-      entryPointFile = entryPointFile.replace(
+    } else if (output.entryPoint.startsWith("browser-route-module:")) {
+      let entryPointFile = output.entryPoint.replace(
         /(^browser-route-module:|\?browser$)/g,
         ""
       );
       let route = routesByFile.get(entryPointFile);
       invariant(route, `Cannot get route for entry point ${output.entryPoint}`);
-      let sourceExports = await getRouteModuleExportsCached(config, route.id);
+      let sourceExports = await getRouteModuleExports(config, route.id);
       routes[route.id] = {
         id: route.id,
         parentId: route.parentId,

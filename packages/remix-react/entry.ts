@@ -12,6 +12,11 @@ export interface EntryContext {
   actionData?: RouteData;
   routeModules: RouteModules;
   serverHandoffString?: string;
+  future: FutureConfig;
+}
+
+export interface FutureConfig {
+  v2_meta: boolean;
 }
 
 export interface AssetsManifest {

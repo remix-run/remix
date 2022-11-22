@@ -10,10 +10,11 @@ import {
   assetsManifestVirtualModule,
 } from "../virtualModules";
 import { createMatchPath } from "../utils/tsconfig";
+import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
 
 /**
  * A plugin responsible for resolving bare module ids based on server target.
- * This includes externalizing for node based plaforms, and bundling for single file
+ * This includes externalizing for node based platforms, and bundling for single file
  * environments such as cloudflare.
  */
 export function serverBareModulesPlugin(
@@ -65,12 +66,18 @@ export function serverBareModulesPlugin(
         }
 
         let packageName = getNpmPackageName(path);
+        let pkgManager = getPreferredPackageManager();
 
         // Warn if we can't find an import for a package.
         if (
           onWarning &&
           !isNodeBuiltIn(packageName) &&
-          !/\bnode_modules\b/.test(importer)
+          !/\bnode_modules\b/.test(importer) &&
+          // Silence spurious warnings when using Yarn PnP. Yarn PnP doesn’t use
+          // a `node_modules` folder to keep its dependencies, so the above check
+          // will always fail.
+          (pkgManager === "npm" ||
+            (pkgManager === "yarn" && process.versions.pnp == null))
         ) {
           try {
             require.resolve(path);

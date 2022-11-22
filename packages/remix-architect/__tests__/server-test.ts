@@ -3,6 +3,10 @@ import path from "path";
 import lambdaTester from "lambda-tester";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
 import {
+  // This has been added as a global in node 15+, but we expose it here while we
+  // support Node 14
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  AbortController,
   createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,
 } from "@remix-run/node";
@@ -86,7 +90,10 @@ describe("architect createRequestHandler", () => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
-      await lambdaTester(createRequestHandler({ build: undefined } as any))
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
+      await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
         .expectResolve((res) => {
           expect(res.statusCode).toBe(200);
@@ -99,7 +106,10 @@ describe("architect createRequestHandler", () => {
         return new Response(null, { status: 200 });
       });
 
-      await lambdaTester(createRequestHandler({ build: undefined } as any))
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
+      await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
         .expectResolve((res) => {
           expect(res.statusCode).toBe(200);
@@ -111,7 +121,10 @@ describe("architect createRequestHandler", () => {
         return new Response(null, { status: 204 });
       });
 
-      await lambdaTester(createRequestHandler({ build: undefined } as any))
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
+      await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawPath: "/foo/bar" }))
         .expectResolve((res) => {
           expect(res.statusCode).toBe(204);
@@ -138,7 +151,10 @@ describe("architect createRequestHandler", () => {
         return new Response(null, { headers });
       });
 
-      await lambdaTester(createRequestHandler({ build: undefined } as any))
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
+      await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawPath: "/" }))
         .expectResolve((res) => {
           expect(res.statusCode).toBe(200);
@@ -268,6 +284,7 @@ describe("architect createRemixRequest", () => {
           "type": null,
         },
         Symbol(Request internals): Object {
+          "credentials": "same-origin",
           "headers": Headers {
             Symbol(query): Array [
               "accept",
