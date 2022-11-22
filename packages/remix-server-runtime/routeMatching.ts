@@ -1,6 +1,6 @@
-import type { Params, RouteObject } from "react-router"; // TODO: export/import from react-router-dom
-import { matchRoutes } from "react-router-dom";
-
+// TODO: export/import @remix-run/router
+import type { Params, AgnosticRouteObject } from "./router";
+import { matchRoutes } from "./router";
 import type { ServerRoute } from "./routes";
 
 export interface RouteMatch<Route> {
@@ -13,7 +13,10 @@ export function matchServerRoutes(
   routes: ServerRoute[],
   pathname: string
 ): RouteMatch<ServerRoute>[] | null {
-  let matches = matchRoutes(routes as unknown as RouteObject[], pathname);
+  let matches = matchRoutes(
+    routes as unknown as AgnosticRouteObject[],
+    pathname
+  );
   if (!matches) return null;
 
   return matches.map((match) => ({
