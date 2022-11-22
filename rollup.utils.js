@@ -223,14 +223,11 @@ function magicExportsPlugin({ packageName, version }) {
           )
           .join("\n");
 
-        cjsContents +=
-          `var ${moduleName} = require('${packageName}');\n` +
-          deprecationFunctions;
+        cjsContents += `var ${moduleName} = require('${packageName}');\n`;
         cjsContents += magicExports.values
           .map(
             (symbol) =>
               `/** @deprecated Import \`${symbol}\` from \`${packageName}\` instead. */\n` +
-              `const ${symbol} = warn(${moduleName}.${symbol}, getDeprecatedMessage('${symbol}', '${packageName}'));\n` +
               `exports.${symbol} = ${symbol};\n`
           )
           .join("\n");
