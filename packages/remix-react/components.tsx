@@ -1245,8 +1245,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         );
       }
 
-      let { protocol, host } = window.location;
-      let url = new URL(action, `${protocol}//${host}`);
+      let url = new URL(action, window.location.origin);
 
       if (method.toLowerCase() === "get") {
         // Start with a fresh set of params and wipe out the old params to

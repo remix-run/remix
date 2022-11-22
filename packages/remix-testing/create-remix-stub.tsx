@@ -9,6 +9,7 @@ import type {
 } from "@remix-run/react";
 import { RemixEntry } from "@remix-run/react";
 import type {
+  AgnosticDataRouteObject,
   AgnosticIndexRouteObject,
   AgnosticNonIndexRouteObject,
   AgnosticRouteMatch,
@@ -17,7 +18,6 @@ import type {
   MemoryHistory,
   StaticHandler,
   Update,
-  AgnosticDataRouteObject,
 } from "@remix-run/server-runtime";
 import {
   createMemoryHistory,
@@ -69,7 +69,12 @@ type NonIndexRouteObject = AgnosticNonIndexRouteObject & {
 
 type RouteObject = IndexRouteObject | NonIndexRouteObject;
 
-export function createRemixStub(routes: RouteObject[]) {
+type RemixConfigFuture = Partial<EntryContext["future"]>;
+
+export function createRemixStub(
+  routes: RouteObject[],
+  remixConfigFuture?: RemixConfigFuture
+) {
   // Setup request handler to handle requests to the mock routes
   let { dataRoutes, queryRoute } = createStaticHandler(routes);
   return function RemixStub({
@@ -81,19 +86,19 @@ export function createRemixStub(routes: RouteObject[]) {
     let historyRef = React.useRef<MemoryHistory>();
     if (historyRef.current == null) {
       historyRef.current = createMemoryHistory({
-        initialEntries: initialEntries,
-        initialIndex: initialIndex,
+        initialEntries,
+        initialIndex,
       });
     }
 
     let history = historyRef.current;
 
     let [state, dispatch] = React.useReducer(
-      (_current: Update, update: Update) => update,
+      (_: Update, update: Update) => update,
       { action: history.action, location: history.location }
     );
 
-    React.useLayoutEffect(() => history.listen(dispatch), [history]);
+    React.useLayoutEffect(
 
     // Convert path based ids in user supplied initial loader/action data to data route ids
     let loaderData = convertRouteData(dataRoutes, initialLoaderData);
@@ -104,7 +109,8 @@ export function createRemixStub(routes: RouteObject[]) {
       dataRoutes,
       state.location,
       loaderData,
-      actionData
+      actionData,
+      remixConfigFuture
     );
 
     // Patch fetch so that mock routes can handle action/loader requests
@@ -125,7 +131,8 @@ function createRemixContext(
   routes: AgnosticDataRouteObject[],
   currentLocation: Location,
   initialLoaderData?: RouteData,
-  initialActionData?: RouteData
+  initialActionData?: RouteData,
+  future?: RemixConfigFuture
 ): EntryContext {
   let manifest = createManifest(routes);
   let matches = matchRoutes(routes, currentLocation) || [];
@@ -141,9 +148,10 @@ function createRemixContext(
     },
     future: {
       v2_meta: false,
+      ...future,
     },
     matches: convertToEntryRouteMatch(matches),
-    routeData: initialLoaderData || [],
+    routeData: initialLoaderData || {},
     manifest,
     routeModules: createRouteModules(routes),
   };
