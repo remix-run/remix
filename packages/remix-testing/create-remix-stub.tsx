@@ -71,7 +71,7 @@ type RouteObject = IndexRouteObject | NonIndexRouteObject;
 
 type RemixConfigFuture = Partial<EntryContext["future"]>;
 
-export function createRemixStub(
+export function unstable_createRemixStub(
   routes: RouteObject[],
   remixConfigFuture?: RemixConfigFuture
 ) {
