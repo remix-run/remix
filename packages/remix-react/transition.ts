@@ -107,7 +107,7 @@ export type Redirects = {
 };
 
 // TODO: keep data around on resubmission?
-type FetcherStates<TData = any> = {
+export type FetcherStates<TData = any> = {
   Idle: {
     state: "idle";
     type: "init";
@@ -178,3 +178,17 @@ export type FetcherEvent = {
 };
 
 export type DataEvent = NavigationEvent | FetcherEvent;
+
+export const IDLE_TRANSITION: TransitionStates["Idle"] = {
+  state: "idle",
+  submission: undefined,
+  location: undefined,
+  type: "idle",
+};
+
+export const IDLE_FETCHER: FetcherStates["Idle"] = {
+  state: "idle",
+  type: "init",
+  data: undefined,
+  submission: undefined,
+};
