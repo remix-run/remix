@@ -35,6 +35,24 @@ export interface ActionFunction {
 }
 
 /**
+ * Route loader function signature.
+ *
+ * This is intended to be used with TypeScript's `satisfies` keyword.
+ *
+ * @example
+ *
+ * ```ts
+ * export const loader = (({ request }) => {
+ *   const url = new URL(request.url);
+ *   return new Response("hello from " + url.pathname);
+ * }) satisfies LoaderFunction;
+ * ```
+ */
+export interface LoaderFunction {
+  (args: DataFunctionArgs): Promise<Response> | Response;
+}
+
+/**
  * A React component that is rendered when the server throws a Response.
  */
 export type CatchBoundaryComponent = ComponentType;
