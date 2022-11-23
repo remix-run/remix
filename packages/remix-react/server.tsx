@@ -1,4 +1,3 @@
-import { StaticHandlerContext } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
 import {
@@ -6,7 +5,7 @@ import {
   unstable_StaticRouterProvider as StaticRouterProvider,
 } from "react-router-dom/server";
 
-import { RemixContext, RemixRoute, RemixRouteError } from "./components";
+import { RemixContext } from "./components";
 import type { EntryContext } from "./entry";
 import { createServerRoutes } from "./routes";
 
@@ -27,23 +26,6 @@ export function RemixServer({ context, url }: RemixServerProps): ReactElement {
 
   let { manifest, routeModules, serverHandoffString } = context;
   let routes = createServerRoutes(manifest.routes, routeModules);
-
-  // Update in place to preserve _deepestRenderedBoundaryId tracking
-  // TODO: Matt to clean this up
-  context.staticHandlerContext.matches =
-    context.staticHandlerContext.matches.map((match) => ({
-      ...match,
-      route: {
-        ...match.route,
-        element: <RemixRoute id={match.route.id} />,
-        ...(match.route.hasErrorBoundary
-          ? {
-              errorElement: <RemixRouteError id={match.route.id} />,
-            }
-          : {}),
-      },
-    }));
-
   let router = createStaticRouter(routes, context.staticHandlerContext);
 
   console.log("✅ Rendering RR 6.4 StaticRouterProvider");

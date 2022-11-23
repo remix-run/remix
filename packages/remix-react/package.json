@@ -16,9 +16,9 @@
   "typings": "dist/index.d.ts",
   "module": "dist/esm/index.js",
   "dependencies": {
-    "@remix-run/router": "^1.0.3",
+    "@remix-run/router": "1.0.4-pre.0",
     "history": "^5.3.0",
-    "react-router-dom": "~6.4.3"
+    "react-router-dom": "6.4.4-pre.0"
   },
   "devDependencies": {
     "@remix-run/server-runtime": "1.7.6",

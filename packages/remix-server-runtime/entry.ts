@@ -1,6 +1,7 @@
+import type { StaticHandlerContext } from "@remix-run/router";
+
 import type { RouteManifest, ServerRouteManifest, EntryRoute } from "./routes";
 import type { RouteModules, EntryRouteModule } from "./routeModules";
-import type { StaticHandlerContext } from "./router";
 
 export interface EntryContext {
   manifest: AssetsManifest;

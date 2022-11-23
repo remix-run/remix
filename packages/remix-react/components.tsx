@@ -19,6 +19,7 @@ import type {
   SubmitFunction,
 } from "react-router-dom";
 import {
+  isRouteErrorResponse,
   matchRoutes,
   useActionData as useActionDataRR,
   useLoaderData as useLoaderDataRR,
@@ -150,16 +151,6 @@ export function RemixRouteError({ id }: { id: string }) {
   if (id === "root") {
     CatchBoundary ||= RemixRootDefaultCatchBoundary;
     ErrorBoundary ||= RemixRootDefaultErrorBoundary;
-  }
-
-  // TODO: Temp hack to avoid instanceof check issues
-  function isRouteErrorResponse(thing: unknown) {
-    return (
-      thing != null &&
-      "status" in thing &&
-      "statusText" in thing &&
-      "data" in thing
-    );
   }
 
   if (isRouteErrorResponse(error)) {

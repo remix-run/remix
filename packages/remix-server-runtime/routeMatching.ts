@@ -1,6 +1,6 @@
-// TODO: export/import @remix-run/router
-import type { Params, AgnosticRouteObject } from "./router";
-import { matchRoutes } from "./router";
+import type { Params, AgnosticRouteObject } from "@remix-run/router";
+import { matchRoutes } from "@remix-run/router";
+
 import type { ServerRoute } from "./routes";
 
 export interface RouteMatch<Route> {
