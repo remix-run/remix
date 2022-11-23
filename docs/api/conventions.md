@@ -130,6 +130,7 @@ The `serverBuildTarget` can be one of the following:
 - [`"arc"`][arc]
 - [`"cloudflare-pages"`][cloudflare-pages]
 - [`"cloudflare-workers"`][cloudflare-workers]
+- [`"cloudflare-workers-esm"`][cloudflare-workers]
 - [`"deno"`][deno]
 - [`"netlify"`][netlify]
 - [`"node-cjs"`][node-cjs]

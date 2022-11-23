@@ -10,6 +10,7 @@ Idiomatic Remix apps can generally be deployed anywhere because Remix adapt's th
 - `@remix-run/architect`
 - `@remix-run/cloudflare-pages`
 - `@remix-run/cloudflare-workers`
+- `@remix-run/cloudflare-workers-esm`
 - `@remix-run/express`
 - `@remix-run/netlify`
 - `@remix-run/vercel`
@@ -117,7 +118,17 @@ exports.handler =
       };
 ```
 
-Here's an example with the simplified Cloudflare Workers API:
+Here's an example with the simplified Cloudflare Workers API (Module Worker / ES Modules syntax; for more information on the difference between Module Workers and Service Workers, [see Cloudflare's docs][cloudflare-module-workers]):
+
+```ts
+import { createEventHandler } from "@remix-run/cloudflare-workers-esm";
+
+import * as build from "../build";
+
+export default { fetch: createEventHandler({ build }) };
+```
+
+Here's an example with the Cloudflare Workers API (Service Worker syntax):
 
 ```ts
 import { createEventHandler } from "@remix-run/cloudflare-workers";
@@ -169,3 +180,4 @@ addEventListener("fetch", (event) => {
 ```
 
 [web-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+[cloudflare-module-workers]: https://developers.cloudflare.com/workers/runtime-apis/fetch-event#syntax-module-worker

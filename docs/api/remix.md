@@ -18,6 +18,7 @@ Server adapters:
 - `@remix-run/architect`
 - `@remix-run/cloudflare-pages`
 - `@remix-run/cloudflare-workers`
+- `@remix-run/cloudflare-workers-esm`
 - `@remix-run/express`
 - `@remix-run/netlify`
 - `@remix-run/vercel`
