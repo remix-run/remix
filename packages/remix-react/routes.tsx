@@ -88,15 +88,20 @@ export function createServerRoutes(
   return Object.values(manifest)
     .filter((route) => route.parentId === parentId)
     .map((route) => {
+      // TODO: Remove this in favor of an enhanceManualRouteObjects call
+      // inside of createStaticRouter
+      let hasErrorBoundary =
+        route.id === "root" ||
+        routeModules[route.id].ErrorBoundary != null ||
+        routeModules[route.id].CatchBoundary != null;
+
       let baseRoute: Omit<DataRouteObject, "children" | "index"> = {
         caseSensitive: route.caseSensitive,
         element: <RemixRoute id={route.id} />,
-        errorElement:
-          route.id === "root" ||
-          routeModules[route.id].ErrorBoundary ||
-          routeModules[route.id].CatchBoundary ? (
-            <RemixRouteError id={route.id} />
-          ) : undefined,
+        hasErrorBoundary,
+        errorElement: hasErrorBoundary ? (
+          <RemixRouteError id={route.id} />
+        ) : undefined,
         id: route.id,
         path: route.path,
         // Note: we don't need loader/action/shouldRevalidate on these routes

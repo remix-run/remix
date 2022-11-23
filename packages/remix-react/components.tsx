@@ -33,7 +33,6 @@ import {
   useNavigation,
   useHref,
   useRouteError,
-  isRouteErrorResponse,
 } from "react-router-dom";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
@@ -71,19 +70,6 @@ import type {
   TransitionStates,
 } from "./transition";
 import { IDLE_TRANSITION, IDLE_FETCHER } from "./transition";
-
-export type {
-  FormProps,
-  SubmitFunction,
-  SubmitOptions,
-} from "react-router-dom";
-export {
-  Form,
-  useFetchers,
-  useMatches,
-  useSubmit,
-  useFormAction,
-} from "react-router-dom";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -173,7 +159,27 @@ export function RemixRouteError({ id }: { id: string }) {
     ErrorBoundary ||= RemixRootDefaultErrorBoundary;
   }
 
-  if (isRouteErrorResponse(error) && CatchBoundary) {
+  // TODO: Temp hack to avoid instanceof check issues
+  function isRouteErrorResponse(thing: unknown) {
+    return (
+      thing != null &&
+      "status" in thing &&
+      "statusText" in thing &&
+      "data" in thing
+    );
+  }
+
+  if (isRouteErrorResponse(error)) {
+    if (error?.error && error.status !== 404) {
+      return (
+        // TODO: Handle error type?
+        <RemixErrorBoundary
+          location={location}
+          component={ErrorBoundary}
+          error={error.error}
+        />
+      );
+    }
     return <RemixCatchBoundary component={CatchBoundary} catch={error} />;
   }
 

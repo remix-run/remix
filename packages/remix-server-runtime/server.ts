@@ -232,13 +232,13 @@ async function handleDocumentRequestRR(
     future: build.future,
   };
 
-  let handleDocumentRequestParameters: Parameters<HandleDocumentRequestFunction> =
-    [request, context.statusCode, headers, entryContext];
-
   let handleDocumentRequestFunction = build.entry.module.default;
   try {
     return await handleDocumentRequestFunction(
-      ...handleDocumentRequestParameters
+      request,
+      context.statusCode,
+      headers,
+      entryContext
     );
   } catch (error) {
     if (serverMode !== ServerMode.Test) {
@@ -257,14 +257,18 @@ async function handleDocumentRequestRR(
     differentiateCatchVersusErrorBoundaries(build, context);
 
     // Update entryContext for the second render pass
-    Object.assign(entryContext, {
+    entryContext = {
+      ...entryContext,
       staticHandlerContext: context,
       serverHandoffString: createServerHandoffString(context),
-    });
+    };
 
     try {
       return await handleDocumentRequestFunction(
-        ...handleDocumentRequestParameters
+        request,
+        context.statusCode,
+        headers,
+        entryContext
       );
     } catch (error: any) {
       return returnLastResortErrorResponse(error, serverMode);
