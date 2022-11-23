@@ -120,7 +120,7 @@ const templateChoices = [
   { name: "Netlify", value: "netlify" },
   { name: "Vercel", value: "vercel" },
   { name: "Cloudflare Pages", value: "cloudflare-pages" },
-  { name: "Cloudflare Workers (CommonJS)", value: "cloudflare-workers" },
+  { name: "Cloudflare Workers (Service Worker)", value: "cloudflare-workers" },
   { name: "Cloudflare Workers (ES Modules)", value: "cloudflare-workers-esm" },
   { name: "Deno", value: "deno" },
 ];
