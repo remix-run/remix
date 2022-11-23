@@ -53,7 +53,7 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
         try {
           let file = getFile(dir, id);
           await fsp.mkdir(path.dirname(file), { recursive: true });
-          await writeFile(file, content, { encoding: "utf-8" });
+          await fsp.writeFile(file, content, { encoding: "utf-8", flag: "wx" });
           return id;
         } catch (error: any) {
           if (error.code !== "EEXIST") throw error;
