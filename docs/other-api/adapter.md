@@ -118,7 +118,7 @@ exports.handler =
       };
 ```
 
-Here's an example with the simplified Cloudflare Workers API (Module Worker / ES Modules syntax; for more information on the difference between Module Workers and Service Workers, [see Cloudflare's docs][cloudflare-module-workers]):
+Here's an example with the simplified Cloudflare Workers API (Module Worker / ES Modules syntax). This syntax supports additional Cloudflare Workers features, such as Durable Objects (you can access these bindings in the Remix context using the `getLoadContext(request, env, ctx)` option on `createEventHandler`). For more information on the difference between Module Workers and Service Workers, [see Cloudflare's docs][cloudflare-module-workers]):
 
 ```ts
 import { createEventHandler } from "@remix-run/cloudflare-workers-esm";
