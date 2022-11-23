@@ -12,6 +12,7 @@ let remixPackages = {
     "architect",
     "cloudflare-pages",
     "cloudflare-workers",
+    "cloudflare-workers-esm",
     "express",
     "netlify",
     "vercel",

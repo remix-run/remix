@@ -26,6 +26,7 @@ export type ServerBuildTarget =
   | "vercel"
   | "cloudflare-pages"
   | "cloudflare-workers"
+  | "cloudflare-workers-esm"
   | "deno";
 
 export type ServerModuleFormat = "esm" | "cjs";
@@ -335,6 +336,7 @@ export async function readConfig(
   switch (appConfig.serverBuildTarget) {
     case "cloudflare-pages":
     case "cloudflare-workers":
+    case "cloudflare-workers-esm":
     case "deno":
       serverModuleFormat = "esm";
       serverPlatform = "neutral";

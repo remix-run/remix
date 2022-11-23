@@ -41,9 +41,11 @@ const createEsbuildConfig = (
     };
   }
 
-  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
-    config.serverBuildTarget ?? ""
-  );
+  let isCloudflareRuntime = [
+    "cloudflare-pages",
+    "cloudflare-workers",
+    "cloudflare-workers-esm",
+  ].includes(config.serverBuildTarget ?? "");
   let isDenoRuntime = config.serverBuildTarget === "deno";
 
   let plugins: esbuild.Plugin[] = [

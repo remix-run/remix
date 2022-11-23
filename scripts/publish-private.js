@@ -43,6 +43,7 @@ async function run() {
     "cloudflare",
     "cloudflare-pages",
     "cloudflare-workers",
+    "cloudflare-workers-esm",
     "deno",
     "node", // publish node before node servers
     "architect",
