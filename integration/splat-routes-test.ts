@@ -87,42 +87,42 @@ test.describe("rendering", () => {
     });
   });
 
-  test("flat exact match", async () => {
+  test.only("flat exact match", async () => {
     let res = await fixture.requestDocument("/flat");
     expect(await res.text()).toMatch(FLAT_$);
   });
 
-  test("flat deep match", async () => {
+  test.only("flat deep match", async () => {
     let res = await fixture.requestDocument("/flat/swig");
     expect(await res.text()).toMatch(FLAT_$);
   });
 
-  test("prioritizes index over root splat", async () => {
+  test.only("prioritizes index over root splat", async () => {
     let res = await fixture.requestDocument("/");
     expect(await res.text()).toMatch(ROOT_INDEX);
   });
 
-  test("matches root splat", async () => {
+  test.only("matches root splat", async () => {
     let res = await fixture.requestDocument("/twisted/sugar");
     expect(await res.text()).toMatch(ROOT_$);
   });
 
-  test("prioritizes index over splat for parent route match", async () => {
+  test.only("prioritizes index over splat for parent route match", async () => {
     let res = await fixture.requestDocument("/nested");
     expect(await res.text()).toMatch(NESTED_INDEX);
   });
 
-  test("nested child", async () => {
+  test.only("nested child", async () => {
     let res = await fixture.requestDocument("/nested/sodalicious");
     expect(await res.text()).toMatch(NESTED_$);
   });
 
-  test("parentless exact match", async () => {
+  test.only("parentless exact match", async () => {
     let res = await fixture.requestDocument("/parentless");
     expect(await res.text()).toMatch(PARENTLESS_$);
   });
 
-  test("parentless deep match", async () => {
+  test.only("parentless deep match", async () => {
     let res = await fixture.requestDocument("/parentless/chip");
     expect(await res.text()).toMatch(PARENTLESS_$);
   });

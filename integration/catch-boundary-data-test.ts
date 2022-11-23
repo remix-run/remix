@@ -158,7 +158,7 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => appFixture.close());
 
-test("renders root boundary with data available", async () => {
+test.only("renders root boundary with data available", async () => {
   let res = await fixture.requestDocument(NO_BOUNDARY_LOADER);
   expect(res.status).toBe(401);
   let html = await res.text();
@@ -176,7 +176,7 @@ test("renders root boundary with data available on transition", async ({
   await page.waitForSelector(`#root-boundary-data:has-text("${ROOT_DATA}")`);
 });
 
-test("renders layout boundary with data available", async () => {
+test.only("renders layout boundary with data available", async () => {
   let res = await fixture.requestDocument(HAS_BOUNDARY_LAYOUT_NESTED_LOADER);
   expect(res.status).toBe(401);
   let html = await res.text();
@@ -200,7 +200,7 @@ test("renders layout boundary with data available on transition", async ({
   );
 });
 
-test("renders self boundary with layout data available", async () => {
+test.only("renders self boundary with layout data available", async () => {
   let res = await fixture.requestDocument(HAS_BOUNDARY_NESTED_LOADER);
   expect(res.status).toBe(401);
   let html = await res.text();

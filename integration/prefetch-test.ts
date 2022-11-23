@@ -85,7 +85,7 @@ test.describe("prefetch=none", () => {
 
   test.afterAll(() => appFixture.close());
 
-  test("does not render prefetch tags during SSR", async ({ page }) => {
+  test.only("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
     expect(await page.locator("#nav link").count()).toBe(0);
@@ -111,7 +111,7 @@ test.describe("prefetch=render", () => {
     await appFixture.close();
   });
 
-  test("does not render prefetch tags during SSR", async ({ page }) => {
+  test.only("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
     expect(await page.locator("#nav link").count()).toBe(0);
@@ -153,7 +153,7 @@ test.describe("prefetch=intent (hover)", () => {
     await appFixture.close();
   });
 
-  test("does not render prefetch tags during SSR", async ({ page }) => {
+  test.only("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
     expect(await page.locator("#nav link").count()).toBe(0);
@@ -224,7 +224,7 @@ test.describe("prefetch=intent (focus)", () => {
     await appFixture.close();
   });
 
-  test("does not render prefetch tags during SSR", async ({ page }) => {
+  test.only("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
     expect(res.status).toBe(200);
     expect(await page.locator("#nav link").count()).toBe(0);

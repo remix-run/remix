@@ -100,18 +100,18 @@ test.beforeAll(async () => {
   });
 });
 
-test("import internal library via alias other than ~", async () => {
+test.only("import internal library via alias other than ~", async () => {
   // test for https://github.com/remix-run/remix/issues/2298
   let response = await fixture.requestDocument("/");
   expect(await response.text()).toMatch("this is a pizza");
 });
 
-test("import internal library via ~ alias", async () => {
+test.only("import internal library via ~ alias", async () => {
   let response = await fixture.requestDocument("/tilde-alias");
   expect(await response.text()).toMatch("this is a pizza");
 });
 
-test("works for mdx files", async () => {
+test.only("works for mdx files", async () => {
   let response = await fixture.requestDocument("/mdx");
   expect(await response.text()).toMatch("this is a pizza");
 });

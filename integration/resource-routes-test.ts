@@ -106,7 +106,7 @@ test.describe("loader in an app", async () => {
     runTests();
   });
 
-  test.describe("without JavaScript", () => {
+  test.describe.only("without JavaScript", () => {
     test.use({ javaScriptEnabled: false });
     runTests();
   });

@@ -458,7 +458,7 @@ test.describe("Forms", () => {
     await appFixture.close();
   });
 
-  test.describe("without JavaScript", () => {
+  test.describe.only("without JavaScript", () => {
     test.use({ javaScriptEnabled: false });
 
     runFormTests();

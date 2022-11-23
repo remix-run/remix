@@ -81,7 +81,7 @@ test.describe("headers export", () => {
     });
   });
 
-  test("can use `action` headers", async () => {
+  test.only("can use `action` headers", async () => {
     let response = await appFixture.postDocument(
       "/action",
       new URLSearchParams()
@@ -89,12 +89,12 @@ test.describe("headers export", () => {
     expect(response.headers.get(ACTION_HKEY)).toBe(ACTION_HVALUE);
   });
 
-  test("can use the loader headers when all routes have loaders", async () => {
+  test.only("can use the loader headers when all routes have loaders", async () => {
     let response = await appFixture.requestDocument("/");
     expect(response.headers.get(ROOT_HEADER_KEY)).toBe(ROOT_HEADER_VALUE);
   });
 
-  test("can use the loader headers when parents don't have loaders", async () => {
+  test.only("can use the loader headers when parents don't have loaders", async () => {
     let HEADER_KEY = "X-Test";
     let HEADER_VALUE = "SUCCESS";
 

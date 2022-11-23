@@ -286,13 +286,13 @@ test.describe("ErrorBoundary", () => {
     await appFixture.close();
   });
 
-  test("invalid request methods", async () => {
+  test.only("invalid request methods", async () => {
     let res = await fixture.requestDocument("/", { method: "OPTIONS" });
     expect(res.status).toBe(405);
     expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
-  test("own boundary, action, document request", async () => {
+  test.only("own boundary, action, document request", async () => {
     let params = new URLSearchParams();
     let res = await fixture.postDocument(HAS_BOUNDARY_ACTION, params);
     expect(res.status).toBe(500);
@@ -319,7 +319,7 @@ test.describe("ErrorBoundary", () => {
     expect(await app.getHtml("main")).toMatch(OWN_BOUNDARY_TEXT);
   });
 
-  test("bubbles to parent in action document requests", async () => {
+  test.only("bubbles to parent in action document requests", async () => {
     let params = new URLSearchParams();
     let res = await fixture.postDocument(NO_BOUNDARY_ACTION, params);
     expect(res.status).toBe(500);
@@ -344,7 +344,7 @@ test.describe("ErrorBoundary", () => {
     expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
-  test("own boundary, loader, document request", async () => {
+  test.only("own boundary, loader, document request", async () => {
     let res = await fixture.requestDocument(HAS_BOUNDARY_LOADER);
     expect(res.status).toBe(500);
     expect(await res.text()).toMatch(OWN_BOUNDARY_TEXT);
@@ -357,7 +357,7 @@ test.describe("ErrorBoundary", () => {
     expect(await app.getHtml("main")).toMatch(OWN_BOUNDARY_TEXT);
   });
 
-  test("bubbles to parent in loader document requests", async () => {
+  test.only("bubbles to parent in loader document requests", async () => {
     let res = await fixture.requestDocument(NO_BOUNDARY_LOADER);
     expect(res.status).toBe(500);
     expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);
@@ -372,7 +372,7 @@ test.describe("ErrorBoundary", () => {
     expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
-  test("ssr rendering errors with no boundary", async () => {
+  test.only("ssr rendering errors with no boundary", async () => {
     let res = await fixture.requestDocument(NO_BOUNDARY_RENDER);
     expect(res.status).toBe(500);
     expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);
@@ -387,7 +387,7 @@ test.describe("ErrorBoundary", () => {
     expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
-  test("ssr rendering errors with boundary", async () => {
+  test.only("ssr rendering errors with boundary", async () => {
     let res = await fixture.requestDocument(HAS_BOUNDARY_RENDER);
     expect(res.status).toBe(500);
     expect(await res.text()).toMatch(OWN_BOUNDARY_TEXT);
@@ -432,7 +432,7 @@ test.describe("ErrorBoundary", () => {
     await page.waitForSelector("#root-boundary");
   });
 
-  test("renders root boundary in document POST without action requests", async () => {
+  test.only("renders root boundary in document POST without action requests", async () => {
     let res = await fixture.requestDocument(NO_BOUNDARY_NO_LOADER_OR_ACTION, {
       method: "post",
     });
@@ -449,7 +449,7 @@ test.describe("ErrorBoundary", () => {
     await page.waitForSelector("#root-boundary");
   });
 
-  test("renders own boundary in document POST without action requests", async () => {
+  test.only("renders own boundary in document POST without action requests", async () => {
     let res = await fixture.requestDocument(HAS_BOUNDARY_NO_LOADER_OR_ACTION, {
       method: "post",
     });
@@ -595,7 +595,7 @@ test.describe("ErrorBoundary", () => {
       expect(await app.getHtml("h1")).toMatch(INTERNAL_ERROR_BOUNDARY_HEADING);
     });
 
-    test("bubbles to internal boundary if loader doesn't return (document requests)", async () => {
+    test.only("bubbles to internal boundary if loader doesn't return (document requests)", async () => {
       let res = await fixture.requestDocument(NO_ROOT_BOUNDARY_LOADER_RETURN);
       expect(res.status).toBe(500);
       expect(await res.text()).toMatch(INTERNAL_ERROR_BOUNDARY_HEADING);
@@ -611,7 +611,7 @@ test.describe("ErrorBoundary", () => {
       expect(await app.getHtml("h1")).toMatch(INTERNAL_ERROR_BOUNDARY_HEADING);
     });
 
-    test("bubbles to internal boundary if action doesn't return (document requests)", async () => {
+    test.only("bubbles to internal boundary if action doesn't return (document requests)", async () => {
       let res = await fixture.requestDocument(NO_ROOT_BOUNDARY_ACTION_RETURN, {
         method: "post",
       });
