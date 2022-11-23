@@ -60,7 +60,14 @@ import type {
   V1_HtmlMetaDescriptor,
   V2_HtmlMetaDescriptor,
 } from "./routeModules";
-import type { Transition, Fetcher } from "./transition";
+import type {
+  Transition,
+  Fetcher,
+  FetcherStates,
+  LoaderSubmission,
+  ActionSubmission,
+  TransitionStates,
+} from "./transition";
 import { IDLE_TRANSITION, IDLE_FETCHER } from "./transition";
 
 function useDataRouterContext() {
@@ -906,9 +913,154 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  * @see https://remix.run/api/remix#usetransition
  */
 export function useTransition(): Transition {
-  // TODO: For SSR we can just return IDLE_TRANSITION for now, we'll handle
-  // this as part of hydration work
-  return IDLE_TRANSITION;
+  let navigation = useNavigation();
+
+  // TODO: Should we populate navigation.formData on <Form method="get"> even
+  // though we've already move the data onto URLSearchParams.
+  // Reason would be to provide a consistent optimistic UI DX regardless of form method
+  // Downside is that it arguably deviates from how the browser would handle it since there would
+  //   be no request body/FormData.  We _do_ strip formData from the Request passed to your loader
+  //   but we could keep it on the navigation object for DX
+
+  let { location, state, formMethod, formAction, formEncType, formData } =
+    navigation;
+
+  if (!location) {
+    return IDLE_TRANSITION;
+  }
+
+  let isActionSubmission =
+    formMethod != null &&
+    ["POST", "PUT", "PATCH", "DELETE"].includes(formMethod.toUpperCase());
+
+  if (
+    state === "submitting" &&
+    formMethod &&
+    formAction &&
+    formEncType &&
+    formData
+  ) {
+    if (isActionSubmission) {
+      // Actively submitting to an action
+      let transition: TransitionStates["SubmittingAction"] = {
+        location,
+        state,
+        submission: {
+          method: formMethod.toUpperCase() as ActionSubmission["method"],
+          action: formAction,
+          encType: formEncType,
+          formData: formData,
+          key: location.key,
+        },
+        type: "actionSubmission",
+      };
+      return transition;
+    } else {
+      // TODO if we don't update the router to keep formData on loader
+      // submissions then we can recreate it here from URLSearchParams
+
+      // Actively "submitting" to a loader
+      let transition: TransitionStates["SubmittingLoader"] = {
+        location,
+        state,
+        submission: {
+          method: formMethod.toUpperCase() as LoaderSubmission["method"],
+          action: formAction,
+          encType: formEncType,
+          // TODO: Recreate from params
+          formData: formData,
+          key: location.key,
+        },
+        type: "loaderSubmission",
+      };
+      return transition;
+    }
+  }
+
+  if (state === "loading") {
+    if (formMethod && formAction && formEncType && formData) {
+      if (formAction === location.pathname + location.search) {
+        // TODO: How would we detect a redirect to the same location from an
+        // action?  Might need local state ion this hook to track the previous
+        // "transition"
+        if (isActionSubmission) {
+          // We're reloading the same location after an action submission
+          let transition: TransitionStates["LoadingAction"] = {
+            location,
+            state,
+            submission: {
+              method: formMethod.toUpperCase() as ActionSubmission["method"],
+              action: formAction,
+              encType: formEncType,
+              formData: formData,
+              key: location.key,
+            },
+            type: "actionReload",
+          };
+          return transition;
+        } else {
+          // I don't think this is possible?  This is just a loader submission
+          // which goes idle -> submitting -> idle?
+          invariant(
+            false,
+            "Encountered an unexpected navigation scenario in useTransition()"
+          );
+        }
+      } else {
+        // Redirecting after a submission
+        if (isActionSubmission) {
+          let transition: TransitionStates["LoadingActionRedirect"] = {
+            location,
+            state,
+            submission: {
+              method: formMethod.toUpperCase() as ActionSubmission["method"],
+              action: formAction,
+              encType: formEncType,
+              formData: formData,
+              key: location.key,
+            },
+            type: "actionRedirect",
+          };
+          return transition;
+        } else {
+          let transition: TransitionStates["LoadingLoaderSubmissionRedirect"] =
+            {
+              location,
+              state,
+              submission: {
+                method: formMethod.toUpperCase() as LoaderSubmission["method"],
+                action: formAction,
+                encType: formEncType,
+                formData: formData,
+                key: location.key,
+              },
+              type: "loaderSubmissionRedirect",
+            };
+          return transition;
+        }
+      }
+    } else {
+      // TODO: How can we detect a fetch action redirect???  Do we need to
+      // check useFetchers?  Or could we somehow look at location key?
+
+      let transition: TransitionStates["LoadingRedirect"] = {
+        location,
+        state,
+        submission: undefined,
+        type: "normalRedirect",
+      };
+      return transition;
+    }
+  }
+
+  // If all else fails, it's a normal load!
+  let transition: TransitionStates["Loading"] = {
+    location,
+    state: "loading",
+    submission: undefined,
+    type: "normalLoad",
+  };
+  return transition;
 }
 
 export type FetcherWithComponents<TData> = Fetcher<TData> & {
@@ -929,15 +1081,170 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
   SerializeFrom<TData>
 > {
   let fetcherRR = useFetcherRR();
-  let { Form, submit, load } = fetcherRR;
 
-  // TODO: For SSR we can just return IDLE_FETCHER for now, we'll handle
-  // this as part of hydration work
+  let {
+    state,
+    formMethod,
+    formAction,
+    formEncType,
+    formData,
+    data,
+    Form,
+    submit,
+    load,
+  } = fetcherRR;
+
+  let isActionSubmission =
+    formMethod != null &&
+    ["POST", "PUT", "PATCH", "DELETE"].includes(formMethod.toUpperCase());
+
+  if (state === "idle") {
+    if (data === undefined) {
+      let fetcher: FetcherStates["Idle"] = IDLE_FETCHER;
+      return {
+        Form,
+        submit,
+        load,
+        ...fetcher,
+      };
+    } else {
+      let fetcher: FetcherStates["Done"] = {
+        state: "idle",
+        type: "done",
+        submission: undefined,
+        data,
+      };
+      return {
+        Form,
+        submit,
+        load,
+        ...fetcher,
+      };
+    }
+  }
+
+  if (
+    state === "submitting" &&
+    formMethod &&
+    formAction &&
+    formEncType &&
+    formData
+  ) {
+    if (isActionSubmission) {
+      // Actively submitting to an action
+      let fetcher: FetcherStates["SubmittingAction"] = {
+        state,
+        type: "actionSubmission",
+        submission: {
+          method: formMethod.toUpperCase() as ActionSubmission["method"],
+          action: formAction,
+          encType: formEncType,
+          formData: formData,
+          // TODO???
+          // This looks like something that's created as a random hash value in
+          // useSubmitImpl in Remix today. we do not have this key in react router
+          // as we flattened submissions down onto the fetcher.  Can we recreate
+          // one here in a stable manner? Or do we need to re-add this key to RR?
+          key: "todo-what-is-this?",
+        },
+        data: undefined,
+      };
+      return {
+        Form,
+        submit,
+        load,
+        ...fetcher,
+      };
+    } else {
+      // Actively "submitting" to a loader
+      let fetcher: FetcherStates["SubmittingLoader"] = {
+        state,
+        type: "loaderSubmission",
+        submission: {
+          method: formMethod.toUpperCase() as LoaderSubmission["method"],
+          action: formAction,
+          encType: formEncType,
+          // TODO: Recreate from params
+          formData: formData,
+          // TODO???
+          key: "todo-what-is-this?",
+        },
+        data: undefined,
+      };
+      return {
+        Form,
+        submit,
+        load,
+        ...fetcher,
+      };
+    }
+  }
+
+  if (state === "loading") {
+    if (
+      formMethod &&
+      formAction &&
+      formEncType &&
+      formData &&
+      isActionSubmission
+    ) {
+      if (data) {
+        // In a loading state but we have data - must be an actionReload
+        let fetcher: FetcherStates["ReloadingAction"] = {
+          state,
+          type: "actionReload",
+          submission: {
+            method: formMethod.toUpperCase() as ActionSubmission["method"],
+            action: formAction,
+            encType: formEncType,
+            formData: formData,
+            // TODO???
+            key: "todo-what-is-this?",
+          },
+          data: undefined,
+        };
+        return {
+          Form,
+          submit,
+          load,
+          ...fetcher,
+        };
+      } else {
+        let fetcher: FetcherStates["LoadingActionRedirect"] = {
+          state,
+          type: "actionRedirect",
+          submission: {
+            method: formMethod.toUpperCase() as ActionSubmission["method"],
+            action: formAction,
+            encType: formEncType,
+            formData: formData,
+            // TODO???
+            key: "todo-what-is-this?",
+          },
+          data: undefined,
+        };
+        return {
+          Form,
+          submit,
+          load,
+          ...fetcher,
+        };
+      }
+    }
+  }
+
+  // If all else fails, it's a normal load!
+  let fetcher: FetcherStates["Loading"] = {
+    state: "loading",
+    type: "normalLoad",
+    submission: undefined,
+    data: undefined,
+  };
   return {
     Form,
     submit,
     load,
-    ...IDLE_FETCHER,
+    ...fetcher,
   };
 }
 
