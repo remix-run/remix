@@ -6,7 +6,7 @@ import type {
   Response as NodeResponse,
 } from "@remix-run/node";
 import {
-  AbortController,
+  AbortController as NodeAbortController,
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
@@ -46,7 +46,7 @@ export function createRequestHandler({
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (req, res) => {
-    let request = createRemixRequest(req);
+    let request = createRemixRequest(req, res);
     let loadContext = getLoadContext?.(req, res);
 
     let response = (await handleRequest(request, loadContext)) as NodeResponse;
@@ -75,21 +75,24 @@ export function createRemixHeaders(
   return headers;
 }
 
-export function createRemixRequest(req: VercelRequest): NodeRequest {
+export function createRemixRequest(
+  req: VercelRequest,
+  res: VercelResponse
+): NodeRequest {
   let host = req.headers["x-forwarded-host"] || req.headers["host"];
   // doesn't seem to be available on their req object!
   let protocol = req.headers["x-forwarded-proto"] || "https";
   let url = new URL(req.url!, `${protocol}://${host}`);
 
-  let controller = new AbortController();
-
-  req.on("close", () => {
-    controller.abort();
-  });
+  // Abort action/loaders once we can no longer write a response
+  let controller = new NodeAbortController();
+  res.on("close", () => controller.abort());
 
   let init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
+    // Cast until reason/throwIfAborted added
+    // https://github.com/mysticatea/abort-controller/issues/36
     signal: controller.signal as NodeRequestInit["signal"],
   };
 

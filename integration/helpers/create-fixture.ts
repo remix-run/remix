@@ -6,6 +6,7 @@ import getPort from "get-port";
 import stripIndent from "strip-indent";
 import { sync as spawnSync } from "cross-spawn";
 import type { JsonObject } from "type-fest";
+import type { ServerMode } from "@remix-run/server-runtime/mode";
 
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
@@ -16,7 +17,7 @@ const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 interface FixtureInit {
   buildStdio?: Writable;
   sourcemap?: boolean;
-  files?: { [filename: string]: string | Buffer };
+  files?: { [filename: string]: string };
   template?: "cf-template" | "deno-template" | "node-template";
   setup?: "node" | "cloudflare";
 }
@@ -39,7 +40,10 @@ export async function createFixture(init: FixtureInit) {
 
   let requestDocument = async (href: string, init?: RequestInit) => {
     let url = new URL(href, "test://test");
-    let request = new Request(url.toString(), init);
+    let request = new Request(url.toString(), {
+      ...init,
+      signal: init?.signal || new AbortController().signal,
+    });
     return handler(request);
   };
 
@@ -48,6 +52,8 @@ export async function createFixture(init: FixtureInit) {
     routeId: string,
     init?: RequestInit
   ) => {
+    init = init || {};
+    init.signal = init.signal || new AbortController().signal;
     let url = new URL(href, "test://test");
     url.searchParams.set("_data", routeId);
     let request = new Request(url.toString(), init);
@@ -84,7 +90,7 @@ export async function createFixture(init: FixtureInit) {
   };
 }
 
-export async function createAppFixture(fixture: Fixture) {
+export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
   let startAppServer = async (): Promise<{
     port: number;
     stop: () => Promise<void>;
@@ -93,9 +99,13 @@ export async function createAppFixture(fixture: Fixture) {
       let port = await getPort();
       let app = express();
       app.use(express.static(path.join(fixture.projectDir, "public")));
+
       app.all(
         "*",
-        createExpressHandler({ build: fixture.build, mode: "production" })
+        createExpressHandler({
+          build: fixture.build,
+          mode: mode || "production",
+        })
       );
 
       let server = app.listen(port);
@@ -133,6 +143,7 @@ export async function createAppFixture(fixture: Fixture) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
 export async function createFixtureProject(
   init: FixtureInit = {}
 ): Promise<string> {
@@ -148,6 +159,7 @@ export async function createFixtureProject(
     path.join(projectDir, "node_modules"),
     { overwrite: true }
   );
+
   if (init.setup) {
     let setupSpawn = spawnSync(
       "node",
@@ -206,11 +218,13 @@ async function writeTestFiles(init: FixtureInit, dir: string) {
       let filePath = path.join(dir, filename);
       await fse.ensureDir(path.dirname(filePath));
       let file = init.files![filename];
-      if (typeof file === "string") {
-        await fse.writeFile(filePath, stripIndent(file));
-      } else {
-        await fse.writeFile(filePath, file);
+      // if we have a jsconfig we don't want the tsconfig to exist
+      if (filename.endsWith("jsconfig.json")) {
+        let parsed = path.parse(filePath);
+        await fse.remove(path.join(parsed.dir, "tsconfig.json"));
       }
+
+      await fse.writeFile(filePath, stripIndent(file));
     })
   );
 }

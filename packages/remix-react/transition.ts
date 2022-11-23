@@ -97,9 +97,12 @@ export interface TransitionManagerInit {
   error?: Error;
   catchBoundaryId?: null | string;
   errorBoundaryId?: null | string;
-  onChange: (state: TransitionManagerState) => void;
   onRedirect: (to: string, state?: any) => void;
 }
+
+export type TransitionManagerSubscriber = (
+  state: TransitionManagerState
+) => void;
 
 export interface Submission {
   action: string;
@@ -408,6 +411,12 @@ export const IDLE_FETCHER: FetcherStates["Idle"] = {
   data: undefined,
   submission: undefined,
 };
+
+const isBrowser =
+  typeof window !== "undefined" &&
+  typeof window.document !== "undefined" &&
+  typeof window.document.createElement !== "undefined";
+const isServer = !isBrowser;
 //#endregion
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -422,6 +431,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
   let navigationLoadId = -1;
   let fetchReloadIds = new Map<string, number>();
   let fetchRedirectIds = new Set<string>();
+  let subscribers = new Set<TransitionManagerSubscriber>();
 
   let matches = matchClientRoutes(routes, init.location);
 
@@ -462,7 +472,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     }
 
     state = Object.assign({}, state, updates);
-    init.onChange(state);
+
+    for (let subscriber of subscribers.values()) {
+      subscriber(state);
+    }
   }
 
   function getState(): TransitionManagerState {
@@ -560,6 +573,14 @@ export function createTransitionManager(init: TransitionManagerInit) {
       }
 
       case "fetcher": {
+        if (isServer) {
+          throw new Error(
+            "a fetcher was called during the server render, but it shouldn't be. " +
+              "You are likely calling useFetcher.load() or useFetcher.submit() in " +
+              "the body of your component. Try moving it to a useEffect or a callback."
+          );
+        }
+
         let { key, submission, href } = event;
         console.debug(
           `[transition] fetcher send() - ${event.submission?.method} ${href} (key: ${key})`
@@ -569,7 +590,7 @@ export function createTransitionManager(init: TransitionManagerInit) {
         invariant(matches, "No matches found");
         if (fetchControllers.has(key)) abortFetcher(key);
 
-        let match = getFetcherRequestMatch(
+        let match = getRequestMatch(
           new URL(href, window.location.href),
           matches
         );
@@ -623,17 +644,28 @@ export function createTransitionManager(init: TransitionManagerInit) {
     return false;
   }
 
-  function getFetcherRequestMatch(
-    url: URL,
-    matches: RouteMatch<ClientRoute>[]
-  ) {
+  // Return the correct single match for a route (used for submission
+  // navigations and  and fetchers)
+  // - ?index should try to match the leaf index route
+  // - otherwise it should match the deepest "path contributing" match, which
+  //   ignores index and pathless routes
+  function getRequestMatch(url: URL, matches: ClientMatch[]) {
     let match = matches.slice(-1)[0];
 
-    if (!isIndexRequestUrl(url) && match.route.index) {
-      return matches.slice(-2)[0];
+    if (isIndexRequestUrl(url) && match.route.index) {
+      return match;
     }
 
-    return match;
+    return getPathContributingMatches(matches).slice(-1)[0];
+  }
+
+  // Filter index and pathless routes when looking for submission targets
+  function getPathContributingMatches(matches: ClientMatch[]) {
+    return matches.filter(
+      (match, index) =>
+        index === 0 ||
+        (!match.route.index && match.route.path && match.route.path.length > 0)
+    );
   }
 
   async function handleActionFetchSubmission(
@@ -904,13 +936,6 @@ export function createTransitionManager(init: TransitionManagerInit) {
     key: string,
     match: ClientMatch
   ) {
-    if (typeof AbortController === "undefined") {
-      throw new Error(
-        "handleLoaderFetch was called during the server render, but it shouldn't be. " +
-          "You are likely calling useFetcher.load() in the body of your component. " +
-          "Try moving it to a useEffect or a callback."
-      );
-    }
     let currentFetcher = state.fetchers.get(key);
 
     let fetcher: FetcherStates["Loading"] = {
@@ -1057,14 +1082,10 @@ export function createTransitionManager(init: TransitionManagerInit) {
     // to run on layout/index routes.  We do not want to mutate the eventual
     // matches used for revalidation
     let actionMatches = matches;
-    if (
-      !isIndexRequestUrl(createUrl(submission.action)) &&
-      actionMatches[matches.length - 1].route.index
-    ) {
-      actionMatches = actionMatches.slice(0, -1);
-    }
-
-    let leafMatch = actionMatches.slice(-1)[0];
+    let leafMatch = getRequestMatch(
+      createUrl(submission.action),
+      actionMatches
+    );
     let result = await callAction(submission, leafMatch, controller.signal);
 
     if (controller.signal.aborted) {
@@ -1382,7 +1403,15 @@ export function createTransitionManager(init: TransitionManagerInit) {
     markFetchersDone(doneKeys);
   }
 
+  function subscribe(subscriber: TransitionManagerSubscriber) {
+    subscribers.add(subscriber);
+    return () => {
+      subscribers.delete(subscriber);
+    };
+  }
+
   return {
+    subscribe,
     send,
     getState,
     getFetcher,

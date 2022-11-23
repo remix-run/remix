@@ -1,3 +1,11 @@
+// TODO: RRR - Change import to @remix-run/router
+import type {
+  AgnosticDataRouteObject,
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+} from "./router";
+import type { AppLoadContext } from "./data";
+import { callRouteAction, callRouteLoader } from "./data";
 import type { ServerRouteModule } from "./routeModules";
 
 export interface RouteManifest<Route> {
@@ -40,4 +48,62 @@ export function createRoutes(
       ...route,
       children: createRoutes(manifest, id),
     }));
+}
+
+// Convert the Remix ServerManifest into DataRouteObject's for use with
+// createStaticHandler
+export function createStaticHandlerDataRoutes(
+  manifest: ServerRouteManifest,
+  loadContext: AppLoadContext,
+  parentId?: string
+): AgnosticDataRouteObject[] {
+  return Object.values(manifest)
+    .filter((route) => route.parentId === parentId)
+    .map((route) => {
+      let commonRoute = {
+        // Always include root due to default boundaries
+        hasErrorBoundary:
+          route.id === "root" ||
+          route.module.CatchBoundary != null ||
+          route.module.ErrorBoundary != null,
+        id: route.id,
+        path: route.path,
+        loader: route.module.loader
+          ? (args: LoaderFunctionArgs) =>
+              callRouteLoader({
+                ...args,
+                routeId: route.id,
+                loader: route.module.loader,
+                loadContext,
+              })
+          : undefined,
+        action: route.module.action
+          ? (args: ActionFunctionArgs) =>
+              callRouteAction({
+                ...args,
+                routeId: route.id,
+                action: route.module.action,
+                loadContext,
+              })
+          : undefined,
+        handle: route.module.handle,
+        // TODO: RRR - Implement!
+        shouldRevalidate: () => true,
+      };
+
+      return route.index
+        ? {
+            index: true,
+            ...commonRoute,
+          }
+        : {
+            caseSensitive: route.caseSensitive,
+            children: createStaticHandlerDataRoutes(
+              manifest,
+              loadContext,
+              route.id
+            ),
+            ...commonRoute,
+          };
+    });
 }

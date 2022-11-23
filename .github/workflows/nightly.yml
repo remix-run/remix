@@ -22,7 +22,7 @@ jobs:
       NEXT_VERSION: ${{ steps.version.outputs.NEXT_VERSION }}
     steps:
       - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
+        uses: styfle/cancel-workflow-action@0.11.0
 
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
@@ -49,20 +49,18 @@ jobs:
           SHORT_SHA=${SHA::7}
 
           # get latest nightly tag
-          LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-taggerdate | head -n 1)
+          LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-committerdate | head -n 1)
 
-          # check if last commit to dev starts would be the nightly tag we're about to create (minus the date)
-          # if it is, we'll skip the nightly creation
-          # if not, we'll create a new nightly tag
-          if [[ ${LATEST_NIGHTLY_TAG} == v0.0.0-nightly-${SHORT_SHA}-* ]]; then
-            echo "🛑 Latest nightly tag is the same as the latest commit sha, skipping nightly release"
-          else
+          CHANGES=$(git diff $LATEST_NIGHTLY_TAG..dev -- ./packages/ -- ':!packages/**/package.json')
+
+          # check if there are changes to ./packages
+          if [[ -n $(echo $CHANGES | xargs) ]]; then
             git config --local user.email "hello@remix.run"
             git config --local user.name "Remix Run Bot"
 
             DATE=$(date '+%Y%m%d')
             NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}-${DATE}
-            echo ::set-output name=NEXT_VERSION::${NEXT_VERSION}
+            echo "NEXT_VERSION=${NEXT_VERSION}" >> $GITHUB_OUTPUT
 
             git checkout -b nightly/${NEXT_VERSION}
 
@@ -75,6 +73,8 @@ jobs:
             fi
 
             yarn run version ${NEXT_VERSION} --skip-prompt
+          else
+            echo "🛑 no changes since last nightly, skipping..."
           fi
 
       - name: 🏗 Build
@@ -102,6 +102,7 @@ jobs:
     uses: remix-run/remix/.github/workflows/release-comments.yml@main
     with:
       ref: "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}"
+      packageVersionToFollow: "remix"
 
   deployments:
     needs: [nightly]
