@@ -4,7 +4,7 @@
   "compilerOptions": {
     "lib": ["ES2019"],
     "target": "ES2019",
-    "types": ["@cloudflare/workers-types"],
+    "types": ["@types/node", "@cloudflare/workers-types"],
     "composite": true,
 
     "moduleResolution": "node",

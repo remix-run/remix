@@ -1,6 +1,3 @@
-// Needed because the @cloudflare/workers-types do not include the `process` global
-/// <reference types="@types/node" />
-
 import type { Options as KvAssetHandlerOptions } from "@cloudflare/kv-asset-handler";
 import {
   getAssetFromKV,
