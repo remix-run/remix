@@ -96,9 +96,14 @@ export function serverBareModulesPlugin(
           // Always bundle everything for cloudflare.
           case "cloudflare-pages":
           case "cloudflare-workers":
-          case "cloudflare-workers-esm":
           case "deno":
             return undefined;
+          case "cloudflare-workers-esm": {
+            // If we're using Workers Modules (ESM), bundle everything except the special asset manifest import
+            if (path !== "__STATIC_CONTENT_MANIFEST") {
+              return undefined;
+            }
+          }
         }
 
         for (let pattern of remixConfig.serverDependenciesToBundle) {
