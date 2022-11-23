@@ -33,7 +33,7 @@ export function createRequestHandler({
   mode?: string;
   getLoadContext?: GetLoadContextFunction;
 }): RequestHandler {
-  let remixHandler = createRemixRequestHandler(build, mode);
+  let remixHandler = createRemixRequestHandler({ build, mode });
 
   let assetPath = build.assets.url.split("/").slice(0, -1).join("/");
 
