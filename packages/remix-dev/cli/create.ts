@@ -574,6 +574,7 @@ function isRemixTemplate(input: string) {
     "arc",
     "cloudflare-pages",
     "cloudflare-workers",
+    "cloudflare-workers-esm",
     "deno",
     "express",
     "fly",
