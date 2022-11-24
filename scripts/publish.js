@@ -56,6 +56,7 @@ async function run() {
     "netlify",
     "react",
     "serve",
+    "css-bundle",
   ]) {
     publish(path.join(buildDir, "@remix-run", name), tag);
   }

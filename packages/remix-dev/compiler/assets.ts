@@ -31,12 +31,31 @@ export interface AssetsManifest {
       hasErrorBoundary: boolean;
     };
   };
+  cssBundleHref?: string;
 }
 
-export async function createAssetsManifest(
-  config: RemixConfig,
-  metafile: esbuild.Metafile
-): Promise<AssetsManifest> {
+export async function createAssetsManifest({
+  config,
+  metafile,
+  cssMetafile,
+}: {
+  config: RemixConfig;
+  metafile: esbuild.Metafile;
+  cssMetafile: esbuild.Metafile;
+}): Promise<AssetsManifest> {
+  let cssBundlePathPrefix = path.join(
+    config.relativeAssetsBuildDirectory,
+    "css-bundle"
+  );
+
+  let cssBundleHref = Object.keys(cssMetafile.outputs).find(
+    (output) =>
+      output.startsWith(cssBundlePathPrefix) && output.endsWith(".css")
+  );
+  if (cssBundleHref) {
+    cssBundleHref = resolveUrl(cssBundleHref);
+  }
+
   function resolveUrl(outputPath: string): string {
     return createUrl(
       config.publicPath,
@@ -109,7 +128,7 @@ export async function createAssetsManifest(
   optimizeRoutes(routes, entry.imports);
   let version = getHash(JSON.stringify({ entry, routes })).slice(0, 8);
 
-  return { version, entry, routes };
+  return { version, entry, routes, cssBundleHref };
 }
 
 type ImportsCache = { [routeId: string]: string[] };

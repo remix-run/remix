@@ -8,6 +8,7 @@
     { "path": "packages/remix-cloudflare" },
     { "path": "packages/remix-cloudflare-pages" },
     { "path": "packages/remix-cloudflare-workers" },
+    { "path": "packages/remix-css-bundle" },
     { "path": "packages/remix-dev" },
     { "path": "packages/remix-express" },
     { "path": "packages/remix-netlify" },

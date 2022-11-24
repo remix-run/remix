@@ -8,6 +8,7 @@ import { type RemixConfig } from "../config";
 import { type AssetsManifest } from "./assets";
 import { loaders } from "./loaders";
 import { type CompileOptions } from "./options";
+import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
 import { cssFilePlugin } from "./plugins/cssFilePlugin";
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
@@ -48,6 +49,7 @@ const createEsbuildConfig = (
   let isDenoRuntime = config.serverBuildTarget === "deno";
 
   let plugins: esbuild.Plugin[] = [
+    cssModulesPlugin(options),
     cssFilePlugin(options),
     urlImportsPlugin(),
     mdxPlugin(config),

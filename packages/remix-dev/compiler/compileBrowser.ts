@@ -10,12 +10,15 @@ import { getAppDependencies } from "./dependencies";
 import { loaders } from "./loaders";
 import { type CompileOptions } from "./options";
 import { browserRouteModulesPlugin } from "./plugins/browserRouteModulesPlugin";
+import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
 import { cssFilePlugin } from "./plugins/cssFilePlugin";
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
 import { type WriteChannel } from "./utils/channel";
 import { writeFileSafe } from "./utils/fs";
+import { cssBuildVirtualModule } from "./virtualModules";
+import { cssEntryModulePlugin } from "./plugins/cssEntryModulePlugin";
 
 export type BrowserCompiler = {
   // produce ./public/build/
@@ -57,20 +60,31 @@ const writeAssetsManifest = async (
 };
 
 const createEsbuildConfig = (
+  build: "app" | "css",
   config: RemixConfig,
   options: CompileOptions
 ): esbuild.BuildOptions | esbuild.BuildIncremental => {
-  let entryPoints: esbuild.BuildOptions["entryPoints"] = {
-    "entry.client": path.resolve(config.appDirectory, config.entryClientFile),
-  };
-  for (let id of Object.keys(config.routes)) {
-    // All route entry points are virtual modules that will be loaded by the
-    // browserEntryPointsPlugin. This allows us to tree-shake server-only code
-    // that we don't want to run in the browser (i.e. action & loader).
-    entryPoints[id] = config.routes[id].file + "?browser";
+  let entryPoints: esbuild.BuildOptions["entryPoints"] = {};
+  if (build === "css") {
+    entryPoints = {
+      "css-bundle": cssBuildVirtualModule.id,
+    };
+  } else {
+    entryPoints = {
+      "entry.client": path.resolve(config.appDirectory, config.entryClientFile),
+    };
+
+    for (let id of Object.keys(config.routes)) {
+      // All route entry points are virtual modules that will be loaded by the
+      // browserEntryPointsPlugin. This allows us to tree-shake server-only code
+      // that we don't want to run in the browser (i.e. action & loader).
+      entryPoints[id] = config.routes[id].file + "?browser";
+    }
   }
 
   let plugins = [
+    cssModulesPlugin(options),
+    cssEntryModulePlugin(config),
     cssFilePlugin(options),
     urlImportsPlugin(),
     mdxPlugin(config),
@@ -89,7 +103,7 @@ const createEsbuildConfig = (
     loader: loaders,
     bundle: true,
     logLevel: "silent",
-    splitting: true,
+    splitting: build !== "css",
     sourcemap: options.sourcemap,
     // As pointed out by https://github.com/evanw/esbuild/issues/2440, when tsconfig is set to
     // `undefined`, esbuild will keep looking for a tsconfig.json recursively up. This unwanted
@@ -118,26 +132,47 @@ export const createBrowserCompiler = (
   remixConfig: RemixConfig,
   options: CompileOptions
 ): BrowserCompiler => {
-  let compiler: esbuild.BuildIncremental;
-  let esbuildConfig = createEsbuildConfig(remixConfig, options);
+  let appCompiler: esbuild.BuildIncremental;
+  let cssCompiler: esbuild.BuildIncremental;
+
+  let appEsbuildConfig = createEsbuildConfig("app", remixConfig, options);
+  let cssEsbuildConfig = createEsbuildConfig("css", remixConfig, options);
+
   let compile = async (manifestChannel: WriteChannel<AssetsManifest>) => {
-    let metafile: esbuild.Metafile;
-    if (compiler === undefined) {
-      compiler = await esbuild.build({
-        ...esbuildConfig,
-        metafile: true,
-        incremental: true,
-      });
-      metafile = compiler.metafile!;
-    } else {
-      metafile = (await compiler.rebuild()).metafile!;
-    }
-    let manifest = await createAssetsManifest(remixConfig, metafile);
+    let appBuildResult = !appCompiler
+      ? esbuild.build({
+          ...appEsbuildConfig,
+          metafile: true,
+          incremental: true,
+        })
+      : appCompiler.rebuild();
+
+    let cssBuildResult = !cssCompiler
+      ? esbuild.build({
+          ...cssEsbuildConfig,
+          metafile: true,
+          incremental: true,
+        })
+      : cssCompiler.rebuild();
+
+    [appCompiler, cssCompiler] = await Promise.all([
+      appBuildResult,
+      cssBuildResult,
+    ]);
+
+    let manifest = await createAssetsManifest({
+      config: remixConfig,
+      metafile: appCompiler.metafile!,
+      cssMetafile: cssCompiler.metafile!,
+    });
     manifestChannel.write(manifest);
     await writeAssetsManifest(remixConfig, manifest);
   };
   return {
     compile,
-    dispose: () => compiler?.rebuild.dispose(),
+    dispose: () => {
+      appCompiler?.rebuild.dispose();
+      cssCompiler?.rebuild.dispose();
+    },
   };
 };

@@ -1,0 +1,23 @@
+{
+  "name": "@remix-run/css-bundle",
+  "description": "Entrypoint for the CSS bundle created by Remix",
+  "version": "1.7.5",
+  "license": "MIT",
+  "main": "./server.js",
+  "module": "./esm/server.js",
+  "browser": {
+    "./server.js": "./browser.js",
+    "./esm/server.js": "./esm/browser.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-css-bundle"
+  },
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
+  "dependencies": {
+    "@remix-run/dev": "1.7.6"
+  }
+}
