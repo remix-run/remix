@@ -1,4 +1,5 @@
 import * as path from "path";
+import * as fs from "fs/promises";
 import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
@@ -135,44 +136,79 @@ export const createBrowserCompiler = (
   let appCompiler: esbuild.BuildIncremental;
   let cssCompiler: esbuild.BuildIncremental;
 
-  let appEsbuildConfig = createEsbuildConfig("app", remixConfig, options);
-  let cssEsbuildConfig = createEsbuildConfig("css", remixConfig, options);
+  let cssBundlePathPrefix = path.join(
+    remixConfig.assetsBuildDirectory,
+    "css-bundle"
+  );
 
   let compile = async (manifestChannel: WriteChannel<AssetsManifest>) => {
-    let appBuildResult = !appCompiler
+    let appBuildPromise = !appCompiler
       ? esbuild.build({
-          ...appEsbuildConfig,
+          ...createEsbuildConfig("app", remixConfig, options),
           metafile: true,
           incremental: true,
         })
       : appCompiler.rebuild();
 
-    let cssBuildResult = !cssCompiler
-      ? esbuild.build({
-          ...cssEsbuildConfig,
-          metafile: true,
-          incremental: true,
-        })
-      : cssCompiler.rebuild();
+    let cssBuildPromise = (
+      !cssCompiler
+        ? esbuild.build({
+            ...createEsbuildConfig("css", remixConfig, options),
+            metafile: true,
+            write: false,
+            incremental: true,
+          })
+        : cssCompiler.rebuild()
+    ).then(async (compiler) => {
+      let cssBundlePath: string | undefined;
+      let outputFiles = compiler.outputFiles || [];
 
-    [appCompiler, cssCompiler] = await Promise.all([
-      appBuildResult,
-      cssBuildResult,
+      await Promise.all(
+        outputFiles.map((outputFile) => {
+          let outputPath = outputFile.path;
+
+          if (outputPath.startsWith(cssBundlePathPrefix)) {
+            if (outputPath.endsWith(".css")) {
+              cssBundlePath = outputPath;
+              return fs.writeFile(outputPath, outputFile.contents);
+            }
+
+            if (outputPath.endsWith(".css.map")) {
+              return fs.writeFile(outputPath, outputFile.contents);
+            }
+          }
+
+          return null;
+        })
+      );
+
+      return {
+        compiler,
+        cssBundlePath,
+      };
+    });
+
+    let [appBuildResult, cssBuildResult] = await Promise.all([
+      appBuildPromise,
+      cssBuildPromise,
     ]);
+
+    appCompiler = appBuildResult;
+
+    // The types aren't great when combining write: false and incremental: true
+    // so we're asserting that it's an incremental build
+    cssCompiler = cssBuildResult.compiler as esbuild.BuildIncremental;
 
     let manifest = await createAssetsManifest({
       config: remixConfig,
       metafile: appCompiler.metafile!,
-      cssMetafile: cssCompiler.metafile!,
+      cssBundlePath: cssBuildResult.cssBundlePath,
     });
     manifestChannel.write(manifest);
     await writeAssetsManifest(remixConfig, manifest);
   };
   return {
     compile,
-    dispose: () => {
-      appCompiler?.rebuild.dispose();
-      cssCompiler?.rebuild.dispose();
-    },
+    dispose: () => appCompiler?.rebuild.dispose(),
   };
 };

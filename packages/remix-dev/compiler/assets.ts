@@ -37,25 +37,12 @@ export interface AssetsManifest {
 export async function createAssetsManifest({
   config,
   metafile,
-  cssMetafile,
+  cssBundlePath,
 }: {
   config: RemixConfig;
   metafile: esbuild.Metafile;
-  cssMetafile: esbuild.Metafile;
+  cssBundlePath?: string;
 }): Promise<AssetsManifest> {
-  let cssBundlePathPrefix = path.join(
-    config.relativeAssetsBuildDirectory,
-    "css-bundle"
-  );
-
-  let cssBundleHref = Object.keys(cssMetafile.outputs).find(
-    (output) =>
-      output.startsWith(cssBundlePathPrefix) && output.endsWith(".css")
-  );
-  if (cssBundleHref) {
-    cssBundleHref = resolveUrl(cssBundleHref);
-  }
-
   function resolveUrl(outputPath: string): string {
     return createUrl(
       config.publicPath,
@@ -127,6 +114,8 @@ export async function createAssetsManifest({
 
   optimizeRoutes(routes, entry.imports);
   let version = getHash(JSON.stringify({ entry, routes })).slice(0, 8);
+
+  let cssBundleHref = cssBundlePath ? resolveUrl(cssBundlePath) : undefined;
 
   return { version, entry, routes, cssBundleHref };
 }
