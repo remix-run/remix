@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/css-bundle",
   "description": "Entrypoint for the CSS bundle created by Remix",
-  "version": "1.7.5",
+  "version": "1.7.6",
   "license": "MIT",
   "main": "./server.js",
   "module": "./esm/server.js",
