@@ -3,8 +3,8 @@ import * as fs from "fs/promises";
 import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
-import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
 
+import { type WriteChannel } from "../channel";
 import { type RemixConfig } from "../config";
 import { createAssetsManifest, type AssetsManifest } from "./assets";
 import { getAppDependencies } from "./dependencies";
@@ -16,7 +16,6 @@ import { cssFilePlugin } from "./plugins/cssFilePlugin";
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
-import { type WriteChannel } from "./utils/channel";
 import { writeFileSafe } from "./utils/fs";
 import { cssBuildVirtualModule } from "./virtualModules";
 import { cssEntryModulePlugin } from "./plugins/cssEntryModulePlugin";
@@ -95,7 +94,6 @@ const createEsbuildConfig = (
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
-    yarnPnpPlugin(),
   ];
 
   return {
