@@ -159,6 +159,8 @@ const prepareBuild = async (build, options) => {
   const buildRoot = getRootDir(build);
   const log = getLogger(build);
   const relative = (to) => getRelativePath(build, to);
+  // CHANGE: Support optionally disabling CSS file output
+  const emitCss = options.emitCss ?? true;
 
   build.context = {
     buildId,
@@ -167,6 +169,8 @@ const prepareBuild = async (build, options) => {
     packageVersion,
     log,
     relative,
+    // CHANGE: Added the emitCss option to the build context object
+    emitCss,
   };
   build.context.cache = new BuildCache(build);
 
@@ -277,6 +281,11 @@ const onLoadModulesCss = async (build, options, args) => {
  * @returns {Promise<import('esbuild').OnResolveResult>}
  */
 const onResolveBuiltModulesCss = async (args, build) => {
+  // CHANGE: Bail out of resolving built CSS file if emitCss is false
+  if (!build.context.emitCss) {
+    return;
+  }
+
   const { path: p, pluginData = {} } = args;
   const { relativePathToBuildRoot } = pluginData;
 
@@ -476,8 +485,11 @@ const onEnd = async (build, options, result) => {
       const container =
         typeof options.inject === "string" ? options.inject : "head";
 
+      // CHANGE: TS says buildId could be undefined since it's no longer available with inject: false
       if (!buildId) {
-        throw new Error("Build ID must be present in order to inject CSS");
+        throw new Error(
+          "Internal error: Build ID must be present in order to inject CSS"
+        );
       }
 
       const injectedCode = buildInjectCode(container, allCss, buildId, options);
