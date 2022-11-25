@@ -1,14 +1,16 @@
 export {};
 
-declare global {
-  interface ProcessEnv {
-    [key: string]: string | undefined;
-    NODE_ENV?: "development" | "production" | "test";
-  }
-  interface Process {
-    env: ProcessEnv;
-  }
+/*
+Remix provides `process.env.NODE_ENV` at compile time.
+Declare types for `process` here so that they are available in Deno.
+*/
 
-  // deno-lint-ignore no-var
-  var process: Process;
+interface ProcessEnv {
+  NODE_ENV: "development" | "production" | "test";
 }
+interface Process {
+  env: ProcessEnv;
+}
+
+// deno-lint-ignore no-unused-vars no-var
+var process: Process;
