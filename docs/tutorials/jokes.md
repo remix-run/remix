@@ -4631,7 +4631,7 @@ Awesome! We're ready to handle errors and it didn't complicate our happy path on
 
 Oh, and don't you love how just like with the `ErrorBoundary`, it's all contextual? So the rest of the app continues to function just as well. Another point for user experience 💪
 
-You know what, while we're adding catch boundaries. Why don't we improve the `app/routes/jokes/$jokeId.tsx` route a bit by allowing users to delete the joke if they own it. If they don't, we can give them a 401 error in the catch boundary.
+You know what, while we're adding catch boundaries. Why don't we improve the `app/routes/jokes/$jokeId.tsx` route a bit by allowing users to delete the joke if they own it. If they don't, we can give them a 403 error in the catch boundary.
 
 One thing to keep in mind with `delete` is that HTML forms only support `method="get"` and `method="post"`. They don't support `method="delete"`. So to make sure our form will work with and without JavaScript, it's a good idea to do something like this:
 
@@ -4708,7 +4708,7 @@ export const action: ActionFunction = async ({
     throw new Response(
       "Pssh, nice try. That's not your joke",
       {
-        status: 401,
+        status: 403,
       }
     );
   }
@@ -4756,7 +4756,7 @@ export function CatchBoundary() {
         </div>
       );
     }
-    case 401: {
+    case 403: {
       return (
         <div className="error-container">
           Sorry, but {params.jokeId} is not your joke.
@@ -4852,7 +4852,7 @@ export const action: ActionFunction = async ({
     throw new Response(
       "Pssh, nice try. That's not your joke",
       {
-        status: 401,
+        status: 403,
       }
     );
   }
@@ -4902,7 +4902,7 @@ export function CatchBoundary() {
         </div>
       );
     }
-    case 401: {
+    case 403: {
       return (
         <div className="error-container">
           Sorry, but {params.jokeId} is not your joke.
