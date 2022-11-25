@@ -2,11 +2,6 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/de
 import type { ServerBuild } from "@remix-run/deno";
 import type { Context } from "@netlify/edge-functions";
 
-// Deno will exist in Deno land and we only need the minimal types for ProcessEnv
-// The types for this for Deno are defined in globals.d.ts in the Netlify template
-// @ts-ignore
-globalThis.process ||= { env: Deno.env.toObject() };
-
 /**
  * A function that returns the value to use as `context` in route `loader` and
  * `action` functions.
