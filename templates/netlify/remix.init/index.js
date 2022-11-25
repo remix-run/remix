@@ -43,25 +43,20 @@ async function copyEdgeTemplateFiles(files, rootDirectory) {
 async function updatePackageJsonForEdge(directory) {
   const packageJson = await PackageJson.load(directory);
   const {
-    dependencies,
-    scripts: { dev: oldDevScript, ...restOfScripts },
+    dependencies: {
+      "@remix-run/netlify": _netlify,
+      "@remix-run/node": _node,
+      ...dependencies
+    },
+    scripts,
     ...restOfPackageJson
   } = packageJson.content;
 
-  // Replaces remix dev since there is no remix dev server for custom servers
-  const dev = "cross-env NODE_ENV=production netlify dev";
-
-  // The start script is not required as the dev script does the same thing
-  delete dependencies["start"];
-
-  delete dependencies["@remix-run/netlify"];
-  delete dependencies["@remix-run/node"];
-  dependencies["@remix-run/netlify-edge"] = "*";
-
   packageJson.update({
-    scripts: { ...restOfScripts, dev },
+    // dev script is the same as the start script for Netlify Edge, "cross-env NODE_ENV=production netlify dev"
+    scripts: { ...scripts, dev: scripts["start"] },
     ...restOfPackageJson,
-    dependencies,
+    dependencies: { ...dependencies, "@remix-run/netlify-edge": "*" },
   });
 
   await packageJson.save();
