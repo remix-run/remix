@@ -7,6 +7,7 @@ module.exports = {
   "react/forbid-foreign-prop-types": [WARN, { allowInPropTypes: true }],
   "react/jsx-key": WARN,
   "react/jsx-no-comment-textnodes": WARN,
+  "react/jsx-no-leaked-render": [WARN, { validStrategies: ["ternary"] }],
   "react/jsx-no-target-blank": WARN,
   "react/jsx-no-undef": ERROR,
   "react/jsx-pascal-case": [WARN, { allowAllCaps: true, ignore: [] }],
