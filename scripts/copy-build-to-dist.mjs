@@ -11,7 +11,7 @@ if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
   let appDir = path.join(ROOT_DIR, process.env.REMIX_LOCAL_BUILD_DIRECTORY);
   try {
     fse.readdirSync(path.join(appDir, "node_modules"));
-  } catch (e) {
+  } catch  {
     console.error(
       "Oops! You pointed `REMIX_LOCAL_BUILD_DIRECTORY` to a directory that " +
         "does not have a `node_modules` folder. Please `npm install` in that " +
@@ -74,7 +74,7 @@ async function copyBuildToDist() {
           });
         })()
       );
-    } catch (e) {}
+    } catch {}
   }
 
   // One-off deep import copies so folks don't need to import from inside of

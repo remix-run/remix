@@ -84,7 +84,7 @@ export async function handleAsset(
       cacheControl,
       ...options,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     if (
       error instanceof MethodNotAllowedError ||
       error instanceof NotFoundError

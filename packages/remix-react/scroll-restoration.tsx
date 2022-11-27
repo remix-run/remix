@@ -47,7 +47,7 @@ export function ScrollRestoration(props: ScriptProps) {
       if (typeof storedY === "number") {
         window.scrollTo(0, storedY);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(error);
       sessionStorage.removeItem(STORAGE_KEY);
     }

@@ -1461,7 +1461,7 @@ async function callLoader(match: ClientMatch, url: URL, signal: AbortSignal) {
     let { params } = match;
     let value = await match.route.loader({ params, url, signal });
     return { match, value };
-  } catch (error) {
+  } catch (error: unknown) {
     return { match, value: error };
   }
 }
@@ -1479,7 +1479,7 @@ async function callAction(
       signal,
     });
     return { match, value };
-  } catch (error) {
+  } catch (error: unknown) {
     return { match, value: error };
   }
 }
