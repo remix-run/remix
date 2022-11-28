@@ -258,6 +258,43 @@ jobs:
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
 
+  netlify_edge_deploy:
+    name: "Netlify Edge Deploy"
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.11.0
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: ./scripts/deployment-test/package.json # no lockfile, key caching off package.json
+
+      # some deployment targets require the latest version of npm
+      # TODO: remove this eventually when the default version we get
+      # is "latest" enough.
+      - name: 📦 Install latest version of npm
+        run: npm install -g npm@latest
+        working-directory: ./scripts/deployment-test
+
+      - name: 📥 Install deployment-test deps
+        run: npm install
+        working-directory: ./scripts/deployment-test
+
+      - name: 🚀 Deploy to Netlify
+        run: node ./netlify.mjs
+        working-directory: ./scripts/deployment-test
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
+          # required so we can skip the prompt in remix.init
+          NETLIFY_EDGE_CI: 1
+
   vercel_deploy:
     name: "Vercel Deploy"
     if: github.repository == 'remix-run/remix'

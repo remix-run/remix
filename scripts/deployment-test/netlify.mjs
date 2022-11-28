@@ -5,6 +5,7 @@ import fse from "fs-extra";
 import { createApp } from "@remix-run/dev";
 import PackageJson from "@npmcli/package-json";
 
+import netlifyRemixInit from "../../templates/netlify/remix.init/index.js";
 import {
   addCypress,
   CYPRESS_CONFIG,
@@ -15,6 +16,8 @@ import {
   runCypress,
   validatePackageVersions,
 } from "./_shared.mjs";
+
+const { NETLIFY_EDGE_CI } = process.env;
 
 let APP_NAME = getAppName("netlify");
 let PROJECT_DIR = getAppDirectory(APP_NAME);
@@ -27,6 +30,12 @@ async function createNewApp() {
     useTypeScript: true,
     projectDir: PROJECT_DIR,
   });
+
+  // In conjunction with NETLIFY_EDGE_CI we explicitly call remix init
+  // to create the edge version of the app
+  if (typeof NETLIFY_EDGE_CI !== "undefined") {
+    await netlifyRemixInit({ rootDirectory: PROJECT_DIR });
+  }
 }
 
 let client = new NetlifyAPI(process.env.NETLIFY_AUTH_TOKEN);
