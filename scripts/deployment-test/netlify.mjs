@@ -33,7 +33,7 @@ async function createNewApp() {
 
   // In conjunction with NETLIFY_EDGE_CI we explicitly call remix init
   // to create the edge version of the app
-  if (typeof NETLIFY_EDGE_CI !== "undefined") {
+  if (process.env.USE_NETLIFY_EDGE) {
     await netlifyRemixInit({ rootDirectory: PROJECT_DIR });
   }
 }
