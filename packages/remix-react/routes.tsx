@@ -119,7 +119,7 @@ export function createClientRoute(
   entryRoute: EntryRoute,
   routeModulesCache: RouteModules,
   Component: RemixRouteComponentType
-): ClientRoute {
+): DataRouteObject {
   return {
     caseSensitive: !!entryRoute.caseSensitive,
     element: <Component id={entryRoute.id} />,
@@ -127,13 +127,13 @@ export function createClientRoute(
     path: entryRoute.path,
     index: entryRoute.index,
     module: entryRoute.module,
-    loader: createLoader(entryRoute, routeModulesCache),
-    action: createAction(entryRoute, routeModulesCache),
+    loader: createLoader(entryRoute, routeModulesCache) as any,
+    action: createAction(entryRoute, routeModulesCache) as any,
     shouldReload: createShouldReload(entryRoute, routeModulesCache),
     ErrorBoundary: entryRoute.hasErrorBoundary,
     CatchBoundary: entryRoute.hasCatchBoundary,
     hasLoader: entryRoute.hasLoader,
-  };
+  } as any;
 }
 
 export function createClientRoutes(
@@ -141,7 +141,7 @@ export function createClientRoutes(
   routeModulesCache: RouteModules,
   Component: RemixRouteComponentType,
   parentId?: string
-): ClientRoute[] {
+): DataRouteObject[] {
   return Object.keys(routeManifest)
     .filter((key) => routeManifest[key].parentId === parentId)
     .map((key) => {

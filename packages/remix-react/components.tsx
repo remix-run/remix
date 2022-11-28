@@ -7,6 +7,7 @@ import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
   AgnosticDataRouteObject,
+  ErrorResponse,
 } from "@remix-run/router";
 import type {
   LinkProps,
@@ -159,17 +160,23 @@ export function RemixRouteError({ id }: { id: string }) {
   }
 
   if (isRouteErrorResponse(error)) {
-    if (error?.error && error.status !== 404) {
+    let tError = error as any;
+    if (tError?.error && tError.status !== 404) {
       return (
         // TODO: Handle error type?
         <RemixErrorBoundary
           location={location}
-          component={ErrorBoundary}
-          error={error.error}
+          component={ErrorBoundary!}
+          error={tError.error}
         />
       );
     }
-    return <RemixCatchBoundary component={CatchBoundary} catch={error} />;
+    return (
+      <RemixCatchBoundary
+        component={CatchBoundary!}
+        catch={error as ErrorResponse}
+      />
+    );
   }
 
   if (!isRouteErrorResponse(error) && ErrorBoundary) {
@@ -178,7 +185,7 @@ export function RemixRouteError({ id }: { id: string }) {
       <RemixErrorBoundary
         location={location}
         component={ErrorBoundary}
-        error={error}
+        error={error as Error}
       />
     );
   }
@@ -700,7 +707,7 @@ function V2Meta() {
 
 export function Meta() {
   let { future } = useRemixContext();
-  return future.v2_meta ? <V2Meta /> : <V1Meta />;
+  return future?.v2_meta ? <V2Meta /> : <V1Meta />;
 }
 
 /**

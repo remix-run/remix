@@ -9,6 +9,7 @@ test.describe("rendering", () => {
   let appFixture: AppFixture;
 
   test.beforeAll(async () => {
+    process.env.NODE_ENV = "development";
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
@@ -57,8 +58,9 @@ test.describe("rendering", () => {
 </div>`);
   });
 
-  test("hydrates", async ({ page }) => {
+  test.only("hydrates", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
+    await app.poke(120);
     await app.goto("/");
     expect(await app.getHtml("#content")).toBe(`<div id="content">
   <h1>Root</h1>
