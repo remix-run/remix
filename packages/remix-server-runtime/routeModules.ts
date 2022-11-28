@@ -1,6 +1,5 @@
-import type { Params } from "@remix-run/router";
-import type { Location } from "history";
 import type { ComponentType } from "react";
+import type { Location, Params } from "react-router-dom";
 
 import type { AppLoadContext, AppData } from "./data";
 import type { LinkDescriptor } from "./links";
