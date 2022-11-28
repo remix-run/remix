@@ -7,7 +7,7 @@ declare module "*.avif" {
   export default asset;
 }
 declare module "*.module.css" {
-  let styles: { [key: string]: string };
+  let styles: { readonly [key: string]: string };
   export default styles;
 }
 declare module "*.css" {
