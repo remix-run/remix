@@ -211,7 +211,7 @@ function magicExportsPlugin({ packageName, version }) {
           .map(
             (symbol) =>
               `/** @deprecated Import \`${symbol}\` from \`${packageName}\` instead. */\n` +
-              `exports.${symbol} = ${symbol};\n`
+              `exports.${symbol} = ${moduleName}.${symbol};\n`
           )
           .join("\n");
       }
