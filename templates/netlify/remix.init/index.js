@@ -11,7 +11,6 @@ const filesToCopy = [
   ["server.js"],
   ["remix.config.js"],
   ["vscode.json", join(".vscode", "settings.json")],
-  ["globals.d.ts"],
 ];
 
 const filesToModify = ["app/entry.server.tsx", "app/root.tsx"];
