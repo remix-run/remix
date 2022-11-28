@@ -24,8 +24,8 @@ async function modifyFilesForEdge(files, rootDirectory) {
 
   await Promise.all(
     contents.map((content, index) => {
-      const newContent = content.replaceAll(
-        "@remix-run/node",
+      const newContent = content.replace(
+        /@remix-run\/node/g,
         "@remix-run/deno"
       );
       return fs.writeFile(filePaths[index], newContent);
