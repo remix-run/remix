@@ -1,5 +1,5 @@
 import React, { useContext } from "react";
-import type { Location } from "react-router-dom";
+import type { ErrorResponse, Location } from "react-router-dom";
 
 import type {
   CatchBoundaryComponent,
@@ -124,9 +124,8 @@ export function useCatch<
 }
 
 type RemixCatchBoundaryProps = React.PropsWithChildren<{
-  location: Location;
   component: CatchBoundaryComponent;
-  catch?: ThrownResponse;
+  catch?: ErrorResponse;
 }>;
 
 export function RemixCatchBoundary({
@@ -135,6 +134,7 @@ export function RemixCatchBoundary({
   children,
 }: RemixCatchBoundaryProps) {
   if (catchVal) {
+    // TODO: Add Status/Data generics to ErrorResponse?
     return (
       <RemixCatchContext.Provider value={catchVal}>
         <Component />

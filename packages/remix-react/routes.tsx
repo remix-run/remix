@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import * as React from "react";
-import type { Params } from "react-router-dom";
+import type { DataRouteObject, Params } from "react-router-dom";
 
 import type { RouteModules, ShouldReloadFunction } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
@@ -11,9 +11,10 @@ import {
   isRedirectResponse,
 } from "./data";
 import type { Submission } from "./transition";
-import { CatchValue, TransitionRedirect } from "./transition";
+import { CatchValue } from "./transition";
 import { prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
+import { RemixRoute, RemixRouteError } from "./components";
 
 export interface RouteManifest<Route> {
   [routeId: string]: Route;
@@ -77,6 +78,42 @@ export interface ClientRoute extends Route {
 }
 
 type RemixRouteComponentType = ComponentType<{ id: string }>;
+
+export function createServerRoutes(
+  manifest: RouteManifest<EntryRoute>,
+  routeModules: RouteModules,
+  parentId?: string
+): DataRouteObject[] {
+  return Object.values(manifest)
+    .filter((route) => route.parentId === parentId)
+    .map((route) => {
+      let baseRoute: Omit<DataRouteObject, "children" | "index"> = {
+        caseSensitive: route.caseSensitive,
+        element: <RemixRoute id={route.id} />,
+        errorElement:
+          route.id === "root" ||
+          routeModules[route.id].ErrorBoundary != null ||
+          routeModules[route.id].CatchBoundary != null ? (
+            <RemixRouteError id={route.id} />
+          ) : undefined,
+        id: route.id,
+        path: route.path,
+        // Note: we don't need loader/action/shouldRevalidate on these routes
+        // since they're for a static render
+        handle: routeModules[route.id].handle,
+      };
+
+      return route.index
+        ? {
+            index: true,
+            ...baseRoute,
+          }
+        : {
+            children: createServerRoutes(manifest, routeModules, route.id),
+            ...baseRoute,
+          };
+    });
+}
 
 export function createClientRoute(
   entryRoute: EntryRoute,
@@ -158,8 +195,10 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
 
         if (result instanceof Error) throw result;
 
+        /* TODO: Handle client side redirects
         let redirect = await checkRedirect(result);
         if (redirect) return redirect;
+        */
 
         if (isCatchResponse(result)) {
           throw new CatchValue(
@@ -202,8 +241,10 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
         throw result;
       }
 
+      /* TODO: Handle client side redirects
       let redirect = await checkRedirect(result);
       if (redirect) return redirect;
+      */
 
       if (isCatchResponse(result)) {
         throw new CatchValue(
@@ -220,28 +261,4 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
   };
 
   return action;
-}
-
-async function checkRedirect(
-  response: Response
-): Promise<null | TransitionRedirect> {
-  if (isRedirectResponse(response)) {
-    let url = new URL(
-      response.headers.get("X-Remix-Redirect")!,
-      window.location.origin
-    );
-
-    if (url.origin !== window.location.origin) {
-      await new Promise(() => {
-        window.location.replace(url.href);
-      });
-    } else {
-      return new TransitionRedirect(
-        url.pathname + url.search + url.hash,
-        response.headers.get("X-Remix-Revalidate") !== null
-      );
-    }
-  }
-
-  return null;
 }
