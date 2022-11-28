@@ -1,6 +1,3 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import type { Action, Location } from "history";
 import type {
   FocusEventHandler,
   FormHTMLAttributes,
@@ -8,11 +5,17 @@ import type {
   TouchEventHandler,
 } from "react";
 import * as React from "react";
-import type { Navigator, Params } from "react-router";
+import type {
+  NavigationType as Action,
+  Location,
+  Navigator,
+  Params,
+} from "react-router-dom";
 import {
   Router,
   Link as RouterLink,
   NavLink as RouterNavLink,
+  createPath,
   useLocation,
   useRoutes,
   useNavigate,
@@ -20,7 +23,6 @@ import {
   useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
-import { createPath } from "history";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
