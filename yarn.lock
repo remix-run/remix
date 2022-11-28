@@ -2257,6 +2257,11 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
+"@remix-run/router@1.0.4-pre.0":
+  version "1.0.4-pre.0"
+  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.0.4-pre.0.tgz#51b84d14d21358bea76da373dae935b19fa2f830"
+  integrity sha512-gKzu5SESxxEwzLTi1J9V5akGwmy6ePkuauZQg5r/tgb/iMryCzkIVwXCMtWnDOMfYUHutPhvdmCrk7YWWw5q8Q==
+
 "@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
   resolved "https://registry.npmjs.org/@remix-run/web-blob/-/web-blob-3.0.4.tgz"
