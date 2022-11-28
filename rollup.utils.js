@@ -206,15 +206,14 @@ function magicExportsPlugin({ packageName, version }) {
           )
           .join("\n");
 
-        let cjsModule = camelCase(packageName.slice("@remix-run/".length));
-        cjsContents += `var ${cjsModule} = require('${packageName}');\n`;
-        for (let symbol of magicExports.values) {
-          cjsContents +=
-            `Object.defineProperty(exports, '${symbol}', {\n` +
-            "  enumerable: true,\n" +
-            `  get: function () { return ${cjsModule}.${symbol}; }\n` +
-            "});\n";
-        }
+        cjsContents += `var ${moduleName} = require('${packageName}');\n`;
+        cjsContents += magicExports.values
+          .map(
+            (symbol) =>
+              `/** @deprecated Import \`${symbol}\` from \`${packageName}\` instead. */\n` +
+              `exports.${symbol} = ${moduleName}.${symbol};\n`
+          )
+          .join("\n");
       }
 
       if (magicExports.types) {
