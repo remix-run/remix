@@ -117,43 +117,54 @@ export function createServerRoutes(
 
 export function createClientRoute(
   entryRoute: EntryRoute,
-  routeModulesCache: RouteModules,
-  Component: RemixRouteComponentType
+  routeModulesCache: RouteModules
 ): DataRouteObject {
+  let loader = createLoader(entryRoute, routeModulesCache);
+  let action = createAction(entryRoute, routeModulesCache);
+  let hasErrorBoundary =
+    entryRoute.id === "root" ||
+    entryRoute.hasErrorBoundary ||
+    entryRoute.hasCatchBoundary;
   return {
     caseSensitive: !!entryRoute.caseSensitive,
-    element: <Component id={entryRoute.id} />,
+    element: <RemixRoute id={entryRoute.id} />,
+    errorElement: hasErrorBoundary ? (
+      <RemixRouteError id={entryRoute.id} />
+    ) : undefined,
     id: entryRoute.id,
     path: entryRoute.path,
     index: entryRoute.index,
-    module: entryRoute.module,
-    loader: createLoader(entryRoute, routeModulesCache) as any,
-    action: createAction(entryRoute, routeModulesCache) as any,
-    shouldReload: createShouldReload(entryRoute, routeModulesCache),
-    ErrorBoundary: entryRoute.hasErrorBoundary,
-    CatchBoundary: entryRoute.hasCatchBoundary,
-    hasLoader: entryRoute.hasLoader,
-  } as any;
+    loader: ({ request, params }) =>
+      loader({
+        url: new URL(request.url),
+        signal: request.signal,
+        submission: undefined,
+        params,
+      }),
+    action: ({ request, params }) =>
+      action({
+        url: new URL(request.url),
+        signal: request.signal,
+        submission: undefined,
+        params,
+      }),
+    // TODO: RRR Implement!
+    shouldRevalidate: undefined,
+  };
 }
 
 export function createClientRoutes(
   routeManifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
-  Component: RemixRouteComponentType,
   parentId?: string
 ): DataRouteObject[] {
   return Object.keys(routeManifest)
     .filter((key) => routeManifest[key].parentId === parentId)
     .map((key) => {
-      let route = createClientRoute(
-        routeManifest[key],
-        routeModulesCache,
-        Component
-      );
+      let route = createClientRoute(routeManifest[key], routeModulesCache);
       let children = createClientRoutes(
         routeManifest,
         routeModulesCache,
-        Component,
         route.id
       );
       if (children.length > 0) route.children = children;
@@ -214,6 +225,7 @@ function createLoader(route: EntryRoute, routeModules: RouteModules) {
       }
     } else {
       await loadRouteModuleWithBlockingLinks(route, routeModules);
+      return null;
     }
   };
 
@@ -257,6 +269,7 @@ function createAction(route: EntryRoute, routeModules: RouteModules) {
       return extractData(result);
     } finally {
       await routeModulePromise;
+      return null;
     }
   };
 

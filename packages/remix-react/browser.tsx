@@ -1,15 +1,19 @@
+import type { HydrationState, Router } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
-import { RemixContext, RemixRoute } from "./components";
-import type { EntryContext } from "./entry";
+import { RemixContext } from "./components";
+import type { EntryContext, FutureConfig } from "./entry";
 import type { RouteModules } from "./routeModules";
 import { createClientRoutes } from "./routes";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
-  var __remixContext: EntryContext;
+  var __remixContext: {
+    state: HydrationState;
+    future: FutureConfig;
+  };
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
 }
@@ -17,18 +21,7 @@ declare global {
 
 export interface RemixBrowserProps {}
 
-const entryContext = window.__remixContext;
-entryContext.manifest = window.__remixManifest;
-entryContext.routeModules = window.__remixRouteModules;
-
-const routes = createClientRoutes(
-  entryContext.manifest.routes,
-  entryContext.routeModules,
-  RemixRoute
-);
-const router = createBrowserRouter(routes, {
-  hydrationData: entryContext.staticHandlerContext,
-});
+let router: Router;
 
 /**
  * The entry point for a Remix app when it is rendered in the browser (in
@@ -36,8 +29,24 @@ const router = createBrowserRouter(routes, {
  * that was received from the server.
  */
 export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
+  if (!router) {
+    let routes = createClientRoutes(
+      window.__remixManifest.routes,
+      window.__remixRouteModules
+    );
+    router = createBrowserRouter(routes, {
+      hydrationData: window.__remixContext.state,
+    });
+  }
+
   return (
-    <RemixContext.Provider value={entryContext}>
+    <RemixContext.Provider
+      value={{
+        manifest: window.__remixManifest,
+        routeModules: window.__remixRouteModules,
+        future: window.__remixContext.future,
+      }}
+    >
       <RouterProvider router={router} fallbackElement={null} />
     </RemixContext.Provider>
   );
