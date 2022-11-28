@@ -1,5 +1,11 @@
 # `@remix-run/eslint-config`
 
+## 1.8.0-pre.2
+
+### Patch Changes
+
+- add JSDoc deprecation to CJS exports ([#4673](https://github.com/remix-run/remix/pull/4673))
+
 ## 1.8.0-pre.1
 
 ## 1.8.0-pre.0

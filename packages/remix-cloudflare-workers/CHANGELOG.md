@@ -1,5 +1,13 @@
 # `@remix-run/cloudflare-workers`
 
+## 1.8.0-pre.2
+
+### Patch Changes
+
+- add JSDoc deprecation to CJS exports ([#4673](https://github.com/remix-run/remix/pull/4673))
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.8.0-pre.2`
+
 ## 1.8.0-pre.1
 
 ### Patch Changes
