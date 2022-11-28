@@ -212,6 +212,9 @@ export const createBrowserCompiler = (
   };
   return {
     compile,
-    dispose: () => appCompiler?.rebuild.dispose(),
+    dispose: () => {
+      appCompiler?.rebuild.dispose();
+      cssCompiler?.rebuild.dispose();
+    },
   };
 };
