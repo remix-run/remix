@@ -4,7 +4,6 @@
 
 ### Patch Changes
 
-- add JSDoc deprecation to CJS exports ([#4673](https://github.com/remix-run/remix/pull/4673))
 - Updated dependencies:
   - `@remix-run/serve@1.8.0-pre.2`
   - `@remix-run/server-runtime@1.8.0-pre.2`
