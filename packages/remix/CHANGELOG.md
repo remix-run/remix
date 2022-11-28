@@ -1,5 +1,7 @@
 # `remix`
 
+## 1.8.0-pre.2
+
 ## 1.8.0-pre.1
 
 ### Patch Changes
