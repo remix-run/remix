@@ -185,7 +185,7 @@ test.describe("CatchBoundary", () => {
 
   test.afterAll(() => appFixture.close());
 
-  test.only("non-matching urls on document requests", async () => {
+  test("non-matching urls on document requests", async () => {
     let res = await fixture.requestDocument(NOT_FOUND_HREF);
     expect(res.status).toBe(404);
     expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);
@@ -198,7 +198,7 @@ test.describe("CatchBoundary", () => {
     await page.waitForSelector("#root-boundary");
   });
 
-  test.only("own boundary, action, document request", async () => {
+  test("own boundary, action, document request", async () => {
     let params = new URLSearchParams();
     let res = await fixture.postDocument(HAS_BOUNDARY_ACTION, params);
     expect(res.status).toBe(401);
@@ -223,7 +223,7 @@ test.describe("CatchBoundary", () => {
     await page.waitForSelector("#action-boundary");
   });
 
-  test.only("bubbles to parent in action document requests", async () => {
+  test("bubbles to parent in action document requests", async () => {
     let params = new URLSearchParams();
     let res = await fixture.postDocument(NO_BOUNDARY_ACTION, params);
     expect(res.status).toBe(401);
@@ -248,7 +248,7 @@ test.describe("CatchBoundary", () => {
     await page.waitForSelector("#root-boundary");
   });
 
-  test.only("own boundary, loader, document request", async () => {
+  test("own boundary, loader, document request", async () => {
     let res = await fixture.requestDocument(HAS_BOUNDARY_LOADER);
     expect(res.status).toBe(401);
     expect(await res.text()).toMatch(OWN_BOUNDARY_TEXT);
@@ -261,7 +261,7 @@ test.describe("CatchBoundary", () => {
     await page.waitForSelector("#boundary-loader");
   });
 
-  test.only("bubbles to parent in loader document requests", async () => {
+  test("bubbles to parent in loader document requests", async () => {
     let res = await fixture.requestDocument(NO_BOUNDARY_LOADER);
     expect(res.status).toBe(401);
     expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);

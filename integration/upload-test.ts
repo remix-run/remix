@@ -237,7 +237,7 @@ test("can catch MaxPartSizeExceededError when file is too big with createMemoryU
   expect(await app.getHtml("#size")).toMatch(">13<");
 });
 
-test.describe.only("without javascript", () => {
+test.describe("without javascript", () => {
   test.use({ javaScriptEnabled: false });
 
   test("can upload a file with createFileUploadHandler", async ({ page }) => {

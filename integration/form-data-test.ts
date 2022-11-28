@@ -24,7 +24,7 @@ test.beforeAll(async () => {
   });
 });
 
-test.only("invalid content-type does not crash server", async () => {
+test("invalid content-type does not crash server", async () => {
   let response = await fixture.requestDocument("/", {
     method: "post",
     headers: { "content-type": "application/json" },
@@ -32,7 +32,7 @@ test.only("invalid content-type does not crash server", async () => {
   expect(await response.text()).toMatch("no pizza");
 });
 
-test.only("invalid urlencoded body does not crash server", async () => {
+test("invalid urlencoded body does not crash server", async () => {
   let response = await fixture.requestDocument("/", {
     method: "post",
     headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -41,7 +41,7 @@ test.only("invalid urlencoded body does not crash server", async () => {
   expect(await response.text()).toMatch("pizza");
 });
 
-test.only("invalid multipart content-type does not crash server", async () => {
+test("invalid multipart content-type does not crash server", async () => {
   let response = await fixture.requestDocument("/", {
     method: "post",
     headers: { "content-type": "multipart/form-data" },
@@ -50,7 +50,7 @@ test.only("invalid multipart content-type does not crash server", async () => {
   expect(await response.text()).toMatch("pizza");
 });
 
-test.only("invalid multipart body does not crash server", async () => {
+test("invalid multipart body does not crash server", async () => {
   let response = await fixture.requestDocument("/", {
     method: "post",
     headers: { "content-type": "multipart/form-data; boundary=abc" },

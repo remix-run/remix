@@ -87,13 +87,13 @@ test.describe("actions", () => {
     expect(logs).toHaveLength(0);
   });
 
-  test.only("is not called on document GET requests", async () => {
+  test("is not called on document GET requests", async () => {
     let res = await fixture.requestDocument("/urlencoded");
     let html = selectHtml(await res.text(), "#text");
     expect(html).toMatch(WAITING_VALUE);
   });
 
-  test.only("is called on document POST requests", async () => {
+  test("is called on document POST requests", async () => {
     let FIELD_VALUE = "cheeseburger";
 
     let params = new URLSearchParams();
@@ -115,7 +115,7 @@ test.describe("actions", () => {
     await page.waitForSelector(`#text:has-text("${SUBMITTED_VALUE}")`);
   });
 
-  test.only("redirects a thrown response on document requests", async () => {
+  test("redirects a thrown response on document requests", async () => {
     let params = new URLSearchParams();
     let res = await fixture.postDocument(`/${THROWS_REDIRECT}`, params);
     expect(res.status).toBe(302);
