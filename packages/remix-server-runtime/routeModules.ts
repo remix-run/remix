@@ -1,5 +1,5 @@
-import type { Location } from "history";
 import type { ComponentType } from "react";
+import type { Location } from "react-router-dom";
 
 import type { AppLoadContext, AppData } from "./data";
 import type { LinkDescriptor } from "./links";
