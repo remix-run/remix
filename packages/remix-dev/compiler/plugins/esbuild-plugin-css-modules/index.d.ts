@@ -86,8 +86,6 @@ declare interface PluginOptions {
     version?: string;
   };
   usePascalCase?: boolean;
-  // CHANGE: Added emitCss since we only want CSS from one of our builds
-  emitCss?: boolean;
 }
 
 declare interface BuildContext {
@@ -100,8 +98,6 @@ declare interface BuildContext {
   log: (...args: any[]) => void;
   relative: (to: string) => `.${string}`;
   cache: BuildCache;
-  // CHANGE: Added emitCss to the build context
-  emitCss: boolean;
 }
 
 declare function CssModulesPlugin(options?: PluginOptions): Plugin;

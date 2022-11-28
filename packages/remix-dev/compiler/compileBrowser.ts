@@ -83,10 +83,7 @@ const createEsbuildConfig = (
   }
 
   let plugins = [
-    cssModulesPlugin({
-      mode: options.mode,
-      emitCss: build === "css",
-    }),
+    cssModulesPlugin(options),
     cssEntryModulePlugin(config),
     cssFilePlugin(options),
     urlImportsPlugin(),

@@ -48,10 +48,7 @@ const createEsbuildConfig = (
   let isDenoRuntime = config.serverBuildTarget === "deno";
 
   let plugins: esbuild.Plugin[] = [
-    cssModulesPlugin({
-      mode: options.mode,
-      emitCss: false,
-    }),
+    cssModulesPlugin(options),
     cssFilePlugin(options),
     urlImportsPlugin(),
     mdxPlugin(config),
@@ -134,6 +131,11 @@ async function writeServerBuildResult(
       contents = contents.replace(new RegExp(pattern), `$1${filename}`);
       await fse.writeFile(file.path, contents);
     } else if (file.path.endsWith(".map")) {
+      // Don't write CSS source maps to server build output
+      if (file.path.endsWith(".css.map")) {
+        break;
+      }
+
       // remove route: prefix from source filenames so breakpoints work
       let contents = Buffer.from(file.contents).toString("utf-8");
       contents = contents.replace(/"route:/gm, '"');
@@ -143,6 +145,13 @@ async function writeServerBuildResult(
         config.assetsBuildDirectory,
         file.path.replace(path.dirname(config.serverBuildPath), "")
       );
+
+      // Don't write CSS bundle from server build to browser assets directory,
+      // especially since the file name doesn't contain a content hash
+      if (assetPath === path.join(config.assetsBuildDirectory, "index.css")) {
+        break;
+      }
+
       await fse.ensureDir(path.dirname(assetPath));
       await fse.writeFile(assetPath, file.contents);
     }
