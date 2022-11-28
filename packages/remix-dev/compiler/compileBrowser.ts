@@ -1,5 +1,5 @@
 import * as path from "path";
-import * as fs from "fs/promises";
+import * as fse from "fs-extra";
 import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
@@ -137,11 +137,6 @@ export const createBrowserCompiler = (
   let appCompiler: esbuild.BuildIncremental;
   let cssCompiler: esbuild.BuildIncremental;
 
-  let cssBundlePathPrefix = path.join(
-    remixConfig.assetsBuildDirectory,
-    "css-bundle"
-  );
-
   let compile = async (manifestChannel: WriteChannel<AssetsManifest>) => {
     let appBuildPromise = !appCompiler
       ? esbuild.build({
@@ -165,17 +160,24 @@ export const createBrowserCompiler = (
       let outputFiles = compiler.outputFiles || [];
 
       await Promise.all(
-        outputFiles.map((outputFile) => {
+        outputFiles.map(async (outputFile) => {
           let outputPath = outputFile.path;
 
-          if (outputPath.startsWith(cssBundlePathPrefix)) {
-            if (outputPath.endsWith(".css")) {
+          // Only write bundled CSS and source map to disk
+          if (
+            path.dirname(outputPath) === remixConfig.assetsBuildDirectory &&
+            path.basename(outputPath).startsWith("css-bundle")
+          ) {
+            let isCssFile = outputPath.endsWith(".css");
+
+            if (isCssFile) {
+              // Grab the CSS bundle path so we can use it to generate the manifest
               cssBundlePath = outputPath;
-              return fs.writeFile(outputPath, outputFile.contents);
             }
 
-            if (outputPath.endsWith(".css.map")) {
-              return fs.writeFile(outputPath, outputFile.contents);
+            if (isCssFile || outputPath.endsWith(".css.map")) {
+              await fse.ensureDir(path.dirname(outputPath));
+              return await fse.writeFile(outputPath, outputFile.contents);
             }
           }
 
