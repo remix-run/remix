@@ -58,9 +58,8 @@ test.describe("rendering", () => {
 </div>`);
   });
 
-  test.only("hydrates", async ({ page }) => {
+  test("hydrates", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.poke(120);
     await app.goto("/");
     expect(await app.getHtml("#content")).toBe(`<div id="content">
   <h1>Root</h1>
