@@ -34,6 +34,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       window.__remixManifest.routes,
       window.__remixRouteModules
     );
+    console.log(`✅ Creating data router via createBrowserRouter()`);
     router = createBrowserRouter(routes, {
       hydrationData: window.__remixContext.state,
     });
