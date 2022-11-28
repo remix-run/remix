@@ -1,8 +1,5 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import type { Location } from "history";
 import React, { useContext } from "react";
-import type { ErrorResponse } from "@remix-run/router";
+import type { ErrorResponse, Location } from "react-router-dom";
 
 import type {
   CatchBoundaryComponent,

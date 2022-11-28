@@ -1,5 +1,6 @@
-import type { AgnosticDataRouteMatch, Location } from "@remix-run/router";
-import { parsePath } from "@remix-run/router";
+import type { AgnosticDataRouteMatch } from "@remix-run/router";
+import type { Location } from "react-router-dom";
+import { parsePath } from "react-router-dom";
 
 import type { AssetsManifest } from "./entry";
 import type { RouteModules, RouteModule } from "./routeModules";

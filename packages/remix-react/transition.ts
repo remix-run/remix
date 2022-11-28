@@ -1,6 +1,4 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import type { Action, Location } from "@remix-run/router";
+import type { Location, NavigationType as Action } from "react-router-dom";
 
 export interface CatchData<T = any> {
   status: number;

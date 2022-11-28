@@ -1,7 +1,5 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import type { BrowserHistory, Update } from "history";
-import { createBrowserHistory } from "history";
+import type { BrowserHistory, Action, Location } from "@remix-run/router";
+import { createBrowserHistory } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
 
@@ -19,6 +17,11 @@ declare global {
 
 export interface RemixBrowserProps {}
 
+interface Update {
+  action: Action;
+  location: Location;
+}
+
 /**
  * The entry point for a Remix app when it is rendered in the browser (in
  * `app/entry.client.js`). This component is used by React to hydrate the HTML
@@ -27,7 +30,7 @@ export interface RemixBrowserProps {}
 export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   let historyRef = React.useRef<BrowserHistory>();
   if (historyRef.current == null) {
-    historyRef.current = createBrowserHistory({ window });
+    historyRef.current = createBrowserHistory({ window, v5Compat: true });
   }
 
   let history = historyRef.current;
