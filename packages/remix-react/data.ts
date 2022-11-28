@@ -1,9 +1,11 @@
+import type { FormMethod as FormMethodRR } from "react-router-dom";
+
 import invariant from "./invariant";
 import type { Submission } from "./transition";
 
 export type AppData = any;
 
-export type FormMethod = "get" | "post" | "put" | "patch" | "delete";
+export type FormMethod = FormMethodRR;
 
 export type FormEncType =
   | "application/x-www-form-urlencoded"
