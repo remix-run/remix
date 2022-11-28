@@ -818,8 +818,7 @@ export function resolvePath(to: To, fromPathname = "/"): Path {
   } = typeof to === "string" ? parsePath(to) : to;
 
   let pathname = toPathname
-    ? // we don't want to prepend the fromPathname on root or external toPathnames'
-      toPathname.startsWith("/") || toPathname.startsWith("http")
+    ? toPathname.startsWith("/")
       ? toPathname
       : resolvePathname(toPathname, fromPathname)
     : fromPathname;
