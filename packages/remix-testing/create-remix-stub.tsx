@@ -31,19 +31,19 @@ type RemixStubOptions = {
    *  The initial entries in the history stack. This allows you to start a test with
    *  multiple locations already in the history stack (for testing a back navigation, etc.)
    *  The test will default to the last entry in initialEntries if no initialIndex is provided.
-   *  e.g. initialEntries-(["/home", "/about", "/contact"]}
+   *  e.g. initialEntries={["/home", "/about", "/contact"]}
    */
   initialEntries?: InitialEntry[];
 
   /**
    *  Used to set the route's initial loader data.
-   *  e.g. initialLoaderData={("/contact": {locale: "en-US" }}
+   *  e.g. initialLoaderData={{ "/contact": { locale: "en-US" } }}
    */
   initialLoaderData?: RouteData;
 
   /**
    *  Used to set the route's initial action data.
-   *  e.g. initialActionData={("/login": { errors: { email: "invalid email" } }}
+   *  e.g. initialActionData={{ "/login": { errors: { email: "invalid email" } }}
    */
   initialActionData?: RouteData;
 
@@ -57,18 +57,18 @@ type RemixStubOptions = {
   initialIndex?: number;
 };
 
-type IndexRouteObject = AgnosticIndexRouteObject & {
+type IndexStubRouteObject = AgnosticIndexRouteObject & {
   element?: React.ReactNode;
   children?: undefined;
 };
 
-type NonIndexRouteObject = AgnosticNonIndexRouteObject & {
+type NonIndexStubRouteObject = AgnosticNonIndexRouteObject & {
   element?: React.ReactNode;
   children?: StubRouteObject[];
 };
 
 // TODO: once Remix is on RR@6.4 we can just use the native type
-type StubRouteObject = IndexRouteObject | NonIndexRouteObject;
+type StubRouteObject = IndexStubRouteObject | NonIndexStubRouteObject;
 
 type RemixConfigFuture = Partial<EntryContext["future"]>;
 
