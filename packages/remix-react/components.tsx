@@ -1047,20 +1047,34 @@ export function useTransition(): Transition {
         }
       }
     } else {
+      // TODO: How can we detect this?
+      let wasNormalRedirect = false;
+      if (wasNormalRedirect) {
+        let transition: TransitionStates["LoadingRedirect"] = {
+          location,
+          state,
+          submission: undefined,
+          type: "normalRedirect",
+        };
+        return transition;
+      }
+
       // TODO: How can we detect a fetch action redirect???  Do we need to
       // check useFetchers?  Or could we somehow look at location key?
-
-      let transition: TransitionStates["LoadingRedirect"] = {
-        location,
-        state,
-        submission: undefined,
-        type: "normalRedirect",
-      };
-      return transition;
+      let wasFetchActionRedirect = false;
+      if (wasFetchActionRedirect) {
+        let transition: TransitionStates["LoadingFetchActionRedirect"] = {
+          location,
+          state,
+          submission: undefined,
+          type: "fetchActionRedirect",
+        };
+        return transition;
+      }
     }
   }
 
-  // If all else fails, it's a normal load!
+  // If no scenarios above match, then it's a normal load!
   let transition: TransitionStates["Loading"] = {
     location,
     state: "loading",

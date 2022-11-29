@@ -114,6 +114,7 @@ async function handleDataRequestRR(
       // next URL, and then "follow" the redirect manually on the client.
       let headers = new Headers(response.headers);
       headers.set("X-Remix-Redirect", headers.get("Location")!);
+      headers.set("X-Remix-Status", response.status);
       headers.delete("Location");
       if (response.headers.get("Set-Cookie") !== null) {
         headers.set("X-Remix-Revalidate", "yes");

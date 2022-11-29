@@ -1,8 +1,5 @@
 import type { FormMethod as FormMethodRR } from "react-router-dom";
 
-import invariant from "./invariant";
-import type { Submission } from "./transition";
-
 export type AppData = any;
 
 export type FormMethod = FormMethodRR;
@@ -33,17 +30,28 @@ export function isRedirectResponse(response: any): boolean {
 }
 
 export async function fetchData(
-  url: URL,
+  request: Request,
   routeId: string,
-  signal: AbortSignal,
-  submission?: Submission
+  isAction: boolean
 ): Promise<Response | Error> {
+  let url = new URL(request.url);
   url.searchParams.set("_data", routeId);
 
-  let init: RequestInit = submission
-    ? getActionInit(submission, signal)
-    : { credentials: "same-origin", signal };
+  let init: RequestInit | undefined;
 
+  // TODO: There's a bug in @remix-run/router here at the moment where the
+  // loader Request keeps method POST after a submission.  Matt has a local
+  // fix but this does the trick for now.  Once the fix is merged to the
+  // router, we can remove the isAction param and use the method here
+  // if (request.method !== "GET") {
+  if (isAction) {
+    init = {
+      method: request.method,
+      body: await request.formData(),
+    };
+  }
+
+  // TODO: Dropped credentials:"same-origin" since it's the default
   let response = await fetch(url.href, init);
 
   if (isErrorResponse(response)) {
@@ -53,47 +61,7 @@ export async function fetchData(
     return error;
   }
 
+  // TODO: Confirm difference between regex extractData JSON detection versus
+  // @remix-run/router detection
   return response;
-}
-
-export async function extractData(response: Response): Promise<AppData> {
-  // This same algorithm is used on the server to interpret load
-  // results when we render the HTML page.
-  let contentType = response.headers.get("Content-Type");
-
-  if (contentType && /\bapplication\/json\b/.test(contentType)) {
-    return response.json();
-  }
-
-  return response.text();
-}
-
-function getActionInit(
-  submission: Submission,
-  signal: AbortSignal
-): RequestInit {
-  let { encType, method, formData } = submission;
-
-  let headers = undefined;
-  let body = formData;
-
-  if (encType === "application/x-www-form-urlencoded") {
-    body = new URLSearchParams();
-    for (let [key, value] of formData) {
-      invariant(
-        typeof value === "string",
-        `File inputs are not supported with encType "application/x-www-form-urlencoded", please use "multipart/form-data" instead.`
-      );
-      body.append(key, value);
-    }
-    headers = { "Content-Type": encType };
-  }
-
-  return {
-    method,
-    body,
-    signal,
-    credentials: "same-origin",
-    headers,
-  };
 }

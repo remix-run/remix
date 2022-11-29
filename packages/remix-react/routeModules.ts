@@ -1,5 +1,10 @@
 import type { ComponentType } from "react";
-import type { DataRouteMatch, Params, Location } from "react-router-dom";
+import type {
+  DataRouteMatch,
+  Params,
+  Location,
+  ShouldRevalidateFunction,
+} from "react-router-dom";
 
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
@@ -22,7 +27,7 @@ export interface RouteModule {
     | V1_HtmlMetaDescriptor
     | V2_MetaFunction
     | V2_HtmlMetaDescriptor[];
-  unstable_shouldReload?: ShouldReloadFunction;
+  shouldRevalidate?: ShouldRevalidateFunction;
 }
 
 /**
