@@ -23,7 +23,7 @@ export const convertToJavaScript: MigrationFunction = async (
   // 2. Remove @types/* & TypeScript dependencies + `typecheck` script from `package.json`
   await cleanupPackageJson(config.rootDirectory);
 
-  // 3. cConvert appDirectory to relative and force unix style path
+  // 3. convert appDirectory to relative and force unix style path
   let relativeAppDirectory = path.relative(
     config.rootDirectory,
     config.appDirectory
