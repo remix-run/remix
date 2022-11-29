@@ -57,7 +57,11 @@ async function updatePackageJsonForEdge(directory) {
     // dev script is the same as the start script for Netlify Edge, "cross-env NODE_ENV=production netlify dev"
     scripts: { ...scripts, dev: scripts["start"] },
     ...restOfPackageJson,
-    dependencies: { ...dependencies, "@remix-run/netlify-edge": "*" },
+    dependencies: {
+      ...dependencies,
+      "@remix-run/netlify-edge": "*",
+      "@remix-run/deno": "*",
+    },
   });
 
   await packageJson.save();
