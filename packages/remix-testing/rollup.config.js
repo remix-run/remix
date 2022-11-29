@@ -14,7 +14,7 @@ const { name: packageName, version } = require("./package.json");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  let sourceDir = "packages/remix-testing";
+  let sourceDir = path.join("packages", "remix-testing")
   let outputDir = getOutputDir(packageName);
   let outputDist = path.join(outputDir, "dist");
 
