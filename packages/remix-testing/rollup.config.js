@@ -1,4 +1,4 @@
-const path = require("path");
+const path = require("node:path");
 const babel = require("@rollup/plugin-babel").default;
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
@@ -18,14 +18,22 @@ module.exports = function rollup() {
   let outputDir = getOutputDir(packageName);
   let outputDist = path.join(outputDir, "dist");
 
-  // This CommonJS build of remix-testing is for node; both for use in running our
-  // server and for 3rd party tools that work with node.
+  let sharedPlugins = [
+    babel({
+      babelHelpers: "bundled",
+      exclude: /node_modules/,
+      extensions: [".ts", ".tsx"],
+    }),
+    nodeResolve({ extensions: [".ts", ".tsx"] }),
+    copyToPlaygrounds(),
+  ]
+
   /** @type {import("rollup").RollupOptions} */
   let remixTestingCJS = {
     external(id) {
       return isBareModuleId(id);
     },
-    input: `${sourceDir}/index.ts`,
+    input: path.join(sourceDir, 'index.ts'),
     output: {
       banner: createBanner(packageName, version),
       dir: outputDist,
@@ -34,21 +42,15 @@ module.exports = function rollup() {
       exports: "auto",
     },
     plugins: [
-      babel({
-        babelHelpers: "bundled",
-        exclude: /node_modules/,
-        extensions: [".ts", ".tsx"],
-      }),
-      nodeResolve({ extensions: [".ts", ".tsx"] }),
+      ...sharedPlugins,
+      magicExportsPlugin({ packageName, version }),
       copy({
         targets: [
           { src: "LICENSE.md", dest: [outputDir, sourceDir] },
-          { src: `${sourceDir}/package.json`, dest: outputDir },
-          { src: `${sourceDir}/README.md`, dest: outputDir },
+          { src: path.join(sourceDir, 'package.json'), dest: outputDir },
+          { src: path.join(sourceDir, 'README.md'), dest: outputDir },
         ],
       }),
-      magicExportsPlugin({ packageName, version }),
-      copyToPlaygrounds(),
     ],
   };
 
@@ -58,21 +60,15 @@ module.exports = function rollup() {
     external(id) {
       return isBareModuleId(id);
     },
-    input: `${sourceDir}/index.ts`,
+    input: path.join(sourceDir, 'index.ts'),
     output: {
-      banner: createBanner("@remix-run/testing", version),
-      dir: `${outputDist}/esm`,
+      banner: createBanner(packageName, version),
+      dir: path.join(outputDist, 'esm'),
       format: "esm",
       preserveModules: true,
     },
     plugins: [
-      babel({
-        babelHelpers: "bundled",
-        exclude: /node_modules/,
-        extensions: [".ts", ".tsx"],
-      }),
-      nodeResolve({ extensions: [".ts", ".tsx"] }),
-      copyToPlaygrounds(),
+      ...sharedPlugins,
     ],
   };
 
