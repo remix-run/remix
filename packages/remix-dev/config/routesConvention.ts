@@ -190,7 +190,20 @@ export function createRoutePath(partialRouteId: string): string | undefined {
     result = result.replace(/\/?index$/, "");
   }
 
-  return result || undefined;
+  return generateOptionalDynamicRoutes(result) || undefined;
+}
+
+function generateOptionalDynamicRoutes(routeId: string) {
+  let segments = routeId.split("/");
+
+  let newSegments = [];
+  for (let segment of segments) {
+    console.log(segment, "segment");
+    console.log(segment.replace(/^\((.+)\)$/, "$1"));
+    newSegments.push(segment.replace(/^\((.+)\)$/, "$1?"));
+  }
+
+  return newSegments.join("/");
 }
 
 function findParentRouteId(
