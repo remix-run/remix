@@ -11,7 +11,7 @@ const TEXTS = {
   FOO_LAYOUT: "Layout: foo",
   FOO_CHILD: "deep foo",
   SLUG_CHILD: "Slug index from foo layout",
-  BAR_LAYOUT: "Layout: foo",
+  BAR_LAYOUT: "Layout: bar",
   BAR_CHILD: "deep bar",
 } as const
 
