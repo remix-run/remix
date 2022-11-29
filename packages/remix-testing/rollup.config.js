@@ -14,7 +14,7 @@ const { name: packageName, version } = require("./package.json");
 
 /** @returns {import("rollup").RollupOptions[]} */
 module.exports = function rollup() {
-  let sourceDir = path.join("packages", "remix-testing")
+  let sourceDir = path.join("packages", "remix-testing");
   let outputDir = getOutputDir(packageName);
   let outputDist = path.join(outputDir, "dist");
 
@@ -26,14 +26,14 @@ module.exports = function rollup() {
     }),
     nodeResolve({ extensions: [".ts", ".tsx"] }),
     copyToPlaygrounds(),
-  ]
+  ];
 
   /** @type {import("rollup").RollupOptions} */
   let remixTestingCJS = {
     external(id) {
       return isBareModuleId(id);
     },
-    input: path.join(sourceDir, 'index.ts'),
+    input: path.join(sourceDir, "index.ts"),
     output: {
       banner: createBanner(packageName, version),
       dir: outputDist,
@@ -47,8 +47,8 @@ module.exports = function rollup() {
       copy({
         targets: [
           { src: "LICENSE.md", dest: [outputDir, sourceDir] },
-          { src: path.join(sourceDir, 'package.json'), dest: outputDir },
-          { src: path.join(sourceDir, 'README.md'), dest: outputDir },
+          { src: path.join(sourceDir, "package.json"), dest: outputDir },
+          { src: path.join(sourceDir, "README.md"), dest: outputDir },
         ],
       }),
     ],
@@ -60,16 +60,14 @@ module.exports = function rollup() {
     external(id) {
       return isBareModuleId(id);
     },
-    input: path.join(sourceDir, 'index.ts'),
+    input: path.join(sourceDir, "index.ts"),
     output: {
       banner: createBanner(packageName, version),
-      dir: path.join(outputDist, 'esm'),
+      dir: path.join(outputDist, "esm"),
       format: "esm",
       preserveModules: true,
     },
-    plugins: [
-      ...sharedPlugins,
-    ],
+    plugins: [...sharedPlugins],
   };
 
   return [remixTestingCJS, remixTestingESM];
