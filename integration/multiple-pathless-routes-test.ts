@@ -73,7 +73,7 @@ test("slug index & foo layout", async () => {
   let text = await res.text();
   expect(text).toMatch(TEXTS.SLUG_LAYOUT);
   expect(text).toMatch(TEXTS.FOO_LAYOUT);
-  expect(text).toMatch(TEXTS.SLUG_LAYOUT);
+  expect(text).toMatch(TEXTS.SLUG_CHILD);
 });
 
 test("foo layout", async () => {
