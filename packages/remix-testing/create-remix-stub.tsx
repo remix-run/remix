@@ -64,15 +64,16 @@ type IndexRouteObject = AgnosticIndexRouteObject & {
 
 type NonIndexRouteObject = AgnosticNonIndexRouteObject & {
   element?: React.ReactNode;
-  children?: RouteObject[];
+  children?: StubRouteObject[];
 };
 
-type RouteObject = IndexRouteObject | NonIndexRouteObject;
+// TODO: once Remix is on RR@6.4 we can just use the native type
+type StubRouteObject = IndexRouteObject | NonIndexRouteObject;
 
 type RemixConfigFuture = Partial<EntryContext["future"]>;
 
 export function createRemixStub(
-  routes: RouteObject[],
+  routes: StubRouteObject[],
   remixConfigFuture?: RemixConfigFuture
 ) {
   // Setup request handler to handle requests to the mock routes
