@@ -7,6 +7,7 @@ import {
   readJSONSync,
   realpathSync,
   removeSync,
+  readFile
 } from "fs-extra";
 import shell from "shelljs";
 import stripAnsi from "strip-ansi";
@@ -98,6 +99,10 @@ const checkMigrationRanSuccessfully = async (projectDir: string) => {
   expect(exportDefaultResult.stdout.trim()).toBe("");
   expect(exportDefaultResult.stderr).toBeNull();
   expect(exportDefaultResult.code).toBe(0);
+
+  let rootRouteContent = await readFile(join(projectDir, "app", "root.jsx"), "utf-8")
+
+  expect(!(rootRouteContent).includes('require("@remix-run/react")'))
 };
 
 const makeApp = () => {
