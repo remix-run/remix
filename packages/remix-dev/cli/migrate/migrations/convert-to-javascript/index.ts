@@ -23,16 +23,20 @@ export const convertToJavaScript: MigrationFunction = async (
   // 2. Remove @types/* & TypeScript dependencies + `typecheck` script from `package.json`
   await cleanupPackageJson(config.rootDirectory);
 
-  // 3. Force unix style path for `appDirectory`
+  // 3. cConvert appDirectory to relative and force unix style path
+  let relativeAppDirectory = path.relative(
+    config.rootDirectory,
+    config.appDirectory
+  );
   let unixAppDirectory = path.posix.join(
-    ...config.appDirectory.split(path.delimiter)
+    ...relativeAppDirectory.split(path.delimiter)
   );
 
   // 4. Run codemod
   let files = glob.sync("**/*.+(ts|tsx)", {
     absolute: true,
     cwd: config.rootDirectory,
-    ignore: [`./${unixAppDirectory}/**/*`, "**/node_modules/**"],
+    ignore: [`${unixAppDirectory}/**/*`, "**/node_modules/**"],
   });
   let codemodOk = await jscodeshift.run({
     files,
