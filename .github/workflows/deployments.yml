@@ -293,7 +293,7 @@ jobs:
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
           # required so we can skip the prompt in remix.init
-          NETLIFY_EDGE_CI: 1
+          USE_NETLIFY_EDGE: 1
 
   vercel_deploy:
     name: "Vercel Deploy"

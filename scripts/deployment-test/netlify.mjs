@@ -17,7 +17,7 @@ import {
   validatePackageVersions,
 } from "./_shared.mjs";
 
-const { NETLIFY_EDGE_CI } = process.env;
+const { USE_NETLIFY_EDGE } = process.env;
 
 let APP_NAME = getAppName("netlify");
 let PROJECT_DIR = getAppDirectory(APP_NAME);
@@ -31,9 +31,9 @@ async function createNewApp() {
     projectDir: PROJECT_DIR,
   });
 
-  // In conjunction with NETLIFY_EDGE_CI we explicitly call remix init
+  // In conjunction with USE_NETLIFY_EDGE we explicitly call remix init
   // to create the edge version of the app
-  if (process.env.USE_NETLIFY_EDGE) {
+  if (USE_NETLIFY_EDGE) {
     await netlifyRemixInit({ rootDirectory: PROJECT_DIR });
   }
 }

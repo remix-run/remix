@@ -3,7 +3,7 @@ const fs = require("fs/promises");
 const { join } = require("path");
 const PackageJson = require("@npmcli/package-json");
 
-const { NETLIFY_EDGE_CI } = process.env;
+const { USE_NETLIFY_EDGE } = process.env;
 
 const filesToCopy = [
   ["README.md"],
@@ -80,7 +80,7 @@ async function main({ rootDirectory }) {
 }
 
 async function shouldUseEdge() {
-  if (typeof NETLIFY_EDGE_CI !== "undefined") {
+  if (USE_NETLIFY_EDGE) {
     // Skip the prompt if we're running in CI for Netlify Edge
     return true;
   }
