@@ -58,12 +58,12 @@ type RemixStubOptions = {
 };
 
 type IndexRouteObject = AgnosticIndexRouteObject & {
-  element: React.ReactNode;
+  element?: React.ReactNode;
   children?: undefined;
 };
 
 type NonIndexRouteObject = AgnosticNonIndexRouteObject & {
-  element: React.ReactNode;
+  element?: React.ReactNode;
   children?: RouteObject[];
 };
 
@@ -71,7 +71,7 @@ type RouteObject = IndexRouteObject | NonIndexRouteObject;
 
 type RemixConfigFuture = Partial<EntryContext["future"]>;
 
-export function unstable_createRemixStub(
+export function createRemixStub(
   routes: RouteObject[],
   remixConfigFuture?: RemixConfigFuture
 ) {
