@@ -154,6 +154,7 @@ const createEsbuildConfig = (
     entryPoints,
     outdir: config.assetsBuildDirectory,
     platform: "browser",
+    target: ['safari12'],
     format: "esm",
     external: [
       // This allows Vanilla Extract to bundle asset imports, e.g. `import href
