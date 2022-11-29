@@ -1,6 +1,6 @@
 import { installGlobals as installNodeGlobals } from "@remix-run/node";
 
-export async function installGlobals(framework: 'jsdom' | 'happy-dom') {
+export async function installGlobals(framework: 'jsdom' | 'happy-dom' = 'jsdom') {
   installNodeGlobals();
 
   if (framework === 'happy-dom') {
