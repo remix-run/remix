@@ -7,7 +7,8 @@
     "dev:remix": "remix watch",
     "dev:miniflare": "cross-env NODE_ENV=development miniflare ./build/index.js --watch",
     "dev": "remix build && run-p \"dev:*\"",
-    "start": "cross-env NODE_ENV=production miniflare ./build/index.js"
+    "start": "cross-env NODE_ENV=production miniflare ./build/index.js",
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@remix-run/cloudflare": "*",
