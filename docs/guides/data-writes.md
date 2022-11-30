@@ -180,9 +180,7 @@ import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
 // Note the "action" export name, this will handle our form POST
-export const action = async ({
-  request,
-}: ActionArgs) => {
+export const action = async ({ request }: ActionArgs) => {
   const formData = await request.formData();
   const project = await createProject(formData);
   return redirect(`/projects/${project.id}`);
@@ -212,9 +210,7 @@ const [errors, project] = await createProject(formData);
 If there are validation errors, we want to go back to the form and display them.
 
 ```tsx lines=[5,7-10]
-export const action = async ({
-  request,
-}: ActionArgs) => {
+export const action = async ({ request }: ActionArgs) => {
   const formData = await request.formData();
   const [errors, project] = await createProject(formData);
 
@@ -234,9 +230,7 @@ import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useActionData } from "@remix-run/react";
 
-export const action = async ({
-  request,
-}: ActionArgs) => {
+export const action = async ({ request }: ActionArgs) => {
   // ...
 };
 

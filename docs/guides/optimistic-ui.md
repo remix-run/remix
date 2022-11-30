@@ -66,9 +66,7 @@ import { Form } from "@remix-run/react";
 
 import { createProject } from "~/utils";
 
-export const action = async ({
-  request,
-}: ActionArgs) => {
+export const action = async ({ request }: ActionArgs) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
   const project = await createProject(newProject);
@@ -101,9 +99,7 @@ import { Form, useTransition } from "@remix-run/react";
 
 import { createProject } from "~/utils";
 
-export const action = async ({
-  request,
-}: ActionArgs) => {
+export const action = async ({ request }: ActionArgs) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
   const project = await createProject(newProject);
@@ -145,9 +141,7 @@ import { Form, useTransition } from "@remix-run/react";
 import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
 
-export const action = async ({
-  request,
-}: ActionArgs) => {
+export const action = async ({ request }: ActionArgs) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
   const project = await createProject(newProject);
@@ -198,9 +192,7 @@ import {
 import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
 
-export const action = async ({
-  request,
-}: ActionArgs) => {
+export const action = async ({ request }: ActionArgs) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
   try {

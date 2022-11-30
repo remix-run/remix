@@ -51,7 +51,7 @@ If you're using the `@remix-run/cloudflare-pages` adapter, env variables work a 
 Then, in your `loader` functions, you can access environment variables directly on `context`:
 
 ```tsx
-export const loader = async ({ context }:LoaderArgs) => {
+export const loader = async ({ context }: LoaderArgs) => {
   console.log(context.SOME_SECRET);
 };
 ```
