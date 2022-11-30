@@ -11,7 +11,8 @@
     { "path": "packages/remix-dev" },
     { "path": "packages/remix-express" },
     { "path": "packages/remix-netlify" },
-    { "path": "packages/remix-netlify-edge" },
+    // Commenting out for now because of https://github.com/remix-run/remix/pull/3104#issuecomment-1331779471
+    // { "path": "packages/remix-netlify-edge" },
     { "path": "packages/remix-node" },
     { "path": "packages/remix-react" },
     { "path": "packages/remix-serve" },
