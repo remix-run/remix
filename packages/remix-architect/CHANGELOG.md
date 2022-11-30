@@ -1,27 +1,6 @@
 # `@remix-run/architect`
 
-## 1.8.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@1.8.0-pre.3`
-
-## 1.8.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@1.8.0-pre.2`
-
-## 1.8.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@1.8.0-pre.1`
-
-## 1.8.0-pre.0
+## 1.8.0
 
 ### Minor Changes
 
@@ -33,7 +12,7 @@
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/node@1.8.0-pre.0`
+  - `@remix-run/node@1.8.0`
 
 ## 1.7.6
 
