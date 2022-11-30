@@ -1,12 +1,6 @@
 # `@remix-run/react`
 
-## 1.8.0-pre.3
-
-## 1.8.0-pre.2
-
-## 1.8.0-pre.1
-
-## 1.8.0-pre.0
+## 1.8.0
 
 ### Minor Changes
 
