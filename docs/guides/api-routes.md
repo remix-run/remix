@@ -18,7 +18,9 @@ export async function loader() {
 }
 
 export default function Teams() {
-  return <TeamsView teams={useLoaderData<typeof loader>()} />;
+  return (
+    <TeamsView teams={useLoaderData<typeof loader>()} />
+  );
 }
 ```
 
