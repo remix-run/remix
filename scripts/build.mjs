@@ -15,6 +15,7 @@ exec("yarn", ["rollup", "-c"])
         "check",
         "--import-map=.vscode/deno_resolve_npm_imports.json",
         ...glob.sync("packages/remix-deno/**/*.ts"),
+        ...glob.sync("packages/remix-netlify-edge/**/*.ts"),
       ])
   )
   .then(() => publish && exec("node", ["scripts/copy-build-to-dist.mjs"]))
