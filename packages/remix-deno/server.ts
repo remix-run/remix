@@ -1,7 +1,7 @@
 import * as path from "https://deno.land/std@0.128.0/path/mod.ts";
 import mime from "mime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-import type { ServerBuild } from "@remix-run/server-runtime";
+import type { AppLoadContext, ServerBuild } from "@remix-run/server-runtime";
 
 function defaultCacheControl(url: URL, assetsPublicPath = "/build/") {
   if (url.pathname.startsWith(assetsPublicPath)) {
@@ -11,7 +11,9 @@ function defaultCacheControl(url: URL, assetsPublicPath = "/build/") {
   }
 }
 
-export function createRequestHandler<Context = unknown>({
+export function createRequestHandler<
+  Context extends AppLoadContext | undefined = undefined,
+>({
   build,
   mode,
   getLoadContext,
@@ -20,14 +22,13 @@ export function createRequestHandler<Context = unknown>({
   mode?: string;
   getLoadContext?: (request: Request) => Promise<Context> | Context;
 }) {
-  const remixHandler = createRemixRequestHandler(build, mode);
+  const handleRequest = createRemixRequestHandler(build, mode);
+
   return async (request: Request) => {
     try {
-      const loadContext = getLoadContext
-        ? await getLoadContext(request)
-        : undefined;
+      const loadContext = await getLoadContext?.(request);
 
-      return await remixHandler(request, loadContext);
+      return handleRequest(request, loadContext);
     } catch (e) {
       console.error(e);
 
@@ -82,7 +83,9 @@ export async function serveStaticFiles(
   }
 }
 
-export function createRequestHandlerWithStaticFiles<Context = unknown>({
+export function createRequestHandlerWithStaticFiles<
+  Context extends AppLoadContext | undefined = undefined,
+>({
   build,
   mode,
   getLoadContext,

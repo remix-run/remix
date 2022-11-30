@@ -1,4 +1,11 @@
+import type {
+  AppLoadContext,
+  ServerBuild,
+  RequestInit as NodeRequestInit,
+  Response as NodeResponse,
+} from "@remix-run/node";
 import {
+  AbortController as NodeAbortController,
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
@@ -10,12 +17,6 @@ import type {
   HandlerContext,
   HandlerResponse,
 } from "@netlify/functions";
-import type {
-  AppLoadContext,
-  ServerBuild,
-  RequestInit as NodeRequestInit,
-  Response as NodeResponse,
-} from "@remix-run/node";
 
 import { isBinaryType } from "./binaryTypes";
 
@@ -39,17 +40,14 @@ export function createRequestHandler({
   mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
-  getLoadContext?: AppLoadContext;
+  getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (event, context) => {
     let request = createRemixRequest(event);
-    let loadContext =
-      typeof getLoadContext === "function"
-        ? getLoadContext(event, context)
-        : undefined;
+    let loadContext = getLoadContext?.(event, context);
 
     let response = (await handleRequest(request, loadContext)) as NodeResponse;
 
@@ -68,9 +66,16 @@ export function createRemixRequest(event: HandlerEvent): NodeRequest {
     url = new URL(rawPath, `http://${origin}`);
   }
 
+  // Note: No current way to abort these for Netlify, but our router expects
+  // requests to contain a signal so it can detect aborted requests
+  let controller = new NodeAbortController();
+
   let init: NodeRequestInit = {
     method: event.httpMethod,
     headers: createRemixHeaders(event.multiValueHeaders),
+    // Cast until reason/throwIfAborted added
+    // https://github.com/mysticatea/abort-controller/issues/36
+    signal: controller.signal as NodeRequestInit["signal"],
   };
 
   if (event.httpMethod !== "GET" && event.httpMethod !== "HEAD" && event.body) {

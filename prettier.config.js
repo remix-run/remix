@@ -1,4 +1,2 @@
-/**
- * @type {import('prettier').Options}
- */
+/** @type {import('prettier').Options} */
 module.exports = {};

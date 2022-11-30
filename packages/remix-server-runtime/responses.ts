@@ -1,7 +1,13 @@
-export type JsonFunction = <Data>(
+export type JsonFunction = <Data extends unknown>(
   data: Data,
   init?: number | ResponseInit
-) => Response;
+) => TypedResponse<Data>;
+
+// must be a type since this is a subtype of response
+// interfaces must conform to the types they extend
+export type TypedResponse<T extends unknown = unknown> = Response & {
+  json(): Promise<T>;
+};
 
 /**
  * This is a shortcut for creating `application/json` responses. Converts `data`
@@ -26,7 +32,7 @@ export const json: JsonFunction = (data, init = {}) => {
 export type RedirectFunction = (
   url: string,
   init?: number | ResponseInit
-) => Response;
+) => TypedResponse<never>;
 
 /**
  * A redirect response. Sets the status code and the `Location` header.
@@ -48,7 +54,7 @@ export const redirect: RedirectFunction = (url, init = 302) => {
   return new Response(null, {
     ...responseInit,
     headers,
-  });
+  }) as TypedResponse<never>;
 };
 
 export function isResponse(value: any): value is Response {
@@ -64,8 +70,4 @@ export function isResponse(value: any): value is Response {
 const redirectStatusCodes = new Set([301, 302, 303, 307, 308]);
 export function isRedirectResponse(response: Response): boolean {
   return redirectStatusCodes.has(response.status);
-}
-
-export function isCatchResponse(response: Response) {
-  return response.headers.get("X-Remix-Catch") != null;
 }

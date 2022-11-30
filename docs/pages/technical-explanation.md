@@ -67,7 +67,7 @@ export function createRequestHandler({ build }) {
 }
 ```
 
-Real adapters do a bit more more than that, but that's the gist of it. Not only does this enable you to deploy Remix anywhere, but it also lets you incrementally adopt it in an existing JavaScript server since you can have routes outside of Remix that your server continues to handle before getting to Remix.
+Real adapters do a bit more than that, but that's the gist of it. Not only does this enable you to deploy Remix anywhere, but it also lets you incrementally adopt it in an existing JavaScript server since you can have routes outside of Remix that your server continues to handle before getting to Remix.
 
 Additionally, if Remix doesn't have an adapter for your server already, you can look at the source of one of the adapters and build your own.
 
@@ -217,7 +217,7 @@ And while it doesn't reach as far back into the stack as server side frameworks 
 
 For example. Building a plain HTML form and server side handler in a back end heavy web framework is just as easy to do as it is in Remix. But as soon as you want to cross over into an experience with animated validation messages, focus management, and pending UI, it requires a fundamental change in the code. Typically people build an API route and then bring in a splash of client side JavaScript to connect the two. With Remix you simply add some code around the existing "server side view" without changing how it works fundamentally.
 
-We borrowed an old term and call this Progressive Enhancement in Remix. Start small with a plain HTML form (Remix scales down) and then scale the UI up when you have the time and ambition.
+We borrowed an old term and called this Progressive Enhancement in Remix. Start small with a plain HTML form (Remix scales down) and then scale the UI up when you have the time and ambition.
 
 [esbuild]: https://esbuild.github.io/
 [cf]: https://workers.cloudflare.com/

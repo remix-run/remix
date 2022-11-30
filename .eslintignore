@@ -5,8 +5,9 @@
 .tmp
 /playground
 **/__tests__/fixtures
+**/__tests__/**/*/fixtures
 
-# deno
+# Deno
 integration/helpers/deno-template
 packages/remix-deno
 templates/deno

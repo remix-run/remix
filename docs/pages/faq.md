@@ -17,7 +17,7 @@ We recommend you create a function that validates the user session that can be a
 import {
   createCookieSessionStorage,
   redirect,
-} from "@remix-run/node"; // or "@remix-run/cloudflare"
+} from "@remix-run/node"; // or cloudflare/deno
 
 // somewhere you've got a session storage
 const { getSession } = createCookieSessionStorage();
@@ -64,7 +64,7 @@ export async function loader({ request }) {
 
 ## How do I handle multiple forms in one route?
 
-[Watch on YouTube](https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix)
+[Watch on YouTube][watch-on-you-tube]
 
 In HTML, forms can post to any URL with the action prop and the app will navigate there:
 
@@ -84,8 +84,8 @@ HTML buttons can send a value, so it's the easiest way to implement this:
 ```jsx filename=app/routes/projects/$id.jsx lines=[3-4,33,39]
 export async function action({ request }) {
   let formData = await request.formData();
-  let action = formData.get("action");
-  switch (action) {
+  let intent = formData.get("intent");
+  switch (intent) {
     case "update": {
       // do your update
       return updateProjectName(formData.get("name"));
@@ -114,28 +114,19 @@ export default function Projects() {
             defaultValue={project.name}
           />
         </label>
-        <button type="submit" name="action" value="create">
+        <button type="submit" name="intent" value="update">
           Update
         </button>
       </Form>
 
       <Form method="post">
-        <button type="submit" name="action" value="delete">
+        <button type="submit" name="intent" value="delete">
           Delete
         </button>
       </Form>
     </>
   );
 }
-```
-
-You can also use a hidden input field:
-
-```jsx lines=[2]
-<Form method="post">
-  <input type="hidden" name="action" value="create" />
-  <button type="submit">Create</button>
-</Form>
 ```
 
 ## How can I have structured data in a form?
@@ -235,3 +226,5 @@ Again, `formData.getAll()` is often all you need, we encourage you to give it a 
 Error boundaries render when your application throws an error and you had no clue it was going to happen. Most apps just go blank or have spinners spin forever. In remix the error boundary renders and you have granular control over it.
 
 Catch boundaries render when you decide in a loader that you can't proceed down the happy path to render the UI you want (auth required, record not found, etc.), so you throw a response and let some catch boundary up the tree handle it.
+
+[watch-on-you-tube]: https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix

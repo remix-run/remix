@@ -23,6 +23,7 @@ export {
 } from "@remix-run/server-runtime";
 
 export type {
+  ActionArgs,
   ActionFunction,
   AppData,
   AppLoadContext,
@@ -31,7 +32,6 @@ export type {
   CookieParseOptions,
   CookieSerializeOptions,
   CookieSignatureOptions,
-  CreateRequestHandlerFunction,
   DataFunctionArgs,
   EntryContext,
   ErrorBoundaryComponent,
@@ -42,6 +42,7 @@ export type {
   HtmlMetaDescriptor,
   LinkDescriptor,
   LinksFunction,
+  LoaderArgs,
   LoaderFunction,
   MemoryUploadHandlerFilterArgs,
   MemoryUploadHandlerOptions,
@@ -51,12 +52,16 @@ export type {
   RequestHandler,
   RouteComponent,
   RouteHandle,
+  SerializeFrom,
   ServerBuild,
   ServerEntryModule,
   Session,
   SessionData,
   SessionIdStorageStrategy,
   SessionStorage,
-  UploadHandler,
+  SignFunction,
+  TypedResponse,
+  UnsignFunction,
   UploadHandlerPart,
+  UploadHandler,
 } from "@remix-run/server-runtime";

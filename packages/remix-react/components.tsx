@@ -20,9 +20,11 @@ import {
   useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
+import { createPath } from "history";
+import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
-import type { EntryContext, AssetsManifest } from "./entry";
+import type { AssetsManifest, EntryContext, FutureConfig } from "./entry";
 import type { AppState, SerializedError } from "./errors";
 import {
   RemixRootDefaultErrorBoundary,
@@ -46,9 +48,19 @@ import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch as BaseRouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
-import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
+import type {
+  RouteModules,
+  RouteMatchWithMeta,
+  V1_HtmlMetaDescriptor,
+  V2_HtmlMetaDescriptor,
+} from "./routeModules";
 import { createTransitionManager } from "./transition";
-import type { Transition, Fetcher, Submission } from "./transition";
+import type {
+  Transition,
+  TransitionManagerState,
+  Fetcher,
+  Submission,
+} from "./transition";
 
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
@@ -56,7 +68,7 @@ import type { Transition, Fetcher, Submission } from "./transition";
 export interface RemixEntryContextType {
   manifest: AssetsManifest;
   matches: BaseRouteMatch<ClientRoute>[];
-  routeData: { [routeId: string]: RouteData };
+  routeData: RouteData;
   actionData?: RouteData;
   pendingLocation?: Location;
   appState: AppState;
@@ -64,6 +76,7 @@ export interface RemixEntryContextType {
   serverHandoffString?: string;
   clientRoutes: ClientRoute[];
   transitionManager: ReturnType<typeof createTransitionManager>;
+  future: FutureConfig;
 }
 
 export const RemixEntryContext = React.createContext<
@@ -116,19 +129,24 @@ export function RemixEntry({
       catch: entryComponentDidCatchEmulator.catch,
       catchBoundaryId: entryComponentDidCatchEmulator.catchBoundaryRouteId,
       onRedirect: _navigator.replace,
-      onChange: (state) => {
-        setClientState({
-          catch: state.catch,
-          error: state.error,
-          catchBoundaryRouteId: state.catchBoundaryId,
-          loaderBoundaryRouteId: state.errorBoundaryId,
-          renderBoundaryRouteId: null,
-          trackBoundaries: false,
-          trackCatchBoundaries: false,
-        });
-      },
     });
   });
+
+  React.useEffect(() => {
+    let subscriber = (state: TransitionManagerState) => {
+      setClientState({
+        catch: state.catch,
+        error: state.error,
+        catchBoundaryRouteId: state.catchBoundaryId,
+        loaderBoundaryRouteId: state.errorBoundaryId,
+        renderBoundaryRouteId: null,
+        trackBoundaries: false,
+        trackCatchBoundaries: false,
+      });
+    };
+
+    return transitionManager.subscribe(subscriber);
+  }, [transitionManager]);
 
   // Ensures pushes interrupting pending navigations use replace
   // TODO: Move this to React Router
@@ -183,6 +201,7 @@ export function RemixEntry({
         routeData: loaderData,
         actionData,
         transitionManager,
+        future: entryContext.future,
       }}
     >
       <RemixErrorBoundary
@@ -399,7 +418,7 @@ interface PrefetchHandlers {
 function usePrefetchBehavior(
   prefetch: PrefetchBehavior,
   theirElementProps: PrefetchHandlers
-) {
+): [boolean, Required<PrefetchHandlers>] {
   let [maybePrefetch, setMaybePrefetch] = React.useState(false);
   let [shouldPrefetch, setShouldPrefetch] = React.useState(false);
   let { onFocus, onBlur, onMouseEnter, onMouseLeave, onTouchStart } =
@@ -681,11 +700,11 @@ function PrefetchPageLinksImpl({
  *
  * @see https://remix.run/api/remix#meta-links-scripts
  */
-export function Meta() {
+function V1Meta() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
   let location = useLocation();
 
-  let meta: HtmlMetaDescriptor = {};
+  let meta: V1_HtmlMetaDescriptor = {};
   let parentsData: { [routeId: string]: AppData } = {};
 
   for (let match of matches) {
@@ -698,8 +717,26 @@ export function Meta() {
     if (routeModule.meta) {
       let routeMeta =
         typeof routeModule.meta === "function"
-          ? routeModule.meta({ data, parentsData, params, location })
+          ? routeModule.meta({
+              data,
+              parentsData,
+              params,
+              location,
+              matches: undefined as any,
+            })
           : routeModule.meta;
+      if (routeMeta && Array.isArray(routeMeta)) {
+        throw new Error(
+          "The route at " +
+            match.route.path +
+            " returns an array. This is only supported with the `v2_meta` future flag " +
+            "in the Remix config. Either set the flag to `true` or update the route's " +
+            "meta function to return an object." +
+            "\n\nTo reference the v1 meta function API, see https://remix.run/api/conventions#meta"
+          // TODO: Add link to the docs once they are written
+          // + "\n\nTo reference future flags and the v2 meta API, see https://remix.run/api/remix#future-v2-meta."
+        );
+      }
       Object.assign(meta, routeMeta);
     }
 
@@ -718,25 +755,40 @@ export function Meta() {
         }
 
         if (name === "title") {
-          return <title key="title">{value}</title>;
+          return <title key="title">{String(value)}</title>;
         }
 
         // Open Graph tags use the `property` attribute, while other meta tags
         // use `name`. See https://ogp.me/
-        let isOpenGraphTag = name.startsWith("og:");
+        //
+        // Namespaced attributes:
+        //  - https://ogp.me/#type_music
+        //  - https://ogp.me/#type_video
+        //  - https://ogp.me/#type_article
+        //  - https://ogp.me/#type_book
+        //  - https://ogp.me/#type_profile
+        //
+        // Facebook specific tags begin with `fb:` and also use the `property`
+        // attribute.
+        //
+        // Twitter specific tags begin with `twitter:` but they use `name`, so
+        // they are excluded.
+        let isOpenGraphTag =
+          /^(og|music|video|article|book|profile|fb):.+$/.test(name);
+
         return [value].flat().map((content) => {
           if (isOpenGraphTag) {
             return (
               <meta
+                property={name}
                 content={content as string}
                 key={name + content}
-                property={name}
               />
             );
           }
 
           if (typeof content === "string") {
-            return <meta content={content} name={name} key={name + content} />;
+            return <meta name={name} content={content} key={name + content} />;
           }
 
           return <meta key={name + JSON.stringify(content)} {...content} />;
@@ -744,6 +796,92 @@ export function Meta() {
       })}
     </>
   );
+}
+
+function V2Meta() {
+  let { matches, routeData, routeModules } = useRemixEntryContext();
+  let location = useLocation();
+
+  let meta: V2_HtmlMetaDescriptor[] = [];
+  let parentsData: { [routeId: string]: AppData } = {};
+
+  let matchesWithMeta: RouteMatchWithMeta<ClientRoute>[] = matches.map(
+    (match) => ({ ...match, meta: [] })
+  );
+
+  let index = -1;
+  for (let match of matches) {
+    index++;
+    let routeId = match.route.id;
+    let data = routeData[routeId];
+    let params = match.params;
+
+    let routeModule = routeModules[routeId];
+
+    let routeMeta: V2_HtmlMetaDescriptor[] | V1_HtmlMetaDescriptor | undefined =
+      [];
+
+    if (routeModule?.meta) {
+      routeMeta =
+        typeof routeModule.meta === "function"
+          ? routeModule.meta({
+              data,
+              parentsData,
+              params,
+              location,
+              matches: matchesWithMeta,
+            })
+          : routeModule.meta;
+    }
+
+    routeMeta = routeMeta || [];
+    if (!Array.isArray(routeMeta)) {
+      throw new Error(
+        "The `v2_meta` API is enabled in the Remix config, but the route at " +
+          match.route.path +
+          " returns an invalid value. In v2, all route meta functions must " +
+          "return an array of meta objects." +
+          // TODO: Add link to the docs once they are written
+          // "\n\nTo reference future flags and the v2 meta API, see https://remix.run/api/remix#future-v2-meta." +
+          "\n\nTo reference the v1 meta function API, see https://remix.run/api/conventions#meta"
+      );
+    }
+
+    matchesWithMeta[index].meta = routeMeta;
+    meta = routeMeta;
+    parentsData[routeId] = data;
+  }
+
+  return (
+    <>
+      {meta.flat().map((metaProps) => {
+        if (!metaProps) {
+          return null;
+        }
+
+        if ("title" in metaProps) {
+          return <title key="title">{String(metaProps.title)}</title>;
+        }
+
+        if ("charSet" in metaProps || "charset" in metaProps) {
+          // TODO: We normalize this for the user in v1, but should we continue
+          // to do that? Seems like a nice convenience IMO.
+          return (
+            <meta
+              key="charset"
+              charSet={metaProps.charSet || (metaProps as any).charset}
+            />
+          );
+        }
+        return <meta key={JSON.stringify(metaProps)} {...metaProps} />;
+      })}
+    </>
+  );
+}
+
+export function Meta() {
+  let { future } = useRemixEntryContext();
+  return future.v2_meta ? <V2Meta /> : <V1Meta />;
 }
 
 /**
@@ -795,14 +933,17 @@ export function Scripts(props: ScriptProps) {
     let routeModulesScript = `${matches
       .map(
         (match, index) =>
-          `import * as route${index} from ${JSON.stringify(
+          `import ${JSON.stringify(manifest.url)};
+import * as route${index} from ${JSON.stringify(
             manifest.routes[match.route.id].module
           )};`
       )
       .join("\n")}
 window.__remixRouteModules = {${matches
       .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
-      .join(",")}};`;
+      .join(",")}};
+
+import(${JSON.stringify(manifest.entry.module)});`;
 
     return (
       <>
@@ -810,14 +951,14 @@ window.__remixRouteModules = {${matches
           {...props}
           suppressHydrationWarning
           dangerouslySetInnerHTML={createHtml(contextScript)}
+          type={undefined}
         />
-        <script {...props} src={manifest.url} />
         <script
           {...props}
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
+          async
         />
-        <script {...props} src={manifest.entry.module} type="module" />
       </>
     );
     // disabled deps array because we are purposefully only rendering this once
@@ -850,6 +991,16 @@ window.__remixRouteModules = {${matches
 
   return (
     <>
+      <link
+        rel="modulepreload"
+        href={manifest.url}
+        crossOrigin={props.crossOrigin}
+      />
+      <link
+        rel="modulepreload"
+        href={manifest.entry.module}
+        crossOrigin={props.crossOrigin}
+      />
       {dedupe(preloads).map((path) => (
         <link
           key={path}
@@ -933,7 +1084,7 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
       reloadDocument = false,
       replace = false,
       method = "get",
-      action = ".",
+      action,
       encType = "application/x-www-form-urlencoded",
       fetchKey,
       onSubmit,
@@ -963,7 +1114,13 @@ let FormImpl = React.forwardRef<HTMLFormElement, FormImplProps>(
                 let submitter = (event as unknown as HTMLSubmitEvent)
                   .nativeEvent.submitter as HTMLFormSubmitter | null;
 
-                submit(submitter || event.currentTarget, { method, replace });
+                let submitMethod =
+                  (submitter?.formMethod as FormMethod | undefined) || method;
+
+                submit(submitter || event.currentTarget, {
+                  method: submitMethod,
+                  replace,
+                });
               }
         }
         {...props}
@@ -988,20 +1145,41 @@ type HTMLFormSubmitter = HTMLButtonElement | HTMLInputElement;
  * @see https://remix.run/api/remix#useformaction
  */
 export function useFormAction(
-  action = ".",
+  action?: string,
   // TODO: Remove method param in v2 as it's no longer needed and is a breaking change
   method: FormMethod = "get"
 ): string {
   let { id } = useRemixRouteContext();
-  let path = useResolvedPath(action);
-  let search = path.search;
+  let resolvedPath = useResolvedPath(action ? action : ".");
+
+  // Previously we set the default action to ".". The problem with this is that
+  // `useResolvedPath(".")` excludes search params and the hash of the resolved
+  // URL. This is the intended behavior of when "." is specifically provided as
+  // the form action, but inconsistent w/ browsers when the action is omitted.
+  // https://github.com/remix-run/remix/issues/927
+  let location = useLocation();
+  let { search, hash } = resolvedPath;
   let isIndexRoute = id.endsWith("/index");
 
-  if (action === "." && isIndexRoute) {
+  if (action == null) {
+    search = location.search;
+    hash = location.hash;
+
+    // When grabbing search params from the URL, remove the automatically
+    // inserted ?index param so we match the useResolvedPath search behavior
+    // which would not include ?index
+    if (isIndexRoute) {
+      let params = new URLSearchParams(search);
+      params.delete("index");
+      search = params.toString() ? `?${params.toString()}` : "";
+    }
+  }
+
+  if ((action == null || action === ".") && isIndexRoute) {
     search = search ? search.replace(/^\?/, "?index&") : "?index";
   }
 
-  return path.pathname + search;
+  return createPath({ pathname: resolvedPath.pathname, search, hash });
 }
 
 export interface SubmitOptions {
@@ -1138,7 +1316,7 @@ export function useSubmitImpl(key?: string): SubmitFunction {
 
         // Include name + value from a <button>
         if (target.name) {
-          formData.set(target.name, target.value);
+          formData.append(target.name, target.value);
         }
       } else {
         if (isHtmlElement(target)) {
@@ -1180,13 +1358,29 @@ export function useSubmitImpl(key?: string): SubmitFunction {
       let url = new URL(action, `${protocol}//${host}`);
 
       if (method.toLowerCase() === "get") {
+        // Start with a fresh set of params and wipe out the old params to
+        // match default browser behavior
+        let params = new URLSearchParams();
+        let hasParams = false;
         for (let [name, value] of formData) {
           if (typeof value === "string") {
-            url.searchParams.append(name, value);
+            hasParams = true;
+            params.append(name, value);
           } else {
             throw new Error(`Cannot submit binary form data using GET`);
           }
         }
+
+        // Preserve any incoming ?index param for fetcher GET submissions
+        let isIndexAction = new URLSearchParams(url.search)
+          .getAll("index")
+          .some((v) => v === "");
+        if (key != null && isIndexAction) {
+          hasParams = true;
+          params.append("index", "");
+        }
+
+        url.search = hasParams ? `?${params.toString()}` : "";
       }
 
       let submission: Submission = {
@@ -1252,7 +1446,9 @@ function isInputElement(object: any): object is HTMLInputElement {
  *
  * @see https://remix.run/api/remix#usebeforeunload
  */
-export function useBeforeUnload(callback: () => any): void {
+export function useBeforeUnload(
+  callback: (event: BeforeUnloadEvent) => any
+): void {
   React.useEffect(() => {
     window.addEventListener("beforeunload", callback);
     return () => {
@@ -1320,7 +1516,7 @@ export function useMatches(): RouteMatch[] {
  *
  * @see https://remix.run/api/remix#useloaderdata
  */
-export function useLoaderData<T = AppData>(): T {
+export function useLoaderData<T = AppData>(): SerializeFrom<T> {
   return useRemixRouteContext().data;
 }
 
@@ -1329,7 +1525,7 @@ export function useLoaderData<T = AppData>(): T {
  *
  * @see https://remix.run/api/remix#useactiondata
  */
-export function useActionData<T = AppData>(): T | undefined {
+export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
   let { id: routeId } = useRemixRouteContext();
   let { transitionManager } = useRemixEntryContext();
   let { actionData } = transitionManager.getState();
@@ -1374,7 +1570,9 @@ export type FetcherWithComponents<TData> = Fetcher<TData> & {
  *
  * @see https://remix.run/api/remix#usefetcher
  */
-export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
+export function useFetcher<TData = any>(): FetcherWithComponents<
+  SerializeFrom<TData>
+> {
   let { transitionManager } = useRemixEntryContext();
 
   let [key] = React.useState(() => String(++fetcherId));
@@ -1384,7 +1582,7 @@ export function useFetcher<TData = any>(): FetcherWithComponents<TData> {
   });
   let submit = useSubmitImpl(key);
 
-  let fetcher = transitionManager.getFetcher<TData>(key);
+  let fetcher = transitionManager.getFetcher<SerializeFrom<TData>>(key);
 
   let fetcherWithComponents = React.useMemo(
     () => ({
@@ -1442,7 +1640,7 @@ export const LiveReload =
             suppressHydrationWarning
             dangerouslySetInnerHTML={{
               __html: js`
-                (() => {
+                function remixLiveReloadConnect(config) {
                   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
                   let socketPath = protocol + "//" + host + ":" + ${String(
@@ -1460,11 +1658,27 @@ export const LiveReload =
                       window.location.reload();
                     }
                   };
+                  ws.onopen = () => {
+                    if (config && typeof config.onOpen === "function") {
+                      config.onOpen();
+                    }
+                  };
+                  ws.onclose = (error) => {
+                    console.log("Remix dev asset server web socket closed. Reconnecting...");
+                    setTimeout(
+                      () =>
+                        remixLiveReloadConnect({
+                          onOpen: () => window.location.reload(),
+                        }),
+                      1000
+                    );
+                  };
                   ws.onerror = (error) => {
                     console.log("Remix dev asset server web socket error:");
                     console.error(error);
                   };
-                })();
+                }
+                remixLiveReloadConnect();
               `,
             }}
           />
