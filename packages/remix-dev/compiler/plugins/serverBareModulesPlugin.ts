@@ -22,7 +22,7 @@ export function serverBareModulesPlugin(
   onWarning?: (warning: string, key: string) => void
 ): Plugin {
   let isDenoRuntime = ["deno", "netlify-edge"].includes(
-    remixConfig.serverBuildTarget!
+    remixConfig.serverBuildTarget ?? ""
   );
 
   // Resolve paths according to tsconfig paths property

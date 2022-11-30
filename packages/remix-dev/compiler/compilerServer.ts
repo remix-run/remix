@@ -45,7 +45,7 @@ const createEsbuildConfig = (
     config.serverBuildTarget ?? ""
   );
   let isDenoRuntime = ["deno", "netlify-edge"].includes(
-    config.serverBuildTarget!
+    config.serverBuildTarget ?? ""
   );
 
   let plugins: esbuild.Plugin[] = [
