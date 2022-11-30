@@ -21,10 +21,11 @@ export interface RouteManifest<Route> {
 
 // NOTE: make sure to change the Route in server-runtime if you change this
 interface Route {
+  index?: boolean;
   caseSensitive?: boolean;
   id: string;
+  parentId?: string;
   path?: string;
-  index?: boolean;
 }
 
 // NOTE: make sure to change the EntryRoute in server-runtime if you change this
