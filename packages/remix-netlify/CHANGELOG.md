@@ -1,5 +1,12 @@
 # `@remix-run/netlify`
 
+## 1.8.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.8.0`
+
 ## 1.7.6
 
 ### Patch Changes
