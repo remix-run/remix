@@ -18,7 +18,7 @@ export async function loader() {
 }
 
 export default function Teams() {
-  return <TeamsView teams={useLoaderData()} />;
+  return <TeamsView teams={useLoaderData<typeof loader>()} />;
 }
 ```
 
@@ -33,7 +33,7 @@ You can `useFetcher` for cases like this. And once again, since Remix in the bro
 For example, you could have a route to handle the search:
 
 ```tsx filename=routes/city-search.tsx
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const url = new URL(request.url);
   return json(
     await searchCities(url.searchParams.get("q"))
@@ -91,7 +91,7 @@ function CitySearchCombobox() {
 In other cases, you may need routes that are part of your application, but aren't part of your application's UI. Maybe you want a loader that renders a report as a PDF:
 
 ```tsx
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   const report = await getReport(params.id);
   const pdf = await generateReportPDF(report);
   return new Response(pdf, {

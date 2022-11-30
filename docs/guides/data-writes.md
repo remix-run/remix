@@ -106,8 +106,8 @@ When the user submits this form, the browser will serialize the fields into a re
 
 The data is made available to the server's request handler so you can create the record. After that, you return a response. In this case, you'd probably redirect to the newly created project. A remix action would look something like this:
 
-```js filename=app/routes/projects
-export async function action({ request }) {
+```tsx filename=app/routes/projects.tsx
+export async function action({ request }: ActionArgs) {
   const body = await request.formData();
   const project = await createProject(body);
   return redirect(`/projects/${project.id}`);
@@ -175,14 +175,14 @@ export default function NewProject() {
 
 Now add the route action. Any form submissions that are "post" will call your data "action". Any "get" submissions (`<Form method="get">`) will be handled by your "loader".
 
-```tsx [5-11]
-import type { ActionFunction } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[5-11]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
 // Note the "action" export name, this will handle our form POST
-export const action: ActionFunction = async ({
+export const action = async ({
   request,
-}) => {
+}: ActionArgs) => {
   const formData = await request.formData();
   const project = await createProject(formData);
   return redirect(`/projects/${project.id}`);
@@ -211,10 +211,10 @@ const [errors, project] = await createProject(formData);
 
 If there are validation errors, we want to go back to the form and display them.
 
-```tsx [5,7-10]
-export const action: ActionFunction = async ({
+```tsx lines=[5,7-10]
+export const action = async ({
   request,
-}) => {
+}: ActionArgs) => {
   const formData = await request.formData();
   const [errors, project] = await createProject(formData);
 
@@ -229,18 +229,19 @@ export const action: ActionFunction = async ({
 
 Just like `useLoaderData` returns the values from the `loader`, `useActionData` will return the data from the action. It will only be there if the navigation was a form submission, so you always have to check if you've got it or not.
 
-```tsx [2,11,21,26-30,38,43-47]
+```tsx lines=[3,12,22,27-31,39,44-48]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useActionData } from "@remix-run/react";
 
-export const action: ActionFunction = async ({
+export const action = async ({
   request,
-}) => {
+}: ActionArgs) => {
   // ...
 };
 
 export default function NewProject() {
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   return (
     <form method="post" action="/projects/new">
@@ -301,7 +302,7 @@ import { useActionData, Form } from "@remix-run/react";
 // ...
 
 export default function NewProject() {
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   return (
     // note the capital "F" <Form> now
@@ -332,7 +333,7 @@ export default function NewProject() {
   // when the form is being processed on the server, this returns different
   // transition states to help us build pending and optimistic UI.
   const transition = useTransition();
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   return (
     <Form method="post">
@@ -434,7 +435,7 @@ Now we can wrap our old error messages in this new fancy component, and even tur
 ```tsx [21-24, 31-34, 44-48, 53-56]
 export default function NewProject() {
   const transition = useTransition();
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   return (
     <Form method="post">
