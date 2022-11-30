@@ -39,39 +39,36 @@ describe("createRoutePath", () => {
 
       // Optional segment routes
       ["(routes)/$", "routes?/*"],
-      ["(routes)/($)", "routes?/*?"], // TODO: Fails, do we want to allow this?
       ["(routes)/(sub)/$", "routes?/sub?/*"],
       ["(routes).(sub)/$", "routes?/sub?/*"],
-      ["(routes.sub)/$", "routes?/sub?/*"], // TODO: Fails, do we want to allow this?
       ["(routes)/($slug)", "routes?/:slug?"],
       ["(routes)/sub/($slug)", "routes?/sub/:slug?"],
       ["(routes).sub/($slug)", "routes?/sub/:slug?"],
-      ["($)", "*?"], // TODO: Fails, do we want to allow this?
       ["(nested)/$", "nested?/*"],
       ["(flat).$", "flat?/*"],
       ["($slug)", ":slug?"],
       ["(nested)/($slug)", "nested?/:slug?"],
       ["(flat).($slug)", "flat?/:slug?"],
       ["flat.(sub)", "flat/sub?"],
-      ["(nested)/(index)", "nested?"], // Fails with `"flat?/index?"`
-      ["(flat).(index)", "flat?"], // Fails with `"flat?/index?"`
-      ["(index)", undefined], // Fails with `"index?"`"
-      ["(__layout)/(index)", undefined], // Fails with __layout?/index?
       ["__layout/(test)", "test?"],
       ["__layout.(test)", "test?"],
       ["__layout/($slug)", ":slug?"],
       ["(nested)/__layout/($slug)", "nested?/:slug?"],
       ["($slug[.]json)", ":slug.json?"],
       ["(sub)/([sitemap.xml])", "sub?/sitemap.xml?"],
-      ["(sub)/[(sitemap.xml)]", "sub?/sitemap.xml?"], // TODO should this have been sub?/(sitemap.xml)
+      ["(sub)/[(sitemap.xml)]", "sub?/(sitemap.xml)"],
       ["(posts)/($slug)/([image.jpg])", "posts?/:slug?/image.jpg?"],
       [
-        "($[$dollabills]).([.]lol)[/](what)/([$]).($)", // TODO outputs ":$dollabills?/.lol?/what?/$?/:?"
-        ":$dollabills/.lol/what/$/*",
+        "($[$dollabills]).([.]lol)[/](what)/([$]).$",
+        ":$dollabills?/.lol)/(what?/$?/*",
+      ],
+      [
+        "($[$dollabills]).([.]lol)/(what)/([$]).($up)",
+        ":$dollabills?/.lol?/what?/$?/:up?",
       ],
       ["(sub).([[])", "sub?/[?"],
-      ["(sub).(])", "sub?/)?"],
-      ["(sub).([([])])", "sub/[]"], // Fails with "sub?/([)]?"
+      ["(sub).(])", "sub?/]?"],
+      ["(sub).([[]])", "sub?/[]?"],
       ["(sub).([[])", "sub?/[?"],
       ["(beef])", "beef]?"],
       ["([index])", "index?"],
@@ -84,5 +81,23 @@ describe("createRoutePath", () => {
         expect(createRoutePath(input)).toBe(expected);
       });
     }
+
+    describe("optional segments", () => {
+      it("will only work when starting and ending a segment with parenthesis", () => {
+        let [input, expected] = ["(routes.sub)/$", "(routes/sub)/*"];
+        expect(createRoutePath(input)).toBe(expected);
+      });
+
+      it("throws error on optional to splat routes", () => {
+        expect(() => createRoutePath("(routes)/($)")).toThrow("Splat");
+        expect(() => createRoutePath("($)")).toThrow("Splat");
+      });
+
+      it("throws errors on optional index with brackets routes", () => {
+        expect(() => createRoutePath("(nested)/(index)")).toThrow("index");
+        expect(() => createRoutePath("(flat).(index)")).toThrow("index");
+        expect(() => createRoutePath("(index)")).toThrow("index");
+      });
+    });
   });
 });
