@@ -175,7 +175,7 @@ export default function NewProject() {
 
 Now add the route action. Any form submissions that are "post" will call your data "action". Any "get" submissions (`<Form method="get">`) will be handled by your "loader".
 
-```tsx lines=[5-11]
+```tsx lines=[1,5-9]
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
@@ -209,7 +209,7 @@ const [errors, project] = await createProject(formData);
 
 If there are validation errors, we want to go back to the form and display them.
 
-```tsx lines=[5,7-10]
+```tsx lines=[3,5-8]
 export const action = async ({ request }: ActionArgs) => {
   const formData = await request.formData();
   const [errors, project] = await createProject(formData);
@@ -225,7 +225,7 @@ export const action = async ({ request }: ActionArgs) => {
 
 Just like `useLoaderData` returns the values from the `loader`, `useActionData` will return the data from the action. It will only be there if the navigation was a form submission, so you always have to check if you've got it or not.
 
-```tsx lines=[3,12,22,27-31,39,44-48]
+```tsx lines=[3,10,20,25-29,37,42-46]
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useActionData } from "@remix-run/react";
