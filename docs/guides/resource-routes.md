@@ -20,13 +20,13 @@ If a route doesn't export a default component, it can be used as a Resource Rout
 
 For example, consider a UI Route that renders a report, note the link:
 
-```tsx lines=[10-12] filename=app/routes/reports/$id.js
-export async function loader({ params }) {
+```tsx filename=app/routes/reports/$id.js lines=[10-12]
+export async function loader({ params }: LoaderArgs) {
   return json(await getReport(params.id));
 }
 
 export default function Report() {
-  const report = useLoaderData();
+  const report = useLoaderData<typeof loader>();
   return (
     <div>
       <h1>{report.name}</h1>
@@ -42,7 +42,7 @@ export default function Report() {
 It's linking to a PDF version of the page. To make this work we can create a Resource Route below it. Notice that it has no component: that makes it a Resource Route.
 
 ```tsx filename=app/routes/reports/$id/pdf.ts
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   const report = await getReport(params.id);
   const pdf = await generateReportPDF(report);
   return new Response(pdf, {
@@ -85,13 +85,11 @@ app/routes/reports/$id[.]pdf.ts
 
 To handle `GET` requests export a loader function:
 
-```ts
+```tsx
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
-import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader: LoaderFunction = async ({
-  request,
-}) => {
+export const loader = async ({ request }: LoaderArgs) => {
   // handle "GET" request
 
   return json({ success: true }, 200);
@@ -100,12 +98,10 @@ export const loader: LoaderFunction = async ({
 
 To handle `POST`, `PUT`, `PATCH` or `DELETE` requests export an action function:
 
-```ts
-import type { ActionFunction } from "@remix-run/node"; // or cloudflare/deno
+```tsx
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   switch (request.method) {
     case "POST": {
       /* handle "POST" */
@@ -127,14 +123,12 @@ export const action: ActionFunction = async ({
 
 Resource routes can be used to handle webhooks. For example, you can create a webhook that receives notifications from GitHub when a new commit is pushed to a repository:
 
-```ts
-import type { ActionFunction } from "@remix-run/node"; // or cloudflare/deno
+```tsx
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import crypto from "crypto";
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   if (request.method !== "POST") {
     return json({ message: "Method not allowed" }, 405);
   }

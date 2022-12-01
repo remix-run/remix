@@ -8,6 +8,7 @@ import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { ClientRoute, EntryRoute } from "./routes";
 import type { RouteData } from "./routeData";
+import type { RouteMatch as BaseRouteMatch } from "./routeMatching";
 import type { Submission } from "./transition";
 
 export interface RouteModules {
@@ -20,7 +21,11 @@ export interface RouteModule {
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
-  meta?: MetaFunction | HtmlMetaDescriptor;
+  meta?:
+    | V1_MetaFunction
+    | V1_HtmlMetaDescriptor
+    | V2_MetaFunction
+    | V2_HtmlMetaDescriptor[];
   unstable_shouldReload?: ShouldReloadFunction;
 }
 
@@ -55,13 +60,30 @@ export interface LinksFunction {
  *
  * @see https://remix.run/api/remix#meta-links-scripts
  */
-export interface MetaFunction {
+export interface V1_MetaFunction {
   (args: {
     data: AppData;
     parentsData: RouteData;
     params: Params;
     location: Location;
-  }): HtmlMetaDescriptor | undefined;
+  }): HtmlMetaDescriptor;
+}
+
+// TODO: Replace in v2
+export type MetaFunction = V1_MetaFunction;
+
+export interface RouteMatchWithMeta<Route> extends BaseRouteMatch<Route> {
+  meta: V2_HtmlMetaDescriptor[];
+}
+
+export interface V2_MetaFunction {
+  (args: {
+    data: AppData;
+    parentsData: RouteData;
+    params: Params;
+    location: Location;
+    matches: RouteMatchWithMeta<ClientRoute>[];
+  }): V2_HtmlMetaDescriptor[] | undefined;
 }
 
 /**
@@ -70,7 +92,7 @@ export interface MetaFunction {
  * tag, or an array of strings that will render multiple tags with the same
  * `name` attribute.
  */
-export interface HtmlMetaDescriptor {
+export interface V1_HtmlMetaDescriptor {
   charset?: "utf-8";
   charSet?: "utf-8";
   title?: string;
@@ -81,6 +103,17 @@ export interface HtmlMetaDescriptor {
     | Record<string, string>
     | Array<Record<string, string> | string>;
 }
+
+// TODO: Replace in v2
+export type HtmlMetaDescriptor = V1_HtmlMetaDescriptor;
+
+export type V2_HtmlMetaDescriptor =
+  | { charSet: "utf-8" }
+  | { title: string }
+  | { name: string; content: string }
+  | { property: string; content: string }
+  | { httpEquiv: string; content: string }
+  | { [name: string]: string };
 
 /**
  * During client side transitions Remix will optimize reloading of routes that

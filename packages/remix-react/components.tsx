@@ -24,7 +24,7 @@ import { createPath } from "history";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
-import type { EntryContext, AssetsManifest } from "./entry";
+import type { AssetsManifest, EntryContext, FutureConfig } from "./entry";
 import type { AppState, SerializedError } from "./errors";
 import {
   RemixRootDefaultErrorBoundary,
@@ -48,7 +48,12 @@ import { createClientRoutes } from "./routes";
 import type { RouteData } from "./routeData";
 import type { RouteMatch as BaseRouteMatch } from "./routeMatching";
 import { matchClientRoutes } from "./routeMatching";
-import type { RouteModules, HtmlMetaDescriptor } from "./routeModules";
+import type {
+  RouteModules,
+  RouteMatchWithMeta,
+  V1_HtmlMetaDescriptor,
+  V2_HtmlMetaDescriptor,
+} from "./routeModules";
 import { createTransitionManager } from "./transition";
 import type {
   Transition,
@@ -71,6 +76,7 @@ interface RemixEntryContextType {
   serverHandoffString?: string;
   clientRoutes: ClientRoute[];
   transitionManager: ReturnType<typeof createTransitionManager>;
+  future: FutureConfig;
 }
 
 export const RemixEntryContext = React.createContext<
@@ -195,6 +201,7 @@ export function RemixEntry({
         routeData: loaderData,
         actionData,
         transitionManager,
+        future: entryContext.future,
       }}
     >
       <RemixErrorBoundary
@@ -693,11 +700,11 @@ function PrefetchPageLinksImpl({
  *
  * @see https://remix.run/api/remix#meta-links-scripts
  */
-export function Meta() {
+function V1Meta() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
   let location = useLocation();
 
-  let meta: HtmlMetaDescriptor = {};
+  let meta: V1_HtmlMetaDescriptor = {};
   let parentsData: { [routeId: string]: AppData } = {};
 
   for (let match of matches) {
@@ -710,8 +717,26 @@ export function Meta() {
     if (routeModule.meta) {
       let routeMeta =
         typeof routeModule.meta === "function"
-          ? routeModule.meta({ data, parentsData, params, location })
+          ? routeModule.meta({
+              data,
+              parentsData,
+              params,
+              location,
+              matches: undefined as any,
+            })
           : routeModule.meta;
+      if (routeMeta && Array.isArray(routeMeta)) {
+        throw new Error(
+          "The route at " +
+            match.route.path +
+            " returns an array. This is only supported with the `v2_meta` future flag " +
+            "in the Remix config. Either set the flag to `true` or update the route's " +
+            "meta function to return an object." +
+            "\n\nTo reference the v1 meta function API, see https://remix.run/api/conventions#meta"
+          // TODO: Add link to the docs once they are written
+          // + "\n\nTo reference future flags and the v2 meta API, see https://remix.run/api/remix#future-v2-meta."
+        );
+      }
       Object.assign(meta, routeMeta);
     }
 
@@ -771,6 +796,92 @@ export function Meta() {
       })}
     </>
   );
+}
+
+function V2Meta() {
+  let { matches, routeData, routeModules } = useRemixEntryContext();
+  let location = useLocation();
+
+  let meta: V2_HtmlMetaDescriptor[] = [];
+  let parentsData: { [routeId: string]: AppData } = {};
+
+  let matchesWithMeta: RouteMatchWithMeta<ClientRoute>[] = matches.map(
+    (match) => ({ ...match, meta: [] })
+  );
+
+  let index = -1;
+  for (let match of matches) {
+    index++;
+    let routeId = match.route.id;
+    let data = routeData[routeId];
+    let params = match.params;
+
+    let routeModule = routeModules[routeId];
+
+    let routeMeta: V2_HtmlMetaDescriptor[] | V1_HtmlMetaDescriptor | undefined =
+      [];
+
+    if (routeModule?.meta) {
+      routeMeta =
+        typeof routeModule.meta === "function"
+          ? routeModule.meta({
+              data,
+              parentsData,
+              params,
+              location,
+              matches: matchesWithMeta,
+            })
+          : routeModule.meta;
+    }
+
+    routeMeta = routeMeta || [];
+    if (!Array.isArray(routeMeta)) {
+      throw new Error(
+        "The `v2_meta` API is enabled in the Remix config, but the route at " +
+          match.route.path +
+          " returns an invalid value. In v2, all route meta functions must " +
+          "return an array of meta objects." +
+          // TODO: Add link to the docs once they are written
+          // "\n\nTo reference future flags and the v2 meta API, see https://remix.run/api/remix#future-v2-meta." +
+          "\n\nTo reference the v1 meta function API, see https://remix.run/api/conventions#meta"
+      );
+    }
+
+    matchesWithMeta[index].meta = routeMeta;
+    meta = routeMeta;
+    parentsData[routeId] = data;
+  }
+
+  return (
+    <>
+      {meta.flat().map((metaProps) => {
+        if (!metaProps) {
+          return null;
+        }
+
+        if ("title" in metaProps) {
+          return <title key="title">{String(metaProps.title)}</title>;
+        }
+
+        if ("charSet" in metaProps || "charset" in metaProps) {
+          // TODO: We normalize this for the user in v1, but should we continue
+          // to do that? Seems like a nice convenience IMO.
+          return (
+            <meta
+              key="charset"
+              charSet={metaProps.charSet || (metaProps as any).charset}
+            />
+          );
+        }
+        return <meta key={JSON.stringify(metaProps)} {...metaProps} />;
+      })}
+    </>
+  );
+}
+
+export function Meta() {
+  let { future } = useRemixEntryContext();
+  return future.v2_meta ? <V2Meta /> : <V1Meta />;
 }
 
 /**

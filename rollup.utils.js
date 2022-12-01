@@ -1,5 +1,5 @@
 const babel = require("@rollup/plugin-babel").default;
-const { camelCase } = require("lodash");
+const { camelCase, upperFirst } = require("lodash");
 const copy = require("rollup-plugin-copy");
 const fs = require("fs");
 const fse = require("fs-extra");
@@ -184,6 +184,7 @@ function magicExportsPlugin({ packageName, version }) {
       }
 
       let banner = createBanner(packageName, version);
+      let moduleName = camelCase(packageName.slice("@remix-run/".length));
       let esmContents = banner + "\n";
       let tsContents = banner + "\n";
       let cjsContents =
@@ -195,22 +196,37 @@ function magicExportsPlugin({ packageName, version }) {
       if (magicExports.values) {
         let exportList = magicExports.values.join(", ");
         esmContents += `export { ${exportList} } from '${packageName}';\n`;
-        tsContents += `export { ${exportList} } from '${packageName}';\n`;
 
-        let cjsModule = camelCase(packageName.slice("@remix-run/".length));
-        cjsContents += `var ${cjsModule} = require('${packageName}');\n`;
-        for (let symbol of magicExports.values) {
-          cjsContents +=
-            `Object.defineProperty(exports, '${symbol}', {\n` +
-            "  enumerable: true,\n" +
-            `  get: function () { return ${cjsModule}.${symbol}; }\n` +
-            "});\n";
-        }
+        tsContents += `import * as ${moduleName} from '${packageName}';\n\n`;
+        tsContents += magicExports.values
+          .map(
+            (symbol) =>
+              `/** @deprecated Import \`${symbol}\` from \`${packageName}\` instead. */\n` +
+              `export declare const ${symbol}: typeof ${moduleName}.${symbol};\n`
+          )
+          .join("\n");
+
+        cjsContents += `var ${moduleName} = require('${packageName}');\n`;
+        cjsContents += magicExports.values
+          .map(
+            (symbol) =>
+              `/** @deprecated Import \`${symbol}\` from \`${packageName}\` instead. */\n` +
+              `exports.${symbol} = ${moduleName}.${symbol};\n`
+          )
+          .join("\n");
       }
 
       if (magicExports.types) {
-        let exportList = magicExports.types.join(", ");
-        tsContents += `export type { ${exportList} } from '${packageName}';\n`;
+        let typesModuleName = `${upperFirst(moduleName)}Types`;
+
+        tsContents += `import * as ${typesModuleName} from '${packageName}';\n\n`;
+        tsContents += magicExports.types
+          .map(
+            (symbol) =>
+              `/** @deprecated Import type \`${symbol}\` from \`${packageName}\` instead. */\n` +
+              `export declare type ${symbol} = ${typesModuleName}.${symbol};\n`
+          )
+          .join("\n");
       }
 
       this.emitFile({

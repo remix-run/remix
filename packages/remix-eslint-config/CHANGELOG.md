@@ -1,5 +1,11 @@
 # `@remix-run/eslint-config`
 
+## 1.8.0
+
+### Patch Changes
+
+- Replace references to the old `migrate` command with the new `codemod` command ([#4646](https://github.com/remix-run/remix/pull/4646))
+
 ## 1.7.6
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.7.6) for an overview of all changes in v1.7.6.
