@@ -160,9 +160,9 @@ export function createRoutePath(partialRouteId: string): string | undefined {
       );
     }
 
-    function isCloseOptionalSegment(charCheck: String = char) {
+    function isCloseOptionalSegment() {
       return (
-        charCheck === optionalEnd &&
+        char === optionalEnd &&
         nextChar !== optionalEnd &&
         (isSegmentSeparator(nextChar) || nextChar === undefined) &&
         inOptionalSegment &&
