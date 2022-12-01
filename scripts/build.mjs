@@ -1,11 +1,22 @@
 import { spawn } from "cross-spawn";
+import glob from "glob";
 
 const args = process.argv.slice(2);
 const tsc = process.env.CI || args.includes("--tsc");
 const publish = process.env.CI || args.includes("--publish");
+const denoCheck = process.env.CI || args.includes("--deno");
 
 exec("yarn", ["rollup", "-c"])
   .then(() => tsc && exec("yarn", ["tsc", "-b"]))
+  .then(
+    () =>
+      denoCheck &&
+      exec("deno", [
+        "check",
+        "--import-map=.vscode/deno_resolve_npm_imports.json",
+        ...glob.sync("packages/remix-deno/**/*.ts"),
+      ])
+  )
   .then(() => publish && exec("node", ["scripts/copy-build-to-dist.mjs"]))
   .then(() => process.exit(0))
   .catch((err) => {

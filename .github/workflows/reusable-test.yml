@@ -35,6 +35,11 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "yarn"
 
+      - name: 🦕 Setup deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
@@ -65,8 +70,17 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: "yarn"
 
+      - name: 🦕 Setup deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
+
+      # It's faster to use the built `cli.js` in tests if its available and up-to-date
+      - name: 🏗 Build
+        run: yarn build
 
       - name: 🧪 Run Primary Tests
         run: "yarn test:primary"
@@ -92,6 +106,11 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+
+      - name: 🦕 Setup deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
@@ -124,6 +143,11 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: "yarn"
 
+      - name: 🦕 Setup deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
@@ -154,6 +178,11 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+
+      - name: 🦕 Setup deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
