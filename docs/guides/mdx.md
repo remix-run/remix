@@ -89,14 +89,15 @@ export const handle = {
   someData: "abc",
 };
 
+import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
 export const loader = async () => {
-  return { mamboNumber: 5 };
+  return json({ mamboNumber: 5 });
 };
 
 export function ComponentUsingData() {
-  const { mamboNumber } = useLoaderData();
+  const { mamboNumber } = useLoaderData<typeof loader>();
   return <div id="loader">Mambo Number: {mamboNumber}</div>;
 }
 
@@ -159,7 +160,7 @@ export async function loader() {
 }
 
 export default function Index() {
-  const posts = useLoaderData();
+  const posts = useLoaderData<typeof loader>();
 
   return (
     <ul>

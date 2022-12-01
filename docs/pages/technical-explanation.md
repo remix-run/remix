@@ -85,7 +85,7 @@ More often than not, a Remix route module can contain both the UI and the intera
 
 Route modules have three primary exports: `loader`, `action`, and `default` (component).
 
-```jsx
+```tsx
 // Loaders only run on the server and provide data
 // to your component on GET requests
 export async function loader() {
@@ -95,7 +95,7 @@ export async function loader() {
 // Actions only run on the server and handle POST
 // PUT, PATCH, and DELETE. They can also provide data
 // to the component
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const form = await request.formData();
   const errors = validate(form);
   if (errors) {
@@ -109,8 +109,8 @@ export async function action({ request }) {
 // rendered when a route matches the URL. This runs
 // both on the server and the client
 export default function Projects() {
-  const projects = useLoaderData();
-  const actionData = useActionData();
+  const projects = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
 
   return (
     <div>
@@ -168,10 +168,10 @@ Taking our route module from before, here are a few small, but useful UX improve
 2. Focus the input when server side form validation fails
 3. Animate in the error messages
 
-```jsx nocopy lines=[4-6,8-12,23-26,30-32]
+```tsx nocopy lines=[4-6,8-12,23-26,30-32]
 export default function Projects() {
-  const projects = useLoaderData();
-  const actionData = useActionData();
+  const projects = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
   const { state } = useTransition();
   const busy = state === "submitting";
   const inputRef = React.useRef();
