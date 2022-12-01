@@ -16,7 +16,7 @@
 // packages are bumped to the next minor release instead.
 //
 // Because changesets doesn't automatically bump peer dependencies with the
-// relaxed range (which makes sense in most cases), this script does that for
+// relaxed range (which makes sense in some cases), this script does that for
 // us. This makes the change safer because updating the leading dependency will
 // result in a peer dependency warning if the user doesn't bump the peer
 // dependency for some reason.
