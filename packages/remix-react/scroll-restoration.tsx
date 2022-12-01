@@ -2,6 +2,7 @@ import * as React from "react";
 import { useLocation } from "react-router-dom";
 
 import { useBeforeUnload, useTransition } from "./components";
+import type { ScriptProps } from "./components";
 
 let STORAGE_KEY = "positions";
 
@@ -20,7 +21,7 @@ if (typeof document !== "undefined") {
  *
  * @see https://remix.run/api/remix#scrollrestoration
  */
-export function ScrollRestoration({ nonce = undefined }: { nonce?: string }) {
+export function ScrollRestoration(props: ScriptProps) {
   useScrollRestoration();
 
   // wait for the browser to restore it on its own
@@ -54,7 +55,7 @@ export function ScrollRestoration({ nonce = undefined }: { nonce?: string }) {
 
   return (
     <script
-      nonce={nonce}
+      {...props}
       suppressHydrationWarning
       dangerouslySetInnerHTML={{
         __html: `(${restoreScroll})(${JSON.stringify(STORAGE_KEY)})`,
