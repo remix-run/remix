@@ -161,9 +161,13 @@ export function RemixRouteError({ id }: { id: string }) {
 
   if (isRouteErrorResponse(error)) {
     let tError = error as any;
-    if (tError?.error && tError.status !== 404) {
+    if (
+      tError?.error instanceof Error &&
+      tError.status !== 404 &&
+      ErrorBoundary
+    ) {
+      // Internal framework-thrown ErrorResponses
       return (
-        // TODO: Handle error type?
         <RemixErrorBoundary
           location={location}
           component={ErrorBoundary!}
@@ -171,17 +175,20 @@ export function RemixRouteError({ id }: { id: string }) {
         />
       );
     }
-    return (
-      <RemixCatchBoundary
-        component={CatchBoundary!}
-        catch={error as ErrorResponse}
-      />
-    );
+    if (CatchBoundary) {
+      // User-thrown ErrorResponses
+      return (
+        <RemixCatchBoundary
+          component={CatchBoundary!}
+          catch={error as ErrorResponse}
+        />
+      );
+    }
   }
 
-  if (!isRouteErrorResponse(error) && ErrorBoundary) {
+  if (error instanceof Error && ErrorBoundary) {
+    // User- or framework-thrown Errors
     return (
-      // TODO: Handle error type?
       <RemixErrorBoundary
         location={location}
         component={ErrorBoundary}

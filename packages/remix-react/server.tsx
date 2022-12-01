@@ -28,8 +28,6 @@ export function RemixServer({ context, url }: RemixServerProps): ReactElement {
   let routes = createServerRoutes(manifest.routes, routeModules);
   let router = createStaticRouter(routes, context.staticHandlerContext);
 
-  console.log("✅ Rendering RR 6.4 StaticRouterProvider");
-
   return (
     <RemixContext.Provider
       value={{

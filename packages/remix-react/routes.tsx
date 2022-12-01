@@ -112,7 +112,7 @@ function createShouldRevalidate(
     if (module.shouldRevalidate) {
       return module.shouldRevalidate(arg);
     }
-    return true;
+    return arg.defaultShouldRevalidate;
   };
 }
 

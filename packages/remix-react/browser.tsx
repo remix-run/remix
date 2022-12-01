@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import { RemixContext } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
+import { deserializeErrors } from "./errors";
 import type { RouteModules } from "./routeModules";
 import { createClientRoutes } from "./routes";
 
@@ -34,10 +35,16 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       window.__remixManifest.routes,
       window.__remixRouteModules
     );
-    console.log(`✅ Creating data router via createBrowserRouter()`);
-    router = createBrowserRouter(routes, {
-      hydrationData: window.__remixContext.state,
-    });
+
+    let hydrationData = window.__remixContext.state;
+    if (hydrationData && hydrationData.errors) {
+      hydrationData = {
+        ...hydrationData,
+        errors: deserializeErrors(hydrationData.errors),
+      };
+    }
+
+    router = createBrowserRouter(routes, { hydrationData });
   }
 
   return (

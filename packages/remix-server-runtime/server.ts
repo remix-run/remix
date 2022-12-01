@@ -9,7 +9,7 @@ import type { AppLoadContext } from "./data";
 import type { ServerBuild } from "./build";
 import type { EntryContext } from "./entry";
 import { createEntryRouteModules } from "./entry";
-import { serializeError } from "./errors";
+import { serializeError, serializeErrors } from "./errors";
 import { getDocumentHeadersRR } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
@@ -242,7 +242,7 @@ async function handleDocumentRequestRR(
       state: {
         loaderData: context.loaderData,
         actionData: context.actionData,
-        errors: context.errors,
+        errors: serializeErrors(context.errors),
       },
       future: build.future,
     }),
@@ -281,7 +281,7 @@ async function handleDocumentRequestRR(
         state: {
           loaderData: context.loaderData,
           actionData: context.actionData,
-          errors: context.errors,
+          errors: serializeErrors(context.errors),
         },
         future: build.future,
       }),
