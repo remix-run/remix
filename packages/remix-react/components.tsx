@@ -29,6 +29,7 @@ import {
   useFetcher as useFetcherRR,
   useActionData as useActionDataRR,
   useLoaderData as useLoaderDataRR,
+  useMatches as useMatchesRR,
   useLocation,
   useNavigation,
   useHref,
@@ -874,7 +875,7 @@ export function useBeforeUnload(
   }, [callback]);
 }
 
-// TODO: Handle this typing
+// TODO: Can this be re-exported from RR?
 export interface RouteMatch {
   /**
    * The id of the matched route
@@ -893,13 +894,30 @@ export interface RouteMatch {
   /**
    * Any route data associated with the matched route
    */
-  data: RouteData;
+  data: any;
   /**
    * The exported `handle` object of the matched route.
    *
    * @see https://remix.run/docs/api/conventions#handle
    */
   handle: undefined | { [key: string]: any };
+}
+
+export function useMatches(): RouteMatch[] {
+  let { routeModules } = useRemixContext();
+  let matches = useMatchesRR();
+  return matches.map((match) => {
+    let remixMatch: RouteMatch = {
+      id: match.id,
+      pathname: match.pathname,
+      params: match.params,
+      data: match.data,
+      // Need to grab handle here since we don't have it at client-side route
+      // creation time
+      handle: routeModules[match.id].handle,
+    };
+    return remixMatch;
+  });
 }
 
 /**

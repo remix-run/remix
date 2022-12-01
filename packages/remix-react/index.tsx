@@ -16,7 +16,6 @@ export {
   useFormAction,
   useHref,
   useLocation,
-  useMatches,
   useNavigate,
   useNavigationType,
   useOutlet,
@@ -45,6 +44,7 @@ export {
   useTransition,
   useFetcher,
   useLoaderData,
+  useMatches,
   useActionData,
   useBeforeUnload,
 } from "./components";
