@@ -1646,7 +1646,6 @@ export const LiveReload =
                   let socketPath = protocol + "//" + host + ":" + ${String(
                     port
                   )} + "/socket";
-
                   let ws = new WebSocket(socketPath);
                   ws.onmessage = (message) => {
                     let event = JSON.parse(message.data);
@@ -1663,15 +1662,17 @@ export const LiveReload =
                       config.onOpen();
                     }
                   };
-                  ws.onclose = (error) => {
-                    console.log("Remix dev asset server web socket closed. Reconnecting...");
-                    setTimeout(
-                      () =>
-                        remixLiveReloadConnect({
-                          onOpen: () => window.location.reload(),
-                        }),
-                      1000
-                    );
+                  ws.onclose = (event) => {
+                    if (event.code === 1006) {
+                      console.log("Remix dev asset server web socket closed. Reconnecting...");
+                      setTimeout(
+                        () =>
+                          remixLiveReloadConnect({
+                            onOpen: () => window.location.reload(),
+                          }),
+                        1000
+                      );
+                    }
                   };
                   ws.onerror = (error) => {
                     console.log("Remix dev asset server web socket error:");
