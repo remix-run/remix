@@ -1,3 +1,29 @@
+// Consider this scenario:
+// 1. Run `yarn changeset:version` to bump versions
+// 2. Changesets sees that a package has a minor change
+// 3. Because we release packages in lockstep, all packages get a minor update
+// 4. `@remix-run/dev` has "peerDependencies": { "@remix-run/serve": "1.8.0" }
+// 5. This dependency will now be out of range after the update
+// 6. Changesets makes the safe bet and updates `@remix-run/dev` to 2.0.0
+//    because it can't be sure this doesn't result in a breaking change
+// 7. Because we release packages in lockstep, all packages get a major update
+//
+// In practice, this means any `minor` changeset will result in a major bump,
+// which definitely isn't what we want.
+//
+// Instead, we relaxe the peer dependency range for internal packages. That way
+// the update doesn't result in an out-of-range peer dependency, and all
+// packages are bumped to the next minor release instead.
+//
+// Because changesets doesn't automatically bump peer dependencies with the
+// relaxed range (which makes sense in most cases), this script does that for
+// us. This makes the change safer because updating the leading dependency will
+// result in a peer dependency warning if the user doesn't bump the peer
+// dependency for some reason.
+//
+// Thanks to Mateusz Burzyński for the original script
+// Copyright (c) 2015 David Khourshid, MIT License
+// https://github.com/statelyai/xstate/blob/fb4786b80786d8ff3d44dfa818097b219dab623c/scripts/bump-peer-dep-ranges.js
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import path from "node:path";
