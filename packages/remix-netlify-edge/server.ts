@@ -1,5 +1,5 @@
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/deno";
-import type { ServerBuild } from "@remix-run/deno";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/deno/server.ts";
+import type { ServerBuild } from "@remix-run/deno/index.ts";
 import type { Context } from "@netlify/edge-functions";
 
 /**
