@@ -921,7 +921,7 @@ export default function NewPost() {
 }
 ```
 
-TypeScript is still mad, because someone could call our API with non-string values, so let's add some invariants and a new type for the error object to make it happy.
+TypeScript is still mad, because someone could call our API with non-string values, so let's add some invariants to make it happy.
 
 ```tsx filename=app/routes/posts/admin/new.tsx nocopy
 //...
