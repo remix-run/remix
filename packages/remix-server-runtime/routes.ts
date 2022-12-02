@@ -40,27 +40,50 @@ export interface ServerRoute extends Route {
   module: ServerRouteModule;
 }
 
+function groupRoutesByParentId(manifest: ServerRouteManifest) {
+  let routes: Record<string, Omit<ServerRoute, "children">[]> = {};
+
+  Object.values(manifest).forEach((route) => {
+    let parentId = route.parentId || "";
+    if (!routes[parentId]) {
+      routes[parentId] = [];
+    }
+    routes[parentId].push(route);
+  });
+
+  return routes;
+}
+
 export function createRoutes(
   manifest: ServerRouteManifest,
-  parentId?: string
+  parentId?: string,
+  routesByParentId?: Record<string, Omit<ServerRoute, "children">[]>
 ): ServerRoute[] {
-  return Object.entries(manifest)
-    .filter(([, route]) => route.parentId === parentId)
-    .map(([id, route]) => ({
+  // Create a map of routes by parentId to use recursively instead of
+  // repeatedly filtering the manifest.
+  routesByParentId ||= groupRoutesByParentId(manifest);
+
+  return (routesByParentId[parentId || ""] || [])
+    .map((route) => ({
       ...route,
-      children: createRoutes(manifest, id),
+      children: createRoutes(manifest, route.id, routesByParentId),
     }));
 }
+
 
 // Convert the Remix ServerManifest into DataRouteObject's for use with
 // createStaticHandler
 export function createStaticHandlerDataRoutes(
   manifest: ServerRouteManifest,
   loadContext: AppLoadContext,
-  parentId?: string
+  parentId?: string,
+  routesByParentId?: Record<string, Omit<ServerRoute, "children">[]>
 ): AgnosticDataRouteObject[] {
-  return Object.values(manifest)
-    .filter((route) => route.parentId === parentId)
+  // Create a map of routes by parentId to use recursively instead of
+  // repeatedly filtering the manifest.
+  routesByParentId ||= groupRoutesByParentId(manifest);
+
+  return (routesByParentId[parentId || ""] || [])
     .map((route) => {
       let commonRoute = {
         // Always include root due to default boundaries
@@ -103,7 +126,8 @@ export function createStaticHandlerDataRoutes(
             children: createStaticHandlerDataRoutes(
               manifest,
               loadContext,
-              route.id
+              route.id,
+              routesByParentId
             ),
             ...commonRoute,
           };
