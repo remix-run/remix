@@ -1,7 +1,7 @@
 import * as path from "https://deno.land/std@0.128.0/path/mod.ts";
 import mime from "mime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-export { createRemixRequestHandler }
+export { createRemixRequestHandler };
 import type { AppLoadContext, ServerBuild } from "@remix-run/server-runtime";
 
 function defaultCacheControl(url: URL, assetsPublicPath = "/build/") {
@@ -11,8 +11,6 @@ function defaultCacheControl(url: URL, assetsPublicPath = "/build/") {
     return "public, max-age=600";
   }
 }
-
-export const createRemixRequestHandler = _createRemixRequestHandler;
 
 export function createRequestHandler<
   Context extends AppLoadContext | undefined = undefined
