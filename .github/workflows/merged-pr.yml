@@ -5,6 +5,8 @@ on:
     types: [closed]
     branches:
       - dev
+    paths:
+      - "packages/**"
 
 permissions:
   pull-requests: write
@@ -15,15 +17,7 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: dorny/paths-filter@v2
-        id: changes
-        with:
-          filters: |
-            packages:
-              - 'packages/**'
-
       - uses: actions-ecosystem/action-add-labels@v1
-        if: steps.changes.outputs.packages == 'true'
         with:
           labels: "awaiting release"
           number: ${{ github.event.pull_request.number }}
