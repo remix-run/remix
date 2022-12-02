@@ -3,7 +3,8 @@
   "description": "Netlify Edge platform abstractions for Remix",
   "version": "1.8.0",
   "license": "MIT",
-  "types": "./index.d.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/remix-run/remix",
