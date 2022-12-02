@@ -8,8 +8,21 @@ let STORAGE_KEY = "positions";
 
 let positions: { [key: string]: number } = {};
 
+let isSessionStorageAvailable = true;
+try {
+  void sessionStorage;
+} catch {
+  isSessionStorageAvailable = false;
+}
+
+const safeSessionStorage = {
+  getItem: (...args: Parameters<typeof sessionStorage.getItem>) => isSessionStorageAvailable ? sessionStorage.getItem(...args) : null,
+  removeItem: (...args: Parameters<typeof sessionStorage.removeItem>) => isSessionStorageAvailable ? sessionStorage.removeItem(...args) : undefined,
+  setItem: (...args: Parameters<typeof sessionStorage.setItem>) => isSessionStorageAvailable ? sessionStorage.setItem(...args) : undefined,
+}
+
 if (typeof document !== "undefined") {
-  let sessionPositions = sessionStorage.getItem(STORAGE_KEY);
+  let sessionPositions = safeSessionStorage.getItem(STORAGE_KEY);
   if (sessionPositions) {
     positions = JSON.parse(sessionPositions);
   }
@@ -42,14 +55,14 @@ export function ScrollRestoration(props: ScriptProps) {
       window.history.replaceState({ key }, "");
     }
     try {
-      let positions = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "{}");
+      let positions = JSON.parse(safeSessionStorage.getItem(STORAGE_KEY) || "{}");
       let storedY = positions[window.history.state.key];
       if (typeof storedY === "number") {
         window.scrollTo(0, storedY);
       }
     } catch (error) {
       console.error(error);
-      sessionStorage.removeItem(STORAGE_KEY);
+      safeSessionStorage.removeItem(STORAGE_KEY);
     }
   }).toString();
 
@@ -86,7 +99,7 @@ function useScrollRestoration() {
 
   useBeforeUnload(
     React.useCallback(() => {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
+      safeSessionStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
     }, [])
   );
 
