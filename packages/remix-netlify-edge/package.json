@@ -19,6 +19,9 @@
   "devDependencies": {
     "@netlify/edge-functions": "^2.0.0"
   },
+  "peerDependencies": {
+    "@netlify/edge-functions": "^2.0.0"
+  },
   "engines": {
     "node": ">=14"
   },
