@@ -18,5 +18,14 @@
   },
   "devDependencies": {
     "@netlify/edge-functions": "^2.0.0"
-  }
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
 }
