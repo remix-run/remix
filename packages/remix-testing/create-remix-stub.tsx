@@ -8,14 +8,11 @@ import type {
   RouteModules,
 } from "@remix-run/react";
 import { RemixEntry } from "@remix-run/react";
-import { json } from "@remix-run/server-runtime";
-
 import type {
   Action,
   AgnosticDataRouteObject,
   AgnosticIndexRouteObject,
   AgnosticNonIndexRouteObject,
-  AgnosticRouteObject,
   AgnosticRouteMatch,
   InitialEntry,
   Location,
@@ -27,6 +24,7 @@ import {
   matchRoutes,
   unstable_createStaticHandler as createStaticHandler,
 } from "@remix-run/router";
+import { json } from "@remix-run/server-runtime";
 
 type Update = {
   action: Action;
