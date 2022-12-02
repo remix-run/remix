@@ -12,8 +12,10 @@ Typescript would not show errors when the loader or action returned an incompati
 For example:
 
 ```ts
-export const action = async (args: ActionArgs): Promise<TypedResponse<string>> => {
-    return json(42);
+export const action = async (
+  args: ActionArgs
+): Promise<TypedResponse<string>> => {
+  return json(42);
 };
 ```
 
