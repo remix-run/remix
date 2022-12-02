@@ -2,7 +2,6 @@ import "./globals.ts";
 export { createFileSessionStorage } from "./sessions/fileStorage.ts";
 export {
   createRequestHandler,
-  createRemixRequestHandler,
   createRequestHandlerWithStaticFiles,
   serveStaticFiles,
 } from "./server.ts";
@@ -24,6 +23,7 @@ export {
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,
+  createRequestHandler as createRemixRequestHandler,
 } from "@remix-run/server-runtime";
 
 export type {
