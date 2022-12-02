@@ -8,6 +8,7 @@ import type {
   AgnosticDataRouteMatch,
   AgnosticDataRouteObject,
   ErrorResponse,
+  Navigation,
 } from "@remix-run/router";
 import type {
   LinkProps,
@@ -71,6 +72,7 @@ import type {
   TransitionStates,
 } from "./transition";
 import { IDLE_TRANSITION, IDLE_FETCHER } from "./transition";
+import { labeledStatement } from "@babel/types";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -945,7 +947,11 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  * @see https://remix.run/api/remix#usetransition
  */
 export function useTransition(): Transition {
+  let currentLocation = useLocation();
   let navigation = useNavigation();
+  let lastNavigationRef = React.useRef<Navigation | null>(null);
+  let lastNavigation = lastNavigationRef.current;
+  lastNavigationRef.current = navigation;
 
   // TODO: Should we populate navigation.formData on <Form method="get"> even
   // though we've already move the data onto URLSearchParams.
@@ -1071,31 +1077,25 @@ export function useTransition(): Transition {
           return transition;
         }
       }
-    } else {
-      // TODO: How can we detect this?
-      let wasNormalRedirect = false;
-      if (wasNormalRedirect) {
-        let transition: TransitionStates["LoadingRedirect"] = {
-          location,
-          state,
-          submission: undefined,
-          type: "normalRedirect",
-        };
-        return transition;
-      }
-
-      // TODO: How can we detect a fetch action redirect???  Do we need to
-      // check useFetchers?  Or could we somehow look at location key?
-      let wasFetchActionRedirect = false;
-      if (wasFetchActionRedirect) {
-        let transition: TransitionStates["LoadingFetchActionRedirect"] = {
-          location,
-          state,
-          submission: undefined,
-          type: "fetchActionRedirect",
-        };
-        return transition;
-      }
+    } else if (
+      lastNavigation?.state === "loading" &&
+      lastNavigation.location.key !== navigation.location?.key
+    ) {
+      let transition: TransitionStates["LoadingRedirect"] = {
+        location,
+        state,
+        submission: undefined,
+        type: "normalRedirect",
+      };
+      return transition;
+    } else if (location.state?.isFetchActionRedirect) {
+      let transition: TransitionStates["LoadingFetchActionRedirect"] = {
+        location,
+        state,
+        submission: undefined,
+        type: "fetchActionRedirect",
+      };
+      return transition;
     }
   }
 
