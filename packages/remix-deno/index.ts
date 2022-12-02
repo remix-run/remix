@@ -2,6 +2,7 @@ import "./globals.ts";
 export { createFileSessionStorage } from "./sessions/fileStorage.ts";
 export {
   createRequestHandler,
+  createRemixRequestHandler,
   createRequestHandlerWithStaticFiles,
   serveStaticFiles,
 } from "./server.ts";

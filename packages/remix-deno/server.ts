@@ -1,6 +1,6 @@
 import * as path from "https://deno.land/std@0.128.0/path/mod.ts";
 import mime from "mime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import { createRequestHandler as _createRemixRequestHandler } from "@remix-run/server-runtime";
 import type { AppLoadContext, ServerBuild } from "@remix-run/server-runtime";
 
 function defaultCacheControl(url: URL, assetsPublicPath = "/build/") {
@@ -11,8 +11,10 @@ function defaultCacheControl(url: URL, assetsPublicPath = "/build/") {
   }
 }
 
+export const createRemixRequestHandler = _createRemixRequestHandler;
+
 export function createRequestHandler<
-  Context extends AppLoadContext | undefined = undefined,
+  Context extends AppLoadContext | undefined = undefined
 >({
   build,
   mode,
@@ -27,7 +29,6 @@ export function createRequestHandler<
   return async (request: Request) => {
     try {
       const loadContext = await getLoadContext?.(request);
-
       return handleRequest(request, loadContext);
     } catch (e) {
       console.error(e);
@@ -53,7 +54,7 @@ export async function serveStaticFiles(
     cacheControl?: string | ((url: URL) => string);
     publicDir?: string;
     assetsPublicPath?: string;
-  },
+  }
 ) {
   const url = new URL(request.url);
 
@@ -84,7 +85,7 @@ export async function serveStaticFiles(
 }
 
 export function createRequestHandlerWithStaticFiles<
-  Context extends AppLoadContext | undefined = undefined,
+  Context extends AppLoadContext | undefined = undefined
 >({
   build,
   mode,
