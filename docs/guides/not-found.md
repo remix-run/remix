@@ -18,7 +18,7 @@ The first case is already handled by Remix, you don't have to throw a response y
 As soon as you know you don't have what the user is looking for you should _throw a response_.
 
 ```tsx filename=routes/page/$slug.js
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   const page = await db.page.findOne({
     where: { slug: params.slug },
   });
@@ -69,13 +69,14 @@ export function CatchBoundary() {
 Just like [errors], nested routes can export their own catch boundary to handle the 404 UI without taking down all of the parent layouts around it, and add some nice UX touches right in context. Bots are happy, SEO is happy, CDNs are happy, users are happy, and your code stays in context, so it seems like everybody involved is happy with this.
 
 ```tsx filename=app/routes/pages/$pageId.tsx
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import {
   Form,
   useLoaderData,
   useParams,
 } from "@remix-run/react";
 
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   const page = await db.page.findOne({
     where: { slug: params.slug },
   });
@@ -108,7 +109,7 @@ export function CatchBoundary() {
 }
 
 export default function Page() {
-  return <PageView page={useLoaderData()} />;
+  return <PageView page={useLoaderData<typeof loader>()} />;
 }
 ```
 

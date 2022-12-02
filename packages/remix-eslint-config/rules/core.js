@@ -14,7 +14,7 @@ const WARN = 1;
 const ERROR = 2;
 
 const getReplaceRemixImportsMessage = (packageName) =>
-  `All \`remix\` exports are considered deprecated as of v1.3.3. Please use \`@remix-run/${packageName}\` instead. You can run \`remix migrate --migration replace-remix-imports\` to automatically migrate your code.`;
+  `All \`remix\` exports are considered deprecated as of v1.3.3. Please use \`@remix-run/${packageName}\` instead. Run \`npx @remix-run/dev@latest codemod replace-remix-magic-imports\` to automatically migrate your code.`;
 
 const replaceRemixImportsOptions = [
   {

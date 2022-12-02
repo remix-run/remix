@@ -12,11 +12,12 @@ Mature apps already have a lot of backend application code in Ruby, Elixir, PHP,
 
 Because Remix polyfills the Web Fetch API, you can use `fetch` right from your loaders and actions to your backend.
 
-```jsx lines=[8,14,18]
+```tsx lines=[9,15,19]
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import escapeHtml from "escape-html";
 
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   let apiUrl = "http://api.example.com/some-data.json";
   let res = await fetch(apiUrl, {
     headers: {
