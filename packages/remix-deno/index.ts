@@ -14,6 +14,7 @@ export {
 } from "./implementations.ts";
 
 export {
+  createRequestHandler as createRemixRequestHandler,
   createSession,
   isCookie,
   isSession,
@@ -23,7 +24,6 @@ export {
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
   unstable_parseMultipartFormData,
-  createRequestHandler as createRemixRequestHandler,
 } from "@remix-run/server-runtime";
 
 export type {
