@@ -43,11 +43,14 @@ test.describe("rendering", () => {
               <html lang="en">
                 <body>
                   <Outlet />
-                  <pre>
+                    {transition.state != "idle" && (
+                      <p id="loading-indicator">Loading...</p>
+                    )}
+                  <p>
                     <code id="transitions">
                       {JSON.stringify(transitions, null, 2)}
                     </code>
-                  </pre>
+                  </p>
                   <Scripts />
                 </body>
               </html>
@@ -199,6 +202,8 @@ test.describe("rendering", () => {
     await app.goto("/", true);
     await app.clickLink(`/${STATES.NORMAL_LOAD}`);
     await page.waitForSelector(`#${STATES.NORMAL_LOAD}`);
+    await page.waitForSelector("#loading-indicator", { state: "hidden" });
+
     let transitionsCode = await app.getElement("#transitions");
     let transitionsJson = transitionsCode.text();
     let transitions = JSON.parse(transitionsJson);
@@ -224,6 +229,7 @@ test.describe("rendering", () => {
     await app.goto("/", true);
     await app.clickLink(`/${STATES.LOADING_REDIRECT}`);
     await page.waitForURL(/\?redirected/);
+    await page.waitForSelector("#loading-indicator", { state: "hidden" });
     let transitionsCode = await app.getElement("#transitions");
     let transitionsJson = transitionsCode.text();
     let transitions = JSON.parse(transitionsJson);
@@ -266,6 +272,7 @@ test.describe("rendering", () => {
     await app.goto("/", true);
     await app.clickSubmitButton(`/${STATES.SUBMITTING_LOADER}`);
     await page.waitForSelector(`#${STATES.SUBMITTING_LOADER}`);
+    await page.waitForSelector("#loading-indicator", { state: "hidden" });
     let transitionsCode = await app.getElement("#transitions");
     let transitionsJson = transitionsCode.text();
     let transitions = JSON.parse(transitionsJson);
@@ -300,6 +307,7 @@ test.describe("rendering", () => {
     await app.goto("/", true);
     await app.clickSubmitButton(`/${STATES.SUBMITTING_LOADER_REDIRECT}`);
     await page.waitForURL(/\?redirected/);
+    await page.waitForSelector("#loading-indicator", { state: "hidden" });
     let transitionsCode = await app.getElement("#transitions");
     let transitionsJson = transitionsCode.text();
     let transitions = JSON.parse(transitionsJson);
@@ -356,6 +364,7 @@ test.describe("rendering", () => {
     await app.goto("/", true);
     await app.clickSubmitButton(`/${STATES.SUBMITTING_ACTION}`);
     await page.waitForSelector(`#${STATES.SUBMITTING_ACTION}`);
+    await page.waitForSelector("#loading-indicator", { state: "hidden" });
     let transitionsCode = await app.getElement("#transitions");
     let transitionsJson = transitionsCode.text();
     let transitions = JSON.parse(transitionsJson);
@@ -408,6 +417,7 @@ test.describe("rendering", () => {
     await app.goto("/", true);
     await app.clickSubmitButton(`/${STATES.SUBMITTING_ACTION_REDIRECT}`);
     await page.waitForURL(/\?redirected/);
+    await page.waitForSelector("#loading-indicator", { state: "hidden" });
     let transitionsCode = await app.getElement("#transitions");
     let transitionsJson = transitionsCode.text();
     let transitions = JSON.parse(transitionsJson);
@@ -464,6 +474,7 @@ test.describe("rendering", () => {
     await app.goto("/", true);
     await app.clickSubmitButton(`/${STATES.FETCHER_REDIRECT}`);
     await page.waitForURL(/\?redirected/);
+    await page.waitForSelector("#loading-indicator", { state: "hidden" });
     let transitionsCode = await app.getElement("#transitions");
     let transitionsJson = transitionsCode.text();
     let transitions = JSON.parse(transitionsJson);
