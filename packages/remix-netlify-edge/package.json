@@ -16,9 +16,6 @@
   "dependencies": {
     "@remix-run/deno": "1.8.0"
   },
-  "devDependencies": {
-    "@netlify/edge-functions": "^2.0.0"
-  },
   "peerDependencies": {
     "@netlify/edge-functions": "^2.0.0"
   },
