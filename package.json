@@ -18,6 +18,7 @@
     "packages/remix-react",
     "packages/remix-serve",
     "packages/remix-server-runtime",
+    "packages/remix-testing",
     "packages/remix-vercel"
   ],
   "scripts": {

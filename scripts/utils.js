@@ -17,7 +17,7 @@ let remixPackages = {
     "vercel",
   ],
   runtimes: ["cloudflare", "deno", "node"],
-  core: ["dev", "server-runtime", "react", "eslint-config"],
+  core: ["dev", "server-runtime", "react", "eslint-config", "testing"],
   get all() {
     return [...this.adapters, ...this.runtimes, ...this.core, "serve"];
   },
