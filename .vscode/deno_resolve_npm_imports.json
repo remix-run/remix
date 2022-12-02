@@ -8,6 +8,9 @@
   ],
   "imports": {
     "@remix-run/server-runtime": "https://esm.sh/@remix-run/server-runtime@nightly",
+    "@remix-run/deno": "../packages/remix-deno/index.ts",
+    "@remix-run/deno/": "../packages/remix-deno/",
+    "@netlify/edge-functions": "https://edge.netlify.com",
     "mime": "https://esm.sh/mime@3.0.0"
   }
 }

@@ -1,4 +1,4 @@
-import "./globals";
+import "./globals.ts";
 
-export type { GetLoadContextFunction, RequestHandler } from "./server";
-export { createRequestHandler } from "./server";
+export type { GetLoadContextFunction, RequestHandler } from "./server.ts";
+export { createRequestHandler } from "./server.ts";
