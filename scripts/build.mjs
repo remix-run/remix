@@ -2,8 +2,8 @@ import { spawn } from "cross-spawn";
 import glob from "glob";
 
 const args = process.argv.slice(2);
-const tsc = process.env.CI || args.includes("--tsc");
 const publish = process.env.CI || args.includes("--publish");
+const tsc = process.env.CI || args.includes("--tsc") || publish;
 const denoCheck = process.env.CI || args.includes("--deno");
 
 exec("yarn", ["rollup", "-c"])
