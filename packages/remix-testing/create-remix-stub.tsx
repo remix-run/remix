@@ -18,13 +18,13 @@ import type {
   MemoryHistory,
   StaticHandler,
   Update,
-} from "@remix-run/server-runtime";
+} from "@remix-run/router";
 import {
   createMemoryHistory,
   json,
   matchRoutes,
   unstable_createStaticHandler as createStaticHandler,
-} from "@remix-run/server-runtime";
+} from "@remix-run/router";
 
 type RemixStubOptions = {
   /**
