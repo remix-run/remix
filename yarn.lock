@@ -2388,30 +2388,10 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/deno@1.7.6":
-  version "1.7.6"
-  resolved "https://registry.npmjs.org/@remix-run/deno/-/deno-1.7.6.tgz#4e2f469ed8e7f3c500510df6d64d885a26c091d4"
-  integrity sha512-lCOKmsY907MZaWV/7iJAvCwQKE1lkF4VHr63uMdLBapSW+NBiN9wzbeapA+KqYCIrLb/pFfLtlBrD6Wh3vHvTA==
-  dependencies:
-    "@remix-run/server-runtime" "1.7.6"
-    mime "^3.0.0"
-
 "@remix-run/router@1.0.4":
   version "1.0.4"
   resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.0.4.tgz#cbfbec6735711e7c2fc93b9b40adf70ef5a39990"
   integrity sha512-gTL8H5USTAKOyVA4xczzDJnC3HMssdFa3tRlwBicXynx9XfiXwneHnYQogwSKpdCkjXISrEKSTtX62rLpNEVQg==
-
-"@remix-run/server-runtime@1.7.6":
-  version "1.7.6"
-  resolved "https://registry.npmjs.org/@remix-run/server-runtime/-/server-runtime-1.7.6.tgz#41ac55b12af89a007a9664d05469e2bd2a669c0e"
-  integrity sha512-deHiuDZzERNjoRGHWae6f1xi7zj5y4sIrYdCIrVgTHXCOguyI496LFybzaj+YJyZrS0Dh+2qTTLalTnkoBmLZA==
-  dependencies:
-    "@types/cookie" "^0.4.0"
-    "@web3-storage/multipart-parser" "^1.0.0"
-    cookie "^0.4.1"
-    react-router-dom "6.3.0"
-    set-cookie-parser "^2.4.8"
-    source-map "^0.7.3"
 
 "@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
