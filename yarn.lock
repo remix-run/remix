@@ -2208,45 +2208,10 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/node@1.7.6":
-  version "1.7.6"
-  resolved "https://registry.npmjs.org/@remix-run/node/-/node-1.7.6.tgz#39a2e87a78fbd3c00760deb45a323703a3a6be77"
-  integrity sha512-7hx9MjAtxvuB8tagFC4ghlWmAHLedOw/SCEHhpkaPD53F3xPrrPS5hXe+kGksLHpIpieghOoSDaPh+0N/eORow==
-  dependencies:
-    "@remix-run/server-runtime" "1.7.6"
-    "@remix-run/web-fetch" "^4.3.1"
-    "@remix-run/web-file" "^3.0.2"
-    "@remix-run/web-stream" "^1.0.3"
-    "@web3-storage/multipart-parser" "^1.0.0"
-    abort-controller "^3.0.0"
-    cookie-signature "^1.1.0"
-    source-map-support "^0.5.21"
-    stream-slice "^0.1.2"
-
-"@remix-run/react@1.7.6":
-  version "1.7.6"
-  resolved "https://registry.npmjs.org/@remix-run/react/-/react-1.7.6.tgz#3fce7f233f34d4614db3959f5d6b0f9fb857b932"
-  integrity sha512-QLuhXAmltIzTnVK/o/5edqOvZOY10hNpc7EtGuC477hjx0U2NnPXdbt4G4T0w4eHaCk8Ajo1vUin0GsGTHzcCA==
-  dependencies:
-    history "^5.3.0"
-    react-router-dom "6.3.0"
-
 "@remix-run/router@1.0.4":
   version "1.0.4"
   resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.0.4.tgz#cbfbec6735711e7c2fc93b9b40adf70ef5a39990"
   integrity sha512-gTL8H5USTAKOyVA4xczzDJnC3HMssdFa3tRlwBicXynx9XfiXwneHnYQogwSKpdCkjXISrEKSTtX62rLpNEVQg==
-
-"@remix-run/server-runtime@1.7.6":
-  version "1.7.6"
-  resolved "https://registry.npmjs.org/@remix-run/server-runtime/-/server-runtime-1.7.6.tgz#41ac55b12af89a007a9664d05469e2bd2a669c0e"
-  integrity sha512-deHiuDZzERNjoRGHWae6f1xi7zj5y4sIrYdCIrVgTHXCOguyI496LFybzaj+YJyZrS0Dh+2qTTLalTnkoBmLZA==
-  dependencies:
-    "@types/cookie" "^0.4.0"
-    "@web3-storage/multipart-parser" "^1.0.0"
-    cookie "^0.4.1"
-    react-router-dom "6.3.0"
-    set-cookie-parser "^2.4.8"
-    source-map "^0.7.3"
 
 "@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
@@ -2256,7 +2221,7 @@
     "@remix-run/web-stream" "^1.0.0"
     web-encoding "1.1.5"
 
-"@remix-run/web-fetch@^4.3.1", "@remix-run/web-fetch@^4.3.2":
+"@remix-run/web-fetch@^4.3.2":
   version "4.3.2"
   resolved "https://registry.npmjs.org/@remix-run/web-fetch/-/web-fetch-4.3.2.tgz#193758bb7a301535540f0e3a86c743283f81cf56"
   integrity sha512-aRNaaa0Fhyegv/GkJ/qsxMhXvyWGjPNgCKrStCvAvV1XXphntZI0nQO/Fl02LIQg3cGL8lDiOXOS1gzqDOlG5w==
