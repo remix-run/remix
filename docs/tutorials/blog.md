@@ -1037,8 +1037,8 @@ We hope you love Remix! 💿 👋
 [the-styling-guide]: /guides/styling
 [prisma]: https://prisma.io
 [http-localhost-3000-posts-admin]: http://localhost:3000/posts/admin
-[mdn-io-request]: https://mdn.io/Request
-[mdn-io-request-form-data]: https://mdn.io/Request.formData
+[mdn-io-request]: https://developer.mozilla.org/en-US/docs/Web/API/Request
+[mdn-io-request-form-data]: https://developer.mozilla.org/en-US/docs/Web/API/Request/formData
 [disable-java-script]: https://developer.chrome.com/docs/devtools/javascript/disable
 [the-optimistic-ui-guide]: /guides/optimistic-ui
 [somewhere]: https://www.youtube.com/watch?v=dQw4w9WgXcQ
