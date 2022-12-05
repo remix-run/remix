@@ -93,10 +93,11 @@ export function serverBareModulesPlugin(
         }
 
         switch (remixConfig.serverBuildTarget) {
-          // Always bundle everything for cloudflare.
+          // Always bundle everything for cloudflare/deno/fastly.
           case "cloudflare-pages":
           case "cloudflare-workers":
           case "deno":
+          case "fastly-compute-js":
             return undefined;
         }
 

@@ -45,6 +45,7 @@ const createEsbuildConfig = (
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
     config.serverBuildTarget ?? ""
   );
+  let isFastlyRuntime = config.serverBuildTarget === "fastly-compute-js";
   let isDenoRuntime = config.serverBuildTarget === "deno";
 
   let plugins: esbuild.Plugin[] = [
@@ -71,7 +72,7 @@ const createEsbuildConfig = (
     stdin,
     entryPoints,
     outfile: config.serverBuildPath,
-    conditions: isCloudflareRuntime
+    conditions: (isCloudflareRuntime || isFastlyRuntime)
       ? ["worker"]
       : isDenoRuntime
       ? ["deno", "worker"]
@@ -87,8 +88,8 @@ const createEsbuildConfig = (
     // PR makes dev mode behave closer to production in terms of dead
     // code elimination / tree shaking is concerned.
     minifySyntax: true,
-    minify: options.mode === "production" && isCloudflareRuntime,
-    mainFields: isCloudflareRuntime
+    minify: options.mode === "production" && (isCloudflareRuntime || isFastlyRuntime),
+    mainFields: (isCloudflareRuntime || isFastlyRuntime)
       ? ["browser", "module", "main"]
       : config.serverModuleFormat === "esm"
       ? ["module", "main"]

@@ -26,7 +26,8 @@ export type ServerBuildTarget =
   | "vercel"
   | "cloudflare-pages"
   | "cloudflare-workers"
-  | "deno";
+  | "deno"
+  | "fastly-compute-js";
 
 export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
@@ -336,6 +337,7 @@ export async function readConfig(
     case "cloudflare-pages":
     case "cloudflare-workers":
     case "deno":
+    case "fastly-compute-js":
       serverModuleFormat = "esm";
       serverPlatform = "neutral";
       break;
