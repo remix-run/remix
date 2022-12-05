@@ -1,4 +1,4 @@
-// This class exists to prevent https://github.com/remix-run/remix/issues/2031 from occuring
+// This class exists to prevent https://github.com/remix-run/remix/issues/2031 from occurring
 export class RemixNotSetupError extends Error {
   constructor() {
     super("Did you forget to run `remix setup` for your platform?");
