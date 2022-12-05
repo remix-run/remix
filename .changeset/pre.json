@@ -19,5 +19,7 @@
     "@remix-run/server-runtime": "1.8.0",
     "@remix-run/vercel": "1.8.0"
   },
-  "changesets": []
+  "changesets": [
+    "blue-tigers-look"
+  ]
 }
