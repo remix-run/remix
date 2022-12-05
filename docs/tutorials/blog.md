@@ -796,7 +796,7 @@ export const action = async ({ request }: ActionArgs) => {
 
 That's it. Remix (and the browser) will take care of the rest. Click the submit button and watch the sidebar that lists our posts update automatically.
 
-In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and don't forget, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN! [mdn.io/Request][mdn-io-request] [mdn.io/Request.formData][mdn-io-request-form-data].
+In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and don't forget, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN! [mdn.io/Request][mdn-request] [mdn.io/Request.formData][mdn-request-form-data].
 
 TypeScript is mad again, let's add some types.
 
