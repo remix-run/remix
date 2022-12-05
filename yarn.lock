@@ -2069,10 +2069,10 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/router@1.0.4":
-  version "1.0.4"
-  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.0.4.tgz#cbfbec6735711e7c2fc93b9b40adf70ef5a39990"
-  integrity sha512-gTL8H5USTAKOyVA4xczzDJnC3HMssdFa3tRlwBicXynx9XfiXwneHnYQogwSKpdCkjXISrEKSTtX62rLpNEVQg==
+"@remix-run/router@1.0.5-pre.0":
+  version "1.0.5-pre.0"
+  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.0.5-pre.0.tgz#d5327cc606b444b9721dd0856ad18760e8d75d6d"
+  integrity sha512-7UWQ6HcuNHbKeCiOKD94WDz+FAeeJVzxVi+GNeLczzEdJtqKAvYMiXqJ/IF84T8479+bUrEm/zp7hr+itZs8Zg==
 
 "@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
