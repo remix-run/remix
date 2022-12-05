@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import type * as Playwright from "@playwright/test";
 
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
@@ -11,15 +10,6 @@ import {
 } from "./helpers/create-fixture";
 
 test.describe("CSS Modules", () => {
-  // TODO: Finish all todo tests
-  let testTodo = (
-    title: string,
-    testFunction?: (
-      args: { page: Playwright.Page },
-      testInfo: Playwright.TestInfo
-    ) => any
-  ) => {};
-
   let fixture: Fixture;
   let appFixture: AppFixture;
 
@@ -153,8 +143,8 @@ test.describe("CSS Modules", () => {
           `,
         "app/lib/button.module.css": css`
           .button {
-            /* TODO: composes: text from "./text.module.css"; */
-            /* TODO: composes: reset--button from global; */
+            composes: text from "./text.module.css";
+            composes: reset--button from global;
             padding: 0.5rem 1rem;
             box-shadow: none;
             background-color: dodgerblue;
@@ -162,7 +152,7 @@ test.describe("CSS Modules", () => {
             font-weight: bold;
           }
           .buttonRed {
-            /* TODO: composes: button; */
+            composes: button;
             background-color: red;
           }
         `,
@@ -195,7 +185,7 @@ test.describe("CSS Modules", () => {
                 <div
                   {...props}
                   data-ui-badge=""
-                  className={styles.badge + " global_bold"}
+                  className={styles.badge}
                 />
               );
             }
@@ -203,15 +193,25 @@ test.describe("CSS Modules", () => {
 
         "app/lib/badge.module.css": css`
           .badge {
-            /* TODO: composes: text from "./text.module.css"; */
+            composes: badgeBackgroundColor;
+            composes: text from "./text.module.css";
+            composes: badgePadding from "~/lib/badge-padding.module.css";
+            composes: global_uppercase from global;
             display: inline-block;
-            padding: 0.25rem 0.5rem;
-            background-color: rgb(200, 200, 200);
             color: black;
             font-size: 0.8rem;
           }
-          :global(.global_bold):local(.badge) {
+          .badgeBackgroundColor {
+            background-color: rgb(200, 200, 200);
+          }
+          :global(.global_uppercase):local(.badge) {
             text-transform: uppercase;
+          }
+        `,
+
+        "app/lib/badge-padding.module.css": css`
+          .badgePadding {
+            padding: 8px 16px;
           }
         `,
 
@@ -252,8 +252,14 @@ test.describe("CSS Modules", () => {
           `,
         "app/lib/text.module.css": css`
           .text {
-            font-family: system-ui, sans-serif;
+            composes: fontFamily;
+            composes: letterSpacing;
+          }
+          .letterSpacing {
             letter-spacing: -0.5px;
+          }
+          .fontFamily {
+            font-family: system-ui, sans-serif;
           }
         `,
         "app/lib/heading.jsx": js`
@@ -300,15 +306,63 @@ test.describe("CSS Modules", () => {
       return { display, backgroundColor };
     });
     expect(badgeStyles.display).toBe("inline-block");
+  });
+
+  test("composes from a local classname", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    let badgeLocator = await page.locator("[data-ui-badge]");
+    let badgeStyles = await badgeLocator.evaluate((element) => {
+      let { backgroundColor } = window.getComputedStyle(element);
+      return { backgroundColor };
+    });
     expect(badgeStyles.backgroundColor).toBe("rgb(200, 200, 200)");
   });
 
-  // TODO: Features not implemented yet
-  testTodo("composes from global classname");
-  testTodo("composes from locally scoped classname");
-  testTodo("composes from imported module classname");
+  test("composes from an imported classname", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    let badgeLocator = await page.locator("[data-ui-badge]");
+    let badgeStyles = await badgeLocator.evaluate((element) => {
+      let { fontFamily } = window.getComputedStyle(element);
+      return { fontFamily };
+    });
+    expect(badgeStyles.fontFamily).toBe("system-ui, sans-serif");
+  });
 
-  testTodo("supports combining :global selector with :local selector");
+  test("composes from an imported classname with a root alias (~)", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    let badgeLocator = await page.locator("[data-ui-badge]");
+    let badgeStyles = await badgeLocator.evaluate((element) => {
+      let { padding } = window.getComputedStyle(element);
+      return { padding };
+    });
+    expect(badgeStyles.padding).toBe("8px 16px");
+  });
+
+  test("composes from a global classname", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    let badge = await app.getElement("[data-ui-badge]");
+    let classList = badge.attr("class")?.split(" ");
+    expect(classList).toContain("global_uppercase");
+  });
+
+  test("supports combining :global selector with :local selector", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    let badgeLocator = await page.locator("[data-ui-badge]");
+    let badgeStyles = await badgeLocator.evaluate((element) => {
+      let { textTransform } = window.getComputedStyle(element);
+      return { textTransform };
+    });
+    expect(badgeStyles.textTransform).toBe("uppercase");
+  });
 
   test.describe("No javascript", () => {
     test.use({ javaScriptEnabled: false });

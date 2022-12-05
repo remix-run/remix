@@ -48,7 +48,7 @@ const createEsbuildConfig = (
   let isDenoRuntime = config.serverBuildTarget === "deno";
 
   let plugins: esbuild.Plugin[] = [
-    cssModulesPlugin(options),
+    cssModulesPlugin({ mode: options.mode, appDirectory: config.appDirectory }),
     cssFilePlugin(options),
     urlImportsPlugin(),
     mdxPlugin(config),

@@ -8,10 +8,12 @@ import type { CompileOptions } from "../options";
 
 interface PluginOptions {
   pattern: string;
+  appDirectory: string;
 }
 
 interface BuildContext {
   buildRoot: string;
+  appDirectory: string;
   relative: (to: string) => string;
   cache: BuildCache;
 }
@@ -95,7 +97,7 @@ async function buildCssModulesJs({
   build: Build;
 }) {
   let cssFileName = path.basename(fullPath); // e.g. xxx.module.css?css-modules-plugin-building
-  let { relative } = build.context;
+  let { relative, appDirectory } = build.context;
   let resolveDir = path.dirname(fullPath);
   let originCss = await readFile(fullPath);
 
@@ -103,16 +105,22 @@ async function buildCssModulesJs({
     code,
     exports = {},
     map,
-  } = lightningcss.transform({
+  } = await lightningcss.bundleAsync({
     filename: relative(fullPath), // use relative path to keep hash stable in different machines
-    code: originCss,
     minify: false,
     sourceMap: true,
+    analyzeDependencies: false,
     cssModules: {
       pattern: options.pattern,
       dashedIdents: false,
     },
-    analyzeDependencies: false,
+    resolver: {
+      resolve(specifier, from) {
+        return specifier.startsWith("~/")
+          ? path.resolve(appDirectory, specifier.replace("~/", ""))
+          : path.resolve(path.dirname(from), specifier);
+      },
+    },
   });
 
   let cssModulesExport: Record<string, string> = {};
@@ -120,7 +128,13 @@ async function buildCssModulesJs({
   Object.keys(exports)
     .sort() // to keep order consistent in different builds
     .forEach((originClass) => {
-      cssModulesExport[originClass] = exports[originClass].name;
+      let { name, composes } = exports[originClass];
+
+      cssModulesExport[originClass] =
+        name +
+        (composes.length
+          ? " " + composes.map((composedClass) => composedClass.name).join(" ")
+          : "");
     });
 
   let cssWithSourceMap = code.toString("utf-8");
@@ -159,6 +173,7 @@ async function buildCssModulesJs({
 async function setup(build: Build, options: PluginOptions): Promise<void> {
   build.context = {
     buildRoot: getRootDir(build),
+    appDirectory: options.appDirectory,
     relative: (to) => getRelativePath(build, to),
     cache: new BuildCache(),
   };
@@ -272,12 +287,21 @@ async function setup(build: Build, options: PluginOptions): Promise<void> {
   );
 }
 
-export const cssModulesPlugin = ({ mode }: CompileOptions): Plugin => {
+interface CssModulesPluginOptions {
+  mode: CompileOptions["mode"];
+  appDirectory: string;
+}
+
+export const cssModulesPlugin = ({
+  mode,
+  appDirectory,
+}: CssModulesPluginOptions): Plugin => {
   return {
     name: pluginName,
     setup: async (build) => {
       await setup(build as Build, {
         pattern: mode === "production" ? "[hash]" : "[name]_[local]_[hash]",
+        appDirectory,
       });
     },
   };

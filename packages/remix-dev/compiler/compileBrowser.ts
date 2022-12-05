@@ -3,6 +3,8 @@ import * as fse from "fs-extra";
 import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
+import postcss from "postcss";
+import postcssDiscardDuplicates from "postcss-discard-duplicates";
 
 import { type WriteChannel } from "../channel";
 import { type RemixConfig } from "../config";
@@ -83,7 +85,7 @@ const createEsbuildConfig = (
   }
 
   let plugins = [
-    cssModulesPlugin(options),
+    cssModulesPlugin({ mode: options.mode, appDirectory: config.appDirectory }),
     cssEntryModulePlugin(config),
     cssFilePlugin(options),
     urlImportsPlugin(),
@@ -165,14 +167,33 @@ export const createBrowserCompiler = (
             path.dirname(outputPath) === remixConfig.assetsBuildDirectory &&
             path.basename(outputPath).startsWith("css-bundle")
           ) {
-            let isCssFile = outputPath.endsWith(".css");
-
-            if (isCssFile) {
+            if (outputPath.endsWith(".css")) {
               // Grab the CSS bundle path so we can use it to generate the manifest
               cssBundlePath = outputPath;
+              await fse.ensureDir(path.dirname(outputPath));
+
+              let contents =
+                options.mode === "production"
+                  ? await postcss([
+                      // We need to discard duplicate rules since "composes" in
+                      // CSS Modules can result in duplicate styles. This needs
+                      // to be done via PostCSS because esbuild's CSS minification
+                      // doesn't remove duplicate rules. This is required because
+                      // each CSS Module is processed in isolation and any files
+                      // referenced in "composes" property are inlined into the
+                      // generated CSS each time.
+                      postcssDiscardDuplicates(),
+                    ])
+                      .process(
+                        Buffer.from(outputFile.contents).toString("utf-8")
+                      )
+                      .then((result) => result.css)
+                  : outputFile.contents;
+
+              return await fse.writeFile(outputPath, contents);
             }
 
-            if (isCssFile || outputPath.endsWith(".css.map")) {
+            if (outputPath.endsWith(".css.map")) {
               await fse.ensureDir(path.dirname(outputPath));
               return await fse.writeFile(outputPath, outputFile.contents);
             }
