@@ -6,3 +6,4 @@
 - [ ] add root `tsconfig.json` entry and make sure pkg tsconfig is proper output dir
 - [ ] add to publish scripts
 - [ ] update version script
+- [ ] update `.changeset/config.json` to include the package
