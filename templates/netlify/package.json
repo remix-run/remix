@@ -4,7 +4,8 @@
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
-    "start": "cross-env NODE_ENV=production netlify dev"
+    "start": "cross-env NODE_ENV=production netlify dev",
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@netlify/functions": "^1.3.0",
