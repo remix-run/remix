@@ -308,11 +308,11 @@ For example, the `$invoiceId.jsx` route. When the url is `/sales/invoices/102000
 ```jsx
 import { useParams } from "@remix-run/react";
 
-export function loader({ params }) {
+export async function loader({ params }) {
   const id = params.invoiceId;
 }
 
-export function action({ params }) {
+export async function action({ params }) {
   const id = params.invoiceId;
 }
 
@@ -362,7 +362,7 @@ app
 When the URL is `example.com/files/images/work/flyer.jpg`. The splat param will capture the trailing segments of the URL and be available to your app on `params["*"]`
 
 ```jsx
-export function loader({ params }) {
+export async function loader({ params }) {
   params["*"]; // "images/work/flyer.jpg"
 }
 ```

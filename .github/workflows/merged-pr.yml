@@ -5,12 +5,14 @@ on:
     types: [closed]
     branches:
       - dev
+    paths:
+      - "packages/**"
 
 permissions:
   pull-requests: write
 
 jobs:
-  if_merged:
+  merged:
     name: Add label to merged PR
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest

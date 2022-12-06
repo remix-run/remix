@@ -340,7 +340,7 @@ export async function loader() {
 }
 
 export default function Invoices() {
-  const invoices = useLoaderData();
+  const invoices = useLoaderData<typeof loader>();
   // ...
 }
 ```
@@ -349,18 +349,19 @@ export default function Invoices() {
 
 This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
-```tsx lines=[2,11,20]
+```tsx lines=[3,12,21]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useActionData, Form } from "@remix-run/react";
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const body = await request.formData();
   const name = body.get("visitorsName");
   return json({ message: `Hello, ${name}` });
 }
 
 export default function Invoices() {
-  const data = useActionData();
+  const data = useActionData<typeof action>();
   return (
     <Form method="post">
       <p>
@@ -377,11 +378,12 @@ export default function Invoices() {
 
 The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
 
-```tsx lines=[22, 31, 39-41, 45-47]
+```tsx lines=[23,32,40-42,46-48]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect, json } from "@remix-run/node"; // or cloudflare/deno
 import { Form, useActionData } from "@remix-run/react";
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const form = await request.formData();
   const email = form.get("email");
   const password = form.get("password");
@@ -408,7 +410,7 @@ export async function action({ request }) {
 }
 
 export default function Signup() {
-  const errors = useActionData();
+  const errors = useActionData<typeof action>();
 
   return (
     <>
@@ -522,7 +524,8 @@ Returns the function that may be used to submit a `<form>` (or some raw `FormDat
 
 This is useful whenever you need to programmatically submit a form. For example, you may wish to save a user preferences form whenever any field changes.
 
-```tsx filename=app/routes/prefs.tsx lines=[2,14,18]
+```tsx filename=app/routes/prefs.tsx lines=[3,15,19]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useSubmit, useTransition } from "@remix-run/react";
 
@@ -530,7 +533,7 @@ export async function loader() {
   return json(await getUserPreferences());
 }
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   await updatePreferences(await request.formData());
   return redirect("/prefs");
 }
@@ -909,7 +912,7 @@ See also:
 Perhaps you have a persistent newsletter signup at the bottom of every page on your site. This is not a navigation event, so useFetcher is perfect for the job. First, you create a Resource Route:
 
 ```tsx filename=routes/newsletter/subscribe.tsx
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const email = (await request.formData()).get("email");
   try {
     await subscribe(email);
@@ -970,12 +973,12 @@ Because `useFetcher` doesn't cause a navigation, it won't automatically work if 
 If you want to support a no JavaScript experience, just export a component from the route with the action.
 
 ```tsx filename=routes/newsletter/subscribe.tsx
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   // just like before
 }
 
 export default function NewsletterSignupRoute() {
-  const newsletter = useActionData();
+  const newsletter = useActionData<typeof action>();
   return (
     <Form method="post" action="/newsletter/subscribe">
       <p>
@@ -1033,7 +1036,7 @@ import { Form } from "@remix-run/react";
 import { NewsletterForm } from "~/NewsletterSignup";
 
 export default function NewsletterSignupRoute() {
-  const data = useActionData();
+  const data = useActionData<typeof action>();
   return (
     <NewsletterForm
       Form={Form}
@@ -1070,7 +1073,7 @@ function useMarkAsRead({ articleId, userId }) {
 Anytime you show the user avatar, you could put a hover effect that fetches data from a loader and displays it in a popup.
 
 ```tsx filename=routes/user/$id/details.tsx
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   return json(
     await fakeDb.user.find({ where: { id: params.id } })
   );
@@ -1109,7 +1112,7 @@ function UserAvatar({ partialUser }) {
 If the user needs to select a city, you could have a loader that returns a list of cities based on a query and plug it into a Reach UI combobox:
 
 ```tsx filename=routes/city-search.tsx
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const url = new URL(request.url);
   return json(
     await searchCities(url.searchParams.get("city-query"))
@@ -1431,11 +1434,10 @@ function SomeForm() {
 
 This is a shortcut for creating `application/json` responses. It assumes you are using `utf-8` encoding.
 
-```ts lines=[2,6]
-import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
+```ts lines=[1,5]
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader: LoaderFunction = async () => {
+export const loader = async () => {
   // So you can write this:
   return json({ any: "thing" });
 
@@ -1451,7 +1453,7 @@ export const loader: LoaderFunction = async () => {
 You can also pass a status code and headers:
 
 ```ts lines=[4-9]
-export const loader: LoaderFunction = async () => {
+export const loader = async () => {
   return json(
     { not: "coffee" },
     {
@@ -1468,11 +1470,10 @@ export const loader: LoaderFunction = async () => {
 
 This is shortcut for sending 30x responses.
 
-```ts lines=[2,8]
-import type { ActionFunction } from "@remix-run/node"; // or cloudflare/deno
+```ts lines=[1,7]
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
-export const action: ActionFunction = async () => {
+export const action = async () => {
   const userSession = await getUserSessionOrWhatever();
 
   if (!userSession) {
@@ -1538,9 +1539,7 @@ It's to be used in place of `request.formData()`.
 For example:
 
 ```tsx lines=[4-7,9,25]
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const formData = await unstable_parseMultipartFormData(
     request,
     uploadHandler // <-- we'll look at this deeper next
@@ -1587,9 +1586,7 @@ An upload handler that will write parts with a filename to disk to keep them out
 **Example:**
 
 ```tsx
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const uploadHandler = unstable_composeUploadHandlers(
     unstable_createFileUploadHandler({
       maxPartSize: 5_000_000,
@@ -1629,9 +1626,7 @@ The `filter` function accepts an `object` and returns a `boolean` (or a promise 
 **Example:**
 
 ```tsx
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const uploadHandler = unstable_createMemoryUploadHandler({
     maxPartSize: 500_000,
   });
@@ -1656,11 +1651,14 @@ Most of the time, you'll probably want to proxy the file to a file host.
 **Example:**
 
 ```tsx
-import type { UploadHandler } from "@remix-run/{runtime}";
+import type {
+  ActionArgs,
+  UploadHandler,
+} from "@remix-run/node"; // or cloudflare/deno
 import {
   unstable_composeUploadHandlers,
   unstable_createMemoryUploadHandler,
-} from "@remix-run/{runtime}";
+} from "@remix-run/node"; // or cloudflare/deno
 // writeAsyncIterableToWritable is a Node-only utility
 import { writeAsyncIterableToWritable } from "@remix-run/node";
 import type {
@@ -1698,9 +1696,7 @@ async function uploadImageToCloudinary(
   return uploadPromise;
 }
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const userId = getUserId(request);
 
   const uploadHandler = unstable_composeUploadHandlers(
@@ -1798,20 +1794,24 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
-```tsx filename=app/routes/index.tsx lines=[4,8-9,15-16,20]
+```tsx filename=app/routes/index.tsx lines=[8,12-13,19-10,24]
+import type {
+  ActionArgs,
+  LoaderArgs,
+} from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { userPrefs } from "~/cookies";
 
-export async function loader({ request }) {
+export const loader = async ({ params }: LoaderArgs) => {
   const cookieHeader = request.headers.get("Cookie");
   const cookie =
     (await userPrefs.parse(cookieHeader)) || {};
   return json({ showBanner: cookie.showBanner });
-}
+};
 
-export async function action({ request }) {
+export const action = async ({ request }: ActionArgs) => {
   const cookieHeader = request.headers.get("Cookie");
   const cookie =
     (await userPrefs.parse(cookieHeader)) || {};
@@ -1826,10 +1826,10 @@ export async function action({ request }) {
       "Set-Cookie": await userPrefs.serialize(cookie),
     },
   });
-}
+};
 
 export default function Home() {
-  const { showBanner } = useLoaderData();
+  const { showBanner } = useLoaderData<typeof loader>();
 
   return (
     <div>
@@ -1893,14 +1893,16 @@ Cookies that have one or more `secrets` will be stored and verified in a way tha
 
 Secrets may be rotated by adding new secrets to the front of the `secrets` array. Cookies that have been signed with old secrets will still be decoded successfully in `cookie.parse()`, and the newest secret (the first one in the array) will always be used to sign outgoing cookies created in `cookie.serialize()`.
 
-```js
-// app/cookies.js
-const cookie = createCookie("user-prefs", {
+```ts filename=app/cookies.ts
+export const cookie = createCookie("user-prefs", {
   secrets: ["n3wsecr3t", "olds3cret"],
 });
+```
 
-// in your route module...
-export async function loader({ request }) {
+```ts filename=app/routes/route.tsx
+import { cookie } from "~/cookies";
+
+export async function loader({ request }: LoaderArgs) {
   const oldCookie = request.headers.get("Cookie");
   // oldCookie may have been signed with "olds3cret", but still parses ok
   const value = await cookie.parse(oldCookie);
@@ -2067,13 +2069,17 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 
 A login form might look something like this:
 
-```tsx filename=app/routes/login.js lines=[4,7-9,11,16,20,26-28,39,44,49,54]
+```tsx filename=app/routes/login.js lines=[8,11-13,15,20,24,30-32,43,48,53,58]
+import type {
+  ActionArgs,
+  LoaderArgs,
+} from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { getSession, commitSession } from "../sessions";
 
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -2092,7 +2098,7 @@ export async function loader({ request }) {
   });
 }
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -2127,7 +2133,8 @@ export async function action({ request }) {
 }
 
 export default function Login() {
-  const { currentUser, error } = useLoaderData();
+  const { currentUser, error } =
+    useLoaderData<typeof loader>();
 
   return (
     <div>
@@ -2154,9 +2161,7 @@ And then a logout form might look something like this:
 ```tsx
 import { getSession, destroySession } from "../sessions";
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -2412,8 +2417,8 @@ export { getSession, commitSession, destroySession };
 
 After retrieving a session with `getSession`, the session object returned has a handful of methods and properties:
 
-```js
-export async function action({ request }) {
+```tsx
+export async function action({ request }: ActionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -2443,10 +2448,15 @@ session.set("userId", "1234");
 
 Sets a session value that will be unset the first time it is read. After that, it's gone. Most useful for "flash messages" and server-side form validation messages:
 
-```js
+```tsx
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+
 import { getSession, commitSession } from "../sessions";
 
-export async function action({ request, params }) {
+export async function action({
+  params,
+  request,
+}: ActionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -2471,7 +2481,8 @@ Now we can read the message in a loader.
 
 <docs-info>You must commit the session whenever you read a `flash`. This is different than you might be used to where some type of middleware automatically sets the cookie header for you.</docs-info>
 
-```jsx
+```tsx
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import {
   Meta,
@@ -2482,7 +2493,7 @@ import {
 
 import { getSession, commitSession } from "./sessions";
 
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -2500,7 +2511,7 @@ export async function loader({ request }) {
 }
 
 export default function App() {
-  const { message } = useLoaderData();
+  const { message } = useLoaderData<typeof loader>();
 
   return (
     <html>
@@ -2538,8 +2549,8 @@ session.unset("name");
 
 <docs-info>When using cookieSessionStorage, you must commit the session whenever you `unset`</docs-info>
 
-```js
-export async function loader({ request }) {
+```tsx
+export async function loader({ request }: LoaderArgs) {
   // ...
 
   return json(data, {
@@ -2572,18 +2583,12 @@ import {
   AccordionPanel,
 } from "@reach/accordion";
 
-import type { Companies } from "~/utils/companies";
 import { getCompanies } from "~/utils/companies";
 
-type LoaderData = {
-  companies: Array<Companies>;
-};
-
-export const loader: LoaderFunction = async () => {
-  const data: LoaderData = {
+export const loader = async () => {
+  return json({
     companies: await getCompanies(),
-  };
-  return json(data);
+  });
 };
 
 type Sort = "ASC" | "DESC";
@@ -2592,7 +2597,7 @@ export type ContextType = {
 };
 
 export default function CompaniesRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData<typeof loader>();
 
   const [invoiceSort, setInvoiceSort] =
     React.useState<Sort>("ASC");
@@ -2644,7 +2649,7 @@ This hook returns the context from the `<Outlet />` that rendered you.
 Continuing from the `<Outlet context />` example above, here's what the child route could do to use the sort order.
 
 ```tsx filename=app/routes/companies/$companyId.tsx lines=[5,8,25,27-30]
-import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import {
   useLoaderData,
@@ -2653,21 +2658,14 @@ import {
 
 import type { ContextType } from "../companies";
 
-type LoaderData = {
-  company: Company;
-};
-
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
-  const data: LoaderData = {
+export const loader = async ({ params }: LoaderArgs) => {
+  return json({
     company: await getCompany(params.companyId),
-  };
-  return json(data);
+  });
 };
 
 export default function CompanyRoute() {
-  const data = useLoaderData<LoaderData>();
+  const data = useLoaderData<typeof loader>();
   const { invoiceSort } = useOutletContext<ContextType>();
 
   const sortedInvoices =

@@ -49,6 +49,8 @@ In addition to the [official][official] [tutorials][tutorials], here are Remix t
 
 - [How to Debug Remix loaders and actions in VS Code][how-to-debug-remix-loaders-and-actions-in-vs-code] by [Michael Carter][michael-carter].
 - [How to build a Remix website with Sanity.io and live preview][how-to-build-a-remix-website-with-sanity-io-and-live-preview] by [Simeon Griggs][simeon-griggs]
+- [Build A Pet Management System With Remix, Prisma, and Postgres][build-a-pet-management-system-with-remix-prisma-and-postgres]
+  by [Austin Gil][austin-gil]
 
 ## Events
 
@@ -88,6 +90,8 @@ There are Remix Meetups all over the world with thousands of members. Some onlin
 [michael-carter]: https://twitter.com/kiliman
 [how-to-build-a-remix-website-with-sanity-io-and-live-preview]: https://www.sanity.io/guides/remix-run-live-preview
 [simeon-griggs]: https://twitter.com/simeongriggs
+[build-a-pet-management-system-with-remix-prisma-and-postgres]: https://www.youtube.com/watch?v=wqyHGQlZcws&list=PLTnRtjQN5ieYu9SdwLvzKYFVtfqySY7FT
+[austin-gil]: https://twitter.com/heyAustinGil
 [remix-conf]: ../../../../conf
 [the-remix-meetup-page]: https://rmx.as/meetup
 [remix-guide]: https://remix.guide

@@ -9,14 +9,10 @@ on:
         # but we want to pass an array (node_version: "[14, 16, 18]"),
         # so we'll need to manually stringify it for now
         type: string
-      enable_remix_router:
-        required: false
-        type: string
 
 env:
   CI: true
   CYPRESS_INSTALL_BINARY: 0
-  ENABLE_REMIX_ROUTER: ${{ inputs.enable_remix_router }}
 
 jobs:
   build:
@@ -34,6 +30,11 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: "yarn"
+
+      - name: 🦕 Setup deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
@@ -64,6 +65,11 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+
+      - name: 🦕 Setup deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
@@ -97,6 +103,11 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: "yarn"
 
+      - name: 🦕 Setup deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
@@ -128,6 +139,11 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: "yarn"
 
+      - name: 🦕 Setup deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
@@ -158,6 +174,11 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+
+      - name: 🦕 Setup deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
