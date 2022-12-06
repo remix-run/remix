@@ -1,5 +1,6 @@
 import { createCookieFactory } from "../cookies";
 import type { SignFunction, UnsignFunction } from "../crypto";
+import type { SessionData } from "../sessions";
 import {
   createSession,
   createSessionStorageFactory,
@@ -28,8 +29,16 @@ const createCookie = createCookieFactory({ sign, unsign });
 const createCookieSessionStorage =
   createCookieSessionStorageFactory(createCookie);
 const createSessionStorage = createSessionStorageFactory(createCookie);
-const createMemorySessionStorage =
-  createMemorySessionStorageFactory(createSessionStorage);
+
+const externalMemoryDataStore = new Map<
+  string,
+  { data: SessionData; expires?: Date }
+>();
+
+const createMemorySessionStorage = createMemorySessionStorageFactory(
+  createSessionStorage,
+  externalMemoryDataStore
+);
 
 describe("Session", () => {
   it("has an empty id by default", () => {
@@ -82,6 +91,30 @@ describe("In-memory session storage", () => {
     let session = await getSession();
     session.set("user", "mjackson");
     let setCookie = await commitSession(session);
+    session = await getSession(getCookieFromSetCookie(setCookie));
+
+    expect(session.get("user")).toEqual("mjackson");
+  });
+  it("handles data loss appropriately", async () => {
+    let { getSession, commitSession } = createMemorySessionStorage({
+      cookie: { secrets: ["secret1"] },
+    });
+    let session = await getSession();
+
+    session.set("user", "mjackson");
+    let setCookie = await commitSession(session);
+    session = await getSession(getCookieFromSetCookie(setCookie));
+
+    expect(session.get("user")).toEqual("mjackson");
+
+    // Simulate data loss in storage.
+    externalMemoryDataStore.delete(session.id);
+
+    session = await getSession(getCookieFromSetCookie(setCookie));
+    expect(session.get("user")).toBeUndefined();
+
+    session.set("user", "mjackson");
+    setCookie = await commitSession(session);
     session = await getSession(getCookieFromSetCookie(setCookie));
 
     expect(session.get("user")).toEqual("mjackson");

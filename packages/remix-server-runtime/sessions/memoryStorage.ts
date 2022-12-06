@@ -28,11 +28,13 @@ export type CreateMemorySessionStorageFunction = (
  */
 export const createMemorySessionStorageFactory =
   (
-    createSessionStorage: CreateSessionStorageFunction
+    createSessionStorage: CreateSessionStorageFunction,
+    dataStore?: Map<string, { data: SessionData; expires?: Date }>
   ): CreateMemorySessionStorageFunction =>
   ({ cookie } = {}) => {
     let uniqueId = 0;
-    let map = new Map<string, { data: SessionData; expires?: Date }>();
+    let map =
+      dataStore ?? new Map<string, { data: SessionData; expires?: Date }>();
 
     return createSessionStorage({
       cookie,
@@ -56,7 +58,7 @@ export const createMemorySessionStorageFactory =
         return null;
       },
       async updateData(id, data, expires) {
-        map.set(id, { data, expires });
+        if (map.has(id)) map.set(id, { data, expires });
       },
       async deleteData(id) {
         map.delete(id);
