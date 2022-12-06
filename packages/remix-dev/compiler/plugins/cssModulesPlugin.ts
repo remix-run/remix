@@ -1,7 +1,6 @@
 // Local fork of https://github.com/indooorsman/esbuild-css-modules-plugin
 import path from "path";
-import { readFile } from "fs-extra";
-import type { Plugin, PluginBuild, OnLoadResult } from "esbuild";
+import type { Plugin, PluginBuild } from "esbuild";
 
 import type { CompileOptions } from "../options";
 
@@ -14,7 +13,6 @@ interface BuildContext {
   buildRoot: string;
   appDirectory: string;
   relative: (to: string) => string;
-  cache: BuildCache;
 }
 
 interface Build extends PluginBuild {
@@ -31,45 +29,6 @@ const builtModulesCssRegExp = new RegExp(
   `.module.css${builtCssSuffix.replace("?", "\\?").replace(/-/g, "\\-")}$`,
   "i"
 );
-
-class BuildCache {
-  cache: Map<string, { result: OnLoadResult; input: string }>;
-
-  constructor() {
-    this.cache = new Map();
-  }
-
-  async get(absPath: string): Promise<OnLoadResult | void> {
-    let cachedData = this.cache.get(absPath);
-
-    if (cachedData) {
-      let input = await readFile(absPath, { encoding: "utf8" });
-
-      if (input === cachedData.input) {
-        return cachedData.result;
-      }
-
-      return;
-    }
-  }
-
-  async set(
-    absPath: string,
-    result: OnLoadResult,
-    originContent: string
-  ): Promise<void> {
-    let m = process.memoryUsage().rss;
-    if (m / 1024 / 1024 > 250) {
-      this.clear();
-    }
-    let input =
-      originContent || (await readFile(absPath, { encoding: "utf8" }));
-    this.cache.set(absPath, { input, result });
-  }
-  clear() {
-    this.cache.clear();
-  }
-}
 
 function getRootDir(build: Build): string {
   let { absWorkingDir } = build.initialOptions;
@@ -96,9 +55,8 @@ async function buildCssModulesJs({
   build: Build;
 }) {
   let cssFileName = path.basename(fullPath); // e.g. xxx.module.css?css-modules-plugin-building
-  let { relative, appDirectory } = build.context;
   let resolveDir = path.dirname(fullPath);
-  let originCss = await readFile(fullPath);
+  let { relative, appDirectory } = build.context;
 
   let lightningcss = await import("lightningcss");
 
@@ -165,7 +123,6 @@ async function buildCssModulesJs({
   return {
     js,
     css: cssWithSourceMap,
-    originCss: originCss.toString("utf8"),
     exports,
     resolveDir,
   };
@@ -176,7 +133,6 @@ async function setup(build: Build, options: PluginOptions): Promise<void> {
     buildRoot: getRootDir(build),
     appDirectory: options.appDirectory,
     relative: (to) => getRelativePath(build, to),
-    cache: new BuildCache(),
   };
 
   // resolve xxx.module.css to xxx.module.css?css-modules-plugin-building
@@ -209,25 +165,16 @@ async function setup(build: Build, options: PluginOptions): Promise<void> {
     { filter: modulesCssRegExp, namespace: pluginNamespace },
     async (args) => {
       let { path: maybeFullPath, pluginData = {} } = args;
-      let { buildRoot, cache } = build.context;
+      let { buildRoot } = build.context;
       let absPath = path.isAbsolute(maybeFullPath)
         ? maybeFullPath
         : path.resolve(buildRoot, maybeFullPath);
 
-      let useCache = build.initialOptions.watch;
-
-      let cached = useCache && (await cache.get(absPath));
-      if (cached) {
-        return cached;
-      }
-
-      let { js, resolveDir, css, exports, originCss } = await buildCssModulesJs(
-        {
-          fullPath: absPath,
-          options,
-          build,
-        }
-      );
+      let { js, resolveDir, css, exports } = await buildCssModulesJs({
+        fullPath: absPath,
+        options,
+        build,
+      });
 
       let result = {
         pluginName,
@@ -240,10 +187,6 @@ async function setup(build: Build, options: PluginOptions): Promise<void> {
           exports,
         },
       };
-
-      if (useCache) {
-        await cache.set(absPath, result, originCss);
-      }
 
       return result;
     }
