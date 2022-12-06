@@ -16,6 +16,13 @@ test.describe("CSS Modules", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
+        "remix.config.js": js`
+          module.exports = {
+            future: {
+              v2_cssBundle: true
+            },
+          };
+        `,
         "app/root.jsx": js`
             import { Links, Outlet, Scripts } from "@remix-run/react";
             import cssBundleHref from "@remix-run/css-bundle";

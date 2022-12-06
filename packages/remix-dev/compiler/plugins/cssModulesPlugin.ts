@@ -1,7 +1,6 @@
 // Local fork of https://github.com/indooorsman/esbuild-css-modules-plugin
 import path from "path";
 import { readFile } from "fs-extra";
-import lightningcss from "lightningcss";
 import type { Plugin, PluginBuild, OnLoadResult } from "esbuild";
 
 import type { CompileOptions } from "../options";
@@ -100,6 +99,8 @@ async function buildCssModulesJs({
   let { relative, appDirectory } = build.context;
   let resolveDir = path.dirname(fullPath);
   let originCss = await readFile(fullPath);
+
+  let lightningcss = await import("lightningcss");
 
   let {
     code,

@@ -3,8 +3,6 @@ import * as fse from "fs-extra";
 import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
-import postcss from "postcss";
-import postcssDiscardDuplicates from "postcss-discard-duplicates";
 
 import { type WriteChannel } from "../channel";
 import { type RemixConfig } from "../config";
@@ -85,8 +83,15 @@ const createEsbuildConfig = (
   }
 
   let plugins = [
-    cssModulesPlugin({ mode: options.mode, appDirectory: config.appDirectory }),
-    cssEntryModulePlugin(config),
+    ...(config.future.v2_cssBundle
+      ? [
+          ...(build === "css" ? [cssEntryModulePlugin(config)] : []),
+          cssModulesPlugin({
+            mode: options.mode,
+            appDirectory: config.appDirectory,
+          }),
+        ]
+      : []),
     cssFilePlugin(options),
     urlImportsPlugin(),
     mdxPlugin(config),
@@ -137,24 +142,34 @@ export const createBrowserCompiler = (
   let cssCompiler: esbuild.BuildIncremental;
 
   let compile = async (manifestChannel: WriteChannel<AssetsManifest>) => {
-    let appBuildPromise = !appCompiler
-      ? esbuild.build({
-          ...createEsbuildConfig("app", remixConfig, options),
-          metafile: true,
-          incremental: true,
-        })
-      : appCompiler.rebuild();
+    let appBuildTask = async () => {
+      appCompiler = await (!appCompiler
+        ? esbuild.build({
+            ...createEsbuildConfig("app", remixConfig, options),
+            metafile: true,
+            incremental: true,
+          })
+        : appCompiler.rebuild());
+    };
 
-    let cssBuildPromise = (
-      !cssCompiler
+    let cssBuildTask = async () => {
+      if (!remixConfig.future.v2_cssBundle) {
+        return;
+      }
+
+      let compiler = await (!cssCompiler
         ? esbuild.build({
             ...createEsbuildConfig("css", remixConfig, options),
             metafile: true,
             write: false,
             incremental: true,
           })
-        : cssCompiler.rebuild()
-    ).then(async (compiler) => {
+        : cssCompiler.rebuild());
+
+      // The types aren't great when combining write: false and incremental: true
+      // so we're asserting that it's an incremental build
+      cssCompiler = compiler as esbuild.BuildIncremental;
+
       let cssBundlePath: string | undefined;
       let outputFiles = compiler.outputFiles || [];
 
@@ -172,16 +187,22 @@ export const createBrowserCompiler = (
               cssBundlePath = outputPath;
               await fse.ensureDir(path.dirname(outputPath));
 
+              let [
+                { default: postcss },
+                { default: postcssDiscardDuplicates },
+              ] = await Promise.all([
+                import("postcss"),
+                import("postcss-discard-duplicates"),
+              ]);
+
               let contents =
                 options.mode === "production"
                   ? await postcss([
                       // We need to discard duplicate rules since "composes" in
                       // CSS Modules can result in duplicate styles. This needs
                       // to be done via PostCSS because esbuild's CSS minification
-                      // doesn't remove duplicate rules. This is required because
-                      // each CSS Module is processed in isolation and any files
-                      // referenced in "composes" property are inlined into the
-                      // generated CSS each time.
+                      // doesn't remove duplicate rules with our current version.
+                      // This won't be required with esbuild >= v0.15.15.
                       postcssDiscardDuplicates(),
                     ])
                       .process(
@@ -203,31 +224,20 @@ export const createBrowserCompiler = (
         })
       );
 
-      return {
-        compiler,
-        cssBundlePath,
-      };
-    });
+      return cssBundlePath;
+    };
 
-    let [appBuildResult, cssBuildResult] = await Promise.all([
-      appBuildPromise,
-      cssBuildPromise,
-    ]);
-
-    appCompiler = appBuildResult;
-
-    // The types aren't great when combining write: false and incremental: true
-    // so we're asserting that it's an incremental build
-    cssCompiler = cssBuildResult.compiler as esbuild.BuildIncremental;
+    let [cssBundlePath] = await Promise.all([cssBuildTask(), appBuildTask()]);
 
     let manifest = await createAssetsManifest({
       config: remixConfig,
       metafile: appCompiler.metafile!,
-      cssBundlePath: cssBuildResult.cssBundlePath,
+      cssBundlePath,
     });
     manifestChannel.write(manifest);
     await writeAssetsManifest(remixConfig, manifest);
   };
+
   return {
     compile,
     dispose: () => {
