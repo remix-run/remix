@@ -242,7 +242,14 @@ export const createSessionStorageFactory =
       async commitSession(session, options) {
         let { id, data } = session;
 
-        if (id) {
+        let storageData;
+        try {
+          storageData = await readData(id);
+        } catch (e) {
+          storageData = null;
+        }
+
+        if (id && storageData != null) {
           await updateData(id, data, cookie.expires);
         } else {
           id = await createData(data, cookie.expires);
