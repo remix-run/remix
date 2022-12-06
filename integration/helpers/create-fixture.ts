@@ -1,6 +1,6 @@
-import path from "path";
+import type { Writable } from "node:stream";
+import path from "node:path";
 import fse from "fs-extra";
-import type { Writable } from "stream";
 import express from "express";
 import getPort from "get-port";
 import stripIndent from "strip-indent";
@@ -93,7 +93,7 @@ export async function createFixture(init: FixtureInit) {
 export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
   let startAppServer = async (): Promise<{
     port: number;
-    stop: () => Promise<void>;
+    stop: VoidFunction;
   }> => {
     return new Promise(async (accept) => {
       let port = await getPort();
@@ -110,13 +110,7 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
 
       let server = app.listen(port);
 
-      let stop = (): Promise<void> => {
-        return new Promise((res) => {
-          server.close(() => res());
-        });
-      };
-
-      accept({ stop, port });
+      accept({ stop: server.close.bind(server), port });
     });
   };
 
@@ -134,7 +128,11 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
        * have memory leaks.
        */
       close: async () => {
-        return stop();
+        try {
+          return stop();
+        } catch (error) {
+          throw error;
+        }
       },
     };
   };
