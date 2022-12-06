@@ -83,7 +83,9 @@ test.describe("prefetch=none", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(() => appFixture.close());
+  test.afterAll(async () => {
+    await appFixture.close();
+  });
 
   test("does not render prefetch tags during SSR", async ({ page }) => {
     let res = await fixture.requestDocument("/");
