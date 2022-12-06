@@ -19,5 +19,8 @@
     "@remix-run/server-runtime": "1.8.1",
     "@remix-run/vercel": "1.8.1"
   },
-  "changesets": []
+  "changesets": [
+    "popular-mugs-change",
+    "rare-bikes-report"
+  ]
 }
