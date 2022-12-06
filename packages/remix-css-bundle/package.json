@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/css-bundle",
   "description": "Entrypoint for the CSS bundle created by Remix",
-  "version": "1.7.6",
+  "version": "1.8.1",
   "license": "MIT",
   "main": "./server.js",
   "module": "./esm/server.js",
@@ -18,6 +18,6 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@remix-run/dev": "1.7.6"
+    "@remix-run/dev": "1.8.1"
   }
 }
