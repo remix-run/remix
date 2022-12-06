@@ -4,16 +4,7 @@ import type { Plugin, PluginBuild } from "esbuild";
 
 import type { CompileOptions } from "../options";
 
-interface PluginBuildWithContext extends PluginBuild {
-  context: {
-    buildRoot: string;
-    appDirectory: string;
-    relative: (to: string) => string;
-  };
-}
-
-export const pluginName = "css-modules-plugin";
-
+const pluginName = "css-modules-plugin";
 const pluginNamespace = `${pluginName}-namespace`;
 const buildingCssSuffix = `?${pluginName}-building`;
 const builtCssSuffix = `?${pluginName}-built`;
@@ -30,14 +21,6 @@ function getRootDir(build: PluginBuild): string {
   return rootDir;
 }
 
-function getRelativePath(build: PluginBuildWithContext, to: string): string {
-  if (!path.isAbsolute(to)) {
-    return to.startsWith(".") ? to : `.${path.sep}${to}`;
-  }
-  let root = build.context?.buildRoot ?? getRootDir(build);
-  return `.${path.sep}${path.relative(root, to)}`;
-}
-
 export const cssModulesPlugin = ({
   mode,
   appDirectory,
@@ -47,25 +30,24 @@ export const cssModulesPlugin = ({
 }): Plugin => {
   return {
     name: pluginName,
-    setup: async (initialBuild: PluginBuild) => {
-      let build: PluginBuildWithContext = {
-        ...initialBuild,
-        context: {
-          buildRoot: getRootDir(initialBuild),
-          appDirectory: appDirectory,
-          relative: (to) => getRelativePath(build, to),
-        },
-      };
+    setup: async (build: PluginBuild) => {
+      let buildRoot = getRootDir(build);
+
+      function getRelativePathFromBuildRoot(to: string): string {
+        if (!path.isAbsolute(to)) {
+          return to.startsWith(".") ? to : `.${path.sep}${to}`;
+        }
+        return `.${path.sep}${path.relative(buildRoot, to)}`;
+      }
 
       // resolve xxx.module.css to xxx.module.css?css-modules-plugin-building
       build.onResolve(
         { filter: modulesCssRegExp, namespace: "file" },
         async (args) => {
-          let { resolve, context } = build;
+          let { resolve } = build;
           let { resolveDir, path: p, pluginData = {} } = args;
-          let { relative } = context;
           let { path: absPath } = await resolve(p, { resolveDir });
-          let relativePath = relative(absPath);
+          let relativePath = getRelativePathFromBuildRoot(absPath);
 
           return {
             namespace: pluginNamespace,
@@ -86,15 +68,10 @@ export const cssModulesPlugin = ({
       build.onLoad(
         { filter: modulesCssRegExp, namespace: pluginNamespace },
         async (args) => {
-          let { path: maybeFullPath, pluginData = {} } = args;
-          let { buildRoot } = build.context;
-          let fullPath = path.isAbsolute(maybeFullPath)
-            ? maybeFullPath
-            : path.resolve(buildRoot, maybeFullPath);
+          let { path: fullPath, pluginData = {} } = args;
 
           let cssFileName = path.basename(fullPath); // e.g. xxx.module.css?css-modules-plugin-building
           let resolveDir = path.dirname(fullPath);
-          let { relative, appDirectory } = build.context;
 
           let lightningcss = await import("lightningcss");
 
@@ -103,7 +80,7 @@ export const cssModulesPlugin = ({
             exports = {},
             map,
           } = await lightningcss.bundleAsync({
-            filename: relative(fullPath), // use relative path to keep hash stable in different machines
+            filename: fullPath,
             minify: false,
             sourceMap: true,
             analyzeDependencies: false,
@@ -199,7 +176,6 @@ export const cssModulesPlugin = ({
         { filter: builtModulesCssRegExp, namespace: pluginNamespace },
         async (args) => {
           let { pluginData } = args;
-          let { buildRoot } = build.context;
           let { css, relativePathToBuildRoot } = pluginData;
           let absPath = path.resolve(buildRoot, relativePathToBuildRoot);
           let resolveDir = path.dirname(absPath);
