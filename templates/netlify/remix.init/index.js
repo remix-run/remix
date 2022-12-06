@@ -59,6 +59,7 @@ async function updatePackageJsonForEdge(directory) {
     ...restOfPackageJson,
     dependencies: {
       ...dependencies,
+      "@netlify/edge-functions": "^2.0.0",
       "@remix-run/netlify-edge": "*",
       "@remix-run/deno": "*",
     },
