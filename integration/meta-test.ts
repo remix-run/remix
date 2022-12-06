@@ -256,8 +256,8 @@ test.describe("meta", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => {
-    await appFixture.close();
+  test.afterAll(() => {
+    appFixture.close();
   });
 
   test("empty meta does not render a tag", async ({ page }) => {
@@ -477,8 +477,8 @@ test.describe("v2_meta", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => {
-    await appFixture.close();
+  test.afterAll(() => {
+    appFixture.close();
   });
 
   test("empty meta does not render a tag", async ({ page }) => {

@@ -44,8 +44,8 @@ test.describe("rendering", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => {
-    await appFixture.close();
+  test.afterAll(() => {
+    appFixture.close();
   });
 
   test("server renders matching routes", async () => {

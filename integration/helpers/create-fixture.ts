@@ -127,12 +127,8 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
        * `beforeAll` block. Also make sure to `await app.close()` or else you'll
        * have memory leaks.
        */
-      close: async () => {
-        try {
-          return stop();
-        } catch (error) {
-          throw error;
-        }
+      close: () => {
+        return stop();
       },
     };
   };

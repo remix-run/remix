@@ -191,8 +191,8 @@ test.describe("compiler", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => {
-    await appFixture.close();
+  test.afterAll(() => {
+    appFixture.close();
   });
 
   test("removes server code with `*.server` files", async ({ page }) => {

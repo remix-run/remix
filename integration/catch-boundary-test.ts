@@ -183,8 +183,8 @@ test.describe("CatchBoundary", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => {
-    await appFixture.close();
+  test.afterAll(() => {
+    appFixture.close();
   });
 
   test("non-matching urls on document requests", async () => {

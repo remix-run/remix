@@ -49,8 +49,8 @@ test.beforeAll(async () => {
   appFixture = await createAppFixture(fixture);
 });
 
-test.afterAll(async () => {
-  await appFixture.close();
+test.afterAll(() => {
+  appFixture.close();
 });
 
 test.skip("should log relevant error message", async ({ page }) => {
