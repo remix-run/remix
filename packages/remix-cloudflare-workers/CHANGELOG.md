@@ -1,5 +1,12 @@
 # `@remix-run/cloudflare-workers`
 
+## 1.8.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.8.1`
+
 ## 1.8.0
 
 ### Patch Changes

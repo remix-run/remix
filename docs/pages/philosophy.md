@@ -26,7 +26,7 @@ There are a lot of ways Remix helps you send less stuff over the network and we 
 
 Consider [the Github Gist API][the-github-gist-api]. This payload is 75kb unpacked and 12kb over the network compressed. If you fetch it in the browser you make the user download all of it. It might look like this:
 
-```jsx
+```tsx
 export default function Gists() {
   const gists = useSomeFetchWrapper(
     "https://api.github.com/gists"
@@ -55,26 +55,26 @@ export default function Gists() {
 
 With Remix, you can filter down the data _on the server_ before sending it to the user:
 
-```js [3-16]
+```tsx lines=[3-15]
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
 export async function loader() {
   const res = await fetch("https://api.github.com/gists");
   const gists = await res.json();
+
   return json(
-    gists.map((gist) => {
-      return {
-        description: gist.description,
-        url: gist.html_url,
-        files: Object.keys(gist.files),
-        owner: gist.owner.login,
-      };
-    })
+    gists.map((gist) => ({
+      description: gist.description,
+      url: gist.html_url,
+      files: Object.keys(gist.files),
+      owner: gist.owner.login,
+    }))
   );
 }
 
 export default function Gists() {
-  const gists = useLoaderData();
+  const gists = useLoaderData<typeof loader>();
+
   return (
     <ul>
       {gists.map((gist) => (

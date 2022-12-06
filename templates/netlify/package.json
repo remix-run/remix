@@ -7,7 +7,7 @@
     "start": "cross-env NODE_ENV=production netlify dev"
   },
   "dependencies": {
-    "@netlify/functions": "^1.0.0",
+    "@netlify/functions": "^1.3.0",
     "@remix-run/netlify": "*",
     "@remix-run/node": "*",
     "@remix-run/react": "*",
@@ -19,10 +19,10 @@
     "@remix-run/dev": "*",
     "@remix-run/eslint-config": "*",
     "@remix-run/serve": "*",
-    "@types/react": "^18.0.15",
-    "@types/react-dom": "^18.0.6",
-    "eslint": "^8.23.1",
-    "typescript": "^4.7.4"
+    "@types/react": "^18.0.25",
+    "@types/react-dom": "^18.0.8",
+    "eslint": "^8.27.0",
+    "typescript": "^4.8.4"
   },
   "engines": {
     "node": ">=14"

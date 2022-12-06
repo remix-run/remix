@@ -265,21 +265,17 @@ For example: `app/routes/blog/$postId.tsx` will match the following URLs:
 On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId` [view example app][view-example-app]) and all parameters can be accessed within components via [`useParams`][use-params] and within loaders/actions via the argument's [`params`][params] property:
 
 ```tsx filename=app/routes/blog/$postId.tsx
-import { useParams } from "@remix-run/react";
 import type {
-  LoaderFunction,
-  ActionFunction,
+  ActionArgs,
+  LoaderArgs,
 } from "@remix-run/node"; // or cloudflare/deno
+import { useParams } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   console.log(params.postId);
 };
 
-export const action: ActionFunction = async ({
-  params,
-}) => {
+export const action = async ({ params }: ActionArgs) => {
   console.log(params.postId);
 };
 
@@ -428,21 +424,17 @@ Files that are named `$.tsx` are called "splat" (or "catch-all") routes. These r
 Similar to dynamic route parameters, you can access the value of the matched path on the splat route's `params` with the `"*"` key.
 
 ```tsx filename=app/routes/$.tsx
-import { useParams } from "@remix-run/react";
 import type {
-  LoaderFunction,
-  ActionFunction,
+  ActionArgs,
+  LoaderArgs,
 } from "@remix-run/node"; // or cloudflare/deno
+import { useParams } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   console.log(params["*"]);
 };
 
-export const action: ActionFunction = async ({
-  params,
-}) => {
+export const action = async ({ params }: ActionArgs) => {
   console.log(params["*"]);
 };
 
@@ -554,22 +546,12 @@ export default function SomeRouteComponent() {
 
 Each route can define a "loader" function that will be called on the server before rendering to provide data to the route. You may think of this as a "GET" request handler in that you should not be reading the body of the request; that is the job of an [`action`][action].
 
-```js
+```tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
 export const loader = async () => {
   // The `json` function converts a serializable object into a JSON response
   // All loaders must return a `Response` object.
-  return json({ ok: true });
-};
-```
-
-```ts
-// Typescript
-import { json } from "@remix-run/node"; // or cloudflare/deno
-import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
-
-export const loader: LoaderFunction = async () => {
   return json({ ok: true });
 };
 ```
@@ -589,7 +571,7 @@ export const loader = async () => {
 };
 
 export default function Users() {
-  const data = useLoaderData();
+  const data = useLoaderData<typeof loader>();
   return (
     <ul>
       {data.map((user) => (
@@ -608,11 +590,9 @@ Remix polyfills the [Web Fetch API][fetch] on the server so you can use `fetch` 
 
 Route params are passed to your loader. If you have a loader at `data/invoices/$invoiceId.tsx` then Remix will parse out the `invoiceId` and pass it to your loader. This is useful for fetching data from an API or database.
 
-```ts
+```tsx
 // if the user visits /invoices/123
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   params.invoiceId; // "123"
 };
 ```
@@ -624,9 +604,7 @@ This is a [Fetch Request][request] instance with information about the request. 
 Most common cases are reading headers or the URL. You can also use this to read URL [URLSearchParams][urlsearchparams] from the request like so:
 
 ```tsx
-export const loader: LoaderFunction = async ({
-  request,
-}) => {
+export const loader = async ({ request }: LoaderArgs) => {
   // read a cookie
   const cookie = request.headers.get("Cookie");
 
@@ -662,10 +640,8 @@ app.all(
 
 And then your loader can access it.
 
-```ts filename=routes/some-route.tsx
-export const loader: LoaderFunction = async ({
-  context,
-}) => {
+```tsx
+export const loader = async ({ context }: LoaderArgs) => {
   const { expressUser } = context;
   // ...
 };
@@ -675,8 +651,8 @@ export const loader: LoaderFunction = async ({
 
 You need to return a [Fetch Response][response] from your loader.
 
-```ts
-export const loader: LoaderFunction = async () => {
+```tsx
+export const loader = async () => {
   const users = await db.users.findMany();
   const body = JSON.stringify(users);
   return new Response(body, {
@@ -692,7 +668,7 @@ Using the `json` helper simplifies this so you don't have to construct them your
 ```tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader: LoaderFunction = async () => {
+export const loader = async () => {
   const users = await fakeDb.users.findMany();
   return json(users);
 };
@@ -701,11 +677,10 @@ export const loader: LoaderFunction = async () => {
 You can see how `json` just does a little of the work to make your loader a lot cleaner. You can also use the `json` helper to add headers or a status code to your response:
 
 ```tsx
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   const user = await fakeDb.project.findOne({
     where: { id: params.id },
   });
@@ -766,15 +741,14 @@ export async function requireUserSession(request) {
 ```
 
 ```tsx filename=app/routes/invoice/$invoiceId.tsx
-import { useCatch, useLoaderData } from "@remix-run/react";
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import type { ThrownResponse } from "@remix-run/react";
+import { useCatch, useLoaderData } from "@remix-run/react";
 
 import { requireUserSession } from "~/http";
 import { getInvoice } from "~/db";
-import type {
-  Invoice,
-  InvoiceNotFoundResponse,
-} from "~/db";
+import type { InvoiceNotFoundResponse } from "~/db";
 
 type InvoiceCatchData = {
   invoiceOwnerEmail: string;
@@ -784,22 +758,25 @@ type ThrownResponses =
   | InvoiceNotFoundResponse
   | ThrownResponse<401, InvoiceCatchData>;
 
-export const loader = async ({ request, params }) => {
+export const loader = async ({
+  params,
+  request,
+}: LoaderArgs) => {
   const user = await requireUserSession(request);
-  const invoice: Invoice = getInvoice(params.invoiceId);
+  const invoice = getInvoice(params.invoiceId);
 
   if (!invoice.userIds.includes(user.id)) {
-    const data: InvoiceCatchData = {
-      invoiceOwnerEmail: invoice.owner.email,
-    };
-    throw json(data, { status: 401 });
+    throw json(
+      { invoiceOwnerEmail: invoice.owner.email },
+      { status: 401 }
+    );
   }
 
   return json(invoice);
 };
 
 export default function InvoiceRoute() {
-  const invoice = useLoaderData<Invoice>();
+  const invoice = useLoaderData<typeof loader>();
   return <InvoiceView invoice={invoice} />;
 }
 
@@ -844,6 +821,7 @@ Actions have the same API as loaders, the only difference is when they are calle
 This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
 ```tsx
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { Form } from "@remix-run/react";
 
@@ -854,7 +832,7 @@ export async function loader() {
   return json(await fakeGetTodos());
 }
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const body = await request.formData();
   const todo = await fakeCreateTodo({
     title: body.get("title"),
@@ -863,7 +841,7 @@ export async function action({ request }) {
 }
 
 export default function Todos() {
-  const data = useLoaderData();
+  const data = useLoaderData<typeof loader>();
   return (
     <div>
       <TodoList todos={data} />
@@ -1093,16 +1071,14 @@ export const meta: MetaFunction<typeof loader> = ({
 
 To infer types for `parentsData`, provide a mapping from the route's file path (relative to `app/`) to that route loader type:
 
-```tsx
-// app/routes/sales.tsx
+```tsx filename=app/routes/sales.tsx
 const loader = () => {
   return json({ salesCount: 1074 });
 };
-export type Loader = typeof loader;
 ```
 
 ```tsx
-import type { Loader as SalesLoader } from "../../sales";
+import type { loader as salesLoader } from "../../sales";
 
 const loader = () => {
   return json({ name: "Customer name" });
@@ -1110,9 +1086,7 @@ const loader = () => {
 
 const meta: MetaFunction<
   typeof loader,
-  {
-    "routes/sales": SalesLoader;
-  }
+  { "routes/sales": typeof salesLoader }
 > = ({ data, parentsData }) => {
   const { name } = data;
   //      ^? string
@@ -1162,7 +1136,7 @@ Examples:
 ```tsx
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
-import stylesHref from "../styles/something.css";
+import stylesHref from "~/styles/something.css";
 
 export const links: LinksFunction = () => {
   return [
@@ -1208,7 +1182,7 @@ export const links: LinksFunction = () => {
 
 These descriptors allow you to prefetch the resources for a page the user is likely to navigate to. While this API is useful, you might get more mileage out of `<Link prefetch="render">` instead. But if you'd like, you can get the same behavior with this API.
 
-```js
+```tsx
 export function links() {
   return [{ page: "/posts/public" }];
 }
@@ -1273,7 +1247,7 @@ export function ErrorBoundary({ error }) {
 
 Exporting a handle allows you to create application conventions with the `useMatches()` hook. You can put whatever values you want on it:
 
-```js
+```tsx
 export const handle = {
   its: "all yours",
 };
@@ -1289,7 +1263,7 @@ This is almost always used on conjunction with `useMatches`. To see what kinds o
 
 This function lets apps optimize which routes should be reloaded on some client-side transitions.
 
-```ts
+```tsx
 import type { ShouldReloadFunction } from "@remix-run/react";
 
 export const unstable_shouldReload: ShouldReloadFunction =
@@ -1327,7 +1301,7 @@ Here are a couple of common use-cases:
 
 It's common for root loaders to return data that never changes, like environment variables to be sent to the client app. In these cases you never need the root loader to be called again. For this case, you can simply `return false`.
 
-```js [10]
+```tsx lines=[10]
 export const loader = async () => {
   return json({
     ENV: {
@@ -1372,8 +1346,11 @@ And lets say the UI looks something like this:
 
 The `activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
 
-```js [2,8]
-export async function loader({ request, params }) {
+```tsx lines=[5,11]
+export async function loader({
+  params,
+  request,
+}: LoaderArgs) {
   const url = new URL(request.url);
   return json(
     await exampleDb.activity.findAll({
@@ -1393,7 +1370,7 @@ This is great for the activity route, but Remix doesn't know if the parent loade
 In this UI, that's wasted bandwidth for the user, your server, and your database because `$projectId.tsx` doesn't use the search params. Consider that our loader for `$projectId.tsx` looks something like this:
 
 ```tsx
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   return json(await fakedb.findProject(params.projectId));
 }
 ```

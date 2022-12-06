@@ -41,7 +41,7 @@ export async function requireUserSession(request) {
 And now in any loader or action that requires a user session, you can call the function.
 
 ```tsx filename=app/routes/projects.jsx lines=[3]
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   // if the user isn't authenticated, this will redirect to login
   const session = await requireUserSession(request);
 
@@ -55,8 +55,8 @@ export async function loader({ request }) {
 
 Even if you don't need the session information, the function will still protect the route:
 
-```js
-export async function loader({ request }) {
+```tsx
+export async function loader({ request }: LoaderArgs) {
   await requireUserSession(request);
   // continue
 }
@@ -81,8 +81,8 @@ We find option (1) to be the simplest because you don't have to mess around with
 
 HTML buttons can send a value, so it's the easiest way to implement this:
 
-```jsx filename=app/routes/projects/$id.jsx lines=[3-4,33,39]
-export async function action({ request }) {
+```tsx filename=app/routes/projects/$id.tsx lines=[3-4,33,39]
+export async function action({ request }: ActionArgs) {
   let formData = await request.formData();
   let intent = formData.get("intent");
   switch (intent) {
@@ -101,7 +101,7 @@ export async function action({ request }) {
 }
 
 export default function Projects() {
-  let project = useLoaderData();
+  let project = useLoaderData<typeof loader>();
   return (
     <>
       <h2>Update Project</h2>
@@ -159,7 +159,7 @@ If you're wanting to send structured data simply to post arrays, you can use the
 Each checkbox has the name: "category". Since `FormData` can have multiple values on the same key, you don't need JSON for this. Access the checkbox values with `formData.getAll()` in your action.
 
 ```tsx
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const formData = await request.formData();
   let categories = formData.getAll("category");
   // ["comedy", "music"]
@@ -186,7 +186,7 @@ And then in your action:
 import queryString from "query-string";
 
 // in your action:
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   // use `request.text()`, not `request.formData` to get the form data as a url
   // encoded form query string
   let formQueryString = await request.text();
@@ -209,7 +209,7 @@ Some folks even dump their JSON into a hidden field. Note that this approach won
 And then parse it in the action:
 
 ```tsx
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   let formData = await request.formData();
   let obj = JSON.parse(formData.get("json"));
 }
