@@ -85,7 +85,7 @@ const createEsbuildConfig = (
 
   let plugins = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    ...(config.future.v2_cssBundle
+    ...(config.future.unstable_cssBundle
       ? [
           ...(build === "css" ? [cssEntryModulePlugin(config)] : []),
           cssModulesPlugin({
@@ -155,7 +155,7 @@ export const createBrowserCompiler = (
     };
 
     let cssBuildTask = async () => {
-      if (!remixConfig.future.v2_cssBundle) {
+      if (!remixConfig.future.unstable_cssBundle) {
         return;
       }
 

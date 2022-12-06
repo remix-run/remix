@@ -23,7 +23,7 @@ describe("readConfig", () => {
         relativeAssetsBuildDirectory: expect.any(String),
         tsconfigPath: expect.any(String),
         future: {
-          v2_cssBundle: expect.any(Boolean),
+          unstable_cssBundle: expect.any(Boolean),
           v2_meta: expect.any(Boolean),
         },
       },
@@ -37,7 +37,7 @@ describe("readConfig", () => {
         "entryClientFile": "entry.client.tsx",
         "entryServerFile": "entry.server.tsx",
         "future": Object {
-          "v2_cssBundle": Any<Boolean>,
+          "unstable_cssBundle": Any<Boolean>,
           "v2_meta": Any<Boolean>,
         },
         "mdx": undefined,

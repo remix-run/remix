@@ -17,7 +17,7 @@ export interface EntryContext {
 
 export interface FutureConfig {
   v2_meta: boolean;
-  v2_cssBundle: boolean;
+  unstable_cssBundle: boolean;
 }
 
 export interface AssetsManifest {

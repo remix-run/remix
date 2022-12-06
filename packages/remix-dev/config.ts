@@ -33,7 +33,7 @@ export type ServerPlatform = "node" | "neutral";
 
 interface FutureConfig {
   v2_meta: boolean;
-  v2_cssBundle: boolean;
+  unstable_cssBundle: boolean;
 }
 
 /**
@@ -483,7 +483,7 @@ export async function readConfig(
 
   let future = {
     v2_meta: appConfig.future?.v2_meta === true,
-    v2_cssBundle: appConfig.future?.v2_cssBundle === true,
+    unstable_cssBundle: appConfig.future?.unstable_cssBundle === true,
   };
 
   return {
