@@ -20,6 +20,7 @@ interface FixtureInit {
   files?: { [filename: string]: string };
   template?: "cf-template" | "deno-template" | "node-template";
   setup?: "node" | "cloudflare";
+  mode?: ServerMode,
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
@@ -36,7 +37,7 @@ export async function createFixture(init: FixtureInit) {
   let projectDir = await createFixtureProject(init);
   let buildPath = path.resolve(projectDir, "build");
   let app: ServerBuild = await import(buildPath);
-  let handler = createRequestHandler(app, "production");
+  let handler = createRequestHandler(app, init.mode ?? "production");
 
   let requestDocument = async (href: string, init?: RequestInit) => {
     let url = new URL(href, "test://test");
