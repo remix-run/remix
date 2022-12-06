@@ -93,7 +93,7 @@ describe("createRoutePath", () => {
         expect(() => createRoutePath("($)")).toThrow("Splat");
       });
 
-      it("throws errors on optional index with brackets routes", () => {
+      it("throws errors on optional index without brackets routes", () => {
         expect(() => createRoutePath("(nested)/(index)")).toThrow("index");
         expect(() => createRoutePath("(flat).(index)")).toThrow("index");
         expect(() => createRoutePath("(index)")).toThrow("index");
