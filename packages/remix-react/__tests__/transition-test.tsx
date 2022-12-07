@@ -1877,10 +1877,6 @@ describe("navigating with inflight fetchers", () => {
   });
 });
 
-// describe("react-router", () => {
-//   it.todo("replaces pending locations even on a push");
-// });
-
 ////////////////////////////////////////////////////////////////////////////////
 type Deferred = ReturnType<typeof defer>;
 
