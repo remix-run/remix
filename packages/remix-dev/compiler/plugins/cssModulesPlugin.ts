@@ -13,6 +13,8 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
   return {
     name: pluginName,
     setup: async (build: PluginBuild) => {
+      let buildRootDirectory = process.cwd();
+
       build.onResolve(
         { filter: cssModulesFilter, namespace: "file" },
         async (args) => {
@@ -42,7 +44,7 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
           exports: exportsMeta = {},
           map,
         } = await lightningcss.bundleAsync({
-          filename: absolutePath,
+          filename: path.relative(buildRootDirectory, absolutePath),
           minify: false,
           sourceMap: options.mode !== "production",
           analyzeDependencies: false,
