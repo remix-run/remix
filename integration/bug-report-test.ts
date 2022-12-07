@@ -47,29 +47,88 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
-
-        export function loader() {
-          return json("pizza");
-        }
-
-        export default function Index() {
-          let data = useLoaderData();
-          return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
-        }
+      "app/routes/withBoundary.jsx": js`
+          import { json } from '@remix-run/node';
+          import { useCatch } from '@remix-run/react';
+          
+          export const loader = () => {
+            const message = 'data from example-with-catchboundary/loader';
+            throw json({ message });
+          };
+          
+          export function CatchBoundary() {
+            return <div>{JSON.stringify(useCatch().data.message)}</div>;
+          }
+          
+          export default function Example() {
+            return (
+              <div style={{ border: '1px solid red' }}>
+                <h3>example-with-catchboundary/index</h3>
+              </div>
+            );
+          }
+      `,
+      "app/routes/withoutBoundary.jsx": js`
+          import { json } from '@remix-run/node';
+          
+          export const loader = () => {
+            const message = 'data from example-without-catchboundary/loader';
+            throw json({ message });
+          };
+          
+          export default function Example() {
+            return (
+              <div style={{ border: '1px solid red' }}>
+                <h3>example-with-catchboundary/index</h3>
+              </div>
+            );
+          }
       `,
 
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
-        }
+      "app/root.jsx": js`
+          import {
+            Links,
+            LiveReload,
+            Meta,
+            Outlet,
+            Scripts,
+            ScrollRestoration,
+            useCatch,
+            useLoaderData,
+          } from '@remix-run/react';
+          import { json } from '@remix-run/node/';
+          
+          export const meta = () => ({
+            charset: 'utf-8',
+            title: 'New Remix App',
+            viewport: 'width=device-width,initial-scale=1',
+          });
+          
+          export const loader = () => {
+            const message = 'data from root loader';
+            throw json({ message });
+          };
+          
+          export function CatchBoundary() {
+            return <div>root boundary: {JSON.stringify(useCatch().data.message)}</div>;
+          }
+          
+          export default function App() {
+            return (
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                  <ScrollRestoration />
+                  <Scripts />
+                  <LiveReload />
+                </body>
+              </html>
+            );
+          }
       `,
     },
   });
@@ -85,22 +144,19 @@ test.afterAll(() => appFixture.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
+test.only("[description of what you expect it to do]", async ({ page }) => {
+  // ✅ Root loader throws json, root catch boundary renders with data from root loader
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+  expect(await response.text()).toContain("data from root loader");
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  // ✅ Root loader throws json, root catch boundary renders with data from root loader
+  response = await fixture.requestDocument("/withBoundary");
+  expect(await response.text()).toContain("data from root loader");
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+  // ❌ Root loader throws json, root catch boundary renders with data from nested loader
+  // if that loader does not export a CatchBoundary
+  response = await fixture.requestDocument("/withoutBoundary");
+  expect(await response.text()).toContain("data from root loader");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
