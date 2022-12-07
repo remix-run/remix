@@ -90,10 +90,9 @@ export const cssModulesPlugin = ({
               dashedIdents: false,
             },
             resolver: {
-              resolve(specifier, from) {
-                return specifier.startsWith("~/")
-                  ? path.resolve(appDirectory, specifier.replace("~/", ""))
-                  : path.resolve(path.dirname(from), specifier);
+              async resolve(specifier, originatingFile) {
+                let resolveDir = path.dirname(originatingFile);
+                return (await build.resolve(specifier, { resolveDir })).path;
               },
             },
           });
