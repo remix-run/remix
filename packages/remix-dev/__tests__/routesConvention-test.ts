@@ -50,7 +50,7 @@ describe("createRoutePath", () => {
 
 describe("defineConventionalRoutes", () => {
   it("creates a route manifest from the routes directory", () => {
-    let routes = defineConventionalRoutes(path.join(__dirname, "fixtures/replace-remix-imports/app"));
+    let routes = defineConventionalRoutes(path.join(__dirname, "fixtures/replace-remix-magic-imports/app"));
     let keys = Object.keys(routes);
     expect(keys.length).toBe(14)
     expect(keys.filter(key => routes[key].parentId).length).toBe(5)
