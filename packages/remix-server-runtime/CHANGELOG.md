@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Fix performance regression with ctreation of `@remix-run/router` static handler ([#4790](https://github.com/remix-run/remix/pull/4790))
+- Fix performance regression with creation of `@remix-run/router` static handler ([#4790](https://github.com/remix-run/remix/pull/4790))
 
 ## 1.8.2-pre.0
 
