@@ -2069,6 +2069,11 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
+"@remix-run/router@1.0.4":
+  version "1.0.4"
+  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.0.4.tgz#cbfbec6735711e7c2fc93b9b40adf70ef5a39990"
+  integrity sha512-gTL8H5USTAKOyVA4xczzDJnC3HMssdFa3tRlwBicXynx9XfiXwneHnYQogwSKpdCkjXISrEKSTtX62rLpNEVQg==
+
 "@remix-run/router@1.0.5":
   version "1.0.5"
   resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.0.5.tgz#d5c65626add4c3c185a89aa5bd38b1e42daec075"
