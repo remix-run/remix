@@ -81,7 +81,7 @@ jobs:
         run: |
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
-          git checkout -b nightly/${NEXT_VERSION}
+          git checkout -b nightly/${steps.version.outputs.NEXT_VERSION}
           yarn run version ${steps.version.outputs.NEXT_VERSION} --skip-prompt
 
       - name: 🏷 Push Tag
