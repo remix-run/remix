@@ -1,7 +1,5 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import type { Location } from "history";
-import { parsePath } from "history";
+import type { Location } from "react-router-dom";
+import { parsePath } from "react-router-dom";
 
 import type { AssetsManifest } from "./entry";
 import type { ClientRoute } from "./routes";

@@ -1,9 +1,7 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import type { Location, To } from "history";
-import { Action, createPath } from "history";
 import type { ReactElement } from "react";
 import * as React from "react";
+import type { Location, To } from "react-router-dom";
+import { NavigationType as Action, createPath } from "react-router-dom";
 
 import { RemixEntry } from "./components";
 import type { EntryContext } from "./entry";

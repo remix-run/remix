@@ -1,7 +1,4 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import type { Location } from "history";
-import type { Params, RouteObject } from "react-router"; // TODO: export/import from react-router-dom
+import type { Location, Params, RouteObject } from "react-router-dom";
 import { matchRoutes } from "react-router-dom";
 
 import type { ClientRoute } from "./routes";
