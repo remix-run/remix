@@ -23,17 +23,18 @@ Remix can help you build optimistic UI with [`useTransition`][use-transition] an
 Consider the workflow for viewing and creating a new project. The project route loads the project and renders it.
 
 ```tsx filename=app/routes/project/$id.tsx
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { ProjectView } from "~/components/project";
 
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   return json(await findProject(params.id));
 }
 
 export default function ProjectRoute() {
-  const project = useLoaderData();
+  const project = useLoaderData<typeof loader>();
   return <ProjectView project={project} />;
 }
 ```
@@ -59,14 +60,13 @@ export function ProjectView({ project }) {
 Now we can get to the fun part. Here's what a "new project" route might look like:
 
 ```tsx filename=app/routes/projects/new.tsx
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import { Form } from "@remix-run/react";
 
 import { createProject } from "~/utils";
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
   const project = await createProject(newProject);
@@ -79,7 +79,7 @@ export default function NewProject() {
       <h2>New Project</h2>
       <Form method="post">
         <label>
-          Title: <input type="text" name="title" />
+          Title: <input name="title" type="text" />
         </label>
         <label htmlFor="description">Description:</label>
         <textarea name="description" id="description" />
@@ -92,15 +92,14 @@ export default function NewProject() {
 
 At this point, typically you'd render a busy spinner on the page while the user waits for the project to be sent to the server, added to the database, and sent back to the browser and then redirected to the project. Remix makes that pretty easy:
 
-```tsx filename=app/routes/projects/new.tsx lines=[2,16,28,30-32]
+```tsx filename=app/routes/projects/new.tsx lines=[3,15,27,29-31]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import { Form, useTransition } from "@remix-run/react";
 
 import { createProject } from "~/utils";
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
   const project = await createProject(newProject);
@@ -114,7 +113,7 @@ export default function NewProject() {
       <h2>New Project</h2>
       <Form method="post">
         <label>
-          Title: <input type="text" name="title" />
+          Title: <input name="title" type="text" />
         </label>
         <label htmlFor="description">Description:</label>
         <textarea name="description" id="description" />
@@ -134,16 +133,15 @@ export default function NewProject() {
 
 Since we know that almost every time this form is submitted it's going to succeed, we can just skip the busy spinners and show the UI as we know it's going to be: the `<ProjectView>`.
 
-```tsx filename=app/routes/projects/new.tsx lines=[5,17-23]
+```tsx filename=app/routes/projects/new.tsx lines=[5,17-23,31-32]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import { Form, useTransition } from "@remix-run/react";
 
-import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
+import { createProject } from "~/utils";
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
   const project = await createProject(newProject);
@@ -163,7 +161,7 @@ export default function NewProject() {
       <h2>New Project</h2>
       <Form method="post">
         <label>
-          Title: <input type="text" name="title" />
+          Title: <input name="title" type="text" />
         </label>
         <label htmlFor="description">Description:</label>
         <textarea name="description" id="description" />
@@ -182,26 +180,25 @@ One of the hardest parts about implementing optimistic UI is how to handle failu
 
 If you want to have more control over the UI when an error occurs and put the user right back where they were without losing any state, you can catch your own error and send it down through action data.
 
-```tsx filename=app/routes/projects/new.tsx lines=[4-5,16-24,29,48]
+```tsx filename=app/routes/projects/new.tsx lines=[5,15-23,27,47]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import {
   Form,
-  useTransition,
   useActionData,
+  useTransition,
 } from "@remix-run/react";
 
-import { createProject } from "~/utils";
 import { ProjectView } from "~/components/project";
+import { createProject } from "~/utils";
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const body = await request.formData();
   const newProject = Object.fromEntries(body);
   try {
     const project = await createProject(newProject);
     return redirect(`/projects/${project.id}`);
-  } catch (e) {
+  } catch (e: unknown) {
     console.error(e);
     return json("Sorry, we couldn't create the project", {
       status: 500,
@@ -210,8 +207,8 @@ export const action: ActionFunction = async ({
 };
 
 export default function NewProject() {
+  const error = useActionData<typeof action>();
   const transition = useTransition();
-  const error = useActionData();
 
   return transition.submission ? (
     <ProjectView
@@ -224,7 +221,7 @@ export default function NewProject() {
       <h2>New Project</h2>
       <Form method="post">
         <label>
-          Title: <input type="text" name="title" />
+          Title: <input name="title" type="text" />
         </label>
         <label htmlFor="description">Description:</label>
         <textarea name="description" id="description" />
@@ -242,21 +239,63 @@ Now in the rare case of an error on the server, the UI reverts back to the form,
 
 For this to work best, you'll want a bit of client-side validation so that form validation issues on the server don't cause the app to flash between optimistic UI and validation messages. Fortunately [HTML usually has everything you need][html-input] built-in. The browser will validate the fields before the form is even submitted to the server to avoid sending bad data and getting flashes of optimistic UI.
 
-```jsx filename=app/routes/projects/new.js lines=[7-8]
-<Form method="post">
-  <label>
-    Title:{" "}
-    <input
-      type="text"
-      name="title"
-      required
-      minLength={3}
+```tsx filename=app/routes/projects/new.tsx lines=[43,45]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
+import {
+  Form,
+  useActionData,
+  useTransition,
+} from "@remix-run/react";
+
+import { ProjectView } from "~/components/project";
+import { createProject } from "~/utils";
+
+export const action = async ({ request }: ActionArgs) => {
+  const body = await request.formData();
+  const newProject = Object.fromEntries(body);
+  try {
+    const project = await createProject(newProject);
+    return redirect(`/projects/${project.id}`);
+  } catch (e: unknown) {
+    console.error(e);
+    return json("Sorry, we couldn't create the project", {
+      status: 500,
+    });
+  }
+};
+
+export default function NewProject() {
+  const error = useActionData<typeof action>();
+  const transition = useTransition();
+
+  return transition.submission ? (
+    <ProjectView
+      project={Object.fromEntries(
+        transition.submission.formData
+      )}
     />
-  </label>
-  <label htmlFor="description">Description:</label>
-  <textarea name="description" id="description" required />
-  <button type="submit">Create Project</button>
-</Form>
+  ) : (
+    <>
+      <h2>New Project</h2>
+      <Form method="post">
+        <label>
+          40 Title:{" "}
+          <input
+            minLength={3}
+            name="title"
+            required
+            type="text"
+          />
+        </label>
+        <label htmlFor="description">Description:</label>
+        <textarea name="description" id="description" />
+        <button type="submit">Create Project</button>
+      </Form>
+      {error ? <p>{error}</p> : null}
+    </>
+  );
+}
 ```
 
 [use-fetcher]: ../api/remix#usefetcher
