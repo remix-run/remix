@@ -1,193 +1,127 @@
-// Local fork of https://github.com/indooorsman/esbuild-css-modules-plugin
 import path from "path";
 import type { Plugin, PluginBuild } from "esbuild";
 
 import type { CompileOptions } from "../options";
 
 const pluginName = "css-modules-plugin";
-const pluginNamespace = `${pluginName}-namespace`;
-const buildingCssSuffix = `?${pluginName}-building`;
-const builtCssSuffix = `?${pluginName}-built`;
-const modulesCssRegExp = /\.module\.css$/;
-const builtModulesCssRegExp = new RegExp(
-  `.module.css${builtCssSuffix.replace("?", "\\?").replace(/-/g, "\\-")}$`,
-  "i"
-);
+const namespace = `${pluginName}-ns`;
+const cssModulesFilter = /\.module\.css$/;
+const compiledCssSuffix = "?compiled";
+const compiledCssFilter = /\?compiled$/;
 
-function getRootDir(build: PluginBuild): string {
-  let { absWorkingDir } = build.initialOptions;
-  let abs = absWorkingDir ? absWorkingDir : process.cwd();
-  let rootDir = path.isAbsolute(abs) ? abs : path.resolve(process.cwd(), abs);
-  return rootDir;
-}
-
-export const cssModulesPlugin = ({
-  mode,
-  appDirectory,
-}: {
-  mode: CompileOptions["mode"];
-  appDirectory: string;
-}): Plugin => {
+export const cssModulesPlugin = (options: CompileOptions): Plugin => {
   return {
     name: pluginName,
     setup: async (build: PluginBuild) => {
-      let buildRoot = getRootDir(build);
-
-      function getRelativePathFromBuildRoot(to: string): string {
-        if (!path.isAbsolute(to)) {
-          return to.startsWith(".") ? to : `.${path.sep}${to}`;
-        }
-        return `.${path.sep}${path.relative(buildRoot, to)}`;
-      }
-
-      // resolve xxx.module.css to xxx.module.css?css-modules-plugin-building
       build.onResolve(
-        { filter: modulesCssRegExp, namespace: "file" },
+        { filter: cssModulesFilter, namespace: "file" },
         async (args) => {
-          let { resolve } = build;
-          let { resolveDir, path: p, pluginData = {} } = args;
-          let { path: absPath } = await resolve(p, { resolveDir });
-          let relativePath = getRelativePathFromBuildRoot(absPath);
-
-          return {
-            namespace: pluginNamespace,
-            suffix: buildingCssSuffix,
-            path: relativePath,
-            external: false,
-            pluginData: {
-              ...pluginData,
-              relativePathToBuildRoot: relativePath,
-            },
-            sideEffects: true,
-            pluginName,
-          };
-        }
-      );
-
-      // load xxx.module.css?css-modules-plugin-building
-      build.onLoad(
-        { filter: modulesCssRegExp, namespace: pluginNamespace },
-        async (args) => {
-          let { path: fullPath, pluginData = {} } = args;
-
-          let cssFileName = path.basename(fullPath); // e.g. xxx.module.css?css-modules-plugin-building
-          let resolveDir = path.dirname(fullPath);
-
-          let lightningcss = await import("lightningcss");
-
-          let {
-            code,
-            exports = {},
-            map,
-          } = await lightningcss.bundleAsync({
-            filename: fullPath,
-            minify: false,
-            sourceMap: true,
-            analyzeDependencies: false,
-            cssModules: {
-              pattern:
-                mode === "production" ? "[hash]" : "[name]_[local]_[hash]",
-              dashedIdents: false,
-            },
-            resolver: {
-              async resolve(specifier, originatingFile) {
-                let resolveDir = path.dirname(originatingFile);
-                return (await build.resolve(specifier, { resolveDir })).path;
-              },
-            },
+          let { path: importPath, resolveDir } = args;
+          let { path: absolutePath } = await build.resolve(importPath, {
+            resolveDir,
           });
 
-          let cssModulesExport: Record<string, string> = {};
-
-          Object.keys(exports)
-            .sort() // to keep order consistent in different builds
-            .forEach((originClass) => {
-              let { name, composes } = exports[originClass];
-
-              cssModulesExport[originClass] =
-                name +
-                (composes.length
-                  ? " " +
-                    composes
-                      .map((composedClass) => composedClass.name)
-                      .join(" ")
-                  : "");
-            });
-
-          let css = code.toString("utf-8");
-
-          if (map) {
-            css += `\n/*# sourceMappingURL=data:application/json;base64,${map.toString(
-              "base64"
-            )} */`;
-          }
-
-          // fix path issue on Windows: https://github.com/indooorsman/css-modules-plugin/issues/12
-          let cssImportPath =
-            "./" +
-            cssFileName
-              .split(path.sep)
-              .join(path.posix.sep)
-              .trim()
-              .replace(buildingCssSuffix, "") +
-            builtCssSuffix;
-
-          // => ./xxx.module.css?css-modules-plugin-built
-          let js = [
-            `import "${cssImportPath}";`,
-            `export default ${JSON.stringify(cssModulesExport)};`,
-          ].join("\n");
-
           return {
-            pluginName,
-            resolveDir,
-            loader: "js" as const,
-            contents: js,
+            namespace,
+            path: absolutePath,
+            sideEffects: true,
             pluginData: {
-              ...pluginData,
-              css,
-              exports,
+              absolutePath,
             },
           };
         }
       );
 
-      // resolve virtual path xxx.module.css?css-modules-plugin-built
+      build.onLoad({ filter: cssModulesFilter, namespace }, async (args) => {
+        let { path: absolutePath, pluginData } = args;
+
+        let lightningcss = await import("lightningcss");
+
+        let {
+          code: compiledCssBuffer,
+          exports: exportsMeta = {},
+          map,
+        } = await lightningcss.bundleAsync({
+          filename: absolutePath,
+          minify: false,
+          sourceMap: options.mode !== "production",
+          analyzeDependencies: false,
+          cssModules: {
+            pattern:
+              options.mode === "production"
+                ? "[hash]"
+                : "[name]_[local]_[hash]",
+            dashedIdents: false,
+          },
+          resolver: {
+            async resolve(specifier, originatingFile) {
+              let resolveDir = path.dirname(originatingFile);
+              return (await build.resolve(specifier, { resolveDir })).path;
+            },
+          },
+        });
+
+        let exports: Record<string, string> = {};
+
+        for (let exportName in exportsMeta) {
+          let { name, composes } = exportsMeta[exportName];
+
+          let composedClasses = composes.length
+            ? composes.map((composedClass) => composedClass.name).join(" ")
+            : null;
+
+          exports[exportName] = `${name}${
+            composedClasses ? ` ${composedClasses}` : ""
+          }`;
+        }
+
+        let compiledCss = compiledCssBuffer.toString("utf-8");
+
+        if (map) {
+          let mapBase64 = map.toString("base64");
+          compiledCss += `\n/*# sourceMappingURL=data:application/json;base64,${mapBase64} */`;
+        }
+
+        let contents = [
+          `import "./${path.basename(absolutePath)}${compiledCssSuffix}";`,
+          `export default ${JSON.stringify(exports)};`,
+        ].join("\n");
+
+        return {
+          contents,
+          resolveDir: path.dirname(absolutePath),
+          loader: "js" as const,
+          pluginData: {
+            ...pluginData,
+            compiledCss,
+          },
+        };
+      });
+
       build.onResolve(
-        { filter: builtModulesCssRegExp, namespace: pluginNamespace },
+        { filter: compiledCssFilter, namespace },
         async (args) => {
-          let { pluginData = {} } = args;
-          let { relativePathToBuildRoot } = pluginData;
+          let { pluginData, path } = args;
 
           return {
-            pluginName,
-            namespace: pluginNamespace,
-            path: relativePathToBuildRoot + builtCssSuffix,
-            external: false,
-            sideEffects: true,
+            namespace,
+            path,
             pluginData,
           };
         }
       );
 
-      // load virtual path xxx.module.css?css-modules-plugin-built
-      build.onLoad(
-        { filter: builtModulesCssRegExp, namespace: pluginNamespace },
-        async (args) => {
-          let { pluginData } = args;
-          let { css, relativePathToBuildRoot } = pluginData;
-          let absPath = path.resolve(buildRoot, relativePathToBuildRoot);
-          let resolveDir = path.dirname(absPath);
+      build.onLoad({ filter: compiledCssFilter, namespace }, async (args) => {
+        let { pluginData } = args;
+        let { compiledCss, absolutePath } = pluginData;
+        let resolveDir = path.dirname(absolutePath);
 
-          return {
-            pluginName,
-            pluginData,
-            resolveDir,
-            loader: "css" as const,
-            contents: css,
-          };
-        }
-      );
+        return {
+          resolveDir,
+          contents: compiledCss,
+          loader: "css" as const,
+        };
+      });
     },
   };
 };
