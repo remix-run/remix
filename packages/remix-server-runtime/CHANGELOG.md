@@ -1,5 +1,11 @@
 # `@remix-run/server-runtime`
 
+## 1.8.2-pre.2
+
+### Patch Changes
+
+- Update dependency for `@remix-run/router` to v1.0.5 ([`bd84a9317`](https://github.com/remix-run/remix/commit/bd84a931770a6b5e20c2f21839b4322023432b25))
+
 ## 1.8.2-pre.1
 
 ### Patch Changes

@@ -20,6 +20,7 @@
     "@remix-run/vercel": "1.8.1"
   },
   "changesets": [
+    "cyan-wolves-divide",
     "popular-mugs-change",
     "rare-bikes-report",
     "silver-fireants-grab"
