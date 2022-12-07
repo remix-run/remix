@@ -51,7 +51,7 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
           cssModules: {
             pattern:
               options.mode === "production"
-                ? "[hash]"
+                ? "[hash]_[local]" // We need to leave the local name in production for now because of this hashing issue: https://github.com/parcel-bundler/lightningcss/issues/351
                 : "[name]_[local]_[hash]",
             dashedIdents: false,
           },
