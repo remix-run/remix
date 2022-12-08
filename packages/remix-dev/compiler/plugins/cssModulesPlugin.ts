@@ -6,11 +6,11 @@ import type { CompileOptions } from "../options";
 const pluginName = "css-modules-plugin";
 const namespace = `${pluginName}-ns`;
 const cssModulesFilter = /\.module\.css$/;
-const compiledCssSuffix = "?css-modules-plugin-compiled";
-const compiledCssFilter = /\?css-modules-plugin-compiled$/;
+const compiledCssQueryString = "?css-modules-plugin-compiled-css";
+const compiledCssFilter = /\?css-modules-plugin-compiled-css$/;
 
 interface PluginData {
-  resolveDir: string;
+  absolutePath: string;
   compiledCss: string;
 }
 
@@ -18,7 +18,7 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
   return {
     name: pluginName,
     setup: async (build: PluginBuild) => {
-      let buildRootDirectory = process.cwd();
+      let cwd = process.cwd();
 
       build.onLoad({ filter: cssModulesFilter }, async (args) => {
         let { path: absolutePath } = args;
@@ -30,7 +30,7 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
           exports: exportsMeta = {},
           map,
         } = await lightningcss.bundleAsync({
-          filename: path.relative(buildRootDirectory, absolutePath),
+          filename: path.relative(cwd, absolutePath),
           minify: false,
           sourceMap: options.mode !== "production",
           analyzeDependencies: false,
@@ -70,42 +70,40 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
           compiledCss += `\n/*# sourceMappingURL=data:application/json;base64,${mapBase64} */`;
         }
 
-        let resolveDir = path.dirname(absolutePath);
-
         let pluginData: PluginData = {
-          resolveDir,
+          absolutePath,
           compiledCss,
         };
 
         let contents = [
-          `import "./${path.basename(absolutePath)}${compiledCssSuffix}";`,
+          `import "./${path.basename(absolutePath)}${compiledCssQueryString}";`,
           `export default ${JSON.stringify(exports)};`,
         ].join("\n");
 
         return {
           contents,
-          resolveDir,
           loader: "js" as const,
           pluginData,
         };
       });
 
       build.onResolve({ filter: compiledCssFilter }, async (args) => {
-        let { pluginData, path } = args;
+        let pluginData: PluginData = args.pluginData;
+        let absolutePath = path.resolve(args.resolveDir, args.path);
 
         return {
           namespace,
-          path,
+          path: path.relative(cwd, absolutePath),
           pluginData,
         };
       });
 
       build.onLoad({ filter: compiledCssFilter, namespace }, async (args) => {
-        let pluginData = args.pluginData as PluginData;
-        let { resolveDir, compiledCss } = pluginData;
+        let pluginData: PluginData = args.pluginData;
+        let { compiledCss, absolutePath } = pluginData;
 
         return {
-          resolveDir,
+          resolveDir: path.dirname(absolutePath),
           contents: compiledCss,
           loader: "css" as const,
         };
