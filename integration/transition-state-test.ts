@@ -289,8 +289,7 @@ test.describe("rendering", () => {
           key: expect.any(String),
         },
         submission: {
-          // TODO: This feels potentially wrong - the formAction is just /submitting-loader,
-          // the request URL/pending location is /submitting-loader?key=value
+          // TODO: I think this is a bug and will be fixed with RR 6.4
           action: `/${STATES.SUBMITTING_LOADER}?key=value`,
           encType: "application/x-www-form-urlencoded",
           method: "GET",

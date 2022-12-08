@@ -199,8 +199,7 @@ test.describe("fetcher states", () => {
         type: "loaderSubmission",
         submission: {
           formData: { key: "value" },
-          // TODO: This feels potentially wrong - the formAction is just /page,
-          // the request URL is /page?key=value
+          // TODO: I think this is a bug and will be fixed with RR 6.4
           action: "/page?key=value",
           method: "GET",
           encType: "application/x-www-form-urlencoded",
