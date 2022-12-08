@@ -30,7 +30,10 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
           exports: exportsMeta = {},
           map,
         } = await lightningcss.bundleAsync({
-          filename: path.relative(cwd, absolutePath), // Path must be relative to ensure stable hashes
+          // Path must be relative to ensure stable hashes.
+          // Also, we can only generate stable hashes relative to cwd right now:
+          // https://github.com/parcel-bundler/lightningcss/issues/355
+          filename: path.relative(cwd, absolutePath),
           minify: false,
           sourceMap: options.mode !== "production",
           analyzeDependencies: false,
