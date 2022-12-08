@@ -199,7 +199,9 @@ test.describe("fetcher states", () => {
         type: "loaderSubmission",
         submission: {
           formData: { key: "value" },
-          // TODO: I think this is a bug and will be fixed with RR 6.4
+          // Note: This is a bug in Remix but we're going to keep it that way
+          // in useTransition (including the back-compat version) and it'll be
+          // fixed with useNavigation
           action: "/page?key=value",
           method: "GET",
           encType: "application/x-www-form-urlencoded",
