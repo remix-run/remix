@@ -11,6 +11,7 @@ const filesToCopy = [
   ["server.js"],
   ["remix.config.js"],
   ["vscode.json", join(".vscode", "settings.json")],
+  ["create-edge-manifest.ts"],
 ];
 
 const filesToModify = ["app/entry.server.tsx", "app/root.tsx"];
@@ -55,7 +56,13 @@ async function updatePackageJsonForEdge(directory) {
 
   packageJson.update({
     // dev script is the same as the start script for Netlify Edge, "cross-env NODE_ENV=production netlify dev"
-    scripts: { ...scripts, dev: scripts["start"] },
+    scripts: {
+      ...scripts,
+      dev: scripts["start"],
+      build: "run-s build:*",
+      "build:remix": "remix build",
+      "build:edge-manifest": "ts-node create-edge-manifest.ts",
+    },
     ...restOfPackageJson,
     dependencies: {
       ...dependencies,

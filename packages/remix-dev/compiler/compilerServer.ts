@@ -45,9 +45,7 @@ const createEsbuildConfig = (
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
     config.serverBuildTarget ?? ""
   );
-  let isDenoRuntime = ["deno", "netlify-edge"].includes(
-    config.serverBuildTarget ?? ""
-  );
+  let isDenoRuntime = config.serverBuildTarget === "deno";
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
@@ -63,17 +61,6 @@ const createEsbuildConfig = (
 
   if (config.serverPlatform !== "node") {
     plugins.unshift(NodeModulesPolyfillPlugin());
-  }
-
-  if (config.serverBuildTarget === "netlify-edge") {
-    let edgeManifest = {
-      functions: [{ function: "server", path: "/*" }],
-      version: 1,
-    };
-    let edgeDir = path.dirname(config.serverBuildPath);
-
-    fse.ensureDirSync(edgeDir);
-    fse.writeJSONSync(path.join(edgeDir, "manifest.json"), edgeManifest);
   }
 
   return {
