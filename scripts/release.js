@@ -173,7 +173,7 @@ async function execStart(nextVersion) {
   await gitPull("dev");
   try {
     checkoutNewBranch(releaseBranch);
-  } catch (e) {
+  } catch {
     throw Error(
       `Branch ${chalk.bold(
         releaseBranch
@@ -243,10 +243,10 @@ async function gitMerge(from, to, opts = {}) {
   let summary;
   try {
     summary = await git.merge([from]);
-  } catch (err) {
-    savedError = err;
+  } catch (error) {
+    savedError = error;
     // @ts-ignore
-    summary = err.git;
+    summary = error.git;
   }
 
   if (summary.conflicts.length > 0) {
@@ -281,9 +281,9 @@ async function gitPull(branch) {
       console.error(chalk.red("Merge failed.\n"));
       throw Error(resp);
     }
-  } catch (e) {
+  } catch (error) {
     console.error(chalk.red(`Error rebasing to origin/${branch}`));
-    throw e;
+    throw error;
   }
 }
 

@@ -81,7 +81,7 @@ async function updatePackageConfig(packageName, transform) {
     }
     transform(json);
     await jsonfile.writeFile(file, json, { spaces: 2 });
-  } catch (err) {
+  } catch {
     return;
   }
 }

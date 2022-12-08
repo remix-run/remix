@@ -16,7 +16,7 @@ if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
   );
   try {
     fse.readdirSync(path.join(appDir, "node_modules"));
-  } catch (e) {
+  } catch {
     console.error(
       "Oops! You pointed REMIX_LOCAL_BUILD_DIRECTORY to a directory that " +
         "does not have a node_modules/ folder. Please `npm install` in that " +

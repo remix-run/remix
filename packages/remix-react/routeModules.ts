@@ -158,7 +158,7 @@ export async function loadRouteModule(
     let routeModule = await import(/* webpackIgnore: true */ route.module);
     routeModulesCache[route.id] = routeModule;
     return routeModule;
-  } catch (error) {
+  } catch (error: unknown) {
     // User got caught in the middle of a deploy and the CDN no longer has the
     // asset we're trying to import! Reload from the server and the user
     // (should) get the new manifest--unless the developer purged the static

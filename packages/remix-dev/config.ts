@@ -318,7 +318,7 @@ export async function readConfig(
         appConfigModule = await import(pathToFileURL(configFile).href);
       }
       appConfig = appConfigModule?.default || appConfigModule;
-    } catch (error) {
+    } catch (error: unknown) {
       throw new Error(
         `Error loading Remix config at ${configFile}\n${String(error)}`
       );
