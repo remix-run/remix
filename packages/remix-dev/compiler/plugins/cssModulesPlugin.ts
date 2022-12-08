@@ -38,7 +38,7 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
             pattern:
               options.mode === "production"
                 ? "[hash]_[local]" // We need to leave the local name in production for now because of this hashing issue: https://github.com/parcel-bundler/lightningcss/issues/351
-                : "[hash]_[name]_[local]",
+                : "[hash]_[name]_[local]", // [local] must be at the end to support scoped grid line names: https://github.com/parcel-bundler/lightningcss/issues/351#issuecomment-1342099486
             dashedIdents: false,
           },
           resolver: {
