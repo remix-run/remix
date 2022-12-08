@@ -253,14 +253,13 @@ test.describe("rendering", () => {
           pathname: "/",
           search: "?redirected",
           hash: "",
-          // These were private API for transition manager that are no longer
-          // needed with the new router so OK to disappear
-          // state: {
-          //   isRedirect: true,
-          //   setCookie: false,
-          //   type: "loader",
-          // },
-          state: null,
+          state: {
+            _isRedirect: true,
+            // These were private API for transition manager that are no longer
+            // needed with the new router so OK to disappear
+            // setCookie: false,
+            // type: "loader",
+          },
           key: expect.any(String),
         },
       },
@@ -291,9 +290,6 @@ test.describe("rendering", () => {
           state: null,
           key: expect.any(String),
         },
-        // TODO This fails because we don't expose the "submission" on loader
-        // submissions from the new router, but we think we probably should
-        // even though it's a "loading" navigation
         submission: {
           // Note: This is a bug in Remix but we're going to keep it that way
           // in useTransition (including the back-compat version) and it'll be
@@ -347,14 +343,13 @@ test.describe("rendering", () => {
           pathname: "/",
           search: "?redirected",
           hash: "",
-          // These were private API for transition manager that are no longer
-          // needed with the new router so OK to disappear
-          // state: {
-          //   isRedirect: true,
-          //   setCookie: false,
-          //   type: "loaderSubmission",
-          // },
-          state: null,
+          state: {
+            _isRedirect: true,
+            // These were private API for transition manager that are no longer
+            // needed with the new router so OK to disappear
+            // setCookie: false,
+            // type: "loader",
+          },
           key: expect.any(String),
         },
         submission: {
@@ -460,14 +455,13 @@ test.describe("rendering", () => {
           pathname: "/",
           search: "?redirected",
           hash: "",
-          // These were private API for transition manager that are no longer
-          // needed with the new router so OK to disappear
-          // state: {
-          //   isRedirect: true,
-          //   setCookie: false,
-          //   type: "action",
-          // },
-          state: null,
+          state: {
+            _isRedirect: true,
+            // These were private API for transition manager that are no longer
+            // needed with the new router so OK to disappear
+            // setCookie: false,
+            // type: "loader",
+          },
           key: expect.any(String),
         },
         submission: {
@@ -502,15 +496,13 @@ test.describe("rendering", () => {
           pathname: "/",
           search: "?redirected",
           hash: "",
-          // These were private API for transition manager that are no longer
-          // needed with the new router so OK to disappear
-          // state: {
-          //   isRedirect: true,
-          //   setCookie: false,
-          //   type: "fetchAction",
-          // },
           state: {
-            isFetchActionRedirect: true,
+            _isRedirect: true,
+            _isFetchActionRedirect: true,
+            // These were private API for transition manager that are no longer
+            // needed with the new router so OK to disappear
+            // setCookie: false,
+            // type: "loader",
           },
           key: expect.any(String),
         },

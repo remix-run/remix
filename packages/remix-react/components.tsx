@@ -947,18 +947,7 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  * @see https://remix.run/api/remix#usetransition
  */
 export function useTransition(): Transition {
-  let currentLocation = useLocation();
   let navigation = useNavigation();
-  let lastNavigationRef = React.useRef<Navigation | null>(null);
-  let lastNavigation = lastNavigationRef.current;
-  lastNavigationRef.current = navigation;
-
-  // TODO: Should we populate navigation.formData on <Form method="get"> even
-  // though we've already move the data onto URLSearchParams.
-  // Reason would be to provide a consistent optimistic UI DX regardless of form method
-  // Downside is that it arguably deviates from how the browser would handle it since there would
-  //   be no request body/FormData.  We _do_ strip formData from the Request passed to your loader
-  //   but we could keep it on the navigation object for DX
 
   let { location, state, formMethod, formAction, formEncType, formData } =
     navigation;
@@ -994,33 +983,18 @@ export function useTransition(): Transition {
       };
       return transition;
     } else {
-      // TODO if we don't update the router to keep formData on loader
-      // submissions then we can recreate it here from URLSearchParams
-
-      // Actively "submitting" to a loader
-      let transition: TransitionStates["SubmittingLoader"] = {
-        location,
-        state,
-        submission: {
-          method: formMethod.toUpperCase() as LoaderSubmission["method"],
-          action: formAction,
-          encType: formEncType,
-          // TODO: Recreate from params
-          formData: formData,
-          key: location.key,
-        },
-        type: "loaderSubmission",
-      };
-      return transition;
+      // @remix-run/router doesn't mark loader submissions as state: "submitting"
+      invariant(
+        false,
+        "Encountered an unexpected navigation scenario in useTransition()"
+      );
     }
   }
 
   if (state === "loading") {
+    let { _isRedirect, _isFetchActionRedirect } = location.state || {};
     if (formMethod && formAction && formEncType && formData) {
-      if (formAction === location.pathname + location.search) {
-        // TODO: How would we detect a redirect to the same location from an
-        // action?  Might need local state ion this hook to track the previous
-        // "transition"
+      if (!_isRedirect) {
         if (isActionSubmission) {
           // We're reloading the same location after an action submission
           let transition: TransitionStates["LoadingAction"] = {
@@ -1037,12 +1011,20 @@ export function useTransition(): Transition {
           };
           return transition;
         } else {
-          // I don't think this is possible?  This is just a loader submission
-          // which goes idle -> submitting -> idle?
-          invariant(
-            false,
-            "Encountered an unexpected navigation scenario in useTransition()"
-          );
+          // Actively "submitting" to a loader
+          let transition: TransitionStates["SubmittingLoader"] = {
+            location,
+            state: "submitting",
+            submission: {
+              method: formMethod.toUpperCase() as LoaderSubmission["method"],
+              action: formAction,
+              encType: formEncType,
+              formData: formData,
+              key: location.key,
+            },
+            type: "loaderSubmission",
+          };
+          return transition;
         }
       } else {
         // Redirecting after a submission
@@ -1077,25 +1059,24 @@ export function useTransition(): Transition {
           return transition;
         }
       }
-    } else if (
-      lastNavigation?.state === "loading" &&
-      lastNavigation.location.key !== navigation.location?.key
-    ) {
-      let transition: TransitionStates["LoadingRedirect"] = {
-        location,
-        state,
-        submission: undefined,
-        type: "normalRedirect",
-      };
-      return transition;
-    } else if (location.state?.isFetchActionRedirect) {
-      let transition: TransitionStates["LoadingFetchActionRedirect"] = {
-        location,
-        state,
-        submission: undefined,
-        type: "fetchActionRedirect",
-      };
-      return transition;
+    } else if (_isRedirect) {
+      if (_isFetchActionRedirect) {
+        let transition: TransitionStates["LoadingFetchActionRedirect"] = {
+          location,
+          state,
+          submission: undefined,
+          type: "fetchActionRedirect",
+        };
+        return transition;
+      } else {
+        let transition: TransitionStates["LoadingRedirect"] = {
+          location,
+          state,
+          submission: undefined,
+          type: "normalRedirect",
+        };
+        return transition;
+      }
     }
   }
 
