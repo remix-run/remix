@@ -1,8 +1,5 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import type { Location } from "history";
 import type { ComponentType } from "react";
-import type { Params } from "react-router"; // TODO: import/export from react-router-dom
+import type { Params, Location } from "react-router-dom";
 
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
@@ -161,7 +158,7 @@ export async function loadRouteModule(
     let routeModule = await import(/* webpackIgnore: true */ route.module);
     routeModulesCache[route.id] = routeModule;
     return routeModule;
-  } catch (error) {
+  } catch (error: unknown) {
     // User got caught in the middle of a deploy and the CDN no longer has the
     // asset we're trying to import! Reload from the server and the user
     // (should) get the new manifest--unless the developer purged the static

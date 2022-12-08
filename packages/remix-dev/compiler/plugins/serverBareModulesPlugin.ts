@@ -86,7 +86,7 @@ export function serverBareModulesPlugin(
         ) {
           try {
             require.resolve(path);
-          } catch (error) {
+          } catch (error: unknown) {
             onWarning(
               `The path "${path}" is imported in ` +
                 `${relative(process.cwd(), importer)} but ` +
