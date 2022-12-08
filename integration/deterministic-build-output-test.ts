@@ -41,7 +41,19 @@ test("builds deterministically under different paths", async () => {
       "app/styles/foo.module.css": css`
         .foo {
           color: peachpuff;
+          background-image: url(../images/foo.svg);
+          composes: bar from "./bar.module.css";
         }
+      `,
+      "app/styles/bar.module.css": css`
+        .bar {
+          background-color: papayawhip;
+        }
+      `,
+      "app/images/foo.svg": `
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="50" fill="coral" />
+        </svg>
       `,
     },
   };

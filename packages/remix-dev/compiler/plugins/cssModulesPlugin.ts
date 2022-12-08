@@ -30,7 +30,7 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
           exports: exportsMeta = {},
           map,
         } = await lightningcss.bundleAsync({
-          filename: path.relative(cwd, absolutePath),
+          filename: path.relative(cwd, absolutePath), // Path must be relative to ensure stable hashes
           minify: false,
           sourceMap: options.mode !== "production",
           analyzeDependencies: false,
@@ -44,7 +44,12 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
           resolver: {
             async resolve(specifier, originatingFile) {
               let resolveDir = path.dirname(originatingFile);
-              return (await build.resolve(specifier, { resolveDir })).path;
+
+              let absolutePath = (
+                await build.resolve(specifier, { resolveDir })
+              ).path;
+
+              return path.relative(cwd, absolutePath); // Path must be relative to ensure stable hashes
             },
           },
         });
