@@ -76,7 +76,7 @@ test.describe("rendering", () => {
                 </li>
                 <li>
                   <Form action="/${STATES.SUBMITTING_LOADER}" method="get">
-                    <button type="submit">
+                    <button type="submit" name="key" value="value">
                       ${STATES.SUBMITTING_LOADER}
                     </button>
                   </Form>
@@ -283,13 +283,15 @@ test.describe("rendering", () => {
         type: "loaderSubmission",
         location: {
           pathname: `/${STATES.SUBMITTING_LOADER}`,
-          search: "",
+          search: "?key=value",
           hash: "",
           state: null,
           key: expect.any(String),
         },
         submission: {
-          action: `/${STATES.SUBMITTING_LOADER}`,
+          // TODO: This feels potentially wrong - the formAction is just /submitting-loader,
+          // the request URL/pending location is /submitting-loader?key=value
+          action: `/${STATES.SUBMITTING_LOADER}?key=value`,
           encType: "application/x-www-form-urlencoded",
           method: "GET",
           key: expect.any(String),
