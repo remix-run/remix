@@ -6,8 +6,8 @@ import type { CompileOptions } from "../options";
 const pluginName = "css-modules-plugin";
 const namespace = `${pluginName}-ns`;
 const cssModulesFilter = /\.module\.css$/;
-const compiledCssSuffix = "?compiled";
-const compiledCssFilter = /\?compiled$/;
+const compiledCssSuffix = "?css-modules-plugin-compiled";
+const compiledCssFilter = /\?css-modules-plugin-compiled$/;
 
 interface PluginData {
   resolveDir: string;
