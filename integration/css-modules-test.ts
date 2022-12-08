@@ -235,6 +235,29 @@ test.describe("CSS Modules", () => {
             padding: 20px;
           }
         `,
+
+        // Scoped grid line name test
+        "app/routes/grid-line-name-test.jsx": js`
+          import { Test } from "~/test-components/grid-line-name";
+          export default function() {
+            return <Test />;
+          }
+        `,
+        "app/test-components/grid-line-name/index.jsx": js`
+          import styles from "./styles.module.css";
+          export function Test() {
+            return (
+              <div data-testid="grid-line-name" className={styles.root}>
+                Grid line name test
+              </div>
+            );
+          }
+        `,
+        "app/test-components/grid-line-name/styles.module.css": css`
+          .root {
+            grid-column-start: test-start;
+          }
+        `,
       },
     });
     appFixture = await createAppFixture(fixture);
@@ -319,5 +342,17 @@ test.describe("CSS Modules", () => {
     let element = await app.getElement("[data-testid='unique-class-names']");
     let classNames = element.attr("class")?.split(" ");
     expect(new Set(classNames).size).toBe(2);
+  });
+
+  // This test is designed to catch this issue: https://github.com/parcel-bundler/lightningcss/issues/351#issuecomment-1342099486
+  test("supports scoped grid line names", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/grid-line-name-test");
+    let locator = await page.locator("[data-testid='grid-line-name']");
+    let styles = await locator.evaluate((element) => {
+      let { gridColumnStart } = window.getComputedStyle(element);
+      return { gridColumnStart };
+    });
+    expect(styles.gridColumnStart.endsWith("-start")).toBeTruthy();
   });
 });
