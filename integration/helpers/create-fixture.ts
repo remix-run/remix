@@ -124,7 +124,7 @@ export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
       /**
        * Shuts down the fixture app, **you need to call this
        * at the end of a test** or `afterAll` if the fixture is initialized in a
-       * `beforeAll` block. Also make sure to `await app.close()` or else you'll
+       * `beforeAll` block. Also make sure to `app.close()` or else you'll
        * have memory leaks.
        */
       close: () => {
