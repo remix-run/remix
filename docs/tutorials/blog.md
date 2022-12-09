@@ -169,56 +169,6 @@ import { Link, useLoaderData } from "@remix-run/react";
 
 // ...
 export default function Posts() {
-  const { posts } = useLoaderData();
-  return (
-    <main>
-      <h1>Posts</h1>
-      <ul>
-        {posts.map((post) => (
-          <li key={post.slug}>
-            <Link
-              to={post.slug}
-              className="text-blue-600 underline"
-            >
-              {post.title}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </main>
-  );
-}
-```
-
-TypeScript is mad, so let's help it out:
-
-💿 Add the Post type and generic for `useLoaderData`
-
-```tsx filename=app/routes/posts/index.tsx lines=[4-7,9-11,14,29]
-import { json } from "@remix-run/node";
-import { Link, useLoaderData } from "@remix-run/react";
-
-type Post = {
-  slug: string;
-  title: string;
-};
-
-export const loader = async () => {
-  return json({
-    posts: [
-      {
-        slug: "my-first-post",
-        title: "My First Post",
-      },
-      {
-        slug: "90s-mixtape",
-        title: "A Mixtape I Made Just For You",
-      },
-    ],
-  });
-};
-
-export default function Posts() {
   const { posts } = useLoaderData<typeof loader>();
   return (
     <main>
@@ -242,7 +192,7 @@ export default function Posts() {
 
 Hey, that's pretty cool. We get a pretty solid degree of type safety even over a network request because it's all defined in the same file. Unless the network blows up while Remix fetches the data, you've got type safety in this component and its API (remember, the component is already its own API route).
 
-We can take this type safety a step further in TypeScript 4.9.0 using the `satisfies` keyword. This will ensure that we always return a type of `Response` from the loader instead of accidentally returning another type which would result in a runtime error.
+We can take the type safety a step further in TypeScript 4.9.0 using the `satisfies` keyword. This will ensure that we always return a type of `Response` from the loader instead of accidentally returning another type which would result in a runtime error.
 
 ```ts filename=app/routes/posts/index.tsx lines=[1,22]
 import { json, LoaderFunction } from "@remix-run/node";
