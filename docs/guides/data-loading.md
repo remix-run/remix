@@ -19,7 +19,7 @@ One of the primary features of Remix is simplifying interactions with the server
 
 ## Basics
 
-Each [route module][route-module] can export a component and a [`loader`][loader]. [`useLoaderData`][useloaderdata] will provide the loader's data to your component:
+Each route module can export a component and a [`loader`][loader]. [`useLoaderData`][useloaderdata] will provide the loader's data to your component:
 
 ```tsx filename=app/routes/products.tsx lines=[1-2,4-9,12]
 import { json } from "@remix-run/node"; // or cloudflare/deno
@@ -735,20 +735,19 @@ export default function RouteComp() {
 }
 ```
 
-[action]: ../api/conventions#action
-[catch-boundary]: ../api/conventions#catchboundary
+[action]: ../route/action
+[catch-boundary]: ../route/catch-boundary
 [cloudflare-kv-setup]: https://developers.cloudflare.com/workers/cli-wrangler/commands#kv
 [cloudflare-kv]: https://developers.cloudflare.com/workers/learning/how-kv-works
-[error-boundary]: ../api/conventions#errorboundary
+[error-boundary]: ../route/error-boundary
 [fauna]: https://fauna.com
-[fetcher-submit]: ../api/remix#fetchersubmit
-[loader]: ../api/conventions#loader
+[fetcher-submit]: ../hooks/use-fetcher#fetchersubmit
+[loader]: ../route/loader
 [prisma]: https://prisma.io
 [request]: https://developer.mozilla.org/en-US/docs/Web/API/Request
-[route-module]: ../api/conventions#route-module-api
 [search-params-getall]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams/getAll
-[should-reload]: ../api/conventions#unstable_shouldreload
+[should-reload]: ../route/should-reload
 [url-search-params]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [url]: https://developer.mozilla.org/en-US/docs/Web/API/URL
-[use-submit]: ../api/remix#usesubmit
-[useloaderdata]: ../api/remix#useloaderdata
+[use-submit]: ../hooks/use-submit
+[useloaderdata]: ../hooks/use-loader-data
