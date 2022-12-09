@@ -1,6 +1,6 @@
 ---
-title: Jokes App
-order: 2
+title: App Tutorial (long)
+order: 4
 ---
 
 # Jokes App Tutorial
@@ -247,7 +247,7 @@ The first thing we want to do is get our routing structure set up. Here are all 
 
 You can programmatically create routes via the [`remix.config.js`][remix-config-js], but the more common way to create the routes is through the file system. This is called "file-based routing."
 
-Each file we put in the `app/routes` directory is called a ["Route Module"][route-module] and by following [the route filename convention][the-route-filename-convention], we can create the routing URL structure we're looking for. Remix uses [React Router][react-router] under the hood to handle this routing.
+Each file we put in the `app/routes` directory is called a Route Module and by following [the route filename convention][the-route-filename-convention], we can create the routing URL structure we're looking for. Remix uses [React Router][react-router] under the hood to handle this routing.
 
 💿 Let's start with the index route (`/`). To do that, create a file at `app/routes/index.tsx` and `export default` a component from that route module. For now, you can have it just say "Hello Index Route" or something.
 
@@ -6222,9 +6222,9 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [hydrate]: https://reactjs.org/docs/react-dom.html#hydrate
 [http-localhost-3000]: http://localhost:3000
 [bare-bones-hello-world-app]: /jokes-tutorial/img/bare-bones.png
-[remix-config-js]: ../api/conventions#remixconfigjs
-[route-module]: ../api/conventions#route-module-api
-[the-route-filename-convention]: ../api/conventions#route-file-conventions
+[remix-config-js]: ../file-conventions/remix-config
+[route-module]: ../route/route-module
+[the-route-filename-convention]: ../file-conventions/routes-files
 [react-router]: https://reactrouter.com
 [a-greeting-from-the-index-route]: /jokes-tutorial/img/index-route-greeting.png
 [jokes]: http://localhost:3000/jokes
@@ -6233,8 +6233,8 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [a-new-joke-form]: /jokes-tutorial/img/new-joke.png
 [jokes-anything-you-want]: http://localhost:3000/jokes/hippos
 [a-new-joke-form-2]: /jokes-tutorial/img/param-route.png
-[links]: ../api/conventions#links
-[links-2]: ../api/remix#link
+[links]: ../route/links
+[links-2]: ../components/link
 [the-homepage-with-a-purple-gradient-background-and-white-text-with-the-words-hello-index-route]: /jokes-tutorial/img/homepage-styles.png
 [the-jokes-page-with-no-background-gradient]: /jokes-tutorial/img/jokes-no-styles.png
 [check-out-the-mdn-page-for-link]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/link
@@ -6251,19 +6251,19 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [a-vs-code-extension]: https://marketplace.visualstudio.com/items?itemName=Prisma.prisma
 [sq-lite]: https://sqlite.org/index.html
 [their-docs]: https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference
-[loader]: ../api/conventions#loader
-[use-loader-data]: ../api/remix#useloaderdata
+[loader]: ../route/loader
+[use-loader-data]: ../hooks/use-loader-data
 [list-of-links-to-jokes]: /jokes-tutorial/img/jokes-loaded.png
 [huge-graphql-client]: https://bundlephobia.com/package/graphql@16.0.1
 [assertion-functions]: https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html#assertion-functions
 [zod]: https://npm.im/zod
 [jokes-page-showing-a-unique-joke]: /jokes-tutorial/img/joke-page.png
 [jokes-page-showing-a-random-joke]: /jokes-tutorial/img/random-joke-loaded.png
-[action]: ../api/conventions#action
+[action]: ../route/action
 [response]: https://developer.mozilla.org/en-US/docs/Web/API/Response
 [create-new-joke-form-filled-out]: /jokes-tutorial/img/creating-new-joke.png
 [newly-created-joke-displayed]: /jokes-tutorial/img/new-joke-created.png
-[use-action-data]: ../api/remix#useactiondata
+[use-action-data]: ../hooks/use-action-data
 [new-joke-form-with-validation-errors]: /jokes-tutorial/img/new-joke-form-with-errors.png
 [400-bad-request]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
 [http-cookies]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies
@@ -6271,40 +6271,40 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [excalidraw-authentication-diagram]: /jokes-tutorial/img/auth-flow.png
 [a-login-form-with-a-login-register-radio-button-and-username-password-fields-and-a-submit-button]: /jokes-tutorial/img/login-route.png
 [login-form-with-errors]: /jokes-tutorial/img/login-form-with-errors.png
-[here-are-the-docs]: ../api/remix#sessions
-[create-cookie-session-storage]: ../api/remix#createcookiesessionstorage
+[here-are-the-docs]: ../utils/sessions
+[create-cookie-session-storage]: ../utils/sessions#createcookiesessionstorage
 [network-tab]: https://developer.chrome.com/docs/devtools/network/reference
 [login]: http://localhost:3000/login
 [dev-tools-network-tab-showing-a-set-cookie-header-on-the-post-response]: /jokes-tutorial/img/network-tab-set-cookie.png
 [application-tab]: https://developer.chrome.com/docs/devtools/storage/cookies
 [dev-tools-application-tab-showing]: /jokes-tutorial/img/application-tab-cookies.png
 [request-headers-showing-the-cookie]: /jokes-tutorial/img/cookie-header-on-request.png
-[destroy-session]: ../api/remix#using-sessions
+[destroy-session]: ../utils/sessions#using-sessions
 [csrf]: https://developer.mozilla.org/en-US/docs/Glossary/CSRF
 [jokes-page-nice-and-designed]: /jokes-tutorial/img/random-joke-designed.png
 [new-joke-form-designed]: /jokes-tutorial/img/new-joke-designed.png
 [error-boundary-feature]: https://reactjs.org/docs/error-boundaries.html#gatsby-focus-wrapper
-[error-boundary-component]: ../api/conventions#errorboundary
+[error-boundary-component]: ../route/error-boundary
 [app-error]: /jokes-tutorial/img/app-level-error.png
 [joke-page-error]: /jokes-tutorial/img/joke-id-error.png
 [joke-index-page-error]: /jokes-tutorial/img/jokes-index-error.png
 [new-joke-page-error]: /jokes-tutorial/img/new-joke-error.png
 [server-errors]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#server_error_responses
 [client-errors]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#client_error_responses
-[catch-boundaries]: ../api/conventions#catchboundary
+[catch-boundaries]: ../route/catch-boundary
 [app-400-bad-request]: /jokes-tutorial/img/app-400.png
 [a-404-on-the-joke-page]: /jokes-tutorial/img/joke-404.png
 [a-404-on-the-random-joke-page]: /jokes-tutorial/img/jokes-404.png
 [a-401-on-the-new-joke-page]: /jokes-tutorial/img/new-joke-401.png
-[meta]: ../api/conventions#meta
-[meta-component]: ../api/remix#meta-links-scripts
+[meta]: ../route/meta
+[meta-component]: ../components/meta
 [resource-routes]: ../guides/resource-routes
-[escaping-special-characters-here]: ../api/conventions#escaping-special-characters
+[escaping-special-characters-here]: ../file-conventions/routes-files#escaping-special-characters
 [xml-document-for-rss-feed]: /jokes-tutorial/img/jokes-rss-feed.png
 [network-tab-indicating-no-java-script-is-loaded]: /jokes-tutorial/img/no-javascript.png
 [network-tab-showing-java-script-loaded]: /jokes-tutorial/img/yes-javascript.png
 [browser-console-showing-the-log-of-a-server-side-error]: /jokes-tutorial/img/server-side-error-in-browser.png
-[form]: ../api/remix#form
+[form]: ../components/form
 [guide-on-optimistic-ui]: ../guides/optimistic-ui
 [install-fly]: https://fly.io/docs/hands-on/installing
 [sign-up-for-an-account]: https://fly.io/docs/hands-on/sign-up

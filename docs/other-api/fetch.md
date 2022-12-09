@@ -38,6 +38,6 @@ Remix adds `Request`, `Response`, `Headers`, and `fetch` to your loader's global
 
 [https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API][https-developer-mozilla-org-en-us-docs-web-api-fetch-api]
 
-[json]: ../api/remix#json
-[redirect]: ../api/remix#redirect
+[json]: ../utils/json
+[redirect]: ../utils/redirect
 [https-developer-mozilla-org-en-us-docs-web-api-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API

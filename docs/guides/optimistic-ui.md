@@ -298,12 +298,12 @@ export default function NewProject() {
 }
 ```
 
-[use-fetcher]: ../api/remix#usefetcher
-[fetcher-submit]: ../api/remix#fethersubmit
-[fetcher-submission]: ../api/remix#fetchersubmission
-[use-transition]: ../api/remix#usetransition
-[transition-submission]: ../api/remix#transitionsubmission
-[use-submit]: ../api/remix#usesubmit
-[error-boundary]: ../api/conventions#errorboundary
+[use-fetcher]: ../hooks/use-fetcher
+[fetcher-submit]: ../hooks/use-fetcher#fetchersubmit
+[fetcher-submission]: ../hooks/use-fetcher#fetchersubmission
+[use-transition]: ../hooks/use-transition
+[transition-submission]: ../hooks/use-transition/#transitionsubmission
+[use-submit]: ../hooks/use-submit
+[error-boundary]: ../route/error-boundary
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [html-input]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/text#additional_attributes

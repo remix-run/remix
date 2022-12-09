@@ -116,4 +116,4 @@ Here are a handful of use cases to get you thinking.
 
 You can read more in the [Resource Routes][resource-routes] docs.
 
-[resource-routes]: resource-routes
+[resource-routes]: ./resource-routes
