@@ -8,7 +8,7 @@ import type {
   AgnosticDataRouteMatch,
   AgnosticDataRouteObject,
   ErrorResponse,
-  Fetcher as FetcherRR,
+  Navigation,
 } from "@remix-run/router";
 import type {
   LinkProps,
@@ -957,7 +957,13 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  */
 export function useTransition(): Transition {
   let navigation = useNavigation();
+  return React.useMemo(
+    () => convertNavigationToTransition(navigation),
+    [navigation]
+  );
+}
 
+function convertNavigationToTransition(navigation: Navigation): Transition {
   let { location, state, formMethod, formAction, formEncType, formData } =
     navigation;
 
@@ -1020,13 +1026,27 @@ export function useTransition(): Transition {
           };
           return transition;
         } else {
+          // The new router fixes a bug in useTransition where the submission
+          // "action" represents the request URL not the state of the <form> in
+          // the DOM.  Back-port it here to maintain behavior, but useNavigation
+          // will fix this bug.
+          let url = new URL(formAction, window.location.origin);
+
+          // This typing override should be safe since this is only running for
+          // GET submissions and over in @remix-run/router we have an invariant
+          // if you have any non-string values in your FormData when we attempt
+          // to convert them to URLSearchParams
+          url.search = new URLSearchParams(
+            formData.entries() as unknown as [string, string][]
+          ).toString();
+
           // Actively "submitting" to a loader
           let transition: TransitionStates["SubmittingLoader"] = {
             location,
             state: "submitting",
             submission: {
               method: formMethod.toUpperCase() as LoaderSubmission["method"],
-              action: formAction,
+              action: url.pathname + url.search,
               encType: formEncType,
               formData: formData,
               key: location.key,
@@ -1107,7 +1127,17 @@ export function useTransition(): Transition {
  */
 export function useFetchers(): Fetcher[] {
   let fetchers = useFetchersRR();
-  return fetchers.map(convertRRFetcherToRemixFetcher);
+  return fetchers.map((f) =>
+    convertRouterFetcherToRemixFetcher({
+      state: f.state,
+      data: f.data,
+      formMethod: f.formMethod,
+      formAction: f.formAction,
+      formData: f.formData,
+      formEncType: f.formEncType,
+      " _hasFetcherDoneAnything ": f[" _hasFetcherDoneAnything "],
+    })
+  );
 }
 
 export type FetcherWithComponents<TData> = Fetcher<TData> & {
@@ -1128,23 +1158,28 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
   SerializeFrom<TData>
 > {
   let fetcherRR = useFetcherRR();
-  return convertRRFetcherToRemixFetcher(fetcherRR);
+  let remixFetcher = convertRouterFetcherToRemixFetcher({
+    state: fetcherRR.state,
+    data: fetcherRR.data,
+    formMethod: fetcherRR.formMethod,
+    formAction: fetcherRR.formAction,
+    formData: fetcherRR.formData,
+    formEncType: fetcherRR.formEncType,
+    " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
+  });
+  return {
+    ...remixFetcher,
+    load: fetcherRR.load,
+    submit: fetcherRR.submit,
+    Form: fetcherRR.Form,
+  };
 }
 
-function convertRRFetcherToRemixFetcher(
-  fetcherRR: ReturnType<typeof useFetcherRR>
-) {
-  let {
-    state,
-    formMethod,
-    formAction,
-    formEncType,
-    formData,
-    data,
-    Form,
-    submit,
-    load,
-  } = fetcherRR;
+function convertRouterFetcherToRemixFetcher(
+  fetcherRR: Omit<ReturnType<typeof useFetcherRR>, "load" | "submit" | "Form">
+): Fetcher {
+  let { state, formMethod, formAction, formEncType, formData, data } =
+    fetcherRR;
 
   let isActionSubmission =
     formMethod != null &&
@@ -1158,20 +1193,10 @@ function convertRRFetcherToRemixFetcher(
         submission: undefined,
         data,
       };
-      return {
-        Form,
-        submit,
-        load,
-        ...fetcher,
-      };
+      return fetcher;
     } else {
       let fetcher: FetcherStates["Idle"] = IDLE_FETCHER;
-      return {
-        Form,
-        submit,
-        load,
-        ...fetcher,
-      };
+      return fetcher;
     }
   }
 
@@ -1205,12 +1230,7 @@ function convertRRFetcherToRemixFetcher(
         },
         data: undefined,
       };
-      return {
-        Form,
-        submit,
-        load,
-        ...fetcher,
-      };
+      return fetcher;
     } else {
       invariant(false, "nope");
     }
@@ -1242,12 +1262,7 @@ function convertRRFetcherToRemixFetcher(
             },
             data,
           };
-          return {
-            Form,
-            submit,
-            load,
-            ...fetcher,
-          };
+          return fetcher;
         } else {
           let fetcher: FetcherStates["LoadingActionRedirect"] = {
             state,
@@ -1262,12 +1277,7 @@ function convertRRFetcherToRemixFetcher(
             },
             data: undefined,
           };
-          return {
-            Form,
-            submit,
-            load,
-            ...fetcher,
-          };
+          return fetcher;
         }
       } else {
         // The new router fixes a bug in useTransition where the submission
@@ -1306,12 +1316,7 @@ function convertRRFetcherToRemixFetcher(
           },
           data: undefined,
         };
-        return {
-          Form,
-          submit,
-          load,
-          ...fetcher,
-        };
+        return fetcher;
       }
     }
   }
@@ -1323,12 +1328,7 @@ function convertRRFetcherToRemixFetcher(
     submission: undefined,
     data: undefined,
   };
-  return {
-    Form,
-    submit,
-    load,
-    ...fetcher,
-  };
+  return fetcher;
 }
 
 // Dead Code Elimination magic for production builds.

@@ -259,7 +259,8 @@ async function handleDocumentRequestRR(
     );
   } catch (error: unknown) {
     if (serverMode !== ServerMode.Test) {
-      // TODO Do we want to log this here?
+      // TODO Do we want to log this here?  Can we get it to not log on
+      // integration tests runs?
       console.log("Error in entry.server handleDocumentRequest:", error);
     }
 
