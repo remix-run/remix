@@ -209,7 +209,9 @@ const [errors, project] = await createProject(formData);
 
 If there are validation errors, we want to go back to the form and display them.
 
-```tsx lines=[3,5-8]
+```tsx lines=[1, 5, 7-10]
+import { redirect, json} from "@remix-run/node"; // or cloudflare/deno
+...
 export const action = async ({ request }: ActionArgs) => {
   const formData = await request.formData();
   const [errors, project] = await createProject(formData);
@@ -227,7 +229,7 @@ Just like `useLoaderData` returns the values from the `loader`, `useActionData` 
 
 ```tsx lines=[3,10,20,25-29,37,42-46]
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
-import { redirect } from "@remix-run/node"; // or cloudflare/deno
+import { redirect, json } from "@remix-run/node"; // or cloudflare/deno
 import { useActionData } from "@remix-run/react";
 
 export const action = async ({ request }: ActionArgs) => {
@@ -290,7 +292,7 @@ You can ship this code as-is. The browser will handle the pending UI and interru
 Let's use progressive enhancement to make this UX a bit more fancy. By changing it from `<form>` to `<Form>`, Remix will emulate the browser behavior with `fetch`. It will also give you access to the pending form data so you can build pending UI.
 
 ```tsx [2, 11]
-import { redirect } from "@remix-run/node"; // or cloudflare/deno
+import { redirect, json } from "@remix-run/node"; // or cloudflare/deno
 import { useActionData, Form } from "@remix-run/react";
 
 // ...
@@ -314,7 +316,7 @@ If you don't have the time or drive to do the rest of the job here, use `<Form r
 Now let's add some pending UI so the user has a clue something happened when they submit. There's a hook called `useTransition`. When there is a pending form submission, Remix will give you the serialized version of the form as a <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData">`FormData`</a> object. You'll be most interested in the <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData/get">`formData.get()`</a> method.
 
 ```tsx [5, 13, 19, 65-67]
-import { redirect } from "@remix-run/node"; // or cloudflare/deno
+import { redirect, json } from "@remix-run/node"; // or cloudflare/deno
 import {
   useActionData,
   Form,
