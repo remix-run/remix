@@ -1,12 +1,16 @@
 ---
-"@remix-run/dev": minor
+"@remix-run/dev": patch
 ---
 
-feat: remix optional segments
+Convention for Remix optional segments
 
-Allows for the creation of optional route segments by using parenthesis. For example:
-Creating the following file routes in remix `/($lang)/about`
-this will match the following routes
+Note that this only set ups the convention conversion for React Router.
+Optional segments won't be available in Remix until Remix is built on top of React Router v6.5
+
+Converts segments surrounded by parenthesis into optional segments for React Router.
+For example `/($lang)/about` will be converted to `/:lang?/about` in React Router.
+
+This means `/($lang/about)` would match:
 
 ```
 /en/about
@@ -14,10 +18,7 @@ this will match the following routes
 /about
 ```
 
-helpful for optional language paths.
-
-Another example `/(one)/($two)/(three).($four)` file routing would match
-
+Another example: `/(one)/($two)/(three).($four)` route would match all of the following:
 ```
 /
 /one
