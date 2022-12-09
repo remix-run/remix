@@ -57,8 +57,8 @@ export function createRequestHandler({
         }
       }
       return response;
-    } catch (e) {
-      console.error(e);
+    } catch (error: unknown) {
+      console.error(error);
 
       return new Response("Internal Error", { status: 500 });
     }
