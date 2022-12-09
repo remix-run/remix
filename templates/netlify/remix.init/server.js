@@ -9,5 +9,6 @@ export default createRequestHandler({
 });
 
 export const config = () => ({
+  cache: "manual",
   path: "/*",
 });
