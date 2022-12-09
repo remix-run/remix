@@ -124,29 +124,29 @@ test.describe("CSS Modules", () => {
         `,
 
         // Root import composes test
-        "app/routes/root-import-composes-test.jsx": js`
-          import { Test } from "~/test-components/root-import-composes";
+        "app/routes/root-relative-import-composes-test.jsx": js`
+          import { Test } from "~/test-components/root-relative-import-composes";
           export default function() {
             return <Test />;
           }
         `,
-        "app/test-components/root-import-composes/index.jsx": js`
+        "app/test-components/root-relative-import-composes/index.jsx": js`
           import styles from "./styles.module.css";
           export function Test() {
             return (
-              <div data-testid="root-import-composes" className={styles.root}>
+              <div data-testid="root-relative-import-composes" className={styles.root}>
                 Root import composes test
               </div>
             );
           }
         `,
-        "app/test-components/root-import-composes/styles.module.css": css`
+        "app/test-components/root-relative-import-composes/styles.module.css": css`
           .root {
             background: peachpuff;
-            composes: padding from "~/test-components/root-import-composes/import.module.css";
+            composes: padding from "~/test-components/root-relative-import-composes/import.module.css";
           }
         `,
-        "app/test-components/root-import-composes/import.module.css": css`
+        "app/test-components/root-relative-import-composes/import.module.css": css`
           .padding {
             padding: 20px;
           }
@@ -205,6 +205,36 @@ test.describe("CSS Modules", () => {
           }
         `,
         "app/test-components/image/image.svg": `
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="50" fill="coral" />
+          </svg>
+        `,
+
+        // Root relative image test
+        "app/routes/root-relative-image-test.jsx": js`
+          import { Test } from "~/test-components/root-relative-image";
+          export default function() {
+            return <Test />;
+          }
+        `,
+        "app/test-components/root-relative-image/index.jsx": js`
+          import styles from "./styles.module.css";
+          export function Test() {
+            return (
+              <div data-testid="root-relative-image" className={styles.root}>
+                Root relative image test
+              </div>
+            );
+          }
+        `,
+        "app/test-components/root-relative-image/styles.module.css": css`
+          .root {
+            background-color: peachpuff;
+            background-image: url(~/test-components/root-relative-image/image.svg);
+            padding: 20px;
+          }
+        `,
+        "app/test-components/root-relative-image/image.svg": `
           <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
             <circle cx="50" cy="50" r="50" fill="coral" />
           </svg>
@@ -300,12 +330,12 @@ test.describe("CSS Modules", () => {
     expect(styles.padding).toBe("20px");
   });
 
-  test("composes from an imported classname with an app root alias (~)", async ({
-    page,
-  }) => {
+  test("composes from root relative imported classname", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/root-import-composes-test");
-    let locator = await page.locator("[data-testid='root-import-composes']");
+    await app.goto("/root-relative-import-composes-test");
+    let locator = await page.locator(
+      "[data-testid='root-relative-import-composes']"
+    );
     let styles = await locator.evaluate((element) => {
       let { padding } = window.getComputedStyle(element);
       return { padding };
@@ -328,6 +358,17 @@ test.describe("CSS Modules", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/image-test");
     let locator = await page.locator("[data-testid='image']");
+    let styles = await locator.evaluate((element) => {
+      let { backgroundImage } = window.getComputedStyle(element);
+      return { backgroundImage };
+    });
+    expect(styles.backgroundImage).toContain(".svg");
+  });
+
+  test("supports root relative image URLs", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/root-relative-image-test");
+    let locator = await page.locator("[data-testid='root-relative-image']");
     let styles = await locator.evaluate((element) => {
       let { backgroundImage } = window.getComputedStyle(element);
       return { backgroundImage };
