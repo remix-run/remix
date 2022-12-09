@@ -7,3 +7,7 @@ export default createRequestHandler({
   // process.env.NODE_ENV is provided by Remix at compile time
   mode: process.env.NODE_ENV,
 });
+
+export const config = () => ({
+  path: "/*",
+});
