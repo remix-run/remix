@@ -767,8 +767,8 @@ Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framewo
 NOTE: You may run into hydration warnings when using Styled Components. Hopefully [this issue][styled-components-issue] will be fixed soon.
 
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
-[link]: ../api/remix#link
-[route-module-links]: ../api/conventions#links
+[link]: ../components/link
+[route-module-links]: ../route/links
 [styled-components-example]: https://github.com/remix-run/examples/tree/main/styled-components
 [examples]: https://github.com/remix-run/examples
 [styled-components-issue]: https://github.com/styled-components/styled-components/issues/3660
