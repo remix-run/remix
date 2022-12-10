@@ -1,5 +1,5 @@
 ---
-title: Migrating your React Router App to Remix
+title: Migrating from React Router
 description: Migrating your React Router app to Remix can be done all at once or in stages. This guide will walk you through an iterative approach to get your app running quickly.
 ---
 
@@ -620,7 +620,7 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [routing-conventions]: ./routing
 [a-catch-all-route]: ./routing#splats
 [hydration-mismatch]: https://reactjs.org/docs/react-dom.html#hydrate
-[loader-data]: ../api/conventions#loader
+[loader-data]: ../route/loader
 [client-only-component]: https://github.com/sergiodxa/remix-utils/blob/main/src/react/client-only.tsx
 [remix-utils]: https://www.npmjs.com/package/remix-utils
 [examples-repository]: https://github.com/remix-run/examples/blob/main/client-only-components/app/routes/index.tsx
@@ -628,13 +628,13 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [react-suspense]: https://reactjs.org/docs/react-api.html#reactsuspense
 [client-only-approach]: #client-only-components
 [loadable-components]: https://loadable-components.com/docs/loadable-vs-react-lazy
-[docs-on-configuration]: ../api/conventions#remixconfigjs
-[see-our-docs-on-route-links-for-more-information]: ../api/conventions#links
+[docs-on-configuration]: ../file-conventions/remix-config
+[see-our-docs-on-route-links-for-more-information]: ../route/links
 [react-svgr]: https://react-svgr.com
 [command-line]: https://react-svgr.com/docs/cli
 [online-playground]: https://react-svgr.com/playground
 [read-more-about-route-styles-and-why-remix-does-things-a-bit-differently]: #route-stylesheets
-[page-link-descriptor-object]: ../api/conventions#pagelinkdescriptor
+[page-link-descriptor-object]: ../route/links#pagelinkdescriptor
 [react-helmet]: https://www.npmjs.com/package/react-helmet
 [remix-philosophy]: ../pages/philosophy
 [remix-technical-explanation]: ../pages/technical-explanation

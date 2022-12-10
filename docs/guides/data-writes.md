@@ -518,9 +518,9 @@ From your components perspective, all that happened was the `useTransition` hook
 - [`useSubmit()`][use-submit]
 - [`useFetcher()`][use-fetcher]
 
-[form]: ../api/remix#form
-[use-submit]: ../api/remix#usesubmit
-[use-fetcher]: ../api/remix#usefetcher
-[use-transition]: ../api/remix#usetransition
-[actions]: ../api/conventions#action
-[loaders]: ../api/conventions#loader
+[form]: ../components/form
+[use-submit]: ../hooks/use-submit
+[use-fetcher]: ../hooks/use-fetcher
+[use-transition]: ../hooks/use-transition
+[actions]: ../route/action
+[loaders]: ../route/loader
