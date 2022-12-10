@@ -10,282 +10,355 @@ title: Remix Packages
 
 ### `<Links>`, `<LiveReload>`, `<Meta>`, `<Scripts>`, `<ScrollRestoration>`
 
-- [Links Moved →](../components/links)
-- [LiveReload Moved →](../components/live-reload)
-- [Meta Moved →](../components/meta)
-- [Scripts Moved →](../components/scripts)
-- [ScrollRestoration Moved →](../components/ScrollRestoration)
+- [Links Moved →][links-moved]
+- [LiveReload Moved →][live-reload-moved]
+- [Meta Moved →][meta-moved]
+- [Scripts Moved →][scripts-moved]
+- [ScrollRestoration Moved →][scroll-restoration-moved]
 
 ### `<Link>`
 
-[Moved →](../components/link)
+[Moved →][moved]
 
 ### `<PrefetchPageLinks />`
 
-[Moved →](../components/link)
+[Moved →][moved]
 
 ### `<NavLink>`
 
-[Moved →](../components/nav-link)
+[Moved →][moved-2]
 
 ### `<Form>`
 
-[Moved →](../components/form)
+[Moved →][moved-3]
 
 #### `<Form action>`
 
-[Moved →](../components/form#action)
+[Moved →][moved-4]
 
 #### `<Form method>`
 
-[Moved →](../components/form#method)
+[Moved →][moved-5]
 
 #### `<Form encType>`
 
-[Moved →](../components/form#enctype)
+[Moved →][moved-6]
 
 #### `<Form replace>`
 
-[Moved →](../components/form#replace)
+[Moved →][moved-7]
 
 #### `<Form reloadDocument>`
 
-[Moved →](../components/form#reloaddocument)
+[Moved →][moved-8]
 
 ### `<ScrollRestoration>`
 
-[Moved →](../components/scroll-restoration)
+[Moved →][moved-9]
 
 ### `useLoaderData`
 
-[Moved →](../hooks/use-loader-data)
+[Moved →][moved-10]
 
 ### `useActionData`
 
-[Moved →](../hooks/use-action-data)
+[Moved →][moved-11]
 
 #### Notes about resubmissions
 
-[Moved →](../hooks/use-action-data#notes-about-resubmissions)
+[Moved →][moved-12]
 
 ### `useFormAction`
 
-[Moved →](../hooks/use-form-action)
+[Moved →][moved-13]
 
 ### `useSubmit`
 
-[Moved →](../hooks/use-submit)
+[Moved →][moved-14]
 
 ### `useTransition`
 
-[Moved →](../hooks/use-transition)
+[Moved →][moved-15]
 
 #### `transition.state`
 
-[Moved →](../hooks/use-transition#transitionstate)
+[Moved →][moved-16]
 
 #### `transition.type`
 
-[Moved →](../hooks/use-transition#transitiontype)
+[Moved →][moved-17]
 
 #### `transition.submission`
 
-[Moved →](../hooks/use-transition#transitionsubmission)
+[Moved →][moved-18]
 
 #### `transition.location`
 
-[Moved →](../hooks/use-transition#transitionlocation)
+[Moved →][moved-19]
 
 ### `useFetcher`
 
-[Moved →](../hooks/use-fetcher)
+[Moved →][moved-20]
 
 #### `fetcher.state`
 
-[Moved →](../hooks/use-fetcher#fetcherstate)
+[Moved →][moved-21]
 
 #### `fetcher.type`
 
-[Moved →](../hooks/use-fetcher#fetchertype)
+[Moved →][moved-22]
 
 #### `fetcher.submission`
 
-[Moved →](../hooks/use-fetcher#fetchersubmission)
+[Moved →][moved-23]
 
 #### `fetcher.data`
 
-[Moved →](../hooks/use-fetcher#fetcherdata)
+[Moved →][moved-24]
 
 #### `fetcher.Form`
 
-[Moved →](../hooks/use-fetcher#fetcherform)
+[Moved →][moved-25]
 
 #### `fetcher.submit()`
 
-[Moved →](../hooks/use-fetcher#fetchersubmit)
+[Moved →][moved-26]
 
 #### `fetcher.load()`
 
-[Moved →](../hooks/use-fetcher#fetcherload)
+[Moved →][moved-27]
 
 #### Examples
 
-[Moved →](../hooks/use-fetcher#examples)
+[Moved →][moved-28]
 
 ### `useFetchers`
 
-[Moved →](../hooks/use-fetchers)
+[Moved →][moved-29]
 
 ### `useMatches`
 
-[Moved →](../hooks/use-matches)
+[Moved →][moved-30]
 
 ### `useBeforeUnload`
 
-[Moved →](../hooks/use-before-unload)
+[Moved →][moved-31]
 
 ## HTTP Helpers
 
 ### `json`
 
-[Moved →](../utils/json)
+[Moved →][moved-32]
 
 ### `redirect`
 
-[Moved →](../utils/redirect)
+[Moved →][moved-33]
 
 ### `unstable_parseMultipartFormData`
 
-[Moved →](../utils/parse-multipart-form-data)
+[Moved →][moved-34]
 
 ### `uploadHandler`
 
-[Moved →](../utils/parse-multipart-form-data#uploadhandler)
+[Moved →][moved-35]
 
 #### `unstable_createFileUploadHandler (node)`
 
-[Moved →](../utils/unstable-create-file-upload-handler#unstable_createfileuploadhandler-node)
+[Moved →][moved-36]
 
 #### `unstable_createMemoryUploadHandler`
 
-[Moved →](../utils/unstable-create-memory-upload-handler)
+[Moved →][moved-37]
 
 ### Upload Handler Composition
 
-[Moved →](../guides/file-uploads#upload-handler-composition)
+[Moved →][moved-38]
 
 ## Cookies
 
-[Moved →](../utils/cookies)
+[Moved →][moved-39]
 
 ### Using cookies
 
-[Moved →](../utils/cookies#using-cookies)
+[Moved →][moved-40]
 
 ### Cookie attributes
 
-[Moved →](../utils/cookies#cookie-attributes)
+[Moved →][moved-41]
 
 ### Signing cookies
 
-[Moved →](../utils/cookies#signing-cookies)
+[Moved →][moved-42]
 
 ### `createCookie`
 
-[Moved →](../utils/cookies#createcookie)
+[Moved →][moved-43]
 
 ### `isCookie`
 
-[Moved →](../utils/cookies#iscookie)
+[Moved →][moved-44]
 
 ### Cookie API
 
-[Moved →](../utils/cookies#cookie-api)
+[Moved →][moved-45]
 
 #### `cookie.name`
 
-[Moved →](../utils/cookies#cookiename)
+[Moved →][moved-46]
 
 #### `cookie.parse()`
 
-[Moved →](../utils/cookies#cookieparse)
+[Moved →][moved-47]
 
 #### `cookie.serialize()`
 
-[Moved →](../utils/cookies#cookieserialize)
+[Moved →][moved-48]
 
 #### `cookie.isSigned`
 
-[Moved →](../utils/cookies#cookieissigned)
+[Moved →][moved-49]
 
 #### `cookie.expires`
 
-[Moved →](../utils/cookies#cookieexpires)
+[Moved →][moved-50]
 
 ## Sessions
 
-[Moved →](../utils/sessions)
+[Moved →][moved-51]
 
 ### Using Sessions
 
-[Moved →](../utils/sessions#using-sessions)
+[Moved →][moved-52]
 
 ### Session Gotchas
 
-[Moved →](../utils/sessions#session-gotchas)
+[Moved →][moved-53]
 
 ### `createSession`
 
-[Moved →](../utils/sessions#createsession)
+[Moved →][moved-54]
 
 ### `isSession`
 
-[Moved →](../utils/sessions#issession)
+[Moved →][moved-55]
 
 ### `createSessionStorage`
 
-[Moved →](../utils/sessions#createsessionstorage)
+[Moved →][moved-56]
 
 ### `createCookieSessionStorage`
 
-[Moved →](../utils/sessions#createcookiesessionstorage)
+[Moved →][moved-57]
 
 ### `createMemorySessionStorage`
 
-[Moved →](../utils/sessions#creatememorysessionstorage)
+[Moved →][moved-58]
 
 ### `createFileSessionStorage` (node)
 
-[Moved →](../utils/sessions#createfilesessionstorage-node)
+[Moved →][moved-59]
 
 ### `createCloudflareKVSessionStorage` (cloudflare-workers)
 
-[Moved →](../utils/sessions#createcloudflarekvsessionstorage-cloudflare-workers)
+[Moved →][moved-60]
 
 ### `createArcTableSessionStorage` (architect, Amazon DynamoDB)
 
-[Moved →](../utils/sessions#createarctablesessionstorage-architect-amazon-dynamodb)
+[Moved →][moved-61]
 
 ### Session API
 
-[Moved →](../utils/sessions#session-api)
+[Moved →][moved-62]
 
 #### `session.has(key)`
 
-[Moved →](../utils/sessions#sessionhaskey)
+[Moved →][moved-63]
 
 #### `session.set(key, value)`
 
-[Moved →](../utils/sessions#sessionsetkey-value)
+[Moved →][moved-64]
 
 #### `session.flash(key, value)`
 
-[Moved →](../utils/sessions#sessionflashkey-value)
+[Moved →][moved-65]
 
 #### `session.get()`
 
-[Moved →](../utils/sessions#sessionget)
+[Moved →][moved-66]
 
 #### `session.unset()`
 
-[Moved →](../utils/sessions#sessionunset)
+[Moved →][moved-67]
+
+[links-moved]: ../components/links
+[live-reload-moved]: ../components/live-reload
+[meta-moved]: ../components/meta
+[scripts-moved]: ../components/scripts
+[scroll-restoration-moved]: ../components/ScrollRestoration
+[moved]: ../components/link
+[moved-2]: ../components/nav-link
+[moved-3]: ../components/form
+[moved-4]: ../components/form#action
+[moved-5]: ../components/form#method
+[moved-6]: ../components/form#enctype
+[moved-7]: ../components/form#replace
+[moved-8]: ../components/form#reloaddocument
+[moved-9]: ../components/scroll-restoration
+[moved-10]: ../hooks/use-loader-data
+[moved-11]: ../hooks/use-action-data
+[moved-12]: ../hooks/use-action-data#notes-about-resubmissions
+[moved-13]: ../hooks/use-form-action
+[moved-14]: ../hooks/use-submit
+[moved-15]: ../hooks/use-transition
+[moved-16]: ../hooks/use-transition#transitionstate
+[moved-17]: ../hooks/use-transition#transitiontype
+[moved-18]: ../hooks/use-transition#transitionsubmission
+[moved-19]: ../hooks/use-transition#transitionlocation
+[moved-20]: ../hooks/use-fetcher
+[moved-21]: ../hooks/use-fetcher#fetcherstate
+[moved-22]: ../hooks/use-fetcher#fetchertype
+[moved-23]: ../hooks/use-fetcher#fetchersubmission
+[moved-24]: ../hooks/use-fetcher#fetcherdata
+[moved-25]: ../hooks/use-fetcher#fetcherform
+[moved-26]: ../hooks/use-fetcher#fetchersubmit
+[moved-27]: ../hooks/use-fetcher#fetcherload
+[moved-28]: ../hooks/use-fetcher#examples
+[moved-29]: ../hooks/use-fetchers
+[moved-30]: ../hooks/use-matches
+[moved-31]: ../hooks/use-before-unload
+[moved-32]: ../utils/json
+[moved-33]: ../utils/redirect
+[moved-34]: ../utils/parse-multipart-form-data
+[moved-35]: ../utils/parse-multipart-form-data#uploadhandler
+[moved-36]: ../utils/unstable-create-file-upload-handler#unstable_createfileuploadhandler-node
+[moved-37]: ../utils/unstable-create-memory-upload-handler
+[moved-38]: ../guides/file-uploads#upload-handler-composition
+[moved-39]: ../utils/cookies
+[moved-40]: ../utils/cookies#using-cookies
+[moved-41]: ../utils/cookies#cookie-attributes
+[moved-42]: ../utils/cookies#signing-cookies
+[moved-43]: ../utils/cookies#createcookie
+[moved-44]: ../utils/cookies#iscookie
+[moved-45]: ../utils/cookies#cookie-api
+[moved-46]: ../utils/cookies#cookiename
+[moved-47]: ../utils/cookies#cookieparse
+[moved-48]: ../utils/cookies#cookieserialize
+[moved-49]: ../utils/cookies#cookieissigned
+[moved-50]: ../utils/cookies#cookieexpires
+[moved-51]: ../utils/sessions
+[moved-52]: ../utils/sessions#using-sessions
+[moved-53]: ../utils/sessions#session-gotchas
+[moved-54]: ../utils/sessions#createsession
+[moved-55]: ../utils/sessions#issession
+[moved-56]: ../utils/sessions#createsessionstorage
+[moved-57]: ../utils/sessions#createcookiesessionstorage
+[moved-58]: ../utils/sessions#creatememorysessionstorage
+[moved-59]: ../utils/sessions#createfilesessionstorage-node
+[moved-60]: ../utils/sessions#createcloudflarekvsessionstorage-cloudflare-workers
+[moved-61]: ../utils/sessions#createarctablesessionstorage-architect-amazon-dynamodb
+[moved-62]: ../utils/sessions#session-api
+[moved-63]: ../utils/sessions#sessionhaskey
+[moved-64]: ../utils/sessions#sessionsetkey-value
+[moved-65]: ../utils/sessions#sessionflashkey-value
+[moved-66]: ../utils/sessions#sessionget
+[moved-67]: ../utils/sessions#sessionunset
