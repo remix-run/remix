@@ -194,7 +194,7 @@ Hey, that's pretty cool. We get a pretty solid degree of type safety even over a
 
 We can take the type safety a step further in TypeScript 4.9.0 using the `satisfies` keyword. This will ensure that we always return a type of `Response` from the loader instead of accidentally returning another type which would result in a runtime error.
 
-```ts filename=app/routes/posts/index.tsx lines=[1,22]
+```ts filename=app/routes/posts/index.tsx lines=[1,23]
 import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
