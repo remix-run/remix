@@ -8,63 +8,63 @@ title: Conventions
 
 ## remix.config.js
 
-[Moved →](../file-conventions/remix-config)
+[Moved →][moved]
 
 ### appDirectory
 
-[Moved →](../file-conventions/remix-config#appdirectory)
+[Moved →][moved-2]
 
 ### assetsBuildDirectory
 
-[Moved →](../file-conventions/remix-config#assetsbuilddirectory)
+[Moved →][moved-3]
 
 ### cacheDirectory
 
-[Moved →](../file-conventions/remix-config#cachedirectory)
+[Moved →][moved-4]
 
 ### devServerBroadcastDelay
 
-[Moved →](../file-conventions/remix-config#devserverbroadcastdelay)
+[Moved →][moved-5]
 
 ### devServerPort
 
-[Moved →](../file-conventions/remix-config#devserverport)
+[Moved →][moved-6]
 
 ### ignoredRouteFiles
 
-[Moved →](../file-conventions/remix-config#ignoredroutefiles)
+[Moved →][moved-7]
 
 ### publicPath
 
-[Moved →](../file-conventions/remix-config#publicpath)
+[Moved →][moved-8]
 
 ### routes
 
-[Moved →](../file-conventions/remix-config#routes)
+[Moved →][moved-9]
 
 ### server
 
-[Moved →](../file-conventions/remix-config#server)
+[Moved →][moved-10]
 
 ### serverBuildDirectory
 
-[Moved →](../file-conventions/remix-config#serverbuilddirectory)
+[Moved →][moved-11]
 
 ### serverBuildPath
 
-[Moved →](../file-conventions/remix-config#serverbuildpath)
+[Moved →][moved-12]
 
 ### serverBuildTarget
 
-[Moved →](../file-conventions/remix-config#serverbuildtarget)
+[Moved →][moved-13]
 
 ### serverDependenciesToBundle
 
-[Moved →](../file-conventions/remix-config#serverdependenciestobundle)
+[Moved →][moved-14]
 
 ### watchPaths
 
-[Moved →](../file-conventions/remix-config#watchpaths)
+[Moved →][moved-15]
 
 ## File Name Conventions
 
@@ -72,136 +72,185 @@ title: Conventions
 
 ### Route File Conventions
 
-[Moved →](../file-conventions/routes-files)
+[Moved →][moved-16]
 
 #### Root Layout Route
 
-[Moved →](../file-conventions/root)
+[Moved →][moved-17]
 
 #### Basic Routes
 
-[Moved →](../file-conventions/routes-files#basic-routes)
+[Moved →][moved-18]
 
 #### Dynamic Route Parameters
 
-[Moved →](../file-conventions/routes-files#dynamic-route-parameters)
+[Moved →][moved-19]
 
 #### Layout Routes
 
-[Moved →](../file-conventions/routes-files#layout-routes)
+[Moved →][moved-20]
 
 #### Pathless Layout Routes
 
-[Moved →](../file-conventions/routes-files#pathless-layout-routes)
+[Moved →][moved-21]
 
 #### Dot Delimiters
 
-[Moved →](../file-conventions/routes-files#dot-delimiters)
+[Moved →][moved-22]
 
 #### Splat Routes
 
-[Moved →](../file-conventions/routes-files#splat-routes)
+[Moved →][moved-23]
 
 ### Escaping special characters
 
-[Moved →](../file-conventions/routes-files#escaping-special-characters)
+[Moved →][moved-24]
 
 ## Entry Files
 
 ### entry.client.tsx
 
-[Moved →](../file-conventions/entry.client)
+[Moved →][moved-25]
 
 ### entry.server.tsx
 
-[Moved →](../file-conventions/entry.server)
+[Moved →][moved-26]
 
 ## Route Module API
 
 ### `default` export
 
-[Moved →](../route/component)
+[Moved →][moved-27]
 
 ### `loader`
 
-[Moved →](../route/loader)
+[Moved →][moved-28]
 
 #### loader `params`
 
-[Moved →](../route/loader#params)
+[Moved →][moved-29]
 
 #### loader `request`
 
-[Moved →](../route/loader#request)
+[Moved →][moved-30]
 
 #### loader `context`
 
-[Moved →](../route/loader#context)
+[Moved →][moved-31]
 
 #### Returning Response Instances
 
-[Moved →](../route/loader#returning-response-instances)
+[Moved →][moved-32]
 
 #### Throwing Responses in Loaders
 
-[Moved →](../route/loader#throwing-responses-in-loaders)
+[Moved →][moved-33]
 
 ### `action`
 
-[Moved →](../route/action)
+[Moved →][moved-34]
 
 ### `headers`
 
-[Moved →](../route/headers)
+[Moved →][moved-35]
 
 ### `meta`
 
-[Moved →](../route/meta)
+[Moved →][moved-36]
 
 #### `HtmlMetaDescriptor`
 
-[Moved →](../route/meta#htmlmetadescriptor)
+[Moved →][moved-37]
 
 #### Page context in `meta` function
 
-[Moved →](../route/meta#page-context-in-meta-function)
+[Moved →][moved-38]
 
 ### `links`
 
-[Moved →](../route/links)
+[Moved →][moved-39]
 
 #### `HtmlLinkDescriptor`
 
-[Moved →](../route/links#htmllinkdescriptor)
+[Moved →][moved-40]
 
 #### `PageLinkDescriptor`
 
-[Moved →](../route/links#pagelinkdescriptor)
+[Moved →][moved-41]
 
 ### CatchBoundary
 
-[Moved →](../route/catch-boundary)
+[Moved →][moved-42]
 
 ### ErrorBoundary
 
-[Moved →](../route/error-boundary)
+[Moved →][moved-43]
 
 ### handle
 
-[Moved →](../route/handle)
+[Moved →][moved-44]
 
 ### unstable_shouldReload
 
-[Moved →](../route/should-reload)
+[Moved →][moved-45]
 
 #### Never reloading the root
 
-[Moved →](../route/should-reload#never-reloading-the-root)
+[Moved →][moved-46]
 
 #### Ignoring search params
 
-[Moved →](../route/should-reload#ignoring-search-params)
+[Moved →][moved-47]
 
 ## Asset URL Imports
 
-[Moved →](../other-api/asset-imports)
+[Moved →][moved-48]
+
+[moved]: ../file-conventions/remix-config
+[moved-2]: ../file-conventions/remix-config#appdirectory
+[moved-3]: ../file-conventions/remix-config#assetsbuilddirectory
+[moved-4]: ../file-conventions/remix-config#cachedirectory
+[moved-5]: ../file-conventions/remix-config#devserverbroadcastdelay
+[moved-6]: ../file-conventions/remix-config#devserverport
+[moved-7]: ../file-conventions/remix-config#ignoredroutefiles
+[moved-8]: ../file-conventions/remix-config#publicpath
+[moved-9]: ../file-conventions/remix-config#routes
+[moved-10]: ../file-conventions/remix-config#server
+[moved-11]: ../file-conventions/remix-config#serverbuilddirectory
+[moved-12]: ../file-conventions/remix-config#serverbuildpath
+[moved-13]: ../file-conventions/remix-config#serverbuildtarget
+[moved-14]: ../file-conventions/remix-config#serverdependenciestobundle
+[moved-15]: ../file-conventions/remix-config#watchpaths
+[moved-16]: ../file-conventions/routes-files
+[moved-17]: ../file-conventions/root
+[moved-18]: ../file-conventions/routes-files#basic-routes
+[moved-19]: ../file-conventions/routes-files#dynamic-route-parameters
+[moved-20]: ../file-conventions/routes-files#layout-routes
+[moved-21]: ../file-conventions/routes-files#pathless-layout-routes
+[moved-22]: ../file-conventions/routes-files#dot-delimiters
+[moved-23]: ../file-conventions/routes-files#splat-routes
+[moved-24]: ../file-conventions/routes-files#escaping-special-characters
+[moved-25]: ../file-conventions/entry.client
+[moved-26]: ../file-conventions/entry.server
+[moved-27]: ../route/component
+[moved-28]: ../route/loader
+[moved-29]: ../route/loader#params
+[moved-30]: ../route/loader#request
+[moved-31]: ../route/loader#context
+[moved-32]: ../route/loader#returning-response-instances
+[moved-33]: ../route/loader#throwing-responses-in-loaders
+[moved-34]: ../route/action
+[moved-35]: ../route/headers
+[moved-36]: ../route/meta
+[moved-37]: ../route/meta#htmlmetadescriptor
+[moved-38]: ../route/meta#page-context-in-meta-function
+[moved-39]: ../route/links
+[moved-40]: ../route/links#htmllinkdescriptor
+[moved-41]: ../route/links#pagelinkdescriptor
+[moved-42]: ../route/catch-boundary
+[moved-43]: ../route/error-boundary
+[moved-44]: ../route/handle
+[moved-45]: ../route/should-reload
+[moved-46]: ../route/should-reload#never-reloading-the-root
+[moved-47]: ../route/should-reload#ignoring-search-params
+[moved-48]: ../other-api/asset-imports

@@ -92,7 +92,7 @@ The `UploadHandler` function accepts a number of parameters about the file:
 | filename    | string                    | The name of the file that the user selected for upload (like `rickroll.mp4`) |
 | contentType | string                    | The content type of the file (like `videomp4`)                               |
 
-Your job is to do whatever you need with the `data` and return a value that's a valid [`FormData`][form-data] value: [`File`][the-browser-file-api], `string`, or `undefined` to skip adding it to the resulting FormData.
+Your job is to do whatever you need with the `data` and return a value that's a valid \[`FormData`]\[form-data] value: \[`File`]\[the-browser-file-api], `string`, or `undefined` to skip adding it to the resulting FormData.
 
 ### Upload Handler Composition
 
