@@ -49,26 +49,26 @@ test.beforeAll(async () => {
     files: {
       "app/routes/index.jsx": js`
         import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+        import { useLoaderData, useActionData } from "@remix-run/react";
 
-        export function loader() {
-          return json("pizza");
+        export function loader({ request }) {
+          // NOTE test use headers.connection but that could be anytything else, like the cookie
+          return json({ connection: request.headers.get('connection') });
+        }
+
+        export function action({ request }) {
+          return json({ connection: request.headers.get('connection') });
         }
 
         export default function Index() {
-          let data = useLoaderData();
+          let loaderData = useLoaderData();
+          let actionData = useActionData();
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              <form method="post" action="/?index"><input type="submit" /></form>
+              <pre>{JSON.stringify({ loaderData, actionData })}</pre>
             </div>
           )
-        }
-      `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -85,22 +85,30 @@ test.afterAll(() => appFixture.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("loader still has access to request.headers when called for a POST action", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
-  // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
+  expect(await page.locator("pre").innerHTML()).toEqual(
+    JSON.stringify({
+      loaderData: {
+        connection: "keep-alive",
+      },
+    })
+  );
 
-  // Go check out the other tests to see what else you can do.
+  await page.getByRole("button", { name: "Submit" }).click();
+
+  expect(await page.locator("pre").innerHTML()).toEqual(
+    JSON.stringify({
+      loaderData: {
+        connection: "keep-alive", // NOTE this was working prior to 1.8.0
+      },
+      actionData: {
+        connection: "keep-alive",
+      },
+    })
+  );
 });
 
 ////////////////////////////////////////////////////////////////////////////////
