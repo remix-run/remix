@@ -20,6 +20,7 @@ import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
 import { writeFileSafe } from "./utils/fs";
 import { cssBuildVirtualModule } from "./virtualModules";
 import { cssEntryModulePlugin } from "./plugins/cssEntryModulePlugin";
+import invariant from "../invariant";
 
 export type BrowserCompiler = {
   // produce ./public/build/
@@ -83,7 +84,7 @@ const createEsbuildConfig = (
     }
   }
 
-  let plugins = [
+  let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
     ...(config.future.unstable_cssBundle
       ? [
@@ -149,6 +150,11 @@ export const createBrowserCompiler = (
             incremental: true,
           })
         : appCompiler.rebuild());
+
+      invariant(
+        appCompiler.metafile,
+        "Expected app compiler metafile to be defined"
+      );
     };
 
     let cssBuildTask = async () => {
@@ -168,6 +174,11 @@ export const createBrowserCompiler = (
       // The types aren't great when combining write: false and incremental: true
       // so we're asserting that it's an incremental build
       cssCompiler = compiler as esbuild.BuildIncremental;
+
+      invariant(
+        cssCompiler.metafile,
+        "Expected CSS compiler metafile to be defined"
+      );
 
       let cssBundlePath: string | undefined;
       let outputFiles = compiler.outputFiles || [];

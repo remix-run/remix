@@ -7,7 +7,7 @@
     "@octokit/plugin-paginate-rest": "^2.17.0",
     "@octokit/plugin-throttling": "^3.6.2",
     "@octokit/rest": "^18.12.0",
-    "esbuild": "0.15.12",
+    "esbuild": "^0.16.3",
     "esbuild-register": "^3.3.2",
     "semver": "^7.3.7"
   },

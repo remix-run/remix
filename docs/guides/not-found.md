@@ -115,7 +115,7 @@ export default function Page() {
 
 As you can probably tell, this mechanism isn't just limited to 404s. You can throw any response from a loader or action to send your app down the catch boundary path. For more information, check out the [Catch Boundary][catch-boundary] docs.
 
-[catch-boundary]: ../api/conventions#catchboundary
-[errors]: errors
+[catch-boundary]: ../route/catch-boundary
+[errors]: ./errors
 [404-status-code]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
 [splat-route]: ./routing#splats

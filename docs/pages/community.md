@@ -92,7 +92,7 @@ There are Remix Meetups all over the world with thousands of members. Some onlin
 [simeon-griggs]: https://twitter.com/simeongriggs
 [build-a-pet-management-system-with-remix-prisma-and-postgres]: https://www.youtube.com/watch?v=wqyHGQlZcws&list=PLTnRtjQN5ieYu9SdwLvzKYFVtfqySY7FT
 [austin-gil]: https://twitter.com/heyAustinGil
-[remix-conf]: ../../../../conf
+[remix-conf]: /conf
 [the-remix-meetup-page]: https://rmx.as/meetup
 [remix-guide]: https://remix.guide
 [frontend-masters]: https://frontendmasters.com

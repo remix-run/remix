@@ -18,9 +18,7 @@ The Remix philosophy can be summed up in four points:
 
 You can make your server fast, but you can't control the user's network.
 
-With today's web infrastructure you don't need static files to make your server fast. This very site has a time to first byte that's hard to beat and it's completely fresh. We leveraged distributed systems at the edge instead of static builds. We can fix a typo and the site reflects it within seconds: no rebuilds, no redeploys, not even HTTP caching.
-
-What you can't make fast is the user's network. The only thing you can do is **decrease the amount of stuff you send over the network**. Less JavaScript, less JSON, less CSS. This is easiest when you have a server that you can move the logic to, and a framework that favors progressive enhancement.
+With today's web infrastructure you don't need static files to make your server fast. What you can't make fast is the user's network. The only thing you can do is **decrease the amount of stuff you send over the network**. Less JavaScript, less JSON, less CSS. This is easiest when you have a server that you can move the code to, and a framework that favors progressive enhancement.
 
 There are a lot of ways Remix helps you send less stuff over the network and we hope to talk about all of them, but for now here's one: fetching a list of records.
 
@@ -123,6 +121,8 @@ Finally, since data mutation is built into Remix, it knows when to refetch data 
 The point is not so much to make the app work without JavaScript, it's more about keeping the simpler client/server model. Being able to leave JavaScript at the door is a nice side-effect.
 
 ## Don’t Over Abstract
+
+Remix's job is to cross the center of the stack and then get out of your way. We avoid as many "Remixisms" as possible and instead make it easier to use the standard APIs the web already has.
 
 This one is more for us. We've been educators for the 5 years before Remix. Our tagline is _Build Better Websites_. We also think of it with a little extra on the end: _Build Better Websites, Sometimes with Remix_. If you get good at Remix, you will accidentally get good at web development in general.
 
