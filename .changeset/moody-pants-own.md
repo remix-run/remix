@@ -10,7 +10,7 @@ Optional segments won't be available in Remix until Remix is built on top of Rea
 Converts segments surrounded by parenthesis into optional segments for React Router.
 For example `/($lang)/about` will be converted to `/:lang?/about` in React Router.
 
-This means `/($lang/about)` would match:
+This means `/($lang)/about` would match:
 
 ```
 /en/about
