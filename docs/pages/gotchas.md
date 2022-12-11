@@ -168,4 +168,4 @@ This is a hydration warning from React, and is most likely due to one of your br
 
 Check out the page in incognito mode, the warning should disappear.
 
-[remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler]: ../api/remix#uploadhandler
+[remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler]: ../utils/parse-multipart-form-data#uploadhandler
