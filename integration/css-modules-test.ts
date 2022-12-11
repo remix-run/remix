@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+import globby from "globby";
+import fse from "fs-extra";
 
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
@@ -288,6 +290,49 @@ test.describe("CSS Modules", () => {
             grid-column-start: test-start;
           }
         `,
+
+        // Deduplicated CSS test
+        "app/routes/deduplicated-css-test.jsx": js`
+          import { Test } from "~/test-components/deduplicated-css";
+          export default function() {
+            return <Test />;
+          }
+        `,
+        "app/test-components/deduplicated-css/index.jsx": js`
+          import styles_1 from "./styles_1.module.css";
+          import styles_2 from "./styles_2.module.css";
+          import sharedStyles from "./shared.module.css";
+          export function Test() {
+            return (
+              <div
+                data-testid="deduplicated-css"
+                data-deduplicated-class-name={sharedStyles.deduplicated}
+                className={[
+                  styles_1.root,
+                  styles_2.root,
+                ].join(' ')}
+                >
+                Deduplicated CSS test
+              </div>
+            );
+          }
+        `,
+        "app/test-components/deduplicated-css/styles_1.module.css": css`
+          .root {
+            composes: deduplicated from "./shared.module.css";
+          }
+        `,
+        "app/test-components/deduplicated-css/styles_2.module.css": css`
+          .root {
+            composes: deduplicated from "./shared.module.css";
+          }
+        `,
+        "app/test-components/deduplicated-css/shared.module.css": css`
+          .deduplicated {
+            background: peachpuff;
+            padding: 20px;
+          }
+        `,
       },
     });
     appFixture = await createAppFixture(fixture);
@@ -395,5 +440,38 @@ test.describe("CSS Modules", () => {
       return { gridColumnStart };
     });
     expect(styles.gridColumnStart.endsWith("-start")).toBeTruthy();
+  });
+
+  test("deduplicates CSS bundle contents in production build", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/deduplicated-css-test");
+
+    let element = await app.getElement("[data-testid='deduplicated-css']");
+    let deduplicatedClassName = element.data().deduplicatedClassName;
+
+    if (typeof deduplicatedClassName !== "string") {
+      throw new Error(
+        "Couldn't find data-deduplicated-class-name value on test element"
+      );
+    }
+
+    let [cssBundlePath] = await globby(["public/build/css-bundle-*.css"], {
+      cwd: fixture.projectDir,
+      absolute: true,
+    });
+
+    if (!cssBundlePath) {
+      throw new Error("Couldn't find CSS bundle");
+    }
+
+    let cssBundleContents = await fse.readFile(cssBundlePath, "utf8");
+
+    let deduplicatedClassNameUsages = cssBundleContents.match(
+      new RegExp(`\\.${deduplicatedClassName}`, "g")
+    );
+
+    expect(deduplicatedClassNameUsages?.length).toBe(1);
   });
 });
