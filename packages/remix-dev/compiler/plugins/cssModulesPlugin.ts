@@ -49,7 +49,10 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
               let resolveDir = path.dirname(originatingFile);
 
               let absolutePath = (
-                await build.resolve(specifier, { resolveDir })
+                await build.resolve(specifier, {
+                  resolveDir,
+                  kind: "require-resolve",
+                })
               ).path;
 
               return path.relative(cwd, absolutePath); // Path must be relative to ensure stable hashes
