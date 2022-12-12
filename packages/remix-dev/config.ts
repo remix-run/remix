@@ -32,8 +32,8 @@ export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
 interface FutureConfig {
-  v2_meta: boolean;
   unstable_cssBundle: boolean;
+  v2_meta: boolean;
 }
 
 /**
@@ -482,8 +482,8 @@ export async function readConfig(
   }
 
   let future = {
-    v2_meta: appConfig.future?.v2_meta === true,
     unstable_cssBundle: appConfig.future?.unstable_cssBundle === true,
+    v2_meta: appConfig.future?.v2_meta === true,
   };
 
   return {
