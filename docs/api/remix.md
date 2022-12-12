@@ -22,7 +22,7 @@ title: Remix Packages
 
 ### `<PrefetchPageLinks />`
 
-[Moved →](../components/prefetch-page-links)
+[Moved →][moved-68]
 
 ### `<NavLink>`
 
@@ -362,3 +362,4 @@ title: Remix Packages
 [moved-65]: ../utils/sessions#sessionflashkey-value
 [moved-66]: ../utils/sessions#sessionget
 [moved-67]: ../utils/sessions#sessionunset
+[moved-68]: ../components/prefetch-page-links
