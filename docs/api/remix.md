@@ -22,7 +22,7 @@ title: Remix Packages
 
 ### `<PrefetchPageLinks />`
 
-[Moved →][moved]
+[Moved →](../components/prefetch-page-links)
 
 ### `<NavLink>`
 
