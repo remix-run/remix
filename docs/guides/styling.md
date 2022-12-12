@@ -766,6 +766,76 @@ Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framewo
 
 NOTE: You may run into hydration warnings when using Styled Components. Hopefully [this issue][styled-components-issue] will be fixed soon.
 
+## CSS Modules
+
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+
+<docs-warning>Since all CSS Modules styles end up in a single CSS file at the end of the build, we recommend that you only use this styling approach for smaller applications, or sparingly within larger applications. If you're concerned about bundle size, you should probably look at [Tailwind](#tailwind-css) or [Regular Stylesheets](#regular-stylesheets) instead.
+</docs-warning>
+
+To enable [CSS Modules], set the `unstable_cssBundle` feature flag in `remix.config.js`.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  future: {
+    unstable_cssBundle: true,
+  },
+  // ...
+};
+```
+
+With this feature flag enabled, the Remix compiler will now generate a single CSS file containing all CSS Modules styles in your application. Note that any [regular stylesheet imports](http://localhost:3000/docs/en/v1/guides/styling#regular-stylesheets) will remain as separate files.
+
+Unlike many other tools in the React ecosystem, insertion of this CSS bundle into the page is not handled for you automatically. Instead, we ensure that you always have control over the link tags on your page. This lets you decide where the CSS bundle is inserted and in what order relative to other style sheets.
+
+To get access to the CSS bundle, first install the `@remix-run/css-bundle` package.
+
+```sh
+npm install @remix-run/css-bundle
+```
+
+Then, import the CSS bundle's `href` and add it to a link descriptor, most likely in `root.tsx` so that it applies to your entire application.
+
+```tsx filename=root.tsx lines=[2,6]
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+import cssBundleHref from "@remix-run/css-bundle";
+
+export const links: LinksFunction = () => {
+  return [
+    { rel: "stylesheet", href: cssBundleHref },
+    // ...
+  ];
+};
+```
+
+You're all set! You can now opt into CSS Modules via the `.module.css` file name convention, for example:
+
+```css filename=app/components/button/styles.module.css
+.root {
+  border: solid 1px;
+  background: white;
+  color: #454545;
+}
+```
+
+```tsx filename=app/components/button/index.js lines=[1,9]
+import styles from "./styles.module.css";
+
+export const Button = React.forwardRef(
+  ({ children, ...props }, ref) => {
+    return (
+      <button
+        {...props}
+        ref={ref}
+        className={styles.root}
+      />
+    );
+  }
+);
+Button.displayName = "Button";
+```
+
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
 [link]: ../components/link
 [route-module-links]: ../route/links
@@ -774,3 +844,4 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 [styled-components-issue]: https://github.com/styled-components/styled-components/issues/3660
 [tailwind]: https://tailwindcss.com
 [tailwind-intelli-sense-extension]: https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss
+[css modules]: https://github.com/css-modules/css-modules
