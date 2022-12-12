@@ -9,7 +9,6 @@ test.describe("rendering", () => {
   let appFixture: AppFixture;
 
   test.beforeAll(async () => {
-    process.env.NODE_ENV = "development";
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`

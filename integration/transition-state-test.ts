@@ -32,11 +32,6 @@ test.describe("rendering", () => {
           export default function() {
             const transition = useTransition();
 
-            // TODO: This seems to have some issues with StrictMode?
-            //  - Passes running only transition tests w/StrictMode
-            //  - Passes on full suite with fullyParallel:false w/StrictMode
-            //  - Fails on full suite with fullyParallel:true w/StrictMode
-            //  - Passes on full suite with fullyParallel:true w/o StrictMode
             const transitionsRef = useRef();
             const transitions = useMemo(() => {
               const savedTransitions = transitionsRef.current || [];
@@ -47,6 +42,7 @@ test.describe("rendering", () => {
 
             return (
               <html lang="en">
+                <head><title>Test</title></head>
                 <body>
                   <Outlet />
                     {transition.state != "idle" && (
