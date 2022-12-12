@@ -863,29 +863,6 @@ function dedupe(array: any[]) {
   return [...new Set(array)];
 }
 
-/**
- * Setup a callback to be fired on the window's `beforeunload` event. This is
- * useful for saving some data to `window.localStorage` just before the page
- * refreshes, which automatically happens on the next `<Link>` click when Remix
- * detects a new version of the app is available on the server.
- *
- * Note: The `callback` argument should be a function created with
- * `React.useCallback()`.
- *
- * @see https://remix.run/api/remix#usebeforeunload
- */
-export function useBeforeUnload(
-  callback: (event: BeforeUnloadEvent) => any
-): void {
-  // TODO: Export from react-router-dom
-  React.useEffect(() => {
-    window.addEventListener("beforeunload", callback);
-    return () => {
-      window.removeEventListener("beforeunload", callback);
-    };
-  }, [callback]);
-}
-
 // TODO: Can this be re-exported from RR?
 export interface RouteMatch {
   /**
