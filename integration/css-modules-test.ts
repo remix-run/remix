@@ -46,7 +46,7 @@ test.describe("CSS Modules", () => {
             )
           }
         `,
-        ...basicTextFixture(),
+        ...basicFixture(),
         ...localComposesFixture(),
         ...importComposesFixture(),
         ...rootRelativeImportComposesFixture(),
@@ -65,7 +65,7 @@ test.describe("CSS Modules", () => {
     await appFixture.close();
   });
 
-  function basicTextFixture() {
+  function basicFixture() {
     return {
       "app/routes/basic-test.jsx": js`
         import { Test } from "~/test-components/basic";
