@@ -103,12 +103,8 @@ export function serverBareModulesPlugin(
           }
         }
 
-        switch (remixConfig.serverBuildTarget) {
-          // Always bundle everything for cloudflare.
-          case "cloudflare-pages":
-          case "cloudflare-workers":
-          case "deno":
-            return undefined;
+        if (remixConfig.serverDependenciesToBundle === "all") {
+          return undefined;
         }
 
         for (let pattern of remixConfig.serverDependenciesToBundle) {
