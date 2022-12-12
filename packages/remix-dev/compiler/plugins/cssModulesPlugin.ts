@@ -20,6 +20,22 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
     setup: async (build: PluginBuild) => {
       let cwd = process.cwd();
 
+      build.onResolve(
+        { filter: cssModulesFilter, namespace: "file" },
+        async (args) => {
+          let resolvedPath = (
+            await build.resolve(args.path, {
+              resolveDir: args.resolveDir,
+              kind: args.kind,
+            })
+          ).path;
+
+          return {
+            path: resolvedPath,
+          };
+        }
+      );
+
       build.onLoad({ filter: cssModulesFilter }, async (args) => {
         let { path: absolutePath } = args;
 

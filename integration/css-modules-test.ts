@@ -53,6 +53,7 @@ test.describe("CSS Modules", () => {
         ...globalComposesFixture(),
         ...imageFixture(),
         ...rootRelativeImageFixture(),
+        ...clientEntrySideEffectsFixture(),
         ...deduplicatedCssFixture(),
         ...uniqueClassNamesFixture(),
         ...gridLineNameFixture(),
@@ -345,6 +346,61 @@ test.describe("CSS Modules", () => {
       (element) => window.getComputedStyle(element).backgroundImage
     );
     expect(backgroundImage).toContain(".svg");
+  });
+
+  function clientEntrySideEffectsFixture() {
+    return {
+      "app/entry.client.jsx": js`
+        import { RemixBrowser } from "@remix-run/react";
+        import { startTransition, StrictMode } from "react";
+        import { hydrateRoot } from "react-dom/client";
+        import "./entry.client.module.css";
+        
+        const hydrate = () => {
+          startTransition(() => {
+            hydrateRoot(
+              document,
+              <StrictMode>
+                <RemixBrowser />
+              </StrictMode>
+            );
+          });
+        };
+        
+        if (window.requestIdleCallback) {
+          window.requestIdleCallback(hydrate);
+        } else {
+          // Safari doesn't support requestIdleCallback
+          // https://caniuse.com/requestidlecallback
+          window.setTimeout(hydrate, 1);
+        }        
+      `,
+      "app/entry.client.module.css": css`
+        :global(.clientEntry) {
+          padding: ${TEST_PADDING_VALUE};
+        }
+      `,
+      "app/routes/client-entry-side-effects-test.jsx": js`
+        export default function() {
+          return (
+            <div data-testid="client-entry-side-effects" className="clientEntry">
+              Client entry side effects test
+            </div>
+          );
+        }
+      `,
+    };
+  }
+  test("supports client entry side effects", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/client-entry-side-effects-test");
+    let locator = await page.locator(
+      "[data-testid='client-entry-side-effects']"
+    );
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
   });
 
   function deduplicatedCssFixture() {
