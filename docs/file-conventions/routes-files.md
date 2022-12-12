@@ -81,21 +81,17 @@ For example: `app/routes/blog/$postId.tsx` will match the following URLs:
 On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId` [view example app][view-example-app]) and all parameters can be accessed within components via [`useParams`][use-params] and within loaders/actions via the argument's [`params`][params] property:
 
 ```tsx filename=app/routes/blog/$postId.tsx
-import { useParams } from "@remix-run/react";
 import type {
-  LoaderFunction,
-  ActionFunction,
+  ActionArgs,
+  LoaderArgs,
 } from "@remix-run/node"; // or cloudflare/deno
+import { useParams } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   console.log(params.postId);
 };
 
-export const action: ActionFunction = async ({
-  params,
-}) => {
+export const action = async ({ params }: ActionArgs) => {
   console.log(params.postId);
 };
 
@@ -244,21 +240,17 @@ Files that are named `$.tsx` are called "splat" (or "catch-all") routes. These r
 Similar to dynamic route parameters, you can access the value of the matched path on the splat route's `params` with the `"*"` key.
 
 ```tsx filename=app/routes/$.tsx
-import { useParams } from "@remix-run/react";
 import type {
-  LoaderFunction,
-  ActionFunction,
+  ActionArgs,
+  LoaderArgs,
 } from "@remix-run/node"; // or cloudflare/deno
+import { useParams } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   console.log(params["*"]);
 };
 
-export const action: ActionFunction = async ({
-  params,
-}) => {
+export const action = async ({ params }: ActionArgs) => {
   console.log(params["*"]);
 };
 

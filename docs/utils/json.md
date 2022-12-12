@@ -6,11 +6,10 @@ title: json
 
 This is a shortcut for creating `application/json` responses. It assumes you are using `utf-8` encoding.
 
-```ts lines=[2,6]
-import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[1,5]
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader: LoaderFunction = async () => {
+export const loader = async () => {
   // So you can write this:
   return json({ any: "thing" });
 
@@ -25,8 +24,8 @@ export const loader: LoaderFunction = async () => {
 
 You can also pass a status code and headers:
 
-```ts lines=[4-9]
-export const loader: LoaderFunction = async () => {
+```tsx lines=[4-9]
+export const loader = async () => {
   return json(
     { not: "coffee" },
     {

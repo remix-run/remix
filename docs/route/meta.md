@@ -90,26 +90,22 @@ export const meta: MetaFunction<typeof loader> = ({
 
 To infer types for `parentsData`, provide a mapping from the route's file path (relative to `app/`) to that route loader type:
 
-```tsx
-// app/routes/sales.tsx
-const loader = () => {
+```tsx filename=app/routes/sales.tsx
+export const loader = async () => {
   return json({ salesCount: 1074 });
 };
-export type Loader = typeof loader;
 ```
 
 ```tsx
-import type { Loader as SalesLoader } from "../../sales";
+import type { loader as salesLoader } from "../../sales";
 
-const loader = () => {
+export const loader = async () => {
   return json({ name: "Customer name" });
 };
 
 const meta: MetaFunction<
   typeof loader,
-  {
-    "routes/sales": SalesLoader;
-  }
+  { "routes/sales": typeof salesLoader }
 > = ({ data, parentsData }) => {
   const { name } = data;
   //      ^? string

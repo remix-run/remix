@@ -6,18 +6,19 @@ title: useActionData
 
 This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
-```tsx lines=[2,11,20]
+```tsx lines=[3,12,21]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
-import { useActionData, Form } from "@remix-run/react";
+import { Form, useActionData } from "@remix-run/react";
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const body = await request.formData();
   const name = body.get("visitorsName");
   return json({ message: `Hello, ${name}` });
 }
 
 export default function Invoices() {
-  const data = useActionData();
+  const data = useActionData<typeof action>();
   return (
     <Form method="post">
       <p>
@@ -34,11 +35,12 @@ export default function Invoices() {
 
 The most common use-case for this hook is form validation errors. If the form isn't right, you can simply return the errors and let the user try again (instead of pushing all the errors into sessions and back out of the loader).
 
-```tsx lines=[22, 31, 39-41, 45-47]
-import { redirect, json } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[23,32,40-42,46-48]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { Form, useActionData } from "@remix-run/react";
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const form = await request.formData();
   const email = form.get("email");
   const password = form.get("password");
@@ -65,7 +67,7 @@ export async function action({ request }) {
 }
 
 export default function Signup() {
-  const errors = useActionData();
+  const errors = useActionData<typeof action>();
 
   return (
     <>

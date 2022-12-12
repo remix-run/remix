@@ -8,7 +8,8 @@ Returns the function that may be used to submit a `<form>` (or some raw `FormDat
 
 This is useful whenever you need to programmatically submit a form. For example, you may wish to save a user preferences form whenever any field changes.
 
-```tsx filename=app/routes/prefs.tsx lines=[2,14,18]
+```tsx filename=app/routes/prefs.tsx lines=[3,15,19]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useSubmit, useTransition } from "@remix-run/react";
 
@@ -16,7 +17,7 @@ export async function loader() {
   return json(await getUserPreferences());
 }
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   await updatePreferences(await request.formData());
   return redirect("/prefs");
 }

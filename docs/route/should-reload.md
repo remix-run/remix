@@ -29,15 +29,15 @@ export const unstable_shouldReload: ShouldReloadFunction =
   }) => false; // or `true`;
 ```
 
-During client-side transitions, Remix will optimize reloading of routes that are already rendering, like not reloading layout routes that aren't changing. In other cases, like form submissions or search param changes, Remix doesn't know which routes need to be reloaded so it reloads them all to be safe. This ensures data mutations from the submission or changes in the search params are reflected across the entire page.
+During client-side transitions, Remix will optimize reloading of routes that are already rendering, like not reloading layout routes that aren't changing. In other cases, like form submissions or search param changes, Remix doesn't know which routes need to be reloaded, so it reloads them all to be safe. This ensures data mutations from the submission or changes in the search params are reflected across the entire page.
 
-This function lets apps further optimize by returning `false` when Remix is about to reload a route. There are three cases when Remix will reload a route and you have the opportunity to optimize:
+This function lets apps further optimize by returning `false` when Remix is about to reload a route. There are three cases when Remix will reload a route, and you have the opportunity to optimize:
 
 - if the `url.search` changes (while the `url.pathname` is the same)
 - after actions are called
 - "refresh" link clicks (click link to same URL)
 
-Otherwise Remix will reload the route and you have no choice:
+Otherwise, Remix will reload the route, and you have no choice:
 
 - A route matches the new URL that didn't match before
 - The `url.pathname` changed (including route params)
@@ -48,7 +48,7 @@ Here are a couple of common use-cases:
 
 It's common for root loaders to return data that never changes, like environment variables to be sent to the client app. In these cases you never need the root loader to be called again. For this case, you can simply `return false`.
 
-```js [10]
+```tsx lines=[10]
 export const loader = async () => {
   return json({
     ENV: {
@@ -74,7 +74,7 @@ Consider these routes:
     └── activity.tsx
 ```
 
-And lets say the UI looks something like this:
+And let's say the UI looks something like this:
 
 ```
 +------------------------------+
@@ -93,8 +93,11 @@ And lets say the UI looks something like this:
 
 The `activity.tsx` loader can use the search params to filter the list, so visiting a URL like `/projects/design-revamp/activity?search=image` could filter the list of results. Maybe it looks something like this:
 
-```js [2,8]
-export async function loader({ request, params }) {
+```tsx lines=[2,8]
+export async function loader({
+  params,
+  request,
+}: LoaderArgs) {
   const url = new URL(request.url);
   return json(
     await exampleDb.activity.findAll({
@@ -114,7 +117,7 @@ This is great for the activity route, but Remix doesn't know if the parent loade
 In this UI, that's wasted bandwidth for the user, your server, and your database because `$projectId.tsx` doesn't use the search params. Consider that our loader for `$projectId.tsx` looks something like this:
 
 ```tsx
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   return json(await fakedb.findProject(params.projectId));
 }
 ```
