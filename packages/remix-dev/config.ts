@@ -486,10 +486,12 @@ export async function readConfig(
   let publicPath = addTrailingSlash(appConfig.publicPath || defaultPublicPath);
 
   let rootRouteFile = findEntry(appDirectory, "root");
-  let defaultRootRouteFile = path.resolve(defaultsDirectory, "root.tsx");
+  if (!rootRouteFile) {
+    throw new Error(`Missing "root" route file in ${appDirectory}`);
+  }
 
   let routes: RouteManifest = {
-    root: { path: "", id: "root", file: rootRouteFile || defaultRootRouteFile },
+    root: { path: "", id: "root", file: rootRouteFile },
   };
 
   let routesConvention = appConfig.future?.v2_routeConvention
