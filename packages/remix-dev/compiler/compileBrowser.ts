@@ -168,8 +168,8 @@ export const createBrowserCompiler = (
         ? esbuild.build({
             ...createEsbuildConfig("css", remixConfig, options),
             metafile: true,
-            write: false,
             incremental: true,
+            write: false,
           })
         : cssCompiler.rebuild());
 
