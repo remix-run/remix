@@ -24,6 +24,7 @@ describe("readConfig", () => {
         tsconfigPath: expect.any(String),
         future: {
           v2_meta: expect.any(Boolean),
+          v2_routeConvention: expect.any(Boolean),
         },
       },
       `
@@ -37,6 +38,7 @@ describe("readConfig", () => {
         "entryServerFile": "entry.server.tsx",
         "future": Object {
           "v2_meta": Any<Boolean>,
+          "v2_routeConvention": Any<Boolean>,
         },
         "mdx": undefined,
         "publicPath": "/build/",
