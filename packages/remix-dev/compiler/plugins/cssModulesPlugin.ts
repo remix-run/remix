@@ -108,7 +108,7 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
 
         return {
           namespace,
-          path: absolutePath,
+          path: path.relative(process.cwd(), absolutePath),
           pluginData,
         };
       });
