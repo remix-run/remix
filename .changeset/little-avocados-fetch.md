@@ -1,9 +1,9 @@
 ---
-"@remix-run/css-bundle": patch
-"@remix-run/dev": patch
-"@remix-run/react": patch
-"@remix-run/server-runtime": patch
-"@remix-run/testing": patch
+"@remix-run/css-bundle": minor
+"@remix-run/dev": minor
+"@remix-run/react": minor
+"@remix-run/server-runtime": minor
+"@remix-run/testing": minor
 ---
 
 Add unstable support for CSS Modules via `future.unstable_cssBundle` feature flag
