@@ -2,7 +2,7 @@
  * Common binary MIME types
  * @see https://github.com/architect/functions/blob/45254fc1936a1794c185aac07e9889b241a2e5c6/src/http/helpers/binary-types.js
  */
-const binaryTypes = [
+const binaryTypes = new Set([
   "application/octet-stream",
   // Docs
   "application/epub+zip",
@@ -60,9 +60,10 @@ const binaryTypes = [
   "application/x-tar",
   "application/x-zip",
   "application/zip",
-];
+]);
 
 export function isBinaryType(contentType: string | null | undefined) {
   if (!contentType) return false;
-  return binaryTypes.some((t) => contentType.includes(t));
+  let [test] = contentType.split(";");
+  return binaryTypes.has(test);
 }

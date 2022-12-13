@@ -64,6 +64,6 @@ const binaryTypes = new Set([
 
 export function isBinaryType(contentType: string | null | undefined) {
   if (!contentType) return false;
-  let [ test ] = contentType.split(';');
+  let [test] = contentType.split(";");
   return binaryTypes.has(test);
 }
