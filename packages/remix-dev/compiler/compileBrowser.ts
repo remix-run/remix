@@ -202,11 +202,8 @@ export const createBrowserCompiler = (
               let contents =
                 options.mode === "production"
                   ? await postcss([
-                      // We need to discard duplicate rules since "composes" in
-                      // CSS Modules can result in duplicate styles. This needs
-                      // to be done via PostCSS because esbuild's CSS minification
-                      // doesn't remove duplicate rules with our current version.
-                      // This won't be required with esbuild >= v0.15.15.
+                      // We need to discard duplicate rules since "composes"
+                      // in CSS Modules can result in duplicate styles
                       postcssDiscardDuplicates(),
                     ])
                       .process(
