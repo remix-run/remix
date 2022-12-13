@@ -1,6 +1,7 @@
 name: 🌒 Nightly Release
 
 on:
+  workflow_call:
   schedule:
     - cron: "0 7 * * *" # every day at 12AM PST
 
