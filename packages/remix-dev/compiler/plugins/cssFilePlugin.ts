@@ -72,9 +72,11 @@ export function cssFilePlugin(options: {
         let entry = Object.keys(outputs).find((out) => outputs[out].entryPoint);
         invariant(entry, "entry point not found");
 
-        let normalizedEntry = normalizePathSlashes(entry);
+        let normalizedEntry = path.resolve(normalizePathSlashes(entry));
         let entryFile = outputFiles.find((file) => {
-          return normalizePathSlashes(file.path).endsWith(normalizedEntry);
+          return (
+            path.resolve(normalizePathSlashes(file.path)) === normalizedEntry
+          );
         });
 
         invariant(entryFile, "entry file not found");
