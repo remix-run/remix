@@ -27,8 +27,10 @@ test("builds deterministically under different paths", async () => {
       "remix.config.js": js`
         module.exports = {
           future: {
-            unstable_cssBundle: true
-          }
+            unstable_cssBundle: {
+              cssModules: true,
+            },
+          },
         };
       `,
       "app/routes/index.mdx": "# hello world",

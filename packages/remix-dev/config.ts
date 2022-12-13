@@ -32,7 +32,9 @@ export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
 interface FutureConfig {
-  unstable_cssBundle: boolean;
+  unstable_cssBundle: {
+    cssModules: boolean;
+  };
   v2_meta: boolean;
 }
 
@@ -163,7 +165,7 @@ export interface AppConfig {
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
 
-  future?: Partial<FutureConfig>;
+  future?: DeepPartial<FutureConfig>;
 }
 
 /**
@@ -482,7 +484,9 @@ export async function readConfig(
   }
 
   let future = {
-    unstable_cssBundle: appConfig.future?.unstable_cssBundle === true,
+    unstable_cssBundle: {
+      cssModules: appConfig.future?.unstable_cssBundle?.cssModules === true,
+    },
     v2_meta: appConfig.future?.v2_meta === true,
   };
 
@@ -513,6 +517,14 @@ export async function readConfig(
   };
 }
 
+export function isCssBundleEnabled(config: RemixConfig) {
+  return Object.values(config.future.unstable_cssBundle).includes(true);
+}
+
+export function isCssModulesEnabled(config: RemixConfig) {
+  return config.future.unstable_cssBundle.cssModules;
+}
+
 function addTrailingSlash(path: string): string {
   return path.endsWith("/") ? path : path + "/";
 }
@@ -538,3 +550,9 @@ function findConfig(dir: string, basename: string): string | undefined {
 
   return undefined;
 }
+
+type DeepPartial<T> = T extends object
+  ? {
+      [P in keyof T]?: DeepPartial<T[P]>;
+    }
+  : T;
