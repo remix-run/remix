@@ -50,7 +50,14 @@ const createEsbuildConfig = (
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    ...(config.future.unstable_cssModules ? [cssModulesPlugin(options)] : []),
+    ...(config.future.unstable_cssModules
+      ? [
+          cssModulesPlugin({
+            mode: options.mode,
+            rootDirectory: config.rootDirectory,
+          }),
+        ]
+      : []),
     cssFilePlugin({
       mode: options.mode,
       rootDirectory: config.rootDirectory,

@@ -17,7 +17,10 @@ interface PluginData {
   compiledCss: string;
 }
 
-export const cssModulesPlugin = (options: CompileOptions): Plugin => {
+export const cssModulesPlugin = (options: {
+  mode: CompileOptions["mode"];
+  rootDirectory: string;
+}): Plugin => {
   return {
     name: pluginName,
     setup: async (build: PluginBuild) => {
@@ -108,7 +111,7 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
 
         return {
           namespace,
-          path: path.relative(process.cwd(), absolutePath),
+          path: path.relative(options.rootDirectory, absolutePath),
           pluginData,
         };
       });

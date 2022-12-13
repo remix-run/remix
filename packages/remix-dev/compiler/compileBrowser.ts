@@ -92,7 +92,10 @@ const createEsbuildConfig = (
     ...(config.future.unstable_cssModules
       ? [
           ...(build === "css" ? [cssEntryModulePlugin(config)] : []),
-          cssModulesPlugin(options),
+          cssModulesPlugin({
+            mode: options.mode,
+            rootDirectory: config.rootDirectory,
+          }),
         ]
       : []),
     cssFilePlugin({
