@@ -36,7 +36,7 @@ export type FlatRoutesOptions = {
 export type DefineRoutesFunction = typeof defaultDefineRoutes;
 
 const defaultOptions: FlatRoutesOptions = {
-  routeDir: "routes-bug",
+  routeDir: "routes",
   basePath: "/",
   paramPrefixChar: "$",
   routeRegex:
