@@ -54,7 +54,7 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
             getJSON: function (_, json) {
               exports = json;
             },
-            async resolve(id: string, importer: string) {
+            async resolve(id, importer) {
               return (
                 await build.resolve(id, {
                   resolveDir: path.dirname(importer),
