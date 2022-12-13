@@ -68,7 +68,8 @@ const createEsbuildConfig = (
   config: RemixConfig,
   options: CompileOptions
 ): esbuild.BuildOptions | esbuild.BuildIncremental => {
-  let entryPoints: esbuild.BuildOptions["entryPoints"] = {};
+  let entryPoints: esbuild.BuildOptions["entryPoints"];
+
   if (build === "css") {
     entryPoints = {
       "css-bundle": cssBuildVirtualModule.id,
