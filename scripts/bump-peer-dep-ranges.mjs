@@ -55,7 +55,7 @@ const pkgChanges = new Map(
        * @ts-expect-error */
       let gitPath = line.match(/[^\s]+package.json/)[0];
       let fsPath = path.join(rootDir, gitPath);
-      let packageJson = require(fsPath);
+      let packageJson = JSON.parse(fs.readFileSync(fsPath, "utf-8"));
       let previousPackageJsonResult = spawnSync("git", [
         "show",
         `HEAD:${gitPath}`,
