@@ -644,5 +644,3 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [frequently-asked-questions]: ../pages/faq
 [common-gotchas]: ../pages/currently
 [css-modules]: ./styling#css-modules
-
-[modules]: by default .but w currently provide unstable support behind a feature flage
