@@ -2,4 +2,4 @@
 "@remix-run/server-runtime": patch
 ---
 
-Ensure loader requests proxy method/headers on document acton submissions
+Ensure `loader` `request`'s proxy headers on document `action` submissions
