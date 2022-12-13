@@ -13,15 +13,15 @@ import { getAppDependencies } from "./dependencies";
 import { loaders } from "./loaders";
 import { type CompileOptions } from "./options";
 import { browserRouteModulesPlugin } from "./plugins/browserRouteModulesPlugin";
-import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
 import { cssFilePlugin } from "./plugins/cssFilePlugin";
 import { deprecatedRemixPackagePlugin } from "./plugins/deprecatedRemixPackagePlugin";
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
-import { writeFileSafe } from "./utils/fs";
-import { cssBuildVirtualModule } from "./virtualModules";
+import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
 import { cssEntryModulePlugin } from "./plugins/cssEntryModulePlugin";
+import { cssBuildVirtualModule } from "./virtualModules";
+import { writeFileSafe } from "./utils/fs";
 import invariant from "../invariant";
 
 export type BrowserCompiler = {
