@@ -13,7 +13,7 @@ const compiledCssQueryString = "?css-modules-plugin-compiled-css";
 const compiledCssFilter = /\?css-modules-plugin-compiled-css$/;
 
 interface PluginData {
-  absolutePath: string;
+  resolveDir: string;
   compiledCss: string;
 }
 
@@ -39,6 +39,7 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
 
       build.onLoad({ filter: cssModulesFilter }, async (args) => {
         let { path: absolutePath } = args;
+        let resolveDir = path.dirname(absolutePath);
 
         let fileContents = await fse.readFile(absolutePath, "utf8");
         let exports: Record<string, string> = {};
@@ -80,11 +81,6 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
           compiledCss += `\n/*# sourceMappingURL=data:application/json;base64,${mapBase64} */`;
         }
 
-        let pluginData: PluginData = {
-          absolutePath,
-          compiledCss,
-        };
-
         // Each .module.css file ultimately resolves as a JS file that imports
         // a virtual CSS file containing the compiled CSS, and exports the
         // object that maps local names to generated class names. The compiled
@@ -93,6 +89,11 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
           `import "./${path.basename(absolutePath)}${compiledCssQueryString}";`,
           `export default ${JSON.stringify(exports)};`,
         ].join("\n");
+
+        let pluginData: PluginData = {
+          resolveDir,
+          compiledCss,
+        };
 
         return {
           contents,
@@ -114,10 +115,10 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
 
       build.onLoad({ filter: compiledCssFilter, namespace }, async (args) => {
         let pluginData: PluginData = args.pluginData;
-        let { compiledCss, absolutePath } = pluginData;
+        let { resolveDir, compiledCss } = pluginData;
 
         return {
-          resolveDir: path.dirname(absolutePath),
+          resolveDir,
           contents: compiledCss,
           loader: "css" as const,
         };
