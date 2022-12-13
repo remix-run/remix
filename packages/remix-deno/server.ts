@@ -29,8 +29,8 @@ export function createRequestHandler<
       const loadContext = await getLoadContext?.(request);
 
       return handleRequest(request, loadContext);
-    } catch (e) {
-      console.error(e);
+    } catch (error: unknown) {
+      console.error(error);
 
       return new Response("Internal Error", { status: 500 });
     }
@@ -108,7 +108,7 @@ export function createRequestHandlerWithStaticFiles<
   return async (request: Request) => {
     try {
       return await serveStaticFiles(request, staticFiles);
-    } catch (error) {
+    } catch (error: unknown) {
       if (!(error instanceof FileNotFoundError)) {
         throw error;
       }

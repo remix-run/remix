@@ -15,6 +15,7 @@
     { "path": "packages/remix-react" },
     { "path": "packages/remix-serve" },
     { "path": "packages/remix-server-runtime" },
+    { "path": "packages/remix-testing" },
     { "path": "packages/remix-vercel" }
   ]
 }

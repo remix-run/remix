@@ -35,6 +35,7 @@ export {
   Link,
   NavLink,
   Form,
+  RemixEntry,
   PrefetchPageLinks,
   LiveReload,
   useFormAction,
@@ -54,7 +55,12 @@ export type { ThrownResponse } from "./errors";
 export { useCatch } from "./errorBoundaries";
 
 export type { HtmlLinkDescriptor } from "./links";
-export type { ShouldReloadFunction, HtmlMetaDescriptor } from "./routeModules";
+export type {
+  ShouldReloadFunction,
+  HtmlMetaDescriptor,
+  CatchBoundaryComponent,
+  RouteModules,
+} from "./routeModules";
 
 export { ScrollRestoration } from "./scroll-restoration";
 
@@ -62,3 +68,7 @@ export type { RemixServerProps } from "./server";
 export { RemixServer } from "./server";
 
 export type { Fetcher } from "./transition";
+
+export type { AssetsManifest, EntryContext } from "./entry";
+export type { RouteData } from "./routeData";
+export type { EntryRoute, RouteManifest } from "./routes";
