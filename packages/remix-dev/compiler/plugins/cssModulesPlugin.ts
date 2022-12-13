@@ -21,8 +21,6 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
   return {
     name: pluginName,
     setup: async (build: PluginBuild) => {
-      let cwd = process.cwd();
-
       build.onResolve(
         { filter: cssModulesFilter, namespace: "file" },
         async (args) => {
@@ -105,7 +103,7 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
 
         return {
           namespace,
-          path: path.relative(cwd, absolutePath),
+          path: absolutePath,
           pluginData,
         };
       });
