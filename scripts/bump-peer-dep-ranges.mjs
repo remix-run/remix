@@ -27,16 +27,16 @@
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import path from "node:path";
-import { createRequire } from "node:module";
+import * as url from "node:url";
+import { getPackagesSync } from "@manypkg/get-packages";
 
-const require = createRequire(import.meta.url);
-const { getPackagesSync } = require("@manypkg/get-packages");
 const gitStatusResult = spawnSync("git", ["status", "--porcelain"]);
 
 if (gitStatusResult.status !== 0) {
   process.exit(gitStatusResult.status || undefined);
 }
 
+const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const rootDir = path.join(__dirname, "..");
 
 const allPackages = getPackagesSync(rootDir).packages;
