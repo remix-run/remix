@@ -1,6 +1,8 @@
 import path from "path";
 import type { Plugin, PluginBuild } from "esbuild";
 import fse from "fs-extra";
+import postcss from "postcss";
+import postcssModules from "postcss-modules";
 
 import type { CompileOptions } from "../options";
 
@@ -40,11 +42,7 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
       build.onLoad({ filter: cssModulesFilter }, async (args) => {
         let { path: absolutePath } = args;
 
-        let [{ default: postcss }, { default: postcssModules }] =
-          await Promise.all([import("postcss"), import("postcss-modules")]);
-
         let fileContents = await fse.readFile(absolutePath, "utf8");
-
         let exports: Record<string, string> = {};
 
         let { css: compiledCss, map } = await postcss([

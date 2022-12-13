@@ -3,6 +3,8 @@ import * as fse from "fs-extra";
 import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
+import postcss from "postcss";
+import postcssDiscardDuplicates from "postcss-discard-duplicates";
 
 import { type WriteChannel } from "../channel";
 import { type RemixConfig } from "../config";
@@ -196,14 +198,6 @@ export const createBrowserCompiler = (
               // Grab the CSS bundle path so we can use it to generate the manifest
               cssBundlePath = outputPath;
               await fse.ensureDir(path.dirname(outputPath));
-
-              let [
-                { default: postcss },
-                { default: postcssDiscardDuplicates },
-              ] = await Promise.all([
-                import("postcss"),
-                import("postcss-discard-duplicates"),
-              ]);
 
               let contents =
                 options.mode === "production"
