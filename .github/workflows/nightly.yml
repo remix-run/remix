@@ -1,6 +1,7 @@
 name: 🌒 Nightly Release
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 7 * * *" # every day at 12AM PST
 
@@ -58,10 +59,10 @@ jobs:
           LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-committerdate | head -n 1)
 
           # get changes since last nightly
-          CHANGES=$(git diff $LATEST_NIGHTLY_TAG..dev -- ./packages/ -- ':!packages/**/package.json')
+          CHANGES=$(git diff --name-only $LATEST_NIGHTLY_TAG..dev -- ./packages/ -- ':!packages/**/package.json')
 
           # check if there are changes to ./packages
-          if [[ -n $(echo $CHANGES | xargs) ]]; then
+          if [[ -n $CHANGES ]]; then
             # yyyyMMdd format (e.g. 20221207)
             DATE=$(date '+%Y%m%d')
             # v0.0.0-nightly-<short sha>-<date>
@@ -81,8 +82,8 @@ jobs:
         run: |
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
-          git checkout -b nightly/${steps.version.outputs.NEXT_VERSION}
-          yarn run version ${steps.version.outputs.NEXT_VERSION} --skip-prompt
+          git checkout -b nightly/${{steps.version.outputs.NEXT_VERSION}}
+          yarn run version ${{steps.version.outputs.NEXT_VERSION}} --skip-prompt
 
       - name: 🏷 Push Tag
         if: steps.version.outputs.NEXT_VERSION

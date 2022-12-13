@@ -22,7 +22,7 @@ title: Remix Packages
 
 ### `<PrefetchPageLinks />`
 
-[Moved →][moved]
+[Moved →][moved-68]
 
 ### `<NavLink>`
 
@@ -162,7 +162,7 @@ title: Remix Packages
 
 [Moved →][moved-35]
 
-#### `unstable_createFileUploadHandler (node)`
+#### `unstable_createFileUploadHandler`
 
 [Moved →][moved-36]
 
@@ -330,7 +330,7 @@ title: Remix Packages
 [moved-33]: ../utils/redirect
 [moved-34]: ../utils/parse-multipart-form-data
 [moved-35]: ../utils/parse-multipart-form-data#uploadhandler
-[moved-36]: ../utils/unstable-create-file-upload-handler#unstable_createfileuploadhandler-node
+[moved-36]: ../utils/unstable-create-file-upload-handler
 [moved-37]: ../utils/unstable-create-memory-upload-handler
 [moved-38]: ../guides/file-uploads#upload-handler-composition
 [moved-39]: ../utils/cookies
@@ -362,3 +362,4 @@ title: Remix Packages
 [moved-65]: ../utils/sessions#sessionflashkey-value
 [moved-66]: ../utils/sessions#sessionget
 [moved-67]: ../utils/sessions#sessionunset
+[moved-68]: ../components/prefetch-page-links
