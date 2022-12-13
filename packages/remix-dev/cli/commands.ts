@@ -54,6 +54,7 @@ export async function create({
 type InitFlags = {
   deleteScript?: boolean;
 };
+
 export async function init(
   projectDir: string,
   { deleteScript = true }: InitFlags = {}
@@ -246,4 +247,46 @@ export async function codemod(
     }
     throw error;
   }
+}
+
+export async function generateEntry(remixRoot: string, entry: string) {
+  // 0. valid entry file
+  let entries = new Set([
+    "entry.server.tsx",
+    "entry.server.js",
+    "entry.server.jsx",
+    "entry.client.tsx",
+    "entry.client.js",
+    "entry.client.jsx",
+  ]);
+  if (!entries.has(entry)) {
+    console.log(
+      colors.error(
+        `Invalid entry file. Valid entry files are ${Array.from(entries).join(
+          ", "
+        )}`
+      )
+    );
+    return;
+  }
+  // 1. check if the entry file exists
+  let entryExists = await fse.pathExists(path.join(remixRoot, entry));
+  if (entryExists) {
+    console.log(colors.gray(`Entry file ${entry} already exists.`));
+    return;
+  }
+
+  let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
+  let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");
+  let defaultEntryServer = path.resolve(defaultsDirectory, "entry.server.tsx");
+
+  let outputFile = path.resolve(remixRoot, entry);
+
+  // 2. copy the entry file from the template
+  await fse.copyFile(
+    entry.startsWith("entry.client") ? defaultEntryClient : defaultEntryServer,
+    outputFile
+  );
+
+  console.log(colors.blue(`Entry file ${entry} created at ${outputFile}.`));
 }
