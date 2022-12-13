@@ -1,3 +1,4 @@
+const path = require("path");
 const babel = require("@rollup/plugin-babel").default;
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
@@ -14,6 +15,7 @@ const { name: packageName, version } = require("./package.json");
 module.exports = function rollup() {
   let sourceDir = "packages/remix-css-bundle";
   let outputDir = getOutputDir(packageName);
+  let outputDist = path.join(outputDir, "dist");
 
   return [
     {
@@ -23,7 +25,7 @@ module.exports = function rollup() {
       input: [`${sourceDir}/browser.ts`, `${sourceDir}/server.ts`],
       output: {
         banner: createBanner(packageName, version),
-        dir: outputDir,
+        dir: outputDist,
         format: "cjs",
         preserveModules: true,
         exports: "named",
@@ -51,7 +53,7 @@ module.exports = function rollup() {
       input: [`${sourceDir}/browser.ts`, `${sourceDir}/server.ts`],
       output: {
         banner: createBanner(packageName, version),
-        dir: `${outputDir}/esm`,
+        dir: `${outputDist}/esm`,
         format: "esm",
         preserveModules: true,
       },
