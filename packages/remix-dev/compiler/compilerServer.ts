@@ -4,7 +4,7 @@ import * as fse from "fs-extra";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 
 import { type ReadChannel } from "../channel";
-import { type RemixConfig, isCssModulesEnabled } from "../config";
+import { type RemixConfig } from "../config";
 import { type AssetsManifest } from "./assets";
 import { loaders } from "./loaders";
 import { type CompileOptions } from "./options";
@@ -50,7 +50,7 @@ const createEsbuildConfig = (
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    ...(isCssModulesEnabled(config) ? [cssModulesPlugin(options)] : []),
+    ...(config.future.unstable_cssModules ? [cssModulesPlugin(options)] : []),
     cssFilePlugin({
       mode: options.mode,
       rootDirectory: config.rootDirectory,

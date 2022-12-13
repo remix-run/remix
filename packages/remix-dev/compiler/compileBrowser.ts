@@ -7,11 +7,7 @@ import postcss from "postcss";
 import postcssDiscardDuplicates from "postcss-discard-duplicates";
 
 import { type WriteChannel } from "../channel";
-import {
-  type RemixConfig,
-  isCssBundleEnabled,
-  isCssModulesEnabled,
-} from "../config";
+import { type RemixConfig } from "../config";
 import { createAssetsManifest, type AssetsManifest } from "./assets";
 import { getAppDependencies } from "./dependencies";
 import { loaders } from "./loaders";
@@ -93,10 +89,12 @@ const createEsbuildConfig = (
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    ...(isCssBundleEnabled(config) && build === "css"
-      ? [cssEntryModulePlugin(config)]
+    ...(config.future.unstable_cssModules
+      ? [
+          ...(build === "css" ? [cssEntryModulePlugin(config)] : []),
+          cssModulesPlugin(options),
+        ]
       : []),
-    ...(isCssModulesEnabled(config) ? [cssModulesPlugin(options)] : []),
     cssFilePlugin({
       mode: options.mode,
       rootDirectory: config.rootDirectory,
@@ -166,7 +164,7 @@ export const createBrowserCompiler = (
     };
 
     let cssBuildTask = async () => {
-      if (!isCssBundleEnabled(remixConfig)) {
+      if (!remixConfig.future.unstable_cssModules) {
         return;
       }
 

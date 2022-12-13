@@ -154,7 +154,7 @@ function createRemixContext(
       loaderBoundaryRouteId: null,
     },
     future: {
-      unstable_cssBundle: false,
+      unstable_cssModules: false,
       v2_meta: false,
       ...future,
     },

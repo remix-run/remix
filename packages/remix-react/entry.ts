@@ -16,9 +16,7 @@ export interface EntryContext {
 }
 
 export interface FutureConfig {
-  unstable_cssBundle: {
-    cssModules: boolean;
-  };
+  unstable_cssModules: boolean;
   v2_meta: boolean;
 }
 

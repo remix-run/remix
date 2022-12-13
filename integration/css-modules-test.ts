@@ -23,9 +23,7 @@ test.describe("CSS Modules", () => {
         "remix.config.js": js`
           module.exports = {
             future: {
-              unstable_cssBundle: {
-                cssModules: true,
-              },
+              unstable_cssModules: true,
             },
           };
         `,

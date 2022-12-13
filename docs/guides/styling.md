@@ -773,15 +773,13 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 <docs-warning>Since all CSS Modules styles end up in a single CSS file at the end of the build, we recommend that you only use this styling approach for smaller applications, or sparingly within larger applications. If you're concerned about bundle size, you should probably look at [Tailwind](#tailwind-css) or [Regular Stylesheets](#regular-stylesheets) instead.
 </docs-warning>
 
-To enable [CSS Modules], set the `future.unstable_cssBundle.cssModules` feature flag in `remix.config.js`.
+To enable [CSS Modules], set the `future.unstable_cssModules` feature flag in `remix.config.js`.
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
-    unstable_cssBundle: {
-      cssModules: true,
-    },
+    unstable_cssModules: true,
   },
   // ...
 };
