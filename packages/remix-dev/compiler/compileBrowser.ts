@@ -75,7 +75,7 @@ const createEsbuildConfig = (
     deprecatedRemixPackagePlugin(options.onWarning),
     cssFilePlugin({
       mode: options.mode,
-      rootDir: config.rootDirectory,
+      rootDirectory: config.rootDirectory,
     }),
     urlImportsPlugin(),
     mdxPlugin(config),
