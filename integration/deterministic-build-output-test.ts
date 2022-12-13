@@ -40,14 +40,19 @@ test("builds deterministically under different paths", async () => {
       "app/foo/bar.server.ts": "export const meta = () => []",
       "app/styles/foo.module.css": css`
         .foo {
-          color: peachpuff;
-          background-image: url(../images/foo.svg);
-          composes: bar from "./bar.module.css";
+          background-image: url(~/images/foo.svg);
+          composes: bar from "~/styles/bar.module.css";
+          composes: baz from "./baz.module.css";
         }
       `,
       "app/styles/bar.module.css": css`
         .bar {
-          background-color: papayawhip;
+          background-color: peachpuff;
+        }
+      `,
+      "app/styles/baz.module.css": css`
+        .baz {
+          color: coral;
         }
       `,
       "app/images/foo.svg": `
