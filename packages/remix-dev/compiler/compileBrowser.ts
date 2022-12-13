@@ -73,7 +73,10 @@ const createEsbuildConfig = (
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    cssFilePlugin(options),
+    cssFilePlugin({
+      mode: options.mode,
+      rootDir: config.rootDirectory,
+    }),
     urlImportsPlugin(),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),

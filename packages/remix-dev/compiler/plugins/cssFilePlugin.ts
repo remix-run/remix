@@ -17,6 +17,7 @@ function normalizePathSlashes(p: string) {
  */
 export function cssFilePlugin(options: {
   mode: CompileOptions["mode"];
+  rootDirectory: string;
 }): esbuild.Plugin {
   return {
     name: "css-file",
@@ -72,10 +73,16 @@ export function cssFilePlugin(options: {
         let entry = Object.keys(outputs).find((out) => outputs[out].entryPoint);
         invariant(entry, "entry point not found");
 
-        let normalizedEntry = path.resolve(normalizePathSlashes(entry));
+        let normalizedEntry = path.resolve(
+          options.rootDirectory,
+          normalizePathSlashes(entry)
+        );
         let entryFile = outputFiles.find((file) => {
           return (
-            path.resolve(normalizePathSlashes(file.path)) === normalizedEntry
+            path.resolve(
+              options.rootDirectory,
+              normalizePathSlashes(file.path)
+            ) === normalizedEntry
           );
         });
 
