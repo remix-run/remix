@@ -1,13 +1,9 @@
-# Welcome to Remix!
+# @remix-run/css-bundle
 
-[Remix](https://remix.run) is a web framework that helps you build better websites with React.
-
-To get started, open a new shell and run:
+This package provides access to the `href` of the generated CSS file when using CSS bundling features in [Remix](https://remix.run).
 
 ```sh
-npx create-remix@latest
+npm install @remix-run/css-bundle
 ```
 
-Then follow the prompts you see in your terminal.
-
-For more information about Remix, [visit remix.run](https://remix.run)!
+For more, see the [Remix docs](https://remix.run/docs/).

@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/css-bundle",
   "version": "1.8.2",
-  "description": "CSS bundle href for Remix",
+  "description": "CSS bundle href when using CSS bundling features in Remix",
   "homepage": "https://remix.run",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
