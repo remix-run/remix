@@ -4,6 +4,7 @@ const path = require("path");
 const { execSync } = require("child_process");
 const jsonfile = require("jsonfile");
 const Confirm = require("prompt-confirm");
+const semver = require("semver");
 
 let rootDir = path.resolve(__dirname, "..");
 
@@ -155,6 +156,7 @@ const getPackageNameFromImportSpecifier = (importSpecifier) => {
  * @param {string} nextVersion
  */
 const updateDenoImportMap = async (importMapPath, nextVersion) => {
+  let tag = getTagFromVersion(nextVersion);
   let { imports, ...json } = await jsonfile.readFile(importMapPath);
   let remixPackagesFull = remixPackages.all.map(
     (remixPackage) => `@remix-run/${remixPackage}`
@@ -168,7 +170,7 @@ const updateDenoImportMap = async (importMapPath, nextVersion) => {
       return remixPackagesFull.includes(packageName)
         ? [
             importName,
-            `https://esm.sh/${packageName}@${nextVersion}${
+            `https://esm.sh/${packageName}@${tag}${
               importPath ? `/${importPath}` : ""
             }`,
           ]
@@ -221,9 +223,25 @@ async function fileExists(filePath) {
   try {
     await fsp.stat(filePath);
     return true;
-  } catch (_) {
+  } catch {
     return false;
   }
+}
+
+/**
+ * @param {string} nextVersion
+ * @returns "latest" | "nightly" | "experimental" | string
+ */
+function getTagFromVersion(nextVersion) {
+  let prerelease = semver.prerelease(nextVersion);
+  let prereleaseTag = prerelease ? String(prerelease[0]) : undefined;
+  return prereleaseTag
+    ? prereleaseTag.includes("nightly")
+      ? "nightly"
+      : prereleaseTag.includes("experimental")
+      ? "experimental"
+      : prereleaseTag
+    : "latest";
 }
 
 exports.rootDir = rootDir;
@@ -236,3 +254,4 @@ exports.prompt = prompt;
 exports.updatePackageConfig = updatePackageConfig;
 exports.updateRemixVersion = updateRemixVersion;
 exports.incrementRemixVersion = incrementRemixVersion;
+exports.getTagFromVersion = getTagFromVersion;

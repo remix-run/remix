@@ -1,6 +1,7 @@
 const path = require("path");
 const { execSync } = require("child_process");
-const semver = require("semver");
+
+const { getTagFromVersion } = require("./utils");
 
 const buildDir = path.resolve(__dirname, "../build/node_modules");
 const packageDir = path.resolve(__dirname, "../packages");
@@ -28,15 +29,7 @@ async function run() {
     process.exit(1);
   }
 
-  let prerelease = semver.prerelease(taggedVersion);
-  let prereleaseTag = prerelease ? String(prerelease[0]) : undefined;
-  let tag = prereleaseTag
-    ? prereleaseTag.includes("nightly")
-      ? "nightly"
-      : prereleaseTag.includes("experimental")
-      ? "experimental"
-      : prereleaseTag
-    : "latest";
+  let tag = getTagFromVersion(taggedVersion);
 
   // Publish eslint config directly from the package directory
   publish(path.join(packageDir, "remix-eslint-config"), tag);
