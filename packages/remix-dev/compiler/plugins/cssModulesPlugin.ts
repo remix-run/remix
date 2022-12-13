@@ -85,6 +85,10 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
           compiledCss,
         };
 
+        // Each .module.css file ultimately resolves as a JS file that imports
+        // a virtual CSS file containing the compiled CSS, and exports the
+        // object that maps local names to generated class names. The compiled
+        // CSS file contents are passed to the virtual CSS file via pluginData.
         let contents = [
           `import "./${path.basename(absolutePath)}${compiledCssQueryString}";`,
           `export default ${JSON.stringify(exports)};`,
