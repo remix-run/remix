@@ -26,6 +26,7 @@ export function cssEntryModulePlugin(config: RemixConfig): Plugin {
           resolveDir: config.appDirectory,
           loader: "js",
           contents: [
+            // These need to be exports to avoid tree shaking
             `export * as entryClient from ${JSON.stringify(
               `./${config.entryClientFile}`
             )};`,
