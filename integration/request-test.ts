@@ -129,7 +129,7 @@ test("action + loader requests SSR POST requests", async ({ page }) => {
   expect(actionData.text).toEqual("type=ssr");
 
   loaderData = JSON.parse(await page.locator("#loader-data").innerHTML());
-  expect(loaderData.method).toEqual("POST");
+  expect(loaderData.method).toEqual("GET");
   expect(loaderData.url).toMatch(/^http:\/\/localhost:\d+\/$/);
   expect(loaderData.headers.cookie).toEqual("cookie=nomnom");
   expect(loaderData.text).toEqual("");
