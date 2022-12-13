@@ -165,18 +165,16 @@ export const createBrowserCompiler = (
         return;
       }
 
-      let compiler = await (!cssCompiler
+      // The types aren't great when combining write: false and incremental: true
+      //  so we need to assert that it's an incremental build
+      cssCompiler = (await (!cssCompiler
         ? esbuild.build({
             ...createEsbuildConfig("css", remixConfig, options),
             metafile: true,
             incremental: true,
             write: false,
           })
-        : cssCompiler.rebuild());
-
-      // The types aren't great when combining write: false and incremental: true
-      // so we're asserting that it's an incremental build
-      cssCompiler = compiler as esbuild.BuildIncremental;
+        : cssCompiler.rebuild())) as esbuild.BuildIncremental;
 
       invariant(
         cssCompiler.metafile,
@@ -184,7 +182,7 @@ export const createBrowserCompiler = (
       );
 
       let cssBundlePath: string | undefined;
-      let outputFiles = compiler.outputFiles || [];
+      let outputFiles = cssCompiler.outputFiles || [];
 
       await Promise.all(
         outputFiles.map(async (outputFile) => {
