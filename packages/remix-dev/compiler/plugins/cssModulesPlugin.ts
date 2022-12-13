@@ -1,5 +1,6 @@
 import path from "path";
 import type { Plugin, PluginBuild } from "esbuild";
+import fse from "fs-extra";
 
 import type { CompileOptions } from "../options";
 
@@ -39,61 +40,47 @@ export const cssModulesPlugin = (options: CompileOptions): Plugin => {
       build.onLoad({ filter: cssModulesFilter }, async (args) => {
         let { path: absolutePath } = args;
 
-        let lightningcss = await import("lightningcss");
+        let [{ default: postcss }, { default: postcssModules }] =
+          await Promise.all([import("postcss"), import("postcss-modules")]);
 
-        let {
-          code: compiledCssBuffer,
-          exports: exportsMeta = {},
-          map,
-        } = await lightningcss.bundleAsync({
-          // Path must be relative to ensure stable hashes.
-          // Also, we can only generate stable hashes relative to cwd right now:
-          // https://github.com/parcel-bundler/lightningcss/issues/355
-          filename: path.relative(cwd, absolutePath),
-          minify: false,
-          sourceMap: options.mode !== "production",
-          analyzeDependencies: false,
-          cssModules: {
-            pattern:
-              options.mode === "production"
-                ? "[hash]_[local]" // We need to leave the local name in production for now because of this hashing issue: https://github.com/parcel-bundler/lightningcss/issues/351
-                : "[hash]_[name]_[local]", // [local] must be at the end to support scoped grid line names: https://github.com/parcel-bundler/lightningcss/issues/351#issuecomment-1342099486
-            dashedIdents: false,
-          },
-          resolver: {
-            async resolve(specifier, originatingFile) {
-              let resolveDir = path.dirname(originatingFile);
-
-              let absolutePath = (
-                await build.resolve(specifier, {
-                  resolveDir,
-                  kind: "require-resolve",
-                })
-              ).path;
-
-              return path.relative(cwd, absolutePath); // Path must be relative to ensure stable hashes
-            },
-          },
-        });
+        let fileContents = await fse.readFile(absolutePath, "utf8");
 
         let exports: Record<string, string> = {};
 
-        for (let exportName in exportsMeta) {
-          let { name, composes } = exportsMeta[exportName];
-
-          let composedClasses = composes.length
-            ? composes.map((composedClass) => composedClass.name).join(" ")
-            : null;
-
-          exports[exportName] = `${name}${
-            composedClasses ? ` ${composedClasses}` : ""
-          }`;
-        }
-
-        let compiledCss = compiledCssBuffer.toString("utf-8");
+        let { css: compiledCss, map } = await postcss([
+          postcssModules({
+            generateScopedName:
+              options.mode === "production"
+                ? "[hash:base64:5]"
+                : "[name]__[local]__[hash:base64:5]",
+            getJSON: function (_, json) {
+              exports = json;
+            },
+            async resolve(id: string, importer: string) {
+              return (
+                await build.resolve(id, {
+                  resolveDir: path.dirname(importer),
+                  kind: "require-resolve",
+                })
+              ).path;
+            },
+          }),
+        ]).process(fileContents, {
+          from: absolutePath,
+          to: absolutePath,
+          ...(options.mode !== "production"
+            ? {
+                map: {
+                  inline: false,
+                  annotation: false,
+                  sourcesContent: true,
+                },
+              }
+            : undefined),
+        });
 
         if (map) {
-          let mapBase64 = map.toString("base64");
+          let mapBase64 = Buffer.from(map.toString()).toString("base64");
           compiledCss += `\n/*# sourceMappingURL=data:application/json;base64,${mapBase64} */`;
         }
 

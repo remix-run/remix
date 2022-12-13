@@ -46,17 +46,21 @@ test.describe("CSS Modules", () => {
             )
           }
         `,
-        ...basicFixture(),
-        ...localComposesFixture(),
-        ...importComposesFixture(),
-        ...rootRelativeImportComposesFixture(),
-        ...globalComposesFixture(),
-        ...imageFixture(),
-        ...rootRelativeImageFixture(),
+        ...basicStylesFixture(),
+        ...globalSelectorsFixture(),
+        ...nestedGlobalSelectorsFixture(),
+        ...localClassCompositionFixture(),
+        ...importedClassCompositionFixture(),
+        ...rootRelativeImportedClassCompositionFixture(),
+        ...globalClassCompositionFixture(),
+        ...localValueFixture(),
+        ...importedValueFixture(),
+        ...rootRelativeImportedValueFixture(),
+        ...imageUrlsFixture(),
+        ...rootRelativeImageUrlsFixture(),
         ...clientEntrySideEffectsFixture(),
         ...deduplicatedCssFixture(),
         ...uniqueClassNamesFixture(),
-        ...gridLineNameFixture(),
       },
     });
     appFixture = await createAppFixture(fixture);
@@ -66,25 +70,25 @@ test.describe("CSS Modules", () => {
     await appFixture.close();
   });
 
-  function basicFixture() {
+  function basicStylesFixture() {
     return {
-      "app/routes/basic-test.jsx": js`
-        import { Test } from "~/test-components/basic";
+      "app/routes/basic-styles-test.jsx": js`
+        import { Test } from "~/test-components/basic-styles";
         export default function() {
           return <Test />;
         }
       `,
-      "app/test-components/basic/index.jsx": js`
+      "app/test-components/basic-styles/index.jsx": js`
         import styles from "./styles.module.css";
         export function Test() {
           return (
-            <div data-testid="basic" className={styles.root}>
-              Basic test
+            <div data-testid="basic-styles" className={styles.root}>
+              Basic styles test
             </div>
           );
         }
       `,
-      "app/test-components/basic/styles.module.css": css`
+      "app/test-components/basic-styles/styles.module.css": css`
         .root {
           background: peachpuff;
           padding: ${TEST_PADDING_VALUE};
@@ -92,132 +96,210 @@ test.describe("CSS Modules", () => {
       `,
     };
   }
-  test("supports basic scoped styles", async ({ page }) => {
+  test("basic styles", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/basic-test");
-    let locator = await page.locator("[data-testid='basic']");
+    await app.goto("/basic-styles-test");
+    let locator = await page.locator("[data-testid='basic-styles']");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
     expect(padding).toBe(TEST_PADDING_VALUE);
   });
 
-  function localComposesFixture() {
+  function globalSelectorsFixture() {
     return {
-      "app/routes/local-composes-test.jsx": js`
-        import { Test } from "~/test-components/local-composes";
+      "app/routes/global-selector-test.jsx": js`
+        import { Test } from "~/test-components/global-selector";
         export default function() {
           return <Test />;
         }
       `,
-      "app/test-components/local-composes/index.jsx": js`
+      "app/test-components/global-selector/index.jsx": js`
         import styles from "./styles.module.css";
         export function Test() {
           return (
-            <div data-testid="local-composes" className={styles.root}>
+            <div className="global_container">
+              <div data-testid="global-selector" className={styles.root}>
+                Nested global selector test
+              </div>
+            </div>
+          );
+        }
+      `,
+      "app/test-components/global-selector/styles.module.css": css`
+        :global(.global_container) .root {
+          background: peachpuff;
+          padding: ${TEST_PADDING_VALUE};
+        }
+      `,
+    };
+  }
+  test("global selectors", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/global-selector-test");
+    let locator = await page.locator("[data-testid='global-selector']");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+
+  function nestedGlobalSelectorsFixture() {
+    return {
+      "app/routes/nested-global-selector-test.jsx": js`
+        import { Test } from "~/test-components/nested-global-selector";
+        export default function() {
+          return <Test />;
+        }
+      `,
+      "app/test-components/nested-global-selector/index.jsx": js`
+        import styles from "./styles.module.css";
+        export function Test() {
+          return (
+            <div className="global_container">
+              <div data-testid="nested-global-selector" className={styles.root}>
+                Nested global selector test
+              </div>
+            </div>
+          );
+        }
+      `,
+      "app/test-components/nested-global-selector/styles.module.css": css`
+        :global .global_container :local .root {
+          background: peachpuff;
+          padding: ${TEST_PADDING_VALUE};
+        }
+      `,
+    };
+  }
+  test("nested global selectors", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/nested-global-selector-test");
+    let locator = await page.locator("[data-testid='nested-global-selector']");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+
+  function localClassCompositionFixture() {
+    return {
+      "app/routes/local-class-composition-test.jsx": js`
+        import { Test } from "~/test-components/local-class-composition";
+        export default function() {
+          return <Test />;
+        }
+      `,
+      "app/test-components/local-class-composition/index.jsx": js`
+        import styles from "./styles.module.css";
+        export function Test() {
+          return (
+            <div data-testid="local-class-composition" className={styles.root}>
               Local composes test
             </div>
           );
         }
       `,
-      "app/test-components/local-composes/styles.module.css": css`
+      "app/test-components/local-class-composition/styles.module.css": css`
+        .padding {
+          padding: ${TEST_PADDING_VALUE};
+        }
         .root {
           background: peachpuff;
           composes: padding;
         }
-        .padding {
-          padding: ${TEST_PADDING_VALUE};
-        }
       `,
     };
   }
-  test("composes from a local classname", async ({ page }) => {
+  test("local class composition", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/local-composes-test");
-    let locator = await page.locator("[data-testid='local-composes']");
+    await app.goto("/local-class-composition-test");
+    let locator = await page.locator("[data-testid='local-class-composition']");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
     expect(padding).toBe(TEST_PADDING_VALUE);
   });
 
-  function importComposesFixture() {
+  function importedClassCompositionFixture() {
     return {
-      "app/routes/import-composes-test.jsx": js`
-        import { Test } from "~/test-components/import-composes";
+      "app/routes/imported-class-composition-test.jsx": js`
+        import { Test } from "~/test-components/imported-class-composition";
         export default function() {
           return <Test />;
         }
       `,
-      "app/test-components/import-composes/index.jsx": js`
+      "app/test-components/imported-class-composition/index.jsx": js`
         import styles from "./styles.module.css";
         export function Test() {
           return (
-            <div data-testid="import-composes" className={styles.root}>
-              Import composes test
+            <div data-testid="imported-class-composition" className={styles.root}>
+              Imported class composition test
             </div>
           );
         }
       `,
-      "app/test-components/import-composes/styles.module.css": css`
+      "app/test-components/imported-class-composition/styles.module.css": css`
         .root {
           background: peachpuff;
           composes: padding from "./import.module.css";
         }
       `,
-      "app/test-components/import-composes/import.module.css": css`
+      "app/test-components/imported-class-composition/import.module.css": css`
         .padding {
           padding: ${TEST_PADDING_VALUE};
         }
       `,
     };
   }
-  test("composes from an imported classname", async ({ page }) => {
+  test("imported class composition", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/import-composes-test");
-    let locator = await page.locator("[data-testid='import-composes']");
+    await app.goto("/imported-class-composition-test");
+    let locator = await page.locator(
+      "[data-testid='imported-class-composition']"
+    );
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
     expect(padding).toBe(TEST_PADDING_VALUE);
   });
 
-  function rootRelativeImportComposesFixture() {
+  function rootRelativeImportedClassCompositionFixture() {
     return {
-      "app/routes/root-relative-import-composes-test.jsx": js`
-        import { Test } from "~/test-components/root-relative-import-composes";
+      "app/routes/root-relative-imported-class-composition-test.jsx": js`
+        import { Test } from "~/test-components/root-relative-imported-class-composition";
         export default function() {
           return <Test />;
         }
       `,
-      "app/test-components/root-relative-import-composes/index.jsx": js`
+      "app/test-components/root-relative-imported-class-composition/index.jsx": js`
         import styles from "./styles.module.css";
         export function Test() {
           return (
-            <div data-testid="root-relative-import-composes" className={styles.root}>
-              Root import composes test
+            <div data-testid="root-relative-imported-class-composition" className={styles.root}>
+              Root relative imported class composition test
             </div>
           );
         }
       `,
-      "app/test-components/root-relative-import-composes/styles.module.css": css`
+      "app/test-components/root-relative-imported-class-composition/styles.module.css": css`
         .root {
           background: peachpuff;
-          composes: padding from "~/test-components/root-relative-import-composes/import.module.css";
+          composes: padding from "~/test-components/root-relative-imported-class-composition/import.module.css";
         }
       `,
-      "app/test-components/root-relative-import-composes/import.module.css": css`
+      "app/test-components/root-relative-imported-class-composition/import.module.css": css`
         .padding {
           padding: ${TEST_PADDING_VALUE};
         }
       `,
     };
   }
-  test("composes from root relative imported classname", async ({ page }) => {
+  test("root relative imported class composition", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/root-relative-import-composes-test");
+    await app.goto("/root-relative-imported-class-composition-test");
     let locator = await page.locator(
-      "[data-testid='root-relative-import-composes']"
+      "[data-testid='root-relative-imported-class-composition']"
     );
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
@@ -225,25 +307,25 @@ test.describe("CSS Modules", () => {
     expect(padding).toBe(TEST_PADDING_VALUE);
   });
 
-  function globalComposesFixture() {
+  function globalClassCompositionFixture() {
     return {
-      "app/routes/global-composes-test.jsx": js`
-        import { Test } from "~/test-components/global-composes";
+      "app/routes/global-class-composition-test.jsx": js`
+        import { Test } from "~/test-components/global-class-composition";
         export default function() {
           return <Test />;
         }
       `,
-      "app/test-components/global-composes/index.jsx": js`
+      "app/test-components/global-class-composition/index.jsx": js`
         import styles from "./styles.module.css";
         export function Test() {
           return (
-            <div data-testid="global-composes" className={styles.root}>
-              Global composes test
+            <div data-testid="global-class-composition" className={styles.root}>
+              Global class composition test
             </div>
           );
         }
       `,
-      "app/test-components/global-composes/styles.module.css": css`
+      "app/test-components/global-class-composition/styles.module.css": css`
         .root {
           background: peachpuff;
           composes: padding from global;
@@ -254,94 +336,217 @@ test.describe("CSS Modules", () => {
       `,
     };
   }
-  test("composes from a global classname", async ({ page }) => {
+  test("global class composition", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/global-composes-test");
-    let locator = await page.locator("[data-testid='global-composes']");
+    await app.goto("/global-class-composition-test");
+    let locator = await page.locator(
+      "[data-testid='global-class-composition']"
+    );
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
     expect(padding).toBe(TEST_PADDING_VALUE);
   });
 
-  function imageFixture() {
+  function localValueFixture() {
     return {
-      "app/routes/image-test.jsx": js`
-        import { Test } from "~/test-components/image";
+      "app/routes/local-value-test.jsx": js`
+        import { Test } from "~/test-components/local-value";
         export default function() {
           return <Test />;
         }
       `,
-      "app/test-components/image/index.jsx": js`
+      "app/test-components/local-value/index.jsx": js`
         import styles from "./styles.module.css";
         export function Test() {
           return (
-            <div data-testid="image" className={styles.root}>
-              Image test
+            <div data-testid="local-value" className={styles.root}>
+              Local @value test
             </div>
           );
         }
       `,
-      "app/test-components/image/styles.module.css": css`
+      "app/test-components/local-value/styles.module.css": css`
+        @value padding: ${TEST_PADDING_VALUE};
+        .root {
+          background: peachpuff;
+          padding: padding;
+        }
+      `,
+    };
+  }
+  test("local @value", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/local-value-test");
+    let locator = await page.locator("[data-testid='local-value']");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+
+  function importedValueFixture() {
+    return {
+      "app/routes/imported-value-test.jsx": js`
+        import { Test } from "~/test-components/imported-value";
+        export default function() {
+          return <Test />;
+        }
+      `,
+      "app/test-components/imported-value/index.jsx": js`
+        import styles from "./styles.module.css";
+        export function Test() {
+          return (
+            <div data-testid="imported-value" className={styles.root}>
+              Imported @value test
+            </div>
+          );
+        }
+      `,
+      "app/test-components/imported-value/styles.module.css": css`
+        @value padding from "./values.module.css";
+        .root {
+          background: peachpuff;
+          padding: padding;
+        }
+      `,
+      "app/test-components/imported-value/values.module.css": css`
+        @value padding: ${TEST_PADDING_VALUE};
+      `,
+    };
+  }
+  test("imported @value", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/imported-value-test");
+    let locator = await page.locator("[data-testid='imported-value']");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+
+  function rootRelativeImportedValueFixture() {
+    return {
+      "app/routes/root-relative-imported-value-test.jsx": js`
+        import { Test } from "~/test-components/root-relative-imported-value";
+        export default function() {
+          return <Test />;
+        }
+      `,
+      "app/test-components/root-relative-imported-value/index.jsx": js`
+        import styles from "./styles.module.css";
+        export function Test() {
+          return (
+            <div data-testid="root-relative-imported-value" className={styles.root}>
+              Root relative imported @value test
+            </div>
+          );
+        }
+      `,
+      "app/test-components/root-relative-imported-value/styles.module.css": css`
+        @value padding from "~/test-components/root-relative-imported-value/values.module.css";
+        .root {
+          background: peachpuff;
+          padding: padding;
+        }
+      `,
+      "app/test-components/root-relative-imported-value/values.module.css": css`
+        @value padding: ${TEST_PADDING_VALUE};
+      `,
+    };
+  }
+  test("root relative imported @value", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/root-relative-imported-value-test");
+    let locator = await page.locator(
+      "[data-testid='root-relative-imported-value']"
+    );
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+
+  function imageUrlsFixture() {
+    return {
+      "app/routes/image-urls-test.jsx": js`
+        import { Test } from "~/test-components/image-urls";
+        export default function() {
+          return <Test />;
+        }
+      `,
+      "app/test-components/image-urls/index.jsx": js`
+        import styles from "./styles.module.css";
+        export function Test() {
+          return (
+            <div data-testid="image-urls" className={styles.root}>
+              Image URLs test
+            </div>
+          );
+        }
+      `,
+      "app/test-components/image-urls/styles.module.css": css`
         .root {
           background-color: peachpuff;
           background-image: url(./image.svg);
           padding: ${TEST_PADDING_VALUE};
         }
       `,
-      "app/test-components/image/image.svg": `
+      "app/test-components/image-urls/image.svg": `
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
           <circle cx="50" cy="50" r="50" fill="coral" />
         </svg>
       `,
     };
   }
-  test("supports image URLs", async ({ page }) => {
+  test("image URLs", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/image-test");
-    let locator = await page.locator("[data-testid='image']");
+    await app.goto("/image-urls-test");
+    let locator = await page.locator("[data-testid='image-urls']");
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
     );
     expect(backgroundImage).toContain(".svg");
   });
 
-  function rootRelativeImageFixture() {
+  function rootRelativeImageUrlsFixture() {
     return {
-      "app/routes/root-relative-image-test.jsx": js`
-        import { Test } from "~/test-components/root-relative-image";
+      "app/routes/root-relative-image-urls-test.jsx": js`
+        import { Test } from "~/test-components/root-relative-image-urls";
         export default function() {
           return <Test />;
         }
       `,
-      "app/test-components/root-relative-image/index.jsx": js`
+      "app/test-components/root-relative-image-urls/index.jsx": js`
         import styles from "./styles.module.css";
         export function Test() {
           return (
-            <div data-testid="root-relative-image" className={styles.root}>
-              Root relative image test
+            <div data-testid="root-relative-image-urls" className={styles.root}>
+              Root relative image URLs test
             </div>
           );
         }
       `,
-      "app/test-components/root-relative-image/styles.module.css": css`
+      "app/test-components/root-relative-image-urls/styles.module.css": css`
         .root {
           background-color: peachpuff;
-          background-image: url(~/test-components/root-relative-image/image.svg);
+          background-image: url(~/test-components/root-relative-image-urls/image.svg);
           padding: ${TEST_PADDING_VALUE};
         }
       `,
-      "app/test-components/root-relative-image/image.svg": `
+      "app/test-components/root-relative-image-urls/image.svg": `
         <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
           <circle cx="50" cy="50" r="50" fill="coral" />
         </svg>
       `,
     };
   }
-  test("supports root relative image URLs", async ({ page }) => {
+  test("root relative image URLs", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/root-relative-image-test");
-    let locator = await page.locator("[data-testid='root-relative-image']");
+    await app.goto("/root-relative-image-urls-test");
+    let locator = await page.locator(
+      "[data-testid='root-relative-image-urls']"
+    );
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
     );
@@ -391,7 +596,7 @@ test.describe("CSS Modules", () => {
       `,
     };
   }
-  test("supports client entry side effects", async ({ page }) => {
+  test("client entry side effects", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/client-entry-side-effects-test");
     let locator = await page.locator(
@@ -447,9 +652,7 @@ test.describe("CSS Modules", () => {
       `,
     };
   }
-  test("deduplicates CSS bundle contents in production build", async ({
-    page,
-  }) => {
+  test("deduplicated CSS", async ({ page }) => {
     // Using `composes: xxx from "./another.module.css"` leads
     // to duplicate CSS in the final bundle prior to optimization.
     // This test ensures the optimization does in fact happen,
@@ -513,50 +716,11 @@ test.describe("CSS Modules", () => {
       `,
     };
   }
-  test("generates unique class names per file", async ({ page }) => {
-    // This test is designed to catch this issue:
-    // https://github.com/parcel-bundler/lightningcss/issues/351
+  test("unique class names", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/unique-class-names-test");
     let element = await app.getElement("[data-testid='unique-class-names']");
     let classNames = element.attr("class")?.split(" ");
     expect(new Set(classNames).size).toBe(2);
-  });
-
-  function gridLineNameFixture() {
-    return {
-      "app/routes/grid-line-name-test.jsx": js`
-        import { Test } from "~/test-components/grid-line-name";
-        export default function() {
-          return <Test />;
-        }
-      `,
-      "app/test-components/grid-line-name/index.jsx": js`
-        import styles from "./styles.module.css";
-        export function Test() {
-          return (
-            <div data-testid="grid-line-name" className={styles.root}>
-              Grid line name test
-            </div>
-          );
-        }
-      `,
-      "app/test-components/grid-line-name/styles.module.css": css`
-        .root {
-          grid-column-start: test-start;
-        }
-      `,
-    };
-  }
-  test("supports grid line names", async ({ page }) => {
-    // This test is designed to catch this issue:
-    // https://github.com/parcel-bundler/lightningcss/issues/351#issuecomment-1342099486
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/grid-line-name-test");
-    let locator = await page.locator("[data-testid='grid-line-name']");
-    let gridColumnStart = await locator.evaluate(
-      (element) => window.getComputedStyle(element).gridColumnStart
-    );
-    expect(gridColumnStart.endsWith("-start")).toBeTruthy();
   });
 });
