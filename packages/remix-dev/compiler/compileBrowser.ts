@@ -97,7 +97,10 @@ const createEsbuildConfig = (
       ? [cssEntryModulePlugin(config)]
       : []),
     ...(isCssModulesEnabled(config) ? [cssModulesPlugin(options)] : []),
-    cssFilePlugin(options),
+    cssFilePlugin({
+      mode: options.mode,
+      rootDirectory: config.rootDirectory,
+    }),
     urlImportsPlugin(),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
