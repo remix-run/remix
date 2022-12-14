@@ -7,7 +7,7 @@ function isEqual<A, B>(
 ): void {}
 
 // not sure why `eslint` thinks the `T` generic is not used...
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 type LoaderData<T> = ReturnType<typeof useLoaderData<T>>;
 
 describe("useLoaderData", () => {
