@@ -130,6 +130,12 @@ The `serverBuildTarget` can be one of the following:
 - [`"node-cjs"`][node-cjs]
 - [`"vercel"`][vercel]
 
+Alternatively, it may also be set to the following:
+
+- [`"fastly-compute-js"`][fastly-compute-js]
+  Use this value to use Remix with [@fastly/remix-compute-js][fastly-remix-compute-js]
+
+
 ## serverDependenciesToBundle
 
 A list of regex patterns that determines if a module is transpiled and included in the server bundle. This can be useful when consuming ESM only packages in a CJS build.
@@ -179,6 +185,8 @@ There are a few conventions that Remix uses you should be aware of.
 [netlify]: https://www.netlify.com
 [node-cjs]: https://nodejs.org/en
 [vercel]: https://vercel.com
+[fastly-compute-js]: https://www.fastly.com/products/edge-compute
+[fastly-remix-compute-js]: https://github.com/fastly/remix-compute-js
 [dilum-sanjaya]: https://twitter.com/DilumSanjaya
 [an-awesome-visualization]: https://remix-routing-demo.netlify.app
 [remix-dev]: ../other-api/dev#remix-dev
