@@ -46,7 +46,8 @@
     "changeset:release": "yarn build --tsc --publish && changeset publish",
     "version": "node ./scripts/version.js",
     "version:experimental": "node ./scripts/version.js experimental",
-    "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\""
+    "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\"",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@babel/core": "^7.18.6",
