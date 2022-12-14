@@ -9,7 +9,7 @@ import type { AppLoadContext } from "./data";
 import type { ServerBuild } from "./build";
 import type { EntryContext } from "./entry";
 import { createEntryRouteModules } from "./entry";
-import { serializeError } from "./errors";
+import { serializeError, serializeErrors } from "./errors";
 import { getDocumentHeadersRR } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
@@ -114,6 +114,7 @@ async function handleDataRequestRR(
       // next URL, and then "follow" the redirect manually on the client.
       let headers = new Headers(response.headers);
       headers.set("X-Remix-Redirect", headers.get("Location")!);
+      headers.set("X-Remix-Status", response.status);
       headers.delete("Location");
       if (response.headers.get("Set-Cookie") !== null) {
         headers.set("X-Remix-Revalidate", "yes");
@@ -237,7 +238,14 @@ async function handleDocumentRequestRR(
     manifest: build.assets,
     routeModules: createEntryRouteModules(build.routes),
     staticHandlerContext: context,
-    serverHandoffString: createServerHandoffString(context),
+    serverHandoffString: createServerHandoffString({
+      state: {
+        loaderData: context.loaderData,
+        actionData: context.actionData,
+        errors: serializeErrors(context.errors),
+      },
+      future: build.future,
+    }),
     future: build.future,
   };
 
@@ -251,7 +259,8 @@ async function handleDocumentRequestRR(
     );
   } catch (error: unknown) {
     if (serverMode !== ServerMode.Test) {
-      // TODO Do we want to log this here?
+      // TODO Do we want to log this here?  Can we get it to not log on
+      // integration tests runs?
       console.log("Error in entry.server handleDocumentRequest:", error);
     }
 
@@ -269,7 +278,14 @@ async function handleDocumentRequestRR(
     entryContext = {
       ...entryContext,
       staticHandlerContext: context,
-      serverHandoffString: createServerHandoffString(context),
+      serverHandoffString: createServerHandoffString({
+        state: {
+          loaderData: context.loaderData,
+          actionData: context.actionData,
+          errors: serializeErrors(context.errors),
+        },
+        future: build.future,
+      }),
     };
 
     try {

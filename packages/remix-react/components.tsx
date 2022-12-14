@@ -7,6 +7,8 @@ import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
   AgnosticDataRouteObject,
+  ErrorResponse,
+  Navigation,
 } from "@remix-run/router";
 import type {
   LinkProps,
@@ -26,8 +28,10 @@ import {
   isRouteErrorResponse,
   matchRoutes,
   useFetcher as useFetcherRR,
+  useFetchers as useFetchersRR,
   useActionData as useActionDataRR,
   useLoaderData as useLoaderDataRR,
+  useMatches as useMatchesRR,
   useLocation,
   useNavigation,
   useHref,
@@ -54,13 +58,19 @@ import {
 } from "./links";
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml } from "./markup";
-import type { RouteData } from "./routeData";
 import type {
   RouteMatchWithMeta,
   V1_HtmlMetaDescriptor,
   V2_HtmlMetaDescriptor,
 } from "./routeModules";
-import type { Transition, Fetcher } from "./transition";
+import type {
+  Transition,
+  Fetcher,
+  FetcherStates,
+  LoaderSubmission,
+  ActionSubmission,
+  TransitionStates,
+} from "./transition";
 import { IDLE_TRANSITION, IDLE_FETCHER } from "./transition";
 
 function useDataRouterContext() {
@@ -145,6 +155,15 @@ export function RemixRouteError({ id }: { id: string }) {
   let location = useLocation();
   let { CatchBoundary, ErrorBoundary } = routeModules[id];
 
+  // POC for potential v2 error boundary handling
+  // if (future.v2_errorBoundary) {
+  //   // Provide defaults for the root route if they are not present
+  //   if (id === "root") {
+  //     ErrorBoundary ||= RemixRootDefaultNewErrorBoundary;
+  //   }
+  //   return <ErrorBoundary />
+  // }
+
   // Provide defaults for the root route if they are not present
   if (id === "root") {
     CatchBoundary ||= RemixRootDefaultCatchBoundary;
@@ -152,26 +171,39 @@ export function RemixRouteError({ id }: { id: string }) {
   }
 
   if (isRouteErrorResponse(error)) {
-    if (error?.error && error.status !== 404) {
+    let tError = error as any;
+    if (
+      tError?.error instanceof Error &&
+      tError.status !== 404 &&
+      ErrorBoundary
+    ) {
+      // Internal framework-thrown ErrorResponses
       return (
-        // TODO: Handle error type?
         <RemixErrorBoundary
           location={location}
-          component={ErrorBoundary}
-          error={error.error}
+          component={ErrorBoundary!}
+          error={tError.error}
         />
       );
     }
-    return <RemixCatchBoundary component={CatchBoundary} catch={error} />;
+    if (CatchBoundary) {
+      // User-thrown ErrorResponses
+      return (
+        <RemixCatchBoundary
+          component={CatchBoundary!}
+          catch={error as ErrorResponse}
+        />
+      );
+    }
   }
 
-  if (!isRouteErrorResponse(error) && ErrorBoundary) {
+  if (error instanceof Error && ErrorBoundary) {
+    // User- or framework-thrown Errors
     return (
-      // TODO: Handle error type?
       <RemixErrorBoundary
         location={location}
         component={ErrorBoundary}
-        error={error}
+        error={error as Error}
       />
     );
   }
@@ -693,7 +725,7 @@ function V2Meta() {
 
 export function Meta() {
   let { future } = useRemixContext();
-  return future.v2_meta ? <V2Meta /> : <V1Meta />;
+  return future?.v2_meta ? <V2Meta /> : <V1Meta />;
 }
 
 /**
@@ -764,6 +796,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
         />
         <script
           {...props}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={createHtml(routeModulesScript)}
           type="module"
           async
@@ -853,7 +886,7 @@ export function useBeforeUnload(
   }, [callback]);
 }
 
-// TODO: Handle this typing
+// TODO: Can this be re-exported from RR?
 export interface RouteMatch {
   /**
    * The id of the matched route
@@ -872,13 +905,30 @@ export interface RouteMatch {
   /**
    * Any route data associated with the matched route
    */
-  data: RouteData;
+  data: any;
   /**
    * The exported `handle` object of the matched route.
    *
    * @see https://remix.run/docs/api/conventions#handle
    */
   handle: undefined | { [key: string]: any };
+}
+
+export function useMatches(): RouteMatch[] {
+  let { routeModules } = useRemixContext();
+  let matches = useMatchesRR();
+  return matches.map((match) => {
+    let remixMatch: RouteMatch = {
+      id: match.id,
+      pathname: match.pathname,
+      params: match.params,
+      data: match.data,
+      // Need to grab handle here since we don't have it at client-side route
+      // creation time
+      handle: routeModules[match.id].handle,
+    };
+    return remixMatch;
+  });
 }
 
 /**
@@ -904,11 +954,203 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  * navigation indicators and optimistic UI on data mutations.
  *
  * @see https://remix.run/api/remix#usetransition
+ * @deprecated Deprecated in favor of useNavigation
  */
 export function useTransition(): Transition {
-  // TODO: For SSR we can just return IDLE_TRANSITION for now, we'll handle
-  // this as part of hydration work
-  return IDLE_TRANSITION;
+  let navigation = useNavigation();
+
+  // Have to avoid useMemo here to avoid introducing unstable transition object
+  // identities in StrictMode, since navigation will be stable but using
+  // [navigation] as the dependency array will _still_ re-run on concurrent
+  // renders, and that will create a new object identify for transition
+  let lastNavigationRef = React.useRef<Navigation>();
+  let lastTransitionRef = React.useRef<Transition>();
+
+  if (lastTransitionRef.current && lastNavigationRef.current === navigation) {
+    return lastTransitionRef.current;
+  }
+
+  lastNavigationRef.current = navigation;
+  lastTransitionRef.current = convertNavigationToTransition(navigation);
+
+  return lastTransitionRef.current;
+}
+
+function convertNavigationToTransition(navigation: Navigation): Transition {
+  let { location, state, formMethod, formAction, formEncType, formData } =
+    navigation;
+
+  if (!location) {
+    return IDLE_TRANSITION;
+  }
+
+  let isActionSubmission =
+    formMethod != null &&
+    ["POST", "PUT", "PATCH", "DELETE"].includes(formMethod.toUpperCase());
+
+  if (
+    state === "submitting" &&
+    formMethod &&
+    formAction &&
+    formEncType &&
+    formData
+  ) {
+    if (isActionSubmission) {
+      // Actively submitting to an action
+      let transition: TransitionStates["SubmittingAction"] = {
+        location,
+        state,
+        submission: {
+          method: formMethod.toUpperCase() as ActionSubmission["method"],
+          action: formAction,
+          encType: formEncType,
+          formData: formData,
+          key: location.key,
+        },
+        type: "actionSubmission",
+      };
+      return transition;
+    } else {
+      // @remix-run/router doesn't mark loader submissions as state: "submitting"
+      invariant(
+        false,
+        "Encountered an unexpected navigation scenario in useTransition()"
+      );
+    }
+  }
+
+  if (state === "loading") {
+    let { _isRedirect, _isFetchActionRedirect } = location.state || {};
+    if (formMethod && formAction && formEncType && formData) {
+      if (!_isRedirect) {
+        if (isActionSubmission) {
+          // We're reloading the same location after an action submission
+          let transition: TransitionStates["LoadingAction"] = {
+            location,
+            state,
+            submission: {
+              method: formMethod.toUpperCase() as ActionSubmission["method"],
+              action: formAction,
+              encType: formEncType,
+              formData: formData,
+              key: location.key,
+            },
+            type: "actionReload",
+          };
+          return transition;
+        } else {
+          // The new router fixes a bug in useTransition where the submission
+          // "action" represents the request URL not the state of the <form> in
+          // the DOM.  Back-port it here to maintain behavior, but useNavigation
+          // will fix this bug.
+          let url = new URL(formAction, window.location.origin);
+
+          // This typing override should be safe since this is only running for
+          // GET submissions and over in @remix-run/router we have an invariant
+          // if you have any non-string values in your FormData when we attempt
+          // to convert them to URLSearchParams
+          url.search = new URLSearchParams(
+            formData.entries() as unknown as [string, string][]
+          ).toString();
+
+          // Actively "submitting" to a loader
+          let transition: TransitionStates["SubmittingLoader"] = {
+            location,
+            state: "submitting",
+            submission: {
+              method: formMethod.toUpperCase() as LoaderSubmission["method"],
+              action: url.pathname + url.search,
+              encType: formEncType,
+              formData: formData,
+              key: location.key,
+            },
+            type: "loaderSubmission",
+          };
+          return transition;
+        }
+      } else {
+        // Redirecting after a submission
+        if (isActionSubmission) {
+          let transition: TransitionStates["LoadingActionRedirect"] = {
+            location,
+            state,
+            submission: {
+              method: formMethod.toUpperCase() as ActionSubmission["method"],
+              action: formAction,
+              encType: formEncType,
+              formData: formData,
+              key: location.key,
+            },
+            type: "actionRedirect",
+          };
+          return transition;
+        } else {
+          let transition: TransitionStates["LoadingLoaderSubmissionRedirect"] =
+            {
+              location,
+              state,
+              submission: {
+                method: formMethod.toUpperCase() as LoaderSubmission["method"],
+                action: formAction,
+                encType: formEncType,
+                formData: formData,
+                key: location.key,
+              },
+              type: "loaderSubmissionRedirect",
+            };
+          return transition;
+        }
+      }
+    } else if (_isRedirect) {
+      if (_isFetchActionRedirect) {
+        let transition: TransitionStates["LoadingFetchActionRedirect"] = {
+          location,
+          state,
+          submission: undefined,
+          type: "fetchActionRedirect",
+        };
+        return transition;
+      } else {
+        let transition: TransitionStates["LoadingRedirect"] = {
+          location,
+          state,
+          submission: undefined,
+          type: "normalRedirect",
+        };
+        return transition;
+      }
+    }
+  }
+
+  // If no scenarios above match, then it's a normal load!
+  let transition: TransitionStates["Loading"] = {
+    location,
+    state: "loading",
+    submission: undefined,
+    type: "normalLoad",
+  };
+  return transition;
+}
+
+/**
+ * Provides all fetchers currently on the page. Useful for layouts and parent
+ * routes that need to provide pending/optimistic UI regarding the fetch.
+ *
+ * @see https://remix.run/api/remix#usefetchers
+ */
+export function useFetchers(): Fetcher[] {
+  let fetchers = useFetchersRR();
+  return fetchers.map((f) =>
+    convertRouterFetcherToRemixFetcher({
+      state: f.state,
+      data: f.data,
+      formMethod: f.formMethod,
+      formAction: f.formAction,
+      formData: f.formData,
+      formEncType: f.formEncType,
+      " _hasFetcherDoneAnything ": f[" _hasFetcherDoneAnything "],
+    })
+  );
 }
 
 export type FetcherWithComponents<TData> = Fetcher<TData> & {
@@ -929,16 +1171,177 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
   SerializeFrom<TData>
 > {
   let fetcherRR = useFetcherRR();
-  let { Form, submit, load } = fetcherRR;
-
-  // TODO: For SSR we can just return IDLE_FETCHER for now, we'll handle
-  // this as part of hydration work
+  let remixFetcher = convertRouterFetcherToRemixFetcher({
+    state: fetcherRR.state,
+    data: fetcherRR.data,
+    formMethod: fetcherRR.formMethod,
+    formAction: fetcherRR.formAction,
+    formData: fetcherRR.formData,
+    formEncType: fetcherRR.formEncType,
+    " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
+  });
   return {
-    Form,
-    submit,
-    load,
-    ...IDLE_FETCHER,
+    ...remixFetcher,
+    load: fetcherRR.load,
+    submit: fetcherRR.submit,
+    Form: fetcherRR.Form,
   };
+}
+
+function convertRouterFetcherToRemixFetcher(
+  fetcherRR: Omit<ReturnType<typeof useFetcherRR>, "load" | "submit" | "Form">
+): Fetcher {
+  let { state, formMethod, formAction, formEncType, formData, data } =
+    fetcherRR;
+
+  let isActionSubmission =
+    formMethod != null &&
+    ["POST", "PUT", "PATCH", "DELETE"].includes(formMethod.toUpperCase());
+
+  if (state === "idle") {
+    if (fetcherRR[" _hasFetcherDoneAnything "] === true) {
+      let fetcher: FetcherStates["Done"] = {
+        state: "idle",
+        type: "done",
+        submission: undefined,
+        data,
+      };
+      return fetcher;
+    } else {
+      let fetcher: FetcherStates["Idle"] = IDLE_FETCHER;
+      return fetcher;
+    }
+  }
+
+  if (
+    state === "submitting" &&
+    formMethod &&
+    formAction &&
+    formEncType &&
+    formData
+  ) {
+    if (isActionSubmission) {
+      // Actively submitting to an action
+      let fetcher: FetcherStates["SubmittingAction"] = {
+        state,
+        type: "actionSubmission",
+        submission: {
+          method: formMethod.toUpperCase() as ActionSubmission["method"],
+          action: formAction,
+          encType: formEncType,
+          formData: formData,
+          // TODO: this is created as a random hash value in useSubmitImpl in
+          // Remix today. We do not have this key in react router as we
+          // flattened submissions down onto the fetcher.  We can't recreate in
+          // this back-compat layer in a stable manner for useFetchers because
+          // we don't have a stable fetcher identity.  So we could:
+          //  - Expose the fetcher key from the router (might make sense if
+          //    we're considering adding useFetcher({ key }) anyway
+          //  - Expose a hidden field with a stable identifier on the fetcher
+          //    like we did for _hasFetcherDoneAnything
+          key: "todo-not-implemented-yet",
+        },
+        data: undefined,
+      };
+      return fetcher;
+    } else {
+      invariant(false, "nope");
+    }
+  }
+
+  if (state === "loading") {
+    if (formMethod && formAction && formEncType && formData) {
+      if (isActionSubmission) {
+        if (data) {
+          // In a loading state but we have data - must be an actionReload
+          let fetcher: FetcherStates["ReloadingAction"] = {
+            state,
+            type: "actionReload",
+            submission: {
+              method: formMethod.toUpperCase() as ActionSubmission["method"],
+              action: formAction,
+              encType: formEncType,
+              formData: formData,
+              // TODO: this is created as a random hash value in useSubmitImpl in
+              // Remix today. We do not have this key in react router as we
+              // flattened submissions down onto the fetcher.  We can't recreate in
+              // this back-compat layer in a stable manner for useFetchers because
+              // we don't have a stable fetcher identity.  So we could:
+              //  - Expose the fetcher key from the router (might make sense if
+              //    we're considering adding useFetcher({ key }) anyway
+              //  - Expose a hidden field with a stable identifier on the fetcher
+              //    like we did for _hasFetcherDoneAnything
+              key: "todo-not-implemented-yet",
+            },
+            data,
+          };
+          return fetcher;
+        } else {
+          let fetcher: FetcherStates["LoadingActionRedirect"] = {
+            state,
+            type: "actionRedirect",
+            submission: {
+              method: formMethod.toUpperCase() as ActionSubmission["method"],
+              action: formAction,
+              encType: formEncType,
+              formData: formData,
+              // TODO???
+              key: "todo-what-is-this?",
+            },
+            data: undefined,
+          };
+          return fetcher;
+        }
+      } else {
+        // The new router fixes a bug in useTransition where the submission
+        // "action" represents the request URL not the state of the <form> in
+        // the DOM.  Back-port it here to maintain behavior, but useNavigation
+        // will fix this bug.
+        let url = new URL(formAction, window.location.origin);
+
+        // This typing override should be safe since this is only running for
+        // GET submissions and over in @remix-run/router we have an invariant
+        // if you have any non-string values in your FormData when we attempt
+        // to convert them to URLSearchParams
+        url.search = new URLSearchParams(
+          formData.entries() as unknown as [string, string][]
+        ).toString();
+
+        // Actively "submitting" to a loader
+        let fetcher: FetcherStates["SubmittingLoader"] = {
+          state: "submitting",
+          type: "loaderSubmission",
+          submission: {
+            method: formMethod.toUpperCase() as LoaderSubmission["method"],
+            action: url.pathname + url.search,
+            encType: formEncType,
+            formData: formData,
+            // TODO: this is created as a random hash value in useSubmitImpl in
+            // Remix today. We do not have this key in react router as we
+            // flattened submissions down onto the fetcher.  We can't recreate in
+            // this back-compat layer in a stable manner for useFetchers because
+            // we don't have a stable fetcher identity.  So we could:
+            //  - Expose the fetcher key from the router (might make sense if
+            //    we're considering adding useFetcher({ key }) anyway
+            //  - Expose a hidden field with a stable identifier on the fetcher
+            //    like we did for _hasFetcherDoneAnything
+            key: "todo-not-implemented-yet",
+          },
+          data: undefined,
+        };
+        return fetcher;
+      }
+    }
+  }
+
+  // If all else fails, it's a normal load!
+  let fetcher: FetcherStates["Loading"] = {
+    state: "loading",
+    type: "normalLoad",
+    submission: undefined,
+    data: undefined,
+  };
+  return fetcher;
 }
 
 // Dead Code Elimination magic for production builds.
