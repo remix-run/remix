@@ -89,7 +89,16 @@ module.exports = {
   "no-new-object": WARN,
   "no-octal": WARN,
   "no-redeclare": ERROR,
-  "no-restricted-imports": [WARN, ...replaceRemixImportsOptions],
+  "no-restricted-imports": [
+    WARN,
+    ...replaceRemixImportsOptions,
+    {
+      importNames: ["useTransition"],
+      message:
+        "useTransition is deprecated in favor of useNavigation as of v1.9.0.",
+      name: "@remix-run/react",
+    },
+  ],
   "no-script-url": WARN,
   "no-self-assign": WARN,
   "no-self-compare": WARN,

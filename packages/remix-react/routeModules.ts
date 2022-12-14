@@ -1,11 +1,15 @@
 import type { ComponentType } from "react";
-import type { Params, Location } from "react-router-dom";
+import type {
+  DataRouteMatch,
+  Params,
+  Location,
+  ShouldRevalidateFunction,
+} from "react-router-dom";
 
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { ClientRoute, EntryRoute } from "./routes";
 import type { RouteData } from "./routeData";
-import type { RouteMatch as BaseRouteMatch } from "./routeMatching";
 import type { Submission } from "./transition";
 
 export interface RouteModules {
@@ -23,7 +27,7 @@ export interface RouteModule {
     | V1_HtmlMetaDescriptor
     | V2_MetaFunction
     | V2_HtmlMetaDescriptor[];
-  unstable_shouldReload?: ShouldReloadFunction;
+  shouldRevalidate?: ShouldRevalidateFunction;
 }
 
 /**
@@ -68,6 +72,8 @@ export interface V1_MetaFunction {
 
 // TODO: Replace in v2
 export type MetaFunction = V1_MetaFunction;
+
+type BaseRouteMatch<Route> = DataRouteMatch;
 
 export interface RouteMatchWithMeta<Route> extends BaseRouteMatch<Route> {
   meta: V2_HtmlMetaDescriptor[];
