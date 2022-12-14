@@ -1,5 +1,13 @@
 # `@remix-run/deno`
 
+## 1.9.0-pre.0
+
+### Patch Changes
+
+- Fix types for request handler context ([#4715](https://github.com/remix-run/remix/pull/4715))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.9.0-pre.0`
+
 ## 1.8.2
 
 ### Patch Changes

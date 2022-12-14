@@ -20,5 +20,20 @@
     "@remix-run/testing": "1.8.2",
     "@remix-run/vercel": "1.8.2"
   },
-  "changesets": []
+  "changesets": [
+    "big-spoons-grab",
+    "clean-clocks-float",
+    "early-camels-guess",
+    "fresh-shrimps-join",
+    "late-files-trade",
+    "late-peas-hang",
+    "light-sheep-give",
+    "metal-impalas-brake",
+    "mighty-grapes-laugh",
+    "moody-pants-own",
+    "poor-shrimps-boil",
+    "sharp-paws-nail",
+    "thin-oranges-boil",
+    "weak-beds-thank"
+  ]
 }

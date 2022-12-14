@@ -1,5 +1,25 @@
 # `@remix-run/react`
 
+## 1.9.0-pre.0
+
+### Patch Changes
+
+- Update `@remix-run/react` to use `Router` from `react-router-dom@6.4.4` ([#4731](https://github.com/remix-run/remix/pull/4731))
+- Allow pass-through props to be passed to the script rendered by `ScrollRestoration` ([#2879](https://github.com/remix-run/remix/pull/2879))
+- Bump RR deps ([#4868](https://github.com/remix-run/remix/pull/4868))
+- adds a new testing package to allow easier testing of components using Remix specific apis like useFetcher, useActionData, etc. ([#4539](https://github.com/remix-run/remix/pull/4539))
+- Fixed a problem with live reload and firefox infinitely reloading the page ([#4725](https://github.com/remix-run/remix/pull/4725))
+
+  The problem is:
+
+  1. Firefox is calling `ws.onclose` immediately upon connecting (?!)
+  2. Then we’re trying to reconnect, and upon reconnection, we reload the page.
+  3. Firefox then calls `ws.onclose` again after reconnecting and the loop starts over
+
+  This fix is to check `event.code === 1006` before actually trying to reconnect and the reload the page. 1006 means the connection was closed abnormally (https://www.rfc-editor.org/rfc/rfc6455#section-7.4.1). In our case, that means the server was shut down in local dev and then the socket can reconnect again when the server is back up.
+
+  It’s unclear to me why Firefox is calling `onclose` immediately upon connecting to the web socket, but it does.
+
 ## 1.8.2
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.8.2) for an overview of all changes in v1.8.2.
