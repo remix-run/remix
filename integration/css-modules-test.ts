@@ -29,7 +29,7 @@ test.describe("CSS Modules", () => {
         `,
         "app/root.jsx": js`
           import { Links, Outlet } from "@remix-run/react";
-          import cssBundleHref from "@remix-run/css-bundle";
+          import { cssBundleHref } from "@remix-run/css-bundle";
           export function links() {
             return [{ rel: "stylesheet", href: cssBundleHref }];
           }
