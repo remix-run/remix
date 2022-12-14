@@ -1,23 +1,22 @@
 import type { Plugin } from "esbuild";
 
 import type { RemixConfig } from "../../config";
-import { cssBuildVirtualModule } from "../virtualModules";
+
+export const cssBundleEntryModuleId = "__remix_cssBundleEntryModule__";
+const filter = new RegExp(`^${cssBundleEntryModuleId}$`);
 
 /**
- * Creates a virtual module called `@remix-run/dev/css-build` that imports all
- * browser build entry points so that any reachable CSS can be included in a
- * single file at the end of the build.
+ * Creates a virtual module that imports all browser build entry points so that
+ * all reachable CSS can be included in a single file at the end of the build.
  */
-export function cssEntryModulePlugin(config: RemixConfig): Plugin {
-  let filter = cssBuildVirtualModule.filter;
-
+export function cssBundleEntryModulePlugin(config: RemixConfig): Plugin {
   return {
-    name: "css-entry-module",
+    name: "css-bundle-entry-module",
     setup(build) {
       build.onResolve({ filter }, ({ path }) => {
         return {
           path,
-          namespace: "css-entry-module",
+          namespace: "css-bundle-entry-module",
         };
       });
 

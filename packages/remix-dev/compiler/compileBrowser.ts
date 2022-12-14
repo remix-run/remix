@@ -19,8 +19,10 @@ import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
 import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
-import { cssEntryModulePlugin } from "./plugins/cssEntryModulePlugin";
-import { cssBuildVirtualModule } from "./virtualModules";
+import {
+  cssBundleEntryModulePlugin,
+  cssBundleEntryModuleId,
+} from "./plugins/cssBundleEntryModulePlugin";
 import { writeFileSafe } from "./utils/fs";
 import invariant from "../invariant";
 
@@ -72,7 +74,7 @@ const createEsbuildConfig = (
 
   if (build === "css") {
     entryPoints = {
-      "css-bundle": cssBuildVirtualModule.id,
+      "css-bundle": cssBundleEntryModuleId,
     };
   } else {
     entryPoints = {
@@ -91,7 +93,7 @@ const createEsbuildConfig = (
     deprecatedRemixPackagePlugin(options.onWarning),
     ...(config.future.unstable_cssModules
       ? [
-          ...(build === "css" ? [cssEntryModulePlugin(config)] : []),
+          ...(build === "css" ? [cssBundleEntryModulePlugin(config)] : []),
           cssModulesPlugin({
             mode: options.mode,
             rootDirectory: config.rootDirectory,
