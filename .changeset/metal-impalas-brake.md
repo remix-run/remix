@@ -3,7 +3,7 @@
 "@remix-run/dev": patch
 ---
 
-Optimize `parentRouteId` lookup in `defineConventionalRoutes`
+Optimize `parentRouteId` lookup in `defineConventionalRoutes`.
 
 Local runs of production Remix builds:
 

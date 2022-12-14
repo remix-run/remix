@@ -1,14 +1,10 @@
 ---
-"@remix-run/dev": patch
+"@remix-run/dev": minor
 ---
 
-Convention for Remix optional segments
+Added support and conventions for optional route segments
 
-Note that this only set ups the convention conversion for React Router.
-Optional segments won't be available in Remix until Remix is built on top of React Router v6.5
-
-Converts segments surrounded by parenthesis into optional segments for React Router.
-For example `/($lang)/about` will be converted to `/:lang?/about` in React Router.
+Routes surrounded by parenthesis will be converted into optional segments for React Router. For example `/($lang)/about` will be converted to `/:lang?/about` in React Router.
 
 This means `/($lang)/about` would match:
 
@@ -27,3 +23,5 @@ Another example: `/(one)/($two)/(three).($four)` route would match all of the fo
 /one/param1/three
 /one/param1/three/param2
 ```
+
+As with any of our conventions, you can escape this conversion by wrapping the route filename in square brackets. For example, `/[(one)]/two` would match the URL path `/(one)/two`.
