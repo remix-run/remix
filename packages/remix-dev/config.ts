@@ -9,7 +9,7 @@ import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/virtualModules";
 import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
-import { flatRoutes } from "./config/flatRoutes";
+import { flatRoutes } from "./config/flat-routes";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
