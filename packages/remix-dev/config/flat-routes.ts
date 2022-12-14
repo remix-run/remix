@@ -1,11 +1,17 @@
-/* eslint-disable no-loop-func */
 import * as fs from "fs";
 import * as path from "path";
 import minimatch from "minimatch";
 
 import { createRouteId, defineRoutes } from "./routes";
 import type { RouteManifest, DefineRouteFunction } from "./routes";
-import { isRouteModuleFile } from "./routesConvention";
+import {
+  escapeEnd,
+  escapeStart,
+  isRouteModuleFile,
+  optionalEnd,
+  optionalStart,
+  paramPrefixChar,
+} from "./routesConvention";
 
 type RouteInfo = {
   id: string;
@@ -13,16 +19,14 @@ type RouteInfo = {
   file: string;
   name: string;
   segments: string[];
-  parentId?: string; // first pass parent is undefined
+  parentId?: string;
   index?: boolean;
   caseSensitive?: boolean;
 };
 
-export type VisitFilesFunction = (
-  dir: string,
-  visitor: (file: string) => void,
-  baseDir?: string
-) => void;
+export type FlatRoutesOptions = {
+  routeRegex?: RegExp;
+};
 
 export function flatRoutes(
   appDir: string,
@@ -50,10 +54,11 @@ export function flatRoutes(
   });
 
   // update parentIds for all routes
-  Array.from(routeMap.values()).forEach((routeInfo) => {
+  for (let routeInfo of routeMap.values()) {
     let parentId = findParentRouteId(routeInfo, nameMap);
     routeInfo.parentId = parentId;
-  });
+  }
+
   let uniqueRoutes = new Map<string, string>();
 
   // Then, recurse through all routes using the public defineRoutes() API
@@ -115,18 +120,19 @@ export function flatRoutes(
   return routes;
 }
 
+const indexRouteRegex = /((^|[.])(_index))(\/[^/]+)?$|(\/_?index\/)/;
 export function isIndexRoute(routeId: string): boolean {
-  return routeId.endsWith("/index");
+  return indexRouteRegex.test(routeId);
 }
 
-export function getRouteInfo(routeDir: string, file: string): RouteInfo {
+export function getRouteInfo(routeDir: string, file: string) {
   let filePath = path.join(routeDir, file);
   let routeId = createRouteId(filePath);
   let routeIdWithoutRoutes = routeId.slice(routeDir.length + 1);
   let index = isIndexRoute(routeIdWithoutRoutes);
   let routeSegments = getRouteSegments(routeIdWithoutRoutes);
   let routePath = createRoutePath(routeSegments, index);
-  return {
+  let routeInfo = {
     id: routeId,
     path: routePath!,
     file: filePath,
@@ -134,51 +140,94 @@ export function getRouteInfo(routeDir: string, file: string): RouteInfo {
     segments: routeSegments,
     index,
   };
+
+  return routeInfo;
 }
 
-let paramPrefixChar = "$";
+function handleEscapedSegment(segment: string) {
+  let matches = segment.match(/\[(.*?)\]/g);
+
+  if (!matches) return segment;
+
+  for (let match of matches) {
+    segment = segment.replace(match, match.slice(1, -1));
+  }
+
+  return segment;
+}
+
+function handleSplatOrParamSegment(segment: string) {
+  console.log("handleSplatOrParam", segment);
+
+  if (segment.startsWith(paramPrefixChar)) {
+    if (segment === "$?") return segment;
+    if (segment === paramPrefixChar) {
+      return "*";
+    }
+
+    return `:${segment.slice(1)}`;
+  }
+
+  return segment;
+}
+
+function handleOptionalSegment(segment: string) {
+  let optional = segment.slice(1, -1);
+
+  if (optional.startsWith(paramPrefixChar)) {
+    return `:${optional.slice(1)}?`;
+  }
+
+  return optional + "?";
+}
 
 // create full path starting with /
 export function createRoutePath(
   routeSegments: string[],
   index: boolean
 ): string | undefined {
-  let result = [];
-  let basePath = "/";
+  let result = "";
 
   if (index) {
-    // replace index with blank
-    routeSegments[routeSegments.length - 1] = "";
+    // remove index segment
+    routeSegments = routeSegments.slice(0, -1);
   }
-  for (let i = 0; i < routeSegments.length; i++) {
-    let segment = routeSegments[i];
+
+  for (let segment of routeSegments) {
     // skip pathless layout segments
     if (segment.startsWith("_")) {
       continue;
     }
+
     // remove trailing slash
     if (segment.endsWith("_")) {
       segment = segment.slice(0, -1);
     }
 
-    // handle param segments: $ => *, $id => :id
-    if (segment.startsWith(paramPrefixChar)) {
-      if (segment === paramPrefixChar) {
-        result.push("*");
-      } else {
-        result.push(`:${segment.slice(1)}`);
-      }
-      // handle optional segments: (segment) => segment?
-    } else if (segment.startsWith("(")) {
-      result.push(`${segment.slice(1, segment.length - 1)}?`);
+    // handle optional segments: `(segment)` => `segment?`
+    if (segment.startsWith(optionalStart) && segment.endsWith(optionalEnd)) {
+      let escaped = handleEscapedSegment(segment);
+      let optional = handleOptionalSegment(escaped);
+      let param = handleSplatOrParamSegment(optional);
+      result += `/${param}`;
+    }
+
+    // handle escape segments: `[se[g]ment]` => `segment`
+    else if (segment.includes(escapeStart) && segment.includes(escapeEnd)) {
+      let escaped = handleEscapedSegment(segment);
+      let param = handleSplatOrParamSegment(escaped);
+      result += `/${param}`;
+    }
+
+    // handle param segments: `$` => `*`, `$id` => `:id`
+    else if (segment.startsWith(paramPrefixChar)) {
+      result += `/${handleSplatOrParamSegment(segment)}`;
     } else {
-      result.push(segment);
+      result += `/${segment}`;
     }
   }
-  if (basePath !== "/") {
-    result.unshift(basePath);
-  }
-  return result.length ? result.join("/") : undefined;
+
+  return result || undefined;
 }
 
 function findParentRouteId(
@@ -202,18 +251,6 @@ export function getRouteSegments(name: string) {
   let state = "START";
   let subState = "NORMAL";
 
-  // do not remove segments ending in .route
-  // since these would be part of the route directory name
-  // docs/readme.route.tsx => docs/readme
-  if (!name.endsWith(".route")) {
-    // remove last segment since this should just be the
-    // route filename and we only want the directory name
-    // docs/_layout.tsx => docs
-    let last = name.lastIndexOf("/");
-    if (last >= 0) {
-      name = name.substring(0, last);
-    }
-  }
   let pushRouteSegment = (routeSegment: string) => {
     if (routeSegment) {
       routeSegments.push(routeSegment);
@@ -224,24 +261,6 @@ export function getRouteSegments(name: string) {
     let char = name[index];
     switch (state) {
       case "START":
-        // process existing segment
-        if (
-          routeSegment.includes(paramPrefixChar) &&
-          !routeSegment.startsWith(paramPrefixChar)
-        ) {
-          throw new Error(
-            `Route params must start with prefix char ${paramPrefixChar}: ${routeSegment}`
-          );
-        }
-        if (
-          routeSegment.includes("(") &&
-          !routeSegment.startsWith("(") &&
-          !routeSegment.endsWith(")")
-        ) {
-          throw new Error(
-            `Optional routes must start and end with parentheses: ${routeSegment}`
-          );
-        }
         pushRouteSegment(routeSegment);
         routeSegment = "";
         state = "PATH";
@@ -250,10 +269,20 @@ export function getRouteSegments(name: string) {
         if (isPathSeparator(char) && subState === "NORMAL") {
           state = "START";
           break;
-        } else if (char === "[") {
+        } else if (char === optionalStart) {
+          routeSegment += char;
+          subState = "OPTIONAL";
+          break;
+        } else if (char === optionalEnd) {
+          routeSegment += char;
+          subState = "NORMAL";
+          break;
+        } else if (char === escapeStart) {
+          routeSegment += char;
           subState = "ESCAPE";
           break;
-        } else if (char === "]") {
+        } else if (char === escapeEnd) {
+          routeSegment += char;
           subState = "NORMAL";
           break;
         }
@@ -262,12 +291,10 @@ export function getRouteSegments(name: string) {
     }
     index++; // advance to next character
   }
+
   // process remaining segment
   pushRouteSegment(routeSegment);
-  // strip trailing .route segment
-  if (routeSegments.at(-1) === "route") {
-    routeSegments = routeSegments.slice(0, -1);
-  }
+
   return routeSegments;
 }
 
