@@ -9,9 +9,6 @@ on:
       - "!release-manual"
       - "!release-manual-*"
 
-env:
-  packageVersionToFollow: "remix"
-
 jobs:
   release:
     name: 🦋 Changesets Release
@@ -72,7 +69,7 @@ jobs:
     name: 🦋 Find Package
     needs: [release]
     runs-on: ubuntu-latest
-    if: github.repository == 'remix-run/remix' && needs.release.outputs.published == true
+    if: github.repository == 'remix-run/remix' && needs.release.outputs.published == 'true'
     outputs:
       package: ${{ steps.findPackage.outputs.package }}
     steps:
@@ -93,7 +90,7 @@ jobs:
           package=$(node ./scripts/release/find-release-from-changeset.js)
           echo "package=${package}" >> $GITHUB_OUTPUT
         env:
-          packageVersionToFollow: $packageVersionToFollow
+          packageVersionToFollow: "remix"
           publishedPackages: ${{ needs.release.outputs.publishedPackages }}
 
   comment:
@@ -103,7 +100,7 @@ jobs:
     uses: ./.github/workflows/release-comments.yml
     with:
       ref: refs/tags/${{ needs.findPackage.outputs.package }}
-      packageVersionToFollow: $packageVersionToFollow
+      packageVersionToFollow: "remix"
 
   deployments:
     name: 🚀 Deployment Tests
