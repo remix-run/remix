@@ -1256,16 +1256,28 @@ export interface SubmitFunction {
  *
  * @see https://remix.run/api/remix#usesubmit
  */
-export function useSubmit(): SubmitFunction {
-  return useSubmitImpl();
+export function useSubmit(options?: SubmitOptions): SubmitFunction {
+  let key = undefined; // no key for global submit
+  return useSubmitImpl(key, options);
 }
 
-let defaultMethod = "get";
-let defaultEncType = "application/x-www-form-urlencoded";
+const DEFAULT_METHOD = "get";
+const DEFAULT_ENC_TYPE = "application/x-www-form-urlencoded";
 
-export function useSubmitImpl(key?: string): SubmitFunction {
+// IDEA: remove the export here?
+export function useSubmitImpl(
+  key?: string,
+  {
+    method: submitMethod = DEFAULT_METHOD,
+    action: submitAction,
+    encType: submitEncType = DEFAULT_ENC_TYPE,
+  }: SubmitOptions = {}
+): SubmitFunction {
   let navigate = useNavigate();
-  let defaultAction = useFormAction();
+  let defaultFormAction = useFormAction();
+  let defaultAction = submitAction || defaultFormAction;
+  let defaultMethod = submitMethod || DEFAULT_METHOD;
+  let defaultEncType = submitEncType || DEFAULT_ENC_TYPE;
   let { transitionManager } = useRemixEntryContext();
 
   return React.useCallback(
@@ -1334,9 +1346,9 @@ export function useSubmitImpl(key?: string): SubmitFunction {
           );
         }
 
-        method = options.method || "get";
+        method = options.method || defaultMethod;
         action = options.action || defaultAction;
-        encType = options.encType || "application/x-www-form-urlencoded";
+        encType = options.encType || defaultEncType;
 
         if (target instanceof FormData) {
           formData = target;
@@ -1411,7 +1423,14 @@ export function useSubmitImpl(key?: string): SubmitFunction {
         navigate(url.pathname + url.search, { replace: options.replace });
       }
     },
-    [defaultAction, key, navigate, transitionManager]
+    [
+      defaultAction,
+      defaultEncType,
+      defaultMethod,
+      key,
+      navigate,
+      transitionManager,
+    ]
   );
 }
 
@@ -1578,9 +1597,9 @@ export type FetcherWithComponents<TData> = Fetcher<TData> & {
  *
  * @see https://remix.run/api/remix#usefetcher
  */
-export function useFetcher<TData = any>(): FetcherWithComponents<
-  SerializeFrom<TData>
-> {
+export function useFetcher<TData = any>(
+  submitOptions?: SubmitOptions
+): FetcherWithComponents<SerializeFrom<TData>> {
   let { transitionManager } = useRemixEntryContext();
 
   let [key] = React.useState(() => String(++fetcherId));
@@ -1588,7 +1607,7 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
   let [load] = React.useState(() => (href: string) => {
     transitionManager.send({ type: "fetcher", href, key });
   });
-  let submit = useSubmitImpl(key);
+  let submit = useSubmitImpl(key, submitOptions);
 
   let fetcher = transitionManager.getFetcher<SerializeFrom<TData>>(key);
 

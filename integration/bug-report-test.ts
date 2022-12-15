@@ -48,34 +48,30 @@ test.beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/index.jsx": js`
-        import {useFetcher, useSearchParams} from '@remix-run/react'
-        import {useEffect, useRef} from 'react'
-      
+        import { useFetcher, useSearchParams } from "@remix-run/react";
+        import { useEffect, useRef } from "react";
+        
         export default function Fetcher() {
-          const [, setSearchParams] = useSearchParams()
-          const fetcher = useFetcher()
-          const mounted = useRef(false)
-
+          const [, setSearchParams] = useSearchParams();
+          const clickedRef = useRef(false);
+          const fetcher = useFetcher({ action: "/whatever" });
+        
           useEffect(() => {
-            if (mounted.current) {
-              throw new Error('fetcher changed!')
+            if (clickedRef.current) {
+              throw new Error("fetcher changed!");
             }
-            mounted.current = true
-          }, [fetcher])
-
+          }, [fetcher]);
+        
           return (
-            <div style={{fontFamily: 'system-ui, sans-serif', lineHeight: '1.4'}}>
-              <button
-                onClick={() =>
-                  setSearchParams({
-                    random: Math.random().toString(),
-                  })
-                }
-              >
-                Set searchParams
-              </button>
-            </div>
-          )
+            <button
+              onClick={() => {
+                clickedRef.current = true;
+                setSearchParams({ random: Math.random().toString() });
+              }}
+            >
+              Set searchParams
+            </button>
+          );
         }
       `,
     },
