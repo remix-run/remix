@@ -4,7 +4,8 @@ import glob from "glob";
 const args = process.argv.slice(2);
 const publish = process.env.CI || args.includes("--publish");
 const tsc = process.env.CI || args.includes("--tsc") || publish;
-const denoCheck = process.env.CI || args.includes("--deno");
+// const denoCheck = process.env.CI || args.includes("--deno");
+const denoCheck = false;
 
 exec("yarn", ["rollup", "-c"])
   .then(() => tsc && exec("yarn", ["tsc", "-b"]))
