@@ -9,7 +9,6 @@ import type { ScriptProps } from "./components";
 import { useMatches } from "./components";
 
 let STORAGE_KEY = "positions";
-let hydrated = false;
 
 /**
  * This component will emulate the browser's scroll restoration on location
@@ -29,7 +28,6 @@ export function ScrollRestoration({
   useScrollRestoration({
     getKey,
     storageKey: STORAGE_KEY,
-    skip: !hydrated,
   });
 
   // In order to support `getKey`, we need to compute a "key" here so we can
@@ -65,12 +63,6 @@ export function ScrollRestoration({
       sessionStorage.removeItem(STORAGE_KEY);
     }
   }).toString();
-
-  // Use this to skip restoration on the initial load since we'll do it in
-  // the inline <script> below
-  if (!hydrated) {
-    hydrated = true;
-  }
 
   return (
     <script
