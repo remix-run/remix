@@ -60,6 +60,24 @@ Notes about how it works:
 - Handles uncaught errors by rendering the nearest `ErrorBoundary` (just like a normal navigation from `<Link>` or `<Form>`)
 - Will redirect the app if your action/loader being called returns a redirect (just like a normal navigation from `<Link>` or `<Form>`)
 
+### Arguments
+
+`useFetcher` takes one optional argument which is the `submitOptions` that will be used as a default for calls to `fetcher.submit`. This is useful to avoid repetition and to ensure the reference to `fetcher` remains stable if you need to include it in a dependency array.
+
+#### `submitOptions.method`
+
+The URL method to use when submitting. Defaults to `"GET"`.
+
+### `submitOptions.action`
+
+The URL to submit to. Defaults to the current URL.
+
+### `submitOptions.encType`
+
+The `enctype` to use when submitting. Defaults to `"application/x-www-form-urlencoded"`.
+
+### Properties
+
 #### `fetcher.state`
 
 You can know the state of the fetcher with `fetcher.state`. It will be one of:

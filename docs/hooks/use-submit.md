@@ -67,3 +67,23 @@ function useSessionTimeout() {
   }, [submit, transition]);
 }
 ```
+
+## `useSubmit` Parameters
+
+`useSubmit` takes one optional argument which is the `submitOptions` that will be used as a default for calls to `submit`. This is useful to avoid repetition and to ensure the reference to `submit` remains stable if you need to include it in a dependency array.
+
+#### `submitOptions.method`
+
+The URL method to use when submitting. Defaults to `"GET"`.
+
+### `submitOptions.action`
+
+The URL to submit to. Defaults to the current URL.
+
+### `submitOptions.encType`
+
+The `enctype` to use when submitting. Defaults to `"application/x-www-form-urlencoded"`.
+
+### `submitOptions.replace`
+
+Whether to replace the current history entry or push a new one. Defaults to `false`.
