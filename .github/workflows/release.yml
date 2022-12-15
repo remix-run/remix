@@ -11,7 +11,6 @@ on:
 
 env:
   packageVersionToFollow: "remix"
-  repo: "remix-run/remix"
 
 jobs:
   release:
@@ -21,7 +20,7 @@ jobs:
     # and a `repository_dispatch` trigger, actions still aren't ran if a version
     # is published using the default secrets.GITHUB_TOKEN.
     if: |
-      github.repository == $repo &&
+      github.repository == 'remix-run/remix' &&
       !contains(github.ref, 'nightly')
     runs-on: ubuntu-latest
     outputs:
@@ -73,7 +72,7 @@ jobs:
     name: 🦋 Find Package
     needs: [release]
     runs-on: ubuntu-latest
-    if: github.repository == $repo && needs.release.outputs.published == true
+    if: github.repository == 'remix-run/remix' && needs.release.outputs.published == true
     outputs:
       package: ${{ steps.findPackage.outputs.package }}
     steps:
@@ -99,7 +98,7 @@ jobs:
 
   comment:
     name: 📝 Comment on related issues and pull requests
-    if: github.repository == $repo && needs.findPackage.outputs.package != ''
+    if: github.repository == 'remix-run/remix' && needs.findPackage.outputs.package != ''
     needs: [release, findPackage]
     uses: ./.github/workflows/release-comments.yml
     with:
@@ -108,7 +107,7 @@ jobs:
 
   deployments:
     name: 🚀 Deployment Tests
-    if: github.repository == $repo
+    if: github.repository == 'remix-run/remix'
     needs: [release, findPackage]
     uses: ./.github/workflows/deployments.yml
     secrets:
@@ -127,7 +126,7 @@ jobs:
 
   stacks:
     name: 🥞 Remix Stacks Test
-    if: github.repository == $repo
+    if: github.repository == 'remix-run/remix'
     needs: [release, findPackage]
     uses: ./.github/workflows/stacks.yml
     with:
