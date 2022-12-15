@@ -68,11 +68,11 @@ Notes about how it works:
 
 The URL method to use when submitting. Defaults to `"GET"`.
 
-### `submitOptions.action`
+#### `submitOptions.action`
 
 The URL to submit to. Defaults to the current URL.
 
-### `submitOptions.encType`
+#### `submitOptions.encType`
 
 The `enctype` to use when submitting. Defaults to `"application/x-www-form-urlencoded"`.
 
