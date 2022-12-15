@@ -1264,7 +1264,7 @@ export function useSubmit(options?: SubmitOptions): SubmitFunction {
 const DEFAULT_METHOD = "get";
 const DEFAULT_ENC_TYPE = "application/x-www-form-urlencoded";
 
-// IDEA: remove the export here?
+// TODO: remove the export here?
 export function useSubmitImpl(
   key?: string,
   {
