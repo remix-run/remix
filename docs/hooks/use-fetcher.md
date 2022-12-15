@@ -66,7 +66,7 @@ Notes about how it works:
 
 #### `submitOptions.method`
 
-The URL method to use when submitting. Defaults to `"GET"`.
+The URL method to use when submitting. Defaults to `"get"` (options are `"get"`, `"post"`, `"put"`, `"patch"`, `"delete"`).
 
 #### `submitOptions.action`
 
