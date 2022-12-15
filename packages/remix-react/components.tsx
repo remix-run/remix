@@ -1271,6 +1271,7 @@ export function useSubmitImpl(
     method: submitMethod = DEFAULT_METHOD,
     action: submitAction,
     encType: submitEncType = DEFAULT_ENC_TYPE,
+    replace,
   }: SubmitOptions = {}
 ): SubmitFunction {
   let navigate = useNavigate();
@@ -1420,7 +1421,10 @@ export function useSubmitImpl(
         });
       } else {
         setNextNavigationSubmission(submission);
-        navigate(url.pathname + url.search, { replace: options.replace });
+        navigate(url.pathname + url.search, {
+          replace:
+            typeof options.replace === "undefined" ? replace : options.replace,
+        });
       }
     },
     [
@@ -1429,6 +1433,7 @@ export function useSubmitImpl(
       defaultMethod,
       key,
       navigate,
+      replace,
       transitionManager,
     ]
   );
@@ -1598,7 +1603,8 @@ export type FetcherWithComponents<TData> = Fetcher<TData> & {
  * @see https://remix.run/api/remix#usefetcher
  */
 export function useFetcher<TData = any>(
-  submitOptions?: SubmitOptions
+  // replace doesn't make sense for fetchers
+  submitOptions?: Omit<SubmitOptions, "replace">
 ): FetcherWithComponents<SerializeFrom<TData>> {
   let { transitionManager } = useRemixEntryContext();
 
