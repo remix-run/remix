@@ -20,9 +20,6 @@ jobs:
       github.repository == 'remix-run/remix' &&
       !contains(github.ref, 'nightly')
     runs-on: ubuntu-latest
-    outputs:
-      published: steps.changesets.outputs.published
-      remixVersion: steps.get_remix_version.outputs.version
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.11.0
@@ -64,47 +61,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: 🕵️ Get remix package version
-        id: get_remix_version
-        run: |
-          # find the remix package in the publishedPackages array from changesets
-          # example output [{"name": "@xx/xx", "version": "1.2.0"}, {"name": "@xx/xy", "version": "0.8.9"}]
-          remixVersion=(echo ${{ steps.changesets.outputs.publishedPackages }} | jq '.[] | select(.name == "remix") .version')
-          echo "remixVersion=${version}" >> $GITHUB_OUTPUT
-
-  comment:
-    needs: [release]
-    name: 📝 Comment on related issues and pull requests
-    if: github.repository == 'remix-run/remix' && needs.release.outputs.published
-    uses: ./.github/workflows/release-comments.yml
-    with:
-      ref: refs/tags/v${{ needs.release.outputs.remixVersion }}
-      packageVersionToFollow: "remix"
-
-  deployments:
-    needs: [release]
-    name: 🚀 Deployment Tests
-    if: github.repository == 'remix-run/remix' && needs.release.outputs.published
-    uses: ./.github/workflows/deployments.yml
-    secrets:
-      TEST_AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
-      TEST_AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
-      TEST_CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
-      TEST_CF_GLOBAL_API_KEY: ${{ secrets.TEST_CF_GLOBAL_API_KEY }}
-      TEST_CF_EMAIL: ${{ secrets.TEST_CF_EMAIL }}
-      TEST_CF_PAGES_API_TOKEN: ${{ secrets.TEST_CF_PAGES_API_TOKEN }}
-      TEST_CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
-      TEST_DENO_DEPLOY_TOKEN: ${{ secrets.TEST_DENO_DEPLOY_TOKEN }}
-      TEST_FLY_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
-      TEST_NETLIFY_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
-      TEST_VERCEL_TOKEN: ${{ secrets.TEST_VERCEL_TOKEN }}
-      TEST_VERCEL_USER_ID: ${{ secrets.TEST_VERCEL_USER_ID }}
-
-  stacks:
-    needs: [release]
-    name: 🥞 Remix Stacks Test
-    if: github.repository == 'remix-run/remix' && needs.release.outputs.published
-    uses: ./.github/workflows/stacks.yml
-    with:
-      version: ${{ needs.release.outputs.remixVersion }}
