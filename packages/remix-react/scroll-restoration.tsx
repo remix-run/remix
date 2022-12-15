@@ -18,7 +18,7 @@ if (typeof document !== "undefined") {
  * This component will emulate the browser's scroll restoration on location
  * changes.
  *
- * @see https://remix.run/api/remix#scrollrestoration
+ * @see https://remix.run/components/scroll-restoration
  */
 export function ScrollRestoration({ nonce = undefined }: { nonce?: string }) {
   useScrollRestoration();

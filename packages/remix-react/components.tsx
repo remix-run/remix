@@ -469,7 +469,7 @@ function usePrefetchBehavior(
 /**
  * A special kind of `<Link>` that knows whether or not it is "active".
  *
- * @see https://remix.run/api/remix#navlink
+ * @see https://remix.run/components/nav-link
  */
 let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
@@ -497,7 +497,7 @@ export { NavLink };
  * This component renders an anchor tag and is the primary way the user will
  * navigate around your website.
  *
- * @see https://remix.run/api/remix#link
+ * @see https://remix.run/components/link
  */
 let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
@@ -539,7 +539,7 @@ export function composeEventHandlers<
 /**
  * Renders the `<link>` tags for the current routes.
  *
- * @see https://remix.run/api/remix#meta-links-scripts
+ * @see https://remix.run/components/links
  */
 export function Links() {
   let { matches, routeModules, manifest } = useRemixEntryContext();
@@ -602,7 +602,7 @@ export function Links() {
  *
  * @param props
  * @param props.page
- * @see https://remix.run/api/remix#prefetchpagelinks-
+ * @see https://remix.run/components/prefetch-page-links
  */
 export function PrefetchPageLinks({
   page,
@@ -698,7 +698,7 @@ function PrefetchPageLinksImpl({
 /**
  * Renders the `<title>` and `<meta>` tags for the current routes.
  *
- * @see https://remix.run/api/remix#meta-links-scripts
+ * @see https://remix.run/components/meta
  */
 function V1Meta() {
   let { matches, routeData, routeModules } = useRemixEntryContext();
@@ -732,9 +732,9 @@ function V1Meta() {
             " returns an array. This is only supported with the `v2_meta` future flag " +
             "in the Remix config. Either set the flag to `true` or update the route's " +
             "meta function to return an object." +
-            "\n\nTo reference the v1 meta function API, see https://remix.run/api/conventions#meta"
+            "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
           // TODO: Add link to the docs once they are written
-          // + "\n\nTo reference future flags and the v2 meta API, see https://remix.run/api/remix#future-v2-meta."
+          // + "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta."
         );
       }
       Object.assign(meta, routeMeta);
@@ -842,8 +842,8 @@ function V2Meta() {
           " returns an invalid value. In v2, all route meta functions must " +
           "return an array of meta objects." +
           // TODO: Add link to the docs once they are written
-          // "\n\nTo reference future flags and the v2 meta API, see https://remix.run/api/remix#future-v2-meta." +
-          "\n\nTo reference the v1 meta function API, see https://remix.run/api/conventions#meta"
+          // "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta." +
+          "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
       );
     }
 
@@ -910,7 +910,7 @@ type ScriptProps = Omit<
  * In addition to scripts, \<link rel="modulepreload"> tags receive the crossOrigin
  * property if provided.
  *
- * @see https://remix.run/api/remix#meta-links-scripts
+ * @see https://remix.run/components/scripts
  */
 export function Scripts(props: ScriptProps) {
   let {
@@ -1066,7 +1066,7 @@ export interface FormProps extends FormHTMLAttributes<HTMLFormElement> {
  * requests, allowing components to add nicer UX to the page as the form is
  * submitted and returns with data.
  *
- * @see https://remix.run/api/remix#form
+ * @see https://remix.run/components/form
  */
 let Form = React.forwardRef<HTMLFormElement, FormProps>((props, ref) => {
   return <FormImpl {...props} ref={ref} />;
@@ -1142,7 +1142,7 @@ type HTMLFormSubmitter = HTMLButtonElement | HTMLInputElement;
 /**
  * Resolves a `<form action>` path relative to the current route.
  *
- * @see https://remix.run/api/remix#useformaction
+ * @see https://remix.run/hooks/use-form-action
  */
 export function useFormAction(
   action?: string,
@@ -1246,7 +1246,7 @@ export interface SubmitFunction {
  * Returns a function that may be used to programmatically submit a form (or
  * some arbitrary data) to the server.
  *
- * @see https://remix.run/api/remix#usesubmit
+ * @see https://remix.run/hooks/use-submit
  */
 export function useSubmit(): SubmitFunction {
   return useSubmitImpl();
@@ -1444,7 +1444,7 @@ function isInputElement(object: any): object is HTMLInputElement {
  * Note: The `callback` argument should be a function created with
  * `React.useCallback()`.
  *
- * @see https://remix.run/api/remix#usebeforeunload
+ * @see https://remix.run/hooks/use-before-unload
  */
 export function useBeforeUnload(
   callback: (event: BeforeUnloadEvent) => any
@@ -1469,7 +1469,7 @@ export interface RouteMatch {
   /**
    * The dynamic parameters of the matched route
    *
-   * @see https://remix.run/docs/api/conventions#dynamic-route-parameters
+   * @see https://remix.run/file-conventions/routes-files#dynamic-route-parameters
    */
   params: Params<string>;
   /**
@@ -1479,7 +1479,7 @@ export interface RouteMatch {
   /**
    * The exported `handle` object of the matched route.
    *
-   * @see https://remix.run/docs/api/conventions#handle
+   * @see https://remix.run/route/handle
    */
   handle: undefined | { [key: string]: any };
 }
@@ -1488,7 +1488,7 @@ export interface RouteMatch {
  * Returns the current route matches on the page. This is useful for creating
  * layout abstractions with your current routes.
  *
- * @see https://remix.run/api/remix#usematches
+ * @see https://remix.run/hooks/use-matches
  */
 export function useMatches(): RouteMatch[] {
   let { matches, routeData, routeModules } = useRemixEntryContext();
@@ -1514,7 +1514,7 @@ export function useMatches(): RouteMatch[] {
 /**
  * Returns the JSON parsed data from the current route's `loader`.
  *
- * @see https://remix.run/api/remix#useloaderdata
+ * @see https://remix.run/hooks/use-loader-data
  */
 export function useLoaderData<T = AppData>(): SerializeFrom<T> {
   return useRemixRouteContext().data;
@@ -1523,7 +1523,7 @@ export function useLoaderData<T = AppData>(): SerializeFrom<T> {
 /**
  * Returns the JSON parsed data from the current route's `action`.
  *
- * @see https://remix.run/api/remix#useactiondata
+ * @see https://remix.run/hooks/use-action-data
  */
 export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
   let { id: routeId } = useRemixRouteContext();
@@ -1536,7 +1536,7 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  * Returns everything you need to know about a page transition to build pending
  * navigation indicators and optimistic UI on data mutations.
  *
- * @see https://remix.run/api/remix#usetransition
+ * @see https://remix.run/hooks/use-transition
  */
 export function useTransition(): Transition {
   let { transitionManager } = useRemixEntryContext();
@@ -1568,7 +1568,7 @@ export type FetcherWithComponents<TData> = Fetcher<TData> & {
  * Interacts with route loaders and actions without causing a navigation. Great
  * for any interaction that stays on the same page.
  *
- * @see https://remix.run/api/remix#usefetcher
+ * @see https://remix.run/hooks/use-fetcher
  */
 export function useFetcher<TData = any>(): FetcherWithComponents<
   SerializeFrom<TData>
@@ -1608,7 +1608,7 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
  * Provides all fetchers currently on the page. Useful for layouts and parent
  * routes that need to provide pending/optimistic UI regarding the fetch.
  *
- * @see https://remix.run/api/remix#usefetchers
+ * @see https://remix.run/hooks/use-fetchers
  */
 export function useFetchers(): Fetcher[] {
   let { transitionManager } = useRemixEntryContext();
