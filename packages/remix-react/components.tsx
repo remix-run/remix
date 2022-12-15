@@ -958,21 +958,10 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
 export function useTransition(): Transition {
   let navigation = useNavigation();
 
-  // Have to avoid useMemo here to avoid introducing unstable transition object
-  // identities in StrictMode, since navigation will be stable but using
-  // [navigation] as the dependency array will _still_ re-run on concurrent
-  // renders, and that will create a new object identify for transition
-  let lastNavigationRef = React.useRef<Navigation>();
-  let lastTransitionRef = React.useRef<Transition>();
-
-  if (lastTransitionRef.current && lastNavigationRef.current === navigation) {
-    return lastTransitionRef.current;
-  }
-
-  lastNavigationRef.current = navigation;
-  lastTransitionRef.current = convertNavigationToTransition(navigation);
-
-  return lastTransitionRef.current;
+  return React.useMemo(
+    () => convertNavigationToTransition(navigation),
+    [navigation]
+  );
 }
 
 function convertNavigationToTransition(navigation: Navigation): Transition {
