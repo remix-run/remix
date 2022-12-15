@@ -954,7 +954,6 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  * navigation indicators and optimistic UI on data mutations.
  *
  * @see https://remix.run/api/remix#usetransition
- * @deprecated Deprecated in favor of useNavigation
  */
 export function useTransition(): Transition {
   let navigation = useNavigation();
