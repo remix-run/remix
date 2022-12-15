@@ -48,30 +48,27 @@ test.beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/index.jsx": js`
-        import { useFetcher, useSearchParams } from "@remix-run/react";
-        import { useEffect, useRef } from "react";
-        
-        export default function Fetcher() {
-          const [, setSearchParams] = useSearchParams();
-          const clickedRef = useRef(false);
-          const fetcher = useFetcher({ action: "/whatever" });
-        
-          useEffect(() => {
-            if (clickedRef.current) {
-              throw new Error("fetcher changed!");
-            }
-          }, [fetcher]);
-        
+        import { json } from "@remix-run/node";
+        import { useLoaderData, Link } from "@remix-run/react";
+
+        export function loader() {
+          return json("pizza");
+        }
+
+        export default function Index() {
+          let data = useLoaderData();
           return (
-            <button
-              onClick={() => {
-                clickedRef.current = true;
-                setSearchParams({ random: Math.random().toString() });
-              }}
-            >
-              Set searchParams
-            </button>
-          );
+            <div>
+              {data}
+              <Link to="/burgers">Other Route</Link>
+            </div>
+          )
+        }
+      `,
+
+      "app/routes/burgers.jsx": js`
+        export default function Index() {
+          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -90,14 +87,22 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("fetchers should be able to be stable when changing the search params", async ({
-  page,
-}) => {
+test("[description of what you expect it to do]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
+  let response = await fixture.requestDocument("/");
+  expect(await response.text()).toMatch("pizza");
+
+  // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickElement("button");
-  expect(await app.getHtml()).not.toContain("fetcher changed!");
+  await app.clickLink("/burgers");
+  expect(await app.getHtml()).toMatch("cheeseburger");
+
+  // If you're not sure what's going on, you can "poke" the app, it'll
+  // automatically open up in your browser for 20 seconds, so be quick!
+  // await app.poke(20);
+
+  // Go check out the other tests to see what else you can do.
 });
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
@@ -143,6 +143,34 @@ test.describe("useFetcher", () => {
             );
           }
         `,
+
+        "app/routes/stable-fetcher.jsx": js`
+          import { useFetcher, useSearchParams } from "@remix-run/react";
+          import { useEffect, useRef } from "react";
+          
+          export default function Fetcher() {
+            const [, setSearchParams] = useSearchParams();
+            const clickedRef = useRef(false);
+            const fetcher = useFetcher({ action: "/whatever" });
+          
+            useEffect(() => {
+              if (clickedRef.current) {
+                throw new Error("fetcher changed!");
+              }
+            }, [fetcher]);
+          
+            return (
+              <button
+                onClick={() => {
+                  clickedRef.current = true;
+                  setSearchParams({ random: Math.random().toString() });
+                }}
+              >
+                Set searchParams
+              </button>
+            );
+          }
+        `,
       },
     });
 
@@ -231,5 +259,14 @@ test.describe("useFetcher", () => {
 
     await app.clickElement("#submit-index-post");
     await page.waitForSelector(`pre:has-text("${PARENT_INDEX_ACTION}")`);
+  });
+
+  test("fetchers should be stable when providing submit options", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/stable-fetcher");
+    await app.clickElement("button");
+    expect(await app.getHtml()).not.toContain("fetcher changed!");
   });
 });
