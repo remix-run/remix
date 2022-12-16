@@ -90,7 +90,6 @@ export function createClientRoutes(
         path: route.path,
         // handle gets added in via useMatches since we aren't guaranteed to
         // have the route module available here
-        // TODO: Add handle in from a remix wrapper for useMatches
         handle: undefined,
         loader: createDataFunction(route, routeModulesCache, false),
         action: createDataFunction(route, routeModulesCache, true),
@@ -137,17 +136,16 @@ function createDataFunction(
     );
     try {
       if (isAction && !route.hasAction) {
-        console.error(
+        let msg =
           `Route "${route.id}" does not have an action, but you are trying ` +
-            `to submit to it. To fix this, please add an \`action\` function to the route`
-        );
-        // TODO: Should we `return null` here like we do for loaders?  Is there
-        // a benefit to triggering a network request that will error/404?
+          `to submit to it. To fix this, please add an \`action\` function to the route`;
+        console.error(msg);
+        throw new Error(msg);
       } else if (!isAction && !route.hasLoader) {
         return null;
       }
 
-      let result = await fetchData(request, route.id, isAction);
+      let result = await fetchData(request, route.id);
 
       if (result instanceof Error) {
         throw result;
