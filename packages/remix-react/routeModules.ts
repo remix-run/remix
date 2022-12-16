@@ -8,9 +8,8 @@ import type {
 
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
-import type { ClientRoute, EntryRoute } from "./routes";
+import type { EntryRoute } from "./routes";
 import type { RouteData } from "./routeData";
-import type { Submission } from "./transition";
 
 export interface RouteModules {
   [routeId: string]: RouteModule;
@@ -73,9 +72,9 @@ export interface V1_MetaFunction {
 // TODO: Replace in v2
 export type MetaFunction = V1_MetaFunction;
 
-type BaseRouteMatch<Route> = DataRouteMatch;
+type BaseRouteMatch = DataRouteMatch;
 
-export interface RouteMatchWithMeta<Route> extends BaseRouteMatch<Route> {
+export interface RouteMatchWithMeta extends BaseRouteMatch {
   meta: V2_HtmlMetaDescriptor[];
 }
 
@@ -85,7 +84,7 @@ export interface V2_MetaFunction {
     parentsData: RouteData;
     params: Params;
     location: Location;
-    matches: RouteMatchWithMeta<ClientRoute>[];
+    matches: RouteMatchWithMeta[];
   }): V2_HtmlMetaDescriptor[] | undefined;
 }
 
@@ -131,7 +130,7 @@ export type RouteComponent = ComponentType<{}>;
 export type RouteHandle = any;
 
 export async function loadRouteModule(
-  route: EntryRoute | ClientRoute,
+  route: EntryRoute,
   routeModulesCache: RouteModules
 ): Promise<RouteModule> {
   if (route.id in routeModulesCache) {

@@ -1,5 +1,6 @@
 import React, { useContext } from "react";
-import type { ErrorResponse, Location } from "react-router-dom";
+import type { ErrorResponse } from "@remix-run/router";
+import type { Location } from "react-router-dom";
 
 import type {
   CatchBoundaryComponent,

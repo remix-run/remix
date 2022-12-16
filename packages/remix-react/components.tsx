@@ -6,7 +6,6 @@ import type {
 import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
-  AgnosticDataRouteObject,
   ErrorResponse,
   Navigation,
 } from "@remix-run/router";
@@ -650,8 +649,10 @@ function V2Meta() {
   let meta: V2_HtmlMetaDescriptor[] = [];
   let parentsData: { [routeId: string]: AppData } = {};
 
-  let matchesWithMeta: RouteMatchWithMeta<AgnosticDataRouteObject>[] =
-    matches.map((match) => ({ ...match, meta: [] }));
+  let matchesWithMeta: RouteMatchWithMeta[] = matches.map((match) => ({
+    ...match,
+    meta: [],
+  }));
 
   let index = -1;
   for (let match of matches) {

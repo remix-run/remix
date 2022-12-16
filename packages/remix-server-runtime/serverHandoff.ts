@@ -1,6 +1,7 @@
+import type { HydrationState } from "@remix-run/router";
+
 import type { FutureConfig } from "./entry";
 import { escapeHtml } from "./markup";
-import type { HydrationState } from "./router";
 
 type ValidateShape<T, Shape> =
   // If it extends T
