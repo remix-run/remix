@@ -21,8 +21,6 @@ export const action = async (
 
 In this case, Typescript would not show an error even though `42` is clearly not a `string`.
 
-This happens because `json` returns a `TypedResponse<string>`,
-but because `TypedReponse<string>` was previously just `Response & { json: () => Promise<string> }`
-and `Response` already defines `{ json: () => Promise<any> }`, type erasure caused `Promise<any>` to be used for `42`.
+This happens because `json` returns a `TypedResponse<string>`, but because `TypedReponse<string>` was previously just `Response & { json: () => Promise<string> }` and `Response` already defines `{ json: () => Promise<any> }`, type erasure caused `Promise<any>` to be used for `42`.
 
 To fix this, we explicitly omit the `Response` object's `json` property before intersecting with `{ json: () => Promise<T> }`.

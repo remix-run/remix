@@ -2,4 +2,4 @@
 "@remix-run/deno": patch
 ---
 
-Fix types for the request handler context
+Fixed type issues for the request handler context
