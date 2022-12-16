@@ -20,7 +20,7 @@ export function ScrollRestoration({
   getKey,
   ...props
 }: ScriptProps & {
-  getKey: ScrollRestorationPropsRR["getKey"];
+  getKey?: ScrollRestorationPropsRR["getKey"];
 }) {
   let location = useLocation();
   let matches = useMatches();
