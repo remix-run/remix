@@ -12,7 +12,7 @@ function defaultCacheControl(url: URL, assetsPublicPath = "/build/") {
 }
 
 export function createRequestHandler<
-  Context extends AppLoadContext | undefined = undefined,
+  Context extends AppLoadContext | undefined = undefined
 >({
   build,
   mode,
@@ -22,11 +22,11 @@ export function createRequestHandler<
   mode?: string;
   getLoadContext?: (request: Request) => Promise<Context> | Context;
 }) {
-  const handleRequest = createRemixRequestHandler(build, mode);
+  let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (request: Request) => {
     try {
-      const loadContext = await getLoadContext?.(request);
+      let loadContext = await getLoadContext?.(request);
 
       return handleRequest(request, loadContext);
     } catch (error: unknown) {
@@ -53,12 +53,12 @@ export async function serveStaticFiles(
     cacheControl?: string | ((url: URL) => string);
     publicDir?: string;
     assetsPublicPath?: string;
-  },
+  }
 ) {
-  const url = new URL(request.url);
+  let url = new URL(request.url);
 
-  const headers = new Headers();
-  const contentType = mime.getType(url.pathname);
+  let headers = new Headers();
+  let contentType = mime.getType(url.pathname);
   if (contentType) {
     headers.set("Content-Type", contentType);
   }
@@ -71,9 +71,9 @@ export async function serveStaticFiles(
     headers.set("Cache-Control", defaultCacheControl(url, assetsPublicPath));
   }
 
-  const filePath = path.join(publicDir, url.pathname);
+  let filePath = path.join(publicDir, url.pathname);
   try {
-    const file = await Deno.readFile(filePath);
+    let file = await Deno.readFile(filePath);
     return new Response(file, { headers });
   } catch (error) {
     if (error.code === "EISDIR" || error.code === "ENOENT") {
@@ -84,7 +84,7 @@ export async function serveStaticFiles(
 }
 
 export function createRequestHandlerWithStaticFiles<
-  Context extends AppLoadContext | undefined = undefined,
+  Context extends AppLoadContext | undefined = undefined
 >({
   build,
   mode,
@@ -103,7 +103,7 @@ export function createRequestHandlerWithStaticFiles<
     assetsPublicPath?: string;
   };
 }) {
-  const remixHandler = createRequestHandler({ build, mode, getLoadContext });
+  let remixHandler = createRequestHandler({ build, mode, getLoadContext });
 
   return async (request: Request) => {
     try {
