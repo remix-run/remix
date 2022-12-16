@@ -3,4 +3,4 @@
 "@remix-run/react": minor
 ---
 
-feat(remix-react): add `submitOptions` argument for `useSubmit` and `useFetcher`
+Add `submitOptions` argument for `useSubmit` and `useFetcher`
