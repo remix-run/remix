@@ -20,10 +20,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 describe("<ScrollRestoration />", () => {
+  let scrollTo = window.scrollTo;
   beforeAll(() => {
-    if (!window.scrollTo) {
-      window.scrollTo = () => {};
-    }
+    window.scrollTo = () => {};
+  });
+  afterAll(() => {
+    window.scrollTo = scrollTo;
   });
   function withContext(stuff: JSX.Element) {
     let context: RemixEntryContextType = {
