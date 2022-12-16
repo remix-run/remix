@@ -56,7 +56,7 @@
     "@babel/preset-env": "^7.18.6",
     "@babel/preset-react": "^7.18.6",
     "@babel/preset-typescript": "^7.18.6",
-    "@changesets/cli": "^2.23.0",
+    "@changesets/cli": "^2.25.2",
     "@mcansh/remark-definition-links": "2.4.1",
     "@octokit/core": "^3.6.0",
     "@octokit/graphql": "^4.8.0",
