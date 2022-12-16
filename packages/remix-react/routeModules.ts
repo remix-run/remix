@@ -72,9 +72,7 @@ export interface V1_MetaFunction {
 // TODO: Replace in v2
 export type MetaFunction = V1_MetaFunction;
 
-type BaseRouteMatch = DataRouteMatch;
-
-export interface RouteMatchWithMeta extends BaseRouteMatch {
+export interface RouteMatchWithMeta extends DataRouteMatch {
   meta: V2_HtmlMetaDescriptor[];
 }
 
