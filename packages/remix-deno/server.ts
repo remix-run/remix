@@ -12,7 +12,7 @@ function defaultCacheControl(url: URL, assetsPublicPath = "/build/") {
 }
 
 export function createRequestHandler<
-  Context extends AppLoadContext | undefined = undefined
+  Context extends AppLoadContext | undefined = undefined,
 >({
   build,
   mode,
@@ -53,7 +53,7 @@ export async function serveStaticFiles(
     cacheControl?: string | ((url: URL) => string);
     publicDir?: string;
     assetsPublicPath?: string;
-  }
+  },
 ) {
   const url = new URL(request.url);
 
@@ -84,7 +84,7 @@ export async function serveStaticFiles(
 }
 
 export function createRequestHandlerWithStaticFiles<
-  Context extends AppLoadContext | undefined = undefined
+  Context extends AppLoadContext | undefined = undefined,
 >({
   build,
   mode,
