@@ -90,7 +90,6 @@ export function createClientRoutes(
         path: route.path,
         // handle gets added in via useMatches since we aren't guaranteed to
         // have the route module available here
-        // TODO: Add handle in from a remix wrapper for useMatches
         handle: undefined,
         loader: createDataFunction(route, routeModulesCache, false),
         action: createDataFunction(route, routeModulesCache, true),
