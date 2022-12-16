@@ -10,6 +10,7 @@ import type {
   Navigation,
 } from "@remix-run/router";
 import type {
+  Fetcher as FetcherRR,
   LinkProps,
   NavigationType,
   Navigator,
@@ -1137,7 +1138,10 @@ export function useFetchers(): Fetcher[] {
       formAction: f.formAction,
       formData: f.formData,
       formEncType: f.formEncType,
-      " _hasFetcherDoneAnything ": f[" _hasFetcherDoneAnything "],
+      // TODO: Remove this type union once we point to the updated prerelease
+      " _hasFetcherDoneAnything ": (
+        f as FetcherRR & { " _hasFetcherDoneAnything "?: boolean }
+      )[" _hasFetcherDoneAnything "],
     })
   );
 }
@@ -1167,7 +1171,12 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
     formAction: fetcherRR.formAction,
     formData: fetcherRR.formData,
     formEncType: fetcherRR.formEncType,
-    " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
+    // TODO: Remove this type union once we point to the updated prerelease
+    " _hasFetcherDoneAnything ": (
+      fetcherRR as FetcherRR & {
+        " _hasFetcherDoneAnything "?: boolean;
+      }
+    )[" _hasFetcherDoneAnything "],
   });
   return {
     ...remixFetcher,
@@ -1178,7 +1187,10 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
 }
 
 function convertRouterFetcherToRemixFetcher(
-  fetcherRR: Omit<ReturnType<typeof useFetcherRR>, "load" | "submit" | "Form">
+  // TODO: Remove this type union once we point to the updated prerelease
+  fetcherRR: Omit<FetcherRR, "load" | "submit" | "Form"> & {
+    " _hasFetcherDoneAnything "?: boolean;
+  }
 ): Fetcher {
   let { state, formMethod, formAction, formEncType, formData, data } =
     fetcherRR;
