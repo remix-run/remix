@@ -4,7 +4,8 @@
 
 ### Patch Changes
 
-- Fixed type issues for the request handler context ([#4715](https://github.com/remix-run/remix/pull/4715))
+- Fixed type issues for the request handler context
+  ([#4715](https://github.com/remix-run/remix/pull/4715))
 - Updated dependencies:
   - `@remix-run/server-runtime@1.9.0`
 
