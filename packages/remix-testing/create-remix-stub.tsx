@@ -1,13 +1,13 @@
 import * as React from "react";
 import type {
-  AssetsManifest,
-  EntryContext,
-  EntryRoute,
+  UNSAFE_AssetsManifest,
+  UNSAFE_EntryContext,
+  UNSAFE_EntryRoute,
   RouteData,
-  RouteManifest,
-  RouteModules,
+  UNSAFE_RouteManifest,
+  UNSAFE_RouteModules,
 } from "@remix-run/react";
-import { RemixEntry } from "@remix-run/react";
+import { UNSAFE_RemixEntry } from "@remix-run/react";
 import type {
   Action,
   AgnosticDataRouteObject,
@@ -75,7 +75,7 @@ type NonIndexStubRouteObject = AgnosticNonIndexRouteObject & {
 // TODO: once Remix is on RR@6.4 we can just use the native type
 type StubRouteObject = IndexStubRouteObject | NonIndexStubRouteObject;
 
-type RemixConfigFuture = Partial<EntryContext["future"]>;
+type RemixConfigFuture = Partial<UNSAFE_EntryContext["future"]>;
 
 export function createRemixStub(
   routes: StubRouteObject[],
@@ -124,7 +124,7 @@ export function createRemixStub(
     monkeyPatchFetch(queryRoute, dataRoutes);
 
     return (
-      <RemixEntry
+      <UNSAFE_RemixEntry
         context={remixContext}
         action={state.action}
         location={state.location}
@@ -140,7 +140,7 @@ function createRemixContext(
   initialLoaderData?: RouteData,
   initialActionData?: RouteData,
   future?: RemixConfigFuture
-): EntryContext {
+): UNSAFE_EntryContext {
   let manifest = createManifest(routes);
   let matches = matchRoutes(routes, currentLocation) || [];
 
@@ -164,7 +164,9 @@ function createRemixContext(
   };
 }
 
-function createManifest(routes: AgnosticDataRouteObject[]): AssetsManifest {
+function createManifest(
+  routes: AgnosticDataRouteObject[]
+): UNSAFE_AssetsManifest {
   return {
     routes: createRouteManifest(routes),
     entry: { imports: [], module: "" },
@@ -175,9 +177,9 @@ function createManifest(routes: AgnosticDataRouteObject[]): AssetsManifest {
 
 function createRouteManifest(
   routes: AgnosticDataRouteObject[],
-  manifest?: RouteManifest<EntryRoute>,
+  manifest?: UNSAFE_RouteManifest<UNSAFE_EntryRoute>,
   parentId?: string
-): RouteManifest<EntryRoute> {
+): UNSAFE_RouteManifest<UNSAFE_EntryRoute> {
   return routes.reduce((manifest, route) => {
     if (route.children) {
       createRouteManifest(route.children, manifest, route.id);
@@ -189,8 +191,8 @@ function createRouteManifest(
 
 function createRouteModules(
   routes: AgnosticDataRouteObject[],
-  routeModules?: RouteModules
-): RouteModules {
+  routeModules?: UNSAFE_RouteModules
+): UNSAFE_RouteModules {
   return routes.reduce((modules, route) => {
     if (route.children) {
       createRouteModules(route.children, modules);
@@ -247,7 +249,7 @@ function monkeyPatchFetch(
 function convertToEntryRoute(
   route: AgnosticDataRouteObject,
   parentId?: string
-): EntryRoute {
+): UNSAFE_EntryRoute {
   return {
     id: route.id!,
     index: route.index,
