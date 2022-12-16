@@ -4,10 +4,11 @@
   "scripts": {
     "build": "remix build",
     "dev:remix": "remix watch",
-    "dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public",
+    "dev:wrangler": "cross-env NODE_ENV=development npm run wrangler",
     "dev": "remix build && run-p \"dev:*\"",
-    "start": "cross-env NODE_ENV=production npm run dev:wrangler",
-    "typecheck": "tsc -b"
+    "start": "cross-env NODE_ENV=production npm run wrangler",
+    "typecheck": "tsc -b",
+    "wrangler": "wrangler pages dev ./public"
   },
   "dependencies": {
     "@remix-run/cloudflare": "*",
