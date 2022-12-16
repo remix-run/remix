@@ -1,5 +1,11 @@
 # `@remix-run/eslint-config`
 
+## 1.9.0-pre.1
+
+### Patch Changes
+
+- Update react-router ([`31bb30741`](https://github.com/remix-run/remix/commit/31bb307419f733d9cfd2c16e74890a075eac7682))
+
 ## 1.9.0-pre.0
 
 ## 1.8.2
