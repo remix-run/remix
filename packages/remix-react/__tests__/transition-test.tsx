@@ -1,5 +1,5 @@
-import { Action, parsePath } from "history";
-import type { Location, State } from "history";
+import { NavigationType as Action, parsePath } from "react-router-dom";
+import type { Location } from "react-router-dom";
 
 import type { Submission, TransitionManagerInit } from "../transition";
 import {
@@ -1876,10 +1876,6 @@ describe("navigating with inflight fetchers", () => {
     });
   });
 });
-
-// describe("react-router", () => {
-//   it.todo("replaces pending locations even on a push");
-// });
 
 ////////////////////////////////////////////////////////////////////////////////
 type Deferred = ReturnType<typeof defer>;

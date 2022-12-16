@@ -1,6 +1,3 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import type { Action, Location } from "history";
 import type {
   FocusEventHandler,
   FormHTMLAttributes,
@@ -8,11 +5,17 @@ import type {
   TouchEventHandler,
 } from "react";
 import * as React from "react";
-import type { Navigator, Params } from "react-router";
+import type {
+  NavigationType as Action,
+  Location,
+  Navigator,
+  Params,
+} from "react-router-dom";
 import {
   Router,
   Link as RouterLink,
   NavLink as RouterNavLink,
+  createPath,
   useLocation,
   useRoutes,
   useNavigate,
@@ -20,7 +23,6 @@ import {
   useResolvedPath,
 } from "react-router-dom";
 import type { LinkProps, NavLinkProps } from "react-router-dom";
-import { createPath } from "history";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData, FormEncType, FormMethod } from "./data";
@@ -65,7 +67,7 @@ import type {
 ////////////////////////////////////////////////////////////////////////////////
 // RemixEntry
 
-interface RemixEntryContextType {
+export interface RemixEntryContextType {
   manifest: AssetsManifest;
   matches: BaseRouteMatch<ClientRoute>[];
   routeData: RouteData;
@@ -239,6 +241,12 @@ function Routes() {
   // need this component, we can just `renderMatches` from RemixEntry
   let { clientRoutes } = useRemixEntryContext();
   // fallback to the root if we don't have a match
+
+  // TODO: clientRoutes currently errors here since RR 6.4 dropped `signal` as a
+  // loader argument.  But since we're just using <Router> we aren't using any
+  // loaders in RR so this isn't an issue.  We'll get these typings straightened
+  // out as part of the rendering work.
+  // @ts-expect-error
   let element = useRoutes(clientRoutes) || (clientRoutes[0].element as any);
   return element;
 }
@@ -890,7 +898,7 @@ export function Meta() {
  */
 let isHydrated = false;
 
-type ScriptProps = Omit<
+export type ScriptProps = Omit<
   React.HTMLProps<HTMLScriptElement>,
   | "children"
   | "async"
@@ -1646,7 +1654,6 @@ export const LiveReload =
                   let socketPath = protocol + "//" + host + ":" + ${String(
                     port
                   )} + "/socket";
-
                   let ws = new WebSocket(socketPath);
                   ws.onmessage = (message) => {
                     let event = JSON.parse(message.data);
@@ -1663,15 +1670,17 @@ export const LiveReload =
                       config.onOpen();
                     }
                   };
-                  ws.onclose = (error) => {
-                    console.log("Remix dev asset server web socket closed. Reconnecting...");
-                    setTimeout(
-                      () =>
-                        remixLiveReloadConnect({
-                          onOpen: () => window.location.reload(),
-                        }),
-                      1000
-                    );
+                  ws.onclose = (event) => {
+                    if (event.code === 1006) {
+                      console.log("Remix dev asset server web socket closed. Reconnecting...");
+                      setTimeout(
+                        () =>
+                          remixLiveReloadConnect({
+                            onOpen: () => window.location.reload(),
+                          }),
+                        1000
+                      );
+                    }
                   };
                   ws.onerror = (error) => {
                     console.log("Remix dev asset server web socket error:");

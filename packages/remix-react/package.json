@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/react",
-  "version": "1.8.2",
+  "version": "1.9.0",
   "description": "React DOM bindings for Remix",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -16,11 +16,11 @@
   "typings": "dist/index.d.ts",
   "module": "dist/esm/index.js",
   "dependencies": {
-    "history": "^5.3.0",
-    "react-router-dom": "6.3.0"
+    "@remix-run/router": "1.1.0",
+    "react-router-dom": "6.5.0"
   },
   "devDependencies": {
-    "@remix-run/server-runtime": "1.8.2",
+    "@remix-run/server-runtime": "1.9.0",
     "@testing-library/jest-dom": "^5.16.2",
     "@testing-library/react": "^13.3.0",
     "abort-controller": "^3.0.0",

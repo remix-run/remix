@@ -198,8 +198,8 @@ export const action = async ({ request }: ActionArgs) => {
   try {
     const project = await createProject(newProject);
     return redirect(`/projects/${project.id}`);
-  } catch (e: unknown) {
-    console.error(e);
+  } catch (error: unknown) {
+    console.error(error);
     return json("Sorry, we couldn't create the project", {
       status: 500,
     });

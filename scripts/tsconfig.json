@@ -8,6 +8,7 @@
     "forceConsistentCasingInFileNames": true,
     "allowSyntheticDefaultImports": true,
     "moduleResolution": "Node",
+    "module": "ESNext",
     "noEmit": true,
     "strict": true,
     "target": "ES2018"

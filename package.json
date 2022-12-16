@@ -18,6 +18,7 @@
     "packages/remix-react",
     "packages/remix-serve",
     "packages/remix-server-runtime",
+    "packages/remix-testing",
     "packages/remix-vercel"
   ],
   "scripts": {
@@ -41,11 +42,12 @@
     "posttest:integration": "node ./integration/helpers/cleanup.mjs",
     "test:primary": "jest",
     "changeset": "changeset",
-    "changeset:version": "changeset version",
+    "changeset:version": "changeset version && node ./scripts/patchup-version.mjs",
     "changeset:release": "yarn build --tsc --publish && changeset publish",
     "version": "node ./scripts/version.js",
     "version:experimental": "node ./scripts/version.js experimental",
-    "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\""
+    "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\"",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@babel/core": "^7.18.6",
@@ -54,7 +56,7 @@
     "@babel/preset-env": "^7.18.6",
     "@babel/preset-react": "^7.18.6",
     "@babel/preset-typescript": "^7.18.6",
-    "@changesets/cli": "^2.23.0",
+    "@changesets/cli": "^2.25.2",
     "@mcansh/remark-definition-links": "2.4.1",
     "@octokit/core": "^3.6.0",
     "@octokit/graphql": "^4.8.0",
@@ -65,7 +67,6 @@
     "@rollup/plugin-babel": "^5.2.2",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^11.0.1",
-    "@rollup/plugin-replace": "^4.0.0",
     "@testing-library/cypress": "^8.0.2",
     "@testing-library/jest-dom": "^5.16.2",
     "@testing-library/react": "^13.3.0",
@@ -104,6 +105,7 @@
     "jsonfile": "^6.0.1",
     "lodash": "^4.17.21",
     "npm-run-all": "^4.1.5",
+    "patch-package": "^6.5.0",
     "prettier": "2.7.1",
     "prompt-confirm": "^2.0.4",
     "react": "^18.2.0",

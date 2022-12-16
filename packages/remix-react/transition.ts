@@ -1,7 +1,5 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import { Action } from "history";
-import type { Location } from "history";
+import { NavigationType as Action } from "react-router-dom";
+import type { Location } from "react-router-dom";
 
 import type { RouteData } from "./routeData";
 import type { RouteMatch } from "./routeMatching";
@@ -1463,7 +1461,7 @@ async function callLoader(match: ClientMatch, url: URL, signal: AbortSignal) {
     let { params } = match;
     let value = await match.route.loader({ params, url, signal });
     return { match, value };
-  } catch (error) {
+  } catch (error: unknown) {
     return { match, value: error };
   }
 }
@@ -1481,7 +1479,7 @@ async function callAction(
       signal,
     });
     return { match, value };
-  } catch (error) {
+  } catch (error: unknown) {
     return { match, value: error };
   }
 }
