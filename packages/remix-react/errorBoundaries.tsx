@@ -135,7 +135,6 @@ export function RemixCatchBoundary({
   children,
 }: RemixCatchBoundaryProps) {
   if (catchVal) {
-    // TODO: Add Status/Data generics to ErrorResponse?
     return (
       <RemixCatchContext.Provider value={catchVal}>
         <Component />
