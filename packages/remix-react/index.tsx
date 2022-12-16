@@ -12,6 +12,7 @@ export type {
 export {
   Form,
   Outlet,
+  useBeforeUnload,
   useFormAction,
   useHref,
   useLocation,
@@ -48,7 +49,6 @@ export {
   useLoaderData,
   useMatches,
   useActionData,
-  useBeforeUnload,
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";
