@@ -3,10 +3,11 @@
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
+    "wrangler": "wrangler pages dev ./public",
     "dev:remix": "remix watch",
-    "dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public",
+    "dev:wrangler": "cross-env NODE_ENV=development npm run wrangler",
     "dev": "remix build && run-p \"dev:*\"",
-    "start": "cross-env NODE_ENV=production wrangler pages dev ./public",
+    "start": "cross-env NODE_ENV=production npm run wrangler",
     "typecheck": "tsc -b"
   },
   "dependencies": {
