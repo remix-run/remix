@@ -119,28 +119,6 @@ export type V2_HtmlMetaDescriptor =
   | { [name: string]: string };
 
 /**
- * During client side transitions Remix will optimize reloading of routes that
- * are currently on the page by avoiding loading routes that aren't changing.
- * However, in some cases, like form submissions or search params Remix doesn't
- * know which routes need to be reloaded so it reloads them all to be safe.
- *
- * This function lets apps further optimize by returning `false` when Remix is
- * about to reload the route. A common case is a root loader with nothing but
- * environment variables: after form submissions the root probably doesn't need
- * to be reloaded.
- *
- * @see https://remix.run/api/conventions#unstable_shouldreload
- */
-export interface ShouldReloadFunction {
-  (args: {
-    url: URL;
-    prevUrl: URL;
-    params: Params;
-    submission?: Submission;
-  }): boolean;
-}
-
-/**
  * A React component that is rendered for a route.
  */
 export type RouteComponent = ComponentType<{}>;

@@ -58,7 +58,6 @@ export { useCatch } from "./errorBoundaries";
 
 export type { HtmlLinkDescriptor } from "./links";
 export type {
-  ShouldReloadFunction,
   HtmlMetaDescriptor,
   CatchBoundaryComponent,
   RouteModules,
