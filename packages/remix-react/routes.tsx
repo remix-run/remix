@@ -137,11 +137,11 @@ function createDataFunction(
     );
     try {
       if (isAction && !route.hasAction) {
-        console.error(
+        let msg =
           `Route "${route.id}" does not have an action, but you are trying ` +
-            `to submit to it. To fix this, please add an \`action\` function to the route`
-        );
-        return null;
+          `to submit to it. To fix this, please add an \`action\` function to the route`;
+        console.error(msg);
+        throw new Error(msg);
       } else if (!isAction && !route.hasLoader) {
         return null;
       }
