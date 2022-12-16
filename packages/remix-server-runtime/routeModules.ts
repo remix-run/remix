@@ -151,14 +151,11 @@ export type MetaFunction<
   ParentsLoaders extends Record<string, LoaderFunction> = {}
 > = V1_MetaFunction<Loader, ParentsLoaders>;
 
-interface RouteMatchWithMeta<Route> extends BaseRouteMatch<Route> {
-  meta: V2_HtmlMetaDescriptor[];
-}
-
-interface BaseRouteMatch<Route> {
+interface RouteMatchWithMeta<Route> {
   params: Params;
   pathname: string;
   route: Route;
+  meta: V2_HtmlMetaDescriptor[];
 }
 
 interface ClientRoute extends Route {

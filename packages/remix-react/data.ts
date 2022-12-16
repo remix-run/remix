@@ -31,27 +31,20 @@ export function isRedirectResponse(response: any): boolean {
 
 export async function fetchData(
   request: Request,
-  routeId: string,
-  isAction: boolean
+  routeId: string
 ): Promise<Response | Error> {
   let url = new URL(request.url);
   url.searchParams.set("_data", routeId);
 
   let init: RequestInit | undefined;
 
-  // TODO: There's a bug in @remix-run/router here at the moment where the
-  // loader Request keeps method POST after a submission.  Matt has a local
-  // fix but this does the trick for now.  Once the fix is merged to the
-  // router, we can remove the isAction param and use the method here
-  // if (request.method !== "GET") {
-  if (isAction) {
+  if (request.method !== "GET") {
     init = {
       method: request.method,
       body: await request.formData(),
     };
   }
 
-  // TODO: Dropped credentials:"same-origin" since it's the default
   let response = await fetch(url.href, init);
 
   if (isErrorResponse(response)) {
@@ -61,7 +54,5 @@ export async function fetchData(
     return error;
   }
 
-  // TODO: Confirm difference between regex extractData JSON detection versus
-  // @remix-run/router detection
   return response;
 }

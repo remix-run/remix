@@ -2,7 +2,7 @@ import type { StaticHandler, StaticHandlerContext } from "@remix-run/router";
 import {
   getStaticContextFromError,
   isRouteErrorResponse,
-  unstable_createStaticHandler,
+  createStaticHandler,
 } from "@remix-run/router";
 
 import type { AppLoadContext } from "./data";
@@ -36,7 +36,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   let routes = createRoutes(build.routes);
   let dataRoutes = createStaticHandlerDataRoutes(build.routes);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
-  let staticHandler = unstable_createStaticHandler(dataRoutes);
+  let staticHandler = createStaticHandler(dataRoutes);
 
   return async function requestHandler(request, loadContext = {}) {
     let url = new URL(request.url);
@@ -259,8 +259,6 @@ async function handleDocumentRequestRR(
     );
   } catch (error: unknown) {
     if (serverMode !== ServerMode.Test) {
-      // TODO Do we want to log this here?  Can we get it to not log on
-      // integration tests runs?
       console.log("Error in entry.server handleDocumentRequest:", error);
     }
 

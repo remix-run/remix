@@ -305,7 +305,7 @@ test.describe("ErrorBoundary", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     await app.clickSubmitButton(HAS_BOUNDARY_ACTION);
-    await page.waitForSelector("#own-boundary");
+    await page.waitForSelector(`text=${OWN_BOUNDARY_TEXT}`);
     expect(await app.getHtml("main")).toMatch(OWN_BOUNDARY_TEXT);
   });
 
@@ -315,7 +315,7 @@ test.describe("ErrorBoundary", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto(HAS_BOUNDARY_ACTION);
     await app.clickSubmitButton(HAS_BOUNDARY_ACTION);
-    await page.waitForSelector("#own-boundary");
+    await page.waitForSelector(`text=${OWN_BOUNDARY_TEXT}`);
     expect(await app.getHtml("main")).toMatch(OWN_BOUNDARY_TEXT);
   });
 
@@ -332,6 +332,7 @@ test.describe("ErrorBoundary", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     await app.clickSubmitButton(NO_BOUNDARY_ACTION);
+    await page.waitForSelector(`text=${ROOT_BOUNDARY_TEXT}`);
     expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
@@ -341,6 +342,7 @@ test.describe("ErrorBoundary", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto(NO_BOUNDARY_ACTION);
     await app.clickSubmitButton(NO_BOUNDARY_ACTION);
+    await page.waitForSelector(`text=${ROOT_BOUNDARY_TEXT}`);
     expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
@@ -354,6 +356,7 @@ test.describe("ErrorBoundary", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     await app.clickLink(HAS_BOUNDARY_LOADER);
+    await page.waitForSelector(`text=${OWN_BOUNDARY_TEXT}`);
     expect(await app.getHtml("main")).toMatch(OWN_BOUNDARY_TEXT);
   });
 
@@ -369,6 +372,7 @@ test.describe("ErrorBoundary", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     await app.clickLink(NO_BOUNDARY_LOADER);
+    await page.waitForSelector(`text=${ROOT_BOUNDARY_TEXT}`);
     expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
@@ -384,6 +388,7 @@ test.describe("ErrorBoundary", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     await app.clickLink(NO_BOUNDARY_RENDER);
+    await page.waitForSelector(`text=${ROOT_BOUNDARY_TEXT}`);
     expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
   });
 
@@ -397,6 +402,7 @@ test.describe("ErrorBoundary", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     await app.clickLink(HAS_BOUNDARY_RENDER);
+    await page.waitForSelector(`text=${OWN_BOUNDARY_TEXT}`);
     expect(await app.getHtml("main")).toMatch(OWN_BOUNDARY_TEXT);
   });
 
@@ -429,7 +435,7 @@ test.describe("ErrorBoundary", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/fetcher-no-boundary");
     await app.clickSubmitButton(NO_BOUNDARY_NO_LOADER_OR_ACTION);
-    await page.waitForSelector("#root-boundary");
+    await page.waitForSelector(`text=${ROOT_BOUNDARY_TEXT}`);
   });
 
   test("renders root boundary in document POST without action requests", async () => {
@@ -446,7 +452,7 @@ test.describe("ErrorBoundary", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     await app.clickSubmitButton(NO_BOUNDARY_NO_LOADER_OR_ACTION);
-    await page.waitForSelector("#root-boundary");
+    await page.waitForSelector(`text=${ROOT_BOUNDARY_TEXT}`);
   });
 
   test("renders own boundary in document POST without action requests", async () => {
