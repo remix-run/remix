@@ -1,8 +1,8 @@
 import type { ReactElement } from "react";
 import * as React from "react";
 import {
-  unstable_createStaticRouter as createStaticRouter,
-  unstable_StaticRouterProvider as StaticRouterProvider,
+  createStaticRouter,
+  StaticRouterProvider,
 } from "react-router-dom/server";
 
 import { RemixContext } from "./components";

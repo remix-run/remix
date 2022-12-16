@@ -389,15 +389,19 @@ export function getNewMatchesForLinks(
           }
 
           if (match.route.shouldRevalidate) {
-            // TODO: Implement
-            // return match.route.shouldRevalidate({
-            //   params: match.params,
-            //   prevUrl: new URL(
-            //     location.pathname + location.search + location.hash,
-            //     window.origin
-            //   ),
-            //   url: new URL(page, window.origin),
-            // });
+            let routeChoice = match.route.shouldRevalidate({
+              currentUrl: new URL(
+                location.pathname + location.search + location.hash,
+                window.origin
+              ),
+              currentParams: currentMatches[0]?.params || {},
+              nextUrl: new URL(page, window.origin),
+              nextParams: match.params,
+              defaultShouldRevalidate: true,
+            });
+            if (typeof routeChoice === "boolean") {
+              return routeChoice;
+            }
           }
           return true;
         })

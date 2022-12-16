@@ -6,7 +6,6 @@ import type {
 import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
-  AgnosticDataRouteObject,
   ErrorResponse,
   Navigation,
 } from "@remix-run/router";
@@ -491,7 +490,7 @@ function PrefetchPageLinksImpl({
         location,
         "data"
       ),
-    [page, nextMatches, matches, location]
+    [page, nextMatches, matches, manifest, location]
   );
 
   let newMatchesForAssets = React.useMemo(
@@ -504,7 +503,7 @@ function PrefetchPageLinksImpl({
         location,
         "assets"
       ),
-    [page, nextMatches, matches, location]
+    [page, nextMatches, matches, manifest, location]
   );
 
   let dataHrefs = React.useMemo(
@@ -650,8 +649,10 @@ function V2Meta() {
   let meta: V2_HtmlMetaDescriptor[] = [];
   let parentsData: { [routeId: string]: AppData } = {};
 
-  let matchesWithMeta: RouteMatchWithMeta<AgnosticDataRouteObject>[] =
-    matches.map((match) => ({ ...match, meta: [] }));
+  let matchesWithMeta: RouteMatchWithMeta[] = matches.map((match) => ({
+    ...match,
+    meta: [],
+  }));
 
   let index = -1;
   for (let match of matches) {
@@ -954,26 +955,14 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  * navigation indicators and optimistic UI on data mutations.
  *
  * @see https://remix.run/api/remix#usetransition
- * @deprecated Deprecated in favor of useNavigation
  */
 export function useTransition(): Transition {
   let navigation = useNavigation();
 
-  // Have to avoid useMemo here to avoid introducing unstable transition object
-  // identities in StrictMode, since navigation will be stable but using
-  // [navigation] as the dependency array will _still_ re-run on concurrent
-  // renders, and that will create a new object identify for transition
-  let lastNavigationRef = React.useRef<Navigation>();
-  let lastTransitionRef = React.useRef<Transition>();
-
-  if (lastTransitionRef.current && lastNavigationRef.current === navigation) {
-    return lastTransitionRef.current;
-  }
-
-  lastNavigationRef.current = navigation;
-  lastTransitionRef.current = convertNavigationToTransition(navigation);
-
-  return lastTransitionRef.current;
+  return React.useMemo(
+    () => convertNavigationToTransition(navigation),
+    [navigation]
+  );
 }
 
 function convertNavigationToTransition(navigation: Navigation): Transition {
@@ -1005,7 +994,7 @@ function convertNavigationToTransition(navigation: Navigation): Transition {
           action: formAction,
           encType: formEncType,
           formData: formData,
-          key: location.key,
+          key: "",
         },
         type: "actionSubmission",
       };
@@ -1033,7 +1022,7 @@ function convertNavigationToTransition(navigation: Navigation): Transition {
               action: formAction,
               encType: formEncType,
               formData: formData,
-              key: location.key,
+              key: "",
             },
             type: "actionReload",
           };
@@ -1062,7 +1051,7 @@ function convertNavigationToTransition(navigation: Navigation): Transition {
               action: url.pathname + url.search,
               encType: formEncType,
               formData: formData,
-              key: location.key,
+              key: "",
             },
             type: "loaderSubmission",
           };
@@ -1079,7 +1068,7 @@ function convertNavigationToTransition(navigation: Navigation): Transition {
               action: formAction,
               encType: formEncType,
               formData: formData,
-              key: location.key,
+              key: "",
             },
             type: "actionRedirect",
           };
@@ -1094,7 +1083,7 @@ function convertNavigationToTransition(navigation: Navigation): Transition {
                 action: formAction,
                 encType: formEncType,
                 formData: formData,
-                key: location.key,
+                key: "",
               },
               type: "loaderSubmissionRedirect",
             };
@@ -1230,22 +1219,17 @@ function convertRouterFetcherToRemixFetcher(
           action: formAction,
           encType: formEncType,
           formData: formData,
-          // TODO: this is created as a random hash value in useSubmitImpl in
-          // Remix today. We do not have this key in react router as we
-          // flattened submissions down onto the fetcher.  We can't recreate in
-          // this back-compat layer in a stable manner for useFetchers because
-          // we don't have a stable fetcher identity.  So we could:
-          //  - Expose the fetcher key from the router (might make sense if
-          //    we're considering adding useFetcher({ key }) anyway
-          //  - Expose a hidden field with a stable identifier on the fetcher
-          //    like we did for _hasFetcherDoneAnything
-          key: "todo-not-implemented-yet",
+          key: "",
         },
         data: undefined,
       };
       return fetcher;
     } else {
-      invariant(false, "nope");
+      // @remix-run/router doesn't mark loader submissions as state: "submitting"
+      invariant(
+        false,
+        "Encountered an unexpected fetcher scenario in useFetcher()"
+      );
     }
   }
 
@@ -1262,16 +1246,7 @@ function convertRouterFetcherToRemixFetcher(
               action: formAction,
               encType: formEncType,
               formData: formData,
-              // TODO: this is created as a random hash value in useSubmitImpl in
-              // Remix today. We do not have this key in react router as we
-              // flattened submissions down onto the fetcher.  We can't recreate in
-              // this back-compat layer in a stable manner for useFetchers because
-              // we don't have a stable fetcher identity.  So we could:
-              //  - Expose the fetcher key from the router (might make sense if
-              //    we're considering adding useFetcher({ key }) anyway
-              //  - Expose a hidden field with a stable identifier on the fetcher
-              //    like we did for _hasFetcherDoneAnything
-              key: "todo-not-implemented-yet",
+              key: "",
             },
             data,
           };
@@ -1316,16 +1291,7 @@ function convertRouterFetcherToRemixFetcher(
             action: url.pathname + url.search,
             encType: formEncType,
             formData: formData,
-            // TODO: this is created as a random hash value in useSubmitImpl in
-            // Remix today. We do not have this key in react router as we
-            // flattened submissions down onto the fetcher.  We can't recreate in
-            // this back-compat layer in a stable manner for useFetchers because
-            // we don't have a stable fetcher identity.  So we could:
-            //  - Expose the fetcher key from the router (might make sense if
-            //    we're considering adding useFetcher({ key }) anyway
-            //  - Expose a hidden field with a stable identifier on the fetcher
-            //    like we did for _hasFetcherDoneAnything
-            key: "todo-not-implemented-yet",
+            key: "",
           },
           data: undefined,
         };
