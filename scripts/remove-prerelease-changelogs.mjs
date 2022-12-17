@@ -6,7 +6,7 @@ import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
 import rehypeStringify from "remark-stringify";
 import { unified } from "unified";
-import { visit } from "unist-util-visit";
+import { remove } from "unist-util-remove";
 
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const rootDir = path.join(__dirname, "..");
@@ -39,6 +39,7 @@ async function removePreReleaseChangelogs() {
           // @ts-expect-error
           .use(rehypeStringify, {
             bullet: "-",
+            emphasis: "_",
             listItemIndent: "one",
           })
           .process(changelogFileContents);
@@ -57,31 +58,42 @@ function removePreReleaseSectionFromMarkdown() {
    * @returns {Promise<void>}
    */
   async function transformer(tree) {
-    visit(tree, "heading", (node, index, parent) => {
-      if (
-        node.depth === 2 &&
-        node.children[0].type === "text" &&
-        isPrereleaseVersion(node.children[0].value)
-      ) {
-        if (index == null || parent == null) return;
-        let nextIdx = 1;
-        let nextNode = parent.children[index + 1];
-        let found = false;
-        /** @type {import('./unist').FlowNode[]} */
-        let nodesToRemove = [node];
-        while (nextNode && !found) {
-          if (nextNode.type === "heading" && nextNode.depth === 2) {
-            found = true;
-            break;
+    remove(
+      tree,
+      /**
+       * @param {import("./unist").Node & { __REMOVE__?: boolean }} node
+       * @param {number | null | undefined} index
+       * @param {*} parent
+       */
+      (node, index, parent) => {
+        if (node.__REMOVE__ === true) return true;
+        if (
+          node.type === "heading" &&
+          node.depth === 2 &&
+          node.children[0].type === "text" &&
+          isPrereleaseVersion(node.children[0].value)
+        ) {
+          if (index == null || parent == null) return false;
+
+          let nextIdx = 1;
+          let nextNode = parent.children[index + 1];
+          let found = false;
+
+          /** @type {import('./unist').FlowNode[]} */
+          while (nextNode && !found) {
+            if (nextNode.type === "heading" && nextNode.depth === 2) {
+              found = true;
+              break;
+            }
+            nextNode.__REMOVE__ = true;
+            nextNode = parent.children[++nextIdx + index];
           }
-          nodesToRemove.push(nextNode);
-          nextNode = parent.children[++nextIdx + index];
+          return true;
         }
-        for (let node of nodesToRemove) {
-          parent.children.splice(parent.children.indexOf(node), 1);
-        }
+
+        return false;
       }
-    });
+    );
   }
   return transformer;
 }

@@ -1,5 +1,7 @@
 import type { Parent, Literal } from "unist";
 
+export type Node = FlowNode | PhrasingNode | RootNode;
+
 export interface RootNode extends Parent {
   type: "root";
   children: FlowNode[];
