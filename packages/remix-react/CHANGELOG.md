@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 1.9.0
+
+### Patch Changes
+
+- Update `@remix-run/react` to use `Router` from `react-router-dom@6.5.0` ([#4731](https://github.com/remix-run/remix/pull/4731))
+- Allow pass-through props to be passed to the script rendered by `ScrollRestoration` ([#2879](https://github.com/remix-run/remix/pull/2879))
+- Fixed a problem with `<LiveReload>` and Firefox infinitely reloading the page. ([#4725](https://github.com/remix-run/remix/pull/4725))
+
 ## 1.8.2
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.8.2) for an overview of all changes in v1.8.2.

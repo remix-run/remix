@@ -20,6 +20,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
 }
 
 describe("<ScrollRestoration />", () => {
+  let scrollTo = window.scrollTo;
+  beforeAll(() => {
+    window.scrollTo = () => {};
+  });
+  afterAll(() => {
+    window.scrollTo = scrollTo;
+  });
   function withContext(stuff: JSX.Element) {
     let context: RemixEntryContextType = {
       routeModules: { idk: { default: () => null } },
@@ -63,6 +70,7 @@ describe("<ScrollRestoration />", () => {
           };
         },
       } as any,
+      future: {} as any,
     };
     return (
       <RemixEntryContext.Provider value={context}>
