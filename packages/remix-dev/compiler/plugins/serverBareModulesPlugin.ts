@@ -9,6 +9,7 @@ import {
   serverBuildVirtualModule,
   assetsManifestVirtualModule,
 } from "../virtualModules";
+import { isCssSideEffectPath } from "./cssSideEffectsPlugin";
 import { createMatchPath } from "../utils/tsconfig";
 import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
 
@@ -67,6 +68,11 @@ export function serverBareModulesPlugin(
 
         // Always bundle CSS files so we get immutable fingerprinted asset URLs.
         if (path.endsWith(".css")) {
+          return undefined;
+        }
+
+        // Always bundle CSS side effects.
+        if (isCssSideEffectPath(path)) {
           return undefined;
         }
 

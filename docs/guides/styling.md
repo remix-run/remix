@@ -766,28 +766,16 @@ Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framewo
 
 NOTE: You may run into hydration warnings when using Styled Components. Hopefully [this issue][styled-components-issue] will be fixed soon.
 
-## CSS Modules
+## CSS Bundling
 
-<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+<docs-warning>CSS bundling features are unstable and currently only available behind feature flags. We're confident in the use cases they solve but the API and implementation may change in the future.</docs-warning>
 
-<docs-warning>Since all CSS Modules styles end up in a single CSS file at the end of the build, we recommend that you only use this styling approach for smaller applications, or sparingly within larger applications. If you're concerned about bundle size, you should probably look at [Tailwind](#tailwind-css) or [Regular Stylesheets](#regular-stylesheets) instead.
+<docs-warning>Since all bundled CSS ends up in a single file at the end of the build, we recommend that you only use these styling approaches for smaller applications, or sparingly within larger applications. If you're concerned about bundle size, you should probably look at [Tailwind](#tailwind-css) or [Regular Stylesheets](#regular-stylesheets) instead.
 </docs-warning>
 
-To enable [CSS Modules], set the `future.unstable_cssModules` feature flag in `remix.config.js`.
+Many common approaches to CSS within the React community are only possible when bundling CSS, meaning that the CSS files you write during development are collected into a separate bundle as part of the build process.
 
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  future: {
-    unstable_cssModules: true,
-  },
-  // ...
-};
-```
-
-With this feature flag enabled, the Remix compiler will now generate a single CSS file containing all CSS Modules styles in your application. Note that any [regular stylesheet imports](http://localhost:3000/docs/en/v1/guides/styling#regular-stylesheets) will remain as separate files.
-
-Unlike many other tools in the React ecosystem, insertion of this CSS bundle into the page is not handled for you automatically. Instead, we ensure that you always have control over the link tags on your page. This lets you decide where the CSS bundle is inserted and in what order relative to other style sheets.
+Unlike many other tools in the React ecosystem, insertion of this bundle into the page is not handled for you automatically. Instead, we ensure that you always have control over the link tags on your page. This lets you decide where the CSS bundle is inserted and in what order relative to other style sheets.
 
 To get access to the CSS bundle, first install the `@remix-run/css-bundle` package.
 
@@ -809,7 +797,30 @@ export const links: LinksFunction = () => {
 };
 ```
 
-You're all set! You can now opt into CSS Modules via the `.module.css` file name convention, for example:
+With this link tag inserted into the page, you're now ready to start using the various CSS bundling features built into Remix.
+
+### CSS Modules
+
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+
+<docs-warning>Since all CSS Modules styles end up in a single CSS file at the end of the build, we recommend that you only use this styling approach for smaller applications, or sparingly within larger applications. If you're concerned about bundle size, you should probably look at [Tailwind](#tailwind-css) or [Regular Stylesheets](#regular-stylesheets) instead.
+</docs-warning>
+
+First, ensure you've set up [CSS bundling](#css-bundling) in your application.
+
+Then, to enable [CSS Modules], set the `future.unstable_cssModules` feature flag in `remix.config.js`.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  future: {
+    unstable_cssModules: true,
+  },
+  // ...
+};
+```
+
+With this feature flag enabled, you can now opt into CSS Modules via the `.module.css` file name convention, for example:
 
 ```css filename=app/components/button/styles.module.css
 .root {
@@ -836,6 +847,46 @@ export const Button = React.forwardRef(
 Button.displayName = "Button";
 ```
 
+### CSS Side Effects
+
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+
+<docs-warning>Since all CSS side effects end up in a single CSS file at the end of the build, we recommend that you only use this styling approach for smaller applications, or sparingly within larger applications. If you're concerned about bundle size, you should probably look at [Regular Stylesheets](#regular-stylesheets) instead.
+</docs-warning>
+
+This feature is primarily designed to support packages that import plain CSS files directly within JS files. For consistency, this is also available within your application code, but we recommend that you avoid it entirely.
+
+In order to use this feature, first ensure you've set up [CSS bundling](#css-bundling) in your application.
+
+Then, set the `future.unstable_cssSideEffects` feature flag in `remix.config.js`.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  future: {
+    unstable_cssSideEffects: true,
+  },
+  // ...
+};
+```
+
+Since it's non-standard to import CSS from within JS files, you'll also need to add any relevant packages to the [`serverDependenciesToBundle`][server-dependencies-to-bundle] option in your `remix.config.js` file. For example, to use React Spectrum:
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  serverDependenciesToBundle: [
+    /^@adobe\/react-spectrum/,
+    /^@react-spectrum/,
+    /^@spectrum-icons/,
+  ],
+  future: {
+    unstable_cssSideEffects: true,
+  },
+  // ...
+};
+```
+
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
 [link]: ../components/link
 [route-module-links]: ../route/links
@@ -845,3 +896,4 @@ Button.displayName = "Button";
 [tailwind]: https://tailwindcss.com
 [tailwind-intelli-sense-extension]: https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss
 [css modules]: https://github.com/css-modules/css-modules
+[server-dependencies-to-bundle]: ../file-conventions/remix-config#serverdependenciestobundle

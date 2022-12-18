@@ -19,6 +19,7 @@ import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
 import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
+import { cssSideEffectsPlugin } from "./plugins/cssSideEffectsPlugin";
 import {
   cssBundleEntryModulePlugin,
   cssBundleEntryModuleId,
@@ -65,6 +66,9 @@ const writeAssetsManifest = async (
   );
 };
 
+const isCssBundlingEnabled = (config: RemixConfig) =>
+  config.future.unstable_cssModules || config.future.unstable_cssSideEffects;
+
 const createEsbuildConfig = (
   build: "app" | "css",
   config: RemixConfig,
@@ -89,27 +93,26 @@ const createEsbuildConfig = (
     }
   }
 
+  let { mode } = options;
+  let { rootDirectory } = config;
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    ...(config.future.unstable_cssModules
-      ? [
-          ...(build === "css" ? [cssBundleEntryModulePlugin(config)] : []),
-          cssModulesPlugin({
-            mode: options.mode,
-            rootDirectory: config.rootDirectory,
-          }),
-        ]
-      : []),
-    cssFilePlugin({
-      mode: options.mode,
-      rootDirectory: config.rootDirectory,
-    }),
+    isCssBundlingEnabled(config) && build === "css"
+      ? cssBundleEntryModulePlugin(config)
+      : null,
+    config.future.unstable_cssModules
+      ? cssModulesPlugin({ mode, rootDirectory })
+      : null,
+    config.future.unstable_cssSideEffects
+      ? cssSideEffectsPlugin({ rootDirectory })
+      : null,
+    cssFilePlugin({ mode, rootDirectory }),
     urlImportsPlugin(),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
-  ];
+  ].filter(isNotNull);
 
   return {
     entryPoints,
@@ -169,7 +172,7 @@ export const createBrowserCompiler = (
     };
 
     let cssBuildTask = async () => {
-      if (!remixConfig.future.unstable_cssModules) {
+      if (!isCssBundlingEnabled(remixConfig)) {
         return;
       }
 
@@ -254,3 +257,7 @@ export const createBrowserCompiler = (
     },
   };
 };
+
+function isNotNull<Value>(value: Value): value is Exclude<Value, null> {
+  return value !== null;
+}

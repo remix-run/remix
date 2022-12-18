@@ -17,6 +17,7 @@ export interface EntryContext {
 
 export interface FutureConfig {
   unstable_cssModules: boolean;
+  unstable_cssSideEffects: boolean;
   v2_meta: boolean;
 }
 
