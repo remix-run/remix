@@ -3,7 +3,8 @@
   "sideEffects": false,
   "scripts": {
     "build": "remix build",
-    "dev": "remix dev"
+    "dev": "remix dev",
+    "typecheck": "tsc -b"
   },
   "dependencies": {
     "@remix-run/node": "*",
