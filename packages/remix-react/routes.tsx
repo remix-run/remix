@@ -10,10 +10,10 @@ import { redirect } from "react-router-dom";
 import type { RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
 import { fetchData, isCatchResponse, isRedirectResponse } from "./data";
+import type { FutureConfig } from "./entry";
 import { prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
 import { RemixRoute, RemixRouteError } from "./components";
-import { FutureConfig } from "./entry";
 
 export interface RouteManifest<Route> {
   [routeId: string]: Route;

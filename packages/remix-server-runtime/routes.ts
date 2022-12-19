@@ -5,7 +5,7 @@ import type {
 } from "@remix-run/router";
 
 import { callRouteActionRR, callRouteLoaderRR } from "./data";
-import { FutureConfig } from "./entry";
+import type { FutureConfig } from "./entry";
 import type { ServerRouteModule } from "./routeModules";
 
 export interface RouteManifest<Route> {

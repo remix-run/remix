@@ -8,7 +8,7 @@ import { sync as spawnSync } from "cross-spawn";
 import type { JsonObject } from "type-fest";
 import type { ServerMode } from "@remix-run/server-runtime/mode";
 
-import type { AppConfig } from "../../build/node_modules/@remix-run/dev";
+import type { AppConfig } from "../../build/node_modules/@remix-run/dev/dist/config";
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express";
