@@ -42,7 +42,6 @@ import type { AppData } from "./data";
 import type { EntryContext, RemixContextObject } from "./entry";
 import {
   RemixRootDefaultErrorBoundary,
-  RemixErrorBoundary,
   RemixRootDefaultCatchBoundary,
   RemixCatchBoundary,
 } from "./errorBoundaries";
@@ -151,7 +150,6 @@ export function RemixRouteError({ id }: { id: string }) {
   );
 
   let error = useRouteError();
-  let location = useLocation();
   let { CatchBoundary, ErrorBoundary } = routeModules[id];
 
   // POC for potential v2 error boundary handling
@@ -177,13 +175,7 @@ export function RemixRouteError({ id }: { id: string }) {
       ErrorBoundary
     ) {
       // Internal framework-thrown ErrorResponses
-      return (
-        <RemixErrorBoundary
-          location={location}
-          component={ErrorBoundary!}
-          error={tError.error}
-        />
-      );
+      return <ErrorBoundary error={tError.error} />;
     }
     if (CatchBoundary) {
       // User-thrown ErrorResponses
@@ -198,13 +190,7 @@ export function RemixRouteError({ id }: { id: string }) {
 
   if (error instanceof Error && ErrorBoundary) {
     // User- or framework-thrown Errors
-    return (
-      <RemixErrorBoundary
-        location={location}
-        component={ErrorBoundary}
-        error={error as Error}
-      />
-    );
+    return <ErrorBoundary error={error} />;
   }
 
   throw error;
