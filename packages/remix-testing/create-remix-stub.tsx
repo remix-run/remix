@@ -7,29 +7,20 @@ import type {
   RouteManifest,
   RouteModules,
 } from "@remix-run/react";
-import { RemixEntry } from "@remix-run/react";
-import type {
-  Action,
-  AgnosticDataRouteObject,
-  AgnosticIndexRouteObject,
-  AgnosticNonIndexRouteObject,
-  AgnosticRouteMatch,
-  InitialEntry,
-  Location,
-  MemoryHistory,
-  StaticHandler,
-} from "@remix-run/router";
 import {
-  createMemoryHistory,
-  matchRoutes,
-  unstable_createStaticHandler as createStaticHandler,
+  createStaticRouter,
+  StaticRouterProvider,
+} from "react-router-dom/server";
+import type { RouteObject, Location } from "react-router-dom";
+import { matchRoutes, json } from "react-router-dom";
+import type {
+  AgnosticDataRouteObject,
+  InitialEntry,
+  StaticHandler,
+  StaticHandlerContext,
 } from "@remix-run/router";
-import { json } from "@remix-run/server-runtime";
-
-type Update = {
-  action: Action;
-  location: Location;
-};
+import { createStaticHandler } from "@remix-run/router";
+import { RemixContext } from "@remix-run/react/dist/components";
 
 type RemixStubOptions = {
   /**
@@ -47,10 +38,26 @@ type RemixStubOptions = {
   initialLoaderData?: RouteData;
 
   /**
+   * Used to set the route's initial loader headers.
+   * e.g. initialLoaderHeaders={{ "/contact": { "Content-Type": "application/json" } }}
+   */
+  initialLoaderHeaders?: Record<string, Headers>;
+
+  /**
    *  Used to set the route's initial action data.
    *  e.g. initialActionData={{ "/login": { errors: { email: "invalid email" } }}
    */
   initialActionData?: RouteData;
+
+  /**
+   * Used to set the route's initial action headers.
+   */
+  initialActionHeaders?: Record<string, Headers>;
+
+  /**
+   * Used to set the route's initial status code.
+   */
+  initialStatusCode?: number;
 
   /**
    * The initial index in the history stack to render. This allows you to start a test at a specific entry.
@@ -62,107 +69,64 @@ type RemixStubOptions = {
   initialIndex?: number;
 };
 
-type IndexStubRouteObject = AgnosticIndexRouteObject & {
-  element?: React.ReactNode;
-  children?: undefined;
-};
-
-type NonIndexStubRouteObject = AgnosticNonIndexRouteObject & {
-  element?: React.ReactNode;
-  children?: StubRouteObject[];
-};
-
-// TODO: once Remix is on RR@6.4 we can just use the native type
-type StubRouteObject = IndexStubRouteObject | NonIndexStubRouteObject;
-
 type RemixConfigFuture = Partial<EntryContext["future"]>;
 
 export function createRemixStub(
-  routes: StubRouteObject[],
+  routes: RouteObject[],
   remixConfigFuture?: RemixConfigFuture
 ) {
   // Setup request handler to handle requests to the mock routes
-  let { dataRoutes, queryRoute } = createStaticHandler(routes);
+  let staticHandler = createStaticHandler(routes);
   return function RemixStub({
     initialEntries,
+    initialIndex,
     initialLoaderData = {},
     initialActionData,
-    initialIndex,
+    initialActionHeaders,
+    initialLoaderHeaders,
+    initialStatusCode: statusCode,
   }: RemixStubOptions) {
-    let historyRef = React.useRef<MemoryHistory>();
-    if (historyRef.current == null) {
-      historyRef.current = createMemoryHistory({
-        initialEntries,
-        initialIndex,
-        v5Compat: true,
+    let location = React.useRef<Location>();
+
+    React.useLayoutEffect(() => {
+      return router.subscribe((state) => {
+        location.current = state.location;
       });
-    }
+    }, []);
 
-    let history = historyRef.current;
+    let manifest = createManifest(staticHandler.dataRoutes);
+    let matches = matchRoutes(routes, location.current!) || [];
+    let future: EntryContext["future"] = {
+      v2_meta: false,
+      ...remixConfigFuture,
+    };
+    let routeModules = createRouteModules(staticHandler.dataRoutes);
 
-    let [state, dispatch] = React.useReducer(
-      (_: Update, update: Update) => update,
-      { action: history.action, location: history.location }
-    );
+    let staticHandlerContext: StaticHandlerContext = {
+      actionData: initialActionData || null,
+      actionHeaders: initialActionHeaders || {},
+      loaderData: initialLoaderData || {},
+      loaderHeaders: initialLoaderHeaders || {},
+      basename: "",
+      errors: null,
+      location: location.current!,
+      matches,
+      statusCode: statusCode || 200,
+    };
 
-    React.useLayoutEffect(() => history.listen(dispatch), [history]);
-
-    // Convert path based ids in user supplied initial loader/action data to data route ids
-    let loaderData = convertRouteData(dataRoutes, initialLoaderData);
-    let actionData = convertRouteData(dataRoutes, initialActionData);
-
-    // Create mock remix context
-    let remixContext = createRemixContext(
-      dataRoutes,
-      state.location,
-      loaderData,
-      actionData,
-      remixConfigFuture
+    let router = createStaticRouter(
+      staticHandler.dataRoutes,
+      staticHandlerContext
     );
 
     // Patch fetch so that mock routes can handle action/loader requests
-    monkeyPatchFetch(queryRoute, dataRoutes);
+    monkeyPatchFetch(staticHandler);
 
     return (
-      <RemixEntry
-        context={remixContext}
-        action={state.action}
-        location={state.location}
-        navigator={history}
-      />
+      <RemixContext.Provider value={{ manifest, routeModules, future }}>
+        <StaticRouterProvider router={router} context={staticHandlerContext} />
+      </RemixContext.Provider>
     );
-  };
-}
-
-function createRemixContext(
-  routes: AgnosticDataRouteObject[],
-  currentLocation: Location,
-  initialLoaderData?: RouteData,
-  initialActionData?: RouteData,
-  future?: RemixConfigFuture
-): EntryContext {
-  let manifest = createManifest(routes);
-  let matches = matchRoutes(routes, currentLocation) || [];
-
-  return {
-    // TODO: Check with Logan on how to handle the update heree
-    // @ts-expect-error
-    actionData: initialActionData,
-    appState: {
-      trackBoundaries: true,
-      trackCatchBoundaries: true,
-      catchBoundaryRouteId: null,
-      renderBoundaryRouteId: null,
-      loaderBoundaryRouteId: null,
-    },
-    future: {
-      v2_meta: false,
-      ...future,
-    },
-    matches: convertToEntryRouteMatch(matches),
-    routeData: initialLoaderData || {},
-    manifest,
-    routeModules: createRouteModules(routes),
   };
 }
 
@@ -206,9 +170,7 @@ function createRouteModules(
       handle: route.handle,
       links: undefined,
       meta: undefined,
-      // TODO: Check with Logan on how to handle the update here
-      // @ts-expect-error
-      unstable_shouldReload: undefined,
+      shouldRevalidate: undefined,
     };
     return modules;
   }, routeModules || {});
@@ -217,10 +179,7 @@ function createRouteModules(
 const originalFetch =
   typeof global !== "undefined" ? global.fetch : window.fetch;
 
-function monkeyPatchFetch(
-  queryRoute: StaticHandler["queryRoute"],
-  dataRoutes: StaticHandler["dataRoutes"]
-) {
+function monkeyPatchFetch(staticHandler: StaticHandler) {
   let fetchPatch = async (
     input: RequestInfo | URL,
     init: RequestInit = {}
@@ -230,9 +189,9 @@ function monkeyPatchFetch(
 
     // if we have matches, send the request to mock routes via @remix-run/router rather than the normal
     // @remix-run/server-runtime so that stubs can also be used in browser environments.
-    let matches = matchRoutes(dataRoutes, url);
+    let matches = matchRoutes(staticHandler.dataRoutes, url);
     if (matches && matches.length > 0) {
-      let response = await queryRoute(request);
+      let response = await staticHandler.queryRoute(request);
 
       if (response instanceof Response) {
         return response;
@@ -264,18 +223,6 @@ function convertToEntryRoute(
     hasCatchBoundary: false,
     hasErrorBoundary: false,
   };
-}
-
-function convertToEntryRouteMatch(
-  routes: AgnosticRouteMatch<string, AgnosticDataRouteObject>[]
-) {
-  return routes.map((match) => {
-    return {
-      params: match.params,
-      pathname: match.pathname,
-      route: convertToEntryRoute(match.route),
-    };
-  });
 }
 
 // Converts route data from a path based index to a route id index value.
