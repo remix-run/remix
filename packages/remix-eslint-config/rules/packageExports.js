@@ -144,7 +144,6 @@ const reactSpecificExports = {
     "NavLinkProps",
     "RemixBrowserProps",
     "RemixServerProps",
-    "ShouldReloadFunction",
     "SubmitFunction",
     "SubmitOptions",
     "ThrownResponse",
