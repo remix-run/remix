@@ -51,6 +51,7 @@ export {
   useLoaderData,
   useMatches,
   useActionData,
+  RemixContext as UNSAFE_RemixContext,
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";

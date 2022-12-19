@@ -7,11 +7,10 @@ import type {
   RouteManifest,
   RouteModules,
 } from "@remix-run/react";
-import {
-  createStaticRouter,
-  StaticRouterProvider,
-} from "react-router-dom/server";
-import type { RouteObject, Location } from "react-router-dom";
+import { UNSAFE_RemixContext as RemixContext } from "@remix-run/react";
+import { StaticRouterProvider } from "react-router-dom/server";
+import type { RouteObject } from "react-router-dom";
+import { createMemoryRouter } from "react-router-dom";
 import { matchRoutes, json } from "react-router-dom";
 import type {
   AgnosticDataRouteObject,
@@ -20,7 +19,6 @@ import type {
   StaticHandlerContext,
 } from "@remix-run/router";
 import { createStaticHandler } from "@remix-run/router";
-import { RemixContext } from "@remix-run/react/dist/components";
 
 type RemixStubOptions = {
   /**
@@ -86,16 +84,13 @@ export function createRemixStub(
     initialLoaderHeaders,
     initialStatusCode: statusCode,
   }: RemixStubOptions) {
-    let location = React.useRef<Location>();
-
-    React.useLayoutEffect(() => {
-      return router.subscribe((state) => {
-        location.current = state.location;
-      });
-    }, []);
+    let memoryRouter = createMemoryRouter(staticHandler.dataRoutes, {
+      initialEntries,
+      initialIndex,
+    });
 
     let manifest = createManifest(staticHandler.dataRoutes);
-    let matches = matchRoutes(routes, location.current!) || [];
+    let matches = matchRoutes(routes, memoryRouter.state.location) || [];
     let future: EntryContext["future"] = {
       v2_meta: false,
       ...remixConfigFuture,
@@ -109,22 +104,21 @@ export function createRemixStub(
       loaderHeaders: initialLoaderHeaders || {},
       basename: "",
       errors: null,
-      location: location.current!,
+      location: memoryRouter.state.location,
+      // @ts-expect-error
       matches,
       statusCode: statusCode || 200,
     };
-
-    let router = createStaticRouter(
-      staticHandler.dataRoutes,
-      staticHandlerContext
-    );
 
     // Patch fetch so that mock routes can handle action/loader requests
     monkeyPatchFetch(staticHandler);
 
     return (
       <RemixContext.Provider value={{ manifest, routeModules, future }}>
-        <StaticRouterProvider router={router} context={staticHandlerContext} />
+        <StaticRouterProvider
+          router={memoryRouter}
+          context={staticHandlerContext}
+        />
       </RemixContext.Provider>
     );
   };
@@ -223,31 +217,4 @@ function convertToEntryRoute(
     hasCatchBoundary: false,
     hasErrorBoundary: false,
   };
-}
-
-// Converts route data from a path based index to a route id index value.
-// e.g. { "/post/:postId": post } to { "0": post }
-// TODO: may not need
-function convertRouteData(
-  routes: AgnosticDataRouteObject[],
-  initialRouteData?: RouteData,
-  routeData: RouteData = {}
-): RouteData | undefined {
-  if (!initialRouteData) return undefined;
-  return routes.reduce<RouteData>((data, route) => {
-    if (route.children) {
-      convertRouteData(route.children, initialRouteData, data);
-    }
-    // Check if any of the initial route data entries match this route
-    Object.keys(initialRouteData).forEach((routePath) => {
-      if (
-        routePath === route.path ||
-        // Let '/' refer to the root routes data
-        (routePath === "/" && route.id === "0" && !route.path)
-      ) {
-        data[route.id!] = initialRouteData[routePath];
-      }
-    });
-    return data;
-  }, routeData);
 }
