@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/netlify-edge",
   "description": "Netlify Edge server request handler for Remix",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
