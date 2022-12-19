@@ -230,7 +230,9 @@ async function handleDocumentRequestRR(
   }
 
   // Restructure context.errors to the right Catch/Error Boundary
-  differentiateCatchVersusErrorBoundaries(build, context);
+  if (build.future.v2_errorBoundary !== true) {
+    differentiateCatchVersusErrorBoundaries(build, context);
+  }
 
   let headers = getDocumentHeadersRR(build, context);
 
@@ -270,7 +272,9 @@ async function handleDocumentRequestRR(
     );
 
     // Restructure context.errors to the right Catch/Error Boundary
-    differentiateCatchVersusErrorBoundaries(build, context);
+    if (build.future.v2_errorBoundary !== true) {
+      differentiateCatchVersusErrorBoundaries(build, context);
+    }
 
     // Update entryContext for the second render pass
     entryContext = {

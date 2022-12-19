@@ -145,7 +145,7 @@ function createRemixContext(
   let matches = matchRoutes(routes, currentLocation) || [];
 
   return {
-    // TODO: Check with Logan on how to handle the update heree
+    // TODO: Check with Logan on how to handle the update here
     // @ts-expect-error
     actionData: initialActionData,
     appState: {
@@ -156,6 +156,7 @@ function createRemixContext(
       loaderBoundaryRouteId: null,
     },
     future: {
+      v2_errorBoundary: false,
       v2_meta: false,
       ...future,
     },

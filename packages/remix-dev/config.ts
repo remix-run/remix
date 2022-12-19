@@ -32,6 +32,7 @@ export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
 interface FutureConfig {
+  v2_errorBoundary: boolean;
   v2_meta: boolean;
 }
 
@@ -481,6 +482,7 @@ export async function readConfig(
   }
 
   let future = {
+    v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
     v2_meta: appConfig.future?.v2_meta === true,
   };
 

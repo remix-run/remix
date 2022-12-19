@@ -12,6 +12,7 @@ export interface EntryContext {
 }
 
 export interface FutureConfig {
+  v2_errorBoundary: boolean;
   v2_meta: boolean;
 }
 

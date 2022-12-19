@@ -12,6 +12,7 @@ export type {
 export {
   Form,
   Outlet,
+  isRouteErrorResponse,
   useBeforeUnload,
   useFormAction,
   useHref,
@@ -24,6 +25,7 @@ export {
   useParams,
   useResolvedPath,
   useRevalidator,
+  useRouteError,
   useSearchParams,
   useSubmit,
 } from "react-router-dom";
