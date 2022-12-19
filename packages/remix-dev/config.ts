@@ -22,6 +22,7 @@ export type RemixMdxConfigFunction = (
 export type ServerBuildTarget =
   | "node-cjs"
   | "arc"
+  | "netlify"
   | "vercel"
   | "cloudflare-pages"
   | "cloudflare-workers"
@@ -369,6 +370,9 @@ export async function readConfig(
       break;
     case "cloudflare-pages":
       serverBuildPath = "functions/[[path]].js";
+      break;
+    case "netlify":
+      serverBuildPath = ".netlify/functions-internal/server.js";
       break;
     case "vercel":
       serverBuildPath = "api/index.js";
