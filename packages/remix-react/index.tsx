@@ -1,30 +1,36 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export type {
+  FormProps,
   Location,
   NavigateFunction,
   Params,
   Path,
+  SubmitFunction,
+  SubmitOptions,
 } from "react-router-dom";
 export {
+  Form,
   Outlet,
+  useBeforeUnload,
+  useFormAction,
   useHref,
   useLocation,
   useNavigate,
+  useNavigation,
   useNavigationType,
   useOutlet,
   useOutletContext,
   useParams,
   useResolvedPath,
+  useRevalidator,
   useSearchParams,
+  useSubmit,
 } from "react-router-dom";
 
 export type {
   FetcherWithComponents,
-  FormProps,
   RouteMatch,
-  SubmitOptions,
-  SubmitFunction,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,
 } from "./components";
@@ -34,19 +40,15 @@ export {
   Scripts,
   Link,
   NavLink,
-  Form,
   RemixEntry,
   PrefetchPageLinks,
   LiveReload,
-  useFormAction,
-  useSubmit,
   useTransition,
   useFetcher,
   useFetchers,
   useLoaderData,
-  useActionData,
-  useBeforeUnload,
   useMatches,
+  useActionData,
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";
@@ -56,7 +58,6 @@ export { useCatch } from "./errorBoundaries";
 
 export type { HtmlLinkDescriptor } from "./links";
 export type {
-  ShouldReloadFunction,
   HtmlMetaDescriptor,
   CatchBoundaryComponent,
   RouteModules,

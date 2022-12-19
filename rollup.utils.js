@@ -326,7 +326,6 @@ function getMagicExports(packageName) {
         "NavLinkProps",
         "RemixBrowserProps",
         "RemixServerProps",
-        "ShouldReloadFunction",
         "SubmitFunction",
         "SubmitOptions",
         "ThrownResponse",

@@ -1,6 +1,6 @@
 ---
-title: Developer Blog
-order: 1
+title: Blog Tutorial (short)
+order: 3
 ---
 
 # Quickstart
@@ -1034,7 +1034,7 @@ We hope you love Remix! 💿 👋
 [http-localhost-3000]: http://localhost:3000
 [screenshot-of-the-app-showing-the-blog-post-link]: https://user-images.githubusercontent.com/1500684/160208939-34fe20ed-3146-4f4b-a68a-d82284339c47.png
 [tailwind]: https://tailwindcss.com
-[the-styling-guide]: /guides/styling
+[the-styling-guide]: ../guides/styling
 [prisma]: https://prisma.io
 [http-localhost-3000-posts-admin]: http://localhost:3000/posts/admin
 [mdn-request]: https://developer.mozilla.org/en-US/docs/Web/API/Request
