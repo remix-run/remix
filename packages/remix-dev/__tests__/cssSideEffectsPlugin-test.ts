@@ -1,154 +1,205 @@
 import dedent from "dedent";
 
-import {
-  addSuffixToCssSideEffectImports,
-  cssSideEffectSuffix,
-} from "../compiler/plugins/cssSideEffectsPlugin";
+import { addSuffixToCssSideEffectImports } from "../compiler/plugins/cssSideEffectsPlugin";
 
-const SUFFIX_PLACEHOLDER = "{{SUFFIX_PLACEHOLDER}}";
-const suffixPlaceholderRegExp = new RegExp(SUFFIX_PLACEHOLDER, "g");
+describe("addSuffixToCssSideEffectImports", () => {
+  describe("adds suffix", () => {
+    test("side effect require", () => {
+      let code = dedent`
+        require("./foo.css");
+      `;
 
-const testCase = (input: string) => {
-  let contents = dedent(input);
-
-  return {
-    withoutSuffix: contents.replace(suffixPlaceholderRegExp, ""),
-    withSuffix: contents.replace(suffixPlaceholderRegExp, cssSideEffectSuffix),
-  } as const;
-};
-
-describe("cssSideEffectsPlugin", () => {
-  describe("addSuffixToCssSideEffectImports", () => {
-    test("require - double quotes", () => {
-      let { withoutSuffix, withSuffix } = testCase(
-        `require("./foo.css${SUFFIX_PLACEHOLDER}")`
+      expect(addSuffixToCssSideEffectImports("js", code)).toMatchInlineSnapshot(
+        `"require(\\"./foo.css?__remix_sideEffect__\\");"`
       );
-
-      expect(addSuffixToCssSideEffectImports(withoutSuffix)).toBe(withSuffix);
     });
 
-    test("require - single quotes", () => {
-      let { withoutSuffix, withSuffix } = testCase(
-        `require('./foo.css${SUFFIX_PLACEHOLDER}')`
+    test("side effect import", () => {
+      let code = dedent`
+        import "./foo.css";
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code)).toMatchInlineSnapshot(
+        `"import \\"./foo.css?__remix_sideEffect__\\";"`
       );
-
-      expect(addSuffixToCssSideEffectImports(withoutSuffix)).toBe(withSuffix);
     });
 
-    test("import - double quotes", () => {
-      let { withoutSuffix, withSuffix } = testCase(
-        `import "./foo.css${SUFFIX_PLACEHOLDER}"`
-      );
-
-      expect(addSuffixToCssSideEffectImports(withoutSuffix)).toBe(withSuffix);
-    });
-
-    test("import - single quotes", () => {
-      let { withoutSuffix, withSuffix } = testCase(
-        `import './foo.css${SUFFIX_PLACEHOLDER}'`
-      );
-
-      expect(addSuffixToCssSideEffectImports(withoutSuffix)).toBe(withSuffix);
-    });
-
-    test("multiple requires", () => {
-      let { withoutSuffix, withSuffix } = testCase(`
-          const path = require('path');
-          require('./foo.css${SUFFIX_PLACEHOLDER}');
-          const fs = require('fs');
-      `);
-
-      expect(addSuffixToCssSideEffectImports(withoutSuffix)).toBe(withSuffix);
-    });
-
-    test("multiple imports", () => {
-      let { withoutSuffix, withSuffix } = testCase(`
-          import path from 'path';
-          import './foo.css${SUFFIX_PLACEHOLDER}';
-          import fs from 'fs';
-      `);
-
-      expect(addSuffixToCssSideEffectImports(withoutSuffix)).toBe(withSuffix);
-    });
-
-    test("multiple requires with other CSS formats", () => {
-      let { withoutSuffix, withSuffix } = testCase(`
-        const fooHref = require("./foo.css");
-        require("./foo.css${SUFFIX_PLACEHOLDER}");
-        const barStyles = require("./bar.module.css");
-      `);
-
-      expect(addSuffixToCssSideEffectImports(withoutSuffix)).toBe(withSuffix);
-    });
-
-    test("mutliple imports with other CSS formats", () => {
-      let { withoutSuffix, withSuffix } = testCase(`
-        import fooHref from "./foo.css";
-        import "./foo.css${SUFFIX_PLACEHOLDER}";
-        import barStyles from "./bar.module.css";
-      `);
-
-      expect(addSuffixToCssSideEffectImports(withoutSuffix)).toBe(withSuffix);
-    });
-
-    test("multiple requires with other CSS formats on a single line", () => {
-      let { withoutSuffix, withSuffix } = testCase(
-        [
-          `const fooHref=require("./foo.css");`,
-          `require("./foo.css${SUFFIX_PLACEHOLDER}");`,
-          `const barStyles=require("./bar.module.css");`,
-        ].join("")
-      );
-
-      expect(addSuffixToCssSideEffectImports(withoutSuffix)).toBe(withSuffix);
-    });
-
-    test("multiple imports with other CSS formats on a single line", () => {
-      let { withoutSuffix, withSuffix } = testCase(
-        [
-          `import fooHref from "./foo.css";`,
-          `import "./foo.css${SUFFIX_PLACEHOLDER}";`,
-          `import barStyles from "./bar.module.css";`,
-        ].join("")
-      );
-
-      expect(addSuffixToCssSideEffectImports(withoutSuffix)).toBe(withSuffix);
-    });
-
-    test("conditional requires with other CSS formats", () => {
-      let { withoutSuffix, withSuffix } = testCase(`
-        if (process.env.NODE_ENV === 'production') {
-          require("./foo.min.css${SUFFIX_PLACEHOLDER}")
-        } else {
-          require("./foo.css${SUFFIX_PLACEHOLDER}")
-        }
-
-        const barStylesHref =
-          process.env.NODE_ENV === "production"
-            ? require("./bar.min.css")
-            : require("./bar.css");
+    test("side effect import with JSX", () => {
+      let code = dedent`
+        import "./foo.css";
         
-        let bazStylesHref;
-        if (process.env.NODE_ENV === 'production') {
-          bazStylesHref = require("./baz.min.css")
-        } else {
-          bazStylesHref = require("./baz.css")
-        }
-      `);
+        export const Foo = () => <div />;
+      `;
 
-      expect(addSuffixToCssSideEffectImports(withoutSuffix)).toBe(withSuffix);
+      expect(addSuffixToCssSideEffectImports("jsx", code))
+        .toMatchInlineSnapshot(`
+        "import \\"./foo.css?__remix_sideEffect__\\";
+
+        export const Foo = () => <div />;"
+      `);
     });
 
-    test("conditional requires with other CSS formats on a single line", () => {
-      let { withoutSuffix, withSuffix } = testCase(
-        [
-          `if(process.env.NODE_ENV==='production'){require("./foo.min.css${SUFFIX_PLACEHOLDER}")}else{require("./foo.css${SUFFIX_PLACEHOLDER}")}`,
-          `const barStylesHref=process.env.NODE_ENV==='production'?require("./bar.min.css"):require("./bar.css");`,
-          `let bazStylesHref;if(process.env.NODE_ENV==='production'){bazStylesHref=require("./baz.min.css")}else{bazStylesHref=require("./baz.css")}`,
-        ].join("")
-      );
+    test("side effect import in TypeScript", () => {
+      let code = dedent`
+        require("./foo.css");
+        
+        export const foo: string = 'foo' satisfies string;
+      `;
 
-      expect(addSuffixToCssSideEffectImports(withoutSuffix)).toBe(withSuffix);
+      expect(addSuffixToCssSideEffectImports("ts", code))
+        .toMatchInlineSnapshot(`
+        "require(\\"./foo.css?__remix_sideEffect__\\");
+
+        export const foo: string = ('foo' satisfies string);"
+      `);
+    });
+
+    test("side effect import in TypeScript with JSX", () => {
+      let code = dedent`
+        require("./foo.css");
+        
+        export const foo: string = 'foo' satisfies string;
+        export const Bar = () => <div>{foo}</div>;
+      `;
+
+      expect(addSuffixToCssSideEffectImports("tsx", code))
+        .toMatchInlineSnapshot(`
+        "require(\\"./foo.css?__remix_sideEffect__\\");
+
+        export const foo: string = ('foo' satisfies string);
+        export const Bar = () => <div>{foo}</div>;"
+      `);
+    });
+
+    test("conditional side effect require", () => {
+      let code = dedent`
+        if (process.env.NODE_ENV === "production") {
+          require("./foo.min.css");
+        } else {
+          require("./foo.css");
+        }
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code))
+        .toMatchInlineSnapshot(`
+        "if (process.env.NODE_ENV === \\"production\\") {
+          require(\\"./foo.min.css?__remix_sideEffect__\\");
+        } else {
+          require(\\"./foo.css?__remix_sideEffect__\\");
+        }"
+      `);
+    });
+
+    test("conditional side effect require via ternary", () => {
+      let code = dedent`
+        process.env.NODE_ENV === "production" ? require("./foo.min.css") : require("./foo.css");
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code)).toMatchInlineSnapshot(
+        `"process.env.NODE_ENV === \\"production\\" ? require(\\"./foo.min.css?__remix_sideEffect__\\") : require(\\"./foo.css?__remix_sideEffect__\\");"`
+      );
+    });
+
+    test("conditional side effect require via && operator", () => {
+      let code = dedent`
+        process.env.NODE_ENV === "development" && require("./debug.css");
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code)).toMatchInlineSnapshot(
+        `"process.env.NODE_ENV === \\"development\\" && require(\\"./debug.css?__remix_sideEffect__\\");"`
+      );
+    });
+
+    test("conditional side effect require via || operator", () => {
+      let code = dedent`
+        process.env.NODE_ENV === "production" || require("./debug.css");
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code)).toMatchInlineSnapshot(
+        `"process.env.NODE_ENV === \\"production\\" || require(\\"./debug.css?__remix_sideEffect__\\");"`
+      );
+    });
+  });
+
+  describe("doesn't add suffix", () => {
+    test("ignores non side effect require of CSS", () => {
+      let code = dedent`
+        const href = require("./foo.css");
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code)).toMatchInlineSnapshot(
+        `"const href = require(\\"./foo.css\\");"`
+      );
+    });
+
+    test("ignores non side effect import of CSS", () => {
+      let code = dedent`
+        import href from "./foo.css";
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code)).toMatchInlineSnapshot(
+        `"import href from \\"./foo.css\\";"`
+      );
+    });
+
+    test("ignores conditional non side effect require of CSS", () => {
+      let code = dedent`
+        const href = process.env.NODE_ENV === "production" ?
+          require("./foo.min.css") :
+          require("./foo.css");
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code))
+        .toMatchInlineSnapshot(`
+        "const href = process.env.NODE_ENV === \\"production\\" ?
+        require(\\"./foo.min.css\\") :
+        require(\\"./foo.css\\");"
+      `);
+    });
+
+    test("ignores conditional non side effect require of CSS via logical operators", () => {
+      let code = dedent`
+        const href = (process.env.NODE_ENV === "production" && require("./foo.min.css")) || require("./foo.css");
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code)).toMatchInlineSnapshot(
+        `"const href = process.env.NODE_ENV === \\"production\\" && require(\\"./foo.min.css\\") || require(\\"./foo.css\\");"`
+      );
+    });
+
+    test("ignores side effect require of non-CSS", () => {
+      let code = dedent`
+        require("./foo");
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code)).toMatchInlineSnapshot(
+        `"require(\\"./foo\\");"`
+      );
+    });
+
+    test("ignores side effect import of non-CSS", () => {
+      let code = dedent`
+        import "./foo";
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code)).toMatchInlineSnapshot(
+        `"import \\"./foo\\";"`
+      );
+    });
+
+    test("ignores dynamic import", () => {
+      let code = dedent`
+        export const foo = async () => {
+          await import("./foo.css");
+        }
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code))
+        .toMatchInlineSnapshot(`
+        "export const foo = async () => {
+          await import(\\"./foo.css\\");
+        };"
+      `);
     });
   });
 });
