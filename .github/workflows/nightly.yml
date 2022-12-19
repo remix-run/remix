@@ -68,10 +68,6 @@ jobs:
             echo "🛑 no changes since last nightly, skipping..."
           fi
 
-      - name: 🏗 Build
-        if: steps.version.outputs.NEXT_VERSION
-        run: yarn build
-
       - name: ⤴️ Update version
         if: steps.version.outputs.NEXT_VERSION
         run: |
@@ -79,10 +75,11 @@ jobs:
           git config --local user.name "Remix Run Bot"
           git checkout -b nightly/${{steps.version.outputs.NEXT_VERSION}}
           yarn run version ${{steps.version.outputs.NEXT_VERSION}} --skip-prompt
+          git push origin --tags
 
-      - name: 🏷 Push Tag
+      - name: 🏗 Build
         if: steps.version.outputs.NEXT_VERSION
-        run: git push origin --tags
+        run: yarn build
 
       - name: 🔐 Setup npm auth
         if: steps.version.outputs.NEXT_VERSION

@@ -1,19 +1,18 @@
-import type { ComponentType, ReactNode } from "react";
 import * as React from "react";
-import type { Params } from "react-router-dom";
+import type {
+  ActionFunction,
+  DataRouteObject,
+  LoaderFunction,
+  ShouldRevalidateFunction,
+} from "react-router-dom";
+import { redirect } from "react-router-dom";
 
-import type { RouteModules, ShouldReloadFunction } from "./routeModules";
+import type { RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
-import {
-  extractData,
-  fetchData,
-  isCatchResponse,
-  isRedirectResponse,
-} from "./data";
-import type { Submission } from "./transition";
-import { CatchValue, TransitionRedirect } from "./transition";
+import { fetchData, isCatchResponse, isRedirectResponse } from "./data";
 import { prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
+import { RemixRoute, RemixRouteError } from "./components";
 
 export interface RouteManifest<Route> {
   [routeId: string]: Route;
@@ -39,102 +38,81 @@ export interface EntryRoute extends Route {
   parentId?: string;
 }
 
-export type RouteDataFunction = {
-  (args: {
-    /**
-     * Parsed params from the route path
-     */
-    params: Params;
-
-    /**
-     * The url to be loaded, resolved to the matched route.
-     */
-    url: URL; // resolved route
-
-    /**
-     * Will be present if being called from `<Form>` or `useSubmit`
-     */
-    submission?: Submission;
-
-    /**
-     * Attach this signal to fetch (or whatever else) to abort your
-     * implementation when a load/action is aborted.
-     */
-    signal: AbortSignal;
-  }): Promise<any> | any;
-};
-
-export interface ClientRoute extends Route {
-  loader?: RouteDataFunction;
-  action: RouteDataFunction;
-  shouldReload?: ShouldReloadFunction;
-  ErrorBoundary?: any;
-  CatchBoundary?: any;
-  children?: ClientRoute[];
-  element: ReactNode;
-  module: string;
-  hasLoader: boolean;
-}
-
-type RemixRouteComponentType = ComponentType<{ id: string }>;
-
-export function createClientRoute(
-  entryRoute: EntryRoute,
-  routeModulesCache: RouteModules,
-  Component: RemixRouteComponentType
-): ClientRoute {
-  return {
-    caseSensitive: !!entryRoute.caseSensitive,
-    element: <Component id={entryRoute.id} />,
-    id: entryRoute.id,
-    path: entryRoute.path,
-    index: entryRoute.index,
-    module: entryRoute.module,
-    loader: createLoader(entryRoute, routeModulesCache),
-    action: createAction(entryRoute, routeModulesCache),
-    shouldReload: createShouldReload(entryRoute, routeModulesCache),
-    ErrorBoundary: entryRoute.hasErrorBoundary,
-    CatchBoundary: entryRoute.hasCatchBoundary,
-    hasLoader: entryRoute.hasLoader,
-  };
-}
-
-export function createClientRoutes(
-  routeManifest: RouteManifest<EntryRoute>,
-  routeModulesCache: RouteModules,
-  Component: RemixRouteComponentType,
+export function createServerRoutes(
+  manifest: RouteManifest<EntryRoute>,
+  routeModules: RouteModules,
   parentId?: string
-): ClientRoute[] {
-  return Object.keys(routeManifest)
-    .filter((key) => routeManifest[key].parentId === parentId)
-    .map((key) => {
-      let route = createClientRoute(
-        routeManifest[key],
-        routeModulesCache,
-        Component
-      );
-      let children = createClientRoutes(
-        routeManifest,
-        routeModulesCache,
-        Component,
-        route.id
-      );
-      if (children.length > 0) route.children = children;
-      return route;
+): DataRouteObject[] {
+  return Object.values(manifest)
+    .filter((route) => route.parentId === parentId)
+    .map((route) => {
+      let hasErrorBoundary =
+        route.id === "root" || route.hasErrorBoundary || route.hasCatchBoundary;
+      let dataRoute: DataRouteObject = {
+        caseSensitive: route.caseSensitive,
+        element: <RemixRoute id={route.id} />,
+        errorElement: hasErrorBoundary ? (
+          <RemixRouteError id={route.id} />
+        ) : undefined,
+        id: route.id,
+        index: route.index,
+        path: route.path,
+        handle: routeModules[route.id].handle,
+        // Note: we don't need loader/action/shouldRevalidate on these routes
+        // since they're for a static render
+      };
+
+      let children = createServerRoutes(manifest, routeModules, route.id);
+      if (children.length > 0) dataRoute.children = children;
+      return dataRoute;
     });
 }
 
-function createShouldReload(route: EntryRoute, routeModules: RouteModules) {
-  let shouldReload: ShouldReloadFunction = (arg) => {
+export function createClientRoutes(
+  manifest: RouteManifest<EntryRoute>,
+  routeModulesCache: RouteModules,
+  parentId?: string
+): DataRouteObject[] {
+  return Object.values(manifest)
+    .filter((entryRoute) => entryRoute.parentId === parentId)
+    .map((route) => {
+      let hasErrorBoundary =
+        route.id === "root" || route.hasErrorBoundary || route.hasCatchBoundary;
+
+      let dataRoute: DataRouteObject = {
+        caseSensitive: route.caseSensitive,
+        element: <RemixRoute id={route.id} />,
+        errorElement: hasErrorBoundary ? (
+          <RemixRouteError id={route.id} />
+        ) : undefined,
+        id: route.id,
+        index: route.index,
+        path: route.path,
+        // handle gets added in via useMatches since we aren't guaranteed to
+        // have the route module available here
+        handle: undefined,
+        loader: createDataFunction(route, routeModulesCache, false),
+        action: createDataFunction(route, routeModulesCache, true),
+        shouldRevalidate: createShouldRevalidate(route, routeModulesCache),
+      };
+      let children = createClientRoutes(manifest, routeModulesCache, route.id);
+      if (children.length > 0) dataRoute.children = children;
+      return dataRoute;
+    });
+}
+
+function createShouldRevalidate(
+  route: EntryRoute,
+  routeModules: RouteModules
+): ShouldRevalidateFunction {
+  return function (arg) {
     let module = routeModules[route.id];
     invariant(module, `Expected route module to be loaded for ${route.id}`);
-    if (module.unstable_shouldReload) {
-      return module.unstable_shouldReload(arg);
+    if (module.shouldRevalidate) {
+      return module.shouldRevalidate(arg);
     }
-    return true;
+    return arg.defaultShouldRevalidate;
   };
-
-  return shouldReload;
 }
 
 async function loadRouteModuleWithBlockingLinks(
@@ -146,102 +124,55 @@ async function loadRouteModuleWithBlockingLinks(
   return routeModule;
 }
 
-function createLoader(route: EntryRoute, routeModules: RouteModules) {
-  let loader: ClientRoute["loader"] = async ({ url, signal, submission }) => {
-    if (route.hasLoader) {
-      let routeModulePromise = loadRouteModuleWithBlockingLinks(
-        route,
-        routeModules
-      );
-      try {
-        let result = await fetchData(url, route.id, signal, submission);
-
-        if (result instanceof Error) throw result;
-
-        let redirect = await checkRedirect(result);
-        if (redirect) return redirect;
-
-        if (isCatchResponse(result)) {
-          throw new CatchValue(
-            result.status,
-            result.statusText,
-            await extractData(result)
-          );
-        }
-
-        return extractData(result);
-      } finally {
-        await routeModulePromise;
-      }
-    } else {
-      await loadRouteModuleWithBlockingLinks(route, routeModules);
-    }
-  };
-
-  return loader;
-}
-
-function createAction(route: EntryRoute, routeModules: RouteModules) {
-  let action: ClientRoute["action"] = async ({ url, signal, submission }) => {
-    let routeModulePromise = await loadRouteModuleWithBlockingLinks(
+function createDataFunction(
+  route: EntryRoute,
+  routeModules: RouteModules,
+  isAction: boolean
+): LoaderFunction | ActionFunction {
+  return async ({ request }) => {
+    let routeModulePromise = loadRouteModuleWithBlockingLinks(
       route,
       routeModules
     );
-
     try {
-      if (!route.hasAction) {
-        console.error(
+      if (isAction && !route.hasAction) {
+        let msg =
           `Route "${route.id}" does not have an action, but you are trying ` +
-            `to submit to it. To fix this, please add an \`action\` function to the route`
-        );
+          `to submit to it. To fix this, please add an \`action\` function to the route`;
+        console.error(msg);
+        throw new Error(msg);
+      } else if (!isAction && !route.hasLoader) {
+        return null;
       }
 
-      let result = await fetchData(url, route.id, signal, submission);
+      let result = await fetchData(request, route.id);
 
       if (result instanceof Error) {
         throw result;
       }
 
-      let redirect = await checkRedirect(result);
-      if (redirect) return redirect;
-
-      if (isCatchResponse(result)) {
-        throw new CatchValue(
-          result.status,
-          result.statusText,
-          await extractData(result)
-        );
+      if (isRedirectResponse(result)) {
+        throw getRedirect(result);
       }
 
-      return extractData(result);
+      if (isCatchResponse(result)) {
+        throw result;
+      }
+
+      return result;
     } finally {
       await routeModulePromise;
     }
   };
-
-  return action;
 }
 
-async function checkRedirect(
-  response: Response
-): Promise<null | TransitionRedirect> {
-  if (isRedirectResponse(response)) {
-    let url = new URL(
-      response.headers.get("X-Remix-Redirect")!,
-      window.location.origin
-    );
-
-    if (url.origin !== window.location.origin) {
-      await new Promise(() => {
-        window.location.replace(url.href);
-      });
-    } else {
-      return new TransitionRedirect(
-        url.pathname + url.search + url.hash,
-        response.headers.get("X-Remix-Revalidate") !== null
-      );
-    }
+function getRedirect(response: Response): Response {
+  let status = parseInt(response.headers.get("X-Remix-Status")!, 10) || 302;
+  let url = response.headers.get("X-Remix-Redirect")!;
+  let headers: Record<string, string> = {};
+  let revalidate = response.headers.get("X-Remix-Revalidate");
+  if (revalidate) {
+    headers["X-Remix-Revalidate"] = revalidate;
   }
-
-  return null;
+  return redirect(url, { status, headers });
 }
