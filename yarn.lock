@@ -1289,13 +1289,6 @@
   dependencies:
     regenerator-runtime "^0.13.4"
 
-"@babel/runtime@^7.7.6":
-  version "7.20.6"
-  resolved "https://registry.npmjs.org/@babel/runtime/-/runtime-7.20.6.tgz#facf4879bfed9b5326326273a64220f099b0fce3"
-  integrity sha512-Q+8MqP7TiHMWzSfwiJwXCjyf4GYA4Dgw3emg/7xmwsdLJOZUp+nMqcOwOzzYheuM1rhDu8FSj2l0aoMygEuXuA==
-  dependencies:
-    regenerator-runtime "^0.13.11"
-
 "@babel/template@^7.16.7", "@babel/template@^7.18.10", "@babel/template@^7.3.3":
   version "7.18.10"
   resolved "https://registry.npmjs.org/@babel/template/-/template-7.18.10.tgz"
@@ -2315,19 +2308,6 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/deno@1.8.0":
-  version "1.8.0"
-  resolved "https://registry.npmjs.org/@remix-run/deno/-/deno-1.8.0.tgz#676630e029f4a76b3a6e9911d75444affb131712"
-  integrity sha512-6Xq76/7UaSGZ8eSqOCLo3ot/gG9J2lDZZr9yOiZdhNllJxjGRLKOB9Imc7wTBDQwi9AqAa3O60Q3b89IkL9XBA==
-  dependencies:
-    "@remix-run/server-runtime" "1.8.0"
-    mime "^3.0.0"
-
-"@remix-run/router@1.0.4":
-  version "1.0.4"
-  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.0.4.tgz#cbfbec6735711e7c2fc93b9b40adf70ef5a39990"
-  integrity sha512-gTL8H5USTAKOyVA4xczzDJnC3HMssdFa3tRlwBicXynx9XfiXwneHnYQogwSKpdCkjXISrEKSTtX62rLpNEVQg==
-
 "@remix-run/router@1.1.0":
   version "1.1.0"
   resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.1.0.tgz#b48db8148c8a888e50580a8152b6f68161c49406"
@@ -2337,19 +2317,6 @@
   version "1.2.0-pre.0"
   resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.2.0-pre.0.tgz#bfe7372f391b7584311482b310cae5687dccf0ff"
   integrity sha512-MMwAKk7CmPInZs1OzIlv+BOx+lNxsse3pD2RdJYpN63zb8S5jaDDKk5FGWp5D1twlgPYW6cs1zPjMwq0n5ktOA==
-
-"@remix-run/server-runtime@1.8.0":
-  version "1.8.0"
-  resolved "https://registry.npmjs.org/@remix-run/server-runtime/-/server-runtime-1.8.0.tgz#f039694aed645f9a92dacc38943ab5a1287e519b"
-  integrity sha512-ChhOneBGTj1Ax7OtKdqCBNpFrsaX+7gVnEXRvlHGZA0xXYjpVuyNQRnI/VqFOuQ5s3BzK2F3e+bo9+pTssT23w==
-  dependencies:
-    "@remix-run/router" "1.0.4"
-    "@types/cookie" "^0.4.0"
-    "@web3-storage/multipart-parser" "^1.0.0"
-    cookie "^0.4.1"
-    react-router-dom "6.3.0"
-    set-cookie-parser "^2.4.8"
-    source-map "^0.7.3"
 
 "@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
@@ -7043,13 +7010,6 @@ headers-polyfill@^3.0.4:
   resolved "https://registry.npmjs.org/headers-polyfill/-/headers-polyfill-3.0.7.tgz"
   integrity sha512-JoLCAdCEab58+2/yEmSnOlficyHFpIl0XJqwu3l+Unkm1gXpFUYsThz6Yha3D6tNhocWkCPfyW0YVIGWFqTi7w==
 
-history@^5.2.0:
-  version "5.3.0"
-  resolved "https://registry.npmjs.org/history/-/history-5.3.0.tgz#1548abaa245ba47992f063a0783db91ef201c73b"
-  integrity sha512-ZqaKwjjrAYUYfLG+htGaIIZ4nioX2L70ZUMIFysS3xvBsSG4x/n1V6TXV3N8ZYNuFGlDirFg32T7B6WOUPDYcQ==
-  dependencies:
-    "@babel/runtime" "^7.7.6"
-
 hosted-git-info@^2.1.4:
   version "2.8.9"
   resolved "https://registry.npmjs.org/hosted-git-info/-/hosted-git-info-2.8.9.tgz"
@@ -10665,14 +10625,6 @@ react-is@^17.0.1:
   resolved "https://registry.npmjs.org/react-is/-/react-is-17.0.2.tgz"
   integrity sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==
 
-react-router-dom@6.3.0:
-  version "6.3.0"
-  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.3.0.tgz#a0216da813454e521905b5fa55e0e5176123f43d"
-  integrity sha512-uaJj7LKytRxZNQV8+RbzJWnJ8K2nPsOOEuX7aQstlMZKQT0164C+X2w6bnkqU3sjtLvpd5ojrezAyfZ1+0sStw==
-  dependencies:
-    history "^5.2.0"
-    react-router "6.3.0"
-
 react-router-dom@6.6.0-pre.0:
   version "6.6.0-pre.0"
   resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.6.0-pre.0.tgz#771be887d4ac1813df4b3b57db754c532d37ee75"
@@ -10680,13 +10632,6 @@ react-router-dom@6.6.0-pre.0:
   dependencies:
     "@remix-run/router" "1.2.0-pre.0"
     react-router "6.6.0-pre.0"
-
-react-router@6.3.0:
-  version "6.3.0"
-  resolved "https://registry.npmjs.org/react-router/-/react-router-6.3.0.tgz#3970cc64b4cb4eae0c1ea5203a80334fdd175557"
-  integrity sha512-7Wh1DzVQ+tlFjkeo+ujvjSqSJmkt1+8JO+T5xklPlgrh70y7ogx75ODRW0ThWhY7S+6yEDks8TYrtQe/aoboBQ==
-  dependencies:
-    history "^5.2.0"
 
 react-router@6.6.0-pre.0:
   version "6.6.0-pre.0"
@@ -10850,11 +10795,6 @@ regenerate@^1.4.2:
   version "1.4.2"
   resolved "https://registry.npmjs.org/regenerate/-/regenerate-1.4.2.tgz"
   integrity sha512-zrceR/XhGYU/d/opr2EKO7aRHUeiBI8qjtfHqADTwZd6Szfy16la6kqD0MIUs5z5hx6AaKa+PixpPrR289+I0A==
-
-regenerator-runtime@^0.13.11:
-  version "0.13.11"
-  resolved "https://registry.npmjs.org/regenerator-runtime/-/regenerator-runtime-0.13.11.tgz#f6dca3e7ceec20590d07ada785636a90cdca17f9"
-  integrity sha512-kY1AZVr2Ra+t+piVaJ4gxaFaReZVH40AKNo7UCX6W+dEwBo/2oZJzqfuN1qLq1oL45o56cPaTXELwrTh8Fpggg==
 
 regenerator-runtime@^0.13.4:
   version "0.13.10"
