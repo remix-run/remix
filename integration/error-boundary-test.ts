@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { ServerMode } from "@remix-run/server-runtime/mode";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
@@ -635,4 +636,242 @@ test.describe("ErrorBoundary", () => {
       expect(await app.getHtml("h1")).toMatch(INTERNAL_ERROR_BOUNDARY_HEADING);
     });
   });
+});
+
+test.describe("loaderData in ErrorBoundary", () => {
+  let fixture: Fixture;
+  let appFixture: AppFixture;
+  let consoleErrors: string[];
+  let oldConsoleError: () => void;
+
+  test.beforeAll(async () => {
+    fixture = await createFixture({
+      files: {
+        "app/root.jsx": js`
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
+          export default function Root() {
+            return (
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <main>
+                    <Outlet />
+                  </main>
+                  <Scripts />
+                </body>
+              </html>
+            );
+          }
+        `,
+
+        "app/routes/parent.jsx": js`
+          import { Outlet, useLoaderData, useMatches } from "@remix-run/react";
+
+          export function loader() {
+            return "PARENT";
+          }
+
+          export default function () {
+            return (
+              <div>
+                <p id="parent-data">{useLoaderData()}</p>
+                <Outlet />
+              </div>
+            )
+          }
+
+          export function ErrorBoundary({ error }) {
+            return (
+              <>
+                <p id="parent-data">{useLoaderData()}</p>
+                <p id="parent-matches-data">
+                  {useMatches().find(m => m.id === 'routes/parent').data}
+                </p>
+                <p id="parent-error">{error.message}</p>
+              </>
+            );
+          }
+        `,
+
+        "app/routes/parent/child-with-boundary.jsx": js`
+          import { Form, useLoaderData } from "@remix-run/react";
+
+          export function loader() {
+            return "CHILD";
+          }
+
+          export function action() {
+            throw new Error("Broken!");
+          }
+
+          export default function () {
+            return (
+              <>
+                <p id="child-data">{useLoaderData()}</p>
+                <Form method="post">
+                  <button type="submit" name="key" value="value">
+                    Submit
+                  </button>
+                </Form>
+              </>
+            )
+          }
+
+          export function ErrorBoundary({ error }) {
+            return (
+              <>
+                <p id="child-data">{useLoaderData()}</p>
+                <p id="child-error">{error.message}</p>
+              </>
+            );
+          }
+        `,
+
+        "app/routes/parent/child-without-boundary.jsx": js`
+          import { Form, useLoaderData } from "@remix-run/react";
+
+          export function loader() {
+            return "CHILD";
+          }
+
+          export function action() {
+            throw new Error("Broken!");
+          }
+
+          export default function () {
+            return (
+              <>
+                <p id="child-data">{useLoaderData()}</p>
+                <Form method="post">
+                  <button type="submit" name="key" value="value">
+                    Submit
+                  </button>
+                </Form>
+              </>
+            )
+          }
+        `,
+      },
+    });
+
+    appFixture = await createAppFixture(fixture, ServerMode.Development);
+  });
+
+  test.afterAll(() => {
+    appFixture.close();
+  });
+
+  test.beforeEach(({ page }) => {
+    oldConsoleError = console.error;
+    console.error = () => {};
+    consoleErrors = [];
+    // Listen for all console events and handle errors
+    page.on("console", (msg) => {
+      if (msg.type() === "error") {
+        consoleErrors.push(msg.text());
+      }
+    });
+  });
+
+  test.afterEach(() => {
+    console.error = oldConsoleError;
+  });
+
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+    runBoundaryTests();
+  });
+
+  test.describe("with JavaScript", () => {
+    test.use({ javaScriptEnabled: true });
+    runBoundaryTests();
+  });
+
+  function runBoundaryTests() {
+    test("Prevents useLoaderData in self ErrorBoundary", async ({
+      page,
+      javaScriptEnabled,
+    }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/parent/child-with-boundary");
+
+      expect(await app.getHtml("#parent-data")).toEqual(
+        '<p id="parent-data">PARENT</p>'
+      );
+      expect(await app.getHtml("#child-data")).toEqual(
+        '<p id="child-data">CHILD</p>'
+      );
+      expect(consoleErrors).toEqual([]);
+
+      await app.clickSubmitButton("/parent/child-with-boundary");
+      await page.waitForSelector("#child-error");
+
+      expect(await app.getHtml("#child-error")).toEqual(
+        '<p id="child-error">Broken!</p>'
+      );
+      expect(await app.getHtml("#parent-data")).toEqual(
+        '<p id="parent-data">PARENT</p>'
+      );
+      expect(await app.getHtml("#child-data")).toEqual(
+        '<p id="child-data"></p>'
+      );
+
+      // Only look for this message.  Chromium browsers will also log the
+      // network error but firefox does not
+      //   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      let msg =
+        "You cannot `useLoaderData` in an errorElement (routeId: routes/parent/child-with-boundary)";
+      if (javaScriptEnabled) {
+        expect(consoleErrors.filter((m) => m === msg)).toEqual([msg]);
+      } else {
+        // We don't get the useLoaderData message in the client when JS is disabled
+        expect(consoleErrors.filter((m) => m === msg)).toEqual([]);
+      }
+    });
+
+    test("Prevents useLoaderData in bubbled ErrorBoundary", async ({
+      page,
+      javaScriptEnabled,
+    }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/parent/child-without-boundary");
+
+      expect(await app.getHtml("#parent-data")).toEqual(
+        '<p id="parent-data">PARENT</p>'
+      );
+      expect(await app.getHtml("#child-data")).toEqual(
+        '<p id="child-data">CHILD</p>'
+      );
+      expect(consoleErrors).toEqual([]);
+
+      await app.clickSubmitButton("/parent/child-without-boundary");
+      await page.waitForSelector("#parent-error");
+
+      expect(await app.getHtml("#parent-error")).toEqual(
+        '<p id="parent-error">Broken!</p>'
+      );
+      expect(await app.getHtml("#parent-matches-data")).toEqual(
+        '<p id="parent-matches-data"></p>'
+      );
+      expect(await app.getHtml("#parent-data")).toEqual(
+        '<p id="parent-data"></p>'
+      );
+
+      // Only look for this message.  Chromium browsers will also log the
+      // network error but firefox does not
+      //   "Failed to load resource: the server responded with a status of 500 (Internal Server Error)",
+      let msg =
+        "You cannot `useLoaderData` in an errorElement (routeId: routes/parent)";
+      if (javaScriptEnabled) {
+        expect(consoleErrors.filter((m) => m === msg)).toEqual([msg]);
+      } else {
+        // We don't get the useLoaderData message in the client when JS is disabled
+        expect(consoleErrors.filter((m) => m === msg)).toEqual([]);
+      }
+    });
+  }
 });
