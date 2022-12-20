@@ -132,13 +132,33 @@ describe("addSuffixToCssSideEffectImports", () => {
       );
     });
 
-    test("ignores non side effect import of CSS", () => {
+    test("ignores default import of CSS", () => {
       let code = dedent`
         import href from "./foo.css";
       `;
 
       expect(addSuffixToCssSideEffectImports("js", code)).toMatchInlineSnapshot(
         `"import href from \\"./foo.css\\";"`
+      );
+    });
+
+    test("ignores named import of CSS", () => {
+      let code = dedent`
+        import { foo } from "./foo.css";
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code)).toMatchInlineSnapshot(
+        `"import { foo } from \\"./foo.css\\";"`
+      );
+    });
+
+    test("ignores namespace import of CSS", () => {
+      let code = dedent`
+        import * as foo from "./foo.css";
+      `;
+
+      expect(addSuffixToCssSideEffectImports("js", code)).toMatchInlineSnapshot(
+        `"import * as foo from \\"./foo.css\\";"`
       );
     });
 
