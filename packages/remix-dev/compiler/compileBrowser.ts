@@ -75,7 +75,7 @@ const createEsbuildConfig = (
   config: RemixConfig,
   options: CompileOptions
 ): esbuild.BuildOptions | esbuild.BuildIncremental => {
-  let isCssBuild = isCssBuild;
+  let isCssBuild = build === "css";
   let entryPoints: esbuild.BuildOptions["entryPoints"];
 
   if (isCssBuild) {
