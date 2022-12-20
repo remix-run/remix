@@ -23,6 +23,7 @@ describe("readConfig", () => {
         relativeAssetsBuildDirectory: expect.any(String),
         tsconfigPath: expect.any(String),
         future: {
+          v2_errorBoundary: expect.any(Boolean),
           v2_meta: expect.any(Boolean),
         },
       },
@@ -36,6 +37,7 @@ describe("readConfig", () => {
         "entryClientFile": "entry.client.tsx",
         "entryServerFile": "entry.server.tsx",
         "future": Object {
+          "v2_errorBoundary": Any<Boolean>,
           "v2_meta": Any<Boolean>,
         },
         "mdx": undefined,
