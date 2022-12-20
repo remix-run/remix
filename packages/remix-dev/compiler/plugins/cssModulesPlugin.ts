@@ -9,7 +9,7 @@ import type { CompileOptions } from "../options";
 const pluginName = "css-modules-plugin";
 const namespace = `${pluginName}-ns`;
 const cssModulesFilter = /\.module\.css$/;
-const compiledCssQueryString = "?css-modules-plugin-compiled-css";
+const compiledCssQuery = "?css-modules-plugin-compiled-css";
 const compiledCssFilter = /\?css-modules-plugin-compiled-css$/;
 
 interface PluginData {
@@ -20,6 +20,7 @@ interface PluginData {
 export const cssModulesPlugin = (options: {
   mode: CompileOptions["mode"];
   rootDirectory: string;
+  outputCss: boolean;
 }): Plugin => {
   return {
     name: pluginName,
@@ -89,9 +90,13 @@ export const cssModulesPlugin = (options: {
         // object that maps local names to generated class names. The compiled
         // CSS file contents are passed to the virtual CSS file via pluginData.
         let contents = [
-          `import "./${path.basename(absolutePath)}${compiledCssQueryString}";`,
+          options.outputCss
+            ? `import "./${path.basename(absolutePath)}${compiledCssQuery}";`
+            : null,
           `export default ${JSON.stringify(exports)};`,
-        ].join("\n");
+        ]
+          .filter(Boolean)
+          .join("\n");
 
         let pluginData: PluginData = {
           resolveDir,
