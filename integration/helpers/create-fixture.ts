@@ -7,8 +7,8 @@ import stripIndent from "strip-indent";
 import { sync as spawnSync } from "cross-spawn";
 import type { JsonObject } from "type-fest";
 import type { ServerMode } from "@remix-run/server-runtime/mode";
+import type { FutureConfig } from "@remix-run/server-runtime/entry";
 
-import type { AppConfig } from "../../build/node_modules/@remix-run/dev/dist/config";
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler as createExpressHandler } from "../../build/node_modules/@remix-run/express";
@@ -21,7 +21,7 @@ interface FixtureInit {
   files?: { [filename: string]: string };
   template?: "cf-template" | "deno-template" | "node-template";
   setup?: "node" | "cloudflare";
-  future?: AppConfig["future"];
+  future?: Partial<FutureConfig>;
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
