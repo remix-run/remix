@@ -18,6 +18,8 @@ export function ErrorBoundary({ error }) {
 
 
 // Using future.v2_errorBoundary
+import { isRouteErrorResponse, useRouteError } from "@remix-run/react";
+
 export function ErrorBoundary() {
   let error = useRouteError();
 
