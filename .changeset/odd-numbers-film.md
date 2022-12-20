@@ -7,6 +7,8 @@ Add `future.v2_errorBoundary` flag to opt-into v2 `ErrorBoundary` behavior.  Thi
 
 ```jsx
 // Current (Remix v1 default)
+import { useCatch } from "@remix-run/react";
+
 export function CatchBoundary() {
   let caught = useCatch();
   return <p>{caught.status} {caught.data}</p>;
