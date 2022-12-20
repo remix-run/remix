@@ -3,8 +3,7 @@ import type { RouteData } from "@remix-run/react";
 import type { RouteObject } from "react-router-dom";
 import { RouterProvider } from "react-router-dom";
 import { createMemoryRouter } from "react-router-dom";
-import type { InitialEntry } from "@remix-run/router";
-import { createStaticHandler } from "@remix-run/router";
+import type { InitialEntry, Router } from "@remix-run/router";
 
 type RemixStubOptions = {
   /**
@@ -38,23 +37,24 @@ type RemixStubOptions = {
 };
 
 export function createRemixStub(routes: RouteObject[]) {
-  // Setup request handler to handle requests to the mock routes
-  let staticHandler = createStaticHandler(routes);
   return function RemixStub({
     initialEntries,
     initialIndex,
     initialActionData,
     initialLoaderData,
   }: RemixStubOptions) {
-    let router = createMemoryRouter(staticHandler.dataRoutes, {
-      initialEntries,
-      initialIndex,
-      hydrationData: {
-        actionData: initialActionData,
-        loaderData: initialLoaderData,
-      },
-    });
+    let routerRef = React.useRef<Router>();
+    if (routerRef.current == null) {
+      routerRef.current = createMemoryRouter(routes, {
+        initialEntries,
+        initialIndex,
+        hydrationData: {
+          actionData: initialActionData,
+          loaderData: initialLoaderData,
+        },
+      });
+    }
 
-    return <RouterProvider router={router} />;
+    return <RouterProvider router={routerRef.current} />;
   };
 }
