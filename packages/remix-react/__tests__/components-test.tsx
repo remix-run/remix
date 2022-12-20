@@ -1,9 +1,9 @@
 import * as React from "react";
-import { MemoryRouter } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { fireEvent, render, act } from "@testing-library/react";
 
 import type { LiveReload as ActualLiveReload } from "../components";
-import { Link, NavLink, RemixEntryContext } from "../components";
+import { Link, NavLink, RemixContext } from "../components";
 
 import "@testing-library/jest-dom/extend-expect";
 
@@ -77,49 +77,56 @@ function itPrefetchesPageLinks<
   Props extends { to: any; prefetch?: any } & PrefetchEventHandlerProps
 >(Component: React.ComponentType<Props>) {
   describe('prefetch="intent"', () => {
+    let context = {
+      routeModules: { idk: { default: () => null } },
+      manifest: {
+        routes: {
+          idk: {
+            hasLoader: true,
+            hasAction: false,
+            hasCatchBoundary: false,
+            hasErrorBoundary: false,
+            id: "idk",
+            module: "idk.js",
+          },
+        },
+        entry: { imports: [], module: "" },
+        url: "",
+        version: "",
+      },
+      future: { v2_meta: false },
+    };
+
     beforeEach(() => {
       jest.useFakeTimers();
     });
 
-    function withContext(stuff: JSX.Element) {
-      let context = {
-        routeModules: { idk: { default: () => null } },
-        manifest: {
-          routes: {
-            idk: {
-              hasLoader: true,
-              hasAction: false,
-              hasCatchBoundary: false,
-              hasErrorBoundary: false,
-              id: "idk",
-              module: "idk",
-            },
-          },
-          entry: { imports: [], module: "" },
-          url: "",
-          version: "",
-        },
-        matches: [],
-        clientRoutes: [
-          { id: "idk", path: "idk", hasLoader: true, element: "", module: "" },
-        ],
-        routeData: {},
-        appState: {} as any,
-        transitionManager: {} as any,
-      };
-      return (
-        <RemixEntryContext.Provider value={context}>
-          <MemoryRouter>{stuff}</MemoryRouter>
-        </RemixEntryContext.Provider>
-      );
-    }
-
     setIntentEvents.forEach((event) => {
       it(`prefetches page links on ${event}`, () => {
+        let router;
+
+        act(() => {
+          router = createMemoryRouter([
+            {
+              id: "root",
+              path: "/",
+              element: (
+                <Component {...({ to: "idk", prefetch: "intent" } as Props)} />
+              ),
+            },
+            {
+              id: "idk",
+              path: "idk",
+              loader: () => null,
+              element: <h1>idk</h1>,
+            },
+          ]);
+        });
+
         let { container, unmount } = render(
-          withContext(
-            <Component {...({ to: "idk", prefetch: "intent" } as Props)} />
-          )
+          <RemixContext.Provider value={context}>
+            <RouterProvider router={router} />
+          </RemixContext.Provider>
         );
 
         fireEvent[event](container.firstChild);
@@ -127,25 +134,51 @@ function itPrefetchesPageLinks<
           jest.runAllTimers();
         });
 
-        expect(container.querySelector("link[rel=prefetch]")).toBeTruthy();
+        let dataHref = container
+          .querySelector('link[rel="prefetch"][as="fetch"]')
+          ?.getAttribute("href");
+        expect(dataHref).toBe("/idk?_data=idk");
+        let moduleHref = container
+          .querySelector('link[rel="modulepreload"]')
+          ?.getAttribute("href");
+        expect(moduleHref).toBe("idk.js");
         unmount();
       });
 
       it(`prefetches page links and calls explicit handler on ${event}`, () => {
+        let router;
         let ranHandler = false;
         let eventHandler = `on${event[0].toUpperCase()}${event.slice(1)}`;
+        act(() => {
+          router = createMemoryRouter([
+            {
+              id: "root",
+              path: "/",
+              element: (
+                <Component
+                  {...({
+                    to: "idk",
+                    prefetch: "intent",
+                    [eventHandler]: () => {
+                      ranHandler = true;
+                    },
+                  } as any)}
+                />
+              ),
+            },
+            {
+              id: "idk",
+              path: "idk",
+              loader: () => true,
+              element: <h1>idk</h1>,
+            },
+          ]);
+        });
+
         let { container, unmount } = render(
-          withContext(
-            <Component
-              {...({
-                to: "idk",
-                prefetch: "intent",
-                [eventHandler]: () => {
-                  ranHandler = true;
-                },
-              } as any)}
-            />
-          )
+          <RemixContext.Provider value={context}>
+            <RouterProvider router={router} />
+          </RemixContext.Provider>
         );
 
         fireEvent[event](container.firstChild);
