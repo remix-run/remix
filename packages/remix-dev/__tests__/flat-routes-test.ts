@@ -99,8 +99,8 @@ describe("createRoutePath", () => {
 
     for (let [input, expected] of tests) {
       it(`"${input}" -> "${expected}"`, () => {
-        let segments = getRouteSegments(input);
         let index = isIndexRoute(input);
+        let segments = getRouteSegments(input);
         let result = createRoutePath(segments, index);
         let expectedPath = expected === undefined ? undefined : "/" + expected;
         expect(result).toBe(expectedPath);

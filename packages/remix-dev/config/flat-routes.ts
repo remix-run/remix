@@ -5,9 +5,12 @@ import minimatch from "minimatch";
 import { createRouteId, defineRoutes } from "./routes";
 import type { RouteManifest, DefineRouteFunction } from "./routes";
 import {
-  escapeEnd,
-  escapeStart,
+  isCloseEscapeSequence,
+  isCloseOptionalSegment,
+  isNewEscapeSequence,
+  isNewOptionalSegment,
   isRouteModuleFile,
+  isSegmentSeparator,
   optionalEnd,
   optionalStart,
   paramPrefixChar,
@@ -144,90 +147,19 @@ export function getRouteInfo(routeDir: string, file: string) {
   return routeInfo;
 }
 
-function handleEscapedSegment(segment: string) {
-  let matches = segment.match(/\[(.*?)\]/g);
-
-  if (!matches) return segment;
-
-  for (let match of matches) {
-    segment = segment.replace(match, match.slice(1, -1));
-  }
-
-  return segment;
-}
-
-function handleSplatOrParamSegment(segment: string) {
-  console.log("handleSplatOrParam", segment);
-
-  if (segment.startsWith(paramPrefixChar)) {
-    if (segment === "$?") return segment;
-    if (segment === paramPrefixChar) {
-      return "*";
-    }
-
-    return `:${segment.slice(1)}`;
-  }
-
-  return segment;
-}
-
-function handleOptionalSegment(segment: string) {
-  let optional = segment.slice(1, -1);
-
-  if (optional.startsWith(paramPrefixChar)) {
-    return `:${optional.slice(1)}?`;
-  }
-
-  return optional + "?";
-}
-
 // create full path starting with /
 export function createRoutePath(
   routeSegments: string[],
   index: boolean
 ): string | undefined {
-  let result = "";
-
   if (index) {
     // remove index segment
     routeSegments = routeSegments.slice(0, -1);
   }
 
-  for (let segment of routeSegments) {
-    // skip pathless layout segments
-    if (segment.startsWith("_")) {
-      continue;
-    }
+  let normalized = routeSegments.filter((s) => s !== "");
 
-    // remove trailing slash
-    if (segment.endsWith("_")) {
-      segment = segment.slice(0, -1);
-    }
-
-    // handle optional segments: `(segment)` => `segment?`
-    if (segment.startsWith(optionalStart) && segment.endsWith(optionalEnd)) {
-      let escaped = handleEscapedSegment(segment);
-      let optional = handleOptionalSegment(escaped);
-      let param = handleSplatOrParamSegment(optional);
-      result += `/${param}`;
-    }
-
-    // handle escape segments: `[se[g]ment]` => `segment`
-    else if (segment.includes(escapeStart) && segment.includes(escapeEnd)) {
-      let escaped = handleEscapedSegment(segment);
-      let param = handleSplatOrParamSegment(escaped);
-      result += `/${param}`;
-    }
-
-    // handle param segments: `$` => `*`, `$id` => `:id`
-    else if (segment.startsWith(paramPrefixChar)) {
-      result += `/${handleSplatOrParamSegment(segment)}`;
-    } else {
-      result += `/${segment}`;
-    }
-  }
-
-  return result || undefined;
+  return normalized.length > 0 ? "/" + normalized.join("/") : undefined;
 }
 
 function findParentRouteId(
@@ -244,63 +176,121 @@ function findParentRouteId(
   return undefined;
 }
 
-export function getRouteSegments(name: string) {
-  let routeSegments: string[] = [];
-  let index = 0;
-  let routeSegment = "";
-  let state = "START";
-  let subState = "NORMAL";
+export function getRouteSegments(partialRouteId: string) {
+  let result = "";
+  let rawSegmentBuffer = "";
 
-  let pushRouteSegment = (routeSegment: string) => {
-    if (routeSegment) {
-      routeSegments.push(routeSegment);
-    }
-  };
+  let inEscapeSequence = 0;
+  let inOptionalSegment = 0;
+  let optionalSegmentIndex = null;
+  let skipSegment = false;
+  for (let i = 0; i < partialRouteId.length; i++) {
+    let char = partialRouteId.charAt(i);
+    let prevChar = i > 0 ? partialRouteId.charAt(i - 1) : undefined;
+    let nextChar =
+      i < partialRouteId.length - 1 ? partialRouteId.charAt(i + 1) : undefined;
 
-  while (index < name.length) {
-    let char = name[index];
-    switch (state) {
-      case "START":
-        pushRouteSegment(routeSegment);
-        routeSegment = "";
-        state = "PATH";
-        continue; // restart without advancing index
-      case "PATH":
-        if (isPathSeparator(char) && subState === "NORMAL") {
-          state = "START";
-          break;
-        } else if (char === optionalStart) {
-          routeSegment += char;
-          subState = "OPTIONAL";
-          break;
-        } else if (char === optionalEnd) {
-          routeSegment += char;
-          subState = "NORMAL";
-          break;
-        } else if (char === escapeStart) {
-          routeSegment += char;
-          subState = "ESCAPE";
-          break;
-        } else if (char === escapeEnd) {
-          routeSegment += char;
-          subState = "NORMAL";
-          break;
-        }
-        routeSegment += char;
-        break;
+    if (skipSegment) {
+      if (isSegmentSeparator(char)) {
+        skipSegment = false;
+      }
+      continue;
     }
-    index++; // advance to next character
+
+    if (isNewEscapeSequence(inEscapeSequence, char, prevChar)) {
+      inEscapeSequence++;
+      continue;
+    }
+
+    if (isCloseEscapeSequence(inEscapeSequence, char, nextChar)) {
+      inEscapeSequence--;
+      continue;
+    }
+
+    if (
+      isNewOptionalSegment(char, prevChar, inOptionalSegment, inEscapeSequence)
+    ) {
+      inOptionalSegment++;
+      optionalSegmentIndex = result.length;
+      result += optionalStart;
+      continue;
+    }
+
+    if (
+      isCloseOptionalSegment(
+        char,
+        nextChar,
+        inOptionalSegment,
+        inEscapeSequence
+      )
+    ) {
+      if (optionalSegmentIndex !== null) {
+        result =
+          result.slice(0, optionalSegmentIndex) +
+          result.slice(optionalSegmentIndex + 1);
+      }
+      optionalSegmentIndex = null;
+      inOptionalSegment--;
+      result += "?";
+      continue;
+    }
+
+    if (inEscapeSequence) {
+      result += char;
+      continue;
+    }
+
+    if (isSegmentSeparator(char)) {
+      // url segment, no layout
+      if (prevChar === "_") {
+        result = result.slice(0, -1);
+      }
+
+      if (rawSegmentBuffer === "_index" && result.endsWith("_index")) {
+        result = result.replace(/\/?index$/, "");
+      } else {
+        result += "/";
+      }
+
+      rawSegmentBuffer = "";
+      inOptionalSegment = 0;
+      optionalSegmentIndex = null;
+      continue;
+    }
+
+    // isStartOfLayoutSegment
+    // layout nesting, no url segment
+    if (char === "_" && !rawSegmentBuffer) {
+      skipSegment = true;
+      continue;
+    }
+
+    rawSegmentBuffer += char;
+
+    if (char === paramPrefixChar) {
+      if (nextChar === optionalEnd) {
+        throw new Error(
+          `Invalid route path: ${partialRouteId}. Splat route $ is already optional`
+        );
+      }
+      result += typeof nextChar === "undefined" ? "*" : ":";
+      continue;
+    }
+
+    result += char;
   }
 
-  // process remaining segment
-  pushRouteSegment(routeSegment);
+  if (rawSegmentBuffer === "_index" && result.endsWith("_index")) {
+    result = result.replace(/\/?index$/, "");
+  }
 
-  return routeSegments;
-}
+  if (rawSegmentBuffer === "_index" && result.endsWith("_index?")) {
+    throw new Error(
+      `Invalid route path: ${partialRouteId}. Make index route optional by using (_index)`
+    );
+  }
 
-const pathSeparatorRegex = /[/\\.]/;
-function isPathSeparator(char: string) {
-  return pathSeparatorRegex.test(char);
+  return result ? result.split("/") : [];
 }
 
 export function visitFiles(
