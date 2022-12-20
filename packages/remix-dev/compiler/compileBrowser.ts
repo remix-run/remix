@@ -71,9 +71,10 @@ const createEsbuildConfig = (
   config: RemixConfig,
   options: CompileOptions
 ): esbuild.BuildOptions | esbuild.BuildIncremental => {
+  let isCssBuild = build === "css";
   let entryPoints: esbuild.BuildOptions["entryPoints"];
 
-  if (build === "css") {
+  if (isCssBuild) {
     entryPoints = {
       "css-bundle": cssBundleEntryModuleId,
     };
@@ -94,10 +95,11 @@ const createEsbuildConfig = (
     deprecatedRemixPackagePlugin(options.onWarning),
     ...(config.future.unstable_cssModules
       ? [
-          ...(build === "css" ? [cssBundleEntryModulePlugin(config)] : []),
+          ...(isCssBuild ? [cssBundleEntryModulePlugin(config)] : []),
           cssModulesPlugin({
             mode: options.mode,
             rootDirectory: config.rootDirectory,
+            outputCss: isCssBuild,
           }),
         ]
       : []),
@@ -121,7 +123,7 @@ const createEsbuildConfig = (
     loader: loaders,
     bundle: true,
     logLevel: "silent",
-    splitting: build !== "css",
+    splitting: !isCssBuild,
     sourcemap: options.sourcemap,
     // As pointed out by https://github.com/evanw/esbuild/issues/2440, when tsconfig is set to
     // `undefined`, esbuild will keep looking for a tsconfig.json recursively up. This unwanted

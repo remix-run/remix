@@ -55,6 +55,7 @@ const createEsbuildConfig = (
           cssModulesPlugin({
             mode: options.mode,
             rootDirectory: config.rootDirectory,
+            outputCss: false,
           }),
         ]
       : []),
