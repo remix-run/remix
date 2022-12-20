@@ -285,7 +285,7 @@ Because some characters have special meaning, you must use our escaping syntax i
 [catch-boundary]: ../route/catch-boundary
 [outlet]: ../components/outlet
 [view-example-app]: https://github.com/remix-run/examples/tree/main/multiple-params
-[use-params]: https://reactrouter.com/docs/hooks/use-params
+[use-params]: https://reactrouter.com/hooks/use-params
 [params]: ../route/loader#params
 [routing-guide]: ../guides/routing
 [root-route]: #root-route
