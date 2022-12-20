@@ -1,5 +1,16 @@
 # `@remix-run/netlify`
 
+## 1.10.0-pre.0
+
+### Patch Changes
+
+- improve performance of `isBinaryType` in the netlify and architect adapters ([#4761](https://github.com/remix-run/remix/pull/4761))
+
+  previous implementation from arc itself has a complexity of O(N\*includesComplexity), where as now it is O(includesComplexity).
+
+- Updated dependencies:
+  - `@remix-run/node@1.10.0-pre.0`
+
 ## 1.9.0
 
 ### Patch Changes

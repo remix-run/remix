@@ -20,5 +20,11 @@
     "@remix-run/testing": "1.9.0",
     "@remix-run/vercel": "1.9.0"
   },
-  "changesets": []
+  "changesets": [
+    "late-bottles-shop",
+    "many-zebras-arrive",
+    "mighty-rules-drum",
+    "quick-cats-fix",
+    "thirty-eels-taste"
+  ]
 }
