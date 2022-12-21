@@ -312,11 +312,14 @@ export async function generateEntry(remixRoot: string, entry: string) {
       projectDir: remixRoot,
       source: contents,
     });
-    console.log(javascript);
     await fse.writeFile(outputFile, javascript, "utf-8");
   } else {
     await fse.copyFile(inputFile, outputFile);
   }
 
-  console.log(colors.blue(`Entry file ${entry} created at ${outputFile}.`));
+  console.log(
+    colors.blue(
+      `Entry file ${entry} created at ${path.relative(remixRoot, outputFile)}.`
+    )
+  );
 }
