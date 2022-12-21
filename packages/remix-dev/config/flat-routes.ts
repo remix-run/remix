@@ -1,4 +1,11 @@
 import type { ConfigRoute } from "./routes";
+import {
+  escapeEnd,
+  escapeStart,
+  optionalEnd,
+  optionalStart,
+  paramPrefixChar,
+} from "./routesConvention";
 
 /**
  * Create route configs from a list of routes using the flat routes conventions.
@@ -55,6 +62,7 @@ function routeIdFromPath(relativePath: string) {
       .join(".")
   );
 }
+
 export function pathFromRouteId(routeId: string, parentId: string) {
   let parentPath = "";
   if (parentId) {
@@ -111,23 +119,28 @@ function getRouteSegments(name: string, toPath: boolean = true) {
     }
     if (state == "PATH") {
       switch (subState) {
-        case "PATHLESS":
+        case "PATHLESS": {
           if (isPathSeparator(char)) {
             state = "START";
             break;
           }
           break;
-        case "NORMAL":
+        }
+        case "NORMAL": {
           if (isPathSeparator(char)) {
             state = "START";
             separators.push(char);
             break;
           }
-          if (toPath && char === "[") {
+          if (toPath && char === escapeStart) {
             subState = "ESCAPE";
             break;
           }
-          if (toPath && !routeSegment && char == "$") {
+          if (toPath && char === optionalStart) {
+            subState = "OPTIONAL";
+            break;
+          }
+          if (toPath && !routeSegment && char == paramPrefixChar) {
             if (index === name.length) {
               routeSegment += "*";
             } else {
@@ -137,18 +150,34 @@ function getRouteSegments(name: string, toPath: boolean = true) {
           }
           routeSegment += char;
           break;
-        case "ESCAPE":
+        }
+        case "ESCAPE": {
           if (
             toPath &&
-            char === "]" &&
-            name[index - 1] !== "[" &&
-            name[index + 1] !== "]"
+            char === escapeEnd &&
+            name[index - 1] !== escapeStart &&
+            name[index + 1] !== escapeEnd
           ) {
             subState = "NORMAL";
             break;
           }
           routeSegment += char;
           break;
+        }
+        case "OPTIONAL": {
+          if (
+            toPath &&
+            char === optionalEnd &&
+            name[index - 1] !== optionalStart &&
+            name[index + 1] !== optionalEnd
+          ) {
+            routeSegment += "?";
+            subState = "NORMAL";
+            break;
+          }
+          routeSegment += char;
+          break;
+        }
       }
     }
   }
