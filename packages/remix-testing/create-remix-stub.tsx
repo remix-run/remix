@@ -1,9 +1,8 @@
 import * as React from "react";
 import type { RouteData } from "@remix-run/react";
-import type { RouteObject } from "react-router-dom";
-import { RouterProvider } from "react-router-dom";
-import { createMemoryRouter } from "react-router-dom";
 import type { InitialEntry, Router } from "@remix-run/router";
+import type { RouteObject } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 
 type RemixStubOptions = {
   /**
