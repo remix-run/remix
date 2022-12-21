@@ -70,8 +70,8 @@ export function pathFromRouteId(routeId: string, parentId: string) {
   let pathname = parentPath
     ? routePath.slice(parentPath.length + 1)
     : routePath;
-  if (pathname.endsWith("index") || pathname.endsWith("/_index")) {
-    pathname = pathname.replace(/index$/, "");
+  if (pathname.endsWith("/_index")) {
+    pathname = pathname.replace(/_index$/, "");
   }
   if (pathname.startsWith("/")) {
     pathname = pathname.substring(1);
@@ -80,7 +80,7 @@ export function pathFromRouteId(routeId: string, parentId: string) {
 }
 
 function isIndexRoute(routeId: string) {
-  return routeId.endsWith("index");
+  return routeId.endsWith("_index");
 }
 
 // TODO: Add support for optional segments
