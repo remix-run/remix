@@ -441,9 +441,16 @@ export async function readConfig(
     appConfig.cacheDirectory || ".cache"
   );
 
+  let serverEntryType = appConfig.serverBuildTarget ? "string" : "streaming";
+
   let defaultsDirectory = path.resolve(__dirname, "config", "defaults");
   let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");
-  let defaultEntryServer = path.resolve(defaultsDirectory, "entry.server.tsx");
+  let defaultEntryServer = path.resolve(
+    defaultsDirectory,
+    serverEntryType === "streaming"
+      ? "streaming-entry.server.tsx"
+      : "string-entry.server.tsx"
+  );
 
   let userEntryClientFile = findEntry(appDirectory, "entry.client");
   let userEntryServerFile = findEntry(appDirectory, "entry.server");

@@ -250,7 +250,10 @@ export async function codemod(
 }
 
 export async function generateEntry(remixRoot: string, entry: string) {
-  // 0. valid entry file
+  // 0. read config
+  let config = await readConfig(remixRoot);
+
+  // 1. validate requested entry file
   let entries = new Set([
     "entry.server.tsx",
     "entry.server.js",
@@ -269,22 +272,36 @@ export async function generateEntry(remixRoot: string, entry: string) {
     );
     return;
   }
-  // 1. check if the entry file exists
+
+  let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
+  let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");
+  let defaultEntryServer = path.resolve(
+    defaultsDirectory,
+    "streaming-entry.server.tsx"
+  );
+
+  // 2.1. if the entry file is a server entry file, determine if streaming is supported
+  if (entry.startsWith("entry.server.")) {
+    let type = config.serverBuildTarget ? "string" : "streaming";
+    if (type === "streaming") {
+      defaultEntryServer = path.resolve(
+        defaultsDirectory,
+        "string-entry.server.tsx"
+      );
+    }
+  }
+
+  // 2.2. check if the entry file exists
   let entryExists = await fse.pathExists(path.join(remixRoot, entry));
   if (entryExists) {
     console.log(colors.gray(`Entry file ${entry} already exists.`));
     return;
   }
 
-  let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
-  let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");
-  let defaultEntryServer = path.resolve(defaultsDirectory, "entry.server.tsx");
-
+  // 3. copy the entry file from the template
   let outputFile = path.resolve(remixRoot, entry);
-
-  // 2. copy the entry file from the template
   await fse.copyFile(
-    entry.startsWith("entry.client") ? defaultEntryClient : defaultEntryServer,
+    entry.startsWith("entry.client.") ? defaultEntryClient : defaultEntryServer,
     outputFile
   );
 
