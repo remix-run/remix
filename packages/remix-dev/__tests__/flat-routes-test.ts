@@ -1,8 +1,4 @@
-import {
-  createRoutePath,
-  getRouteSegments,
-  isIndexRoute,
-} from "../config/flat-routes";
+import { pathFromRouteId } from "../config/flat-routes";
 
 describe("createRoutePath", () => {
   describe("creates proper route paths", () => {
@@ -99,11 +95,8 @@ describe("createRoutePath", () => {
 
     for (let [input, expected] of tests) {
       it(`"${input}" -> "${expected}"`, () => {
-        let index = isIndexRoute(input);
-        let segments = getRouteSegments(input);
-        let result = createRoutePath(segments, index);
-        let expectedPath = expected === undefined ? undefined : "/" + expected;
-        expect(result).toBe(expectedPath);
+        let result = pathFromRouteId(input, "");
+        expect(result).toBe(expected);
       });
     }
   });
