@@ -127,6 +127,9 @@ function getRouteSegments(name: string, toPath: boolean = true) {
     index++; // advance to next character
     if (state == "START") {
       // process existing segment
+      if (routeSegment.endsWith("_")) {
+        routeSegment = routeSegment.slice(0, -1);
+      }
       pushRouteSegment(routeSegment);
       routeSegment = "";
       state = "PATH";
