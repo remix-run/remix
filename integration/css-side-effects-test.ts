@@ -64,14 +64,14 @@ test.describe("CSS side effects", () => {
   });
 
   let basicSideEffectFixture = () => ({
-    "app/basicSideEffect.css": css`
+    "app/basicSideEffect/styles.css": css`
       .global_basicSideEffect {
         background: peachpuff;
         padding: ${TEST_PADDING_VALUE};
       }
     `,
     "app/routes/basic-side-effect-test.jsx": js`
-      import "../basicSideEffect.css";
+      import "../basicSideEffect/styles.css";
       
       export default function() {
         return (
@@ -93,14 +93,14 @@ test.describe("CSS side effects", () => {
   });
 
   let rootRelativeFixture = () => ({
-    "app/rootRelative.css": css`
+    "app/rootRelative/styles.css": css`
       .global_rootRelative {
         background: peachpuff;
         padding: ${TEST_PADDING_VALUE};
       }
     `,
     "app/routes/root-relative-test.jsx": js`
-      import "~/rootRelative.css";
+      import "~/rootRelative/styles.css";
       
       export default function() {
         return (
