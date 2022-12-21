@@ -284,7 +284,7 @@ export async function generateEntry(remixRoot: string, entry: string) {
   // 2.1. if the entry file is a server entry file, determine if streaming is supported
   if (entry.startsWith("entry.server.")) {
     let type = config.serverBuildTarget ? "string" : "streaming";
-    if (type === "streaming") {
+    if (type === "string") {
       defaultEntryServer = path.resolve(
         defaultsDirectory,
         "string-entry.server.tsx"
