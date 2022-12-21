@@ -50,6 +50,8 @@ test.describe("CSS side effects", () => {
         `,
         ...basicSideEffectFixture(),
         ...rootRelativeFixture(),
+        ...imageUrlsFixture(),
+        ...rootRelativeImageUrlsFixture(),
         ...commonJsPackageFixture(),
         ...esmPackageFixture(),
       },
@@ -117,6 +119,78 @@ test.describe("CSS side effects", () => {
       (element) => window.getComputedStyle(element).padding
     );
     expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+
+  let imageUrlsFixture = () => ({
+    "app/imageUrls/styles.css": css`
+      .global_imageUrls {
+        background-color: peachpuff;
+        background-image: url(./image.svg);
+        padding: ${TEST_PADDING_VALUE};
+      }
+    `,
+    "app/imageUrls/image.svg": `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="50" fill="coral" />
+      </svg>
+    `,
+    "app/routes/image-urls-test.jsx": js`
+      import "../imageUrls/styles.css";
+      
+      export default function() {
+        return (
+          <div data-testid="image-urls" className="global_imageUrls">
+            Image URLs test
+          </div>
+        )
+      }
+    `,
+  });
+  test("image URLs", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/image-urls-test");
+    let locator = await page.locator("[data-testid='image-urls']");
+    let backgroundImage = await locator.evaluate(
+      (element) => window.getComputedStyle(element).backgroundImage
+    );
+    expect(backgroundImage).toContain(".svg");
+  });
+
+  let rootRelativeImageUrlsFixture = () => ({
+    "app/rootRelativeImageUrls/styles.css": css`
+      .global_rootRelativeImageUrls {
+        background-color: peachpuff;
+        background-image: url(~/rootRelativeImageUrls/image.svg);
+        padding: ${TEST_PADDING_VALUE};
+      }
+    `,
+    "app/rootRelativeImageUrls/image.svg": `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="50" fill="coral" />
+      </svg>
+    `,
+    "app/routes/root-relative-image-urls-test.jsx": js`
+      import "../rootRelativeImageUrls/styles.css";
+      
+      export default function() {
+        return (
+          <div data-testid="root-relative-image-urls" className="global_rootRelativeImageUrls">
+            Image URLs test
+          </div>
+        )
+      }
+    `,
+  });
+  test("root relative image URLs", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/root-relative-image-urls-test");
+    let locator = await page.locator(
+      "[data-testid='root-relative-image-urls']"
+    );
+    let backgroundImage = await locator.evaluate(
+      (element) => window.getComputedStyle(element).backgroundImage
+    );
+    expect(backgroundImage).toContain(".svg");
   });
 
   let commonJsPackageFixture = () => ({

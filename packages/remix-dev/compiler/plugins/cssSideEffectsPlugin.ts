@@ -84,6 +84,7 @@ export const cssSideEffectsPlugin = (options: {
 
         return {
           contents,
+          resolveDir: path.dirname(args.path),
           loader: "css",
         };
       });
