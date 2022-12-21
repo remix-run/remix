@@ -1,11 +1,29 @@
-import type { ConfigRoute } from "./routes";
+import path from "node:path";
+import fg from "fast-glob";
+
+import type { ConfigRoute, RouteManifest } from "./routes";
 import {
   escapeEnd,
   escapeStart,
   optionalEnd,
   optionalStart,
   paramPrefixChar,
+  routeModuleExts,
 } from "./routesConvention";
+
+export function flatRoutes(
+  appDirectory: string,
+  ignoredFilePatterns?: string[]
+): RouteManifest {
+  let extensions = Array.from(routeModuleExts).join(",");
+  let routePaths = fg.sync(`*.${extensions}`, {
+    absolute: true,
+    cwd: path.join(appDirectory, "routes"),
+    ignore: ignoredFilePatterns,
+  });
+
+  return flatRoutesUniversal(appDirectory, routePaths);
+}
 
 /**
  * Create route configs from a list of routes using the flat routes conventions.
@@ -50,7 +68,8 @@ export function flatRoutesUniversal(
     }
     processedIds.unshift(routeId);
   }
-  return Object.values(routes);
+
+  return routes;
 }
 
 function routeIdFromPath(relativePath: string) {
