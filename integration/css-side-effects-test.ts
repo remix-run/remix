@@ -65,7 +65,7 @@ test.describe("CSS side effects", () => {
 
   let basicSideEffectFixture = () => ({
     "app/basicSideEffect/styles.css": css`
-      .global_basicSideEffect {
+      .basicSideEffect {
         background: peachpuff;
         padding: ${TEST_PADDING_VALUE};
       }
@@ -75,7 +75,7 @@ test.describe("CSS side effects", () => {
       
       export default function() {
         return (
-          <div data-testid="basic-side-effect" className="global_basicSideEffect">
+          <div data-testid="basic-side-effect" className="basicSideEffect">
             Basic side effect test
           </div>
         )
@@ -94,7 +94,7 @@ test.describe("CSS side effects", () => {
 
   let rootRelativeFixture = () => ({
     "app/rootRelative/styles.css": css`
-      .global_rootRelative {
+      .rootRelative {
         background: peachpuff;
         padding: ${TEST_PADDING_VALUE};
       }
@@ -104,7 +104,7 @@ test.describe("CSS side effects", () => {
       
       export default function() {
         return (
-          <div data-testid="root-relative" className="global_rootRelative">
+          <div data-testid="root-relative" className="rootRelative">
             Root relative import test
           </div>
         )
@@ -123,7 +123,7 @@ test.describe("CSS side effects", () => {
 
   let imageUrlsFixture = () => ({
     "app/imageUrls/styles.css": css`
-      .global_imageUrls {
+      .imageUrls {
         background-color: peachpuff;
         background-image: url(./image.svg);
         padding: ${TEST_PADDING_VALUE};
@@ -139,7 +139,7 @@ test.describe("CSS side effects", () => {
       
       export default function() {
         return (
-          <div data-testid="image-urls" className="global_imageUrls">
+          <div data-testid="image-urls" className="imageUrls">
             Image URLs test
           </div>
         )
@@ -158,7 +158,7 @@ test.describe("CSS side effects", () => {
 
   let rootRelativeImageUrlsFixture = () => ({
     "app/rootRelativeImageUrls/styles.css": css`
-      .global_rootRelativeImageUrls {
+      .rootRelativeImageUrls {
         background-color: peachpuff;
         background-image: url(~/rootRelativeImageUrls/image.svg);
         padding: ${TEST_PADDING_VALUE};
@@ -174,7 +174,7 @@ test.describe("CSS side effects", () => {
       
       export default function() {
         return (
-          <div data-testid="root-relative-image-urls" className="global_rootRelativeImageUrls">
+          <div data-testid="root-relative-image-urls" className="rootRelativeImageUrls">
             Image URLs test
           </div>
         )
@@ -195,7 +195,7 @@ test.describe("CSS side effects", () => {
 
   let commonJsPackageFixture = () => ({
     "node_modules/@test-package/commonjs/styles.css": css`
-      .global_commonJsPackageStyles {
+      .commonJsPackage {
         background: peachpuff;
         padding: ${TEST_PADDING_VALUE};
       }
@@ -209,7 +209,7 @@ test.describe("CSS side effects", () => {
           'div',
           {
             'data-testid': 'commonjs-package',
-            'className': 'global_commonJsPackageStyles'
+            'className': 'commonJsPackage'
           },
           'CommonJS package test',
         );
@@ -234,7 +234,7 @@ test.describe("CSS side effects", () => {
 
   let esmPackageFixture = () => ({
     "node_modules/@test-package/esm/styles.css": css`
-      .global_esmPackageStyles {
+      .esmPackage {
         background: peachpuff;
         padding: ${TEST_PADDING_VALUE};
       }
@@ -248,7 +248,7 @@ test.describe("CSS side effects", () => {
           'div',
           {
             'data-testid': 'esm-package',
-            'className': 'global_esmPackageStyles'
+            'className': 'esmPackage'
           },
           'ESM package test',
         );
