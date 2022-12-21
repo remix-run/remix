@@ -6,6 +6,7 @@ export type {
   NavigateFunction,
   Params,
   Path,
+  ShouldRevalidateFunction,
   SubmitFunction,
   SubmitOptions,
 } from "react-router-dom";
@@ -24,6 +25,7 @@ export {
   useParams,
   useResolvedPath,
   useRevalidator,
+  useRouteLoaderData,
   useSearchParams,
   useSubmit,
 } from "react-router-dom";
