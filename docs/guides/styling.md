@@ -770,9 +770,6 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 
 <docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
 
-<docs-warning>Since all CSS Modules styles end up in a single CSS file at the end of the build, we recommend that you only use this styling approach for smaller applications, or sparingly within larger applications. If you're concerned about bundle size, you should probably look at [Tailwind](#tailwind-css) or [Regular Stylesheets](#regular-stylesheets) instead.
-</docs-warning>
-
 To enable [CSS Modules], set the `future.unstable_cssModules` feature flag in `remix.config.js`.
 
 ```js filename=remix.config.js
