@@ -809,7 +809,7 @@ export const links: LinksFunction = () => {
 };
 ```
 
-You're all set! You can now opt into CSS Modules via the `.module.css` file name convention, for example:
+You're all set! You can now opt into CSS Modules via the `.module.css` file name convention. For example:
 
 ```css filename=app/components/button/styles.module.css
 .root {
