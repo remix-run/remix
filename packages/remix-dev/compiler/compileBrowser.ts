@@ -213,7 +213,7 @@ export const createBrowserCompiler = (
         return;
       }
 
-      let cssBundlePath = cssBundleFile?.path;
+      let cssBundlePath = cssBundleFile.path;
 
       // Get esbuild's existing CSS source map so we can pass it to PostCSS
       let cssBundleSourceMap = outputFiles.find((outputFile) =>
