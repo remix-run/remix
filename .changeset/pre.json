@@ -21,6 +21,7 @@
     "@remix-run/vercel": "1.9.0"
   },
   "changesets": [
+    "honest-phones-visit",
     "late-bottles-shop",
     "many-zebras-arrive",
     "mighty-rules-drum",

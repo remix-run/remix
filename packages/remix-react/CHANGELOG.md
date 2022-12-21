@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.10.0-pre.1
+
+### Patch Changes
+
+- Add a few missed re-exports and back-compat ([`dc079d29b`](https://github.com/remix-run/remix/commit/dc079d29b373d3ebe3781facc7da637c64ce81c3))
+
 ## 1.10.0-pre.0
 
 ### Minor Changes
