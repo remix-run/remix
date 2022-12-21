@@ -492,7 +492,7 @@ The answer to all of these questions is up to your bundler, _not you_. We think 
 
 **Note:** Remix does not currently support CSS processing directly. If you use preprocessors like Sass, Less, or PostCSS, you can run those as a separate process in development.
 
-We also do not yet support [CSS Modules][css-modules] by default, but it is currently [available behind a feature flag.][css-modules]
+We do process [CSS Modules][css-modules], but support is currently [opt-in behind a feature flag][css-modules].
 
 </docs-info>
 
