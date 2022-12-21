@@ -785,7 +785,7 @@ module.exports = {
 };
 ```
 
-With this feature flag enabled, the Remix compiler will now generate a single CSS file containing all CSS Modules styles in your application. Note that any [regular stylesheet imports](http://localhost:3000/docs/en/v1/guides/styling#regular-stylesheets) will remain as separate files.
+With this feature flag enabled, the Remix compiler will now generate a single CSS file containing all CSS Modules styles in your application. Note that any [regular stylesheet imports](#regular-stylesheets) will remain as separate files.
 
 Unlike many other tools in the React ecosystem, insertion of this CSS bundle into the page is not handled for you automatically. Instead, we ensure that you always have control over the link tags on your page. This lets you decide where the CSS bundle is inserted and in what order relative to other style sheets.
 
