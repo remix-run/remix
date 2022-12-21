@@ -255,14 +255,17 @@ export async function generateEntry(remixRoot: string, entry: string) {
   let config = await readConfig(remixRoot);
 
   // 1. validate requested entry file
-  let entries = new Set([
-    "entry.server.tsx",
-    "entry.server.js",
-    "entry.server.jsx",
+  let clientEntries = new Set([
     "entry.client.tsx",
     "entry.client.js",
     "entry.client.jsx",
   ]);
+  let serverEntries = new Set([
+    "entry.server.tsx",
+    "entry.server.js",
+    "entry.server.jsx",
+  ]);
+  let entries = new Set([...clientEntries, ...serverEntries]);
   if (!entries.has(entry)) {
     console.log(
       colors.error(
@@ -292,15 +295,23 @@ export async function generateEntry(remixRoot: string, entry: string) {
     }
   }
 
-  // 2.2. check if the entry file exists
-  let inputFile = entry.startsWith("entry.client.")
-    ? defaultEntryClient
-    : defaultEntryServer;
-  let outputFile = path.resolve(path.join(remixRoot, "app", entry));
-  let entryExists = await fse.pathExists(outputFile);
-  if (entryExists) {
-    console.log(colors.gray(`Entry file ${outputFile} already exists.`));
-    return;
+  // 2.2. check if any of the requested entry file exists
+  let entryType = entry.startsWith("entry.client.") ? "client" : "server";
+  let inputFile =
+    entryType === "client" ? defaultEntryClient : defaultEntryServer;
+  let outputFile: string = "";
+  let entriesToCheck = entryType === "client" ? clientEntries : serverEntries;
+  for (let entryToCheck of entriesToCheck) {
+    outputFile = path.resolve(remixRoot, "app", entryToCheck);
+    let entryExists = await fse.pathExists(outputFile);
+    if (entryExists) {
+      console.log(
+        colors.gray(
+          `Entry file ${path.relative(remixRoot, entryToCheck)} already exists.`
+        )
+      );
+      return;
+    }
   }
 
   // 3. if entry is jsx?, convert to js
