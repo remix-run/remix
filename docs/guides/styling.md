@@ -795,7 +795,7 @@ To get access to the CSS bundle, first install the `@remix-run/css-bundle` packa
 npm install @remix-run/css-bundle
 ```
 
-Then, import `cssBundleHref` and add it to a link descriptor, most likely in `root.tsx` so that it applies to your entire application.
+Then, import `cssBundleHref` and add it to a link descriptor—most likely in `root.tsx` so that it applies to your entire application.
 
 ```tsx filename=root.tsx lines=[2,6]
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
