@@ -19,6 +19,7 @@ import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 import runCodemod from "../codemod";
 import { CodemodError } from "../codemod/utils/error";
 import { TaskError } from "../codemod/utils/task";
+import { convertTSFileToJS } from "./migrate/migrations/convert-to-javascript/convertTSFilesToJS/convertTSFileToJS";
 
 export async function create({
   appTemplate,
@@ -292,18 +293,30 @@ export async function generateEntry(remixRoot: string, entry: string) {
   }
 
   // 2.2. check if the entry file exists
-  let entryExists = await fse.pathExists(path.join(remixRoot, entry));
+  let inputFile = entry.startsWith("entry.client.")
+    ? defaultEntryClient
+    : defaultEntryServer;
+  let outputFile = path.resolve(path.join(remixRoot, "app", entry));
+  let entryExists = await fse.pathExists(outputFile);
   if (entryExists) {
-    console.log(colors.gray(`Entry file ${entry} already exists.`));
+    console.log(colors.gray(`Entry file ${outputFile} already exists.`));
     return;
   }
 
-  // 3. copy the entry file from the template
-  let outputFile = path.resolve(remixRoot, entry);
-  await fse.copyFile(
-    entry.startsWith("entry.client.") ? defaultEntryClient : defaultEntryServer,
-    outputFile
-  );
+  // 3. if entry is jsx?, convert to js
+  // otherwise, copy the entry file from the defaults
+  if (/\.jsx?$/.test(entry)) {
+    let contents = await fse.readFile(inputFile, "utf-8");
+    let javascript = convertTSFileToJS({
+      filename: inputFile,
+      projectDir: remixRoot,
+      source: contents,
+    });
+    console.log(javascript);
+    await fse.writeFile(outputFile, javascript, "utf-8");
+  } else {
+    await fse.copyFile(inputFile, outputFile);
+  }
 
   console.log(colors.blue(`Entry file ${entry} created at ${outputFile}.`));
 }
