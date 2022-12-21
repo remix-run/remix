@@ -167,7 +167,7 @@ export const createBrowserCompiler = (
 
       invariant(
         appCompiler.metafile,
-        "Expected app compiler metafile to be defined"
+        "Expected app compiler metafile to be defined. This is likely a bug in Remix. Please open an issue at https://github.com/remix-run/remix/issues/new"
       );
     };
 
