@@ -42,7 +42,6 @@ export {
   Scripts,
   Link,
   NavLink,
-  RemixEntry,
   PrefetchPageLinks,
   LiveReload,
   useTransition,
@@ -59,11 +58,7 @@ export type { ThrownResponse } from "./errors";
 export { useCatch } from "./errorBoundaries";
 
 export type { HtmlLinkDescriptor } from "./links";
-export type {
-  HtmlMetaDescriptor,
-  CatchBoundaryComponent,
-  RouteModules,
-} from "./routeModules";
+export type { HtmlMetaDescriptor } from "./routeModules";
 
 export { ScrollRestoration } from "./scroll-restoration";
 
@@ -72,6 +67,4 @@ export { RemixServer } from "./server";
 
 export type { Fetcher } from "./transition";
 
-export type { AssetsManifest, EntryContext } from "./entry";
-export type { RouteData } from "./routeData";
-export type { EntryRoute, RouteManifest } from "./routes";
+export type { RouteData as UNSAFE_RouteData } from "./routeData";

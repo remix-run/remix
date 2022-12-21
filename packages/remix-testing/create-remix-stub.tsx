@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { RouteData } from "@remix-run/react";
+import type { UNSAFE_RouteData as RouteData } from "@remix-run/react";
 import type { InitialEntry, Router } from "@remix-run/router";
 import type { RouteObject } from "react-router-dom";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
