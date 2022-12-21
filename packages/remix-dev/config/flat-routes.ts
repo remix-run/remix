@@ -110,7 +110,6 @@ function isIndexRoute(routeId: string) {
   return routeId.endsWith("_index");
 }
 
-// TODO: Add support for optional segments
 function getRouteSegments(name: string, toPath: boolean = true) {
   let routeSegments: string[] = [];
   let separators: string[] = [];
