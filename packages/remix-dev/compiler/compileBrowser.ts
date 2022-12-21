@@ -189,7 +189,7 @@ export const createBrowserCompiler = (
 
       invariant(
         cssCompiler.metafile,
-        "Expected CSS compiler metafile to be defined"
+        "Expected CSS compiler metafile to be defined. This is likely a bug in Remix. Please open an issue at https://github.com/remix-run/remix/issues/new"
       );
 
       let cssBundlePath: string | undefined;
