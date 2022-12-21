@@ -2,4 +2,5 @@
 "@remix-run/react": patch
 ---
 
-Add a few missed re-exports and back-compat
+- Re-export `ShouldRevalidateFunction`, `useRouteLoaderData`
+- Include flattened `fetcher` submission data on `useFetcher`

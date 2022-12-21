@@ -4,7 +4,8 @@
 
 ### Patch Changes
 
-- Add a few missed re-exports and back-compat ([`dc079d29b`](https://github.com/remix-run/remix/commit/dc079d29b373d3ebe3781facc7da637c64ce81c3))
+- Re-export `ShouldRevalidateFunction`, `useRouteLoaderData` ([#4933](https://github.com/remix-run/remix/pull/4933))
+- Include flattened `fetcher` submission data on `useFetcher` ([#4933](https://github.com/remix-run/
 
 ## 1.10.0-pre.0
 
