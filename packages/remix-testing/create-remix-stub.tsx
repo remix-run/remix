@@ -1,6 +1,14 @@
 import * as React from "react";
-import type { UNSAFE_RouteData as RouteData } from "@remix-run/react";
-import type { InitialEntry, Router } from "@remix-run/router";
+import type { HydrationState, InitialEntry, Router } from "@remix-run/router";
+import { UNSAFE_RemixContext as RemixContext } from "@remix-run/react";
+import type {
+  UNSAFE_FutureConfig as FutureConfig,
+  UNSAFE_AssetsManifest as AssetsManifest,
+  UNSAFE_EntryRoute as EntryRoute,
+  UNSAFE_RouteManifest as RouteManifest,
+  UNSAFE_RouteModules as RouteModules,
+  UNSAFE_RemixContextObject as RemixContextObject,
+} from "@remix-run/react";
 import type { RouteObject } from "react-router-dom";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 
@@ -14,16 +22,13 @@ type RemixStubOptions = {
   initialEntries?: InitialEntry[];
 
   /**
-   *  Used to set the route's initial loader data.
-   *  e.g. initialLoaderData={{ "/contact": { locale: "en-US" } }}
+   *  Used to set the route's initial loader and action data.
+   *  e.g. hydrationData={{
+   *   loaderData: { "/contact": { locale: "en-US" } },
+   *   actionData: { "/login": { errors: { email: "invalid email" } }}
+   *  }}
    */
-  initialLoaderData?: RouteData;
-
-  /**
-   *  Used to set the route's initial action data.
-   *  e.g. initialActionData={{ "/login": { errors: { email: "invalid email" } }}
-   */
-  initialActionData?: RouteData;
+  hydrationData?: HydrationState;
 
   /**
    * The initial index in the history stack to render. This allows you to start a test at a specific entry.
@@ -33,27 +38,112 @@ type RemixStubOptions = {
    *   initialIndex: 1 // start at "/events/123"
    */
   initialIndex?: number;
+
+  remixConfigFuture?: Partial<FutureConfig>;
 };
 
-export function createRemixStub(routes: RouteObject[]) {
+type StubRouteObject = Omit<
+  RouteObject,
+  "id" | "handle" | "shouldRevalidate" | "errorElement" | "hasErrorBoundary"
+>;
+
+export function createRemixStub(routes: StubRouteObject[]) {
   return function RemixStub({
     initialEntries,
     initialIndex,
-    initialActionData,
-    initialLoaderData,
+    hydrationData,
+    remixConfigFuture,
   }: RemixStubOptions) {
     let routerRef = React.useRef<Router>();
+    let remixContextRef = React.useRef<RemixContextObject>();
+
     if (routerRef.current == null) {
-      routerRef.current = createMemoryRouter(routes, {
+      routerRef.current = createMemoryRouter(routes as RouteObject[], {
         initialEntries,
         initialIndex,
-        hydrationData: {
-          actionData: initialActionData,
-          loaderData: initialLoaderData,
-        },
+        hydrationData,
       });
     }
 
-    return <RouterProvider router={routerRef.current} />;
+    if (remixContextRef.current == null) {
+      remixContextRef.current = {
+        future: {
+          v2_meta: false,
+          ...remixConfigFuture,
+        },
+        manifest: createManifest(routes as RouteObject[]),
+        routeModules: createRouteModules(routes as RouteObject[]),
+      };
+    }
+
+    return (
+      <RemixContext.Provider value={remixContextRef.current}>
+        <RouterProvider router={routerRef.current} />
+      </RemixContext.Provider>
+    );
+  };
+}
+
+function createManifest(routes: RouteObject[]): AssetsManifest {
+  return {
+    routes: createRouteManifest(routes),
+    entry: { imports: [], module: "" },
+    url: "",
+    version: "",
+  };
+}
+
+function createRouteManifest(
+  routes: RouteObject[],
+  manifest?: RouteManifest<EntryRoute>,
+  parentId?: string
+): RouteManifest<EntryRoute> {
+  return routes.reduce((manifest, route) => {
+    if (route.children) {
+      createRouteManifest(route.children, manifest, route.id);
+    }
+    manifest[route.id!] = convertToEntryRoute(route, parentId);
+    return manifest;
+  }, manifest || {});
+}
+
+function createRouteModules(
+  routes: RouteObject[],
+  routeModules?: RouteModules
+): RouteModules {
+  return routes.reduce((modules, route) => {
+    if (route.children) {
+      createRouteModules(route.children, modules);
+    }
+
+    modules[route.id!] = {
+      CatchBoundary: undefined,
+      ErrorBoundary: undefined,
+      // @ts-expect-error - types are still `agnostic` here
+      default: () => route.element,
+      handle: route.handle,
+      links: undefined,
+      meta: undefined,
+      shouldRevalidate: undefined,
+    };
+    return modules;
+  }, routeModules || {});
+}
+
+function convertToEntryRoute(
+  route: RouteObject,
+  parentId?: string
+): EntryRoute {
+  return {
+    id: route.id!,
+    index: route.index,
+    caseSensitive: route.caseSensitive,
+    path: route.path,
+    parentId,
+    hasAction: !!route.action,
+    hasLoader: !!route.loader,
+    module: "",
+    hasCatchBoundary: false,
+    hasErrorBoundary: false,
   };
 }

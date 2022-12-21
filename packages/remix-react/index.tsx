@@ -50,6 +50,7 @@ export {
   useLoaderData,
   useMatches,
   useActionData,
+  RemixContext as UNSAFE_RemixContext,
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";
@@ -58,7 +59,10 @@ export type { ThrownResponse } from "./errors";
 export { useCatch } from "./errorBoundaries";
 
 export type { HtmlLinkDescriptor } from "./links";
-export type { HtmlMetaDescriptor } from "./routeModules";
+export type {
+  HtmlMetaDescriptor,
+  RouteModules as UNSAFE_RouteModules,
+} from "./routeModules";
 
 export { ScrollRestoration } from "./scroll-restoration";
 
@@ -67,4 +71,13 @@ export { RemixServer } from "./server";
 
 export type { Fetcher } from "./transition";
 
-export type { RouteData as UNSAFE_RouteData } from "./routeData";
+export type {
+  FutureConfig as UNSAFE_FutureConfig,
+  AssetsManifest as UNSAFE_AssetsManifest,
+  RemixContextObject as UNSAFE_RemixContextObject,
+} from "./entry";
+
+export type {
+  EntryRoute as UNSAFE_EntryRoute,
+  RouteManifest as UNSAFE_RouteManifest,
+} from "./routes";
