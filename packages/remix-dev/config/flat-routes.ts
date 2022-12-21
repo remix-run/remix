@@ -194,6 +194,34 @@ function getRouteSegments(name: string, toPath: boolean = true) {
             subState = "NORMAL";
             break;
           }
+
+          if (toPath && char === escapeStart) {
+            subState = "OPTIONAL_ESCAPE";
+            break;
+          }
+
+          if (toPath && !routeSegment && char == paramPrefixChar) {
+            if (index === name.length) {
+              routeSegment += "*";
+            } else {
+              routeSegment += ":";
+            }
+            break;
+          }
+
+          routeSegment += char;
+          break;
+        }
+        case "OPTIONAL_ESCAPE": {
+          if (
+            toPath &&
+            char === escapeEnd &&
+            name[index - 1] !== escapeStart &&
+            name[index + 1] !== escapeEnd
+          ) {
+            subState = "OPTIONAL";
+            break;
+          }
           routeSegment += char;
           break;
         }
