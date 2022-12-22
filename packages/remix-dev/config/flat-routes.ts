@@ -56,13 +56,9 @@ export function flatRoutesUniversal(
     for (let processedId of processedIds) {
       if (routeId.startsWith(processedId.replace(/\$$/, "*"))) {
         let [segments, delimiters] = splitBySegments(routeId);
-
         if (segments.at(1)?.endsWith("_")) {
-          // update routeId to remove the suffix from the first segment
           segments[1] = segments[1].slice(0, -1);
           tmpId = segments.map((s, i) => s + delimiters[i]).join("");
-          console.log({ tmpId });
-
           break;
         }
 
