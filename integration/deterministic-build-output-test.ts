@@ -17,7 +17,7 @@ test("builds deterministically under different paths", async () => {
   //  * browserRouteModulesPlugin (implicitly tested by root route)
   //  * cssEntryModulePlugin (implicitly tested by build)
   //  * cssModulesPlugin (via app/routes/foo.tsx' CSS Modules import)
-  //  * cssSideEffectsPlugin (via app/routes/foo.tsx' CSS side effect import)
+  //  * cssSideEffectImportsPlugin (via app/routes/foo.tsx' CSS side-effect import)
   //  * emptyModulesPlugin (via app/routes/foo.tsx' server import)
   //  * mdx (via app/routes/index.mdx)
   //  * serverAssetsManifestPlugin (implicitly tested by build)
@@ -29,7 +29,7 @@ test("builds deterministically under different paths", async () => {
         module.exports = {
           future: {
             unstable_cssModules: true,
-            unstable_cssSideEffects: true,
+            unstable_cssSideEffectImports: true,
           },
         };
       `,

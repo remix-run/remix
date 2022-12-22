@@ -19,7 +19,7 @@ export interface EntryContext extends RemixContextObject {
 
 export interface FutureConfig {
   unstable_cssModules: boolean;
-  unstable_cssSideEffects: boolean;
+  unstable_cssSideEffectImports: boolean;
   v2_meta: boolean;
 }
 

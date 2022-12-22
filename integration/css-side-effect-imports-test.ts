@@ -11,7 +11,7 @@ import {
 
 const TEST_PADDING_VALUE = "20px";
 
-test.describe("CSS side effects", () => {
+test.describe("CSS side-effect imports", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
 
@@ -25,7 +25,7 @@ test.describe("CSS side effects", () => {
               // Enable all CSS future flags to
               // ensure features don't clash
               unstable_cssModules: true,
-              unstable_cssSideEffects: true,
+              unstable_cssSideEffectImports: true,
             },
           };
         `,

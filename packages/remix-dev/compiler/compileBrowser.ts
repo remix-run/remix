@@ -20,7 +20,7 @@ import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
 import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
-import { cssSideEffectsPlugin } from "./plugins/cssSideEffectsPlugin";
+import { cssSideEffectImportsPlugin } from "./plugins/cssSideEffectImportsPlugin";
 import {
   cssBundleEntryModulePlugin,
   cssBundleEntryModuleId,
@@ -68,7 +68,8 @@ const writeAssetsManifest = async (
 };
 
 const isCssBundlingEnabled = (config: RemixConfig) =>
-  config.future.unstable_cssModules || config.future.unstable_cssSideEffects;
+  config.future.unstable_cssModules ||
+  config.future.unstable_cssSideEffectImports;
 
 const createEsbuildConfig = (
   build: "app" | "css",
@@ -105,8 +106,8 @@ const createEsbuildConfig = (
     config.future.unstable_cssModules
       ? cssModulesPlugin({ mode, rootDirectory, outputCss: isCssBuild })
       : null,
-    config.future.unstable_cssSideEffects
-      ? cssSideEffectsPlugin({ rootDirectory })
+    config.future.unstable_cssSideEffectImports
+      ? cssSideEffectImportsPlugin({ rootDirectory })
       : null,
     cssFilePlugin({ mode, rootDirectory }),
     urlImportsPlugin(),

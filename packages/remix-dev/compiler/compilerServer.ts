@@ -9,7 +9,7 @@ import type { AssetsManifest } from "./assets";
 import { loaders } from "./loaders";
 import type { CompileOptions } from "./options";
 import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
-import { cssSideEffectsPlugin } from "./plugins/cssSideEffectsPlugin";
+import { cssSideEffectImportsPlugin } from "./plugins/cssSideEffectImportsPlugin";
 import { cssFilePlugin } from "./plugins/cssFilePlugin";
 import { deprecatedRemixPackagePlugin } from "./plugins/deprecatedRemixPackagePlugin";
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
@@ -56,8 +56,8 @@ const createEsbuildConfig = (
     config.future.unstable_cssModules
       ? cssModulesPlugin({ mode, rootDirectory, outputCss: false })
       : null,
-    config.future.unstable_cssSideEffects
-      ? cssSideEffectsPlugin({ rootDirectory })
+    config.future.unstable_cssSideEffectImports
+      ? cssSideEffectImportsPlugin({ rootDirectory })
       : null,
     cssFilePlugin({ mode, rootDirectory }),
     urlImportsPlugin(),

@@ -11,7 +11,7 @@ const namespace = `${pluginName}-ns`;
 const cssSideEffectSuffix = "?__remix_sideEffect__";
 const cssSideEffectFilter = new RegExp(`\\.css\\?${cssSideEffectSuffix}$`);
 
-export function isCssSideEffectPath(path: string): boolean {
+export function isCssSideEffectImportPath(path: string): boolean {
   return cssSideEffectFilter.test(path);
 }
 
@@ -36,7 +36,7 @@ const loaderForExtension: Record<Extension, Loader> = {
  * to the CSS bundle. This is primarily designed to support packages that
  * import plain CSS files directly within JS files.
  */
-export const cssSideEffectsPlugin = (options: {
+export const cssSideEffectImportsPlugin = (options: {
   rootDirectory: string;
 }): Plugin => {
   return {

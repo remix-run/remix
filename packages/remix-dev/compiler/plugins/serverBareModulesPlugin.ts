@@ -9,7 +9,7 @@ import {
   serverBuildVirtualModule,
   assetsManifestVirtualModule,
 } from "../virtualModules";
-import { isCssSideEffectPath } from "./cssSideEffectsPlugin";
+import { isCssSideEffectImportPath } from "./cssSideEffectImportsPlugin";
 import { createMatchPath } from "../utils/tsconfig";
 import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
 
@@ -71,8 +71,8 @@ export function serverBareModulesPlugin(
           return undefined;
         }
 
-        // Always bundle CSS side effects.
-        if (isCssSideEffectPath(path)) {
+        // Always bundle CSS side-effect imports.
+        if (isCssSideEffectImportPath(path)) {
           return undefined;
         }
 

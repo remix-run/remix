@@ -26,7 +26,7 @@ test.describe("CSS Modules", () => {
               // Enable all CSS future flags to
               // ensure features don't clash
               unstable_cssModules: true,
-              unstable_cssSideEffects: true,
+              unstable_cssSideEffectImports: true,
             },
           };
         `,

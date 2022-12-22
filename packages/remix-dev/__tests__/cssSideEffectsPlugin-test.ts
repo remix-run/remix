@@ -1,10 +1,10 @@
 import dedent from "dedent";
 
-import { addSuffixToCssSideEffectImports } from "../compiler/plugins/cssSideEffectsPlugin";
+import { addSuffixToCssSideEffectImports } from "../compiler/plugins/cssSideEffectImportsPlugin";
 
 describe("addSuffixToCssSideEffectImports", () => {
   describe("adds suffix", () => {
-    test("side effect require", () => {
+    test("side-effect require", () => {
       let code = dedent`
         require("./foo.css");
       `;
@@ -14,7 +14,7 @@ describe("addSuffixToCssSideEffectImports", () => {
       );
     });
 
-    test("side effect import", () => {
+    test("side-effect import", () => {
       let code = dedent`
         import "./foo.css";
       `;
@@ -24,7 +24,7 @@ describe("addSuffixToCssSideEffectImports", () => {
       );
     });
 
-    test("side effect import with JSX", () => {
+    test("side-effect import with JSX", () => {
       let code = dedent`
         import "./foo.css";
         
@@ -39,7 +39,7 @@ describe("addSuffixToCssSideEffectImports", () => {
       `);
     });
 
-    test("side effect import in TypeScript", () => {
+    test("side-effect import in TypeScript", () => {
       let code = dedent`
         require("./foo.css");
         
@@ -54,7 +54,7 @@ describe("addSuffixToCssSideEffectImports", () => {
       `);
     });
 
-    test("side effect import in TypeScript with JSX", () => {
+    test("side-effect import in TypeScript with JSX", () => {
       let code = dedent`
         require("./foo.css");
         
@@ -71,7 +71,7 @@ describe("addSuffixToCssSideEffectImports", () => {
       `);
     });
 
-    test("conditional side effect require", () => {
+    test("conditional side-effect require", () => {
       let code = dedent`
         if (process.env.NODE_ENV === "production") {
           require("./foo.min.css");
@@ -90,7 +90,7 @@ describe("addSuffixToCssSideEffectImports", () => {
       `);
     });
 
-    test("conditional side effect require via ternary", () => {
+    test("conditional side-effect require via ternary", () => {
       let code = dedent`
         process.env.NODE_ENV === "production" ? require("./foo.min.css") : require("./foo.css");
       `;
@@ -100,7 +100,7 @@ describe("addSuffixToCssSideEffectImports", () => {
       );
     });
 
-    test("conditional side effect require via && operator", () => {
+    test("conditional side-effect require via && operator", () => {
       let code = dedent`
         process.env.NODE_ENV === "development" && require("./debug.css");
       `;
@@ -110,7 +110,7 @@ describe("addSuffixToCssSideEffectImports", () => {
       );
     });
 
-    test("conditional side effect require via || operator", () => {
+    test("conditional side-effect require via || operator", () => {
       let code = dedent`
         process.env.NODE_ENV === "production" || require("./debug.css");
       `;
@@ -122,7 +122,7 @@ describe("addSuffixToCssSideEffectImports", () => {
   });
 
   describe("doesn't add suffix", () => {
-    test("ignores non side effect require of CSS", () => {
+    test("ignores non side-effect require of CSS", () => {
       let code = dedent`
         const href = require("./foo.css");
       `;
@@ -162,7 +162,7 @@ describe("addSuffixToCssSideEffectImports", () => {
       );
     });
 
-    test("ignores conditional non side effect require of CSS", () => {
+    test("ignores conditional non side-effect require of CSS", () => {
       let code = dedent`
         const href = process.env.NODE_ENV === "production" ?
           require("./foo.min.css") :
@@ -177,7 +177,7 @@ describe("addSuffixToCssSideEffectImports", () => {
       `);
     });
 
-    test("ignores conditional non side effect require of CSS via logical operators", () => {
+    test("ignores conditional non side-effect require of CSS via logical operators", () => {
       let code = dedent`
         const href = (process.env.NODE_ENV === "production" && require("./foo.min.css")) || require("./foo.css");
       `;
@@ -187,7 +187,7 @@ describe("addSuffixToCssSideEffectImports", () => {
       );
     });
 
-    test("ignores side effect require of non-CSS", () => {
+    test("ignores side-effect require of non-CSS", () => {
       let code = dedent`
         require("./foo");
       `;
@@ -197,7 +197,7 @@ describe("addSuffixToCssSideEffectImports", () => {
       );
     });
 
-    test("ignores side effect import of non-CSS", () => {
+    test("ignores side-effect import of non-CSS", () => {
       let code = dedent`
         import "./foo";
       `;
