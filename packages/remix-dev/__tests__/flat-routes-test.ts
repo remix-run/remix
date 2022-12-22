@@ -18,6 +18,8 @@ describe("flatRoutes", () => {
       ["app.projects", "app/projects"],
       ["app", "app"],
       ["app_.projects.$id.roadmap", "app/projects/:id/roadmap"],
+      ["app_/projects/$id/roadmap", "app/projects/:id/roadmap"],
+      ["app_.projects/$id.roadmap", "app/projects/:id/roadmap"],
       ["app_.projects.$id.roadmap[.pdf]", "app/projects/:id/roadmap.pdf"],
 
       ["routes/$", "routes/*"],
@@ -101,7 +103,7 @@ describe("flatRoutes", () => {
     }
   });
 
-  describe("should return the correct route hierarchy", () => {
+  it.only("should return the correct route hierarchy", () => {
     let files = [
       "/test/root/app/routes/$.tsx",
       "/test/root/app/routes/_index.tsx",
@@ -118,88 +120,205 @@ describe("flatRoutes", () => {
       "/test/root/app/routes/about.[.].tsx",
       "/test/root/app/routes/about.[*].tsx",
       "/test/root/app/routes/about.[.[.*].].tsx",
+
+      "/test/root/app/routes/_auth.forgot-password.tsx",
+      "/test/root/app/routes/_auth.login.tsx",
+      "/test/root/app/routes/_auth.reset-password.tsx",
+      "/test/root/app/routes/_auth.signup.tsx",
+      "/test/root/app/routes/_auth.tsx",
+      "/test/root/app/routes/_landing.about.tsx",
+      "/test/root/app/routes/_landing._index.tsx",
+      "/test/root/app/routes/_landing.index.tsx",
+      "/test/root/app/routes/_landing.tsx",
+      "/test/root/app/routes/app.calendar.$day.tsx",
+      "/test/root/app/routes/app.calendar._index.tsx",
+      "/test/root/app/routes/app.projects.$id.tsx",
+      "/test/root/app/routes/app.projects.tsx",
+      "/test/root/app/routes/app.tsx",
+      "/test/root/app/routes/app_.projects.$id.roadmap.tsx",
+      "/test/root/app/routes/app_.projects.$id.roadmap[.pdf].tsx",
     ];
 
     let routeManifest = flatRoutesUniversal("/test/root/app", files, "routes");
     let routes = Object.values(routeManifest);
     expect(routes).toHaveLength(files.length);
     expect(routes).toContainEqual({
+      file: "routes/$.tsx",
       id: "routes/$",
       parentId: "root",
-      file: "routes/$.tsx",
       path: "*",
     });
     expect(routes).toContainEqual({
-      id: "routes/_index",
+      file: "routes/app.tsx",
+      id: "routes/app",
       parentId: "root",
-      file: "routes/_index.tsx",
-      index: true,
+      path: "app",
     });
     expect(routes).toContainEqual({
+      file: "routes/_auth.tsx",
+      id: "routes/_auth",
+      parentId: "root",
+      path: undefined,
+    });
+    expect(routes).toContainEqual({
+      file: "routes/about.tsx",
       id: "routes/about",
       parentId: "root",
-      file: "routes/about.tsx",
       path: "about",
     });
     expect(routes).toContainEqual({
-      id: "routes/about._index",
-      parentId: "routes/about",
-      file: "routes/about._index.tsx",
+      file: "routes/_index.tsx",
+      id: "routes/_index",
       index: true,
+      parentId: "root",
+      path: undefined,
     });
     expect(routes).toContainEqual({
-      id: "routes/about.faq",
-      parentId: "routes/about",
-      file: "routes/about.faq.tsx",
-      path: "faq",
-    });
-    expect(routes).toContainEqual({
-      id: "routes/about.$splat",
-      parentId: "routes/about",
-      file: "routes/about.$splat.tsx",
-      path: ":splat",
-    });
-    expect(routes).toContainEqual({
+      file: "routes/about.$.tsx",
       id: "routes/about.$",
       parentId: "routes/about",
-      file: "routes/about.$.tsx",
       path: "*",
     });
     expect(routes).toContainEqual({
-      id: "routes/about.[$splat]",
-      parentId: "routes/about",
-      file: "routes/about.[$splat].tsx",
-      path: "$splat",
+      file: "routes/_landing.tsx",
+      id: "routes/_landing",
+      parentId: "root",
+      path: undefined,
     });
     expect(routes).toContainEqual({
-      id: "routes/about.[[]",
+      file: "routes/about.[*].tsx",
+      id: "routes/about.[*]",
       parentId: "routes/about",
-      file: "routes/about.[[].tsx",
-      path: "[",
+      path: "*",
     });
     expect(routes).toContainEqual({
-      id: "routes/about.[]]",
-      parentId: "routes/about",
-      file: "routes/about.[]].tsx",
-      path: "]",
-    });
-    expect(routes).toContainEqual({
+      file: "routes/about.[.].tsx",
       id: "routes/about.[.]",
       parentId: "routes/about",
-      file: "routes/about.[.].tsx",
       path: ".",
     });
     expect(routes).toContainEqual({
-      id: "routes/about.[*]",
+      file: "routes/about.[]].tsx",
+      id: "routes/about.[]]",
       parentId: "routes/about",
-      file: "routes/about.[*].tsx",
-      path: "*",
+      path: "]",
     });
     expect(routes).toContainEqual({
+      file: "routes/about.[[].tsx",
+      id: "routes/about.[[]",
+      parentId: "routes/about",
+      path: "[",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/about.faq.tsx",
+      id: "routes/about.faq",
+      parentId: "routes/about",
+      path: "faq",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/_auth.login.tsx",
+      id: "routes/_auth.login",
+      parentId: "routes/_auth",
+      path: "login",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/app.projects.tsx",
+      id: "routes/app.projects",
+      parentId: "routes/app",
+      path: "projects",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/_auth.signup.tsx",
+      id: "routes/_auth.signup",
+      parentId: "routes/_auth",
+      path: "signup",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/about.$splat.tsx",
+      id: "routes/about.$splat",
+      parentId: "routes/about",
+      path: ":splat",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/about._index.tsx",
+      id: "routes/about._index",
+      index: true,
+      parentId: "routes/about",
+      path: undefined,
+    });
+    expect(routes).toContainEqual({
+      file: "routes/_landing.index.tsx",
+      id: "routes/_landing.index",
+      parentId: "routes/_landing",
+      path: "index",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/_landing.about.tsx",
+      id: "routes/_landing.about",
+      parentId: "routes/_landing",
+      path: "about",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/about.[.[.*].].tsx",
       id: "routes/about.[.[.*].]",
       parentId: "routes/about",
-      file: "routes/about.[.[.*].].tsx",
       path: ".[.*].",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/about.[$splat].tsx",
+      id: "routes/about.[$splat]",
+      parentId: "routes/about",
+      path: "$splat",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/_landing._index.tsx",
+      id: "routes/_landing._index",
+      index: true,
+      parentId: "routes/_landing",
+      path: undefined,
+    });
+    expect(routes).toContainEqual({
+      file: "routes/app.projects.$id.tsx",
+      id: "routes/app.projects.$id",
+      parentId: "routes/app.projects",
+      path: ":id",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/app.calendar.$day.tsx",
+      id: "routes/app.calendar.$day",
+      parentId: "routes/app",
+      path: "calendar/:day",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/app.calendar._index.tsx",
+      id: "routes/app.calendar._index",
+      index: true,
+      parentId: "routes/app",
+      path: "calendar",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/_auth.reset-password.tsx",
+      id: "routes/_auth.reset-password",
+      parentId: "routes/_auth",
+      path: "reset-password",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/_auth.forgot-password.tsx",
+      id: "routes/_auth.forgot-password",
+      parentId: "routes/_auth",
+      path: "forgot-password",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/app_.projects.$id.roadmap.tsx",
+      id: "routes/app_.projects.$id.roadmap",
+      parentId: "root",
+      path: "app/projects/:id/roadmap",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/app_.projects.$id.roadmap[.pdf].tsx",
+      id: "routes/app_.projects.$id.roadmap[.pdf]",
+      parentId: "root",
+      path: "app/projects/:id/roadmap/pdf",
     });
   });
 });
