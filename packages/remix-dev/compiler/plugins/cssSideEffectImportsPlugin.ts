@@ -9,7 +9,9 @@ import generate from "@babel/generator";
 const pluginName = "css-side-effects-plugin";
 const namespace = `${pluginName}-ns`;
 const cssSideEffectSuffix = "?__remix_sideEffect__";
-const cssSideEffectFilter = new RegExp(`\\.css\\?${cssSideEffectSuffix}$`);
+const cssSideEffectFilter = new RegExp(
+  `\\.css${cssSideEffectSuffix.replace("?", "\\?")}$`
+);
 
 export function isCssSideEffectImportPath(path: string): boolean {
   return cssSideEffectFilter.test(path);
