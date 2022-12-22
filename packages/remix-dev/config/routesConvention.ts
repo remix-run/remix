@@ -139,6 +139,40 @@ export function createRoutePath(partialRouteId: string): string | undefined {
     let nextChar =
       i < partialRouteId.length - 1 ? partialRouteId.charAt(i + 1) : undefined;
 
+    function isNewEscapeSequence() {
+      return (
+        !inEscapeSequence && char === escapeStart && prevChar !== escapeStart
+      );
+    }
+
+    function isCloseEscapeSequence() {
+      return inEscapeSequence && char === escapeEnd && nextChar !== escapeEnd;
+    }
+
+    function isStartOfLayoutSegment() {
+      return char === "_" && nextChar === "_" && !rawSegmentBuffer;
+    }
+
+    function isNewOptionalSegment() {
+      return (
+        char === optionalStart &&
+        prevChar !== optionalStart &&
+        (isSegmentSeparator(prevChar) || prevChar === undefined) &&
+        !inOptionalSegment &&
+        !inEscapeSequence
+      );
+    }
+
+    function isCloseOptionalSegment() {
+      return (
+        char === optionalEnd &&
+        nextChar !== optionalEnd &&
+        (isSegmentSeparator(nextChar) || nextChar === undefined) &&
+        inOptionalSegment &&
+        !inEscapeSequence
+      );
+    }
+
     if (skipSegment) {
       if (isSegmentSeparator(char)) {
         skipSegment = false;
@@ -146,33 +180,24 @@ export function createRoutePath(partialRouteId: string): string | undefined {
       continue;
     }
 
-    if (isNewEscapeSequence(inEscapeSequence, char, prevChar)) {
+    if (isNewEscapeSequence()) {
       inEscapeSequence++;
       continue;
     }
 
-    if (isCloseEscapeSequence(inEscapeSequence, char, nextChar)) {
+    if (isCloseEscapeSequence()) {
       inEscapeSequence--;
       continue;
     }
 
-    if (
-      isNewOptionalSegment(char, prevChar, inOptionalSegment, inEscapeSequence)
-    ) {
+    if (isNewOptionalSegment()) {
       inOptionalSegment++;
       optionalSegmentIndex = result.length;
       result += optionalStart;
       continue;
     }
 
-    if (
-      isCloseOptionalSegment(
-        char,
-        nextChar,
-        inOptionalSegment,
-        inEscapeSequence
-      )
-    ) {
+    if (isCloseOptionalSegment()) {
       if (optionalSegmentIndex !== null) {
         result =
           result.slice(0, optionalSegmentIndex) +
@@ -202,8 +227,7 @@ export function createRoutePath(partialRouteId: string): string | undefined {
       continue;
     }
 
-    // isStartOfLayoutSegment
-    if (char === "_" && nextChar === "_" && !rawSegmentBuffer) {
+    if (isStartOfLayoutSegment()) {
       skipSegment = true;
       continue;
     }
@@ -236,55 +260,9 @@ export function createRoutePath(partialRouteId: string): string | undefined {
   return result || undefined;
 }
 
-function isNewEscapeSequence(
-  inEscapeSequence: number,
-  char: string,
-  prevChar: string | undefined
-) {
-  return !inEscapeSequence && char === escapeStart && prevChar !== escapeStart;
-}
-
-function isCloseEscapeSequence(
-  inEscapeSequence: number,
-  char: string,
-  nextChar: string | undefined
-) {
-  return inEscapeSequence && char === escapeEnd && nextChar !== escapeEnd;
-}
-
 export function isSegmentSeparator(checkChar: string | undefined) {
   if (!checkChar) return false;
   return ["/", ".", path.win32.sep].includes(checkChar);
-}
-
-function isNewOptionalSegment(
-  char: string,
-  prevChar: string | undefined,
-  inOptionalSegment: number,
-  inEscapeSequence: number
-) {
-  return (
-    char === optionalStart &&
-    prevChar !== optionalStart &&
-    (isSegmentSeparator(prevChar) || prevChar === undefined) &&
-    !inOptionalSegment &&
-    !inEscapeSequence
-  );
-}
-
-function isCloseOptionalSegment(
-  char: string,
-  nextChar: string | undefined,
-  inOptionalSegment: number,
-  inEscapeSequence: number
-) {
-  return (
-    char === optionalEnd &&
-    nextChar !== optionalEnd &&
-    (isSegmentSeparator(nextChar) || nextChar === undefined) &&
-    inOptionalSegment &&
-    !inEscapeSequence
-  );
 }
 
 function getParentRouteIds(
@@ -319,3 +297,8 @@ function visitFiles(
     }
   }
 }
+
+/*
+eslint
+  no-loop-func: "off",
+*/
