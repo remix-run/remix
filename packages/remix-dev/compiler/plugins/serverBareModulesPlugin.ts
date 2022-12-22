@@ -21,7 +21,9 @@ export function serverBareModulesPlugin(
   remixConfig: RemixConfig,
   onWarning?: (warning: string, key: string) => void
 ): Plugin {
-  let isDenoRuntime = remixConfig.serverBuildTarget === "deno";
+  let isDenoRuntime = ["deno", "netlify-edge"].includes(
+    remixConfig.serverBuildTarget ?? ""
+  );
 
   // Resolve paths according to tsconfig paths property
   let matchPath = isDenoRuntime
@@ -97,6 +99,7 @@ export function serverBareModulesPlugin(
           case "cloudflare-pages":
           case "cloudflare-workers":
           case "deno":
+          case "netlify-edge":
             return undefined;
         }
 

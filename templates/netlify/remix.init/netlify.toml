@@ -1,5 +1,5 @@
 [build]
-command = "npm run build"
+command = "remix build"
 publish = "public"
 
 [[headers]]
