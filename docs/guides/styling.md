@@ -845,7 +845,7 @@ Button.displayName = "Button";
 
 <docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
 
-Some npm packages use side-effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up [CSS bundling](#css-bundling) in your application.
+Some NPM packages use side-effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up [CSS bundling](#css-bundling) in your application.
 
 Then, set the `future.unstable_cssSideEffects` feature flag in `remix.config.js`.
 
