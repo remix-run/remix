@@ -845,9 +845,7 @@ Button.displayName = "Button";
 
 <docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
 
-This feature is primarily designed to support packages that import plain CSS files directly within JS files. For consistency, this is also available within your application code, but we recommend that you avoid it entirely.
-
-In order to use this feature, first ensure you've set up [CSS bundling](#css-bundling) in your application.
+Some npm packages use side-effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up [CSS bundling](#css-bundling) in your application.
 
 Then, set the `future.unstable_cssSideEffects` feature flag in `remix.config.js`.
 
@@ -861,7 +859,7 @@ module.exports = {
 };
 ```
 
-Since it's non-standard to import CSS from within JS files, you'll also need to add any relevant packages to the [`serverDependenciesToBundle`][server-dependencies-to-bundle] option in your `remix.config.js` file. For example, to use React Spectrum:
+Since JavaScript runtimes don't support importing CSS files in this way, you'll also need to add any relevant packages to the [`serverDependenciesToBundle`][server-dependencies-to-bundle] option in your `remix.config.js` file. This ensures that any CSS imports are processed before running on the server. For example, to use React Spectrum:
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
