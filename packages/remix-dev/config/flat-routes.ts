@@ -187,6 +187,15 @@ function getRouteSegments(name: string, toPath: boolean = true) {
         case "OPTIONAL": {
           if (
             toPath &&
+            name[index] === escapeStart &&
+            isSegmentSeparator(name[index + 1]) &&
+            name[index + 2] === escapeEnd
+          ) {
+            routeSegment += char;
+            break;
+          }
+          if (
+            toPath &&
             char === optionalEnd &&
             name[index - 1] !== optionalStart &&
             name[index + 1] !== optionalEnd
