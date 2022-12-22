@@ -42,7 +42,6 @@ export {
   Scripts,
   Link,
   NavLink,
-  RemixEntry,
   PrefetchPageLinks,
   LiveReload,
   useTransition,
@@ -51,6 +50,7 @@ export {
   useLoaderData,
   useMatches,
   useActionData,
+  RemixContext as UNSAFE_RemixContext,
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";
@@ -61,8 +61,7 @@ export { useCatch } from "./errorBoundaries";
 export type { HtmlLinkDescriptor } from "./links";
 export type {
   HtmlMetaDescriptor,
-  CatchBoundaryComponent,
-  RouteModules,
+  RouteModules as UNSAFE_RouteModules,
 } from "./routeModules";
 
 export { ScrollRestoration } from "./scroll-restoration";
@@ -72,6 +71,13 @@ export { RemixServer } from "./server";
 
 export type { Fetcher } from "./transition";
 
-export type { AssetsManifest, EntryContext } from "./entry";
-export type { RouteData } from "./routeData";
-export type { EntryRoute, RouteManifest } from "./routes";
+export type {
+  FutureConfig as UNSAFE_FutureConfig,
+  AssetsManifest as UNSAFE_AssetsManifest,
+  RemixContextObject as UNSAFE_RemixContextObject,
+} from "./entry";
+
+export type {
+  EntryRoute as UNSAFE_EntryRoute,
+  RouteManifest as UNSAFE_RouteManifest,
+} from "./routes";
