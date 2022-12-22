@@ -1,7 +1,7 @@
 import { pathFromRouteId } from "../config/flat-routes";
 
-describe("createRoutePath", () => {
-  describe("creates proper route paths", () => {
+describe("flatRoutes", () => {
+  describe("pathFromRouteId creates proper route paths", () => {
     let tests: [string, string | undefined][] = [
       ["_auth.forgot-password", "forgot-password"],
       ["_auth.login", "login"],
