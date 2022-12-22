@@ -5,6 +5,7 @@ import type { ConfigRoute, RouteManifest } from "./routes";
 import {
   escapeEnd,
   escapeStart,
+  isSegmentSeparator,
   optionalEnd,
   optionalStart,
   paramPrefixChar,
@@ -141,14 +142,14 @@ function getRouteSegments(name: string, toPath: boolean = true) {
     if (state == "PATH") {
       switch (subState) {
         case "PATHLESS": {
-          if (isPathSeparator(char)) {
+          if (isSegmentSeparator(char)) {
             state = "START";
             break;
           }
           break;
         }
         case "NORMAL": {
-          if (isPathSeparator(char)) {
+          if (isSegmentSeparator(char)) {
             state = "START";
             separators.push(char);
             break;
@@ -233,8 +234,4 @@ function getRouteSegments(name: string, toPath: boolean = true) {
   // process remaining segment
   pushRouteSegment(routeSegment);
   return [routeSegments, separators];
-}
-
-function isPathSeparator(char: string | undefined) {
-  return char === "/" || char === ".";
 }
