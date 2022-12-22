@@ -48,7 +48,7 @@ export const cssModulesPlugin = (options: {
         let fileContents = await fse.readFile(absolutePath, "utf8");
         let exports: Record<string, string> = {};
 
-        let { css: compiledCss, map } = await postcss([
+        let { css: compiledCss } = await postcss([
           postcssModules({
             generateScopedName:
               options.mode === "production"
@@ -69,21 +69,7 @@ export const cssModulesPlugin = (options: {
         ]).process(fileContents, {
           from: absolutePath,
           to: absolutePath,
-          ...(options.mode !== "production"
-            ? {
-                map: {
-                  inline: false,
-                  annotation: false,
-                  sourcesContent: true,
-                },
-              }
-            : undefined),
         });
-
-        if (map) {
-          let mapBase64 = Buffer.from(map.toString()).toString("base64");
-          compiledCss += `\n/*# sourceMappingURL=data:application/json;base64,${mapBase64} */`;
-        }
 
         // Each .module.css file ultimately resolves as a JS file that imports
         // a virtual CSS file containing the compiled CSS, and exports the

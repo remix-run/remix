@@ -770,12 +770,9 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 
 <docs-warning>CSS bundling features are unstable and currently only available behind feature flags. We're confident in the use cases they solve but the API and implementation may change in the future.</docs-warning>
 
-<docs-warning>Since all bundled CSS ends up in a single file at the end of the build, we recommend that you only use these styling approaches for smaller applications, or sparingly within larger applications. If you're concerned about bundle size, you should probably look at [Tailwind](#tailwind-css) or [Regular Stylesheets](#regular-stylesheets) instead.
-</docs-warning>
-
 Many common approaches to CSS within the React community are only possible when bundling CSS, meaning that the CSS files you write during development are collected into a separate bundle as part of the build process.
 
-Unlike many other tools in the React ecosystem, insertion of this bundle into the page is not handled for you automatically. Instead, we ensure that you always have control over the link tags on your page. This lets you decide where the CSS bundle is inserted and in what order relative to other style sheets.
+Unlike many other tools in the React ecosystem, we do not insert the CSS bundle into the page automatically. Instead, we ensure that you always have control over the link tags on your page. This lets you decide where the CSS file is loaded relative to other stylesheets in your app.
 
 To get access to the CSS bundle, first install the `@remix-run/css-bundle` package.
 
@@ -783,7 +780,7 @@ To get access to the CSS bundle, first install the `@remix-run/css-bundle` packa
 npm install @remix-run/css-bundle
 ```
 
-Then, import `cssBundleHref` and add it to a link descriptor, most likely in `root.tsx` so that it applies to your entire application.
+Then, import `cssBundleHref` and add it to a link descriptor—most likely in `root.tsx` so that it applies to your entire application.
 
 ```tsx filename=root.tsx lines=[2,6]
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
@@ -803,9 +800,6 @@ With this link tag inserted into the page, you're now ready to start using the v
 
 <docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
 
-<docs-warning>Since all CSS Modules styles end up in a single CSS file at the end of the build, we recommend that you only use this styling approach for smaller applications, or sparingly within larger applications. If you're concerned about bundle size, you should probably look at [Tailwind](#tailwind-css) or [Regular Stylesheets](#regular-stylesheets) instead.
-</docs-warning>
-
 First, ensure you've set up [CSS bundling](#css-bundling) in your application.
 
 Then, to enable [CSS Modules], set the `future.unstable_cssModules` feature flag in `remix.config.js`.
@@ -820,7 +814,7 @@ module.exports = {
 };
 ```
 
-With this feature flag enabled, you can now opt into CSS Modules via the `.module.css` file name convention, for example:
+With this feature flag enabled, you can now opt into CSS Modules via the `.module.css` file name convention. For example:
 
 ```css filename=app/components/button/styles.module.css
 .root {

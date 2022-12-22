@@ -169,7 +169,7 @@ export const createBrowserCompiler = (
 
       invariant(
         appCompiler.metafile,
-        "Expected app compiler metafile to be defined"
+        "Expected app compiler metafile to be defined. This is likely a bug in Remix. Please open an issue at https://github.com/remix-run/remix/issues/new"
       );
     };
 
@@ -191,52 +191,62 @@ export const createBrowserCompiler = (
 
       invariant(
         cssCompiler.metafile,
-        "Expected CSS compiler metafile to be defined"
+        "Expected CSS compiler metafile to be defined. This is likely a bug in Remix. Please open an issue at https://github.com/remix-run/remix/issues/new"
       );
 
-      let cssBundlePath: string | undefined;
       let outputFiles = cssCompiler.outputFiles || [];
 
-      await Promise.all(
-        outputFiles.map(async (outputFile) => {
-          let outputPath = outputFile.path;
+      let isCssBundleFile = (
+        outputFile: esbuild.OutputFile,
+        extension: ".css" | ".css.map"
+      ): boolean => {
+        return (
+          path.dirname(outputFile.path) === remixConfig.assetsBuildDirectory &&
+          path.basename(outputFile.path).startsWith("css-bundle") &&
+          outputFile.path.endsWith(extension)
+        );
+      };
 
-          // Only write bundled CSS and source map to disk
-          if (
-            path.dirname(outputPath) === remixConfig.assetsBuildDirectory &&
-            path.basename(outputPath).startsWith("css-bundle")
-          ) {
-            if (outputPath.endsWith(".css")) {
-              // Grab the CSS bundle path so we can use it to generate the manifest
-              cssBundlePath = outputPath;
-              await fse.ensureDir(path.dirname(outputPath));
-
-              let contents =
-                options.mode === "production"
-                  ? await postcss([
-                      // We need to discard duplicate rules since "composes"
-                      // in CSS Modules can result in duplicate styles
-                      postcssDiscardDuplicates(),
-                    ])
-                      .process(
-                        Buffer.from(outputFile.contents).toString("utf-8")
-                      )
-                      .then((result) => result.css)
-                  : outputFile.contents;
-
-              return await fse.writeFile(outputPath, contents);
-            }
-
-            if (outputPath.endsWith(".css.map")) {
-              await fse.ensureDir(path.dirname(outputPath));
-              return await fse.writeFile(outputPath, outputFile.contents);
-            }
-          }
-
-          return null;
-        })
+      let cssBundleFile = outputFiles.find((outputFile) =>
+        isCssBundleFile(outputFile, ".css")
       );
 
+      if (!cssBundleFile) {
+        return;
+      }
+
+      let cssBundlePath = cssBundleFile.path;
+
+      // Get esbuild's existing CSS source map so we can pass it to PostCSS
+      let cssBundleSourceMap = outputFiles.find((outputFile) =>
+        isCssBundleFile(outputFile, ".css.map")
+      )?.text;
+
+      let { css, map } = await postcss([
+        // We need to discard duplicate rules since "composes"
+        // in CSS Modules can result in duplicate styles
+        postcssDiscardDuplicates(),
+      ]).process(cssBundleFile.text, {
+        from: cssBundlePath,
+        to: cssBundlePath,
+        map: {
+          prev: cssBundleSourceMap,
+          inline: false,
+          annotation: false,
+          sourcesContent: true,
+        },
+      });
+
+      await fse.ensureDir(path.dirname(cssBundlePath));
+
+      await Promise.all([
+        fse.writeFile(cssBundlePath, css),
+        options.mode !== "production" && map
+          ? fse.writeFile(`${cssBundlePath}.map`, map.toString()) // Write our updated source map rather than esbuild's
+          : null,
+      ]);
+
+      // Return the CSS bundle path so we can use it to generate the manifest
       return cssBundlePath;
     };
 
