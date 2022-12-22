@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.10.0-pre.2
+
+### Patch Changes
+
+- Bump to react-router 6.6.1 pre versions ([#4944](https://github.com/remix-run/remix/pull/4944))
+
 ## 1.10.0-pre.1
 
 ### Patch Changes
