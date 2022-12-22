@@ -47,7 +47,7 @@ describe("flatRoutes", () => {
       ["sub/[sitemap.xml]", "sub/sitemap.xml"],
       ["posts/$slug/[image.jpg]", "posts/:slug/image.jpg"],
       ["$[$dollabills].[.]lol[/]what/[$].$", ":$dollabills/.lol/what/$/*"],
-      ["sub.[[]", "sub/["],
+      ["$[$dollabills].[.][/lol/]what/[$].$", ":$dollabills/./lol/what/$/*"],
       ["sub.]", "sub/]"],
       ["sub.[[]]", "sub/[]"],
       ["sub.[[]", "sub/["],
@@ -55,6 +55,7 @@ describe("flatRoutes", () => {
       ["[_index]", "_index"],
       ["test/inde[x]", "test/index"],
       ["[i]ndex/[[].[[]]", "index/[/[]"],
+      ["[]otherstuff]", "otherstuff]"],
 
       // Optional segment routes
       ["(routes)/$", "routes?/*"],
@@ -103,7 +104,7 @@ describe("flatRoutes", () => {
     }
   });
 
-  it.only("should return the correct route hierarchy", () => {
+  it("should return the correct route hierarchy", () => {
     let files = [
       "/test/root/app/routes/$.tsx",
       "/test/root/app/routes/_index.tsx",
@@ -132,8 +133,8 @@ describe("flatRoutes", () => {
       "/test/root/app/routes/_landing.tsx",
       "/test/root/app/routes/app.calendar.$day.tsx",
       "/test/root/app/routes/app.calendar._index.tsx",
-      "/test/root/app/routes/app.projects.$id.tsx",
       "/test/root/app/routes/app.projects.tsx",
+      "/test/root/app/routes/app.projects.$id.tsx",
       "/test/root/app/routes/app.tsx",
       "/test/root/app/routes/app_.projects.$id.roadmap.tsx",
       "/test/root/app/routes/app_.projects.$id.roadmap[.pdf].tsx",
@@ -147,12 +148,6 @@ describe("flatRoutes", () => {
       id: "routes/$",
       parentId: "root",
       path: "*",
-    });
-    expect(routes).toContainEqual({
-      file: "routes/app.tsx",
-      id: "routes/app",
-      parentId: "root",
-      path: "app",
     });
     expect(routes).toContainEqual({
       file: "routes/_auth.tsx",
@@ -220,6 +215,12 @@ describe("flatRoutes", () => {
       id: "routes/_auth.login",
       parentId: "routes/_auth",
       path: "login",
+    });
+    expect(routes).toContainEqual({
+      file: "routes/app.tsx",
+      id: "routes/app",
+      parentId: "root",
+      path: "app",
     });
     expect(routes).toContainEqual({
       file: "routes/app.projects.tsx",
@@ -318,7 +319,7 @@ describe("flatRoutes", () => {
       file: "routes/app_.projects.$id.roadmap[.pdf].tsx",
       id: "routes/app_.projects.$id.roadmap[.pdf]",
       parentId: "root",
-      path: "app/projects/:id/roadmap/pdf",
+      path: "app/projects/:id/roadmap.pdf",
     });
   });
 });

@@ -51,9 +51,21 @@ export function flatRoutesUniversal(
       throw new Error(`Duplicate route: ${routeId}`);
     }
 
+    let tmpId = "";
     let parentId = "";
     for (let processedId of processedIds) {
       if (routeId.startsWith(processedId.replace(/\$$/, "*"))) {
+        let [segments, delimiters] = splitBySegments(routeId);
+
+        if (segments.at(1)?.endsWith("_")) {
+          // update routeId to remove the suffix from the first segment
+          segments[1] = segments[1].slice(0, -1);
+          tmpId = segments.map((s, i) => s + delimiters[i]).join("");
+          console.log({ tmpId });
+
+          break;
+        }
+
         parentId = processedId;
         break;
       }
@@ -61,7 +73,7 @@ export function flatRoutesUniversal(
 
     routes[routeId] = {
       id: routeId,
-      path: pathFromRouteId(routeId, parentId || prefix),
+      path: pathFromRouteId(tmpId || routeId, parentId || prefix),
       parentId: parentId || "root",
       file: routePath,
     };
@@ -87,12 +99,12 @@ function routeIdFromPath(relativePath: string) {
 export function pathFromRouteId(routeId: string, parentId: string) {
   let parentPath = "";
   if (parentId) {
-    parentPath = getRouteSegments(parentId, true).join("/");
+    parentPath = getRouteSegments(parentId).join("/");
   }
   if (parentPath.startsWith("/")) {
     parentPath = parentPath.substring(1);
   }
-  let routePath = getRouteSegments(routeId, true).join("/");
+  let routePath = getRouteSegments(routeId).join("/");
   if (routePath.startsWith("/")) {
     routePath = routePath.substring(1);
   }
@@ -112,7 +124,7 @@ function isIndexRoute(routeId: string) {
   return routeId.endsWith("_index");
 }
 
-function getRouteSegments(name: string, toPath: boolean = true) {
+function getRouteSegments(routeId: string) {
   let routeSegments: string[] = [];
   let index = 0;
   let routeSegment = "";
@@ -123,14 +135,11 @@ function getRouteSegments(name: string, toPath: boolean = true) {
       routeSegments.push(routeSegment);
     }
   };
-  while (index < name.length) {
-    let char = name[index];
+  while (index < routeId.length) {
+    let char = routeId[index];
     index++; // advance to next character
     if (state == "START") {
       // process existing segment
-      if (routeSegment.endsWith("_")) {
-        routeSegment = routeSegment.slice(0, -1);
-      }
       pushRouteSegment(routeSegment);
       routeSegment = "";
       state = "PATH";
@@ -153,16 +162,16 @@ function getRouteSegments(name: string, toPath: boolean = true) {
             state = "START";
             break;
           }
-          if (toPath && char === escapeStart) {
+          if (char === escapeStart) {
             subState = "ESCAPE";
             break;
           }
-          if (toPath && char === optionalStart) {
+          if (char === optionalStart) {
             subState = "OPTIONAL";
             break;
           }
-          if (toPath && !routeSegment && char == paramPrefixChar) {
-            if (index === name.length) {
+          if (!routeSegment && char == paramPrefixChar) {
+            if (index === routeId.length) {
               routeSegment += "*";
             } else {
               routeSegment += ":";
@@ -173,12 +182,7 @@ function getRouteSegments(name: string, toPath: boolean = true) {
           break;
         }
         case "ESCAPE": {
-          if (
-            toPath &&
-            char === escapeEnd &&
-            name[index - 1] !== escapeStart &&
-            name[index + 1] !== escapeEnd
-          ) {
+          if (char === escapeEnd) {
             subState = "NORMAL";
             break;
           }
@@ -186,33 +190,28 @@ function getRouteSegments(name: string, toPath: boolean = true) {
           break;
         }
         case "OPTIONAL": {
+          // TODO: don't allow slashes in non normal mode
           if (
-            toPath &&
-            name[index] === escapeStart &&
-            isSegmentSeparator(name[index + 1]) &&
-            name[index + 2] === escapeEnd
+            routeId[index] === escapeStart &&
+            isSegmentSeparator(routeId[index + 1]) &&
+            routeId[index + 2] === escapeEnd
           ) {
             routeSegment += char;
             break;
           }
-          if (
-            toPath &&
-            char === optionalEnd &&
-            name[index - 1] !== optionalStart &&
-            name[index + 1] !== optionalEnd
-          ) {
+          if (char === optionalEnd) {
             routeSegment += "?";
             subState = "NORMAL";
             break;
           }
 
-          if (toPath && char === escapeStart) {
+          if (char === escapeStart) {
             subState = "OPTIONAL_ESCAPE";
             break;
           }
 
-          if (toPath && !routeSegment && char == paramPrefixChar) {
-            if (index === name.length) {
+          if (!routeSegment && char === paramPrefixChar) {
+            if (index === routeId.length) {
               routeSegment += "*";
             } else {
               routeSegment += ":";
@@ -224,12 +223,7 @@ function getRouteSegments(name: string, toPath: boolean = true) {
           break;
         }
         case "OPTIONAL_ESCAPE": {
-          if (
-            toPath &&
-            char === escapeEnd &&
-            name[index - 1] !== escapeStart &&
-            name[index + 1] !== escapeEnd
-          ) {
+          if (char === escapeEnd) {
             subState = "OPTIONAL";
             break;
           }
@@ -242,4 +236,21 @@ function getRouteSegments(name: string, toPath: boolean = true) {
   // process remaining segment
   pushRouteSegment(routeSegment);
   return routeSegments;
+}
+
+function splitBySegments(routeId: string) {
+  // split by / and . to get the segments
+  let segments = routeId.split(/[/.\\]/);
+  let start = 0;
+  let delimiters = segments.map((s, i, { [i + 1]: next }) => {
+    let index = routeId.indexOf(next, (start += s.length));
+    if (index !== -1) {
+      let sub = routeId.slice(start, index);
+      start = index;
+      return sub;
+    }
+    return "";
+  });
+
+  return [segments, delimiters];
 }
