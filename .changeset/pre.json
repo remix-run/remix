@@ -21,12 +21,15 @@
     "@remix-run/vercel": "1.9.0"
   },
   "changesets": [
+    "gentle-yaks-lick",
     "honest-phones-visit",
     "late-bottles-shop",
+    "lucky-chairs-remember",
     "many-zebras-arrive",
     "mighty-rules-drum",
     "quick-cats-fix",
     "shaggy-garlics-confess",
+    "silver-ducks-protect",
     "thirty-eels-taste"
   ]
 }
