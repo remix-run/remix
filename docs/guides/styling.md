@@ -845,9 +845,6 @@ Button.displayName = "Button";
 
 <docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
 
-<docs-warning>Since all CSS side effects end up in a single CSS file at the end of the build, we recommend that you only use this styling approach for smaller applications, or sparingly within larger applications. If you're concerned about bundle size, you should probably look at [Regular Stylesheets](#regular-stylesheets) instead.
-</docs-warning>
-
 This feature is primarily designed to support packages that import plain CSS files directly within JS files. For consistency, this is also available within your application code, but we recommend that you avoid it entirely.
 
 In order to use this feature, first ensure you've set up [CSS bundling](#css-bundling) in your application.
