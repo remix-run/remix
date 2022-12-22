@@ -86,12 +86,12 @@ function routeIdFromPath(relativePath: string) {
 export function pathFromRouteId(routeId: string, parentId: string) {
   let parentPath = "";
   if (parentId) {
-    parentPath = getRouteSegments(parentId, true)[0].join("/");
+    parentPath = getRouteSegments(parentId, true).join("/");
   }
   if (parentPath.startsWith("/")) {
     parentPath = parentPath.substring(1);
   }
-  let routePath = getRouteSegments(routeId, true)[0].join("/");
+  let routePath = getRouteSegments(routeId, true).join("/");
   if (routePath.startsWith("/")) {
     routePath = routePath.substring(1);
   }
@@ -113,7 +113,6 @@ function isIndexRoute(routeId: string) {
 
 function getRouteSegments(name: string, toPath: boolean = true) {
   let routeSegments: string[] = [];
-  let separators: string[] = [];
   let index = 0;
   let routeSegment = "";
   let state = "START";
@@ -151,7 +150,6 @@ function getRouteSegments(name: string, toPath: boolean = true) {
         case "NORMAL": {
           if (isSegmentSeparator(char)) {
             state = "START";
-            separators.push(char);
             break;
           }
           if (toPath && char === escapeStart) {
@@ -233,5 +231,5 @@ function getRouteSegments(name: string, toPath: boolean = true) {
   }
   // process remaining segment
   pushRouteSegment(routeSegment);
-  return [routeSegments, separators];
+  return routeSegments;
 }
