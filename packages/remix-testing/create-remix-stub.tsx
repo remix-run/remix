@@ -42,12 +42,7 @@ type RemixStubOptions = {
   remixConfigFuture?: Partial<FutureConfig>;
 };
 
-type StubRouteObject = Omit<
-  RouteObject,
-  "id" | "handle" | "shouldRevalidate" | "errorElement" | "hasErrorBoundary"
->;
-
-export function createRemixStub(routes: StubRouteObject[]) {
+export function createRemixStub(routes: RouteObject[]) {
   return function RemixStub({
     initialEntries,
     initialIndex,
@@ -58,7 +53,7 @@ export function createRemixStub(routes: StubRouteObject[]) {
     let remixContextRef = React.useRef<RemixContextObject>();
 
     if (routerRef.current == null) {
-      routerRef.current = createMemoryRouter(routes as RouteObject[], {
+      routerRef.current = createMemoryRouter(routes, {
         initialEntries,
         initialIndex,
         hydrationData,
@@ -71,8 +66,8 @@ export function createRemixStub(routes: StubRouteObject[]) {
           v2_meta: false,
           ...remixConfigFuture,
         },
-        manifest: createManifest(routes as RouteObject[]),
-        routeModules: createRouteModules(routes as RouteObject[]),
+        manifest: createManifest(routes),
+        routeModules: createRouteModules(routes),
       };
     }
 
