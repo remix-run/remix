@@ -18,7 +18,7 @@ export function flatRoutes(
 ): RouteManifest {
   let extensions = routeModuleExts.join(",");
 
-  let routePaths = fg.sync(`*.${extensions}`, {
+  let routePaths = fg.sync(`*{${extensions}}`, {
     absolute: true,
     cwd: path.join(appDirectory, "routes"),
     ignore: ignoredFilePatterns,
