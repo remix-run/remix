@@ -47,29 +47,92 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+      "app/root.jsx": js`
+      import { redirect } from "@remix-run/node";
+      import {
+        Links,
+        LiveReload,
+        Meta,
+        NavLink,
+        Outlet,
+        Scripts,
+        ScrollRestoration,
+        useLoaderData,
+      } from "@remix-run/react";
 
-        export function loader() {
-          return json("pizza");
-        }
+      export const meta = () => ({
+        charset: "utf-8",
+        title: "New Remix App",
+        viewport: "width=device-width,initial-scale=1",
+      });
 
-        export default function Index() {
-          let data = useLoaderData();
-          return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
+      /**
+       * @type {import("@remix-run/node").LoaderFunction}
+       */
+      export const loader = ({ params }) => {
+        let { lang = "en" } = params;
+      
+        if (lang !== "en" && lang !== "ckb") {
+          return redirect("/");
         }
-      `,
+      
+        return { lang };
+      };
 
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
-        }
+      export default function App() {
+        const { lang } = useLoaderData();
+        return (
+          <html lang="en">
+            <head>
+              <Meta />
+              <Links />
+            </head>
+            <body>
+              <NavLink id="lang-switcher" to={lang === "en" ? "/ckb" : "/"}>
+                {lang === "en" ? "CKB" : "EN"}
+              </NavLink>
+              <Outlet />
+              <ScrollRestoration />
+              <Scripts />
+              <LiveReload />
+            </body>
+          </html>
+        );
+      }
+    `,
+      "app/routes/($lang)/index.jsx": js`
+      export default function Index() {
+        return (
+          <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.4" }}>
+            <h1>Welcome to Remix</h1>
+            <ul>
+              <li>
+                <a
+                  target="_blank"
+                  href="https://remix.run/tutorials/blog"
+                  rel="noreferrer"
+                >
+                  15m Quickstart Blog Tutorial
+                </a>
+              </li>
+              <li>
+                <a
+                  target="_blank"
+                  href="https://remix.run/tutorials/jokes"
+                  rel="noreferrer"
+                >
+                  Deep Dive Jokes App Tutorial
+                </a>
+              </li>
+              <li>
+                <a target="_blank" href="https://remix.run/docs" rel="noreferrer">
+                  Remix Docs
+                </a>
+              </li>
+            </ul>
+          </div>
+        );
+      }
       `,
     },
   });
@@ -87,22 +150,20 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("changes in URL and particularly optional segments should trigger loaders", async ({
+  page,
+}) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+  await fixture.requestDocument("/");
 
-  // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  let langSwitcher = await app.getElement("#lang-switcher");
+  expect(langSwitcher.text()).toMatch("CKB");
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
+  await app.clickLink("/ckb");
 
-  // Go check out the other tests to see what else you can do.
+  langSwitcher = await app.getElement("#lang-switcher");
+  expect(langSwitcher.text()).toMatch("EN");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
