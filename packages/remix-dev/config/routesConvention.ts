@@ -236,7 +236,7 @@ export function createRoutePath(partialRouteId: string): string | undefined {
   return result || undefined;
 }
 
-export function isNewEscapeSequence(
+function isNewEscapeSequence(
   inEscapeSequence: number,
   char: string,
   prevChar: string | undefined
@@ -244,7 +244,7 @@ export function isNewEscapeSequence(
   return !inEscapeSequence && char === escapeStart && prevChar !== escapeStart;
 }
 
-export function isCloseEscapeSequence(
+function isCloseEscapeSequence(
   inEscapeSequence: number,
   char: string,
   nextChar: string | undefined
@@ -257,7 +257,7 @@ export function isSegmentSeparator(checkChar: string | undefined) {
   return ["/", ".", path.win32.sep].includes(checkChar);
 }
 
-export function isNewOptionalSegment(
+function isNewOptionalSegment(
   char: string,
   prevChar: string | undefined,
   inOptionalSegment: number,
@@ -272,7 +272,7 @@ export function isNewOptionalSegment(
   );
 }
 
-export function isCloseOptionalSegment(
+function isCloseOptionalSegment(
   char: string,
   nextChar: string | undefined,
   inOptionalSegment: number,
