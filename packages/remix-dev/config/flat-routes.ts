@@ -16,7 +16,8 @@ export function flatRoutes(
   appDirectory: string,
   ignoredFilePatterns?: string[]
 ): RouteManifest {
-  let extensions = Array.from(routeModuleExts).join(",");
+  let extensions = routeModuleExts.join(",");
+
   let routePaths = fg.sync(`*.${extensions}`, {
     absolute: true,
     cwd: path.join(appDirectory, "routes"),
@@ -28,15 +29,15 @@ export function flatRoutes(
 
 /**
  * Create route configs from a list of routes using the flat routes conventions.
- * @param {string} appDirectory The absolute root directory the routes were looked up from.
- * @param {string[]} routePaths The absolute route paths.
- * @param {string} [prefix = "routes"] The prefix to strip off of the routes.
+ * @param {string} appDirectory - The absolute root directory the routes were looked up from.
+ * @param {string[]} routePaths - The absolute route paths.
+ * @param {string} [prefix=routes] - The prefix to strip off of the routes.
  */
 export function flatRoutesUniversal(
   appDirectory: string,
   routePaths: string[],
   prefix: string = "routes"
-) {
+): RouteManifest {
   let routes: Record<string, ConfigRoute> = {};
   let sortedRoutes = routePaths
     .sort((a, b) => (a.length - b.length > 0 ? 1 : -1))

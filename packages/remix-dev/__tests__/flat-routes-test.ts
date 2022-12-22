@@ -1,4 +1,4 @@
-import { pathFromRouteId } from "../config/flat-routes";
+import { flatRoutesUniversal, pathFromRouteId } from "../config/flat-routes";
 
 describe("flatRoutes", () => {
   describe("pathFromRouteId creates proper route paths", () => {
@@ -99,5 +99,107 @@ describe("flatRoutes", () => {
         expect(result).toBe(expected);
       });
     }
+  });
+
+  describe("should return the correct route hierarchy", () => {
+    let files = [
+      "/test/root/app/routes/$.tsx",
+      "/test/root/app/routes/_index.tsx",
+      "/test/root/app/routes/about.tsx",
+      "/test/root/app/routes/about._index.tsx",
+      "/test/root/app/routes/about.faq.tsx",
+      "/test/root/app/routes/about.$splat.tsx",
+      "/test/root/app/routes/about.$.tsx",
+
+      // escape special characters
+      "/test/root/app/routes/about.[$splat].tsx",
+      "/test/root/app/routes/about.[[].tsx",
+      "/test/root/app/routes/about.[]].tsx",
+      "/test/root/app/routes/about.[.].tsx",
+      "/test/root/app/routes/about.[*].tsx",
+      "/test/root/app/routes/about.[.[.*].].tsx",
+    ];
+
+    let routeManifest = flatRoutesUniversal("/test/root/app", files, "routes");
+    let routes = Object.values(routeManifest);
+    expect(routes).toHaveLength(files.length);
+    expect(routes).toContainEqual({
+      id: "routes/$",
+      parentId: "root",
+      file: "routes/$.tsx",
+      path: "*",
+    });
+    expect(routes).toContainEqual({
+      id: "routes/_index",
+      parentId: "root",
+      file: "routes/_index.tsx",
+      index: true,
+    });
+    expect(routes).toContainEqual({
+      id: "routes/about",
+      parentId: "root",
+      file: "routes/about.tsx",
+      path: "about",
+    });
+    expect(routes).toContainEqual({
+      id: "routes/about._index",
+      parentId: "routes/about",
+      file: "routes/about._index.tsx",
+      index: true,
+    });
+    expect(routes).toContainEqual({
+      id: "routes/about.faq",
+      parentId: "routes/about",
+      file: "routes/about.faq.tsx",
+      path: "faq",
+    });
+    expect(routes).toContainEqual({
+      id: "routes/about.$splat",
+      parentId: "routes/about",
+      file: "routes/about.$splat.tsx",
+      path: ":splat",
+    });
+    expect(routes).toContainEqual({
+      id: "routes/about.$",
+      parentId: "routes/about",
+      file: "routes/about.$.tsx",
+      path: "*",
+    });
+    expect(routes).toContainEqual({
+      id: "routes/about.[$splat]",
+      parentId: "routes/about",
+      file: "routes/about.[$splat].tsx",
+      path: "$splat",
+    });
+    expect(routes).toContainEqual({
+      id: "routes/about.[[]",
+      parentId: "routes/about",
+      file: "routes/about.[[].tsx",
+      path: "[",
+    });
+    expect(routes).toContainEqual({
+      id: "routes/about.[]]",
+      parentId: "routes/about",
+      file: "routes/about.[]].tsx",
+      path: "]",
+    });
+    expect(routes).toContainEqual({
+      id: "routes/about.[.]",
+      parentId: "routes/about",
+      file: "routes/about.[.].tsx",
+      path: ".",
+    });
+    expect(routes).toContainEqual({
+      id: "routes/about.[*]",
+      parentId: "routes/about",
+      file: "routes/about.[*].tsx",
+      path: "*",
+    });
+    expect(routes).toContainEqual({
+      id: "routes/about.[.[.*].]",
+      parentId: "routes/about",
+      file: "routes/about.[.[.*].].tsx",
+      path: ".[.*].",
+    });
   });
 });

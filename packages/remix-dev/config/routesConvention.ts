@@ -5,17 +5,10 @@ import minimatch from "minimatch";
 import type { RouteManifest, DefineRouteFunction } from "./routes";
 import { defineRoutes, createRouteId } from "./routes";
 
-export const routeModuleExts = new Set([
-  ".js",
-  ".jsx",
-  ".ts",
-  ".tsx",
-  ".md",
-  ".mdx",
-]);
+export const routeModuleExts = [".js", ".jsx", ".ts", ".tsx", ".md", ".mdx"];
 
 export function isRouteModuleFile(filename: string): boolean {
-  return routeModuleExts.has(path.extname(filename));
+  return routeModuleExts.includes(path.extname(filename));
 }
 
 /**
