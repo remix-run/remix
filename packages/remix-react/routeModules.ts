@@ -150,3 +150,26 @@ export async function loadRouteModule(
     });
   }
 }
+
+/**
+ * @deprecated The `unstable_shouldReload` function has been removed, so this
+ * function will never run and route data will be revalidated on every request.
+ * Please update the function name to `shouldRevalidate` and use the
+ * `ShouldRevalidateFunction` interface.
+ */
+export interface ShouldReloadFunction {
+  (args: {
+    url: URL;
+    prevUrl: URL;
+    params: Params;
+    submission?: Submission;
+  }): boolean;
+}
+
+interface Submission {
+  action: string;
+  method: string;
+  formData: FormData;
+  encType: string;
+  key: string;
+}
