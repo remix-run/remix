@@ -42,7 +42,10 @@ export async function fetchData(
     init = {
       method: request.method,
       body: await request.formData(),
+      signal: request.signal,
     };
+  } else {
+    init = { signal: request.signal };
   }
 
   let response = await fetch(url.href, init);
