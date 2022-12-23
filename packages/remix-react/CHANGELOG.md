@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.10.0-pre.5
+
+### Patch Changes
+
+- Add back `ShouldReloadFunction` type with deprecated notice ([`28ccd9973`](https://github.com/remix-run/remix/commit/28ccd99739fa36a93a6f26a300f9f83baf02b896))
+
 ## 1.10.0-pre.4
 
 ### Patch Changes
