@@ -9,4 +9,4 @@ A route in Remix can be used for many things. Usually they’re used for the use
 
 It's important to read [Route Module Constraints][route-module-constraints].
 
-[route-module-constraints]: ../guides/constraints
+[route-module-constraints]: ./guides/constraints
