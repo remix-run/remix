@@ -1,5 +1,12 @@
 # `@remix-run/react`
 
+## 1.10.0-pre.4
+
+### Patch Changes
+
+- fix: pass through request abort signal ([#4954](https://github.com/remix-run/remix/pull/4954))
+- Bump react router version to latest ([#4952](https://github.com/remix-run/remix/pull/4952))
+
 ## 1.10.0-pre.3
 
 ## 1.10.0-pre.2
