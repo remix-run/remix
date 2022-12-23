@@ -21,11 +21,13 @@
     "@remix-run/vercel": "1.9.0"
   },
   "changesets": [
+    "big-geese-cry",
     "gentle-yaks-lick",
     "honest-phones-visit",
     "late-bottles-shop",
     "lucky-chairs-remember",
     "many-zebras-arrive",
+    "metal-birds-tease",
     "mighty-rules-drum",
     "quick-cats-fix",
     "rotten-bulldogs-reply",
