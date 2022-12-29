@@ -4,7 +4,7 @@
   "scripts": {
     "build": "remix build",
     "dev": "remix build && run-p \"dev:*\"",
-    "dev:node": "cross-env NODE_ENV=development nodemon ./server.js --watch ./server.js",
+    "dev:node": "cross-env NODE_ENV=development nodemon --require dotenv/config ./server.js --watch ./server.js",
     "dev:remix": "remix watch",
     "start": "cross-env NODE_ENV=production node ./server.js"
   },
@@ -25,6 +25,7 @@
     "@remix-run/eslint-config": "*",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
+    "dotenv": "^16.0.2",
     "eslint": "^8.23.1",
     "nodemon": "^2.0.19",
     "npm-run-all": "^4.1.5",

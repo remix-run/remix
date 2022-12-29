@@ -31,6 +31,8 @@ Here's a list of courses (in no particular order) you can take to help learn Rem
 - [Learn Remix by Building a Social Media Platform with TypeScript and Prisma][learn-remix-by-building-a-social-media-platform-with-type-script-and-prisma] by [Ian Jones][ian-jones] on [Egghead.io][egghead-io]
 - [Remix for Everyone][remix-for-everyone] by [Scott Tolinski][scott-tolinski] on [Level Up Tutorials][level-up-tutorials]
 - [Realtime Remix with Supabase][realtime-remix-with-supabase] by [Jon Meyers][jon-meyers] on [Level Up Tutorials][level-up-tutorials]
+- [Remix Fundamentals][remix-fundamentals] by [Kent C. Dodds][kent-c-dodds] on [Frontendmasters][frontend-masters]
+- [Advanced Remix][advanced-remix] by [Kent C. Dodds][kent-c-dodds] on [Frontendmasters][frontend-masters]
 
 If you need to learn React first, [this free egghead course][this-free-egghead-course] by Kent C. Dodds has everything you need.
 
@@ -89,3 +91,6 @@ There are Remix Meetups all over the world with thousands of members. Some onlin
 [remix-conf]: ../../../../conf
 [the-remix-meetup-page]: https://rmx.as/meetup
 [remix-guide]: https://remix.guide
+[frontend-masters]: https://frontendmasters.com
+[remix-fundamentals]: https://frontendmasters.com/courses/remix/
+[advanced-remix]: https://frontendmasters.com/courses/advanced-remix/

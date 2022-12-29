@@ -1335,7 +1335,9 @@ function isInputElement(object: any): object is HTMLInputElement {
  *
  * @see https://remix.run/api/remix#usebeforeunload
  */
-export function useBeforeUnload(callback: (event: BeforeUnloadEvent) => any): void {
+export function useBeforeUnload(
+  callback: (event: BeforeUnloadEvent) => any
+): void {
   React.useEffect(() => {
     window.addEventListener("beforeunload", callback);
     return () => {
