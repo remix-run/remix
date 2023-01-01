@@ -3400,7 +3400,7 @@ export async function createUserSession(
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[14,22,27,34,38,60-71]
+```tsx filename=app/routes/jokes.tsx lines=[14,22,27,52-63]
 import type { User } from "@prisma/client";
 import type {
   LinksFunction,
