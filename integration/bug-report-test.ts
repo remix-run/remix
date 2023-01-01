@@ -47,30 +47,35 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
+      // Comment out this entry and the test will pass
+      "app/routes/$postId.tsx": js`
         import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+        import { useLoaderData } from "@remix-run/react";
 
-        export function loader() {
-          return json("pizza");
+        export function loader({ params }) {
+          const { postId } = params;
+          return json({ message: postId });
         }
 
+        export default function PostPage() {
+          const { message } = useLoaderData();
+          return <div>{message}</div>;
+        }
+      `,
+
+      "app/routes/index.jsx": js`
+        import { Link } from "@remix-run/react";
+
         export default function Index() {
-          let data = useLoaderData();
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              <Link to="/asset.txt">Asset</Link>
             </div>
-          )
+          );
         }
       `,
 
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
-        }
-      `,
+      "public/asset.txt": "I'm an asset!",
     },
   });
 
@@ -87,22 +92,17 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
-  // If you need to test interactivity use the `app`
+test(`
+  <Link> without reloadDocument should 404 an href that matches both a dynamic
+  route and a public/ asset because that is what it does when the href only
+  matches an asset. Instead it is returning an empty page
+`, async ({ page }) => {
+  const app = new PlaywrightFixture(appFixture, page);
   await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
+  await app.clickLink("/asset.txt", { wait: true });
 
-  // Go check out the other tests to see what else you can do.
+  expect(await app.getHtml()).toMatch("Not Found");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
