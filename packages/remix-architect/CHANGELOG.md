@@ -1,5 +1,19 @@
 # `@remix-run/architect`
 
+## 1.9.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.9.0`
+
+## 1.8.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.8.2`
+
 ## 1.8.1
 
 ### Patch Changes

@@ -3,12 +3,13 @@ import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 
-import { type WriteChannel } from "../channel";
-import { type RemixConfig } from "../config";
-import { createAssetsManifest, type AssetsManifest } from "./assets";
+import type { WriteChannel } from "../channel";
+import type { RemixConfig } from "../config";
+import type { AssetsManifest } from "./assets";
+import { createAssetsManifest } from "./assets";
 import { getAppDependencies } from "./dependencies";
 import { loaders } from "./loaders";
-import { type CompileOptions } from "./options";
+import type { CompileOptions } from "./options";
 import { browserRouteModulesPlugin } from "./plugins/browserRouteModulesPlugin";
 import { cssFilePlugin } from "./plugins/cssFilePlugin";
 import { deprecatedRemixPackagePlugin } from "./plugins/deprecatedRemixPackagePlugin";
@@ -16,6 +17,7 @@ import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
 import { writeFileSafe } from "./utils/fs";
+import invariant from "../invariant";
 
 export type BrowserCompiler = {
   // produce ./public/build/
@@ -70,9 +72,12 @@ const createEsbuildConfig = (
     entryPoints[id] = config.routes[id].file + "?browser";
   }
 
-  let plugins = [
+  let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    cssFilePlugin(options),
+    cssFilePlugin({
+      mode: options.mode,
+      rootDirectory: config.rootDirectory,
+    }),
     urlImportsPlugin(),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
@@ -128,9 +133,12 @@ export const createBrowserCompiler = (
         metafile: true,
         incremental: true,
       });
-      metafile = compiler.metafile!;
+      invariant(compiler.metafile, "Expected metafile to be defined");
+      metafile = compiler.metafile;
     } else {
-      metafile = (await compiler.rebuild()).metafile!;
+      let rebuild = await compiler.rebuild();
+      invariant(rebuild.metafile, "Expected metafile to be defined");
+      metafile = rebuild.metafile;
     }
     let manifest = await createAssetsManifest(remixConfig, metafile);
     manifestChannel.write(manifest);

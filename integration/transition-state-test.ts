@@ -31,6 +31,7 @@ test.describe("rendering", () => {
           import { Outlet, Scripts, useTransition } from "@remix-run/react";
           export default function() {
             const transition = useTransition();
+
             const transitionsRef = useRef();
             const transitions = useMemo(() => {
               const savedTransitions = transitionsRef.current || [];
@@ -41,6 +42,7 @@ test.describe("rendering", () => {
 
             return (
               <html lang="en">
+                <head><title>Test</title></head>
                 <body>
                   <Outlet />
                     {transition.state != "idle" && (
@@ -76,7 +78,7 @@ test.describe("rendering", () => {
                 </li>
                 <li>
                   <Form action="/${STATES.SUBMITTING_LOADER}" method="get">
-                    <button type="submit">
+                    <button type="submit" name="key" value="value">
                       ${STATES.SUBMITTING_LOADER}
                     </button>
                   </Form>
@@ -193,8 +195,8 @@ test.describe("rendering", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => {
-    await appFixture.close();
+  test.afterAll(() => {
+    appFixture.close();
   });
 
   test("transitions to normal load (Loading)", async ({ page }) => {
@@ -254,9 +256,11 @@ test.describe("rendering", () => {
           search: "?redirected",
           hash: "",
           state: {
-            isRedirect: true,
-            setCookie: false,
-            type: "loader",
+            _isRedirect: true,
+            // These were private API for transition manager that are no longer
+            // needed with the new router so OK to disappear
+            // setCookie: false,
+            // type: "loader",
           },
           key: expect.any(String),
         },
@@ -283,13 +287,16 @@ test.describe("rendering", () => {
         type: "loaderSubmission",
         location: {
           pathname: `/${STATES.SUBMITTING_LOADER}`,
-          search: "",
+          search: "?key=value",
           hash: "",
           state: null,
           key: expect.any(String),
         },
         submission: {
-          action: `/${STATES.SUBMITTING_LOADER}`,
+          // Note: This is a bug in Remix but we're going to keep it that way
+          // in useTransition (including the back-compat version) and it'll be
+          // fixed with useNavigation
+          action: `/${STATES.SUBMITTING_LOADER}?key=value`,
           encType: "application/x-www-form-urlencoded",
           method: "GET",
           key: expect.any(String),
@@ -339,9 +346,11 @@ test.describe("rendering", () => {
           search: "?redirected",
           hash: "",
           state: {
-            isRedirect: true,
-            setCookie: false,
-            type: "loaderSubmission",
+            _isRedirect: true,
+            // These were private API for transition manager that are no longer
+            // needed with the new router so OK to disappear
+            // setCookie: false,
+            // type: "loader",
           },
           key: expect.any(String),
         },
@@ -449,9 +458,11 @@ test.describe("rendering", () => {
           search: "?redirected",
           hash: "",
           state: {
-            isRedirect: true,
-            setCookie: false,
-            type: "action",
+            _isRedirect: true,
+            // These were private API for transition manager that are no longer
+            // needed with the new router so OK to disappear
+            // setCookie: false,
+            // type: "loader",
           },
           key: expect.any(String),
         },
@@ -488,9 +499,12 @@ test.describe("rendering", () => {
           search: "?redirected",
           hash: "",
           state: {
-            isRedirect: true,
-            setCookie: false,
-            type: "fetchAction",
+            _isRedirect: true,
+            _isFetchActionRedirect: true,
+            // These were private API for transition manager that are no longer
+            // needed with the new router so OK to disappear
+            // setCookie: false,
+            // type: "loader",
           },
           key: expect.any(String),
         },

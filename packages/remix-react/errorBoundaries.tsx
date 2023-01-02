@@ -1,7 +1,6 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import type { Location } from "history";
 import React, { useContext } from "react";
+import type { ErrorResponse } from "@remix-run/router";
+import type { Location } from "react-router-dom";
 
 import type {
   CatchBoundaryComponent,
@@ -126,9 +125,8 @@ export function useCatch<
 }
 
 type RemixCatchBoundaryProps = React.PropsWithChildren<{
-  location: Location;
   component: CatchBoundaryComponent;
-  catch?: ThrownResponse;
+  catch?: ErrorResponse;
 }>;
 
 export function RemixCatchBoundary({

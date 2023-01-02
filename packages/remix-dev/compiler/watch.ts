@@ -2,9 +2,10 @@ import chokidar from "chokidar";
 import debounce from "lodash.debounce";
 import * as path from "path";
 
-import { type RemixConfig, readConfig } from "../config";
+import type { RemixConfig } from "../config";
+import { readConfig } from "../config";
 import { logCompileFailure } from "./onCompileFailure";
-import { type CompileOptions } from "./options";
+import type { CompileOptions } from "./options";
 import { compile, createRemixCompiler, dispose } from "./remixCompiler";
 import { warnOnce } from "./warnings";
 
@@ -65,7 +66,7 @@ export async function watch(
 
     try {
       config = await readConfig(config.rootDirectory);
-    } catch (error) {
+    } catch (error: unknown) {
       onCompileFailure(error as Error);
       return;
     }
@@ -110,7 +111,7 @@ export async function watch(
 
       try {
         config = await readConfig(config.rootDirectory);
-      } catch (error) {
+      } catch (error: unknown) {
         onCompileFailure(error as Error);
         return;
       }

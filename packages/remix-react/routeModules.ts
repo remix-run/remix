@@ -1,15 +1,15 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import type { Location } from "history";
 import type { ComponentType } from "react";
-import type { Params } from "react-router"; // TODO: import/export from react-router-dom
+import type {
+  DataRouteMatch,
+  Params,
+  Location,
+  ShouldRevalidateFunction,
+} from "react-router-dom";
 
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
-import type { ClientRoute, EntryRoute } from "./routes";
+import type { EntryRoute } from "./routes";
 import type { RouteData } from "./routeData";
-import type { RouteMatch as BaseRouteMatch } from "./routeMatching";
-import type { Submission } from "./transition";
 
 export interface RouteModules {
   [routeId: string]: RouteModule;
@@ -26,7 +26,7 @@ export interface RouteModule {
     | V1_HtmlMetaDescriptor
     | V2_MetaFunction
     | V2_HtmlMetaDescriptor[];
-  unstable_shouldReload?: ShouldReloadFunction;
+  shouldRevalidate?: ShouldRevalidateFunction;
 }
 
 /**
@@ -72,7 +72,7 @@ export interface V1_MetaFunction {
 // TODO: Replace in v2
 export type MetaFunction = V1_MetaFunction;
 
-export interface RouteMatchWithMeta<Route> extends BaseRouteMatch<Route> {
+export interface RouteMatchWithMeta extends DataRouteMatch {
   meta: V2_HtmlMetaDescriptor[];
 }
 
@@ -82,7 +82,7 @@ export interface V2_MetaFunction {
     parentsData: RouteData;
     params: Params;
     location: Location;
-    matches: RouteMatchWithMeta<ClientRoute>[];
+    matches: RouteMatchWithMeta[];
   }): V2_HtmlMetaDescriptor[] | undefined;
 }
 
@@ -116,28 +116,6 @@ export type V2_HtmlMetaDescriptor =
   | { [name: string]: string };
 
 /**
- * During client side transitions Remix will optimize reloading of routes that
- * are currently on the page by avoiding loading routes that aren't changing.
- * However, in some cases, like form submissions or search params Remix doesn't
- * know which routes need to be reloaded so it reloads them all to be safe.
- *
- * This function lets apps further optimize by returning `false` when Remix is
- * about to reload the route. A common case is a root loader with nothing but
- * environment variables: after form submissions the root probably doesn't need
- * to be reloaded.
- *
- * @see https://remix.run/api/conventions#unstable_shouldreload
- */
-export interface ShouldReloadFunction {
-  (args: {
-    url: URL;
-    prevUrl: URL;
-    params: Params;
-    submission?: Submission;
-  }): boolean;
-}
-
-/**
  * A React component that is rendered for a route.
  */
 export type RouteComponent = ComponentType<{}>;
@@ -150,7 +128,7 @@ export type RouteComponent = ComponentType<{}>;
 export type RouteHandle = any;
 
 export async function loadRouteModule(
-  route: EntryRoute | ClientRoute,
+  route: EntryRoute,
   routeModulesCache: RouteModules
 ): Promise<RouteModule> {
   if (route.id in routeModulesCache) {
@@ -161,7 +139,7 @@ export async function loadRouteModule(
     let routeModule = await import(/* webpackIgnore: true */ route.module);
     routeModulesCache[route.id] = routeModule;
     return routeModule;
-  } catch (error) {
+  } catch (error: unknown) {
     // User got caught in the middle of a deploy and the CDN no longer has the
     // asset we're trying to import! Reload from the server and the user
     // (should) get the new manifest--unless the developer purged the static
