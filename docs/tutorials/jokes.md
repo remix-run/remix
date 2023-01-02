@@ -5543,7 +5543,7 @@ There are reasons to include JavaScript on the page. For example, some common UI
 
 Ok, so let's load JavaScript on this page now 😆
 
-💿 Use Remix's [`<Scripts />` component][meta-component] component to load all the JavaScript files in `app/root.tsx`.
+💿 Use Remix's [`<Scripts />` component][scripts-component] component to load all the JavaScript files in `app/root.tsx`.
 
 <details>
 
@@ -6302,6 +6302,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [escaping-special-characters-here]: ../file-conventions/routes-files#escaping-special-characters
 [xml-document-for-rss-feed]: /jokes-tutorial/img/jokes-rss-feed.png
 [network-tab-indicating-no-java-script-is-loaded]: /jokes-tutorial/img/no-javascript.png
+[scripts-component]: ../components/scripts
 [network-tab-showing-java-script-loaded]: /jokes-tutorial/img/yes-javascript.png
 [browser-console-showing-the-log-of-a-server-side-error]: /jokes-tutorial/img/server-side-error-in-browser.png
 [form]: ../components/form
