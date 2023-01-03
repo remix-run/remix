@@ -9,12 +9,12 @@
   dependencies:
     "@jridgewell/trace-mapping" "^0.3.0"
 
-"@architect/functions@^5.0.2":
-  version "5.0.3"
-  resolved "https://registry.npmjs.org/@architect/functions/-/functions-5.0.3.tgz"
-  integrity sha512-C9+yqNAthyhXfhKl0BxLabNlbLo3ReefN598pr7OidMXU/wkSjR72xlpBmr/pnnZYGlJ8+yNr9OxU99d4S/hZQ==
+"@architect/functions@^5.2.0":
+  version "5.3.3"
+  resolved "https://registry.npmjs.org/@architect/functions/-/functions-5.3.3.tgz#b70d20c723e62dd984da90b23a51495ebbdc551e"
+  integrity sha512-q9ePtpw7SIl14B0KFIJGm4StL6jOWWYgGpD1HR7zkTKKiUIL/W0tkrAZnBhU8WPXRHPmpf5BcEjIXHQKyvz9Hg==
   dependencies:
-    cookie "^0.4.2"
+    cookie "^0.5.0"
     cookie-signature "^1.2.0"
     csrf "^3.1.0"
     node-webtokens "^1.0.4"
@@ -2399,15 +2399,6 @@
   dependencies:
     "@types/estree" "*"
 
-"@types/architect__functions@^3.13.6":
-  version "3.13.6"
-  resolved "https://registry.npmjs.org/@types/architect__functions/-/architect__functions-3.13.6.tgz"
-  integrity sha512-1XggtRqhJ7Hy47gAg3qcPZMSDeJuQNp3obL5OJEVt2oo+8CsfU4vk1GU385AHs/xkBGOp1cfgKcDTyBrDbqJdA==
-  dependencies:
-    "@types/aws-lambda" "*"
-    "@types/express" "*"
-    aws-sdk "^2.820.0"
-
 "@types/aria-query@^4.2.0":
   version "4.2.2"
   resolved "https://registry.npmjs.org/@types/aria-query/-/aria-query-4.2.2.tgz"
@@ -3804,7 +3795,7 @@ available-typed-arrays@^1.0.5:
   resolved "https://registry.npmjs.org/available-typed-arrays/-/available-typed-arrays-1.0.5.tgz"
   integrity sha512-DMD0KiN46eipeziST1LPP/STfDU0sufISXmjSgvVsoU2tqxctQeASejWcfNtxYKqETM1UxQ8sp2OrSBWpHY6sw==
 
-aws-sdk@^2.1055.0, aws-sdk@^2.820.0:
+aws-sdk@^2.1055.0:
   version "2.1069.0"
   resolved "https://registry.npmjs.org/aws-sdk/-/aws-sdk-2.1069.0.tgz"
   integrity sha512-AF7/5JotrVd8g/D3WWHgQto+IryB1V7iudIYm+H+qxmkGOU3xvL63ChhEoLTY/CxuK/diayg0oWILEsXUn3dfw==
@@ -4702,6 +4693,11 @@ cookie@0.4.2, cookie@^0.4.1, cookie@^0.4.2:
   version "0.4.2"
   resolved "https://registry.npmjs.org/cookie/-/cookie-0.4.2.tgz"
   integrity sha512-aSWTXFzaKWkvHO1Ny/s+ePFpvKsPnjc551iI41v3ny/ow6tBG5Vd+FuqGNhh1LxOmVzOlGUriIlOaokOvhaStA==
+
+cookie@^0.5.0:
+  version "0.5.0"
+  resolved "https://registry.npmjs.org/cookie/-/cookie-0.5.0.tgz#d1f5d71adec6558c58f389987c366aa47e994f8b"
+  integrity sha512-YZ3GUyn/o8gfKJlnlX7g7xq4gyO6OSuhGPKaaGssGB2qgDUS0gPgtTvoyZLTt9Ab6dC4hfc9dV5arkvc/OCmrw==
 
 cookiejar@^2.1.2:
   version "2.1.2"

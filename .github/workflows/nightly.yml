@@ -53,19 +53,18 @@ jobs:
           # get latest nightly tag
           LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-committerdate | head -n 1)
 
-          # get changes since last nightly
-          CHANGES=$(git diff --name-only $LATEST_NIGHTLY_TAG..dev -- ./packages/ -- ':!packages/**/package.json')
-
-          # check if there are changes to ./packages
-          if [[ -n $CHANGES ]]; then
+          # check if last commit to dev starts would be the nightly tag we're about to create (minus the date)
+          # if it is, we'll skip the nightly creation
+          # if not, we'll create a new nightly tag
+          if [[ ${LATEST_NIGHTLY_TAG} == v0.0.0-nightly-${SHORT_SHA}-* ]]; then
+            echo "🛑 Latest nightly tag is the same as the latest commit sha, skipping nightly release"
+          else
             # yyyyMMdd format (e.g. 20221207)
             DATE=$(date '+%Y%m%d')
             # v0.0.0-nightly-<short sha>-<date>
             NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}-${DATE}
             # set output so it can be used in other jobs
             echo "NEXT_VERSION=${NEXT_VERSION}" >> $GITHUB_OUTPUT
-          else
-            echo "🛑 no changes since last nightly, skipping..."
           fi
 
       - name: ⤴️ Update version
