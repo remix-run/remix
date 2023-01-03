@@ -41,7 +41,12 @@ export async function fetchData(
   if (request.method !== "GET") {
     init = {
       method: request.method,
-      body: await request.formData(),
+      headers: {
+        "Content-Type":
+          request.headers.get("Content-Type") ||
+          "application/x-www-form-urlencoded",
+      },
+      body: await request.text(),
       signal: request.signal,
     };
   } else {
