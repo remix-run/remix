@@ -38,14 +38,13 @@ export async function fetchData(
 
   let init: RequestInit = { signal: request.signal };
 
-  debugger;
   if (request.method !== "GET") {
     init.method = request.method;
 
     let contentType = request.headers.get("Content-Type");
-    // Check between word boundaries instead of startsWith() due to the last
-    // paragraph of https://httpwg.org/specs/rfc9110.html#field.content-type
     init.body =
+      // Check between word boundaries instead of startsWith() due to the last
+      // paragraph of https://httpwg.org/specs/rfc9110.html#field.content-type
       contentType && /\bapplication\/x-www-form-urlencoded\b/.test(contentType)
         ? new URLSearchParams(await request.text())
         : await request.formData();
