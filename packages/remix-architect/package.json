@@ -14,12 +14,11 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "dependencies": {
-    "@architect/functions": "^5.0.2",
+    "@architect/functions": "^5.2.0",
     "@remix-run/node": "1.9.0",
     "@types/aws-lambda": "^8.10.82"
   },
   "devDependencies": {
-    "@types/architect__functions": "^3.13.6",
     "@types/lambda-tester": "^3.6.1",
     "lambda-tester": "^4.0.1"
   },
