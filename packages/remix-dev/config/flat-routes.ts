@@ -140,9 +140,8 @@ function getRouteSegments(routeId: string) {
   };
   while (index < routeId.length) {
     let char = routeId[index];
-    index++; // advance to next character
     let nextChar = routeId[index + 1];
-    let prevChar = routeId[index - 1];
+    index++; // advance to next character
     if (state == "START") {
       // process existing segment
       pushRouteSegment(routeSegment);
@@ -187,11 +186,7 @@ function getRouteSegments(routeId: string) {
           break;
         }
         case "ESCAPE": {
-          if (
-            char === escapeEnd &&
-            prevChar !== escapeStart &&
-            nextChar !== escapeEnd
-          ) {
+          if (char === escapeEnd) {
             subState = "NORMAL";
             break;
           }
@@ -208,11 +203,7 @@ function getRouteSegments(routeId: string) {
             routeSegment += char;
             break;
           }
-          if (
-            char === optionalEnd &&
-            prevChar !== optionalStart &&
-            nextChar !== optionalEnd
-          ) {
+          if (char === optionalEnd) {
             routeSegment += "?";
             subState = "NORMAL";
             break;
@@ -236,11 +227,7 @@ function getRouteSegments(routeId: string) {
           break;
         }
         case "OPTIONAL_ESCAPE": {
-          if (
-            char === escapeEnd &&
-            prevChar !== escapeStart &&
-            nextChar !== escapeEnd
-          ) {
+          if (char === escapeEnd) {
             subState = "OPTIONAL";
             break;
           }

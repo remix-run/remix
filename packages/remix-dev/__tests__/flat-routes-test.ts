@@ -245,7 +245,7 @@ describe("flatRoutes", () => {
           file: "routes/about.[.[.*].].tsx",
           id: "routes/about.[.[.*].]",
           parentId: "routes/about",
-          path: ".[.*].",
+          path: ".[.*/]",
         },
       ],
 
@@ -474,7 +474,7 @@ describe("flatRoutes", () => {
           file: "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$.tsx",
           id: "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$",
           parentId: "root",
-          path: ":$dollabills?/.lol)/(what?/$?/*",
+          path: ":$dollabills?/.lol?/what?/$?/*",
         },
       ],
       [
