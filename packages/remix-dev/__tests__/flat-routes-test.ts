@@ -523,11 +523,15 @@ describe("flatRoutes", () => {
         },
       ],
 
-      // ["routes/[]otherstuff]",{file: "routes/[]otherstuff].tsx",id: "routes/[]otherstuff]",parentId: "root",path: "otherstuff]",},],
-      // ["routes/(sub).([[]]).tsx", {file: "routes/(sub).([[]]).tsx",id: "routes/(sub).([[]])",parentId: "root",path: "sub?/[]?",}],
-      // ["routes/(beef]).tsx", {file: "routes/(beef]).tsx",id: "routes/(beef])",parentId: "root",path: "beef]?",}],
-      // ["routes/([index]).tsx", {file: "routes/([index]).tsx",id: "routes/([index])",parentId: "root",path: "index?",}],
-      // ["routes/(test)/(inde[x]).tsx", {file: "routes/(test)/(inde[x]).tsx",id: "routes/(test)/(inde[x])",parentId: "root",path: "test?/index?",}],
+      [
+        "routes/[]otherstuff].tsx",
+        {
+          file: "routes/[]otherstuff].tsx",
+          id: "routes/[]otherstuff]",
+          parentId: "root",
+          path: "otherstuff]",
+        },
+      ],
       [
         "routes/$.tsx",
         { file: "routes/$.tsx", id: "routes/$", parentId: "root", path: "*" },
