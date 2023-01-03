@@ -549,7 +549,7 @@ describe("flatRoutes", () => {
     expect(routes).toHaveLength(files.length);
 
     for (let [file, route] of files) {
-      it("should match " + file + " to " + route.path, () => {
+      test(`hierarchy for ${file} - ${route.path}`, () => {
         expect(routes).toContainEqual(route);
       });
     }
