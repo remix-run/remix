@@ -251,9 +251,6 @@ export async function codemod(
 }
 
 export async function generateEntry(remixRoot: string, entry: string) {
-  // 0. read config
-  let config = await readConfig(remixRoot);
-
   // 1. validate requested entry file
   let clientEntries = new Set([
     "entry.client.tsx",
@@ -266,6 +263,7 @@ export async function generateEntry(remixRoot: string, entry: string) {
     "entry.server.jsx",
   ]);
   let entries = new Set([...clientEntries, ...serverEntries]);
+
   if (!entries.has(entry)) {
     console.log(
       colors.error(
@@ -279,26 +277,13 @@ export async function generateEntry(remixRoot: string, entry: string) {
 
   let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
   let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");
-  let defaultEntryServer = path.resolve(
-    defaultsDirectory,
-    "streaming-entry.server.tsx"
-  );
+  let defaultEntryServer = path.resolve(defaultsDirectory, "entry.server.tsx");
 
-  // 2.1. if the entry file is a server entry file, determine if streaming is supported
-  if (entry.startsWith("entry.server.")) {
-    let type = config.serverBuildTarget ? "string" : "streaming";
-    if (type === "string") {
-      defaultEntryServer = path.resolve(
-        defaultsDirectory,
-        "string-entry.server.tsx"
-      );
-    }
-  }
-
-  // 2.2. check if any of the requested entry file exists
+  // 2. check if any of the requested entry file exists
   let entryType = entry.startsWith("entry.client.") ? "client" : "server";
   let inputFile =
     entryType === "client" ? defaultEntryClient : defaultEntryServer;
+
   let outputFile: string = "";
   let entriesToCheck = entryType === "client" ? clientEntries : serverEntries;
   for (let entryToCheck of entriesToCheck) {
@@ -314,7 +299,7 @@ export async function generateEntry(remixRoot: string, entry: string) {
     }
   }
 
-  // 3. if entry is jsx?, convert to js
+  // 3. if entry is js/jsx, convert to js
   // otherwise, copy the entry file from the defaults
   if (/\.jsx?$/.test(entry)) {
     let contents = await fse.readFile(inputFile, "utf-8");
