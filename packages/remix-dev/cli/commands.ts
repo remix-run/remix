@@ -272,7 +272,7 @@ export async function generateEntry(remixRoot: string, entry: string) {
         )}`
       )
     );
-    return;
+    return process.exit(1);
   }
 
   let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
@@ -295,7 +295,7 @@ export async function generateEntry(remixRoot: string, entry: string) {
           `Entry file ${path.relative(remixRoot, entryToCheck)} already exists.`
         )
       );
-      return;
+      return process.exit(1);
     }
   }
 
@@ -318,4 +318,6 @@ export async function generateEntry(remixRoot: string, entry: string) {
       `Entry file ${entry} created at ${path.relative(remixRoot, outputFile)}.`
     )
   );
+
+  return process.exit(0);
 }
