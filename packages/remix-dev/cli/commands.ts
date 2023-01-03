@@ -262,15 +262,22 @@ export async function generateEntry(remixRoot: string, entry: string) {
     "entry.server.js",
     "entry.server.jsx",
   ]);
+
   let entries = new Set([...clientEntries, ...serverEntries]);
 
   if (!entries.has(entry)) {
+    // @ts-expect-error available in node 12+
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
+    let listFormat = new Intl.ListFormat("en", {
+      style: "long",
+      type: "conjunction",
+    });
+
+    let entriesArray = Array.from(entries);
+    let list = listFormat.format(entriesArray);
+
     console.log(
-      colors.error(
-        `Invalid entry file. Valid entry files are ${Array.from(entries).join(
-          ", "
-        )}`
-      )
+      colors.error(`Invalid entry file. Valid entry files are ${list}`)
     );
     return process.exit(1);
   }
