@@ -48,28 +48,44 @@ test.beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
-
-        export function loader() {
-          return json("pizza");
-        }
+        import { useFetcher } from '@remix-run/react';
+        import { useEffect } from 'react';
 
         export default function Index() {
-          let data = useLoaderData();
+          const fetcher = useFetcher();
+
+          useEffect(() => {
+            if (!fetcher.data && fetcher.state === 'idle') {
+              fetcher.load('/load');
+            }
+          }, [fetcher]);
+
           return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+            <div style={{ fontFamily: 'system-ui, sans-serif', lineHeight: '1.4' }}>
+              <h1>web-fetch 4.3.2 crash "Premature close"</h1>
+              <ol>
+                <li>Observe exit code 1 when fetcher loads from /load.tsx route</li>
+                <li>Go to load.tsx, uncomment the import that uses web-fetch 4.3.1</li>
+                <li>Remix no longer crashes</li>
+              </ol>
+              <hr />
+              <h2>Response from /load:</h2>
+              <code>{JSON.stringify(fetcher.data)}</code>
             </div>
-          )
+          );
         }
       `,
 
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+      "app/routes/load.jsx": js`
+        import { json } from '@remix-run/server-runtime';
+
+        export async function loader() {
+          const res = await fetch(
+            'https://docs.google.com/document/d/1ZM3fgLNXoj8_QYnits3UiITvctobJvB9KEh_SE9KL-E/edit?usp=sharing'
+          );
+          return json({ response: await res.text() });
         }
+
       `,
     },
   });
@@ -87,16 +103,10 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("fetching a private google url", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
-  // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  expect(await app.getHtml()).toMatch("Response");
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
