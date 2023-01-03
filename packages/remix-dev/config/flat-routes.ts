@@ -92,7 +92,7 @@ function routeIdFromPath(relativePath: string) {
   );
 }
 
-export function pathFromRouteId(routeId: string, parentId: string) {
+function pathFromRouteId(routeId: string, parentId: string) {
   let parentPath = "";
   if (parentId) {
     parentPath = getRouteSegments(parentId).join("/");
@@ -120,12 +120,19 @@ function isIndexRoute(routeId: string) {
   return routeId.endsWith("_index");
 }
 
+type SubState =
+  | "NORMAL"
+  | "PATHLESS"
+  | "ESCAPE"
+  | "OPTIONAL"
+  | "OPTIONAL_ESCAPE";
+
 function getRouteSegments(routeId: string) {
   let routeSegments: string[] = [];
   let index = 0;
   let routeSegment = "";
-  let state = "START";
-  let subState = "NORMAL";
+  let state: "START" | "PATH" = "START";
+  let subState: SubState = "NORMAL";
   let pushRouteSegment = (routeSegment: string) => {
     if (routeSegment) {
       routeSegments.push(routeSegment);
@@ -134,6 +141,8 @@ function getRouteSegments(routeId: string) {
   while (index < routeId.length) {
     let char = routeId[index];
     index++; // advance to next character
+    let nextChar = routeId[index + 1];
+    let prevChar = routeId[index - 1];
     if (state == "START") {
       // process existing segment
       pushRouteSegment(routeSegment);
@@ -189,7 +198,7 @@ function getRouteSegments(routeId: string) {
           // TODO: don't allow slashes in non normal mode
           if (
             routeId[index] === escapeStart &&
-            isSegmentSeparator(routeId[index + 1]) &&
+            isSegmentSeparator(nextChar) &&
             routeId[index + 2] === escapeEnd
           ) {
             routeSegment += char;
