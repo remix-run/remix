@@ -187,7 +187,11 @@ function getRouteSegments(routeId: string) {
           break;
         }
         case "ESCAPE": {
-          if (char === escapeEnd) {
+          if (
+            char === escapeEnd &&
+            prevChar !== escapeStart &&
+            nextChar !== escapeEnd
+          ) {
             subState = "NORMAL";
             break;
           }
@@ -204,7 +208,11 @@ function getRouteSegments(routeId: string) {
             routeSegment += char;
             break;
           }
-          if (char === optionalEnd) {
+          if (
+            char === optionalEnd &&
+            prevChar !== optionalStart &&
+            nextChar !== optionalEnd
+          ) {
             routeSegment += "?";
             subState = "NORMAL";
             break;
@@ -228,7 +236,11 @@ function getRouteSegments(routeId: string) {
           break;
         }
         case "OPTIONAL_ESCAPE": {
-          if (char === escapeEnd) {
+          if (
+            char === escapeEnd &&
+            prevChar !== escapeStart &&
+            nextChar !== escapeEnd
+          ) {
             subState = "OPTIONAL";
             break;
           }
