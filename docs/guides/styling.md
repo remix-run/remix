@@ -772,7 +772,7 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 
 Many common approaches to CSS within the React community are only possible when bundling CSS, meaning that the CSS files you write during development are collected into a separate bundle as part of the build process.
 
-When using CSS bundling features, the Remix compiler will generate a single CSS file containing all bundled styles in your application. Note that any [regular stylesheet imports](#regular-stylesheets) will remain as separate files.
+When using CSS bundling features, the Remix compiler will generate a single CSS file containing all bundled styles in your application. Note that any [regular stylesheet imports][regular-stylesheet-imports-2] will remain as separate files.
 
 Unlike many other tools in the React ecosystem, we do not insert the CSS bundle into the page automatically. Instead, we ensure that you always have control over the link tags on your page. This lets you decide where the CSS file is loaded relative to other stylesheets in your app.
 
@@ -802,7 +802,7 @@ With this link tag inserted into the page, you're now ready to start using the v
 
 <docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
 
-First, ensure you've set up [CSS bundling](#css-bundling) in your application.
+First, ensure you've set up [CSS bundling][css-bundling] in your application.
 
 Then, to enable [CSS Modules], set the `future.unstable_cssModules` feature flag in `remix.config.js`.
 
@@ -847,7 +847,7 @@ Button.displayName = "Button";
 
 <docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
 
-Some NPM packages use side-effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up [CSS bundling](#css-bundling) in your application.
+Some NPM packages use side-effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up [CSS bundling][css-bundling] in your application.
 
 Then, set the `future.unstable_cssSideEffectImports` feature flag in `remix.config.js`.
 
@@ -889,3 +889,5 @@ module.exports = {
 [css modules]: https://github.com/css-modules/css-modules
 [regular-stylesheet-imports]: #regular-stylesheets
 [server-dependencies-to-bundle]: ../file-conventions/remix-config#serverdependenciestobundle
+[regular-stylesheet-imports-2]: #regular-stylesheets
+[css-bundling]: #css-bundling
