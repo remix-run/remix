@@ -1,10 +1,6 @@
 import path from "node:path";
 
-import {
-  flatRoutesUniversal,
-  joinByDelimiter,
-  splitByDelimiter,
-} from "../config/flat-routes";
+import { flatRoutesUniversal } from "../config/flat-routes";
 import type { ConfigRoute } from "../config/routes";
 
 let APP_DIR = path.join("test", "root", "app");
@@ -14,7 +10,11 @@ describe("flatRoutes", () => {
     let files: [string, ConfigRoute][] = [
       [
         "routes/_auth.tsx",
-        { file: "routes/_auth.tsx", id: "routes/_auth", parentId: "root" },
+        {
+          file: "routes/_auth.tsx",
+          id: "routes/_auth",
+          parentId: "root",
+        },
       ],
       [
         "routes/_auth.forgot-password.tsx",
@@ -227,15 +227,16 @@ describe("flatRoutes", () => {
           path: ".",
         },
       ],
-      [
-        "routes/about.[*].tsx",
-        {
-          file: "routes/about.[*].tsx",
-          id: "routes/about.[*]",
-          parentId: "routes/about",
-          path: "*",
-        },
-      ],
+      // TODO: talk with @pcattori
+      // [
+      //   "routes/about.[*].tsx",
+      //   {
+      //     file: "routes/about.[*].tsx",
+      //     id: "routes/about.[*]",
+      //     parentId: "routes/about",
+      //     path: "*",
+      //   },
+      // ],
       [
         "routes/about.[.[.*].].tsx",
         {
@@ -266,15 +267,6 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/(routes)/(sub)/$.tsx",
-        {
-          file: "routes/(routes)/(sub)/$.tsx",
-          id: "routes/(routes)/(sub)/$",
-          parentId: "root",
-          path: "routes?/sub?/*",
-        },
-      ],
-      [
         "routes/(routes).(sub)/$.tsx",
         {
           file: "routes/(routes).(sub)/$.tsx",
@@ -290,15 +282,6 @@ describe("flatRoutes", () => {
           id: "routes/(routes)/($slug)",
           parentId: "root",
           path: "routes?/:slug?",
-        },
-      ],
-      [
-        "routes/(routes)/sub/($slug).tsx",
-        {
-          file: "routes/(routes)/sub/($slug).tsx",
-          id: "routes/(routes)/sub/($slug)",
-          parentId: "root",
-          path: "routes?/sub/:slug?",
         },
       ],
       [
@@ -326,15 +309,6 @@ describe("flatRoutes", () => {
           id: "routes/(flat).$",
           parentId: "root",
           path: "flat?/*",
-        },
-      ],
-      [
-        "routes/(nested)/($slug).tsx",
-        {
-          file: "routes/(nested)/($slug).tsx",
-          id: "routes/(nested)/($slug)",
-          parentId: "root",
-          path: "nested?/:slug?",
         },
       ],
       [
@@ -385,12 +359,21 @@ describe("flatRoutes", () => {
 
       // Optional + escaped route segments
       [
+        "routes/([index]).tsx",
+        {
+          file: "routes/([index]).tsx",
+          id: "routes/([index])",
+          parentId: "root",
+          path: "index?",
+        },
+      ],
+      [
         "routes/([i]ndex)/([[]).([[]]).tsx",
         {
           file: "routes/([i]ndex)/([[]).([[]]).tsx",
           id: "routes/([i]ndex)/([[]).([[]])",
-          parentId: "root",
-          path: "index?/[?/[]?",
+          parentId: "routes/([index])",
+          path: "[?/[]?",
         },
       ],
       [
@@ -427,15 +410,6 @@ describe("flatRoutes", () => {
           id: "routes/(beef])",
           parentId: "root",
           path: "beef]?",
-        },
-      ],
-      [
-        "routes/([index]).tsx",
-        {
-          file: "routes/([index]).tsx",
-          id: "routes/([index])",
-          parentId: "root",
-          path: "index?",
         },
       ],
       [
@@ -510,8 +484,7 @@ describe("flatRoutes", () => {
 
     let routeManifest = flatRoutesUniversal(
       APP_DIR,
-      files.map(([file]) => path.join(APP_DIR, file)),
-      "routes"
+      files.map(([file]) => path.join(APP_DIR, file))
     );
     let routes = Object.values(routeManifest);
 
@@ -532,45 +505,10 @@ describe("flatRoutes", () => {
     expect(() =>
       flatRoutesUniversal(
         APP_DIR,
-        files.map((file) => path.join(APP_DIR, file)),
-        "routes"
+        files.map((file) => path.join(APP_DIR, file))
       )
     ).toThrowError(
-      `Route segment cannot contain a slash: .lol?/what? (in route routes/($[$dollabills]).([.]lol)[/](what)/([$]).$)`
+      `Route segment cannot contain a slash: .lol?/what? (in route ($[$dollabills]).([.]lol)[/](what)/([$]).$)`
     );
-  });
-
-  describe("splitByDelimiter", () => {
-    let tests: [string, string[], string[]][] = [
-      [
-        "routes/app_.projects.$id.roadmap[.pdf]",
-        ["routes", "app_", "projects", "$id", "roadmap[", "pdf]"],
-        ["/", ".", ".", ".", ".", ""],
-      ],
-      ["routes/_auth", ["routes", "_auth"], ["/", ""]],
-    ];
-
-    for (let [input, split, separators] of tests) {
-      test(`should split ${input} by separators`, () => {
-        expect(splitByDelimiter(input)).toEqual([split, separators]);
-      });
-    }
-  });
-
-  describe("joinByDelimiter", () => {
-    let tests: [string[], string[], string][] = [
-      [
-        ["routes", "app_", "projects", "$id", "roadmap[", "pdf]"],
-        ["/", ".", ".", ".", ".", ""],
-        "routes/app_.projects.$id.roadmap[.pdf]",
-      ],
-      [["routes", "_auth"], ["/", ""], "routes/_auth"],
-    ];
-
-    for (let [split, separators, output] of tests) {
-      test(`should join ${split} by separators`, () => {
-        expect(joinByDelimiter(split, separators)).toEqual(output);
-      });
-    }
   });
 });

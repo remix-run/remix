@@ -1,7 +1,8 @@
 import path from "node:path";
 import fg from "fast-glob";
 
-import type { ConfigRoute, RouteManifest } from "./routes";
+import type { ConfigRoute, DefineRouteFunction, RouteManifest } from "./routes";
+import { createRouteId, defineRoutes } from "./routes";
 import {
   escapeEnd,
   escapeStart,
@@ -27,6 +28,11 @@ export function flatRoutes(
   return flatRoutesUniversal(appDirectory, routePaths);
 }
 
+interface RouteInfo extends ConfigRoute {
+  name: string;
+  segments: string[];
+}
+
 /**
  * Create route configs from a list of routes using the flat routes conventions.
  * @param {string} appDirectory - The absolute root directory the routes were looked up from.
@@ -38,85 +44,98 @@ export function flatRoutesUniversal(
   routePaths: string[],
   prefix: string = "routes"
 ): RouteManifest {
-  let routes: Record<string, ConfigRoute> = {};
-  let sortedRoutes = routePaths
-    .sort((a, b) => (a.length - b.length > 0 ? 1 : -1))
-    .map((routePath) =>
-      routePath.slice(appDirectory.length + 1).replace(/\\/g, "/")
-    );
-  let processedIds: string[] = [];
-  for (let routePath of sortedRoutes) {
-    let routeId = routeIdFromPath(routePath);
-    if (routes[routeId]) {
-      throw new Error(`Duplicate route: ${routeId}`);
-    }
+  let routeMap = new Map<string, RouteInfo>();
+  let nameMap = new Map<string, RouteInfo>();
 
-    let tmpId = "";
-    let parentId = "";
-    for (let processedId of processedIds) {
-      if (routeId.startsWith(processedId.replace(/\$$/, "*"))) {
-        let [segments, delimiters] = splitByDelimiter(routeId);
-        if (segments.at(1)?.endsWith("_")) {
-          segments[1] = segments[1].slice(0, -1);
-          tmpId = joinByDelimiter(segments, delimiters);
-          break;
+  for (let routePath of routePaths) {
+    let routeInfo = getRouteInfo(appDirectory, prefix, routePath);
+    routeMap.set(routeInfo.id, routeInfo);
+    nameMap.set(routeInfo.name, routeInfo);
+  }
+
+  // update parentIds for all routes
+  Array.from(routeMap.values()).forEach((routeInfo) => {
+    let parentId = findParentRouteId(routeInfo, nameMap);
+    routeInfo.parentId = parentId;
+  });
+
+  let uniqueRoutes = new Map<string, string>();
+
+  function defineNestedRoutes(
+    defineRoute: DefineRouteFunction,
+    parentId?: string
+  ): void {
+    let childRoutes = Array.from(routeMap.values()).filter(
+      (routeInfo) => routeInfo.parentId === parentId
+    );
+    let parentRoute = parentId ? routeMap.get(parentId) : undefined;
+    let parentRoutePath = parentRoute?.path ?? "/";
+    for (let childRoute of childRoutes) {
+      let routePath = childRoute?.path?.slice(parentRoutePath.length) ?? "";
+      // remove leading slash
+      if (routePath.startsWith("/")) {
+        routePath = routePath.slice(1);
+      }
+      let index = childRoute.index;
+      let fullPath = childRoute.path;
+
+      // add option to check for unique route ids
+      // this is copied from remix default convention
+      // but it is currently breaking some flat routes
+      // so until we can figure out a better way to do this
+      // make it optional to unblock users
+      let uniqueRouteId = (fullPath || "") + (index ? "?index" : "");
+      console.log(uniqueRouteId);
+      if (uniqueRouteId) {
+        let conflict = uniqueRoutes.get(uniqueRouteId);
+        if (conflict) {
+          throw new Error(
+            `Path ${JSON.stringify(fullPath)} defined by route ${JSON.stringify(
+              childRoute.id
+            )} conflicts with route ${JSON.stringify(conflict)}`
+          );
+        } else {
+          uniqueRoutes.set(uniqueRouteId, childRoute.id);
+        }
+      }
+      if (index) {
+        let invalidChildRoutes = Object.values(routeMap).filter(
+          (routeInfo) => routeInfo.parentId === childRoute.id
+        );
+
+        if (invalidChildRoutes.length > 0) {
+          throw new Error(
+            `Child routes are not allowed in index routes. Please remove child routes of ${childRoute.id}`
+          );
         }
 
-        parentId = processedId;
-        break;
+        defineRoute(routePath, routeMap.get(childRoute.id!)!.file, {
+          index: true,
+        });
+      } else {
+        defineRoute(routePath, routeMap.get(childRoute.id!)!.file, () => {
+          defineNestedRoutes(defineRoute, childRoute.id);
+        });
       }
     }
-
-    routes[routeId] = {
-      id: routeId,
-      path: pathFromRouteId(tmpId || routeId, parentId || prefix),
-      parentId: parentId || "root",
-      file: routePath,
-    };
-    if (isIndexRoute(routeId)) {
-      routes[routeId].index = true;
-    }
-    processedIds.unshift(routeId);
   }
+
+  let routes = defineRoutes(defineNestedRoutes);
+
+  Object.values(routes).forEach((route) => {
+    if (route.parentId === undefined) {
+      route.parentId = "root";
+    }
+  });
 
   return routes;
-}
-
-function routeIdFromPath(relativePath: string) {
-  let { dir, name } = path.parse(relativePath)
-  return path.join(dir, name)
-}
-
-function pathFromRouteId(routeId: string, parentId: string) {
-  let parentPath = "";
-  if (parentId) {
-    parentPath = getRouteSegments(parentId).join("/");
-  }
-  parentPath = parentPath.replace(/^\//, '')
-  let routePath = getRouteSegments(routeId).join("/");
-  if (routePath.startsWith("/")) {
-    routePath = routePath.substring(1);
-  }
-  let pathname = parentPath
-    ? routePath.slice(parentPath.length + 1)
-    : routePath;
-  pathname = pathname.replace(/_index$/, "");
-  if (pathname.startsWith("/")) {
-    pathname = pathname.substring(1);
-  }
-  return pathname || undefined;
 }
 
 function isIndexRoute(routeId: string) {
   return routeId.endsWith("_index");
 }
 
-type SubState =
-  | "NORMAL"
-  | "PATHLESS"
-  | "ESCAPE"
-  | "OPTIONAL"
-  | "OPTIONAL_ESCAPE";
+type SubState = "NORMAL" | "ESCAPE" | "OPTIONAL" | "OPTIONAL_ESCAPE";
 
 function getRouteSegments(routeId: string) {
   let routeSegments: string[] = [];
@@ -137,26 +156,17 @@ function getRouteSegments(routeId: string) {
 
   while (index < routeId.length) {
     let char = routeId[index];
-    index++; // advance to next character
+    index++; //advance to next char
+
     if (state == "START") {
       // process existing segment
       pushRouteSegment(routeSegment);
       routeSegment = "";
       state = "PATH";
       subState = "NORMAL";
-      if (char === "_") {
-        subState = "PATHLESS";
-      }
     }
     if (state == "PATH") {
       switch (subState) {
-        case "PATHLESS": {
-          if (isSegmentSeparator(char)) {
-            state = "START";
-            break;
-          }
-          break;
-        }
         case "NORMAL": {
           if (isSegmentSeparator(char)) {
             state = "START";
@@ -230,31 +240,59 @@ function getRouteSegments(routeId: string) {
   return routeSegments;
 }
 
-/**
- * split a routeId by delimiters (`.`, `/`) to get the segments and delimiters for future rejoins
- * @param {string} routeId
- * @returns {[string[], string[]]}
- */
-export function splitByDelimiter(routeId: string): [string[], string[]] {
-  // split by / and . to get the segments
-  let segments = routeId.split(/[/.\\]/);
-  let start = 0;
-  let delimiters = segments.map((s, i, { [i + 1]: next }) => {
-    let index = routeId.indexOf(next, (start += s.length));
-    if (index !== -1) {
-      let sub = routeId.slice(start, index);
-      start = index;
-      return sub;
-    }
-    return "";
-  });
-
-  return [segments, delimiters];
+function findParentRouteId(
+  routeInfo: RouteInfo,
+  nameMap: Map<string, RouteInfo>
+) {
+  let parentName = routeInfo.segments.slice(0, -1).join("/");
+  while (parentName) {
+    let parentRoute = nameMap.get(parentName);
+    if (parentRoute) return parentRoute.id;
+    parentName = parentName.substring(0, parentName.lastIndexOf("/"));
+  }
+  return undefined;
 }
 
-export function joinByDelimiter(
-  segments: string[],
-  delimiters: string[]
-): string {
-  return segments.map((s, i) => s + delimiters[i]).join("");
+function getRouteInfo(
+  appDirectory: string,
+  routeDirectory: string,
+  filePath: string
+): RouteInfo {
+  let filePathWithoutApp = filePath.slice(appDirectory.length + 1);
+  let routeId = createRouteId(filePathWithoutApp);
+  let routeIdWithoutRoutes = routeId.slice(routeDirectory.length + 1);
+  let index = isIndexRoute(routeIdWithoutRoutes);
+  let routeSegments = getRouteSegments(routeIdWithoutRoutes);
+  let routePath = createRoutePath(routeSegments);
+
+  return {
+    id: routeIdWithoutRoutes,
+    path: routePath,
+    file: filePathWithoutApp,
+    name: routeSegments.join("/"),
+    segments: routeSegments,
+    index,
+  };
+}
+
+function createRoutePath(routeSegments: string[]) {
+  let result = "";
+
+  for (let i = 0; i < routeSegments.length; i++) {
+    let segment = routeSegments[i];
+
+    // skip pathless layout segments
+    if (segment.startsWith("_")) {
+      continue;
+    }
+
+    // remove trailing slash
+    if (segment.endsWith("_")) {
+      segment = segment.slice(0, -1);
+    }
+
+    result += `/${segment}`;
+  }
+
+  return result;
 }
