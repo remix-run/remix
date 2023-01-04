@@ -782,7 +782,7 @@ module.exports = {
 };
 ```
 
-With this feature flag enabled, the Remix compiler will now generate a single CSS file containing all CSS Modules styles in your application. Note that any [regular stylesheet imports](#regular-stylesheets) will remain as separate files.
+With this feature flag enabled, the Remix compiler will now generate a single CSS file containing all CSS Modules styles in your application. Note that any [regular stylesheet imports][regular-stylesheet-imports] will remain as separate files.
 
 Unlike many other tools in the React ecosystem, we do not insert the CSS bundle into the page automatically. Instead, we ensure that you always have control over the link tags on your page. This lets you decide where the CSS file is loaded relative to other stylesheets in your app.
 
@@ -842,3 +842,4 @@ Button.displayName = "Button";
 [tailwind]: https://tailwindcss.com
 [tailwind-intelli-sense-extension]: https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss
 [css modules]: https://github.com/css-modules/css-modules
+[regular-stylesheet-imports]: #regular-stylesheets
