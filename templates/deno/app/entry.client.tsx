@@ -8,12 +8,12 @@ function hydrate() {
       document,
       <StrictMode>
         <RemixBrowser />
-      </StrictMode>,
+      </StrictMode>
     );
   });
 }
 
-if (requestIdleCallback) {
+if (typeof requestIdleCallback === "function") {
   requestIdleCallback(hydrate);
 } else {
   // Safari doesn't support requestIdleCallback
