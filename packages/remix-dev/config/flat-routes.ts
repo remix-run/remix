@@ -55,10 +55,10 @@ export function flatRoutesUniversal(
     let parentId = "";
     for (let processedId of processedIds) {
       if (routeId.startsWith(processedId.replace(/\$$/, "*"))) {
-        let [segments, delimiters] = splitBySegments(routeId);
+        let [segments, delimiters] = splitByDelimiter(routeId);
         if (segments.at(1)?.endsWith("_")) {
           segments[1] = segments[1].slice(0, -1);
-          tmpId = segments.map((s, i) => s + delimiters[i]).join("");
+          tmpId = joinByDelimiter(segments, delimiters);
           break;
         }
 
@@ -239,7 +239,12 @@ function getRouteSegments(routeId: string) {
   return routeSegments;
 }
 
-export function splitBySegments(routeId: string) {
+/**
+ * split a routeId by delimiters (`.`, `/`) to get the segments and delimiters for future rejoins
+ * @param {string} routeId
+ * @returns {[string[], string[]]}
+ */
+export function splitByDelimiter(routeId: string): [string[], string[]] {
   // split by / and . to get the segments
   let segments = routeId.split(/[/.\\]/);
   let start = 0;
@@ -254,4 +259,11 @@ export function splitBySegments(routeId: string) {
   });
 
   return [segments, delimiters];
+}
+
+export function joinByDelimiter(
+  segments: string[],
+  delimiters: string[]
+): string {
+  return segments.map((s, i) => s + delimiters[i]).join("");
 }

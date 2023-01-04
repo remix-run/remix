@@ -1,6 +1,10 @@
 import path from "node:path";
 
-import { flatRoutesUniversal, splitBySegments } from "../config/flat-routes";
+import {
+  flatRoutesUniversal,
+  joinByDelimiter,
+  splitByDelimiter,
+} from "../config/flat-routes";
 import type { ConfigRoute } from "../config/routes";
 
 describe("flatRoutes", () => {
@@ -571,7 +575,7 @@ describe("flatRoutes", () => {
     );
   });
 
-  describe("splitBySegments", () => {
+  describe("splitByDelimiter", () => {
     let tests: [string, string[], string[]][] = [
       [
         "routes/app_.projects.$id.roadmap[.pdf]",
@@ -583,7 +587,24 @@ describe("flatRoutes", () => {
 
     for (let [input, split, separators] of tests) {
       test(`should split ${input} by separators`, () => {
-        expect(splitBySegments(input)).toEqual([split, separators]);
+        expect(splitByDelimiter(input)).toEqual([split, separators]);
+      });
+    }
+  });
+
+  describe("joinByDelimiter", () => {
+    let tests: [string[], string[], string][] = [
+      [
+        ["routes", "app_", "projects", "$id", "roadmap[", "pdf]"],
+        ["/", ".", ".", ".", ".", ""],
+        "routes/app_.projects.$id.roadmap[.pdf]",
+      ],
+      [["routes", "_auth"], ["/", ""], "routes/_auth"],
+    ];
+
+    for (let [split, separators, output] of tests) {
+      test(`should join ${split} by separators`, () => {
+        expect(joinByDelimiter(split, separators)).toEqual(output);
       });
     }
   });
