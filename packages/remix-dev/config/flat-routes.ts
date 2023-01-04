@@ -277,9 +277,7 @@ function getRouteInfo(
 export function createRoutePath(routeSegments: string[]) {
   let result = "";
 
-  for (let i = 0; i < routeSegments.length; i++) {
-    let segment = routeSegments[i];
-
+  for (let segment of routeSegments) {
     // skip pathless layout segments
     if (segment.startsWith("_")) {
       continue;
