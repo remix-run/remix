@@ -92,9 +92,7 @@ function pathFromRouteId(routeId: string, parentId: string) {
   if (parentId) {
     parentPath = getRouteSegments(parentId).join("/");
   }
-  if (parentPath.startsWith("/")) {
-    parentPath = parentPath.substring(1);
-  }
+  parentPath = parentPath.replace(/^\//, '')
   let routePath = getRouteSegments(routeId).join("/");
   if (routePath.startsWith("/")) {
     routePath = routePath.substring(1);
