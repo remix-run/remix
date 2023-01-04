@@ -546,7 +546,7 @@ describe("flatRoutes", () => {
     }
   });
 
-  describe("should error when using `/` in an escaped route segment", () => {
+  test("should error when using `/` in a route segment", () => {
     let files: [string, ConfigRoute][] = [
       [
         "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$.tsx",
