@@ -135,12 +135,17 @@ function getRouteSegments(routeId: string) {
   let subState: SubState = "NORMAL";
   let pushRouteSegment = (routeSegment: string) => {
     if (routeSegment) {
+      if (routeSegment.includes("/")) {
+        throw new Error(
+          `Route segment cannot contain a slash: ${routeSegment} (in route ${routeId})`
+        );
+      }
       routeSegments.push(routeSegment);
     }
   };
+
   while (index < routeId.length) {
     let char = routeId[index];
-    let nextChar = routeId[index + 1];
     index++; // advance to next character
     if (state == "START") {
       // process existing segment
@@ -194,15 +199,6 @@ function getRouteSegments(routeId: string) {
           break;
         }
         case "OPTIONAL": {
-          // TODO: don't allow slashes in non normal mode
-          if (
-            routeId[index] === escapeStart &&
-            isSegmentSeparator(nextChar) &&
-            routeId[index + 2] === escapeEnd
-          ) {
-            routeSegment += char;
-            break;
-          }
           if (char === optionalEnd) {
             routeSegment += "?";
             subState = "NORMAL";
@@ -237,6 +233,7 @@ function getRouteSegments(routeId: string) {
       }
     }
   }
+
   // process remaining segment
   pushRouteSegment(routeSegment);
   return routeSegments;

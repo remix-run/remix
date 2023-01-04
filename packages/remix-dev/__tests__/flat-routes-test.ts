@@ -469,15 +469,6 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$.tsx",
-        {
-          file: "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$.tsx",
-          id: "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$",
-          parentId: "root",
-          path: ":$dollabills?/.lol?/what?/$?/*",
-        },
-      ],
-      [
         "routes/($[$dollabills]).([.]lol)/(what)/([$]).($up).tsx",
         {
           file: "routes/($[$dollabills]).([.]lol)/(what)/([$]).($up).tsx",
@@ -553,5 +544,30 @@ describe("flatRoutes", () => {
         expect(routes).toContainEqual(route);
       });
     }
+  });
+
+  describe("should error when using `/` in an escaped route segment", () => {
+    let files: [string, ConfigRoute][] = [
+      [
+        "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$.tsx",
+        {
+          file: "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$.tsx",
+          id: "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$",
+          parentId: "root",
+          path: ":$dollabills?/.lol?/what?/$?/*",
+        },
+      ],
+    ];
+
+    let appDir = path.join("test", "root", "app");
+    expect(() =>
+      flatRoutesUniversal(
+        appDir,
+        files.map(([file]) => path.join(appDir, file)),
+        "routes"
+      )
+    ).toThrowError(
+      `Route segment cannot contain a slash: .lol?/what? (in route routes/($[$dollabills]).([.]lol)[/](what)/([$]).$)`
+    );
   });
 });
