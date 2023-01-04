@@ -136,7 +136,7 @@ function isIndexRoute(routeId: string) {
 
 type SubState = "NORMAL" | "ESCAPE" | "OPTIONAL" | "OPTIONAL_ESCAPE";
 
-function getRouteSegments(routeId: string) {
+export function getRouteSegments(routeId: string) {
   let routeSegments: string[] = [];
   let index = 0;
   let routeSegment = "";
@@ -274,7 +274,7 @@ function getRouteInfo(
   };
 }
 
-function createRoutePath(routeSegments: string[]) {
+export function createRoutePath(routeSegments: string[]) {
   let result = "";
 
   for (let i = 0; i < routeSegments.length; i++) {
@@ -293,5 +293,5 @@ function createRoutePath(routeSegments: string[]) {
     result += `/${segment}`;
   }
 
-  return result;
+  return result || undefined;
 }
