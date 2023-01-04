@@ -1,4 +1,4 @@
-type PackageManager = "npm" | "pnpm" | "yarn";
+export type PackageManager = "npm" | "pnpm" | "yarn";
 
 /**
  * Determine which package manager the user prefers.

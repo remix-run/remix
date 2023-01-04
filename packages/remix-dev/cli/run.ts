@@ -49,6 +49,9 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
   \`codemod\` Options:
     --dry               Dry run (no changes are made to files)
     --force             Bypass Git safety checks
+  \`upgrade\` Options:
+    --prerelease        Upgrade to the latest prerelease version
+    --tag               Upgrade to a specific tag (e.g. \`nightly\`)
 
   ${colors.heading("Values")}:
     - ${colors.arg("projectDir")}        The Remix project directory
@@ -110,6 +113,11 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     $ remix routes
     $ remix routes my-app
     $ remix routes --json
+
+  ${colors.heading("Upgrade your Remix packages to the latest version")}
+    $ remix upgrade
+    $ remix upgrade --prerelease
+    $ remix upgrade --tag nightly
 `;
 
 const templateChoices = [
@@ -175,6 +183,8 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "--no-typescript": Boolean,
       "--version": Boolean,
       "-v": "--version",
+      "--prerelease": Boolean,
+      "--tag": String,
     },
     {
       argv,
@@ -456,32 +466,55 @@ export async function run(argv: string[] = process.argv.slice(2)) {
 
       break;
     }
-    case "init":
+    case "init": {
       await commands.init(input[1] || process.env.REMIX_ROOT || process.cwd(), {
         deleteScript: flags.delete,
       });
       break;
-    case "routes":
+    }
+    case "routes": {
       await commands.routes(input[1], flags.json ? "json" : "jsx");
       break;
-    case "build":
+    }
+    case "build": {
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "production";
       await commands.build(input[1], process.env.NODE_ENV, flags.sourcemap);
       break;
-    case "watch":
+    }
+    case "watch": {
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
       await commands.watch(input[1], process.env.NODE_ENV);
       break;
-    case "setup":
+    }
+    case "setup": {
       await commands.setup(input[1]);
       break;
+    }
     case "codemod": {
       await commands.codemod(input[1], input[2]);
       break;
     }
-    case "dev":
+    case "upgrade": {
+      let packageManager = getPreferredPackageManager();
+
+      if (flags.prerelease && flags.tag) {
+        throw new Error(
+          `Cannot set both --tag and --prerelease. Use --tag pre to get the latest prereleae`
+        );
+      }
+
+      let tag = flags.prerelease ? "pre" : flags.tag ? flags.tag : "latest";
+      await commands.upgrade({
+        tag: tag.startsWith("@") ? tag : `@${tag}`,
+        packageManager,
+        projectDir: process.cwd(),
+      });
+      break;
+    }
+    case "dev": {
       await dev(input[1], flags);
       break;
+    }
     default:
       // `remix ./my-project` is shorthand for `remix dev ./my-project`
       await dev(input[0], flags);

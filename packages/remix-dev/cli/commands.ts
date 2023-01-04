@@ -4,6 +4,7 @@ import * as fse from "fs-extra";
 import ora from "ora";
 import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
+import execa from "execa";
 
 import * as colors from "../colors";
 import * as compiler from "../compiler";
@@ -13,6 +14,7 @@ import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
 import { log } from "../logging";
 import { createApp } from "./create";
+import type { PackageManager } from "./getPreferredPackageManager";
 import { getPreferredPackageManager } from "./getPreferredPackageManager";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 import runCodemod from "../codemod";
@@ -233,4 +235,43 @@ export async function codemod(
     }
     throw error;
   }
+}
+
+export async function upgrade({
+  tag,
+  packageManager,
+  projectDir = process.cwd(),
+}: {
+  tag: string;
+  packageManager: PackageManager;
+  projectDir?: string;
+}) {
+  let options: execa.Options = {
+    cwd: projectDir,
+    encoding: "utf8",
+    stdio: "pipe",
+    shell: true,
+  };
+
+  let args = ["--target", tag, "--upgrade", "--packageManager", packageManager];
+
+  if (tag !== "latest") {
+    args.push("--removeRange");
+  }
+
+  let check = await execa(
+    "npx",
+    ["npm-check-updates@latest", "/remix-run/", ...args],
+    options
+  );
+
+  console.info(check.stdout);
+
+  let checkRemix = await execa(
+    "npx",
+    ["npm-check-updates@latest", "remix", ...args],
+    options
+  );
+
+  console.info(checkRemix.stdout);
 }
