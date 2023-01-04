@@ -83,13 +83,8 @@ export function flatRoutesUniversal(
 }
 
 function routeIdFromPath(relativePath: string) {
-  return (
-    relativePath
-      .split(".")
-      // remove file extension
-      .slice(0, -1)
-      .join(".")
-  );
+  let { dir, name } = path.parse(relativePath)
+  return path.join(dir, name)
 }
 
 function pathFromRouteId(routeId: string, parentId: string) {
