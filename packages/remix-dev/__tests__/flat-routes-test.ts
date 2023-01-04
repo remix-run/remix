@@ -228,15 +228,15 @@ describe("flatRoutes", () => {
         },
       ],
       // TODO: talk with @pcattori
-      // [
-      //   "routes/about.[*].tsx",
-      //   {
-      //     file: "routes/about.[*].tsx",
-      //     id: "routes/about.[*]",
-      //     parentId: "routes/about",
-      //     path: "*",
-      //   },
-      // ],
+      [
+        "routes/about.[*].tsx",
+        {
+          file: "routes/about.[*].tsx",
+          id: "routes/about.[*]",
+          parentId: "routes/about",
+          path: "*",
+        },
+      ],
       [
         "routes/about.[.[.*].].tsx",
         {

@@ -85,7 +85,6 @@ export function flatRoutesUniversal(
       // so until we can figure out a better way to do this
       // make it optional to unblock users
       let uniqueRouteId = (fullPath || "") + (index ? "?index" : "");
-      console.log(uniqueRouteId);
       if (uniqueRouteId) {
         let conflict = uniqueRoutes.get(uniqueRouteId);
         if (conflict) {
