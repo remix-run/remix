@@ -772,6 +772,8 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 
 Many common approaches to CSS within the React community are only possible when bundling CSS, meaning that the CSS files you write during development are collected into a separate bundle as part of the build process.
 
+When using CSS bundling features, the Remix compiler will generate a single CSS file containing all bundled styles in your application. Note that any [regular stylesheet imports](#regular-stylesheets) will remain as separate files.
+
 Unlike many other tools in the React ecosystem, we do not insert the CSS bundle into the page automatically. Instead, we ensure that you always have control over the link tags on your page. This lets you decide where the CSS file is loaded relative to other stylesheets in your app.
 
 To get access to the CSS bundle, first install the `@remix-run/css-bundle` package.
@@ -885,4 +887,5 @@ module.exports = {
 [tailwind]: https://tailwindcss.com
 [tailwind-intelli-sense-extension]: https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss
 [css modules]: https://github.com/css-modules/css-modules
+[regular-stylesheet-imports]: #regular-stylesheets
 [server-dependencies-to-bundle]: ../file-conventions/remix-config#serverdependenciestobundle
