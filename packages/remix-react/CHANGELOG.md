@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.10.0-pre.6
+
+### Patch Changes
+
+- Fix content type on proxied action request ([#4995](https://github.com/remix-run/remix/pull/4995))
+
 ## 1.10.0-pre.5
 
 ### Patch Changes
