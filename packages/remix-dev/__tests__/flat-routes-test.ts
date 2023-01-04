@@ -7,6 +7,8 @@ import {
 } from "../config/flat-routes";
 import type { ConfigRoute } from "../config/routes";
 
+let APP_DIR = path.join("test", "root", "app");
+
 describe("flatRoutes", () => {
   describe("should return the correct route hierarchy", () => {
     let files: [string, ConfigRoute][] = [
@@ -51,15 +53,6 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/_index.tsx",
-        {
-          file: "routes/_index.tsx",
-          id: "routes/_index",
-          index: true,
-          parentId: "root",
-        },
-      ],
-      [
         "routes/_landing.tsx",
         {
           file: "routes/_landing.tsx",
@@ -70,10 +63,10 @@ describe("flatRoutes", () => {
       [
         "routes/_landing._index.tsx",
         {
-          file: "routes/_index.tsx",
-          id: "routes/_index",
+          file: "routes/_landing._index.tsx",
+          id: "routes/_landing._index",
           index: true,
-          parentId: "root",
+          parentId: "routes/_landing",
         },
       ],
       [
@@ -97,10 +90,10 @@ describe("flatRoutes", () => {
       [
         "routes/about._index.tsx",
         {
-          file: "routes/_index.tsx",
-          id: "routes/_index",
+          file: "routes/about._index.tsx",
+          id: "routes/about._index",
           index: true,
-          parentId: "root",
+          parentId: "routes/about",
         },
       ],
       [
@@ -336,15 +329,6 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/($slug).tsx",
-        {
-          file: "routes/($slug).tsx",
-          id: "routes/($slug)",
-          parentId: "root",
-          path: ":slug?",
-        },
-      ],
-      [
         "routes/(nested)/($slug).tsx",
         {
           file: "routes/(nested)/($slug).tsx",
@@ -378,15 +362,6 @@ describe("flatRoutes", () => {
           id: "routes/_layout",
           parentId: "root",
           path: undefined,
-        },
-      ],
-      [
-        "routes/_layout/(test).tsx",
-        {
-          file: "routes/_layout/(test).tsx",
-          id: "routes/_layout/(test)",
-          parentId: "routes/_layout",
-          path: "test?",
         },
       ],
       [
@@ -533,10 +508,9 @@ describe("flatRoutes", () => {
       ],
     ];
 
-    let appDir = path.join("test", "root", "app");
     let routeManifest = flatRoutesUniversal(
-      appDir,
-      files.map(([file]) => path.join(appDir, file)),
+      APP_DIR,
+      files.map(([file]) => path.join(APP_DIR, file)),
       "routes"
     );
     let routes = Object.values(routeManifest);
@@ -551,23 +525,14 @@ describe("flatRoutes", () => {
   });
 
   test("should error when using `/` in a route segment", () => {
-    let files: [string, ConfigRoute][] = [
-      [
-        "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$.tsx",
-        {
-          file: "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$.tsx",
-          id: "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$",
-          parentId: "root",
-          path: ":$dollabills?/.lol?/what?/$?/*",
-        },
-      ],
+    let files: string[] = [
+      "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$.tsx",
     ];
 
-    let appDir = path.join("test", "root", "app");
     expect(() =>
       flatRoutesUniversal(
-        appDir,
-        files.map(([file]) => path.join(appDir, file)),
+        APP_DIR,
+        files.map((file) => path.join(APP_DIR, file)),
         "routes"
       )
     ).toThrowError(
