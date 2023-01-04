@@ -239,7 +239,7 @@ function getRouteSegments(routeId: string) {
   return routeSegments;
 }
 
-function splitBySegments(routeId: string) {
+export function splitBySegments(routeId: string) {
   // split by / and . to get the segments
   let segments = routeId.split(/[/.\\]/);
   let start = 0;

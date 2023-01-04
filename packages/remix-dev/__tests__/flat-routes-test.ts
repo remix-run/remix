@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { flatRoutesUniversal } from "../config/flat-routes";
+import { flatRoutesUniversal, splitBySegments } from "../config/flat-routes";
 import type { ConfigRoute } from "../config/routes";
 
 describe("flatRoutes", () => {
@@ -569,5 +569,22 @@ describe("flatRoutes", () => {
     ).toThrowError(
       `Route segment cannot contain a slash: .lol?/what? (in route routes/($[$dollabills]).([.]lol)[/](what)/([$]).$)`
     );
+  });
+
+  describe("splitBySegments", () => {
+    let tests: [string, string[], string[]][] = [
+      [
+        "routes/app_.projects.$id.roadmap[.pdf]",
+        ["routes", "app_", "projects", "$id", "roadmap[", "pdf]"],
+        ["/", ".", ".", ".", ".", ""],
+      ],
+      ["routes/_auth", ["routes", "_auth"], ["/", ""]],
+    ];
+
+    for (let [input, split, separators] of tests) {
+      test(`should split ${input} by separators`, () => {
+        expect(splitBySegments(input)).toEqual([split, separators]);
+      });
+    }
   });
 });
