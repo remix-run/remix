@@ -492,7 +492,7 @@ The answer to all of these questions is up to your bundler, _not you_. We think 
 
 **Note:** Remix does not currently support CSS processing directly. If you use preprocessors like Sass, Less, or PostCSS, you can run those as a separate process in development.
 
-We also do not yet support CSS Modules, as that requires compiler integration and current approaches are not aligned with our design philosophy. We are actively working on a solution and plan to have an API for CSS Modules very soon.
+We do process [CSS Modules][css-modules], but support is currently [opt-in behind a feature flag][css-modules].
 
 </docs-info>
 
@@ -642,4 +642,5 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [routing-in-remix]: ./routing
 [styling-in-remix]: ./styling
 [frequently-asked-questions]: ../pages/faq
-[common-gotchas]: ../pages/gotchas
+[common-gotchas]: ../pages/currently
+[css-modules]: ./styling#css-modules

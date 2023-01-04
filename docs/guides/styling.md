@@ -766,6 +766,73 @@ Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framewo
 
 NOTE: You may run into hydration warnings when using Styled Components. Hopefully [this issue][styled-components-issue] will be fixed soon.
 
+## CSS Modules
+
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+
+To enable [CSS Modules], set the `future.unstable_cssModules` feature flag in `remix.config.js`.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  future: {
+    unstable_cssModules: true,
+  },
+  // ...
+};
+```
+
+With this feature flag enabled, the Remix compiler will now generate a single CSS file containing all CSS Modules styles in your application. Note that any [regular stylesheet imports](#regular-stylesheets) will remain as separate files.
+
+Unlike many other tools in the React ecosystem, we do not insert the CSS bundle into the page automatically. Instead, we ensure that you always have control over the link tags on your page. This lets you decide where the CSS file is loaded relative to other stylesheets in your app.
+
+To get access to the CSS bundle, first install the `@remix-run/css-bundle` package.
+
+```sh
+npm install @remix-run/css-bundle
+```
+
+Then, import `cssBundleHref` and add it to a link descriptor—most likely in `root.tsx` so that it applies to your entire application.
+
+```tsx filename=root.tsx lines=[2,6]
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+import { cssBundleHref } from "@remix-run/css-bundle";
+
+export const links: LinksFunction = () => {
+  return [
+    { rel: "stylesheet", href: cssBundleHref },
+    // ...
+  ];
+};
+```
+
+You're all set! You can now opt into CSS Modules via the `.module.css` file name convention. For example:
+
+```css filename=app/components/button/styles.module.css
+.root {
+  border: solid 1px;
+  background: white;
+  color: #454545;
+}
+```
+
+```tsx filename=app/components/button/index.js lines=[1,9]
+import styles from "./styles.module.css";
+
+export const Button = React.forwardRef(
+  ({ children, ...props }, ref) => {
+    return (
+      <button
+        {...props}
+        ref={ref}
+        className={styles.root}
+      />
+    );
+  }
+);
+Button.displayName = "Button";
+```
+
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
 [link]: ../components/link
 [route-module-links]: ../route/links
@@ -774,3 +841,4 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 [styled-components-issue]: https://github.com/styled-components/styled-components/issues/3660
 [tailwind]: https://tailwindcss.com
 [tailwind-intelli-sense-extension]: https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss
+[css modules]: https://github.com/css-modules/css-modules
