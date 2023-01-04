@@ -78,6 +78,11 @@ describe("flatRoutes", () => {
       ["([index])", "/index?"],
       ["(test)/(inde[x])", "/test?/index?"],
       ["([i]ndex)/([[]).([[]])", "/index?/[?/[]?"],
+
+      // Opting out of parent layout
+      ["app_.projects/$id.roadmap", "/app/projects/:id/roadmap"],
+      ["app.projects_/$id.roadmap", "/app/projects/:id/roadmap"],
+      ["app_.projects_/$id.roadmap", "/app/projects/:id/roadmap"],
     ];
 
     for (let [input, expected] of tests) {
@@ -280,6 +285,46 @@ describe("flatRoutes", () => {
           id: "routes/app_.projects/$id.roadmap",
           parentId: "root",
           path: "app/projects/:id/roadmap",
+        },
+      ],
+
+      [
+        "routes/app.skip.tsx",
+        {
+          file: "routes/app.skip.tsx",
+          id: "routes/app.skip",
+          parentId: "routes/app",
+          path: "skip",
+        },
+      ],
+      [
+        "routes/app.skip_/layout.tsx",
+        {
+          file: "routes/app.skip_/layout.tsx",
+          id: "routes/app.skip_/layout",
+          index: undefined,
+          parentId: "routes/app",
+          path: "skip/layout",
+        },
+      ],
+
+      [
+        "routes/app.skipall.tsx",
+        {
+          file: "routes/app.skipall.tsx",
+          id: "routes/app.skipall",
+          parentId: "routes/app",
+          path: "skipall",
+        },
+      ],
+      [
+        "routes/app_.skipall_/_index.tsx",
+        {
+          file: "routes/app_.skipall_/_index.tsx",
+          id: "routes/app_.skipall_/_index",
+          index: true,
+          parentId: "root",
+          path: "app/skipall",
         },
       ],
 
