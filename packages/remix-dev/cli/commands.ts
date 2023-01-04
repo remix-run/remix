@@ -4,7 +4,7 @@ import * as fse from "fs-extra";
 import ora from "ora";
 import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
-import execa from "execa";
+import ncu from "npm-check-updates";
 
 import * as colors from "../colors";
 import * as compiler from "../compiler";
@@ -246,32 +246,33 @@ export async function upgrade({
   packageManager: PackageManager;
   projectDir?: string;
 }) {
-  let options: execa.Options = {
+  console.log(`Checking for @remix-run package updates for ${tag}...`);
+
+  let check = await ncu({
     cwd: projectDir,
-    encoding: "utf8",
-    stdio: "pipe",
-    shell: true,
-  };
+    target() {
+      return tag;
+    },
+    upgrade: true,
+    packageManager,
+    filter(name) {
+      return name.startsWith("@remix-run/") || name === "remix";
+    },
+    removeRange: tag !== "latest",
+  });
 
-  let args = ["--target", tag, "--upgrade", "--packageManager", packageManager];
+  if (check && Object.keys(check).length > 0) {
+    let newVersion = Object.values(check)[0];
 
-  if (tag !== "latest") {
-    args.push("--removeRange");
+    console.log(colors.gray(`Upgrading @remix-run packages to ${newVersion}`));
+
+    execSync(`${packageManager} install`, {
+      cwd: projectDir,
+      stdio: "ignore",
+    });
+
+    console.log(colors.blue(`Upgraded @remix-run packages to ${newVersion}`));
+  } else {
+    console.log(colors.blue(`All @remix-run packages are up to date`));
   }
-
-  let check = await execa(
-    "npx",
-    ["npm-check-updates@latest", "/remix-run/", ...args],
-    options
-  );
-
-  console.info(check.stdout);
-
-  let checkRemix = await execa(
-    "npx",
-    ["npm-check-updates@latest", "remix", ...args],
-    options
-  );
-
-  console.info(checkRemix.stdout);
 }
