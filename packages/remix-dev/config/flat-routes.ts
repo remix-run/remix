@@ -102,9 +102,7 @@ function pathFromRouteId(routeId: string, parentId: string) {
   let pathname = parentPath
     ? routePath.slice(parentPath.length + 1)
     : routePath;
-  if (pathname.endsWith("/_index")) {
-    pathname = pathname.replace(/_index$/, "");
-  }
+  pathname = pathname.replace(/_index$/, "");
   if (pathname.startsWith("/")) {
     pathname = pathname.substring(1);
   }
