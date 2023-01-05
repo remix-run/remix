@@ -1034,14 +1034,19 @@ test.describe("Default ErrorBoundary", () => {
         await page.waitForSelector("h1#index");
       });
 
-      test("renders default boundary on render errors", async ({ page }) => {
+      test("renders default boundary on render errors", async ({
+        page,
+      }, workerInfo) => {
         let app = new PlaywrightFixture(appFixture, page);
         await app.goto("/");
         await app.clickLink("/render-error");
         await page.waitForSelector("pre");
         let html = await app.getHtml();
         expect(html).toMatch("Application Error");
-        expect(html).toMatch("Render Error");
+        // Chromium seems to be the only one that includes the message in the stack
+        if (workerInfo.project.name === "chromium") {
+          expect(html).toMatch("Render Error");
+        }
         expect(html).not.toMatch("Root Error Boundary");
 
         // Ensure we can click back to our prior page
@@ -1156,14 +1161,16 @@ test.describe("Default ErrorBoundary", () => {
     test.describe("SPA navigations", () => {
       test("tries to render root boundary on loader errors but bubbles to default boundary", async ({
         page,
-      }) => {
+      }, workerInfo) => {
         let app = new PlaywrightFixture(appFixture, page);
         await app.goto("/");
         await app.clickLink("/loader-error");
         await page.waitForSelector("pre");
         let html = await app.getHtml();
         expect(html).toMatch("Application Error");
-        expect(html).toMatch("ReferenceError: oh is not defined");
+        if (workerInfo.project.name === "chromium") {
+          expect(html).toMatch("ReferenceError: oh is not defined");
+        }
         expect(html).not.toMatch("Loader Error");
         expect(html).not.toMatch("Root Error Boundary");
 
@@ -1174,14 +1181,16 @@ test.describe("Default ErrorBoundary", () => {
 
       test("tries to render root boundary on render errors but bubbles to default boundary", async ({
         page,
-      }) => {
+      }, workerInfo) => {
         let app = new PlaywrightFixture(appFixture, page);
         await app.goto("/");
         await app.clickLink("/render-error");
         await page.waitForSelector("pre");
         let html = await app.getHtml();
         expect(html).toMatch("Application Error");
-        expect(html).toMatch("ReferenceError: oh is not defined");
+        if (workerInfo.project.name === "chromium") {
+          expect(html).toMatch("ReferenceError: oh is not defined");
+        }
         expect(html).not.toMatch("Render Error");
         expect(html).not.toMatch("Root Error Boundary");
 
