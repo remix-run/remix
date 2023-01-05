@@ -338,15 +338,6 @@ describe("flatRoutes", () => {
           path: ".",
         },
       ],
-      // TODO: talk with @pcattori
-      // [
-      //   "routes/about.[*].tsx",
-      //   {
-      //     id: "routes/about.[*]",
-      //     parentId: "routes/about",
-      //     path: "*",
-      //   },
-      // ],
       [
         "routes/about.[.[.*].].tsx",
         {
@@ -570,10 +561,12 @@ describe("flatRoutes", () => {
       ],
     ];
 
-    let files = testFiles.map(([file, route]) => {
-      let filepath = file.split("/").join(path.sep);
-      return [filepath, { ...route, file: filepath }];
-    });
+    let files: [string, Omit<ConfigRoute, "file">][] = testFiles.map(
+      ([file, route]) => {
+        let filepath = file.split("/").join(path.sep);
+        return [filepath, { ...route, file: filepath }];
+      }
+    );
 
     let routeManifest = flatRoutesUniversal(
       APP_DIR,
@@ -603,5 +596,27 @@ describe("flatRoutes", () => {
     ).toThrowError(
       `Route segment cannot contain a slash: .lol?/what? (in route ($[$dollabills]).([.]lol)[/](what)/([$]).$)`
     );
+  });
+
+  test("should error when using `*` in an escaped route segment", () => {
+    let files: string[] = ["routes/about.[*].tsx"];
+
+    expect(() =>
+      flatRoutesUniversal(
+        APP_DIR,
+        files.map((file) => path.join(APP_DIR, file))
+      )
+    ).toThrowError("Escaped route segment cannot contain `*`");
+  });
+
+  test("should error when using `:` in an escaped route segment", () => {
+    let files: string[] = ["routes/about.[:name].tsx"];
+
+    expect(() =>
+      flatRoutesUniversal(
+        APP_DIR,
+        files.map((file) => path.join(APP_DIR, file))
+      )
+    ).toThrowError("Escaped route segment cannot contain `:`");
   });
 });

@@ -121,10 +121,13 @@ export function getRouteSegments(routeId: string) {
   let routeSegments: string[] = [];
   let index = 0;
   let routeSegment = "";
+  let rawRouteSegment = "";
   let state: State = "NORMAL";
   let pushRouteSegment = (routeSegment: string) => {
     if (!routeSegment) return;
-    if (routeSegment.includes("/")) {
+    console.log({ routeSegment, rawRouteSegment });
+
+    if (rawRouteSegment.includes("/")) {
       throw new Error(
         `Route segment cannot contain a slash: ${routeSegment} (in route ${routeId})`
       );
@@ -141,6 +144,7 @@ export function getRouteSegments(routeId: string) {
         if (isSegmentSeparator(char)) {
           pushRouteSegment(routeSegment);
           routeSegment = "";
+          rawRouteSegment = "";
           state = "NORMAL";
           break;
         }
@@ -155,25 +159,40 @@ export function getRouteSegments(routeId: string) {
         if (!routeSegment && char == paramPrefixChar) {
           if (index === routeId.length) {
             routeSegment += "*";
+            rawRouteSegment += char;
           } else {
             routeSegment += ":";
+            rawRouteSegment += char;
           }
           break;
         }
+
         routeSegment += char;
+        rawRouteSegment += char;
         break;
       }
       case "ESCAPE": {
         if (char === escapeEnd) {
+          console.log({ rawRouteSegment });
+
+          if (rawRouteSegment === "*") {
+            throw new Error("Escaped route segment cannot contain `*`");
+          }
+          if (rawRouteSegment.includes(":")) {
+            throw new Error("Escaped route segment cannot contain `:`");
+          }
           state = "NORMAL";
           break;
         }
+
         routeSegment += char;
+        rawRouteSegment += char;
         break;
       }
       case "OPTIONAL": {
         if (char === optionalEnd) {
           routeSegment += "?";
+          rawRouteSegment += "?";
           state = "NORMAL";
           break;
         }
@@ -186,13 +205,16 @@ export function getRouteSegments(routeId: string) {
         if (!routeSegment && char === paramPrefixChar) {
           if (index === routeId.length) {
             routeSegment += "*";
+            rawRouteSegment += char;
           } else {
             routeSegment += ":";
+            rawRouteSegment += char;
           }
           break;
         }
 
         routeSegment += char;
+        rawRouteSegment += char;
         break;
       }
       case "OPTIONAL_ESCAPE": {
@@ -200,7 +222,9 @@ export function getRouteSegments(routeId: string) {
           state = "OPTIONAL";
           break;
         }
+
         routeSegment += char;
+        rawRouteSegment += char;
         break;
       }
     }
