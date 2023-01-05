@@ -107,13 +107,27 @@ function isIndexRoute(routeId: string) {
   return routeId.endsWith("_index");
 }
 
-type SubState = "NORMAL" | "ESCAPE" | "OPTIONAL" | "OPTIONAL_ESCAPE";
+type State =
+  | // we hit a segment separator, push route segment if we have one and start a new one
+  "START"
+  // we are in a path segment
+  | "PATH";
+
+type SubState =
+  | // normal path segment normal character concatenation until we hit a special character or the end of the segment (i.e. `/`, `.`, '\')
+  "NORMAL"
+  // we hit a `[` and are now in an escape sequence until we hit a `]` - take characters literally and skip isSegmentSeparator checks
+  | "ESCAPE"
+  // we hit a `(` and are now in an optional segment until we hit a `)` or an escape sequence
+  | "OPTIONAL"
+  // we previously were in a optional segment and hit a `[` and are now in an escape sequence until we hit a `]` - take characters literally and skip isSegmentSeparator checks - afterwards go back to OPTIONAL state
+  | "OPTIONAL_ESCAPE";
 
 export function getRouteSegments(routeId: string) {
   let routeSegments: string[] = [];
   let index = 0;
   let routeSegment = "";
-  let state: "START" | "PATH" = "START";
+  let state: State = "START";
   let subState: SubState = "NORMAL";
   let pushRouteSegment = (routeSegment: string) => {
     if (routeSegment) {
