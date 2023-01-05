@@ -269,7 +269,7 @@ export async function upgrade({
 
     execSync(`${packageManager} install`, {
       cwd: projectDir,
-      stdio: "ignore",
+      stdio: "inherit",
     });
 
     console.log(colors.blue(`Upgraded @remix-run packages to ${newVersion}`));
