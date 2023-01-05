@@ -125,7 +125,6 @@ export function getRouteSegments(routeId: string) {
   let state: State = "NORMAL";
   let pushRouteSegment = (routeSegment: string) => {
     if (!routeSegment) return;
-    console.log({ routeSegment, rawRouteSegment });
 
     if (rawRouteSegment.includes("/")) {
       throw new Error(
@@ -173,8 +172,6 @@ export function getRouteSegments(routeId: string) {
       }
       case "ESCAPE": {
         if (char === escapeEnd) {
-          console.log({ rawRouteSegment });
-
           if (rawRouteSegment === "*") {
             throw new Error("Escaped route segment cannot contain `*`");
           }
