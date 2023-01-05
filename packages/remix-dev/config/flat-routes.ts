@@ -73,9 +73,8 @@ export function flatRoutesUniversal(
               childRoute.id
             )} conflicts with route ${JSON.stringify(conflict)}`
           );
-        } else {
-          uniqueRoutes.set(uniqueRouteId, childRoute.id);
         }
+        uniqueRoutes.set(uniqueRouteId, childRoute.id);
       }
       if (index) {
         let invalidChildRoutes = Object.values(routeMap).filter(
