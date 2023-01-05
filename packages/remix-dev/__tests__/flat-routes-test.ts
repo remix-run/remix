@@ -92,15 +92,46 @@ describe("flatRoutes", () => {
       });
     }
 
-    let invalidRoutes = [
+    let invalidSlashFiles = [
       "($[$dollabills]).([.]lol)[/](what)/([$]).$",
       "$[$dollabills].[.]lol[/]what/[$].$",
     ];
 
-    for (let invalid of invalidRoutes) {
-      expect(() => getRouteSegments(invalid)).toThrow(
-        "Route segment cannot contain a slash"
-      );
+    for (let invalid of invalidSlashFiles) {
+      test("should error when using `/` in a route segment", () => {
+        let regex = new RegExp(
+          /Route segment (".*?") for (".*?") cannot contain "\/"/
+        );
+        expect(() => getRouteSegments(invalid)).toThrow(regex);
+      });
+    }
+
+    let invalidSplatFiles: string[] = [
+      "routes/about.[*].tsx",
+      "routes/about.*.tsx",
+    ];
+
+    for (let invalid of invalidSplatFiles) {
+      test("should error when using `*` in a route segment", () => {
+        let regex = new RegExp(
+          /Route segment (".*?") for (".*?") cannot contain "\*"/
+        );
+        expect(() => getRouteSegments(invalid)).toThrow(regex);
+      });
+    }
+
+    let invalidParamFiles: string[] = [
+      "routes/about.[:name].tsx",
+      "routes/about.:name.tsx",
+    ];
+
+    for (let invalid of invalidParamFiles) {
+      test("should error when using `:` in a route segment", () => {
+        let regex = new RegExp(
+          /Route segment (".*?") for (".*?") cannot contain ":"/
+        );
+        expect(() => getRouteSegments(invalid)).toThrow(regex);
+      });
     }
   });
 
@@ -582,46 +613,4 @@ describe("flatRoutes", () => {
       });
     }
   });
-
-  let invalidSlashFiles: string[] = [
-    "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$.tsx",
-  ];
-
-  for (let file of invalidSlashFiles) {
-    test("should error when using `/` in a route segment", () => {
-      expect(() =>
-        flatRoutesUniversal(APP_DIR, [path.join(APP_DIR, file)])
-      ).toThrowError(`Route segment cannot contain a slash`);
-    });
-  }
-
-  let invalidSplatFiles: string[] = [
-    "routes/about.[*].tsx",
-    "routes/about.*.tsx",
-  ];
-
-  for (let file of invalidSplatFiles) {
-    test("should error when using `*` in a route segment", () => {
-      expect(() =>
-        flatRoutesUniversal(APP_DIR, [path.join(APP_DIR, file)])
-      ).toThrowError(
-        `Route segment for "${path.parse(file).name}" cannot contain "*"`
-      );
-    });
-  }
-
-  let invalidParamFiles: string[] = [
-    "routes/about.[:name].tsx",
-    "routes/about.:name.tsx",
-  ];
-
-  for (let file of invalidParamFiles) {
-    test("should error when using `:` in a route segment", () => {
-      expect(() =>
-        flatRoutesUniversal(APP_DIR, [path.join(APP_DIR, file)])
-      ).toThrowError(
-        `Route segment for "${path.parse(file).name}" cannot contain ":"`
-      );
-    });
-  }
 });

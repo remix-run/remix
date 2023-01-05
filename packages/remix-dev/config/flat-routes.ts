@@ -127,16 +127,20 @@ export function getRouteSegments(routeId: string) {
     if (!routeSegment) return;
 
     if (rawRouteSegment === "*") {
-      throw new Error(`Route segment for "${routeId}" cannot contain "*"`);
+      throw new Error(
+        `Route segment "${rawRouteSegment}" for "${routeId}" cannot contain "*"`
+      );
     }
 
     if (rawRouteSegment.includes(":")) {
-      throw new Error(`Route segment for "${routeId}" cannot contain ":"`);
+      throw new Error(
+        `Route segment "${rawRouteSegment}" for "${routeId}" cannot contain ":"`
+      );
     }
 
     if (rawRouteSegment.includes("/")) {
       throw new Error(
-        `Route segment cannot contain a slash: ${routeSegment} (in route ${routeId})`
+        `Route segment "${routeSegment}" for "${routeId}" cannot contain "/"`
       );
     }
     routeSegments.push(routeSegment);
