@@ -122,6 +122,9 @@ describe("remix CLI", () => {
           \`codemod\` Options:
             --dry               Dry run (no changes are made to files)
             --force             Bypass Git safety checks
+          \`upgrade\` Options:
+            --prerelease        Upgrade to the latest prerelease version
+            --tag               Upgrade to a specific tag (e.g. \`nightly\`)
 
           Values:
             - projectDir        The Remix project directory
@@ -182,7 +185,12 @@ describe("remix CLI", () => {
 
             $ remix routes
             $ remix routes my-app
-            $ remix routes --json"
+            $ remix routes --json
+
+          Upgrade your Remix packages to the latest version
+            $ remix upgrade
+            $ remix upgrade --prerelease
+            $ remix upgrade --tag nightly"
       `);
     });
   });
