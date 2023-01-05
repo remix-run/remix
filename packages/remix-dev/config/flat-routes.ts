@@ -58,11 +58,9 @@ export function flatRoutesUniversal(
     let parentRoute = parentId ? routeMap.get(parentId) : undefined;
     let parentRoutePath = parentRoute?.path ?? "/";
     for (let childRoute of childRoutes) {
-      let routePath = childRoute?.path?.slice(parentRoutePath.length) ?? "";
+      let routePath = childRoute.path?.slice(parentRoutePath.length) ?? "";
       // remove leading slash
-      if (routePath.startsWith("/")) {
-        routePath = routePath.slice(1);
-      }
+      routePath = routePath.replace(/^\//, "");
       let index = childRoute.index;
       let fullPath = childRoute.path;
 
