@@ -126,7 +126,7 @@ export function getRouteSegments(routeId: string) {
   let pushRouteSegment = (routeSegment: string) => {
     if (!routeSegment) return;
 
-    if (rawRouteSegment === "*") {
+    if (rawRouteSegment.includes("*")) {
       throw new Error(
         `Route segment "${rawRouteSegment}" for "${routeId}" cannot contain "*"`
       );
