@@ -54,7 +54,7 @@ export function flatRoutesUniversal(
   }
 
   // update parentIds for all routes
-  Array.from(routeMap.values()).forEach((routeInfo) => {
+  for (let routeInfo of routeMap.values()) {
     let parentId = findParentRouteId(routeInfo, nameMap);
     routeInfo.parentId = parentId;
   });
