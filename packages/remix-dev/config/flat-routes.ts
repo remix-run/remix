@@ -44,20 +44,7 @@ export function flatRoutesUniversal(
   routePaths: string[],
   prefix: string = "routes"
 ): RouteManifest {
-  let routeMap = new Map<string, RouteInfo>();
-  let nameMap = new Map<string, RouteInfo>();
-
-  for (let routePath of routePaths) {
-    let routeInfo = getRouteInfo(appDirectory, prefix, routePath);
-    routeMap.set(routeInfo.id, routeInfo);
-    nameMap.set(routeInfo.name, routeInfo);
-  }
-
-  // update parentIds for all routes
-  for (let routeInfo of routeMap.values()) {
-    let parentId = findParentRouteId(routeInfo, nameMap);
-    routeInfo.parentId = parentId;
-  }
+  let routeMap = getRouteMap(appDirectory, routePaths, prefix);
 
   let uniqueRoutes = new Map<string, string>();
 
@@ -292,4 +279,27 @@ export function createRoutePath(routeSegments: string[]) {
   }
 
   return result || undefined;
+}
+
+function getRouteMap(
+  appDirectory: string,
+  routePaths: string[],
+  prefix: string = "routes"
+) {
+  let routeMap = new Map<string, RouteInfo>();
+  let nameMap = new Map<string, RouteInfo>();
+
+  for (let routePath of routePaths) {
+    let routeInfo = getRouteInfo(appDirectory, prefix, routePath);
+    routeMap.set(routeInfo.id, routeInfo);
+    nameMap.set(routeInfo.name, routeInfo);
+  }
+
+  // update parentIds for all routes
+  for (let routeInfo of routeMap.values()) {
+    let parentId = findParentRouteId(routeInfo, nameMap);
+    routeInfo.parentId = parentId;
+  }
+
+  return routeMap;
 }
