@@ -256,7 +256,8 @@ export async function upgrade({
     upgrade: true,
     packageManager,
     filter(name) {
-      return name.startsWith("@remix-run/") || name === "remix" && name !== "@remix-run/router";
+      if (name === "@remix-run/router") return false;
+      return name.startsWith("@remix-run/") || name === "remix";
     },
     removeRange: tag !== "latest",
   });
