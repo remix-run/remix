@@ -4,7 +4,7 @@ import * as fse from "fs-extra";
 import ora from "ora";
 import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
-import ncu from "npm-check-updates";
+import execa from "execa";
 
 import * as colors from "../colors";
 import * as compiler from "../compiler";
@@ -14,12 +14,12 @@ import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
 import { log } from "../logging";
 import { createApp } from "./create";
-import type { PackageManager } from "./getPreferredPackageManager";
 import { getPreferredPackageManager } from "./getPreferredPackageManager";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 import runCodemod from "../codemod";
 import { CodemodError } from "../codemod/utils/error";
 import { TaskError } from "../codemod/utils/task";
+import type { PackageManager } from "./getPreferredPackageManager";
 
 export async function create({
   appTemplate,
@@ -246,34 +246,33 @@ export async function upgrade({
   packageManager: PackageManager;
   projectDir?: string;
 }) {
-  console.log(`Checking for @remix-run package updates for ${tag}...`);
+  console.log(`💿 Checking for latest versions of '@remix-run/*'`);
 
-  let check = await ncu({
-    cwd: projectDir,
-    target() {
-      return tag;
-    },
-    upgrade: true,
+  let args = [
+    "--upgrade",
+    "--target",
+    tag,
+    "--packageManager",
     packageManager,
-    filter(name) {
-      if (name === "@remix-run/router") return false;
-      return name.startsWith("@remix-run/") || name === "remix";
-    },
-    removeRange: tag !== "latest",
+    "--filter",
+    "/@remix-run/",
+    "--reject",
+    "@remix-run/router",
+    "--filter",
+    "/remix/",
+  ];
+
+  if (tag !== "latest") {
+    args.push("--removeRange");
+  }
+
+  await execa("npx", ["npm-check-updates@latest", ...args], {
+    cwd: projectDir,
+    stdio: "inherit",
   });
 
-  if (check && Object.keys(check).length > 0) {
-    let newVersion = Object.values(check)[0];
-
-    console.log(colors.gray(`Upgrading @remix-run packages to ${newVersion}`));
-
-    execSync(`${packageManager} install`, {
-      cwd: projectDir,
-      stdio: "inherit",
-    });
-
-    console.log(colors.blue(`Upgraded @remix-run packages to ${newVersion}`));
-  } else {
-    console.log(colors.blue(`All @remix-run packages are up to date`));
-  }
+  await execa(packageManager, ["install"], {
+    cwd: projectDir,
+    stdio: "inherit",
+  });
 }

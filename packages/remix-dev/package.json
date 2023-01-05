@@ -52,7 +52,6 @@
     "lru-cache": "^7.14.1",
     "minimatch": "^3.0.4",
     "node-fetch": "^2.6.7",
-    "npm-check-updates": "16.6.2",
     "ora": "^5.4.1",
     "postcss": "^8.4.19",
     "postcss-discard-duplicates": "^5.1.0",
