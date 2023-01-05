@@ -64,11 +64,6 @@ export function flatRoutesUniversal(
       let index = childRoute.index;
       let fullPath = childRoute.path;
 
-      // add option to check for unique route ids
-      // this is copied from remix default convention
-      // but it is currently breaking some flat routes
-      // so until we can figure out a better way to do this
-      // make it optional to unblock users
       let uniqueRouteId = (fullPath || "") + (index ? "?index" : "");
       if (uniqueRouteId) {
         let conflict = uniqueRoutes.get(uniqueRouteId);
