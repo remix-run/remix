@@ -106,12 +106,6 @@ export function flatRoutesUniversal(
 
   let routes = defineRoutes(defineNestedRoutes);
 
-  Object.values(routes).forEach((route) => {
-    if (route.parentId === undefined) {
-      route.parentId = "root";
-    }
-  });
-
   return routes;
 }
 
