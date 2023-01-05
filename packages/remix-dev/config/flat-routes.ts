@@ -57,7 +57,7 @@ export function flatRoutesUniversal(
   for (let routeInfo of routeMap.values()) {
     let parentId = findParentRouteId(routeInfo, nameMap);
     routeInfo.parentId = parentId;
-  });
+  }
 
   let uniqueRoutes = new Map<string, string>();
 
