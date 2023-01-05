@@ -130,14 +130,13 @@ export function getRouteSegments(routeId: string) {
   let state: State = "START";
   let subState: SubState = "NORMAL";
   let pushRouteSegment = (routeSegment: string) => {
-    if (routeSegment) {
-      if (routeSegment.includes("/")) {
-        throw new Error(
-          `Route segment cannot contain a slash: ${routeSegment} (in route ${routeId})`
-        );
-      }
-      routeSegments.push(routeSegment);
+    if (!routeSegment) return
+    if (routeSegment.includes("/")) {
+      throw new Error(
+        `Route segment cannot contain a slash: ${routeSegment} (in route ${routeId})`
+      );
     }
+    routeSegments.push(routeSegment);
   };
 
   while (index < routeId.length) {
