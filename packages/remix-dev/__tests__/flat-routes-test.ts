@@ -583,42 +583,45 @@ describe("flatRoutes", () => {
     }
   });
 
-  test("should error when using `/` in a route segment", () => {
-    let files: string[] = [
-      "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$.tsx",
-    ];
+  let invalidSlashFiles: string[] = [
+    "routes/($[$dollabills]).([.]lol)[/](what)/([$]).$.tsx",
+  ];
 
-    expect(() =>
-      flatRoutesUniversal(
-        APP_DIR,
-        files.map((file) => path.join(APP_DIR, file))
-      )
-    ).toThrowError(
-      `Route segment cannot contain a slash: .lol?/what? (in route ($[$dollabills]).([.]lol)[/](what)/([$]).$)`
-    );
-  });
+  for (let file of invalidSlashFiles) {
+    test("should error when using `/` in a route segment", () => {
+      expect(() =>
+        flatRoutesUniversal(APP_DIR, [path.join(APP_DIR, file)])
+      ).toThrowError(`Route segment cannot contain a slash`);
+    });
+  }
 
-  test("should error when using `*` in an escaped route segment", () => {
-    let files: string[] = ["routes/about.[*].tsx"];
+  let invalidSplatFiles: string[] = [
+    "routes/about.[*].tsx",
+    "routes/about.*.tsx",
+  ];
 
-    expect(() =>
-      flatRoutesUniversal(
-        APP_DIR,
-        files.map((file) => path.join(APP_DIR, file))
-      )
-    ).toThrowError(`Escaped route segment for "about.[*]" cannot contain "*"`);
-  });
+  for (let file of invalidSplatFiles) {
+    test("should error when using `*` in a route segment", () => {
+      expect(() =>
+        flatRoutesUniversal(APP_DIR, [path.join(APP_DIR, file)])
+      ).toThrowError(
+        `Route segment for "${path.parse(file).name}" cannot contain "*"`
+      );
+    });
+  }
 
-  test("should error when using `:` in an escaped route segment", () => {
-    let files: string[] = ["routes/about.[:name].tsx"];
+  let invalidParamFiles: string[] = [
+    "routes/about.[:name].tsx",
+    "routes/about.:name.tsx",
+  ];
 
-    expect(() =>
-      flatRoutesUniversal(
-        APP_DIR,
-        files.map((file) => path.join(APP_DIR, file))
-      )
-    ).toThrowError(
-      `Escaped route segment for "about.[:name]" cannot contain ":"`
-    );
-  });
+  for (let file of invalidParamFiles) {
+    test("should error when using `:` in a route segment", () => {
+      expect(() =>
+        flatRoutesUniversal(APP_DIR, [path.join(APP_DIR, file)])
+      ).toThrowError(
+        `Route segment for "${path.parse(file).name}" cannot contain ":"`
+      );
+    });
+  }
 });

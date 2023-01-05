@@ -126,6 +126,14 @@ export function getRouteSegments(routeId: string) {
   let pushRouteSegment = (routeSegment: string) => {
     if (!routeSegment) return;
 
+    if (rawRouteSegment === "*") {
+      throw new Error(`Route segment for "${routeId}" cannot contain "*"`);
+    }
+
+    if (rawRouteSegment.includes(":")) {
+      throw new Error(`Route segment for "${routeId}" cannot contain ":"`);
+    }
+
     if (rawRouteSegment.includes("/")) {
       throw new Error(
         `Route segment cannot contain a slash: ${routeSegment} (in route ${routeId})`
@@ -172,16 +180,6 @@ export function getRouteSegments(routeId: string) {
       }
       case "ESCAPE": {
         if (char === escapeEnd) {
-          if (rawRouteSegment === "*") {
-            throw new Error(
-              `Escaped route segment for "${routeId}" cannot contain "*"`
-            );
-          }
-          if (rawRouteSegment.includes(":")) {
-            throw new Error(
-              `Escaped route segment for "${routeId}" cannot contain ":"`
-            );
-          }
           state = "NORMAL";
           break;
         }
