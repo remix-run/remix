@@ -606,7 +606,7 @@ describe("flatRoutes", () => {
         APP_DIR,
         files.map((file) => path.join(APP_DIR, file))
       )
-    ).toThrowError("Escaped route segment cannot contain `*`");
+    ).toThrowError(`Escaped route segment for "about.[*]" cannot contain "*"`);
   });
 
   test("should error when using `:` in an escaped route segment", () => {
@@ -617,6 +617,8 @@ describe("flatRoutes", () => {
         APP_DIR,
         files.map((file) => path.join(APP_DIR, file))
       )
-    ).toThrowError("Escaped route segment cannot contain `:`");
+    ).toThrowError(
+      `Escaped route segment for "about.[:name]" cannot contain ":"`
+    );
   });
 });

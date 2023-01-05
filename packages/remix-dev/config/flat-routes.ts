@@ -173,10 +173,14 @@ export function getRouteSegments(routeId: string) {
       case "ESCAPE": {
         if (char === escapeEnd) {
           if (rawRouteSegment === "*") {
-            throw new Error("Escaped route segment cannot contain `*`");
+            throw new Error(
+              `Escaped route segment for "${routeId}" cannot contain "*"`
+            );
           }
           if (rawRouteSegment.includes(":")) {
-            throw new Error("Escaped route segment cannot contain `:`");
+            throw new Error(
+              `Escaped route segment for "${routeId}" cannot contain ":"`
+            );
           }
           state = "NORMAL";
           break;
