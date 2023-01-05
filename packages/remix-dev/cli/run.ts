@@ -499,7 +499,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
 
       if (flags.prerelease && flags.tag) {
         throw new Error(
-          `Cannot set both --tag and --prerelease. Use --tag pre to get the latest prereleae`
+          `Cannot set both --tag and --prerelease. Use --tag pre to get the latest prerelease`
         );
       }
 
