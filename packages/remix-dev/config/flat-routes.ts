@@ -108,12 +108,6 @@ function isIndexRoute(routeId: string) {
 }
 
 type State =
-  | // we hit a segment separator, push route segment if we have one and start a new one
-  "START"
-  // we are in a path segment
-  | "PATH";
-
-type SubState =
   | // normal path segment normal character concatenation until we hit a special character or the end of the segment (i.e. `/`, `.`, '\')
   "NORMAL"
   // we hit a `[` and are now in an escape sequence until we hit a `]` - take characters literally and skip isSegmentSeparator checks
@@ -127,10 +121,9 @@ export function getRouteSegments(routeId: string) {
   let routeSegments: string[] = [];
   let index = 0;
   let routeSegment = "";
-  let state: State = "START";
-  let subState: SubState = "NORMAL";
+  let state: State = "NORMAL";
   let pushRouteSegment = (routeSegment: string) => {
-    if (!routeSegment) return
+    if (!routeSegment) return;
     if (routeSegment.includes("/")) {
       throw new Error(
         `Route segment cannot contain a slash: ${routeSegment} (in route ${routeId})`
@@ -143,79 +136,72 @@ export function getRouteSegments(routeId: string) {
     let char = routeId[index];
     index++; //advance to next char
 
-    if (state == "START") {
-      // process existing segment
-      pushRouteSegment(routeSegment);
-      routeSegment = "";
-      state = "PATH";
-      subState = "NORMAL";
-    }
-    if (state == "PATH") {
-      switch (subState) {
-        case "NORMAL": {
-          if (isSegmentSeparator(char)) {
-            state = "START";
-            break;
-          }
-          if (char === escapeStart) {
-            subState = "ESCAPE";
-            break;
-          }
-          if (char === optionalStart) {
-            subState = "OPTIONAL";
-            break;
-          }
-          if (!routeSegment && char == paramPrefixChar) {
-            if (index === routeId.length) {
-              routeSegment += "*";
-            } else {
-              routeSegment += ":";
-            }
-            break;
-          }
-          routeSegment += char;
+    switch (state) {
+      case "NORMAL": {
+        if (isSegmentSeparator(char)) {
+          pushRouteSegment(routeSegment);
+          routeSegment = "";
+          state = "NORMAL";
           break;
         }
-        case "ESCAPE": {
-          if (char === escapeEnd) {
-            subState = "NORMAL";
-            break;
-          }
-          routeSegment += char;
+        if (char === escapeStart) {
+          state = "ESCAPE";
           break;
         }
-        case "OPTIONAL": {
-          if (char === optionalEnd) {
-            routeSegment += "?";
-            subState = "NORMAL";
-            break;
+        if (char === optionalStart) {
+          state = "OPTIONAL";
+          break;
+        }
+        if (!routeSegment && char == paramPrefixChar) {
+          if (index === routeId.length) {
+            routeSegment += "*";
+          } else {
+            routeSegment += ":";
           }
+          break;
+        }
+        routeSegment += char;
+        break;
+      }
+      case "ESCAPE": {
+        if (char === escapeEnd) {
+          state = "NORMAL";
+          break;
+        }
+        routeSegment += char;
+        break;
+      }
+      case "OPTIONAL": {
+        if (char === optionalEnd) {
+          routeSegment += "?";
+          state = "NORMAL";
+          break;
+        }
 
-          if (char === escapeStart) {
-            subState = "OPTIONAL_ESCAPE";
-            break;
-          }
-
-          if (!routeSegment && char === paramPrefixChar) {
-            if (index === routeId.length) {
-              routeSegment += "*";
-            } else {
-              routeSegment += ":";
-            }
-            break;
-          }
-
-          routeSegment += char;
+        if (char === escapeStart) {
+          state = "OPTIONAL_ESCAPE";
           break;
         }
-        case "OPTIONAL_ESCAPE": {
-          if (char === escapeEnd) {
-            subState = "OPTIONAL";
-            break;
+
+        if (!routeSegment && char === paramPrefixChar) {
+          if (index === routeId.length) {
+            routeSegment += "*";
+          } else {
+            routeSegment += ":";
           }
-          routeSegment += char;
           break;
         }
+
+        routeSegment += char;
+        break;
+      }
+      case "OPTIONAL_ESCAPE": {
+        if (char === escapeEnd) {
+          state = "OPTIONAL";
+          break;
+        }
+        routeSegment += char;
+        break;
       }
     }
   }
