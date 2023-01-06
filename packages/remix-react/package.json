@@ -17,7 +17,8 @@
   "module": "dist/esm/index.js",
   "dependencies": {
     "@remix-run/router": "1.2.1",
-    "react-router-dom": "6.6.2-pre.0"
+    "react-router-dom": "6.6.2-pre.0",
+    "use-sync-external-store": "1.2.0"
   },
   "devDependencies": {
     "@remix-run/server-runtime": "1.10.0-pre.6",
