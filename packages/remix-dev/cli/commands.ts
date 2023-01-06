@@ -4,6 +4,7 @@ import * as fse from "fs-extra";
 import ora from "ora";
 import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
+import NPMCliPackageJson from "@npmcli/package-json";
 
 import * as colors from "../colors";
 import * as compiler from "../compiler";
@@ -290,12 +291,13 @@ export async function generateEntry(remixRoot: string, entry: string) {
   let entryType = entry.startsWith("entry.client.") ? "client" : "server";
   let inputFile =
     entryType === "client" ? defaultEntryClient : defaultEntryServer;
+  let outputFile = path.resolve(remixRoot, "app", entry);
 
-  let outputFile: string = "";
   let entriesToCheck = entryType === "client" ? clientEntries : serverEntries;
   for (let entryToCheck of entriesToCheck) {
-    outputFile = path.resolve(remixRoot, "app", entryToCheck);
-    let entryExists = await fse.pathExists(outputFile);
+    let entryExists = await fse.pathExists(
+      path.resolve(remixRoot, "app", entryToCheck)
+    );
     if (entryExists) {
       console.log(
         colors.gray(
@@ -306,16 +308,36 @@ export async function generateEntry(remixRoot: string, entry: string) {
     }
   }
 
+  let contents: string | undefined;
+
+  // 3. if server entry, update runtime import
+  if (entryType === "server") {
+    contents = await fse.readFile(inputFile, "utf-8");
+
+    let pkgJson = await NPMCliPackageJson.load(remixRoot);
+    let deps = pkgJson.content.dependencies ?? {};
+
+    if (deps["@remix-run/node"]) {
+      // we good
+    } else if (deps["@remix-run/cloudflare"]) {
+      contents = contents.replace(/@remix-run\/node/g, "@remix-run/cloudflare");
+    } else if (deps["@remix-run/deno"]) {
+      contents = contents.replace(/@remix-run\/node/g, "@remix-run/deno");
+    }
+  }
+
   // 3. if entry is js/jsx, convert to js
   // otherwise, copy the entry file from the defaults
   if (/\.jsx?$/.test(entry)) {
-    let contents = await fse.readFile(inputFile, "utf-8");
+    contents = contents ||= await fse.readFile(inputFile, "utf-8");
     let javascript = convertTSFileToJS({
       filename: inputFile,
       projectDir: remixRoot,
       source: contents,
     });
     await fse.writeFile(outputFile, javascript, "utf-8");
+  } else if (contents) {
+    await fse.writeFile(outputFile, contents, "utf-8");
   } else {
     await fse.copyFile(inputFile, outputFile);
   }
