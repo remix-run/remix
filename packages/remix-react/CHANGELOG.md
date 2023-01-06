@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.10.0-pre.7
+
+### Patch Changes
+
+- Add outer ErrorBoundary to catch root ErrorBoundary thrown errors ([#5012](https://github.com/remix-run/remix/pull/5012))
+
 ## 1.10.0-pre.6
 
 ### Patch Changes
