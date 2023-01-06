@@ -55,7 +55,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
 
   // We need to include a wrapper RemixErrorBoundary here in case the root error
   // boundary also throws and we need to bubble up outside of the router entirely.
-  // Then we need a stateful location here so the user can back0-button navigate
+  // Then we need a stateful location here so the user can back-button navigate
   // out of there
   let location: Location = useSyncExternalStore(
     router.subscribe,
