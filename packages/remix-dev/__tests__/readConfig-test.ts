@@ -25,6 +25,7 @@ describe("readConfig", () => {
         future: {
           unstable_cssModules: expect.any(Boolean),
           unstable_cssSideEffectImports: expect.any(Boolean),
+          unstable_vanillaExtract: expect.any(Boolean),
           v2_meta: expect.any(Boolean),
         },
       },
@@ -40,6 +41,7 @@ describe("readConfig", () => {
         "future": Object {
           "unstable_cssModules": Any<Boolean>,
           "unstable_cssSideEffectImports": Any<Boolean>,
+          "unstable_vanillaExtract": Any<Boolean>,
           "v2_meta": Any<Boolean>,
         },
         "mdx": undefined,

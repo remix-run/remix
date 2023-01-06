@@ -158,6 +158,7 @@ function createRemixContext(
     future: {
       unstable_cssModules: false,
       unstable_cssSideEffectImports: false,
+      unstable_vanillaExtract: false,
       v2_meta: false,
       ...future,
     },

@@ -5,4 +5,4 @@
 "@remix-run/testing": minor
 ---
 
-Add unstable support for CSS side-effect imports via `future.unstable_cssSideEffectImports` feature flag
+Add unstable support for CSS side-effect imports via the `future.unstable_cssSideEffectImports` feature flag

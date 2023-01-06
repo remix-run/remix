@@ -6,4 +6,4 @@
 "@remix-run/testing": minor
 ---
 
-Add unstable support for CSS Modules via `future.unstable_cssModules` feature flag
+Add unstable support for CSS Modules via the `future.unstable_cssModules` feature flag
