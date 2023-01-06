@@ -329,7 +329,7 @@ export async function generateEntry(remixRoot: string, entry: string) {
   // 3. if entry is js/jsx, convert to js
   // otherwise, copy the entry file from the defaults
   if (/\.jsx?$/.test(entry)) {
-    contents = contents ||= await fse.readFile(inputFile, "utf-8");
+    contents ||= await fse.readFile(inputFile, "utf-8");
     let javascript = convertTSFileToJS({
       filename: inputFile,
       projectDir: remixRoot,
