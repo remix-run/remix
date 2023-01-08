@@ -45,6 +45,8 @@ test.describe("Vanilla Extract", () => {
         `,
         ...typeScriptFixture(),
         ...javaScriptFixture(),
+        ...classCompositionFixture(),
+        ...rootRelativeClassCompositionFixture(),
         ...imageUrlsViaCssUrlFixture(),
         ...imageUrlsViaRootRelativeCssUrlFixture(),
         ...imageUrlsViaJsImportFixture(),
@@ -116,6 +118,86 @@ test.describe("Vanilla Extract", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/javascript-test");
     let locator = await page.locator("[data-testid='javascript']");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+
+  let classCompositionFixture = () => ({
+    "app/fixtures/class-composition/styles.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+      import { padding } from "./padding.css";
+
+      export const root = style([
+        padding,
+        { background: 'peachpuff' },
+      ]);
+    `,
+    "app/fixtures/class-composition/padding.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+
+      export const padding = style({
+        padding: ${JSON.stringify(TEST_PADDING_VALUE)}
+      });
+    `,
+    "app/routes/class-composition-test.jsx": js`
+      import * as styles from "../fixtures/class-composition/styles.css";
+      
+      export default function() {
+        return (
+          <div data-testid="class-composition" className={styles.root}>
+            Class composition test
+          </div>
+        )
+      }
+    `,
+  });
+  test("class composition", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/class-composition-test");
+    let locator = await page.locator("[data-testid='class-composition']");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+
+  let rootRelativeClassCompositionFixture = () => ({
+    "app/fixtures/root-relative-class-composition/styles.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+      import { padding } from "~/fixtures/root-relative-class-composition/padding.css";
+
+      export const root = style([
+        padding,
+        { background: 'peachpuff' },
+      ]);
+    `,
+    "app/fixtures/root-relative-class-composition/padding.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+
+      export const padding = style({
+        padding: ${JSON.stringify(TEST_PADDING_VALUE)}
+      });
+    `,
+    "app/routes/root-relative-class-composition-test.jsx": js`
+      import * as styles from "../fixtures/root-relative-class-composition/styles.css";
+      
+      export default function() {
+        return (
+          <div data-testid="root-relative-class-composition" className={styles.root}>
+            Root-relative class composition test
+          </div>
+        )
+      }
+    `,
+  });
+  test("root-relative class composition", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/root-relative-class-composition-test");
+    let locator = await page.locator(
+      "[data-testid='root-relative-class-composition']"
+    );
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -328,7 +410,7 @@ test.describe("Vanilla Extract", () => {
       }
     `,
   });
-  test("Standard image URLs via JS import", async ({ page }) => {
+  test("standard image URLs via JS import", async ({ page }) => {
     // This ensures that image URLs are fully resolved within the CSS file
     // rather than using some intermediary format that needs to be resolved
     // later. This is important to ensure that image import semantics are the
@@ -378,7 +460,7 @@ test.describe("Vanilla Extract", () => {
       }
     `,
   });
-  test("Standard image URLs via root-relative JS import", async ({ page }) => {
+  test("standard image URLs via root-relative JS import", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     let imgStatus: number | null = null;
     app.page.on("response", (res) => {
