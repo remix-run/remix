@@ -847,7 +847,7 @@ Button.displayName = "Button";
 
 <docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
 
-[Vanilla Extract][vanilla-extract] is a zero-runtime CSS-in-TypeScript (or JavaScript) library that lets you use TypeScript as your CSS preprocessor. Styles are written in separate `*.css.ts` (or `*.css.js`) files and all code within them is executed during the build process rather than in your user's browser.
+[Vanilla Extract][vanilla-extract] is a zero-runtime CSS-in-TypeScript (or JavaScript) library that lets you use TypeScript as your CSS preprocessor. Styles are written in separate `*.css.ts` (or `*.css.js`) files and all code within them is executed during the build process rather than in your user's browser. If you want to keep your CSS bundle size to a minimum, Vanilla Extract also provides an official library called [Sprinkles][sprinkles] that lets you define a custom set of utility classes and a type-safe function for accessing them at runtime.
 
 First, ensure you've set up [CSS bundling][css-bundling] in your application.
 
@@ -897,8 +897,6 @@ export const Button = React.forwardRef(
 );
 Button.displayName = "Button";
 ```
-
-If you want to keep the size of your generated CSS to a minimum, Vanilla Extract provides an official library called [Sprinkles][sprinkles] that generates a custom set of utility classes along with a type-safe function for accessing them at runtime.
 
 ### CSS Side-Effect Imports
 
