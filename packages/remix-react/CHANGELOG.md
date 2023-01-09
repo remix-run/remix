@@ -1,51 +1,23 @@
 # `@remix-run/react`
 
-## 1.10.0-pre.7
-
-### Patch Changes
-
-- Add outer ErrorBoundary to catch root ErrorBoundary thrown errors ([#5012](https://github.com/remix-run/remix/pull/5012))
-
-## 1.10.0-pre.6
-
-### Patch Changes
-
-- Fix content type on proxied action request ([#4995](https://github.com/remix-run/remix/pull/4995))
-- Bump RR versions ([#5005](https://github.com/remix-run/remix/pull/5005))
-
-## 1.10.0-pre.5
-
-### Patch Changes
-
-- Add back `ShouldReloadFunction` type with deprecated notice ([`28ccd9973`](https://github.com/remix-run/remix/commit/28ccd99739fa36a93a6f26a300f9f83baf02b896))
-
-## 1.10.0-pre.4
-
-### Patch Changes
-
-- fix: pass through request abort signal ([#4954](https://github.com/remix-run/remix/pull/4954))
-- Bump react router version to latest ([#4952](https://github.com/remix-run/remix/pull/4952))
-
-## 1.10.0-pre.3
-
-## 1.10.0-pre.2
-
-### Patch Changes
-
-- Bump to react-router 6.6.1 pre versions ([#4944](https://github.com/remix-run/remix/pull/4944))
-
-## 1.10.0-pre.1
-
-### Patch Changes
-
-- Add a few missed re-exports and back-compat ([`dc079d29b`](https://github.com/remix-run/remix/commit/dc079d29b373d3ebe3781facc7da637c64ce81c3))
-- Lock into RR 6.6.0 ([#4935](https://github.com/remix-run/remix/pull/4935))
-
-## 1.10.0-pre.0
+## 1.10.0
 
 ### Minor Changes
 
 - Update Remix to use React Router 6.4+ data APIs ([#4900](https://github.com/remix-run/remix/pull/4900))
+
+### Patch Changes
+
+- fix: pass through request abort signal ([#4954](https://github.com/remix-run/remix/pull/4954))
+- Fix content type on proxied action request ([#4995](https://github.com/remix-run/remix/pull/4995))
+- Lock into react-router 6.6.2 stable release ([#5035](https://github.com/remix-run/remix/pull/5035))
+- Add outer ErrorBoundary to catch root ErrorBoundary thrown errors ([#5012](https://github.com/remix-run/remix/pull/5012))
+- Bump RR versions ([#5005](https://github.com/remix-run/remix/pull/5005))
+- Bump to react-router 6.6.1 pre versions ([#4944](https://github.com/remix-run/remix/pull/4944))
+- Add a few missed re-exports and back-compat ([`dc079d29b`](https://github.com/remix-run/remix/commit/dc079d29b373d3ebe3781facc7da637c64ce81c3))
+- Bump react router version to latest ([#4952](https://github.com/remix-run/remix/pull/4952))
+- Add back `ShouldReloadFunction` type with deprecated notice ([`28ccd9973`](https://github.com/remix-run/remix/commit/28ccd99739fa36a93a6f26a300f9f83baf02b896))
+- Lock into RR 6.6.0 ([#4935](https://github.com/remix-run/remix/pull/4935))
 
 ## 1.9.0
 
