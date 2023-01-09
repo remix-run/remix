@@ -1,43 +1,48 @@
-import { dirname, join } from "path";
+import { dirname, join, extname } from "path";
 import type { IdentifierOption } from "@vanilla-extract/integration";
 import {
   cssFileFilter,
   virtualCssFileFilter,
   processVanillaFile,
   getSourceFromVirtualCssFile,
-  vanillaExtractTransformPlugin,
+  transform,
 } from "@vanilla-extract/integration";
 import * as fse from "fs-extra";
 import * as esbuild from "esbuild";
 
+import type { RemixConfig } from "../../config";
 import type { CompileOptions } from "../options";
 import { loaders } from "../loaders";
 
-const vanillaCssNamespace = "vanilla-extract-css-ns";
+const pluginName = "vanilla-extract-plugin";
+const namespace = `${pluginName}-ns`;
 
 export function vanillaExtractPlugin({
+  config,
   mode,
   outputCss,
 }: {
+  config: RemixConfig;
   mode: CompileOptions["mode"];
   outputCss: boolean;
 }): esbuild.Plugin {
   return {
-    name: "vanilla-extract",
+    name: pluginName,
     setup(build) {
+      let { rootDirectory } = config;
+
       build.onResolve({ filter: virtualCssFileFilter }, (args) => {
         return {
           path: args.path,
-          namespace: vanillaCssNamespace,
+          namespace,
         };
       });
 
       build.onLoad(
-        { filter: /.*/, namespace: vanillaCssNamespace },
+        { filter: virtualCssFileFilter, namespace },
         async ({ path }) => {
           let { source, fileName } = await getSourceFromVirtualCssFile(path);
-          let rootDir = build.initialOptions.absWorkingDir ?? process.cwd();
-          let resolveDir = dirname(join(rootDir, fileName));
+          let resolveDir = dirname(join(rootDirectory, fileName));
 
           return {
             contents: source,
@@ -53,27 +58,23 @@ export function vanillaExtractPlugin({
 
         let { outputFiles } = await esbuild.build({
           entryPoints: [filePath],
-          outdir:
-            build.initialOptions.outdir ??
-            (build.initialOptions.outfile
-              ? dirname(build.initialOptions.outfile)
-              : undefined),
+          outdir: config.assetsBuildDirectory,
           assetNames: build.initialOptions.assetNames,
           bundle: true,
           external: ["@vanilla-extract"],
           platform: "node",
           write: false,
           plugins: [
-            vanillaExtractTransformPlugin({ identOption }) as esbuild.Plugin,
+            vanillaExtractTransformPlugin({ rootDirectory, identOption }),
           ],
           loader: loaders,
-          absWorkingDir: build.initialOptions.absWorkingDir ?? process.cwd(),
-          publicPath: build.initialOptions.publicPath,
+          absWorkingDir: rootDirectory,
+          publicPath: config.publicPath,
         });
 
-        let source = outputFiles
-          .reverse()
-          .find((file) => file.path.endsWith(".js"))?.text;
+        let source = outputFiles.find((file) =>
+          file.path.endsWith(".js")
+        )?.text;
 
         if (!source) {
           return null;
@@ -86,14 +87,7 @@ export function vanillaExtractPlugin({
             outputCss,
             identOption,
           }),
-          ...(outputCss
-            ? outputFiles
-                .filter((file) => !file.path.endsWith(".js"))
-                .map(async (file) => {
-                  await fse.ensureDir(dirname(file.path));
-                  await fse.writeFile(file.path, file.contents);
-                })
-            : []),
+          outputCss && writeAssets(outputFiles),
         ]);
 
         return {
@@ -104,4 +98,87 @@ export function vanillaExtractPlugin({
       });
     },
   };
+}
+
+async function writeAssets(
+  outputFiles: Array<esbuild.OutputFile>
+): Promise<void> {
+  await Promise.all(
+    outputFiles
+      .filter((file) => !file.path.endsWith(".js"))
+      .map(async (file) => {
+        await fse.ensureDir(dirname(file.path));
+        await fse.writeFile(file.path, file.contents);
+      })
+  );
+}
+
+const loaderForExtension: Record<string, esbuild.Loader> = {
+  ".js": "js",
+  ".jsx": "jsx",
+  ".ts": "ts",
+  ".tsx": "tsx",
+};
+
+/**
+ * This plugin is used within the child compilation. It applies the Vanilla
+ * Extract file transform to all .css.ts/js files. This is used to add "file
+ * scope" annotations, which is done via function calls at the beginning and end
+ * of each file so that we can tell which CSS file the styles belong to when
+ * evaluating the JS. It's also done to automatically apply debug IDs.
+ */
+function vanillaExtractTransformPlugin({
+  rootDirectory,
+  identOption,
+}: {
+  identOption: IdentifierOption;
+  rootDirectory: string;
+}): esbuild.Plugin {
+  return {
+    name: "vanilla-extract-transform-plugin",
+    setup(build) {
+      build.onLoad({ filter: cssFileFilter }, async ({ path }) => {
+        let source = await fse.readFile(path, "utf-8");
+
+        let contents = await transform({
+          source,
+          filePath: path,
+          rootPath: rootDirectory,
+          packageName: getPackageName(rootDirectory),
+          identOption,
+        });
+
+        return {
+          contents,
+          loader: loaderForExtension[extname(path)],
+          resolveDir: dirname(path),
+        };
+      });
+    },
+  };
+}
+
+let packageName: string;
+function getPackageName(rootDirectory: string): string {
+  if (packageName) {
+    return packageName;
+  }
+
+  try {
+    let pkg = JSON.parse(
+      fse.readFileSync(join(rootDirectory, "package.json"), "utf-8")
+    );
+
+    if (!pkg.name) {
+      throw new Error();
+    }
+
+    packageName = pkg.name;
+
+    return pkg.name;
+  } catch (err) {
+    packageName = "remix-app";
+
+    return packageName;
+  }
 }
