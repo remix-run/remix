@@ -303,9 +303,13 @@ function getRouteMap(
   let nameMap = new Map<string, RouteInfo>();
 
   for (let routePath of routePaths) {
-    let routeInfo = getRouteInfo(appDirectory, prefix, routePath);
-    routeMap.set(routeInfo.id, routeInfo);
-    nameMap.set(routeInfo.name, routeInfo);
+    let routesDirectory = path.join(appDirectory, prefix);
+    let pathWithoutAppRoutes = routePath.slice(routesDirectory.length + 1);
+    if (isRouteModuleFile(pathWithoutAppRoutes)) {
+      let routeInfo = getRouteInfo(appDirectory, prefix, routePath);
+      routeMap.set(routeInfo.id, routeInfo);
+      nameMap.set(routeInfo.name, routeInfo);
+    }
   }
 
   // update parentIds for all routes
@@ -315,4 +319,15 @@ function getRouteMap(
   }
 
   return routeMap;
+}
+
+let routeRegex = /\/(_index|([a-zA-Z0-9_$.[\]-]))\.(tsx|ts|jsx|js|mdx|md)/;
+
+function isRouteModuleFile(filename: string) {
+  // flat files only need correct extension
+  let isFlatFile = !filename.includes(path.sep);
+  if (isFlatFile) {
+    return routeModuleExts.includes(path.extname(filename));
+  }
+  return routeRegex.test(filename);
 }
