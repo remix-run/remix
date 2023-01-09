@@ -138,10 +138,11 @@ describe("flatRoutes", () => {
 
   describe("should return the correct route hierarchy", () => {
     // we'll add file manually before running the tests
-    let testFiles: [string, Omit<ConfigRoute, "file" | "id">][] = [
+    let testFiles: [string, Omit<ConfigRoute, "file">][] = [
       [
         "routes/_auth.tsx",
         {
+          id: "routes/_auth",
           parentId: "root",
           path: undefined,
         },
@@ -149,6 +150,7 @@ describe("flatRoutes", () => {
       [
         "routes/_auth.forgot-password.tsx",
         {
+          id: "routes/_auth.forgot-password",
           parentId: "routes/_auth",
           path: "forgot-password",
         },
@@ -156,6 +158,7 @@ describe("flatRoutes", () => {
       [
         "routes/_auth.login.tsx",
         {
+          id: "routes/_auth.login",
           parentId: "routes/_auth",
           path: "login",
         },
@@ -163,6 +166,7 @@ describe("flatRoutes", () => {
       [
         "routes/_auth.reset-password.tsx",
         {
+          id: "routes/_auth.reset-password",
           parentId: "routes/_auth",
           path: "reset-password",
         },
@@ -170,6 +174,7 @@ describe("flatRoutes", () => {
       [
         "routes/_auth.signup.tsx",
         {
+          id: "routes/_auth.signup",
           parentId: "routes/_auth",
           path: "signup",
         },
@@ -177,6 +182,7 @@ describe("flatRoutes", () => {
       [
         "routes/_landing.tsx",
         {
+          id: "routes/_landing",
           parentId: "root",
           path: undefined,
         },
@@ -184,6 +190,7 @@ describe("flatRoutes", () => {
       [
         "routes/_landing._index.tsx",
         {
+          id: "routes/_landing._index",
           index: true,
           parentId: "routes/_landing",
           path: undefined,
@@ -192,6 +199,7 @@ describe("flatRoutes", () => {
       [
         "routes/_landing.index.tsx",
         {
+          id: "routes/_landing.index",
           parentId: "routes/_landing",
           path: "index",
         },
@@ -199,6 +207,7 @@ describe("flatRoutes", () => {
       [
         "routes/about.tsx",
         {
+          id: "routes/about",
           parentId: "root",
           path: "about",
         },
@@ -206,6 +215,7 @@ describe("flatRoutes", () => {
       [
         "routes/about._index.tsx",
         {
+          id: "routes/about._index",
           index: true,
           parentId: "routes/about",
           path: undefined,
@@ -214,6 +224,7 @@ describe("flatRoutes", () => {
       [
         "routes/about.$.tsx",
         {
+          id: "routes/about.$",
           parentId: "routes/about",
           path: "*",
         },
@@ -221,6 +232,7 @@ describe("flatRoutes", () => {
       [
         "routes/about.faq.tsx",
         {
+          id: "routes/about.faq",
           parentId: "routes/about",
           path: "faq",
         },
@@ -228,6 +240,7 @@ describe("flatRoutes", () => {
       [
         "routes/about.$splat.tsx",
         {
+          id: "routes/about.$splat",
           parentId: "routes/about",
           path: ":splat",
         },
@@ -235,6 +248,7 @@ describe("flatRoutes", () => {
       [
         "routes/app.tsx",
         {
+          id: "routes/app",
           parentId: "root",
           path: "app",
         },
@@ -242,6 +256,7 @@ describe("flatRoutes", () => {
       [
         "routes/app.calendar.$day.tsx",
         {
+          id: "routes/app.calendar.$day",
           parentId: "routes/app",
           path: "calendar/:day",
         },
@@ -249,6 +264,7 @@ describe("flatRoutes", () => {
       [
         "routes/app.calendar._index.tsx",
         {
+          id: "routes/app.calendar._index",
           index: true,
           parentId: "routes/app",
           path: "calendar",
@@ -257,6 +273,7 @@ describe("flatRoutes", () => {
       [
         "routes/app.projects.tsx",
         {
+          id: "routes/app.projects",
           parentId: "routes/app",
           path: "projects",
         },
@@ -264,6 +281,7 @@ describe("flatRoutes", () => {
       [
         "routes/app.projects.$id.tsx",
         {
+          id: "routes/app.projects.$id",
           parentId: "routes/app.projects",
           path: ":id",
         },
@@ -273,6 +291,7 @@ describe("flatRoutes", () => {
       [
         "routes/app_.projects.$id.roadmap[.pdf].tsx",
         {
+          id: "routes/app_.projects.$id.roadmap[.pdf]",
           parentId: "root",
           path: "app/projects/:id/roadmap.pdf",
         },
@@ -280,6 +299,7 @@ describe("flatRoutes", () => {
       [
         "routes/app_.projects.$id.roadmap.tsx",
         {
+          id: "routes/app_.projects.$id.roadmap",
           parentId: "root",
           path: "app/projects/:id/roadmap",
         },
@@ -288,6 +308,7 @@ describe("flatRoutes", () => {
       [
         "routes/app.skip.tsx",
         {
+          id: "routes/app.skip",
           parentId: "routes/app",
           path: "skip",
         },
@@ -295,6 +316,7 @@ describe("flatRoutes", () => {
       [
         "routes/app.skip_.layout.tsx",
         {
+          id: "routes/app.skip_.layout",
           index: undefined,
           parentId: "routes/app",
           path: "skip/layout",
@@ -304,6 +326,7 @@ describe("flatRoutes", () => {
       [
         "routes/app.skipall.tsx",
         {
+          id: "routes/app.skipall",
           parentId: "routes/app",
           path: "skipall",
         },
@@ -311,6 +334,7 @@ describe("flatRoutes", () => {
       [
         "routes/app_.skipall_/_index.tsx",
         {
+          id: "routes/app_.skipall_/_index",
           index: true,
           parentId: "root",
           path: "app/skipall",
@@ -321,6 +345,7 @@ describe("flatRoutes", () => {
       [
         "routes/about.[$splat].tsx",
         {
+          id: "routes/about.[$splat]",
           parentId: "routes/about",
           path: "$splat",
         },
@@ -328,6 +353,7 @@ describe("flatRoutes", () => {
       [
         "routes/about.[[].tsx",
         {
+          id: "routes/about.[[]",
           parentId: "routes/about",
           path: "[",
         },
@@ -335,6 +361,7 @@ describe("flatRoutes", () => {
       [
         "routes/about.[]].tsx",
         {
+          id: "routes/about.[]]",
           parentId: "routes/about",
           path: "]",
         },
@@ -342,6 +369,7 @@ describe("flatRoutes", () => {
       [
         "routes/about.[.].tsx",
         {
+          id: "routes/about.[.]",
           parentId: "routes/about",
           path: ".",
         },
@@ -351,6 +379,7 @@ describe("flatRoutes", () => {
       [
         "routes/(nested)._layout.($slug).tsx",
         {
+          id: "routes/(nested)._layout.($slug)",
           parentId: "root",
           path: "nested?/:slug?",
         },
@@ -358,6 +387,7 @@ describe("flatRoutes", () => {
       [
         "routes/(routes).$.tsx",
         {
+          id: "routes/(routes).$",
           parentId: "root",
           path: "routes?/*",
         },
@@ -365,6 +395,7 @@ describe("flatRoutes", () => {
       [
         "routes/(routes).(sub).$.tsx",
         {
+          id: "routes/(routes).(sub).$",
           parentId: "root",
           path: "routes?/sub?/*",
         },
@@ -372,6 +403,7 @@ describe("flatRoutes", () => {
       [
         "routes/(routes).($slug).tsx",
         {
+          id: "routes/(routes).($slug)",
           parentId: "root",
           path: "routes?/:slug?",
         },
@@ -379,6 +411,7 @@ describe("flatRoutes", () => {
       [
         "routes/(routes).sub.($slug).tsx",
         {
+          id: "routes/(routes).sub.($slug)",
           parentId: "root",
           path: "routes?/sub/:slug?",
         },
@@ -386,6 +419,7 @@ describe("flatRoutes", () => {
       [
         "routes/(nested).$.tsx",
         {
+          id: "routes/(nested).$",
           parentId: "root",
           path: "nested?/*",
         },
@@ -393,6 +427,7 @@ describe("flatRoutes", () => {
       [
         "routes/(flat).$.tsx",
         {
+          id: "routes/(flat).$",
           parentId: "root",
           path: "flat?/*",
         },
@@ -400,6 +435,7 @@ describe("flatRoutes", () => {
       [
         "routes/(flat).($slug).tsx",
         {
+          id: "routes/(flat).($slug)",
           parentId: "root",
           path: "flat?/:slug?",
         },
@@ -407,6 +443,7 @@ describe("flatRoutes", () => {
       [
         "routes/flat.(sub).tsx",
         {
+          id: "routes/flat.(sub)",
           parentId: "root",
           path: "flat/sub?",
         },
@@ -414,6 +451,7 @@ describe("flatRoutes", () => {
       [
         "routes/_layout.tsx",
         {
+          id: "routes/_layout",
           parentId: "root",
           path: undefined,
         },
@@ -421,6 +459,7 @@ describe("flatRoutes", () => {
       [
         "routes/_layout.(test).tsx",
         {
+          id: "routes/_layout.(test)",
           parentId: "routes/_layout",
           path: "test?",
         },
@@ -428,6 +467,7 @@ describe("flatRoutes", () => {
       [
         "routes/_layout.($slug).tsx",
         {
+          id: "routes/_layout.($slug)",
           parentId: "routes/_layout",
           path: ":slug?",
         },
@@ -437,6 +477,7 @@ describe("flatRoutes", () => {
       [
         "routes/([index]).tsx",
         {
+          id: "routes/([index])",
           parentId: "root",
           path: "index?",
         },
@@ -444,6 +485,7 @@ describe("flatRoutes", () => {
       [
         "routes/([i]ndex).([[]).([[]]).tsx",
         {
+          id: "routes/([i]ndex).([[]).([[]])",
           parentId: "routes/([index])",
           path: "[?/[]?",
         },
@@ -451,6 +493,7 @@ describe("flatRoutes", () => {
       [
         "routes/(sub).([[]).tsx",
         {
+          id: "routes/(sub).([[])",
           parentId: "root",
           path: "sub?/[?",
         },
@@ -458,6 +501,7 @@ describe("flatRoutes", () => {
       [
         "routes/(sub).(]).tsx",
         {
+          id: "routes/(sub).(])",
           parentId: "root",
           path: "sub?/]?",
         },
@@ -465,6 +509,7 @@ describe("flatRoutes", () => {
       [
         "routes/(sub).([[]]).tsx",
         {
+          id: "routes/(sub).([[]])",
           parentId: "root",
           path: "sub?/[]?",
         },
@@ -472,6 +517,7 @@ describe("flatRoutes", () => {
       [
         "routes/(beef]).tsx",
         {
+          id: "routes/(beef])",
           parentId: "root",
           path: "beef]?",
         },
@@ -479,6 +525,7 @@ describe("flatRoutes", () => {
       [
         "routes/(test).(inde[x]).tsx",
         {
+          id: "routes/(test).(inde[x])",
           parentId: "root",
           path: "test?/index?",
         },
@@ -486,6 +533,7 @@ describe("flatRoutes", () => {
       [
         "routes/($[$dollabills]).([.]lol).(what).([$]).($up).tsx",
         {
+          id: "routes/($[$dollabills]).([.]lol).(what).([$]).($up)",
           parentId: "root",
           path: ":$dollabills?/.lol?/what?/$?/:up?",
         },
@@ -493,6 +541,7 @@ describe("flatRoutes", () => {
       [
         "routes/(posts).($slug).([image.jpg]).tsx",
         {
+          id: "routes/(posts).($slug).([image.jpg])",
           parentId: "root",
           path: "posts?/:slug?/image.jpg?",
         },
@@ -500,6 +549,7 @@ describe("flatRoutes", () => {
       [
         "routes/(sub).([sitemap.xml]).tsx",
         {
+          id: "routes/(sub).([sitemap.xml])",
           parentId: "root",
           path: "sub?/sitemap.xml?",
         },
@@ -507,6 +557,7 @@ describe("flatRoutes", () => {
       [
         "routes/(sub).[(sitemap.xml)].tsx",
         {
+          id: "routes/(sub).[(sitemap.xml)]",
           parentId: "root",
           path: "sub?/(sitemap.xml)",
         },
@@ -514,6 +565,7 @@ describe("flatRoutes", () => {
       [
         "routes/($slug[.]json).tsx",
         {
+          id: "routes/($slug[.]json)",
           parentId: "root",
           path: ":slug.json?",
         },
@@ -522,6 +574,7 @@ describe("flatRoutes", () => {
       [
         "routes/[]otherstuff].tsx",
         {
+          id: "routes/[]otherstuff]",
           parentId: "root",
           path: "otherstuff]",
         },
@@ -529,6 +582,7 @@ describe("flatRoutes", () => {
       [
         "routes/brand/_index.tsx",
         {
+          id: "routes/brand/_index",
           parentId: "root",
           path: "brand",
           index: true,
@@ -537,18 +591,17 @@ describe("flatRoutes", () => {
       [
         "routes/$.tsx",
         {
+          id: "routes/$",
           parentId: "root",
           path: "*",
         },
       ],
     ];
 
-    let files: [string, Omit<ConfigRoute, "file" | "id">][] = testFiles.map(
+    let files: [string, Omit<ConfigRoute, "file">][] = testFiles.map(
       ([file, route]) => {
         let filepath = file.split("/").join(path.sep);
-        let ext = path.extname(filepath);
-        let id = filepath.slice(0, -ext.length);
-        return [filepath, { ...route, id, file: filepath }];
+        return [filepath, { ...route, file: filepath }];
       }
     );
 
