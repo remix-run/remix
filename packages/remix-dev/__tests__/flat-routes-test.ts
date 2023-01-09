@@ -293,7 +293,7 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/app.skip_/layout.tsx",
+        "routes/app.skip_.layout.tsx",
         {
           index: undefined,
           parentId: "routes/app",
