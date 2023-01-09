@@ -10535,18 +10535,18 @@ react-is@^17.0.1:
   resolved "https://registry.npmjs.org/react-is/-/react-is-17.0.2.tgz"
   integrity sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==
 
-react-router-dom@6.6.2-pre.0:
-  version "6.6.2-pre.0"
-  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.6.2-pre.0.tgz#2c1c9b1c50540dc7875301b4b39611f31c70cff7"
-  integrity sha512-+WCCc0GArJBfGI0kaLajBel2YPmwvxKJehTLYB4wubN2nTiN9lkwM4GHTb3qDhp8P+RRu7qzEw7HgQl6V2qSWQ==
+react-router-dom@6.6.2:
+  version "6.6.2"
+  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.6.2.tgz#bbf1f9b45855b218d22fc2d294b79408a084740a"
+  integrity sha512-6SCDXxRQqW5af8ImOqKza7icmQ47/EMbz572uFjzvcArg3lZ+04PxSPp8qGs+p2Y+q+b+S/AjXv8m8dyLndIIA==
   dependencies:
     "@remix-run/router" "1.2.1"
-    react-router "6.6.2-pre.0"
+    react-router "6.6.2"
 
-react-router@6.6.2-pre.0:
-  version "6.6.2-pre.0"
-  resolved "https://registry.npmjs.org/react-router/-/react-router-6.6.2-pre.0.tgz#8672b4b204643c7fc44fb61e749b37b4e874e314"
-  integrity sha512-yzKRCIl3RE/Oz9nCY85EWw0cj5bmZcviFNTRdjYfhEx5lOmOrU5ROND6E3D98/70L14hIx25L9iv5v1HTN8TYg==
+react-router@6.6.2:
+  version "6.6.2"
+  resolved "https://registry.npmjs.org/react-router/-/react-router-6.6.2.tgz#556f7b56cff7fe32c5c02429fef3fcb2ecd08111"
+  integrity sha512-uJPG55Pek3orClbURDvfljhqFvMgJRo59Pktywkk8hUUkTY2aRfza8Yhl/vZQXs+TNQyr6tu+uqz/fLxPICOGQ==
   dependencies:
     "@remix-run/router" "1.2.1"
 
