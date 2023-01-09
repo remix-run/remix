@@ -107,11 +107,11 @@ const createEsbuildConfig = (
     isCssBundlingEnabled(config) && isCssBuild
       ? cssBundleEntryModulePlugin(config)
       : null,
-    config.future.unstable_vanillaExtract
-      ? vanillaExtractPlugin({ config, mode, outputCss })
-      : null,
     config.future.unstable_cssModules
       ? cssModulesPlugin({ mode, rootDirectory, outputCss })
+      : null,
+    config.future.unstable_vanillaExtract
+      ? vanillaExtractPlugin({ config, mode, outputCss })
       : null,
     config.future.unstable_cssSideEffectImports
       ? cssSideEffectImportsPlugin({ rootDirectory })
