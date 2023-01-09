@@ -51,6 +51,8 @@ test.describe("Vanilla Extract", () => {
         ...imageUrlsViaRootRelativeCssUrlFixture(),
         ...imageUrlsViaJsImportFixture(),
         ...imageUrlsViaRootRelativeJsImportFixture(),
+        ...imageUrlsViaClassCompositionFixture(),
+        ...imageUrlsViaJsImportClassCompositionFixture(),
         ...standardImageUrlsViaJsImportFixture(),
         ...standardImageUrlsViaRootRelativeJsImportFixture(),
       },
@@ -318,7 +320,7 @@ test.describe("Vanilla Extract", () => {
       }
     `,
   });
-  test("Image URLs via JS import", async ({ page }) => {
+  test("image URLs via JS import", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     let imgStatus: number | null = null;
     app.page.on("response", (res) => {
@@ -363,7 +365,7 @@ test.describe("Vanilla Extract", () => {
       }
     `,
   });
-  test("Image URLs via root-relative JS import", async ({ page }) => {
+  test("image URLs via root-relative JS import", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     let imgStatus: number | null = null;
     app.page.on("response", (res) => {
@@ -372,6 +374,115 @@ test.describe("Vanilla Extract", () => {
     await app.goto("/image-urls-via-root-relative-js-import-test");
     let locator = await page.locator(
       "[data-testid='image-urls-via-root-relative-js-import']"
+    );
+    let backgroundImage = await locator.evaluate(
+      (element) => window.getComputedStyle(element).backgroundImage
+    );
+    expect(backgroundImage).toContain(".svg");
+    expect(imgStatus).toBe(200);
+  });
+
+  let imageUrlsViaClassCompositionFixture = () => ({
+    "app/fixtures/imageUrlsViaClassComposition/styles.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+      import { backgroundImage } from "./nested/backgroundImage.css";
+
+      export const root = style([
+        backgroundImage,
+        {
+          backgroundColor: 'peachpuff',
+          padding: ${JSON.stringify(TEST_PADDING_VALUE)}
+        }
+      ]);
+    `,
+    "app/fixtures/imageUrlsViaClassComposition/nested/backgroundImage.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+
+      export const backgroundImage = style({
+        backgroundImage: 'url(../image.svg)',
+      });
+    `,
+    "app/fixtures/imageUrlsViaClassComposition/image.svg": `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="50" fill="coral" />
+      </svg>
+    `,
+    "app/routes/image-urls-via-class-composition-test.jsx": js`
+      import * as styles from "../fixtures/imageUrlsViaClassComposition/styles.css";
+      
+      export default function() {
+        return (
+          <div data-testid="image-urls-via-class-composition" className={styles.root}>
+            Image URLs via class composition test
+          </div>
+        )
+      }
+    `,
+  });
+  test("image URLs via class composition", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let imgStatus: number | null = null;
+    app.page.on("response", (res) => {
+      if (res.url().endsWith(".svg")) imgStatus = res.status();
+    });
+    await app.goto("/image-urls-via-class-composition-test");
+    let locator = await page.locator(
+      "[data-testid='image-urls-via-class-composition']"
+    );
+    let backgroundImage = await locator.evaluate(
+      (element) => window.getComputedStyle(element).backgroundImage
+    );
+    expect(backgroundImage).toContain(".svg");
+    expect(imgStatus).toBe(200);
+  });
+
+  let imageUrlsViaJsImportClassCompositionFixture = () => ({
+    "app/fixtures/imageUrlsViaJsImportClassComposition/styles.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+      import { backgroundImage } from "./nested/backgroundImage.css";
+
+      export const root = style([
+        backgroundImage,
+        {
+          backgroundColor: 'peachpuff',
+          padding: ${JSON.stringify(TEST_PADDING_VALUE)}
+        }
+      ]);
+    `,
+    "app/fixtures/imageUrlsViaJsImportClassComposition/nested/backgroundImage.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+      import href from "../image.svg";
+
+      export const backgroundImage = style({
+        backgroundImage: 'url(' + href + ')',
+      });
+    `,
+    "app/fixtures/imageUrlsViaJsImportClassComposition/image.svg": `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="50" fill="coral" />
+      </svg>
+    `,
+    "app/routes/image-urls-via-js-import-class-composition-test.jsx": js`
+      import * as styles from "../fixtures/imageUrlsViaJsImportClassComposition/styles.css";
+      
+      export default function() {
+        return (
+          <div data-testid="image-urls-via-js-import-class-composition" className={styles.root}>
+            Image URLs via class composition test
+          </div>
+        )
+      }
+    `,
+  });
+  test("image URLs via JS import class composition", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let imgStatus: number | null = null;
+    app.page.on("response", (res) => {
+      if (res.url().endsWith(".svg")) imgStatus = res.status();
+    });
+    await app.goto("/image-urls-via-js-import-class-composition-test");
+    let locator = await page.locator(
+      "[data-testid='image-urls-via-js-import-class-composition']"
     );
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
