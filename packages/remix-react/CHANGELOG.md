@@ -4,20 +4,12 @@
 
 ### Minor Changes
 
-- Update Remix to use React Router 6.4+ data APIs ([#4900](https://github.com/remix-run/remix/pull/4900))
-
-### Patch Changes
-
-- fix: pass through request abort signal ([#4954](https://github.com/remix-run/remix/pull/4954))
-- Fix content type on proxied action request ([#4995](https://github.com/remix-run/remix/pull/4995))
-- Lock into react-router 6.6.2 stable release ([#5035](https://github.com/remix-run/remix/pull/5035))
-- Add outer ErrorBoundary to catch root ErrorBoundary thrown errors ([#5012](https://github.com/remix-run/remix/pull/5012))
-- Bump RR versions ([#5005](https://github.com/remix-run/remix/pull/5005))
-- Bump to react-router 6.6.1 pre versions ([#4944](https://github.com/remix-run/remix/pull/4944))
-- Add a few missed re-exports and back-compat ([`dc079d29b`](https://github.com/remix-run/remix/commit/dc079d29b373d3ebe3781facc7da637c64ce81c3))
-- Bump react router version to latest ([#4952](https://github.com/remix-run/remix/pull/4952))
-- Add back `ShouldReloadFunction` type with deprecated notice ([`28ccd9973`](https://github.com/remix-run/remix/commit/28ccd99739fa36a93a6f26a300f9f83baf02b896))
-- Lock into RR 6.6.0 ([#4935](https://github.com/remix-run/remix/pull/4935))
+- Update Remix to use new data APIs introduced in React Router v6.4 ([#4900](https://github.com/remix-run/remix/pull/4900))
+- Added new hooks from React Router
+  - [`useNavigation`](https://reactrouter.com/en/main/hooks/use-navigation)
+  - [`useNavigationType`](https://reactrouter.com/en/main/hooks/use-navigation-type)
+  - [`useRevalidator`](https://reactrouter.com/en/main/hooks/use-revalidator)
+  - [`useRouteLoaderData`](https://reactrouter.com/en/main/hooks/use-route-loader-data)
 
 ## 1.9.0
 
