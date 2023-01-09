@@ -321,7 +321,8 @@ function getRouteMap(
   return routeMap;
 }
 
-let routeRegex = /\/(_index|([a-zA-Z0-9_$.[\]-]))\.(tsx|ts|jsx|js|mdx|md)/;
+let routeRegex =
+  /(([+][/\\][^/\\:?*]+)|[/\\]((_index)|([^/\\:?*])))\.(tsx?|jsx?|mdx?)$$/;
 
 function isRouteModuleFile(filename: string) {
   // flat files only need correct extension
