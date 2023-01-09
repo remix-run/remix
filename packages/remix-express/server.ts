@@ -13,6 +13,9 @@ import {
   writeReadableStreamToWritable,
 } from "@remix-run/node";
 
+import { AsyncLocalStorage } from 'node:async_hooks';
+
+
 /**
  * A function that returns the value to use as `context` in route `loader` and
  * `action` functions.
@@ -26,22 +29,35 @@ export type GetLoadContextFunction = (
   res: express.Response
 ) => AppLoadContext;
 
+export type GetGlobalContextFunction<T> = (
+  request: NodeRequest
+) => T;
+
 export type RequestHandler = (
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
 ) => Promise<void>;
 
+
+let asyncLocalStorage: AsyncLocalStorage<unknown>;
+
+export function getGlobalContext<T>(): T | undefined {
+  return asyncLocalStorage.getStore<T>();
+}
+
 /**
  * Returns a request handler for Express that serves the response using Remix.
  */
-export function createRequestHandler({
+export function createRequestHandler<T>({
   build,
   getLoadContext,
+  getGlobalContext,
   mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
+  getGlobalContext?: GetGlobalContextFunction<T>;
   mode?: string;
 }): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
@@ -54,11 +70,13 @@ export function createRequestHandler({
     try {
       let request = createRemixRequest(req, res);
       let loadContext = getLoadContext?.(req, res);
-
-      let response = (await handleRequest(
-        request,
-        loadContext
-      )) as NodeResponse;
+      let context = getGlobalContext?.(request);
+      let response = asyncLocalStorage.run(context, async () => {
+        return (await handleRequest(
+          request,
+          loadContext
+        )) as NodeResponse;
+      });
 
       await sendRemixResponse(res, response);
     } catch (error: unknown) {
