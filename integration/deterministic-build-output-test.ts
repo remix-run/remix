@@ -68,14 +68,24 @@ test("builds deterministically under different paths", async () => {
       `,
       "app/styles/vanilla.css.ts": css`
         import { style } from "@vanilla-extract/css";
+        import { chocolate } from "./chocolate.css";
         import imageUrl from "~/images/foo.svg";
 
-        export const vanilla = style({
+        export const vanilla = style([
+          chocolate,
+          {
+            backgroundImage: [
+              "url(" + imageUrl + ")",
+              "url(~/images/foo.svg)",
+            ],
+          }
+        ]);
+      `,
+      "app/styles/chocolate.css.ts": css`
+        import { style } from "@vanilla-extract/css";
+
+        export const chocolate = style({
           color: "chocolate",
-          backgroundImage: [
-            "url(" + imageUrl + ")",
-            "url(~/images/foo.svg)",
-          ],
         });
       `,
       "app/styles/side-effect.css": css`
