@@ -136,7 +136,10 @@ const createEsbuildConfig = (
       // url("/build/_assets/XXXX.svg")`. If we don't mark this path as
       // external, esbuild will try to bundle it again but won't find it.
       config.future.unstable_vanillaExtract
-        ? path.join(config.publicPath, "_assets", "*")
+        ? path
+            .join(config.publicPath, "_assets", "*")
+            .split(path.sep)
+            .join(path.posix.sep)
         : null,
       ...getExternals(config),
     ].filter(isNotNull),
