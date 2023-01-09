@@ -47,6 +47,7 @@ test.describe("Vanilla Extract", () => {
         ...javaScriptFixture(),
         ...classCompositionFixture(),
         ...rootRelativeClassCompositionFixture(),
+        ...stableIdentifiersFixture(),
         ...imageUrlsViaCssUrlFixture(),
         ...imageUrlsViaRootRelativeCssUrlFixture(),
         ...imageUrlsViaJsImportFixture(),
@@ -204,6 +205,58 @@ test.describe("Vanilla Extract", () => {
       (element) => window.getComputedStyle(element).padding
     );
     expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+
+  let stableIdentifiersFixture = () => ({
+    "app/fixtures/stable-identifiers/styles_a.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+      import { shared } from "./shared.css";
+
+      export const root = style([shared]);
+    `,
+    "app/fixtures/stable-identifiers/styles_b.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+      import { shared } from "./shared.css";
+
+      export const root = style([shared]);
+    `,
+    "app/fixtures/stable-identifiers/shared.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+
+      export const shared = style({
+        padding: ${JSON.stringify(TEST_PADDING_VALUE)},
+        background: 'peachpuff',
+      });
+    `,
+    "app/routes/stable-identifiers-test.jsx": js`
+      import * as styles_a from "../fixtures/stable-identifiers/styles_a.css";
+      import * as styles_b from "../fixtures/stable-identifiers/styles_b.css";
+
+      const styles = new Set([styles_a.root, styles_b.root]);
+      
+      export default function() {
+        return (
+          <div data-testid="stable-identifiers" className={Array.from(styles).join(' ')}>
+            Stable identifiers test
+          </div>
+        )
+      }
+    `,
+  });
+  test("stable identifiers", async ({ page }) => {
+    // This test ensures that file scoping is working as expected and
+    // identifiers are stable across different .css.ts contexts. We test this by
+    // using the same shared style in two different .css.ts files and then
+    // asserting that it's the same class name.
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/stable-identifiers-test");
+    let locator = await page.locator("[data-testid='stable-identifiers']");
+    let { padding, classList } = await locator.evaluate((element) => ({
+      padding: window.getComputedStyle(element).padding,
+      classList: Array.from(element.classList),
+    }));
+    expect(padding).toBe(TEST_PADDING_VALUE);
+    expect(classList.length).toBe(1);
   });
 
   let imageUrlsViaCssUrlFixture = () => ({
