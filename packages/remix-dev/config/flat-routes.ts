@@ -324,10 +324,9 @@ function getRouteMap(
 function isRouteModuleFile(filepath: string) {
   // flat files only need correct extension
   let isFlatFile = !filepath.includes(path.sep);
-  let ext = path.extname(filepath);
   if (isFlatFile) {
-    return routeModuleExts.includes(ext);
+    return routeModuleExts.includes(path.extname(filepath));
   }
 
-  return isIndexRoute(filepath.slice(0, -ext.length));
+  return isIndexRoute(createRouteId(filepath));
 }
