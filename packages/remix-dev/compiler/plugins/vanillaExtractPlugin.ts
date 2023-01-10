@@ -144,7 +144,7 @@ function vanillaExtractTransformPlugin({
           source,
           filePath: path,
           rootPath: rootDirectory,
-          packageName: getPackageName(rootDirectory),
+          packageName: "remix-app", // This option is designed to support scoping hashes for libraries, we can hard code an arbitrary value for simplicity
           identOption,
         });
 
@@ -156,29 +156,4 @@ function vanillaExtractTransformPlugin({
       });
     },
   };
-}
-
-let packageName: string;
-function getPackageName(rootDirectory: string): string {
-  if (packageName) {
-    return packageName;
-  }
-
-  try {
-    let pkg = JSON.parse(
-      fse.readFileSync(join(rootDirectory, "package.json"), "utf-8")
-    );
-
-    if (!pkg.name) {
-      throw new Error();
-    }
-
-    packageName = pkg.name;
-
-    return pkg.name;
-  } catch (err) {
-    packageName = "remix-app";
-
-    return packageName;
-  }
 }
