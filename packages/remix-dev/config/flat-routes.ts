@@ -321,14 +321,13 @@ function getRouteMap(
   return routeMap;
 }
 
-let routeRegex =
-  /(([+][/\\][^/\\:?*]+)|[/\\]((_index)|([^/\\:?*])))\.(tsx?|jsx?|mdx?)$$/;
-
-function isRouteModuleFile(filename: string) {
+function isRouteModuleFile(filepath: string) {
   // flat files only need correct extension
-  let isFlatFile = !filename.includes(path.sep);
+  let isFlatFile = !filepath.includes(path.sep);
+  let ext = path.extname(filepath);
   if (isFlatFile) {
-    return routeModuleExts.includes(path.extname(filename));
+    return routeModuleExts.includes(ext);
   }
-  return routeRegex.test(filename);
+
+  return isIndexRoute(filepath.slice(0, -ext.length));
 }
