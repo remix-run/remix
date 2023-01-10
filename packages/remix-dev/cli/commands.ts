@@ -4,6 +4,7 @@ import * as fse from "fs-extra";
 import ora from "ora";
 import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
+import type { PackageJson } from "@npmcli/package-json";
 import NPMCliPackageJson from "@npmcli/package-json";
 
 import * as colors from "../colors";
@@ -251,21 +252,19 @@ export async function codemod(
   }
 }
 
+let clientEntries = new Set([
+  "entry.client.tsx",
+  "entry.client.js",
+  "entry.client.jsx",
+]);
+let serverEntries = new Set([
+  "entry.server.tsx",
+  "entry.server.js",
+  "entry.server.jsx",
+]);
+let entries = new Set([...clientEntries, ...serverEntries]);
+
 export async function generateEntry(remixRoot: string, entry: string) {
-  // 1. validate requested entry file
-  let clientEntries = new Set([
-    "entry.client.tsx",
-    "entry.client.js",
-    "entry.client.jsx",
-  ]);
-  let serverEntries = new Set([
-    "entry.server.tsx",
-    "entry.server.js",
-    "entry.server.jsx",
-  ]);
-
-  let entries = new Set([...clientEntries, ...serverEntries]);
-
   if (!entries.has(entry)) {
     // @ts-expect-error available in node 12+
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
@@ -283,63 +282,50 @@ export async function generateEntry(remixRoot: string, entry: string) {
     return process.exit(1);
   }
 
+  let pkgJson = await NPMCliPackageJson.load(remixRoot);
+  let deps = pkgJson.content.dependencies ?? {};
+
+  let runtime = deps["@remix-run/deno"]
+    ? "deno"
+    : deps["@remix-run/cloudflare"]
+    ? "cloudflare"
+    : deps["@remix-run/node"]
+    ? "node"
+    : undefined;
+
+  if (!runtime) {
+    throw new Error(
+      `Could not determine runtime. Please install one of the following: @remix-run/deno, @remix-run/cloudflare, @remix-run/node`
+    );
+  }
+
   let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
   let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");
-  let defaultEntryServer = path.resolve(defaultsDirectory, "entry.server.tsx");
+  let defaultEntryServer = path.resolve(
+    defaultsDirectory,
+    `entry.server.${runtime}.tsx`
+  );
 
-  // 2. check if any of the requested entry file exists
-  let entryType = entry.startsWith("entry.client.") ? "client" : "server";
-  let inputFile =
-    entryType === "client" ? defaultEntryClient : defaultEntryServer;
+  let isServerEntry = entry.startsWith("entry.server.");
+
+  let contents = isServerEntry
+    ? await createServerEntry(remixRoot, defaultEntryServer)
+    : await createClientEntry(remixRoot, defaultEntryClient);
+
+  let inputFile = isServerEntry ? defaultEntryServer : defaultEntryClient;
   let outputFile = path.resolve(remixRoot, "app", entry);
-
-  let entriesToCheck = entryType === "client" ? clientEntries : serverEntries;
-  for (let entryToCheck of entriesToCheck) {
-    let entryExists = await fse.pathExists(
-      path.resolve(remixRoot, "app", entryToCheck)
-    );
-    if (entryExists) {
-      console.log(
-        colors.gray(
-          `Entry file ${path.relative(remixRoot, entryToCheck)} already exists.`
-        )
-      );
-      return process.exit(1);
-    }
-  }
-
-  let contents: string | undefined;
-
-  // 3. if server entry, update runtime import
-  if (entryType === "server") {
-    contents = await fse.readFile(inputFile, "utf-8");
-
-    let pkgJson = await NPMCliPackageJson.load(remixRoot);
-    let deps = pkgJson.content.dependencies ?? {};
-
-    if (deps["@remix-run/node"]) {
-      // we good
-    } else if (deps["@remix-run/cloudflare"]) {
-      contents = contents.replace(/@remix-run\/node/g, "@remix-run/cloudflare");
-    } else if (deps["@remix-run/deno"]) {
-      contents = contents.replace(/@remix-run\/node/g, "@remix-run/deno");
-    }
-  }
 
   // 3. if entry is js/jsx, convert to js
   // otherwise, copy the entry file from the defaults
   if (/\.jsx?$/.test(entry)) {
-    contents ||= await fse.readFile(inputFile, "utf-8");
     let javascript = convertTSFileToJS({
       filename: inputFile,
       projectDir: remixRoot,
       source: contents,
     });
     await fse.writeFile(outputFile, javascript, "utf-8");
-  } else if (contents) {
-    await fse.writeFile(outputFile, contents, "utf-8");
   } else {
-    await fse.copyFile(inputFile, outputFile);
+    await fse.writeFile(outputFile, contents, "utf-8");
   }
 
   console.log(
@@ -349,4 +335,31 @@ export async function generateEntry(remixRoot: string, entry: string) {
   );
 
   return process.exit(0);
+}
+
+async function checkForEntry(remixRoot: string, entries: Set<string>) {
+  for (let entryToCheck of entries) {
+    let entryPath = path.resolve(remixRoot, "app", entryToCheck);
+    let entryExists = await fse.pathExists(entryPath);
+    if (entryExists) {
+      console.log(
+        colors.red(
+          `Entry file ${path.relative(remixRoot, entryToCheck)} already exists.`
+        )
+      );
+      return process.exit(1);
+    }
+  }
+}
+
+async function createServerEntry(remixRoot: string, inputFile: string) {
+  await checkForEntry(remixRoot, serverEntries);
+  let contents = await fse.readFile(inputFile, "utf-8");
+  return contents;
+}
+
+async function createClientEntry(remixRoot: string, inputFile: string) {
+  await checkForEntry(remixRoot, clientEntries);
+  let contents = await fse.readFile(inputFile, "utf-8");
+  return contents;
 }

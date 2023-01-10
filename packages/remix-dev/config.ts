@@ -2,6 +2,7 @@ import * as path from "path";
 import { pathToFileURL } from "url";
 import * as fse from "fs-extra";
 import getPort from "get-port";
+import NPMCliPackageJson from "@npmcli/package-json";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -443,18 +444,38 @@ export async function readConfig(
 
   let defaultsDirectory = path.resolve(__dirname, "config", "defaults");
   let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");
-  let defaultEntryServer = path.resolve(defaultsDirectory, "entry.server.tsx");
 
   let userEntryClientFile = findEntry(appDirectory, "entry.client");
   let userEntryServerFile = findEntry(appDirectory, "entry.server");
 
+  let entryServerFile: string;
+
+  if (!userEntryServerFile) {
+    let pkgJson = await NPMCliPackageJson.load(remixRoot);
+    let deps = pkgJson.content.dependencies ?? {};
+
+    let runtime = deps["@remix-run/deno"]
+      ? "deno"
+      : deps["@remix-run/cloudflare"]
+      ? "cloudflare"
+      : deps["@remix-run/node"]
+      ? "node"
+      : undefined;
+
+    if (!runtime) {
+      throw new Error(
+        `Could not determine runtime. Please install one of the following: @remix-run/deno, @remix-run/cloudflare, @remix-run/node`
+      );
+    }
+
+    entryServerFile = `entry.server.${runtime}.tsx`;
+  } else {
+    entryServerFile = userEntryServerFile;
+  }
+
   let entryClientFile = userEntryClientFile
     ? userEntryClientFile
     : "entry.client.tsx";
-
-  let entryServerFile = userEntryServerFile
-    ? userEntryServerFile
-    : "entry.server.tsx";
 
   let entryClientFilePath = userEntryClientFile
     ? path.resolve(appDirectory, userEntryClientFile)
@@ -462,7 +483,7 @@ export async function readConfig(
 
   let entryServerFilePath = userEntryServerFile
     ? path.resolve(appDirectory, userEntryServerFile)
-    : defaultEntryServer;
+    : path.resolve(defaultsDirectory, entryServerFile);
 
   let assetsBuildDirectory =
     appConfig.assetsBuildDirectory ||
