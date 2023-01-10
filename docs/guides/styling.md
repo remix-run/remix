@@ -772,7 +772,7 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 
 Many common approaches to CSS within the React community are only possible when bundling CSS, meaning that the CSS files you write during development are collected into a separate bundle as part of the build process.
 
-When using CSS bundling features, the Remix compiler will generate a single CSS file containing all bundled styles in your application. Note that any [regular stylesheet imports][regular-stylesheet-imports-2] will remain as separate files.
+When using CSS bundling features, the Remix compiler will generate a single CSS file containing all bundled styles in your application. Note that any [regular stylesheet imports][regular-stylesheet-imports] will remain as separate files.
 
 Unlike many other tools in the React ecosystem, we do not insert the CSS bundle into the page automatically. Instead, we ensure that you always have control over the link tags on your page. This lets you decide where the CSS file is loaded relative to other stylesheets in your app.
 
@@ -790,7 +790,7 @@ import { cssBundleHref } from "@remix-run/css-bundle";
 
 export const links: LinksFunction = () => {
   return [
-    { rel: "stylesheet", href: cssBundleHref },
+    ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
     // ...
   ];
 };
@@ -828,6 +828,61 @@ With this feature flag enabled, you can now opt into CSS Modules via the `.modul
 
 ```tsx filename=app/components/button/index.js lines=[1,9]
 import styles from "./styles.module.css";
+
+export const Button = React.forwardRef(
+  ({ children, ...props }, ref) => {
+    return (
+      <button
+        {...props}
+        ref={ref}
+        className={styles.root}
+      />
+    );
+  }
+);
+Button.displayName = "Button";
+```
+
+### Vanilla Extract
+
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+
+[Vanilla Extract][vanilla-extract] is a zero-runtime CSS-in-TypeScript (or JavaScript) library that lets you use TypeScript as your CSS preprocessor. Styles are written in separate `*.css.ts` (or `*.css.js`) files and all code within them is executed during the build process rather than in your user's browser. If you want to keep your CSS bundle size to a minimum, Vanilla Extract also provides an official library called [Sprinkles][sprinkles] that lets you define a custom set of utility classes and a type-safe function for accessing them at runtime.
+
+First, ensure you've set up [CSS bundling][css-bundling] in your application.
+
+Next, install Vanilla Extract's core styling package as a dev dependency.
+
+```sh
+npm install -D @vanilla-extract/css
+```
+
+Then, to enable Vanilla Extract, set the `future.unstable_vanillaExtract` feature flag in `remix.config.js`.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  future: {
+    unstable_vanillaExtract: true,
+  },
+  // ...
+};
+```
+
+With this feature flag enabled, you can now opt into Vanilla Extract via the `.css.ts`/`.css.js` file name convention. For example:
+
+```ts filename=app/components/button/styles.css.ts
+import { style } from "@vanilla-extract/css";
+
+export const root = style({
+  border: 'solid 1px',
+  background: 'white',
+  color: '#454545',
+});
+```
+
+```tsx filename=app/components/button/index.js lines=[1,9]
+import * as styles from "./styles.css"; // Note that `.ts` is omitted here
 
 export const Button = React.forwardRef(
   ({ children, ...props }, ref) => {
@@ -889,5 +944,6 @@ module.exports = {
 [css modules]: https://github.com/css-modules/css-modules
 [regular-stylesheet-imports]: #regular-stylesheets
 [server-dependencies-to-bundle]: ../file-conventions/remix-config#serverdependenciestobundle
-[regular-stylesheet-imports-2]: #regular-stylesheets
 [css-bundling]: #css-bundling
+[vanilla-extract]: https://vanilla-extract.style
+[sprinkles]: https://vanilla-extract.style/documentation/packages/sprinkles
