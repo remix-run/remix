@@ -267,7 +267,7 @@ export async function generateEntry(remixRoot: string, entry: string) {
     let entriesArray = Array.from(entries);
     let list = listFormat.format(entriesArray);
 
-    console.log(
+    console.error(
       colors.error(`Invalid entry file. Valid entry files are ${list}`)
     );
     return process.exit(1);
@@ -333,8 +333,8 @@ async function checkForEntry(remixRoot: string, entries: string[]) {
     let entryPath = path.resolve(remixRoot, "app", entryToCheck);
     let entryExists = await fse.pathExists(entryPath);
     if (entryExists) {
-      console.log(
-        colors.red(
+      console.error(
+        colors.error(
           `Entry file ${path.relative(remixRoot, entryToCheck)} already exists.`
         )
       );
