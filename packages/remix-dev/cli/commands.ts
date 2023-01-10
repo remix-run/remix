@@ -4,7 +4,6 @@ import * as fse from "fs-extra";
 import ora from "ora";
 import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
-import type { PackageJson } from "@npmcli/package-json";
 import NPMCliPackageJson from "@npmcli/package-json";
 
 import * as colors from "../colors";
