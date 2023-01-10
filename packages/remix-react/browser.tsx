@@ -1,10 +1,16 @@
 import type { HydrationState, Router } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
+import type { Location } from "react-router-dom";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { useSyncExternalStore } from "use-sync-external-store/shim";
 
 import { RemixContext } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
+import {
+  RemixErrorBoundary,
+  RemixRootDefaultErrorBoundary,
+} from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
 import type { RouteModules } from "./routeModules";
 import { createClientRoutes } from "./routes";
@@ -47,6 +53,16 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     router = createBrowserRouter(routes, { hydrationData });
   }
 
+  // We need to include a wrapper RemixErrorBoundary here in case the root error
+  // boundary also throws and we need to bubble up outside of the router entirely.
+  // Then we need a stateful location here so the user can back-button navigate
+  // out of there
+  let location: Location = useSyncExternalStore(
+    router.subscribe,
+    () => router.state.location,
+    () => router.state.location
+  );
+
   return (
     <RemixContext.Provider
       value={{
@@ -55,7 +71,12 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         future: window.__remixContext.future,
       }}
     >
-      <RouterProvider router={router} fallbackElement={null} />
+      <RemixErrorBoundary
+        location={location}
+        component={RemixRootDefaultErrorBoundary}
+      >
+        <RouterProvider router={router} fallbackElement={null} />
+      </RemixErrorBoundary>
     </RemixContext.Provider>
   );
 }

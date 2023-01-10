@@ -67,4 +67,6 @@ export type {
   UnsignFunction,
   UploadHandler,
   UploadHandlerPart,
+  V2_HtmlMetaDescriptor,
+  V2_MetaFunction,
 } from "@remix-run/server-runtime";
