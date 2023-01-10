@@ -252,20 +252,12 @@ export async function codemod(
   }
 }
 
-let clientEntries = new Set([
-  "entry.client.tsx",
-  "entry.client.js",
-  "entry.client.jsx",
-]);
-let serverEntries = new Set([
-  "entry.server.tsx",
-  "entry.server.js",
-  "entry.server.jsx",
-]);
-let entries = new Set([...clientEntries, ...serverEntries]);
+let clientEntries = ["entry.client.tsx", "entry.client.js", "entry.client.jsx"];
+let serverEntries = ["entry.server.tsx", "entry.server.js", "entry.server.jsx"];
+let entries = [...clientEntries, ...serverEntries];
 
 export async function generateEntry(remixRoot: string, entry: string) {
-  if (!entries.has(entry)) {
+  if (!entries.includes(entry)) {
     // @ts-expect-error available in node 12+
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
     let listFormat = new Intl.ListFormat("en", {
@@ -337,7 +329,7 @@ export async function generateEntry(remixRoot: string, entry: string) {
   return process.exit(0);
 }
 
-async function checkForEntry(remixRoot: string, entries: Set<string>) {
+async function checkForEntry(remixRoot: string, entries: string[]) {
   for (let entryToCheck of entries) {
     let entryPath = path.resolve(remixRoot, "app", entryToCheck);
     let entryExists = await fse.pathExists(entryPath);
