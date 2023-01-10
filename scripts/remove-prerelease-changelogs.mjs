@@ -11,9 +11,16 @@ import { remove } from "unist-util-remove";
 const __dirname = url.fileURLToPath(new URL(".", import.meta.url));
 const rootDir = path.join(__dirname, "..");
 
-removePreReleaseChangelogs().then(() =>
-  console.log("✅ Removed pre-release changelogs")
-);
+main();
+
+async function main() {
+  if (isPrereleaseMode()) {
+    console.log("🚫 Skipping changelog removal in prerelease mode");
+    return;
+  }
+  await removePreReleaseChangelogs();
+  console.log("✅ Removed pre-release changelogs");
+}
 
 async function removePreReleaseChangelogs() {
   let allPackages = getPackagesSync(rootDir).packages;
@@ -104,4 +111,13 @@ function removePreReleaseSectionFromMarkdown() {
  */
 function isPrereleaseVersion(str) {
   return /^(v?\d+\.){2}\d+-[a-z]+\.\d+$/i.test(str.trim());
+}
+
+function isPrereleaseMode() {
+  try {
+    let prereleaseFilePath = path.join(rootDir, ".changeset", "pre.json");
+    return fs.existsSync(prereleaseFilePath);
+  } catch (err) {
+    return false;
+  }
 }
