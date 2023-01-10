@@ -647,6 +647,7 @@ function V2Meta() {
   let location = useLocation();
 
   let meta: V2_HtmlMetaDescriptor[] = [];
+  let leafMeta: V2_HtmlMetaDescriptor[] | null = null;
   let parentsData: { [routeId: string]: AppData } = {};
 
   let matchesWithMeta: RouteMatchWithMeta[] = matches.map((match) => ({
@@ -677,6 +678,8 @@ function V2Meta() {
               matches: matchesWithMeta,
             })
           : routeModule.meta;
+    } else if (leafMeta) {
+      routeMeta = leafMeta;
     }
 
     routeMeta = routeMeta || [];
@@ -695,6 +698,7 @@ function V2Meta() {
     matchesWithMeta[index].meta = routeMeta;
     meta = routeMeta;
     parentsData[routeId] = data;
+    leafMeta = meta;
   }
 
   return (
