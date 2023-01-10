@@ -1,4 +1,5 @@
 import React, { useContext } from "react";
+import type { ErrorResponse } from "@remix-run/router";
 import type { Location } from "react-router-dom";
 
 import type {
@@ -124,9 +125,8 @@ export function useCatch<
 }
 
 type RemixCatchBoundaryProps = React.PropsWithChildren<{
-  location: Location;
   component: CatchBoundaryComponent;
-  catch?: ThrownResponse;
+  catch?: ErrorResponse;
 }>;
 
 export function RemixCatchBoundary({

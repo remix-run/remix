@@ -1,23 +1,12 @@
 import * as React from "react";
-import { MemoryRouter, Outlet } from "react-router-dom";
+import { createMemoryRouter, RouterProvider, Outlet } from "react-router-dom";
 import { render, screen } from "@testing-library/react";
 
-import { LiveReload, RemixEntryContext, Scripts } from "../components";
-import type { RemixEntryContextType } from "../components";
+import { RemixContext, Scripts } from "../components";
 import { ScrollRestoration } from "../scroll-restoration";
+import type { RemixContextObject } from "../entry";
 
 import "@testing-library/jest-dom/extend-expect";
-
-function AppShell({ children }: { children: React.ReactNode }) {
-  return (
-    <React.Fragment>
-      <Outlet />
-      {children}
-      <Scripts />
-      <LiveReload />
-    </React.Fragment>
-  );
-}
 
 describe("<ScrollRestoration />", () => {
   let scrollTo = window.scrollTo;
@@ -27,81 +16,73 @@ describe("<ScrollRestoration />", () => {
   afterAll(() => {
     window.scrollTo = scrollTo;
   });
-  function withContext(stuff: JSX.Element) {
-    let context: RemixEntryContextType = {
-      routeModules: { idk: { default: () => null } },
-      manifest: {
-        routes: {
-          idk: {
-            hasLoader: true,
-            hasAction: false,
-            hasCatchBoundary: false,
-            hasErrorBoundary: false,
-            id: "idk",
-            module: "idk",
-          },
+
+  let context: RemixContextObject = {
+    routeModules: { root: { default: () => null } },
+    manifest: {
+      routes: {
+        root: {
+          hasLoader: false,
+          hasAction: false,
+          hasCatchBoundary: false,
+          hasErrorBoundary: false,
+          id: "root",
+          module: "root.js",
         },
-        entry: { imports: [], module: "" },
-        url: "",
-        version: "",
       },
-      matches: [],
-      clientRoutes: [
-        {
-          id: "idk",
-          path: "idk",
-          hasLoader: true,
-          element: "",
-          module: "",
-          async action() {
-            return {};
-          },
-          async loader() {
-            return {};
-          },
-        },
-      ],
-      routeData: {},
-      appState: {} as any,
-      transitionManager: {
-        getState() {
-          return {
-            transition: {},
-          };
-        },
-      } as any,
-      future: {} as any,
-    };
-    return (
-      <RemixEntryContext.Provider value={context}>
-        <MemoryRouter>{stuff}</MemoryRouter>
-      </RemixEntryContext.Provider>
-    );
-  }
+      entry: { imports: [], module: "" },
+      url: "",
+      version: "",
+    },
+    future: { v2_meta: false },
+  };
 
   it("should render a <script> tag", () => {
+    let router = createMemoryRouter([
+      {
+        id: "root",
+        path: "/",
+        element: (
+          <>
+            <Outlet />
+            <ScrollRestoration data-testid="scroll-script" />
+            <Scripts />
+          </>
+        ),
+      },
+    ]);
+
     render(
-      withContext(
-        <AppShell>
-          <ScrollRestoration data-testid="scroll-script" />
-        </AppShell>
-      )
+      <RemixContext.Provider value={context}>
+        <RouterProvider router={router} />
+      </RemixContext.Provider>
     );
     let script = screen.getByTestId("scroll-script");
     expect(script instanceof HTMLScriptElement).toBe(true);
   });
 
   it("should pass props to <script>", () => {
+    let router = createMemoryRouter([
+      {
+        id: "root",
+        path: "/",
+        element: (
+          <>
+            <Outlet />
+            <ScrollRestoration
+              data-testid="scroll-script"
+              nonce="hello"
+              crossOrigin="anonymous"
+            />
+            <Scripts />
+          </>
+        ),
+      },
+    ]);
     render(
-      withContext(
-        <AppShell>
-          <ScrollRestoration
-            data-testid="scroll-script"
-            nonce="hello"
-            crossOrigin="anonymous"
-          />
-        </AppShell>
-      )
+      <RemixContext.Provider value={context}>
+        <RouterProvider router={router} />
+      </RemixContext.Provider>
     );
     let script = screen.getByTestId("scroll-script");
     expect(script).toHaveAttribute("nonce", "hello");

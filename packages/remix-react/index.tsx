@@ -1,30 +1,38 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export type {
+  FormProps,
   Location,
   NavigateFunction,
   Params,
   Path,
+  ShouldRevalidateFunction,
+  SubmitFunction,
+  SubmitOptions,
 } from "react-router-dom";
 export {
+  Form,
   Outlet,
+  useBeforeUnload,
+  useFormAction,
   useHref,
   useLocation,
   useNavigate,
+  useNavigation,
   useNavigationType,
   useOutlet,
   useOutletContext,
   useParams,
   useResolvedPath,
+  useRevalidator,
+  useRouteLoaderData,
   useSearchParams,
+  useSubmit,
 } from "react-router-dom";
 
 export type {
   FetcherWithComponents,
-  FormProps,
   RouteMatch,
-  SubmitOptions,
-  SubmitFunction,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,
 } from "./components";
@@ -34,19 +42,15 @@ export {
   Scripts,
   Link,
   NavLink,
-  Form,
-  RemixEntry,
   PrefetchPageLinks,
   LiveReload,
-  useFormAction,
-  useSubmit,
   useTransition,
   useFetcher,
   useFetchers,
   useLoaderData,
-  useActionData,
-  useBeforeUnload,
   useMatches,
+  useActionData,
+  RemixContext as UNSAFE_RemixContext,
 } from "./components";
 
 export type { FormMethod, FormEncType } from "./data";
@@ -56,10 +60,9 @@ export { useCatch } from "./errorBoundaries";
 
 export type { HtmlLinkDescriptor } from "./links";
 export type {
-  ShouldReloadFunction,
   HtmlMetaDescriptor,
-  CatchBoundaryComponent,
-  RouteModules,
+  RouteModules as UNSAFE_RouteModules,
+  ShouldReloadFunction,
 } from "./routeModules";
 
 export { ScrollRestoration } from "./scroll-restoration";
@@ -69,6 +72,13 @@ export { RemixServer } from "./server";
 
 export type { Fetcher } from "./transition";
 
-export type { AssetsManifest, EntryContext } from "./entry";
-export type { RouteData } from "./routeData";
-export type { EntryRoute, RouteManifest } from "./routes";
+export type {
+  FutureConfig as UNSAFE_FutureConfig,
+  AssetsManifest as UNSAFE_AssetsManifest,
+  RemixContextObject as UNSAFE_RemixContextObject,
+} from "./entry";
+
+export type {
+  EntryRoute as UNSAFE_EntryRoute,
+  RouteManifest as UNSAFE_RouteManifest,
+} from "./routes";

@@ -29,7 +29,7 @@
     "format": "prettier --ignore-path .eslintignore --write ./ && npm run lint:fix",
     "format:deno": "deno fmt integration/helpers/deno-template packages/remix-deno templates/deno --ignore=packages/remix-deno/node_modules",
     "license": "node ./scripts/license.js",
-    "lint": "eslint --cache --ext .tsx,.ts,.js,.jsx,.md .",
+    "lint": "eslint --cache .",
     "lint:deno": "deno lint integration/helpers/deno-template packages/remix-deno templates/deno --ignore=packages/remix-deno/node_modules",
     "lint:fix": "yarn lint --fix",
     "playground:new": "node ./scripts/playground/new.js",
@@ -42,7 +42,7 @@
     "posttest:integration": "node ./integration/helpers/cleanup.mjs",
     "test:primary": "jest",
     "changeset": "changeset",
-    "changeset:version": "changeset version && node ./scripts/patchup-version.mjs",
+    "changeset:version": "changeset version && node ./scripts/remove-prerelease-changelogs.mjs && node ./scripts/patchup-version.mjs",
     "changeset:release": "yarn build --tsc --publish && changeset publish",
     "version": "node ./scripts/version.js",
     "version:experimental": "node ./scripts/version.js experimental",
@@ -83,6 +83,7 @@
     "@types/retry": "^0.12.0",
     "@types/semver": "^7.3.4",
     "@types/ssri": "^7.1.0",
+    "@types/use-sync-external-store": "^0.0.3",
     "abort-controller": "^3.0.0",
     "abortcontroller-polyfill": "^1.7.3",
     "aws-sdk": "^2.1055.0",
@@ -113,6 +114,8 @@
     "remark": "14.0.2",
     "remark-frontmatter": "4.0.1",
     "remark-gfm": "3.0.1",
+    "remark-parse": "^10.0.1",
+    "remark-stringify": "^10.0.2",
     "rollup": "^2.36.1",
     "rollup-plugin-copy": "^3.3.0",
     "semver": "^7.3.7",
@@ -121,7 +124,10 @@
     "strip-indent": "^3.0.0",
     "to-vfile": "7.2.3",
     "type-fest": "^2.16.0",
-    "typescript": "^4.7.4"
+    "typescript": "^4.7.4",
+    "unified": "^10.1.2",
+    "unist-util-remove": "^3.1.0",
+    "unist-util-visit": "^4.1.1"
   },
   "engines": {
     "node": ">=14"
