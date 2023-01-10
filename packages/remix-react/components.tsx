@@ -1191,6 +1191,10 @@ function convertRouterFetcherToRemixFetcher(
       let fetcher: FetcherStates["SubmittingAction"] = {
         state,
         type: "actionSubmission",
+        formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
+        formAction: formAction,
+        formEncType: formEncType,
+        formData: formData,
         submission: {
           method: formMethod.toUpperCase() as ActionSubmission["method"],
           action: formAction,
@@ -1218,6 +1222,10 @@ function convertRouterFetcherToRemixFetcher(
           let fetcher: FetcherStates["ReloadingAction"] = {
             state,
             type: "actionReload",
+            formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
+            formAction: formAction,
+            formEncType: formEncType,
+            formData: formData,
             submission: {
               method: formMethod.toUpperCase() as ActionSubmission["method"],
               action: formAction,
@@ -1232,13 +1240,16 @@ function convertRouterFetcherToRemixFetcher(
           let fetcher: FetcherStates["LoadingActionRedirect"] = {
             state,
             type: "actionRedirect",
+            formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
+            formAction: formAction,
+            formEncType: formEncType,
+            formData: formData,
             submission: {
               method: formMethod.toUpperCase() as ActionSubmission["method"],
               action: formAction,
               encType: formEncType,
               formData: formData,
-              // TODO???
-              key: "todo-what-is-this?",
+              key: "",
             },
             data: undefined,
           };
@@ -1263,6 +1274,10 @@ function convertRouterFetcherToRemixFetcher(
         let fetcher: FetcherStates["SubmittingLoader"] = {
           state: "submitting",
           type: "loaderSubmission",
+          formMethod: formMethod.toUpperCase() as LoaderSubmission["method"],
+          formAction: formAction,
+          formEncType: formEncType,
+          formData: formData,
           submission: {
             method: formMethod.toUpperCase() as LoaderSubmission["method"],
             action: url.pathname + url.search,

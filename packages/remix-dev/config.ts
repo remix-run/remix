@@ -9,6 +9,7 @@ import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/virtualModules";
 import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
+import { flatRoutes } from "./config/flat-routes";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -32,7 +33,10 @@ export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
 interface FutureConfig {
+  unstable_cssModules: boolean;
+  unstable_cssSideEffectImports: boolean;
   v2_meta: boolean;
+  v2_routeConvention: boolean;
 }
 
 /**
@@ -426,8 +430,13 @@ export async function readConfig(
   let routes: RouteManifest = {
     root: { path: "", id: "root", file: rootRouteFile },
   };
+
+  let routesConvention = appConfig.future?.v2_routeConvention
+    ? flatRoutes
+    : defineConventionalRoutes;
+
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
-    let conventionalRoutes = defineConventionalRoutes(
+    let conventionalRoutes = routesConvention(
       appDirectory,
       appConfig.ignoredRouteFiles
     );
@@ -481,7 +490,11 @@ export async function readConfig(
   }
 
   let future = {
+    unstable_cssModules: appConfig.future?.unstable_cssModules === true,
+    unstable_cssSideEffectImports:
+      appConfig.future?.unstable_cssSideEffectImports === true,
     v2_meta: appConfig.future?.v2_meta === true,
+    v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
   return {
