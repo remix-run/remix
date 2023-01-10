@@ -1,5 +1,13 @@
 # `@remix-run/architect`
 
+## 1.10.0
+
+### Patch Changes
+
+- Improve performance of `isBinaryType` ([#4761](https://github.com/remix-run/remix/pull/4761))
+- Updated dependencies:
+  - `@remix-run/node@1.10.0`
+
 ## 1.9.0
 
 ### Patch Changes
