@@ -481,6 +481,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       await commands.codemod(input[1], input[2]);
       break;
     }
+    // TODO: come up with a better name for this command
     case "eject": {
       let remixRoot = process.env.REMIX_ROOT || process.cwd();
       await commands.generateEntry(remixRoot, input[1]);
