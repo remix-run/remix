@@ -27,7 +27,7 @@ export function cssBundleEntryModulePlugin(config: RemixConfig): Plugin {
           contents: [
             // These need to be exports to avoid tree shaking
             `export * as entryClient from ${JSON.stringify(
-              `./${config.entryClientFile}`
+              config.entryClientFilePath
             )};`,
             ...Object.keys(config.routes).map((key, index) => {
               let route = config.routes[key];
