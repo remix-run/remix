@@ -18,6 +18,7 @@ test.describe("cloudflare compiler", () => {
           sideEffects: false,
           main: "build/index.js",
           dependencies: {
+            "@remix-run/cloudflare": "0.0.0-local-version",
             "@remix-run/cloudflare-workers": "0.0.0-local-version",
             "@remix-run/react": "0.0.0-local-version",
             react: "0.0.0-local-version",
