@@ -239,6 +239,6 @@ export async function codemod(
 export async function dev2(projectDir?: string) {
   projectDir ??= process.cwd();
   let config = await readConfig(projectDir);
-  let dispose = await devServer2.serve(config, 3000);
-  await new Promise(() => {})
+  await devServer2.serve(config);
+  await new Promise(() => {});
 }

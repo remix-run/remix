@@ -536,11 +536,10 @@ export async function readConfig(
     unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract === true,
     v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
     v2_dev: {
-      proxyPort: appConfig.future?.v2_dev?.proxyPort ?? 3000,
-      proxyRebuildPollIntervalMs:
-        appConfig.future?.v2_dev?.proxyRebuildPollIntervalMs ?? 50,
-      proxyRebuildTimeoutMs:
-        appConfig.future?.v2_dev?.proxyRebuildTimeoutMs ?? 1000,
+      appServerPort: appConfig.future?.v2_dev?.appServerPort ?? 3000,
+      rebuildPollIntervalMs:
+        appConfig.future?.v2_dev!.rebuildPollIntervalMs ?? 50,
+      rebuildTimeoutMs: appConfig.future?.v2_dev?.rebuildTimeoutMs ?? 1000,
       remixRequestHandlerPath:
         appConfig.future?.v2_dev?.remixRequestHandlerPath ?? "",
     },

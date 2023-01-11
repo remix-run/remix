@@ -46,14 +46,14 @@ let fetchAssetsManifest = async (
 
 let info = (message: string) => console.info(`💿 ${message}`);
 
-export let serve = async (config: RemixConfig, proxyPort: number) => {
+export let serve = async (config: RemixConfig) => {
   await loadEnv(config.rootDirectory);
+  let { appServerPort, rebuildPollIntervalMs, rebuildTimeoutMs } =
+    config.future.v2_dev;
 
   let host = getHost();
-  let port = await findPort();
-  let appServerOrigin = `http://${host ?? "localhost"}:${proxyPort}`;
+  let appServerOrigin = `http://${host ?? "localhost"}:${appServerPort}`;
   let waitForProxyServer = async (buildHash: string) => {
-    let { rebuildPollIntervalMs, rebuildTimeoutMs } = config.future.v2_dev;
     let elapsedMs = 0;
     while (elapsedMs < rebuildTimeoutMs) {
       let assetsManifest = await fetchAssetsManifest(appServerOrigin, config);
@@ -68,10 +68,12 @@ export let serve = async (config: RemixConfig, proxyPort: number) => {
   };
 
   // watch and live reload on rebuilds
-  let socket = Socket.serve({ port: config.devServerPort });
+  let port = await findPort();
+  let socket = Socket.serve({ port });
   let dispose = await Compiler.watch(config, {
     // TODO: inject websocket port into build
     mode: "development",
+    liveReloadPort: port,
     onInitialBuild: (durationMs) => info(`Built in ${prettyMs(durationMs)}`),
     onRebuildStart: () => socket.log("Rebuilding..."),
     onRebuildFinish: async (durationMs, assetsManifest) => {

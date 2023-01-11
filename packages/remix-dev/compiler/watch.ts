@@ -33,6 +33,7 @@ export async function watch(
   config: RemixConfig,
   {
     mode = "development",
+    liveReloadPort,
     target = "node14",
     sourcemap = true,
     onWarning = warnOnce,
@@ -47,6 +48,7 @@ export async function watch(
 ): Promise<() => Promise<void>> {
   let options: CompileOptions = {
     mode,
+    liveReloadPort,
     target,
     sourcemap,
     onCompileFailure,
@@ -81,7 +83,7 @@ export async function watch(
     onRebuildStart?.();
     let start = Date.now();
     let assetsManifest = await compile(compiler, { onCompileFailure });
-    await onRebuildFinish?.(Date.now() - start, assetsManifest);
+    onRebuildFinish?.(Date.now() - start, assetsManifest);
   }, 100);
 
   let toWatch = [config.appDirectory];
