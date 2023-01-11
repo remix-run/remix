@@ -1202,7 +1202,7 @@ function convertRouterFetcherToRemixFetcher(
           formData: formData,
           key: "",
         },
-        data: undefined,
+        data,
       };
       return fetcher;
     } else {
@@ -1285,7 +1285,7 @@ function convertRouterFetcherToRemixFetcher(
             formData: formData,
             key: "",
           },
-          data: undefined,
+          data,
         };
         return fetcher;
       }
@@ -1297,7 +1297,7 @@ function convertRouterFetcherToRemixFetcher(
     state: "loading",
     type: "normalLoad",
     submission: undefined,
-    data: undefined,
+    data,
   };
   return fetcher;
 }
