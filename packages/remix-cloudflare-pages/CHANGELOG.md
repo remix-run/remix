@@ -1,5 +1,12 @@
 # `@remix-run/cloudflare-pages`
 
+## 1.10.1-pre.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.10.1-pre.1`
+
 ## 1.10.1-pre.0
 
 ### Patch Changes

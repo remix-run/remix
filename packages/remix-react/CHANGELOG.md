@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.10.1-pre.1
+
+### Patch Changes
+
+- Fetchers should persist data through reload/resubmit ([#5065](https://github.com/remix-run/remix/pull/5065))
+
 ## 1.10.1-pre.0
 
 ### Patch Changes

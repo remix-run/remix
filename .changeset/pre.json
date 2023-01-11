@@ -21,6 +21,7 @@
     "@remix-run/vercel": "1.10.0"
   },
   "changesets": [
+    "eighty-donkeys-run",
     "purple-ads-itch"
   ]
 }
