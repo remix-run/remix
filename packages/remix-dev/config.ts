@@ -71,12 +71,22 @@ type V2_Dev = {
   rebuildTimeoutMs?: number;
 };
 
+interface FutureConfigInput {
+  unstable_cssModules?: boolean;
+  unstable_cssSideEffectImports?: boolean;
+  unstable_vanillaExtract?: boolean;
+  v2_errorBoundary?: boolean;
+  v2_dev?: false | V2_Dev;
+  v2_meta?: boolean;
+  v2_routeConvention?: boolean;
+}
+
 interface FutureConfig {
   unstable_cssModules: boolean;
   unstable_cssSideEffectImports: boolean;
   unstable_vanillaExtract: boolean;
   v2_errorBoundary: boolean;
-  v2_dev: false | V2_Dev;
+  v2_dev: false | Required<V2_Dev>;
   v2_meta: boolean;
   v2_routeConvention: boolean;
 }
@@ -208,7 +218,7 @@ export interface AppConfig {
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
 
-  future?: Partial<FutureConfig>;
+  future?: FutureConfigInput;
 }
 
 /**
@@ -537,17 +547,16 @@ export async function readConfig(
       appConfig.future?.unstable_cssSideEffectImports === true,
     unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract === true,
     v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
-    v2_dev:
-      appConfig.future?.v2_dev === undefined
-        ? undefined
-        : {
-            appServerPort: appConfig.future.v2_dev.appServerPort,
-            remixRequestHandlerPath:
-              appConfig.future.v2_dev.remixRequestHandlerPath ?? "",
-            rebuildPollIntervalMs:
-              appConfig.future.v2_dev.rebuildPollIntervalMs ?? 50,
-            rebuildTimeoutMs: appConfig.future.v2_dev.rebuildTimeoutMs ?? 1000,
-          },
+    v2_dev: appConfig.future?.v2_dev
+      ? {
+          appServerPort: appConfig.future.v2_dev.appServerPort,
+          remixRequestHandlerPath:
+            appConfig.future.v2_dev.remixRequestHandlerPath ?? "",
+          rebuildPollIntervalMs:
+            appConfig.future.v2_dev.rebuildPollIntervalMs ?? 50,
+          rebuildTimeoutMs: appConfig.future.v2_dev.rebuildTimeoutMs ?? 1000,
+        }
+      : false,
     v2_meta: appConfig.future?.v2_meta === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };

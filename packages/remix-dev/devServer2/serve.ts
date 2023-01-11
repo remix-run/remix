@@ -31,9 +31,8 @@ let sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 let fetchAssetsManifest = async (
   origin: string,
-  config: RemixConfig
+  remixRequestHandlerPath: string
 ): Promise<AssetsManifest | undefined> => {
-  let { remixRequestHandlerPath } = config.future.v2_dev;
   try {
     let url = origin + remixRequestHandlerPath + "/__REMIX_ASSETS_MANIFEST";
     let res = await fetch(url);
@@ -48,13 +47,19 @@ let info = (message: string) => console.info(`💿 ${message}`);
 
 export let serve = async (config: RemixConfig) => {
   await loadEnv(config.rootDirectory);
-  if (config.future.v2_dev === false) {
+
+  let { v2_dev } = config.future;
+  if (v2_dev === false) {
     throw Error(
       "`remix dev2` requires that you enable the `v2_dev` future flag"
     );
   }
-  let { appServerPort, rebuildPollIntervalMs, rebuildTimeoutMs } =
-    config.future.v2_dev;
+  let {
+    appServerPort,
+    remixRequestHandlerPath,
+    rebuildPollIntervalMs,
+    rebuildTimeoutMs,
+  } = v2_dev;
 
   let host = getHost();
   let appServerOrigin = `http://${host ?? "localhost"}:${appServerPort}`;
@@ -63,7 +68,10 @@ export let serve = async (config: RemixConfig) => {
     let elapsedMs = 0;
     while (elapsedMs < rebuildTimeoutMs) {
       // if canceled, move one
-      let assetsManifest = await fetchAssetsManifest(appServerOrigin, config);
+      let assetsManifest = await fetchAssetsManifest(
+        appServerOrigin,
+        remixRequestHandlerPath
+      );
       if (assetsManifest?.version === buildHash) return;
 
       await sleep(rebuildPollIntervalMs);
