@@ -679,6 +679,9 @@ function V2Meta() {
             })
           : routeModule.meta;
     } else if (leafMeta) {
+      // We only assign the route's meta to the nearest leaf if there is no meta
+      // export in the route. The meta function may return a falsey value which
+      // is effectively the same as an empty array.
       routeMeta = leafMeta;
     }
 
