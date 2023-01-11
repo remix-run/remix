@@ -20,5 +20,7 @@
     "@remix-run/testing": "1.10.0",
     "@remix-run/vercel": "1.10.0"
   },
-  "changesets": []
+  "changesets": [
+    "purple-ads-itch"
+  ]
 }
