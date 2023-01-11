@@ -32,7 +32,7 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 
 ```tsx filename=app/routes/index.tsx lines=[4,8-9,15-16,20]
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, Link, Form } from "@remix-run/react";
 
 import { userPrefs } from "~/cookies";
 
