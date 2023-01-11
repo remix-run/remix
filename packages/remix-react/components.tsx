@@ -1535,7 +1535,6 @@ export const LiveReload =
         port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
         nonce = undefined,
       }: {
-        // TODO deprecate port?
         port?: number;
         /**
          * @deprecated this property is no longer relevant.
@@ -1550,9 +1549,9 @@ export const LiveReload =
             dangerouslySetInnerHTML={{
               __html: js`
                 function remixLiveReloadConnect(config) {
-                  let protocol = location.protocol ===(window.__remixDevLiveReloadPort "https:" ? "wss:" : "ws:";
+                  let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
-                  let socketPath = protocol + "//" + host + ":" + (window.__remixDevLiveReloadPort ||${String(
+                  let socketPath = protocol + "//" + host + ":" + ((window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) ||${String(
                     port
                   )}) + "/socket";
                   let ws = new WebSocket(socketPath);

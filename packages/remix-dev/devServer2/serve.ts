@@ -48,14 +48,21 @@ let info = (message: string) => console.info(`💿 ${message}`);
 
 export let serve = async (config: RemixConfig) => {
   await loadEnv(config.rootDirectory);
+  if (config.future.v2_dev === false) {
+    throw Error(
+      "`remix dev2` requires that you enable the `v2_dev` future flag"
+    );
+  }
   let { appServerPort, rebuildPollIntervalMs, rebuildTimeoutMs } =
     config.future.v2_dev;
 
   let host = getHost();
   let appServerOrigin = `http://${host ?? "localhost"}:${appServerPort}`;
+  // TODO pass in an AbortController signal into waitForProxyServer
   let waitForProxyServer = async (buildHash: string) => {
     let elapsedMs = 0;
     while (elapsedMs < rebuildTimeoutMs) {
+      // if canceled, move one
       let assetsManifest = await fetchAssetsManifest(appServerOrigin, config);
       if (assetsManifest?.version === buildHash) return;
 
@@ -71,7 +78,6 @@ export let serve = async (config: RemixConfig) => {
   let port = await findPort();
   let socket = Socket.serve({ port });
   let dispose = await Compiler.watch(config, {
-    // TODO: inject websocket port into build
     mode: "development",
     liveReloadPort: port,
     onInitialBuild: (durationMs) => info(`Built in ${prettyMs(durationMs)}`),

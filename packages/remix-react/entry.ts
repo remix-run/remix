@@ -10,6 +10,9 @@ export interface RemixContextObject {
   serverHandoffString?: string;
   future: FutureConfig;
   abortDelay?: number;
+  dev?: {
+    liveReloadPort: number;
+  };
 }
 
 // Additional React-Router information needed at runtime, but not hydrated

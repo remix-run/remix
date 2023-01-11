@@ -32,49 +32,51 @@ export type ServerBuildTarget =
 export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
+type V2_Dev = {
+  /**
+   * URL path to the Remix request handler.
+   *
+   * When a rebuild finishes, the dev server polls `/__REMIX_ASSETS_MANIFEST`
+   * to check that the app server is running and serving up-to-date routes and assets.
+   *
+   * Most apps will place the Remix request handler at the root, but some apps
+   * may only route requests with a specific path prefix to the Remix request handler.
+   * Those apps will need to provide that request handler path prefix so that the
+   * dev server can prefix the assets manifest request:
+   * `{remixRequestHandlerPath}/__REMIX_ASSETS_MANIFEST`
+   */
+  remixRequestHandlerPath?: string;
+  /**
+   * Port for the Remix app server.
+   *
+   * When a rebuild finishes, the dev server polls `/__REMIX_ASSETS_MANIFEST`
+   * to check that the app server is running and serving up-to-date routes and assets.
+   *
+   * To send each poll request, the dev server needs to know the app server's port.
+   */
+  appServerPort: number;
+  /**
+   * Milliseconds to wait between poll requests to the app server.
+   *
+   * When a rebuild finishes, the dev server polls `/__REMIX_ASSETS_MANIFEST`
+   * to check that the app server is running and serving up-to-date routes and assets.
+   */
+  rebuildPollIntervalMs?: number;
+  /**
+   * Milliseconds to wait for app server to be running and up-to-date before timing out.
+   *
+   * When a rebuild finishes, the dev server polls `/__REMIX_ASSETS_MANIFEST`
+   * to check that the app server is running and serving up-to-date routes and assets.
+   */
+  rebuildTimeoutMs?: number;
+};
+
 interface FutureConfig {
   unstable_cssModules: boolean;
   unstable_cssSideEffectImports: boolean;
   unstable_vanillaExtract: boolean;
   v2_errorBoundary: boolean;
-  v2_dev: {
-    /**
-     * URL path to the Remix request handler.
-     *
-     * When a rebuild finishes, the dev server polls `/__REMIX_ASSETS_MANIFEST`
-     * to check that the app server is running and serving up-to-date routes and assets.
-     *
-     * Most apps will place the Remix request handler at the root, but some apps
-     * may only route requests with a specific path prefix to the Remix request handler.
-     * Those apps will need to provide that request handler path prefix so that the
-     * dev server can prefix the assets manifest request:
-     * `{remixRequestHandlerPath}/__REMIX_ASSETS_MANIFEST`
-     */
-    remixRequestHandlerPath: string;
-    /**
-     * Port for the Remix app server.
-     *
-     * When a rebuild finishes, the dev server polls `/__REMIX_ASSETS_MANIFEST`
-     * to check that the app server is running and serving up-to-date routes and assets.
-     *
-     * To send each poll request, the dev server needs to know the app server's port.
-     */
-    appServerPort: number;
-    /**
-     * Milliseconds to wait between poll requests to the app server.
-     *
-     * When a rebuild finishes, the dev server polls `/__REMIX_ASSETS_MANIFEST`
-     * to check that the app server is running and serving up-to-date routes and assets.
-     */
-    rebuildPollIntervalMs: number;
-    /**
-     * Milliseconds to wait for app server to be running and up-to-date before timing out.
-     *
-     * When a rebuild finishes, the dev server polls `/__REMIX_ASSETS_MANIFEST`
-     * to check that the app server is running and serving up-to-date routes and assets.
-     */
-    rebuildTimeoutMs: number;
-  };
+  v2_dev: false | V2_Dev;
   v2_meta: boolean;
   v2_routeConvention: boolean;
 }
@@ -326,7 +328,7 @@ export interface RemixConfig {
    */
   tsconfigPath: string | undefined;
 
-  future: FutureConfig;
+  future: Omit<FutureConfig, "v2_dev"> & { v2_dev: false | Required<V2_Dev> };
 }
 
 /**
@@ -535,14 +537,17 @@ export async function readConfig(
       appConfig.future?.unstable_cssSideEffectImports === true,
     unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract === true,
     v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
-    v2_dev: {
-      appServerPort: appConfig.future?.v2_dev?.appServerPort ?? 3000,
-      rebuildPollIntervalMs:
-        appConfig.future?.v2_dev!.rebuildPollIntervalMs ?? 50,
-      rebuildTimeoutMs: appConfig.future?.v2_dev?.rebuildTimeoutMs ?? 1000,
-      remixRequestHandlerPath:
-        appConfig.future?.v2_dev?.remixRequestHandlerPath ?? "",
-    },
+    v2_dev:
+      appConfig.future?.v2_dev === undefined
+        ? undefined
+        : {
+            appServerPort: appConfig.future.v2_dev.appServerPort,
+            remixRequestHandlerPath:
+              appConfig.future.v2_dev.remixRequestHandlerPath ?? "",
+            rebuildPollIntervalMs:
+              appConfig.future.v2_dev.rebuildPollIntervalMs ?? 50,
+            rebuildTimeoutMs: appConfig.future.v2_dev.rebuildTimeoutMs ?? 1000,
+          },
     v2_meta: appConfig.future?.v2_meta === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
