@@ -115,24 +115,40 @@ export type FetcherStates<TData = any> = {
   SubmittingAction: {
     state: "submitting";
     type: "actionSubmission";
+    formMethod: ActionSubmission["method"];
+    formAction: string;
+    formData: FormData;
+    formEncType: string;
     submission: ActionSubmission;
     data: undefined;
   };
   SubmittingLoader: {
     state: "submitting";
     type: "loaderSubmission";
+    formMethod: LoaderSubmission["method"];
+    formAction: string;
+    formData: FormData;
+    formEncType: string;
     submission: LoaderSubmission;
     data: TData | undefined;
   };
   ReloadingAction: {
     state: "loading";
     type: "actionReload";
+    formMethod: ActionSubmission["method"];
+    formAction: string;
+    formData: FormData;
+    formEncType: string;
     submission: ActionSubmission;
     data: TData;
   };
   LoadingActionRedirect: {
     state: "loading";
     type: "actionRedirect";
+    formMethod: ActionSubmission["method"];
+    formAction: string;
+    formData: FormData;
+    formEncType: string;
     submission: ActionSubmission;
     data: undefined;
   };
