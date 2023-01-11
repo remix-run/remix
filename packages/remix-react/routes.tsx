@@ -9,7 +9,13 @@ import { redirect } from "react-router-dom";
 
 import type { RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
-import { fetchData, isCatchResponse, isRedirectResponse } from "./data";
+import {
+  fetchData,
+  isCatchResponse,
+  isDeferredResponse,
+  isRedirectResponse,
+  parseDeferredReadableStream,
+} from "./data";
 import { prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
 import { RemixRoute, RemixRouteError } from "./components";
@@ -157,6 +163,10 @@ function createDataFunction(
 
       if (isCatchResponse(result)) {
         throw result;
+      }
+
+      if (isDeferredResponse(result) && result.body) {
+        return await parseDeferredReadableStream(result.body);
       }
 
       return result;

@@ -12,6 +12,7 @@ export {
 export {
   createRequestHandler,
   createSession,
+  defer,
   isCookie,
   isSession,
   json,

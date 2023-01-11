@@ -6,8 +6,10 @@ import type {
 import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
+  UNSAFE_DeferredData as DeferredData,
   ErrorResponse,
   Navigation,
+  TrackedPromise,
 } from "@remix-run/router";
 import type {
   LinkProps,
@@ -20,12 +22,14 @@ import type {
   SubmitFunction,
 } from "react-router-dom";
 import {
+  Await,
   Link as RouterLink,
   NavLink as RouterNavLink,
   UNSAFE_DataRouterContext as DataRouterContext,
   UNSAFE_DataRouterStateContext as DataRouterStateContext,
   isRouteErrorResponse,
   matchRoutes,
+  useAsyncError,
   useFetcher as useFetcherRR,
   useFetchers as useFetchersRR,
   useActionData as useActionDataRR,
@@ -56,7 +60,7 @@ import {
   isPageLinkDescriptor,
 } from "./links";
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
-import { createHtml } from "./markup";
+import { createHtml, escapeHtml } from "./markup";
 import type {
   RouteMatchWithMeta,
   V1_HtmlMetaDescriptor,
@@ -765,8 +769,8 @@ export type ScriptProps = Omit<
  * @see https://remix.run/api/remix#meta-links-scripts
  */
 export function Scripts(props: ScriptProps) {
-  let { manifest, serverHandoffString } = useRemixContext();
-  let { router } = useDataRouterContext();
+  let { manifest, serverHandoffString, abortDelay } = useRemixContext();
+  let { router, static: isStatic, staticContext } = useDataRouterContext();
   let { matches } = useDataRouterStateContext();
   let navigation = useNavigation();
 
@@ -774,23 +778,122 @@ export function Scripts(props: ScriptProps) {
     isHydrated = true;
   }, []);
 
+  let deferredScripts: any[] = [];
   let initialScripts = React.useMemo(() => {
-    let contextScript = serverHandoffString
+    let contextScript = staticContext
       ? `window.__remixContext = ${serverHandoffString};`
-      : "";
+      : " ";
 
-    let routeModulesScript = `${matches
-      .map(
-        (match, index) =>
-          `import ${JSON.stringify(manifest.url)};
+    let activeDeferreds = staticContext?.activeDeferreds;
+    contextScript += !activeDeferreds
+      ? ""
+      : [
+          "// Add dev only comments about what these are used for",
+          "__remixContext.p = function(v,e,p,x) {",
+          "  if (typeof e !== 'undefined') {",
+          "    x=new Error(e.message);",
+          process.env.NODE_ENV === "development" ? `x.stack=e.stack;` : "",
+          "    p=Promise.reject(x);",
+          "  } else {",
+          "    p=Promise.resolve(v);",
+          "  }",
+          "  return p;",
+          "};",
+          "__remixContext.n = function(i,k) {",
+          "  __remixContext.t = __remixContext.t || {};",
+          "  __remixContext.t[i] = __remixContext.t[i] || {};",
+          "  let p = new Promise((r, e) => {__remixContext.t[i][k] = {r:(v)=>{r(v);},e:(v)=>{e(v);}};});",
+          typeof abortDelay === "number"
+            ? `setTimeout(() => {if(typeof p._error !== "undefined" || typeof p._data !== "undefined"){return;} __remixContext.t[i][k].e(new Error("Server timeout."))}, ${abortDelay});`
+            : "",
+          "  return p;",
+          "};",
+          "__remixContext.r = function(i,k,v,e,p,x) {",
+          "  p = __remixContext.t[i][k];",
+          "  if (typeof e !== 'undefined') {",
+          "    x=new Error(e.message);",
+          process.env.NODE_ENV === "development" ? `x.stack=e.stack;` : "",
+          "    p.e(x);",
+          "  } else {",
+          "    p.r(v);",
+          "  }",
+          "};",
+        ].join("\n") +
+        Object.entries(activeDeferreds)
+          .map(([routeId, deferredData]) => {
+            let pendingKeys = new Set(deferredData.pendingKeys);
+            let promiseKeyValues = deferredData.deferredKeys
+              .map((key) => {
+                if (pendingKeys.has(key)) {
+                  deferredScripts.push(
+                    <DeferredHydrationScript
+                      key={`${routeId} | ${key}`}
+                      deferredData={deferredData}
+                      routeId={routeId}
+                      dataKey={key}
+                    />
+                  );
+
+                  return `${JSON.stringify(
+                    key
+                  )}:__remixContext.n(${JSON.stringify(
+                    routeId
+                  )}, ${JSON.stringify(key)})`;
+                } else {
+                  let trackedPromise = deferredData.data[key] as TrackedPromise;
+                  if (typeof trackedPromise._error !== "undefined") {
+                    let toSerialize: { message: string; stack?: string } = {
+                      message: trackedPromise._error.message,
+                      stack: undefined,
+                    };
+                    if (process.env.NODE_ENV === "development") {
+                      toSerialize.stack = trackedPromise._error.stack;
+                    }
+                    return `${JSON.stringify(
+                      key
+                    )}:__remixContext.p(!1, ${escapeHtml(
+                      JSON.stringify(toSerialize)
+                    )})`;
+                  } else {
+                    if (typeof trackedPromise._data === "undefined") {
+                      throw new Error(
+                        `The deferred data for ${key} was not resolved, did you forget to return data from a deferred promise?`
+                      );
+                    }
+                    return `${JSON.stringify(
+                      key
+                    )}:__remixContext.p(${escapeHtml(
+                      JSON.stringify(trackedPromise._data)
+                    )})`;
+                  }
+                }
+              })
+              .join(",\n");
+            return `Object.assign(__remixContext.state.loaderData[${JSON.stringify(
+              routeId
+            )}], {${promiseKeyValues}});`;
+          })
+          .join("\n") +
+        (deferredScripts.length > 0
+          ? `__remixContext.a=${deferredScripts.length};`
+          : "");
+
+    let routeModulesScript = !isStatic
+      ? " "
+      : `${matches
+          .map(
+            (match, index) =>
+              `import ${JSON.stringify(manifest.url)};
 import * as route${index} from ${JSON.stringify(
-            manifest.routes[match.route.id].module
-          )};`
-      )
-      .join("\n")}
+                manifest.routes[match.route.id].module
+              )};`
+          )
+          .join("\n")}
 window.__remixRouteModules = {${matches
-      .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
-      .join(",")}};
+          .map(
+            (match, index) => `${JSON.stringify(match.route.id)}:route${index}`
+          )
+          .join(",")}};
 
 import(${JSON.stringify(manifest.entry.module)});`;
 
@@ -816,6 +919,12 @@ import(${JSON.stringify(manifest.entry.module)});`;
     // scripts as they were when the page first loaded
     // eslint-disable-next-line
   }, []);
+
+  if (!isStatic && typeof __remixContext === "object" && __remixContext.a) {
+    for (let i = 0; i < __remixContext.a; i++) {
+      deferredScripts.push(<DeferredHydrationScript key={i} />);
+    }
+  }
 
   // avoid waterfall when importing the next route module
   let nextMatches = React.useMemo(() => {
@@ -862,8 +971,102 @@ import(${JSON.stringify(manifest.entry.module)});`;
           crossOrigin={props.crossOrigin}
         />
       ))}
-      {isHydrated ? null : initialScripts}
+      {!isHydrated && initialScripts}
+      {!isHydrated && deferredScripts}
     </>
+  );
+}
+
+function DeferredHydrationScript({
+  dataKey,
+  deferredData,
+  routeId,
+}: {
+  dataKey?: string;
+  deferredData?: DeferredData;
+  routeId?: string;
+}) {
+  if (typeof document === "undefined" && deferredData && dataKey && routeId) {
+    invariant(
+      deferredData.pendingKeys.includes(dataKey),
+      `Deferred data for route ${routeId} with key ${dataKey} was not pending but tried to render a script for it.`
+    );
+  }
+
+  return (
+    <React.Suspense
+      fallback={
+        // This makes absolutely no sense. The server renders null as a fallback,
+        // but when hydrating, we need to render a script tag to avoid a hydration issue.
+        // To reproduce a hydration mismatch, just render null as a fallback.
+        typeof document === "undefined" &&
+        deferredData &&
+        dataKey &&
+        routeId ? null : (
+          <script
+            async
+            suppressHydrationWarning
+            dangerouslySetInnerHTML={{ __html: " " }}
+          />
+        )
+      }
+    >
+      {typeof document === "undefined" && deferredData && dataKey && routeId ? (
+        <Await
+          resolve={deferredData.data[dataKey]}
+          errorElement={
+            <ErrorDeferredHydrationScript dataKey={dataKey} routeId={routeId} />
+          }
+          children={(data) => (
+            <script
+              async
+              suppressHydrationWarning
+              dangerouslySetInnerHTML={{
+                __html: `__remixContext.r(${JSON.stringify(
+                  routeId
+                )}, ${JSON.stringify(dataKey)}, ${escapeHtml(
+                  JSON.stringify(data)
+                )});`,
+              }}
+            />
+          )}
+        />
+      ) : (
+        <script
+          async
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: " " }}
+        />
+      )}
+    </React.Suspense>
+  );
+}
+
+function ErrorDeferredHydrationScript({
+  dataKey,
+  routeId,
+}: {
+  dataKey: string;
+  routeId: string;
+}) {
+  let error = useAsyncError() as Error;
+  let toSerialize: { message: string; stack?: string } = {
+    message: error.message,
+    stack: undefined,
+  };
+  if (process.env.NODE_ENV === "development") {
+    toSerialize.stack = error.stack;
+  }
+
+  return (
+    <script
+      suppressHydrationWarning
+      dangerouslySetInnerHTML={{
+        __html: `__remixContext.r(${JSON.stringify(routeId)}, ${JSON.stringify(
+          dataKey
+        )}, !1, ${escapeHtml(JSON.stringify(toSerialize))});`,
+      }}
+    />
   );
 }
 

@@ -20,6 +20,8 @@ declare global {
   var __remixContext: {
     state: HydrationState;
     future: FutureConfig;
+    // The number of active deferred keys rendered on the server
+    a?: number;
   };
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];

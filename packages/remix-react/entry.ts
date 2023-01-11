@@ -9,6 +9,7 @@ export interface RemixContextObject {
   routeModules: RouteModules;
   serverHandoffString?: string;
   future: FutureConfig;
+  abortDelay?: number;
 }
 
 // Additional React-Router information needed at runtime, but not hydrated
