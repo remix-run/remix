@@ -2,6 +2,7 @@ import chokidar from "chokidar";
 import debounce from "lodash.debounce";
 import * as path from "path";
 
+import { type AssetsManifest } from "../assets-manifest";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { logCompileFailure } from "./onCompileFailure";
@@ -21,7 +22,7 @@ function isEntryPoint(config: RemixConfig, file: string): boolean {
 
 export type WatchOptions = Partial<CompileOptions> & {
   onRebuildStart?(): void;
-  onRebuildFinish?(durationMs: number): void;
+  onRebuildFinish?(durationMs: number, assetsManifest?: AssetsManifest): void;
   onFileCreated?(file: string): void;
   onFileChanged?(file: string): void;
   onFileDeleted?(file: string): void;
@@ -72,15 +73,15 @@ export async function watch(
     }
 
     compiler = createRemixCompiler(config, options);
-    await compile(compiler);
-    onRebuildFinish?.(Date.now() - start);
+    let assetsManifest = await compile(compiler);
+    onRebuildFinish?.(Date.now() - start, assetsManifest);
   }, 500);
 
   let rebuild = debounce(async () => {
     onRebuildStart?.();
     let start = Date.now();
-    await compile(compiler, { onCompileFailure });
-    onRebuildFinish?.(Date.now() - start);
+    let assetsManifest = await compile(compiler, { onCompileFailure });
+    await onRebuildFinish?.(Date.now() - start, assetsManifest);
   }, 100);
 
   let toWatch = [config.appDirectory];

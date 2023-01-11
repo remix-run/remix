@@ -36,7 +36,7 @@ export type RequestHandler = (
 
 export type CreateRequestHandlerFunction = (
   build: ServerBuild,
-  mode?: string
+  mode?: string // TODO strongly type this!
 ) => RequestHandler;
 
 export const createRequestHandler: CreateRequestHandlerFunction = (
@@ -50,6 +50,21 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
 
   return async function requestHandler(request, loadContext = {}) {
     let url = new URL(request.url);
+
+    if (
+      mode === "development" &&
+      url.pathname ===
+        build.future.v2_dev.remixRequestHandlerPath + "/__REMIX_ASSETS_MANIFEST"
+    ) {
+      if (request.method !== "GET") {
+        return new Response("Method not allowed", { status: 405 });
+      }
+      return new Response(JSON.stringify(build.assets), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     let matches = matchServerRoutes(routes, url.pathname);
 
     let response: Response;

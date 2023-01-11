@@ -482,6 +482,9 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     case "dev":
       await dev(input[1], flags);
       break;
+    case "dev2":
+      await commands.dev2(input[1]);
+      break;
     default:
       // `remix ./my-project` is shorthand for `remix dev ./my-project`
       await dev(input[0], flags);
