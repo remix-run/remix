@@ -1,9 +1,70 @@
 import React, { useContext } from "react";
-import type { ErrorResponse } from "@remix-run/router";
+import type { ErrorResponse, Location } from "@remix-run/router";
 import { isRouteErrorResponse, useRouteError } from "react-router-dom";
 
-import type { CatchBoundaryComponent } from "./routeModules";
+import type {
+  CatchBoundaryComponent,
+  ErrorBoundaryComponent,
+} from "./routeModules";
 import type { ThrownResponse } from "./errors";
+
+type RemixErrorBoundaryProps = React.PropsWithChildren<{
+  location: Location;
+  component: ErrorBoundaryComponent;
+  error?: Error;
+}>;
+
+type RemixErrorBoundaryState = {
+  error: null | Error;
+  location: Location;
+};
+
+export class RemixErrorBoundary extends React.Component<
+  RemixErrorBoundaryProps,
+  RemixErrorBoundaryState
+> {
+  constructor(props: RemixErrorBoundaryProps) {
+    super(props);
+
+    this.state = { error: props.error || null, location: props.location };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  static getDerivedStateFromProps(
+    props: RemixErrorBoundaryProps,
+    state: RemixErrorBoundaryState
+  ) {
+    // When we get into an error state, the user will likely click "back" to the
+    // previous page that didn't have an error. Because this wraps the entire
+    // application (even the HTML!) that will have no effect--the error page
+    // continues to display. This gives us a mechanism to recover from the error
+    // when the location changes.
+    //
+    // Whether we're in an error state or not, we update the location in state
+    // so that when we are in an error state, it gets reset when a new location
+    // comes in and the user recovers from the error.
+    if (state.location !== props.location) {
+      return { error: props.error || null, location: props.location };
+    }
+
+    // If we're not changing locations, preserve the location but still surface
+    // any new errors that may come through. We retain the existing error, we do
+    // this because the error provided from the app state may be cleared without
+    // the location changing.
+    return { error: props.error || state.error, location: state.location };
+  }
+
+  render() {
+    if (this.state.error) {
+      return <this.props.component error={this.state.error} />;
+    } else {
+      return this.props.children;
+    }
+  }
+}
 
 /**
  * When app's don't provide a root level ErrorBoundary, we default to this.
