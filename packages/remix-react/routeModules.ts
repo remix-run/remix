@@ -48,7 +48,7 @@ export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
  * Error and Catch Boundaries and behaves like RR 6.4 errorElement and captures
  * errors with useRouteError()
  */
-export type V2_ErrorBoundaryComponent = ComponentType<{}>;
+export type V2_ErrorBoundaryComponent = ComponentType;
 
 /**
  * A function that defines `<link>` tags to be inserted into the `<head>` of
