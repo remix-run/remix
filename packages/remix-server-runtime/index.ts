@@ -71,6 +71,7 @@ export type {
   SessionIdStorageStrategy,
   SessionStorage,
   SignFunction,
+  TypedDeferredData,
   TypedResponse,
   UnsignFunction,
   UploadHandler,

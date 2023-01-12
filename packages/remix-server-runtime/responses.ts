@@ -6,10 +6,17 @@ import {
 
 import { serializeError } from "./errors";
 
+export type TypedDeferredData<Data extends Record<string, unknown>> = Omit<
+  DeferredData,
+  "data"
+> & {
+  data: Data;
+};
+
 export type DeferFunction = <Data extends Record<string, unknown>>(
   data: Data,
   init?: number | ResponseInit
-) => unknown;
+) => TypedDeferredData<Data>;
 
 export type JsonFunction = <Data extends unknown>(
   data: Data,
@@ -62,7 +69,7 @@ export const defer: DeferFunction = (data, init = {}) => {
   return routerDefer(data, {
     ...responseInit,
     headers,
-  });
+  }) as TypedDeferredData<typeof data>;
 };
 
 export type RedirectFunction = (
