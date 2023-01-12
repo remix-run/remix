@@ -255,24 +255,18 @@ export async function upgrade({
     "--packageManager",
     packageManager,
     "--filter",
-    "/@remix-run/",
+    "@remix-run/*,remix",
     "--reject",
     "@remix-run/router",
-    "--filter",
-    "/remix/",
   ];
 
-  if (tag !== "latest") {
+  if (tag !== "@latest") {
     args.push("--removeRange");
   }
 
-  await execa("npx", ["npm-check-updates@latest", ...args], {
-    cwd: projectDir,
-    stdio: "inherit",
-  });
+  let options: execa.Options = { cwd: projectDir, stdio: "inherit" };
 
-  await execa(packageManager, ["install"], {
-    cwd: projectDir,
-    stdio: "inherit",
-  });
+  await execa("npx", ["npm-check-updates@latest", ...args], options);
+
+  await execa(packageManager, ["install"], options);
 }
