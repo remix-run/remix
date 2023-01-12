@@ -22,7 +22,7 @@ import type {
   SubmitFunction,
 } from "react-router-dom";
 import {
-  Await,
+  Await as AwaitRR,
   Link as RouterLink,
   NavLink as RouterNavLink,
   UNSAFE_DataRouterContext as DataRouterContext,
@@ -738,6 +738,16 @@ function V2Meta() {
 export function Meta() {
   let { future } = useRemixContext();
   return future?.v2_meta ? <V2Meta /> : <V1Meta />;
+}
+
+export interface AwaitProps<Resolve> {
+  children: React.ReactNode | ((value: Awaited<Resolve>) => React.ReactElement);
+  errorElement?: React.ReactNode;
+  resolve: Resolve;
+}
+
+export function Await<Resolve>(props: AwaitProps<Resolve>) {
+  return <AwaitRR {...props} />;
 }
 
 /**

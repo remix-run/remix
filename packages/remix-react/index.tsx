@@ -1,7 +1,6 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export type {
-  AwaitProps,
   FormProps,
   Location,
   NavigateFunction,
@@ -12,7 +11,6 @@ export type {
   SubmitOptions,
 } from "react-router-dom";
 export {
-  Await,
   Form,
   Outlet,
   useAsyncError,
@@ -35,12 +33,14 @@ export {
 } from "react-router-dom";
 
 export type {
+  AwaitProps,
   FetcherWithComponents,
   RouteMatch,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,
 } from "./components";
 export {
+  Await,
   Meta,
   Links,
   Scripts,
