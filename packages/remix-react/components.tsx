@@ -291,7 +291,7 @@ function usePrefetchBehavior(
 /**
  * A special kind of `<Link>` that knows whether or not it is "active".
  *
- * @see https://remix.run/api/remix#navlink
+ * @see https://remix.run/components/nav-link
  */
 let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
@@ -319,7 +319,7 @@ export { NavLink };
  * This component renders an anchor tag and is the primary way the user will
  * navigate around your website.
  *
- * @see https://remix.run/api/remix#link
+ * @see https://remix.run/components/link
  */
 let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
@@ -361,7 +361,7 @@ export function composeEventHandlers<
 /**
  * Renders the `<link>` tags for the current routes.
  *
- * @see https://remix.run/api/remix#meta-links-scripts
+ * @see https://remix.run/components/links
  */
 export function Links() {
   let { manifest, routeModules } = useRemixContext();
@@ -425,7 +425,7 @@ export function Links() {
  *
  * @param props
  * @param props.page
- * @see https://remix.run/api/remix#prefetchpagelinks-
+ * @see https://remix.run/components/prefetch-page-links
  */
 export function PrefetchPageLinks({
   page,
@@ -540,7 +540,7 @@ function PrefetchPageLinksImpl({
 /**
  * Renders the `<title>` and `<meta>` tags for the current routes.
  *
- * @see https://remix.run/api/remix#meta-links-scripts
+ * @see https://remix.run/components/meta
  */
 function V1Meta() {
   let { routeModules } = useRemixContext();
@@ -575,9 +575,9 @@ function V1Meta() {
             " returns an array. This is only supported with the `v2_meta` future flag " +
             "in the Remix config. Either set the flag to `true` or update the route's " +
             "meta function to return an object." +
-            "\n\nTo reference the v1 meta function API, see https://remix.run/api/conventions#meta"
+            "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
           // TODO: Add link to the docs once they are written
-          // + "\n\nTo reference future flags and the v2 meta API, see https://remix.run/api/remix#future-v2-meta."
+          // + "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta."
         );
       }
       Object.assign(meta, routeMeta);
@@ -693,8 +693,8 @@ function V2Meta() {
           " returns an invalid value. In v2, all route meta functions must " +
           "return an array of meta objects." +
           // TODO: Add link to the docs once they are written
-          // "\n\nTo reference future flags and the v2 meta API, see https://remix.run/api/remix#future-v2-meta." +
-          "\n\nTo reference the v1 meta function API, see https://remix.run/api/conventions#meta"
+          // "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta." +
+          "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
       );
     }
 
@@ -762,7 +762,7 @@ export type ScriptProps = Omit<
  * In addition to scripts, \<link rel="modulepreload"> tags receive the crossOrigin
  * property if provided.
  *
- * @see https://remix.run/api/remix#meta-links-scripts
+ * @see https://remix.run/components/scripts
  */
 export function Scripts(props: ScriptProps) {
   let { manifest, serverHandoffString } = useRemixContext();
@@ -884,7 +884,7 @@ export interface RouteMatch {
   /**
    * The dynamic parameters of the matched route
    *
-   * @see https://remix.run/docs/api/conventions#dynamic-route-parameters
+   * @see https://remix.run/file-conventions/routes-files#dynamic-route-parameters
    */
   params: Params<string>;
   /**
@@ -894,7 +894,7 @@ export interface RouteMatch {
   /**
    * The exported `handle` object of the matched route.
    *
-   * @see https://remix.run/docs/api/conventions#handle
+   * @see https://remix.run/route/handle
    */
   handle: undefined | { [key: string]: any };
 }
@@ -919,7 +919,7 @@ export function useMatches(): RouteMatch[] {
 /**
  * Returns the JSON parsed data from the current route's `loader`.
  *
- * @see https://remix.run/api/remix#useloaderdata
+ * @see https://remix.run/hooks/use-loader-data
  */
 export function useLoaderData<T = AppData>(): SerializeFrom<T> {
   return useLoaderDataRR() as SerializeFrom<T>;
@@ -928,7 +928,7 @@ export function useLoaderData<T = AppData>(): SerializeFrom<T> {
 /**
  * Returns the JSON parsed data from the current route's `action`.
  *
- * @see https://remix.run/api/remix#useactiondata
+ * @see https://remix.run/hooks/use-action-data
  */
 export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
   return useActionDataRR() as SerializeFrom<T> | undefined;
@@ -938,7 +938,7 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  * Returns everything you need to know about a page transition to build pending
  * navigation indicators and optimistic UI on data mutations.
  *
- * @see https://remix.run/api/remix#usetransition
+ * @see https://remix.run/hooks/use-transition
  */
 export function useTransition(): Transition {
   let navigation = useNavigation();
@@ -1138,7 +1138,7 @@ export type FetcherWithComponents<TData> = Fetcher<TData> & {
  * Interacts with route loaders and actions without causing a navigation. Great
  * for any interaction that stays on the same page.
  *
- * @see https://remix.run/api/remix#usefetcher
+ * @see https://remix.run/hooks/use-fetcher
  */
 export function useFetcher<TData = any>(): FetcherWithComponents<
   SerializeFrom<TData>
@@ -1209,7 +1209,7 @@ function convertRouterFetcherToRemixFetcher(
           formData: formData,
           key: "",
         },
-        data: undefined,
+        data,
       };
       return fetcher;
     } else {
@@ -1292,7 +1292,7 @@ function convertRouterFetcherToRemixFetcher(
             formData: formData,
             key: "",
           },
-          data: undefined,
+          data,
         };
         return fetcher;
       }
@@ -1304,7 +1304,7 @@ function convertRouterFetcherToRemixFetcher(
     state: "loading",
     type: "normalLoad",
     submission: undefined,
-    data: undefined,
+    data,
   };
   return fetcher;
 }

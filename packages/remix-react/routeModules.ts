@@ -32,14 +32,14 @@ export interface RouteModule {
 /**
  * A React component that is rendered when the server throws a Response.
  *
- * @see https://remix.run/api/conventions#catchboundary
+ * @see https://remix.run/route/catch-boundary
  */
 export type CatchBoundaryComponent = ComponentType<{}>;
 
 /**
  * A React component that is rendered when there is an error on a route.
  *
- * @see https://remix.run/api/conventions#errorboundary
+ * @see https://remix.run/route/error-boundary
  */
 export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
 
@@ -47,7 +47,7 @@ export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
  * A function that defines `<link>` tags to be inserted into the `<head>` of
  * the document on route transitions.
  *
- * @see https://remix.run/api/remix#meta-links-scripts
+ * @see https://remix.run/route/meta
  */
 export interface LinksFunction {
   (): LinkDescriptor[];
@@ -58,7 +58,7 @@ export interface LinksFunction {
  * `<meta>` tags for a route. These tags will be merged with (and take
  * precedence over) tags from parent routes.
  *
- * @see https://remix.run/api/remix#meta-links-scripts
+ * @see https://remix.run/route/meta
  */
 export interface V1_MetaFunction {
   (args: {
@@ -123,7 +123,7 @@ export type RouteComponent = ComponentType<{}>;
 /**
  * An arbitrary object that is associated with a route.
  *
- * @see https://remix.run/api/conventions#handle
+ * @see https://remix.run/route/handle
  */
 export type RouteHandle = any;
 
