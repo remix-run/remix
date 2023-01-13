@@ -317,20 +317,34 @@ export { NavLink };
  * @see https://remix.run/components/link
  */
 let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
-  ({ to, prefetch = "none", ...props }, forwardedRef) => {
+  ({ to: inputTo, prefetch = "none", children, ...props }, forwardedRef) => {
+    let to = inputTo.toString();
+    let isExternal = /^[a-z]+:/.test(to);
     let href = useHref(to);
+
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
     );
+
+    if (isExternal) {
+      return (
+        <>
+          <a ref={forwardedRef} href={to} {...props} {...prefetchHandlers}>
+            {children}
+          </a>
+          {shouldPrefetch ? (
+            <link key={href} rel="prefetch" as="document" href={to} />
+          ) : null}
+        </>
+      );
+    }
+
     return (
       <>
-        <RouterLink
-          ref={forwardedRef}
-          to={to}
-          {...props}
-          {...prefetchHandlers}
-        />
+        <RouterLink ref={forwardedRef} to={to} {...props} {...prefetchHandlers}>
+          {children}
+        </RouterLink>
         {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
       </>
     );
