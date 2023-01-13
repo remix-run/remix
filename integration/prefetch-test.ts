@@ -204,7 +204,7 @@ test.describe("prefetch=intent (hover)", () => {
       `#nav link[rel='prefetch'][as='document'][href='${EXTERNAL_URL}']`,
       { state: "attached" }
     );
-    expect(await page.locator("#nav link").count()).toBe(1);
+    expect(await page.locator("#nav link").count()).toBe(2);
   });
 
   test("removes prefetch tags after navigating to/from the page", async ({
@@ -221,7 +221,7 @@ test.describe("prefetch=intent (hover)", () => {
     // Links added on hover (external)
     await page.hover(`a[href='${EXTERNAL_URL}']`);
     await page.waitForSelector("#nav link", { state: "attached" });
-    expect(await page.locator("#nav link").count()).toBe(1);
+    expect(await page.locator("#nav link").count()).toBe(2);
 
     // Links removed upon navigating to the page
     await page.click("a[href='/with-loader']");
@@ -290,6 +290,6 @@ test.describe("prefetch=intent (focus)", () => {
       `#nav link[rel='prefetch'][as='document'][href='${EXTERNAL_URL}']`,
       { state: "attached" }
     );
-    expect(await page.locator("#nav link").count()).toBe(1);
+    expect(await page.locator("#nav link").count()).toBe(2);
   });
 });

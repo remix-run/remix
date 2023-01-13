@@ -334,7 +334,10 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
             {children}
           </a>
           {shouldPrefetch ? (
-            <link key={href} rel="prefetch" as="document" href={to} />
+            <>
+              <link rel="prerender" href={to} />
+              <link rel="dns-prefetch" href={to} />
+            </>
           ) : null}
         </>
       );
