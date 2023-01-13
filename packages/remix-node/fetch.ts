@@ -72,5 +72,15 @@ export const fetch: typeof webFetch = (
     ...init,
   };
 
-  return webFetch(info, init as RequestInit);
+  return webFetch(info, init as RequestInit)
+    .then((res) => {
+      if (res instanceof WebResponse && !(res instanceof NodeResponse))
+        return new NodeResponse(res.body, res);
+      return res;
+    })
+    .catch((res) => {
+      if (res instanceof WebResponse && !(res instanceof NodeResponse))
+        return new NodeResponse(res.body, res);
+      return res;
+    });
 };
