@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
-import type { ErrorResponse } from "@remix-run/router";
-import type { Location } from "react-router-dom";
+import type { ErrorResponse, Location } from "@remix-run/router";
+import { isRouteErrorResponse, useRouteError } from "react-router-dom";
 
 import type {
   CatchBoundaryComponent,
@@ -109,6 +109,23 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
   );
 }
 
+export function V2_RemixRootDefaultErrorBoundary() {
+  let error = useRouteError();
+  if (isRouteErrorResponse(error)) {
+    return <RemixRootDefaultCatchBoundaryImpl caught={error} />;
+  } else if (error instanceof Error) {
+    return <RemixRootDefaultErrorBoundary error={error} />;
+  } else {
+    let errorString =
+      error == null
+        ? "Unknown Error"
+        : typeof error === "object" && "toString" in error
+        ? error.toString()
+        : JSON.stringify(error);
+    return <RemixRootDefaultErrorBoundary error={new Error(errorString)} />;
+  }
+}
+
 let RemixCatchContext = React.createContext<ThrownResponse | undefined>(
   undefined
 );
@@ -150,6 +167,14 @@ export function RemixCatchBoundary({
  */
 export function RemixRootDefaultCatchBoundary() {
   let caught = useCatch();
+  return <RemixRootDefaultCatchBoundaryImpl caught={caught} />;
+}
+
+function RemixRootDefaultCatchBoundaryImpl({
+  caught,
+}: {
+  caught: ThrownResponse;
+}) {
   return (
     <html lang="en">
       <head>

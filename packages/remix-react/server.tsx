@@ -34,7 +34,11 @@ export function RemixServer({
   }
 
   let { manifest, routeModules, serverHandoffString } = context;
-  let routes = createServerRoutes(manifest.routes, routeModules);
+  let routes = createServerRoutes(
+    manifest.routes,
+    routeModules,
+    context.future
+  );
   let router = createStaticRouter(routes, context.staticHandlerContext);
 
   return (
