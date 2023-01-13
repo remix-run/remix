@@ -1,5 +1,13 @@
 # `@remix-run/architect`
 
+## 1.11.0-pre.0
+
+### Patch Changes
+
+- use `@architect/functions`' built-in types ([#4898](https://github.com/remix-run/remix/pull/4898))
+- Updated dependencies:
+  - `@remix-run/node@1.11.0-pre.0`
+
 ## 1.10.1
 
 ### Patch Changes

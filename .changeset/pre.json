@@ -21,5 +21,20 @@
     "@remix-run/testing": "1.10.1",
     "@remix-run/vercel": "1.10.1"
   },
-  "changesets": []
+  "changesets": [
+    "bright-moons-attend",
+    "curvy-mangos-heal",
+    "dry-humans-press",
+    "eight-forks-collect",
+    "five-kings-work",
+    "funny-numbers-type",
+    "giant-kings-repair",
+    "hungry-owls-greet",
+    "little-avocados-fetch",
+    "little-lobsters-decide",
+    "modern-pumas-hide",
+    "odd-numbers-film",
+    "old-cameras-lay",
+    "smart-doors-sing"
+  ]
 }
