@@ -13,6 +13,8 @@ export type {
 export {
   Form,
   Outlet,
+  useAsyncError,
+  useAsyncValue,
   isRouteErrorResponse,
   useBeforeUnload,
   useFormAction,
@@ -33,12 +35,14 @@ export {
 } from "react-router-dom";
 
 export type {
+  AwaitProps,
   FetcherWithComponents,
   RouteMatch,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,
 } from "./components";
 export {
+  Await,
   Meta,
   Links,
   Scripts,

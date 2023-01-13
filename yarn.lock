@@ -2248,10 +2248,71 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/router@1.2.1":
-  version "1.2.1"
-  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.2.1.tgz#812edd4104a15a493dda1ccac0b352270d7a188c"
-  integrity sha512-XiY0IsyHR+DXYS5vBxpoBe/8veTeoRpMHP+vDosLZxL5bnpetzI0igkxkLZS235ldLzyfkxF+2divEwWHP3vMQ==
+"@remix-run/dev@1.10.0":
+  version "1.10.0"
+  resolved "https://registry.npmjs.org/@remix-run/dev/-/dev-1.10.0.tgz#3a5b2cb52eee6da1d993538a44a307375bf694df"
+  integrity sha512-WBbxkPSkN1LQx0gdzGT+VBSbQLGiFW/Q7HaAYBxV7Wd7DdByk61GPz9CRb1K9a7eWGJ+FzZeYvRwqYkz7moRgA==
+  dependencies:
+    "@babel/core" "^7.18.6"
+    "@babel/plugin-syntax-jsx" "^7.18.6"
+    "@babel/plugin-syntax-typescript" "^7.20.0"
+    "@babel/preset-env" "^7.18.6"
+    "@babel/preset-typescript" "^7.18.6"
+    "@babel/types" "^7.20.2"
+    "@esbuild-plugins/node-modules-polyfill" "^0.1.4"
+    "@npmcli/package-json" "^2.0.0"
+    "@remix-run/server-runtime" "1.10.0"
+    arg "^5.0.1"
+    cacache "^15.0.5"
+    chalk "^4.1.2"
+    chokidar "^3.5.1"
+    dotenv "^16.0.0"
+    esbuild "0.16.3"
+    execa "5.1.1"
+    exit-hook "2.2.1"
+    express "^4.17.1"
+    fast-glob "3.2.11"
+    fs-extra "^10.0.0"
+    get-port "^5.1.1"
+    gunzip-maybe "^1.4.2"
+    inquirer "^8.2.1"
+    jscodeshift "^0.13.1"
+    jsesc "3.0.2"
+    json5 "^2.2.1"
+    lodash "^4.17.21"
+    lodash.debounce "^4.0.8"
+    minimatch "^3.0.4"
+    node-fetch "^2.6.7"
+    ora "^5.4.1"
+    prettier "2.7.1"
+    pretty-ms "^7.0.1"
+    proxy-agent "^5.0.0"
+    recast "^0.21.5"
+    remark-frontmatter "4.0.1"
+    remark-mdx-frontmatter "^1.0.1"
+    semver "^7.3.7"
+    sort-package-json "^1.55.0"
+    tar-fs "^2.1.1"
+    tsconfig-paths "^4.0.0"
+    ws "^7.4.5"
+    xdm "^2.0.0"
+
+"@remix-run/router@1.3.0-pre.2":
+  version "1.3.0-pre.2"
+  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.3.0-pre.2.tgz#13f8ac419d272558a9d48f6efe40a8909f6ff212"
+  integrity sha512-XWpQkUMfuJy5BPA+fivgJtKPiRu1VC5M3LdrUw6Wb310liR3LUIUmY2b5xP6kpcbpIQOTMgF4NVrdwZ4NRG0lA==
+
+"@remix-run/server-runtime@1.10.0":
+  version "1.10.0"
+  resolved "https://registry.npmjs.org/@remix-run/server-runtime/-/server-runtime-1.10.0.tgz#d498332a8b6f7ee9a2dca5ac987619a1bce8f9e1"
+  integrity sha512-2Hlyv96JI4R3ygsF+zgC7NxfeRO1lqNxH/0GpPniyZIfq3JT4+PmTOgbx7HSsj/jgJzDfCyhwjymGYK84mBMKg==
+  dependencies:
+    "@remix-run/router" "1.3.0-pre.2"
+    "@types/cookie" "^0.4.0"
+    "@web3-storage/multipart-parser" "^1.0.0"
+    cookie "^0.4.1"
+    set-cookie-parser "^2.4.8"
+    source-map "^0.7.3"
 
 "@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
@@ -10800,20 +10861,20 @@ react-is@^17.0.1:
   resolved "https://registry.npmjs.org/react-is/-/react-is-17.0.2.tgz"
   integrity sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==
 
-react-router-dom@6.6.2:
-  version "6.6.2"
-  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.6.2.tgz#bbf1f9b45855b218d22fc2d294b79408a084740a"
-  integrity sha512-6SCDXxRQqW5af8ImOqKza7icmQ47/EMbz572uFjzvcArg3lZ+04PxSPp8qGs+p2Y+q+b+S/AjXv8m8dyLndIIA==
+react-router-dom@6.7.0-pre.3:
+  version "6.7.0-pre.3"
+  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.7.0-pre.3.tgz#21c276af8623582751d15b3f0334d8bfe14af450"
+  integrity sha512-f/WTO17U5jKM9KJY+0DEcCggKDn8DAWCFbTUdG6XTUMMcTYFqoWzQM6hez+rvasS1HvK8OQBOX7gQ+htnERjcA==
   dependencies:
-    "@remix-run/router" "1.2.1"
-    react-router "6.6.2"
+    "@remix-run/router" "1.3.0-pre.2"
+    react-router "6.7.0-pre.3"
 
-react-router@6.6.2:
-  version "6.6.2"
-  resolved "https://registry.npmjs.org/react-router/-/react-router-6.6.2.tgz#556f7b56cff7fe32c5c02429fef3fcb2ecd08111"
-  integrity sha512-uJPG55Pek3orClbURDvfljhqFvMgJRo59Pktywkk8hUUkTY2aRfza8Yhl/vZQXs+TNQyr6tu+uqz/fLxPICOGQ==
+react-router@6.7.0-pre.3:
+  version "6.7.0-pre.3"
+  resolved "https://registry.npmjs.org/react-router/-/react-router-6.7.0-pre.3.tgz#131b816f1bfa0fbe1c2e86c09d3ee803f169de9e"
+  integrity sha512-6Nrovh23eq8ySnr7/CaV4f+jm9Qde6u3w9z4zglXfaVDBRRlO4lUClMOMlvrxr1U+KwqB/qNo4roGyrzJoF6Hg==
   dependencies:
-    "@remix-run/router" "1.2.1"
+    "@remix-run/router" "1.3.0-pre.2"
 
 react@^18.2.0:
   version "18.2.0"
