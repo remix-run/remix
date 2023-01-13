@@ -11,7 +11,7 @@ Please note that you can use either `.js`, `.jsx` or `.tsx` file extensions depe
 ## Root Route
 
 <!-- prettier-ignore -->
-```markdown [3]
+```markdown lines=[3]
 app/
 ├── routes/
 └── root.tsx
@@ -28,7 +28,7 @@ The file in `app/root.tsx` is your root layout, or "root route" (very sorry for 
 Any JavaScript or TypeScript files in the `app/routes/` directory will become routes in your application. The filename maps to the route's URL pathname, except for `index.tsx` which maps to the root pathname.
 
 <!-- prettier-ignore -->
-```markdown [3-4]
+```markdown lines=[3-4]
 app/
 ├── routes/
 │   ├── about.tsx
@@ -46,14 +46,14 @@ The default export in this file is the component that is rendered at that route 
 ## Dynamic Route Parameters
 
 <!-- prettier-ignore -->
-```markdown [4]
+```markdown lines=[4]
 app/
 ├── routes/
 │   ├── blog/
 │   │   ├── $postId.tsx
 │   │   ├── categories.tsx
-│   │   ├── index.tsx
-│   └── about.tsx
+│   │   └── index.tsx
+│   ├── about.tsx
 │   └── index.tsx
 └── root.tsx
 ```
@@ -112,15 +112,15 @@ See the [routing guide][routing-guide] for more information.
 ## Layout Routes
 
 <!-- prettier-ignore -->
-```markdown [3,8]
+```markdown lines=[3,8]
 app/
 ├── routes/
 │   ├── blog/
 │   │   ├── $postId.tsx
 │   │   ├── categories.tsx
-│   │   ├── index.tsx
-│   └── about.tsx
-│   └── blog.tsx
+│   │   └── index.tsx
+│   ├── about.tsx
+│   ├── blog.tsx
 │   └── index.tsx
 └── root.tsx
 ```
@@ -144,18 +144,18 @@ In the example above, the `blog.tsx` is a "layout route" for everything within t
 ## Pathless Layout Routes
 
 <!-- prettier-ignore -->
-```markdown [3,7,10-11]
+```markdown lines=[3,7,10-11]
 app/
 ├── routes/
 │   ├── __app/
 │   │   ├── dashboard.tsx
 │   │   └── $userId/
-│   │   │   └── profile.tsx
+│   │       └── profile.tsx
 │   └── __marketing
 │   │   ├── index.tsx
 │   │   └── product.tsx
 │   ├── __app.tsx
-│   ├── __marketing.tsx
+│   └── __marketing.tsx
 └── root.tsx
 ```
 
@@ -181,16 +181,16 @@ For example, all of your marketing pages could be in `app/routes/__marketing/*` 
 ## Dot Delimiters
 
 <!-- prettier-ignore -->
-```markdown [8]
+```markdown lines=[8]
 app/
 ├── routes/
 │   ├── blog/
 │   │   ├── $postId.tsx
 │   │   ├── categories.tsx
-│   │   ├── index.tsx
-│   └── about.tsx
-│   └── blog.authors.tsx
-│   └── blog.tsx
+│   │   └── index.tsx
+│   ├── about.tsx
+│   ├── blog.authors.tsx
+│   ├── blog.tsx
 │   └── index.tsx
 └── root.tsx
 ```
@@ -212,17 +212,17 @@ By creating a file with `.` characters between segments, you can create a nested
 ## Splat Routes
 
 <!-- prettier-ignore -->
-```markdown [7]
+```markdown lines=[7]
 app/
 ├── routes/
 │   ├── blog/
 │   │   ├── $postId.tsx
 │   │   ├── categories.tsx
-│   │   ├── index.tsx
-│   └── $.tsx
-│   └── about.tsx
-│   └── blog.authors.tsx
-│   └── blog.tsx
+│   │   └── index.tsx
+│   ├── $.tsx
+│   ├── about.tsx
+│   ├── blog.authors.tsx
+│   ├── blog.tsx
 │   └── index.tsx
 └── root.tsx
 ```
@@ -285,7 +285,7 @@ Because some characters have special meaning, you must use our escaping syntax i
 [catch-boundary]: ../route/catch-boundary
 [outlet]: ../components/outlet
 [view-example-app]: https://github.com/remix-run/examples/tree/main/multiple-params
-[use-params]: https://reactrouter.com/docs/hooks/use-params
+[use-params]: https://reactrouter.com/hooks/use-params
 [params]: ../route/loader#params
 [routing-guide]: ../guides/routing
 [root-route]: #root-route

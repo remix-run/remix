@@ -20,6 +20,9 @@ jobs:
       github.repository == 'remix-run/remix' &&
       !contains(github.ref, 'nightly')
     runs-on: ubuntu-latest
+    outputs:
+      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
+      published: ${{ steps.changesets.outputs.published }}
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.11.0
@@ -61,3 +64,67 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  findPackage:
+    name: 🦋 Find Package
+    needs: [release]
+    runs-on: ubuntu-latest
+    if: github.repository == 'remix-run/remix' && needs.release.outputs.published == 'true'
+    outputs:
+      package: ${{ steps.findPackage.outputs.package }}
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.11.0
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: "npm"
+
+      - id: findPackage
+        run: |
+          package=$(node ./scripts/release/find-release-from-changeset.js)
+          echo "package=${package}" >> $GITHUB_OUTPUT
+        env:
+          packageVersionToFollow: "remix"
+          publishedPackages: ${{ needs.release.outputs.publishedPackages }}
+
+  comment:
+    name: 📝 Comment on related issues and pull requests
+    if: github.repository == 'remix-run/remix' && needs.findPackage.outputs.package != ''
+    needs: [release, findPackage]
+    uses: ./.github/workflows/release-comments.yml
+    with:
+      ref: refs/tags/${{ needs.findPackage.outputs.package }}
+      packageVersionToFollow: "remix"
+
+  deployments:
+    name: 🚀 Deployment Tests
+    if: github.repository == 'remix-run/remix'
+    needs: [release, findPackage]
+    uses: ./.github/workflows/deployments.yml
+    secrets:
+      TEST_AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
+      TEST_AWS_SECRET_ACCESS_KEY: ${{ secrets.TEST_AWS_SECRET_ACCESS_KEY }}
+      TEST_CF_ACCOUNT_ID: ${{ secrets.TEST_CF_ACCOUNT_ID }}
+      TEST_CF_GLOBAL_API_KEY: ${{ secrets.TEST_CF_GLOBAL_API_KEY }}
+      TEST_CF_EMAIL: ${{ secrets.TEST_CF_EMAIL }}
+      TEST_CF_PAGES_API_TOKEN: ${{ secrets.TEST_CF_PAGES_API_TOKEN }}
+      TEST_CF_API_TOKEN: ${{ secrets.TEST_CF_API_TOKEN }}
+      TEST_DENO_DEPLOY_TOKEN: ${{ secrets.TEST_DENO_DEPLOY_TOKEN }}
+      TEST_FLY_TOKEN: ${{ secrets.TEST_FLY_TOKEN }}
+      TEST_NETLIFY_TOKEN: ${{ secrets.TEST_NETLIFY_TOKEN }}
+      TEST_VERCEL_TOKEN: ${{ secrets.TEST_VERCEL_TOKEN }}
+      TEST_VERCEL_USER_ID: ${{ secrets.TEST_VERCEL_USER_ID }}
+
+  stacks:
+    name: 🥞 Remix Stacks Test
+    if: github.repository == 'remix-run/remix'
+    needs: [release, findPackage]
+    uses: ./.github/workflows/stacks.yml
+    with:
+      version: ${{ needs.findPackage.outputs.package }}

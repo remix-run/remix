@@ -14,7 +14,7 @@ let STORAGE_KEY = "positions";
  * This component will emulate the browser's scroll restoration on location
  * changes.
  *
- * @see https://remix.run/api/remix#scrollrestoration
+ * @see https://remix.run/components/scroll-restoration
  */
 export function ScrollRestoration({
   getKey,
