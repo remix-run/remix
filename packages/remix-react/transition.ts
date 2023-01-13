@@ -120,7 +120,7 @@ export type FetcherStates<TData = any> = {
     formData: FormData;
     formEncType: string;
     submission: ActionSubmission;
-    data: undefined;
+    data: TData | undefined;
   };
   SubmittingLoader: {
     state: "submitting";
