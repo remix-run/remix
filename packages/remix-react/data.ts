@@ -1,4 +1,7 @@
-import { AbortedDeferredError, UNSAFE_DeferredData as DeferredData } from "@remix-run/router";
+import {
+  AbortedDeferredError,
+  UNSAFE_DeferredData as DeferredData,
+} from "@remix-run/router";
 import type { FormMethod as FormMethodRR } from "react-router-dom";
 
 export type AppData = any;
