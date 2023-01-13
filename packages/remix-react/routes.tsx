@@ -10,6 +10,7 @@ import { redirect } from "react-router-dom";
 import type { RouteModules } from "./routeModules";
 import { loadRouteModule } from "./routeModules";
 import { fetchData, isCatchResponse, isRedirectResponse } from "./data";
+import type { FutureConfig } from "./entry";
 import { prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
 import { RemixRoute, RemixRouteError } from "./components";
@@ -41,13 +42,18 @@ export interface EntryRoute extends Route {
 export function createServerRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModules: RouteModules,
+  future: FutureConfig,
   parentId?: string
 ): DataRouteObject[] {
   return Object.values(manifest)
     .filter((route) => route.parentId === parentId)
     .map((route) => {
       let hasErrorBoundary =
-        route.id === "root" || route.hasErrorBoundary || route.hasCatchBoundary;
+        future.v2_errorBoundary === true
+          ? route.id === "root" || route.hasErrorBoundary
+          : route.id === "root" ||
+            route.hasCatchBoundary ||
+            route.hasErrorBoundary;
       let dataRoute: DataRouteObject = {
         caseSensitive: route.caseSensitive,
         element: <RemixRoute id={route.id} />,
@@ -62,7 +68,12 @@ export function createServerRoutes(
         // since they're for a static render
       };
 
-      let children = createServerRoutes(manifest, routeModules, route.id);
+      let children = createServerRoutes(
+        manifest,
+        routeModules,
+        future,
+        route.id
+      );
       if (children.length > 0) dataRoute.children = children;
       return dataRoute;
     });
@@ -71,13 +82,18 @@ export function createServerRoutes(
 export function createClientRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
+  future: FutureConfig,
   parentId?: string
 ): DataRouteObject[] {
   return Object.values(manifest)
     .filter((entryRoute) => entryRoute.parentId === parentId)
     .map((route) => {
       let hasErrorBoundary =
-        route.id === "root" || route.hasErrorBoundary || route.hasCatchBoundary;
+        future.v2_errorBoundary === true
+          ? route.id === "root" || route.hasErrorBoundary
+          : route.id === "root" ||
+            route.hasCatchBoundary ||
+            route.hasErrorBoundary;
 
       let dataRoute: DataRouteObject = {
         caseSensitive: route.caseSensitive,
@@ -95,7 +111,12 @@ export function createClientRoutes(
         action: createDataFunction(route, routeModulesCache, true),
         shouldRevalidate: createShouldRevalidate(route, routeModulesCache),
       };
-      let children = createClientRoutes(manifest, routeModulesCache, route.id);
+      let children = createClientRoutes(
+        manifest,
+        routeModulesCache,
+        future,
+        route.id
+      );
       if (children.length > 0) dataRoute.children = children;
       return dataRoute;
     });

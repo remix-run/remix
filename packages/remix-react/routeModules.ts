@@ -17,7 +17,7 @@ export interface RouteModules {
 
 export interface RouteModule {
   CatchBoundary?: CatchBoundaryComponent;
-  ErrorBoundary?: ErrorBoundaryComponent;
+  ErrorBoundary?: ErrorBoundaryComponent | V2_ErrorBoundaryComponent;
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
@@ -42,6 +42,13 @@ export type CatchBoundaryComponent = ComponentType<{}>;
  * @see https://remix.run/route/error-boundary
  */
 export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
+
+/**
+ * V2 version of the ErrorBoundary that eliminates the distinction between
+ * Error and Catch Boundaries and behaves like RR 6.4 errorElement and captures
+ * errors with useRouteError()
+ */
+export type V2_ErrorBoundaryComponent = ComponentType;
 
 /**
  * A function that defines `<link>` tags to be inserted into the `<head>` of
