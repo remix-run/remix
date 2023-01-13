@@ -1,6 +1,7 @@
 import { PassThrough } from "stream";
 
-import { Request } from "../fetch";
+import { Request, fetch, Response } from "../fetch";
+import { Response as WebResponse } from "@remix-run/web-fetch";
 
 let test = {
   source: [
@@ -110,4 +111,12 @@ describe("fetch", () => {
   // fetch a gzip-encoded json blob
   // call res.json() and make sure it's decoded properly
   it.todo("decodes gzip encoded body");
+
+  it("should return an instance of Response and WebResponse", async () => {
+    let res = await fetch("https://github.com/", {
+      method: "HEAD",
+    });
+    expect(res).toBeInstanceOf(WebResponse);
+    expect(res).toBeInstanceOf(Response);
+  });
 });
