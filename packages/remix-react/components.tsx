@@ -795,10 +795,21 @@ export function Scripts(props: ScriptProps) {
       : " ";
 
     let activeDeferreds = staticContext?.activeDeferreds;
+    // This sets up the __remixContext with utility functions used by the
+    // deferred scripts.
+    // - __remixContext.p is a function that takes a resolved value or error and returns a promise.
+    //   This is used for transmitting pre-resolved promises from the server to the client.
+    // - __remixContext.n is a function that takes a routeID and key to returns a promise for later
+    //   resolution by the subsequently streamed chunks.
+    // - __remixContext.r is a function that takes a routeID, key and value or error and resolves
+    //   the promise created by __remixContext.n.
+    // - __remixContext.t is a a map or routeId to keys to an object containing `e` and `r` methods
+    //   to resolve or reject the promise created by __remixContext.n.
+    // - __remixContext.a is the active number of deferred scripts that should be rendered to match
+    //   the SSR tree for hydration on the client.
     contextScript += !activeDeferreds
       ? ""
       : [
-          "// Add dev only comments about what these are used for",
           "__remixContext.p = function(v,e,p,x) {",
           "  if (typeof e !== 'undefined') {",
           "    x=new Error(e.message);",
