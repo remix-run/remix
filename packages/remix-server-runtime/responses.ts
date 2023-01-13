@@ -6,9 +6,9 @@ import {
 
 import { serializeError } from "./errors";
 
-export type TypedDeferredData<Data extends Record<string, unknown>> = Omit<
+export type TypedDeferredData<Data extends Record<string, unknown>> = Pick<
   DeferredData,
-  "data"
+  "init"
 > & {
   data: Data;
 };
