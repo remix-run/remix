@@ -8,7 +8,7 @@ export default createRequestHandler({
   mode: process.env.NODE_ENV,
 });
 
-export const config = () => ({
+export const config = {
   cache: "manual",
   path: "/*",
-});
+};
