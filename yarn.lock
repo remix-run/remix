@@ -2343,14 +2343,6 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/deno@1.9.0":
-  version "1.9.0"
-  resolved "https://registry.npmjs.org/@remix-run/deno/-/deno-1.9.0.tgz#24f8d8a8e0fd8f562d609d59f58bd3a592c555ee"
-  integrity sha512-duJyx46fBAqRSJAgNIPuPzaNA0V6gchfr0X++7CoFKsHtlcPhbjDRrzzucrvWBrHo5R+Y1jtvLRYmLTmNtnmRw==
-  dependencies:
-    "@remix-run/server-runtime" "1.9.0"
-    mime "^3.0.0"
-
 "@remix-run/dev@1.10.0":
   version "1.10.0"
   resolved "https://registry.npmjs.org/@remix-run/dev/-/dev-1.10.0.tgz#3a5b2cb52eee6da1d993538a44a307375bf694df"
@@ -2400,10 +2392,10 @@
     ws "^7.4.5"
     xdm "^2.0.0"
 
-"@remix-run/router@1.1.0":
-  version "1.1.0"
-  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.1.0.tgz#b48db8148c8a888e50580a8152b6f68161c49406"
-  integrity sha512-rGl+jH/7x1KBCQScz9p54p0dtPLNeKGb3e0wD2H5/oZj41bwQUnXdzbj2TbUAFhvD7cp9EyEQA4dEgpUFa1O7Q==
+"@remix-run/router@1.2.1":
+  version "1.2.1"
+  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.2.1.tgz#812edd4104a15a493dda1ccac0b352270d7a188c"
+  integrity sha512-XiY0IsyHR+DXYS5vBxpoBe/8veTeoRpMHP+vDosLZxL5bnpetzI0igkxkLZS235ldLzyfkxF+2divEwWHP3vMQ==
 
 "@remix-run/router@1.3.0-pre.2":
   version "1.3.0-pre.2"
@@ -2416,18 +2408,6 @@
   integrity sha512-2Hlyv96JI4R3ygsF+zgC7NxfeRO1lqNxH/0GpPniyZIfq3JT4+PmTOgbx7HSsj/jgJzDfCyhwjymGYK84mBMKg==
   dependencies:
     "@remix-run/router" "1.2.1"
-    "@types/cookie" "^0.4.0"
-    "@web3-storage/multipart-parser" "^1.0.0"
-    cookie "^0.4.1"
-    set-cookie-parser "^2.4.8"
-    source-map "^0.7.3"
-
-"@remix-run/server-runtime@1.9.0":
-  version "1.9.0"
-  resolved "https://registry.npmjs.org/@remix-run/server-runtime/-/server-runtime-1.9.0.tgz#b0e1b0431fcd91daa6058691290f8ebb9519d922"
-  integrity sha512-HNJGAzdp4JZqBtDqhi9tEtTxWztuQYruuMPyTlJmSWQhK3MdaOs7F9DJtfFKAhy8LBOqniwpE5w27dkCx7trOg==
-  dependencies:
-    "@remix-run/router" "1.1.0"
     "@types/cookie" "^0.4.0"
     "@web3-storage/multipart-parser" "^1.0.0"
     cookie "^0.4.1"
