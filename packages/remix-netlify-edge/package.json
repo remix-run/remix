@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/netlify-edge",
   "description": "Netlify Edge server request handler for Remix",
-  "version": "1.9.0",
+  "version": "1.10.1",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,7 +14,7 @@
     "url": "https://github.com/remix-run/remix/issues"
   },
   "dependencies": {
-    "@remix-run/deno": "1.9.0"
+    "@remix-run/deno": "1.10.1"
   },
   "devDependencies": {
     "@netlify/edge-functions": "^2.0.0"
