@@ -16,6 +16,7 @@ export {
 export {
   createRequestHandler as createRemixRequestHandler,
   createSession,
+  defer,
   isCookie,
   isSession,
   json,
@@ -64,8 +65,11 @@ export type {
   SessionIdStorageStrategy,
   SessionStorage,
   SignFunction,
+  TypedDeferredData,
   TypedResponse,
   UnsignFunction,
   UploadHandler,
   UploadHandlerPart,
+  V2_HtmlMetaDescriptor,
+  V2_MetaFunction,
 } from "@remix-run/server-runtime";

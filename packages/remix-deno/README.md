@@ -2,7 +2,7 @@
 
 This package contains a Deno module that provides abstractions for Remix.
 
-For more, see the [Remix docs](https://remix.run/docs/).
+For more, see the [Remix docs](https://remix.run/docs).
 
 ## Install
 

@@ -17,7 +17,7 @@ export interface RouteModules {
 
 export interface RouteModule {
   CatchBoundary?: CatchBoundaryComponent;
-  ErrorBoundary?: ErrorBoundaryComponent;
+  ErrorBoundary?: ErrorBoundaryComponent | V2_ErrorBoundaryComponent;
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
@@ -32,22 +32,29 @@ export interface RouteModule {
 /**
  * A React component that is rendered when the server throws a Response.
  *
- * @see https://remix.run/api/conventions#catchboundary
+ * @see https://remix.run/route/catch-boundary
  */
 export type CatchBoundaryComponent = ComponentType<{}>;
 
 /**
  * A React component that is rendered when there is an error on a route.
  *
- * @see https://remix.run/api/conventions#errorboundary
+ * @see https://remix.run/route/error-boundary
  */
 export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
+
+/**
+ * V2 version of the ErrorBoundary that eliminates the distinction between
+ * Error and Catch Boundaries and behaves like RR 6.4 errorElement and captures
+ * errors with useRouteError()
+ */
+export type V2_ErrorBoundaryComponent = ComponentType;
 
 /**
  * A function that defines `<link>` tags to be inserted into the `<head>` of
  * the document on route transitions.
  *
- * @see https://remix.run/api/remix#meta-links-scripts
+ * @see https://remix.run/route/meta
  */
 export interface LinksFunction {
   (): LinkDescriptor[];
@@ -58,7 +65,7 @@ export interface LinksFunction {
  * `<meta>` tags for a route. These tags will be merged with (and take
  * precedence over) tags from parent routes.
  *
- * @see https://remix.run/api/remix#meta-links-scripts
+ * @see https://remix.run/route/meta
  */
 export interface V1_MetaFunction {
   (args: {
@@ -123,7 +130,7 @@ export type RouteComponent = ComponentType<{}>;
 /**
  * An arbitrary object that is associated with a route.
  *
- * @see https://remix.run/api/conventions#handle
+ * @see https://remix.run/route/handle
  */
 export type RouteHandle = any;
 
@@ -149,4 +156,27 @@ export async function loadRouteModule(
       // check out of this hook cause the DJs never gonna re[s]olve this
     });
   }
+}
+
+/**
+ * @deprecated The `unstable_shouldReload` function has been removed, so this
+ * function will never run and route data will be revalidated on every request.
+ * Please update the function name to `shouldRevalidate` and use the
+ * `ShouldRevalidateFunction` interface.
+ */
+export interface ShouldReloadFunction {
+  (args: {
+    url: URL;
+    prevUrl: URL;
+    params: Params;
+    submission?: Submission;
+  }): boolean;
+}
+
+interface Submission {
+  action: string;
+  method: string;
+  formData: FormData;
+  encType: string;
+  key: string;
 }
