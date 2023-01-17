@@ -11,6 +11,7 @@ import type {
   Navigation,
   TrackedPromise,
 } from "@remix-run/router";
+import { createPath } from "@remix-run/router";
 import type {
   LinkProps,
   NavigationType,
@@ -310,6 +311,7 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
 );
 NavLink.displayName = "NavLink";
 export { NavLink };
+
 /**
  * This component renders an anchor tag and is the primary way the user will
  * navigate around your website.
@@ -317,26 +319,27 @@ export { NavLink };
  * @see https://remix.run/components/link
  */
 let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
-  ({ to: inputTo, prefetch = "none", children, ...props }, forwardedRef) => {
-    let to = inputTo.toString();
-    let isExternal = /^[a-z]+:/.test(to);
-    let href = useHref(to);
+  ({ to, prefetch = "none", children, ...props }, forwardedRef) => {
+    let location = typeof to === "string" ? to : createPath(to);
+    let isAbsolute =
+      /^[a-z+]+:\/\//i.test(location) || location.startsWith("//");
 
+    let href = useHref(location);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
     );
 
-    if (isExternal) {
+    if (isAbsolute) {
       return (
         <>
-          <a ref={forwardedRef} href={to} {...props} {...prefetchHandlers}>
+          <a ref={forwardedRef} href={href} {...props} {...prefetchHandlers}>
             {children}
           </a>
           {shouldPrefetch ? (
             <>
-              <link rel="prerender" href={to} />
-              <link rel="dns-prefetch" href={to} />
+              <link rel="prerender" href={href} />
+              <link rel="dns-prefetch" href={href} />
             </>
           ) : null}
         </>
