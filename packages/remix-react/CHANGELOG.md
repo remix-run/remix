@@ -1,5 +1,12 @@
 # `@remix-run/react`
 
+## 1.11.0-pre.1
+
+### Patch Changes
+
+- Bump react router versions ([#5120](https://github.com/remix-run/remix/pull/5120))
+- Ensure `useFetcher` is stable across re-renders in backwards-compatibility layer ([#5118](https://github.com/remix-run/remix/pull/5118))
+
 ## 1.11.0-pre.0
 
 ### Minor Changes
