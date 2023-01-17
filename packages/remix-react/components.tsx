@@ -1359,21 +1359,24 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
   SerializeFrom<TData>
 > {
   let fetcherRR = useFetcherRR();
-  let remixFetcher = convertRouterFetcherToRemixFetcher({
-    state: fetcherRR.state,
-    data: fetcherRR.data,
-    formMethod: fetcherRR.formMethod,
-    formAction: fetcherRR.formAction,
-    formData: fetcherRR.formData,
-    formEncType: fetcherRR.formEncType,
-    " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
-  });
-  return {
-    ...remixFetcher,
-    load: fetcherRR.load,
-    submit: fetcherRR.submit,
-    Form: fetcherRR.Form,
-  };
+
+  return React.useMemo(() => {
+    let remixFetcher = convertRouterFetcherToRemixFetcher({
+      state: fetcherRR.state,
+      data: fetcherRR.data,
+      formMethod: fetcherRR.formMethod,
+      formAction: fetcherRR.formAction,
+      formData: fetcherRR.formData,
+      formEncType: fetcherRR.formEncType,
+      " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
+    });
+    return {
+      ...remixFetcher,
+      load: fetcherRR.load,
+      submit: fetcherRR.submit,
+      Form: fetcherRR.Form,
+    };
+  }, [fetcherRR]);
 }
 
 function convertRouterFetcherToRemixFetcher(
