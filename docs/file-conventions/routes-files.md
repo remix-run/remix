@@ -105,6 +105,37 @@ Nested routes can also contain dynamic segments by using the `$` character in th
 
 See the [routing guide][routing-guide] for more information.
 
+## Optional Segments
+
+Wrapping a route segment in parens will make the segment optional.
+
+<!-- prettier-ignore -->
+```markdown lines=[3]
+app/
+├── routes/
+│   ├── ($lang)/
+│   │   ├── $pid.tsx
+│   │   ├── categories.tsx
+│   │   └── index.tsx
+│   └── index.tsx
+└── root.tsx
+```
+
+<details>
+
+<summary>URL Route Matches</summary>
+
+| URL                        | Matched Route                       |
+| -------------------------- | ----------------------------------- |
+| `/categories`              | `app/routes/($lang)/categories.tsx` |
+| `/en/categories`           | `app/routes/($lang)/categories.tsx` |
+| `/fr/categories`           | `app/routes/($lang)/categories.tsx` |
+| `/american-flag-speedo`    | `app/routes/($lang)/$pid.tsx`       |
+| `/en/american-flag-speedo` | `app/routes/($lang)/$pid.tsx`       |
+| `/fr/american-flag-speedo` | `app/routes/($lang)/$pid.tsx`       |
+
+</details>
+
 ## Layout Routes
 
 <!-- prettier-ignore -->
