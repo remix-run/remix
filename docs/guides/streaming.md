@@ -3,6 +3,8 @@ title: Streaming
 description: When, why, and how to stream with React 18 and Remix's deferred API.
 ---
 
+# Streaming
+
 Remix supports the [web streaming API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) as a first-class citizen. Additionally, JavaScript server runtimes have support for streaming responses to the client.
 
 <docs-warning>NOTE: Deferred UX goals rely on streaming responses. Some popular hosts do not support streaming responses. In general, any host built around AWS Lambda does not support streaming and any bare metal / VM provider will. Make sure your hosting platform supports before using this API.</docs-warning>
