@@ -17,7 +17,7 @@ export async function loader() {
 }
 
 export default function Invoices() {
-  const invoices = useLoaderData();
+  const invoices = useLoaderData<typeof loader>();
   // ...
 }
 ```

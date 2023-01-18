@@ -6,11 +6,10 @@ title: redirect
 
 This is shortcut for sending 30x responses.
 
-```ts lines=[2,8]
-import type { ActionFunction } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[1,7]
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
-export const action: ActionFunction = async () => {
+export const action = async () => {
   const userSession = await getUserSessionOrWhatever();
 
   if (!userSession) {
@@ -21,7 +20,7 @@ export const action: ActionFunction = async () => {
 };
 ```
 
-By default it sends 302, but you can change it to whichever redirect status code you'd like:
+By default, it sends 302, but you can change it to whichever redirect status code you'd like:
 
 ```ts
 redirect(path, 301);

@@ -57,13 +57,17 @@ You'll use methods to get access to sessions in your `loader` and `action` funct
 
 A login form might look something like this:
 
-```tsx filename=app/routes/login.js lines=[4,7-9,11,16,20,26-28,39,44,49,54]
+```tsx filename=app/routes/login.js lines=[8,11-13,15,20,24,30-32,43,48,53,58]
+import type {
+  ActionArgs,
+  LoaderArgs,
+} from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { getSession, commitSession } from "../sessions";
 
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -82,7 +86,7 @@ export async function loader({ request }) {
   });
 }
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -117,7 +121,8 @@ export async function action({ request }) {
 }
 
 export default function Login() {
-  const { currentUser, error } = useLoaderData();
+  const { currentUser, error } =
+    useLoaderData<typeof loader>();
 
   return (
     <div>
@@ -144,9 +149,7 @@ And then a logout form might look something like this:
 ```tsx
 import { getSession, destroySession } from "../sessions";
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -276,8 +279,7 @@ This storage keeps all the cookie information in your server's memory.
 
 <docs-error>This should only be used in development. Use one of the other methods in production.</docs-error>
 
-```js
-// app/sessions.js
+```js filename=app/sessions.js
 import {
   createCookie,
   createMemorySessionStorage,
@@ -334,8 +336,7 @@ For [Cloudflare KV][cloudflare-kv] backed sessions, use `createCloudflareKVSessi
 
 The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
 
-```js
-// app/sessions.server.js
+```js filename=app/sessions.server.js
 import {
   createCookie,
   createCloudflareKVSessionStorage,
@@ -370,8 +371,7 @@ sessions
   _ttl TTL
 ```
 
-```js
-// app/sessions.server.js
+```js filename=app/sessions.server.js
 import {
   createCookie,
   createArcTableSessionStorage,
@@ -402,8 +402,8 @@ export { getSession, commitSession, destroySession };
 
 After retrieving a session with `getSession`, the session object returned has a handful of methods and properties:
 
-```js
-export async function action({ request }) {
+```tsx
+export async function action({ request }: ActionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -433,10 +433,13 @@ session.set("userId", "1234");
 
 Sets a session value that will be unset the first time it is read. After that, it's gone. Most useful for "flash messages" and server-side form validation messages:
 
-```js
-import { getSession, commitSession } from "../sessions";
+```tsx
+import { commitSession, getSession } from "../sessions";
 
-export async function action({ request, params }) {
+export async function action({
+  params,
+  request,
+}: ActionArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -461,7 +464,7 @@ Now we can read the message in a loader.
 
 <docs-info>You must commit the session whenever you read a `flash`. This is different than you might be used to where some type of middleware automatically sets the cookie header for you.</docs-info>
 
-```jsx
+```tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import {
   Meta,
@@ -472,7 +475,7 @@ import {
 
 import { getSession, commitSession } from "./sessions";
 
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const session = await getSession(
     request.headers.get("Cookie")
   );
@@ -490,7 +493,7 @@ export async function loader({ request }) {
 }
 
 export default function App() {
-  const { message } = useLoaderData();
+  const { message } = useLoaderData<typeof loader>();
 
   return (
     <html>
@@ -528,8 +531,8 @@ session.unset("name");
 
 <docs-info>When using cookieSessionStorage, you must commit the session whenever you `unset`</docs-info>
 
-```js
-export async function loader({ request }) {
+```tsx
+export async function loader({ request }: LoaderArgs) {
   // ...
 
   return json(data, {
