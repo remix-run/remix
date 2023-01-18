@@ -67,7 +67,7 @@ But it's still sub-optimal for two reasons:
 
 ## The solution
 
-Remix takes advantage of React 18's streaming and server-side support for `<Suspense />` boundaries using the [`deferred` Response][defer] utility and [`<Await />`][await] component / [`useAsyncValue`][useasyncvalue] hook. By using these APIs, you can solve both of these problems:
+Remix takes advantage of React 18's streaming and server-side support for `<Suspense />` boundaries using the [`defer` Response][defer] utility and [`<Await />`][await] component / [`useAsyncValue`][useasyncvalue] hook. By using these APIs, you can solve both of these problems:
 
 1. Your data is no longer on a waterfall: document & data (in parallel) -> JavaScript
 2. Your can easily switch between streaming and waiting for the data
