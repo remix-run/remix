@@ -3,4 +3,4 @@
 "@remix-run/architect": patch
 ---
 
-use `@architect/functions`' built-in types
+Use `@architect/functions`' built-in types

@@ -3,4 +3,4 @@
 "@remix-run/dev": patch
 ---
 
-suport `handle` in md(x) frontmatter
+Added support for `handle` in MDX frontmatter
