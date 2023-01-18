@@ -1554,9 +1554,10 @@ export const LiveReload =
                 function remixLiveReloadConnect(config) {
                   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
-                  let socketPath = protocol + "//" + host + ":" + ${String(
+                  let port = (window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || ${String(
                     port
-                  )} + "/socket";
+                  )};
+                  let socketPath = protocol + "//" + host + ":" + port + "/socket";
                   let ws = new WebSocket(socketPath);
                   ws.onmessage = (message) => {
                     let event = JSON.parse(message.data);
