@@ -732,7 +732,7 @@ export function Meta() {
 }
 
 export interface AwaitProps<Resolve> {
-  children: React.ReactNode | ((value: Awaited<Resolve>) => React.ReactElement);
+  children: React.ReactNode | ((value: Awaited<Resolve>) => React.ReactNode);
   errorElement?: React.ReactNode;
   resolve: Resolve;
 }
