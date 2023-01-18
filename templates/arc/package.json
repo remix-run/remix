@@ -7,7 +7,7 @@
     "dev:arc": "cross-env NODE_ENV=development arc sandbox",
     "dev": "remix build && run-p \"dev:*\"",
     "start": "cross-env NODE_ENV=production arc sandbox",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@remix-run/architect": "*",
