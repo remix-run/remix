@@ -29,7 +29,7 @@ export type WatchOptions = Partial<CompileOptions> & {
 };
 
 export async function watch(
-  config: RemixConfig,
+  configGetter: RemixConfig | (() => RemixConfig | Promise<RemixConfig>),
   {
     mode = "development",
     target = "node14",
@@ -52,6 +52,17 @@ export async function watch(
     onWarning,
   };
 
+  let config: RemixConfig;
+  let getNewConfig: () => RemixConfig | Promise<RemixConfig>;
+
+  if (typeof configGetter === "function") {
+    config = await configGetter();
+    getNewConfig = configGetter;
+  } else {
+    config = configGetter;
+    getNewConfig = () => readConfig(config.rootDirectory);
+  }
+
   let start = Date.now();
   let compiler = createRemixCompiler(config, options);
 
@@ -65,7 +76,7 @@ export async function watch(
     dispose(compiler);
 
     try {
-      config = await readConfig(config.rootDirectory);
+      config = await getNewConfig();
     } catch (error: unknown) {
       onCompileFailure(error as Error);
       return;
@@ -110,7 +121,7 @@ export async function watch(
       onFileCreated?.(file);
 
       try {
-        config = await readConfig(config.rootDirectory);
+        config = await getNewConfig();
       } catch (error: unknown) {
         onCompileFailure(error as Error);
         return;
