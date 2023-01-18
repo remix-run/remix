@@ -30,7 +30,7 @@ function Accessor() {
   <Await resolve={deferredValue}>
     <Accessor />
   </Await>
-</Suspense>;
+</Suspense>
 ```
 
 `<Await>` is paired with [`defer()`][defer] in your loader. Returning a deferred value from your loader will put Remix in streaming mode and allow you to render fallbacks with `<Suspense>`. A full example can be found in the [streaming guide][streaming-guide].
