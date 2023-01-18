@@ -1,14 +1,15 @@
 ---
 title: unstable_shouldReload
+hidden: true
 ---
 
 # `unstable_shouldReload`
 
-<docs-warning>This API is unstable, we're confident in the use cases it solves but aren't sure about the API yet, it may change in the future.</docs-warning>
+<docs-error>This API has been stabilized as [`shouldRevalidate`][shouldrevalidate], you should use it instead. This hook is no longer called starting in v1.10.0</docs-error>
 
-<docs-warning>This feature is an <i>additional</i> optimization. In general, Remix's design does a great job of only calling the loaders that the next page needs and ensuring your UI is in sync with your server. When you use this feature you risk your UI getting out of sync with your server. Use with caution!</docs-warning>
+---
 
-This function lets apps optimize which routes should be reloaded on some client-side transitions.
+This function lets apps optimize which routes should be reloaded on some client-side transitions in v1.9.x and lower.
 
 ```ts
 import type { ShouldReloadFunction } from "@remix-run/react";
@@ -149,3 +150,5 @@ export function unstable_shouldReload({
 ```
 
 You need to be very careful here, though. That project (or its nested relationships) may be updated by other actions and your app will get out of sync if you don't also consider them.
+
+[shouldrevalidate]: ./should-revalidate
