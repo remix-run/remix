@@ -11,7 +11,7 @@ module.exports = {
   plugins: ["markdown"],
   overrides: [
     {
-      files: ["rollup.config.js", "**/*.md"],
+      files: ["rollup.config.js", "**/*.md/**"],
       rules: {
         "import/no-extraneous-dependencies": OFF,
       },
