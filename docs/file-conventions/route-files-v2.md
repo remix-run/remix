@@ -31,7 +31,7 @@ app/
 └── root.tsx
 ```
 
-The file in `app/root.tsx` is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes so you can export a [`loader`][loader], [`action`][action], [`headers`][headers], etc.
+The file in `app/root.tsx` is your root layout, or "root route" (very sorry for those of you who pronounce those words the same way!). It works just like all other routes so you can export a [`loader`][loader], [`action`][action], \[`headers`]\[headers], etc.
 
 The root route typically looks something like this. It serves as the root layout of the entire app, all other routes will render inside the `<Outlet />`.
 
