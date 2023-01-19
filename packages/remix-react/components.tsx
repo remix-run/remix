@@ -732,7 +732,7 @@ export function Meta() {
 }
 
 export interface AwaitProps<Resolve> {
-  children: React.ReactNode | ((value: Awaited<Resolve>) => React.ReactElement);
+  children: React.ReactNode | ((value: Awaited<Resolve>) => React.ReactNode);
   errorElement?: React.ReactNode;
   resolve: Resolve;
 }
@@ -1359,21 +1359,24 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
   SerializeFrom<TData>
 > {
   let fetcherRR = useFetcherRR();
-  let remixFetcher = convertRouterFetcherToRemixFetcher({
-    state: fetcherRR.state,
-    data: fetcherRR.data,
-    formMethod: fetcherRR.formMethod,
-    formAction: fetcherRR.formAction,
-    formData: fetcherRR.formData,
-    formEncType: fetcherRR.formEncType,
-    " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
-  });
-  return {
-    ...remixFetcher,
-    load: fetcherRR.load,
-    submit: fetcherRR.submit,
-    Form: fetcherRR.Form,
-  };
+
+  return React.useMemo(() => {
+    let remixFetcher = convertRouterFetcherToRemixFetcher({
+      state: fetcherRR.state,
+      data: fetcherRR.data,
+      formMethod: fetcherRR.formMethod,
+      formAction: fetcherRR.formAction,
+      formData: fetcherRR.formData,
+      formEncType: fetcherRR.formEncType,
+      " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
+    });
+    return {
+      ...remixFetcher,
+      load: fetcherRR.load,
+      submit: fetcherRR.submit,
+      Form: fetcherRR.Form,
+    };
+  }, [fetcherRR]);
 }
 
 function convertRouterFetcherToRemixFetcher(
@@ -1551,9 +1554,10 @@ export const LiveReload =
                 function remixLiveReloadConnect(config) {
                   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
-                  let socketPath = protocol + "//" + host + ":" + ${String(
+                  let port = (window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || ${String(
                     port
-                  )} + "/socket";
+                  )};
+                  let socketPath = protocol + "//" + host + ":" + port + "/socket";
                   let ws = new WebSocket(socketPath);
                   ws.onmessage = (message) => {
                     let event = JSON.parse(message.data);
