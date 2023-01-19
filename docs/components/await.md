@@ -4,7 +4,7 @@ title: Await
 
 # `<Await>`
 
-The `<Await>` component is responsible for resolving promises accessed from \[`useLoaderData`]\[useloaderdata]. This can be thought of as a thin wrapper around React Error Boundaries with support for handling SSR that will suspend to resolve the data of a deferred loader value.
+The `<Await>` component is responsible for resolving promises accessed from [`useLoaderData`][useloaderdata]. This can be thought of as a thin wrapper around React Error Boundaries with support for handling SSR that will suspend to resolve the data of a deferred loader value.
 
 `<Await>` can be used to resolve the deferred value in one of two ways:
 
@@ -37,3 +37,4 @@ function Accessor() {
 
 [defer]: ../utils/defer
 [streaming-guide]: ../guides/streaming
+[useloaderdata]: ../hooks/use-loader-data
