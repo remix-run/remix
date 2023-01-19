@@ -32,7 +32,9 @@
   export function ErrorBoundary({ error }) {
     return <p>{error.message}</p>;
   }
+  ```
 
+  ```jsx
   // Using future.v2_errorBoundary
   import { isRouteErrorResponse, useRouteError } from "@remix-run/react";
 
