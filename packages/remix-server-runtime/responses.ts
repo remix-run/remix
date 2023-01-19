@@ -1,3 +1,23 @@
+import {
+  defer as routerDefer,
+  type UNSAFE_DeferredData as DeferredData,
+  type TrackedPromise,
+} from "@remix-run/router";
+
+import { serializeError } from "./errors";
+
+export type TypedDeferredData<Data extends Record<string, unknown>> = Pick<
+  DeferredData,
+  "init"
+> & {
+  data: Data;
+};
+
+export type DeferFunction = <Data extends Record<string, unknown>>(
+  data: Data,
+  init?: number | ResponseInit
+) => TypedDeferredData<Data>;
+
 export type JsonFunction = <Data extends unknown>(
   data: Data,
   init?: number | ResponseInit
@@ -5,7 +25,10 @@ export type JsonFunction = <Data extends unknown>(
 
 // must be a type since this is a subtype of response
 // interfaces must conform to the types they extend
-export type TypedResponse<T extends unknown = unknown> = Response & {
+export type TypedResponse<T extends unknown = unknown> = Omit<
+  Response,
+  "json"
+> & {
   json(): Promise<T>;
 };
 
@@ -13,7 +36,7 @@ export type TypedResponse<T extends unknown = unknown> = Response & {
  * This is a shortcut for creating `application/json` responses. Converts `data`
  * to JSON and sets the `Content-Type` header.
  *
- * @see https://remix.run/api/remix#json
+ * @see https://remix.run/utils/json
  */
 export const json: JsonFunction = (data, init = {}) => {
   let responseInit = typeof init === "number" ? { status: init } : init;
@@ -29,6 +52,26 @@ export const json: JsonFunction = (data, init = {}) => {
   });
 };
 
+/**
+ * This is a shortcut for creating `application/json` responses. Converts `data`
+ * to JSON and sets the `Content-Type` header.
+ *
+ * @see https://remix.run/api/remix#json
+ */
+export const defer: DeferFunction = (data, init = {}) => {
+  let responseInit = typeof init === "number" ? { status: init } : init;
+
+  let headers = new Headers(responseInit.headers);
+  if (!headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json; charset=utf-8");
+  }
+
+  return routerDefer(data, {
+    ...responseInit,
+    headers,
+  }) as TypedDeferredData<typeof data>;
+};
+
 export type RedirectFunction = (
   url: string,
   init?: number | ResponseInit
@@ -38,7 +81,7 @@ export type RedirectFunction = (
  * A redirect response. Sets the status code and the `Location` header.
  * Defaults to "302 Found".
  *
- * @see https://remix.run/api/remix#redirect
+ * @see https://remix.run/utils/redirect
  */
 export const redirect: RedirectFunction = (url, init = 302) => {
   let responseInit = init;
@@ -57,6 +100,18 @@ export const redirect: RedirectFunction = (url, init = 302) => {
   }) as TypedResponse<never>;
 };
 
+export function isDeferredData(value: any): value is DeferredData {
+  let deferred: DeferredData = value;
+  return (
+    deferred &&
+    typeof deferred === "object" &&
+    typeof deferred.data === "object" &&
+    typeof deferred.subscribe === "function" &&
+    typeof deferred.cancel === "function" &&
+    typeof deferred.resolveData === "function"
+  );
+}
+
 export function isResponse(value: any): value is Response {
   return (
     value != null &&
@@ -68,10 +123,101 @@ export function isResponse(value: any): value is Response {
 }
 
 const redirectStatusCodes = new Set([301, 302, 303, 307, 308]);
+export function isRedirectStatusCode(statusCode: number): boolean {
+  return redirectStatusCodes.has(statusCode);
+}
 export function isRedirectResponse(response: Response): boolean {
-  return redirectStatusCodes.has(response.status);
+  return isRedirectStatusCode(response.status);
 }
 
-export function isCatchResponse(response: Response) {
-  return response.headers.get("X-Remix-Catch") != null;
+function isTrackedPromise(value: any): value is TrackedPromise {
+  return (
+    value != null && typeof value.then === "function" && value._tracked === true
+  );
+}
+
+// TODO: Figure out why ReadableStream types are borked sooooooo badly
+// in this file. Probably related to our TS configurations and configs
+// bleeding into each other.
+const DEFERRED_VALUE_PLACEHOLDER_PREFIX = "__deferred_promise:";
+export function createDeferredReadableStream(
+  deferredData: DeferredData,
+  signal: AbortSignal
+): any {
+  let encoder = new TextEncoder();
+  let stream = new ReadableStream({
+    async start(controller: any) {
+      let criticalData: any = {};
+
+      let preresolvedKeys: string[] = [];
+      for (let [key, value] of Object.entries(deferredData.data)) {
+        if (isTrackedPromise(value)) {
+          criticalData[key] = `${DEFERRED_VALUE_PLACEHOLDER_PREFIX}${key}`;
+          if (
+            typeof value._data !== "undefined" ||
+            typeof value._error !== "undefined"
+          ) {
+            preresolvedKeys.push(key);
+          }
+        } else {
+          criticalData[key] = value;
+        }
+      }
+
+      // Send the critical data
+      controller.enqueue(encoder.encode(JSON.stringify(criticalData) + "\n\n"));
+
+      for (let preresolvedKey of preresolvedKeys) {
+        enqueueTrackedPromise(
+          controller,
+          encoder,
+          preresolvedKey,
+          deferredData.data[preresolvedKey] as TrackedPromise
+        );
+      }
+
+      let unsubscribe = deferredData.subscribe((aborted, settledKey) => {
+        if (settledKey) {
+          enqueueTrackedPromise(
+            controller,
+            encoder,
+            settledKey,
+            deferredData.data[settledKey] as TrackedPromise
+          );
+        }
+      });
+      await deferredData.resolveData(signal);
+      unsubscribe();
+      controller.close();
+    },
+  });
+
+  return stream;
+}
+
+function enqueueTrackedPromise(
+  controller: any,
+  encoder: TextEncoder,
+  settledKey: string,
+  promise: TrackedPromise
+) {
+  if ("_error" in promise) {
+    controller.enqueue(
+      encoder.encode(
+        "error:" +
+          JSON.stringify({
+            [settledKey]: serializeError(promise._error),
+          }) +
+          "\n\n"
+      )
+    );
+  } else {
+    controller.enqueue(
+      encoder.encode(
+        "data:" +
+          JSON.stringify({ [settledKey]: promise._data ?? null }) +
+          "\n\n"
+      )
+    );
+  }
 }

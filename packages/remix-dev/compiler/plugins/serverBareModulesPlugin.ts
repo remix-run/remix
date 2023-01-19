@@ -9,6 +9,7 @@ import {
   serverBuildVirtualModule,
   assetsManifestVirtualModule,
 } from "../virtualModules";
+import { isCssSideEffectImportPath } from "./cssSideEffectImportsPlugin";
 import { createMatchPath } from "../utils/tsconfig";
 import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
 
@@ -45,6 +46,11 @@ export function serverBareModulesPlugin(
           return undefined;
         }
 
+        // Always bundle @remix-run/css-bundle
+        if (path === "@remix-run/css-bundle") {
+          return undefined;
+        }
+
         // To prevent `import xxx from "remix"` from ending up in the bundle
         // we "bundle" remix but the other modules where the code lives.
         if (path === "remix") {
@@ -65,6 +71,11 @@ export function serverBareModulesPlugin(
           return undefined;
         }
 
+        // Always bundle CSS side-effect imports.
+        if (isCssSideEffectImportPath(path)) {
+          return undefined;
+        }
+
         let packageName = getNpmPackageName(path);
         let pkgManager = getPreferredPackageManager();
 
@@ -81,7 +92,7 @@ export function serverBareModulesPlugin(
         ) {
           try {
             require.resolve(path);
-          } catch (error) {
+          } catch (error: unknown) {
             onWarning(
               `The path "${path}" is imported in ` +
                 `${relative(process.cwd(), importer)} but ` +

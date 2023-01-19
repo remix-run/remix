@@ -9,6 +9,7 @@ import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/virtualModules";
 import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
+import { flatRoutes } from "./config/flat-routes";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -30,6 +31,15 @@ export type ServerBuildTarget =
 
 export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
+
+interface FutureConfig {
+  unstable_cssModules: boolean;
+  unstable_cssSideEffectImports: boolean;
+  unstable_vanillaExtract: boolean;
+  v2_errorBoundary: boolean;
+  v2_meta: boolean;
+  v2_routeConvention: boolean;
+}
 
 /**
  * The user-provided config in `remix.config.js`.
@@ -165,6 +175,8 @@ export interface AppConfig {
     | string
     | string[]
     | (() => Promise<string | string[]> | string | string[]);
+
+  future?: Partial<FutureConfig>;
 }
 
 /**
@@ -291,6 +303,8 @@ export interface RemixConfig {
    * The path for the tsconfig file, if present on the root directory.
    */
   tsconfigPath: string | undefined;
+
+  future: FutureConfig;
 }
 
 /**
@@ -327,7 +341,7 @@ export async function readConfig(
         appConfigModule = await import(pathToFileURL(configFile).href);
       }
       appConfig = appConfigModule?.default || appConfigModule;
-    } catch (error) {
+    } catch (error: unknown) {
       throw new Error(
         `Error loading Remix config at ${configFile}\n${String(error)}`
       );
@@ -439,8 +453,13 @@ export async function readConfig(
       file: rootRouteFile,
     },
   };
+
+  let routesConvention = appConfig.future?.v2_routeConvention
+    ? flatRoutes
+    : defineConventionalRoutes;
+
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
-    let conventionalRoutes = defineConventionalRoutes(
+    let conventionalRoutes = routesConvention(
       appDirectory,
       appConfig.ignoredRouteFiles
     );
@@ -493,6 +512,16 @@ export async function readConfig(
     writeConfigDefaults(tsconfigPath);
   }
 
+  let future = {
+    unstable_cssModules: appConfig.future?.unstable_cssModules === true,
+    unstable_cssSideEffectImports:
+      appConfig.future?.unstable_cssSideEffectImports === true,
+    unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract === true,
+    v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
+    v2_meta: appConfig.future?.v2_meta === true,
+    v2_routeConvention: appConfig.future?.v2_routeConvention === true,
+  };
+
   return {
     appDirectory,
     cacheDirectory,
@@ -517,6 +546,7 @@ export async function readConfig(
     mdx,
     watchPaths,
     tsconfigPath,
+    future,
   };
 }
 

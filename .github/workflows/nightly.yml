@@ -1,6 +1,7 @@
 name: 🌒 Nightly Release
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 7 * * *" # every day at 12AM PST
 
@@ -41,49 +42,43 @@ jobs:
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
-      - name: ⤴️ Update Version if needed
+      - name: 🕵️ Check for changes
         id: version
         run: |
           # get latest commit sha
           SHA=$(git rev-parse HEAD)
+          # get first 7 characters of sha
           SHORT_SHA=${SHA::7}
 
           # get latest nightly tag
           LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-committerdate | head -n 1)
 
-          CHANGES=$(git diff $LATEST_NIGHTLY_TAG..dev -- ./packages/ -- ':!packages/**/package.json')
-
-          # check if there are changes to ./packages
-          if [[ -n $(echo $CHANGES | xargs) ]]; then
-            git config --local user.email "hello@remix.run"
-            git config --local user.name "Remix Run Bot"
-
-            DATE=$(date '+%Y%m%d')
-            NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}-${DATE}
-            echo ::set-output name=NEXT_VERSION::${NEXT_VERSION}
-
-            git checkout -b nightly/${NEXT_VERSION}
-
-            if [ -z "$(git status --porcelain)" ]; then
-              echo "✨"
-            else
-              echo "dirty working directory..."
-              git add .
-              git commit -m "dirty working directory..."
-            fi
-
-            yarn run version ${NEXT_VERSION} --skip-prompt
+          # check if last commit to dev starts would be the nightly tag we're about to create (minus the date)
+          # if it is, we'll skip the nightly creation
+          # if not, we'll create a new nightly tag
+          if [[ ${LATEST_NIGHTLY_TAG} == v0.0.0-nightly-${SHORT_SHA}-* ]]; then
+            echo "🛑 Latest nightly tag is the same as the latest commit sha, skipping nightly release"
           else
-            echo "🛑 no changes since last nightly, skipping..."
+            # yyyyMMdd format (e.g. 20221207)
+            DATE=$(date '+%Y%m%d')
+            # v0.0.0-nightly-<short sha>-<date>
+            NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}-${DATE}
+            # set output so it can be used in other jobs
+            echo "NEXT_VERSION=${NEXT_VERSION}" >> $GITHUB_OUTPUT
           fi
+
+      - name: ⤴️ Update version
+        if: steps.version.outputs.NEXT_VERSION
+        run: |
+          git config --local user.email "hello@remix.run"
+          git config --local user.name "Remix Run Bot"
+          git checkout -b nightly/${{steps.version.outputs.NEXT_VERSION}}
+          yarn run version ${{steps.version.outputs.NEXT_VERSION}} --skip-prompt
+          git push origin --tags
 
       - name: 🏗 Build
         if: steps.version.outputs.NEXT_VERSION
         run: yarn build
-
-      - name: 🏷 Push Tag
-        if: steps.version.outputs.NEXT_VERSION
-        run: git push origin --tags
 
       - name: 🔐 Setup npm auth
         if: steps.version.outputs.NEXT_VERSION

@@ -2,9 +2,10 @@ import chokidar from "chokidar";
 import debounce from "lodash.debounce";
 import * as path from "path";
 
-import { type RemixConfig, readConfig } from "../config";
+import type { RemixConfig } from "../config";
+import { readConfig } from "../config";
 import { logCompileFailure } from "./onCompileFailure";
-import { type CompileOptions } from "./options";
+import type { CompileOptions } from "./options";
 import { compile, createRemixCompiler, dispose } from "./remixCompiler";
 import { warnOnce } from "./warnings";
 
@@ -18,13 +19,13 @@ function isEntryPoint(config: RemixConfig, file: string): boolean {
   return entryPoints.includes(appFile);
 }
 
-type WatchOptions = Partial<CompileOptions> & {
+export type WatchOptions = Partial<CompileOptions> & {
   onRebuildStart?(): void;
   onRebuildFinish?(durationMs: number): void;
   onFileCreated?(file: string): void;
   onFileChanged?(file: string): void;
   onFileDeleted?(file: string): void;
-  onInitialBuild?(): void;
+  onInitialBuild?(durationMs: number): void;
 };
 
 export async function watch(
@@ -51,11 +52,12 @@ export async function watch(
     onWarning,
   };
 
+  let start = Date.now();
   let compiler = createRemixCompiler(config, options);
 
   // initial build
   await compile(compiler);
-  onInitialBuild?.();
+  onInitialBuild?.(Date.now() - start);
 
   let restart = debounce(async () => {
     onRebuildStart?.();
@@ -64,7 +66,7 @@ export async function watch(
 
     try {
       config = await readConfig(config.rootDirectory);
-    } catch (error) {
+    } catch (error: unknown) {
       onCompileFailure(error as Error);
       return;
     }
@@ -109,7 +111,7 @@ export async function watch(
 
       try {
         config = await readConfig(config.rootDirectory);
-      } catch (error) {
+      } catch (error: unknown) {
         onCompileFailure(error as Error);
         return;
       }

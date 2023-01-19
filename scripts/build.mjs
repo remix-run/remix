@@ -1,8 +1,8 @@
 import { spawn } from "cross-spawn";
 
 const args = process.argv.slice(2);
-const tsc = process.env.CI || args.includes("--tsc");
 const publish = process.env.CI || args.includes("--publish");
+const tsc = process.env.CI || args.includes("--tsc") || publish;
 
 exec("yarn", ["rollup", "-c"])
   .then(() => tsc && exec("yarn", ["tsc", "-b"]))

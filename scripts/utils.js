@@ -17,7 +17,14 @@ let remixPackages = {
     "vercel",
   ],
   runtimes: ["cloudflare", "deno", "node"],
-  core: ["dev", "server-runtime", "react", "eslint-config"],
+  core: [
+    "dev",
+    "server-runtime",
+    "react",
+    "eslint-config",
+    "css-bundle",
+    "testing",
+  ],
   get all() {
     return [...this.adapters, ...this.runtimes, ...this.core, "serve"];
   },
@@ -80,7 +87,7 @@ async function updatePackageConfig(packageName, transform) {
     }
     transform(json);
     await jsonfile.writeFile(file, json, { spaces: 2 });
-  } catch (err) {
+  } catch {
     return;
   }
 }

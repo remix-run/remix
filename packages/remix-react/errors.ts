@@ -1,15 +1,7 @@
-import type { AppData } from "./data";
+import type { Router as RemixRouter } from "@remix-run/router";
+import { ErrorResponse } from "@remix-run/router";
 
-export interface AppState {
-  error?: SerializedError;
-  catch?: ThrownResponse;
-  catchBoundaryRouteId: string | null;
-  loaderBoundaryRouteId: string | null;
-  // `null` means the app layout threw before any routes rendered
-  renderBoundaryRouteId: string | null;
-  trackBoundaries: boolean;
-  trackCatchBoundaries: boolean;
-}
+import type { AppData } from "./data";
 
 export interface ThrownResponse<
   Status extends number = number,
@@ -20,9 +12,29 @@ export interface ThrownResponse<
   data: Data;
 }
 
-// must be type alias due to inference issues on interfaces
-// https://github.com/microsoft/TypeScript/issues/15300
-export type SerializedError = {
-  message: string;
-  stack?: string;
-};
+export function deserializeErrors(
+  errors: RemixRouter["state"]["errors"]
+): RemixRouter["state"]["errors"] {
+  if (!errors) return null;
+  let entries = Object.entries(errors);
+  let serialized: RemixRouter["state"]["errors"] = {};
+  for (let [key, val] of entries) {
+    // Hey you!  If you change this, please change the corresponding logic in
+    // serializeErrors in remix-server-runtime/errors.ts :)
+    if (val && val.__type === "RouteErrorResponse") {
+      serialized[key] = new ErrorResponse(
+        val.status,
+        val.statusText,
+        val.data,
+        val.internal === true
+      );
+    } else if (val && val.__type === "Error") {
+      let error = new Error(val.message);
+      error.stack = val.stack;
+      serialized[key] = error;
+    } else {
+      serialized[key] = val;
+    }
+  }
+  return serialized;
+}

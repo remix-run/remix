@@ -1,5 +1,128 @@
 # `@remix-run/react`
 
+## 1.11.0
+
+### Minor Changes
+
+- Added support for [Vanilla Extract](https://vanilla-extract.style) via the `unstable_vanillaExtract` future flag. **IMPORTANT:** Features marked with `unstable` are … unstable. While we're confident in the use cases they solve, the API and implementation may change without a major version bump. ([#5040](https://github.com/remix-run/remix/pull/5040))
+- Add support for CSS side-effect imports via the `unstable_cssSideEffectImports` future flag. **IMPORTANT:** Features marked with `unstable` are … unstable. While we're confident in the use cases they solve, the API and implementation may change without a major version bump. ([#4919](https://github.com/remix-run/remix/pull/4919))
+- Add support for CSS Modules via the `unstable_cssModules` future flag. **IMPORTANT:** Features marked with `unstable` are … unstable. While we're confident in the use cases they solve, the API and implementation may change without a major version bump. ([#4852](https://github.com/remix-run/remix/pull/4852))
+
+### Patch Changes
+
+- Fix v2 `meta` to ensure meta is rendered from the next route in the tree if no `meta` export is included in a leaf route ([#5041](https://github.com/remix-run/remix/pull/5041))
+
+- Ensure `useFetcher` is stable across re-renders in backwards-compatibility layer ([#5118](https://github.com/remix-run/remix/pull/5118))
+
+- Added the `v2_errorBoundary` future flag to opt into the next version of Remix's `ErrorBoundary` behavior. This removes the separate `CatchBoundary` and `ErrorBoundary` and consolidates them into a single `ErrorBoundary`, following the logic used by `errorElement` in React Router. You can then use `isRouteErrorResponse` to differentiate between thrown `Response`/`Error` instances. ([#4918](https://github.com/remix-run/remix/pull/4918))
+
+  ```jsx
+  // Current (Remix v1 default)
+  import { useCatch } from "@remix-run/react";
+
+  export function CatchBoundary() {
+    let caught = useCatch();
+    return (
+      <p>
+        {caught.status} {caught.data}
+      </p>
+    );
+  }
+
+  export function ErrorBoundary({ error }) {
+    return <p>{error.message}</p>;
+  }
+
+  // Using future.v2_errorBoundary
+  import { isRouteErrorResponse, useRouteError } from "@remix-run/react";
+
+  export function ErrorBoundary() {
+    let error = useRouteError();
+
+    return isRouteErrorResponse(error) ? (
+      <p>
+        {error.status} {error.data}
+      </p>
+    ) : (
+      <p>{error.message}</p>
+    );
+  }
+  ```
+
+- Introduces the `defer()` API from `@remix-run/router` with support for server-rendering and HTTP streaming. This utility allows you to defer values returned from `loader` functions by returning promises instead of resolved values. This has been refered to as _"sending a promise over the wire"_. ([#4920](https://github.com/remix-run/remix/pull/4920))
+
+  Informational Resources:
+
+  - <https://gist.github.com/jacob-ebey/9bde9546c1aafaa6bc8c242054b1be26>
+  - <https://github.com/remix-run/remix/blob/main/decisions/0004-streaming-apis.md>
+
+  Documentation Resources (better docs specific to Remix are in the works):
+
+  - <https://reactrouter.com/en/main/utils/defer>
+  - <https://reactrouter.com/en/main/components/await>
+  - <https://reactrouter.com/en/main/hooks/use-async-value>
+  - <https://reactrouter.com/en/main/hooks/use-async-error>
+
+## 1.10.1
+
+### Patch Changes
+
+- Fetchers should persist data through reload/resubmit ([#5065](https://github.com/remix-run/remix/pull/5065))
+- Update babel config to transpile down to node 14 ([#5047](https://github.com/remix-run/remix/pull/5047))
+
+## 1.10.0
+
+### Minor Changes
+
+- Update Remix to use new data APIs introduced in React Router v6.4 ([#4900](https://github.com/remix-run/remix/pull/4900))
+- Added new hooks from React Router
+  - [`useNavigation`](https://reactrouter.com/en/main/hooks/use-navigation)
+  - [`useNavigationType`](https://reactrouter.com/en/main/hooks/use-navigation-type)
+  - [`useRevalidator`](https://reactrouter.com/en/main/hooks/use-revalidator)
+  - [`useRouteLoaderData`](https://reactrouter.com/en/main/hooks/use-route-loader-data)
+
+## 1.9.0
+
+### Patch Changes
+
+- Update `@remix-run/react` to use `Router` from `react-router-dom@6.5.0` ([#4731](https://github.com/remix-run/remix/pull/4731))
+- Allow pass-through props to be passed to the script rendered by `ScrollRestoration` ([#2879](https://github.com/remix-run/remix/pull/2879))
+- Fixed a problem with `<LiveReload>` and Firefox infinitely reloading the page. ([#4725](https://github.com/remix-run/remix/pull/4725))
+
+## 1.8.2
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.8.2) for an overview of all changes in v1.8.2.
+
+## 1.8.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.8.1) for an overview of all changes in v1.8.1.
+
+## 1.8.0
+
+### Minor Changes
+
+- Importing functions and types from the `remix` package is deprecated, and all ([#3284](https://github.com/remix-run/remix/pull/3284))
+  exported modules will be removed in the next major release. For more details,
+  [see the release notes for 1.4.0](https://github.com/remix-run/remix/releases/tag/v1.4.0)
+  where these changes were first announced.
+- Added support for a new route `meta` API to handle arrays of tags instead of an object. For details, check out the [RFC](https://github.com/remix-run/remix/discussions/4462). ([#4610](https://github.com/remix-run/remix/pull/4610))
+
+### Patch Changes
+
+- Ensure route modules are loaded even in failure cases. This addresses a long standing issue where you would end up in your root catch boundary if a form transition to another route threw. This no longer occurs, and you end up in the contextual boundary you'd expect. ([#4611](https://github.com/remix-run/remix/pull/4611))
+
+## 1.7.6
+
+### Patch Changes
+
+- Fixed a regression in the browser build for browsers that don't support the nullish coalescing operator ([#4561](https://github.com/remix-run/remix/pull/4561))
+
+## 1.7.5
+
+### Patch Changes
+
+- Make sure namespaced Open Graph and `fb:app_id` meta data renders the correct attributes on `<meta>` tags ([#4445](https://github.com/remix-run/remix/pull/4445))
+
 ## 1.7.4
 
 ### Patch Changes

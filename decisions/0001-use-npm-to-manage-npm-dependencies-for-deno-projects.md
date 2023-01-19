@@ -12,7 +12,7 @@ Deno has three ways to manage dependencies:
 2. [deps.ts](https://deno.land/manual/examples/manage_dependencies)
 3. [Import maps](https://deno.land/manual/linking_to_external_code/import_maps)
 
-Additionally, NPM packages can be accessed as Deno modules via [Deno-friendly CDNs](https://deno.land/manual/node/cdns#deno-friendly-cdns) like https://esm.sh .
+Additionally, NPM packages can be accessed as Deno modules via [Deno-friendly CDNs](https://deno.land/manual/node/cdns#deno-friendly-cdns) like https://esm.sh.
 
 Remix has some requirements around dependencies:
 
@@ -78,7 +78,7 @@ Remix will not yet support import maps.
 
 ## Consequences
 
-- URL imports will not be treeshaken
+- URL imports will not be treeshaken.
 - Users can specify environment via the `NODE_ENV` environment variable at runtime.
 - Users won't have to do error-prone, manual dependency resolution.
 

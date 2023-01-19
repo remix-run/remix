@@ -11,7 +11,7 @@ if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
   let appDir = path.join(ROOT_DIR, process.env.REMIX_LOCAL_BUILD_DIRECTORY);
   try {
     fse.readdirSync(path.join(appDir, "node_modules"));
-  } catch (e) {
+  } catch {
     console.error(
       "Oops! You pointed `REMIX_LOCAL_BUILD_DIRECTORY` to a directory that " +
         "does not have a `node_modules` folder. Please `npm install` in that " +
@@ -38,6 +38,18 @@ async function copyBuildToDist() {
     };
   });
 
+  // Write an export shim for @remix-run/node/globals types
+  let dest = path.join(
+    ".",
+    "build",
+    "node_modules",
+    "@remix-run",
+    "node",
+    "globals.d.ts"
+  );
+  console.log(chalk.yellow(`  🛠  Writing globals.d.ts shim to ${dest}`));
+  await fse.writeFile(dest, "export * from './dist/globals';");
+
   /** @type {Promise<void>[]} */
   let copyQueue = [];
   for (let pkg of packages) {
@@ -62,24 +74,8 @@ async function copyBuildToDist() {
           });
         })()
       );
-    } catch (e) {}
+    } catch {}
   }
-
-  // Write an export shim for @remix-run/node/globals types
-  copyQueue.push(
-    (async () => {
-      let dest = path.join(
-        ".",
-        "build",
-        "node_modules",
-        "@remix-run",
-        "node",
-        "globals.d.ts"
-      );
-      console.log(chalk.yellow(`  🛠  Writing globals.d.ts shim to ${dest}`));
-      await fse.writeFile(dest, "export * from './dist/globals';");
-    })()
-  );
 
   // One-off deep import copies so folks don't need to import from inside of
   // dist/.  TODO: Remove in v2 and either get rid of the deep import or manage

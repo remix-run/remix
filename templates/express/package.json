@@ -4,9 +4,10 @@
   "scripts": {
     "build": "remix build",
     "dev": "remix build && run-p \"dev:*\"",
-    "dev:node": "cross-env NODE_ENV=development nodemon ./server.js --watch ./server.js",
+    "dev:node": "cross-env NODE_ENV=development nodemon --require dotenv/config ./server.js --watch ./server.js",
     "dev:remix": "remix watch",
-    "start": "cross-env NODE_ENV=production node ./server.js"
+    "start": "cross-env NODE_ENV=production node ./server.js",
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@remix-run/express": "*",
@@ -14,8 +15,8 @@
     "@remix-run/react": "*",
     "compression": "^1.7.4",
     "cross-env": "^7.0.3",
-    "express": "^4.18.1",
-    "isbot": "^3.5.4",
+    "express": "^4.18.2",
+    "isbot": "^3.6.5",
     "morgan": "^1.10.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
@@ -23,12 +24,13 @@
   "devDependencies": {
     "@remix-run/dev": "*",
     "@remix-run/eslint-config": "*",
-    "@types/react": "^18.0.15",
-    "@types/react-dom": "^18.0.6",
-    "eslint": "^8.23.1",
-    "nodemon": "^2.0.19",
+    "@types/react": "^18.0.25",
+    "@types/react-dom": "^18.0.8",
+    "dotenv": "^16.0.3",
+    "eslint": "^8.27.0",
+    "nodemon": "^2.0.20",
     "npm-run-all": "^4.1.5",
-    "typescript": "^4.7.4"
+    "typescript": "^4.8.4"
   },
   "engines": {
     "node": ">=14"

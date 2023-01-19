@@ -1,4 +1,4 @@
 ---
 title: Pages
-order: 4
+order: 2
 ---

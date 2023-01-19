@@ -1,10 +1,12 @@
-import { type RemixConfig } from "../config";
-import { type AssetsManifest } from "./assets";
-import { type BrowserCompiler, createBrowserCompiler } from "./compileBrowser";
-import { type ServerCompiler, createServerCompiler } from "./compilerServer";
-import { type OnCompileFailure } from "./onCompileFailure";
-import { type CompileOptions } from "./options";
-import { createChannel } from "./utils/channel";
+import { createChannel } from "../channel";
+import type { RemixConfig } from "../config";
+import type { AssetsManifest } from "./assets";
+import type { BrowserCompiler } from "./compileBrowser";
+import { createBrowserCompiler } from "./compileBrowser";
+import type { ServerCompiler } from "./compilerServer";
+import { createServerCompiler } from "./compilerServer";
+import type { OnCompileFailure } from "./onCompileFailure";
+import type { CompileOptions } from "./options";
 
 type RemixCompiler = {
   browser: BrowserCompiler;
@@ -32,8 +34,8 @@ export const compile = async (
     let browserPromise = compiler.browser.compile(assetsManifestChannel);
     let serverPromise = compiler.server.compile(assetsManifestChannel);
     await Promise.all([browserPromise, serverPromise]);
-  } catch (err) {
-    options.onCompileFailure?.(err as Error);
+  } catch (error: unknown) {
+    options.onCompileFailure?.(error as Error);
   }
 };
 

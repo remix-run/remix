@@ -125,15 +125,15 @@ test.describe("rendering", () => {
         `,
 
         "app/routes/gh-1691.jsx": js`
-          import { redirect } from "@remix-run/node";
-          import { Form, useFetcher, useTransition} from "@remix-run/react";
+          import { json, redirect } from "@remix-run/node";
+          import { useFetcher} from "@remix-run/react";
 
-          export const action = async ({ request }) => {
+          export const action = async ( ) => {
             return redirect("/gh-1691");
           };
 
-          export const loader = async ({ request }) => {
-            return {};
+          export const loader = async () => {
+            return json({});
           };
 
           export default function GitHubIssue1691() {
@@ -144,7 +144,7 @@ test.describe("rendering", () => {
                 <span>{fetcher.state}</span>
                 <fetcher.Form method="post">
                   <input type="hidden" name="source" value="fetcher" />
-                  <button type="submit" name="action" value="add">
+                  <button type="submit" name="intent" value="add">
                     Submit
                   </button>
                 </fetcher.Form>
@@ -204,8 +204,8 @@ test.describe("rendering", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => {
-    await appFixture.close();
+  test.afterAll(() => {
+    appFixture.close();
   });
 
   test("calls all loaders for new routes", async ({ page }) => {
@@ -213,10 +213,13 @@ test.describe("rendering", () => {
     await app.goto("/");
     let responses = app.collectDataResponses();
     await app.clickLink(`/${PAGE}`);
+    await page.waitForLoadState("networkidle");
 
     expect(
-      responses.map((res) => new URL(res.url()).searchParams.get("_data"))
-    ).toEqual([`routes/${PAGE}`, `routes/${PAGE}/index`]);
+      responses
+        .map((res) => new URL(res.url()).searchParams.get("_data"))
+        .sort()
+    ).toEqual([`routes/${PAGE}`, `routes/${PAGE}/index`].sort());
 
     await page.waitForSelector(`h2:has-text("${PAGE_TEXT}")`);
     await page.waitForSelector(`h3:has-text("${PAGE_INDEX_TEXT}")`);
@@ -227,6 +230,7 @@ test.describe("rendering", () => {
     await app.goto(`/${PAGE}`);
     let responses = app.collectDataResponses();
     await app.clickLink(`/${PAGE}/${CHILD}`);
+    await page.waitForLoadState("networkidle");
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
@@ -244,6 +248,7 @@ test.describe("rendering", () => {
 
     await app.clickLink(`/${REDIRECT}`);
     await page.waitForURL(/\/page/);
+    await page.waitForLoadState("networkidle");
 
     expect(
       responses

@@ -31,6 +31,8 @@ Here's a list of courses (in no particular order) you can take to help learn Rem
 - [Learn Remix by Building a Social Media Platform with TypeScript and Prisma][learn-remix-by-building-a-social-media-platform-with-type-script-and-prisma] by [Ian Jones][ian-jones] on [Egghead.io][egghead-io]
 - [Remix for Everyone][remix-for-everyone] by [Scott Tolinski][scott-tolinski] on [Level Up Tutorials][level-up-tutorials]
 - [Realtime Remix with Supabase][realtime-remix-with-supabase] by [Jon Meyers][jon-meyers] on [Level Up Tutorials][level-up-tutorials]
+- [Remix Fundamentals][remix-fundamentals] by [Kent C. Dodds][kent-c-dodds] on [Frontendmasters][frontend-masters]
+- [Advanced Remix][advanced-remix] by [Kent C. Dodds][kent-c-dodds] on [Frontendmasters][frontend-masters]
 
 If you need to learn React first, [this free egghead course][this-free-egghead-course] by Kent C. Dodds has everything you need.
 
@@ -47,6 +49,8 @@ In addition to the [official][official] [tutorials][tutorials], here are Remix t
 
 - [How to Debug Remix loaders and actions in VS Code][how-to-debug-remix-loaders-and-actions-in-vs-code] by [Michael Carter][michael-carter].
 - [How to build a Remix website with Sanity.io and live preview][how-to-build-a-remix-website-with-sanity-io-and-live-preview] by [Simeon Griggs][simeon-griggs]
+- [Build A Pet Management System With Remix, Prisma, and Postgres][build-a-pet-management-system-with-remix-prisma-and-postgres]
+  by [Austin Gil][austin-gil]
 
 ## Events
 
@@ -86,6 +90,11 @@ There are Remix Meetups all over the world with thousands of members. Some onlin
 [michael-carter]: https://twitter.com/kiliman
 [how-to-build-a-remix-website-with-sanity-io-and-live-preview]: https://www.sanity.io/guides/remix-run-live-preview
 [simeon-griggs]: https://twitter.com/simeongriggs
-[remix-conf]: ../../../../conf
+[build-a-pet-management-system-with-remix-prisma-and-postgres]: https://www.youtube.com/watch?v=wqyHGQlZcws&list=PLTnRtjQN5ieYu9SdwLvzKYFVtfqySY7FT
+[austin-gil]: https://twitter.com/heyAustinGil
+[remix-conf]: /conf
 [the-remix-meetup-page]: https://rmx.as/meetup
 [remix-guide]: https://remix.guide
+[frontend-masters]: https://frontendmasters.com
+[remix-fundamentals]: https://frontendmasters.com/courses/remix/
+[advanced-remix]: https://frontendmasters.com/courses/advanced-remix/
