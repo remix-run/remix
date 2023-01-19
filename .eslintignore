@@ -6,6 +6,7 @@
 **/__tests__/fixtures
 **/__tests__/**/*/fixtures
 /packages/*/dist/
+/packages/*/CHANGELOG.md
 
 # Deno
 integration/helpers/deno-template
