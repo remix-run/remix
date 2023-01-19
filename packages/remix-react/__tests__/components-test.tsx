@@ -47,14 +47,14 @@ describe("<LiveReload />", () => {
       LiveReload = require("../components").LiveReload;
       let { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
-        `8002 + "/socket"`
+        "let port = (window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || 8002;"
       );
     });
 
     it("can set the port explicitly", () => {
       let { container } = render(<LiveReload port={4321} />);
       expect(container.querySelector("script")).toHaveTextContent(
-        `4321 + "/socket"`
+        "let port = (window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || 4321;"
       );
     });
 
@@ -62,7 +62,7 @@ describe("<LiveReload />", () => {
       process.env.REMIX_DEV_SERVER_WS_PORT = "1234";
       let { container } = render(<LiveReload />);
       expect(container.querySelector("script")).toHaveTextContent(
-        `1234 + "/socket"`
+        "let port = (window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || 1234;"
       );
     });
   });
