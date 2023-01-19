@@ -44,9 +44,9 @@ To enable the new dev server with all defaults, set the `unstable_dev` future fl
 
 module.exports = {
   future: {
-    unstable_dev: true
-  }
-}
+    unstable_dev: true,
+  },
+};
 ```
 
 You can also set specific options:
@@ -79,7 +79,7 @@ module.exports = {
       // You can set this option to tune how frequently the dev server polls your app server.
       // default: `50`
       rebuildPollIntervalMs: 25,
-    }
-  }
-}
+    },
+  },
+};
 ```
