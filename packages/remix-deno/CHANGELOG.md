@@ -4,7 +4,11 @@
 
 ### Patch Changes
 
-- Introduces the `defer()` API from `@remix-run/router` with support for server-rendering and HTTP streaming. This utility allows you to defer values returned from `loader` functions by returning promises instead of resolved values. This has been refered to as _"sending a promise over the wire"_. ([#4920](https://github.com/remix-run/remix/pull/4920))
+- Introduces the `defer()` API from `@remix-run/router` with support for
+  server-rendering and HTTP streaming. This utility allows you to defer values
+  returned from `loader` functions by returning promises instead of resolved
+  values. This has been refered to as _"sending a promise over the wire"_.
+  ([#4920](https://github.com/remix-run/remix/pull/4920))
 
   Informational Resources:
 
