@@ -20,6 +20,7 @@ function isEntryPoint(config: RemixConfig, file: string): boolean {
 }
 
 export type WatchOptions = Partial<CompileOptions> & {
+  reloadConfig?(root: string): Promise<RemixConfig>;
   onRebuildStart?(): void;
   onRebuildFinish?(durationMs: number): void;
   onFileCreated?(file: string): void;
@@ -29,11 +30,12 @@ export type WatchOptions = Partial<CompileOptions> & {
 };
 
 export async function watch(
-  configGetter: RemixConfig | (() => RemixConfig | Promise<RemixConfig>),
+  config: RemixConfig,
   {
     mode = "development",
     target = "node14",
     sourcemap = true,
+    reloadConfig = readConfig,
     onWarning = warnOnce,
     onCompileFailure = logCompileFailure,
     onRebuildStart,
@@ -52,17 +54,6 @@ export async function watch(
     onWarning,
   };
 
-  let config: RemixConfig;
-  let getNewConfig: () => RemixConfig | Promise<RemixConfig>;
-
-  if (typeof configGetter === "function") {
-    config = await configGetter();
-    getNewConfig = configGetter;
-  } else {
-    config = configGetter;
-    getNewConfig = () => readConfig(config.rootDirectory);
-  }
-
   let start = Date.now();
   let compiler = createRemixCompiler(config, options);
 
@@ -76,7 +67,7 @@ export async function watch(
     dispose(compiler);
 
     try {
-      config = await getNewConfig();
+      config = await reloadConfig(config.rootDirectory);
     } catch (error: unknown) {
       onCompileFailure(error as Error);
       return;
@@ -121,7 +112,7 @@ export async function watch(
       onFileCreated?.(file);
 
       try {
-        config = await getNewConfig();
+        config = await reloadConfig(config.rootDirectory);
       } catch (error: unknown) {
         onCompileFailure(error as Error);
         return;
