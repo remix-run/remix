@@ -4,9 +4,11 @@ title: Route File Naming
 
 # Route File Naming
 
+<docs-info>The Route file naming convention is changing in v2, you can opt-in to the new convention today, [see the Route Convention v2 page][routeconvention-v2]</docs-info>
+
 Setting up routes in Remix is as simple as creating files in your `app` directory. These are the conventions you should know to understand how routing in Remix works.
 
-Please note that you can use either `.js`, `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication (and because we ❤️ TypeScript).
+Please note that you can use either `.js`, `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication.
 
 ## Root Route
 
@@ -313,3 +315,5 @@ Because some characters have special meaning, you must use our escaping syntax i
 [routing-guide]: ../guides/routing
 [root-route]: #root-route
 [resource-route]: ../guides/resource-routes
+[routeconvention-v2]: ./route-files-v2
+[flatroutes-rfc]: https://github.com/remix-run/remix/discussions/4482
