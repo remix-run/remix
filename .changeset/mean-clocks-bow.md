@@ -37,18 +37,49 @@ Alternatively, you can roll your own with `chokidar` (or similar) if you want to
 
 ## Configure
 
-- Dev server port
-  - flag: `--port`
-  - future config: `unstable_dev.port`
-  - default: finds an empty port to use
-- App server port
-  - flag: `--app-server-port`
-  - future config: `unstable_dev.appServerPort`
-  - default: `3000`
-- Remix request handler path
-  - Most Remix apps shouldn't need this, but if you wire up the Remix request handler at a specific URL path set this to that path so that the dev server can reliably check your app server for "readiness"
-  - future flag: `unstable_dev.remixRequestHandlerPath`
-  - default: `''`
-- Rebuild poll interval (milliseconds)
-  - future config: `unstable_dev.rebuildPollIntervalMs`
-  - default: 50ms
+To enable the new dev server with all defaults, set the `unstable_dev` future flag to `true`:
+
+```js
+// remix.config.js
+
+module.exports = {
+  future: {
+    unstable_dev: true
+  }
+}
+```
+
+You can also set specific options:
+
+```js
+// remix.config.js
+
+module.exports = {
+  future: {
+    unstable_dev: {
+      // Port to use for the dev server (i.e. the live reload websocket)
+      // Can be overridden by a CLI flag: `remix dev --port 3011`
+      // default: finds an empty port and uses that
+      port: 3010,
+
+      // Port for your running Remix app server
+      // Can be overridden by a CLI flag: `remix dev --app-server-port 3021`
+      // default: `3000`
+      appServerPort: 3020,
+
+      // Path to the Remix request handler in your app server
+      // Most app server will route all requests to the Remix request handler and will not need to set this option.
+      // If your app server _does_ route only certain request paths to the Remix request handler, then you'll need to set this.
+      // default: `""`
+      remixRequestHandlerPath: "/products",
+
+      // Milliseconds between "readiness" pings to your app server
+      // When a Remix rebuild finishes, the dev server will ping a special endpoint (`__REMIX_ASSETS_MANIFEST`)
+      // to check if your app server is serving up-to-date routes and assets.
+      // You can set this option to tune how frequently the dev server polls your app server.
+      // default: `50`
+      rebuildPollIntervalMs: 25,
+    }
+  }
+}
+```
