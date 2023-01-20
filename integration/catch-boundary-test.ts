@@ -22,7 +22,12 @@ test.describe("CatchBoundary", () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+          import { json } from "@remix-run/node";
+          import { Links, Meta, Outlet, Scripts, useMatches } from "@remix-run/react";
+
+          export function loader() {
+            return json({ data: "ROOT LOADER" });
+          }
 
           export default function Root() {
             return (
@@ -40,11 +45,13 @@ test.describe("CatchBoundary", () => {
           }
 
           export function CatchBoundary() {
+            let matches = useMatches()
             return (
               <html>
                 <head />
                 <body>
                   <div id="root-boundary">${ROOT_BOUNDARY_TEXT}</div>
+                  <pre id="matches">{JSON.stringify(matches)}</pre>
                   <Scripts />
                 </body>
               </html>
@@ -66,6 +73,9 @@ test.describe("CatchBoundary", () => {
 
                 <Link to="${HAS_BOUNDARY_LOADER}">
                   ${HAS_BOUNDARY_LOADER}
+                </Link>
+                <Link to="${HAS_BOUNDARY_LOADER}/child">
+                  ${HAS_BOUNDARY_LOADER}/child
                 </Link>
                 <Link to="${NO_BOUNDARY_LOADER}">
                   ${NO_BOUNDARY_LOADER}
@@ -111,11 +121,27 @@ test.describe("CatchBoundary", () => {
         `,
 
         [`app/routes${HAS_BOUNDARY_LOADER}.jsx`]: js`
+          import { useCatch } from '@remix-run/react';
           export function loader() {
             throw new Response("", { status: 401 })
           }
           export function CatchBoundary() {
-            return <div id="boundary-loader">${OWN_BOUNDARY_TEXT}</div>
+            let caught = useCatch();
+            return (
+              <>
+                <div id="boundary-loader">${OWN_BOUNDARY_TEXT}</div>
+                <pre id="status">{caught.status}</pre>
+              </>
+            );
+          }
+          export default function Index() {
+            return <div/>
+          }
+        `,
+
+        [`app/routes${HAS_BOUNDARY_LOADER}/child.jsx`]: js`
+          export function loader() {
+            throw new Response("", { status: 404 })
           }
           export default function Index() {
             return <div/>
@@ -183,12 +209,21 @@ test.describe("CatchBoundary", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(() => appFixture.close());
+  test.afterAll(() => {
+    appFixture.close();
+  });
 
   test("non-matching urls on document requests", async () => {
     let res = await fixture.requestDocument(NOT_FOUND_HREF);
     expect(res.status).toBe(404);
-    expect(await res.text()).toMatch(ROOT_BOUNDARY_TEXT);
+    let html = await res.text();
+    expect(html).toMatch(ROOT_BOUNDARY_TEXT);
+
+    // There should be no loader data on the root route
+    let expected = JSON.stringify([
+      { id: "root", pathname: "", params: {} },
+    ]).replace(/"/g, "&quot;");
+    expect(html).toContain(`<pre id="matches">${expected}</pre>`);
   });
 
   test("non-matching urls on client transitions", async ({ page }) => {
@@ -196,6 +231,12 @@ test.describe("CatchBoundary", () => {
     await app.goto("/");
     await app.clickLink(NOT_FOUND_HREF, { wait: false });
     await page.waitForSelector("#root-boundary");
+
+    // Root loader data sticks around from previous load
+    let expected = JSON.stringify([
+      { id: "root", pathname: "", params: {}, data: { data: "ROOT LOADER" } },
+    ]);
+    expect(await app.getHtml("#matches")).toContain(expected);
   });
 
   test("own boundary, action, document request", async () => {
@@ -289,5 +330,24 @@ test.describe("CatchBoundary", () => {
     expect(await app.getHtml("#parent-data")).toMatch("PARENT");
     expect(await app.getHtml("#child-catch")).toMatch("400");
     expect(await app.getHtml("#child-catch")).toMatch("Caught!");
+  });
+
+  test("prefers parent catch when child loader also bubbles, document request", async () => {
+    let res = await fixture.requestDocument(`${HAS_BOUNDARY_LOADER}/child`);
+    expect(res.status).toBe(401);
+    let text = await res.text();
+    expect(text).toMatch(OWN_BOUNDARY_TEXT);
+    expect(text).toMatch('<pre id="status">401</pre>');
+  });
+
+  test("prefers parent catch when child loader also bubbles, client transition", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/");
+    await app.clickLink(`${HAS_BOUNDARY_LOADER}/child`);
+    await page.waitForSelector("#boundary-loader");
+    expect(await app.getHtml("#boundary-loader")).toMatch(OWN_BOUNDARY_TEXT);
+    expect(await app.getHtml("#status")).toMatch("401");
   });
 });

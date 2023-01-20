@@ -31,7 +31,7 @@ export type {
   PageLinkDescriptor,
 } from "./links";
 
-export type { TypedResponse } from "./responses";
+export type { TypedDeferredData, TypedResponse } from "./responses";
 
 export type {
   ActionArgs,
@@ -40,11 +40,13 @@ export type {
   ErrorBoundaryComponent,
   HeadersFunction,
   HtmlMetaDescriptor,
+  V2_HtmlMetaDescriptor,
   LinksFunction,
   LoaderArgs,
   LoaderFunction,
   MetaDescriptor,
   MetaFunction,
+  V2_MetaFunction,
   RouteComponent,
   RouteHandle,
 } from "./routeModules";

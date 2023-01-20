@@ -1,5 +1,5 @@
 ---
-title: Migrating your React Router App to Remix
+title: Migrating from React Router
 description: Migrating your React Router app to Remix can be done all at once or in stages. This guide will walk you through an iterative approach to get your app running quickly.
 ---
 
@@ -492,7 +492,7 @@ The answer to all of these questions is up to your bundler, _not you_. We think 
 
 **Note:** Remix does not currently support CSS processing directly. If you use preprocessors like Sass, Less, or PostCSS, you can run those as a separate process in development.
 
-We also do not yet support CSS Modules, as that requires compiler integration and current approaches are not aligned with our design philosophy. We are actively working on a solution and plan to have an API for CSS Modules very soon.
+We do process [CSS Modules][css-modules], but support is currently [opt-in behind a feature flag][css-modules].
 
 </docs-info>
 
@@ -613,14 +613,14 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 - [Common "gotchas"][common-gotchas]
 
 [react-router]: https://reactrouter.com
-[react-router-docs]: https://reactrouter.com/docs/start/concepts
-[migration-guide-from-v5-to-v6]: https://reactrouter.com/docs/upgrading/v5
+[react-router-docs]: https://reactrouter.com/start/concepts
+[migration-guide-from-v5-to-v6]: https://reactrouter.com/upgrading/v5
 [backwards-compatibility-package]: https://www.npmjs.com/package/react-router-dom-v5-compat
 [a-few-tweaks-to-improve-progressive-enhancement]: ../pages/philosophy#progressive-enhancement
 [routing-conventions]: ./routing
 [a-catch-all-route]: ./routing#splats
 [hydration-mismatch]: https://reactjs.org/docs/react-dom.html#hydrate
-[loader-data]: ../api/conventions#loader
+[loader-data]: ../route/loader
 [client-only-component]: https://github.com/sergiodxa/remix-utils/blob/main/src/react/client-only.tsx
 [remix-utils]: https://www.npmjs.com/package/remix-utils
 [examples-repository]: https://github.com/remix-run/examples/blob/main/client-only-components/app/routes/index.tsx
@@ -628,13 +628,13 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [react-suspense]: https://reactjs.org/docs/react-api.html#reactsuspense
 [client-only-approach]: #client-only-components
 [loadable-components]: https://loadable-components.com/docs/loadable-vs-react-lazy
-[docs-on-configuration]: ../api/conventions#remixconfigjs
-[see-our-docs-on-route-links-for-more-information]: ../api/conventions#links
+[docs-on-configuration]: ../file-conventions/remix-config
+[see-our-docs-on-route-links-for-more-information]: ../route/links
 [react-svgr]: https://react-svgr.com
 [command-line]: https://react-svgr.com/docs/cli
 [online-playground]: https://react-svgr.com/playground
 [read-more-about-route-styles-and-why-remix-does-things-a-bit-differently]: #route-stylesheets
-[page-link-descriptor-object]: ../api/conventions#pagelinkdescriptor
+[page-link-descriptor-object]: ../route/links#pagelinkdescriptor
 [react-helmet]: https://www.npmjs.com/package/react-helmet
 [remix-philosophy]: ../pages/philosophy
 [remix-technical-explanation]: ../pages/technical-explanation
@@ -642,4 +642,5 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [routing-in-remix]: ./routing
 [styling-in-remix]: ./styling
 [frequently-asked-questions]: ../pages/faq
-[common-gotchas]: ../pages/gotchas
+[common-gotchas]: ../pages/currently
+[css-modules]: ./styling#css-modules

@@ -256,7 +256,9 @@ test.describe("meta", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(() => appFixture.close());
+  test.afterAll(() => {
+    appFixture.close();
+  });
 
   test("empty meta does not render a tag", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
@@ -447,8 +449,15 @@ test.describe("v2_meta", () => {
           }
         `,
 
-        "app/routes/no-meta.jsx": js`
-          export default function NoMeta() {
+        "app/routes/no-meta-export.jsx": js`
+          export default function NoMetaExport() {
+            return <div>Parent meta here!</div>;
+          }
+        `,
+
+        "app/routes/empty-meta-function.jsx": js`
+          export const meta = () => [];
+          export default function EmptyMetaFunction() {
             return <div>No meta here!</div>;
           }
         `,
@@ -475,11 +484,21 @@ test.describe("v2_meta", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(() => appFixture.close());
+  test.afterAll(() => {
+    appFixture.close();
+  });
 
-  test("empty meta does not render a tag", async ({ page }) => {
+  test("no meta export renders meta from nearest route meta in the tree", async ({
+    page,
+  }) => {
     let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/no-meta");
+    await app.goto("/no-meta-export");
+    expect(await app.getHtml('meta[name="description"]')).toBeTruthy();
+  });
+
+  test("empty meta array does not render a tag", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/empty-meta-function");
     await expect(app.getHtml("title")).rejects.toThrowError(
       'No element matches selector "title"'
     );

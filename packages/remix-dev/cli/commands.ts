@@ -8,6 +8,7 @@ import * as esbuild from "esbuild";
 import * as colors from "../colors";
 import * as compiler from "../compiler";
 import * as devServer from "../devServer";
+import * as devServer2 from "../devServer2";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
@@ -94,7 +95,7 @@ export async function init(
     if (deleteScript) {
       await fse.remove(initScriptDir);
     }
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error) {
       error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
         error.message
@@ -194,10 +195,20 @@ export async function watch(
   });
 }
 
-export async function dev(remixRoot: string, modeArg?: string, port?: number) {
+export async function dev(
+  remixRoot: string,
+  modeArg?: string,
+  flags: { port?: number; appServerPort?: number } = {}
+) {
   let config = await readConfig(remixRoot);
   let mode = compiler.parseMode(modeArg ?? "", "development");
-  return devServer.serve(config, mode, port);
+
+  if (config.future.unstable_dev !== false) {
+    await devServer2.serve(config, flags);
+    return await new Promise(() => {});
+  }
+
+  return devServer.serve(config, mode, flags.port);
 }
 
 export async function codemod(
@@ -222,7 +233,7 @@ export async function codemod(
       dry,
       force,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof CodemodError) {
       console.error(`${colors.red("Error:")} ${error.message}`);
       if (error.additionalInfo) console.info(colors.gray(error.additionalInfo));

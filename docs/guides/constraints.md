@@ -34,7 +34,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  const posts = useLoaderData();
+  const posts = useLoaderData<typeof loader>();
   return <PostsView posts={posts} />;
 }
 ```
@@ -59,7 +59,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  const posts = useLoaderData();
+  const posts = useLoaderData<typeof loader>();
   return <PostsView posts={posts} />;
 }
 ```
@@ -94,7 +94,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  const posts = useLoaderData();
+  const posts = useLoaderData<typeof loader>();
   return <PostsView posts={posts} />;
 }
 ```
@@ -114,7 +114,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  const posts = useLoaderData();
+  const posts = useLoaderData<typeof loader>();
   return <PostsView posts={posts} />;
 }
 ```
@@ -140,7 +140,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  const posts = useLoaderData();
+  const posts = useLoaderData<typeof loader>();
   return <PostsView posts={posts} />;
 }
 ```
@@ -201,12 +201,12 @@ export function removeTrailingSlash(url) {
 
 And then use it like this:
 
-```js bad filename=app/root.js
+```tsx bad filename=app/root.tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
 import { removeTrailingSlash } from "~/http";
 
-export const loader = async ({ request }) => {
+export const loader = async ({ request }: LoaderArgs) => {
   removeTrailingSlash(request.url);
   return json({ some: "data" });
 };
@@ -214,9 +214,9 @@ export const loader = async ({ request }) => {
 
 It reads much nicer as well when you've got a lot of these:
 
-```ts
+```tsx
 // this
-export const loader = async ({ request }) => {
+export const loader = async ({ request }: LoaderArgs) => {
   return removeTrailingSlash(request.url, () => {
     return withSession(request, (session) => {
       return requireUser(session, (user) => {
@@ -227,9 +227,9 @@ export const loader = async ({ request }) => {
 };
 ```
 
-```ts
+```tsx
 // vs. this
-export const loader = async ({ request }) => {
+export const loader = async ({ request }: LoaderArgs) => {
   removeTrailingSlash(request.url);
   const session = await getSession(request);
   const user = await requireUser(session);

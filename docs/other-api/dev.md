@@ -96,6 +96,6 @@ remix dev --port 4001
 
 Alternatively, a port can be assigned to the `PORT` environment variable.
 
-[remix-app-server]: serve
+[remix-app-server]: ./serve
 [node-inspector]: https://nodejs.org/en/docs/guides/debugging-getting-started
 [templates-folder-of-the-remix-repository]: https://github.com/remix-run/remix/tree/main/templates
