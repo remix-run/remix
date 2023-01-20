@@ -2,7 +2,12 @@ import { test, expect } from "@playwright/test";
 
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import {
+  createAppFixture,
+  createFixture,
+  css,
+  js,
+} from "./helpers/create-fixture";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
@@ -47,28 +52,67 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+      "remix.config.js": js`
+        module.exports = {
+          future: {
+            unstable_cssModules: true,
+          },
+        };
+      `,
 
-        export function loader() {
-          return json("pizza");
+      "app/root.jsx": js`
+        import { Links, Outlet } from "@remix-run/react";
+        import { cssBundleHref } from "@remix-run/css-bundle";
+        export function links() {
+          // As described in the docs, add new link only if cssBundleHref is defined
+          return [
+            ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref, "data-test-css-bundle": true }] : []),
+          ];
         }
-
-        export default function Index() {
-          let data = useLoaderData();
+        export default function Root() {
           return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
+            <html>
+              <head>
+                <Links />
+              </head>
+              <body>
+                <Outlet />
+              </body>
+            </html>
           )
         }
       `,
 
-      "app/routes/burgers.jsx": js`
+      "app/test-components/reexport/styles.module.css": css`
+        .root {
+          color: red;
+        }
+      `,
+
+      "app/test-components/reexport/Reexport.jsx": js`
+        import styles from "./styles.module.css";
+        export function Reexport() {
+          return (
+            <div data-testid="reexport" className={styles.root}>
+              Testing component re-export from index.js
+            </div>
+          );
+        }
+      `,
+
+      "app/test-components/reexport/index.js": js`
+        export * from "./Reexport";
+      `,
+
+      "app/routes/index.jsx": js`
+        import { Reexport } from "~/test-components/reexport"; // This is the place which triggers the issue
+
         export default function Index() {
-          return <div>cheeseburger</div>;
+          return (
+            <div>
+              <Reexport />
+            </div>
+          )
         }
       `,
     },
@@ -82,29 +126,18 @@ test.afterAll(() => {
   appFixture.close();
 });
 
-////////////////////////////////////////////////////////////////////////////////
-// 💿 Almost done, now write your failing test case(s) down here Make sure to
-// add a good description for what you expect Remix to do 👇🏽
-////////////////////////////////////////////////////////////////////////////////
+// If index.js is used to re-export the component that is using CSS Modules, the imported CSS file is not bundled.
+// However, the classname is still applied correctly.
 
-test("[description of what you expect it to do]", async ({ page }) => {
+// import { Reexport } from "~/test-components/reexport"; will ignore the styles.module.css file.
+// import { Reexport } from "~/test-components/reexport/Reexport"; will add the CSS file to the bundle as expected.
+
+// In this test, there is a single component. So, if the styles.module.css is ignored, the cssBundleHref will be undefined.
+test("cssBundleHref should be defined", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
 
-  // If you need to test interactivity use the `app`
   await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+  let cssBundleLinkElement = await app.getElement("[data-test-css-bundle]");
+  expect(cssBundleLinkElement.length).toBe(1);
 });
-
-////////////////////////////////////////////////////////////////////////////////
-// 💿 Finally, push your changes to your fork of Remix and open a pull request!
-////////////////////////////////////////////////////////////////////////////////
