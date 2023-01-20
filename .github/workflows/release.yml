@@ -65,13 +65,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  findPackage:
+  findPackageVersion:
     name: 🦋 Find Package
     needs: [release]
     runs-on: ubuntu-latest
     if: github.repository == 'remix-run/remix' && needs.release.outputs.published == 'true'
     outputs:
-      package: ${{ steps.findPackage.outputs.package }}
+      packageVersion: ${{ steps.findPackageVersion.outputs.packageVersion }}
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.11.0
@@ -85,27 +85,27 @@ jobs:
           node-version: 16
           cache: "npm"
 
-      - id: findPackage
+      - id: findPackageVersion
         run: |
-          package=$(node ./scripts/release/find-release-from-changeset.js)
-          echo "package=${package}" >> $GITHUB_OUTPUT
+          packageVersion=$(node ./scripts/release/find-release-from-changeset.js)
+          echo "packageVersion=${packageVersion}" >> $GITHUB_OUTPUT
         env:
           packageVersionToFollow: "remix"
           publishedPackages: ${{ needs.release.outputs.publishedPackages }}
 
   comment:
     name: 📝 Comment on related issues and pull requests
-    if: github.repository == 'remix-run/remix' && needs.findPackage.outputs.package != ''
-    needs: [release, findPackage]
+    if: github.repository == 'remix-run/remix' && needs.findPackageVersion.outputs.packageVersion != ''
+    needs: [release, findPackageVersion]
     uses: ./.github/workflows/release-comments.yml
     with:
-      ref: refs/tags/${{ needs.findPackage.outputs.package }}
+      ref: refs/tags/remix@${{ needs.findPackageVersion.outputs.packageVersion }}
       packageVersionToFollow: "remix"
 
   deployments:
     name: 🚀 Deployment Tests
     if: github.repository == 'remix-run/remix'
-    needs: [release, findPackage]
+    needs: [release, findPackageVersion]
     uses: ./.github/workflows/deployments.yml
     secrets:
       TEST_AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
@@ -124,7 +124,7 @@ jobs:
   stacks:
     name: 🥞 Remix Stacks Test
     if: github.repository == 'remix-run/remix'
-    needs: [release, findPackage]
+    needs: [release, findPackageVersion]
     uses: ./.github/workflows/stacks.yml
     with:
-      version: ${{ needs.findPackage.outputs.package }}
+      version: ${{ needs.findPackageVersion.outputs.packageVersion }}

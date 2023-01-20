@@ -49,52 +49,51 @@ async function bumpPeerDepRanges() {
   }
 
   let allPackages = getPackagesSync(rootDir).packages;
-  let pkgChanges = new Map(
-    gitStatusResult.stdout
-      .toString()
-      .trim()
-      .split("\n")
-      .filter((line) => /^\s*M\s+.*\/package.json/.test(line))
-      .map((line) => {
-        /**
-         * @type {string}
-         * This will always be defined but TS doesn't know that
-         * @ts-expect-error */
-        let gitPath = line.match(/[^\s]+package.json/)[0];
-        let fsPath = path.join(rootDir, gitPath);
-        let packageJson = JSON.parse(fs.readFileSync(fsPath, "utf-8"));
-        let previousPackageJsonResult = spawnSync("git", [
-          "show",
-          `HEAD:${gitPath}`,
-        ]);
+  //   let pkgChanges = new Map(
+  //     gitStatusResult.stdout
+  //       .toString()
+  //       .trim()
+  //       .split("\n")
+  //       .filter((line) => /^\s*M\s+.*\/package.json/.test(line))
+  //       .map((line) => {
+  //         /**
+  //          * @type {string}
+  //          * This will always be defined but TS doesn't know that
+  //          * @ts-expect-error */
+  //         let gitPath = line.match(/[^\s]+package.json/)[0];
+  //         let fsPath = path.join(rootDir, gitPath);
+  //         let packageJson = JSON.parse(fs.readFileSync(fsPath, "utf-8"));
+  //         let previousPackageJsonResult = spawnSync("git", [
+  //           "show",
+  //           `HEAD:${gitPath}`,
+  //         ]);
 
-        if (previousPackageJsonResult.status !== 0) {
-          process.exit(gitStatusResult.status || undefined);
-        }
+  //         if (previousPackageJsonResult.status !== 0) {
+  //           process.exit(gitStatusResult.status || undefined);
+  //         }
 
-        return [
-          packageJson.name,
-          {
-            path: fsPath,
-            packageJson: packageJson,
-            versionChanged:
-              packageJson.version !==
-              JSON.parse(previousPackageJsonResult.stdout.toString().trim())
-                .version,
-          },
-        ];
-      })
-  );
+  //         return [
+  //           packageJson.name,
+  //           {
+  //             path: fsPath,
+  //             packageJson: packageJson,
+  //             versionChanged:
+  //               packageJson.version !==
+  //               JSON.parse(previousPackageJsonResult.stdout.toString().trim())
+  //                 .version,
+  //           },
+  //         ];
+  //       })
+  //   );
 
   for (let pkg of allPackages) {
     let peerPkg = pkg.packageJson.name;
-    let peerPkgChange = pkgChanges.get(peerPkg);
-    if (!peerPkgChange || !peerPkgChange.versionChanged) {
-      continue;
-    }
+    let peerPkgVersion = pkg.packageJson.version;
+    // let peerPkgChange = pkgChanges.get(peerPkg);
+    // if (!peerPkgChange || !peerPkgChange.versionChanged) {
+    //   continue;
+    // }
 
-    /** @type {Promise<any>[]} */
-    let writeFilePromises = [];
     for (let dependentPkg of allPackages) {
       let peerDeps = dependentPkg.packageJson.peerDependencies;
       if (!peerDeps || !peerDeps[peerPkg]) {
@@ -103,20 +102,14 @@ async function bumpPeerDepRanges() {
       let pkgJsonCopy = { ...dependentPkg.packageJson };
       // TS not smart enough to realize we checked this before copying the object
       // @ts-expect-error
-      pkgJsonCopy.peerDependencies[
-        peerPkg
-      ] = `^${peerPkgChange.packageJson.version}`;
+      pkgJsonCopy.peerDependencies[peerPkg] = `^${peerPkgVersion}`;
 
-      writeFilePromises.push(
-        fs.promises.writeFile(
-          path.join(dependentPkg.dir, "package.json"),
-          JSON.stringify(pkgJsonCopy, null, 2) + "\n",
-          "utf-8"
-        )
+      await fs.promises.writeFile(
+        path.join(dependentPkg.dir, "package.json"),
+        JSON.stringify(pkgJsonCopy, null, 2) + "\n",
+        "utf-8"
       );
     }
-
-    return Promise.all(writeFilePromises);
   }
 }
 

@@ -17,7 +17,7 @@ The Remix compiler will not do any type checking (it simply removes the types). 
     "build": "remix build",
     "dev": "remix dev",
     "start": "remix-serve build",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@remix-run/node": "latest",

@@ -6,7 +6,7 @@
     "deploy": "fly deploy --remote-only",
     "dev": "remix dev",
     "start": "remix-serve build",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@remix-run/node": "*",
