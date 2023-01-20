@@ -54,16 +54,17 @@ function groupRoutesByParentId(manifest: ServerRouteManifest) {
   return routes;
 }
 
+// Create a map of routes by parentId to use recursively instead of
+// repeatedly filtering the manifest.
 export function createRoutes(
   manifest: ServerRouteManifest,
-  parentId?: string,
-  routesByParentId?: Record<string, Omit<ServerRoute, "children">[]>
+  parentId: string = "",
+  routesByParentId: Record<
+    string,
+    Omit<ServerRoute, "children">[]
+  > = groupRoutesByParentId(manifest)
 ): ServerRoute[] {
-  // Create a map of routes by parentId to use recursively instead of
-  // repeatedly filtering the manifest.
-  routesByParentId ||= groupRoutesByParentId(manifest);
-
-  return (routesByParentId[parentId || ""] || []).map((route) => ({
+  return (routesByParentId[parentId] || []).map((route) => ({
     ...route,
     children: createRoutes(manifest, route.id, routesByParentId),
   }));
@@ -73,16 +74,14 @@ export function createRoutes(
 // createStaticHandler
 export function createStaticHandlerDataRoutes(
   manifest: ServerRouteManifest,
-  loadContext: AppLoadContext,
   future: FutureConfig,
-  parentId?: string,
-  routesByParentId?: Record<string, Omit<ServerRoute, "children">[]>
+  parentId: string = "",
+  routesByParentId: Record<
+    string,
+    Omit<ServerRoute, "children">[]
+  > = groupRoutesByParentId(manifest)
 ): AgnosticDataRouteObject[] {
-  // Create a map of routes by parentId to use recursively instead of
-  // repeatedly filtering the manifest.
-  routesByParentId ||= groupRoutesByParentId(manifest);
-
-  return (routesByParentId[parentId || ""] || []).map((route) => {
+  return (routesByParentId[parentId] || []).map((route) => {
     let hasErrorBoundary =
       future.v2_errorBoundary === true
         ? route.id === "root" || route.module.ErrorBoundary != null
@@ -126,7 +125,6 @@ export function createStaticHandlerDataRoutes(
           caseSensitive: route.caseSensitive,
           children: createStaticHandlerDataRoutes(
             manifest,
-            loadContext,
             future,
             route.id,
             routesByParentId
