@@ -48,27 +48,24 @@ test.beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
-
-        export function loader() {
-          return json("pizza");
-        }
+        import { Link } from "@remix-run/react";
 
         export default function Index() {
-          let data = useLoaderData();
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              <div>pizza</div>
+              <Link to="/burgers">burger link</Link>
             </div>
           )
         }
       `,
 
       "app/routes/burgers.jsx": js`
+
         export default function Index() {
-          return <div>cheeseburger</div>;
+          return (
+            <div>cheeseburger</div>
+          );
         }
       `,
     },
@@ -88,13 +85,157 @@ test.afterAll(() => appFixture.close());
 test("[description of what you expect it to do]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+  // let response = await fixture.requestDocument("/");
+  // expect(await response.text()).toMatch("pizza");
 
   // If you need to test interactivity use the `app`
   await app.goto("/");
   await app.clickLink("/burgers");
   expect(await app.getHtml()).toMatch("cheeseburger");
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
+
+  await page.goBack({ waitUntil: "commit" });
+  await page.goBack({ waitUntil: "networkidle" });
+  await page.goForward({ waitUntil: "commit" });
+  await page.goForward({ waitUntil: "commit" });
+  expect(await app.getHtml()).not.toContain(
+    `Cannot destructure property 'default'`
+  );
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
