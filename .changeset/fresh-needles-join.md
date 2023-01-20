@@ -8,6 +8,7 @@ use `index` without leading underscore for colocation
 when using flat routes with folder colocation, use `index` without leading underscore for route
 
 before:
+
 ```
   app_.projects.$id.roadmap/
     _index.tsx
@@ -16,6 +17,7 @@ before:
 ```
 
 after:
+
 ```
   app_.projects.$id.roadmap/
     index.tsx
