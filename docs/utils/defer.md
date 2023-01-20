@@ -6,15 +6,15 @@ title: defer
 
 This is a shortcut for creating a streaming/deferred response. It assumes you are using `utf-8` encoding. From a developer perspective it behaves just like [`json()`][json], but with the ability to transport promises to your UI components.
 
-```ts lines=[2,6]
+```ts lines=[2,5,10]
 import type { LoaderFunction } from "@remix-run/node"; // or cloudflare/deno
-import { json } from "@remix-run/node"; // or cloudflare/deno
+import { defer } from "@remix-run/node"; // or cloudflare/deno
 
 export const loader: LoaderFunction = async () => {
   const aStillRunningPromise = loadSlowDataAsync();
 
   // So you can write this without awaiting the promise:
-  return json({
+  return defer({
     critical: "data",
     slowPromise: aStillRunningPromise,
   });
@@ -23,7 +23,7 @@ export const loader: LoaderFunction = async () => {
 
 You can also pass a status code and headers:
 
-```ts lines=[4-9]
+```ts lines=[9-14]
 export const loader: LoaderFunction = async () => {
   const aStillRunningPromise = loadSlowDataAsync();
 
