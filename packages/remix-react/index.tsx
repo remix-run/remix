@@ -9,6 +9,8 @@ export type {
   ShouldRevalidateFunction,
   SubmitFunction,
   SubmitOptions,
+  unstable_Blocker,
+  unstable_BlockerFunction,
 } from "react-router-dom";
 export {
   Form,
@@ -32,6 +34,8 @@ export {
   useRouteLoaderData,
   useSearchParams,
   useSubmit,
+  unstable_useBlocker,
+  unstable_usePrompt,
 } from "react-router-dom";
 
 export type {
