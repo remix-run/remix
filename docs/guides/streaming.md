@@ -179,7 +179,7 @@ function serveTheBots(
       <RemixServer
         context={remixContext}
         url={request.url}
-        serverAbortDelay={ABORT_DELAY}
+        abortDelay={ABORT_DELAY}
       />,
       {
         // Use onAllReady to wait for the entire document to be ready
@@ -215,7 +215,7 @@ function serveBrowsers(
       <RemixServer
         context={remixContext}
         url={request.url}
-        serverAbortDelay={ABORT_DELAY}
+        abortDelay={ABORT_DELAY}
       />,
       {
         // use onShellReady to wait until a suspense boundary is triggered
