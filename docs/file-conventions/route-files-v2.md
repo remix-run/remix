@@ -192,7 +192,8 @@ app/
 │   ├── about.tsx
 │   ├── concerts.$city.tsx
 │   ├── concerts.trending.tsx
-│   └── concerts_.mine.tsx
+│   ├── concerts_.mine.tsx
+|   └── concerts.tsx
 └── root.tsx
 ```
 
