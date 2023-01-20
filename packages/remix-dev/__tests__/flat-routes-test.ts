@@ -88,9 +88,8 @@ describe("flatRoutes", () => {
 
     for (let [input, expected] of tests) {
       it(`"${input}" -> "${expected}"`, () => {
-        let routeId = input.split(path.sep).join(path.posix.sep);
-        let routeSegments = getRouteSegments(routeId);
-        let isIndex = isIndexRoute(routeId);
+        let routeSegments = getRouteSegments(input);
+        let isIndex = isIndexRoute(input);
         expect(createRoutePath(routeSegments, isIndex)).toBe(expected);
       });
     }
@@ -614,7 +613,7 @@ describe("flatRoutes", () => {
     );
     let routes = Object.values(routeManifest);
 
-    // expect(routes).toHaveLength(files.length);
+    expect(routes).toHaveLength(files.length);
 
     for (let [file, route] of files) {
       test(`hierarchy for ${file} - ${route.path}`, () => {
