@@ -289,6 +289,16 @@ describe("flatRoutes", () => {
         },
       ],
 
+      // validate windows path
+      [
+        "routes\\app.windows\\path.tsx",
+        {
+          id: "routes/app.windows/path",
+          parentId: "routes/app",
+          path: "windows/path",
+        },
+      ],
+
       // Opt out of parent layout
       [
         "routes/app_.projects.$id.roadmap[.pdf].tsx",
