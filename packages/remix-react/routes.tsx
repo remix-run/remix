@@ -92,7 +92,13 @@ export function createServerRoutes(
       // since they're for a static render
     };
 
-    let children = createServerRoutes(manifest, routeModules, future, route.id);
+    let children = createServerRoutes(
+      manifest,
+      routeModules,
+      future,
+      route.id,
+      routesByParentId
+    );
     if (children.length > 0) dataRoute.children = children;
     return dataRoute;
   });
@@ -136,7 +142,8 @@ export function createClientRoutes(
       manifest,
       routeModulesCache,
       future,
-      route.id
+      route.id,
+      routesByParentId
     );
     if (children.length > 0) dataRoute.children = children;
     return dataRoute;
