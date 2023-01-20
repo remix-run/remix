@@ -2,7 +2,6 @@ import path from "node:path";
 import fg from "fast-glob";
 
 import type { ConfigRoute, DefineRouteFunction, RouteManifest } from "./routes";
-import { normalizeSlashes } from "./routes";
 import { createRouteId, defineRoutes } from "./routes";
 import {
   escapeEnd,
