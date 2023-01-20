@@ -400,7 +400,80 @@ export function links() {
 
 ## Tailwind CSS
 
-Perhaps the most popular way to style a Remix application in the community is to use Tailwind CSS. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
+Perhaps the most popular way to style a Remix application in the community is to use [Tailwind CSS][tailwind]. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
+
+There are a couple of options for integrating Tailwind into Remix. You can leverage the new, experimental built-in support, or integrate Tailwind manually using their CLI.
+
+### Built-in Tailwind Support
+
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+
+First, to enable built-in Tailwind support, set the `future.unstable_tailwind` feature flag in `remix.config.js`.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  future: {
+    unstable_tailwind: true,
+  },
+  // ...
+};
+```
+
+Then install Tailwind:
+
+```sh
+npm install -D tailwind
+```
+
+Initialize a config file:
+
+```sh
+npx tailwindcss init
+```
+
+Now we can tell it which files to generate classes from:
+
+```js filename=tailwind.config.js lines=[3]
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ["./app/**/*.{ts,tsx,jsx,js}"],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+```
+
+Then include the `@tailwind` directives in your CSS. For example, you could create a `tailwind.css` file at the root of your app:
+
+```css filename=app/tailwind.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+Then add `tailwind.css` to your root route's `links` function:
+
+```tsx filename=app/root.tsx
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
+// ...
+
+import styles from "./tailwind.css";
+
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: styles },
+];
+```
+
+With this setup in place, you can also use any of [Tailwind's functions and directives][tailwind-functions-and-directives] anywhere in your CSS.
+
+Note that if you're also using Remix's [built-in PostCSS support](#built-in-postcss-support), the Tailwind PostCSS plugin will be automatically included if it's missing.
+
+### Manual Tailwind Integration
+
+It's also possible to use Tailwind without leveraging the built-in support by using the `tailwindcss` CLI directly.
 
 First install a couple dev dependencies:
 
@@ -527,7 +600,47 @@ export const links: LinksFunction = () => {
 
 ## PostCSS
 
-While not built into Remix's compiler, it is straight forward to use PostCSS and add whatever syntax sugar you'd like to your stylesheets, here's the gist of it:
+[PostCSS][postcss] is a popular tool with a rich plugin ecosystem, commonly used to prefix CSS for older browsers, transpile future CSS syntax, inline images, lint your styles and more.
+
+There are a couple of options for integrating PostCSS into Remix. You can leverage the new, experimental built-in support, or integrate PostCSS manually using their CLI.
+
+### Built-in PostCSS Support
+
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+
+When a PostCSS config is detected, PostCSS will automatically be run across all CSS in your project. For example, to use [Autoprefixer][autoprefixer]:
+
+1. Enable built-in PostCSS support by setting the the `future.unstable_postcss` feature flag in `remix.config.js`.
+
+   ```js filename=remix.config.js
+   /** @type {import('@remix-run/dev').AppConfig} */
+   module.exports = {
+     future: {
+       unstable_postcss: true,
+     },
+     // ...
+   };
+   ```
+
+2. Install the dependency:
+
+   ```sh
+   npm install -D autoprefixer
+   ```
+
+3. Add `postcss.config.js` in the Remix root referencing the plugin:
+
+   ```js filename=postcss.config.js
+   module.exports = {
+     plugins: {
+       autoprefixer: {},
+     },
+   };
+   ```
+
+### Manual PostCSS Integration
+
+It's also possible to use PostCSS without leveraging the built-in support. Here's the gist of it:
 
 1. Use `postcss` cli directly alongside Remix
 2. Build CSS into the Remix app directory from a styles source directory
@@ -942,7 +1055,11 @@ module.exports = {
 [examples]: https://github.com/remix-run/examples
 [styled-components-issue]: https://github.com/styled-components/styled-components/issues/3660
 [tailwind]: https://tailwindcss.com
+[tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives
 [tailwind-intelli-sense-extension]: https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss
+[postcss]: https://postcss.org
+[autoprefixer]: https://github.com/postcss/autoprefixer
+[postcss-preset-env]: https://preset-env.cssdb.org
 [css modules]: https://github.com/css-modules/css-modules
 [regular-stylesheet-imports]: #regular-stylesheets
 [server-dependencies-to-bundle]: ../file-conventions/remix-config#serverdependenciestobundle

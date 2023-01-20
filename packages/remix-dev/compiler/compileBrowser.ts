@@ -98,8 +98,7 @@ const createEsbuildConfig = (
     }
   }
 
-  let { mode } = options;
-  let { rootDirectory } = config;
+  let { mode, sourcemap } = options;
   let outputCss = isCssBuild;
 
   let plugins: esbuild.Plugin[] = [
@@ -108,15 +107,15 @@ const createEsbuildConfig = (
       ? cssBundleEntryModulePlugin(config)
       : null,
     config.future.unstable_cssModules
-      ? cssModulesPlugin({ mode, rootDirectory, outputCss })
+      ? cssModulesPlugin({ config, mode, outputCss })
       : null,
     config.future.unstable_vanillaExtract
       ? vanillaExtractPlugin({ config, mode, outputCss })
       : null,
     config.future.unstable_cssSideEffectImports
-      ? cssSideEffectImportsPlugin({ rootDirectory })
+      ? cssSideEffectImportsPlugin({ config })
       : null,
-    cssFilePlugin({ mode, rootDirectory }),
+    cssFilePlugin({ config, mode, sourcemap }),
     urlImportsPlugin(),
     mdxPlugin(config),
     browserRouteModulesPlugin(config, /\?browser$/),
@@ -144,7 +143,7 @@ const createEsbuildConfig = (
     bundle: true,
     logLevel: "silent",
     splitting: !isCssBuild,
-    sourcemap: options.sourcemap,
+    sourcemap,
     // As pointed out by https://github.com/evanw/esbuild/issues/2440, when tsconfig is set to
     // `undefined`, esbuild will keep looking for a tsconfig.json recursively up. This unwanted
     // behavior can only be avoided by creating an empty tsconfig file in the root directory.

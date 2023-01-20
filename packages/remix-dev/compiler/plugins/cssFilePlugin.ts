@@ -1,9 +1,12 @@
 import * as path from "path";
 import * as fse from "fs-extra";
 import esbuild from "esbuild";
+import type { Processor } from "postcss";
 
 import invariant from "../../invariant";
+import type { RemixConfig } from "../../config";
 import type { CompileOptions } from "../options";
+import { getPostcssProcessor } from "../utils/postcss";
 
 const isExtendedLengthPath = /^\\\\\?\\/;
 
@@ -15,9 +18,14 @@ function normalizePathSlashes(p: string) {
  * This plugin loads css files with the "css" loader (bundles and moves assets to assets directory)
  * and exports the url of the css file as its default export.
  */
-export function cssFilePlugin(options: {
+export function cssFilePlugin({
+  config,
+  mode,
+  sourcemap,
+}: {
+  config: RemixConfig;
   mode: CompileOptions["mode"];
-  rootDirectory: string;
+  sourcemap: CompileOptions["sourcemap"];
 }): esbuild.Plugin {
   return {
     name: "css-file",
@@ -25,21 +33,23 @@ export function cssFilePlugin(options: {
     async setup(build) {
       let buildOps = build.initialOptions;
 
+      let postcssProcessor = await getPostcssProcessor({ config });
+
       build.onLoad({ filter: /\.css$/ }, async (args) => {
-        let { outfile, outdir, assetNames } = buildOps;
         let { metafile, outputFiles, warnings, errors } = await esbuild.build({
           ...buildOps,
-          minify: options.mode === "production",
+          absWorkingDir: config.rootDirectory,
+          minify: mode === "production",
           minifySyntax: true,
           metafile: true,
           write: false,
-          sourcemap: false,
+          sourcemap,
           incremental: false,
           splitting: false,
           stdin: undefined,
           outfile: undefined,
-          outdir: outfile ? path.dirname(outfile) : outdir,
-          entryNames: assetNames,
+          outdir: config.assetsBuildDirectory,
+          entryNames: buildOps.assetNames,
           entryPoints: [args.path],
           loader: {
             ...buildOps.loader,
@@ -61,6 +71,7 @@ export function cssFilePlugin(options: {
                 });
               },
             },
+            ...(postcssProcessor ? [postcssPlugin(postcssProcessor)] : []),
           ],
         });
 
@@ -74,13 +85,13 @@ export function cssFilePlugin(options: {
         invariant(entry, "entry point not found");
 
         let normalizedEntry = path.resolve(
-          options.rootDirectory,
+          config.rootDirectory,
           normalizePathSlashes(entry)
         );
         let entryFile = outputFiles.find((file) => {
           return (
             path.resolve(
-              options.rootDirectory,
+              config.rootDirectory,
               normalizePathSlashes(file.path)
             ) === normalizedEntry
           );
@@ -114,6 +125,33 @@ export function cssFilePlugin(options: {
             []
           ),
           warnings,
+        };
+      });
+    },
+  };
+}
+
+function postcssPlugin(postcssProcessor: Processor): esbuild.Plugin {
+  return {
+    name: "postcss-plugin",
+    async setup(build) {
+      build.onLoad({ filter: /\.css$/, namespace: "file" }, async (args) => {
+        let contents = await fse.readFile(args.path, "utf-8");
+
+        contents = (
+          await postcssProcessor.process(contents, {
+            from: args.path,
+            to: args.path,
+            map: {
+              inline: true,
+              sourcesContent: true,
+            },
+          })
+        ).css;
+
+        return {
+          contents,
+          loader: "css",
         };
       });
     },

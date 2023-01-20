@@ -50,22 +50,21 @@ const createEsbuildConfig = (
   );
   let isDenoRuntime = config.serverBuildTarget === "deno";
 
-  let { mode } = options;
-  let { rootDirectory } = config;
+  let { mode, sourcemap } = options;
   let outputCss = false;
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
     config.future.unstable_cssModules
-      ? cssModulesPlugin({ mode, rootDirectory, outputCss })
+      ? cssModulesPlugin({ config, mode, outputCss })
       : null,
     config.future.unstable_vanillaExtract
       ? vanillaExtractPlugin({ config, mode, outputCss })
       : null,
     config.future.unstable_cssSideEffectImports
-      ? cssSideEffectImportsPlugin({ rootDirectory })
+      ? cssSideEffectImportsPlugin({ config })
       : null,
-    cssFilePlugin({ mode, rootDirectory }),
+    cssFilePlugin({ config, mode, sourcemap }),
     urlImportsPlugin(),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
@@ -114,7 +113,7 @@ const createEsbuildConfig = (
     // `undefined`, esbuild will keep looking for a tsconfig.json recursively up. This unwanted
     // behavior can only be avoided by creating an empty tsconfig file in the root directory.
     tsconfig: config.tsconfigPath,
-    sourcemap: options.sourcemap, // use linked (true) to fix up .map file
+    sourcemap, // use linked (true) to fix up .map file
     // The server build needs to know how to generate asset URLs for imports
     // of CSS and other files.
     assetNames: "_assets/[name]-[hash]",

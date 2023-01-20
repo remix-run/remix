@@ -35,6 +35,8 @@ export type ServerPlatform = "node" | "neutral";
 interface FutureConfig {
   unstable_cssModules: boolean;
   unstable_cssSideEffectImports: boolean;
+  unstable_postcss: boolean;
+  unstable_tailwind: boolean;
   unstable_vanillaExtract: boolean;
   v2_meta: boolean;
   v2_routeConvention: boolean;
@@ -494,6 +496,8 @@ export async function readConfig(
     unstable_cssModules: appConfig.future?.unstable_cssModules === true,
     unstable_cssSideEffectImports:
       appConfig.future?.unstable_cssSideEffectImports === true,
+    unstable_postcss: appConfig.future?.unstable_postcss === true,
+    unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract === true,
     v2_meta: appConfig.future?.v2_meta === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,

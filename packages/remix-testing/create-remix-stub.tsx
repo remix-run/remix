@@ -71,6 +71,8 @@ export function createRemixStub(routes: AgnosticDataRouteObject[]) {
           v2_meta: false,
           unstable_cssModules: false,
           unstable_cssSideEffectImports: false,
+          unstable_postcss: false,
+          unstable_tailwind: false,
           unstable_vanillaExtract: false,
           ...remixConfigFuture,
         },
