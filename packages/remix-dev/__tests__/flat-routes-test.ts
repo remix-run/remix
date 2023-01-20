@@ -88,8 +88,9 @@ describe("flatRoutes", () => {
 
     for (let [input, expected] of tests) {
       it(`"${input}" -> "${expected}"`, () => {
-        let routeSegments = getRouteSegments(input);
-        let isIndex = isIndexRoute(input);
+        let routeId = input.split(path.sep).join(path.posix.sep);
+        let routeSegments = getRouteSegments(routeId);
+        let isIndex = isIndexRoute(routeId);
         expect(createRoutePath(routeSegments, isIndex)).toBe(expected);
       });
     }
