@@ -32,6 +32,7 @@ import {
   useFetchers as useFetchersRR,
   useActionData as useActionDataRR,
   useLoaderData as useLoaderDataRR,
+  useRouteLoaderData as useRouteLoaderDataRR,
   useMatches as useMatchesRR,
   useLocation,
   useNavigation,
@@ -1269,6 +1270,15 @@ export function useMatches(): RouteMatch[] {
  */
 export function useLoaderData<T = AppData>(): SerializeFrom<T> {
   return useLoaderDataRR() as SerializeFrom<T>;
+}
+
+/**
+ * Returns the loaderData for the given routeId.
+ *
+ * @see https://remix.run/hooks/use-route-loader-data
+ */
+export function useRouteLoaderData<T = AppData>(routeId: string): SerializeFrom<T> | undefined {
+  return useRouteLoaderDataRR(routeId) as SerializeFrom<T> | undefined;
 }
 
 /**
