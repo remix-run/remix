@@ -106,8 +106,13 @@ export function flatRoutesUniversal(
 
 export function isIndexRoute(routeId: string) {
   let isFlatFile = !routeId.includes(path.sep);
+  if (isFlatFile) {
+    return routeId.endsWith("_index");
+  }
+
   let normalized = normalizeSlashes(routeId);
-  return isFlatFile ? routeId.endsWith("_index") : /\/index$/.test(normalized);
+  console.log({ normalized });
+  return /\/index$/.test(normalized);
 }
 
 type State =

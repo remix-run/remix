@@ -602,14 +602,14 @@ describe("flatRoutes", () => {
 
     let files: [string, Omit<ConfigRoute, "file">][] = testFiles.map(
       ([file, route]) => {
-        let filepath = file.split("/").join(path.win32.sep);
+        let filepath = file.split("/").join(path.sep);
         return [filepath, { ...route, file: filepath }];
       }
     );
 
     let routeManifest = flatRoutesUniversal(
       APP_DIR,
-      files.map(([file]) => path.win32.join(APP_DIR, file))
+      files.map(([file]) => path.join(APP_DIR, file))
     );
     let routes = Object.values(routeManifest);
 
