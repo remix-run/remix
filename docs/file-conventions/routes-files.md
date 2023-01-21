@@ -4,9 +4,11 @@ title: Route File Naming
 
 # Route File Naming
 
+<docs-info>The Route file naming convention is changing in v2, you can opt-in to the new convention today, [see the Route Convention v2 page][routeconvention-v2]</docs-info>
+
 Setting up routes in Remix is as simple as creating files in your `app` directory. These are the conventions you should know to understand how routing in Remix works.
 
-Please note that you can use either `.js`, `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication (and because we ❤️ TypeScript).
+Please note that you can use either `.js`, `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication.
 
 ## Root Route
 
@@ -81,21 +83,17 @@ For example: `app/routes/blog/$postId.tsx` will match the following URLs:
 On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId` [view example app][view-example-app]) and all parameters can be accessed within components via [`useParams`][use-params] and within loaders/actions via the argument's [`params`][params] property:
 
 ```tsx filename=app/routes/blog/$postId.tsx
-import { useParams } from "@remix-run/react";
 import type {
-  LoaderFunction,
-  ActionFunction,
+  ActionArgs,
+  LoaderArgs,
 } from "@remix-run/node"; // or cloudflare/deno
+import { useParams } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   console.log(params.postId);
 };
 
-export const action: ActionFunction = async ({
-  params,
-}) => {
+export const action = async ({ params }: ActionArgs) => {
   console.log(params.postId);
 };
 
@@ -108,6 +106,37 @@ export default function PostRoute() {
 Nested routes can also contain dynamic segments by using the `$` character in the parent's directory name. For example, `app/routes/blog/$postId/edit.tsx` might represent the editor page for blog entries.
 
 See the [routing guide][routing-guide] for more information.
+
+## Optional Segments
+
+Wrapping a route segment in parens will make the segment optional.
+
+<!-- prettier-ignore -->
+```markdown lines=[3]
+app/
+├── routes/
+│   ├── ($lang)/
+│   │   ├── $pid.tsx
+│   │   ├── categories.tsx
+│   │   └── index.tsx
+│   └── index.tsx
+└── root.tsx
+```
+
+<details>
+
+<summary>URL Route Matches</summary>
+
+| URL                        | Matched Route                       |
+| -------------------------- | ----------------------------------- |
+| `/categories`              | `app/routes/($lang)/categories.tsx` |
+| `/en/categories`           | `app/routes/($lang)/categories.tsx` |
+| `/fr/categories`           | `app/routes/($lang)/categories.tsx` |
+| `/american-flag-speedo`    | `app/routes/($lang)/$pid.tsx`       |
+| `/en/american-flag-speedo` | `app/routes/($lang)/$pid.tsx`       |
+| `/fr/american-flag-speedo` | `app/routes/($lang)/$pid.tsx`       |
+
+</details>
 
 ## Layout Routes
 
@@ -244,21 +273,17 @@ Files that are named `$.tsx` are called "splat" (or "catch-all") routes. These r
 Similar to dynamic route parameters, you can access the value of the matched path on the splat route's `params` with the `"*"` key.
 
 ```tsx filename=app/routes/$.tsx
-import { useParams } from "@remix-run/react";
 import type {
-  LoaderFunction,
-  ActionFunction,
+  ActionArgs,
+  LoaderArgs,
 } from "@remix-run/node"; // or cloudflare/deno
+import { useParams } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   console.log(params["*"]);
 };
 
-export const action: ActionFunction = async ({
-  params,
-}) => {
+export const action = async ({ params }: ActionArgs) => {
   console.log(params["*"]);
 };
 
@@ -290,3 +315,5 @@ Because some characters have special meaning, you must use our escaping syntax i
 [routing-guide]: ../guides/routing
 [root-route]: #root-route
 [resource-route]: ../guides/resource-routes
+[routeconvention-v2]: ./route-files-v2
+[flatroutes-rfc]: https://github.com/remix-run/remix/discussions/4482

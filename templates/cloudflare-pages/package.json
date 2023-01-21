@@ -7,7 +7,7 @@
     "dev:wrangler": "cross-env NODE_ENV=development npm run wrangler",
     "dev": "remix build && run-p \"dev:*\"",
     "start": "cross-env NODE_ENV=production npm run wrangler",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc",
     "wrangler": "wrangler pages dev ./public"
   },
   "dependencies": {

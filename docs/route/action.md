@@ -13,17 +13,18 @@ Actions have the same API as loaders, the only difference is when they are calle
 This enables you to co-locate everything about a data set in a single route module: the data read, the component that renders the data, and the data writes:
 
 ```tsx
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { Form } from "@remix-run/react";
 
-import { fakeGetTodos, fakeCreateTodo } from "~/utils/db";
 import { TodoList } from "~/components/TodoList";
+import { fakeCreateTodo, fakeGetTodos } from "~/utils/db";
 
 export async function loader() {
   return json(await fakeGetTodos());
 }
 
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const body = await request.formData();
   const todo = await fakeCreateTodo({
     title: body.get("title"),
@@ -32,7 +33,7 @@ export async function action({ request }) {
 }
 
 export default function Todos() {
-  const data = useLoaderData();
+  const data = useLoaderData<typeof loader>();
   return (
     <div>
       <TodoList todos={data} />
