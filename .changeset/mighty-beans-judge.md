@@ -3,4 +3,4 @@
 "@remix-run/testing": patch
 ---
 
-ensure all routes have ids when using `createRemixStub` testing helper
+Ensure all routes have IDs when using the `createRemixStub` testing helper
