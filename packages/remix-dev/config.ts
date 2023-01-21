@@ -541,7 +541,7 @@ export async function readConfig(
     assetsBuildDirectory: absoluteAssetsBuildDirectory,
     relativeAssetsBuildDirectory: assetsBuildDirectory,
     serverBasename,
-    publicPath: `${serverBasename}/${publicPath}`,
+    publicPath: path.join(serverBasename, publicPath).replace(/\\/g, "/"),
     rootDirectory,
     routes,
     serverBuildPath,
