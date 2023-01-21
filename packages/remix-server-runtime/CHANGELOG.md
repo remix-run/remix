@@ -1,5 +1,7 @@
 # `@remix-run/server-runtime`
 
+## 1.11.1
+
 ## 1.11.0
 
 ### Minor Changes
@@ -33,8 +35,6 @@
   ```
 
   ```jsx
-  /* eslint-disable import/no-extraneous-dependencies */
-
   // Using future.v2_errorBoundary
   import { isRouteErrorResponse, useRouteError } from "@remix-run/react";
 
