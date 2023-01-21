@@ -1,5 +1,6 @@
 ---
 title: useAsyncValue
+toc: false
 ---
 
 # `useAsyncValue`

@@ -1,5 +1,6 @@
 ---
 title: useParams
+toc: false
 ---
 
 # `useParams`

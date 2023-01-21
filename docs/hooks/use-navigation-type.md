@@ -1,5 +1,6 @@
 ---
 title: useNavigationType
+toc: false
 ---
 
 # `useNavigationType`

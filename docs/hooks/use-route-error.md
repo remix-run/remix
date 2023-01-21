@@ -1,5 +1,6 @@
 ---
 title: useRouteError
+toc: false
 ---
 
 # `useRouteError`

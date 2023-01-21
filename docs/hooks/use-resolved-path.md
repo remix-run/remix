@@ -1,5 +1,6 @@
 ---
 title: useResolvedPath
+toc: false
 ---
 
 # `useResolvedPath`

@@ -1,5 +1,6 @@
 ---
 title: useFetcher
+toc: false
 ---
 
 # `useFetcher`

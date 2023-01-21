@@ -1,5 +1,6 @@
 ---
 title: useSearchParams
+toc: false
 ---
 
 # `useSearchParams`

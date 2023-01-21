@@ -1,5 +1,6 @@
 ---
 title: useNavigate
+toc: false
 ---
 
 # `useNavigate`

@@ -1,5 +1,6 @@
 ---
 title: useBeforeUnload
+toc: false
 ---
 
 # `useBeforeUnload`

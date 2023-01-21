@@ -1,5 +1,6 @@
 ---
 title: useOutletContext
+toc: false
 ---
 
 # `useOutletContext`

@@ -1,5 +1,6 @@
 ---
 title: useLocation
+toc: false
 ---
 
 # `useLocation`
