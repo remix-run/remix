@@ -32,7 +32,7 @@
     "@remix-run/server-runtime": "1.11.1",
     "@vanilla-extract/integration": "^6.0.1",
     "arg": "^5.0.1",
-    "cacache": "^15.0.5",
+    "cacache": "^17.0.4",
     "chalk": "^4.1.2",
     "chokidar": "^3.5.1",
     "dotenv": "^16.0.0",
@@ -71,7 +71,7 @@
   },
   "devDependencies": {
     "@remix-run/serve": "1.11.1",
-    "@types/cacache": "^15.0.0",
+    "@types/cacache": "^15.0.1",
     "@types/gunzip-maybe": "^1.4.0",
     "@types/inquirer": "^8.2.0",
     "@types/jsesc": "^3.0.1",
