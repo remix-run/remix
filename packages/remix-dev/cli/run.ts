@@ -148,6 +148,7 @@ async function dev(
     appServerPort?: number;
   }
 ) {
+  console.log("-----DEV FUNCTION------");
   if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
 
   if (flags.debug) {
@@ -158,7 +159,10 @@ async function dev(
       inspector.open();
     }
   }
-  await commands.dev(projectDir, process.env.NODE_ENV, flags);
+  await commands.dev(projectDir, process.env.NODE_ENV, {
+    port: flags.port,
+    appServerPort: flags.appServerPort,
+  });
 }
 
 /**
