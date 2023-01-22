@@ -19,4 +19,4 @@ hydrate(<RemixBrowser />, document);
 
 This is the first piece of code that runs in the browser. As you can see, you have full control here. You can initialize client side libraries, setup things like `window.history.scrollRestoration`, etc.
 
-[server-entry-module]: ./entry.server.tsx
+[server-entry-module]: ./entry.server
