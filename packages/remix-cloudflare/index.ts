@@ -42,6 +42,7 @@ export type {
   HtmlLinkDescriptor,
   HtmlMetaDescriptor,
   V2_HtmlMetaDescriptor,
+  JsonFunction,
   LinkDescriptor,
   LinksFunction,
   LoaderArgs,
