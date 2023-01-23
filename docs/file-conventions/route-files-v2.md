@@ -185,7 +185,7 @@ Note you typically want to add an index route when you add nested routes so that
 Sometimes you want the URL to be nested but you don't want the automatic layout nesting. You can opt-out of nesting with a trailing underscore on the parent segment:
 
 <!-- prettier-ignore -->
-```markdown lines=[7]
+```markdown lines=[8]
 app/
 ├── routes/
 │   ├── _index.tsx
