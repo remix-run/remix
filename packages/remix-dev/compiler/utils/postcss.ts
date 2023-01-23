@@ -4,30 +4,38 @@ import postcss from "postcss";
 
 import type { RemixConfig } from "../../config";
 
+interface RemixPostcssContext {
+  vanillaExtract: boolean;
+}
+
+const defaultContext: RemixPostcssContext = {
+  vanillaExtract: false,
+};
+
 interface Options {
   config: RemixConfig;
-  vanillaExtract?: boolean;
+  context?: RemixPostcssContext;
 }
 
 function isPostcssEnabled(config: RemixConfig) {
   return config.future.unstable_postcss || config.future.unstable_tailwind;
 }
 
-function getCacheKey({ config, vanillaExtract }: Required<Options>) {
-  return [config.rootDirectory, vanillaExtract].join("|");
+function getCacheKey({ config, context }: Required<Options>) {
+  return [config.rootDirectory, context.vanillaExtract].join("|");
 }
 
 let pluginsCache = new Map<string, Array<AcceptedPlugin>>();
 export async function loadPostcssPlugins({
   config,
-  vanillaExtract = false,
+  context = defaultContext,
 }: Options): Promise<Array<AcceptedPlugin>> {
   if (!isPostcssEnabled(config)) {
     return [];
   }
 
   let { rootDirectory } = config;
-  let cacheKey = getCacheKey({ config, vanillaExtract });
+  let cacheKey = getCacheKey({ config, context });
   let cachedPlugins = pluginsCache.get(cacheKey);
   if (cachedPlugins) {
     return cachedPlugins;
@@ -37,15 +45,9 @@ export async function loadPostcssPlugins({
 
   if (config.future.unstable_postcss) {
     try {
-      let context = {
-        remix: {
-          vanillaExtract,
-        },
-      };
-
       let postcssConfig = await loadConfig(
         // @ts-expect-error Custom context extensions aren't type safe
-        context,
+        { remix: context },
         rootDirectory
       );
 
@@ -67,19 +69,19 @@ export async function loadPostcssPlugins({
 let processorCache = new Map<string, Processor | null>();
 export async function getPostcssProcessor({
   config,
-  vanillaExtract = false,
+  context = defaultContext,
 }: Options): Promise<Processor | null> {
   if (!isPostcssEnabled(config)) {
     return null;
   }
 
-  let cacheKey = getCacheKey({ config, vanillaExtract });
+  let cacheKey = getCacheKey({ config, context });
   let cachedProcessor = processorCache.get(cacheKey);
   if (cachedProcessor !== undefined) {
     return cachedProcessor;
   }
 
-  let plugins = await loadPostcssPlugins({ config, vanillaExtract });
+  let plugins = await loadPostcssPlugins({ config, context });
   let processor = plugins.length > 0 ? postcss(plugins) : null;
 
   processorCache.set(cacheKey, processor);

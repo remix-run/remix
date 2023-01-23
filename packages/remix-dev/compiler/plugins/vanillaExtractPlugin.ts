@@ -32,7 +32,9 @@ export function vanillaExtractPlugin({
     async setup(build) {
       let postcssProcessor = await getPostcssProcessor({
         config,
-        vanillaExtract: true,
+        context: {
+          vanillaExtract: true,
+        },
       });
       let { rootDirectory } = config;
 
