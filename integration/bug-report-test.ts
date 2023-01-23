@@ -88,35 +88,43 @@ test("expect to be able to go forward and backward in browser history without er
   let app = new PlaywrightFixture(appFixture, page);
 
   // This sets up the module cache in memory, priming the error case.
+  await page.goto("https://remix.run/");
   await app.goto("/");
   await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  expect(await page.content()).toMatch("cheeseburger");
 
   // For chromium, this usually triggers the error.
-  // It requires fast navigation between an empty state,
-  // for example Chromium's 'no url' page and a page
-  // 2 deep in your history (eg click forward twice).
-  let testStr = "Application Error!";
-  let retry = 40;
+  // It requires fast navigation between a page that is not the remix app,
+  // for example Chromium's 'no url' page, or remix.run, and a page
+  // 2 deep in history that's part of a remix app (eg click forward twice).
+  let appErrorStr = "Application Error!";
+  let retry = 1;
   for (let i = 0; i < retry; i++) {
     // Back to /
     await page.goBack();
     expect(await app.getHtml()).toContain("pizza");
     // Takes the browser to its undefined route
     await page.goBack();
+    expect(page.url()).toContain("remix.run");
+    expect(await app.getHtml()).toContain("web standards");
 
     // Forward to /
     await page.goForward();
     let appHtml1 = await app.getHtml();
-    expect(appHtml1).not.toContain(testStr);
-    if (appHtml1.includes(testStr)) break;
+    expect(appHtml1).toContain("pizza");
+    expect(appHtml1).not.toContain(appErrorStr);
+    if (appHtml1.includes(appErrorStr)) break;
 
     // Forward to /burgers
     await page.goForward();
+    // Here's an error: the path should be burgers
+    // (this validates correctly and passes)
+    expect(page.url()).toContain("/burgers");
+    // But now the content won't contain the string "cheeseburger"
     let appHtml2 = await app.getHtml();
-    expect(appHtml2).not.toContain(testStr);
-    if (appHtml2.includes(testStr)) break;
-    expect(appHtml2).not.toContain(testStr);
+    expect(appHtml2).toMatch("cheeseburger");
+    if (appHtml2.includes(appErrorStr)) break;
+    expect(appHtml2).not.toContain(appErrorStr);
   }
 });
 
