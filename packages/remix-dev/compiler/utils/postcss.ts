@@ -4,6 +4,11 @@ import postcss from "postcss";
 
 import type { RemixConfig } from "../../config";
 
+interface Options {
+  config: RemixConfig;
+  context?: RemixPostcssContext;
+}
+
 interface RemixPostcssContext {
   vanillaExtract: boolean;
 }
@@ -11,11 +16,6 @@ interface RemixPostcssContext {
 const defaultContext: RemixPostcssContext = {
   vanillaExtract: false,
 };
-
-interface Options {
-  config: RemixConfig;
-  context?: RemixPostcssContext;
-}
 
 function isPostcssEnabled(config: RemixConfig) {
   return config.future.unstable_postcss || config.future.unstable_tailwind;
@@ -46,7 +46,9 @@ export async function loadPostcssPlugins({
   if (config.future.unstable_postcss) {
     try {
       let postcssConfig = await loadConfig(
-        // @ts-expect-error Custom context extensions aren't type safe
+        // We're nesting our custom context values in a "remix"
+        // namespace to avoid clashing with other tools.
+        // @ts-expect-error Custom context values aren't type safe.
         { remix: context },
         rootDirectory
       );
