@@ -68,7 +68,7 @@ describe("<LiveReload />", () => {
 
     it("timeout of reload is set to 200ms", () => {
       LiveReload = require("../components").LiveReload;
-      let { container } = render(<LiveReload timeout={200} />);
+      let { container } = render(<LiveReload timeoutMs={200} />);
       expect(container.querySelector("script")).toHaveTextContent(
         "setTimeout( () => remixLiveReloadConnect({ onOpen: () => window.location.reload(), }), 200 );"
       );
