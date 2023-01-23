@@ -71,8 +71,10 @@ test.describe("Tailwind", () => {
         `,
         ...basicUsageFixture(),
         ...regularStylesSheetsFixture(),
-        ...cssSideEffectsFixture(),
         ...cssModulesFixture(),
+        ...vanillaExtractClassCompositionFixture(),
+        ...vanillaExtractTailwindFunctionsFixture(),
+        ...cssSideEffectsFixture(),
       },
     });
     appFixture = await createAppFixture(fixture);
@@ -175,6 +177,86 @@ test.describe("Tailwind", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/css-modules-test");
     let locator = await page.locator("[data-testid='css-modules']");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+
+  let vanillaExtractClassCompositionFixture = () => ({
+    "app/routes/vanilla-extract-class-composition-test.jsx": js`
+      import { Test } from "~/test-components/vanilla-extract-class-composition";
+
+      export default function() {
+        return <Test />;
+      }
+    `,
+    "app/test-components/vanilla-extract-class-composition/index.jsx": js`
+      import * as styles from "./styles.css";
+
+      export function Test() {
+        return (
+          <div data-testid="vanilla-extract-class-composition" className={styles.root}>
+            Vanilla Extract test
+          </div>
+        );
+      }
+    `,
+    "app/test-components/vanilla-extract-class-composition/styles.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+
+      export const root = style([
+        { background: 'peachpuff' },
+        "p-test",
+      ]);
+    `,
+  });
+  test("Vanilla Extract class composition", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/vanilla-extract-class-composition-test");
+    let locator = await page.locator(
+      "[data-testid='vanilla-extract-class-composition']"
+    );
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+
+  let vanillaExtractTailwindFunctionsFixture = () => ({
+    "app/routes/vanilla-extract-tailwind-functions-test.jsx": js`
+      import { Test } from "~/test-components/vanilla-extract-tailwind-functions";
+
+      export default function() {
+        return <Test />;
+      }
+    `,
+    "app/test-components/vanilla-extract-tailwind-functions/index.jsx": js`
+      import * as styles from "./styles.css";
+
+      export function Test() {
+        return (
+          <div data-testid="vanilla-extract-tailwind-functions" className={styles.root}>
+            Vanilla Extract Tailwind functions test
+          </div>
+        );
+      }
+    `,
+    "app/test-components/vanilla-extract-tailwind-functions/styles.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+
+      export const root = style({
+        background: 'peachpuff',
+        padding: 'theme(spacing.test)',
+      });
+    `,
+  });
+  test("Vanilla Extract Tailwind functions", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/vanilla-extract-tailwind-functions-test");
+    let locator = await page.locator(
+      "[data-testid='vanilla-extract-tailwind-functions']"
+    );
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
