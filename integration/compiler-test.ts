@@ -58,8 +58,11 @@ test.describe("compiler", () => {
           import { useLoaderData } from "@remix-run/react";
           import * as path from "path";
 
+          // "node:"-prefixed built-in
+          import * as fs from "node:fs";
+
           export let loader = () => {
-            return path.join("test", "file.txt");
+            return path.join("test", fs.existsSync("./index.jsx") ? "file.txt" : "no_file.txt");
           }
 
           export default function BuiltIns() {
@@ -223,7 +226,7 @@ test.describe("compiler", () => {
 
     // rendered the page instead of the error boundary
     expect(await app.getHtml("#built-ins")).toBe(
-      `<div id="built-ins">test${path.sep}file.txt</div>`
+      `<div id="built-ins">test${path.sep}no_file.txt</div>`
     );
 
     let routeModule = await fixture.getBrowserAsset(
