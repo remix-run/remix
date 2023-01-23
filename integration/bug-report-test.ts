@@ -82,16 +82,65 @@ test.afterAll(() => appFixture.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("expect to be able to go forward and backward in browser history without error", async ({
+test(`expect to be able to browse backward out of a remix app, 
+      then forward in history and have pages render correctly`, async ({
   page,
 }) => {
   let app = new PlaywrightFixture(appFixture, page);
 
-  // This sets up the module cache in memory, priming the error case.
+  // This sets up the Remix modules cache in memory, priming the error case.
+  await app.goto("/");
+  await app.clickLink("/burgers");
+  expect(await page.content()).toMatch("cheeseburger");
 
-  // TypeError: Comment out this line to view the TypeError exception:
-  await page.goto("https://remix.run/");
+  let retry = 4;
+  for (let i = 0; i < retry; i++) {
+    // Back to /
+    await page.goBack();
+    expect(await app.getHtml()).toContain("pizza");
+    // Takes the browser to an empty state. This doesn't seem to work in headless Firefox
+    await page.goBack();
 
+    // Forward to /
+    await page.goForward();
+    // This passes
+    expect(await app.getHtml()).toContain("pizza");
+
+    // Forward to /burgers
+    await page.goForward();
+    // Here's an error: the path should be `/burgers`
+    // (this validates correctly and passes)
+    expect(page.url()).toContain("/burgers");
+    // but now the content won't contain the string "cheeseburger"
+    expect(await app.getHtml()).toMatch("cheeseburger");
+    expect(await app.getHtml()).not.toMatch("pizza");
+  }
+});
+
+test("expect to be able to go forward and backward in browser history without triggering a TypeError", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
+
+  // This fails locally in chromium, edge or Firefox but all intermittently on an M1 MacPro.
+  // Increasing the retries will ensure more of the browsers fail.
+  // Failure message look like:
+  //
+  // TypeError: Cannot destructure property 'default' of 'n[e]' as it is undefined.
+  // at hr (http://localhost:60918/build/_shared/chunk-2QBB563C.js:14:85)
+  // at mu (http://localhost:60918/build/entry.client-RIRIZEHM.js:6:19484)
+  // at Xa (http://localhost:60918/build/entry.client-RIRIZEHM.js:8:44019)
+  // at $a (http://localhost:60918/build/entry.client-RIRIZEHM.js:8:39724)
+  // at Zf (http://localhost:60918/build/entry.client-RIRIZEHM.js:8:39655)
+  // at br (http://localhost:60918/build/entry.client-RIRIZEHM.js:8:39515)
+  // at Ui (http://localhost:60918/build/entry.client-RIRIZEHM.js:8:35905)
+  // at Ha (http://localhost:60918/build/entry.client-RIRIZEHM.js:8:34858)
+  // at Cl (http://localhost:60918/build/entry.client-RIRIZEHM.js:1:1741)
+  // at MessagePort.gl (http://localhost:60918/build/entry.client-RIRIZEHM.js:1:2131)</pre
+  //   >
+
+  // First create some history in the browser and validate that Remix
+  // is rendering the content expected.
   await app.goto("/");
   await app.clickLink("/burgers");
   expect(await page.content()).toMatch("cheeseburger");
@@ -102,41 +151,28 @@ test("expect to be able to go forward and backward in browser history without er
   // 2 deep in history that's part of a remix app (eg click forward twice).
   let appErrorStr = "Application Error!";
 
-  // TypeError: increase retries to something large, like 40, to view the
-  // TyepError failures
-  let retry = 4;
+  // Increase `retry` to something large, like 40, to view the
+  // TyepError failures if you're not seeing them after a couple of tries.
+  let retry = 10;
 
   for (let i = 0; i < retry; i++) {
     // Back to /
     await page.goBack();
     expect(await app.getHtml()).toContain("pizza");
-    // Takes the browser to "https://remix.run"
+    // Back to empty page
     await page.goBack();
-
-    // TypeError: Comment out these two lines to view the TypeError exception
-    expect(page.url()).toContain("remix.run");
-    expect(await app.getHtml()).toContain("web standards");
 
     // Forward to /
     await page.goForward();
     let appHtml1 = await app.getHtml();
     expect(appHtml1).toContain("pizza");
     expect(appHtml1).not.toContain(appErrorStr);
-    if (appHtml1.includes(appErrorStr)) break;
 
     // Forward to /burgers
     await page.goForward();
-    // Here's an error: the path should be burgers
-    // (this validates correctly and passes)
-    expect(page.url()).toContain("/burgers");
     // But now the content won't contain the string "cheeseburger"
     let appHtml2 = await app.getHtml();
-
-    // TypeError: comment out this line to view the TypeError
-    expect(appHtml2).toMatch("cheeseburger");
-
     expect(appHtml2).not.toContain(appErrorStr);
-    if (appHtml2.includes(appErrorStr)) break;
   }
 });
 
