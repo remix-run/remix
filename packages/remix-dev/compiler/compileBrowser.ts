@@ -1,6 +1,6 @@
 import * as path from "path";
 import * as fse from "fs-extra";
-import { builtinModules as nodeBuiltins } from "module";
+import { builtinModules } from "module";
 import * as esbuild from "esbuild";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 import postcss from "postcss";
@@ -38,6 +38,11 @@ export type BrowserCompiler = {
   ) => Promise<esbuild.Metafile>;
   dispose: () => void;
 };
+
+// Node v14 compat: include `node:`-prefixed built-ins like `"node:fs"`
+let nodeBuiltins = Array.from(
+  new Set(builtinModules.flatMap((mod) => [mod, `node:${mod}`]))
+);
 
 const getExternals = (remixConfig: RemixConfig): string[] => {
   // For the browser build, exclude node built-ins that don't have a
