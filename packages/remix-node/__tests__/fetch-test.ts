@@ -1,7 +1,7 @@
 import { PassThrough } from "stream";
+import { Response as WebResponse } from "@remix-run/web-fetch";
 
 import { Request, fetch, Response } from "../fetch";
-import { Response as WebResponse } from "@remix-run/web-fetch";
 
 let test = {
   source: [
