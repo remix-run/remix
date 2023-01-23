@@ -18,6 +18,11 @@ let relativePath = (file: string) => path.relative(process.cwd(), file);
 
 let sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+let clean = (config: RemixConfig) => {
+  fs.emptyDirSync(config.relativeAssetsBuildDirectory);
+  fs.removeSync(config.serverBuildPath);
+};
+
 let getHost = () =>
   process.env.HOST ??
   Object.values(os.networkInterfaces())
@@ -107,7 +112,10 @@ export let serve = async (
     mode: "development",
     liveReloadPort: port,
     onInitialBuild: (durationMs) => info(`Built in ${prettyMs(durationMs)}`),
-    onRebuildStart: () => socket.log("Rebuilding..."),
+    onRebuildStart: () => {
+      clean(config);
+      socket.log("Rebuilding...");
+    },
     onRebuildFinish: async (durationMs, assetsManifest) => {
       if (!assetsManifest) return;
       socket.log(`Rebuilt in ${prettyMs(durationMs)}`);
@@ -124,12 +132,8 @@ export let serve = async (
     onFileDeleted: (file) => socket.log(`File deleted: ${relativePath(file)}`),
   });
 
-  // clean up build directories when dev server is terminated
-  exitHook(() => {
-    fs.emptyDirSync(config.relativeAssetsBuildDirectory);
-    fs.removeSync(config.serverBuildPath);
-  });
-
+  // clean up build directories when dev server exits
+  exitHook(() => clean(config));
   return async () => {
     await dispose();
     socket.close();
