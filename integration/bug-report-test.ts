@@ -88,7 +88,10 @@ test("expect to be able to go forward and backward in browser history without er
   let app = new PlaywrightFixture(appFixture, page);
 
   // This sets up the module cache in memory, priming the error case.
+
+  // TypeError: Comment out this line to view the TypeError exception:
   await page.goto("https://remix.run/");
+
   await app.goto("/");
   await app.clickLink("/burgers");
   expect(await page.content()).toMatch("cheeseburger");
@@ -98,13 +101,19 @@ test("expect to be able to go forward and backward in browser history without er
   // for example Chromium's 'no url' page, or remix.run, and a page
   // 2 deep in history that's part of a remix app (eg click forward twice).
   let appErrorStr = "Application Error!";
+
+  // TypeError: increase retries to something large, like 40, to view the
+  // TyepError failures
   let retry = 4;
+
   for (let i = 0; i < retry; i++) {
     // Back to /
     await page.goBack();
     expect(await app.getHtml()).toContain("pizza");
     // Takes the browser to "https://remix.run"
     await page.goBack();
+
+    // TypeError: Comment out these two lines to view the TypeError exception
     expect(page.url()).toContain("remix.run");
     expect(await app.getHtml()).toContain("web standards");
 
@@ -122,9 +131,12 @@ test("expect to be able to go forward and backward in browser history without er
     expect(page.url()).toContain("/burgers");
     // But now the content won't contain the string "cheeseburger"
     let appHtml2 = await app.getHtml();
+
+    // TypeError: comment out this line to view the TypeError
     expect(appHtml2).toMatch("cheeseburger");
-    if (appHtml2.includes(appErrorStr)) break;
+
     expect(appHtml2).not.toContain(appErrorStr);
+    if (appHtml2.includes(appErrorStr)) break;
   }
 });
 
