@@ -40,7 +40,7 @@ export function cssFilePlugin({
           minifySyntax: true,
           metafile: true,
           write: false,
-          sourcemap: Boolean(options.sourcemap && postcssProcessor), // If we're not running PostCSS, we're not transforming CSS so we don't need source maps
+          sourcemap: Boolean(options.sourcemap && postcssProcessor), // We only need source maps if we're processing the CSS with PostCSS
           incremental: false,
           splitting: false,
           stdin: undefined,
