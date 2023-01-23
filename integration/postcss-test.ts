@@ -230,7 +230,7 @@ test.describe("PostCSS", () => {
         );
       }
     `,
-    "app/test-components/vanilla-extract/styles.css.ts": css`
+    "app/test-components/vanilla-extract/styles.css.ts": js`
       import { style, globalStyle } from "@vanilla-extract/css";
     
       export const root = style({
