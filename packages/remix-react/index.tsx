@@ -9,10 +9,15 @@ export type {
   ShouldRevalidateFunction,
   SubmitFunction,
   SubmitOptions,
+  unstable_Blocker,
+  unstable_BlockerFunction,
 } from "react-router-dom";
 export {
   Form,
   Outlet,
+  useAsyncError,
+  useAsyncValue,
+  isRouteErrorResponse,
   useBeforeUnload,
   useFormAction,
   useHref,
@@ -25,18 +30,23 @@ export {
   useParams,
   useResolvedPath,
   useRevalidator,
+  useRouteError,
   useRouteLoaderData,
   useSearchParams,
   useSubmit,
+  unstable_useBlocker,
+  unstable_usePrompt,
 } from "react-router-dom";
 
 export type {
+  AwaitProps,
   FetcherWithComponents,
   RouteMatch,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,
 } from "./components";
 export {
+  Await,
   Meta,
   Links,
   Scripts,
@@ -60,6 +70,7 @@ export { useCatch } from "./errorBoundaries";
 
 export type { HtmlLinkDescriptor } from "./links";
 export type {
+  CatchBoundaryComponent,
   HtmlMetaDescriptor,
   RouteModules as UNSAFE_RouteModules,
   ShouldReloadFunction,

@@ -3125,7 +3125,7 @@ You may also notice that our solution makes use of the `login` route's `redirect
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[7,22,61]
+```tsx filename=app/routes/jokes/new.tsx lines=[7,22,51]
 import type { ActionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { useActionData } from "@remix-run/react";
@@ -3400,7 +3400,7 @@ export async function createUserSession(
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[14,22,27,34,38,60-71]
+```tsx filename=app/routes/jokes.tsx lines=[14,22,27,52-63]
 import type { User } from "@prisma/client";
 import type {
   LinksFunction,
@@ -5543,7 +5543,7 @@ There are reasons to include JavaScript on the page. For example, some common UI
 
 Ok, so let's load JavaScript on this page now 😆
 
-💿 Use Remix's [`<Scripts />` component][meta-component] component to load all the JavaScript files in `app/root.tsx`.
+💿 Use Remix's [`<Scripts />` component][scripts-component] component to load all the JavaScript files in `app/root.tsx`.
 
 <details>
 
@@ -6302,6 +6302,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [escaping-special-characters-here]: ../file-conventions/routes-files#escaping-special-characters
 [xml-document-for-rss-feed]: /jokes-tutorial/img/jokes-rss-feed.png
 [network-tab-indicating-no-java-script-is-loaded]: /jokes-tutorial/img/no-javascript.png
+[scripts-component]: ../components/scripts
 [network-tab-showing-java-script-loaded]: /jokes-tutorial/img/yes-javascript.png
 [browser-console-showing-the-log-of-a-server-side-error]: /jokes-tutorial/img/server-side-error-in-browser.png
 [form]: ../components/form

@@ -182,13 +182,13 @@ See also:
 Perhaps you have a persistent newsletter signup at the bottom of every page on your site. This is not a navigation event, so useFetcher is perfect for the job. First, you create a Resource Route:
 
 ```tsx filename=routes/newsletter/subscribe.tsx
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const email = (await request.formData()).get("email");
   try {
     await subscribe(email);
-    return json({ ok: true });
+    return json({ error: null, ok: true });
   } catch (error) {
-    return json({ error: error.message });
+    return json({ error: error.message, ok: false });
   }
 }
 ```
@@ -243,12 +243,12 @@ Because `useFetcher` doesn't cause a navigation, it won't automatically work if 
 If you want to support a no JavaScript experience, just export a component from the route with the action.
 
 ```tsx filename=routes/newsletter/subscribe.tsx
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   // just like before
 }
 
 export default function NewsletterSignupRoute() {
-  const newsletter = useActionData();
+  const newsletter = useActionData<typeof action>();
   return (
     <Form method="post" action="/newsletter/subscribe">
       <p>
@@ -306,7 +306,7 @@ import { Form } from "@remix-run/react";
 import { NewsletterForm } from "~/NewsletterSignup";
 
 export default function NewsletterSignupRoute() {
-  const data = useActionData();
+  const data = useActionData<typeof action>();
   return (
     <NewsletterForm
       Form={Form}
@@ -343,14 +343,14 @@ function useMarkAsRead({ articleId, userId }) {
 Anytime you show the user avatar, you could put a hover effect that fetches data from a loader and displays it in a popup.
 
 ```tsx filename=routes/user/$id/details.tsx
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   return json(
     await fakeDb.user.find({ where: { id: params.id } })
   );
 }
 
 function UserAvatar({ partialUser }) {
-  const userDetails = useFetcher();
+  const userDetails = useFetcher<typeof loader>();
   const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
@@ -382,7 +382,7 @@ function UserAvatar({ partialUser }) {
 If the user needs to select a city, you could have a loader that returns a list of cities based on a query and plug it into a Reach UI combobox:
 
 ```tsx filename=routes/city-search.tsx
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const url = new URL(request.url);
   return json(
     await searchCities(url.searchParams.get("city-query"))
@@ -390,7 +390,7 @@ export async function loader({ request }) {
 }
 
 function CitySearchCombobox() {
-  const cities = useFetcher();
+  const cities = useFetcher<typeof loader>();
 
   return (
     <cities.Form method="get" action="/city-search">

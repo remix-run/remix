@@ -4,14 +4,16 @@ title: Route File Naming
 
 # Route File Naming
 
+<docs-info>The Route file naming convention is changing in v2, you can opt-in to the new convention today, [see the Route Convention v2 page][routeconvention-v2]</docs-info>
+
 Setting up routes in Remix is as simple as creating files in your `app` directory. These are the conventions you should know to understand how routing in Remix works.
 
-Please note that you can use either `.js`, `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication (and because we ❤️ TypeScript).
+Please note that you can use either `.js`, `.jsx` or `.tsx` file extensions depending on whether or not you use TypeScript. We'll stick with `.tsx` in the examples to avoid duplication.
 
 ## Root Route
 
 <!-- prettier-ignore -->
-```markdown [3]
+```markdown lines=[3]
 app/
 ├── routes/
 └── root.tsx
@@ -28,7 +30,7 @@ The file in `app/root.tsx` is your root layout, or "root route" (very sorry for 
 Any JavaScript or TypeScript files in the `app/routes/` directory will become routes in your application. The filename maps to the route's URL pathname, except for `index.tsx` which maps to the root pathname.
 
 <!-- prettier-ignore -->
-```markdown [3-4]
+```markdown lines=[3-4]
 app/
 ├── routes/
 │   ├── about.tsx
@@ -46,14 +48,14 @@ The default export in this file is the component that is rendered at that route 
 ## Dynamic Route Parameters
 
 <!-- prettier-ignore -->
-```markdown [4]
+```markdown lines=[4]
 app/
 ├── routes/
 │   ├── blog/
 │   │   ├── $postId.tsx
 │   │   ├── categories.tsx
-│   │   ├── index.tsx
-│   └── about.tsx
+│   │   └── index.tsx
+│   ├── about.tsx
 │   └── index.tsx
 └── root.tsx
 ```
@@ -81,21 +83,17 @@ For example: `app/routes/blog/$postId.tsx` will match the following URLs:
 On each of these pages, the dynamic segment of the URL path is the value of the parameter. There can be multiple parameters active at any time (as in `/dashboard/:client/invoices/:invoiceId` [view example app][view-example-app]) and all parameters can be accessed within components via [`useParams`][use-params] and within loaders/actions via the argument's [`params`][params] property:
 
 ```tsx filename=app/routes/blog/$postId.tsx
-import { useParams } from "@remix-run/react";
 import type {
-  LoaderFunction,
-  ActionFunction,
+  ActionArgs,
+  LoaderArgs,
 } from "@remix-run/node"; // or cloudflare/deno
+import { useParams } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   console.log(params.postId);
 };
 
-export const action: ActionFunction = async ({
-  params,
-}) => {
+export const action = async ({ params }: ActionArgs) => {
   console.log(params.postId);
 };
 
@@ -109,18 +107,49 @@ Nested routes can also contain dynamic segments by using the `$` character in th
 
 See the [routing guide][routing-guide] for more information.
 
+## Optional Segments
+
+Wrapping a route segment in parens will make the segment optional.
+
+<!-- prettier-ignore -->
+```markdown lines=[3]
+app/
+├── routes/
+│   ├── ($lang)/
+│   │   ├── $pid.tsx
+│   │   ├── categories.tsx
+│   │   └── index.tsx
+│   └── index.tsx
+└── root.tsx
+```
+
+<details>
+
+<summary>URL Route Matches</summary>
+
+| URL                        | Matched Route                       |
+| -------------------------- | ----------------------------------- |
+| `/categories`              | `app/routes/($lang)/categories.tsx` |
+| `/en/categories`           | `app/routes/($lang)/categories.tsx` |
+| `/fr/categories`           | `app/routes/($lang)/categories.tsx` |
+| `/american-flag-speedo`    | `app/routes/($lang)/$pid.tsx`       |
+| `/en/american-flag-speedo` | `app/routes/($lang)/$pid.tsx`       |
+| `/fr/american-flag-speedo` | `app/routes/($lang)/$pid.tsx`       |
+
+</details>
+
 ## Layout Routes
 
 <!-- prettier-ignore -->
-```markdown [3,8]
+```markdown lines=[3,8]
 app/
 ├── routes/
 │   ├── blog/
 │   │   ├── $postId.tsx
 │   │   ├── categories.tsx
-│   │   ├── index.tsx
-│   └── about.tsx
-│   └── blog.tsx
+│   │   └── index.tsx
+│   ├── about.tsx
+│   ├── blog.tsx
 │   └── index.tsx
 └── root.tsx
 ```
@@ -144,18 +173,18 @@ In the example above, the `blog.tsx` is a "layout route" for everything within t
 ## Pathless Layout Routes
 
 <!-- prettier-ignore -->
-```markdown [3,7,10-11]
+```markdown lines=[3,7,10-11]
 app/
 ├── routes/
 │   ├── __app/
 │   │   ├── dashboard.tsx
 │   │   └── $userId/
-│   │   │   └── profile.tsx
+│   │       └── profile.tsx
 │   └── __marketing
 │   │   ├── index.tsx
 │   │   └── product.tsx
 │   ├── __app.tsx
-│   ├── __marketing.tsx
+│   └── __marketing.tsx
 └── root.tsx
 ```
 
@@ -181,16 +210,16 @@ For example, all of your marketing pages could be in `app/routes/__marketing/*` 
 ## Dot Delimiters
 
 <!-- prettier-ignore -->
-```markdown [8]
+```markdown lines=[8]
 app/
 ├── routes/
 │   ├── blog/
 │   │   ├── $postId.tsx
 │   │   ├── categories.tsx
-│   │   ├── index.tsx
-│   └── about.tsx
-│   └── blog.authors.tsx
-│   └── blog.tsx
+│   │   └── index.tsx
+│   ├── about.tsx
+│   ├── blog.authors.tsx
+│   ├── blog.tsx
 │   └── index.tsx
 └── root.tsx
 ```
@@ -212,17 +241,17 @@ By creating a file with `.` characters between segments, you can create a nested
 ## Splat Routes
 
 <!-- prettier-ignore -->
-```markdown [7]
+```markdown lines=[7]
 app/
 ├── routes/
 │   ├── blog/
 │   │   ├── $postId.tsx
 │   │   ├── categories.tsx
-│   │   ├── index.tsx
-│   └── $.tsx
-│   └── about.tsx
-│   └── blog.authors.tsx
-│   └── blog.tsx
+│   │   └── index.tsx
+│   ├── $.tsx
+│   ├── about.tsx
+│   ├── blog.authors.tsx
+│   ├── blog.tsx
 │   └── index.tsx
 └── root.tsx
 ```
@@ -244,21 +273,17 @@ Files that are named `$.tsx` are called "splat" (or "catch-all") routes. These r
 Similar to dynamic route parameters, you can access the value of the matched path on the splat route's `params` with the `"*"` key.
 
 ```tsx filename=app/routes/$.tsx
-import { useParams } from "@remix-run/react";
 import type {
-  LoaderFunction,
-  ActionFunction,
+  ActionArgs,
+  LoaderArgs,
 } from "@remix-run/node"; // or cloudflare/deno
+import { useParams } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   console.log(params["*"]);
 };
 
-export const action: ActionFunction = async ({
-  params,
-}) => {
+export const action = async ({ params }: ActionArgs) => {
   console.log(params["*"]);
 };
 
@@ -285,8 +310,10 @@ Because some characters have special meaning, you must use our escaping syntax i
 [catch-boundary]: ../route/catch-boundary
 [outlet]: ../components/outlet
 [view-example-app]: https://github.com/remix-run/examples/tree/main/multiple-params
-[use-params]: https://reactrouter.com/docs/hooks/use-params
+[use-params]: https://reactrouter.com/hooks/use-params
 [params]: ../route/loader#params
 [routing-guide]: ../guides/routing
 [root-route]: #root-route
 [resource-route]: ../guides/resource-routes
+[routeconvention-v2]: ./route-files-v2
+[flatroutes-rfc]: https://github.com/remix-run/remix/discussions/4482

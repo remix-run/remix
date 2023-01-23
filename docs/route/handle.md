@@ -12,6 +12,6 @@ export const handle = {
 };
 ```
 
-This is almost always used on conjunction with `useMatches`. To see what kinds of things you can do with it, refer to [`useMatches`][use-matches] for more information.
+This is almost always used in conjunction with `useMatches`. To see what kinds of things you can do with it, refer to [`useMatches`][use-matches] for more information.
 
 [use-matches]: ../hooks/use-matches

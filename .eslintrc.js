@@ -11,6 +11,16 @@ module.exports = {
   plugins: ["markdown"],
   overrides: [
     {
+      files: ["**/*.md/**"],
+      rules: {
+        "import/no-extraneous-dependencies": OFF,
+        "no-dupe-keys": OFF,
+        "no-undef": OFF,
+        "no-unused-expressions": OFF,
+        "no-unused-vars": OFF,
+      },
+    },
+    {
       files: ["rollup.config.js"],
       rules: {
         "import/no-extraneous-dependencies": OFF,

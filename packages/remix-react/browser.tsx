@@ -20,6 +20,8 @@ declare global {
   var __remixContext: {
     state: HydrationState;
     future: FutureConfig;
+    // The number of active deferred keys rendered on the server
+    a?: number;
   };
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
@@ -39,7 +41,8 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   if (!router) {
     let routes = createClientRoutes(
       window.__remixManifest.routes,
-      window.__remixRouteModules
+      window.__remixRouteModules,
+      window.__remixContext.future
     );
 
     let hydrationData = window.__remixContext.state;
