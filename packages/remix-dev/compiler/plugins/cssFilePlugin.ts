@@ -20,12 +20,10 @@ function normalizePathSlashes(p: string) {
  */
 export function cssFilePlugin({
   config,
-  mode,
-  sourcemap,
+  options,
 }: {
   config: RemixConfig;
-  mode: CompileOptions["mode"];
-  sourcemap: CompileOptions["sourcemap"];
+  options: CompileOptions;
 }): esbuild.Plugin {
   return {
     name: "css-file",
@@ -38,12 +36,11 @@ export function cssFilePlugin({
       build.onLoad({ filter: /\.css$/ }, async (args) => {
         let { metafile, outputFiles, warnings, errors } = await esbuild.build({
           ...buildOps,
-          absWorkingDir: config.rootDirectory,
-          minify: mode === "production",
+          minify: options.mode === "production",
           minifySyntax: true,
           metafile: true,
           write: false,
-          sourcemap,
+          sourcemap: Boolean(options.sourcemap && postcssProcessor), // If we're not running PostCSS, we're not transforming CSS so we don't need source maps
           incremental: false,
           splitting: false,
           stdin: undefined,
@@ -71,7 +68,9 @@ export function cssFilePlugin({
                 });
               },
             },
-            ...(postcssProcessor ? [postcssPlugin(postcssProcessor)] : []),
+            ...(postcssProcessor
+              ? [postcssPlugin({ postcssProcessor, options })]
+              : []),
           ],
         });
 
@@ -131,7 +130,13 @@ export function cssFilePlugin({
   };
 }
 
-function postcssPlugin(postcssProcessor: Processor): esbuild.Plugin {
+function postcssPlugin({
+  postcssProcessor,
+  options,
+}: {
+  postcssProcessor: Processor;
+  options: CompileOptions;
+}): esbuild.Plugin {
   return {
     name: "postcss-plugin",
     async setup(build) {
@@ -142,10 +147,7 @@ function postcssPlugin(postcssProcessor: Processor): esbuild.Plugin {
           await postcssProcessor.process(contents, {
             from: args.path,
             to: args.path,
-            map: {
-              inline: true,
-              sourcesContent: true,
-            },
+            map: options.sourcemap,
           })
         ).css;
 

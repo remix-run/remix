@@ -7,6 +7,7 @@ import traverse from "@babel/traverse";
 import generate from "@babel/generator";
 
 import type { RemixConfig } from "../../config";
+import type { CompileOptions } from "../options";
 import { getPostcssProcessor } from "../utils/postcss";
 
 const pluginName = "css-side-effects-plugin";
@@ -43,8 +44,10 @@ const loaderForExtension: Record<Extension, Loader> = {
  */
 export const cssSideEffectImportsPlugin = ({
   config,
+  options,
 }: {
   config: RemixConfig;
+  options: CompileOptions;
 }): Plugin => {
   return {
     name: pluginName,
@@ -96,9 +99,7 @@ export const cssSideEffectImportsPlugin = ({
             await postcssProcessor.process(contents, {
               from: args.path,
               to: args.path,
-              map: {
-                inline: true,
-              },
+              map: options.sourcemap,
             })
           ).css;
         }
