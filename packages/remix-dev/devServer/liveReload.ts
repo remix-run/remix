@@ -19,6 +19,7 @@ export async function liveReload(
   config: RemixConfig,
   options: WatchOptions = {}
 ) {
+  clean(config);
   let wss = new WebSocket.Server({ port: config.devServerPort });
   function broadcast(event: { type: string } & Record<string, unknown>) {
     setTimeout(() => {

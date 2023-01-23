@@ -85,6 +85,7 @@ export let serve = async (
   config: RemixConfig,
   flags: { port?: number; appServerPort?: number } = {}
 ) => {
+  clean(config);
   await loadEnv(config.rootDirectory);
 
   let dev = resolveDev(config.future.unstable_dev, flags);
