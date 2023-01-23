@@ -98,12 +98,12 @@ test("expect to be able to go forward and backward in browser history without er
   // for example Chromium's 'no url' page, or remix.run, and a page
   // 2 deep in history that's part of a remix app (eg click forward twice).
   let appErrorStr = "Application Error!";
-  let retry = 1;
+  let retry = 4;
   for (let i = 0; i < retry; i++) {
     // Back to /
     await page.goBack();
     expect(await app.getHtml()).toContain("pizza");
-    // Takes the browser to its undefined route
+    // Takes the browser to "https://remix.run"
     await page.goBack();
     expect(page.url()).toContain("remix.run");
     expect(await app.getHtml()).toContain("web standards");
