@@ -44,7 +44,6 @@ export type {
   HeadersFunction,
   HtmlLinkDescriptor,
   HtmlMetaDescriptor,
-  V2_HtmlMetaDescriptor,
   JsonFunction,
   LinkDescriptor,
   LinksFunction,
@@ -54,7 +53,6 @@ export type {
   MemoryUploadHandlerOptions,
   MetaDescriptor,
   MetaFunction,
-  V2_MetaFunction,
   PageLinkDescriptor,
   RequestHandler,
   RouteComponent,
@@ -72,4 +70,6 @@ export type {
   UnsignFunction,
   UploadHandler,
   UploadHandlerPart,
+  V2_HtmlMetaDescriptor,
+  V2_MetaFunction,
 } from "@remix-run/server-runtime";
