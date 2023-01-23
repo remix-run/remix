@@ -1,6 +1,6 @@
 import "./globals";
 
-import {createWorkersKVSessionStorage} from './sessions/workersKVStorage';
+import { createWorkersKVSessionStorage } from "./sessions/workersKVStorage";
 
 const warn = <T extends Function>(fn: T, message: string): T =>
   ((...args: unknown[]) => {
@@ -9,11 +9,10 @@ const warn = <T extends Function>(fn: T, message: string): T =>
     return fn(...args);
   }) as unknown as T;
 
-
 /** @deprecated Use `createWorkersKVSessionStorage` instead. */
 export const createCloudflareKVSessionStorage = warn(
   createWorkersKVSessionStorage,
-  "`createCloudflareKVSessionStorage` is deprecated. Please use `createWorkersKVSessionStorage` instead.",
+  "`createCloudflareKVSessionStorage` is deprecated. Please use `createWorkersKVSessionStorage` instead."
 );
 
 export { createWorkersKVSessionStorage } from "./sessions/workersKVStorage";
