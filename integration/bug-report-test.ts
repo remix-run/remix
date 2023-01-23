@@ -82,34 +82,42 @@ test.afterAll(() => appFixture.close());
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("expect to be able to go forward and backward in browser history without error", async ({
+  page,
+}) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  // let response = await fixture.requestDocument("/");
-  // expect(await response.text()).toMatch("pizza");
 
-  // If you need to test interactivity use the `app`
+  // This sets up the module cache in memory, priming the error case.
   await app.goto("/");
   await app.clickLink("/burgers");
   expect(await app.getHtml()).toMatch("cheeseburger");
 
-  let retry = 100;
-
+  // For chromium, this usually triggers the error.
+  // It requires fast navigation between an empty state,
+  // for example Chromium's 'no url' page and a page
+  // 2 deep in your history (eg click forward twice).
+  let testStr = "Application Error!";
+  let retry = 40;
   for (let i = 0; i < retry; i++) {
-    await page.goBack({ waitUntil: "commit" });
-    await page.goBack({ waitUntil: "networkidle" });
-    await page.goForward({ waitUntil: "commit" });
-    await page.goForward({ waitUntil: "commit" });
-    expect(await app.getHtml()).not.toContain(
-      `Cannot destructure property 'default'`
-    );
+    // Back to /
+    await page.goBack();
+    expect(await app.getHtml()).toContain("pizza");
+    // Takes the browser to its undefined route
+    await page.goBack();
+
+    // Forward to /
+    await page.goForward();
+    let appHtml1 = await app.getHtml();
+    expect(appHtml1).not.toContain(testStr);
+    if (appHtml1.includes(testStr)) break;
+
+    // Forward to /burgers
+    await page.goForward();
+    let appHtml2 = await app.getHtml();
+    expect(appHtml2).not.toContain(testStr);
+    if (appHtml2.includes(testStr)) break;
+    expect(appHtml2).not.toContain(testStr);
   }
-
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
 });
 
 ////////////////////////////////////////////////////////////////////////////////
