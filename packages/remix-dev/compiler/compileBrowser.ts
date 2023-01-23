@@ -98,7 +98,7 @@ const createEsbuildConfig = (
     }
   }
 
-  let { mode, sourcemap } = options;
+  let { mode } = options;
   let outputCss = isCssBuild;
 
   let plugins: esbuild.Plugin[] = [
@@ -143,7 +143,7 @@ const createEsbuildConfig = (
     bundle: true,
     logLevel: "silent",
     splitting: !isCssBuild,
-    sourcemap,
+    sourcemap: options.sourcemap,
     // As pointed out by https://github.com/evanw/esbuild/issues/2440, when tsconfig is set to
     // `undefined`, esbuild will keep looking for a tsconfig.json recursively up. This unwanted
     // behavior can only be avoided by creating an empty tsconfig file in the root directory.
