@@ -182,7 +182,7 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/_landing.tsx",
+        "routes/_landing/index.tsx",
         {
           id: "routes/_landing",
           parentId: "root",
@@ -199,6 +199,14 @@ describe("flatRoutes", () => {
         },
       ],
       [
+        "routes/_landing._index/index.tsx",
+        {
+          id: "routes/_landing._index/index",
+          parentId: "routes/_landing",
+          index: true,
+        },
+      ],
+      [
         "routes/_landing.index.tsx",
         {
           id: "routes/_landing.index",
@@ -207,43 +215,26 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/about.tsx",
+        "routes/_about.tsx",
         {
-          id: "routes/about",
+          id: "routes/_about",
           parentId: "root",
-          path: "about",
-        },
-      ],
-      [
-        "routes/about._index.tsx",
-        {
-          id: "routes/about._index",
-          index: true,
-          parentId: "routes/about",
           path: undefined,
         },
       ],
       [
-        "routes/about.$.tsx",
+        "routes/_about.faq.tsx",
         {
-          id: "routes/about.$",
-          parentId: "routes/about",
-          path: "*",
-        },
-      ],
-      [
-        "routes/about.faq.tsx",
-        {
-          id: "routes/about.faq",
-          parentId: "routes/about",
+          id: "routes/_about.faq",
+          parentId: "routes/_about",
           path: "faq",
         },
       ],
       [
-        "routes/about.$splat.tsx",
+        "routes/_about.$splat.tsx",
         {
-          id: "routes/about.$splat",
-          parentId: "routes/about",
+          id: "routes/_about.$splat",
+          parentId: "routes/_about",
           path: ":splat",
         },
       ],
@@ -326,17 +317,9 @@ describe("flatRoutes", () => {
       ],
 
       [
-        "routes/app.skipall.tsx",
+        "routes/app_.skipall_._index.tsx",
         {
-          id: "routes/app.skipall",
-          parentId: "routes/app",
-          path: "skipall",
-        },
-      ],
-      [
-        "routes/app_.skipall_/index.tsx",
-        {
-          id: "routes/app_.skipall_/index",
+          id: "routes/app_.skipall_._index",
           index: true,
           parentId: "root",
           path: "app/skipall",
@@ -345,34 +328,34 @@ describe("flatRoutes", () => {
 
       // Escaping route segments
       [
-        "routes/about.[$splat].tsx",
+        "routes/_about.[$splat].tsx",
         {
-          id: "routes/about.[$splat]",
-          parentId: "routes/about",
+          id: "routes/_about.[$splat]",
+          parentId: "routes/_about",
           path: "$splat",
         },
       ],
       [
-        "routes/about.[[].tsx",
+        "routes/_about.[[].tsx",
         {
-          id: "routes/about.[[]",
-          parentId: "routes/about",
+          id: "routes/_about.[[]",
+          parentId: "routes/_about",
           path: "[",
         },
       ],
       [
-        "routes/about.[]].tsx",
+        "routes/_about.[]].tsx",
         {
-          id: "routes/about.[]]",
-          parentId: "routes/about",
+          id: "routes/_about.[]]",
+          parentId: "routes/_about",
           path: "]",
         },
       ],
       [
-        "routes/about.[.].tsx",
+        "routes/_about.[.].tsx",
         {
-          id: "routes/about.[.]",
-          parentId: "routes/about",
+          id: "routes/_about.[.]",
+          parentId: "routes/_about",
           path: ".",
         },
       ],

@@ -71,6 +71,7 @@ export function flatRoutesUniversal(
       let fullPath = childRoute.path;
 
       let uniqueRouteId = (fullPath || "") + (index ? "?index" : "");
+
       if (uniqueRouteId) {
         let conflict = uniqueRoutes.get(uniqueRouteId);
         if (conflict) {
@@ -111,7 +112,10 @@ export function flatRoutesUniversal(
 
 export function isIndexRoute(routeId: string) {
   let isFlatFile = !routeId.includes(path.posix.sep);
-  return isFlatFile ? routeId.endsWith("_index") : /\/index$/.test(routeId);
+  if (isFlatFile) {
+    return routeId.endsWith("_index");
+  }
+  return /\/index$/.test(routeId);
 }
 
 type State =
@@ -332,12 +336,13 @@ function getRouteMap(
   return routeMap;
 }
 
-function isRouteModuleFile(filepath: string) {
+let routeRegex = /\/(_?(index)|([a-zA-Z0-9_$.[\]-]))\.(tsx?|jsx?|mdx?)/;
+function isRouteModuleFile(filePath: string) {
   // flat files only need correct extension
-  let isFlatFile = !filepath.includes(path.sep);
+  let isFlatFile = !filePath.includes(path.sep);
   if (isFlatFile) {
-    return routeModuleExts.includes(path.extname(filepath));
+    return routeModuleExts.includes(path.extname(filePath));
   }
 
-  return isIndexRoute(createRouteId(filepath));
+  return routeRegex.test(filePath);
 }
