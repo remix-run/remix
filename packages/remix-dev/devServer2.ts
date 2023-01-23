@@ -1,3 +1,5 @@
+import exitHook from "exit-hook";
+import fs from "fs-extra";
 import getPort, { makeRange } from "get-port";
 import os from "os";
 import path from "node:path";
@@ -122,7 +124,11 @@ export let serve = async (
     onFileDeleted: (file) => socket.log(`File deleted: ${relativePath(file)}`),
   });
 
-  // TODO exit hook: clean up assetsBuildDirectory and serverBuildPath?
+  // clean up build directories when dev server is terminated
+  exitHook(() => {
+    fs.emptyDirSync(config.relativeAssetsBuildDirectory);
+    fs.removeSync(config.serverBuildPath);
+  });
 
   return async () => {
     await dispose();
