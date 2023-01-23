@@ -8,9 +8,11 @@ title: loader
 
 Each route can define a "loader" function that provides data to the route when rendering.
 
-```js
+```tsx
+import { json } from "@remix-run/node"; // or cloudflare/deno
+
 export const loader = async () => {
-  return { ok: true };
+  return json({ ok: true });
 };
 ```
 
@@ -20,18 +22,17 @@ This means you can talk directly to your database, use server only API secrets, 
 
 Using the database ORM Prisma as an example:
 
-```tsx lines=[3,5-8]
+```tsx lines=[3,5-7]
 import { useLoaderData } from "@remix-run/react";
 
 import { prisma } from "../db";
 
 export async function loader() {
-  const users = await prisma.user.findMany();
-  return users;
+  return json(await prisma.user.findMany());
 }
 
 export default function Users() {
-  const data = useLoaderData();
+  const data = useLoaderData<typeof loader>();
   return (
     <ul>
       {data.map((user) => (
@@ -46,14 +47,14 @@ Because `prisma` is only used in the loader it will be removed from the browser 
 
 ## Type Safety
 
-You can get type safety over the network for your loader and component with `DataFunctionArgs` and `useLoaderData<typeof loader>`.
+You can get type safety over the network for your loader and component with `LoaderArgs` and `useLoaderData<typeof loader>`.
 
-```tsx lines=[5,10]
+```tsx lines=[1,5,10]
+import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
-import type { DataFunctionArgs } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
-export async function loader(args: DataFunctionArgs) {
+export async function loader(args: LoaderArgs) {
   return json({ name: "Ryan", date: new Date() });
 }
 
@@ -69,21 +70,21 @@ export default function SomeRoute() {
 
 Route params are defined by route file names. If a segment begins with `$` like `$invoiceId`, the value from the URL for that segment will be passed to your loader.
 
-```ts filename=app/routes/invoices/$invoiceId.jsx
+```tsx filename=app/routes/invoices/$invoiceId.tsx nocopy
 // if the user visits /invoices/123
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   params.invoiceId; // "123"
 }
 ```
 
 Params are mostly useful for looking up records by ID:
 
-```ts filename=app/routes/invoices/$invoiceId.jsx
+```tsx filename=app/routes/invoices/$invoiceId.tsx
 // if the user visits /invoices/123
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   const invoice = await fakeDb.getInvoice(params.invoiceId);
   if (!invoice) throw new Response("", { status: 404 });
-  return invoice;
+  return json(invoice);
 }
 ```
 
@@ -94,7 +95,7 @@ This is a [Fetch Request][request] instance. You can read the MDN docs to see al
 The most common use cases in loaders are reading headers (like cookies) and URL [URLSearchParams][urlsearchparams] from the request:
 
 ```tsx
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   // read a cookie
   const cookie = request.headers.get("Cookie");
 
@@ -130,8 +131,8 @@ app.all(
 
 And then your loader can access it.
 
-```ts filename=routes/some-route.tsx
-export async function loader({ context }) {
+```tsx filename=routes/some-route.tsx
+export async function loader({ context }: LoaderArgs) {
   const { expressUser } = context;
   // ...
 }
@@ -141,7 +142,7 @@ export async function loader({ context }) {
 
 You need to return a [Fetch Response][response] from your loader.
 
-```ts
+```tsx
 export async function loader() {
   const users = await db.users.findMany();
   const body = JSON.stringify(users);
@@ -153,12 +154,12 @@ export async function loader() {
 }
 ```
 
-Using the `json` helper simplifies this so you don't have to construct them yourself, but these two examples are effectively the same!
+Using the `json` helper simplifies this, so you don't have to construct them yourself, but these two examples are effectively the same!
 
 ```tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader: LoaderFunction = async () => {
+export const loader = async () => {
   const users = await fakeDb.users.findMany();
   return json(users);
 };
@@ -169,9 +170,7 @@ You can see how `json` just does a little of the work to make your loader a lot 
 ```tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   const user = await fakeDb.project.findOne({
     where: { id: params.id },
   });
@@ -232,15 +231,14 @@ export async function requireUserSession(request) {
 ```
 
 ```tsx filename=app/routes/invoice/$invoiceId.tsx
-import { useCatch, useLoaderData } from "@remix-run/react";
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import type { ThrownResponse } from "@remix-run/react";
+import { useCatch, useLoaderData } from "@remix-run/react";
 
 import { requireUserSession } from "~/http";
 import { getInvoice } from "~/db";
-import type {
-  Invoice,
-  InvoiceNotFoundResponse,
-} from "~/db";
+import type { InvoiceNotFoundResponse } from "~/db";
 
 type InvoiceCatchData = {
   invoiceOwnerEmail: string;
@@ -250,15 +248,18 @@ type ThrownResponses =
   | InvoiceNotFoundResponse
   | ThrownResponse<401, InvoiceCatchData>;
 
-export const loader = async ({ request, params }) => {
+export const loader = async ({
+  params,
+  request,
+}: LoaderArgs) => {
   const user = await requireUserSession(request);
-  const invoice: Invoice = getInvoice(params.invoiceId);
+  const invoice = getInvoice(params.invoiceId);
 
   if (!invoice.userIds.includes(user.id)) {
-    const data: InvoiceCatchData = {
-      invoiceOwnerEmail: invoice.owner.email,
-    };
-    throw json(data, { status: 401 });
+    throw json(
+      { invoiceOwnerEmail: invoice.owner.email },
+      { status: 401 }
+    );
   }
 
   return json(invoice);
@@ -270,7 +271,7 @@ export default function InvoiceRoute() {
 }
 
 export function CatchBoundary() {
-  // this returns { status, statusText, data }
+  // this returns { data, status, statusText }
   const caught = useCatch<ThrownResponses>();
 
   switch (caught.status) {

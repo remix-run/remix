@@ -12,6 +12,7 @@ export {
 export {
   createRequestHandler,
   createSession,
+  defer,
   isCookie,
   isSession,
   json,
@@ -62,6 +63,7 @@ export type {
   SessionIdStorageStrategy,
   SessionStorage,
   SignFunction,
+  TypedDeferredData,
   TypedResponse,
   UnsignFunction,
   UploadHandler,

@@ -305,14 +305,14 @@ Prefixing a file name with `$` will make that route path a **dynamic segment**. 
 
 For example, the `$invoiceId.jsx` route. When the url is `/sales/invoices/102000`, Remix will provide the string value `102000` to your loaders, actions, and components by the same name as the filename segment:
 
-```jsx
+```tsx
 import { useParams } from "@remix-run/react";
 
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   const id = params.invoiceId;
 }
 
-export async function action({ params }) {
+export async function action({ params }: ActionArgs) {
   const id = params.invoiceId;
 }
 
@@ -361,8 +361,8 @@ app
 
 When the URL is `example.com/files/images/work/flyer.jpg`. The splat param will capture the trailing segments of the URL and be available to your app on `params["*"]`
 
-```jsx
-export async function loader({ params }) {
+```tsx
+export async function loader({ params }: LoaderArgs) {
   params["*"]; // "images/work/flyer.jpg"
 }
 ```
