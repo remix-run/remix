@@ -58,6 +58,9 @@ jobs:
       - name: 🏗 Build
         run: yarn build
 
+      - name: Install bundled deps
+        run: npm install --production $(npx bundle-dependencies list-bundled-dependencies); npm dedupe; npm prune;
+
       - name: 🔐 Setup npm auth
         run: |
           echo "registry=https://registry.npmjs.org" >> ~/.npmrc
