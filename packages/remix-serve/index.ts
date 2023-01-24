@@ -5,25 +5,45 @@ import { createRequestHandler } from "@remix-run/express";
 
 export function createApp(
   buildPath: string,
-  mode = "production",
-  publicPath = "/build/",
-  assetsBuildDirectory = "public/build/"
-) {
+  opts: {
+    mode?: string;
+    basename?: string;
+    publicPath?: string;
+    assetsBuildDirectory?: string;
+  } = {}
+): express.Express {
+  let {
+    mode = "production",
+    basename = "",
+    publicPath = "/build/",
+    assetsBuildDirectory = "public/build/",
+  } = opts;
   let app = express();
+  let router: express.Router = app;
 
   app.disable("x-powered-by");
 
-  app.use(compression());
+  if (basename) {
+    // Create a custom basename router
+    router = express.Router();
+    app.use(basename, router);
+    app.get("", (_, res) => {
+      // redirect to basename
+      res.redirect(basename);
+    });
+  }
 
-  app.use(
+  router.use(compression());
+
+  router.use(
     publicPath,
     express.static(assetsBuildDirectory, { immutable: true, maxAge: "1y" })
   );
 
-  app.use(express.static("public", { maxAge: "1h" }));
+  router.use(express.static("public", { maxAge: "1h" }));
 
-  app.use(morgan("tiny"));
-  app.all(
+  router.use(morgan("tiny"));
+  router.all(
     "*",
     mode === "production"
       ? createRequestHandler({ build: require(buildPath), mode })

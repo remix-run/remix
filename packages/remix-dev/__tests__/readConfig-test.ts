@@ -60,6 +60,7 @@ describe("readConfig", () => {
             "path": "",
           },
         },
+        "serverBasename": "",
         "serverBuildPath": Any<String>,
         "serverBuildTarget": undefined,
         "serverBuildTargetEntryModule": "export * from \\"@remix-run/dev/server-build\\";",

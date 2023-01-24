@@ -92,6 +92,14 @@ export interface AppConfig {
   serverBuildPath?: string;
 
   /**
+   * Server Basename is a location path for app deploy on server.
+   *
+   * If omitted, the default location path is / (root directory)
+   * {@link ServerConfig.serverBasename}.
+   */
+  serverBasename?: string;
+
+  /**
    * The path to the browser build, relative to `remix.config.js`. Defaults to
    * "public/build".
    */
@@ -220,6 +228,14 @@ export interface RemixConfig {
   serverBuildPath: string;
 
   /**
+   * Server Basename is a location path for app deploy on server.
+   *
+   * If omitted, the default location path is / (root directory)
+   * {@link ServerConfig.serverBasename}.
+   */
+  serverBasename?: string;
+
+  /**
    * The absolute path to the assets build directory.
    */
   assetsBuildDirectory: string;
@@ -340,6 +356,7 @@ export async function readConfig(
     }
   }
 
+  let serverBasename = appConfig.serverBasename || "";
   let customServerEntryPoint = appConfig.server;
   let serverBuildTarget: ServerBuildTarget | undefined =
     appConfig.serverBuildTarget;
@@ -438,7 +455,11 @@ export async function readConfig(
   }
 
   let routes: RouteManifest = {
-    root: { path: "", id: "root", file: rootRouteFile },
+    root: {
+      path: serverBasename,
+      id: "root",
+      file: rootRouteFile,
+    },
   };
 
   let routesConvention = appConfig.future?.v2_routeConvention
@@ -517,7 +538,8 @@ export async function readConfig(
     devServerBroadcastDelay,
     assetsBuildDirectory: absoluteAssetsBuildDirectory,
     relativeAssetsBuildDirectory: assetsBuildDirectory,
-    publicPath,
+    serverBasename,
+    publicPath: path.join(serverBasename, publicPath).replace(/\\/g, "/"),
     rootDirectory,
     routes,
     serverBuildPath,

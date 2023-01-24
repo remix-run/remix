@@ -60,9 +60,12 @@ export async function serve(
   app.use(
     createApp(
       config.serverBuildPath,
-      mode,
-      config.publicPath,
-      config.assetsBuildDirectory
+      {
+        mode,
+        basename: config.serverBasename,
+        publicPath: config.publicPath,
+        assetsBuildDirectory: config.assetsBuildDirectory
+      }
     )
   );
 
