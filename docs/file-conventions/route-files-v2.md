@@ -307,15 +307,18 @@ If you want one of the special characters Remix uses for these route conventions
 
 ## Folders for Organization
 
-Routes can also be folders with a conventional `index.tsx` file inside defining the route module. The rest of the files in the folder will not become routes. This allows you to organize your code closer to the routes that use them instead of repeating the feature names across other folders.
+Routes can also be folders with a conventional node module resolution `index.tsx` file inside defining the route module. The rest of the files in the folder will not become routes. This allows you to organize your code closer to the routes that use them instead of repeating the feature names across other folders.
+
+<docs-info>The files inside a folder have no meaning for the route paths, the route path is completely defined by the folder name</docs-info>
 
 Consider these routes:
 
 ```
 routes/
   _landing.about.tsx
-  _landing.index.tsx
+  _landing._index.tsx
   _landing.tsx
+  app._index.tsx
   app.projects.tsx
   app.tsx
   app_.projects.$id.roadmap.tsx
@@ -330,13 +333,16 @@ routes/
     employee-profile-card.tsx
     get-employee-data.server.tsx
     team-photo.jpg
-  _landing.index/
+  _landing._index/
     index.tsx
     scroll-experience.tsx
   _landing/
     index.tsx
     header.tsx
     footer.tsx
+  app._index/
+    index.tsx
+    stats.tsx
   app.projects/
     index.tsx
     project-card.tsx
@@ -352,6 +358,20 @@ routes/
     update-timeline.server.tsx
   contact-us.tsx
 ```
+
+Note that `app/index.tsx` is _not_ the the "index route" for `app/`. It is the node module resolution "index module" for the folder `routes/app/`. The index route for `app/` is `app._index/index.tsx`. The only thing that contributes to the route path is the folder name.
+
+```
+# these are the same route:
+routes/app.tsx
+routes/app/index.tsx
+
+# as are these
+routes/app._index.tsx
+route/app._index/index.tsx
+```
+
+In other words `_index` has meaning for Remix index routes, `index` has node module resolution meaning and creates index modules.
 
 ## Scaling
 
