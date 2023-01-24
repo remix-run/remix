@@ -608,7 +608,7 @@ There are a couple of options for integrating PostCSS into your Remix applicatio
 
 <docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
 
-When a PostCSS config is detected, PostCSS will automatically be run across all CSS in your project. For example, to use [Autoprefixer][autoprefixer]:
+When a PostCSS config is detected, Remix will automatically run PostCSS across all CSS in your project. For example, to use [Autoprefixer][autoprefixer]:
 
 1. Enable built-in PostCSS support by setting the the `future.unstable_postcss` feature flag in `remix.config.js`.
 
