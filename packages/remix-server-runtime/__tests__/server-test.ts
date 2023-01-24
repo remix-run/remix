@@ -1,3 +1,5 @@
+import type { StaticHandlerContext } from "@remix-run/router";
+
 import { createRequestHandler } from "..";
 import { ServerMode } from "../mode";
 import type { ServerBuild } from "../build";
@@ -53,6 +55,7 @@ describe("server", () => {
         },
       },
     },
+    future: {},
   } as unknown as ServerBuild;
 
   describe("createRequestHandler", () => {
@@ -120,6 +123,7 @@ describe("shared server runtime", () => {
           loader: resourceLoader,
           path: "resource",
         },
+        future: {},
       });
       let handler = createRequestHandler(build, ServerMode.Test);
 
@@ -763,10 +767,9 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.catch).toBeTruthy();
-      expect(entryContext.appState.catch!.status).toBe(404);
-      expect(entryContext.appState.catchBoundaryRouteId).toBe(null);
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!.root.status).toBe(404);
     });
 
     test("sets root as catch boundary for not found document request", async () => {
@@ -793,11 +796,10 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.catch).toBeTruthy();
-      expect(entryContext.appState.catch!.status).toBe(404);
-      expect(entryContext.appState.catchBoundaryRouteId).toBe("root");
-      expect(entryContext.routeData).toEqual({});
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!.root.status).toBe(404);
+      expect(context.loaderData).toEqual({});
     });
 
     test("thrown loader responses bubble up", async () => {
@@ -834,11 +836,10 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.catch).toBeTruthy();
-      expect(entryContext.appState.catch!.status).toBe(400);
-      expect(entryContext.appState.catchBoundaryRouteId).toBe("root");
-      expect(entryContext.routeData).toEqual({
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!.root.status).toBe(400);
+      expect(context.loaderData).toEqual({
         root: "root",
       });
     });
@@ -878,11 +879,10 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.catch).toBeTruthy();
-      expect(entryContext.appState.catch!.status).toBe(400);
-      expect(entryContext.appState.catchBoundaryRouteId).toBe("routes/index");
-      expect(entryContext.routeData).toEqual({
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!["routes/index"].status).toBe(400);
+      expect(context.loaderData).toEqual({
         root: "root",
       });
     });
@@ -927,11 +927,13 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.catch).toBeTruthy();
-      expect(entryContext.appState.catch!.status).toBe(400);
-      expect(entryContext.appState.catchBoundaryRouteId).toBe("root");
-      expect(entryContext.routeData).toEqual({});
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!.root.status).toBe(400);
+      expect(context.loaderData).toEqual({
+        root: null,
+        "routes/test": null,
+      });
     });
 
     test("thrown action responses bubble up for index routes", async () => {
@@ -974,11 +976,13 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.catch).toBeTruthy();
-      expect(entryContext.appState.catch!.status).toBe(400);
-      expect(entryContext.appState.catchBoundaryRouteId).toBe("root");
-      expect(entryContext.routeData).toEqual({});
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!.root.status).toBe(400);
+      expect(context.loaderData).toEqual({
+        root: null,
+        "routes/index": null,
+      });
     });
 
     test("thrown action responses catch deep", async () => {
@@ -1021,12 +1025,12 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.catch).toBeTruthy();
-      expect(entryContext.appState.catch!.status).toBe(400);
-      expect(entryContext.appState.catchBoundaryRouteId).toBe("routes/test");
-      expect(entryContext.routeData).toEqual({
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!["routes/test"].status).toBe(400);
+      expect(context.loaderData).toEqual({
         root: "root",
+        "routes/test": null,
       });
     });
 
@@ -1070,12 +1074,12 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.catch).toBeTruthy();
-      expect(entryContext.appState.catch!.status).toBe(400);
-      expect(entryContext.appState.catchBoundaryRouteId).toBe("routes/index");
-      expect(entryContext.routeData).toEqual({
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!["routes/index"].status).toBe(400);
+      expect(context.loaderData).toEqual({
         root: "root",
+        "routes/index": null,
       });
     });
 
@@ -1127,14 +1131,13 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.catch).toBeTruthy();
-      expect(entryContext.appState.catch.data).toBe("action");
-      expect(entryContext.appState.catchBoundaryRouteId).toBe(
-        "routes/__layout"
-      );
-      expect(entryContext.routeData).toEqual({
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!["routes/__layout"].data).toBe("action");
+      expect(context.loaderData).toEqual({
         root: "root",
+        "routes/__layout": null,
+        "routes/__layout/test": null,
       });
     });
 
@@ -1186,14 +1189,13 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.catch).toBeTruthy();
-      expect(entryContext.appState.catch.data).toBe("action");
-      expect(entryContext.appState.catchBoundaryRouteId).toBe(
-        "routes/__layout"
-      );
-      expect(entryContext.routeData).toEqual({
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!["routes/__layout"].data).toBe("action");
+      expect(context.loaderData).toEqual({
         root: "root",
+        "routes/__layout": null,
+        "routes/__layout/index": null,
       });
     });
 
@@ -1231,11 +1233,10 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.error).toBeTruthy();
-      expect(entryContext.appState.error.message).toBe("index");
-      expect(entryContext.appState.loaderBoundaryRouteId).toBe("root");
-      expect(entryContext.routeData).toEqual({
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!.root.message).toBe("index");
+      expect(context.loaderData).toEqual({
         root: "root",
       });
     });
@@ -1275,11 +1276,10 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.error).toBeTruthy();
-      expect(entryContext.appState.error.message).toBe("index");
-      expect(entryContext.appState.loaderBoundaryRouteId).toBe("routes/index");
-      expect(entryContext.routeData).toEqual({
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!["routes/index"].message).toBe("index");
+      expect(context.loaderData).toEqual({
         root: "root",
       });
     });
@@ -1324,11 +1324,13 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.error).toBeTruthy();
-      expect(entryContext.appState.error.message).toBe("test");
-      expect(entryContext.appState.loaderBoundaryRouteId).toBe("root");
-      expect(entryContext.routeData).toEqual({});
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!.root.message).toBe("test");
+      expect(context.loaderData).toEqual({
+        root: null,
+        "routes/test": null,
+      });
     });
 
     test("action errors bubble up for index routes", async () => {
@@ -1371,11 +1373,13 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.error).toBeTruthy();
-      expect(entryContext.appState.error.message).toBe("index");
-      expect(entryContext.appState.loaderBoundaryRouteId).toBe("root");
-      expect(entryContext.routeData).toEqual({});
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!.root.message).toBe("index");
+      expect(context.loaderData).toEqual({
+        root: null,
+        "routes/index": null,
+      });
     });
 
     test("action errors catch deep", async () => {
@@ -1418,12 +1422,12 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.error).toBeTruthy();
-      expect(entryContext.appState.error.message).toBe("test");
-      expect(entryContext.appState.loaderBoundaryRouteId).toBe("routes/test");
-      expect(entryContext.routeData).toEqual({
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!["routes/test"].message).toBe("test");
+      expect(context.loaderData).toEqual({
         root: "root",
+        "routes/test": null,
       });
     });
 
@@ -1467,12 +1471,12 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.error).toBeTruthy();
-      expect(entryContext.appState.error.message).toBe("index");
-      expect(entryContext.appState.loaderBoundaryRouteId).toBe("routes/index");
-      expect(entryContext.routeData).toEqual({
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!["routes/index"].message).toBe("index");
+      expect(context.loaderData).toEqual({
         root: "root",
+        "routes/index": null,
       });
     });
 
@@ -1524,14 +1528,13 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.error).toBeTruthy();
-      expect(entryContext.appState.error.message).toBe("action");
-      expect(entryContext.appState.loaderBoundaryRouteId).toBe(
-        "routes/__layout"
-      );
-      expect(entryContext.routeData).toEqual({
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!["routes/__layout"].message).toBe("action");
+      expect(context.loaderData).toEqual({
         root: "root",
+        "routes/__layout": null,
+        "routes/__layout/test": null,
       });
     });
 
@@ -1583,14 +1586,13 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[0][3];
-      expect(entryContext.appState.error).toBeTruthy();
-      expect(entryContext.appState.error.message).toBe("action");
-      expect(entryContext.appState.loaderBoundaryRouteId).toBe(
-        "routes/__layout"
-      );
-      expect(entryContext.routeData).toEqual({
+      let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
+      expect(context.errors).toBeTruthy();
+      expect(context.errors!["routes/__layout"].message).toBe("action");
+      expect(context.loaderData).toEqual({
         root: "root",
+        "routes/__layout": null,
+        "routes/__layout/index": null,
       });
     });
 
@@ -1633,11 +1635,10 @@ describe("shared server runtime", () => {
 
       let calls = build.entry.module.default.mock.calls;
       expect(calls.length).toBe(2 * DATA_CALL_MULTIPIER);
-      let entryContext = calls[1][3];
-      expect(entryContext.appState.error).toBeTruthy();
-      expect(entryContext.appState.error.message).toBe("thrown");
-      expect(entryContext.appState.trackBoundaries).toBe(false);
-      expect(entryContext.routeData).toEqual({});
+      let context = calls[1][3].staticHandlerContext;
+      expect(context.errors.root).toBeTruthy();
+      expect(context.errors.root.message).toBe("thrown");
+      expect(context.loaderData).toEqual({});
     });
 
     test("returns generic message if handleDocumentRequest throws a second time", async () => {

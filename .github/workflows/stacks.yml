@@ -255,7 +255,7 @@ jobs:
           npm run build
 
       - name: 🌳 Cypress run
-        uses: cypress-io/github-action@v4
+        uses: cypress-io/github-action@v5
         with:
           start: ${{ matrix.stack.cypress }}
           wait-on: "http://localhost:8811"

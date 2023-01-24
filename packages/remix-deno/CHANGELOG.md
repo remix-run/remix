@@ -1,5 +1,62 @@
 # `@remix-run/deno`
 
+## 1.11.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.11.1`
+
+## 1.11.0
+
+### Patch Changes
+
+- Introduces the `defer()` API from `@remix-run/router` with support for
+  server-rendering and HTTP streaming. This utility allows you to defer values
+  returned from `loader` functions by returning promises instead of resolved
+  values. This has been refered to as _"sending a promise over the wire"_.
+  ([#4920](https://github.com/remix-run/remix/pull/4920))
+
+  Informational Resources:
+
+  - <https://gist.github.com/jacob-ebey/9bde9546c1aafaa6bc8c242054b1be26>
+  - <https://github.com/remix-run/remix/blob/main/decisions/0004-streaming-apis.md>
+
+  Documentation Resources (better docs specific to Remix are in the works):
+
+  - <https://reactrouter.com/en/main/utils/defer>
+  - <https://reactrouter.com/en/main/components/await>
+  - <https://reactrouter.com/en/main/hooks/use-async-value>
+  - <https://reactrouter.com/en/main/hooks/use-async-error>
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.11.0`
+
+## 1.10.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.10.1`
+
+## 1.10.0
+
+### Patch Changes
+
+- Export `V2_HtmlMetaDescriptor` and `V2_MetaFunction` types from runtime
+  packages ([#4943](https://github.com/remix-run/remix/pull/4943))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.10.0`
+
+## 1.9.0
+
+### Patch Changes
+
+- Fixed type issues for the request handler context
+  ([#4715](https://github.com/remix-run/remix/pull/4715))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.9.0`
+
 ## 1.8.2
 
 ### Patch Changes

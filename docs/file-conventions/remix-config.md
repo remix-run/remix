@@ -132,7 +132,7 @@ The `serverBuildTarget` can be one of the following:
 
 ## serverDependenciesToBundle
 
-A list of regex patterns that determines if a module is transpiled and included in the server bundle. This can be useful when consuming ESM only packages in a CJS build.
+A list of regex patterns that determines if a module is transpiled and included in the server bundle. This can be useful when consuming ESM only packages in a CJS build, or when consuming packages with [CSS side-effect imports][css-side-effect-imports].
 
 For example, the `unified` ecosystem is all ESM-only. Let's also say we're using a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be able to consume those packages in a CJS app without having to use dynamic imports:
 
@@ -155,12 +155,15 @@ module.exports = {
 
 ## watchPaths
 
-A function for defining custom directories to watch while running [remix dev][remix-dev], in addition to [`appDirectory`][app-directory].
+An array, string, or async function that defines custom directories, relative to the project root, to watch while running [remix dev][remix-dev]. These directories are in addition to [`appDirectory`][app-directory].
 
 ```tsx
 exports.watchPaths = async () => {
-  return ["/some/path/*"];
+  return ["./some/path/*"];
 };
+
+// also valid
+exports.watchPaths = ["./some/path/*"];
 ```
 
 ## File Name Conventions
@@ -183,3 +186,4 @@ There are a few conventions that Remix uses you should be aware of.
 [an-awesome-visualization]: https://remix-routing-demo.netlify.app
 [remix-dev]: ../other-api/dev#remix-dev
 [app-directory]: #appDirectory
+[css-side-effect-imports]: ../guides/styling#css-side-effect-imports

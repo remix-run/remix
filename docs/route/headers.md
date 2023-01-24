@@ -113,4 +113,4 @@ export default function handleRequest(
 Just keep in mind that doing this will apply to _all_ document requests, but does not apply to `data` requests (for client-side transitions for example). For those, use [`handleDataRequest`][handledatarequest].
 
 [headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
-[handledatarequest]: ../file-conventions/entry.server.tsx
+[handledatarequest]: ../file-conventions/entry.server

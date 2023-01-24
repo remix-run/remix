@@ -19,7 +19,7 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cl
  */
 export type GetLoadContextFunction = (event: FetchEvent) => AppLoadContext;
 
-export type RequestHandler = ReturnType<typeof createRequestHandler>;
+export type RequestHandler = (event: FetchEvent) => Promise<Response>;
 
 /**
  * Returns a request handler for the Cloudflare runtime that serves the
@@ -33,7 +33,7 @@ export function createRequestHandler({
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
-}) {
+}): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return (event: FetchEvent) => {

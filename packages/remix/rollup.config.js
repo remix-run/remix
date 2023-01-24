@@ -1,4 +1,3 @@
-/* eslint-disable import/no-extraneous-dependencies */
 const babel = require("@rollup/plugin-babel").default;
 const path = require("path");
 

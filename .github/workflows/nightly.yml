@@ -1,6 +1,7 @@
 name: 🌒 Nightly Release
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 7 * * *" # every day at 12AM PST
 
@@ -38,11 +39,6 @@ jobs:
           node-version-file: ".nvmrc"
           cache: "yarn"
 
-      - name: 🦕 Setup deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: vx.x.x
-
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
@@ -57,36 +53,32 @@ jobs:
           # get latest nightly tag
           LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-committerdate | head -n 1)
 
-          # get changes since last nightly
-          CHANGES=$(git diff $LATEST_NIGHTLY_TAG..dev -- ./packages/ -- ':!packages/**/package.json')
-
-          # check if there are changes to ./packages
-          if [[ -n $(echo $CHANGES | xargs) ]]; then
+          # check if last commit to dev starts would be the nightly tag we're about to create (minus the date)
+          # if it is, we'll skip the nightly creation
+          # if not, we'll create a new nightly tag
+          if [[ ${LATEST_NIGHTLY_TAG} == v0.0.0-nightly-${SHORT_SHA}-* ]]; then
+            echo "🛑 Latest nightly tag is the same as the latest commit sha, skipping nightly release"
+          else
             # yyyyMMdd format (e.g. 20221207)
             DATE=$(date '+%Y%m%d')
             # v0.0.0-nightly-<short sha>-<date>
             NEXT_VERSION=0.0.0-nightly-${SHORT_SHA}-${DATE}
             # set output so it can be used in other jobs
             echo "NEXT_VERSION=${NEXT_VERSION}" >> $GITHUB_OUTPUT
-          else
-            echo "🛑 no changes since last nightly, skipping..."
           fi
-
-      - name: 🏗 Build
-        if: steps.version.outputs.NEXT_VERSION
-        run: yarn build
 
       - name: ⤴️ Update version
         if: steps.version.outputs.NEXT_VERSION
         run: |
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
-          git checkout -b nightly/${steps.version.outputs.NEXT_VERSION}
-          yarn run version ${steps.version.outputs.NEXT_VERSION} --skip-prompt
+          git checkout -b nightly/${{steps.version.outputs.NEXT_VERSION}}
+          yarn run version ${{steps.version.outputs.NEXT_VERSION}} --skip-prompt
+          git push origin --tags
 
-      - name: 🏷 Push Tag
+      - name: 🏗 Build
         if: steps.version.outputs.NEXT_VERSION
-        run: git push origin --tags
+        run: yarn build
 
       - name: 🔐 Setup npm auth
         if: steps.version.outputs.NEXT_VERSION

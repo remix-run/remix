@@ -1,4 +1,4 @@
-import { type Adapter, type Renderer, type Runtime } from "./remix";
+import type { Adapter, Renderer, Runtime } from "./remix";
 
 export type Export<Source extends string = string> = {
   source: Source;
@@ -100,7 +100,10 @@ const defaultRuntimeExports: ExportNames = {
 
 const exportNamesByRuntime: Record<Runtime, Partial<ExportNames>> = {
   cloudflare: {
-    value: ["createCloudflareKVSessionStorage"],
+    value: [
+      "createCloudflareKVSessionStorage",
+      "createWorkersKVSessionStorage",
+    ],
   },
   node: {
     type: ["HeadersInit", "RequestInfo", "RequestInit", "ResponseInit"],
@@ -176,7 +179,6 @@ const exportsByRenderer: Record<Renderer, Partial<ExportNames>> = {
       "NavLinkProps",
       "RemixBrowserProps",
       "RemixServerProps",
-      "ShouldReloadFunction",
       "SubmitFunction",
       "SubmitOptions",
       "ThrownResponse",

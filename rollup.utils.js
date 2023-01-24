@@ -267,6 +267,7 @@ function getMagicExports(packageName) {
         "createCookieSessionStorage",
         "createMemorySessionStorage",
         "createSessionStorage",
+        "createWorkersKVSessionStorage",
       ],
     },
     "@remix-run/node": {
@@ -326,7 +327,6 @@ function getMagicExports(packageName) {
         "NavLinkProps",
         "RemixBrowserProps",
         "RemixServerProps",
-        "ShouldReloadFunction",
         "SubmitFunction",
         "SubmitOptions",
         "ThrownResponse",

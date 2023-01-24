@@ -1,12 +1,15 @@
 import type { ComponentType } from "react";
-import type { Params, Location } from "react-router-dom";
+import type {
+  DataRouteMatch,
+  Params,
+  Location,
+  ShouldRevalidateFunction,
+} from "react-router-dom";
 
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
-import type { ClientRoute, EntryRoute } from "./routes";
+import type { EntryRoute } from "./routes";
 import type { RouteData } from "./routeData";
-import type { RouteMatch as BaseRouteMatch } from "./routeMatching";
-import type { Submission } from "./transition";
 
 export interface RouteModules {
   [routeId: string]: RouteModule;
@@ -14,7 +17,7 @@ export interface RouteModules {
 
 export interface RouteModule {
   CatchBoundary?: CatchBoundaryComponent;
-  ErrorBoundary?: ErrorBoundaryComponent;
+  ErrorBoundary?: ErrorBoundaryComponent | V2_ErrorBoundaryComponent;
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
@@ -23,28 +26,35 @@ export interface RouteModule {
     | V1_HtmlMetaDescriptor
     | V2_MetaFunction
     | V2_HtmlMetaDescriptor[];
-  unstable_shouldReload?: ShouldReloadFunction;
+  shouldRevalidate?: ShouldRevalidateFunction;
 }
 
 /**
  * A React component that is rendered when the server throws a Response.
  *
- * @see https://remix.run/api/conventions#catchboundary
+ * @see https://remix.run/route/catch-boundary
  */
 export type CatchBoundaryComponent = ComponentType<{}>;
 
 /**
  * A React component that is rendered when there is an error on a route.
  *
- * @see https://remix.run/api/conventions#errorboundary
+ * @see https://remix.run/route/error-boundary
  */
 export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
+
+/**
+ * V2 version of the ErrorBoundary that eliminates the distinction between
+ * Error and Catch Boundaries and behaves like RR 6.4 errorElement and captures
+ * errors with useRouteError()
+ */
+export type V2_ErrorBoundaryComponent = ComponentType;
 
 /**
  * A function that defines `<link>` tags to be inserted into the `<head>` of
  * the document on route transitions.
  *
- * @see https://remix.run/api/remix#meta-links-scripts
+ * @see https://remix.run/route/meta
  */
 export interface LinksFunction {
   (): LinkDescriptor[];
@@ -55,7 +65,7 @@ export interface LinksFunction {
  * `<meta>` tags for a route. These tags will be merged with (and take
  * precedence over) tags from parent routes.
  *
- * @see https://remix.run/api/remix#meta-links-scripts
+ * @see https://remix.run/route/meta
  */
 export interface V1_MetaFunction {
   (args: {
@@ -69,7 +79,7 @@ export interface V1_MetaFunction {
 // TODO: Replace in v2
 export type MetaFunction = V1_MetaFunction;
 
-export interface RouteMatchWithMeta<Route> extends BaseRouteMatch<Route> {
+export interface RouteMatchWithMeta extends DataRouteMatch {
   meta: V2_HtmlMetaDescriptor[];
 }
 
@@ -79,7 +89,7 @@ export interface V2_MetaFunction {
     parentsData: RouteData;
     params: Params;
     location: Location;
-    matches: RouteMatchWithMeta<ClientRoute>[];
+    matches: RouteMatchWithMeta[];
   }): V2_HtmlMetaDescriptor[] | undefined;
 }
 
@@ -113,28 +123,6 @@ export type V2_HtmlMetaDescriptor =
   | { [name: string]: string };
 
 /**
- * During client side transitions Remix will optimize reloading of routes that
- * are currently on the page by avoiding loading routes that aren't changing.
- * However, in some cases, like form submissions or search params Remix doesn't
- * know which routes need to be reloaded so it reloads them all to be safe.
- *
- * This function lets apps further optimize by returning `false` when Remix is
- * about to reload the route. A common case is a root loader with nothing but
- * environment variables: after form submissions the root probably doesn't need
- * to be reloaded.
- *
- * @see https://remix.run/api/conventions#unstable_shouldreload
- */
-export interface ShouldReloadFunction {
-  (args: {
-    url: URL;
-    prevUrl: URL;
-    params: Params;
-    submission?: Submission;
-  }): boolean;
-}
-
-/**
  * A React component that is rendered for a route.
  */
 export type RouteComponent = ComponentType<{}>;
@@ -142,12 +130,12 @@ export type RouteComponent = ComponentType<{}>;
 /**
  * An arbitrary object that is associated with a route.
  *
- * @see https://remix.run/api/conventions#handle
+ * @see https://remix.run/route/handle
  */
 export type RouteHandle = any;
 
 export async function loadRouteModule(
-  route: EntryRoute | ClientRoute,
+  route: EntryRoute,
   routeModulesCache: RouteModules
 ): Promise<RouteModule> {
   if (route.id in routeModulesCache) {
@@ -168,4 +156,27 @@ export async function loadRouteModule(
       // check out of this hook cause the DJs never gonna re[s]olve this
     });
   }
+}
+
+/**
+ * @deprecated The `unstable_shouldReload` function has been removed, so this
+ * function will never run and route data will be revalidated on every request.
+ * Please update the function name to `shouldRevalidate` and use the
+ * `ShouldRevalidateFunction` interface.
+ */
+export interface ShouldReloadFunction {
+  (args: {
+    url: URL;
+    prevUrl: URL;
+    params: Params;
+    submission?: Submission;
+  }): boolean;
+}
+
+interface Submission {
+  action: string;
+  method: string;
+  formData: FormData;
+  encType: string;
+  key: string;
 }

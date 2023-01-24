@@ -22,7 +22,7 @@ title: Remix Packages
 
 ### `<PrefetchPageLinks />`
 
-[Moved →][moved]
+[Moved →][moved-68]
 
 ### `<NavLink>`
 
@@ -162,7 +162,7 @@ title: Remix Packages
 
 [Moved →][moved-35]
 
-#### `unstable_createFileUploadHandler (node)`
+#### `unstable_createFileUploadHandler`
 
 [Moved →][moved-36]
 
@@ -258,7 +258,7 @@ title: Remix Packages
 
 [Moved →][moved-59]
 
-### `createCloudflareKVSessionStorage` (cloudflare-workers)
+### `createWorkersKVSessionStorage` (Cloudflare Workers)
 
 [Moved →][moved-60]
 
@@ -330,7 +330,7 @@ title: Remix Packages
 [moved-33]: ../utils/redirect
 [moved-34]: ../utils/parse-multipart-form-data
 [moved-35]: ../utils/parse-multipart-form-data#uploadhandler
-[moved-36]: ../utils/unstable-create-file-upload-handler#unstable_createfileuploadhandler-node
+[moved-36]: ../utils/unstable-create-file-upload-handler
 [moved-37]: ../utils/unstable-create-memory-upload-handler
 [moved-38]: ../guides/file-uploads#upload-handler-composition
 [moved-39]: ../utils/cookies
@@ -354,7 +354,7 @@ title: Remix Packages
 [moved-57]: ../utils/sessions#createcookiesessionstorage
 [moved-58]: ../utils/sessions#creatememorysessionstorage
 [moved-59]: ../utils/sessions#createfilesessionstorage-node
-[moved-60]: ../utils/sessions#createcloudflarekvsessionstorage-cloudflare-workers
+[moved-60]: ../utils/sessions#createworkerskvsessionstorage-cloudflare-workers
 [moved-61]: ../utils/sessions#createarctablesessionstorage-architect-amazon-dynamodb
 [moved-62]: ../utils/sessions#session-api
 [moved-63]: ../utils/sessions#sessionhaskey
@@ -362,3 +362,4 @@ title: Remix Packages
 [moved-65]: ../utils/sessions#sessionflashkey-value
 [moved-66]: ../utils/sessions#sessionget
 [moved-67]: ../utils/sessions#sessionunset
+[moved-68]: ../components/prefetch-page-links
