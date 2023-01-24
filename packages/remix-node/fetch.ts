@@ -61,6 +61,12 @@ export {
   NodeResponse as Response,
 };
 
+export const getReturnableResponse = (res: any) => {
+  if (res instanceof WebResponse && !(res instanceof NodeResponse))
+    return new NodeResponse(res.body, res);
+  return res;
+};
+
 export const fetch: typeof webFetch = (
   info: NodeRequestInfo,
   init?: NodeRequestInit
@@ -74,13 +80,9 @@ export const fetch: typeof webFetch = (
 
   return webFetch(info, init as RequestInit)
     .then((res) => {
-      if (res instanceof WebResponse && !(res instanceof NodeResponse))
-        return new NodeResponse(res.body, res);
-      return res;
+      return getReturnableResponse(res);
     })
     .catch((res) => {
-      if (res instanceof WebResponse && !(res instanceof NodeResponse))
-        return new NodeResponse(res.body, res);
-      return res;
+      return getReturnableResponse(res);
     });
 };

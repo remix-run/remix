@@ -1,7 +1,15 @@
 import { PassThrough } from "stream";
 import { Response as WebResponse } from "@remix-run/web-fetch";
 
-import { Request, fetch, Response } from "../fetch";
+import { Request, fetch, Response, getReturnableResponse } from "../fetch";
+const mockWebResponse = () => new WebResponse();
+const mockGetReturnableResponse = (res) => getReturnableResponse(res);
+jest.mock("../fetch", () => ({
+  ...jest.requireActual("../fetch"),
+  fetch: async () => {
+    return mockGetReturnableResponse(mockWebResponse());
+  },
+}));
 
 let test = {
   source: [
