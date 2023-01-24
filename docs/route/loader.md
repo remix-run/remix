@@ -190,7 +190,7 @@ See also:
 
 ## Throwing Responses in Loaders
 
-Along with returning responses, you can also throw Response objects from your loaders, allowing you to break through the call stack and show an alternate UI with contextual data through the `CatchBoundary`.
+Along with returning responses, you can also throw Response objects from your loaders, allowing you to break through the call stack and either redirect or show an alternate UI with contextual data through the `CatchBoundary`.
 
 Here is a full example showing how you can create utility functions that throw responses to stop code execution in the loader and move over to an alternative UI.
 
@@ -223,7 +223,8 @@ export async function requireUserSession(request) {
   );
   if (!session) {
     // can throw our helpers like `redirect` and `json` because they
-    // return responses.
+    // return responses. A redirect response will redirect, other
+    // responses will trigger the `CatchBoundary`.
     throw redirect("/login", 302);
   }
   return session.get("user");
