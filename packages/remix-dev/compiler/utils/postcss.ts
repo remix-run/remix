@@ -54,7 +54,9 @@ export async function loadPostcssPlugins({
       );
 
       plugins.push(...postcssConfig.plugins);
-    } catch (err) {}
+    } catch (err) {
+      // If they don't have a PostCSS config, just ignore it.
+    }
   }
 
   if (config.future.unstable_tailwind) {
@@ -101,6 +103,10 @@ let tailwindPluginCache = new Map<string, AcceptedPlugin | null>();
 async function loadTailwindPlugin(
   config: RemixConfig
 ): Promise<AcceptedPlugin | null> {
+  if (!config.future.unstable_tailwind) {
+    return null;
+  }
+
   let { rootDirectory } = config;
   let cacheKey = rootDirectory;
   let cachedTailwindPlugin = tailwindPluginCache.get(cacheKey);
@@ -108,24 +114,29 @@ async function loadTailwindPlugin(
     return cachedTailwindPlugin;
   }
 
-  let tailwindPlugin: AcceptedPlugin | null = null;
+  let tailwindPath: string | null = null;
 
   try {
-    // First ensure we have a Tailwind config
+    // First ensure they have a Tailwind config
     require.resolve("./tailwind.config", { paths: [rootDirectory] });
 
     // Load Tailwind from the project directory
-    let tailwindPath = require.resolve("tailwindcss", {
+    tailwindPath = require.resolve("tailwindcss", {
       paths: [rootDirectory],
     });
+  } catch (err) {
+    // If they don't have a Tailwind config or Tailwind installed, just ignore it.
+    return null;
+  }
 
-    let importedTailwindPlugin = (await import(tailwindPath))?.default;
+  let importedTailwindPlugin = tailwindPath
+    ? (await import(tailwindPath))?.default
+    : null;
 
-    // Check that it declares itself as a PostCSS plugin
-    if (importedTailwindPlugin && importedTailwindPlugin.postcss) {
-      tailwindPlugin = importedTailwindPlugin;
-    }
-  } catch (err) {}
+  let tailwindPlugin: AcceptedPlugin | null =
+    importedTailwindPlugin && importedTailwindPlugin.postcss // Check that it declares itself as a PostCSS plugin
+      ? importedTailwindPlugin
+      : null;
 
   tailwindPluginCache.set(cacheKey, tailwindPlugin);
 
