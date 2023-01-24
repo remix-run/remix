@@ -336,7 +336,7 @@ test.describe("PostCSS", () => {
       export function Test() {
         return (
           <div data-testid="automatic-tailwind-plugin-insertion" className="automatic-tailwind-plugin-insertion-test">
-            Automatic Tailwind plugin test
+            Automatic Tailwind plugin insertion test
           </div>
         );
       }

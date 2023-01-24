@@ -74,7 +74,7 @@ test.describe("Tailwind", () => {
         ...cssModulesFixture(),
         ...vanillaExtractClassCompositionFixture(),
         ...vanillaExtractTailwindFunctionsFixture(),
-        ...cssSideEffectsFixture(),
+        ...cssSideEffectImportsFixture(),
       },
     });
     appFixture = await createAppFixture(fixture);
@@ -197,7 +197,7 @@ test.describe("Tailwind", () => {
       export function Test() {
         return (
           <div data-testid="vanilla-extract-class-composition" className={styles.root}>
-            Vanilla Extract test
+            Vanilla Extract class composition test
           </div>
         );
       }
@@ -263,7 +263,7 @@ test.describe("Tailwind", () => {
     expect(padding).toBe(TEST_PADDING_VALUE);
   });
 
-  let cssSideEffectsFixture = () => ({
+  let cssSideEffectImportsFixture = () => ({
     "app/routes/css-side-effect-imports-test.jsx": js`
       import { Test } from "~/test-components/css-side-effect-imports";
 
