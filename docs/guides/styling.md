@@ -650,7 +650,6 @@ module.exports = (ctx) => {
         // PostCSS plugins for other styles...
       };
 };
-
 ```
 
 ### Manual PostCSS Integration
