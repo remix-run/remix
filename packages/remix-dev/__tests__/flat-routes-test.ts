@@ -88,8 +88,8 @@ describe("flatRoutes", () => {
 
     for (let [input, expected] of tests) {
       it(`"${input}" -> "${expected}"`, () => {
-        let routeSegments = getRouteSegments(input);
         let isIndex = isIndexRoute(input);
+        let routeSegments = getRouteSegments(input);
         expect(createRoutePath(routeSegments, isIndex)).toBe(expected);
       });
     }
@@ -184,17 +184,8 @@ describe("flatRoutes", () => {
       [
         "routes/_landing/index.tsx",
         {
-          id: "routes/_landing",
+          id: "routes/_landing/index",
           parentId: "root",
-          path: undefined,
-        },
-      ],
-      [
-        "routes/_landing._index.tsx",
-        {
-          id: "routes/_landing._index",
-          index: true,
-          parentId: "routes/_landing",
           path: undefined,
         },
       ],
@@ -202,7 +193,8 @@ describe("flatRoutes", () => {
         "routes/_landing._index/index.tsx",
         {
           id: "routes/_landing._index/index",
-          parentId: "routes/_landing",
+          parentId: "routes/_landing/index",
+          path: undefined,
           index: true,
         },
       ],
@@ -210,7 +202,7 @@ describe("flatRoutes", () => {
         "routes/_landing.index.tsx",
         {
           id: "routes/_landing.index",
-          parentId: "routes/_landing",
+          parentId: "routes/_landing/index",
           path: "index",
         },
       ],
@@ -277,6 +269,14 @@ describe("flatRoutes", () => {
           id: "routes/app.projects.$id",
           parentId: "routes/app.projects",
           path: ":id",
+        },
+      ],
+      [
+        "routes/folder/route.tsx",
+        {
+          id: "routes/folder/route",
+          parentId: "root",
+          path: "folder",
         },
       ],
 
@@ -570,6 +570,13 @@ describe("flatRoutes", () => {
           id: "routes/brand/index",
           parentId: "root",
           path: "brand",
+        },
+      ],
+      [
+        "routes/brand._index.tsx",
+        {
+          id: "routes/brand._index",
+          parentId: "routes/brand/index",
           index: true,
         },
       ],
