@@ -1,11 +1,16 @@
 import tsConfigPaths from "tsconfig-paths";
 
-import { loadTsConfig } from "./configLoader";
-import { writeConfigDefaults } from "./write-config-defaults";
-export { loadTsConfig } from "./configLoader";
+export function createMatchPath(tsconfigPath: string | undefined) {
+  // There is no tsconfig to match paths against.
+  if (!tsconfigPath) {
+    return undefined;
+  }
 
-export function createMatchPath() {
-  let configLoaderResult = loadTsConfig();
+  // When passing a absolute path, loadConfig assumes that the path contains
+  // a tsconfig file.
+  // Ref.: https://github.com/dividab/tsconfig-paths/blob/v4.0.0/src/__tests__/config-loader.test.ts#L74
+  let configLoaderResult = tsConfigPaths.loadConfig(tsconfigPath);
+
   if (configLoaderResult.resultType === "failed") {
     if (configLoaderResult.message === "Missing baseUrl in compilerOptions") {
       throw new Error(
@@ -14,8 +19,6 @@ export function createMatchPath() {
     }
     return undefined;
   }
-
-  writeConfigDefaults(configLoaderResult.configFileAbsolutePath);
 
   return tsConfigPaths.createMatchPath(
     configLoaderResult.absoluteBaseUrl,

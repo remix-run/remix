@@ -1,8 +1,12 @@
 .DS_Store
 
+/.env
 /build/
+/packages/*/dist/
+/packages/*/LICENSE.md
 node_modules/
 yarn-error.log
+tsconfig.tsbuildinfo
 
 /jacob
 /fixtures/cloudflare
@@ -11,6 +15,7 @@ yarn-error.log
 /fixtures/deno-app
 /playwright-report
 /test-results
+/uploads
 
 .eslintcache
 .tmp

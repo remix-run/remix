@@ -1,35 +1,30 @@
 import * as path from "path";
-import os from "os";
 import { execSync } from "child_process";
 import * as fse from "fs-extra";
-import exitHook from "exit-hook";
 import ora from "ora";
 import prettyMs from "pretty-ms";
-import WebSocket from "ws";
-import type { Server } from "http";
-import type * as Express from "express";
-import type { createApp as createAppType } from "@remix-run/serve";
-import getPort, { makeRange } from "get-port";
+import * as esbuild from "esbuild";
 
-import { BuildMode, isBuildMode } from "../build";
 import * as colors from "../colors";
 import * as compiler from "../compiler";
+import * as devServer from "../devServer";
+import * as devServer2 from "../devServer2";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
-import { createApp } from "./create";
-import { loadEnv } from "../env";
 import { log } from "../logging";
+import { createApp } from "./create";
+import { getPreferredPackageManager } from "./getPreferredPackageManager";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
-
-export * as migrate from "./migrate";
+import runCodemod from "../codemod";
+import { CodemodError } from "../codemod/utils/error";
+import { TaskError } from "../codemod/utils/task";
 
 export async function create({
   appTemplate,
   projectDir,
   remixVersion,
   installDeps,
-  packageManager,
   useTypeScript,
   githubToken,
   debug,
@@ -38,7 +33,6 @@ export async function create({
   projectDir: string;
   remixVersion?: string;
   installDeps: boolean;
-  packageManager: "npm" | "yarn" | "pnpm";
   useTypeScript: boolean;
   githubToken?: string;
   debug?: boolean;
@@ -49,7 +43,6 @@ export async function create({
     projectDir,
     remixVersion,
     installDeps,
-    packageManager,
     useTypeScript,
     githubToken,
     debug,
@@ -58,31 +51,57 @@ export async function create({
   spinner.clear();
 }
 
+type InitFlags = {
+  deleteScript?: boolean;
+};
 export async function init(
   projectDir: string,
-  packageManager: "npm" | "yarn" | "pnpm"
+  { deleteScript = true }: InitFlags = {}
 ) {
   let initScriptDir = path.join(projectDir, "remix.init");
+  let initScriptTs = path.resolve(initScriptDir, "index.ts");
   let initScript = path.resolve(initScriptDir, "index.js");
 
-  let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
-
-  if (await fse.pathExists(initScript)) {
-    execSync(`${packageManager} install`, {
-      stdio: "ignore",
-      cwd: initScriptDir,
+  if (await fse.pathExists(initScriptTs)) {
+    await esbuild.build({
+      entryPoints: [initScriptTs],
+      format: "cjs",
+      platform: "node",
+      outfile: initScript,
     });
-    let initFn = require(initScript);
-    try {
-      await initFn({ rootDirectory: projectDir, isTypeScript });
-    } catch (error) {
-      if (error instanceof Error) {
-        error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
-          error.message
-        }`;
-      }
-      throw error;
+  }
+  if (!(await fse.pathExists(initScript))) {
+    return;
+  }
+
+  let initPackageJson = path.resolve(initScriptDir, "package.json");
+  let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
+  let packageManager = getPreferredPackageManager();
+
+  if (await fse.pathExists(initPackageJson)) {
+    execSync(`${packageManager} install`, {
+      cwd: initScriptDir,
+      stdio: "ignore",
+    });
+  }
+
+  let initFn = require(initScript);
+  if (typeof initFn !== "function" && initFn.default) {
+    initFn = initFn.default;
+  }
+  try {
+    await initFn({ isTypeScript, packageManager, rootDirectory: projectDir });
+
+    if (deleteScript) {
+      await fse.remove(initScriptDir);
     }
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
+        error.message
+      }`;
+    }
+    throw error;
   }
 }
 
@@ -123,11 +142,11 @@ export async function build(
   modeArg?: string,
   sourcemap: boolean = false
 ): Promise<void> {
-  let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Production;
+  let mode = compiler.parseMode(modeArg ?? "", "production");
 
   log(`Building Remix app in ${mode} mode...`);
 
-  if (modeArg === BuildMode.Production && sourcemap) {
+  if (modeArg === "production" && sourcemap) {
     console.warn(
       "\n⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️"
     );
@@ -146,10 +165,10 @@ export async function build(
   let config = await readConfig(remixRoot);
   fse.emptyDirSync(config.assetsBuildDirectory);
   await compiler.build(config, {
-    mode: mode,
+    mode,
     sourcemap,
-    onBuildFailure: (failure: compiler.BuildError) => {
-      compiler.formatBuildFailure(failure);
+    onCompileFailure: (failure) => {
+      compiler.logCompileFailure(failure);
       throw Error();
     },
   });
@@ -157,153 +176,73 @@ export async function build(
   log(`Built in ${prettyMs(Date.now() - start)}`);
 }
 
-type WatchCallbacks = {
-  onRebuildStart?(): void;
-  onInitialBuild?(): void;
-};
-
 export async function watch(
   remixRootOrConfig: string | RemixConfig,
-  modeArg?: string,
-  callbacks?: WatchCallbacks
+  modeArg?: string
 ): Promise<void> {
-  let { onInitialBuild, onRebuildStart } = callbacks || {};
-  let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
+  let mode = compiler.parseMode(modeArg ?? "", "development");
   console.log(`Watching Remix app in ${mode} mode...`);
 
-  let start = Date.now();
   let config =
     typeof remixRootOrConfig === "object"
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
 
-  let wss = new WebSocket.Server({ port: config.devServerPort });
-  function broadcast(event: { type: string; [key: string]: any }) {
-    setTimeout(() => {
-      wss.clients.forEach((client) => {
-        if (client.readyState === WebSocket.OPEN) {
-          client.send(JSON.stringify(event));
-        }
-      });
-    }, config.devServerBroadcastDelay);
-  }
-
-  function log(_message: string) {
-    let message = `💿 ${_message}`;
-    console.log(message);
-    broadcast({ type: "LOG", message });
-  }
-
-  let closeWatcher = await compiler.watch(config, {
+  devServer.liveReload(config, {
     mode,
-    onInitialBuild,
-    onRebuildStart() {
-      start = Date.now();
-      onRebuildStart?.();
-      log("Rebuilding...");
-    },
-    onRebuildFinish() {
-      log(`Rebuilt in ${prettyMs(Date.now() - start)}`);
-      broadcast({ type: "RELOAD" });
-    },
-    onFileCreated(file) {
-      log(`File created: ${path.relative(process.cwd(), file)}`);
-    },
-    onFileChanged(file) {
-      log(`File changed: ${path.relative(process.cwd(), file)}`);
-    },
-    onFileDeleted(file) {
-      log(`File deleted: ${path.relative(process.cwd(), file)}`);
-    },
+    onInitialBuild: (durationMs) =>
+      console.log(`💿 Built in ${prettyMs(durationMs)}`),
   });
-
-  console.log(`💿 Built in ${prettyMs(Date.now() - start)}`);
-
-  let resolve: () => void;
-  exitHook(() => {
-    resolve();
-  });
-  return new Promise<void>((r) => {
-    resolve = r;
-  }).then(async () => {
-    wss.close();
-    await closeWatcher();
-    fse.emptyDirSync(config.assetsBuildDirectory);
-    fse.rmSync(config.serverBuildPath);
-  });
+  return await new Promise(() => {});
 }
 
-export async function dev(remixRoot: string, modeArg?: string) {
-  let createApp: typeof createAppType;
-  let express: typeof Express;
-  try {
-    // eslint-disable-next-line import/no-extraneous-dependencies
-    let serve = require("@remix-run/serve");
-    createApp = serve.createApp;
-    express = require("express");
-  } catch (err) {
-    throw new Error(
-      "Could not locate @remix-run/serve. Please verify you have it installed " +
-        "to use the dev command."
-    );
-  }
-
+export async function dev(
+  remixRoot: string,
+  modeArg?: string,
+  flags: { port?: number; appServerPort?: number } = {}
+) {
   let config = await readConfig(remixRoot);
-  let mode = isBuildMode(modeArg) ? modeArg : BuildMode.Development;
+  let mode = compiler.parseMode(modeArg ?? "", "development");
 
-  await loadEnv(config.rootDirectory);
-
-  let port = await getPort({
-    port: process.env.PORT ? Number(process.env.PORT) : makeRange(3000, 3100),
-  });
-
-  if (config.serverEntryPoint) {
-    throw new Error("remix dev is not supported for custom servers.");
+  if (config.future.unstable_dev !== false) {
+    await devServer2.serve(config, flags);
+    return await new Promise(() => {});
   }
 
-  let app = express();
-  app.disable("x-powered-by");
-  app.use((_, __, next) => {
-    purgeAppRequireCache(config.serverBuildPath);
-    next();
-  });
-  app.use(createApp(config.serverBuildPath, mode));
-
-  let server: Server | null = null;
-
-  try {
-    await watch(config, mode, {
-      onInitialBuild: () => {
-        let onListen = () => {
-          let address =
-            process.env.HOST ||
-            Object.values(os.networkInterfaces())
-              .flat()
-              .find((ip) => ip?.family === "IPv4" && !ip.internal)?.address;
-
-          if (!address) {
-            console.log(`Remix App Server started at http://localhost:${port}`);
-          } else {
-            console.log(
-              `Remix App Server started at http://localhost:${port} (http://${address}:${port})`
-            );
-          }
-        };
-
-        server = process.env.HOST
-          ? app.listen(port, process.env.HOST, onListen)
-          : app.listen(port, onListen);
-      },
-    });
-  } finally {
-    server!?.close();
-  }
+  return devServer.serve(config, mode, flags.port);
 }
 
-function purgeAppRequireCache(buildPath: string) {
-  for (let key in require.cache) {
-    if (key.startsWith(buildPath)) {
-      delete require.cache[key];
+export async function codemod(
+  codemodName?: string,
+  projectDir?: string,
+  { dry = false, force = false } = {}
+) {
+  if (!codemodName) {
+    console.error(colors.red("Error: Missing codemod name"));
+    console.log(
+      "Usage: " +
+        colors.gray(
+          `remix codemod <${colors.arg("codemod")}> [${colors.arg(
+            "projectDir"
+          )}]`
+        )
+    );
+    process.exit(1);
+  }
+  try {
+    await runCodemod(projectDir ?? process.cwd(), codemodName, {
+      dry,
+      force,
+    });
+  } catch (error: unknown) {
+    if (error instanceof CodemodError) {
+      console.error(`${colors.red("Error:")} ${error.message}`);
+      if (error.additionalInfo) console.info(colors.gray(error.additionalInfo));
+      process.exit(1);
     }
+    if (error instanceof TaskError) {
+      process.exit(1);
+    }
+    throw error;
   }
 }

@@ -15,25 +15,25 @@ Many times people reach for global state management libraries in React like redu
 
 There are a few ways to call an action and get the routes to revalidate:
 
-- [`<Form>`](../api/remix#form)
-- [`useSubmit()`](../api/remix#usesubmit)
-- [`useFetcher()`](../api/remix#usefetcher)
+- [`<Form>`][form]
+- [`useSubmit()`][use-submit]
+- [`useFetcher()`][use-fetcher]
 
 This guide only covers `<Form>`. We suggest you read the docs for the other two after this guide to get a sense of how to use them. Most of this guide applies to `useSubmit` but `useFetcher` is a bit different.
 
 ## Plain HTML Forms
 
-After teaching workshops with our company <a href="https://reacttraining.com">React Training</a> for years, we've learned that a lot of newer web developers (through no fault of their own) don't actually know how `<form>` works!
+After teaching workshops with our company <a href="https://reacttraining.com">React Training</a> for years, we've learned that a lot of newer web developers (though no fault of their own) don't actually know how `<form>` works!
 
-Since Remix `<Form>` works identically to `<form>` (with a couple extra goodies for optimistic UI etc.), we're going to brush up on plain ol' HTML forms, so you can learn both HTML and Remix at the same time.
+Since Remix `<Form>` works identically to `<form>` (with a couple of extra goodies for optimistic UI etc.), we're going to brush up on plain ol' HTML forms, so you can learn both HTML and Remix at the same time.
 
 ### HTML Form HTTP Verbs
 
-Native forms support two HTTP verbs: `GET` and `POST`. Remix uses these verbs to understand your intent. If it's a get, Remix will figure out what parts of the page are changing and only fetch the data for the changing layouts, and use the cached data for the layouts that don't change. When it's a POST, Remix will reload all data to ensure it captures the update from the server. Let's take a look at both.
+Native forms support two HTTP verbs: `GET` and `POST`. Remix uses these verbs to understand your intent. If it's a GET, Remix will figure out what parts of the page are changing and only fetch the data for the changing layouts, and use the cached data for the layouts that don't change. When it's a POST, Remix will reload all data to ensure it captures the update from the server. Let's take a look at both.
 
 ### HTML Form GET
 
-A `GET` is just a normal navigation where the form data is passed in the URL search params. You use it for normal navigation, just like `<a>` except the user gets to provide the data in the search params through the form. Aside from search pages, it's use with `<form>` is pretty rare.
+A `GET` is just a normal navigation where the form data is passed in the URL search params. You use it for normal navigation, just like `<a>` except the user gets to provide the data in the search params through the form. Aside from search pages, its use with `<form>` is pretty rare.
 
 Consider this form:
 
@@ -106,15 +106,15 @@ When the user submits this form, the browser will serialize the fields into a re
 
 The data is made available to the server's request handler so you can create the record. After that, you return a response. In this case, you'd probably redirect to the newly created project. A remix action would look something like this:
 
-```js filename=app/routes/projects
-export async function action({ request }) {
+```tsx filename=app/routes/projects.tsx
+export async function action({ request }: ActionArgs) {
   const body = await request.formData();
   const project = await createProject(body);
   return redirect(`/projects/${project.id}`);
 }
 ```
 
-The browser started at `/projects/new`, then posted to `/projects` with the form data in the request, then the server redirected the browser to `/projects/123`. While this is all happening, the browser goes into it's normal "loading" state: the address progress bar fills up, the favicon turns into a spinner, etc. It's actually a decent user experience.
+The browser started at `/projects/new`, then posted to `/projects` with the form data in the request, then the server redirected the browser to `/projects/123`. While this is all happening, the browser goes into its normal "loading" state: the address progress bar fills up, the favicon turns into a spinner, etc. It's actually a decent user experience.
 
 If you're newer to web development, you may not have ever used a form this way. Lots of folks have always done:
 
@@ -175,14 +175,12 @@ export default function NewProject() {
 
 Now add the route action. Any form submissions that are "post" will call your data "action". Any "get" submissions (`<Form method="get">`) will be handled by your "loader".
 
-```tsx [5-11]
-import type { ActionFunction } from "@remix-run/{runtime}";
-import { redirect } from "@remix-run/{runtime}";
+```tsx lines=[1,5-9]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
 // Note the "action" export name, this will handle our form POST
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const formData = await request.formData();
   const project = await createProject(formData);
   return redirect(`/projects/${project.id}`);
@@ -211,10 +209,8 @@ const [errors, project] = await createProject(formData);
 
 If there are validation errors, we want to go back to the form and display them.
 
-```tsx [5,7-10]
-export const action: ActionFunction = async ({
-  request,
-}) => {
+```tsx lines=[3,5-8]
+export const action = async ({ request }: ActionArgs) => {
   const formData = await request.formData();
   const [errors, project] = await createProject(formData);
 
@@ -229,18 +225,17 @@ export const action: ActionFunction = async ({
 
 Just like `useLoaderData` returns the values from the `loader`, `useActionData` will return the data from the action. It will only be there if the navigation was a form submission, so you always have to check if you've got it or not.
 
-```tsx [2,11,21,26-30,38,43-47]
-import { redirect } from "@remix-run/{runtime}";
+```tsx lines=[3,10,20,25-29,37,42-46]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useActionData } from "@remix-run/react";
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   // ...
 };
 
 export default function NewProject() {
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   return (
     <form method="post" action="/projects/new">
@@ -292,16 +287,16 @@ You can ship this code as-is. The browser will handle the pending UI and interru
 
 ### Graduate to `<Form>` and add pending UI
 
-Let's use progressive enhancement to make this UX a bit more fancy. By changing it from `<Form reloadDocument>` to `<Form>`, Remix will emulate the browser behavior with `fetch`. It will also give you access to the pending form data so you can build pending UI.
+Let's use progressive enhancement to make this UX a bit more fancy. By changing it from `<form>` to `<Form>`, Remix will emulate the browser behavior with `fetch`. It will also give you access to the pending form data so you can build pending UI.
 
 ```tsx [2, 11]
-import { redirect } from "@remix-run/{runtime}";
+import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useActionData, Form } from "@remix-run/react";
 
 // ...
 
 export default function NewProject() {
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   return (
     // note the capital "F" <Form> now
@@ -314,12 +309,12 @@ export default function NewProject() {
 
 If you don't have the time or drive to do the rest of the job here, use `<Form reloadDocument>`. This lets the browser continue to handle the pending UI state (spinner in the favicon of the tab, progress bar in the address bar, etc.) If you simply use `<Form>` without implementing pending UI, the user will have no idea anything is happening when they submit a form.
 
-<docs-info>We recommend always using capital-F Form, and if you want to let the browser handle the pending UI, use the <code>&lt;Form reloadDocument&gt;</code> prop.</docs-info>
+<docs-info>We recommend always using capital-F Form, and if you want to let the browser handle the pending UI, use the <code>\<Form reloadDocument></code> prop.</docs-info>
 
-Now let's add some pending UI so the user has a clue something happened when they submit. There's a hook called `useTransition`. When there is a pending form submission, Remix will give you the serialized version of the form as a <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData">`FormData`</a> object. You'll be most interested in the <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData/get">`formData.get()`</a> method..
+Now let's add some pending UI so the user has a clue something happened when they submit. There's a hook called `useTransition`. When there is a pending form submission, Remix will give you the serialized version of the form as a <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData">`FormData`</a> object. You'll be most interested in the <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData/get">`formData.get()`</a> method.
 
 ```tsx [5, 13, 19, 65-67]
-import { redirect } from "@remix-run/{runtime}";
+import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import {
   useActionData,
   Form,
@@ -332,7 +327,7 @@ export default function NewProject() {
   // when the form is being processed on the server, this returns different
   // transition states to help us build pending and optimistic UI.
   const transition = useTransition();
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   return (
     <Form method="post">
@@ -434,7 +429,7 @@ Now we can wrap our old error messages in this new fancy component, and even tur
 ```tsx [21-24, 31-34, 44-48, 53-56]
 export default function NewProject() {
   const transition = useTransition();
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   return (
     <Form method="post">
@@ -516,9 +511,16 @@ From your components perspective, all that happened was the `useTransition` hook
 
 ## See also
 
-- [Form](../api/remix#form)
-- [useTransition](../api/remix#usetransition)
-- [Actions](../api/conventions#action)
-- [Loaders](../api/conventions#loader)
-- [`useSubmit()`](../api/remix#usesubmit)
-- [`useFetcher()`](../api/remix#usefetcher)
+- [Form][form]
+- [useTransition][use-transition]
+- [Actions][actions]
+- [Loaders][loaders]
+- [`useSubmit()`][use-submit]
+- [`useFetcher()`][use-fetcher]
+
+[form]: ../components/form
+[use-submit]: ../hooks/use-submit
+[use-fetcher]: ../hooks/use-fetcher
+[use-transition]: ../hooks/use-transition
+[actions]: ../route/action
+[loaders]: ../route/loader

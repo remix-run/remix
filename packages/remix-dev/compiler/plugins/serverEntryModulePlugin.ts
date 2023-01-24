@@ -1,4 +1,3 @@
-import * as path from "path";
 import type { Plugin } from "esbuild";
 
 import type { RemixConfig } from "../../config";
@@ -13,7 +12,10 @@ import {
  * for you to consume the build in a custom server entry that is also fed through
  * the compiler.
  */
-export function serverEntryModulePlugin(config: RemixConfig): Plugin {
+export function serverEntryModulePlugin(
+  config: RemixConfig,
+  options: { liveReloadPort?: number } = {}
+): Plugin {
   let filter = serverBuildVirtualModule.filter;
 
   return {
@@ -31,21 +33,33 @@ export function serverEntryModulePlugin(config: RemixConfig): Plugin {
           resolveDir: config.appDirectory,
           loader: "js",
           contents: `
-import * as entryServer from ${JSON.stringify(
-            path.resolve(config.appDirectory, config.entryServerFile)
-          )};
+import * as entryServer from ${JSON.stringify(`./${config.entryServerFile}`)};
 ${Object.keys(config.routes)
   .map((key, index) => {
+    // IMPORTANT: Any values exported from this generated module must also be
+    // typed in `packages/remix-dev/server-build.ts` to avoid tsc errors.
     let route = config.routes[key];
     return `import * as route${index} from ${JSON.stringify(
-      path.resolve(config.appDirectory, route.file)
+      `./${route.file}`
     )};`;
   })
   .join("\n")}
   export { default as assets } from ${JSON.stringify(
     assetsManifestVirtualModule.id
   )};
+  export const assetsBuildDirectory = ${JSON.stringify(
+    config.relativeAssetsBuildDirectory
+  )};
+  export const future = ${JSON.stringify(config.future)};
+  export const publicPath = ${JSON.stringify(config.publicPath)};
   export const entry = { module: entryServer };
+  ${
+    options.liveReloadPort
+      ? `export const dev = ${JSON.stringify({
+          liveReloadPort: options.liveReloadPort,
+        })}`
+      : ""
+  }
   export const routes = {
     ${Object.keys(config.routes)
       .map((key, index) => {

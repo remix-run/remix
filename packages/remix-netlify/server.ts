@@ -1,9 +1,15 @@
+import type {
+  AppLoadContext,
+  ServerBuild,
+  RequestInit as NodeRequestInit,
+  Response as NodeResponse,
+} from "@remix-run/node";
 import {
-  // This has been added as a global in node 15+
-  AbortController,
+  AbortController as NodeAbortController,
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
+  readableStreamToString,
 } from "@remix-run/node";
 import type {
   Handler,
@@ -11,12 +17,6 @@ import type {
   HandlerContext,
   HandlerResponse,
 } from "@netlify/functions";
-import type {
-  AppLoadContext,
-  ServerBuild,
-  Response as NodeResponse,
-  RequestInit as NodeRequestInit,
-} from "@remix-run/node";
 
 import { isBinaryType } from "./binaryTypes";
 
@@ -40,32 +40,22 @@ export function createRequestHandler({
   mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
-  getLoadContext?: AppLoadContext;
+  getLoadContext?: GetLoadContextFunction;
   mode?: string;
 }): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return async (event, context) => {
-    let abortController = new AbortController();
-    let request = createRemixRequest(event, abortController);
-    let loadContext =
-      typeof getLoadContext === "function"
-        ? getLoadContext(event, context)
-        : undefined;
+    let request = createRemixRequest(event);
+    let loadContext = getLoadContext?.(event, context);
 
-    let response = (await handleRequest(
-      request as unknown as Request,
-      loadContext
-    )) as unknown as NodeResponse;
+    let response = (await handleRequest(request, loadContext)) as NodeResponse;
 
-    return sendRemixResponse(response, abortController);
+    return sendRemixResponse(response);
   };
 }
 
-export function createRemixRequest(
-  event: HandlerEvent,
-  abortController?: AbortController
-): NodeRequest {
+export function createRemixRequest(event: HandlerEvent): NodeRequest {
   let url: URL;
 
   if (process.env.NODE_ENV !== "development") {
@@ -76,11 +66,16 @@ export function createRemixRequest(
     url = new URL(rawPath, `http://${origin}`);
   }
 
+  // Note: No current way to abort these for Netlify, but our router expects
+  // requests to contain a signal so it can detect aborted requests
+  let controller = new NodeAbortController();
+
   let init: NodeRequestInit = {
     method: event.httpMethod,
     headers: createRemixHeaders(event.multiValueHeaders),
-    abortController,
-    signal: abortController?.signal,
+    // Cast until reason/throwIfAborted added
+    // https://github.com/mysticatea/abort-controller/issues/36
+    signal: controller.signal as NodeRequestInit["signal"],
   };
 
   if (event.httpMethod !== "GET" && event.httpMethod !== "HEAD" && event.body) {
@@ -139,29 +134,25 @@ function getRawPath(event: HandlerEvent): string {
 }
 
 export async function sendRemixResponse(
-  nodeResponse: NodeResponse,
-  abortController: AbortController
+  nodeResponse: NodeResponse
 ): Promise<HandlerResponse> {
-  if (abortController.signal.aborted) {
-    nodeResponse.headers.set("Connection", "close");
-  }
-
   let contentType = nodeResponse.headers.get("Content-Type");
-  let isBinary = isBinaryType(contentType);
-  let body;
-  let isBase64Encoded = false;
+  let body: string | undefined;
+  let isBase64Encoded = isBinaryType(contentType);
 
-  if (isBinary) {
-    let blob = await nodeResponse.arrayBuffer();
-    body = Buffer.from(blob).toString("base64");
-    isBase64Encoded = true;
-  } else {
-    body = await nodeResponse.text();
+  if (nodeResponse.body) {
+    if (isBase64Encoded) {
+      body = await readableStreamToString(nodeResponse.body, "base64");
+    } else {
+      body = await nodeResponse.text();
+    }
   }
+
+  let multiValueHeaders = nodeResponse.headers.raw();
 
   return {
     statusCode: nodeResponse.status,
-    multiValueHeaders: nodeResponse.headers.raw(),
+    multiValueHeaders,
     body,
     isBase64Encoded,
   };

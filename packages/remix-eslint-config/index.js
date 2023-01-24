@@ -18,9 +18,7 @@ const OFF = 0;
 // const WARN = 1;
 // const ERROR = 2;
 
-/**
- * @type {import("eslint").Linter.Config}
- */
+/** @type {import('eslint').Linter.Config} */
 const config = {
   parser: "@babel/eslint-parser",
   parserOptions: {
@@ -28,7 +26,7 @@ const config = {
     requireConfigFile: false,
     ecmaVersion: "latest",
     babelOptions: {
-      presets: ["@babel/preset-react"],
+      presets: [require.resolve("@babel/preset-react")],
     },
   },
   env: {

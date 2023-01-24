@@ -20,6 +20,16 @@ describe("readConfig", () => {
         devServerPort: expect.any(Number),
         serverBuildPath: expect.any(String),
         assetsBuildDirectory: expect.any(String),
+        relativeAssetsBuildDirectory: expect.any(String),
+        tsconfigPath: expect.any(String),
+        future: {
+          unstable_cssModules: expect.any(Boolean),
+          unstable_cssSideEffectImports: expect.any(Boolean),
+          unstable_vanillaExtract: expect.any(Boolean),
+          v2_errorBoundary: expect.any(Boolean),
+          v2_meta: expect.any(Boolean),
+          v2_routeConvention: expect.any(Boolean),
+        },
       },
       `
       Object {
@@ -30,8 +40,18 @@ describe("readConfig", () => {
         "devServerPort": Any<Number>,
         "entryClientFile": "entry.client.tsx",
         "entryServerFile": "entry.server.tsx",
+        "future": Object {
+          "unstable_cssModules": Any<Boolean>,
+          "unstable_cssSideEffectImports": Any<Boolean>,
+          "unstable_dev": false,
+          "unstable_vanillaExtract": Any<Boolean>,
+          "v2_errorBoundary": Any<Boolean>,
+          "v2_meta": Any<Boolean>,
+          "v2_routeConvention": Any<Boolean>,
+        },
         "mdx": undefined,
         "publicPath": "/build/",
+        "relativeAssetsBuildDirectory": Any<String>,
         "rootDirectory": Any<String>,
         "routes": Object {
           "root": Object {
@@ -48,8 +68,15 @@ describe("readConfig", () => {
         "serverMode": "production",
         "serverModuleFormat": "cjs",
         "serverPlatform": "node",
+        "tsconfigPath": Any<String>,
+        "watchPaths": Array [],
       }
     `
     );
+  });
+
+  it("returns the same devServerPort value across reloads", async () => {
+    let newConfig = await readConfig(remixRoot);
+    expect(newConfig.devServerPort).toBe(config.devServerPort);
   });
 });

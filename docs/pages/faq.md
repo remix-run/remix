@@ -7,7 +7,7 @@ description: Frequently Asked Questions about Remix
 
 ## How can I have a parent route loader validate the user and protect all child routes?
 
-You can't 😅. During a client side transition, to make your app as speedy as possible, Remix will call all of your loaders _in parallel_, in separate fetch requests. Each one of them needs to have it's own authentication check.
+You can't 😅. During a client side transition, to make your app as speedy as possible, Remix will call all of your loaders _in parallel_, in separate fetch requests. Each one of them needs to have its own authentication check.
 
 This is probably not different than what you were doing before Remix, it might just be more obvious now. Outside of Remix, when you make multiple fetches to your "API Routes", each of those endpoints needs to validate the user session. In other words, Remix route loaders are their own "API Route" and must be treated as such.
 
@@ -17,7 +17,7 @@ We recommend you create a function that validates the user session that can be a
 import {
   createCookieSessionStorage,
   redirect,
-} from "@remix-run/{runtime}";
+} from "@remix-run/node"; // or cloudflare/deno
 
 // somewhere you've got a session storage
 const { getSession } = createCookieSessionStorage();
@@ -41,7 +41,7 @@ export async function requireUserSession(request) {
 And now in any loader or action that requires a user session, you can call the function.
 
 ```tsx filename=app/routes/projects.jsx lines=[3]
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   // if the user isn't authenticated, this will redirect to login
   const session = await requireUserSession(request);
 
@@ -55,8 +55,8 @@ export async function loader({ request }) {
 
 Even if you don't need the session information, the function will still protect the route:
 
-```js
-export async function loader({ request }) {
+```tsx
+export async function loader({ request }: LoaderArgs) {
   await requireUserSession(request);
   // continue
 }
@@ -64,7 +64,7 @@ export async function loader({ request }) {
 
 ## How do I handle multiple forms in one route?
 
-[Watch on YouTube](https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix)
+[Watch on YouTube][watch-on-you-tube]
 
 In HTML, forms can post to any URL with the action prop and the app will navigate there:
 
@@ -81,11 +81,11 @@ We find option (1) to be the simplest because you don't have to mess around with
 
 HTML buttons can send a value, so it's the easiest way to implement this:
 
-```jsx filename=app/routes/projects/$id.jsx lines=[3-4,33,39]
-export async function action({ request }) {
+```tsx filename=app/routes/projects/$id.tsx lines=[3-4,33,39]
+export async function action({ request }: ActionArgs) {
   let formData = await request.formData();
-  let action = formData.get("action");
-  switch (action) {
+  let intent = formData.get("intent");
+  switch (intent) {
     case "update": {
       // do your update
       return updateProjectName(formData.get("name"));
@@ -101,7 +101,7 @@ export async function action({ request }) {
 }
 
 export default function Projects() {
-  let project = useLoaderData();
+  let project = useLoaderData<typeof loader>();
   return (
     <>
       <h2>Update Project</h2>
@@ -114,28 +114,19 @@ export default function Projects() {
             defaultValue={project.name}
           />
         </label>
-        <button type="submit" name="action" value="create">
+        <button type="submit" name="intent" value="update">
           Update
         </button>
       </Form>
 
       <Form method="post">
-        <button type="submit" name="action" value="delete">
+        <button type="submit" name="intent" value="delete">
           Delete
         </button>
       </Form>
     </>
   );
 }
-```
-
-You can also use a hidden input field:
-
-```jsx lines=[2]
-<Form method="post">
-  <input type="hidden" name="action" value="create" />
-  <button type="submit">Create</button>
-</Form>
 ```
 
 ## How can I have structured data in a form?
@@ -168,7 +159,7 @@ If you're wanting to send structured data simply to post arrays, you can use the
 Each checkbox has the name: "category". Since `FormData` can have multiple values on the same key, you don't need JSON for this. Access the checkbox values with `formData.getAll()` in your action.
 
 ```tsx
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const formData = await request.formData();
   let categories = formData.getAll("category");
   // ["comedy", "music"]
@@ -195,7 +186,7 @@ And then in your action:
 import queryString from "query-string";
 
 // in your action:
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   // use `request.text()`, not `request.formData` to get the form data as a url
   // encoded form query string
   let formQueryString = await request.text();
@@ -218,7 +209,7 @@ Some folks even dump their JSON into a hidden field. Note that this approach won
 And then parse it in the action:
 
 ```tsx
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   let formData = await request.formData();
   let obj = JSON.parse(formData.get("json"));
 }
@@ -228,9 +219,12 @@ Again, `formData.getAll()` is often all you need, we encourage you to give it a 
 
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [query-string]: https://www.npmjs.com/package/query-string
+[ramda]: https://www.npmjs.com/package/ramda
 
 ## What's the difference between `CatchBoundary` & `ErrorBoundary`?
 
 Error boundaries render when your application throws an error and you had no clue it was going to happen. Most apps just go blank or have spinners spin forever. In remix the error boundary renders and you have granular control over it.
 
 Catch boundaries render when you decide in a loader that you can't proceed down the happy path to render the UI you want (auth required, record not found, etc.), so you throw a response and let some catch boundary up the tree handle it.
+
+[watch-on-you-tube]: https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix

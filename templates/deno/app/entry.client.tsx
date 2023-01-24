@@ -1,5 +1,22 @@
-import React from "./deps/react.ts";
-import ReactDOM from "./deps/react-dom.ts";
-import { RemixBrowser } from "./deps/@remix-run/react.ts";
+import { RemixBrowser } from "@remix-run/react";
+import { startTransition, StrictMode } from "react";
+import { hydrateRoot } from "react-dom/client";
 
-ReactDOM.hydrate(<RemixBrowser />, document);
+function hydrate() {
+  startTransition(() => {
+    hydrateRoot(
+      document,
+      <StrictMode>
+        <RemixBrowser />
+      </StrictMode>,
+    );
+  });
+}
+
+if (typeof requestIdleCallback === "function") {
+  requestIdleCallback(hydrate);
+} else {
+  // Safari doesn't support requestIdleCallback
+  // https://caniuse.com/requestidlecallback
+  setTimeout(hydrate, 1);
+}

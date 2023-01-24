@@ -1,56 +1,51 @@
-import type { RouteMatch } from "./routeMatching";
-import type { ServerRoute } from "./routes";
-import { json, isResponse, isRedirectResponse } from "./responses";
+import {
+  redirect,
+  json,
+  isDeferredData,
+  isResponse,
+  isRedirectStatusCode,
+} from "./responses";
+import type {
+  ActionFunction,
+  DataFunctionArgs,
+  LoaderFunction,
+} from "./routeModules";
 
 /**
- * An object of arbitrary for route loaders and actions provided by the
+ * An object of unknown type for route loaders and actions provided by the
  * server's `getLoadContext()` function.
  */
-export type AppLoadContext = any;
+export interface AppLoadContext {
+  [key: string]: unknown;
+}
 
 /**
  * Data for a route that was returned from a `loader()`.
  */
 export type AppData = any;
 
-export async function callRouteAction({
+export async function callRouteActionRR({
   loadContext,
-  match,
+  action,
+  params,
   request,
+  routeId,
 }: {
-  loadContext: unknown;
-  match: RouteMatch<ServerRoute>;
   request: Request;
+  action: ActionFunction;
+  params: DataFunctionArgs["params"];
+  loadContext: AppLoadContext;
+  routeId: string;
 }) {
-  let action = match.route.module.action;
-
-  if (!action) {
-    let response = new Response(null, { status: 405 });
-    response.headers.set("X-Remix-Catch", "yes");
-    return response;
-  }
-
-  let result;
-  try {
-    result = await action({
-      request: stripDataParam(stripIndexParam(request)),
-      context: loadContext,
-      params: match.params,
-    });
-  } catch (error: unknown) {
-    if (!isResponse(error)) {
-      throw error;
-    }
-
-    if (!isRedirectResponse(error)) {
-      error.headers.set("X-Remix-Catch", "yes");
-    }
-    result = error;
-  }
+  let result = await action({
+    request: stripDataParam(stripIndexParam(request)),
+    context: loadContext,
+    params,
+  });
 
   if (result === undefined) {
     throw new Error(
-      `You defined an action for route "${match.route.id}" but didn't return ` +
+      `You defined an action for route "${routeId}" but didn't return ` +
         `anything from your \`action\` function. Please return a value or \`null\`.`
     );
   }
@@ -58,53 +53,50 @@ export async function callRouteAction({
   return isResponse(result) ? result : json(result);
 }
 
-export async function callRouteLoader({
+export async function callRouteLoaderRR({
   loadContext,
-  match,
+  loader,
+  params,
   request,
+  routeId,
 }: {
   request: Request;
-  match: RouteMatch<ServerRoute>;
-  loadContext: unknown;
+  loader: LoaderFunction;
+  params: DataFunctionArgs["params"];
+  loadContext: AppLoadContext;
+  routeId: string;
 }) {
-  let loader = match.route.module.loader;
-
-  if (!loader) {
-    throw new Error(
-      `You made a ${request.method} request to ${request.url} but did not provide ` +
-        `a \`loader\` for route "${match.route.id}", so there is no way to handle the ` +
-        `request.`
-    );
-  }
-
-  let result;
-  try {
-    result = await loader({
-      request: stripDataParam(stripIndexParam(request.clone())),
-      context: loadContext,
-      params: match.params,
-    });
-  } catch (error: unknown) {
-    if (!isResponse(error)) {
-      throw error;
-    }
-
-    if (!isRedirectResponse(error)) {
-      error.headers.set("X-Remix-Catch", "yes");
-    }
-    result = error;
-  }
+  let result = await loader({
+    request: stripDataParam(stripIndexParam(request)),
+    context: loadContext,
+    params,
+  });
 
   if (result === undefined) {
     throw new Error(
-      `You defined a loader for route "${match.route.id}" but didn't return ` +
+      `You defined a loader for route "${routeId}" but didn't return ` +
         `anything from your \`loader\` function. Please return a value or \`null\`.`
     );
+  }
+
+  if (isDeferredData(result)) {
+    if (result.init && isRedirectStatusCode(result.init.status || 200)) {
+      return redirect(
+        new Headers(result.init.headers).get("Location")!,
+        result.init
+      );
+    }
+    return result;
   }
 
   return isResponse(result) ? result : json(result);
 }
 
+// TODO: Document these search params better
+// and stop stripping these in V2. These break
+// support for running in a SW and also expose
+// valuable info to data funcs that is being asked
+// for such as "is this a data request?".
 function stripIndexParam(request: Request) {
   let url = new URL(request.url);
   let indexValues = url.searchParams.getAll("index");
@@ -126,20 +118,4 @@ function stripDataParam(request: Request) {
   let url = new URL(request.url);
   url.searchParams.delete("_data");
   return new Request(url.href, request);
-}
-
-export function extractData(response: Response): Promise<unknown> {
-  let contentType = response.headers.get("Content-Type");
-
-  if (contentType && /\bapplication\/json\b/.test(contentType)) {
-    return response.json();
-  }
-
-  // What other data types do we need to handle here? What other kinds of
-  // responses are people going to be returning from their loaders?
-  // - application/x-www-form-urlencoded ?
-  // - multipart/form-data ?
-  // - binary (audio/video) ?
-
-  return response.text();
 }

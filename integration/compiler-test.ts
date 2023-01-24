@@ -1,12 +1,15 @@
 import path from "path";
-import fs from "fs/promises";
+import fse from "fs-extra";
 import { test, expect } from "@playwright/test";
+import { PassThrough } from "stream";
 
 import {
   createFixture,
   createAppFixture,
   js,
   json,
+  createFixtureProject,
+  css,
 } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
@@ -87,6 +90,18 @@ test.describe("compiler", () => {
             return <div id="package-with-submodule">{submodule()}</div>;
           }
         `,
+        "app/routes/css.jsx": js`
+          import stylesUrl from "@org/css/index.css";
+
+          export function links() {
+            return [{ rel: "stylesheet", href: stylesUrl }]
+          }
+
+          export default function PackageWithSubModule() {
+            return <div id="package-with-submodule">{submodule()}</div>;
+          }
+        `,
+
         "remix.config.js": js`
           let { getDependenciesToBundle } = require("@remix-run/dev");
           module.exports = {
@@ -134,6 +149,14 @@ test.describe("compiler", () => {
           module: "./esm/index.js",
           sideEffects: false,
         }),
+        "node_modules/@org/package/sub-package/index.js": js`
+          module.exports.submodule = require("./submodule.js");
+        `,
+        "node_modules/@org/package/sub-package/submodule.js": js`
+          module.exports = function submodule() {
+            return "package-with-submodule";
+          }
+        `,
         "node_modules/@org/package/sub-package/esm/package.json": json({
           type: "module",
           sideEffects: false,
@@ -146,12 +169,20 @@ test.describe("compiler", () => {
             return "package-with-submodule";
           }
         `,
-        "node_modules/@org/package/sub-package/index.js": js`
-          module.exports.submodule = require("./submodule.js");
-        `,
-        "node_modules/@org/package/sub-package/submodule.js": js`
-          module.exports = function submodule() {
-            return "package-with-submodule";
+        "node_modules/@org/css/package.json": json({
+          name: "@org/css",
+          version: "1.0.0",
+          main: "index.css",
+        }),
+        "node_modules/@org/css/font.woff2": "font",
+        "node_modules/@org/css/index.css": css`
+          body {
+            background: red;
+          }
+
+          @font-face {
+            font-family: "MyFont";
+            src: url("./font.woff2");
           }
         `,
       },
@@ -160,7 +191,9 @@ test.describe("compiler", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => appFixture.close());
+  test.afterAll(() => {
+    appFixture.close();
+  });
 
   test("removes server code with `*.server` files", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
@@ -264,6 +297,17 @@ test.describe("compiler", () => {
     );
   });
 
+  test("copies imports in css files to assetsBuildDirectory", async () => {
+    let buildDir = path.join(fixture.projectDir, "public", "build", "_assets");
+    let files = await fse.readdir(buildDir);
+    expect(files).toHaveLength(2);
+
+    let cssFile = files.find((file) => file.match(/index-[a-z0-9]{8}\.css/i));
+    let fontFile = files.find((file) => file.match(/font-[a-z0-9]{8}\.woff2/i));
+    expect(cssFile).toBeTruthy();
+    expect(fontFile).toBeTruthy();
+  });
+
   // TODO: remove this when we get rid of that feature.
   test("magic imports still works", async () => {
     let magicExportsForNode = [
@@ -312,12 +356,77 @@ test.describe("compiler", () => {
       "useSubmit",
       "useTransition",
     ];
-    let magicRemix = await fs.readFile(
-      path.resolve(fixture.projectDir, "node_modules/remix/index.js"),
+    let magicRemix = await fse.readFile(
+      path.resolve(fixture.projectDir, "node_modules/remix/dist/index.js"),
       "utf8"
     );
     for (let name of magicExportsForNode) {
       expect(magicRemix).toContain(name);
     }
+  });
+
+  test.describe("serverBareModulesPlugin", () => {
+    let ogConsole: typeof global.console;
+    test.beforeEach(() => {
+      ogConsole = global.console;
+      // @ts-ignore
+      global.console = {
+        log() {},
+        warn() {},
+        error() {},
+      };
+    });
+    test.afterEach(() => {
+      global.console = ogConsole;
+    });
+    test("warns when a module isn't installed", async () => {
+      let buildOutput: string;
+      let buildStdio = new PassThrough();
+
+      await expect(() =>
+        createFixtureProject({
+          buildStdio,
+          files: {
+            "app/routes/index.jsx": js`
+            import { json } from "@remix-run/node";
+            import { useLoaderData } from "@remix-run/react";
+            import notInstalledMain from "some-not-installed-module";
+            import { notInstalledSub } from "some-not-installed-module/sub";
+
+            export function loader() {
+              return json({ main: notInstalledMain(), sub: notInstalledSub() });
+            }
+
+            export default function Index() {
+                let data = useLoaderData();
+                return null;
+              }
+              `,
+          },
+        })
+      ).rejects.toThrowError("Build failed, check the output above");
+
+      let chunks: Buffer[] = [];
+      buildOutput = await new Promise<string>((resolve, reject) => {
+        buildStdio.on("error", (error) => {
+          reject(error);
+        });
+        buildStdio.on("data", (chunk) => {
+          chunks.push(Buffer.from(chunk));
+        });
+        buildStdio.on("end", () => {
+          resolve(Buffer.concat(chunks).toString("utf8"));
+        });
+      });
+
+      let importer = path.join("app", "routes", "index.jsx");
+
+      expect(buildOutput).toContain(
+        `The path "some-not-installed-module" is imported in ${importer} but "some-not-installed-module" was not found in your node_modules. Did you forget to install it?`
+      );
+      expect(buildOutput).toContain(
+        `The path "some-not-installed-module/sub" is imported in ${importer} but "some-not-installed-module/sub" was not found in your node_modules. Did you forget to install it?`
+      );
+    });
   });
 });

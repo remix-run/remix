@@ -1,9 +1,15 @@
+import type {
+  AppLoadContext,
+  ServerBuild,
+  RequestInit as NodeRequestInit,
+  Response as NodeResponse,
+} from "@remix-run/node";
 import {
-  // This has been added as a global in node 15+
-  AbortController,
+  AbortController as NodeAbortController,
   Headers as NodeHeaders,
   Request as NodeRequest,
   createRequestHandler as createRemixRequestHandler,
+  readableStreamToString,
 } from "@remix-run/node";
 import type {
   APIGatewayProxyEventHeaders,
@@ -11,11 +17,6 @@ import type {
   APIGatewayProxyHandlerV2,
   APIGatewayProxyStructuredResultV2,
 } from "aws-lambda";
-import type {
-  AppLoadContext,
-  ServerBuild,
-  Response as NodeResponse,
-} from "@remix-run/node";
 
 import { isBinaryType } from "./binaryTypes";
 
@@ -47,25 +48,17 @@ export function createRequestHandler({
 }): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
 
-  return async (event /*, context*/) => {
-    let abortController = new AbortController();
-    let request = createRemixRequest(event, abortController);
-    let loadContext =
-      typeof getLoadContext === "function" ? getLoadContext(event) : undefined;
+  return async (event) => {
+    let request = createRemixRequest(event);
+    let loadContext = getLoadContext?.(event);
 
-    let response = (await handleRequest(
-      request as unknown as Request,
-      loadContext
-    )) as unknown as NodeResponse;
+    let response = (await handleRequest(request, loadContext)) as NodeResponse;
 
-    return sendRemixResponse(response, abortController);
+    return sendRemixResponse(response);
   };
 }
 
-export function createRemixRequest(
-  event: APIGatewayProxyEventV2,
-  abortController?: AbortController
-): NodeRequest {
+export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
   let host = event.headers["x-forwarded-host"] || event.headers.host;
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
   let scheme = process.env.ARC_SANDBOX ? "http" : "https";
@@ -73,18 +66,22 @@ export function createRemixRequest(
   let isFormData = event.headers["content-type"]?.includes(
     "multipart/form-data"
   );
+  // Note: No current way to abort these for Architect, but our router expects
+  // requests to contain a signal so it can detect aborted requests
+  let controller = new NodeAbortController();
 
   return new NodeRequest(url.href, {
     method: event.requestContext.http.method,
     headers: createRemixHeaders(event.headers, event.cookies),
+    // Cast until reason/throwIfAborted added
+    // https://github.com/mysticatea/abort-controller/issues/36
+    signal: controller.signal as NodeRequestInit["signal"],
     body:
       event.body && event.isBase64Encoded
         ? isFormData
           ? Buffer.from(event.body, "base64")
           : Buffer.from(event.body, "base64").toString()
         : event.body,
-    abortController,
-    signal: abortController?.signal,
   });
 }
 
@@ -108,8 +105,7 @@ export function createRemixHeaders(
 }
 
 export async function sendRemixResponse(
-  nodeResponse: NodeResponse,
-  abortController: AbortController
+  nodeResponse: NodeResponse
 ): Promise<APIGatewayProxyStructuredResultV2> {
   let cookies: string[] = [];
 
@@ -126,26 +122,21 @@ export async function sendRemixResponse(
     nodeResponse.headers.delete("Set-Cookie");
   }
 
-  if (abortController.signal.aborted) {
-    nodeResponse.headers.set("Connection", "close");
-  }
-
   let contentType = nodeResponse.headers.get("Content-Type");
-  let isBinary = isBinaryType(contentType);
-  let body;
-  let isBase64Encoded = false;
+  let isBase64Encoded = isBinaryType(contentType);
+  let body: string | undefined;
 
-  if (isBinary) {
-    let blob = await nodeResponse.arrayBuffer();
-    body = Buffer.from(blob).toString("base64");
-    isBase64Encoded = true;
-  } else {
-    body = await nodeResponse.text();
+  if (nodeResponse.body) {
+    if (isBase64Encoded) {
+      body = await readableStreamToString(nodeResponse.body, "base64");
+    } else {
+      body = await nodeResponse.text();
+    }
   }
 
   return {
     statusCode: nodeResponse.status,
-    headers: Object.fromEntries(nodeResponse.headers),
+    headers: Object.fromEntries(nodeResponse.headers.entries()),
     cookies,
     body,
     isBase64Encoded,

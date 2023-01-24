@@ -8,24 +8,28 @@ const defaultRuntimeExports = {
     "createCookie",
     "createCookieSessionStorage",
     "createMemorySessionStorage",
-    "createSessionStorage",
     "createRequestHandler",
     "createSession",
+    "createSessionStorage",
     "isCookie",
     "isSession",
     "json",
+    "MaxPartSizeExceededError",
     "redirect",
+    "unstable_composeUploadHandlers",
+    "unstable_createMemoryUploadHandler",
+    "unstable_parseMultipartFormData",
   ],
   type: [
     "ActionFunction",
     "AppData",
     "AppLoadContext",
-    "CreateRequestHandlerFunction",
     "Cookie",
     "CookieOptions",
     "CookieParseOptions",
     "CookieSerializeOptions",
     "CookieSignatureOptions",
+    "CreateRequestHandlerFunction",
     "DataFunctionArgs",
     "EntryContext",
     "ErrorBoundaryComponent",
@@ -37,6 +41,8 @@ const defaultRuntimeExports = {
     "LinkDescriptor",
     "LinksFunction",
     "LoaderFunction",
+    "MemoryUploadHandlerFilterArgs",
+    "MemoryUploadHandlerOptions",
     "MetaDescriptor",
     "MetaFunction",
     "PageLinkDescriptor",
@@ -49,6 +55,8 @@ const defaultRuntimeExports = {
     "SessionData",
     "SessionIdStorageStrategy",
     "SessionStorage",
+    "UploadHandler",
+    "UploadHandlerPart",
   ],
 };
 
@@ -58,7 +66,7 @@ const architectSpecificExports = {
 };
 
 const cloudflareSpecificExports = {
-  value: ["createCloudflareKVSessionStorage"],
+  value: ["createCloudflareKVSessionStorage", "createWorkersKVSessionStorage"],
   type: [],
 };
 
@@ -76,24 +84,20 @@ const nodeSpecificExports = {
   value: [
     "AbortController",
     "createFileSessionStorage",
+    "createReadableStreamFromReadable",
     "fetch",
     "FormData",
     "Headers",
+    "installGlobals",
     "NodeOnDiskFile",
+    "readableStreamToString",
     "Request",
     "Response",
     "unstable_createFileUploadHandler",
-    "unstable_createMemoryUploadHandler",
-    "unstable_parseMultipartFormData",
+    "writeAsyncIterableToWritable",
+    "writeReadableStreamToWritable",
   ],
-  type: [
-    "HeadersInit",
-    "RequestInfo",
-    "RequestInit",
-    "ResponseInit",
-    "UploadHandler",
-    "UploadHandlerArgs",
-  ],
+  type: ["HeadersInit", "RequestInfo", "RequestInit", "ResponseInit"],
 };
 
 const reactSpecificExports = {
@@ -140,7 +144,6 @@ const reactSpecificExports = {
     "NavLinkProps",
     "RemixBrowserProps",
     "RemixServerProps",
-    "ShouldReloadFunction",
     "SubmitFunction",
     "SubmitOptions",
     "ThrownResponse",

@@ -1,3 +1,6 @@
+// Needed because the @cloudflare/workers-types do not include the `process` global
+/// <reference types="@types/node" />
+
 import type { Options as KvAssetHandlerOptions } from "@cloudflare/kv-asset-handler";
 import {
   getAssetFromKV,
@@ -14,11 +17,9 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cl
  * You can think of this as an escape hatch that allows you to pass
  * environment/platform-specific values through to your loader/action.
  */
-export interface GetLoadContextFunction {
-  (event: FetchEvent): AppLoadContext;
-}
+export type GetLoadContextFunction = (event: FetchEvent) => AppLoadContext;
 
-export type RequestHandler = ReturnType<typeof createRequestHandler>;
+export type RequestHandler = (event: FetchEvent) => Promise<Response>;
 
 /**
  * Returns a request handler for the Cloudflare runtime that serves the
@@ -32,12 +33,11 @@ export function createRequestHandler({
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
   mode?: string;
-}) {
+}): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return (event: FetchEvent) => {
-    let loadContext =
-      typeof getLoadContext === "function" ? getLoadContext(event) : undefined;
+    let loadContext = getLoadContext?.(event);
 
     return handleRequest(event.request, loadContext);
   };
@@ -84,7 +84,7 @@ export async function handleAsset(
       cacheControl,
       ...options,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     if (
       error instanceof MethodNotAllowedError ||
       error instanceof NotFoundError

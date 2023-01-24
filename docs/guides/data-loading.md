@@ -19,14 +19,13 @@ One of the primary features of Remix is simplifying interactions with the server
 
 ## Basics
 
-Each [route module][route-module] can export a component and a [`loader`][loader]. [`useLoaderData`][useloaderdata] will provide the loader's data to your component:
+Each route module can export a component and a [`loader`][loader]. [`useLoaderData`][useloaderdata] will provide the loader's data to your component:
 
-```tsx filename=app/routes/products.tsx lines=[1-3,5-10,13]
-import type { LoaderFunction } from "@remix-run/{runtime}";
-import { json } from "@remix-run/{runtime}";
+```tsx filename=app/routes/products.tsx lines=[1-2,4-9,12]
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-export const loader: LoaderFunction = async () => {
+export const loader = async () => {
   return json([
     { id: "1", name: "Pants" },
     { id: "2", name: "Jacket" },
@@ -34,7 +33,7 @@ export const loader: LoaderFunction = async () => {
 };
 
 export default function Products() {
-  const products = useLoaderData();
+  const products = useLoaderData<typeof loader>();
   return (
     <div>
       <h1>Products</h1>
@@ -55,11 +54,9 @@ If your server side modules end up in client bundles, move the imports for those
 When you name a file with `$` like `routes/users/$userId.tsx` and `routes/users/$userId/projects/$projectId.tsx` the dynamic segments (the ones starting with `$`) will be parsed from the URL and passed to your loader on a `params` object.
 
 ```tsx filename=routes/users/$userId/projects/$projectId.tsx
-import type { LoaderFunction } from "@remix-run/{runtime}";
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   console.log(params.userId);
   console.log(params.projectId);
 };
@@ -75,12 +72,10 @@ Given the following URLs, the params would be parsed as follows:
 These params are most useful for looking up data:
 
 ```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[8,9]
-import { json } from "@remix-run/{runtime}";
-import type { LoaderFunction } from "@remix-run/{runtime}";
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   return json(
     await fakeDb.project.findMany({
       where: {
@@ -96,13 +91,11 @@ export const loader: LoaderFunction = async ({
 
 Because these params come from the URL and not your source code, you can't know for sure if they will be defined. That's why the types on the param's keys are `string | undefined`. It's good practice to validate before using them, especially in TypeScript to get type safety. Using `invariant` makes it easy.
 
-```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[1,7-8]
+```tsx filename=routes/users/$userId/projects/$projectId.tsx lines=[2,5-6]
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import invariant from "tiny-invariant";
-import type { LoaderFunction } from "@remix-run/{runtime}";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   invariant(params.userId, "Expected params.userId");
   invariant(params.projectId, "Expected params.projectId");
 
@@ -117,7 +110,7 @@ While you may be uncomfortable throwing errors like this with `invariant` when i
 Remix polyfills the `fetch` API on your server so it's very easy to fetch data from existing JSON APIs. Instead of managing state, errors, race conditions, and more yourself, you can do the fetch from your loader (on the server) and let Remix handle the rest.
 
 ```tsx filename=app/routes/gists.jsx lines=[5]
-import { json } from "@remix-run/{runtime}";
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 export async function loader() {
@@ -126,7 +119,7 @@ export async function loader() {
 }
 
 export default function GistsRoute() {
-  const gists = useLoaderData();
+  const gists = useLoaderData<typeof loader>();
   return (
     <ul>
       {gists.map((gist) => (
@@ -154,15 +147,13 @@ export { db };
 And then your routes can import it and make queries against it:
 
 ```tsx filename=app/routes/products/$categoryId.tsx
-import type { LoaderFunction } from "@remix-run/{runtime}";
-import { json } from "@remix-run/{runtime}";
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { db } from "~/db.server";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   return json(
     await db.product.findMany({
       where: {
@@ -173,7 +164,7 @@ export const loader: LoaderFunction = async ({
 };
 
 export default function ProductCategory() {
-  const products = useLoaderData();
+  const products = useLoaderData<typeof loader>();
   return (
     <div>
       <p>{products.length} Products</p>
@@ -183,33 +174,36 @@ export default function ProductCategory() {
 }
 ```
 
-If you are using TypeScript, you can use type inference to use Prisma Client generated types on when calling `useLoaderData`. This allowes better type safety and intellisense when writing your code that uses the loaded data.
+If you are using TypeScript, you can use type inference to use Prisma Client generated types on when calling `useLoaderData`. This allows better type safety and intellisense when writing your code that uses the loaded data.
 
-```tsx filename=tsx filename=app/routes/products/$productId.tsx
-import { json } from "@remix-run/{runtime}";
+```tsx filename=app/routes/products/$productId.tsx
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { db } from "~/db.server";
 
-type LoaderData = Awaited<ReturnType<typeof getLoaderData>>;
-
-async function getLoaderData() {
-  const products = await db.product.findMany({
+async function getLoaderData(productId: string) {
+  const product = await db.product.findUnique({
+    where: {
+      id: productId,
+    },
     select: {
       id: true,
       name: true,
       imgSrc: true,
     },
   });
-  return { products };
+
+  return product;
 }
 
-export const loader = async () => {
-  return json<LoaderData>(await getLoaderData());
+export const loader = async ({ params }: LoaderArgs) => {
+  return json(await getLoaderData(params.productId));
 };
 
 export default function Product() {
-  const product = useLoaderData<LoaderData>();
+  const product = useLoaderData<typeof loader>();
   return (
     <div>
       <p>Product {product.id}</p>
@@ -221,29 +215,41 @@ export default function Product() {
 
 ## Cloudflare KV
 
-If you picked Cloudflare Workers as your environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource. You'll need to [do some configuration][cloudflare-kv-setup] but then you can access the data from your loaders:
+If you picked Cloudflare Pages or Workers as your environment, [Cloudflare Key Value][cloudflare-kv] storage allows you to persist data at the edge as if it were a static resource.
 
-```tsx filename=app/routes/products/$productId.tsx
-import type { LoaderFunction } from "@remix-run/{runtime}";
-import { json } from "@remix-run/{runtime}";
+For Pages, to start with local development, you need to add a `--kv` parameter with a name of your namespace to the package.json task, so it would look like this:
+
+```
+"dev:wrangler": "cross-env NODE_ENV=development wrangler pages dev ./public --kv PRODUCTS_KV"
+```
+
+For the Cloudflare Workers environment you'll need to [do some other configuration][cloudflare-kv-setup].
+
+This enables you to use the `PRODUCTS_KV` in a loader context (KV stores are added to loader context automatically by the Cloudflare Pages adapter):
+
+```tsx
+import type { LoaderArgs } from "@remix-run/cloudflare";
+import { json } from "@remix-run/cloudflare";
 import { useLoaderData } from "@remix-run/react";
 
-export const loader: LoaderFunction = async ({
+export const loader = async ({
+  context,
   params,
-}) => {
+}: LoaderArgs) => {
   return json(
-    await PRODUCTS_KV.get(`product-${params.productId}`, {
-      type: "json",
-    })
+    await context.PRODUCTS_KV.get(
+      `product-${params.productId}`,
+      { type: "json" }
+    )
   );
 };
 
 export default function Product() {
-  const product = useLoaderData();
+  const product = useLoaderData<typeof loader>();
   return (
     <div>
-      <p>{} Products</p>
-      {/* ... */}
+      <p>Product</p>
+      {product.name}
     </div>
   );
 }
@@ -254,10 +260,10 @@ export default function Product() {
 While loading data it's common for a record to be "not found". As soon as you know you can't render the component as expected, `throw` a response and Remix will stop executing code in the current loader and switch over to the nearest [catch boundary][catch-boundary].
 
 ```tsx lines=[10-13]
-export const loader: LoaderFunction = async ({
+export const loader = async ({
   params,
   request,
-}) => {
+}: LoaderArgs) => {
   const product = await db.product.findOne({
     where: { id: params.productId },
   });
@@ -281,13 +287,11 @@ export const loader: LoaderFunction = async ({
 
 URL Search Params are the portion of the URL after a `?`. Other names for this are "query string", "search string", or "location search". You can access the values by creating a URL out of the `request.url`:
 
-```tsx filename=routes/products.tsx lines=[7,8]
-import { json } from "@remix-run/{runtime}";
-import type { LoaderFunction } from "@remix-run/{runtime}";
+```tsx filename=routes/products.tsx lines=[5-6]
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export const loader: LoaderFunction = async ({
-  request,
-}) => {
+export const loader = async ({ request }: LoaderArgs) => {
   const url = new URL(request.url);
   const term = url.searchParams.get("term");
   return json(await fakeProductSearch(term));
@@ -362,10 +366,11 @@ Then the url will be: `/products/shoes?brand=nike&brand=adidas`
 
 Note that `brand` is repeated in the URL search string since both checkboxes were named `"brand"`. In your loader you can get access to all of those values with [`searchParams.getAll`][search-params-getall]
 
-```tsx lines=[5]
-import { json } from "@remix-run/{runtime}";
+```tsx lines=[6]
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const url = new URL(request.url);
   const brands = url.searchParams.getAll("brand");
   return json(await getProducts({ brands }));
@@ -705,7 +710,7 @@ export async function loader() {
 }
 
 export default function RouteComp() {
-  const data = useLoaderData();
+  const data = useLoaderData<typeof loader>();
   console.log(data);
   // '{"date":"2021-11-27T23:54:26.384Z"}'
 }
@@ -730,20 +735,19 @@ export default function RouteComp() {
 }
 ```
 
-[action]: ../api/conventions#action
-[catch-boundary]: ../api/conventions#catchboundary
+[action]: ../route/action
+[catch-boundary]: ../route/catch-boundary
 [cloudflare-kv-setup]: https://developers.cloudflare.com/workers/cli-wrangler/commands#kv
 [cloudflare-kv]: https://developers.cloudflare.com/workers/learning/how-kv-works
-[error-boundary]: ../api/conventions#errorboundary
+[error-boundary]: ../route/error-boundary
 [fauna]: https://fauna.com
-[fetcher-submit]: ../api/remix#fetchersubmit
-[loader]: ../api/conventions#loader
+[fetcher-submit]: ../hooks/use-fetcher#fetchersubmit
+[loader]: ../route/loader
 [prisma]: https://prisma.io
 [request]: https://developer.mozilla.org/en-US/docs/Web/API/Request
-[route-module]: ../api/conventions#route-module-api
 [search-params-getall]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams/getAll
-[should-reload]: ../api/conventions#unstable_shouldreload
+[should-reload]: ../route/should-reload
 [url-search-params]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [url]: https://developer.mozilla.org/en-US/docs/Web/API/URL
-[use-submit]: ../api/remix#usesubmit
-[useloaderdata]: ../api/remix#useloaderdata
+[use-submit]: ../hooks/use-submit
+[useloaderdata]: ../hooks/use-loader-data

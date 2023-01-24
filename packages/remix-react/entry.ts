@@ -1,17 +1,30 @@
-import type { AppState } from "./errors";
+import type { StaticHandlerContext } from "@remix-run/router";
+
 import type { RouteManifest, EntryRoute } from "./routes";
-import type { RouteData } from "./routeData";
-import type { RouteMatch } from "./routeMatching";
 import type { RouteModules } from "./routeModules";
 
-export interface EntryContext {
-  appState: AppState;
+// Object passed to RemixContext.Provider
+export interface RemixContextObject {
   manifest: AssetsManifest;
-  matches: RouteMatch<EntryRoute>[];
-  routeData: RouteData;
-  actionData?: RouteData;
   routeModules: RouteModules;
   serverHandoffString?: string;
+  future: FutureConfig;
+  abortDelay?: number;
+  dev?: { liveReloadPort: number };
+}
+
+// Additional React-Router information needed at runtime, but not hydrated
+// through RemixContext
+export interface EntryContext extends RemixContextObject {
+  staticHandlerContext: StaticHandlerContext;
+}
+
+export interface FutureConfig {
+  unstable_cssModules: boolean;
+  unstable_cssSideEffectImports: boolean;
+  unstable_vanillaExtract: boolean;
+  v2_errorBoundary: boolean;
+  v2_meta: boolean;
 }
 
 export interface AssetsManifest {

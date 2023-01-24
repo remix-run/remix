@@ -67,7 +67,7 @@ export function createRequestHandler({ build }) {
 }
 ```
 
-Real adapters do a bit more more than that, but that's the gist of it. Not only does this enable you to deploy Remix anywhere, but it also lets you incrementally adopt it in an existing JavaScript server since you can have routes outside of Remix that your server continues to handle before getting to Remix.
+Real adapters do a bit more than that, but that's the gist of it. Not only does this enable you to deploy Remix anywhere, but it also lets you incrementally adopt it in an existing JavaScript server since you can have routes outside of Remix that your server continues to handle before getting to Remix.
 
 Additionally, if Remix doesn't have an adapter for your server already, you can look at the source of one of the adapters and build your own.
 
@@ -85,7 +85,7 @@ More often than not, a Remix route module can contain both the UI and the intera
 
 Route modules have three primary exports: `loader`, `action`, and `default` (component).
 
-```jsx
+```tsx
 // Loaders only run on the server and provide data
 // to your component on GET requests
 export async function loader() {
@@ -95,7 +95,7 @@ export async function loader() {
 // Actions only run on the server and handle POST
 // PUT, PATCH, and DELETE. They can also provide data
 // to the component
-export async function action({ request }) {
+export async function action({ request }: ActionArgs) {
   const form = await request.formData();
   const errors = validate(form);
   if (errors) {
@@ -109,8 +109,8 @@ export async function action({ request }) {
 // rendered when a route matches the URL. This runs
 // both on the server and the client
 export default function Projects() {
-  const projects = useLoaderData();
-  const actionData = useActionData();
+  const projects = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
 
   return (
     <div>
@@ -168,10 +168,10 @@ Taking our route module from before, here are a few small, but useful UX improve
 2. Focus the input when server side form validation fails
 3. Animate in the error messages
 
-```jsx nocopy lines=[4-6,8-12,23-26,30-32]
+```tsx nocopy lines=[4-6,8-12,23-26,30-32]
 export default function Projects() {
-  const projects = useLoaderData();
-  const actionData = useActionData();
+  const projects = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
   const { state } = useTransition();
   const busy = state === "submitting";
   const inputRef = React.useRef();
@@ -217,7 +217,7 @@ And while it doesn't reach as far back into the stack as server side frameworks 
 
 For example. Building a plain HTML form and server side handler in a back end heavy web framework is just as easy to do as it is in Remix. But as soon as you want to cross over into an experience with animated validation messages, focus management, and pending UI, it requires a fundamental change in the code. Typically people build an API route and then bring in a splash of client side JavaScript to connect the two. With Remix you simply add some code around the existing "server side view" without changing how it works fundamentally.
 
-We borrowed an old term and call this Progressive Enhancement in Remix. Start small with a plain HTML form (Remix scales down) and then scale the UI up when you have the time and ambition.
+We borrowed an old term and called this Progressive Enhancement in Remix. Start small with a plain HTML form (Remix scales down) and then scale the UI up when you have the time and ambition.
 
 [esbuild]: https://esbuild.github.io/
 [cf]: https://workers.cloudflare.com/
