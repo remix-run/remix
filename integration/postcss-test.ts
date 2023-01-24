@@ -166,7 +166,9 @@ test.describe("PostCSS", () => {
     await app.goto("/regular-style-sheets-test");
     let testId = "regular-style-sheets-postcss-context";
     let postcssContext = await jsonFromBase64CssContent({ page, testId });
-    expect(postcssContext.remix.vanillaExtract).toBe(false);
+    expect(postcssContext.remix).toEqual({
+      vanillaExtract: false,
+    });
   });
 
   let cssModulesFixture = () => ({
@@ -211,7 +213,9 @@ test.describe("PostCSS", () => {
     await app.goto("/css-modules-test");
     let testId = "css-modules-postcss-context";
     let postcssContext = await jsonFromBase64CssContent({ page, testId });
-    expect(postcssContext.remix.vanillaExtract).toBe(false);
+    expect(postcssContext.remix).toEqual({
+      vanillaExtract: false,
+    });
   });
 
   let vanillaExtractFixture = () => ({
@@ -258,7 +262,9 @@ test.describe("PostCSS", () => {
     await app.goto("/vanilla-extract-test");
     let testId = "vanilla-extract-postcss-context";
     let postcssContext = await jsonFromBase64CssContent({ page, testId });
-    expect(postcssContext.remix.vanillaExtract).toBe(true);
+    expect(postcssContext.remix).toEqual({
+      vanillaExtract: true,
+    });
   });
 
   let cssSideEffectImportsFixture = () => ({
@@ -303,7 +309,9 @@ test.describe("PostCSS", () => {
     await app.goto("/css-side-effect-imports-test");
     let testId = "css-side-effect-imports-postcss-context";
     let postcssContext = await jsonFromBase64CssContent({ page, testId });
-    expect(postcssContext.remix.vanillaExtract).toBe(false);
+    expect(postcssContext.remix).toEqual({
+      vanillaExtract: false,
+    });
   });
 
   let automaticTailwindPluginInsertionFixture = () => ({
