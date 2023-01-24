@@ -6,6 +6,8 @@ title: Form
 
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=Iv25HAHaFDs&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Data Mutations with Form + action</a>, <a href="https://www.youtube.com/watch?v=w2i-9cYxSdc&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Multiple Forms and Single Button Mutations</a> and <a href="https://www.youtube.com/watch?v=bMLej7bg5Zo&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Clearing Inputs After Form Submissions</a></docs-success>
 
+<docs-info>This component is simply a re-export of [React Router's `Form`][rr-form].</docs-info>
+
 The `<Form>` component is a declarative way to perform data mutations: creating, updating, and deleting data. While it might be a mind-shift to think about these tasks as "navigation", it's how the web has handled mutations since before JavaScript was created!
 
 ```tsx
@@ -92,6 +94,8 @@ When the `action` prop is omitted, `<Form>` and `<form>` will sometimes call dif
 - `<form>` uses the current URL as the default which can lead to surprising results: forms inside parent routes will post to the child action if you're at the child's URL and the parents action when you're at the parent's URL. This means as the user navigates, the form's behavior changes.
 - `<Form>` will always post to the route's action, independent of the URL. A form in a parent route will always post to the parent, even if you're at the child's URL.
 
+For more information and usage, please refer to the [React Router `Form` docs][rr-form].
+
 See also:
 
 - [`useTransition`][usetransition]
@@ -103,3 +107,4 @@ See also:
 [useactiondata]: ../hooks/use-action-data
 [usesubmit]: ../hooks/use-submit
 [http-verb]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
+[rr-form]: https://reactrouter.com/components/form

@@ -5,7 +5,7 @@ toc: false
 
 # `useNavigation`
 
-This hook is simply a re-export of [React Router `useNavigation`][rr-usenavigation].
+<docs-info>This hook is simply a re-export of [React Router `useNavigation`][rr-usenavigation].</docs-info>
 
 ```tsx
 import { useNavigation } from "@remix-run/react";
@@ -20,6 +20,6 @@ function SomeComponent() {
 }
 ```
 
-For information and usage, please refer to the [React Router `useNavigation` docs][rr-usenavigation].
+For more information and usage, please refer to the [React Router `useNavigation` docs][rr-usenavigation].
 
-[rr-usenavigation]: https://reactrouter.com/en/main/hooks/use-navigation
+[rr-usenavigation]: https://reactrouter.com/hooks/use-navigation

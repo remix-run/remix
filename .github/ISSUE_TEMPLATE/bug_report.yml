@@ -25,6 +25,12 @@ body:
       label: What version of Remix are you using?
     validations:
       required: true
+  - type: checkboxes
+    attributes:
+      label: Are all your remix dependencies & dev-dependencies using the same version?
+      options:
+        - label: Yes
+          required: true
   - type: textarea
     attributes:
       label: Steps to Reproduce

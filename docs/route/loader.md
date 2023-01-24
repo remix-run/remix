@@ -190,9 +190,12 @@ See also:
 
 ## Throwing Responses in Loaders
 
-Along with returning responses, you can also throw Response objects from your loaders, allowing you to break through the call stack and show an alternate UI with contextual data through the `CatchBoundary`.
+Along with returning responses, you can also throw `Response` objects from your loaders. This allows you to break through the call stack and do one of two things:
 
-Here is a full example showing how you can create utility functions that throw responses to stop code execution in the loader and move over to an alternative UI.
+- Redirect to another URL
+- Show an alternate UI with contextual data through the `CatchBoundary`
+
+Here is a full example showing how you can create utility functions that throw responses to stop code execution in the loader and show an alternative UI.
 
 ```ts filename=app/db.ts
 import { json } from "@remix-run/node"; // or cloudflare/deno
@@ -222,8 +225,10 @@ export async function requireUserSession(request) {
     request.headers.get("cookie")
   );
   if (!session) {
-    // can throw our helpers like `redirect` and `json` because they
-    // return responses.
+    // You can throw our helpers like `redirect` and `json` because they
+    // return `Response` objects. A `redirect` response will redirect to
+    // another URL, while other  responses will trigger the UI rendered
+    // in the `CatchBoundary`.
     throw redirect("/login", 302);
   }
   return session.get("user");
