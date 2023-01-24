@@ -1,5 +1,18 @@
 # `@remix-run/cloudflare`
 
+## 1.12.0-pre.0
+
+### Minor Changes
+
+- Rename `createCloudflareKVSessionStorage` to `createWorkersKVSessionStorage` ([#2542](https://github.com/remix-run/remix/pull/2542))
+
+### Patch Changes
+
+- Update Cloudflare Workers adapter's `RequestHandler` type to be in line with other adapters ([#4884](https://github.com/remix-run/remix/pull/4884))
+- Export `JsonFunction` type in `@remix-run/cloudflare` and `@remix-run/deno` ([#5206](https://github.com/remix-run/remix/pull/5206))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.12.0-pre.0`
+
 ## 1.11.1
 
 ### Patch Changes

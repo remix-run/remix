@@ -21,5 +21,18 @@
     "@remix-run/testing": "1.11.1",
     "@remix-run/vercel": "1.11.1"
   },
-  "changesets": []
+  "changesets": [
+    "afraid-hounds-join",
+    "breezy-dancers-lie",
+    "flat-cobras-beam",
+    "mean-clocks-bow",
+    "mighty-beans-judge",
+    "old-rice-drive",
+    "short-bobcats-switch",
+    "silent-cups-double",
+    "silver-rockets-remember",
+    "tender-turtles-wash",
+    "wild-foxes-wait",
+    "yellow-ligers-clean"
+  ]
 }
