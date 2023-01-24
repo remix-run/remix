@@ -58,9 +58,14 @@ jobs:
       - name: 🏗 Build
         run: yarn build
 
+      - name: Setup build workspaces
+        working-directory: ./build
+        run: |
+          echo -e '{"private":true, "workspaces":{"packages":["@remix-run/*"], "nohoist": ["**"]}}' >> package.json
+
       - name: Install bundled deps
-        working-directory: ./build/node_modules/@remix-run/dev
-        run: npm install --production $(npx bundle-dependencies list-bundled-dependencies); npm dedupe; npm prune;
+        working-directory: ./build
+        run: yarn --prod
 
       - name: 🔐 Setup npm auth
         run: |
