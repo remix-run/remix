@@ -120,7 +120,6 @@
     "@babel/types",
     "@esbuild-plugins/node-modules-polyfill",
     "@npmcli/package-json",
-    "@remix-run/server-runtime",
     "@vanilla-extract/integration",
     "arg",
     "cacache",
