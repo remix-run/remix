@@ -59,6 +59,7 @@ jobs:
         run: yarn build
 
       - name: Install bundled deps
+        working-directory: ./build/node_modules/@remix-run/dev
         run: npm install --production $(npx bundle-dependencies list-bundled-dependencies); npm dedupe; npm prune;
 
       - name: 🔐 Setup npm auth
