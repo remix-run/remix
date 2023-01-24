@@ -47,6 +47,10 @@ test.describe("PostCSS", () => {
             },
           };
         `,
+        // We provide a test plugin that replaces the strings
+        // "TEST_PADDING_VALUE" and "TEST_POSTCSS_CONTEXT".
+        // This lets us assert that the plugin is being run
+        // and that the correct context values are provided.
         "postcss.config.js": js`
           module.exports = (ctx) => ({
             plugins: [
