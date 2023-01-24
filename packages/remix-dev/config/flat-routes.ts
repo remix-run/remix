@@ -142,8 +142,6 @@ export function getRouteSegments(routeId: string) {
   /**
    * @see https://github.com/remix-run/remix/pull/5160#issuecomment-1402157424
    */
-  console.log({ routeId });
-
   if (hasFolder && (routeId.endsWith("/index") || routeId.endsWith("/route"))) {
     let last = routeId.lastIndexOf(path.sep);
     if (last >= 0) {
