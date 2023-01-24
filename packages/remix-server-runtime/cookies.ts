@@ -2,6 +2,7 @@ import type { CookieParseOptions, CookieSerializeOptions } from "cookie";
 import { parse, serialize } from "cookie";
 
 import type { SignFunction, UnsignFunction } from "./crypto";
+import { warnOnce } from "./warnings";
 
 export type { CookieParseOptions, CookieSerializeOptions };
 
@@ -29,7 +30,7 @@ export type CookieOptions = CookieParseOptions &
  * `serialize()` methods that allow a single instance to be reused for
  * parsing/encoding multiple different values.
  *
- * @see https://remix.run/api/remix#cookie-api
+ * @see https://remix.run/utils/cookies#cookie-api
  */
 export interface Cookie {
   /**
@@ -74,7 +75,7 @@ export type CreateCookieFunction = (
 /**
  * Creates a logical container for managing a browser cookie from the server.
  *
- * @see https://remix.run/api/remix#createcookie
+ * @see https://remix.run/utils/cookies#createcookie
  */
 export const createCookieFactory =
   ({
@@ -88,8 +89,11 @@ export const createCookieFactory =
     let { secrets, ...options } = {
       secrets: [],
       path: "/",
+      sameSite: "lax" as const,
       ...cookieOptions,
     };
+
+    warnOnceAboutExpiresCookie(name, options.expires);
 
     return {
       get name() {
@@ -131,7 +135,7 @@ export type IsCookieFunction = (object: any) => object is Cookie;
 /**
  * Returns true if an object is a Remix cookie container.
  *
- * @see https://remix.run/api/remix#iscookie
+ * @see https://remix.run/utils/cookies#iscookie
  */
 export const isCookie: IsCookieFunction = (object): object is Cookie => {
   return (
@@ -183,7 +187,7 @@ function encodeData(value: any): string {
 function decodeData(value: string): any {
   try {
     return JSON.parse(decodeURIComponent(myEscape(atob(value))));
-  } catch (error) {
+  } catch (error: unknown) {
     return {};
   }
 }
@@ -244,4 +248,15 @@ function myUnescape(value: string): string {
     result += chr;
   }
   return result;
+}
+
+function warnOnceAboutExpiresCookie(name: string, expires?: Date) {
+  warnOnce(
+    !expires,
+    `The "${name}" cookie has an "expires" property set. ` +
+      `This will cause the expires value to not be updated when the session is committed. ` +
+      `Instead, you should set the expires value when serializing the cookie. ` +
+      `You can use \`commitSession(session, { expires })\` if using a session storage object, ` +
+      `or \`cookie.serialize("value", { expires })\` if you're using the cookie directly.`
+  );
 }

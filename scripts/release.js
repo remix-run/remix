@@ -148,6 +148,9 @@ async function initBump(git) {
     .filter((tag) => tag.startsWith("v" + versionFromBranch))
     .sort((a, b) => (a > b ? -1 : a < b ? 1 : 0))[0];
   let nextVersion = semver.inc(currentVersion, "prerelease");
+  if (!nextVersion) {
+    throw Error(`Invalid semver version: ${currentVersion}`);
+  }
   return nextVersion;
 }
 
@@ -170,7 +173,7 @@ async function execStart(nextVersion) {
   await gitPull("dev");
   try {
     checkoutNewBranch(releaseBranch);
-  } catch (e) {
+  } catch {
     throw Error(
       `Branch ${chalk.bold(
         releaseBranch
@@ -240,9 +243,10 @@ async function gitMerge(from, to, opts = {}) {
   let summary;
   try {
     summary = await git.merge([from]);
-  } catch (err) {
-    savedError = err;
-    summary = err.git;
+  } catch (error) {
+    savedError = error;
+    // @ts-ignore
+    summary = error.git;
   }
 
   if (summary.conflicts.length > 0) {
@@ -277,14 +281,14 @@ async function gitPull(branch) {
       console.error(chalk.red("Merge failed.\n"));
       throw Error(resp);
     }
-  } catch (e) {
+  } catch (error) {
     console.error(chalk.red(`Error rebasing to origin/${branch}`));
-    throw e;
+    throw error;
   }
 }
 
 /**
- * @param {string} currentVersion
+ * @param {string | undefined} currentVersion
  * @param {string} givenVersion
  * @param {string | undefined} [prereleaseId]
  */
@@ -383,7 +387,7 @@ function ensureLatestReleaseBranch(branch, git) {
 
 /**
  * @param {string} branch
- * @returns {string | undefined}
+ * @returns {string}
  */
 function getVersionFromReleaseBranch(branch) {
   return branch.slice(branch.indexOf("-") + 2);

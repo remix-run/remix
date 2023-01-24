@@ -1,6 +1,6 @@
 import express from "express";
 import supertest from "supertest";
-import { createRequest } from "node-mocks-http";
+import { createRequest, createResponse } from "node-mocks-http";
 import {
   createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,
@@ -32,11 +32,10 @@ function createApp() {
 
   app.all(
     "*",
-    createRequestHandler({
-      // We don't have a real app to test, but it doesn't matter. We
-      // won't ever call through to the real createRequestHandler
-      build: undefined,
-    })
+    // We don't have a real app to test, but it doesn't matter. We won't ever
+    // call through to the real createRequestHandler
+    // @ts-expect-error
+    createRequestHandler({ build: undefined })
   );
 
   return app;
@@ -234,8 +233,10 @@ describe("express createRemixRequest", () => {
         Host: "localhost:3000",
       },
     });
+    let expressResponse = createResponse();
 
-    expect(createRemixRequest(expressRequest)).toMatchInlineSnapshot(`
+    expect(createRemixRequest(expressRequest, expressResponse))
+      .toMatchInlineSnapshot(`
       NodeRequest {
         "agent": undefined,
         "compress": true,
@@ -253,6 +254,7 @@ describe("express createRemixRequest", () => {
           "type": null,
         },
         Symbol(Request internals): Object {
+          "credentials": "same-origin",
           "headers": Headers {
             Symbol(query): Array [
               "cache-control",

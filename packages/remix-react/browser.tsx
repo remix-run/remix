@@ -1,17 +1,28 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import type { BrowserHistory, Update } from "history";
-import { createBrowserHistory } from "history";
+import type { HydrationState, Router } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
+import type { Location } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { useSyncExternalStore } from "use-sync-external-store/shim";
 
-import { RemixEntry } from "./components";
-import type { EntryContext } from "./entry";
+import { RemixContext } from "./components";
+import type { EntryContext, FutureConfig } from "./entry";
+import {
+  RemixErrorBoundary,
+  RemixRootDefaultErrorBoundary,
+} from "./errorBoundaries";
+import { deserializeErrors } from "./errors";
 import type { RouteModules } from "./routeModules";
+import { createClientRoutes } from "./routes";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
-  var __remixContext: EntryContext;
+  var __remixContext: {
+    state: HydrationState;
+    future: FutureConfig;
+    // The number of active deferred keys rendered on the server
+    a?: number;
+  };
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
 }
@@ -19,43 +30,56 @@ declare global {
 
 export interface RemixBrowserProps {}
 
+let router: Router;
+
 /**
  * The entry point for a Remix app when it is rendered in the browser (in
  * `app/entry.client.js`). This component is used by React to hydrate the HTML
  * that was received from the server.
  */
 export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
-  let historyRef = React.useRef<BrowserHistory>();
-  if (historyRef.current == null) {
-    historyRef.current = createBrowserHistory({ window });
+  if (!router) {
+    let routes = createClientRoutes(
+      window.__remixManifest.routes,
+      window.__remixRouteModules,
+      window.__remixContext.future
+    );
+
+    let hydrationData = window.__remixContext.state;
+    if (hydrationData && hydrationData.errors) {
+      hydrationData = {
+        ...hydrationData,
+        errors: deserializeErrors(hydrationData.errors),
+      };
+    }
+
+    router = createBrowserRouter(routes, { hydrationData });
   }
 
-  let history = historyRef.current;
-  let [state, dispatch] = React.useReducer(
-    (_: Update, update: Update) => update,
-    {
-      action: history.action,
-      location: history.location,
-    }
+  // We need to include a wrapper RemixErrorBoundary here in case the root error
+  // boundary also throws and we need to bubble up outside of the router entirely.
+  // Then we need a stateful location here so the user can back-button navigate
+  // out of there
+  let location: Location = useSyncExternalStore(
+    router.subscribe,
+    () => router.state.location,
+    () => router.state.location
   );
 
-  React.useLayoutEffect(() => history.listen(dispatch), [history]);
-
-  let entryContext = window.__remixContext;
-  entryContext.manifest = window.__remixManifest;
-  entryContext.routeModules = window.__remixRouteModules;
-  // In the browser, we don't need this because a) in the case of loader
-  // errors we already know the order and b) in the case of render errors
-  // React knows the order and handles error boundaries normally.
-  entryContext.appState.trackBoundaries = false;
-  entryContext.appState.trackCatchBoundaries = false;
-
   return (
-    <RemixEntry
-      context={entryContext}
-      action={state.action}
-      location={state.location}
-      navigator={history}
-    />
+    <RemixContext.Provider
+      value={{
+        manifest: window.__remixManifest,
+        routeModules: window.__remixRouteModules,
+        future: window.__remixContext.future,
+      }}
+    >
+      <RemixErrorBoundary
+        location={location}
+        component={RemixRootDefaultErrorBoundary}
+      >
+        <RouterProvider router={router} fallbackElement={null} />
+      </RemixErrorBoundary>
+    </RemixContext.Provider>
   );
 }

@@ -9,4 +9,5 @@ interface ProcessEnv {
 interface Process {
   env: ProcessEnv;
 }
+// deno-lint-ignore no-unused-vars no-var
 var process: Process;

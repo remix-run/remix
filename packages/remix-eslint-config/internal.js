@@ -1,6 +1,6 @@
 /**
  * This config is intended for internal Remix projects. It should not be
- * documented nor considered public API in regards to semver considerations.
+ * documented nor considered public API in regard to semver considerations.
  */
 
 /**
@@ -13,6 +13,7 @@ const OFF = 0;
 const WARN = 1;
 const ERROR = 2;
 
+/** @type {import('eslint').Linter.Config} */
 module.exports = {
   root: true,
   extends: [
@@ -36,7 +37,8 @@ module.exports = {
       {
         "newlines-between": "always",
         groups: [
-          ["builtin", "external", "internal"],
+          ["builtin", "external"],
+          "internal",
           ["parent", "sibling", "index"],
         ],
       },
@@ -66,20 +68,6 @@ module.exports = {
       rules: {
         "@typescript-eslint/no-unused-expressions": OFF,
         "@typescript-eslint/no-unused-vars": OFF,
-      },
-    },
-    {
-      files: [
-        // All examples and docs, including code blocks in .md files
-        "examples/**/*.js?(x)",
-        "examples/**/*.ts?(x)",
-      ],
-      rules: {
-        "import/order": OFF,
-        "no-unused-expressions": OFF,
-        "no-unused-labels": OFF,
-        "no-unused-vars": OFF,
-        "prefer-let/prefer-let": OFF,
       },
     },
     {

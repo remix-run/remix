@@ -2,14 +2,24 @@ const { execSync } = require("child_process");
 const { readdir, stat } = require("fs/promises");
 const { join } = require("path");
 
-const main = async (migration) => {
-  if (!migration) {
-    console.error("Please specify a migration to run");
+/**
+ * @param {string} codemod
+ */
+const main = async (codemod) => {
+  if (!codemod) {
+    console.error("Please specify a codemod to run");
     process.exit(1);
   }
 
   let buildPath = join(__dirname, "../", "build");
-  let cliPath = join(buildPath, "node_modules", "@remix-run/dev", "cli.js");
+  let cliPath = join(
+    buildPath,
+    "node_modules",
+    "@remix-run",
+    "dev",
+    "dist",
+    "cli.js"
+  );
   let examplesPath = join(process.cwd(), "examples");
   let examples = await readdir(examplesPath);
 
@@ -21,10 +31,9 @@ const main = async (migration) => {
       return;
     }
 
-    execSync(
-      `node ${cliPath} migrate --migration ${migration} --force ${examplePath}`,
-      { stdio: "inherit" }
-    );
+    execSync(`node ${cliPath} codemod ${codemod} --force ${examplePath}`, {
+      stdio: "inherit",
+    });
   });
 };
 
