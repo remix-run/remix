@@ -1,3 +1,4 @@
+import { pathToFileURL } from "url";
 import loadConfig from "postcss-load-config";
 import type { AcceptedPlugin, Processor } from "postcss";
 import postcss from "postcss";
@@ -130,7 +131,7 @@ async function loadTailwindPlugin(
   }
 
   let importedTailwindPlugin = tailwindPath
-    ? (await import(tailwindPath))?.default
+    ? (await import(pathToFileURL(tailwindPath).href))?.default
     : null;
 
   let tailwindPlugin: AcceptedPlugin | null =
