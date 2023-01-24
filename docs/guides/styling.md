@@ -402,7 +402,7 @@ export function links() {
 
 Perhaps the most popular way to style a Remix application in the community is to use [Tailwind CSS][tailwind]. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
 
-There are a couple of options for integrating Tailwind into Remix. You can leverage the new, experimental built-in support, or integrate Tailwind manually using their CLI.
+There are a couple of options for integrating Tailwind into your Remix application. You can use Remix's built-in support, or integrate Tailwind manually using their CLI.
 
 ### Built-in Tailwind Support
 
@@ -467,7 +467,7 @@ export const links: LinksFunction = () => [
 ];
 ```
 
-With this setup in place, you can also use any of [Tailwind's functions and directives][tailwind-functions-and-directives] anywhere in your CSS.
+With this setup in place, you can also use [Tailwind's functions and directives][tailwind-functions-and-directives] anywhere in your CSS.
 
 Note that if you're also using Remix's [built-in PostCSS support](#built-in-postcss-support), the Tailwind PostCSS plugin will be automatically included if it's missing.
 
@@ -602,7 +602,7 @@ export const links: LinksFunction = () => {
 
 [PostCSS][postcss] is a popular tool with a rich plugin ecosystem, commonly used to prefix CSS for older browsers, transpile future CSS syntax, inline images, lint your styles and more.
 
-There are a couple of options for integrating PostCSS into Remix. You can leverage the new, experimental built-in support, or integrate PostCSS manually using their CLI.
+There are a couple of options for integrating PostCSS into your Remix application. You can use Remix's built-in support, or integrate PostCSS manually using their CLI.
 
 ### Built-in PostCSS Support
 
@@ -622,13 +622,13 @@ When a PostCSS config is detected, PostCSS will automatically be run across all 
    };
    ```
 
-2. Install the dependency:
+2. Install any desired PostCSS plugins.
 
    ```sh
    npm install -D autoprefixer
    ```
 
-3. Add `postcss.config.js` in the Remix root referencing the plugin:
+3. Add `postcss.config.js` in the Remix root with configuration for your plugins.
 
    ```js filename=postcss.config.js
    module.exports = {
@@ -638,23 +638,38 @@ When a PostCSS config is detected, PostCSS will automatically be run across all 
    };
    ```
 
+If you're using [Vanilla Extract](#vanilla-extract), since it's already playing the role of CSS preprocessor, you may want to apply a different set of PostCSS plugins relative to other styles. To support this, you can export a function from `postcss.config.js` which is given a context object that lets you know when Remix is processing a Vanilla Extract file.
+
+```js filename=postcss.config.js
+module.exports = (ctx) => {
+  return ctx.remix?.vanillaExtract
+    ? {
+        // PostCSS plugins for Vanilla Extract styles...
+      }
+    : {
+        // PostCSS plugins for other styles...
+      };
+};
+
+```
+
 ### Manual PostCSS Integration
 
 It's also possible to use PostCSS without leveraging the built-in support. Here's the gist of it:
 
-1. Use `postcss` cli directly alongside Remix
+1. Use the `postcss` CLI directly alongside Remix
 2. Build CSS into the Remix app directory from a styles source directory
 3. Import your stylesheet to your modules like any other stylesheet
 
 Here's how to set it up:
 
-1. Install the dev dependencies in your app:
+1. Install PostCSS along with its CLI and any desired plugins in your app.
 
    ```sh
    npm install -D postcss-cli postcss autoprefixer
    ```
 
-2. Add `postcss.config.js` in the Remix root.
+2. Add `postcss.config.js` in the Remix root with configuration for your plugins.
 
    ```js filename=postcss.config.js
    module.exports = {
