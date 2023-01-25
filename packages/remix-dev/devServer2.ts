@@ -120,9 +120,15 @@ export let serve = async (
       clean(config);
       socket.log("Rebuilding...");
     },
-    onRebuildFinish: async (durationMs, assetsManifest) => {
+    onRebuildFinish: async (durationMs, assetsManifest, hmrUpdates) => {
       if (!assetsManifest) return;
       socket.log(`Rebuilt in ${prettyMs(durationMs)}`);
+
+      console.log({ hmrUpdates });
+      if (hmrUpdates) {
+        socket.hmr(hmrUpdates);
+        return;
+      }
 
       info(`Waiting for ${appServerOrigin}...`);
       let start = Date.now();

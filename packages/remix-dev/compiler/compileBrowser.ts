@@ -31,7 +31,9 @@ import invariant from "../invariant";
 
 export type BrowserCompiler = {
   // produce ./public/build/
-  compile: (manifestChannel: WriteChannel<AssetsManifest>) => Promise<void>;
+  compile: (
+    manifestChannel: WriteChannel<AssetsManifest>
+  ) => Promise<unknown[] | undefined>;
   dispose: () => void;
 };
 
@@ -173,7 +175,7 @@ export const createBrowserCompiler = (
 ): BrowserCompiler => {
   let appCompiler: esbuild.BuildIncremental;
   let cssCompiler: esbuild.BuildIncremental;
-
+  let prevMetafile: esbuild.Metafile;
   let compile = async (manifestChannel: WriteChannel<AssetsManifest>) => {
     let appBuildTask = async () => {
       appCompiler = await (!appCompiler
@@ -188,6 +190,7 @@ export const createBrowserCompiler = (
         appCompiler.metafile,
         "Expected app compiler metafile to be defined. This is likely a bug in Remix. Please open an issue at https://github.com/remix-run/remix/issues/new"
       );
+      return appCompiler.metafile;
     };
 
     let cssBuildTask = async () => {
@@ -270,7 +273,11 @@ export const createBrowserCompiler = (
       return cssBundlePath;
     };
 
-    let [cssBundlePath] = await Promise.all([cssBuildTask(), appBuildTask()]);
+    let [cssBundlePath, metafile] = await Promise.all([
+      cssBuildTask(),
+      appBuildTask(),
+    ]);
+    // TODO map outputs to public paths
 
     let manifest = await createAssetsManifest({
       config: remixConfig,
@@ -279,6 +286,50 @@ export const createBrowserCompiler = (
     });
     manifestChannel.write(manifest);
     await writeAssetsManifest(remixConfig, manifest);
+
+    if (prevMetafile !== undefined) {
+      let create_input2output = (
+        metafile: esbuild.Metafile
+      ): Record<string, string> => {
+        let inputs = new Set(Object.keys(metafile.inputs));
+        let input2output: Record<string, string> = {};
+        for (let [outputPath, output] of Object.entries(metafile.outputs)) {
+          for (let x of Object.keys(output.inputs)) {
+            if (inputs.has(x)) {
+              input2output[x] = outputPath;
+            }
+          }
+        }
+        return input2output;
+      };
+      let updates = [];
+      let prev_i2o = create_input2output(prevMetafile);
+      let i2o = create_input2output(metafile);
+      console.log(
+        JSON.stringify(
+          {
+            prev_i2o,
+            i2o,
+          },
+          undefined,
+          2
+        )
+      );
+      for (let input of Object.keys(metafile.inputs)) {
+        let prev_o = prev_i2o[input];
+        let o = i2o[input];
+        if (prev_o !== o) {
+          updates.push({
+            // TODO replace /public/build with /build, but respect remix config settings for those
+            id: input,
+            url: "",
+          });
+        }
+      }
+      prevMetafile = metafile;
+      return updates;
+    }
+    prevMetafile = metafile;
   };
 
   return {

@@ -23,5 +23,9 @@ export let serve = (options: { port: number }) => {
     broadcast({ type: "LOG", message: _message });
   };
 
-  return { reload, log, close: wss.close };
+  let hmr = (event: unknown) => {
+    log(`[HMR] sending event: ${JSON.stringify(event)}`);
+  };
+
+  return { reload, hmr, log, close: wss.close };
 };

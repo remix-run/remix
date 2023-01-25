@@ -28,15 +28,18 @@ export const compile = async (
   options: {
     onCompileFailure?: OnCompileFailure;
   } = {}
-): Promise<AssetsManifest | undefined> => {
+): Promise<
+  { assetsManifest?: AssetsManifest; hmrUpdates: unknown } | undefined
+> => {
   try {
     let assetsManifestChannel = createChannel<AssetsManifest>();
     let browserPromise = compiler.browser.compile(assetsManifestChannel);
     let serverPromise = compiler.server.compile(assetsManifestChannel);
-    await Promise.all([browserPromise, serverPromise]);
-    return assetsManifestChannel.read();
+    let [hmrUpdates] = await Promise.all([browserPromise, serverPromise]);
+    return { assetsManifest: await assetsManifestChannel.read(), hmrUpdates };
   } catch (error: unknown) {
     options.onCompileFailure?.(error as Error);
+    return undefined;
   }
 };
 

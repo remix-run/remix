@@ -23,7 +23,11 @@ function isEntryPoint(config: RemixConfig, file: string): boolean {
 export type WatchOptions = Partial<CompileOptions> & {
   reloadConfig?(root: string): Promise<RemixConfig>;
   onRebuildStart?(): void;
-  onRebuildFinish?(durationMs: number, assetsManifest?: AssetsManifest): void;
+  onRebuildFinish?(
+    durationMs: number,
+    assetsManifest?: AssetsManifest,
+    hmrEvent?: unknown
+  ): void;
   onFileCreated?(file: string): void;
   onFileChanged?(file: string): void;
   onFileDeleted?(file: string): void;
@@ -77,15 +81,19 @@ export async function watch(
     }
 
     compiler = createRemixCompiler(config, options);
-    let assetsManifest = await compile(compiler, { onCompileFailure });
-    onRebuildFinish?.(Date.now() - start, assetsManifest);
+    let { assetsManifest, hmrUpdates } =
+      (await compile(compiler, { onCompileFailure })) ?? {};
+    onRebuildFinish?.(Date.now() - start, assetsManifest, hmrUpdates);
   }, 500);
 
   let rebuild = debounce(async () => {
     onRebuildStart?.();
     let start = Date.now();
-    let assetsManifest = await compile(compiler, { onCompileFailure });
-    onRebuildFinish?.(Date.now() - start, assetsManifest);
+    let { assetsManifest, hmrUpdates } =
+      (await compile(compiler, {
+        onCompileFailure,
+      })) ?? {};
+    onRebuildFinish?.(Date.now() - start, assetsManifest, hmrUpdates);
   }, 100);
 
   let toWatch = [config.appDirectory];
