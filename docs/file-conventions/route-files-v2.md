@@ -280,7 +280,7 @@ app/
 | `/`                                          | `_index.tsx`  |
 | `/beef/and/cheese`                           | `$.tsx`       |
 | `/files`                                     | `files.$.tsx` |
-| `/files/talks/remix-conf_old.pdf`            | `files/$.tsx` |
+| `/files/talks/remix-conf_old.pdf`            | `files.$.tsx` |
 | `/files/talks/remix-conf_final.pdf`          | `files.$.tsx` |
 | `/files/talks/remix-conf-FINAL-MAY_2022.pdf` | `files.$.tsx` |
 
