@@ -4,8 +4,6 @@ title: meta
 
 # `meta`
 
-<docs-info>Meta is changing in v2, you can opt-in to the new API today, [see the meta v2 section][meta-v2].</docs-info>
-
 The meta export defines object representations of `<meta>` tags for a route. These tags are important for SEO, browser behavior, and more.
 
 The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route besides layout routes (their index route will set the meta).
@@ -121,6 +119,8 @@ const meta: MetaFunction<
 ---
 
 # `meta@v2`
+
+<docs-info>Meta is changing in v2, you can opt-in to the new API today, [see the meta v2 section][meta-v2] but you don't have to until you're ready.</docs-info>
 
 You can enable the new meta API with a future flag in `remix.config.js`
 
