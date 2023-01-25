@@ -5,6 +5,8 @@ order: 2
 
 # Server Adapters
 
+## Official Adapters
+
 Idiomatic Remix apps can generally be deployed anywhere because Remix adapt's the server's request/response to the [Web Fetch API][web-fetch-api]. It does this through adapters. We maintain a few adapters:
 
 - `@remix-run/architect`
@@ -22,7 +24,11 @@ If you initialized your app with `npx create-remix@latest` with something other 
 
 Each adapter has the same API. In the future we may have helpers specific to the platform you're deploying to.
 
-## `createRequestHandler`
+### Community Adapters
+
+- [remix-google-cloud-functions](https://github.com/penx/remix-google-cloud-functions) - For [Google Cloud](https://cloud.google.com/functions) and [Firebase](https://firebase.google.com/docs/functions) functions.
+
+### `createRequestHandler`
 
 Creates a request handler for your server to serve the app. This is the ultimate entry point of your Remix application.
 
