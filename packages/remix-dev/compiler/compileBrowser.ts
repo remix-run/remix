@@ -28,6 +28,7 @@ import {
 } from "./plugins/cssBundleEntryModulePlugin";
 import { writeFileSafe } from "./utils/fs";
 import invariant from "../invariant";
+import { hmrPlugin } from "./plugins/hmrPlugin";
 
 export type BrowserCompiler = {
   // produce ./public/build/
@@ -132,6 +133,7 @@ const createEsbuildConfig = (
     entryPoints["react-dom/client"] = "react-dom/client";
     entryPoints["react-refresh/runtime"] = "react-refresh/runtime";
     entryPoints["remix:hmr"] = "remix:hmr";
+    plugins.push(hmrPlugin());
   }
 
   return {
