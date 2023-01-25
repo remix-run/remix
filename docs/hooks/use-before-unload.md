@@ -39,6 +39,6 @@ function SomeForm() {
 }
 ```
 
-For more information and usage, please refer to the [React Router `useBeforeUnload` docs][rr-usebeforeunload].
+<docs-info>For more information and usage, please refer to the [React Router `useBeforeUnload` docs][rr-usebeforeunload].</docs-info>
 
 [rr-usebeforeunload]: https://reactrouter.com/hooks/use-before-unload

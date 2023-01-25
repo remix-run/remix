@@ -1,5 +1,6 @@
 ---
 title: useSubmit
+toc: false
 ---
 
 # `useSubmit`
@@ -71,6 +72,6 @@ function useSessionTimeout() {
 }
 ```
 
-For more information and usage, please refer to the [React Router `useSubmit` docs][rr-usesubmit].
+<docs-info>For more information and usage, please refer to the [React Router `useSubmit` docs][rr-usesubmit].</docs-info>
 
 [rr-usesubmit]: https://reactrouter.com/hooks/use-submit

@@ -2,7 +2,9 @@
 title: "@remix-run/node"
 ---
 
-This contains utilities and polyfills for Node.js.
+# `@remix-run/node`
+
+This package contains utilities and polyfills for Node.js.
 
 <docs-info>Most of the time you will never be importing from this package directly as it's used internally by adapters such as `@remix-run/express`.</docs-info>
 
