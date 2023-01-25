@@ -11,7 +11,6 @@ import type {
   Navigation,
   TrackedPromise,
 } from "@remix-run/router";
-import { createPath } from "@remix-run/router";
 import type {
   LinkProps,
   NavigationType,
