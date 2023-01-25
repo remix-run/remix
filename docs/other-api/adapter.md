@@ -24,9 +24,11 @@ If you initialized your app with `npx create-remix@latest` with something other 
 
 Each adapter has the same API. In the future we may have helpers specific to the platform you're deploying to.
 
-### Community Adapters
+## Community Adapters
 
 - [remix-google-cloud-functions][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
+
+## Creating an adapter
 
 ### `createRequestHandler`
 
