@@ -291,7 +291,6 @@ function usePrefetchBehavior(
  */
 let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
-    // `location` is the unaltered href we will render in the <a> tag for absolute URLs
     let location = typeof to === "string" ? to : createPath(to);
     let isAbsolute =
       /^[a-z+]+:\/\//i.test(location) || location.startsWith("//");
@@ -305,7 +304,7 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
       <>
         <RouterNavLink
           ref={forwardedRef}
-          to={location}
+          to={to}
           {...props}
           {...prefetchHandlers}
         />
@@ -327,7 +326,6 @@ export { NavLink };
  */
 let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", children, ...props }, forwardedRef) => {
-    // `location` is the unaltered href we will render in the <a> tag for absolute URLs
     let location = typeof to === "string" ? to : createPath(to);
     let isAbsolute =
       /^[a-z+]+:\/\//i.test(location) || location.startsWith("//");
