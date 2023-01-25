@@ -290,6 +290,10 @@ function usePrefetchBehavior(
  */
 let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
+    let isAbsolute =
+      typeof to === "string" &&
+      (/^[a-z+]+:\/\//i.test(to) || to.startsWith("//"));
+
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
@@ -303,13 +307,16 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
           {...props}
           {...prefetchHandlers}
         />
-        {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
+        {shouldPrefetch && !isAbsolute ? (
+          <PrefetchPageLinks page={href} />
+        ) : null}
       </>
     );
   }
 );
 NavLink.displayName = "NavLink";
 export { NavLink };
+
 /**
  * This component renders an anchor tag and is the primary way the user will
  * navigate around your website.
@@ -318,11 +325,16 @@ export { NavLink };
  */
 let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
+    let isAbsolute =
+      typeof to === "string" &&
+      (/^[a-z+]+:\/\//i.test(to) || to.startsWith("//"));
+
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
     );
+
     return (
       <>
         <RouterLink
@@ -331,7 +343,9 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
           {...props}
           {...prefetchHandlers}
         />
-        {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
+        {shouldPrefetch && !isAbsolute ? (
+          <PrefetchPageLinks page={href} />
+        ) : null}
       </>
     );
   }
