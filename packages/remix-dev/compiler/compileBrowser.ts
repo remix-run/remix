@@ -125,6 +125,15 @@ const createEsbuildConfig = (
     NodeModulesPolyfillPlugin(),
   ].filter(isNotNull);
 
+  if (mode === "development") {
+    // TODO do this for all deps in package.json
+    entryPoints["react"] = "react";
+    entryPoints["react-dom"] = "react-dom";
+    entryPoints["react-dom/client"] = "react-dom/client";
+    entryPoints["react-refresh/runtime"] = "react-refresh/runtime";
+    entryPoints["remix:hmr"] = "remix:hmr";
+  }
+
   return {
     entryPoints,
     outdir: config.assetsBuildDirectory,
@@ -305,24 +314,16 @@ export const createBrowserCompiler = (
       let updates = [];
       let prev_i2o = create_input2output(prevMetafile);
       let i2o = create_input2output(metafile);
-      console.log(
-        JSON.stringify(
-          {
-            prev_i2o,
-            i2o,
-          },
-          undefined,
-          2
-        )
-      );
       for (let input of Object.keys(metafile.inputs)) {
         let prev_o = prev_i2o[input];
         let o = i2o[input];
         if (prev_o !== o) {
+          let url =
+            remixConfig.publicPath +
+            path.relative(remixConfig.assetsBuildDirectory, path.resolve(o));
           updates.push({
-            // TODO replace /public/build with /build, but respect remix config settings for those
             id: input,
-            url: "",
+            url,
           });
         }
       }
