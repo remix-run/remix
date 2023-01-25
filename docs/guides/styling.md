@@ -469,7 +469,7 @@ export const links: LinksFunction = () => [
 
 With this setup in place, you can also use [Tailwind's functions and directives][tailwind-functions-and-directives] anywhere in your CSS.
 
-Note that if you're also using Remix's [built-in PostCSS support](#built-in-postcss-support), the Tailwind PostCSS plugin will be automatically included if it's missing.
+Note that if you're also using Remix's [built-in PostCSS support](#built-in-postcss-support), the Tailwind PostCSS plugin will be automatically included if it's missing, but you can also choose to manually include the Tailwind plugin in your PostCSS config instead if you'd prefer.
 
 ### Manual Tailwind Integration
 
