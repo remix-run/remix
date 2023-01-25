@@ -321,6 +321,7 @@ export { NavLink };
 let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", children, ...props }, forwardedRef) => {
     let location = typeof to === "string" ? to : createPath(to);
+
     let isAbsolute =
       /^[a-z+]+:\/\//i.test(location) || location.startsWith("//");
 
@@ -330,28 +331,14 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
       props
     );
 
-    if (isAbsolute) {
-      return (
-        <>
-          <a ref={forwardedRef} href={href} {...props} {...prefetchHandlers}>
-            {children}
-          </a>
-          {shouldPrefetch ? (
-            <>
-              <link rel="prerender" href={href} />
-              <link rel="dns-prefetch" href={href} />
-            </>
-          ) : null}
-        </>
-      );
-    }
-
     return (
       <>
         <RouterLink ref={forwardedRef} to={to} {...props} {...prefetchHandlers}>
           {children}
         </RouterLink>
-        {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
+        {shouldPrefetch && !isAbsolute ? (
+          <PrefetchPageLinks page={href} />
+        ) : null}
       </>
     );
   }
