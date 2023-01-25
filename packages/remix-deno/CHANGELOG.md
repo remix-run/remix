@@ -1,5 +1,13 @@
 # `@remix-run/deno`
 
+## 1.12.0-pre.0
+
+### Patch Changes
+
+- Export `JsonFunction` type in `@remix-run/cloudflare` and `@remix-run/deno` ([#5206](https://github.com/remix-run/remix/pull/5206))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.12.0-pre.0`
+
 ## 1.11.1
 
 ### Patch Changes

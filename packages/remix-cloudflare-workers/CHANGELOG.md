@@ -1,5 +1,13 @@
 # `@remix-run/cloudflare-workers`
 
+## 1.12.0-pre.0
+
+### Patch Changes
+
+- Update Cloudflare Workers adapter's `RequestHandler` type to be in line with other adapters ([#4884](https://github.com/remix-run/remix/pull/4884))
+- Updated dependencies:
+  - `@remix-run/cloudflare@1.12.0-pre.0`
+
 ## 1.11.1
 
 ### Patch Changes
