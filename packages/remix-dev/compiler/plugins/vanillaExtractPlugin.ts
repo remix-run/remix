@@ -178,7 +178,7 @@ const vanillaExtractSideEffectsPlugin: esbuild.Plugin = {
       { filter: /\.css(\.(j|t)sx?)?(\?.*)?$/, namespace: "file" },
       async (args) => {
         if (args.pluginData === preventInfiniteLoop) {
-          return;
+          return null;
         }
 
         let resolvedPath = (
@@ -190,7 +190,7 @@ const vanillaExtractSideEffectsPlugin: esbuild.Plugin = {
         ).path;
 
         if (!cssFileFilter.test(resolvedPath)) {
-          return;
+          return null;
         }
 
         return {
