@@ -469,7 +469,7 @@ export const links: LinksFunction = () => [
 
 With this setup in place, you can also use [Tailwind's functions and directives][tailwind-functions-and-directives] anywhere in your CSS.
 
-Note that if you're also using Remix's [built-in PostCSS support](#built-in-postcss-support), the Tailwind PostCSS plugin will be automatically included if it's missing, but you can also choose to manually include the Tailwind plugin in your PostCSS config instead if you'd prefer.
+Note that if you're also using Remix's [built-in PostCSS support][built-in-post-css-support], the Tailwind PostCSS plugin will be automatically included if it's missing, but you can also choose to manually include the Tailwind plugin in your PostCSS config instead if you'd prefer.
 
 ### Manual Tailwind Integration
 
@@ -638,7 +638,7 @@ When a PostCSS config is detected, Remix will automatically run PostCSS across a
    };
    ```
 
-If you're using [Vanilla Extract](#vanilla-extract), since it's already playing the role of CSS preprocessor, you may want to apply a different set of PostCSS plugins relative to other styles. To support this, you can export a function from `postcss.config.js` which is given a context object that lets you know when Remix is processing a Vanilla Extract file.
+If you're using [Vanilla Extract][vanilla-extract-2], since it's already playing the role of CSS preprocessor, you may want to apply a different set of PostCSS plugins relative to other styles. To support this, you can export a function from `postcss.config.js` which is given a context object that lets you know when Remix is processing a Vanilla Extract file.
 
 ```js filename=postcss.config.js
 module.exports = (ctx) => {
@@ -1080,3 +1080,5 @@ module.exports = {
 [css-bundling]: #css-bundling
 [vanilla-extract]: https://vanilla-extract.style
 [sprinkles]: https://vanilla-extract.style/documentation/packages/sprinkles
+[built-in-post-css-support]: #built-in-postcss-support
+[vanilla-extract-2]: #vanilla-extract
