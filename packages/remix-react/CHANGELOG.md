@@ -1,5 +1,13 @@
 # `@remix-run/react`
 
+## 1.12.0-pre.1
+
+### Patch Changes
+
+- allow `<Link>`'s "to" prop to accept absolute urls ([#5092](https://github.com/remix-run/remix/pull/5092))
+
+  if absolute url, don't prefetch
+
 ## 1.12.0-pre.0
 
 ### Minor Changes
