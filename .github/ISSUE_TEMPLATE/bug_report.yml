@@ -29,7 +29,7 @@ body:
     attributes:
       label: Are all your remix dependencies & dev-dependencies using the same version?
       options:
-        - label: Yes
+        - label: "Yes"
           required: true
   - type: textarea
     attributes:
