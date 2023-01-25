@@ -120,7 +120,7 @@ const meta: MetaFunction<
 
 # `meta@v2`
 
-<docs-info>Meta is changing in v2, you can opt-in to the new API today, [see the meta v2 section][meta-v2] but you don't have to until you're ready.</docs-info>
+<docs-info>Meta is changing in v2, you can opt in to the new API today, [see the meta v2 section][meta-v2], but you don't have to until you're ready.</docs-info>
 
 You can enable the new meta API with a future flag in `remix.config.js`
 
@@ -135,7 +135,7 @@ module.exports = {
 The meta export allows you to add `<meta>` tags for every route in your app, including nested routes. These tags are important for SEO, browser behavior, and more.
 
 ```tsx
-import type { V2_MetaFunction } from "@remix-run/node";
+import type { V2_MetaFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const meta: V2_MetaFunction = () => {
   return [
@@ -171,7 +171,7 @@ const ogTitle = {
 <meta property="og:title" content="My Website Title" />;
 ```
 
-The one exception is the the `title` tag since it's not a `<meta>` tag but acts as one.
+The one exception is the `title` tag since it's not a `<meta>` tag but acts as one.
 
 ```tsx
 const title = {
@@ -190,7 +190,7 @@ This is a list of the current route matches. You have access many things, partic
 It's most useful for merging the parent meta into the child meta since the child meta value is what will be used:
 
 ```tsx
-export const meta = ({ matches }) => {
+export const meta: V2_MetaFunction = ({ matches }) => {
   let parentMeta = matches.map((match) => match.meta ?? []);
   return [...parentMeta, { title: "Projects" }];
 };
@@ -201,13 +201,17 @@ export const meta = ({ matches }) => {
 This is the data from your loader.
 
 ```tsx
-export function loader({ params }) {
-  return getTask(params.projectId, params.taskId);
+export async function loader({ params }: LoaderArgs) {
+  return json({
+    task: await getTask(params.projectId, params.taskId),
+  });
 }
 
-export function meta({ data }) {
+export const meta: V2_MetaFunction<typeof loader> = ({
+  data,
+}) => {
   return [{ title: data.task.name }];
-}
+};
 ```
 
 ## `parentsData`
@@ -215,15 +219,20 @@ export function meta({ data }) {
 Often you'll need the data from a parent route, you can look it up by route ID on `parentsData`
 
 ```tsx filename=routes/project/$pid/tasks/$tid.tsx
-export function loader({ params }) {
-  return getTask(params.tid);
+import type { loader as projectDetailsLoader } from "../../../$pid";
+
+export async function loader({ params }: LoaderArgs) {
+  return json({ task: await getTask(params.tid) });
 }
 
-export function meta({ data, parentsData }) {
+export const meta: V2_MetaFunction<
+  typeof loader,
+  { "routes/project/$pid": typeof projectDetailsLoader }
+> = ({ data, parentsData }) => {
   let project = parentsData["routes/project/$pid"].project;
   let task = data.task;
   return [{ title: `${project.name}: ${task.name}` }];
-}
+};
 ```
 
 ## `params`
@@ -241,7 +250,7 @@ This can get quite tricky when you're new.
 Consider a route like `/projects/123`, there are likely three matching routes: `root.tsx`, `projects.tsx`, and `projects/$id.tsx`. All three may export meta descriptors.
 
 ```tsx bad filename=app/root.tsx
-export const meta = () => {
+export const meta: V2_MetaFunction = () => {
   return [
     {
       name: "viewport",
@@ -253,13 +262,15 @@ export const meta = () => {
 ```
 
 ```tsx bad filename=app/routes/projects.tsx
-export const meta = () => {
+export const meta: V2_MetaFunction = () => {
   return [{ title: "Projects" }];
 };
 ```
 
 ```tsx bad filename=app/routes/projects/$id.tsx
-export const meta: V2_MetaFunction = ({ data }) => {
+export const meta: V2_MetaFunction<typeof loader> = ({
+  data,
+}) => {
   return [{ title: data.project.name }];
 };
 ```
@@ -308,7 +319,7 @@ You can also avoid the merge problem by simply not exporting meta that you want 
 Usually you only need to add meta to what the parent has already defined. You can merge parent meta with the spread operator and the [`matches`][matches] arg:
 
 ```tsx
-export const meta = ({ matches }) => {
+export const meta: V2_MetaFunction = ({ matches }) => {
   let parentMeta = matches.map((match) => match.meta ?? []);
   return [...parentMeta, { title: "Projects" }];
 };
