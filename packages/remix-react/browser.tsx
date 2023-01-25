@@ -22,6 +22,10 @@ declare global {
     future: FutureConfig;
     // The number of active deferred keys rendered on the server
     a?: number;
+    dev?: {
+      liveReloadPort?: number;
+      hmrRuntime?: string;
+    }
   };
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];

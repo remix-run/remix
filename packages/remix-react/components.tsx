@@ -902,25 +902,48 @@ export function Scripts(props: ScriptProps) {
           ? `__remixContext.a=${deferredScripts.length};`
           : "");
 
-    // TODO: change to be dynamic imports for routes
-    let routeModulesScript = !isStatic
-      ? " "
-      : `${matches
-          .map(
-            (match, index) =>
-              `import ${JSON.stringify(manifest.url)};
+    let routeModulesScript;
+    if (manifest.hmrRuntime) {
+      routeModulesScript = !isStatic
+        ? " "
+        : `import ${JSON.stringify(manifest.url)};
+import(${JSON.stringify(manifest.hmrRuntime)}).then(() => Promise.all([
+  ${matches
+    .map(
+      (match) =>
+        `import(${JSON.stringify(manifest.routes[match.route.id].module)})`
+    )
+    .join(",")}
+]).then(([${matches.map((_, index) => `route${index}`).join(",")}]) => {
+  window.__remixRouteModules = {${matches
+    .map((match, index) => `${JSON.stringify(match.route.id)}:route${index}`)
+    .join(",")}};
+  
+  return import(${JSON.stringify(manifest.entry.module)});
+}));
+`;
+    } else {
+      routeModulesScript = !isStatic
+        ? " "
+        : `import ${JSON.stringify(manifest.url)};
+${matches
+  .map(
+    (match, index) =>
+      `import ${JSON.stringify(manifest.url)};
 import * as route${index} from ${JSON.stringify(
-                manifest.routes[match.route.id].module
-              )};`
-          )
-          .join("\n")}
+        manifest.routes[match.route.id].module
+      )};`
+  )
+  .join("\n")}
 window.__remixRouteModules = {${matches
-          .map(
-            (match, index) => `${JSON.stringify(match.route.id)}:route${index}`
-          )
-          .join(",")}};
+            .map(
+              (match, index) =>
+                `${JSON.stringify(match.route.id)}:route${index}`
+            )
+            .join(",")}};
 
 import(${JSON.stringify(manifest.entry.module)});`;
+    }
 
     return (
       <>
@@ -1547,15 +1570,6 @@ function convertRouterFetcherToRemixFetcher(
   };
   return fetcher;
 }
-
-export let Hmr = () => {
-  let [hydrated, setHydrated] = React.useState(false);
-  React.useEffect(() => {
-    setHydrated(true);
-  }, []);
-  if (!hydrated) return null;
-  return <script src={window.__remixContext.dev.hmrRuntime} />;
-};
 
 // Dead Code Elimination magic for production builds.
 // This way devs don't have to worry about doing the NODE_ENV check themselves.

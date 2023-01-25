@@ -1,6 +1,9 @@
 import WebSocket from "ws";
 
-type Message = { type: "RELOAD" } | { type: "LOG"; message: string };
+type Message =
+  | { type: "RELOAD" }
+  | { type: "HMR"; updates: unknown[] }
+  | { type: "LOG"; message: string };
 
 type Broadcast = (message: Message) => void;
 
@@ -23,8 +26,8 @@ export let serve = (options: { port: number }) => {
     broadcast({ type: "LOG", message: _message });
   };
 
-  let hmr = (event: unknown) => {
-    log(`[HMR] sending event: ${JSON.stringify(event)}`);
+  let hmr = (updates: unknown[]) => {
+    broadcast({ type: "HMR", updates });
   };
 
   return { reload, hmr, log, close: wss.close };

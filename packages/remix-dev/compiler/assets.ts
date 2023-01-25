@@ -32,6 +32,7 @@ export interface AssetsManifest {
     };
   };
   cssBundleHref?: string;
+  hmrRuntime?: string;
 }
 
 export async function createAssetsManifest({
@@ -119,7 +120,16 @@ export async function createAssetsManifest({
 
   let cssBundleHref = cssBundlePath ? resolveUrl(cssBundlePath) : undefined;
 
-  return { version, entry, routes, cssBundleHref };
+  let hmrRuntime: string | undefined;
+  for (const [outputPath, output] of Object.entries(metafile.outputs)) {
+    if (Object.keys(output.inputs).includes("remix-hmr:remix:hmr")) {
+      hmrRuntime =
+        config.publicPath +
+        path.relative(config.assetsBuildDirectory, path.resolve(outputPath));
+    }
+  }
+
+  return { version, entry, routes, cssBundleHref, hmrRuntime };
 }
 
 type ImportsCache = { [routeId: string]: string[] };

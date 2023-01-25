@@ -26,7 +26,7 @@ export type WatchOptions = Partial<CompileOptions> & {
   onRebuildFinish?(
     durationMs: number,
     assetsManifest?: AssetsManifest,
-    hmrEvent?: unknown
+    hmrUpdates?: unknown[]
   ): void;
   onFileCreated?(file: string): void;
   onFileChanged?(file: string): void;

@@ -132,8 +132,8 @@ const createEsbuildConfig = (
     entryPoints["react-dom"] = "react-dom";
     entryPoints["react-dom/client"] = "react-dom/client";
     entryPoints["react-refresh/runtime"] = "react-refresh/runtime";
-    entryPoints["remix:hmr"] = "remix:hmr";
-    plugins.push(hmrPlugin());
+    // entryPoints["remix:hmr"] = "remix:hmr";
+    plugins.push(hmrPlugin({ remixConfig: config }));
   }
 
   return {
@@ -177,6 +177,9 @@ const createEsbuildConfig = (
     jsx: "automatic",
     jsxDev: options.mode !== "production",
     plugins,
+    supported: {
+      "import-meta": true,
+    },
   };
 };
 
@@ -188,151 +191,155 @@ export const createBrowserCompiler = (
   let cssCompiler: esbuild.BuildIncremental;
   let prevMetafile: esbuild.Metafile;
   let compile = async (manifestChannel: WriteChannel<AssetsManifest>) => {
-    let appBuildTask = async () => {
-      appCompiler = await (!appCompiler
-        ? esbuild.build({
-            ...createEsbuildConfig("app", remixConfig, options),
-            metafile: true,
-            incremental: true,
-          })
-        : appCompiler.rebuild());
+    try {
+      let appBuildTask = async () => {
+        appCompiler = await (!appCompiler
+          ? esbuild.build({
+              ...createEsbuildConfig("app", remixConfig, options),
+              metafile: true,
+              incremental: true,
+            })
+          : appCompiler.rebuild());
 
-      invariant(
-        appCompiler.metafile,
-        "Expected app compiler metafile to be defined. This is likely a bug in Remix. Please open an issue at https://github.com/remix-run/remix/issues/new"
-      );
-      return appCompiler.metafile;
-    };
-
-    let cssBuildTask = async () => {
-      if (!isCssBundlingEnabled(remixConfig)) {
-        return;
-      }
-
-      // The types aren't great when combining write: false and incremental: true
-      //  so we need to assert that it's an incremental build
-      cssCompiler = (await (!cssCompiler
-        ? esbuild.build({
-            ...createEsbuildConfig("css", remixConfig, options),
-            metafile: true,
-            incremental: true,
-            write: false,
-          })
-        : cssCompiler.rebuild())) as esbuild.BuildIncremental;
-
-      invariant(
-        cssCompiler.metafile,
-        "Expected CSS compiler metafile to be defined. This is likely a bug in Remix. Please open an issue at https://github.com/remix-run/remix/issues/new"
-      );
-
-      let outputFiles = cssCompiler.outputFiles || [];
-
-      let isCssBundleFile = (
-        outputFile: esbuild.OutputFile,
-        extension: ".css" | ".css.map"
-      ): boolean => {
-        return (
-          path.dirname(outputFile.path) === remixConfig.assetsBuildDirectory &&
-          path.basename(outputFile.path).startsWith("css-bundle") &&
-          outputFile.path.endsWith(extension)
+        invariant(
+          appCompiler.metafile,
+          "Expected app compiler metafile to be defined. This is likely a bug in Remix. Please open an issue at https://github.com/remix-run/remix/issues/new"
         );
+        return appCompiler.metafile;
       };
 
-      let cssBundleFile = outputFiles.find((outputFile) =>
-        isCssBundleFile(outputFile, ".css")
-      );
+      let cssBuildTask = async () => {
+        if (!isCssBundlingEnabled(remixConfig)) {
+          return;
+        }
 
-      if (!cssBundleFile) {
-        return;
-      }
+        // The types aren't great when combining write: false and incremental: true
+        //  so we need to assert that it's an incremental build
+        cssCompiler = (await (!cssCompiler
+          ? esbuild.build({
+              ...createEsbuildConfig("css", remixConfig, options),
+              metafile: true,
+              incremental: true,
+              write: false,
+            })
+          : cssCompiler.rebuild())) as esbuild.BuildIncremental;
 
-      let cssBundlePath = cssBundleFile.path;
+        invariant(
+          cssCompiler.metafile,
+          "Expected CSS compiler metafile to be defined. This is likely a bug in Remix. Please open an issue at https://github.com/remix-run/remix/issues/new"
+        );
 
-      let { css, map } = await postcss([
-        // We need to discard duplicate rules since "composes"
-        // in CSS Modules can result in duplicate styles
-        postcssDiscardDuplicates(),
-      ]).process(cssBundleFile.text, {
-        from: cssBundlePath,
-        to: cssBundlePath,
-        map: options.sourcemap && {
-          prev: outputFiles.find((outputFile) =>
-            isCssBundleFile(outputFile, ".css.map")
-          )?.text,
-          inline: false,
-          annotation: false,
-          sourcesContent: true,
-        },
-      });
+        let outputFiles = cssCompiler.outputFiles || [];
 
-      await fse.ensureDir(path.dirname(cssBundlePath));
+        let isCssBundleFile = (
+          outputFile: esbuild.OutputFile,
+          extension: ".css" | ".css.map"
+        ): boolean => {
+          return (
+            path.dirname(outputFile.path) ===
+              remixConfig.assetsBuildDirectory &&
+            path.basename(outputFile.path).startsWith("css-bundle") &&
+            outputFile.path.endsWith(extension)
+          );
+        };
 
-      await Promise.all([
-        fse.writeFile(cssBundlePath, css),
-        options.mode !== "production" && map
-          ? fse.writeFile(`${cssBundlePath}.map`, map.toString()) // Write our updated source map rather than esbuild's
-          : null,
-        ...outputFiles
-          .filter((outputFile) => !/\.(css|js|map)$/.test(outputFile.path))
-          .map(async (asset) => {
-            await fse.ensureDir(path.dirname(asset.path));
-            await fse.writeFile(asset.path, asset.contents);
-          }),
+        let cssBundleFile = outputFiles.find((outputFile) =>
+          isCssBundleFile(outputFile, ".css")
+        );
+
+        if (!cssBundleFile) {
+          return;
+        }
+
+        let cssBundlePath = cssBundleFile.path;
+
+        let { css, map } = await postcss([
+          // We need to discard duplicate rules since "composes"
+          // in CSS Modules can result in duplicate styles
+          postcssDiscardDuplicates(),
+        ]).process(cssBundleFile.text, {
+          from: cssBundlePath,
+          to: cssBundlePath,
+          map: options.sourcemap && {
+            prev: outputFiles.find((outputFile) =>
+              isCssBundleFile(outputFile, ".css.map")
+            )?.text,
+            inline: false,
+            annotation: false,
+            sourcesContent: true,
+          },
+        });
+
+        await fse.ensureDir(path.dirname(cssBundlePath));
+
+        await Promise.all([
+          fse.writeFile(cssBundlePath, css),
+          options.mode !== "production" && map
+            ? fse.writeFile(`${cssBundlePath}.map`, map.toString()) // Write our updated source map rather than esbuild's
+            : null,
+          ...outputFiles
+            .filter((outputFile) => !/\.(css|js|map)$/.test(outputFile.path))
+            .map(async (asset) => {
+              await fse.ensureDir(path.dirname(asset.path));
+              await fse.writeFile(asset.path, asset.contents);
+            }),
+        ]);
+
+        // Return the CSS bundle path so we can use it to generate the manifest
+        return cssBundlePath;
+      };
+
+      let [cssBundlePath, metafile] = await Promise.all([
+        cssBuildTask(),
+        appBuildTask(),
       ]);
 
-      // Return the CSS bundle path so we can use it to generate the manifest
-      return cssBundlePath;
-    };
+      let manifest = await createAssetsManifest({
+        config: remixConfig,
+        metafile: appCompiler.metafile!,
+        cssBundlePath,
+      });
+      manifestChannel.write(manifest);
+      await writeAssetsManifest(remixConfig, manifest);
 
-    let [cssBundlePath, metafile] = await Promise.all([
-      cssBuildTask(),
-      appBuildTask(),
-    ]);
-    // TODO map outputs to public paths
-
-    let manifest = await createAssetsManifest({
-      config: remixConfig,
-      metafile: appCompiler.metafile!,
-      cssBundlePath,
-    });
-    manifestChannel.write(manifest);
-    await writeAssetsManifest(remixConfig, manifest);
-
-    if (prevMetafile !== undefined) {
-      let create_input2output = (
-        metafile: esbuild.Metafile
-      ): Record<string, string> => {
-        let inputs = new Set(Object.keys(metafile.inputs));
-        let input2output: Record<string, string> = {};
-        for (let [outputPath, output] of Object.entries(metafile.outputs)) {
-          for (let x of Object.keys(output.inputs)) {
-            if (inputs.has(x)) {
-              input2output[x] = outputPath;
+      if (prevMetafile !== undefined) {
+        let create_input2output = (
+          metafile: esbuild.Metafile
+        ): Record<string, string> => {
+          let inputs = new Set(Object.keys(metafile.inputs));
+          let input2output: Record<string, string> = {};
+          for (let [outputPath, output] of Object.entries(metafile.outputs)) {
+            for (let x of Object.keys(output.inputs)) {
+              if (inputs.has(x)) {
+                input2output[x] = outputPath;
+              }
             }
           }
+          return input2output;
+        };
+        let updates = [];
+        let prev_i2o = create_input2output(prevMetafile);
+        let i2o = create_input2output(metafile);
+        for (let input of Object.keys(metafile.inputs)) {
+          let prev_o = prev_i2o[input];
+          let o = i2o[input];
+          if (prev_o !== o) {
+            let url =
+              remixConfig.publicPath +
+              path.relative(remixConfig.assetsBuildDirectory, path.resolve(o));
+            updates.push({
+              id: input,
+              url,
+            });
+          }
         }
-        return input2output;
-      };
-      let updates = [];
-      let prev_i2o = create_input2output(prevMetafile);
-      let i2o = create_input2output(metafile);
-      for (let input of Object.keys(metafile.inputs)) {
-        let prev_o = prev_i2o[input];
-        let o = i2o[input];
-        if (prev_o !== o) {
-          let url =
-            remixConfig.publicPath +
-            path.relative(remixConfig.assetsBuildDirectory, path.resolve(o));
-          updates.push({
-            id: input,
-            url,
-          });
-        }
+        prevMetafile = metafile;
+        return updates;
       }
       prevMetafile = metafile;
-      return updates;
+    } catch (reason) {
+      console.error("HMR update failed", reason);
     }
-    prevMetafile = metafile;
   };
 
   return {

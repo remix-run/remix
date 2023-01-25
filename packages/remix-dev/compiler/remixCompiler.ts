@@ -29,7 +29,7 @@ export const compile = async (
     onCompileFailure?: OnCompileFailure;
   } = {}
 ): Promise<
-  { assetsManifest?: AssetsManifest; hmrUpdates: unknown } | undefined
+  { assetsManifest?: AssetsManifest; hmrUpdates?: unknown[] } | undefined
 > => {
   try {
     let assetsManifestChannel = createChannel<AssetsManifest>();

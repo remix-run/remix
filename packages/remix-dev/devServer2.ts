@@ -38,7 +38,7 @@ let findPort = async (portPreference?: number) =>
       // prettier-ignore
       portPreference ? Number(portPreference) :
         process.env.PORT ? Number(process.env.PORT) :
-          makeRange(3001, 3100),
+          makeRange(8002, 8100),
   });
 
 let fetchAssetsManifest = async (
@@ -57,15 +57,20 @@ let fetchAssetsManifest = async (
 
 let resolveDev = (
   dev: RemixConfig["future"]["unstable_dev"],
-  flags: { port?: number; appServerPort?: number }
+  flags: { port?: number; appServerPort?: number },
+  fallbackPort = 8002
 ) => {
   if (dev === false)
     throw Error("The new dev server requires 'unstable_dev' to be set");
 
-  let port = flags.port ?? (dev === true ? undefined : dev.port);
+  let port = fallbackPort;
+  // if (typeof flags.port === "number") {
+  //   port = flags.port;
+  // }
+
   let appServerPort =
     flags.appServerPort ?? (dev === true || dev.appServerPort == undefined)
-      ? 3000
+      ? fallbackPort
       : dev.appServerPort;
   let remixRequestHandlerPath =
     dev === true || dev.remixRequestHandlerPath === undefined
@@ -91,7 +96,7 @@ export let serve = async (
   clean(config);
   await loadEnv(config.rootDirectory);
 
-  let dev = resolveDev(config.future.unstable_dev, flags);
+  let dev = resolveDev(config.future.unstable_dev, flags, config.devServerPort);
 
   let host = getHost();
   let appServerOrigin = `http://${host ?? "localhost"}:${dev.appServerPort}`;
@@ -110,11 +115,10 @@ export let serve = async (
   };
 
   // watch and live reload on rebuilds
-  let port = await findPort(dev.port);
-  let socket = LiveReload.serve({ port });
+  let socket = LiveReload.serve({ port: dev.port });
   let dispose = await Compiler.watch(config, {
     mode: "development",
-    liveReloadPort: port,
+    liveReloadPort: dev.port,
     onInitialBuild: (durationMs) => info(`Built in ${prettyMs(durationMs)}`),
     onRebuildStart: () => {
       clean(config);
@@ -124,8 +128,7 @@ export let serve = async (
       if (!assetsManifest) return;
       socket.log(`Rebuilt in ${prettyMs(durationMs)}`);
 
-      console.log({ hmrUpdates });
-      if (hmrUpdates) {
+      if (hmrUpdates && hmrUpdates.length > 0) {
         socket.hmr(hmrUpdates);
         return;
       }
