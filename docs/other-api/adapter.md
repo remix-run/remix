@@ -26,7 +26,7 @@ Each adapter has the same API. In the future we may have helpers specific to the
 
 ### Community Adapters
 
-- [remix-google-cloud-functions](https://github.com/penx/remix-google-cloud-functions) - For [Google Cloud](https://cloud.google.com/functions) and [Firebase](https://firebase.google.com/docs/functions) functions.
+- [remix-google-cloud-functions][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
 
 ### `createRequestHandler`
 
@@ -175,3 +175,6 @@ addEventListener("fetch", (event) => {
 ```
 
 [web-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+[remix-google-cloud-functions]: https://github.com/penx/remix-google-cloud-functions
+[google-cloud-functions]: https://cloud.google.com/functions
+[firebase-functions]: https://firebase.google.com/docs/functions
