@@ -291,7 +291,7 @@ function usePrefetchBehavior(
  */
 let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
-    let isAbsolute = 
+    let isAbsolute =
       typeof to === "string" &&
       (/^[a-z+]+:\/\//i.test(to) || to.startsWith("//"));
 
@@ -325,12 +325,12 @@ export { NavLink };
  * @see https://remix.run/components/link
  */
 let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
-  ({ to, prefetch = "none", children, ...props }, forwardedRef) => {
-    let location = typeof to === "string" ? to : createPath(to);
+  ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let isAbsolute =
-      /^[a-z+]+:\/\//i.test(location) || location.startsWith("//");
+      typeof to === "string" &&
+      (/^[a-z+]+:\/\//i.test(to) || to.startsWith("//"));
 
-    let href = useHref(location);
+    let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
@@ -338,9 +338,12 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
 
     return (
       <>
-        <RouterLink ref={forwardedRef} to={to} {...props} {...prefetchHandlers}>
-          {children}
-        </RouterLink>
+        <RouterLink
+          ref={forwardedRef}
+          to={to}
+          {...props}
+          {...prefetchHandlers}
+        />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
         ) : null}
