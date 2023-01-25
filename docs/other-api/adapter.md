@@ -26,7 +26,7 @@ Each adapter has the same API. In the future we may have helpers specific to the
 
 ## Community Adapters
 
-- [remix-google-cloud-functions][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
+- [`remix-google-cloud-functions`][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
 
 ## Creating an adapter
 
