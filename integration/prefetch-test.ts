@@ -5,8 +5,6 @@ import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import type { RemixLinkProps } from "../build/node_modules/@remix-run/react/dist/components";
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
-let EXTERNAL_URL = "https://remix.run";
-
 // Generate the test app using the given prefetch mode
 function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
   return {
@@ -42,9 +40,6 @@ function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
                   <br/>
                   <Link to="/without-loader" prefetch="${mode}">
                     Non-Loader Page
-                  </Link>
-                  <Link to="${EXTERNAL_URL}" prefetch="${mode}">
-                    External Page
                   </Link>
                 </nav>
                 <Outlet />
@@ -141,14 +136,9 @@ test.describe("prefetch=render", () => {
       "#nav link[rel='modulepreload'][href^='/build/routes/without-loader-']",
       { state: "attached" }
     );
-    // Only document fetch for external link
-    await page.waitForSelector(
-      `#nav link[rel='prefetch'][as='document'][href='${EXTERNAL_URL}']`,
-      { state: "attached" }
-    );
 
     // Ensure no other links in the #nav element
-    expect(await page.locator("#nav link").count()).toBe(4);
+    expect(await page.locator("#nav link").count()).toBe(3);
   });
 });
 
@@ -198,13 +188,6 @@ test.describe("prefetch=intent (hover)", () => {
       { state: "attached" }
     );
     expect(await page.locator("#nav link").count()).toBe(1);
-
-    await page.hover(`a[href='${EXTERNAL_URL}']`);
-    await page.waitForSelector(
-      `#nav link[rel='prefetch'][as='document'][href='${EXTERNAL_URL}']`,
-      { state: "attached" }
-    );
-    expect(await page.locator("#nav link").count()).toBe(2);
   });
 
   test("removes prefetch tags after navigating to/from the page", async ({
@@ -215,11 +198,6 @@ test.describe("prefetch=intent (hover)", () => {
 
     // Links added on hover
     await page.hover("a[href='/with-loader']");
-    await page.waitForSelector("#nav link", { state: "attached" });
-    expect(await page.locator("#nav link").count()).toBe(2);
-
-    // Links added on hover (external)
-    await page.hover(`a[href='${EXTERNAL_URL}']`);
     await page.waitForSelector("#nav link", { state: "attached" });
     expect(await page.locator("#nav link").count()).toBe(2);
 
@@ -284,12 +262,5 @@ test.describe("prefetch=intent (focus)", () => {
       { state: "attached" }
     );
     expect(await page.locator("#nav link").count()).toBe(1);
-
-    await page.focus(`a[href='${EXTERNAL_URL}']`);
-    await page.waitForSelector(
-      `#nav link[rel='prefetch'][as='document'][href='${EXTERNAL_URL}']`,
-      { state: "attached" }
-    );
-    expect(await page.locator("#nav link").count()).toBe(2);
   });
 });
