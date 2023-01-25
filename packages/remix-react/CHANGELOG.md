@@ -1,5 +1,7 @@
 # `@remix-run/react`
 
+## 1.12.0-pre.2
+
 ## 1.12.0-pre.1
 
 ### Patch Changes
