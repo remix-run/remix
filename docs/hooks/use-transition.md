@@ -4,10 +4,6 @@ title: useTransition
 
 # `useTransition`
 
-<docs-error>This API will be removed in v2, we encourage you to switch to [`useNavigation`][use-navigation] to make upgrading in the future easy.</docs-error>
-
----
-
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=y4VLIFjFq8k&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Pending UI</a>, <a href="https://www.youtube.com/watch?v=bMLej7bg5Zo&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Clearing Inputs After Form Submissions</a>, and <a href="https://www.youtube.com/watch?v=EdB_nj01C80&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Optimistic UI</a></docs-success>
 
 This hook tells you everything you need to know about a page transition to build pending navigation indicators and optimistic UI on data mutations. Things like:
@@ -152,6 +148,10 @@ function PendingLink({ to, children }) {
 ```
 
 Note that this link will not appear "pending" if a form is being submitted to the URL the link points to, because we only do this for "loading" states. The form will contain the pending UI for when the state is "submitting", once the action is complete, then the link will go pending.
+
+## v2 deprecation
+
+This API will be removed in v2 in favor of [`useNavigation`][use-navigation]. You can start using the new `useNavigation` hook today to make upgrading in the future easy, but you can keep using `useTransition` before v2.
 
 [usefetcher]: ./use-fetcher
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
