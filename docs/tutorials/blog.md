@@ -1,15 +1,17 @@
 ---
-title: Developer Blog
-order: 1
+title: Blog Tutorial (short)
+order: 3
 ---
 
 # Quickstart
 
 We're going to be short on words and quick on code in this quickstart. If you're looking to see what Remix is all about in 15 minutes, this is it.
 
-<docs-info>💿 Hey I'm Derrick the Remix Compact Disc 👋 Whenever you're supposed to _do_ something you'll see me</docs-info>
+<docs-info>Work through this tutorial with Kent in <a target="_blank" rel="noopener noreferrer" href="https://rmx.as/egghead-course">this free Egghead.io course</a></docs-info>
 
 This tutorial uses TypeScript. Remix can definitely be used without TypeScript. We feel most productive when writing TypeScript, but if you'd prefer to skip the TypeScript syntax, feel free to write your code in JavaScript.
+
+<docs-info>💿 Hey I'm Derrick the Remix Compact Disc 👋 Whenever you're supposed to _do_ something you'll see me</docs-info>
 
 ## Prerequisites
 
@@ -19,9 +21,9 @@ Click this button to create a [Gitpod][gitpod] workspace with the project set up
 
 If you want to follow this tutorial locally on your own computer, it is important for you to have these things installed:
 
-- [Node.js][node-js] version (^12.22.0, ^14.17.0, or >=16.0.0)
+- [Node.js][node-js] version (^14.17.0, or >=16.0.0)
 - [npm][npm] 7 or greater
-- A code editor
+- A code editor ([VSCode][vs-code] is a nice one)
 
 ## Creating the project
 
@@ -30,7 +32,7 @@ If you want to follow this tutorial locally on your own computer, it is importan
 💿 Initialize a new Remix project. We'll call ours "blog-tutorial" but you can call it something else if you'd like.
 
 ```sh
-npx create-remix --template remix-run/indie-stack blog-tutorial
+npx create-remix@latest --template remix-run/indie-stack blog-tutorial
 ```
 
 ```
@@ -41,7 +43,7 @@ You can read more about the stacks available in [the stacks docs][the-stacks-doc
 
 We're using [the Indie stack][the-indie-stack], which is a full application ready to deploy to [fly.io][fly-io]. This includes development tools as well as production-ready authentication and persistence. Don't worry if you're unfamiliar with the tools used, we'll walk you through things as we go.
 
-<docs-info>Note, you can definitely start with "Just the basics" instead by running `npx create-remix` without the `--template` flag. The generated project is much more minimal that way. However, some bits of the tutorial will be different for you and you'll have to configure things for deployment manually.</docs-info>
+<docs-info>Note, you can definitely start with "Just the basics" instead by running `npx create-remix@latest` without the `--template` flag. The generated project is much more minimal that way. However, some bits of the tutorial will be different for you and you'll have to configure things for deployment manually.</docs-info>
 
 💿 Now, open the project that was generated in your preferred editor and check the instructions in the `README.md` file. Feel free to read over this. We'll get to the deployment bit later in the tutorial.
 
@@ -147,7 +149,7 @@ export const loader = async () => {
 };
 
 export default function Posts() {
-  const { posts } = useLoaderData();
+  const { posts } = useLoaderData<typeof loader>();
   console.log(posts);
   return (
     <main>
@@ -167,61 +169,7 @@ import { Link, useLoaderData } from "@remix-run/react";
 
 // ...
 export default function Posts() {
-  const { posts } = useLoaderData();
-  return (
-    <main>
-      <h1>Posts</h1>
-      <ul>
-        {posts.map((post) => (
-          <li key={post.slug}>
-            <Link
-              to={post.slug}
-              className="text-blue-600 underline"
-            >
-              {post.title}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </main>
-  );
-}
-```
-
-TypeScript is mad, so let's help it out:
-
-💿 Add the Post type and generic for `useLoaderData`
-
-```tsx filename=app/routes/posts/index.tsx lines=[4-7,9-11,14,29]
-import { json } from "@remix-run/node";
-import { Link, useLoaderData } from "@remix-run/react";
-
-type Post = {
-  slug: string;
-  title: string;
-};
-
-type LoaderData = {
-  posts: Array<Post>;
-};
-
-export const loader = async () => {
-  return json<LoaderData>({
-    posts: [
-      {
-        slug: "my-first-post",
-        title: "My First Post",
-      },
-      {
-        slug: "90s-mixtape",
-        title: "A Mixtape I Made Just For You",
-      },
-    ],
-  });
-};
-
-export default function Posts() {
-  const { posts } = useLoaderData() as LoaderData;
+  const { posts } = useLoaderData<typeof loader>();
   return (
     <main>
       <h1>Posts</h1>
@@ -286,15 +234,8 @@ import { Link, useLoaderData } from "@remix-run/react";
 
 import { getPosts } from "~/models/post.server";
 
-type LoaderData = {
-  // this is a handy way to say: "posts is whatever type getPosts resolves to"
-  posts: Awaited<ReturnType<typeof getPosts>>;
-};
-
 export const loader = async () => {
-  return json<LoaderData>({
-    posts: await getPosts(),
-  });
+  return json({ posts: await getPosts() });
 };
 
 // ...
@@ -447,16 +388,17 @@ You can click one of your posts and should see the new page.
 
 💿 Add a loader to access the params
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[1-2,4-6,9,13]
+```tsx filename=app/routes/posts/$slug.tsx lines=[1-3,5-7,10,14]
+import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
-export const loader = async ({ params }) => {
+export const loader = async ({ params }: LoaderArgs) => {
   return json({ slug: params.slug });
 };
 
 export default function PostSlug() {
-  const { slug } = useLoaderData();
+  const { slug } = useLoaderData<typeof loader>();
   return (
     <main className="mx-auto max-w-4xl">
       <h1 className="my-6 border-b-2 text-center text-3xl">
@@ -469,30 +411,12 @@ export default function PostSlug() {
 
 The part of the filename attached to the `$` becomes a named key on the `params` object that comes into your loader. This is how we'll look up our blog post.
 
-💿 Let's get some help from TypeScript for the loader function signature.
-
-```tsx filename=app/routes/posts/$slug.tsx lines=[1,5]
-import type { LoaderFunction } from "@remix-run/node";
-import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
-
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
-  return json({ slug: params.slug });
-};
-```
-
 Now, let's actually get the post contents from the database by its slug.
 
 💿 Add a `getPost` function to our post module
 
-Update the `app/models/post.server.ts` file:
-
-```tsx filename=app/models/post.server.ts lines=[3,9-11]
+```tsx filename=app/models/post.server.ts lines=[7-9]
 import { prisma } from "~/db.server";
-
-export type { Post } from "@prisma/client";
 
 export async function getPosts() {
   return prisma.post.findMany();
@@ -505,22 +429,20 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[5,10-11,15,19]
-import type { LoaderFunction } from "@remix-run/node";
+```tsx filename=app/routes/posts/$slug.tsx lines=[5,8-9,13,17]
+import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
 import { getPost } from "~/models/post.server";
 
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   const post = await getPost(params.slug);
   return json({ post });
 };
 
 export default function PostSlug() {
-  const { post } = useLoaderData();
+  const { post } = useLoaderData<typeof loader>();
   return (
     <main className="mx-auto max-w-4xl">
       <h1 className="my-6 border-b-2 text-center text-3xl">
@@ -535,30 +457,25 @@ Check that out! We're now pulling our posts from a data source instead of includ
 
 Let's make TypeScript happy with our code:
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[4,6,9,14,17,19,23]
-import type { LoaderFunction } from "@remix-run/node";
+```tsx filename=app/routes/posts/$slug.tsx lines=[4,9,12]
+import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
 
-import type { Post } from "~/models/post.server";
 import { getPost } from "~/models/post.server";
 
-type LoaderData = { post: Post };
-
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   invariant(params.slug, `params.slug is required`);
 
   const post = await getPost(params.slug);
   invariant(post, `Post not found: ${params.slug}`);
 
-  return json<LoaderData>({ post });
+  return json({ post });
 };
 
 export default function PostSlug() {
-  const { post } = useLoaderData() as LoaderData;
+  const { post } = useLoaderData<typeof loader>();
   return (
     <main className="mx-auto max-w-4xl">
       <h1 className="my-6 border-b-2 text-center text-3xl">
@@ -583,32 +500,29 @@ npm add marked
 npm add @types/marked -D
 ```
 
-```tsx filename=app/routes/post/$slug.ts lines=[1,10,20-21,25,31]
-import { marked } from "marked";
-import type { LoaderFunction } from "@remix-run/node";
+Now that `marked` has been installed, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
+
+```tsx filename=app/routes/post/$slug.ts lines=[4,15-16,20,26]
+import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
+import { marked } from "marked";
 import invariant from "tiny-invariant";
 
-import type { Post } from "~/models/post.server";
 import { getPost } from "~/models/post.server";
 
-type LoaderData = { post: Post; html: string };
-
-export const loader: LoaderFunction = async ({
-  params,
-}) => {
+export const loader = async ({ params }: LoaderArgs) => {
   invariant(params.slug, `params.slug is required`);
 
   const post = await getPost(params.slug);
   invariant(post, `Post not found: ${params.slug}`);
 
   const html = marked(post.markdown);
-  return json<LoaderData>({ post, html });
+  return json({ post, html });
 };
 
 export default function PostSlug() {
-  const { post, html } = useLoaderData() as LoaderData;
+  const { post, html } = useLoaderData<typeof loader>();
   return (
     <main className="mx-auto max-w-4xl">
       <h1 className="my-6 border-b-2 text-center text-3xl">
@@ -649,22 +563,17 @@ touch app/routes/posts/admin.tsx
 ```
 
 ```tsx filename=app/routes/posts/admin.tsx
-import type { LoaderFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 
 import { getPosts } from "~/models/post.server";
 
-type LoaderData = {
-  posts: Awaited<ReturnType<typeof getPosts>>;
-};
-
-export const loader: LoaderFunction = async () => {
+export const loader = async () => {
   return json({ posts: await getPosts() });
 };
 
 export default function PostAdmin() {
-  const { posts } = useLoaderData() as LoaderData;
+  const { posts } = useLoaderData<typeof loader>();
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">
@@ -726,8 +635,7 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 
 💿 Add an outlet to the admin page
 
-```tsx filename=app/routes/posts/admin.tsx lines=[5,42]
-import type { LoaderFunction } from "@remix-run/node";
+```tsx filename=app/routes/posts/admin.tsx lines=[4,41]
 import { json } from "@remix-run/node";
 import {
   Link,
@@ -737,16 +645,12 @@ import {
 
 import { getPosts } from "~/models/post.server";
 
-type LoaderData = {
-  posts: Awaited<ReturnType<typeof getPosts>>;
-};
-
-export const loader: LoaderFunction = async () => {
+export const loader = async () => {
   return json({ posts: await getPosts() });
 };
 
 export default function PostAdmin() {
-  const { posts } = useLoaderData() as LoaderData;
+  const { posts } = useLoaderData<typeof loader>();
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="my-6 mb-2 border-b-2 text-center text-3xl">
@@ -869,12 +773,13 @@ export async function createPost(post) {
 💿 Call `createPost` from the new post route's action
 
 ```tsx filename=app/routes/posts/admin/new.tsx
+import type { ActionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { Form } from "@remix-run/react";
 
 import { createPost } from "~/models/post.server";
 
-export const action = async ({ request }) => {
+export const action = async ({ request }: ActionArgs) => {
   const formData = await request.formData();
 
   const title = formData.get("title");
@@ -891,16 +796,15 @@ export const action = async ({ request }) => {
 
 That's it. Remix (and the browser) will take care of the rest. Click the submit button and watch the sidebar that lists our posts update automatically.
 
-In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and don't forget, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN! [mdn.io/request][mdn-io-request] [mdn.io/request.formData][mdn-io-request-form-data].
+In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and don't forget, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN! [Request][mdn-request] [Request.formData][mdn-request-form-data].
 
 TypeScript is mad again, let's add some types.
 
-💿 Add the types to both files we changed
+💿 Add the types to `app/models/post.server.ts`
 
-```tsx filename=app/models/post.server.ts lines=[2,8]
+```tsx filename=app/models/post.server.ts lines=[2,7]
 // ...
 import type { Post } from "@prisma/client";
-export type { Post };
 
 // ...
 
@@ -911,60 +815,27 @@ export async function createPost(
 }
 ```
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[1,7]
-import type { ActionFunction } from "@remix-run/node";
-import { redirect } from "@remix-run/node";
-import { Form } from "@remix-run/react";
-
-import { createPost } from "~/models/post.server";
-
-export const action: ActionFunction = async ({
-  request,
-}) => {
-  const formData = await request.formData();
-
-  const title = formData.get("title");
-  const slug = formData.get("slug");
-  const markdown = formData.get("markdown");
-
-  await createPost({ title, slug, markdown });
-
-  return redirect("/posts/admin");
-};
-
-// ...
-```
-
 Whether you're using TypeScript or not, we've got a problem when the user doesn't provide values on some of these fields (and TS is still mad about that call to `createPost`).
 
 Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[2,7-13,23-33]
-import type { ActionFunction } from "@remix-run/node";
+```tsx filename=app/routes/posts/admin/new.tsx lines=[2,14-24]
+import type { ActionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form } from "@remix-run/react";
 
 import { createPost } from "~/models/post.server";
 
-type ActionData =
-  | {
-      title: null | string;
-      slug: null | string;
-      markdown: null | string;
-    }
-  | undefined;
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const formData = await request.formData();
 
   const title = formData.get("title");
   const slug = formData.get("slug");
   const markdown = formData.get("markdown");
 
-  const errors: ActionData = {
+  const errors = {
     title: title ? null : "Title is required",
     slug: slug ? null : "Slug is required",
     markdown: markdown ? null : "Markdown is required",
@@ -973,7 +844,7 @@ export const action: ActionFunction = async ({
     (errorMessage) => errorMessage
   );
   if (hasErrors) {
-    return json<ActionData>(errors);
+    return json(errors);
   }
 
   await createPost({ title, slug, markdown });
@@ -989,7 +860,7 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 💿 Add validation messages to the UI
 
 ```tsx filename=app/routes/posts/admin/new.tsx lines=[3,10,17-19,26-28,35-39]
-import type { ActionFunction } from "@remix-run/node";
+import type { ActionArgs } from "@remix-run/node";
 import { redirect, json } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
 
@@ -998,7 +869,7 @@ import { Form, useActionData } from "@remix-run/react";
 const inputClassName = `w-full rounded border border-gray-500 px-2 py-1 text-lg`;
 
 export default function NewPost() {
-  const errors = useActionData();
+  const errors = useActionData<typeof action>();
 
   return (
     <Form method="post">
@@ -1050,16 +921,14 @@ export default function NewPost() {
 }
 ```
 
-TypeScript is still mad, because someone could call our API with non-string values, so let's add some invariants and a new type for the error object to make it happy.
+TypeScript is still mad, because someone could call our API with non-string values, so let's add some invariants to make it happy.
 
 ```tsx filename=app/routes/posts/admin/new.tsx nocopy
 //...
 import invariant from "tiny-invariant";
 // ..
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   // ...
   invariant(
     typeof title === "string",
@@ -1088,11 +957,9 @@ Let's slow this down and add some "pending UI" to our form.
 
 💿 Slow down our action with a fake delay
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[5-6]
+```tsx filename=app/routes/posts/admin/new.tsx lines=[3-4]
 // ...
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   // TODO: remove me
   await new Promise((res) => setTimeout(res, 1000));
 
@@ -1103,7 +970,8 @@ export const action: ActionFunction = async ({
 
 💿 Add some pending UI with `useTransition`
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[5,13-14,23,25]
+```tsx filename=app/routes/posts/admin/new.tsx lines=[6,14-15,24,26]
+import type { ActionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
   Form,
@@ -1114,7 +982,7 @@ import {
 // ..
 
 export default function NewPost() {
-  const errors = useActionData();
+  const errors = useActionData<typeof action>();
 
   const transition = useTransition();
   const isCreating = Boolean(transition.submission);
@@ -1159,17 +1027,18 @@ We hope you love Remix! 💿 👋
 [gitpod-ready-to-code]: https://img.shields.io/badge/Gitpod-Ready--to--Code-blue?logo=gitpod
 [node-js]: https://nodejs.org
 [npm]: https://www.npmjs.com
+[vs-code]: https://code.visualstudio.com
 [the-stacks-docs]: /pages/stacks
 [the-indie-stack]: https://github.com/remix-run/indie-stack
 [fly-io]: https://fly.io
 [http-localhost-3000]: http://localhost:3000
 [screenshot-of-the-app-showing-the-blog-post-link]: https://user-images.githubusercontent.com/1500684/160208939-34fe20ed-3146-4f4b-a68a-d82284339c47.png
 [tailwind]: https://tailwindcss.com
-[the-styling-guide]: /guides/styling
+[the-styling-guide]: ../guides/styling
 [prisma]: https://prisma.io
 [http-localhost-3000-posts-admin]: http://localhost:3000/posts/admin
-[mdn-io-request]: https://mdn.io/request
-[mdn-io-request-form-data]: https://mdn.io/request.formData
+[mdn-request]: https://developer.mozilla.org/en-US/docs/Web/API/Request
+[mdn-request-form-data]: https://developer.mozilla.org/en-US/docs/Web/API/Request/formData
 [disable-java-script]: https://developer.chrome.com/docs/devtools/javascript/disable
 [the-optimistic-ui-guide]: /guides/optimistic-ui
 [somewhere]: https://www.youtube.com/watch?v=dQw4w9WgXcQ

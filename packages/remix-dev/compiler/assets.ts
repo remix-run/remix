@@ -3,7 +3,7 @@ import type * as esbuild from "esbuild";
 
 import type { RemixConfig } from "../config";
 import invariant from "../invariant";
-import { getRouteModuleExportsCached } from "./routes";
+import { getRouteModuleExports } from "./routeExports";
 import { getHash } from "./utils/crypto";
 import { createUrl } from "./utils/url";
 
@@ -31,12 +31,18 @@ export interface AssetsManifest {
       hasErrorBoundary: boolean;
     };
   };
+  cssBundleHref?: string;
 }
 
-export async function createAssetsManifest(
-  config: RemixConfig,
-  metafile: esbuild.Metafile
-): Promise<AssetsManifest> {
+export async function createAssetsManifest({
+  config,
+  metafile,
+  cssBundlePath,
+}: {
+  config: RemixConfig;
+  metafile: esbuild.Metafile;
+  cssBundlePath?: string;
+}): Promise<AssetsManifest> {
   function resolveUrl(outputPath: string): string {
     return createUrl(
       config.publicPath,
@@ -56,10 +62,13 @@ export async function createAssetsManifest(
     config.appDirectory,
     config.entryClientFile
   );
-  let routesByFile: Map<string, Route> = Object.keys(config.routes).reduce(
+  let routesByFile: Map<string, Route[]> = Object.keys(config.routes).reduce(
     (map, key) => {
       let route = config.routes[key];
-      map.set(route.file, route);
+      map.set(
+        route.file,
+        map.has(route.file) ? [...map.get(route.file), route] : [route]
+      );
       return map;
     },
     new Map()
@@ -72,35 +81,38 @@ export async function createAssetsManifest(
     let output = metafile.outputs[key];
     if (!output.entryPoint) continue;
 
-    // When using yarn-pnp, esbuild-plugin-pnp resolves files under the pnp namespace, even entry.client.tsx
-    let entryPointFile = output.entryPoint.replace(/^pnp:/, "");
-    if (path.resolve(entryPointFile) === entryClientFile) {
+    if (path.resolve(output.entryPoint) === entryClientFile) {
       entry = {
         module: resolveUrl(key),
         imports: resolveImports(output.imports),
       };
       // Only parse routes otherwise dynamic imports can fall into here and fail the build
-    } else if (entryPointFile.startsWith("browser-route-module:")) {
-      entryPointFile = entryPointFile.replace(
+    } else if (output.entryPoint.startsWith("browser-route-module:")) {
+      let entryPointFile = output.entryPoint.replace(
         /(^browser-route-module:|\?browser$)/g,
         ""
       );
-      let route = routesByFile.get(entryPointFile);
-      invariant(route, `Cannot get route for entry point ${output.entryPoint}`);
-      let sourceExports = await getRouteModuleExportsCached(config, route.id);
-      routes[route.id] = {
-        id: route.id,
-        parentId: route.parentId,
-        path: route.path,
-        index: route.index,
-        caseSensitive: route.caseSensitive,
-        module: resolveUrl(key),
-        imports: resolveImports(output.imports),
-        hasAction: sourceExports.includes("action"),
-        hasLoader: sourceExports.includes("loader"),
-        hasCatchBoundary: sourceExports.includes("CatchBoundary"),
-        hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
-      };
+      let groupedRoute = routesByFile.get(entryPointFile);
+      invariant(
+        groupedRoute,
+        `Cannot get route(s) for entry point ${output.entryPoint}`
+      );
+      for (let route of groupedRoute) {
+        let sourceExports = await getRouteModuleExports(config, route.id);
+        routes[route.id] = {
+          id: route.id,
+          parentId: route.parentId,
+          path: route.path,
+          index: route.index,
+          caseSensitive: route.caseSensitive,
+          module: resolveUrl(key),
+          imports: resolveImports(output.imports),
+          hasAction: sourceExports.includes("action"),
+          hasLoader: sourceExports.includes("loader"),
+          hasCatchBoundary: sourceExports.includes("CatchBoundary"),
+          hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
+        };
+      }
     }
   }
 
@@ -109,7 +121,9 @@ export async function createAssetsManifest(
   optimizeRoutes(routes, entry.imports);
   let version = getHash(JSON.stringify({ entry, routes })).slice(0, 8);
 
-  return { version, entry, routes };
+  let cssBundleHref = cssBundlePath ? resolveUrl(cssBundlePath) : undefined;
+
+  return { version, entry, routes, cssBundleHref };
 }
 
 type ImportsCache = { [routeId: string]: string[] };

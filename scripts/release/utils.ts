@@ -1,3 +1,5 @@
+import * as semver from "semver";
+
 import { GITHUB_REPOSITORY, PACKAGE_VERSION_TO_FOLLOW } from "./constants";
 
 export function checkIfStringStartsWith(
@@ -13,10 +15,6 @@ export interface MinimalTag {
   isPrerelease: boolean;
 }
 
-export function sortByDate(a: MinimalTag, b: MinimalTag) {
-  return b.date.getTime() - a.date.getTime();
-}
-
 export function getGitHubUrl(type: "pull" | "issue", number: number) {
   let segment = type === "pull" ? "pull" : "issues";
   return `https://github.com/${GITHUB_REPOSITORY}/${segment}/${number}`;
@@ -24,7 +22,7 @@ export function getGitHubUrl(type: "pull" | "issue", number: number) {
 
 export function cleanupTagName(tagName: string) {
   if (PACKAGE_VERSION_TO_FOLLOW) {
-    let regex = new RegExp(`^${PACKAGE_VERSION_TO_FOLLOW}`);
+    let regex = new RegExp(`^${PACKAGE_VERSION_TO_FOLLOW}@`);
     return tagName.replace(regex, "");
   }
 
@@ -33,4 +31,12 @@ export function cleanupTagName(tagName: string) {
 
 export function cleanupRef(ref: string) {
   return ref.replace(/^refs\/tags\//, "");
+}
+
+export function isNightly(tagName: string) {
+  return tagName.startsWith("v0.0.0-nightly-");
+}
+
+export function isStable(tagName: string) {
+  return semver.prerelease(tagName) === null;
 }

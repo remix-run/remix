@@ -1,11 +1,13 @@
-import path from "path";
+import type { Writable } from "node:stream";
+import path from "node:path";
 import fse from "fs-extra";
-import type { Writable } from "stream";
 import express from "express";
 import getPort from "get-port";
 import stripIndent from "strip-indent";
 import { sync as spawnSync } from "cross-spawn";
 import type { JsonObject } from "type-fest";
+import type { ServerMode } from "@remix-run/server-runtime/mode";
+import type { FutureConfig } from "@remix-run/server-runtime/entry";
 
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
@@ -19,6 +21,7 @@ interface FixtureInit {
   files?: { [filename: string]: string };
   template?: "cf-template" | "deno-template" | "node-template";
   setup?: "node" | "cloudflare";
+  future?: Partial<FutureConfig>;
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
@@ -39,7 +42,10 @@ export async function createFixture(init: FixtureInit) {
 
   let requestDocument = async (href: string, init?: RequestInit) => {
     let url = new URL(href, "test://test");
-    let request = new Request(url.toString(), init);
+    let request = new Request(url.toString(), {
+      ...init,
+      signal: init?.signal || new AbortController().signal,
+    });
     return handler(request);
   };
 
@@ -48,6 +54,8 @@ export async function createFixture(init: FixtureInit) {
     routeId: string,
     init?: RequestInit
   ) => {
+    init = init || {};
+    init.signal = init.signal || new AbortController().signal;
     let url = new URL(href, "test://test");
     url.searchParams.set("_data", routeId);
     let request = new Request(url.toString(), init);
@@ -84,29 +92,27 @@ export async function createFixture(init: FixtureInit) {
   };
 }
 
-export async function createAppFixture(fixture: Fixture) {
+export async function createAppFixture(fixture: Fixture, mode?: ServerMode) {
   let startAppServer = async (): Promise<{
     port: number;
-    stop: () => Promise<void>;
+    stop: VoidFunction;
   }> => {
     return new Promise(async (accept) => {
       let port = await getPort();
       let app = express();
       app.use(express.static(path.join(fixture.projectDir, "public")));
+
       app.all(
         "*",
-        createExpressHandler({ build: fixture.build, mode: "production" })
+        createExpressHandler({
+          build: fixture.build,
+          mode: mode || "production",
+        })
       );
 
       let server = app.listen(port);
 
-      let stop = (): Promise<void> => {
-        return new Promise((res) => {
-          server.close(() => res());
-        });
-      };
-
-      accept({ stop, port });
+      accept({ stop: server.close.bind(server), port });
     });
   };
 
@@ -120,10 +126,10 @@ export async function createAppFixture(fixture: Fixture) {
       /**
        * Shuts down the fixture app, **you need to call this
        * at the end of a test** or `afterAll` if the fixture is initialized in a
-       * `beforeAll` block. Also make sure to `await app.close()` or else you'll
+       * `beforeAll` block. Also make sure to `app.close()` or else you'll
        * have memory leaks.
        */
-      close: async () => {
+      close: () => {
         return stop();
       },
     };
@@ -133,6 +139,7 @@ export async function createAppFixture(fixture: Fixture) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
 export async function createFixtureProject(
   init: FixtureInit = {}
 ): Promise<string> {
@@ -148,6 +155,7 @@ export async function createFixtureProject(
     path.join(projectDir, "node_modules"),
     { overwrite: true }
   );
+
   if (init.setup) {
     let setupSpawn = spawnSync(
       "node",
@@ -168,6 +176,22 @@ export async function createFixtureProject(
       );
     }
   }
+
+  if (init.future) {
+    let contents = fse.readFileSync(
+      path.join(projectDir, "remix.config.js"),
+      "utf-8"
+    );
+    if (!contents.includes("future: {},")) {
+      throw new Error("Invalid formatted remix.config.js in template");
+    }
+    contents = contents.replace(
+      "future: {},",
+      "future: " + JSON.stringify(init.future) + ","
+    );
+    fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);
+  }
+
   await writeTestFiles(init, projectDir);
   build(projectDir, init.buildStdio, init.sourcemap);
 
@@ -205,7 +229,14 @@ async function writeTestFiles(init: FixtureInit, dir: string) {
     Object.keys(init.files ?? {}).map(async (filename) => {
       let filePath = path.join(dir, filename);
       await fse.ensureDir(path.dirname(filePath));
-      await fse.writeFile(filePath, stripIndent(init.files![filename]));
+      let file = init.files![filename];
+      // if we have a jsconfig we don't want the tsconfig to exist
+      if (filename.endsWith("jsconfig.json")) {
+        let parsed = path.parse(filePath);
+        await fse.remove(path.join(parsed.dir, "tsconfig.json"));
+      }
+
+      await fse.writeFile(filePath, stripIndent(file));
     })
   );
 }

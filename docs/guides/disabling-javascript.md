@@ -9,7 +9,7 @@ Do you ever look at a page on your site and think "why are we loading all of thi
 
 Here's how we like to do it:
 
-Open up each route module you want to include JavaScript for and add a "handle". This is way for you to provide any kind of meta information about a route to the parent route (as you'll see in a moment).
+Open up each route module you want to include JavaScript for and add a "handle". This is a way for you to provide any kind of meta information about a route to the parent route (as you'll see in a moment).
 
 ```js
 export const handle = { hydrate: true };

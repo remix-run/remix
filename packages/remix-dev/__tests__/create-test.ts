@@ -1,10 +1,10 @@
 import { execSync } from "child_process";
-import fse from "fs-extra";
-import os from "os";
-import path from "path";
+import * as os from "os";
+import * as path from "path";
 import { pathToFileURL } from "url";
-import stripAnsi from "strip-ansi";
+import * as fse from "fs-extra";
 import inquirer from "inquirer";
+import stripAnsi from "strip-ansi";
 
 import { run } from "../cli/run";
 import { server } from "./msw";
@@ -131,7 +131,7 @@ describe("the create command", () => {
   }
 
   // this also tests sub directories
-  it("works for examples in the remix repo", async () => {
+  it("works for examples in the examples repo", async () => {
     let projectDir = await getProjectDir("example");
     await run([
       "create",
@@ -266,7 +266,7 @@ describe("the create command", () => {
       "create",
       projectDir,
       "--template",
-      "https://example.com/remix-stack.tar.gz",
+      "https://github.com/private-org/private-repo/releases/download/v0.0.1/stack.tar.gz",
       "--no-install",
       "--typescript",
       "--token",
@@ -336,7 +336,7 @@ describe("the create command", () => {
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
 
-  it("converts a template to javascript", async () => {
+  it("converts a template to JavaScript", async () => {
     let projectDir = await getProjectDir("template-to-js");
     await run([
       "create",
@@ -351,16 +351,8 @@ describe("the create command", () => {
         "\n\n" +
         getSuccessMessage(path.join("<TEMP_DIR>", "template-to-js"))
     );
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.jsx"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
-    expect(fse.existsSync(path.join(projectDir, "tsconfig.json"))).toBeFalsy();
-    expect(fse.existsSync(path.join(projectDir, "jsconfig.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/utils.js"))).toBeTruthy();
-    let pkgJSON = JSON.parse(
-      fse.readFileSync(path.join(projectDir, "package.json"), "utf-8")
-    );
-    expect(Object.keys(pkgJSON.devDependencies)).not.toContain("typescript");
+    expect(fse.existsSync(path.join(projectDir, "app/root.jsx"))).toBeTruthy();
   });
 
   it("works for a file path to a directory on disk", async () => {
@@ -449,6 +441,24 @@ describe("the create command", () => {
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
+    expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
+  });
+
+  it("runs remix.init script when using index.ts", async () => {
+    let projectDir = await getProjectDir("remix-init-ts");
+    await run([
+      "create",
+      projectDir,
+      "--template",
+      path.join(__dirname, "fixtures", "stack-init-ts.tar.gz"),
+      "--install",
+      "--typescript",
+    ]);
+    expect(output).toContain(
+      `Running init script on ${projectDir.replace(TEMP_DIR, "<TEMP_DIR>")}`
+    );
+    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
+    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
 
@@ -653,8 +663,8 @@ describe("the create command", () => {
             "--typescript",
           ]);
           return res;
-        } catch (err) {
-          throw err;
+        } catch (error: unknown) {
+          throw error;
         }
       }).rejects.toMatchInlineSnapshot(
         `[Error: 🚨 The template could not be verified because you do not have access to the repository. Please double check the access rights of this repo and try again.]`
@@ -798,6 +808,36 @@ describe("the create command", () => {
         `[Error: 🚨 The project directory must be empty to create a new project. Please clear the contents of the directory or choose a different path.]`
       );
       process.chdir(cwd);
+    });
+  });
+
+  describe("supports proxy usage", () => {
+    beforeAll(() => {
+      server.close();
+    });
+    afterAll(() => {
+      server.listen({ onUnhandledRequest: "error" });
+    });
+    it("uses the proxy from env var", async () => {
+      let projectDir = await getProjectDir("template");
+      let error: Error | undefined;
+      let prevProxy = process.env.HTTPS_PROXY;
+      try {
+        process.env.HTTPS_PROXY = "http://127.0.0.1:33128";
+        await run([
+          "create",
+          projectDir,
+          "--template",
+          "grunge-stack",
+          "--no-install",
+          "--typescript",
+        ]);
+      } catch (err) {
+        error = err;
+      } finally {
+        process.env.HTTPS_PROXY = prevProxy;
+      }
+      expect(error?.message).toMatch("127.0.0.1:33");
     });
   });
 });

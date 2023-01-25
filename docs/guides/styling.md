@@ -108,7 +108,7 @@ export function links() {
 }
 ```
 
-```tsx filename=routes/dashboard/sales.tsx
+```tsx filename=app/routes/dashboard/sales.tsx
 import styles from "~/styles/sales.css";
 
 export function links() {
@@ -253,8 +253,9 @@ Now Remix can prefetch, load, and unload the styles for `button.css`, `primary-b
 
 An initial reaction to this is that routes have to know more than you want them to. Keep in mind each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
 
-```tsx filename=app/routes/$category.js lines=[4-8,24-31]
-import { json } from "@remix-run/node"; // or "@remix-run/cloudflare"
+```tsx filename=app/routes/$category.js lines=[5-9,25-32]
+import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
 import { TileGrid } from "~/components/tile-grid";
@@ -267,14 +268,14 @@ export function links() {
   return [{ rel: "stylesheet", href: styles }];
 }
 
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   return json(
     await getProductsForCategory(params.category)
   );
 }
 
 export default function Category() {
-  const products = useLoaderData();
+  const products = useLoaderData<typeof loader>();
   return (
     <TileGrid>
       {products.map((product) => (
@@ -399,7 +400,80 @@ export function links() {
 
 ## Tailwind CSS
 
-Perhaps the most popular way to style a Remix application in the community is to use Tailwind CSS. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
+Perhaps the most popular way to style a Remix application in the community is to use [Tailwind CSS][tailwind]. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
+
+There are a couple of options for integrating Tailwind into your Remix application. You can use Remix's built-in support, or integrate Tailwind manually using their CLI.
+
+### Built-in Tailwind Support
+
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+
+First, to enable built-in Tailwind support, set the `future.unstable_tailwind` feature flag in `remix.config.js`.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  future: {
+    unstable_tailwind: true,
+  },
+  // ...
+};
+```
+
+Then install Tailwind:
+
+```sh
+npm install -D tailwind
+```
+
+Initialize a config file:
+
+```sh
+npx tailwindcss init
+```
+
+Now we can tell it which files to generate classes from:
+
+```js filename=tailwind.config.js lines=[3]
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ["./app/**/*.{ts,tsx,jsx,js}"],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+```
+
+Then include the `@tailwind` directives in your CSS. For example, you could create a `tailwind.css` file at the root of your app:
+
+```css filename=app/tailwind.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+Then add `tailwind.css` to your root route's `links` function:
+
+```tsx filename=app/root.tsx
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
+// ...
+
+import styles from "./tailwind.css";
+
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: styles },
+];
+```
+
+With this setup in place, you can also use [Tailwind's functions and directives][tailwind-functions-and-directives] anywhere in your CSS.
+
+Note that if you're also using Remix's [built-in PostCSS support][built-in-post-css-support], the Tailwind PostCSS plugin will be automatically included if it's missing, but you can also choose to manually include the Tailwind plugin in your PostCSS config instead if you'd prefer.
+
+### Manual Tailwind Integration
+
+It's also possible to use Tailwind without leveraging the built-in support by using the `tailwindcss` CLI directly.
 
 First install a couple dev dependencies:
 
@@ -448,7 +522,7 @@ Update the package scripts to generate the Tailwind file during dev and for the 
 Finally, import the generated CSS file into your app:
 
 ```tsx filename=app/root.tsx
-import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 // ...
 
@@ -512,7 +586,7 @@ If you're using VS Code, it's recommended you install the [Tailwind IntelliSense
 You can load stylesheets from any server, here's an example of loading a modern css reset from unpkg.
 
 ```ts filename=app/root.tsx
-import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const links: LinksFunction = () => {
   return [
@@ -526,21 +600,75 @@ export const links: LinksFunction = () => {
 
 ## PostCSS
 
-While not built into Remix's compiler, it is straight forward to use PostCSS and add whatever syntax sugar you'd like to your stylesheets, here's the gist of it:
+[PostCSS][postcss] is a popular tool with a rich plugin ecosystem, commonly used to prefix CSS for older browsers, transpile future CSS syntax, inline images, lint your styles and more.
 
-1. Use `postcss` cli directly alongside Remix
+There are a couple of options for integrating PostCSS into your Remix application. You can use Remix's built-in support, or integrate PostCSS manually using their CLI.
+
+### Built-in PostCSS Support
+
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+
+When a PostCSS config is detected, Remix will automatically run PostCSS across all CSS in your project. For example, to use [Autoprefixer][autoprefixer]:
+
+1. Enable built-in PostCSS support by setting the the `future.unstable_postcss` feature flag in `remix.config.js`.
+
+   ```js filename=remix.config.js
+   /** @type {import('@remix-run/dev').AppConfig} */
+   module.exports = {
+     future: {
+       unstable_postcss: true,
+     },
+     // ...
+   };
+   ```
+
+2. Install any desired PostCSS plugins.
+
+   ```sh
+   npm install -D autoprefixer
+   ```
+
+3. Add `postcss.config.js` in the Remix root with configuration for your plugins.
+
+   ```js filename=postcss.config.js
+   module.exports = {
+     plugins: {
+       autoprefixer: {},
+     },
+   };
+   ```
+
+If you're using [Vanilla Extract][vanilla-extract-2], since it's already playing the role of CSS preprocessor, you may want to apply a different set of PostCSS plugins relative to other styles. To support this, you can export a function from `postcss.config.js` which is given a context object that lets you know when Remix is processing a Vanilla Extract file.
+
+```js filename=postcss.config.js
+module.exports = (ctx) => {
+  return ctx.remix?.vanillaExtract
+    ? {
+        // PostCSS plugins for Vanilla Extract styles...
+      }
+    : {
+        // PostCSS plugins for other styles...
+      };
+};
+```
+
+### Manual PostCSS Integration
+
+It's also possible to use PostCSS without leveraging the built-in support. Here's the gist of it:
+
+1. Use the `postcss` CLI directly alongside Remix
 2. Build CSS into the Remix app directory from a styles source directory
 3. Import your stylesheet to your modules like any other stylesheet
 
 Here's how to set it up:
 
-1. Install the dev dependencies in your app:
+1. Install PostCSS along with its CLI and any desired plugins in your app.
 
    ```sh
    npm install -D postcss-cli postcss autoprefixer
    ```
 
-2. Add `postcss.config.js` in the Remix root.
+2. Add `postcss.config.js` in the Remix root with configuration for your plugins.
 
    ```js filename=postcss.config.js
    module.exports = {
@@ -600,7 +728,7 @@ Here's how to set it up:
    Then import like any other css file:
 
    ```tsx filename=root.tsx
-   import type { LinksFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+   import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
    import styles from "./styles/app.css";
 
@@ -684,12 +812,12 @@ Running `npm run dev` will run the specified commands in parallel in a single te
 
 You can use CSS-in-JS libraries like Styled Components. Some of them require a "double render" in order to extract the styles from the component tree during the server render. It's unlikely this will affect performance in a significant way; React is pretty fast.
 
-Here's some sample code to show how you might use Styled Components with Remix (you can also [find a runnable example in the Remix examples directory][styled-components-example]):
+Here's some sample code to show how you might use Styled Components with Remix (you can also [find a runnable example in the Remix examples repository][styled-components-example]):
 
 1. First you'll need to put a placeholder in your root component to control where the styles are inserted.
 
    ```tsx filename=app/root.tsx lines=[22-24]
-   import type { MetaFunction } from "@remix-run/node"; // or "@remix-run/cloudflare"
+   import type { MetaFunction } from "@remix-run/node"; // or cloudflare/deno
    import {
      Links,
      LiveReload,
@@ -730,7 +858,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
    ```tsx filename=entry.server.tsx lines=[4,12,15-20,22-23]
    import { renderToString } from "react-dom/server";
    import { RemixServer } from "@remix-run/react";
-   import type { EntryContext } from "@remix-run/node"; // or "@remix-run/cloudflare"
+   import type { EntryContext } from "@remix-run/node"; // or cloudflare/deno
    import { ServerStyleSheet } from "styled-components";
 
    export default function handleRequest(
@@ -765,11 +893,192 @@ Other CSS-in-JS libraries will have a similar setup. If you've got a CSS framewo
 
 NOTE: You may run into hydration warnings when using Styled Components. Hopefully [this issue][styled-components-issue] will be fixed soon.
 
+## CSS Bundling
+
+<docs-warning>CSS bundling features are unstable and currently only available behind feature flags. We're confident in the use cases they solve but the API and implementation may change in the future.</docs-warning>
+
+Many common approaches to CSS within the React community are only possible when bundling CSS, meaning that the CSS files you write during development are collected into a separate bundle as part of the build process.
+
+When using CSS bundling features, the Remix compiler will generate a single CSS file containing all bundled styles in your application. Note that any [regular stylesheet imports][regular-stylesheet-imports] will remain as separate files.
+
+Unlike many other tools in the React ecosystem, we do not insert the CSS bundle into the page automatically. Instead, we ensure that you always have control over the link tags on your page. This lets you decide where the CSS file is loaded relative to other stylesheets in your app.
+
+To get access to the CSS bundle, first install the `@remix-run/css-bundle` package.
+
+```sh
+npm install @remix-run/css-bundle
+```
+
+Then, import `cssBundleHref` and add it to a link descriptor—most likely in `root.tsx` so that it applies to your entire application.
+
+```tsx filename=root.tsx lines=[2,6-8]
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+import { cssBundleHref } from "@remix-run/css-bundle";
+
+export const links: LinksFunction = () => {
+  return [
+    ...(cssBundleHref
+      ? [{ rel: "stylesheet", href: cssBundleHref }]
+      : []),
+    // ...
+  ];
+};
+```
+
+With this link tag inserted into the page, you're now ready to start using the various CSS bundling features built into Remix.
+
+### CSS Modules
+
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+
+First, ensure you've set up [CSS bundling][css-bundling] in your application.
+
+Then, to enable [CSS Modules], set the `future.unstable_cssModules` feature flag in `remix.config.js`.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  future: {
+    unstable_cssModules: true,
+  },
+  // ...
+};
+```
+
+With this feature flag enabled, you can now opt into CSS Modules via the `.module.css` file name convention. For example:
+
+```css filename=app/components/button/styles.module.css
+.root {
+  border: solid 1px;
+  background: white;
+  color: #454545;
+}
+```
+
+```tsx filename=app/components/button/index.js lines=[1,9]
+import styles from "./styles.module.css";
+
+export const Button = React.forwardRef(
+  ({ children, ...props }, ref) => {
+    return (
+      <button
+        {...props}
+        ref={ref}
+        className={styles.root}
+      />
+    );
+  }
+);
+Button.displayName = "Button";
+```
+
+### Vanilla Extract
+
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+
+[Vanilla Extract][vanilla-extract] is a zero-runtime CSS-in-TypeScript (or JavaScript) library that lets you use TypeScript as your CSS preprocessor. Styles are written in separate `*.css.ts` (or `*.css.js`) files and all code within them is executed during the build process rather than in your user's browser. If you want to keep your CSS bundle size to a minimum, Vanilla Extract also provides an official library called [Sprinkles][sprinkles] that lets you define a custom set of utility classes and a type-safe function for accessing them at runtime.
+
+First, ensure you've set up [CSS bundling][css-bundling] in your application.
+
+Next, install Vanilla Extract's core styling package as a dev dependency.
+
+```sh
+npm install -D @vanilla-extract/css
+```
+
+Then, to enable Vanilla Extract, set the `future.unstable_vanillaExtract` feature flag in `remix.config.js`.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  future: {
+    unstable_vanillaExtract: true,
+  },
+  // ...
+};
+```
+
+With this feature flag enabled, you can now opt into Vanilla Extract via the `.css.ts`/`.css.js` file name convention. For example:
+
+```ts filename=app/components/button/styles.css.ts
+import { style } from "@vanilla-extract/css";
+
+export const root = style({
+  border: "solid 1px",
+  background: "white",
+  color: "#454545",
+});
+```
+
+```tsx filename=app/components/button/index.js lines=[1,9]
+import * as styles from "./styles.css"; // Note that `.ts` is omitted here
+
+export const Button = React.forwardRef(
+  ({ children, ...props }, ref) => {
+    return (
+      <button
+        {...props}
+        ref={ref}
+        className={styles.root}
+      />
+    );
+  }
+);
+Button.displayName = "Button";
+```
+
+### CSS Side-Effect Imports
+
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+
+Some NPM packages use side-effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up [CSS bundling][css-bundling] in your application.
+
+Then, set the `future.unstable_cssSideEffectImports` feature flag in `remix.config.js`.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  future: {
+    unstable_cssSideEffectImports: true,
+  },
+  // ...
+};
+```
+
+Finally, since JavaScript runtimes don't support importing CSS in this way, you'll also need to add any relevant packages to the [`serverDependenciesToBundle`][server-dependencies-to-bundle] option in your `remix.config.js` file. This ensures that any CSS imports are compiled out of your code before running it on the server. For example, to use React Spectrum:
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  serverDependenciesToBundle: [
+    /^@adobe\/react-spectrum/,
+    /^@react-spectrum/,
+    /^@spectrum-icons/,
+  ],
+  future: {
+    unstable_cssSideEffectImports: true,
+  },
+  // ...
+};
+```
+
 [custom-properties]: https://developer.mozilla.org/en-US/docs/Web/CSS/--*
-[link]: ../api/remix#link
-[route-module-links]: ../api/conventions#links
-[styled-components-example]: https://github.com/remix-run/remix/tree/dev/examples/styled-components
-[examples]: https://github.com/remix-run/remix/tree/dev/examples
+[link]: ../components/link
+[route-module-links]: ../route/links
+[styled-components-example]: https://github.com/remix-run/examples/tree/main/styled-components
+[examples]: https://github.com/remix-run/examples
 [styled-components-issue]: https://github.com/styled-components/styled-components/issues/3660
 [tailwind]: https://tailwindcss.com
+[tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives
 [tailwind-intelli-sense-extension]: https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss
+[postcss]: https://postcss.org
+[autoprefixer]: https://github.com/postcss/autoprefixer
+[postcss-preset-env]: https://preset-env.cssdb.org
+[css modules]: https://github.com/css-modules/css-modules
+[regular-stylesheet-imports]: #regular-stylesheets
+[server-dependencies-to-bundle]: ../file-conventions/remix-config#serverdependenciestobundle
+[css-bundling]: #css-bundling
+[vanilla-extract]: https://vanilla-extract.style
+[sprinkles]: https://vanilla-extract.style/documentation/packages/sprinkles
+[built-in-post-css-support]: #built-in-postcss-support
+[vanilla-extract-2]: #vanilla-extract
