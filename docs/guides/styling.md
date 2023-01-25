@@ -423,7 +423,7 @@ module.exports = {
 Then install Tailwind:
 
 ```sh
-npm install -D tailwind
+npm install -D tailwindcss
 ```
 
 Initialize a config file:
