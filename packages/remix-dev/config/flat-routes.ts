@@ -99,11 +99,11 @@ export function flatRoutesUniversal(
           );
         }
 
-        defineRoute(routePath, routeMap.get(childRoute.id!)!.file, {
+        defineRoute(routePath, childRoute.file, {
           index: true,
         });
       } else {
-        defineRoute(routePath, routeMap.get(childRoute.id!)!.file, () => {
+        defineRoute(routePath, childRoute.file, () => {
           defineNestedRoutes(defineRoute, childRoute.id);
         });
       }
@@ -284,7 +284,7 @@ function getRouteInfo(
   filePath: string
 ): RouteInfo {
   let filePathWithoutApp = filePath.slice(appDirectory.length + 1);
-  let routeId = createRouteId(filePathWithoutApp);
+  let routeId = createFlatRouteId(filePathWithoutApp);
   let routeIdWithoutRoutes = routeId.slice(routeDirectory.length + 1);
   let index = isIndexRoute(routeIdWithoutRoutes);
   let routeSegments = getRouteSegments(routeIdWithoutRoutes);
@@ -358,4 +358,12 @@ function isRouteModuleFile(filePath: string) {
     return routeModuleExts.includes(path.extname(filePath));
   }
   return routeRegex.test(filePath);
+}
+
+function createFlatRouteId(filePath: string) {
+  let routeId = createRouteId(filePath);
+  if (routeId.includes(path.posix.sep) && routeId.endsWith("/index")) {
+    routeId = routeId.split(path.posix.sep).slice(0, -1).join(path.posix.sep);
+  }
+  return routeId;
 }

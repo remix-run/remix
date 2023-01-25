@@ -184,7 +184,7 @@ describe("flatRoutes", () => {
       [
         "routes/_landing/index.tsx",
         {
-          id: "routes/_landing/index",
+          id: "routes/_landing",
           parentId: "root",
           path: undefined,
         },
@@ -192,8 +192,8 @@ describe("flatRoutes", () => {
       [
         "routes/_landing._index/index.tsx",
         {
-          id: "routes/_landing._index/index",
-          parentId: "routes/_landing/index",
+          id: "routes/_landing._index",
+          parentId: "routes/_landing",
           path: undefined,
           index: true,
         },
@@ -202,7 +202,7 @@ describe("flatRoutes", () => {
         "routes/_landing.index.tsx",
         {
           id: "routes/_landing.index",
-          parentId: "routes/_landing/index",
+          parentId: "routes/_landing",
           path: "index",
         },
       ],
@@ -567,7 +567,7 @@ describe("flatRoutes", () => {
       [
         "routes/brand/index.tsx",
         {
-          id: "routes/brand/index",
+          id: "routes/brand",
           parentId: "root",
           path: "brand",
         },
@@ -576,7 +576,7 @@ describe("flatRoutes", () => {
         "routes/brand._index.tsx",
         {
           id: "routes/brand._index",
-          parentId: "routes/brand/index",
+          parentId: "routes/brand",
           index: true,
         },
       ],
@@ -590,12 +590,10 @@ describe("flatRoutes", () => {
       ],
     ];
 
-    let files: [string, Omit<ConfigRoute, "file">][] = testFiles.map(
-      ([file, route]) => {
-        let filepath = file.split("/").join(path.sep);
-        return [filepath, { ...route, file: filepath }];
-      }
-    );
+    let files: [string, ConfigRoute][] = testFiles.map(([file, route]) => {
+      let filepath = file.split("/").join(path.sep);
+      return [filepath, { ...route, file: filepath }];
+    });
 
     let routeManifest = flatRoutesUniversal(
       APP_DIR,
