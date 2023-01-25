@@ -74,9 +74,16 @@ export const cssSideEffectImportsPlugin = (options: {
             })
           ).path;
 
+          // If the resolved path isn't a CSS file then we don't want
+          // to handle it. In our case this is specifically done to
+          // avoid matching Vanilla Extract's .css.ts/.js files.
+          if (!resolvedPath.split("?")[0].endsWith(".css")) {
+            return null;
+          }
+
           return {
             path: path.relative(options.rootDirectory, resolvedPath),
-            namespace: resolvedPath.endsWith(".css") ? namespace : undefined,
+            namespace,
           };
         }
       );
