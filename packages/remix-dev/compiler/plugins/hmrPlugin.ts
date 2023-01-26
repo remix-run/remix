@@ -14,11 +14,11 @@ export let hmrPlugin = ({
     setup: async (build) => {
       build.onResolve({ filter: /^remix:hmr$/ }, (args) => {
         return {
-          namespace: "remix-runtime",
+          namespace: "hmr-runtime",
           path: args.path,
         };
       });
-      build.onLoad({ filter: /.*/, namespace: "remix-runtime" }, () => {
+      build.onLoad({ filter: /.*/, namespace: "hmr-runtime" }, () => {
         let contents = `
 import RefreshRuntime from "react-refresh/runtime";
 
@@ -222,6 +222,7 @@ export async function applyHMR(
 
   let IS_FAST_REFRESH_ENABLED = /\$RefreshReg\$\(/;
 
+  // add import.meta.hot to the module
   let argsPath = args.path;
   let hmrId = JSON.stringify(
     path.relative(remixConfig.rootDirectory, argsPath)
@@ -233,9 +234,9 @@ import.meta.hot = __hmr__.createHotContext(
 $id$
 );
 }`.replace(/\$id\$/g, hmrId);
-
   let sourceCodeWithHMR = hmrPrefix + sourceCode;
 
+  // turn the source code into JS for babel
   let jsWithHMR = esbuild.transformSync(sourceCodeWithHMR, {
     loader: argsPath.endsWith("x") ? "tsx" : "ts",
     format: args.pluginData?.format || "esm",
@@ -243,6 +244,7 @@ $id$
   }).code;
   let resultCode = jsWithHMR;
 
+  // run babel to add react-refresh
   let transformResult = babel.transformSync(jsWithHMR, {
     filename: argsPath,
     ast: false,
@@ -255,11 +257,13 @@ $id$
 
   let jsWithReactRefresh = transformResult?.code || jsWithHMR;
 
+  // auto opt-in to accepting fast refresh updates if the module
+  // has react components
   if (IS_FAST_REFRESH_ENABLED.test(jsWithReactRefresh)) {
     resultCode =
       `
         if (!window.$RefreshReg$ || !window.$RefreshSig$ || !window.$RefreshRuntime$) {
-          console.warn('@remix-run/react-refresh: HTML setup script not run. React Fast Refresh only works when Remix serves your HTML routes. You may want to remove this plugin.');
+          console.warn('remix:hmr: React Fast Refresh only works when the Remix compiler is running in development mode.');
         } else {
           var prevRefreshReg = window.$RefreshReg$;
           var prevRefreshSig = window.$RefreshSig$;
