@@ -89,8 +89,10 @@ describe("flatRoutes", () => {
     for (let [input, expected] of tests) {
       it(`"${input}" -> "${expected}"`, () => {
         let isIndex = isIndexRoute(input);
-        let routeSegments = getRouteSegments(input);
-        expect(createRoutePath(routeSegments, isIndex)).toBe(expected);
+        let [routeSegments, rawRouteSegments] = getRouteSegments(input);
+        expect(createRoutePath(routeSegments, rawRouteSegments, isIndex)).toBe(
+          expected
+        );
       });
     }
 
@@ -279,6 +281,14 @@ describe("flatRoutes", () => {
           path: "folder",
         },
       ],
+      [
+        "routes/[route].tsx",
+        {
+          id: "routes/[route]",
+          parentId: "root",
+          path: "route",
+        },
+      ],
 
       // Opt out of parent layout
       [
@@ -460,18 +470,18 @@ describe("flatRoutes", () => {
 
       // Optional + escaped route segments
       [
-        "routes/([index]).tsx",
+        "routes/([_index]).tsx",
         {
-          id: "routes/([index])",
+          id: "routes/([_index])",
           parentId: "root",
-          path: "index?",
+          path: "_index?",
         },
       ],
       [
-        "routes/([i]ndex).([[]).([[]]).tsx",
+        "routes/(_[i]ndex).([[]).([[]]).tsx",
         {
-          id: "routes/([i]ndex).([[]).([[]])",
-          parentId: "routes/([index])",
+          id: "routes/(_[i]ndex).([[]).([[]])",
+          parentId: "routes/([_index])",
           path: "[?/[]?",
         },
       ],
