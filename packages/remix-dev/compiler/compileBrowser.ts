@@ -327,8 +327,20 @@ export const createBrowserCompiler = (
             let url =
               remixConfig.publicPath +
               path.relative(remixConfig.assetsBuildDirectory, path.resolve(o));
+            let id = input;
+            if (id.startsWith("browser-route-module:")) {
+              id = path.relative(
+                remixConfig.rootDirectory,
+                path.join(
+                  remixConfig.appDirectory,
+                  id
+                    .replace(/^browser-route-module:/, "")
+                    .replace(/\?browser$/, "")
+                )
+              );
+            }
             updates.push({
-              id: input,
+              id,
               url,
             });
           }

@@ -69,6 +69,7 @@
     "sort-package-json": "^1.55.0",
     "tar-fs": "^2.1.1",
     "tsconfig-paths": "^4.0.0",
+    "typescript": "^4.9.4",
     "ws": "^7.4.5",
     "xdm": "^2.0.0"
   },

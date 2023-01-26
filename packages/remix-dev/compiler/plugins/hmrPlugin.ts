@@ -12,12 +12,6 @@ export let hmrPlugin = ({
   return {
     name: "remix-hmr",
     setup: async (build) => {
-      let babel = await import("@babel/core");
-      // @ts-expect-error
-      let reactRefresh = await import("react-refresh/babel");
-
-      let IS_FAST_REFRESH_ENABLED = /\$RefreshReg\$\(/;
-
       build.onResolve({ filter: /^remix:hmr$/ }, (args) => {
         return {
           namespace: "remix-runtime",
@@ -164,7 +158,7 @@ remixLiveReloadConnect();
         return { loader: "ts", contents, resolveDir: remixConfig.appDirectory };
       });
 
-      build.onLoad({ filter: /.*/, namespace: "file" }, (args) => {
+      build.onLoad({ filter: /.*/, namespace: "file" }, async (args) => {
         if (
           !args.path.match(/\.[tj]sx?$/) ||
           !fs.existsSync(args.path) ||
@@ -173,64 +167,14 @@ remixLiveReloadConnect();
           return undefined;
         }
 
-        let hmrId = JSON.stringify(
-          path.relative(remixConfig.rootDirectory, args.path)
-        );
-        let hmrPrefix = `import * as __hmr__ from "remix:hmr";
-if (import.meta) {
-  import.meta.hot = __hmr__.createHotContext(
-    //@ts-expect-error
-    $id$
-  );
-}`.replace(/\$id\$/g, hmrId);
         let sourceCode = fs.readFileSync(args.path, "utf8");
 
-        let sourceCodeWithHMR = hmrPrefix + sourceCode;
-
-        let jsWithHMR = esbuild.transformSync(sourceCodeWithHMR, {
-          loader: args.path.endsWith("x") ? "tsx" : "ts",
-          format: args.pluginData?.format || "esm",
-          jsx: "automatic",
-        }).code;
-        let resultCode = jsWithHMR;
-
-        let transformResult = babel.transformSync(jsWithHMR, {
-          filename: args.path,
-          ast: false,
-          compact: false,
-          sourceMaps: build.initialOptions.sourcemap ? "inline" : false,
-          configFile: false,
-          babelrc: false,
-          plugins: [[reactRefresh.default, { skipEnvCheck: true }]],
-        });
-
-        let jsWithReactRefresh = transformResult?.code || jsWithHMR;
-
-        if (IS_FAST_REFRESH_ENABLED.test(jsWithReactRefresh)) {
-          resultCode =
-            `
-              if (!window.$RefreshReg$ || !window.$RefreshSig$ || !window.$RefreshRuntime$) {
-                console.warn('@remix-run/react-refresh: HTML setup script not run. React Fast Refresh only works when Remix serves your HTML routes. You may want to remove this plugin.');
-              } else {
-                var prevRefreshReg = window.$RefreshReg$;
-                var prevRefreshSig = window.$RefreshSig$;
-                window.$RefreshReg$ = (type, id) => {
-                  window.$RefreshRuntime$.register(type, ${JSON.stringify(
-                    hmrId
-                  )} + id);
-                }
-                window.$RefreshSig$ = window.$RefreshRuntime$.createSignatureFunctionForTransform;
-              }
-            ` +
-            jsWithReactRefresh +
-            `
-              window.$RefreshReg$ = prevRefreshReg;
-              window.$RefreshSig$ = prevRefreshSig;
-              import.meta.hot.accept(({ module }) => {
-                window.$RefreshRuntime$.performReactRefresh();
-              });
-            `;
-        }
+        let resultCode = await applyHMR(
+          sourceCode,
+          args,
+          remixConfig,
+          !!build.initialOptions.sourcemap
+        );
 
         return {
           contents: resultCode,
@@ -241,3 +185,77 @@ if (import.meta) {
     },
   };
 };
+
+export async function applyHMR(
+  sourceCode: string,
+  args: esbuild.OnLoadArgs,
+  remixConfig: RemixConfig,
+  sourcemap: boolean
+) {
+  let babel = await import("@babel/core");
+  // @ts-expect-error
+  let reactRefresh = await import("react-refresh/babel");
+
+  let IS_FAST_REFRESH_ENABLED = /\$RefreshReg\$\(/;
+
+  let argsPath = args.path;
+  let hmrId = JSON.stringify(
+    path.relative(remixConfig.rootDirectory, argsPath)
+  );
+  let hmrPrefix = `import * as __hmr__ from "remix:hmr";
+if (import.meta) {
+import.meta.hot = __hmr__.createHotContext(
+//@ts-expect-error
+$id$
+);
+}`.replace(/\$id\$/g, hmrId);
+
+  let sourceCodeWithHMR = hmrPrefix + sourceCode;
+
+  let jsWithHMR = esbuild.transformSync(sourceCodeWithHMR, {
+    loader: argsPath.endsWith("x") ? "tsx" : "ts",
+    format: args.pluginData?.format || "esm",
+    jsx: "automatic",
+  }).code;
+  let resultCode = jsWithHMR;
+
+  let transformResult = babel.transformSync(jsWithHMR, {
+    filename: argsPath,
+    ast: false,
+    compact: false,
+    sourceMaps: sourcemap,
+    configFile: false,
+    babelrc: false,
+    plugins: [[reactRefresh.default, { skipEnvCheck: true }]],
+  });
+
+  let jsWithReactRefresh = transformResult?.code || jsWithHMR;
+
+  if (IS_FAST_REFRESH_ENABLED.test(jsWithReactRefresh)) {
+    resultCode =
+      `
+        if (!window.$RefreshReg$ || !window.$RefreshSig$ || !window.$RefreshRuntime$) {
+          console.warn('@remix-run/react-refresh: HTML setup script not run. React Fast Refresh only works when Remix serves your HTML routes. You may want to remove this plugin.');
+        } else {
+          var prevRefreshReg = window.$RefreshReg$;
+          var prevRefreshSig = window.$RefreshSig$;
+          window.$RefreshReg$ = (type, id) => {
+            window.$RefreshRuntime$.register(type, ${JSON.stringify(
+              hmrId
+            )} + id);
+          }
+          window.$RefreshSig$ = window.$RefreshRuntime$.createSignatureFunctionForTransform;
+        }
+      ` +
+      jsWithReactRefresh +
+      `
+        window.$RefreshReg$ = prevRefreshReg;
+        window.$RefreshSig$ = prevRefreshSig;
+        import.meta.hot.accept(({ module }) => {
+          window.$RefreshRuntime$.performReactRefresh();
+        });
+      `;
+  }
+
+  return resultCode;
+}
