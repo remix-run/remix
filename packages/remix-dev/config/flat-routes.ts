@@ -337,8 +337,6 @@ export function createRoutePath(
       segment = segment.slice(0, -1);
     }
 
-    console.log({ segment, rawSegment });
-
     result += `/${segment}`;
   }
 
