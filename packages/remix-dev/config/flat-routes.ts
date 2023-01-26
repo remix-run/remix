@@ -104,14 +104,14 @@ export function flatRoutesUniversal(
         }
 
         defineRoute(routePath, childRoute.file, {
-          id: path.join(prefix, childRoute.id),
+          id: path.posix.join(prefix, childRoute.id),
           index: true,
         });
       } else {
         defineRoute(
           routePath,
           childRoute.file,
-          { id: path.join(prefix, childRoute.id) },
+          { id: path.posix.join(prefix, childRoute.id) },
           () => {
             defineNestedRoutes(defineRoute, childRoute.id);
           }
