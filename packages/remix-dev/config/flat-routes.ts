@@ -1,7 +1,12 @@
 import path from "node:path";
 import fg from "fast-glob";
 
-import type { ConfigRoute, DefineRouteFunction, RouteManifest } from "./routes";
+import type {
+  ConfigRoute,
+  DefineRouteFunction,
+  DefineRouteOptions,
+  RouteManifest,
+} from "./routes";
 import { createRouteId, defineRoutes } from "./routes";
 import {
   escapeEnd,
@@ -92,6 +97,11 @@ export function flatRoutesUniversal(
         uniqueRoutes.set(uniqueRouteId, childRoute.id);
       }
 
+      let childRouteOptions: DefineRouteOptions = {
+        id: path.posix.join(prefix, childRoute.id),
+        index: childRoute.index ? true : undefined,
+      };
+
       if (index) {
         let invalidChildRoutes = Object.values(routeMap).filter(
           (routeInfo) => routeInfo.parentId === childRoute.id
@@ -103,19 +113,11 @@ export function flatRoutesUniversal(
           );
         }
 
-        defineRoute(routePath, childRoute.file, {
-          id: path.posix.join(prefix, childRoute.id),
-          index: true,
-        });
+        defineRoute(routePath, childRoute.file, childRouteOptions);
       } else {
-        defineRoute(
-          routePath,
-          childRoute.file,
-          { id: path.posix.join(prefix, childRoute.id) },
-          () => {
-            defineNestedRoutes(defineRoute, childRoute.id);
-          }
-        );
+        defineRoute(routePath, childRoute.file, childRouteOptions, () => {
+          defineNestedRoutes(defineRoute, childRoute.id);
+        });
       }
     }
   }
