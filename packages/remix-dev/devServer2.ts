@@ -128,16 +128,15 @@ export let serve = async (
       if (!assetsManifest) return;
       socket.log(`Rebuilt in ${prettyMs(durationMs)}`);
 
-      if (hmrUpdates && hmrUpdates.length > 0) {
-        socket.hmr(assetsManifest, hmrUpdates);
-        return;
-      }
-
       info(`Waiting for ${appServerOrigin}...`);
       let start = Date.now();
       await waitForAppServer(assetsManifest.version);
       info(`${appServerOrigin} ready in ${prettyMs(Date.now() - start)}`);
 
+      if (hmrUpdates && hmrUpdates.length > 0) {
+        socket.hmr(assetsManifest, hmrUpdates);
+        return;
+      }
       socket.reload();
     },
     onFileCreated: (file) => socket.log(`File created: ${relativePath(file)}`),

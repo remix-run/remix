@@ -190,6 +190,7 @@ export const createBrowserCompiler = (
   let appCompiler: esbuild.BuildIncremental;
   let cssCompiler: esbuild.BuildIncremental;
   let prevMetafile: esbuild.Metafile;
+  let prevAssetsManifest: AssetsManifest;
   let compile = async (manifestChannel: WriteChannel<AssetsManifest>) => {
     try {
       let appBuildTask = async () => {
@@ -303,6 +304,36 @@ export const createBrowserCompiler = (
       });
       manifestChannel.write(manifest);
       await writeAssetsManifest(remixConfig, manifest);
+
+      let shouldReload = false;
+      let newRouteIds = new Set(Object.keys(manifest.routes));
+      let oldRouteIds = new Set(Object.keys(prevAssetsManifest?.routes ?? {}));
+      let routeIds = new Set([...newRouteIds, ...oldRouteIds]);
+      for (let rid of routeIds) {
+        // any new not in old -> added -> reload
+        if (!newRouteIds.has(rid)) {
+          shouldReload = true;
+          break;
+        }
+        // any old routes not in new -> removed -> full reload
+        if (!oldRouteIds.has(rid)) {
+          shouldReload = true;
+          break;
+        }
+        // any false->true has loader (hasloader)
+        let prevRoute = prevAssetsManifest.routes[rid];
+        let route = manifest.routes[rid];
+        if (!prevRoute.hasLoader && route.hasLoader) {
+          shouldReload = true;
+          break;
+        }
+      }
+
+      if (shouldReload) {
+        prevAssetsManifest = manifest;
+        return;
+      }
+      prevAssetsManifest = manifest;
 
       if (prevMetafile !== undefined) {
         manifest.entry.module = manifest.entry.module + `?t=${timestamp}`;
