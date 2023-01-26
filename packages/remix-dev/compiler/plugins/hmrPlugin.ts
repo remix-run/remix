@@ -126,7 +126,7 @@ function remixLiveReloadConnect(config) {
         for (let update of payload.updates) {
           if (window.__hmr__.contexts[update.id]) {
             let accepted = window.__hmr__.contexts[update.id].emit(
-              await import(update.url + "?t=" + Date.now())
+              await import(update.url)
             );
             if (accepted) {
               console.log("[HMR] Updated accepted by", update.id);

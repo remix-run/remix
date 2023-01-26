@@ -39,10 +39,12 @@ export async function createAssetsManifest({
   config,
   metafile,
   cssBundlePath,
+  timestamp,
 }: {
   config: RemixConfig;
   metafile: esbuild.Metafile;
   cssBundlePath?: string;
+  timestamp?: number;
 }): Promise<AssetsManifest> {
   function resolveUrl(outputPath: string): string {
     return createUrl(
@@ -56,7 +58,7 @@ export async function createAssetsManifest({
   ): string[] {
     return imports
       .filter((im) => im.kind === "import-statement")
-      .map((im) => resolveUrl(im.path));
+      .map((im) => resolveUrl(im.path) + (timestamp ? `?t=${timestamp}` : ""));
   }
 
   let routesByFile: Map<string, Route[]> = Object.keys(config.routes).reduce(
@@ -121,7 +123,7 @@ export async function createAssetsManifest({
   let cssBundleHref = cssBundlePath ? resolveUrl(cssBundlePath) : undefined;
 
   let hmrRuntime: string | undefined;
-  for (const [outputPath, output] of Object.entries(metafile.outputs)) {
+  for (let [outputPath, output] of Object.entries(metafile.outputs)) {
     if (Object.keys(output.inputs).includes("remix-hmr:remix:hmr")) {
       hmrRuntime =
         config.publicPath +

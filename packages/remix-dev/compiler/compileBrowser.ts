@@ -294,15 +294,31 @@ export const createBrowserCompiler = (
         appBuildTask(),
       ]);
 
+      let timestamp = Date.now();
       let manifest = await createAssetsManifest({
         config: remixConfig,
         metafile: appCompiler.metafile!,
         cssBundlePath,
+        timestamp: options.mode === "development" ? timestamp : undefined,
       });
       manifestChannel.write(manifest);
       await writeAssetsManifest(remixConfig, manifest);
 
       if (prevMetafile !== undefined) {
+        manifest.entry.module = manifest.entry.module + `?t=${timestamp}`;
+        manifest.entry.imports = manifest.entry.imports.map(
+          (imp) => imp + `?t=${timestamp}`
+        );
+        for (let routeId of Object.keys(manifest.routes)) {
+          let route = manifest.routes[routeId];
+          manifest.routes[routeId] = {
+            ...route,
+            module: route.module + `?t=${timestamp}`,
+            imports: (route.imports ?? []).map(
+              (imp) => imp + `?t=${timestamp}`
+            ),
+          };
+        }
         let create_input2output = (
           metafile: esbuild.Metafile
         ): Record<string, string> => {
@@ -311,7 +327,7 @@ export const createBrowserCompiler = (
           for (let [outputPath, output] of Object.entries(metafile.outputs)) {
             for (let x of Object.keys(output.inputs)) {
               if (inputs.has(x)) {
-                input2output[x] = outputPath;
+                input2output[x] = outputPath + `?t=${timestamp}`;
               }
             }
           }
