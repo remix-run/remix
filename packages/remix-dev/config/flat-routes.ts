@@ -45,10 +45,6 @@ interface RouteInfo extends ConfigRoute {
   segments: string[];
 }
 
-// prettier-ignore
-let routeRegex = /(([+][/\\][^/\\:?*]+)|[/\\](index|route)|(_[^/\\:?*]+))\.(tsx?|jsx?|mdx?)$$/;
-let indexRouteRegex = /((^|[.]|[+]\/)(index|_index))(\/[^/]+)?$|(\/_?index\/)/;
-
 /**
  * Create route configs from a list of routes using the flat routes conventions.
  * @param {string} appDirectory - The absolute root directory the routes were looked up from.
@@ -61,9 +57,7 @@ export function flatRoutesUniversal(
   prefix: string = "routes"
 ): RouteManifest {
   let routeMap = getRouteMap(appDirectory, routePaths, prefix);
-
   let uniqueRoutes = new Map<string, string>();
-
   let routes = Array.from(routeMap.values());
 
   function defineNestedRoutes(
@@ -127,10 +121,8 @@ export function flatRoutesUniversal(
 
 export function isIndexRoute(routeId: string) {
   let isFlatFile = !routeId.includes(path.posix.sep);
-  if (isFlatFile) {
-    return routeId.endsWith("_index");
-  }
-  return indexRouteRegex.test(routeId);
+  if (!isFlatFile) return false;
+  return routeId.endsWith("_index");
 }
 
 type State =
@@ -149,7 +141,7 @@ export function getRouteSegments(routeId: string) {
   let routeSegment = "";
   let rawRouteSegment = "";
   let state: State = "NORMAL";
-  let hasFolder = /[/\\]/.test(routeId);
+  let hasFolder = routeId.includes(path.posix.sep);
 
   /**
    * @see https://github.com/remix-run/remix/pull/5160#issuecomment-1402157424
@@ -366,10 +358,10 @@ function getRouteMap(
 function isRouteModuleFile(filePath: string) {
   // flat files only need correct extension
   let isFlatFile = !filePath.includes(path.sep);
-  if (isFlatFile) {
-    return routeModuleExts.includes(path.extname(filePath));
-  }
-  return routeRegex.test(filePath);
+  let hasExt = routeModuleExts.includes(path.extname(filePath));
+  if (isFlatFile) return hasExt;
+  let basename = filePath.slice(0, -path.extname(filePath).length);
+  return basename.endsWith("/route") || basename.endsWith("/index");
 }
 
 function createFlatRouteId(filePath: string) {
