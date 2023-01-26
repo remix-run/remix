@@ -25,7 +25,12 @@ export function flatRoutes(
     ignore: ignoredFilePatterns,
   });
 
-  return flatRoutesUniversal(appDirectory, routePaths);
+  let routePathsForOS = routePaths.map((routePath) => {
+    if (path.sep === "/") return routePath;
+    return routePath.split("/").join(path.sep);
+  });
+
+  return flatRoutesUniversal(appDirectory, routePathsForOS);
 }
 
 interface RouteInfo extends ConfigRoute {
