@@ -35,7 +35,6 @@ export function browserRouteModulesPlugin(
           let sourceCode = fs.readFileSync(routeFile, "utf8");
 
           let contents = removeServerExports(sourceCode, routeFile);
-          console.log({ contents });
 
           contents = await applyHMR(
             contents,

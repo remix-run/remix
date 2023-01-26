@@ -25,7 +25,7 @@ declare global {
     dev?: {
       liveReloadPort?: number;
       hmrRuntime?: string;
-    }
+    };
   };
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
@@ -34,7 +34,44 @@ declare global {
 
 export interface RemixBrowserProps {}
 
+declare global {
+  interface ImportMeta {
+    hot: any;
+  }
+}
+
 let router: Router;
+
+if (import.meta && import.meta.hot) {
+  import.meta.hot.accept(
+    "remix:manifest",
+    async (newManifest: EntryContext["manifest"]) => {
+      let routeModules = Object.fromEntries(
+        (
+          await Promise.all(
+            Object.entries(__remixRouteModules).map(async ([key, value]) => {
+              if (!newManifest.routes[key]) {
+                return null;
+              }
+
+              return [key, await import(newManifest.routes[key].module)];
+            })
+          )
+        ).filter(Boolean) as [string, RouteModules[string]][]
+      );
+
+      let routes = createClientRoutes(
+        newManifest.routes,
+        routeModules,
+        window.__remixContext.future
+      );
+
+      console.log({ routes });
+
+      // router.updateRoutes(routes); ???
+    }
+  );
+}
 
 /**
  * The entry point for a Remix app when it is rendered in the browser (in

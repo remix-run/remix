@@ -56,7 +56,19 @@ export function createHotContext(id: string): ImportMetaHot {
   let disposed = false;
 
   let hot = {
-    accept: (cb) => {
+    accept: (dep, cb) => {
+      if (typeof dep !== "string") {
+        cb = dep;
+        dep = undefined;
+      }
+      if (dep) {
+        if (window.__hmr__.contexts[dep]) {
+          window.__hmr__.contexts[dep].dispose();
+        }
+        window.__hmr__.contexts[dep] = createHotContext(dep);
+        window.__hmr__.contexts[dep].accept(cb);
+        return;
+      }
       if (disposed) {
         throw new Error("import.meta.hot.accept() called after dispose()");
       }
@@ -79,7 +91,6 @@ export function createHotContext(id: string): ImportMetaHot {
 
   if (window.__hmr__.contexts[id]) {
     window.__hmr__.contexts[id].dispose();
-    window.__hmr__.contexts[id] = undefined;
   }
   window.__hmr__.contexts[id] = hot;
 
@@ -124,6 +135,16 @@ function remixLiveReloadConnect(config) {
           }
         }
 
+        if (payload.assetsManifest && window.__hmr__.contexts["remix:manifest"]) {
+          let accepted = window.__hmr__.contexts["remix:manifest"].emit(
+            payload.assetsManifest
+          );
+          if (accepted && !anyAccepted) {
+            console.log("[HMR] Only the manifest update was accepted, your application may be out of sync.");
+            anyAccepted = true;
+          }
+        }
+
         if (!anyAccepted) {
           console.log("[HMR] Updated rejected, reloading...");
           window.location.reload();
@@ -160,9 +181,12 @@ remixLiveReloadConnect();
 
       build.onLoad({ filter: /.*/, namespace: "file" }, async (args) => {
         if (
-          !args.path.match(/\.[tj]sx?$/) ||
-          !fs.existsSync(args.path) ||
-          !args.path.startsWith(remixConfig.appDirectory)
+          !args.path.match(
+            /@remix-run[/\\]react[/\\]dist[/\\]esm[/\\]browser.js$/
+          ) &&
+          (!args.path.match(/\.[tj]sx?$/) ||
+            !fs.existsSync(args.path) ||
+            !args.path.startsWith(remixConfig.appDirectory))
         ) {
           return undefined;
         }

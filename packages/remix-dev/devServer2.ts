@@ -128,9 +128,8 @@ export let serve = async (
       if (!assetsManifest) return;
       socket.log(`Rebuilt in ${prettyMs(durationMs)}`);
 
-      console.log({ hmrUpdates });
       if (hmrUpdates && hmrUpdates.length > 0) {
-        socket.hmr(hmrUpdates);
+        socket.hmr(assetsManifest, hmrUpdates);
         return;
       }
 

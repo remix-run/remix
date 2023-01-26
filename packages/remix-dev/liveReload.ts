@@ -1,8 +1,10 @@
 import WebSocket from "ws";
 
+import type { AssetsManifest } from "./compiler/assets";
+
 type Message =
   | { type: "RELOAD" }
-  | { type: "HMR"; updates: unknown[] }
+  | { type: "HMR"; assetsManifest: AssetsManifest; updates: unknown[] }
   | { type: "LOG"; message: string };
 
 type Broadcast = (message: Message) => void;
@@ -26,8 +28,8 @@ export let serve = (options: { port: number }) => {
     broadcast({ type: "LOG", message: _message });
   };
 
-  let hmr = (updates: unknown[]) => {
-    broadcast({ type: "HMR", updates });
+  let hmr = (assetsManifest: AssetsManifest, updates: unknown[]) => {
+    broadcast({ type: "HMR", assetsManifest, updates });
   };
 
   return { reload, hmr, log, close: wss.close };
