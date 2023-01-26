@@ -7,6 +7,7 @@ import type {
   DefineRouteOptions,
   RouteManifest,
 } from "./routes";
+import { normalizeSlashes } from "./routes";
 import { createRouteId, defineRoutes } from "./routes";
 import {
   escapeEnd,
@@ -372,11 +373,12 @@ function getRouteMap(
 
 function isRouteModuleFile(filePath: string) {
   // flat files only need correct extension
-  let isFlatFile = !filePath.includes(path.sep);
+  let normalizedFilePath = normalizeSlashes(filePath);
+  let isFlatFile = !filePath.includes(path.posix.sep);
   let hasExt = routeModuleExts.includes(path.extname(filePath));
   if (isFlatFile) return hasExt;
-  let basename = filePath.slice(0, -path.extname(filePath).length);
-  return basename.endsWith("/route") || basename.endsWith("/index");
+  let basename = normalizedFilePath.slice(0, -path.extname(filePath).length);
+  return basename.endsWith(`/route`) || basename.endsWith(`/index`);
 }
 
 function createFlatRouteId(filePath: string) {
