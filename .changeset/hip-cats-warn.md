@@ -3,6 +3,4 @@
 "@remix-run/dev": patch
 ---
 
-fix flat routes on windows, so that it picks up new files and renames
-
-fast glob will return posix style paths even on windows
+Fixed issues with `v2_routeConvention` on Windows so that new and renamed files are properly included

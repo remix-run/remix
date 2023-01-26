@@ -1,6 +1,6 @@
 ---
-"remix": patch
-"@remix-run/react": patch
+"remix": minor
+"@remix-run/react": minor
 ---
 
-Configure the browser-side live reload socket timeout via the new `timeoutMs` prop on `<LiveReload />`
+You can now configure the client-side `<LiveReload>` socket timeout via the new `timeoutMs` prop on `<LiveReload />`

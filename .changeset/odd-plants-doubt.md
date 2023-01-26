@@ -3,6 +3,4 @@
 "@remix-run/react": patch
 ---
 
-allow `<Link>`'s "to" prop to accept absolute urls
-
-if absolute url, don't prefetch
+`<Link to>` can now accept absolute URLs. When the `to` value is an absolute URL, the underlying anchor element will behave as normal, and its URL will not be prefetched.

@@ -4,4 +4,4 @@
 "@remix-run/cloudflare-workers": patch
 ---
 
-Update Cloudflare Workers adapter's `RequestHandler` type to be in line with other adapters
+Updated `RequestHandler` type to match other adapter types

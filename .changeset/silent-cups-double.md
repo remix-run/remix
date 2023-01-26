@@ -4,4 +4,4 @@
 "@remix-run/testing": patch
 ---
 
-Bump react router versions
+Bump React Router dependencies to the latest version. [See the release notes for more details.](https://github.com/remix-run/react-router/releases/tag/react-router%406.8.0)

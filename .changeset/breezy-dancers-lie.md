@@ -2,4 +2,4 @@
 "@remix-run/cloudflare": minor
 ---
 
-Rename `createCloudflareKVSessionStorage` to `createWorkersKVSessionStorage`
+Deprectated `createCloudflareKVSessionStorage` in favor of `createWorkersKVSessionStorage`
