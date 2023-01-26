@@ -132,7 +132,13 @@ export let serve = async (
       let start = Date.now();
       await waitForAppServer(assetsManifest.version);
       info(`${appServerOrigin} ready in ${prettyMs(Date.now() - start)}`);
+      await new Promise((resolve) => {
+        setTimeout(resolve, -1);
+      });
 
+      console.log({
+        hmrUpdates,
+      });
       if (hmrUpdates && hmrUpdates.length > 0) {
         socket.hmr(assetsManifest, hmrUpdates);
         return;

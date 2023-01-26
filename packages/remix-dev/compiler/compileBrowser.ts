@@ -330,6 +330,7 @@ export const createBrowserCompiler = (
       }
 
       if (shouldReload) {
+        prevMetafile = metafile;
         prevAssetsManifest = manifest;
         return;
       }
