@@ -23,6 +23,7 @@ export function flatRoutes(
     absolute: true,
     cwd: path.join(appDirectory, "routes"),
     ignore: ignoredFilePatterns,
+    onlyFiles: true,
   });
 
   // fast-glob will return posix paths even on windows
@@ -58,19 +59,22 @@ export function flatRoutesUniversal(
 
   let uniqueRoutes = new Map<string, string>();
 
+  let routes = Array.from(routeMap.values());
+
   function defineNestedRoutes(
     defineRoute: DefineRouteFunction,
     parentId?: string
   ): void {
-    let childRoutes = Array.from(routeMap.values()).filter(
-      (routeInfo) => routeInfo.parentId === parentId
-    );
+    let childRoutes = routes.filter((routeInfo) => {
+      return routeInfo.parentId === parentId;
+    });
     let parentRoute = parentId ? routeMap.get(parentId) : undefined;
     let parentRoutePath = parentRoute?.path ?? "/";
     for (let childRoute of childRoutes) {
       let routePath = childRoute.path?.slice(parentRoutePath.length) ?? "";
       // remove leading slash
       routePath = routePath.replace(/^\//, "");
+
       let index = childRoute.index;
       let fullPath = childRoute.path;
 
@@ -100,12 +104,18 @@ export function flatRoutesUniversal(
         }
 
         defineRoute(routePath, childRoute.file, {
+          id: path.join(prefix, childRoute.id),
           index: true,
         });
       } else {
-        defineRoute(routePath, childRoute.file, () => {
-          defineNestedRoutes(defineRoute, childRoute.id);
-        });
+        defineRoute(
+          routePath,
+          childRoute.file,
+          { id: path.join(prefix, childRoute.id) },
+          () => {
+            defineNestedRoutes(defineRoute, childRoute.id);
+          }
+        );
       }
     }
   }
