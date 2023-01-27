@@ -291,8 +291,7 @@ function usePrefetchBehavior(
 let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let isAbsolute =
-      typeof to === "string" &&
-      (/^[a-z+]+:\/\//i.test(to) || to.startsWith("//"));
+      typeof to === "string" && /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(to);
 
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
@@ -326,8 +325,7 @@ export { NavLink };
 let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let isAbsolute =
-      typeof to === "string" &&
-      (/^[a-z+]+:\/\//i.test(to) || to.startsWith("//"));
+      typeof to === "string" && /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(to);
 
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
