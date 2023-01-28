@@ -2125,7 +2125,7 @@ First I want you to notice that I've passed `typeof action` to the `useActionDat
 
 You may also notice that I return the fields as well. This is so that the form can be re-rendered with the values from the server in the event that JavaScript fails to load for some reason. That's what the `defaultValue` stuff is all about as well.
 
-The `badRequest` helper function accepts a generic that it passes to `json`, so that type inference works, while still returning the accurate HTTP status, [`400 Bad Request`][400-bad-request], to the client. If we just used `json()` without specifying the status, that would result in a `200 OK` response, which isn't suitable since the form submission had errors.
+The `badRequest` helper function will automatically infer the type of the passed data, while still returning the accurate HTTP status, [`400 Bad Request`][400-bad-request], to the client. If we just used `json()` without specifying the status, that would result in a `200 OK` response, which isn't suitable since the form submission had errors.
 
 Another thing I want to call out is how all of this is just so nice and declarative. You don't have to think about state at all here. Your action gets some data, you process it and return a value. The component consumes the action data and renders based on that value. No managing state here. No thinking about race conditions. Nothing.
 
