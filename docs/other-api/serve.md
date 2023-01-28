@@ -1,5 +1,6 @@
 ---
 title: "@remix-run/serve"
+toc: false
 order: 3
 ---
 

@@ -25,14 +25,11 @@ export async function loader({ params }: LoaderArgs) {
     params.packageId
   );
 
-  return json<LoaderData>({
-    packageLocation,
-  });
+  return json({ packageLocation });
 }
 
 export default function PackageRoute() {
-  const data = useLoaderData<typeof loader>();
-  const { packageLocation } = data;
+  const { packageLocation } = useLoaderData<typeof loader>();
 
   return (
     <main>

@@ -23,6 +23,6 @@ function SomeComponent() {
 
 (Yes, HTML buttons can change the action of their form!)
 
-For more information and usage, please refer to the [React Router `useFormAction` docs][rr-useformaction].
+<docs-info>For more information and usage, please refer to the [React Router `useFormAction` docs][rr-useformaction].</docs-info>
 
 [rr-useformaction]: https://reactrouter.com/hooks/use-form-action

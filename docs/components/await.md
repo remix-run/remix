@@ -1,5 +1,6 @@
 ---
 title: Await
+toc: false
 ---
 
 # `<Await>`

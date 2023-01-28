@@ -1,5 +1,6 @@
 ---
 title: entry.client
+toc: false
 ---
 
 # entry.client

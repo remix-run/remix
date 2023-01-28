@@ -1,5 +1,6 @@
 ---
 title: useMatches
+toc: false
 ---
 
 # `useMatches`

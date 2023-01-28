@@ -1,5 +1,6 @@
 ---
 title: unstable_createFileUploadHandler
+toc: false
 ---
 
 # `unstable_createFileUploadHandler`

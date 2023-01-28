@@ -20,6 +20,6 @@ function SomeComponent() {
 }
 ```
 
-For more information and usage, please refer to the [React Router `useNavigation` docs][rr-usenavigation].
+<docs-info>For more information and usage, please refer to the [React Router `useNavigation` docs][rr-usenavigation].</docs-info>
 
 [rr-usenavigation]: https://reactrouter.com/hooks/use-navigation
