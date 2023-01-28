@@ -210,7 +210,7 @@ const [errors, project] = await createProject(formData);
 If there are validation errors, we want to go back to the form and display them.
 
 ```tsx lines=[1, 5, 7-10]
-import { redirect, json} from "@remix-run/node"; // or cloudflare/deno
+import { redirect, json } from "@remix-run/node"; // or cloudflare/deno
 // ...
 export const action = async ({ request }: ActionArgs) => {
   const formData = await request.formData();
