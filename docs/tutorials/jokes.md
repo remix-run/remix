@@ -2121,7 +2121,7 @@ Great! You should now have a form that validates the fields on the server and di
 
 Why don't you pop open my code example for a second. I want to show you a few things about the way I'm doing this.
 
-First I want you to notice that I've used `typeof action` as a generic for `useActionData`. This way, `actionData` type will properly be inferred, and we'll get some type safety. Keep in mind that `useActionData` can return `undefined` if the action hasn't been called yet, so we've got a bit of defensive programming going on there.
+First I want you to notice that I've passed `typeof action` to the `useActionData` generic function. This way, `actionData` type will properly be inferred, and we'll get some type safety. Keep in mind that `useActionData` can return `undefined` if the action hasn't been called yet, so we've got a bit of defensive programming going on there.
 
 You may also notice that I return the fields as well. This is so that the form can be re-rendered with the values from the server in the event that JavaScript fails to load for some reason. That's what the `defaultValue` stuff is all about as well.
 
