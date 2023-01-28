@@ -83,14 +83,15 @@ if (import.meta && import.meta.hot) {
       let donePromise = new Promise<void>((resolve) => {
         let unsub = router.subscribe((state) => {
           if (state.revalidation === "idle") {
+            Object.assign(window.__remixManifest, newManifest);
+            Object.assign(window.__remixRouteModules, routeModules);
             unsub();
             resolve();
           }
         });
       });
 
-      Object.assign(window.__remixManifest, newManifest);
-      Object.assign(window.__remixRouteModules, routeModules);
+      // This is temporary API and will be more granular before release
       router.setNewRoutes(routes);
       await donePromise;
 
