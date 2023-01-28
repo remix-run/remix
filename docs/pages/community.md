@@ -25,7 +25,7 @@ You can find (and create) examples in the [Remix examples repository][the-exampl
 
 ## Community Adapters
 
-You can find Community Adapters in the [Adapters][community-adapters] section of the documentation. 
+You can find Community Adapters in the [Adapters][community-adapters] section of the documentation.
 
 If you've written your own adapter, and think it will be valuable for others, you can [update this list on GitHub][community-adapters-github].
 

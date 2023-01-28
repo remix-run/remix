@@ -29,7 +29,8 @@ export async function loader({ params }: LoaderArgs) {
 }
 
 export default function PackageRoute() {
-  const { packageLocation } = useLoaderData<typeof loader>();
+  const { packageLocation } =
+    useLoaderData<typeof loader>();
 
   return (
     <main>
