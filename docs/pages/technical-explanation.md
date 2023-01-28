@@ -34,7 +34,7 @@ It's built on the [Web Fetch API][fetch] instead of Node.js. This enables Remix 
 
 This is what Remix looks like when running in an express app:
 
-```js [2,6-9]
+```js lines=[2,6-9]
 const express = require("express");
 const remix = require("@remix-run/express");
 

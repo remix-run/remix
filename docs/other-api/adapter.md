@@ -43,7 +43,7 @@ createRequestHandler({ build, getLoadContext });
 
 Here's a full example with express:
 
-```ts [2-4, 11-22]
+```ts lines=[2-4,11-22]
 const express = require("express");
 const {
   createRequestHandler,
