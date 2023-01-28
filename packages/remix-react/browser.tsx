@@ -46,6 +46,7 @@ if (import.meta && import.meta.hot) {
   import.meta.hot.accept(
     "remix:manifest",
     async (newManifest: EntryContext["manifest"]) => {
+      // Load new route modules that we've seen.
       let routeModules = Object.fromEntries(
         (
           await Promise.all(
@@ -53,12 +54,13 @@ if (import.meta && import.meta.hot) {
               if (!newManifest.routes[key]) {
                 return null;
               }
-
               let imported = await import(newManifest.routes[key].module);
               return [
                 key,
                 {
                   ...imported,
+                  // react-refresh takes care of updating these in-place,
+                  // if we don't preserve existing values we'll loose state.
                   default:
                     window.__remixRouteModules[key].default || imported.default,
                   CatchBoundary:
@@ -74,28 +76,26 @@ if (import.meta && import.meta.hot) {
         ).filter(Boolean) as [string, RouteModules[string]][]
       );
 
+      // Create new routes
       let routes = createClientRoutes(
         newManifest.routes,
         routeModules,
         window.__remixContext.future
       );
 
-      let donePromise = new Promise<void>((resolve) => {
-        let unsub = router.subscribe((state) => {
-          if (state.revalidation === "idle") {
-            Object.assign(window.__remixManifest, newManifest);
-            Object.assign(window.__remixRouteModules, routeModules);
-            unsub();
-            resolve();
-          }
-        });
+      // Wait for router to be idle before updating the manifest and route modules
+      // and triggering a react-refresh
+      let unsub = router.subscribe((state) => {
+        if (state.revalidation === "idle") {
+          Object.assign(window.__remixManifest, newManifest);
+          Object.assign(window.__remixRouteModules, routeModules);
+          window.$RefreshRuntime$.performReactRefresh();
+          unsub();
+        }
       });
 
       // This is temporary API and will be more granular before release
       router.setNewRoutes(routes);
-      await donePromise;
-
-      window.$RefreshRuntime$.performReactRefresh();
     }
   );
 }
