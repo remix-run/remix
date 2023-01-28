@@ -139,8 +139,7 @@ function remixLiveReloadConnect(config) {
           let accepted = window.__hmr__.contexts["remix:manifest"].emit(
             payload.assetsManifest
           );
-          if (accepted && !anyAccepted) {
-            console.log("[HMR] Only the manifest update was accepted, your application may be out of sync.");
+          if (accepted) {
             anyAccepted = true;
           }
         }
@@ -184,6 +183,7 @@ remixLiveReloadConnect();
           !args.path.match(
             /@remix-run[/\\]react[/\\]dist[/\\]esm[/\\]browser.js$/
           ) &&
+          !args.path.match(/react-router[-dom]?[/\\]$/) &&
           (!args.path.match(/\.[tj]sx?$/) ||
             !fs.existsSync(args.path) ||
             !args.path.startsWith(remixConfig.appDirectory))
@@ -279,9 +279,6 @@ $id$
       `
         window.$RefreshReg$ = prevRefreshReg;
         window.$RefreshSig$ = prevRefreshSig;
-        import.meta.hot.accept(({ module }) => {
-          window.$RefreshRuntime$.performReactRefresh();
-        });
       `;
   }
 

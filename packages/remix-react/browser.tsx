@@ -54,7 +54,21 @@ if (import.meta && import.meta.hot) {
                 return null;
               }
 
-              return [key, await import(newManifest.routes[key].module)];
+              let imported = await import(newManifest.routes[key].module);
+              return [
+                key,
+                {
+                  ...imported,
+                  default:
+                    window.__remixRouteModules[key].default || imported.default,
+                  CatchBoundary:
+                    window.__remixRouteModules[key].CatchBoundary ||
+                    imported.CatchBoundary,
+                  ErrorBoundary:
+                    window.__remixRouteModules[key].ErrorBoundary ||
+                    imported.ErrorBoundary,
+                },
+              ];
             })
           )
         ).filter(Boolean) as [string, RouteModules[string]][]
@@ -66,9 +80,21 @@ if (import.meta && import.meta.hot) {
         window.__remixContext.future
       );
 
-      console.log({ routes });
+      let donePromise = new Promise<void>((resolve) => {
+        let unsub = router.subscribe((state) => {
+          if (state.revalidation === "idle") {
+            unsub();
+            resolve();
+          }
+        });
+      });
 
-      // router.updateRoutes(routes); ???
+      Object.assign(window.__remixManifest, newManifest);
+      Object.assign(window.__remixRouteModules, routeModules);
+      router.setNewRoutes(routes);
+      await donePromise;
+
+      window.$RefreshRuntime$.performReactRefresh();
     }
   );
 }
