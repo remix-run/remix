@@ -23,6 +23,12 @@ Our [GitHub discussions forum][git-hub-discussions-forum] is a good place to cha
 
 You can find (and create) examples in the [Remix examples repository][the-examples-repository].
 
+## Community Adapters
+
+You can find Community Adapters in the [Adapters][community-adapters] section of the documentation. 
+
+If you've written your own adapter, and think it will be valuable for others, you can [update this list on GitHub][community-adapters-github].
+
 ## Courses
 
 Here's a list of courses (in no particular order) you can take to help learn Remix:
@@ -98,3 +104,5 @@ There are Remix Meetups all over the world with thousands of members. Some onlin
 [frontend-masters]: https://frontendmasters.com
 [remix-fundamentals]: https://frontendmasters.com/courses/remix/
 [advanced-remix]: https://frontendmasters.com/courses/advanced-remix/
+[community-adapters]: ../other-api/adapter#community-adapters
+[community-adapters-github]: https://github.com/remix-run/remix/blob/main/docs/other-api/adapter.md#community-adapters
