@@ -87,10 +87,12 @@ if (import.meta && import.meta.hot) {
       // and triggering a react-refresh
       let unsub = router.subscribe((state) => {
         if (state.revalidation === "idle") {
+          unsub();
+          // TODO: Handle race conditions here. Should abort if a new update
+          // comes in while we're waiting for the router to be idle.
           Object.assign(window.__remixManifest, newManifest);
           Object.assign(window.__remixRouteModules, routeModules);
           window.$RefreshRuntime$.performReactRefresh();
-          unsub();
         }
       });
 
