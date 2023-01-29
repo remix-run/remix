@@ -48,6 +48,7 @@ export const loader: LoaderFunction = async () => {
 - Update `react` and `react-dom` to the latest version, `18` or above
 - If using TypeScript, update `@types/react` and `@types/react-dom` to the latest version
 - Find the [adapter you're using](https://github.com/remix-run/remix/tree/dev/templates) and update your `app/entry.client.tsx` and `app/entry.server.tsx` files to match what is in the template. This will ensure that your project supports React 18 hydration on the client and streaming responses on the server.
+- Check for any updates to the development or build commands in the template's `package.json`
 - You should be ready to use `defer`!
 
 [json]: ./json
