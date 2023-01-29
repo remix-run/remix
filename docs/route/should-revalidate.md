@@ -9,7 +9,7 @@ This function lets apps optimize which routes data should be reloaded after acti
 ```ts
 import type { ShouldRevalidateFunction } from "@remix-run/react";
 
-export const shouldRevalidate: ShouldReloadFunction = ({
+export const shouldRevalidate: ShouldRevalidateFunction = ({
   actionResult,
   currentParams,
   currentUrl,
