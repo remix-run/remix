@@ -1,2 +1,4 @@
+name = "remix-cloudflare-pages"
+
 compatibility_date = "2023-01-18"
 compatibility_flags = ["streams_enable_constructors"]
