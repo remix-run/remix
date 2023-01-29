@@ -8,7 +8,7 @@
     "dev": "remix build && run-p \"dev:*\"",
     "start": "cross-env NODE_ENV=production npm run wrangler",
     "typecheck": "tsc",
-    "wrangler": "wrangler pages dev ./public --compatibility-date=2023-01-18"
+    "wrangler": "wrangler pages dev ./public --port 3000 --compatibility-date=2023-01-18"
   },
   "dependencies": {
     "@remix-run/cloudflare": "*",

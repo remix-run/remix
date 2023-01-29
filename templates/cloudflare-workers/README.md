@@ -15,7 +15,7 @@ Both are started with one command:
 npm run dev
 ```
 
-Open up [http://127.0.0.1:8787](http://127.0.0.1:8787) and you should be ready to go!
+Open up [http://127.0.0.1:3000](http://127.0.0.1:3000) and you should be ready to go!
 
 If you want to check the production build, you can stop the dev server and run following commands:
 

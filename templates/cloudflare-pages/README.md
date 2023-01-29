@@ -11,7 +11,7 @@ You will be utilizing Wrangler for local development to emulate the Cloudflare r
 npm run dev
 ```
 
-Open up [http://127.0.0.1:8788](http://127.0.0.1:8788) and you should be ready to go!
+Open up [http://127.0.0.1:3000](http://127.0.0.1:3000) and you should be ready to go!
 
 ## Deployment
 
