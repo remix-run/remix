@@ -42,4 +42,12 @@ export const loader: LoaderFunction = async () => {
 };
 ```
 
+## How to update an older Remix app to use `defer`
+
+- Update all `@remix-run/*` packages to the latest version
+- Update `react` and `react-dom` to the latest version, `18` or above
+- If using TypeScript, update `@types/react` and `@types/react-dom` to the latest version
+- Find the [adapter you're using](https://github.com/remix-run/remix/tree/dev/templates) and update your `app/entry.client.tsx` and `app/entry.server.tsx` files to match what is in the template. This will ensure that your project supports React 18 hydration on the client and streaming responses on the server.
+- You should be ready to use `defer`!
+
 [json]: ./json
