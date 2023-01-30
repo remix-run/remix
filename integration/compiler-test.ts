@@ -32,6 +32,7 @@ test.describe("compiler", () => {
               "esm-only-pkg",
               "esm-only-single-export",
               ...getDependenciesToBundle("esm-only-exports-pkg"),
+              ...getDependenciesToBundle("esm-only-pkg-with-dep"),
             ],
           };
         `,
@@ -74,6 +75,13 @@ test.describe("compiler", () => {
             return <div id="built-ins-polyfill">{path.join("test", "file.txt")}</div>;
           }
         `,
+        "app/routes/esm-only-pkg-with-dep.jsx": js`
+          import esmOnlyPkgWithDep from "esm-only-pkg-with-dep";
+
+          export default function EsmOnlyPkg() {
+            return <div id="esm-only-pkg-with-dep">{esmOnlyPkgWithDep}</div>;
+          }
+        `,
         "app/routes/esm-only-pkg.jsx": js`
           import esmOnlyPkg from "esm-only-pkg";
 
@@ -112,6 +120,26 @@ test.describe("compiler", () => {
           export default function PackageWithSubModule() {
             return <div id="package-with-submodule">{submodule()}</div>;
           }
+        `,
+        "node_modules/esm-only-dep/package.json": json({
+          name: "esm-only-dep",
+          version: "1.0.0",
+          module: "./esm-only-dep.js",
+        }),
+        "node_modules/esm-only-dep/esm-only-dep.js": js`
+          export default "esm-only-dep";
+        `,
+        "node_modules/esm-only-pkg-with-dep/package.json": json({
+          name: "esm-only-pkg-with-dep",
+          version: "1.0.0",
+          module: "./esm-only-pkg-with-dep.js",
+          dependencies: {
+            "esm-only-dep": "1.0.0",
+          },
+        }),
+        "node_modules/esm-only-pkg-with-dep/esm-only-pkg-with-dep.js": js`
+          import dep from "esm-only-dep";
+          export default "esm-only-pkg-with-dep" + " " + dep;
         `,
         "node_modules/esm-only-pkg/package.json": json({
           name: "esm-only-pkg",
@@ -285,6 +313,18 @@ test.describe("compiler", () => {
     // rendered the page instead of the error boundary
     expect(await app.getHtml("#esm-only-exports-pkg")).toBe(
       '<div id="esm-only-exports-pkg">esm-only-exports-pkg</div>'
+    );
+  });
+
+  test("allows consumption of ESM modules that have ESM modules as dependencies with exports in CJS builds with `serverDependenciesToBundle` and `getDependenciesToBundle`", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let res = await app.goto("/esm-only-pkg-with-dep", true);
+    expect(res.status()).toBe(200); // server rendered fine
+    // rendered the page instead of the error boundary
+    expect(await app.getHtml("#esm-only-pkg-with-dep")).toBe(
+      '<div id="esm-only-pkg-with-dep">esm-only-pkg-with-dep esm-only-dep</div>'
     );
   });
 
