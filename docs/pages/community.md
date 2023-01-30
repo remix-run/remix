@@ -53,7 +53,7 @@ You can also subscribe to [releases on GitHub][releases-on-git-hub].
 
 In addition to the [official][official] [tutorials][tutorials], here are Remix tutorials you can follow to learn Remix:
 
-- [How to Debug Remix loaders and actions in VS Code][how-to-debug-remix-loaders-and-actions-in-vs-code] by [Michael Carter][michael-carter].
+- [How to Debug Remix loaders and actions in VS Code][how-to-debug-remix-loaders-and-actions-in-vs-code] by [Michael Carter][michael-carter]
 - [How to build a Remix website with Sanity.io and live preview][how-to-build-a-remix-website-with-sanity-io-and-live-preview] by [Simeon Griggs][simeon-griggs]
 - [Build A Pet Management System With Remix, Prisma, and Postgres][build-a-pet-management-system-with-remix-prisma-and-postgres]
   by [Austin Gil][austin-gil]
