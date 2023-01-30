@@ -168,4 +168,19 @@ This is a hydration warning from React, and is most likely due to one of your br
 
 Check out the page in incognito mode, the warning should disappear.
 
+## CSS bundle being incorrectly tree-shaken
+
+When using [CSS bundling features][css-bundling] in combination with `export *` (e.g. when using an index file like `components/index.ts` that re-exports from all sub-directories) you may find that styles from the re-exported modules are missing from the build output.
+
+This is due to an [issue with esbuild's CSS tree shaking][esbuild-css-tree-shaking-issue]. As a workaround, you should use named re-exports instead.
+
+```diff
+-export * from "./Button";
++export { Button } from "./Button";
+```
+
+Note that, even if this issue didn't exist, we'd still recommend using named re-exports! While it may introduce a bit more boilerplate, you get explicit control over the module's public interface rather than inadvertently exposing everything.
+
 [remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler]: ../utils/parse-multipart-form-data#uploadhandler
+[css-bundling]: ../guides/styling#css-bundling
+[esbuild-css-tree-shaking-issue]: https://github.com/evanw/esbuild/issues/1370
