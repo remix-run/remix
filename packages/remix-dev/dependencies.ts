@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import resolvePkg from "resolve-package-path";
 
 import type { RemixConfig } from "./config";
 
@@ -47,14 +48,10 @@ function getPackageDependenciesRecursive(
 ): void {
   visitedPackages.add(pkg);
 
-  let pkgPath = require.resolve(pkg);
-  let lastIndexOfPackageName = pkgPath.lastIndexOf(pkg);
-  if (lastIndexOfPackageName !== -1) {
-    pkgPath = pkgPath.substring(0, lastIndexOfPackageName);
-  }
-  let pkgJson = path.join(pkgPath, "package.json");
-  if (!fs.existsSync(pkgJson)) {
-    console.log(pkgJson, `does not exist`);
+  let pkgJson = resolvePkg(pkg, ".");
+
+  if (!pkgJson) {
+    console.log(`Could not find package.json for ${pkg}`);
     return;
   }
 
