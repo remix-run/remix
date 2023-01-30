@@ -12,9 +12,9 @@ export function headers({
   loaderHeaders,
   parentHeaders,
 }: {
-  actionHeaders: Headers,
-  loaderHeaders: Headers,
-  parentHeaders: Headers
+  actionHeaders: Headers;
+  loaderHeaders: Headers;
+  parentHeaders: Headers;
 }) {
   return {
     "X-Stretchy-Pants": "its for fun",
@@ -26,7 +26,11 @@ export function headers({
 Usually your data is a better indicator of your cache duration than your route module (data tends to be more dynamic than markup), so the `action`'s & `loader`'s headers are passed in to `headers()` too:
 
 ```tsx
-export function headers({ loaderHeaders }: { loaderHeaders: Headers }) {
+export function headers({
+  loaderHeaders,
+}: {
+  loaderHeaders: Headers;
+}) {
   return {
     "Cache-Control": loaderHeaders.get("Cache-Control"),
   };
@@ -64,7 +68,13 @@ That is all to say that Remix has given you a very large gun with which to shoot
 ```tsx
 import parseCacheControl from "parse-cache-control";
 
-export function headers({ loaderHeaders, parentHeaders }: { loaderHeaders: Headers, parentHeaders: Headers }) {
+export function headers({
+  loaderHeaders,
+  parentHeaders,
+}: {
+  loaderHeaders: Headers;
+  parentHeaders: Headers;
+}) {
   const loaderCache = parseCacheControl(
     loaderHeaders.get("Cache-Control")
   );
