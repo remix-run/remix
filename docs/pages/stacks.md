@@ -6,7 +6,7 @@ order: 3
 
 # Remix Stacks
 
-Remix Stacks is a feature of the Remix CLI that allows you to generate a Remix project quickly and easily. There are several built-in and official stacks that are full blown applications. You can also make your own (read more below).
+Remix Stacks is a feature of the Remix CLI that allows you to generate a Remix project quickly and easily. There are several built-in and official stacks that are full-blown applications. You can also make your own (read more below).
 
 [Read the feature announcement blog post][read-the-feature-announcement-blog-post] and [watch Remix Stacks videos on YouTube][watch-remix-stacks-videos-on-you-tube].
 
@@ -38,7 +38,7 @@ npx create-remix@latest --template my-username/my-repo
 
 Custom stacks give an enormous amount of power and flexibility, and we hope you create your own that suites the preferences of you and your organization (feel free to fork ours!).
 
-<docs-success>Yes, we do recommend that you name your own stack after a music sub-genre (not "rock" but "indie"!). In the future, we will have a page where you can list your open source stacks for others to learn and discover. For now, please add the <a href="https://github.com/topics/remix-stack"><code>remix-stack</code></a> tag to your repo!</docs-success>
+<docs-success>Yes, we do recommend that you name your own stack after a music sub-genre (not "rock" but "indie"!). In the future, we will have a page where you can list your open-source stacks for others to learn and discover. For now, please add the <a href="https://github.com/topics/remix-stack"><code>remix-stack</code></a> tag to your repo!</docs-success>
 
 ### `--template`
 

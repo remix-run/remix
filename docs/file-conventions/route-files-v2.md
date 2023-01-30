@@ -280,7 +280,7 @@ app/
 | `/`                                          | `_index.tsx`  |
 | `/beef/and/cheese`                           | `$.tsx`       |
 | `/files`                                     | `files.$.tsx` |
-| `/files/talks/remix-conf_old.pdf`            | `files/$.tsx` |
+| `/files/talks/remix-conf_old.pdf`            | `files.$.tsx` |
 | `/files/talks/remix-conf_final.pdf`          | `files.$.tsx` |
 | `/files/talks/remix-conf-FINAL-MAY_2022.pdf` | `files.$.tsx` |
 
@@ -378,7 +378,7 @@ In other words `_index` has meaning for Remix index routes, `index` has node mod
 Our general recommendation for scale is to make every route a folder and put the modules used exclusively by that route in the folder, then put the shared modules outside of routes folder elsewhere. This has a couple benefits:
 
 - Easy to identify shared modules, so tread lightly when changing them
-- Easy to organize an refactor the modules for a specific route without creating "file organization fatigue" and cluttering up other parts of the app
+- Easy to organize and refactor the modules for a specific route without creating "file organization fatigue" and cluttering up other parts of the app
 
 ## More Flexibility
 

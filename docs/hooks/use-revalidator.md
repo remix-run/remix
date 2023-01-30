@@ -1,5 +1,6 @@
 ---
 title: useRevalidator
+toc: false
 ---
 
 # `useRevalidator`
@@ -26,6 +27,6 @@ function WindowFocusRevalidator() {
 }
 ```
 
-For more information and usage, please refer to the [React Router `useRevalidator` docs][rr-userevalidator].
+<docs-info>For more information and usage, please refer to the [React Router `useRevalidator` docs][rr-userevalidator].</docs-info>
 
 [rr-userevalidator]: https://reactrouter.com/hooks/use-revalidator

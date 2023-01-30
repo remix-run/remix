@@ -5,7 +5,7 @@ order: 1
 
 # Philosophy
 
-We've worked on a lot of different types of websites: static sites for credit card companies, social media platforms, learning management systems, content management systems, and e-commerce to name a few. We've also trained hundreds of development teams with our training company, [React Training][react-training]. These teams build websites we all use regularly. Based on our personal development experience and our client's products, we built Remix to be able to handle the dynamic nature of both the front end and the back end of a web project.
+We've worked on a lot of different types of websites: static sites for credit card companies, social media platforms, learning management systems, content management systems, and e-commerce to name a few. We've also trained hundreds of development teams with our training company, [React Training][react-training]. These teams build websites we all use regularly. Based on our personal development experience and our clients' products, we built Remix to be able to handle the dynamic nature of both the front end and the back end of a web project.
 
 The Remix philosophy can be summed up in four points:
 
@@ -22,7 +22,7 @@ With today's web infrastructure you don't need static files to make your server 
 
 There are a lot of ways Remix helps you send less stuff over the network and we hope to talk about all of them, but for now here's one: fetching a list of records.
 
-Consider [the Github Gist API][the-github-gist-api]. This payload is 75kb unpacked and 12kb over the network compressed. If you fetch it in the browser you make the user download all of it. It might look like this:
+Consider [the Github Gist API][the-github-gist-api]. This payload is 75kb unpacked and 12kb over the network compressed. If you fetch it in the browser, you make the user download all of it. It might look like this:
 
 ```tsx
 export default function Gists() {

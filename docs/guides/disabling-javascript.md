@@ -17,7 +17,7 @@ export const handle = { hydrate: true };
 
 Now open `root.tsx`, bring in `useMatches` and add this:
 
-```tsx [6,10,13-15,27]
+```tsx lines=[6,10,13-15,27]
 import {
   Meta,
   Links,

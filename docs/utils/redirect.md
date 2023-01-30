@@ -1,5 +1,6 @@
 ---
 title: redirect
+toc: false
 ---
 
 # `redirect`
