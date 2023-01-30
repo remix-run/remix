@@ -1963,9 +1963,9 @@ But if there's an error, you can return an object with the error messages and th
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[2-3,6,8-12,14-18,28-32,35-38,40-46,53,64,66-74,77-85,91,93-101,104-112,115-122]
+```tsx filename=app/routes/jokes/new.tsx lines=[3,6,8-12,14-18,28-32,35-38,40-46,53,64,66-74,77-85,91,93-101,104-112,115-122]
 import type { ActionArgs } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import { useActionData } from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
