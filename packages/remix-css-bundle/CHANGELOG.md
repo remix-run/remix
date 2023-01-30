@@ -1,5 +1,12 @@
 # @remix-run/css-bundle
 
+## 1.12.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/dev@1.12.0`
+
 ## 1.11.1
 
 ### Patch Changes

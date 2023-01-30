@@ -1,5 +1,6 @@
 ---
 title: entry.server
+toc: false
 ---
 
 # entry.server

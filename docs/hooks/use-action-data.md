@@ -1,8 +1,11 @@
 ---
 title: useActionData
+toc: false
 ---
 
 # `useActionData`
+
+<docs-info>This hook is simply a re-export of [React Router's `useActionData`][rr-useactiondata].</docs-info>
 
 This hook returns the JSON parsed data from your route action. It returns `undefined` if there hasn't been a submission at the current location yet.
 
@@ -151,6 +154,8 @@ If you're using `<Form>` and don't care to support the cases above, you don't ne
 
 <docs-info>In general, if the form validation fails, return data from the action and render it in the component. But, once you actually change data (in your database, or otherwise), you should redirect.</docs-info>
 
+<docs-info>For more information and usage, please refer to the [React Router `useActionData` docs][rr-useactiondata].</docs-info>
+
 See also:
 
 - [`action`][action]
@@ -158,3 +163,4 @@ See also:
 
 [action]: ../route/action
 [usetransition]: ../hooks/use-transition
+[rr-useactiondata]: https://reactrouter.com/hooks/use-action-data

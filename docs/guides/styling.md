@@ -897,6 +897,8 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 
 <docs-warning>CSS bundling features are unstable and currently only available behind feature flags. We're confident in the use cases they solve but the API and implementation may change in the future.</docs-warning>
 
+<docs-warning>When using CSS bundling features, you should avoid using `export *` due to an [issue with esbuild's CSS tree shaking][esbuild-css-tree-shaking-issue].</docs-warning>
+
 Many common approaches to CSS within the React community are only possible when bundling CSS, meaning that the CSS files you write during development are collected into a separate bundle as part of the build process.
 
 When using CSS bundling features, the Remix compiler will generate a single CSS file containing all bundled styles in your application. Note that any [regular stylesheet imports][regular-stylesheet-imports] will remain as separate files.
@@ -1074,6 +1076,7 @@ module.exports = {
 [postcss]: https://postcss.org
 [autoprefixer]: https://github.com/postcss/autoprefixer
 [postcss-preset-env]: https://preset-env.cssdb.org
+[esbuild-css-tree-shaking-issue]: https://github.com/evanw/esbuild/issues/1370
 [css modules]: https://github.com/css-modules/css-modules
 [regular-stylesheet-imports]: #regular-stylesheets
 [server-dependencies-to-bundle]: ../file-conventions/remix-config#serverdependenciestobundle

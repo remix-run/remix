@@ -265,7 +265,7 @@ The most common scenario is initializing a third party API when your module is i
 
 This ensures the library is only initialized if there is a `document`, meaning you're in the browser. We recommend `document` over `window` because server runtimes like Deno have a global `window` available.
 
-```js [3]
+```js lines=[3]
 import firebase from "firebase/app";
 
 if (typeof document !== "undefined") {
@@ -279,7 +279,7 @@ export { firebase };
 
 This strategy defers initialization until the library is actually used:
 
-```js [4]
+```js lines=[4]
 import { loadStripe } from "@stripe/stripe-js";
 
 export async function redirectToStripeCheckout(sessionId) {
@@ -331,7 +331,7 @@ function useLocalStorage(key) {
 
 You can fix this by moving the code into `useEffect`, which only runs in the browser.
 
-```js [2,4-6]
+```jsx lines=[2,4-6]
 function useLocalStorage(key) {
   const [state, setState] = useState(null);
 
