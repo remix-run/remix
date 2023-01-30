@@ -1,8 +1,7 @@
-import * as path from "path";
 import type esbuild from "esbuild";
 
 import type { RemixConfig } from "../../config";
-import { getRouteModuleExportsCached } from "../routes";
+import { getRouteModuleExports } from "../routeExports";
 import invariant from "../../invariant";
 
 type Route = RemixConfig["routes"][string];
@@ -14,7 +13,7 @@ const browserSafeRouteExports: { [name: string]: boolean } = {
   handle: true,
   links: true,
   meta: true,
-  unstable_shouldReload: true,
+  shouldRevalidate: true,
 };
 
 /**
@@ -31,7 +30,7 @@ export function browserRouteModulesPlugin(
       let routesByFile: Map<string, Route> = Object.keys(config.routes).reduce(
         (map, key) => {
           let route = config.routes[key];
-          map.set(path.resolve(config.appDirectory, route.file), route);
+          map.set(route.file, route);
           return map;
         },
         new Map()
@@ -54,9 +53,9 @@ export function browserRouteModulesPlugin(
           try {
             invariant(route, `Cannot get route by path: ${args.path}`);
 
-            theExports = (
-              await getRouteModuleExportsCached(config, route.id)
-            ).filter((ex) => !!browserSafeRouteExports[ex]);
+            theExports = (await getRouteModuleExports(config, route.id)).filter(
+              (ex) => !!browserSafeRouteExports[ex]
+            );
           } catch (error: any) {
             return {
               errors: [
@@ -67,13 +66,16 @@ export function browserRouteModulesPlugin(
               ],
             };
           }
-          let spec =
-            theExports.length > 0 ? `{ ${theExports.join(", ")} }` : "*";
-          let contents = `export ${spec} from ${JSON.stringify(file)};`;
+
+          let contents = "module.exports = {};";
+          if (theExports.length !== 0) {
+            let spec = `{ ${theExports.join(", ")} }`;
+            contents = `export ${spec} from ${JSON.stringify(`./${file}`)};`;
+          }
 
           return {
             contents,
-            resolveDir: path.dirname(file),
+            resolveDir: config.appDirectory,
             loader: "js",
           };
         }

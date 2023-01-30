@@ -24,7 +24,7 @@ export type CreateCookieSessionStorageFunction = (
  * also has the limitation that serialized session data may not exceed the
  * browser's maximum cookie size. Trade-offs!
  *
- * @see https://remix.run/api/remix#createcookiesessionstorage
+ * @see https://remix.run/utils/sessions#createcookiesessionstorage
  */
 export const createCookieSessionStorageFactory =
   (createCookie: CreateCookieFunction): CreateCookieSessionStorageFunction =>
@@ -42,7 +42,14 @@ export const createCookieSessionStorageFactory =
         );
       },
       async commitSession(session, options) {
-        return cookie.serialize(session.data, options);
+        let serializedCookie = await cookie.serialize(session.data, options);
+        if (serializedCookie.length > 4096) {
+          throw new Error(
+            "Cookie length will exceed browser maximum. Length: " +
+              serializedCookie.length
+          );
+        }
+        return serializedCookie;
       },
       async destroySession(_session, options) {
         return cookie.serialize("", {

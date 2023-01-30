@@ -27,7 +27,7 @@ interface FileSessionStorageOptions {
  * The advantage of using this instead of cookie session storage is that
  * files may contain much more data than cookies.
  *
- * @see https://remix.run/api/remix#createfilesessionstorage-node
+ * @see https://remix.run/utils/sessions#createfilesessionstorage-node
  */
 export function createFileSessionStorage({
   cookie,
@@ -88,6 +88,11 @@ export function createFileSessionStorage({
       await fsp.writeFile(file, content, "utf-8");
     },
     async deleteData(id) {
+      // Return early if the id is empty, otherwise we'll end up trying to
+      // unlink the dir, which will cause the EPERM error.
+      if (!id) {
+        return;
+      }
       try {
         await fsp.unlink(getFile(dir, id));
       } catch (error: any) {

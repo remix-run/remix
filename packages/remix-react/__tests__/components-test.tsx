@@ -1,9 +1,9 @@
 import * as React from "react";
-import { MemoryRouter } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { fireEvent, render, act } from "@testing-library/react";
 
-// import type { LiveReload as ActualLiveReload } from "../components";
-import { Link, NavLink, RemixEntryContext } from "../components";
+import type { LiveReload as ActualLiveReload } from "../components";
+import { Link, NavLink, RemixContext } from "../components";
 
 import "@testing-library/jest-dom/extend-expect";
 
@@ -15,57 +15,58 @@ import "@testing-library/jest-dom/extend-expect";
 // the browser reloads with the new UI. At the moment we could completely break
 // LiveReload's real features and these tests wouldn't know it.
 
-// describe("<LiveReload />", () => {
-//   const originalNodeEnv = process.env.NODE_ENV;
-//   afterEach(() => {
-//     process.env.NODE_ENV = originalNodeEnv;
-//   });
+describe("<LiveReload />", () => {
+  let originalNodeEnv = process.env.NODE_ENV;
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv;
+  });
 
-//   describe("non-development environment", () => {
-//     let LiveReload: typeof ActualLiveReload;
-//     beforeEach(() => {
-//       process.env.NODE_ENV = "not-development";
-//       jest.resetModules();
-//       LiveReload = require("../components").LiveReload;
-//     });
+  describe("non-development environment", () => {
+    let LiveReload: typeof ActualLiveReload;
+    beforeEach(() => {
+      process.env.NODE_ENV = "not-development";
+      jest.resetModules();
+      LiveReload = require("../components").LiveReload;
+    });
 
-//     it("does nothing if the NODE_ENV is not development", () => {
-//       const { container } = render(<LiveReload />);
-//       expect(container).toBeEmptyDOMElement();
-//     });
-//   });
+    it("does nothing if the NODE_ENV is not development", () => {
+      let { container } = render(<LiveReload />);
+      expect(container).toBeEmptyDOMElement();
+    });
+  });
 
-//   describe("development environment", () => {
-//     let LiveReload: typeof ActualLiveReload;
-//     beforeEach(() => {
-//       process.env.NODE_ENV = "development";
-//       jest.resetModules();
-//       LiveReload = require("../components").LiveReload;
-//     });
+  describe("development environment", () => {
+    let oldEnv = process.env;
+    let LiveReload: typeof ActualLiveReload;
+    beforeEach(() => {
+      process.env = { ...oldEnv, NODE_ENV: "development" };
+      jest.resetModules();
+    });
 
-//     it("defaults the port to 8002", () => {
-//       const { container } = render(<LiveReload />);
-//       expect(container.querySelector("script")).toHaveTextContent(
-//         /:8002\/socket/
-//       );
-//     });
+    it("defaults the port to 8002", () => {
+      LiveReload = require("../components").LiveReload;
+      let { container } = render(<LiveReload />);
+      expect(container.querySelector("script")).toHaveTextContent(
+        `8002 + "/socket"`
+      );
+    });
 
-//     it("can set the port explicitly", () => {
-//       const { container } = render(<LiveReload port={4321} />);
-//       expect(container.querySelector("script")).toHaveTextContent(
-//         /:4321\/socket/
-//       );
-//     });
+    it("can set the port explicitly", () => {
+      let { container } = render(<LiveReload port={4321} />);
+      expect(container.querySelector("script")).toHaveTextContent(
+        `4321 + "/socket"`
+      );
+    });
 
-//     it("determines the right port based on REMIX_DEV_SERVER_WS_PORT env variable", () => {
-//       process.env.REMIX_DEV_SERVER_WS_PORT = "1234";
-//       const { container } = render(<LiveReload />);
-//       expect(container.querySelector("script")).toHaveTextContent(
-//         /:1234\/socket/
-//       );
-//     });
-//   });
-// });
+    it("determines the right port based on REMIX_DEV_SERVER_WS_PORT env variable", () => {
+      process.env.REMIX_DEV_SERVER_WS_PORT = "1234";
+      let { container } = render(<LiveReload />);
+      expect(container.querySelector("script")).toHaveTextContent(
+        `1234 + "/socket"`
+      );
+    });
+  });
+});
 
 const setIntentEvents = ["focus", "mouseEnter", "touchStart"] as const;
 type PrefetchEventHandlerProps = {
@@ -76,49 +77,56 @@ function itPrefetchesPageLinks<
   Props extends { to: any; prefetch?: any } & PrefetchEventHandlerProps
 >(Component: React.ComponentType<Props>) {
   describe('prefetch="intent"', () => {
+    let context = {
+      routeModules: { idk: { default: () => null } },
+      manifest: {
+        routes: {
+          idk: {
+            hasLoader: true,
+            hasAction: false,
+            hasCatchBoundary: false,
+            hasErrorBoundary: false,
+            id: "idk",
+            module: "idk.js",
+          },
+        },
+        entry: { imports: [], module: "" },
+        url: "",
+        version: "",
+      },
+      future: { v2_meta: false },
+    };
+
     beforeEach(() => {
       jest.useFakeTimers();
     });
 
-    function withContext(stuff: JSX.Element) {
-      let context = {
-        routeModules: { idk: { default: () => null } },
-        manifest: {
-          routes: {
-            idk: {
-              hasLoader: true,
-              hasAction: false,
-              hasCatchBoundary: false,
-              hasErrorBoundary: false,
-              id: "idk",
-              module: "idk",
-            },
-          },
-          entry: { imports: [], module: "" },
-          url: "",
-          version: "",
-        },
-        matches: [],
-        clientRoutes: [
-          { id: "idk", path: "idk", hasLoader: true, element: "", module: "" },
-        ],
-        routeData: {},
-        appState: {} as any,
-        transitionManager: {} as any,
-      };
-      return (
-        <RemixEntryContext.Provider value={context}>
-          <MemoryRouter>{stuff}</MemoryRouter>
-        </RemixEntryContext.Provider>
-      );
-    }
-
     setIntentEvents.forEach((event) => {
       it(`prefetches page links on ${event}`, () => {
+        let router;
+
+        act(() => {
+          router = createMemoryRouter([
+            {
+              id: "root",
+              path: "/",
+              element: (
+                <Component {...({ to: "idk", prefetch: "intent" } as Props)} />
+              ),
+            },
+            {
+              id: "idk",
+              path: "idk",
+              loader: () => null,
+              element: <h1>idk</h1>,
+            },
+          ]);
+        });
+
         let { container, unmount } = render(
-          withContext(
-            <Component {...({ to: "idk", prefetch: "intent" } as Props)} />
-          )
+          <RemixContext.Provider value={context}>
+            <RouterProvider router={router} />
+          </RemixContext.Provider>
         );
 
         fireEvent[event](container.firstChild);
@@ -126,25 +134,51 @@ function itPrefetchesPageLinks<
           jest.runAllTimers();
         });
 
-        expect(container.querySelector("link[rel=prefetch]")).toBeTruthy();
+        let dataHref = container
+          .querySelector('link[rel="prefetch"][as="fetch"]')
+          ?.getAttribute("href");
+        expect(dataHref).toBe("/idk?_data=idk");
+        let moduleHref = container
+          .querySelector('link[rel="modulepreload"]')
+          ?.getAttribute("href");
+        expect(moduleHref).toBe("idk.js");
         unmount();
       });
 
       it(`prefetches page links and calls explicit handler on ${event}`, () => {
+        let router;
         let ranHandler = false;
         let eventHandler = `on${event[0].toUpperCase()}${event.slice(1)}`;
+        act(() => {
+          router = createMemoryRouter([
+            {
+              id: "root",
+              path: "/",
+              element: (
+                <Component
+                  {...({
+                    to: "idk",
+                    prefetch: "intent",
+                    [eventHandler]: () => {
+                      ranHandler = true;
+                    },
+                  } as any)}
+                />
+              ),
+            },
+            {
+              id: "idk",
+              path: "idk",
+              loader: () => true,
+              element: <h1>idk</h1>,
+            },
+          ]);
+        });
+
         let { container, unmount } = render(
-          withContext(
-            <Component
-              {...({
-                to: "idk",
-                prefetch: "intent",
-                [eventHandler]: () => {
-                  ranHandler = true;
-                },
-              } as any)}
-            />
-          )
+          <RemixContext.Provider value={context}>
+            <RouterProvider router={router} />
+          </RemixContext.Provider>
         );
 
         fireEvent[event](container.firstChild);

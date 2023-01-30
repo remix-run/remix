@@ -4,7 +4,7 @@ title: Gotchas
 
 # Gotchas
 
-As we've built Remix, we've been laser focused on production results and scalability for your users and team working in it. Because of this, some developer experience and ecosystem compatibility issues exist that we haven't smoothed over yet.
+As we've built Remix, we've been laser focused on production results and scalability for your users and team working in it. Because of this, some developer-experience and ecosystem-compatibility issues exist that we haven't smoothed over yet.
 
 This document should help you get over these bumps.
 
@@ -18,8 +18,8 @@ TypeError: Cannot read properties of undefined (reading 'root')
 
 For example, you can't import "fs-extra" directly into a route module:
 
-```js lines=[2] filename=app/routes/index.jsx bad
-import { json } from "remix";
+```jsx bad filename=app/routes/index.jsx lines=[2] nocopy
+import { json } from "@remix-run/node"; // or cloudflare/deno
 import fs from "fs-extra";
 
 export async function loader() {
@@ -31,18 +31,18 @@ export default function SomeRoute() {
 }
 ```
 
-To fix it, move the import into a different module named `*.server.js` and import from there. In our example here, we create a new file at `utils/fs-extra.server.js`:
+To fix it, move the import into a different module named `*.server.js` or `*.server.ts` and import from there. In our example here, we create a new file at `utils/fs-extra.server.js`:
 
 ```js filename=app/utils/fs-extra.server.js
-export * from "fs-extra";
+export { default } from "fs-extra";
 ```
 
 And then change our import in the route to the new "wrapper" module:
 
-```js lines=[3] filename=app/routes/index.jsx
-import { json } from "remix";
+```jsx filename=app/routes/index.jsx lines=[3]
+import { json } from "@remix-run/node"; // or cloudflare/deno
 
-import fs from "../utils/fs-extra.server";
+import fs from "~/utils/fs-extra.server";
 
 export async function loader() {
   return json(await fs.pathExists("../some/path"));
@@ -55,11 +55,45 @@ export default function SomeRoute() {
 
 Even better, send a PR to the project to add `"sideEffects": false` to their package.json so that bundlers that tree shake know they can safely remove the code from browser bundles.
 
+Similarly, you may run into the same error if you call a function at the top-level scope of your route module that depends on server-only code.
+
+For example, [Remix upload handlers like `unstable_createFileUploadHandler` and `unstable_createMemoryUploadHandler`][remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler] use Node globals under the hood and should only be called on the server. You can call either of these functions in a `*.server.js` or `*.server.ts` file, or you can move them into your route's `action` or `loader` function.
+
+So instead of doing:
+
+```jsx bad filename=app/routes/some-route.jsx lines=[3-6]
+import { unstable_createFileUploadHandler } from "@remix-run/node"; // or cloudflare/deno
+
+const uploadHandler = unstable_createFileUploadHandler({
+  maxPartSize: 5_000_000,
+  file: ({ filename }) => filename,
+});
+
+export async function action() {
+  // use `uploadHandler` here ...
+}
+```
+
+You should be doing:
+
+```jsx filename=app/routes/some-route.jsx good lines=[4-7]
+import { unstable_createFileUploadHandler } from "@remix-run/node"; // or cloudflare/deno
+
+export async function action() {
+  const uploadHandler = unstable_createFileUploadHandler({
+    maxPartSize: 5_000_000,
+    file: ({ filename }) => filename,
+  });
+
+  // use `uploadHandler` here ...
+}
+```
+
 > Why does this happen?
 
 Remix uses "tree shaking" to remove server code from browser bundles. Anything inside of Route module `loader`, `action`, and `headers` exports will be removed. It's a great approach but suffers from ecosystem compatibility.
 
-When you import a third party module, Remix checks the `package.json` of that package for `"sideEffects": false`. If that is configured, Remix knows it can safely remove the code from the client bundles. Without it, the imports remain because code may depend on the module's side effects (like setting global polyfills, etc.).
+When you import a third-party module, Remix checks the `package.json` of that package for `"sideEffects": false`. If that is configured, Remix knows it can safely remove the code from the client bundles. Without it, the imports remain because code may depend on the module's side effects (like setting global polyfills, etc.).
 
 ## Importing ESM Packages
 
@@ -72,9 +106,10 @@ Instead change the require of /app/project/node_modules/dot-prop/index.js in /ap
 
 To fix it, add the ESM package to the `serverDependenciesToBundle` option in your `remix.config.js` file.
 
-In our case here we're using the `dot-prop` package, so we would do it like this:
+In our case here, we're using the `dot-prop` package, so we would do it like this:
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   serverDependenciesToBundle: ["dot-prop"],
   // ...
@@ -120,3 +155,32 @@ if (typeof document === "undefined") {
 This will work for all JS environments (Node.js, Deno, Workers, etc.).
 
 [esbuild]: https://esbuild.github.io/
+
+## Browser extensions injecting code
+
+You may run into this warning in the browser:
+
+```
+Warning: Did not expect server HTML to contain a <script> in <html>.
+```
+
+This is a hydration warning from React, and is most likely due to one of your browser extensions injecting scripts into the server-rendered HTML, creating a difference with the resulting HTML.
+
+Check out the page in incognito mode, the warning should disappear.
+
+## CSS bundle being incorrectly tree-shaken
+
+When using [CSS bundling features][css-bundling] in combination with `export *` (e.g. when using an index file like `components/index.ts` that re-exports from all sub-directories) you may find that styles from the re-exported modules are missing from the build output.
+
+This is due to an [issue with esbuild's CSS tree shaking][esbuild-css-tree-shaking-issue]. As a workaround, you should use named re-exports instead.
+
+```diff
+-export * from "./Button";
++export { Button } from "./Button";
+```
+
+Note that, even if this issue didn't exist, we'd still recommend using named re-exports! While it may introduce a bit more boilerplate, you get explicit control over the module's public interface rather than inadvertently exposing everything.
+
+[remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler]: ../utils/parse-multipart-form-data#uploadhandler
+[css-bundling]: ../guides/styling#css-bundling
+[esbuild-css-tree-shaking-issue]: https://github.com/evanw/esbuild/issues/1370

@@ -1,9 +1,22 @@
-import type { ServerBuild, AppLoadContext } from "@remix-run/server-runtime";
-import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
+import type { AppLoadContext, ServerBuild } from "@remix-run/cloudflare";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cloudflare";
+
+/**
+ * A function that returns the value to use as `context` in route `loader` and
+ * `action` functions.
+ *
+ * You can think of this as an escape hatch that allows you to pass
+ * environment/platform-specific values through to your loader/action.
+ */
+export type GetLoadContextFunction<Env = any> = (
+  context: EventContext<Env, any, any>
+) => AppLoadContext;
+
+export type RequestHandler<Env = any> = PagesFunction<Env>;
 
 export interface createPagesFunctionHandlerParams<Env = any> {
   build: ServerBuild;
-  getLoadContext?: (context: EventContext<Env, any, any>) => AppLoadContext;
+  getLoadContext?: GetLoadContextFunction<Env>;
   mode?: string;
 }
 
@@ -11,14 +24,12 @@ export function createRequestHandler<Env = any>({
   build,
   getLoadContext,
   mode,
-}: createPagesFunctionHandlerParams<Env>): PagesFunction<Env> {
+}: createPagesFunctionHandlerParams<Env>): RequestHandler<Env> {
   let handleRequest = createRemixRequestHandler(build, mode);
 
   return (context) => {
-    let loadContext =
-      typeof getLoadContext === "function"
-        ? getLoadContext(context)
-        : undefined;
+    let loadContext = getLoadContext?.(context);
+
     return handleRequest(context.request, loadContext);
   };
 }
@@ -63,10 +74,10 @@ export function createPagesFunctionHandler<Env = any>({
   return async (context: EventContext<Env, any, any>) => {
     try {
       return await handleFetch(context);
-    } catch (e) {
-      if (process.env.NODE_ENV === "development" && e instanceof Error) {
-        console.error(e);
-        return new Response(e.message || e.toString(), {
+    } catch (error: unknown) {
+      if (process.env.NODE_ENV === "development" && error instanceof Error) {
+        console.error(error);
+        return new Response(error.message || error.toString(), {
           status: 500,
         });
       }

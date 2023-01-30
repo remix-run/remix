@@ -18,9 +18,7 @@ const OFF = 0;
 // const WARN = 1;
 // const ERROR = 2;
 
-/**
- * @type {import("eslint").Linter.Config}
- */
+/** @type {import('eslint').Linter.Config} */
 const config = {
   parser: "@babel/eslint-parser",
   parserOptions: {
@@ -28,7 +26,7 @@ const config = {
     requireConfigFile: false,
     ecmaVersion: "latest",
     babelOptions: {
-      presets: ["@babel/preset-react"],
+      presets: [require.resolve("@babel/preset-react")],
     },
   },
   env: {
@@ -42,8 +40,13 @@ const config = {
     ...importSettings,
   },
 
-  // NOTE: Omit rules related to code style/formatting. Eslint should report
-  // potential problems only.
+  // NOTE: In general - we want to use prettier for the majority of stylistic
+  // concerns.  However there are some "stylistic" eslint rules we use that should
+  // not fail a PR since we can auto-fix them after merging to dev.  These rules
+  // should be set to WARN.
+  //
+  // ERROR should be used for "functional" rules that indicate a problem in the
+  // code, and these will cause a PR failure
 
   // IMPORTANT: Ensure that rules used here are compatible with
   // typescript-eslint. If they are not, we need to turn the rule off in our

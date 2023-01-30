@@ -80,9 +80,14 @@ export function mockServerBuild(
       },
       {}
     ),
+    future: {},
   };
 }
 
 export function prettyHtml(source: string): string {
   return prettier.format(source, { parser: "html" });
 }
+
+export function isEqual<A, B>(
+  arg: A extends B ? (B extends A ? true : false) : false
+): void {}

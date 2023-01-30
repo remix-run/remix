@@ -2,6 +2,7 @@ import type { CookieParseOptions, CookieSerializeOptions } from "cookie";
 import { parse, serialize } from "cookie";
 
 import type { SignFunction, UnsignFunction } from "./crypto";
+import { warnOnce } from "./warnings";
 
 export type { CookieParseOptions, CookieSerializeOptions };
 
@@ -29,7 +30,7 @@ export type CookieOptions = CookieParseOptions &
  * `serialize()` methods that allow a single instance to be reused for
  * parsing/encoding multiple different values.
  *
- * @see https://remix.run/api/remix#cookie-api
+ * @see https://remix.run/utils/cookies#cookie-api
  */
 export interface Cookie {
   /**
@@ -74,7 +75,7 @@ export type CreateCookieFunction = (
 /**
  * Creates a logical container for managing a browser cookie from the server.
  *
- * @see https://remix.run/api/remix#createcookie
+ * @see https://remix.run/utils/cookies#createcookie
  */
 export const createCookieFactory =
   ({
@@ -88,8 +89,11 @@ export const createCookieFactory =
     let { secrets, ...options } = {
       secrets: [],
       path: "/",
+      sameSite: "lax" as const,
       ...cookieOptions,
     };
+
+    warnOnceAboutExpiresCookie(name, options.expires);
 
     return {
       get name() {
@@ -131,7 +135,7 @@ export type IsCookieFunction = (object: any) => object is Cookie;
 /**
  * Returns true if an object is a Remix cookie container.
  *
- * @see https://remix.run/api/remix#iscookie
+ * @see https://remix.run/utils/cookies#iscookie
  */
 export const isCookie: IsCookieFunction = (object): object is Cookie => {
   return (
@@ -177,13 +181,82 @@ async function decodeCookieValue(
 }
 
 function encodeData(value: any): string {
-  return btoa(JSON.stringify(value));
+  return btoa(myUnescape(encodeURIComponent(JSON.stringify(value))));
 }
 
 function decodeData(value: string): any {
   try {
-    return JSON.parse(atob(value));
-  } catch (error) {
+    return JSON.parse(decodeURIComponent(myEscape(atob(value))));
+  } catch (error: unknown) {
     return {};
   }
+}
+
+// See: https://github.com/zloirock/core-js/blob/master/packages/core-js/modules/es.escape.js
+function myEscape(value: string): string {
+  let str = value.toString();
+  let result = "";
+  let index = 0;
+  let chr, code;
+  while (index < str.length) {
+    chr = str.charAt(index++);
+    if (/[\w*+\-./@]/.exec(chr)) {
+      result += chr;
+    } else {
+      code = chr.charCodeAt(0);
+      if (code < 256) {
+        result += "%" + hex(code, 2);
+      } else {
+        result += "%u" + hex(code, 4).toUpperCase();
+      }
+    }
+  }
+  return result;
+}
+
+function hex(code: number, length: number): string {
+  let result = code.toString(16);
+  while (result.length < length) result = "0" + result;
+  return result;
+}
+
+// See: https://github.com/zloirock/core-js/blob/master/packages/core-js/modules/es.unescape.js
+function myUnescape(value: string): string {
+  let str = value.toString();
+  let result = "";
+  let index = 0;
+  let chr, part;
+  while (index < str.length) {
+    chr = str.charAt(index++);
+    if (chr === "%") {
+      if (str.charAt(index) === "u") {
+        part = str.slice(index + 1, index + 5);
+        if (/^[\da-f]{4}$/i.exec(part)) {
+          result += String.fromCharCode(parseInt(part, 16));
+          index += 5;
+          continue;
+        }
+      } else {
+        part = str.slice(index, index + 2);
+        if (/^[\da-f]{2}$/i.exec(part)) {
+          result += String.fromCharCode(parseInt(part, 16));
+          index += 2;
+          continue;
+        }
+      }
+    }
+    result += chr;
+  }
+  return result;
+}
+
+function warnOnceAboutExpiresCookie(name: string, expires?: Date) {
+  warnOnce(
+    !expires,
+    `The "${name}" cookie has an "expires" property set. ` +
+      `This will cause the expires value to not be updated when the session is committed. ` +
+      `Instead, you should set the expires value when serializing the cookie. ` +
+      `You can use \`commitSession(session, { expires })\` if using a session storage object, ` +
+      `or \`cookie.serialize("value", { expires })\` if you're using the cookie directly.`
+  );
 }

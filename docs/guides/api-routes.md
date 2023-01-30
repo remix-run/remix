@@ -18,7 +18,9 @@ export async function loader() {
 }
 
 export default function Teams() {
-  return <TeamsView teams={useLoaderData()} />;
+  return (
+    <TeamsView teams={useLoaderData<typeof loader>()} />
+  );
 }
 ```
 
@@ -28,12 +30,12 @@ Whenever the user clicks a link to `<Link to="/teams" />`, Remix in the browser 
 
 There are times, however, that you want to get the data from a loader but not because the user is visiting the route, but the current page needs that route's data for some reason. A very clear example is a `<Combobox>` component that queries the database for records and suggests them to the user.
 
-You can `useFetcher` for cases like this. And once again, since Remix in the browser knows about Remix on the server, you don't have to do much to get the data. Remix's error handling kicks in, and race conditions, interruptions, and fetch cancelations are handled for you, too.
+You can `useFetcher` for cases like this. And once again, since Remix in the browser knows about Remix on the server, you don't have to do much to get the data. Remix's error handling kicks in, and race conditions, interruptions, and fetch cancellations are handled for you, too.
 
 For example, you could have a route to handle the search:
 
 ```tsx filename=routes/city-search.tsx
-export async function loader({ request }) {
+export async function loader({ request }: LoaderArgs) {
   const url = new URL(request.url);
   return json(
     await searchCities(url.searchParams.get("q"))
@@ -43,7 +45,7 @@ export async function loader({ request }) {
 
 And then `useFetcher` along with Reach UI's combobox input:
 
-```tsx [2,11,14,19,21,23]
+```tsx lines=[2,11,14,19,21,23]
 function CitySearchCombobox() {
   const cities = useFetcher();
 
@@ -91,7 +93,7 @@ function CitySearchCombobox() {
 In other cases, you may need routes that are part of your application, but aren't part of your application's UI. Maybe you want a loader that renders a report as a PDF:
 
 ```tsx
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   const report = await getReport(params.id);
   const pdf = await generateReportPDF(report);
   return new Response(pdf, {
@@ -114,4 +116,4 @@ Here are a handful of use cases to get you thinking.
 
 You can read more in the [Resource Routes][resource-routes] docs.
 
-[resource-routes]: resource-routes
+[resource-routes]: ./resource-routes
