@@ -27,8 +27,7 @@ function findReleaseFromChangeset(publishedPackages, packageVersionToFollow) {
     );
   }
 
-  let result = `${found.name}@${found.version}`;
-  console.log(result);
+  console.log(found.version);
   return found.version;
 }
 
