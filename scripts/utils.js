@@ -108,7 +108,11 @@ async function updateRemixVersion(packageName, nextVersion, successMessage) {
         config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
       }
       if (config.peerDependencies?.[`@remix-run/${pkg}`]) {
-        config.peerDependencies[`@remix-run/${pkg}`] = nextVersion;
+        let isRelaxedPeerDep =
+          config.peerDependencies[`@remix-run/${pkg}`]?.startsWith("^");
+        config.peerDependencies[`@remix-run/${pkg}`] = `${
+          isRelaxedPeerDep ? "^" : ""
+        }${nextVersion}`;
       }
     }
   });
@@ -172,7 +176,8 @@ const updateDenoImportMap = async (importMapPath, nextVersion) => {
       let [packageName, importPath] =
         getPackageNameFromImportSpecifier(importName);
 
-      return remixPackagesFull.includes(packageName)
+      return remixPackagesFull.includes(packageName) &&
+        importName !== "@remix-run/deno"
         ? [
             importName,
             `https://esm.sh/${packageName}@${nextVersion}${

@@ -51,7 +51,7 @@ jobs:
           SHORT_SHA=${SHA::7}
 
           # get latest nightly tag
-          LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-committerdate | head -n 1)
+          LATEST_NIGHTLY_TAG=$(git tag -l v0.0.0-nightly-\* --sort=-creatordate | head -n 1)
 
           # check if last commit to dev starts would be the nightly tag we're about to create (minus the date)
           # if it is, we'll skip the nightly creation

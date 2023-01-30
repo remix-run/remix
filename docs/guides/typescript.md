@@ -1,5 +1,6 @@
 ---
 title: TypeScript
+toc: false
 ---
 
 # TypeScript
