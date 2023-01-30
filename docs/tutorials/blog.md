@@ -968,7 +968,7 @@ export const action = async ({ request }: ActionArgs) => {
 //...
 ```
 
-💿 Add some pending UI with `useTransition`
+💿 Add some pending UI with `useNavigation`
 
 ```tsx filename=app/routes/posts/admin/new.tsx lines=[6,14-15,24,26]
 import type { ActionArgs } from "@remix-run/node";
@@ -976,7 +976,7 @@ import { json, redirect } from "@remix-run/node";
 import {
   Form,
   useActionData,
-  useTransition,
+  useNavigation,
 } from "@remix-run/react";
 
 // ..
@@ -984,8 +984,8 @@ import {
 export default function NewPost() {
   const errors = useActionData<typeof action>();
 
-  const transition = useTransition();
-  const isCreating = Boolean(transition.submission);
+  const navigation = useNavigation();
+  const isCreating = Boolean(navigation.state === "submitting");
 
   return (
     <Form method="post">
