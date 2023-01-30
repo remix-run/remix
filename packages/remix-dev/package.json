@@ -64,6 +64,7 @@
     "recast": "^0.21.5",
     "remark-frontmatter": "4.0.1",
     "remark-mdx-frontmatter": "^1.0.1",
+    "resolve-package-path": "^4.0.3",
     "semver": "^7.3.7",
     "sort-package-json": "^1.55.0",
     "tar-fs": "^2.1.1",
