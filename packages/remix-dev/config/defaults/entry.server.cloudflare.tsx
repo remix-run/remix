@@ -12,6 +12,7 @@ export default async function handleRequest(
   const body = await renderToReadableStream(
     <RemixServer context={remixContext} url={request.url} />,
     {
+      signal: request.signal,
       onError(error) {
         console.error("renderToReadableStream error");
         console.error(error);
