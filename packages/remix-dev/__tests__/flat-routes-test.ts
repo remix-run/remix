@@ -602,7 +602,7 @@ describe("flatRoutes", () => {
 
     let files: [string, Omit<ConfigRoute, "file">][] = testFiles.map(
       ([file, route]) => {
-        let filepath = file.split("/").join(path.sep);
+        let filepath = path.normalize(file);
         return [filepath, { ...route, file: filepath }];
       }
     );
