@@ -323,8 +323,6 @@ export async function generateEntry(remixRoot: string, entry: string) {
       `Entry file ${entry} created at ${path.relative(remixRoot, outputFile)}.`
     )
   );
-
-  return process.exit(0);
 }
 
 async function checkForEntry(appDirectory: string, entries: string[]) {
