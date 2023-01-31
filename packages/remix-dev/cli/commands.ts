@@ -20,7 +20,7 @@ import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 import runCodemod from "../codemod";
 import { CodemodError } from "../codemod/utils/error";
 import { TaskError } from "../codemod/utils/task";
-import { convertTSFileToJS } from "./migrate/migrations/convert-to-javascript/convertTSFilesToJS/convertTSFileToJS";
+import { transpile as convertFileToJS } from "./useJavascript";
 
 export async function create({
   appTemplate,
@@ -310,10 +310,9 @@ export async function generateEntry(remixRoot: string, entry: string) {
   // 3. if entry is js/jsx, convert to js
   // otherwise, copy the entry file from the defaults
   if (/\.jsx?$/.test(entry)) {
-    let javascript = convertTSFileToJS({
+    let javascript = convertFileToJS(contents, {
+      cwd: remixRoot,
       filename: inputFile,
-      projectDir: remixRoot,
-      source: contents,
     });
     await fse.writeFile(outputFile, javascript, "utf-8");
   } else {
