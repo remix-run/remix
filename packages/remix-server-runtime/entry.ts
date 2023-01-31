@@ -15,6 +15,7 @@ export interface FutureConfig {
   unstable_cssModules: true;
   unstable_cssSideEffectImports: boolean;
   unstable_dev: false | { remixRequestHandlerPath?: string };
+  unstable_middleware: boolean;
   unstable_postcss: boolean;
   unstable_tailwind: boolean;
   unstable_vanillaExtract: boolean;

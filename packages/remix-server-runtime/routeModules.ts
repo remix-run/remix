@@ -1,4 +1,4 @@
-import type { Location, Params } from "@remix-run/router";
+import type { Location, MiddlewareContext, Params } from "@remix-run/router";
 import type { ComponentType } from "react";
 
 import type { AppLoadContext, AppData } from "./data";
@@ -23,15 +23,17 @@ export interface DataFunctionArgs {
 export type LoaderArgs = DataFunctionArgs;
 export type ActionArgs = DataFunctionArgs;
 
+type DataFunctionReturnValue =
+  | Promise<Response>
+  | Response
+  | Promise<AppData>
+  | AppData;
+
 /**
  * A function that handles data mutations for a route.
  */
 export interface ActionFunction {
-  (args: DataFunctionArgs):
-    | Promise<Response>
-    | Response
-    | Promise<AppData>
-    | AppData;
+  (args: DataFunctionArgs): DataFunctionReturnValue;
 }
 
 /**
@@ -68,11 +70,32 @@ export interface LinksFunction {
  * A function that loads data for a route.
  */
 export interface LoaderFunction {
-  (args: DataFunctionArgs):
-    | Promise<Response>
-    | Response
-    | Promise<AppData>
-    | AppData;
+  (args: DataFunctionArgs): DataFunctionReturnValue;
+}
+
+/**
+ * The arguments passed to ActionFunction and LoaderFunction.
+ */
+export interface DataFunctionArgsWithMiddleware {
+  request: Request;
+  context: MiddlewareContext;
+  params: Params;
+}
+
+export type ActionArgsWithMiddleware = DataFunctionArgsWithMiddleware;
+export type LoaderArgsWithMiddleware = DataFunctionArgsWithMiddleware;
+export type MiddlewareArgs = DataFunctionArgsWithMiddleware;
+
+export interface ActionFunctionWithMiddleware {
+  (args: ActionArgsWithMiddleware): DataFunctionReturnValue;
+}
+
+export interface LoaderFunctionWithMiddleware {
+  (args: LoaderArgsWithMiddleware): DataFunctionReturnValue;
+}
+
+export interface MiddlewareFunction {
+  (args: DataFunctionArgsWithMiddleware): DataFunctionReturnValue;
 }
 
 /**
@@ -235,4 +258,5 @@ export interface ServerRouteModule extends EntryRouteModule {
   action?: ActionFunction;
   headers?: HeadersFunction | { [name: string]: string };
   loader?: LoaderFunction;
+  middleware?: MiddlewareFunction;
 }

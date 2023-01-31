@@ -1,3 +1,8 @@
+import type {
+  MiddlewareFunction,
+  MiddlewareFunctionArgs,
+} from "@remix-run/router";
+
 import {
   redirect,
   json,
@@ -24,7 +29,20 @@ export interface AppLoadContext {
  */
 export type AppData = any;
 
-export async function callRouteActionRR({
+export async function callRouteMiddleware(
+  middleware: MiddlewareFunction,
+  args: MiddlewareFunctionArgs
+) {
+  let result = await middleware({
+    request: stripDataParam(stripIndexParam(args.request)),
+    context: args.context,
+    params: args.params,
+  });
+
+  return result;
+}
+
+export async function callRouteAction({
   loadContext,
   action,
   params,
@@ -53,7 +71,7 @@ export async function callRouteActionRR({
   return isResponse(result) ? result : json(result);
 }
 
-export async function callRouteLoaderRR({
+export async function callRouteLoader({
   loadContext,
   loader,
   params,

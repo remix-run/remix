@@ -2,9 +2,10 @@ import type {
   AgnosticDataRouteObject,
   ActionFunctionArgs,
   LoaderFunctionArgs,
+  MiddlewareFunctionArgs,
 } from "@remix-run/router";
 
-import { callRouteActionRR, callRouteLoaderRR } from "./data";
+import { callRouteAction, callRouteLoader, callRouteMiddleware } from "./data";
 import type { FutureConfig } from "./entry";
 import type { ServerRouteModule } from "./routeModules";
 
@@ -72,9 +73,14 @@ export function createStaticHandlerDataRoutes(
         hasErrorBoundary,
         id: route.id,
         path: route.path,
+        middleware:
+          future.unstable_middleware && route.module.middleware
+            ? (args: MiddlewareFunctionArgs) =>
+                callRouteMiddleware(route.module.middleware!, args)
+            : undefined,
         loader: route.module.loader
           ? (args: LoaderFunctionArgs) =>
-              callRouteLoaderRR({
+              callRouteLoader({
                 request: args.request,
                 params: args.params,
                 loadContext: args.context,
@@ -84,7 +90,7 @@ export function createStaticHandlerDataRoutes(
           : undefined,
         action: route.module.action
           ? (args: ActionFunctionArgs) =>
-              callRouteActionRR({
+              callRouteAction({
                 request: args.request,
                 params: args.params,
                 loadContext: args.context,

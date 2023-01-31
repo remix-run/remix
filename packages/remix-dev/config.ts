@@ -43,6 +43,7 @@ interface FutureConfig {
   unstable_cssModules: boolean;
   unstable_cssSideEffectImports: boolean;
   unstable_dev: boolean | Dev;
+  unstable_middleware: boolean;
   unstable_postcss: boolean;
   unstable_tailwind: boolean;
   unstable_vanillaExtract: boolean;
@@ -298,6 +299,9 @@ export interface RemixConfig {
    */
   tsconfigPath: string | undefined;
 
+  /**
+   * Future flags to alter Remix behavior
+   */
   future: FutureConfig;
 }
 
@@ -504,6 +508,7 @@ export async function readConfig(
     unstable_cssSideEffectImports:
       appConfig.future?.unstable_cssSideEffectImports === true,
     unstable_dev: appConfig.future?.unstable_dev ?? false,
+    unstable_middleware: appConfig.future?.unstable_middleware === true,
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract === true,

@@ -46,7 +46,11 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   let routes = createRoutes(build.routes);
   let dataRoutes = createStaticHandlerDataRoutes(build.routes, build.future);
   let serverMode = isServerMode(mode) ? mode : ServerMode.Production;
-  let staticHandler = createStaticHandler(dataRoutes);
+  let staticHandler = createStaticHandler(dataRoutes, {
+    future: {
+      unstable_middleware: build.future.unstable_middleware,
+    },
+  });
 
   return async function requestHandler(request, loadContext = {}) {
     let url = new URL(request.url);
@@ -75,7 +79,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
     if (url.searchParams.has("_data")) {
       let routeId = url.searchParams.get("_data")!;
 
-      response = await handleDataRequestRR(
+      response = await handleRemixDataRequest(
         serverMode,
         staticHandler,
         routeId,
@@ -95,7 +99,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       matches &&
       matches[matches.length - 1].route.module.default == null
     ) {
-      response = await handleResourceRequestRR(
+      response = await handleRemixResourceRequest(
         serverMode,
         staticHandler,
         matches.slice(-1)[0].route.id,
@@ -103,7 +107,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         loadContext
       );
     } else {
-      response = await handleDocumentRequestRR(
+      response = await handleRemixDocumentRequest(
         serverMode,
         build,
         staticHandler,
@@ -124,7 +128,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   };
 };
 
-async function handleDataRequestRR(
+async function handleRemixDataRequest(
   serverMode: ServerMode,
   staticHandler: StaticHandler,
   routeId: string,
@@ -244,7 +248,7 @@ export function differentiateCatchVersusErrorBoundaries(
   context.errors = errors;
 }
 
-async function handleDocumentRequestRR(
+async function handleRemixDocumentRequest(
   serverMode: ServerMode,
   build: ServerBuild,
   staticHandler: StaticHandler,
@@ -339,7 +343,7 @@ async function handleDocumentRequestRR(
   }
 }
 
-async function handleResourceRequestRR(
+async function handleRemixResourceRequest(
   serverMode: ServerMode,
   staticHandler: StaticHandler,
   routeId: string,

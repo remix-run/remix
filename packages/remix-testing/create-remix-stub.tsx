@@ -39,6 +39,9 @@ type RemixStubOptions = {
    */
   initialIndex?: number;
 
+  /**
+   * Future flags to enable for Remix
+   */
   remixConfigFuture?: Partial<FutureConfig>;
 };
 
