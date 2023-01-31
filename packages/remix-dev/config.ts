@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import * as fse from "fs-extra";
@@ -12,7 +11,6 @@ import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/virtualModules";
 import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
 import { flatRoutes } from "./config/flat-routes";
-import { getPreferredPackageManager } from "./cli/getPreferredPackageManager";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
