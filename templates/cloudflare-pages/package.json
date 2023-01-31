@@ -15,6 +15,7 @@
     "@remix-run/cloudflare-pages": "*",
     "@remix-run/react": "*",
     "cross-env": "^7.0.3",
+    "isbot": "^3.6.5",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
