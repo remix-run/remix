@@ -103,7 +103,7 @@ When using `<Form>` (instead of `<form>` or `<Form reloadDocument>`), Remix _doe
 
 <docs-info>Remix client-side navigation does not resubmit forms on pop events like browsers.</docs-info>
 
-Form submissions are navigation events in browsers (and Remix), which means users can click the back button into a location that had a form submission _and the browser will resubmit the form_. You usually don't ever want this to happen.
+Form submissions are navigation events in browsers (and Remix), which means users can click the back button into a location that had a form submission _and the browser will resubmit the form_. You usually don't want this to happen.
 
 For example, consider this user flow:
 

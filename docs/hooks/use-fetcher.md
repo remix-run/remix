@@ -26,7 +26,7 @@ It is common for Remix newcomers to see this hook and think it is the primary wa
 - [`useActionData`][useactiondata]
 - [`useTransition`][usetransition]
 
-If you're building a highly interactive, "app like" user interface, you will use `useFetcher` often.
+If you're building a highly interactive, "app-like" user interface, you will use `useFetcher` often.
 
 ```tsx
 import { useFetcher } from "@remix-run/react";
@@ -65,9 +65,9 @@ Notes about how it works:
 
 You can know the state of the fetcher with `fetcher.state`. It will be one of:
 
-- **idle** - nothing is being fetched.
+- **idle** - Nothing is being fetched.
 - **submitting** - A form has been submitted. If the method is GET, then the route loader is being called. If POST, PUT, PATCH, or DELETE, then the route action is being called.
-- **loading** - The loaders for the routes are being reloaded after an action submission
+- **loading** - The loaders for the routes are being reloaded after an action submission.
 
 #### `fetcher.type`
 
@@ -239,7 +239,7 @@ function NewsletterSignup() {
 
 <docs-info>You can still provide a no-JavaScript experience</docs-info>
 
-Because `useFetcher` doesn't cause a navigation, it won't automatically work if there is no JavaScript on the page like a normal Remix `<Form>` will because the browser will still navigate to the form's action.
+Because `useFetcher` doesn't cause a navigation, it won't automatically work if there is no JavaScript on the page like a normal Remix `<Form>` will, because the browser will still navigate to the form's action.
 
 If you want to support a no JavaScript experience, just export a component from the route with the action.
 
@@ -267,7 +267,7 @@ export default function NewsletterSignupRoute() {
 }
 ```
 
-- When JS is on the page, the user will subscribe to the newsletter and the page won't change, they'll just get a solid, dynamic experience
+- When JS is on the page, the user will subscribe to the newsletter and the page won't change, they'll just get a solid, dynamic experience.
 - When JS is not on the page, they'll be transitioned to the signup page by the browser.
 
 You could even refactor the component to take props from the hooks and reuse it:
@@ -321,7 +321,7 @@ export default function NewsletterSignupRoute() {
 
 **Mark Article as Read**
 
-Imagine you want to mark an article has been read by the current user after they've been on the page for a while and scrolled to the bottom, you could make a hook that looks something like this:
+Imagine you want to mark that an article has been read by the current user, after they've been on the page for a while and scrolled to the bottom. You could make a hook that looks something like this:
 
 ```tsx
 function useMarkAsRead({ articleId, userId }) {
