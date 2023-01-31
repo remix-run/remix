@@ -122,7 +122,7 @@ const meta: MetaFunction<
 
 <docs-info>Meta is changing in v2, you can opt in to the new API today, [see the meta v2 section][meta-v2], but you don't have to until you're ready.</docs-info>
 
-You can enable the new meta API with a future flag in `remix.config.js`
+You can enable the new meta API with a future flag in `remix.config.js`.
 
 ```js filename=remix.config.js
 module.exports = {
@@ -187,7 +187,7 @@ const title = {
 
 This is a list of the current route matches. You have access many things, particularly the meta from the parent matches and data.
 
-It's most useful for merging the parent meta into the child meta since the child meta value is what will be used:
+It's most useful for merging the parent meta into the child meta since the child-meta value is what will be used:
 
 ```tsx
 export const meta: V2_MetaFunction = ({ matches }) => {
@@ -216,7 +216,7 @@ export const meta: V2_MetaFunction<typeof loader> = ({
 
 ## `parentsData`
 
-Often you'll need the data from a parent route, you can look it up by route ID on `parentsData`
+Often you'll need the data from a parent route, you can look it up by route ID on `parentsData`.
 
 ```tsx filename=routes/project/$pid/tasks/$tid.tsx
 import type { loader as projectDetailsLoader } from "../../../$pid";
@@ -312,7 +312,7 @@ export default function Root() {
 
 ### Avoid Meta in Parent Routes
 
-You can also avoid the merge problem by simply not exporting meta that you want to override from parent routes. Instead of defining meta on the parent route, use the \[index route]\[index-route]. This way you can avoid complex merge logic for things the title. Otherwise you will need to find the parent title descriptor and replace it with the child's title. It's much easier to simply not need to override by using index routes.
+You can also avoid the merge problem by simply not exporting meta that you want to override from parent routes. Instead of defining meta on the parent route, use the [index route][index-route]. This way you can avoid complex merge logic for things like the title. Otherwise you will need to find the parent title descriptor and replace it with the child's title. It's much easier to simply not need to override by using index routes.
 
 ### Merging with Parent Meta
 
@@ -340,6 +340,6 @@ If you can't avoid the merge problem with global meta or index routes, we've cre
 [meta-v2]: #metav2
 [root-route]: ../file-conventions/root
 [matches]: #matches
-[index-routes]: ../guides/routing#index-routes
+[index-route]: ../guides/routing#index-routes
 [merge-meta]: https://gist.github.com/ryanflorence/ec1849c6d690cfbffcb408ecd633e069
 [url-params]: ../guides/routing#dynamic-segments

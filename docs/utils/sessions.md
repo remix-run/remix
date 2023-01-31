@@ -255,7 +255,7 @@ The `expires` argument to `createData` and `updateData` is the same `Date` at wh
 
 For purely cookie-based sessions (where the session data itself is stored in the session cookie with the browser, see [cookies][cookies]) you can use `createCookieSessionStorage()`.
 
-The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load balanced scenarios. However, cookie-based sessions may not exceed the browser's max allowed cookie length (typically 4kb).
+The main advantage of cookie session storage is that you don't need any additional backend services or databases to use it. It can also be beneficial in some load-balanced scenarios. However, cookie-based sessions may not exceed the browser's max-allowed cookie length (typically 4kb).
 
 The downside is that you have to `commitSession` in almost every loader and action. If your loader or action changes the session at all, it must be committed. That means if you `session.flash` in an action, and then `session.get` in another, you must commit it for that flashed message to go away. With other session storage strategies you only have to commit it when it's created (the browser cookie doesn't need to change because it doesn't store the session data, just the key to find it elsewhere).
 
@@ -334,7 +334,7 @@ export { getSession, commitSession, destroySession };
 
 For [Cloudflare Workers KV][cloudflare-kv] backed sessions, use `createWorkersKVSessionStorage()`.
 
-The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally replicated, low-latency data store with exceptionally high read volumes with low-latency.
+The advantage of KV backed sessions is that only the session ID is stored in the cookie while the rest of the data is stored in a globally-replicated, low-latency data store with exceptionally high-read volumes with low-latency.
 
 ```js filename=app/sessions.server.js
 import {
@@ -400,7 +400,7 @@ export { getSession, commitSession, destroySession };
 
 ## Session API
 
-After retrieving a session with `getSession`, the session object returned has a handful of methods and properties:
+After retrieving a session with `getSession`, the returned session object has a handful of methods and properties:
 
 ```tsx
 export async function action({ request }: ActionArgs) {
@@ -462,7 +462,7 @@ export async function action({
 
 Now we can read the message in a loader.
 
-<docs-info>You must commit the session whenever you read a `flash`. This is different than you might be used to where some type of middleware automatically sets the cookie header for you.</docs-info>
+<docs-info>You must commit the session whenever you read a `flash`. This is different than what you might be used to, where some type of middleware automatically sets the cookie header for you.</docs-info>
 
 ```tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
