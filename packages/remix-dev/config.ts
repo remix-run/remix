@@ -1,6 +1,7 @@
-import * as path from "node:path";
+import { execSync } from "node:child_process";
+import path from "node:path";
 import { pathToFileURL } from "node:url";
-import * as fse from "fs-extra";
+import fse from "fs-extra";
 import getPort from "get-port";
 import NPMCliPackageJson from "@npmcli/package-json";
 
@@ -11,6 +12,7 @@ import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/virtualModules";
 import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
 import { flatRoutes } from "./config/flat-routes";
+import { getPreferredPackageManager } from "./cli/getPreferredPackageManager";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
