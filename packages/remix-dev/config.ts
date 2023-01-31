@@ -457,6 +457,8 @@ export async function readConfig(
     let deps = pkgJson.content.dependencies ?? {};
 
     if (!deps["isbot"]) {
+      console.log(`adding "isbot" to your package.json`);
+
       pkgJson.update({
         dependencies: {
           ...pkgJson.content.dependencies,
