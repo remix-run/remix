@@ -271,7 +271,7 @@ export async function generateEntry(remixRoot: string, entry: string) {
     console.error(
       colors.error(`Invalid entry file. Valid entry files are ${list}`)
     );
-    return process.exit(1);
+    return;
   }
 
   let pkgJson = await NPMCliPackageJson.load(remixRoot);
