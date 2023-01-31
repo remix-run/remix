@@ -1,5 +1,6 @@
-import * as path from "path";
-import { pathToFileURL } from "url";
+import { execSync } from "node:child_process";
+import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 import * as fse from "fs-extra";
 import getPort from "get-port";
 import NPMCliPackageJson from "@npmcli/package-json";
@@ -11,6 +12,7 @@ import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/virtualModules";
 import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
 import { flatRoutes } from "./config/flat-routes";
+import { getPreferredPackageManager } from "./cli/getPreferredPackageManager";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -453,6 +455,28 @@ export async function readConfig(
   if (!userEntryServerFile) {
     let pkgJson = await NPMCliPackageJson.load(remixRoot);
     let deps = pkgJson.content.dependencies ?? {};
+
+    if (!deps["isbot"]) {
+      pkgJson.update({
+        dependencies: {
+          ...pkgJson.content.dependencies,
+          isbot: "latest",
+        },
+      });
+
+      await pkgJson.save();
+
+      console.log(
+        "adding `isbot` to detect bots, you should commit this change"
+      );
+
+      let packageManager = getPreferredPackageManager();
+
+      execSync(`${packageManager} install`, {
+        cwd: remixRoot,
+        stdio: "inherit",
+      });
+    }
 
     let runtime = deps["@remix-run/deno"]
       ? "deno"
