@@ -304,7 +304,6 @@ export async function generateEntry(remixRoot: string, entry: string) {
     ? await createServerEntry(config.appDirectory, defaultEntryServer)
     : await createClientEntry(config.appDirectory, defaultEntryClient);
 
-  let inputFile = isServerEntry ? defaultEntryServer : defaultEntryClient;
   let outputFile = path.resolve(config.appDirectory, entry);
 
   // 3. if entry is js/jsx, convert to js
@@ -312,7 +311,7 @@ export async function generateEntry(remixRoot: string, entry: string) {
   if (/\.jsx?$/.test(entry)) {
     let javascript = convertFileToJS(contents, {
       cwd: remixRoot,
-      filename: inputFile,
+      filename: entry,
     });
     await fse.writeFile(outputFile, javascript, "utf-8");
   } else {
