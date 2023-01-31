@@ -3,4 +3,6 @@
 "@remix-run/dev": minor
 ---
 
-make `entry.{client,server}.tsx` optional
+make `entry.client` and `entry.server` files optional
+
+we'll use a bundled version of each unless you provide your own
