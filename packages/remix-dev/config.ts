@@ -457,25 +457,11 @@ export async function readConfig(
     let deps = pkgJson.content.dependencies ?? {};
 
     if (!deps["isbot"]) {
-      pkgJson.update({
-        dependencies: {
-          ...pkgJson.content.dependencies,
-          isbot: "latest",
-        },
-      });
-
-      await pkgJson.save();
-
-      console.log(
-        "adding `isbot` to detect bots, you should commit this change"
+      console.error(
+        `Could not locate "isbot". Verify that you have it installed.`
       );
 
-      let packageManager = getPreferredPackageManager();
-
-      execSync(`${packageManager} install`, {
-        cwd: remixRoot,
-        stdio: "inherit",
-      });
+      process.exit(1);
     }
 
     let runtime = deps["@remix-run/deno"]
