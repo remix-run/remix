@@ -256,6 +256,7 @@ let serverEntries = ["entry.server.tsx", "entry.server.js", "entry.server.jsx"];
 let entries = [...clientEntries, ...serverEntries];
 
 export async function generateEntry(remixRoot: string, entry: string) {
+  let config = await readConfig(remixRoot);
   if (!entries.includes(entry)) {
     // @ts-expect-error available in node 12+
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
@@ -300,11 +301,11 @@ export async function generateEntry(remixRoot: string, entry: string) {
   let isServerEntry = entry.startsWith("entry.server.");
 
   let contents = isServerEntry
-    ? await createServerEntry(remixRoot, defaultEntryServer)
-    : await createClientEntry(remixRoot, defaultEntryClient);
+    ? await createServerEntry(config.appDirectory, defaultEntryServer)
+    : await createClientEntry(config.appDirectory, defaultEntryClient);
 
   let inputFile = isServerEntry ? defaultEntryServer : defaultEntryClient;
-  let outputFile = path.resolve(remixRoot, "app", entry);
+  let outputFile = path.resolve(config.appDirectory, entry);
 
   // 3. if entry is js/jsx, convert to js
   // otherwise, copy the entry file from the defaults
@@ -328,14 +329,17 @@ export async function generateEntry(remixRoot: string, entry: string) {
   return process.exit(0);
 }
 
-async function checkForEntry(remixRoot: string, entries: string[]) {
+async function checkForEntry(appDirectory: string, entries: string[]) {
   for (let entryToCheck of entries) {
-    let entryPath = path.resolve(remixRoot, "app", entryToCheck);
+    let entryPath = path.resolve(appDirectory, entryToCheck);
     let entryExists = await fse.pathExists(entryPath);
     if (entryExists) {
       console.error(
         colors.error(
-          `Entry file ${path.relative(remixRoot, entryToCheck)} already exists.`
+          `Entry file ${path.relative(
+            appDirectory,
+            entryToCheck
+          )} already exists.`
         )
       );
       return process.exit(1);
@@ -343,14 +347,14 @@ async function checkForEntry(remixRoot: string, entries: string[]) {
   }
 }
 
-async function createServerEntry(remixRoot: string, inputFile: string) {
-  await checkForEntry(remixRoot, serverEntries);
+async function createServerEntry(appDirectory: string, inputFile: string) {
+  await checkForEntry(appDirectory, serverEntries);
   let contents = await fse.readFile(inputFile, "utf-8");
   return contents;
 }
 
-async function createClientEntry(remixRoot: string, inputFile: string) {
-  await checkForEntry(remixRoot, clientEntries);
+async function createClientEntry(appDirectory: string, inputFile: string) {
+  await checkForEntry(appDirectory, clientEntries);
   let contents = await fse.readFile(inputFile, "utf-8");
   return contents;
 }
