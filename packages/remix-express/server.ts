@@ -103,7 +103,9 @@ export function createRequestHandler({
   ) => {
     try {
       let request = createRemixRequest(req, res);
-      let loadContext = getLoadContext?.(req, res);
+      let loadContext = build.future.unstable_middleware
+        ? undefined
+        : getLoadContext?.(req, res);
 
       let response = (await handleRequest(
         request,
