@@ -9,14 +9,12 @@ export default async function handleRequest(
   responseHeaders: Headers,
   remixContext: EntryContext
 ) {
-  let didError = false;
-
   const stream = await renderToReadableStream(
     <RemixServer context={remixContext} url={request.url} />,
     {
       signal: request.signal,
       onError(error: unknown) {
-        didError = true;
+        responseStatusCode = 500;
         console.error(error);
       },
     }
@@ -30,6 +28,6 @@ export default async function handleRequest(
 
   return new Response(stream, {
     headers: responseHeaders,
-    status: didError ? 500 : responseStatusCode,
+    status: responseStatusCode,
   });
 }

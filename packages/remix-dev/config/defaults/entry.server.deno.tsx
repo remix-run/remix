@@ -14,7 +14,6 @@ export default async function handleRequest(
     {
       signal: request.signal,
       onError(error) {
-        console.error("renderToReadableStream error");
         console.error(error);
         responseStatusCode = 500;
       },

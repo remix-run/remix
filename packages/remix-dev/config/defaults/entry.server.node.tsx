@@ -35,10 +35,12 @@ function handleBotRequest(
   remixContext: EntryContext
 ) {
   return new Promise((resolve, reject) => {
-    let didError = false;
-
     const { pipe, abort } = renderToPipeableStream(
-      <RemixServer context={remixContext} url={request.url} />,
+      <RemixServer
+        context={remixContext}
+        url={request.url}
+        abortDelay={ABORT_DELAY}
+      />,
       {
         onAllReady() {
           const body = new PassThrough();
@@ -48,7 +50,7 @@ function handleBotRequest(
           resolve(
             new Response(body, {
               headers: responseHeaders,
-              status: didError ? 500 : responseStatusCode,
+              status: responseStatusCode,
             })
           );
 
@@ -58,8 +60,7 @@ function handleBotRequest(
           reject(error);
         },
         onError(error: unknown) {
-          didError = true;
-
+          responseStatusCode = 500;
           console.error(error);
         },
       }
@@ -76,8 +77,6 @@ function handleBrowserRequest(
   remixContext: EntryContext
 ) {
   return new Promise((resolve, reject) => {
-    let didError = false;
-
     const { pipe, abort } = renderToPipeableStream(
       <RemixServer
         context={remixContext}
@@ -93,19 +92,18 @@ function handleBrowserRequest(
           resolve(
             new Response(body, {
               headers: responseHeaders,
-              status: didError ? 500 : responseStatusCode,
+              status: responseStatusCode,
             })
           );
 
           pipe(body);
         },
-        onShellError(err: unknown) {
-          reject(err);
+        onShellError(error: unknown) {
+          reject(error);
         },
         onError(error: unknown) {
-          didError = true;
-
           console.error(error);
+          responseStatusCode = 500;
         },
       }
     );
