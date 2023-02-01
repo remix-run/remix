@@ -257,7 +257,7 @@ With just that in place, you're unlikely to see any significant performance impr
 
 ### Using `defer`
 
-With React streaming setup, now you can start adding `Await` usage for your slow data requests where you'd rather render a fallback UI. Let's do that for our example above:
+With React streaming set up, now you can start adding `Await` usage for your slow data requests where you'd rather render a fallback UI. Let's do that for our example above:
 
 ```tsx lines=[1,3,4,9-11,13-15,24-33,38-40]
 import { Suspense } from "react";
@@ -394,7 +394,7 @@ That `shouldDeferPackageLocation` could be implemented to check the user making 
 
 Also, because this happens at request time (even on client transitions), makes use of the URL via nested routing (rather than requiring you to render before you know what data to fetch), and it's all just regular HTTP, we can prefetch and cache the response! Meaning client-side transitions can be _much_ faster (in fact, there are plenty of situations when the user may never be presented with the fallback at all).
 
-Another thing that's not immediately recognizable is if your server can finish loading deferred data before the client can load the javascript and hydrate, the server will stream down the HTML and add it to the document _before React hydrates_, thereby increasing performance for those on slow networks. This works even if you never add `<Scripts />` to the page thanks to React 18's support for out-of-order streaming.
+Another thing that's not immediately recognizable is if your server can finish loading deferred data before the client can load the JavaScript and hydrate, the server will stream down the HTML and add it to the document _before React hydrates_, thereby increasing performance for those on slow networks. This works even if you never add `<Scripts />` to the page thanks to React 18's support for out-of-order streaming.
 
 ## FAQ
 

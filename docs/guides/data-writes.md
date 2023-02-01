@@ -104,7 +104,7 @@ Let's consider a "new project" form.
 
 When the user submits this form, the browser will serialize the fields into a request "body" (instead of URL search params) and "POST" it to the server. This is still a normal navigation as if the user clicked a link. The difference is two-fold: the user provided the data for the server and the browser sent the request as a "POST" instead of a "GET".
 
-The data is made available to the server's request handler so you can create the record. After that, you return a response. In this case, you'd probably redirect to the newly created project. A remix action would look something like this:
+The data is made available to the server's request handler so you can create the record. After that, you return a response. In this case, you'd probably redirect to the newly-created project. A remix action would look something like this:
 
 ```tsx filename=app/routes/projects.tsx
 export async function action({ request }: ActionArgs) {
@@ -136,8 +136,8 @@ We're going to build a mutation from start to finish with:
 1. JavaScript optional
 2. Validation
 3. Error handling
-4. Progressively enhanced loading indicators
-5. Progressively enhanced error display
+4. Progressively-enhanced loading indicators
+5. Progressively-enhanced error display
 
 You use the Remix `<Form>` component for data mutations the same way you use HTML forms. The difference is now you get access to pending form state to build a nicer user experience: like contextual loading indicators and "optimistic UI".
 
@@ -509,7 +509,7 @@ Boom! Fancy UI without having to change anything about how we communicate with t
 
 - Now that there was a stateful page with React, we added loading indicators and animation for the validation errors by simply asking Remix for the state of the transition.
 
-From your components perspective, all that happened was the `useTransition` hook caused a state update when the form was submitted, and then another state update when the data came back. Of course, a lot more happened inside of Remix, but as far as your component is concerned, that's it. Just a couple state updates. This makes it really easy to dress up any user flow.
+From your components perspective, all that happened was the `useTransition` hook caused a state update when the form was submitted, and then another state update when the data came back. Of course, a lot more happened inside of Remix, but as far as your component is concerned, that's it. Just a couple of state updates. This makes it really easy to dress up any user flow.
 
 ## See also
 
