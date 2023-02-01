@@ -36,7 +36,7 @@ But this is just one approach that we wanted to explore.
 
 Cloudflare has been pushing the boundaries of edge computing for a while now and Remix is positioned to take full advantage of it. You can see our demo's response times are the same as serving static files but the features it demonstrates are definitely not static!
 
-Not only does Cloudflare run the app close to the user, they also have persistent storage systems like [KV][kv] and [Durable Objects][durable-objects] to allow SSG-level speed without the handcuffs of coupling data to deploys and bespoke incremental builder backends.
+Not only does Cloudflare run the app close to the user, they also have persistent storage systems like [KV][kv] and [Durable Objects][durable-objects] to allow SSG-level speed without the handcuffs of coupling data to deploys and bespoke, incremental-builder backends.
 
 There are other similar platforms that we've got plans to support soon.
 
@@ -44,9 +44,9 @@ There are other similar platforms that we've got plans to support soon.
 
 Here are some other technologies to help speed up your servers:
 
-- [FaunaDB][fauna-db] - a distributed database that runs close to your users
-- [LRU Cache][lru-cache] - in memory cache that automatically clears out more space when it gets full
-- [Redis][redis] - tried and true server-side cache
+- [FaunaDB][fauna-db] - A distributed database that runs close to your users
+- [LRU Cache][lru-cache] - An in-memory cache that automatically clears out more space when it gets full
+- [Redis][redis] - A tried and true server-side cache
 
 [unpkg-com]: https://unpkg.com
 [fly]: https://fly.io

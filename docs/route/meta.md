@@ -187,7 +187,7 @@ const title = {
 
 This is a list of the current route matches. You have access many things, particularly the meta from the parent matches and data.
 
-It's most useful for merging the parent meta into the child meta since the child-meta value is what will be used:
+It's most useful for merging the parent meta into the child meta since the child meta value is what will be used:
 
 ```tsx
 export const meta: V2_MetaFunction = ({ matches }) => {

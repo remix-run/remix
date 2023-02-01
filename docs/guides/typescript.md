@@ -41,7 +41,7 @@ The Remix compiler will not do any type checking (it simply removes the types). 
 }
 ```
 
-Then you can run that script as part of continuous integration alongside your tests.
+Then you can run that script as part of continuous integration, alongside your tests.
 
 Remix has TypeScript type definitions built-in as well. The starter templates create a `remix.env.d.ts` file that is referenced by the `tsconfig.json`:
 
