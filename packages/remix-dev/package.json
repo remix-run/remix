@@ -41,6 +41,7 @@
     "exit-hook": "2.2.1",
     "express": "^4.17.1",
     "fast-glob": "3.2.11",
+    "find-cache-dir": "^3.3.2",
     "fs-extra": "^10.0.0",
     "get-port": "^5.1.1",
     "gunzip-maybe": "^1.4.2",

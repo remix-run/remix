@@ -568,10 +568,9 @@ Then alter how Tailwind is generating your css:
 
 It isn't required, but it's recommended to add the generated file to your `.gitignore` list:
 
-```sh filename=.gitignore lines=[8]
+```sh filename=.gitignore lines=[7]
 node_modules
 
-/.cache
 /build
 /public/build
 .env

@@ -3,7 +3,6 @@ const ignorePatterns = [
   "\\/coverage\\/",
   "\\/\\.vscode\\/",
   "\\/\\.tmp\\/",
-  "\\/\\.cache\\/",
 ];
 /** @type {import('@jest/types').Config.InitialOptions} */
 module.exports = {

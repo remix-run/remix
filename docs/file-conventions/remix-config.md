@@ -44,7 +44,7 @@ The path to the browser build, relative to remix.config.js. Defaults to
 ## cacheDirectory
 
 The path to a directory Remix can use for caching things in development,
-relative to `remix.config.js`. Defaults to `".cache"`.
+relative to `remix.config.js`. Defaults to `"node_modules/.cache/remix"`.
 
 ## devServerBroadcastDelay
 

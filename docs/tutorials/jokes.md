@@ -1416,10 +1416,9 @@ This command did a few things. For one, it created our database file in `prisma/
 
 💿 Let's add that `prisma/dev.db` to our `.gitignore` so we don't accidentally commit it to our repository. We'll also want to add the `.env` file to the `.gitignore` as mentioned in the prisma output so we don't commit our secrets!
 
-```sh filename=.gitignore lines=[7-8]
+```sh filename=.gitignore lines=[6-7]
 node_modules
 
-/.cache
 /build
 /public/build
 

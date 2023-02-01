@@ -2,6 +2,7 @@ import * as path from "path";
 import { pathToFileURL } from "url";
 import * as fse from "fs-extra";
 import getPort from "get-port";
+import findCacheDirectory from "find-cache-dir";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -63,7 +64,7 @@ export interface AppConfig {
 
   /**
    * The path to a directory Remix can use for caching things in development,
-   * relative to `remix.config.js`. Defaults to `".cache"`.
+   * relative to `remix.config.js`. Defaults to `"node_modules/.cache/remix"`.
    */
   cacheDirectory?: string;
 
@@ -364,10 +365,9 @@ export async function readConfig(
     appConfig.appDirectory || "app"
   );
 
-  let cacheDirectory = path.resolve(
-    rootDirectory,
-    appConfig.cacheDirectory || ".cache"
-  );
+  let cacheDirectory = appConfig.cacheDirectory
+    ? path.resolve(rootDirectory, appConfig.cacheDirectory)
+    : findCacheDirectory({ name: "remix", cwd: rootDirectory });
 
   let entryClientFile = findEntry(appDirectory, "entry.client");
   if (!entryClientFile) {
