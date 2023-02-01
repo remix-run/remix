@@ -1570,7 +1570,7 @@ export const LiveReload =
                 function remixLiveReloadConnect(config) {
                   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
-                  let port = (window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || ${String(
+                  let port = (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || ${String(
                     port
                   )};
                   let socketPath = protocol + "//" + host + ":" + port + "/socket";
