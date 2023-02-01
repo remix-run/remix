@@ -5890,7 +5890,7 @@ import {
   Link,
   useActionData,
   useCatch,
-  useTransition,
+  useNavigation,
 } from "@remix-run/react";
 
 import { JokeDisplay } from "~/components/joke";
@@ -5958,12 +5958,11 @@ export const action = async ({ request }: ActionArgs) => {
 
 export default function NewJokeRoute() {
   const actionData = useActionData<typeof action>();
-  const transition = useTransition();
+  const navigation = useNavigation();
 
-  if (transition.submission) {
-    const name = transition.submission.formData.get("name");
-    const content =
-      transition.submission.formData.get("content");
+  if (navigation.formData) {
+    const name = navigation.formData.get("name");
+    const content = navigation.formData.get("content");
     if (
       typeof name === "string" &&
       typeof content === "string" &&

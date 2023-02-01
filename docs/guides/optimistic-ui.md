@@ -6,17 +6,17 @@ title: Optimistic UI
 
 Optimistic UI is a pattern to avoid showing busy spinners in your UI and make your application feel like it's responding instantly to user interactions that change data on the server. Even though it will take some time to make it to the server to be processed, we often have enough information in the UI that sent it to fake it. If for some reason it fails, we can then notify the user that there was a problem. In the vast majority of cases, it doesn't fail, and the app can respond instantly to the user's interactions.
 
-Remix can help you build optimistic UI with [`useTransition`][use-transition] and [`useFetcher`][use-fetcher].
+Remix can help you build optimistic UI with [`useNavigation`][use-navigation] and [`useFetcher`][use-fetcher].
 
 ## Strategy
 
 1. User submits a form (or you do with [`useSubmit`][use-submit] or [`fetcher.submit`][fetcher-submission]).
-2. Remix makes the submission and its data immediately available to you on [`transition.submission`][transition-submission] or [`fetcher.submission`][fetcher-submission].
+2. Remix makes the submission and its data immediately available to you on [`navigation.formData`][navigation-formdata] or [`fetcher.submission`][fetcher-submission].
 3. App uses [`submission.formData`][form-data] to render an optimistic version of _what it will render_ when the submission completes successfully.
 4. Remix automatically revalidates all the data.
    - If successful, the user doesn't even notice.
    - If it fails, the page data is automatically in sync with the server so the UI reverts automatically.
-     - App notifies the user of a problem (which is also likely automatic in Remix with [error boundaries][error-boundary]).
+   - App notifies the user of a problem (which is also likely automatic in Remix with [error boundaries][error-boundary]).
 
 ## Example
 
@@ -95,7 +95,7 @@ At this point, typically you'd render a busy spinner on the page while the user 
 ```tsx filename=app/routes/projects/new.tsx lines=[3,15,27,29-31]
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
-import { Form, useTransition } from "@remix-run/react";
+import { Form, useNavigation } from "@remix-run/react";
 
 import { createProject } from "~/utils";
 
@@ -107,7 +107,7 @@ export const action = async ({ request }: ActionArgs) => {
 };
 
 export default function NewProject() {
-  const transition = useTransition();
+  const navigation = useNavigation();
   return (
     <>
       <h2>New Project</h2>
@@ -119,9 +119,9 @@ export default function NewProject() {
         <textarea name="description" id="description" />
         <button
           type="submit"
-          disabled={transition.submission}
+          disabled={navigation.state === "submitting"}
         >
-          {transition.submission
+          {navigation.state === "submitting"
             ? "Creating project..."
             : "Create Project"}
         </button>
@@ -136,7 +136,7 @@ Since we know that almost every time this form is submitted it's going to succee
 ```tsx filename=app/routes/projects/new.tsx lines=[5,17-23,31-32]
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
-import { Form, useTransition } from "@remix-run/react";
+import { Form, useNavigation } from "@remix-run/react";
 
 import { ProjectView } from "~/components/project";
 import { createProject } from "~/utils";
@@ -149,12 +149,10 @@ export const action = async ({ request }: ActionArgs) => {
 };
 
 export default function NewProject() {
-  const transition = useTransition();
-  return transition.submission ? (
+  const navigation = useNavigation();
+  return navigation.formData ? (
     <ProjectView
-      project={Object.fromEntries(
-        transition.submission.formData
-      )}
+      project={Object.fromEntries(navigation.formData)}
     />
   ) : (
     <>
@@ -186,7 +184,7 @@ import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import {
   Form,
   useActionData,
-  useTransition,
+  useNavigation,
 } from "@remix-run/react";
 
 import { ProjectView } from "~/components/project";
@@ -208,13 +206,11 @@ export const action = async ({ request }: ActionArgs) => {
 
 export default function NewProject() {
   const error = useActionData<typeof action>();
-  const transition = useTransition();
+  const navigation = useNavigation();
 
-  return transition.submission ? (
+  return navigation.formData ? (
     <ProjectView
-      project={Object.fromEntries(
-        transition.submission.formData
-      )}
+      project={Object.fromEntries(navigation.formData)}
     />
   ) : (
     <>
@@ -245,7 +241,7 @@ import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import {
   Form,
   useActionData,
-  useTransition,
+  useNavigation,
 } from "@remix-run/react";
 
 import { ProjectView } from "~/components/project";
@@ -267,12 +263,12 @@ export const action = async ({ request }: ActionArgs) => {
 
 export default function NewProject() {
   const error = useActionData<typeof action>();
-  const transition = useTransition();
+  const navigation = useNavigation();
 
-  return transition.submission ? (
+  return navigation.formData ? (
     <ProjectView
       project={Object.fromEntries(
-        transition.submission.formData
+        navigation.formData
       )}
     />
   ) : (
@@ -301,8 +297,8 @@ export default function NewProject() {
 [use-fetcher]: ../hooks/use-fetcher
 [fetcher-submit]: ../hooks/use-fetcher#fetchersubmit
 [fetcher-submission]: ../hooks/use-fetcher#fetchersubmission
-[use-transition]: ../hooks/use-transition
-[transition-submission]: ../hooks/use-transition/#transitionsubmission
+[use-navigation]: https://reactrouter.com/hooks/use-navigation
+[navigation-formdata]: https://reactrouter.com/hooks/use-navigation#navigationformdata
 [use-submit]: ../hooks/use-submit
 [error-boundary]: ../route/error-boundary
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
