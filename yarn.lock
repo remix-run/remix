@@ -2772,6 +2772,11 @@
     "@types/qs" "*"
     "@types/serve-static" "*"
 
+"@types/find-cache-dir@3.2.1":
+  version "3.2.1"
+  resolved "https://registry.npmjs.org/@types/find-cache-dir/-/find-cache-dir-3.2.1.tgz#7b959a4b9643a1e6a1a5fe49032693cc36773501"
+  integrity sha512-frsJrz2t/CeGifcu/6uRo4b+SzAwT4NYCVPu1GN8IB9XTzrpPkGuV0tmh9mN+/L0PklAlsC3u5Fxt0ju00LXIw==
+
 "@types/fs-extra@^8.0.1":
   version "8.1.2"
   resolved "https://registry.npmjs.org/@types/fs-extra/-/fs-extra-8.1.2.tgz"

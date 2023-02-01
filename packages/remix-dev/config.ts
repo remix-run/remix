@@ -365,9 +365,7 @@ export async function readConfig(
     appConfig.appDirectory || "app"
   );
 
-  let cacheDirectory = appConfig.cacheDirectory
-    ? path.resolve(rootDirectory, appConfig.cacheDirectory)
-    : findCacheDirectory({ name: "remix", cwd: rootDirectory });
+  let cacheDirectory = getCacheDirectory(rootDirectory, appConfig);
 
   let entryClientFile = findEntry(appDirectory, "entry.client");
   if (!entryClientFile) {
@@ -537,6 +535,26 @@ export async function readConfig(
     tsconfigPath,
     future,
   };
+}
+
+function getCacheDirectory(rootDirectory: string, appConfig: AppConfig) {
+  if (appConfig.cacheDirectory) {
+    return path.resolve(rootDirectory, appConfig.cacheDirectory);
+  }
+  let cacheDirectory = findCacheDirectory({
+    name: "remix",
+    cwd: rootDirectory,
+  });
+
+  if (!cacheDirectory) {
+    throw new Error(
+      `One of two things happened:` +
+        `1. We couldn't find a package.json in your project.` +
+        `2. The node_modules directory in your project is not writable`
+    );
+  }
+
+  return cacheDirectory;
 }
 
 function addTrailingSlash(path: string): string {
