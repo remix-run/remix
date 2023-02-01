@@ -33,3 +33,4 @@ export const PR_FILES_STARTS_WITH = ["packages/"];
 export const IS_NIGHTLY_RELEASE = isNightly(VERSION);
 export const AWAITING_RELEASE_LABEL = "awaiting release";
 export const IS_STABLE_RELEASE = isStable(VERSION);
+export const DRY_RUN = process.env.DRY_RUN === "true";
