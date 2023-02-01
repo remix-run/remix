@@ -72,7 +72,7 @@ jobs:
         run: |
           git config --local user.email "hello@remix.run"
           git config --local user.name "Remix Run Bot"
-          git checkout -b nightly/${{steps.version.outputs.NEXT_VERSION}}
+          git checkout -b nightly/${{ steps.version.outputs.NEXT_VERSION }}
           yarn run version ${{steps.version.outputs.NEXT_VERSION}} --skip-prompt
           git push origin --tags
 
@@ -94,10 +94,11 @@ jobs:
     needs: [nightly]
     name: 📝 Comment on related issues and pull requests
     if: github.repository == 'remix-run/remix' && needs.nightly.outputs.NEXT_VERSION
-    uses: remix-run/remix/.github/workflows/release-comments.yml@main
+    uses: ./.github/workflows/release-comments.yml
     with:
       ref: "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}"
-      packageVersionToFollow: "remix"
+      package_version_to_follow: "remix"
+      release_branch: "dev"
 
   deployments:
     needs: [nightly]

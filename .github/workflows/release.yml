@@ -21,7 +21,7 @@ jobs:
       !contains(github.ref, 'nightly')
     runs-on: ubuntu-latest
     outputs:
-      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
+      published_packages: ${{ steps.changesets.outputs.published_packages }}
       published: ${{ steps.changesets.outputs.published }}
     steps:
       - name: 🛑 Cancel Previous Runs
@@ -65,13 +65,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  findPackageVersion:
+  find_package_version:
     name: 🦋 Find Package
     needs: [release]
     runs-on: ubuntu-latest
     if: github.repository == 'remix-run/remix' && needs.release.outputs.published == 'true'
     outputs:
-      packageVersion: ${{ steps.findPackageVersion.outputs.packageVersion }}
+      package_version: ${{ steps.find_package_version.outputs.package_version }}
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.11.0
@@ -85,27 +85,28 @@ jobs:
           node-version: 16
           cache: "npm"
 
-      - id: findPackageVersion
+      - id: find_package_version
         run: |
-          packageVersion=$(node ./scripts/release/find-release-from-changeset.js)
-          echo "packageVersion=${packageVersion}" >> $GITHUB_OUTPUT
+          package_version=$(node ./scripts/release/find-release-from-changeset.js)
+          echo "package_version=${package_version}" >> $GITHUB_OUTPUT
         env:
-          packageVersionToFollow: "remix"
-          publishedPackages: ${{ needs.release.outputs.publishedPackages }}
+          package_version_to_follow: "remix"
+          published_packages: ${{ needs.release.outputs.published_packages }}
 
   comment:
     name: 📝 Comment on related issues and pull requests
-    if: github.repository == 'remix-run/remix' && needs.findPackageVersion.outputs.packageVersion != ''
-    needs: [release, findPackageVersion]
+    if: github.repository == 'remix-run/remix' && needs.find_package_version.outputs.packageVersion != ''
+    needs: [release, find_package_version]
     uses: ./.github/workflows/release-comments.yml
     with:
-      ref: refs/tags/remix@${{ needs.findPackageVersion.outputs.packageVersion }}
-      packageVersionToFollow: "remix"
+      ref: refs/tags/remix@${{ needs.find_package_version.outputs.packageVersion }}
+      package_version_to_follow: "remix"
+      release_branch: ${{ github.ref_name }}
 
   deployments:
     name: 🚀 Deployment Tests
     if: github.repository == 'remix-run/remix'
-    needs: [release, findPackageVersion]
+    needs: [release, find_package_version]
     uses: ./.github/workflows/deployments.yml
     secrets:
       TEST_AWS_ACCESS_KEY_ID: ${{ secrets.TEST_AWS_ACCESS_KEY_ID }}
@@ -124,7 +125,7 @@ jobs:
   stacks:
     name: 🥞 Remix Stacks Test
     if: github.repository == 'remix-run/remix'
-    needs: [release, findPackageVersion]
+    needs: [release, find_package_version]
     uses: ./.github/workflows/stacks.yml
     with:
-      version: ${{ needs.findPackageVersion.outputs.packageVersion }}
+      version: ${{ needs.find_package_version.outputs.package_version }}
