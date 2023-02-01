@@ -1,4 +1,6 @@
 import type * as express from "express";
+import type { MiddlewareContext } from "@remix-run/router";
+import { UNSAFE_createMiddlewareStore as createMiddlewareStore } from "@remix-run/router";
 import type {
   AppLoadContext,
   ServerBuild,
@@ -26,6 +28,16 @@ export type GetLoadContextFunction = (
   res: express.Response
 ) => AppLoadContext;
 
+export type ServerMiddlewareFunction = ({
+  request,
+  response,
+  context,
+}: {
+  request: express.Request;
+  response: express.Response;
+  context: MiddlewareContext;
+}) => Promise<Response>;
+
 export type RequestHandler = (
   req: express.Request,
   res: express.Response,
@@ -38,13 +50,51 @@ export type RequestHandler = (
 export function createRequestHandler({
   build,
   getLoadContext,
+  serverMiddleware,
   mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
+  serverMiddleware?: ServerMiddlewareFunction;
   mode?: string;
 }): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
+
+  if (build.future.unstable_middleware && serverMiddleware) {
+    return async (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ) => {
+      let response: NodeResponse | undefined;
+      let context = createMiddlewareStore();
+      let callRemix = async () => {
+        let request = createRemixRequest(req, res);
+        response = (await handleRequest(
+          request,
+          undefined,
+          context
+        )) as NodeResponse;
+        return response;
+      };
+      context.next = callRemix;
+
+      try {
+        await serverMiddleware({ request: req, response: res, context });
+        if (!response) {
+          // User never called next(), so doesn't need to do any post-processing
+          response = await callRemix();
+        }
+        if (!res.headersSent) {
+          await sendRemixResponse(res, response);
+        }
+      } catch (error: unknown) {
+        // Express doesn't support async functions, so we have to pass along the
+        // error manually using next().
+        next(error);
+      }
+    };
+  }
 
   return async (
     req: express.Request,
