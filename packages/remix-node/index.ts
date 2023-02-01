@@ -36,6 +36,7 @@ export {
 } from "./stream";
 
 export {
+  createMiddlewareContext,
   createRequestHandler,
   createSession,
   defer,
@@ -84,6 +85,7 @@ export type {
   MetaFunction,
   V2_MetaFunction,
   MiddlewareArgs,
+  MiddlewareContext,
   MiddlewareFunction,
   PageLinkDescriptor,
   RequestHandler,

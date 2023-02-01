@@ -34,8 +34,14 @@ function createApp() {
     "*",
     // We don't have a real app to test, but it doesn't matter. We won't ever
     // call through to the real createRequestHandler
-    // @ts-expect-error
-    createRequestHandler({ build: undefined })
+    createRequestHandler({
+      build: {
+        // @ts-expect-error
+        future: {
+          unstable_middleware: false,
+        },
+      },
+    })
   );
 
   return app;

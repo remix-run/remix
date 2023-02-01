@@ -1,3 +1,5 @@
+export type { MiddlewareContext } from "@remix-run/router";
+
 export type {
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,

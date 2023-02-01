@@ -1,3 +1,5 @@
+export { createMiddlewareContext } from "@remix-run/router";
+
 // Default implementations for the Remix server runtime interface
 export { createCookieFactory, isCookie } from "./cookies";
 export {
@@ -64,8 +66,9 @@ export type {
   MetaDescriptor,
   MetaFunction,
   V2_MetaFunction,
-  MiddlewareFunction,
   MiddlewareArgs,
+  MiddlewareContext,
+  MiddlewareFunction,
   PageLinkDescriptor,
   RequestHandler,
   RouteComponent,
