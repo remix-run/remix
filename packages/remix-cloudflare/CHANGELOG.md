@@ -1,5 +1,17 @@
 # `@remix-run/cloudflare`
 
+## 1.12.0
+
+### Minor Changes
+
+- Deprectated `createCloudflareKVSessionStorage` in favor of `createWorkersKVSessionStorage` ([#2542](https://github.com/remix-run/remix/pull/2542))
+
+### Patch Changes
+
+- Updated `RequestHandler` type to match other adapter types ([#4884](https://github.com/remix-run/remix/pull/4884))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.12.0`
+
 ## 1.11.1
 
 ### Patch Changes

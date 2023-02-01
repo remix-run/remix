@@ -290,6 +290,10 @@ function usePrefetchBehavior(
  */
 let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
+    let isAbsolute =
+      typeof to === "string" &&
+      (/^[a-z+]+:\/\//i.test(to) || to.startsWith("//"));
+
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
@@ -303,13 +307,16 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
           {...props}
           {...prefetchHandlers}
         />
-        {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
+        {shouldPrefetch && !isAbsolute ? (
+          <PrefetchPageLinks page={href} />
+        ) : null}
       </>
     );
   }
 );
 NavLink.displayName = "NavLink";
 export { NavLink };
+
 /**
  * This component renders an anchor tag and is the primary way the user will
  * navigate around your website.
@@ -318,11 +325,16 @@ export { NavLink };
  */
 let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
+    let isAbsolute =
+      typeof to === "string" &&
+      (/^[a-z+]+:\/\//i.test(to) || to.startsWith("//"));
+
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
     );
+
     return (
       <>
         <RouterLink
@@ -331,7 +343,9 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
           {...props}
           {...prefetchHandlers}
         />
-        {shouldPrefetch ? <PrefetchPageLinks page={href} /> : null}
+        {shouldPrefetch && !isAbsolute ? (
+          <PrefetchPageLinks page={href} />
+        ) : null}
       </>
     );
   }
@@ -732,7 +746,7 @@ export function Meta() {
 }
 
 export interface AwaitProps<Resolve> {
-  children: React.ReactNode | ((value: Awaited<Resolve>) => React.ReactElement);
+  children: React.ReactNode | ((value: Awaited<Resolve>) => React.ReactNode);
   errorElement?: React.ReactNode;
   resolve: Resolve;
 }
@@ -1536,9 +1550,11 @@ export const LiveReload =
     ? () => null
     : function LiveReload({
         port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
+        timeoutMs = 1000,
         nonce = undefined,
       }: {
         port?: number;
+        timeoutMs?: number;
         /**
          * @deprecated this property is no longer relevant.
          */
@@ -1554,9 +1570,10 @@ export const LiveReload =
                 function remixLiveReloadConnect(config) {
                   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
-                  let socketPath = protocol + "//" + host + ":" + ${String(
+                  let port = (window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || ${String(
                     port
-                  )} + "/socket";
+                  )};
+                  let socketPath = protocol + "//" + host + ":" + port + "/socket";
                   let ws = new WebSocket(socketPath);
                   ws.onmessage = (message) => {
                     let event = JSON.parse(message.data);
@@ -1581,7 +1598,7 @@ export const LiveReload =
                           remixLiveReloadConnect({
                             onOpen: () => window.location.reload(),
                           }),
-                        1000
+                      ${String(timeoutMs)}
                       );
                     }
                   };

@@ -88,7 +88,7 @@ Attaches a [Node inspector][node-inspector] to develop your app in debug mode.
 
 Launches the app server on a given port.
 
-By default, the port is set to `3000`. If port `3000` is unavailable, the `dev` command will attempt to find another port that is open. Using the `--port` flag will only attempt to launch the server at the given port; if the port is unavailable the app will not start.
+By default, the port is set to `3000`. If port `3000` is unavailable, the `dev` command will attempt to find another port that is open. Using the `--port` flag will only attempt to launch the server at the given port; if the port is unavailable, the app will not start.
 
 ```sh
 remix dev --port 4001

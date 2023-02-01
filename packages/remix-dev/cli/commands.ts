@@ -8,6 +8,7 @@ import * as esbuild from "esbuild";
 import * as colors from "../colors";
 import * as compiler from "../compiler";
 import * as devServer from "../devServer";
+import * as devServer2 from "../devServer2";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
@@ -187,17 +188,29 @@ export async function watch(
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
 
-  return devServer.liveReload(config, {
+  devServer.liveReload(config, {
     mode,
     onInitialBuild: (durationMs) =>
       console.log(`💿 Built in ${prettyMs(durationMs)}`),
   });
+  return await new Promise(() => {});
 }
 
-export async function dev(remixRoot: string, modeArg?: string, port?: number) {
+export async function dev(
+  remixRoot: string,
+  modeArg?: string,
+  flags: { port?: number; appServerPort?: number } = {}
+) {
   let config = await readConfig(remixRoot);
   let mode = compiler.parseMode(modeArg ?? "", "development");
-  return devServer.serve(config, mode, port);
+
+  if (config.future.unstable_dev !== false) {
+    await devServer2.serve(config, flags);
+    return await new Promise(() => {});
+  }
+
+  await devServer.serve(config, mode, flags.port);
+  return await new Promise(() => {});
 }
 
 export async function codemod(

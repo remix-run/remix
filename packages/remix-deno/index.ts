@@ -44,6 +44,7 @@ export type {
   HeadersFunction,
   HtmlLinkDescriptor,
   HtmlMetaDescriptor,
+  JsonFunction,
   LinkDescriptor,
   LinksFunction,
   LoaderArgs,

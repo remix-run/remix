@@ -5,7 +5,7 @@ import type {
 
 import { createSessionStorage } from "../implementations";
 
-interface CloudflareKVSessionStorageOptions {
+interface WorkersKVSessionStorageOptions {
   /**
    * The Cookie used to store the session id on the client, or options used
    * to automatically create one.
@@ -24,10 +24,10 @@ interface CloudflareKVSessionStorageOptions {
  * The advantage of using this instead of cookie session storage is that
  * KV Store may contain much more data than cookies.
  */
-export function createCloudflareKVSessionStorage({
+export function createWorkersKVSessionStorage({
   cookie,
   kv,
-}: CloudflareKVSessionStorageOptions): SessionStorage {
+}: WorkersKVSessionStorageOptions): SessionStorage {
   return createSessionStorage({
     cookie,
     async createData(data, expires) {
