@@ -267,9 +267,7 @@ export default function NewProject() {
 
   return navigation.formData ? (
     <ProjectView
-      project={Object.fromEntries(
-        navigation.formData
-      )}
+      project={Object.fromEntries(navigation.formData)}
     />
   ) : (
     <>

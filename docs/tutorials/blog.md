@@ -985,7 +985,9 @@ export default function NewPost() {
   const errors = useActionData<typeof action>();
 
   const navigation = useNavigation();
-  const isCreating = Boolean(navigation.state === "submitting");
+  const isCreating = Boolean(
+    navigation.state === "submitting"
+  );
 
   return (
     <Form method="post">
