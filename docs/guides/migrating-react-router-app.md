@@ -279,36 +279,21 @@ Your go-to solution may be to check for the `window` object and only run the cal
 
 One potential solution here is using a different caching mechanism that can be used on the server and passed to the component via props passed from a route's [loader data][loader-data]. But if it isn't crucial for your app to render the component on the server, a simpler solution may be to skip rendering altogether on the server and wait until hydration is complete to render it in the browser.
 
+With React 18 and the [streaming rendering APIs](https://beta.reactjs.org/reference/react-dom/server) (eg. `renderToReadableStream` in `entry.server.tsx`), this is a bit easier to do. You can use the `React.Suspense` component to render a fallback component on the server and then render the actual component in the browser:
+
 ```jsx
-// We can safely track hydration in memory state
-// outside of the component because it is only
-// updated once after the version instance of
-// `SomeComponent` has been hydrated. From there,
-// the browser takes over rendering duties across
-// route changes and we no longer need to worry
-// about hydration mismatches until the page is
-// reloaded and `isHydrating` is reset to true.
-let isHydrating = true;
-
 function SomeComponent() {
-  let [isHydrated, setIsHydrated] = React.useState(
-    !isHydrating
+  return (
+    <React.Suspense fallback={<SomeFallbackComponent />}>
+      <Count />
+    </React.Suspense>
   );
-
-  React.useEffect(() => {
-    isHydrating = false;
-    setIsHydrated(true);
-  }, []);
-
-  if (isHydrated) {
-    return <Count />;
-  } else {
-    return <SomeFallbackComponent />;
-  }
 }
 ```
 
-To simplify this solution, we recommend the using the [`ClientOnly` component][client-only-component] in the [`remix-utils`][remix-utils] community package. An example of its usage can be found in the [`examples` repository][examples-repository].
+See the [React Suspense](https://beta.reactjs.org/reference/react/Suspense#providing-a-fallback-for-server-errors-and-server-only-content) docs for more information on how this works.
+
+If you're using React 17 or a non streaming API (eg. `renderToString`), we recommend the using the [`ClientOnly` component](https://github.com/sergiodxa/remix-utils/blob/main/src/react/client-only.tsx) in the [`remix-utils`](https://www.npmjs.com/package/remix-utils) community package. An example of its usage can be found in the [`examples` directory of the Remix repo](https://github.com/remix-run/remix/blob/main/examples/client-only-components/app/routes/index.tsx).
 
 ### `React.lazy` and `React.Suspense`
 
