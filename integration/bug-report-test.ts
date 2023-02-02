@@ -47,28 +47,42 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+      "app/routes/defer.jsx": js`
+        import { defer } from "@remix-run/node";
 
         export function loader() {
-          return json("pizza");
+          return defer({}, { headers: { "x-custom-header": "value from loader" } });
         }
 
-        export default function Index() {
-          let data = useLoaderData();
+        export function headers({ loaderHeaders }) {
+            return {
+                "x-custom-header": loaderHeaders.get("x-custom-header")
+            }
+        }
+
+        export default function WithDefer() {
           return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
+            <div>Header not available with defer?</div>
           )
         }
       `,
+      "app/routes/json.jsx": js`
+        import { json } from "@remix-run/node";
 
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+        export function loader() {
+          return json({}, { headers: { "x-custom-header": "value from loader" } });
+        }
+
+        export function headers({ loaderHeaders }) {
+            return {
+                "x-custom-header": loaderHeaders.get("x-custom-header")
+            }
+        }
+
+        export default function WithJson() {
+          return (
+            <div>Header available with json</div>
+          )
         }
       `,
     },
@@ -87,24 +101,18 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("headers set from `loader` are available in `headers` when using `defer`", async ({
+  page,
+}) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
-
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+  let response = await fixture.requestDocument("/defer");
+  expect(response.headers.get("x-custom-header")).toEqual("value from loader");
 });
 
-////////////////////////////////////////////////////////////////////////////////
-// 💿 Finally, push your changes to your fork of Remix and open a pull request!
-////////////////////////////////////////////////////////////////////////////////
+test("headers set from `loader` are available in `headers` when using `json`", async ({
+  page,
+}) => {
+  let app = new PlaywrightFixture(appFixture, page);
+  let response = await fixture.requestDocument("/json");
+  expect(response.headers.get("x-custom-header")).toEqual("value from loader");
+});
