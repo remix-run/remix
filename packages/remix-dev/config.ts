@@ -388,27 +388,28 @@ export async function readConfig(
   let serverConditions = appConfig.serverConditions;
   let serverDependenciesToBundle = appConfig.serverDependenciesToBundle || [];
   let serverEntryPoint = appConfig.server;
-  let serverMainFields = appConfig.serverMainFields || ["main", "module"];
-  let serverMinify = appConfig.serverMinify || false;
+  let serverMainFields = appConfig.serverMainFields;
+  let serverMinify = appConfig.serverMinify;
   let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
   let serverPlatform = appConfig.serverPlatform || "node";
   if (isCloudflareRuntime) {
-    serverConditions = ["worker"];
+    serverConditions ??= ["worker"];
     serverDependenciesToBundle = "all";
-    serverMainFields = ["browser", "module", "main"];
-    serverMinify = true;
+    serverMainFields ??= ["browser", "module", "main"];
+    serverMinify ??= true;
     serverModuleFormat = "esm";
     serverPlatform = "neutral";
   }
   if (isDenoRuntime) {
-    serverConditions = ["deno", "worker"];
+    serverConditions ??= ["deno", "worker"];
     serverDependenciesToBundle = "all";
-    serverMainFields = ["module", "main"];
+    serverMainFields ??= ["module", "main"];
     serverModuleFormat = "esm";
     serverPlatform = "neutral";
   }
-  serverMainFields ||=
+  serverMainFields ??=
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
+  serverMinify ??= false;
 
   let mdx = appConfig.mdx;
 
