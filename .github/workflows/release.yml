@@ -21,7 +21,7 @@ jobs:
       !contains(github.ref, 'nightly')
     runs-on: ubuntu-latest
     outputs:
-      published_packages: ${{ steps.changesets.outputs.published_packages }}
+      published_packages: ${{ steps.changesets.outputs.publishedPackages }}
       published: ${{ steps.changesets.outputs.published }}
     steps:
       - name: 🛑 Cancel Previous Runs
@@ -90,8 +90,8 @@ jobs:
           package_version=$(node ./scripts/release/find-release-from-changeset.js)
           echo "package_version=${package_version}" >> $GITHUB_OUTPUT
         env:
-          package_version_to_follow: "remix"
-          published_packages: ${{ needs.release.outputs.published_packages }}
+          PACKAGE_VERSION_TO_FOLLOW: "remix"
+          PUBLISHED_PACKAGES: ${{ needs.release.outputs.published_packages }}
 
   comment:
     name: 📝 Comment on related issues and pull requests
