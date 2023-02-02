@@ -144,6 +144,8 @@ export interface AppConfig {
   /**
    * The order of conditions to use when resolving server dependencies'
    * `exports` field in `package.json`.
+   *
+   * For more information, see: https://esbuild.github.io/api/#conditions
    */
   serverConditions?: string[];
 
@@ -157,6 +159,8 @@ export interface AppConfig {
   /**
    * The order of main fields to use when resolving server dependencies.
    * Defaults to `["main", "module"]`.
+   *
+   * For more information, see: https://esbuild.github.io/api/#main-fields
    */
   serverMainFields?: string[];
 
@@ -278,6 +282,8 @@ export interface RemixConfig {
   /**
    * The order of conditions to use when resolving server dependencies'
    * `exports` field in `package.json`.
+   *
+   * For more information, see: https://esbuild.github.io/api/#conditions
    */
   serverConditions?: string[];
 
@@ -297,6 +303,8 @@ export interface RemixConfig {
   /**
    * The order of main fields to use when resolving server dependencies.
    * Defaults to `["main", "module"]`.
+   *
+   * For more information, see: https://esbuild.github.io/api/#main-fields
    */
   serverMainFields: string[];
 
