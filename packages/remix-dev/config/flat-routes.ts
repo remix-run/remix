@@ -35,7 +35,7 @@ export function flatRoutes(
   // fast-glob will return posix paths even on windows
   // convert posix to os specific paths
   let routePathsForOS = routePaths.map((routePath) => {
-    return normalizeSlashes(routePath);
+    return path.normalize(routePath);
   });
 
   return flatRoutesUniversal(appDirectory, routePathsForOS);
