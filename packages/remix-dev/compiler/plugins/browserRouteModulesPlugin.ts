@@ -8,13 +8,16 @@ import { applyHMR } from "./hmrPlugin";
 
 const serverOnlyExports = new Set(["action", "loader"]);
 
+type OnLoader = (filename: string, code: string) => void;
+
 /**
  * This plugin loads route modules for the browser build, using module shims
  * that re-export only the route module exports that are safe for the browser.
  */
 export function browserRouteModulesPlugin(
   config: RemixConfig,
-  suffixMatcher: RegExp
+  suffixMatcher: RegExp,
+  onLoader: OnLoader
 ): esbuild.Plugin {
   return {
     name: "browser-route-modules",
@@ -34,7 +37,7 @@ export function browserRouteModulesPlugin(
 
           let sourceCode = fs.readFileSync(routeFile, "utf8");
 
-          let contents = removeServerExports(sourceCode, routeFile);
+          let contents = removeServerExports(sourceCode, routeFile, onLoader);
 
           contents = await applyHMR(
             contents,
@@ -57,7 +60,11 @@ export function browserRouteModulesPlugin(
   };
 }
 
-function removeServerExports(sourceCode: string, fileName: string) {
+function removeServerExports(
+  sourceCode: string,
+  fileName: string,
+  onLoader: OnLoader
+) {
   let { outputText, sourceMapText } = ts.transpileModule(sourceCode, {
     fileName,
     compilerOptions: {
@@ -68,9 +75,17 @@ function removeServerExports(sourceCode: string, fileName: string) {
     transformers: {
       before: [
         (context) => {
+          let sourceFile: ts.SourceFile;
           let visit: ts.Visitor = (node) => {
+            if (ts.isSourceFile(node)) {
+              sourceFile = node;
+            }
             let modifiers = ts.getModifiers(node as ts.HasModifiers);
 
+            // TODO: if loader changes and its being re-exported or imported in some other route,
+            // need to crawl import graph for all such routes and consider them to have changed their loader too.
+            // consider diffing hashes from esbuild output files and comparing server to browser to prev browser etc.
+            // ^ maybe we can use that to detect these cases
             if (ts.isExportDeclaration(node) && node.exportClause) {
               if ("elements" in node.exportClause) {
                 let elements = node.exportClause.elements.filter(
@@ -97,6 +112,16 @@ function removeServerExports(sourceCode: string, fileName: string) {
             ) {
               if (ts.isFunctionDeclaration(node) && node.name) {
                 if (serverOnlyExports.has(node.name.escapedText as string)) {
+                  if (node.name.escapedText === "loader") {
+                    let printer = ts.createPrinter();
+                    let code = printer.printNode(
+                      ts.EmitHint.Unspecified,
+                      node,
+                      sourceFile
+                    );
+                    // printed = hash of loader
+                    onLoader(fileName, code);
+                  }
                   return ts.factory.createEmptyStatement();
                 }
               }

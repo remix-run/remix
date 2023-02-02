@@ -79,7 +79,8 @@ const isCssBundlingEnabled = (config: RemixConfig) =>
 const createEsbuildConfig = (
   build: "app" | "css",
   config: RemixConfig,
-  options: CompileOptions
+  options: CompileOptions,
+  onLoader: (filename: string, code: string) => void
 ): esbuild.BuildOptions | esbuild.BuildIncremental => {
   let isCssBuild = build === "css";
   let entryPoints: esbuild.BuildOptions["entryPoints"];
@@ -121,7 +122,7 @@ const createEsbuildConfig = (
     cssFilePlugin({ config, options }),
     urlImportsPlugin(),
     mdxPlugin(config),
-    browserRouteModulesPlugin(config, /\?browser$/),
+    browserRouteModulesPlugin(config, /\?browser$/, onLoader),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
   ].filter(isNotNull);
@@ -191,12 +192,20 @@ export const createBrowserCompiler = (
   let cssCompiler: esbuild.BuildIncremental;
   let prevMetafile: esbuild.Metafile;
   let prevAssetsManifest: AssetsManifest;
+
+  let prevLoaderHashes: Record<string, string>;
+  let loaderHashes: Record<string, string> = {};
+  let onLoader = (filename: string, code: string) => {
+    let key = path.relative(remixConfig.appDirectory, filename);
+    loaderHashes[key] = code;
+  };
+
   let compile = async (manifestChannel: WriteChannel<AssetsManifest>) => {
     try {
       let appBuildTask = async () => {
         appCompiler = await (!appCompiler
           ? esbuild.build({
-              ...createEsbuildConfig("app", remixConfig, options),
+              ...createEsbuildConfig("app", remixConfig, options, onLoader),
               metafile: true,
               incremental: true,
             })
@@ -218,7 +227,7 @@ export const createBrowserCompiler = (
         //  so we need to assert that it's an incremental build
         cssCompiler = (await (!cssCompiler
           ? esbuild.build({
-              ...createEsbuildConfig("css", remixConfig, options),
+              ...createEsbuildConfig("css", remixConfig, options, onLoader),
               metafile: true,
               incremental: true,
               write: false,
@@ -305,35 +314,35 @@ export const createBrowserCompiler = (
       manifestChannel.write(manifest);
       await writeAssetsManifest(remixConfig, manifest);
 
-      let shouldReload = false;
-      let newRouteIds = new Set(Object.keys(manifest.routes));
-      let oldRouteIds = new Set(Object.keys(prevAssetsManifest?.routes ?? {}));
-      let routeIds = new Set([...newRouteIds, ...oldRouteIds]);
-      for (let rid of routeIds) {
-        // any new not in old -> added -> reload
-        if (!newRouteIds.has(rid)) {
-          shouldReload = true;
-          break;
-        }
-        // any old routes not in new -> removed -> full reload
-        if (!oldRouteIds.has(rid)) {
-          shouldReload = true;
-          break;
-        }
-        // any false->true has loader (hasloader)
-        let prevRoute = prevAssetsManifest.routes[rid];
-        let route = manifest.routes[rid];
-        if (!prevRoute.hasLoader && route.hasLoader) {
-          shouldReload = true;
-          break;
-        }
-      }
-
-      if (shouldReload) {
-        prevMetafile = metafile;
-        prevAssetsManifest = manifest;
-        return;
-      }
+      // let shouldReload = false;
+      // let newRouteIds = new Set(Object.keys(manifest.routes));
+      // let oldRouteIds = new Set(Object.keys(prevAssetsManifest?.routes ?? {}));
+      // let routeIds = new Set([...newRouteIds, ...oldRouteIds]);
+      // for (let rid of routeIds) {
+      //   // any new not in old -> added -> reload
+      //   if (!newRouteIds.has(rid)) {
+      //     shouldReload = true;
+      //     break;
+      //   }
+      //   // any old routes not in new -> removed -> full reload
+      //   if (!oldRouteIds.has(rid)) {
+      //     shouldReload = true;
+      //     break;
+      //   }
+      //   // any false->true has loader (hasloader)
+      //   let prevRoute = prevAssetsManifest.routes[rid];
+      //   let route = manifest.routes[rid];
+      //   if (!prevRoute.hasLoader && route.hasLoader) {
+      //     shouldReload = true;
+      //     break;
+      //   }
+      // }
+      //
+      // if (shouldReload) {
+      //   prevMetafile = metafile;
+      //   prevAssetsManifest = manifest;
+      //   return;
+      // }
       prevAssetsManifest = manifest;
 
       if (prevMetafile !== undefined) {
@@ -365,38 +374,74 @@ export const createBrowserCompiler = (
           }
           return input2output;
         };
+
+        // TODO: probably want another map to correlate every input file to the
+        // routes that consume it
+        // ^check if route chunk hash changes when its dependencies change, even in different chunks
+        let filename2id = new Map<string, string>(
+          Object.values(remixConfig.routes).map((r) => [r.file, r.id])
+        );
+        console.log("filename2id");
+        console.log(filename2id.entries());
+        console.log({
+          prevLoaderHashes,
+        });
         let updates = [];
-        let prev_i2o = create_input2output(prevMetafile);
+        // let prev_i2o = create_input2output(prevMetafile);
         let i2o = create_input2output(metafile);
         for (let input of Object.keys(metafile.inputs)) {
-          let prev_o = prev_i2o[input];
+          // let prev_o = prev_i2o[input];
           let o = i2o[input];
-          if (prev_o !== o) {
-            let url =
-              remixConfig.publicPath +
-              path.relative(remixConfig.assetsBuildDirectory, path.resolve(o));
-            let id = input;
-            if (id.startsWith("browser-route-module:")) {
-              id = path.relative(
-                remixConfig.rootDirectory,
-                path.join(
-                  remixConfig.appDirectory,
-                  id
-                    .replace(/^browser-route-module:/, "")
-                    .replace(/\?browser$/, "")
-                )
-              );
-            }
-            updates.push({
-              id,
-              url,
-            });
+          if (o === undefined) {
+            console.warn(`o is undefined: [input=${input}]`);
+            continue;
           }
+          let url =
+            remixConfig.publicPath +
+            path.relative(remixConfig.assetsBuildDirectory, path.resolve(o));
+          let id = input;
+          let revalidate: string[] = [];
+          console.log({ input, id });
+          if (id.startsWith("browser-route-module:")) {
+            let filename = id
+              .replace(/^browser-route-module:/, "")
+              .replace(/\?browser$/, "");
+            id = path.relative(
+              remixConfig.rootDirectory,
+              path.join(remixConfig.appDirectory, filename)
+            );
+            if (prevLoaderHashes) {
+              let prevLoader = prevLoaderHashes[filename];
+              let loader = loaderHashes[filename];
+              console.log({
+                prevLoader,
+                loader,
+                id,
+                filename,
+                url,
+              });
+              if (loader !== prevLoader) {
+                let routeId = filename2id.get(filename);
+                if (routeId) {
+                  revalidate.push(routeId);
+                }
+              }
+            }
+          }
+          updates.push({
+            id,
+            url,
+            revalidate,
+          });
         }
         prevMetafile = metafile;
+        prevLoaderHashes = loaderHashes;
+        loaderHashes = {};
         return updates;
       }
       prevMetafile = metafile;
+      prevLoaderHashes = loaderHashes;
+      loaderHashes = {};
     } catch (reason) {
       console.error("HMR update failed", reason);
     }
