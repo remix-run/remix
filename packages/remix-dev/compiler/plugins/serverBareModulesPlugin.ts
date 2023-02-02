@@ -22,12 +22,10 @@ export function serverBareModulesPlugin(
   remixConfig: RemixConfig,
   onWarning?: (warning: string, key: string) => void
 ): Plugin {
-  let isDenoRuntime = remixConfig.serverBuildTarget === "deno";
-
   // Resolve paths according to tsconfig paths property
-  let matchPath = isDenoRuntime
-    ? undefined
-    : createMatchPath(remixConfig.tsconfigPath);
+  let matchPath = remixConfig.tsconfigPath
+    ? createMatchPath(remixConfig.tsconfigPath)
+    : undefined;
   function resolvePath(id: string) {
     if (!matchPath) {
       return id;
@@ -120,8 +118,7 @@ export function serverBareModulesPlugin(
           onWarning &&
           !isNodeBuiltIn(packageName) &&
           kind !== "dynamic-import" &&
-          (!remixConfig.serverBuildTarget ||
-            remixConfig.serverBuildTarget === "node-cjs")
+          remixConfig.serverPlatform === "node"
         ) {
           warnOnceIfEsmOnlyPackage(packageName, path, onWarning);
         }
