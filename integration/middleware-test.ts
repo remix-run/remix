@@ -149,7 +149,6 @@ test.describe("Middleware", () => {
           }
 
           export async function middleware({ context, request }) {
-            debugger;
             let count = context.get(countContext);
             if (request.method === "POST") {
               let fd = await request.formData();
