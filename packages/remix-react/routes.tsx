@@ -17,7 +17,7 @@ import {
   parseDeferredReadableStream,
 } from "./data";
 import type { FutureConfig } from "./entry";
-import { prefetchStyleLinks } from "./links";
+import { metaPls, prefetchStyleLinks } from "./links";
 import invariant from "./invariant";
 import { RemixRoute, RemixRouteError } from "./components";
 
@@ -170,6 +170,7 @@ async function loadRouteModuleWithBlockingLinks(
 ) {
   let routeModule = await loadRouteModule(route, routeModules);
   await prefetchStyleLinks(routeModule);
+  await metaPls(routeModule);
   return routeModule;
 }
 

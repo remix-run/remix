@@ -236,6 +236,28 @@ export function getLinksForMatches(
   return dedupe(descriptors, preloads);
 }
 
+export async function metaPls(routeModule: RouteModule): Promise<void> {
+  if (!routeModule.meta) return;
+  // we're not actually gonna do anything with this...
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let meta =
+    typeof routeModule.meta === "function"
+      ? routeModule.meta({
+          data: {},
+          location: {
+            hash: "",
+            key: "",
+            pathname: "",
+            search: "",
+            state: undefined,
+          },
+          matches: undefined as any,
+          params: {},
+          parentsData: {},
+        })
+      : routeModule.meta;
+}
+
 export async function prefetchStyleLinks(
   routeModule: RouteModule
 ): Promise<void> {
