@@ -385,11 +385,12 @@ export function Links() {
     if (root.ErrorBoundary) {
       renderableMatches.push({
         params: {},
-        pathname: "",
+        pathname: "/",
         pathnameBase: "/",
         route: {
           id: "root",
-          hasErrorBoundary: !!root.ErrorBoundary,
+          path: "/",
+          hasErrorBoundary: true,
         },
       });
     }
@@ -611,11 +612,12 @@ function V1Meta() {
     if (root.ErrorBoundary) {
       renderableMatches.push({
         params: {},
-        pathname: "",
+        pathname: "/",
         pathnameBase: "/",
         route: {
           id: "root",
-          hasErrorBoundary: !!root.ErrorBoundary,
+          path: "/",
+          hasErrorBoundary: true,
         },
       });
     }
@@ -729,11 +731,12 @@ function V2Meta() {
     if (root.ErrorBoundary) {
       renderableMatches.push({
         params: {},
-        pathname: "",
+        pathname: "/",
         pathnameBase: "/",
         route: {
           id: "root",
-          hasErrorBoundary: !!root.ErrorBoundary,
+          path: "/",
+          hasErrorBoundary: true,
         },
       });
     }
