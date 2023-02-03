@@ -1,18 +1,29 @@
-import type { StaticHandlerContext } from "@remix-run/router";
+import type {
+  AgnosticDataRouteMatch,
+  StaticHandlerContext,
+} from "@remix-run/router";
 import { splitCookiesString } from "set-cookie-parser";
 
 import type { ServerBuild } from "./build";
+import type { RouteData } from "./routeData";
+
+function getRenderableMatches(
+  matches: AgnosticDataRouteMatch[],
+  errors: RouteData | null
+) {
+  if (errors) {
+    let index = matches.findIndex((match) => errors[match.route.id]);
+    return matches.slice(0, index + 1);
+  }
+
+  return matches;
+}
 
 export function getDocumentHeadersRR(
   build: ServerBuild,
   context: StaticHandlerContext
 ): Headers {
-  let matches = context.errors
-    ? context.matches.slice(
-        0,
-        context.matches.findIndex((m) => context.errors![m.route.id]) + 1
-      )
-    : context.matches;
+  let matches = getRenderableMatches(context.matches, context.errors);
 
   return matches.reduce((parentHeaders, match) => {
     let { id } = match.route;
