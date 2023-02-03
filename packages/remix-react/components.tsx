@@ -390,7 +390,9 @@ export function Links() {
         route: {
           id: "root",
           path: "/",
-          hasErrorBoundary: true,
+          hasErrorBoundary: !!root.ErrorBoundary,
+          handle: root.handle,
+          shouldRevalidate: root.shouldRevalidate,
         },
       });
     }
@@ -570,25 +572,12 @@ function getRenderableMatches(
   matches: AgnosticDataRouteMatch[],
   errors: RouteData | null
 ) {
-  if (!matches) {
-    return null;
+  if (errors) {
+    let index = matches.findIndex((match) => errors[match.route.id]);
+    return matches.slice(0, index + 1);
   }
 
-  // no error, no worries
-  if (!errors || Object.keys(errors).length === 0) {
-    return matches;
-  }
-
-  let lastRenderableIndex: number = -1;
-
-  matches.forEach((match, index) => {
-    let id = match.route.id;
-    if (errors[id]) {
-      lastRenderableIndex = index;
-    }
-  });
-
-  return matches.slice(0, lastRenderableIndex + 1);
+  return matches;
 }
 
 /**
@@ -602,7 +591,7 @@ function V1Meta() {
   let location = useLocation();
 
   let meta: V1_HtmlMetaDescriptor = {};
-  let parentsData: { [routeId: string]: AppData } = {};
+  let parentsData: RouteData = {};
 
   let renderableMatches = getRenderableMatches(matches, errors);
 
@@ -617,7 +606,9 @@ function V1Meta() {
         route: {
           id: "root",
           path: "/",
-          hasErrorBoundary: true,
+          hasErrorBoundary: !!root.ErrorBoundary,
+          handle: root.handle,
+          shouldRevalidate: root.shouldRevalidate,
         },
       });
     }
@@ -641,6 +632,7 @@ function V1Meta() {
               matches: undefined as any,
             })
           : routeModule.meta;
+
       if (routeMeta && Array.isArray(routeMeta)) {
         throw new Error(
           "The route at " +
@@ -720,7 +712,7 @@ function V2Meta() {
 
   let meta: V2_HtmlMetaDescriptor[] = [];
   let leafMeta: V2_HtmlMetaDescriptor[] | null = null;
-  let parentsData: { [routeId: string]: AppData } = {};
+  let parentsData: RouteData = {};
 
   let renderableMatches = getRenderableMatches(matches, errors);
 
@@ -735,7 +727,9 @@ function V2Meta() {
         route: {
           id: "root",
           path: "/",
-          hasErrorBoundary: true,
+          hasErrorBoundary: !!root.ErrorBoundary,
+          handle: root.handle,
+          shouldRevalidate: root.shouldRevalidate,
         },
       });
     }

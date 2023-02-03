@@ -711,7 +711,7 @@ test.describe("ErrorBoundary", () => {
     });
   });
 
-  test.describe("errors in meta and links dont result in internal server error", () => {
+  test.describe("errors in meta and links don't result in internal server error", () => {
     let ROOT_BOUNDARY_TEXT = "ROOT_BOUNDARY_TEXT";
     let META_ERROR = "/meta-error";
     let LINKS_ERROR = "/links-error";
@@ -820,6 +820,8 @@ test.describe("ErrorBoundary", () => {
       let app = new PlaywrightFixture(appFixture, page);
       await app.goto("/");
       await app.clickLink(META_ERROR);
+      expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
+      await page.reload();
       expect(await app.getHtml("main")).toMatch(ROOT_BOUNDARY_TEXT);
     });
 
