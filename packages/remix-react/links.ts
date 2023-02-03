@@ -226,9 +226,9 @@ export function getLinksForMatches(
   manifest: AssetsManifest
 ): LinkDescriptor[] {
   let descriptors = matches
-    .map((match): LinkDescriptor[] => {
+    .map<LinkDescriptor[]>((match) => {
       let module = routeModules[match.route.id];
-      return module.links?.() || [];
+      return typeof module.links === "function" ? module.links() : [];
     })
     .flat(1);
 

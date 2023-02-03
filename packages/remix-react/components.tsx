@@ -63,6 +63,7 @@ import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml, escapeHtml } from "./markup";
 import type {
   RouteMatchWithMeta,
+  RouteModule,
   V1_HtmlMetaDescriptor,
   V2_HtmlMetaDescriptor,
 } from "./routeModules";
@@ -380,26 +381,12 @@ export function Links() {
   let renderableMatches = getRenderableMatches(matches, errors);
 
   if (!renderableMatches) {
-    renderableMatches = [];
     let root = routeModules["root"];
-    if (root.ErrorBoundary) {
-      renderableMatches.push({
-        params: {},
-        pathname: "/",
-        pathnameBase: "/",
-        route: {
-          id: "root",
-          path: "/",
-          hasErrorBoundary: !!root.ErrorBoundary,
-          handle: root.handle,
-          shouldRevalidate: root.shouldRevalidate,
-        },
-      });
-    }
+    renderableMatches = [getDefaultRenderableMatch(root)];
   }
 
   let links = React.useMemo(
-    () => getLinksForMatches(renderableMatches!, routeModules, manifest),
+    () => getLinksForMatches(renderableMatches, routeModules, manifest),
     [renderableMatches, routeModules, manifest]
   );
 
@@ -580,6 +567,23 @@ function getRenderableMatches(
   return matches;
 }
 
+function getDefaultRenderableMatch(
+  rootRouteModule: RouteModule
+): AgnosticDataRouteMatch {
+  return {
+    params: {},
+    pathname: "/",
+    pathnameBase: "/",
+    route: {
+      id: "root",
+      path: "",
+      shouldRevalidate: rootRouteModule.shouldRevalidate,
+      handle: rootRouteModule.handle,
+      hasErrorBoundary: !!rootRouteModule.ErrorBoundary,
+    },
+  };
+}
+
 /**
  * Renders the `<title>` and `<meta>` tags for the current routes.
  *
@@ -596,29 +600,14 @@ function V1Meta() {
   let renderableMatches = getRenderableMatches(matches, errors);
 
   if (!renderableMatches) {
-    renderableMatches = [];
     let root = routeModules["root"];
-    if (root.ErrorBoundary) {
-      renderableMatches.push({
-        params: {},
-        pathname: "/",
-        pathnameBase: "/",
-        route: {
-          id: "root",
-          path: "/",
-          hasErrorBoundary: !!root.ErrorBoundary,
-          handle: root.handle,
-          shouldRevalidate: root.shouldRevalidate,
-        },
-      });
-    }
+    renderableMatches = [getDefaultRenderableMatch(root)];
   }
 
   for (let match of renderableMatches) {
     let routeId = match.route.id;
     let data = loaderData[routeId];
     let params = match.params;
-
     let routeModule = routeModules[routeId];
 
     if (routeModule.meta) {
@@ -717,30 +706,13 @@ function V2Meta() {
   let renderableMatches = getRenderableMatches(matches, errors);
 
   if (!renderableMatches) {
-    renderableMatches = [];
     let root = routeModules["root"];
-    if (root.ErrorBoundary) {
-      renderableMatches.push({
-        params: {},
-        pathname: "/",
-        pathnameBase: "/",
-        route: {
-          id: "root",
-          path: "/",
-          hasErrorBoundary: !!root.ErrorBoundary,
-          handle: root.handle,
-          shouldRevalidate: root.shouldRevalidate,
-        },
-      });
-    }
+    renderableMatches = [getDefaultRenderableMatch(root)];
   }
 
-  let matchesWithMeta: RouteMatchWithMeta[] = renderableMatches.map(
-    (match) => ({
-      ...match,
-      meta: [],
-    })
-  );
+  let matchesWithMeta: RouteMatchWithMeta[] = renderableMatches.map((match) => {
+    return { ...match, meta: [] };
+  });
 
   let index = -1;
   for (let match of renderableMatches) {
@@ -819,7 +791,7 @@ function V2Meta() {
 
 export function Meta() {
   let { future } = useRemixContext();
-  return future?.v2_meta ? <V2Meta /> : <V1Meta />;
+  return future.v2_meta ? <V2Meta /> : <V1Meta />;
 }
 
 export interface AwaitProps<Resolve> {
