@@ -648,9 +648,8 @@ function V1Meta() {
             " returns an array. This is only supported with the `v2_meta` future flag " +
             "in the Remix config. Either set the flag to `true` or update the route's " +
             "meta function to return an object." +
-            "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
-          // TODO: Add link to the docs once they are written
-          // + "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta."
+            "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta" +
+            "\n\nTo reference future flags and the v2 meta API, see https://remix.run/docs/en/v1/route/meta#metav2."
         );
       }
       Object.assign(meta, routeMeta);
@@ -786,8 +785,7 @@ function V2Meta() {
           match.route.path +
           " returns an invalid value. In v2, all route meta functions must " +
           "return an array of meta objects." +
-          // TODO: Add link to the docs once they are written
-          // "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta." +
+          "\n\nTo reference future flags and the v2 meta API, see https://remix.run/docs/en/v1/route/meta#metav2." +
           "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
       );
     }
