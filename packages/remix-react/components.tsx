@@ -75,6 +75,7 @@ import type {
   TransitionStates,
 } from "./transition";
 import { IDLE_TRANSITION, IDLE_FETCHER } from "./transition";
+import type { RouteData } from "./routeData";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -374,11 +375,29 @@ export function composeEventHandlers<
  */
 export function Links() {
   let { manifest, routeModules } = useRemixContext();
-  let { matches } = useDataRouterStateContext();
+  let { matches, errors } = useDataRouterStateContext();
+
+  let renderableMatches = getRenderableMatches(matches, errors);
+
+  if (!renderableMatches) {
+    renderableMatches = [];
+    let root = routeModules["root"];
+    if (root.ErrorBoundary) {
+      renderableMatches.push({
+        params: {},
+        pathname: "",
+        pathnameBase: "/",
+        route: {
+          id: "root",
+          hasErrorBoundary: !!root.ErrorBoundary,
+        },
+      });
+    }
+  }
 
   let links = React.useMemo(
-    () => getLinksForMatches(matches, routeModules, manifest),
-    [matches, routeModules, manifest]
+    () => getLinksForMatches(renderableMatches!, routeModules, manifest),
+    [renderableMatches, routeModules, manifest]
   );
 
   return (
@@ -546,6 +565,31 @@ function PrefetchPageLinksImpl({
   );
 }
 
+function getRenderableMatches(
+  matches: AgnosticDataRouteMatch[],
+  errors: RouteData | null
+) {
+  if (!matches) {
+    return null;
+  }
+
+  // no error, no worries
+  if (!errors || Object.keys(errors).length === 0) {
+    return matches;
+  }
+
+  let lastRenderableIndex: number = -1;
+
+  matches.forEach((match, index) => {
+    let id = match.route.id;
+    if (errors[id]) {
+      lastRenderableIndex = index;
+    }
+  });
+
+  return matches.slice(0, lastRenderableIndex + 1);
+}
+
 /**
  * Renders the `<title>` and `<meta>` tags for the current routes.
  *
@@ -553,13 +597,31 @@ function PrefetchPageLinksImpl({
  */
 function V1Meta() {
   let { routeModules } = useRemixContext();
-  let { matches, loaderData } = useDataRouterStateContext();
+  let { matches, loaderData, errors } = useDataRouterStateContext();
   let location = useLocation();
 
   let meta: V1_HtmlMetaDescriptor = {};
   let parentsData: { [routeId: string]: AppData } = {};
 
-  for (let match of matches) {
+  let renderableMatches = getRenderableMatches(matches, errors);
+
+  if (!renderableMatches) {
+    renderableMatches = [];
+    let root = routeModules["root"];
+    if (root.ErrorBoundary) {
+      renderableMatches.push({
+        params: {},
+        pathname: "",
+        pathnameBase: "/",
+        route: {
+          id: "root",
+          hasErrorBoundary: !!root.ErrorBoundary,
+        },
+      });
+    }
+  }
+
+  for (let match of renderableMatches) {
     let routeId = match.route.id;
     let data = loaderData[routeId];
     let params = match.params;
@@ -652,20 +714,40 @@ function V1Meta() {
 
 function V2Meta() {
   let { routeModules } = useRemixContext();
-  let { matches, loaderData } = useDataRouterStateContext();
+  let { matches, loaderData, errors } = useDataRouterStateContext();
   let location = useLocation();
 
   let meta: V2_HtmlMetaDescriptor[] = [];
   let leafMeta: V2_HtmlMetaDescriptor[] | null = null;
   let parentsData: { [routeId: string]: AppData } = {};
 
-  let matchesWithMeta: RouteMatchWithMeta[] = matches.map((match) => ({
-    ...match,
-    meta: [],
-  }));
+  let renderableMatches = getRenderableMatches(matches, errors);
+
+  if (!renderableMatches) {
+    renderableMatches = [];
+    let root = routeModules["root"];
+    if (root.ErrorBoundary) {
+      renderableMatches.push({
+        params: {},
+        pathname: "",
+        pathnameBase: "/",
+        route: {
+          id: "root",
+          hasErrorBoundary: !!root.ErrorBoundary,
+        },
+      });
+    }
+  }
+
+  let matchesWithMeta: RouteMatchWithMeta[] = renderableMatches.map(
+    (match) => ({
+      ...match,
+      meta: [],
+    })
+  );
 
   let index = -1;
-  for (let match of matches) {
+  for (let match of renderableMatches) {
     index++;
     let routeId = match.route.id;
     let data = loaderData[routeId];
