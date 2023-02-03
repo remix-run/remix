@@ -780,27 +780,27 @@ test.describe("ErrorBoundary", () => {
           `,
 
           [`app/routes${LINKS_ERROR}.jsx`]: js`
-          export function links() {
-            throw new Error("Kaboom!")
-          }
+            export function links() {
+              throw new Error("Kaboom!")
+            }
 
-          export default function () {
-            return <div/>
-          }
-        `,
+            export default function () {
+              return <div/>
+            }
+          `,
 
           [`app/routes${META_ERROR}.jsx`]: js`
-          export function meta() {
-            throw new Error("Kaboom!")
-          }
+            export function meta() {
+              throw new Error("Kaboom!")
+            }
 
-          export default function () {
-            return <div/>
-          }
-        `,
+            export default function () {
+              return <div/>
+            }
+          `,
         },
       });
-      appFixture = await createAppFixture(fixture);
+      appFixture = await createAppFixture(fixture, ServerMode.Development);
     });
 
     test.afterAll(() => {
