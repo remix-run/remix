@@ -32,7 +32,10 @@ export interface AssetsManifest {
     };
   };
   cssBundleHref?: string;
-  hmrRuntime?: string;
+  hmr?: {
+    runtime: string;
+    routes: Record<string, { loaderHash: string }>;
+  };
 }
 
 export async function createAssetsManifest({
@@ -40,11 +43,13 @@ export async function createAssetsManifest({
   metafile,
   cssBundlePath,
   timestamp,
+  hmr,
 }: {
   config: RemixConfig;
   metafile: esbuild.Metafile;
   cssBundlePath?: string;
   timestamp?: number;
+  hmr?: AssetsManifest["hmr"];
 }): Promise<AssetsManifest> {
   function resolveUrl(outputPath: string): string {
     return createUrl(
@@ -122,16 +127,7 @@ export async function createAssetsManifest({
 
   let cssBundleHref = cssBundlePath ? resolveUrl(cssBundlePath) : undefined;
 
-  let hmrRuntime: string | undefined;
-  for (let [outputPath, output] of Object.entries(metafile.outputs)) {
-    if (Object.keys(output.inputs).includes("remix-hmr:remix:hmr")) {
-      hmrRuntime =
-        config.publicPath +
-        path.relative(config.assetsBuildDirectory, path.resolve(outputPath));
-    }
-  }
-
-  return { version, entry, routes, cssBundleHref, hmrRuntime };
+  return { version, entry, routes, cssBundleHref, hmr };
 }
 
 type ImportsCache = { [routeId: string]: string[] };

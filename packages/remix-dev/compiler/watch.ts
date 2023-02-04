@@ -4,9 +4,9 @@ import * as path from "path";
 
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
-import type { AssetsManifest } from "./assets";
 import { logCompileFailure } from "./onCompileFailure";
 import type { CompileOptions } from "./options";
+import type { CompileResult } from "./remixCompiler";
 import { compile, createRemixCompiler, dispose } from "./remixCompiler";
 import { warnOnce } from "./warnings";
 
@@ -23,11 +23,7 @@ function isEntryPoint(config: RemixConfig, file: string): boolean {
 export type WatchOptions = Partial<CompileOptions> & {
   reloadConfig?(root: string): Promise<RemixConfig>;
   onRebuildStart?(): void;
-  onRebuildFinish?(
-    durationMs: number,
-    assetsManifest?: AssetsManifest,
-    hmrUpdates?: unknown[]
-  ): void;
+  onRebuildFinish?(durationMs: number, result?: CompileResult): void;
   onFileCreated?(file: string): void;
   onFileChanged?(file: string): void;
   onFileDeleted?(file: string): void;
@@ -81,19 +77,17 @@ export async function watch(
     }
 
     compiler = createRemixCompiler(config, options);
-    let { assetsManifest, hmrUpdates } =
-      (await compile(compiler, { onCompileFailure })) ?? {};
-    onRebuildFinish?.(Date.now() - start, assetsManifest, hmrUpdates);
+    let result = await compile(compiler, { onCompileFailure });
+    onRebuildFinish?.(Date.now() - start, result);
   }, 500);
 
   let rebuild = debounce(async () => {
     onRebuildStart?.();
     let start = Date.now();
-    let { assetsManifest, hmrUpdates } =
-      (await compile(compiler, {
-        onCompileFailure,
-      })) ?? {};
-    onRebuildFinish?.(Date.now() - start, assetsManifest, hmrUpdates);
+    let result = await compile(compiler, {
+      onCompileFailure,
+    });
+    onRebuildFinish?.(Date.now() - start, result);
   }, 100);
 
   let toWatch = [config.appDirectory];

@@ -11,6 +11,7 @@ import * as Compiler from "./compiler";
 import { type RemixConfig } from "./config";
 import { loadEnv } from "./env";
 import * as LiveReload from "./liveReload";
+import * as HMR from "./hmr";
 
 let info = (message: string) => console.info(`💿 ${message}`);
 
@@ -116,6 +117,7 @@ export let serve = async (
 
   // watch and live reload on rebuilds
   let socket = LiveReload.serve({ port: dev.port });
+  let prevResult: Compiler.CompileResult | undefined = undefined;
   let dispose = await Compiler.watch(config, {
     mode: "development",
     liveReloadPort: dev.port,
@@ -124,8 +126,9 @@ export let serve = async (
       clean(config);
       socket.log("Rebuilding...");
     },
-    onRebuildFinish: async (durationMs, assetsManifest, hmrUpdates) => {
-      if (!assetsManifest) return;
+    onRebuildFinish: async (durationMs, result) => {
+      if (!result) return;
+      let { assetsManifest } = result;
       socket.log(`Rebuilt in ${prettyMs(durationMs)}`);
 
       info(`Waiting for ${appServerOrigin}...`);
@@ -136,14 +139,13 @@ export let serve = async (
         setTimeout(resolve, -1);
       });
 
-      console.log({
-        hmrUpdates,
-      });
-      if (hmrUpdates) {
-        socket.hmr(assetsManifest, hmrUpdates);
+      if (assetsManifest.hmr && prevResult) {
+        let updates = HMR.updates(result, prevResult);
+        socket.hmr(assetsManifest, updates);
         return;
       }
       socket.reload();
+      prevResult = result;
     },
     onFileCreated: (file) => socket.log(`File created: ${relativePath(file)}`),
     onFileChanged: (file) => socket.log(`File changed: ${relativePath(file)}`),

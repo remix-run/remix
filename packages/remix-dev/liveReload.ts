@@ -2,10 +2,12 @@ import WebSocket from "ws";
 
 import type { AssetsManifest } from "./compiler/assets";
 
+type HMR_Update = {};
+
 type Message =
   | { type: "RELOAD" }
-  | { type: "HMR"; assetsManifest: AssetsManifest; updates: unknown[] }
-  | { type: "LOG"; message: string };
+  | { type: "LOG"; message: string }
+  | { type: "HMR"; assetsManifest: AssetsManifest; updates: HMR_Update[] };
 
 type Broadcast = (message: Message) => void;
 
@@ -28,7 +30,7 @@ export let serve = (options: { port: number }) => {
     broadcast({ type: "LOG", message: _message });
   };
 
-  let hmr = (assetsManifest: AssetsManifest, updates: unknown[]) => {
+  let hmr = (assetsManifest: AssetsManifest, updates: HMR_Update[]) => {
     broadcast({ type: "HMR", assetsManifest, updates });
   };
 
