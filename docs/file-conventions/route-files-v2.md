@@ -368,7 +368,7 @@ routes/app/index.tsx
 
 # as are these
 routes/app._index.tsx
-route/app._index/index.tsx
+routes/app._index/index.tsx
 ```
 
 In other words `_index` has meaning for Remix index routes, `index` has node module resolution meaning and creates index modules.
