@@ -27,7 +27,7 @@ export type WatchOptions = Partial<CompileOptions> & {
   onFileCreated?(file: string): void;
   onFileChanged?(file: string): void;
   onFileDeleted?(file: string): void;
-  onInitialBuild?(durationMs: number): void;
+  onInitialBuild?(durationMs: number, result?: CompileResult): void;
 };
 
 export async function watch(
@@ -61,8 +61,8 @@ export async function watch(
   let compiler = createRemixCompiler(config, options);
 
   // initial build
-  await compile(compiler, { onCompileFailure });
-  onInitialBuild?.(Date.now() - start);
+  let result = await compile(compiler, { onCompileFailure });
+  onInitialBuild?.(Date.now() - start, result);
 
   let restart = debounce(async () => {
     onRebuildStart?.();

@@ -19,6 +19,7 @@ export let hmrPlugin = ({
         };
       });
       build.onLoad({ filter: /.*/, namespace: "hmr-runtime" }, () => {
+        console.log("HMR!!!!");
         let contents = `
 import RefreshRuntime from "react-refresh/runtime";
 

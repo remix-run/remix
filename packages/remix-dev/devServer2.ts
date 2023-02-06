@@ -121,7 +121,10 @@ export let serve = async (
   let dispose = await Compiler.watch(config, {
     mode: "development",
     liveReloadPort: dev.port,
-    onInitialBuild: (durationMs) => info(`Built in ${prettyMs(durationMs)}`),
+    onInitialBuild: (durationMs, result) => {
+      info(`Built in ${prettyMs(durationMs)}`);
+      prevResult = result;
+    },
     onRebuildStart: () => {
       clean(config);
       socket.log("Rebuilding...");
@@ -140,11 +143,12 @@ export let serve = async (
       });
 
       if (assetsManifest.hmr && prevResult) {
-        let updates = HMR.updates(result, prevResult);
+        let updates = HMR.updates(config, result, prevResult);
+        console.log({ updates });
         socket.hmr(assetsManifest, updates);
-        return;
+      } else {
+        socket.reload();
       }
-      socket.reload();
       prevResult = result;
     },
     onFileCreated: (file) => socket.log(`File created: ${relativePath(file)}`),

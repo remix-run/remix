@@ -52,9 +52,11 @@ export async function createAssetsManifest({
   hmr?: AssetsManifest["hmr"];
 }): Promise<AssetsManifest> {
   function resolveUrl(outputPath: string): string {
-    return createUrl(
-      config.publicPath,
-      path.relative(config.assetsBuildDirectory, path.resolve(outputPath))
+    return (
+      createUrl(
+        config.publicPath,
+        path.relative(config.assetsBuildDirectory, path.resolve(outputPath))
+      ) + (timestamp ? `?t=${timestamp}` : "")
     );
   }
 
@@ -63,7 +65,7 @@ export async function createAssetsManifest({
   ): string[] {
     return imports
       .filter((im) => im.kind === "import-statement")
-      .map((im) => resolveUrl(im.path) + (timestamp ? `?t=${timestamp}` : ""));
+      .map((im) => resolveUrl(im.path));
   }
 
   let routesByFile: Map<string, Route[]> = Object.keys(config.routes).reduce(

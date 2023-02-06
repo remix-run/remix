@@ -191,13 +191,14 @@ export const createBrowserCompiler = (
   let appCompiler: esbuild.BuildIncremental;
   let cssCompiler: esbuild.BuildIncremental;
 
-  let compile = async (manifestChannel: WriteChannel<AssetsManifest>) => {
-    let hmrRoutes: Record<string, { loaderHash: string }> = {};
-    let onLoader = (filename: string, code: string) => {
-      let key = path.relative(remixConfig.appDirectory, filename);
-      hmrRoutes[key] = { loaderHash: code };
-    };
+  let hmrRoutes: Record<string, { loaderHash: string }> = {};
+  let onLoader = (filename: string, code: string) => {
+    let key = path.relative(remixConfig.rootDirectory, filename);
+    hmrRoutes[key] = { loaderHash: code };
+  };
 
+  let compile = async (manifestChannel: WriteChannel<AssetsManifest>) => {
+    hmrRoutes = {};
     let appBuildTask = async () => {
       appCompiler = await (!appCompiler
         ? esbuild.build({
@@ -304,7 +305,7 @@ export const createBrowserCompiler = (
     let hmr: AssetsManifest["hmr"] | undefined = undefined;
     if (options.mode === "development") {
       let hmrRuntimeOutput = Object.entries(metafile.outputs).find(
-        ([_, output]) => output.inputs["remix-hmr:remix:hmr"]
+        ([_, output]) => output.inputs["hmr-runtime:remix:hmr"]
       )?.[0];
       invariant(hmrRuntimeOutput, "Expected to find HMR runtime in outputs");
       let hmrRuntime =
@@ -326,8 +327,8 @@ export const createBrowserCompiler = (
       timestamp: options.mode === "development" ? timestamp : undefined,
       hmr,
     });
-    manifestChannel.write(manifest);
     await writeAssetsManifest(remixConfig, manifest);
+    manifestChannel.write(manifest);
     return metafile;
   };
 
