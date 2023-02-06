@@ -24,3 +24,14 @@ Each Remix server runtime package MAY:
 - Re-export the [default implementations](./index.ts) as its implementations
 - Export custom implementations adhering to the [interface types](./interface.ts)
 - Provide additional exports relevant for that runtime
+
+## Community Runtimes
+
+Remix runs on any platform where a runtime package exists and implements the above requirements.
+
+The following is a list of community-provided runtimes:
+
+- [`@fastly/remix-server-runtime`][fastly-remix-server-runtime] - For [Fastly Compute@Edge][fastly-compute-at-edge].
+
+[fastly-remix-server-runtime]: https://github.com/fastly/remix-compute-js/tree/main/packages/remix-server-runtime
+[fastly-compute-at-edge]: https://developer.fastly.com/learning/compute/
