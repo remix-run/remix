@@ -27,6 +27,7 @@ Each adapter has the same API. In the future we may have helpers specific to the
 ## Community Adapters
 
 - [`remix-google-cloud-functions`][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
+- [`@fastly/remix-server-adapter`][fastly-remix-server-adapter] - For [Fastly Compute@Edge][fastly-compute-at-edge].
 
 ## Creating an Adapter
 
@@ -180,3 +181,5 @@ addEventListener("fetch", (event) => {
 [remix-google-cloud-functions]: https://github.com/penx/remix-google-cloud-functions
 [google-cloud-functions]: https://cloud.google.com/functions
 [firebase-functions]: https://firebase.google.com/docs/functions
+[fastly-remix-server-adapter]: https://github.com/fastly/remix-compute-js/tree/main/packages/remix-server-adapter
+[fastly-compute-at-edge]: https://developer.fastly.com/learning/compute/
