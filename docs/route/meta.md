@@ -185,7 +185,7 @@ const title = {
 
 ## `matches`
 
-This is a list of the current route matches. You have access many things, particularly the meta from the parent matches and data.
+This is a list of the current route matches. You have access to many things, particularly the meta from the parent matches and data.
 
 It's most useful for merging the parent meta into the child meta since the child meta value is what will be used:
 
