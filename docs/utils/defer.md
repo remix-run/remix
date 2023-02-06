@@ -7,7 +7,7 @@ toc: false
 
 This is a shortcut for creating a streaming/deferred response. It assumes you are using `utf-8` encoding. From a developer perspective it behaves just like [`json()`][json], but with the ability to transport promises to your UI components.
 
-```ts lines=[2,5,10]
+```ts lines=[1,7-10]
 import { defer } from "@remix-run/node"; // or cloudflare/deno
 
 export const loader = async () => {
