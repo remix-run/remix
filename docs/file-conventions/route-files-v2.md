@@ -315,8 +315,8 @@ Consider these routes:
 
 ```
 routes/
-  _landing.about.tsx
   _landing._index.tsx
+  _landing.about.tsx
   _landing.tsx
   app._index.tsx
   app.projects.tsx
@@ -324,54 +324,52 @@ routes/
   app_.projects.$id.roadmap.tsx
 ```
 
-Some, or all of them can be folders holding their own modules inside:
+Some, or all of them can be folders holding their own modules inside.
 
 ```
 routes/
+  _landing._index/
+    route.tsx
+    scroll-experience.tsx
   _landing.about/
-    index.tsx
     employee-profile-card.tsx
     get-employee-data.server.tsx
+    route.tsx
     team-photo.jpg
-  _landing._index/
-    index.tsx
-    scroll-experience.tsx
   _landing/
-    index.tsx
     header.tsx
     footer.tsx
+    route.tsx
   app._index/
-    index.tsx
+    route.tsx
     stats.tsx
   app.projects/
-    index.tsx
-    project-card.tsx
     get-projects.server.tsx
+    project-card.tsx
     project-buttons.tsx
+    route.tsx
   app/
-    index.tsx
     primary-nav.tsx
+    route.tsx
     footer.tsx
   app_.projects.$id.roadmap/
-    index.tsx
+    route.tsx
     chart.tsx
     update-timeline.server.tsx
   contact-us.tsx
 ```
 
-Note that `app/index.tsx` is _not_ the the "index route" for `app/`. It is the node module resolution "index module" for the folder `routes/app/`. The index route for `app/` is `app._index/index.tsx`. The only thing that contributes to the route path is the folder name.
+Note that the `route.tsx` file is the actual route module, the rest are ignored by the convention.
 
 ```
 # these are the same route:
 routes/app.tsx
-routes/app/index.tsx
+routes/app/route.tsx
 
 # as are these
 routes/app._index.tsx
-route/app._index/index.tsx
+route/app._index/route.tsx
 ```
-
-In other words `_index` has meaning for Remix index routes, `index` has node module resolution meaning and creates index modules.
 
 ## Scaling
 
