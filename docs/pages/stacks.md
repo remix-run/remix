@@ -71,7 +71,7 @@ Community-provided templates can help you get started with other platforms or id
 
 #### Dependency versions
 
-If you set the any dependencies in package.json to `*`, the Remix CLI will change it to a semver caret of the latest released version:
+If you set any dependencies in package.json to `*`, the Remix CLI will change it to a semver caret of the latest released version:
 
 ```diff
 -   "remix": "*",

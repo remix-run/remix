@@ -7,7 +7,7 @@ order: 2
 
 ## Official Adapters
 
-Idiomatic Remix apps can generally be deployed anywhere because Remix adapt's the server's request/response to the [Web Fetch API][web-fetch-api]. It does this through adapters. We maintain a few adapters:
+Idiomatic Remix apps can generally be deployed anywhere because Remix adapts the server's request/response to the [Web Fetch API][web-fetch-api]. It does this through adapters. We maintain a few adapters:
 
 - `@remix-run/architect`
 - `@remix-run/cloudflare-pages`
