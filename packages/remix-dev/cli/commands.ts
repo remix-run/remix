@@ -265,6 +265,8 @@ export async function generateEntry(remixRoot: string, entry: string) {
       type: "conjunction",
     });
 
+export async function generateEntry(entry: string, remixRoot: string) {
+  let config = await readConfig(remixRoot);
     let entriesArray = Array.from(entries);
     let list = listFormat.format(entriesArray);
 
@@ -274,7 +276,7 @@ export async function generateEntry(remixRoot: string, entry: string) {
     return;
   }
 
-  let pkgJson = await NPMCliPackageJson.load(remixRoot);
+  let pkgJson = await NPMCliPackageJson.load(config.rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
 
   let runtime = deps["@remix-run/deno"]
@@ -310,7 +312,7 @@ export async function generateEntry(remixRoot: string, entry: string) {
   // otherwise, copy the entry file from the defaults
   if (/\.jsx?$/.test(entry)) {
     let javascript = convertFileToJS(contents, {
-      cwd: remixRoot,
+      cwd: config.rootDirectory,
       filename: isServerEntry ? defaultEntryServer : defaultEntryClient,
     });
     await fse.writeFile(outputFile, javascript, "utf-8");
@@ -320,7 +322,10 @@ export async function generateEntry(remixRoot: string, entry: string) {
 
   console.log(
     colors.blue(
-      `Entry file ${entry} created at ${path.relative(remixRoot, outputFile)}.`
+      `Entry file ${entry} created at ${path.relative(
+        config.rootDirectory,
+        outputFile
+      )}.`
     )
   );
 }
