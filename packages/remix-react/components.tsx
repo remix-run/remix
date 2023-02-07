@@ -903,11 +903,11 @@ export function Scripts(props: ScriptProps) {
           : "");
 
     let routeModulesScript;
-    if (manifest.hmrRuntime) {
+    if (manifest.hmr?.runtime) {
       routeModulesScript = !isStatic
         ? " "
         : `import ${JSON.stringify(manifest.url)};
-import(${JSON.stringify(manifest.hmrRuntime)}).then(() => Promise.all([
+import(${JSON.stringify(manifest.hmr.runtime)}).then(() => Promise.all([
   ${matches
     .map(
       (match) =>
