@@ -456,7 +456,9 @@ export async function readConfig(
   let pkgJson = await NPMCliPackageJson.load(remixRoot);
   let deps = pkgJson.content.dependencies ?? {};
 
-  if (!userEntryServerFile) {
+  if (userEntryServerFile) {
+    entryServerFile = userEntryServerFile;
+  } else {
     if (!deps["isbot"]) {
       console.log(`adding "isbot" to your package.json`);
 
@@ -502,11 +504,11 @@ export async function readConfig(
     }
 
     entryServerFile = `entry.server.${serverRuntime}.tsx`;
-  } else {
-    entryServerFile = userEntryServerFile;
   }
 
-  if (!userEntryClientFile) {
+  if (userEntryClientFile) {
+    entryClientFile = userEntryClientFile;
+  } else {
     let clientRuntime = deps["@remix-run/react"] ? "react" : undefined;
 
     if (!clientRuntime) {
@@ -516,8 +518,6 @@ export async function readConfig(
     }
 
     entryClientFile = `entry.client.${clientRuntime}.tsx`;
-  } else {
-    entryClientFile = userEntryClientFile;
   }
 
   let entryClientFilePath = userEntryClientFile
