@@ -451,11 +451,12 @@ export async function readConfig(
   let userEntryServerFile = findEntry(appDirectory, "entry.server");
 
   let entryServerFile: string;
+  let entryClientFile: string;
+
+  let pkgJson = await NPMCliPackageJson.load(remixRoot);
+  let deps = pkgJson.content.dependencies ?? {};
 
   if (!userEntryServerFile) {
-    let pkgJson = await NPMCliPackageJson.load(remixRoot);
-    let deps = pkgJson.content.dependencies ?? {};
-
     if (!deps["isbot"]) {
       console.log(`adding "isbot" to your package.json`);
 
@@ -480,7 +481,7 @@ export async function readConfig(
       });
     }
 
-    let runtime = deps["@remix-run/deno"]
+    let serverRuntime = deps["@remix-run/deno"]
       ? "deno"
       : deps["@remix-run/cloudflare"]
       ? "cloudflare"
@@ -488,20 +489,36 @@ export async function readConfig(
       ? "node"
       : undefined;
 
-    if (!runtime) {
+    if (!serverRuntime) {
+      let serverRuntimes = [
+        "@remix-run/deno",
+        "@remix-run/cloudflare",
+        "@remix-run/node",
+      ];
+      let formattedList = listFormat.format(serverRuntimes);
       throw new Error(
-        `Could not determine runtime. Please install one of the following: @remix-run/deno, @remix-run/cloudflare, @remix-run/node`
+        `Could not determine server runtime. Please install one of the following: ${formattedList}`
       );
     }
 
-    entryServerFile = `entry.server.${runtime}.tsx`;
+    entryServerFile = `entry.server.${serverRuntime}.tsx`;
   } else {
     entryServerFile = userEntryServerFile;
   }
 
-  let entryClientFile = userEntryClientFile
-    ? userEntryClientFile
-    : "entry.client.tsx";
+  if (!userEntryClientFile) {
+    let clientRuntime = deps["@remix-run/react"] ? "react" : undefined;
+
+    if (!clientRuntime) {
+      throw new Error(
+        `Could not determine runtime. Please install the following: @remix-run/react`
+      );
+    }
+
+    entryClientFile = `entry.client.${clientRuntime}.tsx`;
+  } else {
+    entryClientFile = userEntryClientFile;
+  }
 
   let entryClientFilePath = userEntryClientFile
     ? path.resolve(appDirectory, userEntryClientFile)
@@ -699,3 +716,10 @@ const resolveServerBuildPath = (
 
   return path.resolve(rootDirectory, serverBuildPath);
 };
+
+// @ts-expect-error available in node 12+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
+let listFormat = new Intl.ListFormat("en", {
+  style: "long",
+  type: "conjunction",
+});

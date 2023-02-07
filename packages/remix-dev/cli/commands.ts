@@ -292,11 +292,10 @@ export async function generateEntry(entry: string, remixRoot: string) {
       "@remix-run/cloudflare",
       "@remix-run/node",
     ];
+    let formattedList = listFormat.format(serverRuntimes);
     console.error(
       colors.error(
-        `Could not determine server runtime. Please install one of the following: ${listFormat.format(
-          serverRuntimes
-        )}`
+        `Could not determine server runtime. Please install one of the following: ${formattedList}`
       )
     );
     return;
