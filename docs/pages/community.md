@@ -23,23 +23,11 @@ Our [GitHub discussions forum][git-hub-discussions-forum] is a good place to cha
 
 You can find (and create) examples in the [Remix examples repository][the-examples-repository].
 
-## Community Runtimes
-
-You can find a list of Community Runtimes in the [@remix-run/server-runtime][remix-run-server-runtime] package.
-
-If you've written your own runtime, and think it will be valuable for others, you can update that list on GitHub.
-
 ## Community Adapters
 
 You can find Community Adapters in the [Adapters][community-adapters] section of the documentation.
 
 If you've written your own adapter, and think it will be valuable for others, you can [update this list on GitHub][community-adapters-github].
-
-## Community Templates
-
-A list of Community Templates is in the [Stacks][community-templates] section of the documentation.
-
-If you've written your own template, and think it will be valuable for others, you can [update this list on GitHub][community-templates-github].
 
 ## Courses
 
@@ -116,8 +104,5 @@ There are Remix Meetups all over the world with thousands of members. Some onlin
 [frontend-masters]: https://frontendmasters.com
 [remix-fundamentals]: https://frontendmasters.com/courses/remix/
 [advanced-remix]: https://frontendmasters.com/courses/advanced-remix/
-[remix-run-server-runtime]: https://github.com/remix-run/remix/blob/main/packages/remix-server-runtime/README.md#community-runtimes
 [community-adapters]: ../other-api/adapter#community-adapters
 [community-adapters-github]: https://github.com/remix-run/remix/blob/main/docs/other-api/adapter.md#community-adapters
-[community-template]: ../pages/stacks#community-templates
-[community-templates-github]: https://github.com/remix-run/remix/blob/main/docs/pages/stacks.md#community-templates

@@ -59,14 +59,6 @@ npx create-remix@latest --template your-private/repo --token yourtoken
 
 The [token just needs `repo` access][repo access token].
 
-### Community Templates
-
-Community-provided templates can help you get started with other platforms or ideas. These are not owned or maintained by Remix.
-
-#### Platforms
-
-- [Remix + Fastly Compute@Edge][fastly-remix-template]: Deployed to [Fastly's Compute@Edge][fastly-compute-at-edge].
-
 ### Custom Template Tips
 
 #### Dependency versions
@@ -99,5 +91,3 @@ If there's a `tsconfig.json` file in the root of the project, the Remix CLI will
 [the-blues-stack]: https://github.com/remix-run/blues-stack
 [the-indie-stack]: https://github.com/remix-run/indie-stack
 [the-grunge-stack]: https://github.com/remix-run/grunge-stack
-[fastly-remix-template]:  https://github.com/fastly/remix-compute-js/tree/main/packages/remix-template
-[fastly-compute-at-edge]: https://developer.fastly.com/learning/compute/
