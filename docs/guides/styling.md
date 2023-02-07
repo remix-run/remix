@@ -76,7 +76,7 @@ Remix also supports "runtime" frameworks like styled components where styles are
 
 All this is to say that **we're still researching how best to integrate and work with the frameworks that require compiler integration**. With Remix's unique ability to prefetch, add, and remove CSS for partial UI on the page, we anticipate CSS frameworks will have some new ideas on how to support building actual CSS files to better support Remix and the performance of websites using them.
 
-The two most popular approaches in the Remix community are route-based stylesheets and [Tailwind][tailwind]. Both have exceptional performance characteristics. In this document we'll show how to use these two approaches as well as a few more.
+The two most popular approaches in the Remix community are route-based stylesheets and [Tailwind][tailwind]. Both have exceptional performance characteristics. In this document, we'll show how to use these two approaches as well as a few more.
 
 ## Regular Stylesheets
 
@@ -251,7 +251,7 @@ export function links() {
 
 Now Remix can prefetch, load, and unload the styles for `button.css`, `primary-button.css`, and the route's `index.css`.
 
-An initial reaction to this is that routes have to know more than you want them to. Keep in mind each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
+An initial reaction to this is that routes have to know more than you want them to. Keep in mind that each component must be imported already, so it's not introducing a new dependency, just some boilerplate to get the assets. For example, consider a product category page like this:
 
 ```tsx filename=app/routes/$category.js lines=[5-9,25-32]
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
@@ -475,7 +475,7 @@ Note that if you're also using Remix's [built-in PostCSS support][built-in-post-
 
 It's also possible to use Tailwind without leveraging the built-in support by using the `tailwindcss` CLI directly.
 
-First install a couple dev dependencies:
+First install a couple of dev dependencies:
 
 ```sh
 npm install -D npm-run-all tailwindcss
@@ -895,13 +895,13 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 
 ## CSS Bundling
 
-<docs-warning>CSS bundling features are unstable and currently only available behind feature flags. We're confident in the use cases they solve but the API and implementation may change in the future.</docs-warning>
+<docs-warning>CSS-bundling features are unstable and currently only available behind feature flags. We're confident in the use cases they solve, but the API and implementation may change in the future.</docs-warning>
 
-<docs-warning>When using CSS bundling features, you should avoid using `export *` due to an [issue with esbuild's CSS tree shaking][esbuild-css-tree-shaking-issue].</docs-warning>
+<docs-warning>When using CSS-bundling features, you should avoid using `export *` due to an [issue with esbuild's CSS tree shaking][esbuild-css-tree-shaking-issue].</docs-warning>
 
 Many common approaches to CSS within the React community are only possible when bundling CSS, meaning that the CSS files you write during development are collected into a separate bundle as part of the build process.
 
-When using CSS bundling features, the Remix compiler will generate a single CSS file containing all bundled styles in your application. Note that any [regular stylesheet imports][regular-stylesheet-imports] will remain as separate files.
+When using CSS-bundling features, the Remix compiler will generate a single CSS file containing all bundled styles in your application. Note that any [regular stylesheet imports][regular-stylesheet-imports] will remain as separate files.
 
 Unlike many other tools in the React ecosystem, we do not insert the CSS bundle into the page automatically. Instead, we ensure that you always have control over the link tags on your page. This lets you decide where the CSS file is loaded relative to other stylesheets in your app.
 
@@ -976,7 +976,7 @@ Button.displayName = "Button";
 
 ### Vanilla Extract
 
-<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves, but the API and implementation may change in the future.</docs-warning>
 
 [Vanilla Extract][vanilla-extract] is a zero-runtime CSS-in-TypeScript (or JavaScript) library that lets you use TypeScript as your CSS preprocessor. Styles are written in separate `*.css.ts` (or `*.css.js`) files and all code within them is executed during the build process rather than in your user's browser. If you want to keep your CSS bundle size to a minimum, Vanilla Extract also provides an official library called [Sprinkles][sprinkles] that lets you define a custom set of utility classes and a type-safe function for accessing them at runtime.
 
@@ -1031,7 +1031,7 @@ Button.displayName = "Button";
 
 ### CSS Side-Effect Imports
 
-<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves, but the API and implementation may change in the future.</docs-warning>
 
 Some NPM packages use side-effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up [CSS bundling][css-bundling] in your application.
 

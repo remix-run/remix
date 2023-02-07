@@ -16,7 +16,7 @@ Idiomatic Remix apps can generally be deployed anywhere because Remix adapt's th
 - `@remix-run/netlify`
 - `@remix-run/vercel`
 
-These adapters are imported into your server's entry and is not used inside of your Remix app itself.
+These adapters are imported into your server's entry and are not used inside of your Remix app itself.
 
 If you initialized your app with `npx create-remix@latest` with something other than the built-in Remix App Server, you will note a `server/index.js` file that imports and uses one of these adapters.
 
@@ -135,7 +135,7 @@ import * as build from "../build";
 addEventListener("fetch", createEventHandler({ build }));
 ```
 
-Here's an example with the lower level Cloudflare Workers API:
+Here's an example with the lower-level Cloudflare Workers API:
 
 ```ts
 import {

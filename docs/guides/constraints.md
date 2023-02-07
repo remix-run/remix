@@ -4,7 +4,7 @@ title: Module Constraints
 
 # Module Constraints
 
-In order for Remix to run your app in both the server and browser environments, your application modules and third party dependencies need to be careful about **module side effects**.
+In order for Remix to run your app in both the server and browser environments, your application modules and third-party dependencies need to be careful about **module side effects**.
 
 - **Server-only code** - Remix will remove server-only code but it can't if you have module side effects that use server-only code.
 - **Browser-only code** - Remix renders on the server so your modules can't have module side effects or first-rendering logic that call browser-only APIs
@@ -257,9 +257,9 @@ export async function redirectToStripeCheckout(sessionId) {
 
 <docs-info>You need to avoid any browser-only module side effects like accessing window or initializing APIs in the module scope.</docs-info>
 
-### Initializing Browser Only APIs
+### Initializing Browser-Only APIs
 
-The most common scenario is initializing a third party API when your module is imported. There are a couple ways to easily deal with this.
+The most common scenario is initializing a third-party API when your module is imported. There are a couple ways to easily deal with this.
 
 #### Document Guard
 

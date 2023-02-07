@@ -160,7 +160,7 @@ export default function Root() {
 Notice a few things here:
 
 - We got rid of the `noscript` tag. We're server rendering now, which means users who disable JavaScript will still be able to see our app (and over time, as you make [a few tweaks to improve progressive enhancement][a-few-tweaks-to-improve-progressive-enhancement], much of your app should still work).
-- Inside of the root element we render an `Outlet` component from `@remix-run/react`. This is the same component that you would normally use to render your matched route in a React Router app; it serves the same function here, but it's adapter for the router in Remix.
+- Inside of the root element we render an `Outlet` component from `@remix-run/react`. This is the same component that you would normally use to render your matched route in a React Router app; it serves the same function here, but it's adapted for the router in Remix.
 
 <docs-warning><strong>Important:</strong> be sure to delete the `index.html` from your `public` directory after you've created your root route. Keeping the file around may cause your server to send that HTML instead of your Remix app when accessing the `/` route.</docs-warning>
 
@@ -552,7 +552,7 @@ If you currently inject `<link />` tags into your page client-side in your exist
 
 Just as a `<link>` is rendered inside your route component and ultimately rendered in your root `<Links />` component, your app may use some injection trickery to render additional components in the document `<head>`. Often this is done to change the document's `<title>` or `<meta>` tags.
 
-Similar to `links`, each route can also export a `meta` function that—you guessed it—returns a value responsible for rendering `<meta>` tags for that route. This is useful because each route often has its own
+Similar to `links`, each route can also export a `meta` function that—you guessed it—returns a value responsible for rendering `<meta>` tags for that route. This is useful because each route often has its own.
 
 The API is slightly different for `meta`. Instead of an array, it returns an object where the keys represent the meta `name` attribute (or `property` in the case of OpenGraph tags) and the value is the `content` attribute. The object can also accept a `title` property that renders a `<title />` component specifically for that route.
 
@@ -598,7 +598,7 @@ import { Link, Outlet } from "@remix-run/react";
 
 ## Final Thoughts
 
-While we've done our best to provide a comprehensive migration guide, it's important to note that we built Remix from the ground up with a few key principles that differ significantly from how many React apps are currently built. While your app will likely run at this point, as you dig through our docs and explore our APIs, we think you'll be able to drastically reduce the complexity of your code and improve the end user experience of your app. It might take a bit of time to get there, but you can eat that elephant one bite at a time.
+While we've done our best to provide a comprehensive migration guide, it's important to note that we built Remix from the ground up with a few key principles that differ significantly from how many React apps are currently built. While your app will likely run at this point, as you dig through our docs and explore our APIs, we think you'll be able to drastically reduce the complexity of your code and improve the end-user experience of your app. It might take a bit of time to get there, but you can eat that elephant one bite at a time.
 
 Now then, go off and _remix your app_. We think you'll like what you build along the way! 💿
 

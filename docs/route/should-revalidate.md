@@ -4,7 +4,7 @@ title: shouldRevalidate
 
 # `shouldRevalidate`
 
-This function lets apps optimize which routes data should be reloaded after actions and for client side navigations.
+This function lets apps optimize which routes data should be reloaded after actions and for client-side navigations.
 
 ```ts
 import type { ShouldRevalidateFunction } from "@remix-run/react";
@@ -85,7 +85,7 @@ export function shouldRevalidate() {
 
 ## `currentParams`
 
-These are the \[URL params]\[url-params] from the URL that can be compared to the `nextParams` to decide if you need to reload or not. Perhaps you're using only a partial piece of the param for data loading, you don't need to revalidate if a superfluous part of the param changed.
+These are the [URL params][url-params] from the URL that can be compared to the `nextParams` to decide if you need to reload or not. Perhaps you're using only a partial piece of the param for data loading, you don't need to revalidate if a superfluous part of the param changed.
 
 For instance, consider an event slug with the id and an human-friendly title:
 
@@ -119,7 +119,7 @@ This is the url the navigation started from.
 
 ## `nextParams`
 
-In the case of navigation, these are the \[URL params]\[url-params] from the next location the user is requesting. Some revalidations are not navigation, so it will simply be the same as `currentParams`.
+In the case of navigation, these are the [URL params][url-params] from the next location the user is requesting. Some revalidations are not navigation, so it will simply be the same as `currentParams`.
 
 ## `nextUrl`
 
@@ -242,3 +242,5 @@ export function shouldRevalidate({
   return defaultShouldRevalidate;
 }
 ```
+
+[url-params]: ../guides/routing#dynamic-segments

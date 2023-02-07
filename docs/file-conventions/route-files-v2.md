@@ -368,7 +368,7 @@ routes/app/route.tsx
 
 # as are these
 routes/app._index.tsx
-route/app._index/route.tsx
+routes/app._index/route.tsx
 ```
 
 ## Scaling
