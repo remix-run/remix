@@ -89,7 +89,7 @@ export function serverBareModulesPlugin(
             (pkgManager === "yarn" && process.versions.pnp == null))
         ) {
           try {
-            require.resolve(path);
+            require.resolve(path, { paths: [importer] });
           } catch (error: unknown) {
             onWarning(
               `The path "${path}" is imported in ` +
@@ -120,7 +120,7 @@ export function serverBareModulesPlugin(
           kind !== "dynamic-import" &&
           remixConfig.serverPlatform === "node"
         ) {
-          warnOnceIfEsmOnlyPackage(packageName, path, onWarning);
+          warnOnceIfEsmOnlyPackage(importer, packageName, path, onWarning);
         }
 
         // Externalize everything else if we've gotten here.
@@ -149,12 +149,17 @@ function isBareModuleId(id: string): boolean {
 }
 
 function warnOnceIfEsmOnlyPackage(
+  importer: string,
   packageName: string,
   fullImportPath: string,
   onWarning: (msg: string, key: string) => void
 ) {
   try {
-    let packageDir = resolveModuleBasePath(packageName, fullImportPath);
+    let packageDir = resolveModuleBasePath(
+      importer,
+      packageName,
+      fullImportPath
+    );
     let packageJsonFile = path.join(packageDir, "package.json");
 
     if (!fs.existsSync(packageJsonFile)) {
@@ -196,8 +201,14 @@ function warnOnceIfEsmOnlyPackage(
 
 // https://github.com/nodejs/node/issues/33460#issuecomment-919184789
 // adapted to use the fullImportPath to resolve sub packages like @heroicons/react/solid
-function resolveModuleBasePath(packageName: string, fullImportPath: string) {
-  let moduleMainFilePath = require.resolve(fullImportPath);
+function resolveModuleBasePath(
+  importer: string,
+  packageName: string,
+  fullImportPath: string
+) {
+  let moduleMainFilePath = require.resolve(fullImportPath, {
+    paths: [importer],
+  });
 
   let packageNameParts = packageName.split("/");
 
