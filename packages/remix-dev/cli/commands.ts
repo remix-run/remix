@@ -311,7 +311,7 @@ export async function generateEntry(remixRoot: string, entry: string) {
   if (/\.jsx?$/.test(entry)) {
     let javascript = convertFileToJS(contents, {
       cwd: remixRoot,
-      filename: entry,
+      filename: isServerEntry ? defaultEntryServer : defaultEntryClient,
     });
     await fse.writeFile(outputFile, javascript, "utf-8");
   } else {
