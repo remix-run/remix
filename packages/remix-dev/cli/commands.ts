@@ -255,18 +255,17 @@ let clientEntries = ["entry.client.tsx", "entry.client.js", "entry.client.jsx"];
 let serverEntries = ["entry.server.tsx", "entry.server.js", "entry.server.jsx"];
 let entries = [...clientEntries, ...serverEntries];
 
-export async function generateEntry(remixRoot: string, entry: string) {
-  let config = await readConfig(remixRoot);
-  if (!entries.includes(entry)) {
-    // @ts-expect-error available in node 12+
-    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
-    let listFormat = new Intl.ListFormat("en", {
-      style: "long",
-      type: "conjunction",
-    });
+// @ts-expect-error available in node 12+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
+let listFormat = new Intl.ListFormat("en", {
+  style: "long",
+  type: "conjunction",
+});
 
 export async function generateEntry(entry: string, remixRoot: string) {
   let config = await readConfig(remixRoot);
+
+  if (!entries.includes(entry)) {
     let entriesArray = Array.from(entries);
     let list = listFormat.format(entriesArray);
 
@@ -279,7 +278,7 @@ export async function generateEntry(entry: string, remixRoot: string) {
   let pkgJson = await NPMCliPackageJson.load(config.rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
 
-  let runtime = deps["@remix-run/deno"]
+  let serverRuntime = deps["@remix-run/deno"]
     ? "deno"
     : deps["@remix-run/cloudflare"]
     ? "cloudflare"
@@ -287,17 +286,41 @@ export async function generateEntry(entry: string, remixRoot: string) {
     ? "node"
     : undefined;
 
-  if (!runtime) {
-    throw new Error(
-      `Could not determine runtime. Please install one of the following: @remix-run/deno, @remix-run/cloudflare, @remix-run/node`
+  if (!serverRuntime) {
+    let serverRuntimes = [
+      "@remix-run/deno",
+      "@remix-run/cloudflare",
+      "@remix-run/node",
+    ];
+    console.error(
+      colors.error(
+        `Could not determine server runtime. Please install one of the following: ${listFormat.format(
+          serverRuntimes
+        )}`
+      )
     );
+    return;
+  }
+
+  let clientRuntime = deps["@remix-run/react"] ? "react" : undefined;
+
+  if (!clientRuntime) {
+    console.error(
+      colors.error(
+        `Could not determine runtime. Please install the following: @remix-run/react`
+      )
+    );
+    return;
   }
 
   let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
-  let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");
+  let defaultEntryClient = path.resolve(
+    defaultsDirectory,
+    `entry.client.${clientRuntime}.tsx`
+  );
   let defaultEntryServer = path.resolve(
     defaultsDirectory,
-    `entry.server.${runtime}.tsx`
+    `entry.server.${serverRuntime}.tsx`
   );
 
   let isServerEntry = entry.startsWith("entry.server.");
