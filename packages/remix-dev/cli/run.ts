@@ -482,6 +482,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     }
     case "reveal": {
+      // TODO: simplify getting started guide
       await commands.generateEntry(input[1], input[2]);
       break;
     }
