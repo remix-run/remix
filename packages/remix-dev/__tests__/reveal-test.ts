@@ -53,7 +53,7 @@ afterEach(() => {
   console.error = originalError;
 });
 
-describe("the eject command", () => {
+describe("the reveal command", () => {
   let tempDirs = new Set<string>();
   let originalCwd = process.cwd();
 
@@ -96,8 +96,8 @@ describe("the eject command", () => {
       expect(fse.existsSync(entryServerFile)).toBeFalsy();
       expect(fse.existsSync(entryClientFile)).toBeFalsy();
 
-      await run(["eject", projectDir, "entry.server.tsx"]);
-      await run(["eject", projectDir, "entry.client.tsx"]);
+      await run(["reveal", projectDir, "entry.server.tsx"]);
+      await run(["reveal", projectDir, "entry.client.tsx"]);
 
       expect(fse.existsSync(entryServerFile)).toBeTruthy();
       expect(fse.existsSync(entryClientFile)).toBeTruthy();

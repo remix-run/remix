@@ -481,8 +481,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       await commands.codemod(input[1], input[2]);
       break;
     }
-    // TODO: come up with a better name for this command
-    case "eject": {
+    case "reveal": {
       await commands.generateEntry(input[1], input[2]);
       break;
     }
