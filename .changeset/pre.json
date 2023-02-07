@@ -21,5 +21,16 @@
     "@remix-run/testing": "1.12.0",
     "@remix-run/vercel": "1.12.0"
   },
-  "changesets": []
+  "changesets": [
+    "eleven-plums-film",
+    "fresh-toes-shout",
+    "gorgeous-meals-rescue",
+    "healthy-beers-nail",
+    "honest-crabs-sort",
+    "lemon-humans-yell",
+    "many-pans-attack",
+    "nine-apricots-breathe",
+    "olive-jokes-invent",
+    "tame-swans-burn"
+  ]
 }
