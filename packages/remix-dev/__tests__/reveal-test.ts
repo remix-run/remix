@@ -80,7 +80,6 @@ describe("the reveal command", () => {
   for (let runtime of runtimes) {
     it(`generates a "${runtime}" specific entry.server.tsx file in the app directory`, async () => {
       let projectDir = await getProjectDir(`entry.server.${runtime}`);
-      console.log({ projectDir });
       await run([
         "create",
         projectDir,
@@ -96,8 +95,8 @@ describe("the reveal command", () => {
       expect(fse.existsSync(entryServerFile)).toBeFalsy();
       expect(fse.existsSync(entryClientFile)).toBeFalsy();
 
-      await run(["reveal", projectDir, "entry.server.tsx"]);
-      await run(["reveal", projectDir, "entry.client.tsx"]);
+      await run(["reveal", "entry.server.tsx", projectDir]);
+      await run(["reveal", "entry.client.tsx", projectDir]);
 
       expect(fse.existsSync(entryServerFile)).toBeTruthy();
       expect(fse.existsSync(entryClientFile)).toBeTruthy();
