@@ -54,7 +54,10 @@ if (import.meta && import.meta.hot) {
               if (!newManifest.routes[key]) {
                 return null;
               }
-              let imported = await import(newManifest.routes[key].module);
+              let imported = await import(
+                newManifest.routes[key].module +
+                  `?t=${newManifest.hmr?.timestamp}`
+              );
               return [
                 key,
                 {

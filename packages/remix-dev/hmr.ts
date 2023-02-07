@@ -9,8 +9,6 @@ export type Update = {
   revalidate: string[];
 };
 
-let stripTimestamp = (x: string): string => x.replace(/\?t=\d+$/, "");
-
 // route id: filepaths relative to app/ dir without extension
 // filename: absolute or relative to root for things we don't handle
 // for things we handle: relative to app dir
@@ -58,12 +56,9 @@ export let updates = (
     }
 
     // when routes are diff
-    let diffModule =
-      stripTimestamp(route.module) !== stripTimestamp(prevRoute.module);
-    let xorImports = new Set(route.imports?.map(stripTimestamp) ?? []);
-    prevRoute.imports
-      ?.map(stripTimestamp)
-      .forEach(xorImports.delete.bind(xorImports));
+    let diffModule = route.module !== prevRoute.module;
+    let xorImports = new Set(route.imports ?? []);
+    prevRoute.imports?.forEach(xorImports.delete.bind(xorImports));
     if (diffModule || xorImports.size > 0) {
       updates.push({
         id: moduleId,

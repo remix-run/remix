@@ -33,6 +33,7 @@ export interface AssetsManifest {
   };
   cssBundleHref?: string;
   hmr?: {
+    timestamp: number;
     runtime: string;
     routes: Record<string, { loaderHash: string }>;
   };
@@ -42,21 +43,17 @@ export async function createAssetsManifest({
   config,
   metafile,
   cssBundlePath,
-  timestamp,
   hmr,
 }: {
   config: RemixConfig;
   metafile: esbuild.Metafile;
   cssBundlePath?: string;
-  timestamp?: number;
   hmr?: AssetsManifest["hmr"];
 }): Promise<AssetsManifest> {
   function resolveUrl(outputPath: string): string {
-    return (
-      createUrl(
-        config.publicPath,
-        path.relative(config.assetsBuildDirectory, path.resolve(outputPath))
-      ) + (timestamp ? `?t=${timestamp}` : "")
+    return createUrl(
+      config.publicPath,
+      path.relative(config.assetsBuildDirectory, path.resolve(outputPath))
     );
   }
 

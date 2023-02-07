@@ -300,8 +300,6 @@ export const createBrowserCompiler = (
       appBuildTask(),
     ]);
 
-    let timestamp = Date.now();
-
     let hmr: AssetsManifest["hmr"] | undefined = undefined;
     if (options.mode === "development") {
       let hmrRuntimeOutput = Object.entries(metafile.outputs).find(
@@ -317,6 +315,7 @@ export const createBrowserCompiler = (
       hmr = {
         runtime: hmrRuntime,
         routes: hmrRoutes,
+        timestamp: Date.now(),
       };
     }
 
@@ -324,7 +323,6 @@ export const createBrowserCompiler = (
       config: remixConfig,
       metafile: appCompiler.metafile!,
       cssBundlePath,
-      timestamp: options.mode === "development" ? timestamp : undefined,
       hmr,
     });
     await writeAssetsManifest(remixConfig, manifest);

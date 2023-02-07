@@ -6,7 +6,11 @@ import type * as HMR from "./hmr";
 type Message =
   | { type: "RELOAD" }
   | { type: "LOG"; message: string }
-  | { type: "HMR"; assetsManifest: AssetsManifest; updates: HMR.Update[] };
+  | {
+      type: "HMR";
+      assetsManifest: AssetsManifest;
+      updates: HMR.Update[];
+    };
 
 type Broadcast = (message: Message) => void;
 
