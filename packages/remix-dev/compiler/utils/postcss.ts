@@ -131,7 +131,7 @@ async function loadTailwindPlugin(
 
     // Load Tailwind from the project directory
     tailwindPath = require.resolve("tailwindcss", { paths: [rootDirectory] });
-  } catch (err) {
+  } catch {
     // If they don't have a Tailwind config or Tailwind installed, just ignore it.
     return null;
   }
