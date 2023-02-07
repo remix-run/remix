@@ -445,7 +445,6 @@ export async function readConfig(
   );
 
   let defaultsDirectory = path.resolve(__dirname, "config", "defaults");
-  let defaultEntryClient = path.resolve(defaultsDirectory, "entry.client.tsx");
 
   let userEntryClientFile = findEntry(appDirectory, "entry.client");
   let userEntryServerFile = findEntry(appDirectory, "entry.server");
@@ -522,7 +521,7 @@ export async function readConfig(
 
   let entryClientFilePath = userEntryClientFile
     ? path.resolve(appDirectory, userEntryClientFile)
-    : defaultEntryClient;
+    : path.resolve(defaultsDirectory, entryClientFile);
 
   let entryServerFilePath = userEntryServerFile
     ? path.resolve(appDirectory, userEntryServerFile)
