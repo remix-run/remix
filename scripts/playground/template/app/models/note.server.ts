@@ -7,8 +7,9 @@ export type { Note } from "@prisma/client";
 export function getNote({
   id,
   userId,
-}: Pick<Note, "id"> & {
-  userId: User["id"];
+}: {
+  id: Note["id"],
+  userId: User["id"]
 }) {
   return prisma.note.findFirst({
     select: { id: true, body: true, title: true },
@@ -28,8 +29,10 @@ export function createNote({
   body,
   title,
   userId,
-}: Pick<Note, "body" | "title"> & {
-  userId: User["id"];
+}: {
+body: Note["body"],
+title: Note["title"],
+userId: User["id"]
 }) {
   return prisma.note.create({
     data: {
@@ -47,7 +50,10 @@ export function createNote({
 export function deleteNote({
   id,
   userId,
-}: Pick<Note, "id"> & { userId: User["id"] }) {
+}: {
+id: Note["id"],
+userId: User["id"]
+}) {
   return prisma.note.deleteMany({
     where: { id, userId },
   });
