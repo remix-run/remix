@@ -1,5 +1,14 @@
 # `@remix-run/react`
 
+## 1.13.0-pre.1
+
+### Patch Changes
+
+- Update the the [latest `react-router` versions](https://github.com/remix-run/react-router/releases/tag/react-router%406.8.1) ([#5389](https://github.com/remix-run/remix/pull/5389))
+  - `react-router-dom@6.8.1`
+  - `@remix-run/router@1.3.2`
+- Added better detection for absolute urls in `<Link>`/`<NavLink>` components ([#5286](https://github.com/remix-run/remix/pull/5286)) ([#5390](https://github.com/remix-run/remix/pull/5390))
+
 ## 1.13.0-pre.0
 
 ### Minor Changes
