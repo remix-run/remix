@@ -6,7 +6,8 @@ import type { CompileResult } from "./compiler";
 export type Update = {
   id: string;
   url: string;
-  revalidate: string[];
+  revalidate: boolean;
+  reason: string;
 };
 
 // route id: filepaths relative to app/ dir without extension
@@ -37,7 +38,8 @@ export let updates = (
       updates.push({
         id: moduleId,
         url: route.module,
-        revalidate: [routeId],
+        revalidate: true,
+        reason: "Route added",
       });
       continue;
     }
@@ -50,12 +52,13 @@ export let updates = (
       updates.push({
         id: moduleId,
         url: route.module,
-        revalidate: [routeId],
+        revalidate: true,
+        reason: "Route loader changed",
       });
       continue;
     }
 
-    // when routes are diff
+    // when fingerprinted assets are diff (self or imports)
     let diffModule = route.module !== prevRoute.module;
     let xorImports = new Set(route.imports ?? []);
     prevRoute.imports?.forEach(xorImports.delete.bind(xorImports));
@@ -63,7 +66,8 @@ export let updates = (
       updates.push({
         id: moduleId,
         url: route.module,
-        revalidate: [],
+        revalidate: false,
+        reason: "Route changed",
       });
       continue;
     }

@@ -124,6 +124,8 @@ function remixLiveReloadConnect(config) {
 
         let anyAccepted = false;
         for (let update of payload.updates) {
+          console.log("[HMR] " + update.reason + " [route=" + update.id +"]")
+          if (update.revalidate) console.log("[HMR] Revalidating [route=" + update.id + "]")
           if (window.__hmr__.contexts[update.id]) {
             let accepted = window.__hmr__.contexts[update.id].emit(
               await import(update.url +  '?t=' + payload.assetsManifest.hmr.timestamp)
