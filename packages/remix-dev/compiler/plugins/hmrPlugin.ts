@@ -19,7 +19,6 @@ export let hmrPlugin = ({
         };
       });
       build.onLoad({ filter: /.*/, namespace: "hmr-runtime" }, () => {
-        console.log("HMR!!!!");
         let contents = `
 import RefreshRuntime from "react-refresh/runtime";
 
@@ -127,7 +126,7 @@ function remixLiveReloadConnect(config) {
         for (let update of payload.updates) {
           if (window.__hmr__.contexts[update.id]) {
             let accepted = window.__hmr__.contexts[update.id].emit(
-              await import(update.url)
+              await import(update.url +  '?t=' + payload.assetsManifest.hmr.timestamp)
             );
             if (accepted) {
               console.log("[HMR] Updated accepted by", update.id);
