@@ -1,5 +1,6 @@
 ---
 title: root
+toc: false
 ---
 
 # Root Route

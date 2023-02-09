@@ -4,7 +4,7 @@ title: Gotchas
 
 # Gotchas
 
-As we've built Remix, we've been laser focused on production results and scalability for your users and team working in it. Because of this, some developer experience and ecosystem compatibility issues exist that we haven't smoothed over yet.
+As we've built Remix, we've been laser focused on production results and scalability for your users and team working in it. Because of this, some developer-experience and ecosystem-compatibility issues exist that we haven't smoothed over yet.
 
 This document should help you get over these bumps.
 
@@ -93,7 +93,7 @@ export async function action() {
 
 Remix uses "tree shaking" to remove server code from browser bundles. Anything inside of Route module `loader`, `action`, and `headers` exports will be removed. It's a great approach but suffers from ecosystem compatibility.
 
-When you import a third party module, Remix checks the `package.json` of that package for `"sideEffects": false`. If that is configured, Remix knows it can safely remove the code from the client bundles. Without it, the imports remain because code may depend on the module's side effects (like setting global polyfills, etc.).
+When you import a third-party module, Remix checks the `package.json` of that package for `"sideEffects": false`. If that is configured, Remix knows it can safely remove the code from the client bundles. Without it, the imports remain because code may depend on the module's side effects (like setting global polyfills, etc.).
 
 ## Importing ESM Packages
 
@@ -106,7 +106,7 @@ Instead change the require of /app/project/node_modules/dot-prop/index.js in /ap
 
 To fix it, add the ESM package to the `serverDependenciesToBundle` option in your `remix.config.js` file.
 
-In our case here we're using the `dot-prop` package, so we would do it like this:
+In our case here, we're using the `dot-prop` package, so we would do it like this:
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
@@ -168,4 +168,19 @@ This is a hydration warning from React, and is most likely due to one of your br
 
 Check out the page in incognito mode, the warning should disappear.
 
+## CSS bundle being incorrectly tree-shaken
+
+When using [CSS bundling features][css-bundling] in combination with `export *` (e.g. when using an index file like `components/index.ts` that re-exports from all sub-directories) you may find that styles from the re-exported modules are missing from the build output.
+
+This is due to an [issue with esbuild's CSS tree shaking][esbuild-css-tree-shaking-issue]. As a workaround, you should use named re-exports instead.
+
+```diff
+-export * from "./Button";
++export { Button } from "./Button";
+```
+
+Note that, even if this issue didn't exist, we'd still recommend using named re-exports! While it may introduce a bit more boilerplate, you get explicit control over the module's public interface rather than inadvertently exposing everything.
+
 [remix-upload-handlers-like-unstable-create-file-upload-handler-and-unstable-create-memory-upload-handler]: ../utils/parse-multipart-form-data#uploadhandler
+[css-bundling]: ../guides/styling#css-bundling
+[esbuild-css-tree-shaking-issue]: https://github.com/evanw/esbuild/issues/1370

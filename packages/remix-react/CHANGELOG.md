@@ -1,5 +1,18 @@
 # `@remix-run/react`
 
+## 1.12.0
+
+### Minor Changes
+
+- Added a new development server available in the Remix config under the `unstable_dev` flag. [See the release notes](https://github.com/remix-run/remix/releases/tag/remix%401.12.0) for a full description. ([#5133](https://github.com/remix-run/remix/pull/5133))
+- You can now configure the client-side socket timeout via the new `timeoutMs` prop on `<LiveReload />` ([#4036](https://github.com/remix-run/remix/pull/4036))
+
+### Patch Changes
+
+- `<Link to>` can now accept absolute URLs. When the `to` value is an absolute URL, the underlying anchor element will behave as normal, and its URL will not be prefetched. ([#5092](https://github.com/remix-run/remix/pull/5092))
+- Bump React Router dependencies to the latest version. [See the release notes for more details.](https://github.com/remix-run/react-router/releases/tag/react-router%406.8.0) ([#5242](https://github.com/remix-run/remix/pull/5242))
+- Added support for `unstable_useBlocker` and `unstable_usePrompt` from React Router ([#5151](https://github.com/remix-run/remix/pull/5151))
+
 ## 1.11.1
 
 ## 1.11.0

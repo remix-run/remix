@@ -5,7 +5,9 @@ toc: false
 
 # `useRouteLoaderData`
 
-This hook is simply a re-export of [React Router `useRouteLoaderData`][userouteloaderdata]. Pass in a route ID and it will return the loader data for that route.
+<docs-info>This hook is simply a re-export of [React Router `useRouteLoaderData`][rr-userouteloaderdata].</docs-info>
+
+Pass in a route ID and it will return the loader data for that route.
 
 ```tsx
 import { useRouteLoaderData } from "@remix-run/react";
@@ -23,6 +25,6 @@ Remix creates the route IDs automatically. They are simply the path of the route
 | `app/routes/teams.tsx`     | `"routes/teams"`     |
 | `app/routes/teams.$id.jsx` | `"routes/teams.$id"` |
 
-For more information and usage, please refer to the [React Router `useRouteLoaderData` docs][userouteloaderdata].
+<docs-info>For more information and usage, please refer to the [React Router `useRouteLoaderData` docs][rr-userouteloaderdata].</docs-info>
 
-[userouteloaderdata]: https://reactrouter.com/en/main/hooks/use-route-loader-data
+[rr-userouteloaderdata]: https://reactrouter.com/hooks/use-route-loader-data

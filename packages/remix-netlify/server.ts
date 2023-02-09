@@ -63,7 +63,7 @@ export function createRemixRequest(event: HandlerEvent): NodeRequest {
   } else {
     let origin = event.headers.host;
     let rawPath = getRawPath(event);
-    url = new URL(rawPath, `http://${origin}`);
+    url = new URL(`http://${origin}${rawPath}`);
   }
 
   // Note: No current way to abort these for Netlify, but our router expects

@@ -185,13 +185,14 @@ Note you typically want to add an index route when you add nested routes so that
 Sometimes you want the URL to be nested but you don't want the automatic layout nesting. You can opt-out of nesting with a trailing underscore on the parent segment:
 
 <!-- prettier-ignore -->
-```markdown lines=[7]
+```markdown lines=[8]
 app/
 ├── routes/
 │   ├── _index.tsx
 │   ├── about.tsx
 │   ├── concerts.$city.tsx
 │   ├── concerts.trending.tsx
+│   ├── concerts.tsx
 │   └── concerts_.mine.tsx
 └── root.tsx
 ```
@@ -279,7 +280,7 @@ app/
 | `/`                                          | `_index.tsx`  |
 | `/beef/and/cheese`                           | `$.tsx`       |
 | `/files`                                     | `files.$.tsx` |
-| `/files/talks/remix-conf_old.pdf`            | `files/$.tsx` |
+| `/files/talks/remix-conf_old.pdf`            | `files.$.tsx` |
 | `/files/talks/remix-conf_final.pdf`          | `files.$.tsx` |
 | `/files/talks/remix-conf-FINAL-MAY_2022.pdf` | `files.$.tsx` |
 
@@ -306,50 +307,68 @@ If you want one of the special characters Remix uses for these route conventions
 
 ## Folders for Organization
 
-Routes can also be folders with a conventional `index.tsx` file inside defining the route module. The rest of the files in the folder will not become routes. This allows you to organize your code closer to the routes that use them instead of repeating the feature names across other folders.
+Routes can also be folders with a conventional node module resolution `index.tsx` file inside defining the route module. The rest of the files in the folder will not become routes. This allows you to organize your code closer to the routes that use them instead of repeating the feature names across other folders.
+
+<docs-info>The files inside a folder have no meaning for the route paths, the route path is completely defined by the folder name</docs-info>
 
 Consider these routes:
 
 ```
 routes/
+  _landing._index.tsx
   _landing.about.tsx
-  _landing.index.tsx
   _landing.tsx
+  app._index.tsx
   app.projects.tsx
   app.tsx
   app_.projects.$id.roadmap.tsx
 ```
 
-Some, or all of them can be folders holding their own modules inside:
+Some, or all of them can be folders holding their own modules inside.
 
 ```
 routes/
+  _landing._index/
+    route.tsx
+    scroll-experience.tsx
   _landing.about/
-    index.tsx
     employee-profile-card.tsx
     get-employee-data.server.tsx
+    route.tsx
     team-photo.jpg
-  _landing.index/
-    index.tsx
-    scroll-experience.tsx
   _landing/
-    index.tsx
     header.tsx
     footer.tsx
+    route.tsx
+  app._index/
+    route.tsx
+    stats.tsx
   app.projects/
-    index.tsx
-    project-card.tsx
     get-projects.server.tsx
+    project-card.tsx
     project-buttons.tsx
+    route.tsx
   app/
-    index.tsx
     primary-nav.tsx
+    route.tsx
     footer.tsx
   app_.projects.$id.roadmap/
-    index.tsx
+    route.tsx
     chart.tsx
     update-timeline.server.tsx
   contact-us.tsx
+```
+
+Note that the `route.tsx` file is the actual route module, the rest are ignored by the convention.
+
+```
+# these are the same route:
+routes/app.tsx
+routes/app/route.tsx
+
+# as are these
+routes/app._index.tsx
+route/app._index/route.tsx
 ```
 
 ## Scaling
@@ -357,7 +376,7 @@ routes/
 Our general recommendation for scale is to make every route a folder and put the modules used exclusively by that route in the folder, then put the shared modules outside of routes folder elsewhere. This has a couple benefits:
 
 - Easy to identify shared modules, so tread lightly when changing them
-- Easy to organize an refactor the modules for a specific route without creating "file organization fatigue" and cluttering up other parts of the app
+- Easy to organize and refactor the modules for a specific route without creating "file organization fatigue" and cluttering up other parts of the app
 
 ## More Flexibility
 

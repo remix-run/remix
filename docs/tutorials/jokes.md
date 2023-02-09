@@ -1963,9 +1963,9 @@ But if there's an error, you can return an object with the error messages and th
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[2-3,6,8-12,14-18,28-32,35-38,40-46,53,64,66-74,77-85,91,93-101,104-112,115-122]
+```tsx filename=app/routes/jokes/new.tsx lines=[3,6,8-12,14-18,28-32,35-38,40-46,53,64,66-74,77-85,91,93-101,104-112,115-122]
 import type { ActionArgs } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import { useActionData } from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
@@ -2121,11 +2121,11 @@ Great! You should now have a form that validates the fields on the server and di
 
 Why don't you pop open my code example for a second. I want to show you a few things about the way I'm doing this.
 
-First I want you to notice that I've added an `ActionData` type so we could get some type safety. Keep in mind that `useActionData` can return `undefined` if the action hasn't been called yet, so we've got a bit of defensive programming going on there.
+First I want you to notice that I've passed `typeof action` to the `useActionData` generic function. This way, `actionData` type will properly be inferred, and we'll get some type safety. Keep in mind that `useActionData` can return `undefined` if the action hasn't been called yet, so we've got a bit of defensive programming going on there.
 
 You may also notice that I return the fields as well. This is so that the form can be re-rendered with the values from the server in the event that JavaScript fails to load for some reason. That's what the `defaultValue` stuff is all about as well.
 
-The `badRequest` helper function is important because it gives us typechecking that ensures our return value is of type `ActionData`, while still returning the accurate HTTP status, [`400 Bad Request`][400-bad-request], to the client. If we just return the `ActionData` value, that would result in a `200 OK` response, which isn't suitable since the form submission had errors.
+The `badRequest` helper function will automatically infer the type of the passed data, while still returning the accurate HTTP status, [`400 Bad Request`][400-bad-request], to the client. If we just used `json()` without specifying the status, that would result in a `200 OK` response, which isn't suitable since the form submission had errors.
 
 Another thing I want to call out is how all of this is just so nice and declarative. You don't have to think about state at all here. Your action gets some data, you process it and return a value. The component consumes the action data and renders based on that value. No managing state here. No thinking about race conditions. Nothing.
 

@@ -635,7 +635,7 @@ If you refresh you're not going to see it yet. Every route inside of `app/routes
 
 💿 Add an outlet to the admin page
 
-```tsx filename=app/routes/posts/admin.tsx lines=[4,41]
+```tsx filename=app/routes/posts/admin.tsx lines=[4,37]
 import { json } from "@remix-run/node";
 import {
   Link,
