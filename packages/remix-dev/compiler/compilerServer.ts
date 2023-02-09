@@ -2,13 +2,17 @@ import * as path from "path";
 import * as esbuild from "esbuild";
 import * as fse from "fs-extra";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
-import { pnpPlugin as yarnPnpPlugin } from "@yarnpkg/esbuild-plugin-pnp";
 
-import { type RemixConfig } from "../config";
-import { type AssetsManifest } from "./assets";
+import type { ReadChannel } from "../channel";
+import type { RemixConfig } from "../config";
+import type { AssetsManifest } from "./assets";
 import { loaders } from "./loaders";
-import { type CompileOptions } from "./options";
+import type { CompileOptions } from "./options";
+import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
+import { cssSideEffectImportsPlugin } from "./plugins/cssSideEffectImportsPlugin";
+import { vanillaExtractPlugin } from "./plugins/vanillaExtractPlugin";
 import { cssFilePlugin } from "./plugins/cssFilePlugin";
+import { deprecatedRemixPackagePlugin } from "./plugins/deprecatedRemixPackagePlugin";
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
 import { serverAssetsManifestPlugin } from "./plugins/serverAssetsManifestPlugin";
@@ -16,7 +20,6 @@ import { serverBareModulesPlugin } from "./plugins/serverBareModulesPlugin";
 import { serverEntryModulePlugin } from "./plugins/serverEntryModulePlugin";
 import { serverRouteModulesPlugin } from "./plugins/serverRouteModulesPlugin";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
-import { type ReadChannel } from "./utils/channel";
 
 export type ServerCompiler = {
   // produce ./build/index.js
@@ -42,22 +45,29 @@ const createEsbuildConfig = (
     };
   }
 
-  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
-    config.serverBuildTarget ?? ""
-  );
-  let isDenoRuntime = config.serverBuildTarget === "deno";
+  let { mode } = options;
+  let outputCss = false;
 
   let plugins: esbuild.Plugin[] = [
-    cssFilePlugin(options),
+    deprecatedRemixPackagePlugin(options.onWarning),
+    config.future.unstable_cssModules
+      ? cssModulesPlugin({ config, mode, outputCss })
+      : null,
+    config.future.unstable_vanillaExtract
+      ? vanillaExtractPlugin({ config, mode, outputCss })
+      : null,
+    config.future.unstable_cssSideEffectImports
+      ? cssSideEffectImportsPlugin({ config, options })
+      : null,
+    cssFilePlugin({ config, options }),
     urlImportsPlugin(),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
-    serverEntryModulePlugin(config),
+    serverEntryModulePlugin(config, { liveReloadPort: options.liveReloadPort }),
     serverAssetsManifestPlugin(assetsManifestChannel.read()),
     serverBareModulesPlugin(config, options.onWarning),
-    yarnPnpPlugin(),
-  ];
+  ].filter(isNotNull);
 
   if (config.serverPlatform !== "node") {
     plugins.unshift(NodeModulesPolyfillPlugin());
@@ -68,11 +78,7 @@ const createEsbuildConfig = (
     stdin,
     entryPoints,
     outfile: config.serverBuildPath,
-    conditions: isCloudflareRuntime
-      ? ["worker"]
-      : isDenoRuntime
-      ? ["deno", "worker"]
-      : undefined,
+    conditions: config.serverConditions,
     platform: config.serverPlatform,
     format: config.serverModuleFormat,
     treeShaking: true,
@@ -84,12 +90,8 @@ const createEsbuildConfig = (
     // PR makes dev mode behave closer to production in terms of dead
     // code elimination / tree shaking is concerned.
     minifySyntax: true,
-    minify: options.mode === "production" && isCloudflareRuntime,
-    mainFields: isCloudflareRuntime
-      ? ["browser", "module", "main"]
-      : config.serverModuleFormat === "esm"
-      ? ["module", "main"]
-      : ["main", "module"],
+    minify: options.mode === "production" && config.serverMinify,
+    mainFields: config.serverMainFields,
     target: options.target,
     loader: loaders,
     bundle: true,
@@ -131,6 +133,11 @@ async function writeServerBuildResult(
       contents = contents.replace(new RegExp(pattern), `$1${filename}`);
       await fse.writeFile(file.path, contents);
     } else if (file.path.endsWith(".map")) {
+      // Don't write CSS source maps to server build output
+      if (file.path.endsWith(".css.map")) {
+        break;
+      }
+
       // remove route: prefix from source filenames so breakpoints work
       let contents = Buffer.from(file.contents).toString("utf-8");
       contents = contents.replace(/"route:/gm, '"');
@@ -140,6 +147,13 @@ async function writeServerBuildResult(
         config.assetsBuildDirectory,
         file.path.replace(path.dirname(config.serverBuildPath), "")
       );
+
+      // Don't write CSS bundle from server build to browser assets directory,
+      // especially since the file name doesn't contain a content hash
+      if (assetPath === path.join(config.assetsBuildDirectory, "index.css")) {
+        break;
+      }
+
       await fse.ensureDir(path.dirname(assetPath));
       await fse.writeFile(assetPath, file.contents);
     }
@@ -167,3 +181,7 @@ export const createServerCompiler = (
     dispose: () => undefined,
   };
 };
+
+function isNotNull<Value>(value: Value): value is Exclude<Value, null> {
+  return value !== null;
+}

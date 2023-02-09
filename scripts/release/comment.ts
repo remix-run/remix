@@ -3,8 +3,9 @@ import {
   OWNER,
   REPO,
   PR_FILES_STARTS_WITH,
-  IS_NIGHTLY_RELEASE,
+  IS_STABLE_RELEASE,
   AWAITING_RELEASE_LABEL,
+  DRY_RUN,
 } from "./constants";
 import {
   closeIssue,
@@ -41,19 +42,21 @@ async function commentOnIssuesAndPrsAboutRelease() {
   for (let pr of merged) {
     console.log(`commenting on pr ${getGitHubUrl("pull", pr.number)}`);
 
-    promises.push(
-      commentOnPullRequest({
-        owner: OWNER,
-        repo: REPO,
-        pr: pr.number,
-        version: VERSION,
-      })
-    );
+    if (!DRY_RUN) {
+      promises.push(
+        commentOnPullRequest({
+          owner: OWNER,
+          repo: REPO,
+          pr: pr.number,
+          version: VERSION,
+        })
+      );
+    }
 
     let prLabels = pr.labels.map((label) => label.name);
     let prIsAwaitingRelease = prLabels.includes(AWAITING_RELEASE_LABEL);
 
-    if (!IS_NIGHTLY_RELEASE && prIsAwaitingRelease) {
+    if (IS_STABLE_RELEASE && prIsAwaitingRelease && !DRY_RUN) {
       promises.push(
         removeLabel({ owner: OWNER, repo: REPO, issue: pr.number })
       );
@@ -73,9 +76,9 @@ async function commentOnIssuesAndPrsAboutRelease() {
 
       issuesCommentedOn.add(issue.number);
       let issueUrl = getGitHubUrl("issue", issue.number);
+      console.log(`commenting on issue ${issueUrl}`);
 
-      if (IS_NIGHTLY_RELEASE || !prIsAwaitingRelease) {
-        console.log(`commenting on ${issueUrl}`);
+      if (!DRY_RUN) {
         promises.push(
           commentOnIssue({
             owner: OWNER,
@@ -84,19 +87,15 @@ async function commentOnIssuesAndPrsAboutRelease() {
             version: VERSION,
           })
         );
-      } else {
-        console.log(`commenting on and closing ${issueUrl}`);
-        promises.push(
-          commentOnIssue({
-            owner: OWNER,
-            repo: REPO,
-            issue: issue.number,
-            version: VERSION,
-          })
-        );
-        promises.push(
-          closeIssue({ owner: OWNER, repo: REPO, issue: issue.number })
-        );
+      }
+
+      if (IS_STABLE_RELEASE) {
+        console.log(`closing issue ${issueUrl}`);
+        if (!DRY_RUN) {
+          promises.push(
+            closeIssue({ owner: OWNER, repo: REPO, issue: issue.number })
+          );
+        }
       }
     }
   }
@@ -104,10 +103,7 @@ async function commentOnIssuesAndPrsAboutRelease() {
   let result = await Promise.allSettled(promises);
   let rejected = result.filter((r) => r.status === "rejected");
   if (rejected.length > 0) {
-    console.log(
-      "🚨 failed to comment on some issues/prs - the most likely reason is they were issues that were turned into discussions, which don't have an api to comment with"
-    );
-    console.log(rejected);
+    console.error("🚨 failed to comment on some issues/prs", rejected);
   }
 }
 

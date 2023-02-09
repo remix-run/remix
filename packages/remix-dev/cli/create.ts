@@ -16,7 +16,7 @@ import * as colors from "../colors";
 import invariant from "../invariant";
 import packageJson from "../package.json";
 import { getPreferredPackageManager } from "./getPreferredPackageManager";
-import { convertToJavaScript } from "./migrate/migrations/convert-to-javascript";
+import * as useJavascript from "./useJavascript";
 
 const remixDevPackageVersion = packageJson.version;
 const defaultAgent = new ProxyAgent();
@@ -176,7 +176,7 @@ export async function createApp({
   let appPkg: any;
   try {
     appPkg = require(pkgJsonPath);
-  } catch (err) {
+  } catch {
     throw Error(
       "🚨 The provided template must be a Remix project with a `package.json` " +
         `file, but that file does not exist in ${pkgJsonPath}.`
@@ -201,8 +201,8 @@ export async function createApp({
     !useTypeScript &&
     fse.existsSync(path.join(projectDir, "tsconfig.json"))
   ) {
-    let spinner = ora("Migrating template to JavaScript…").start();
-    await convertToJavaScript(projectDir, { interactive: false });
+    let spinner = ora("Converting template to JavaScript…").start();
+    await useJavascript.convert(projectDir);
     spinner.stop();
     spinner.clear();
   }
@@ -244,12 +244,12 @@ async function extractLocalTarball(
       gunzip(),
       tar.extract(projectDir, { strip: 1 })
     );
-  } catch (err) {
+  } catch (error: unknown) {
     throw Error(
       "🚨 There was a problem extracting the file from the provided template.\n\n" +
         `  Template filepath: \`${filePath}\`\n` +
         `  Destination directory: \`${projectDir}\`\n` +
-        `  ${err}`
+        `  ${error}`
     );
   }
 }

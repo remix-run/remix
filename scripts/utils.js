@@ -17,7 +17,14 @@ let remixPackages = {
     "vercel",
   ],
   runtimes: ["cloudflare", "deno", "node"],
-  core: ["dev", "server-runtime", "react", "eslint-config"],
+  core: [
+    "dev",
+    "server-runtime",
+    "react",
+    "eslint-config",
+    "css-bundle",
+    "testing",
+  ],
   get all() {
     return [...this.adapters, ...this.runtimes, ...this.core, "serve"];
   },
@@ -80,7 +87,7 @@ async function updatePackageConfig(packageName, transform) {
     }
     transform(json);
     await jsonfile.writeFile(file, json, { spaces: 2 });
-  } catch (err) {
+  } catch {
     return;
   }
 }
@@ -101,7 +108,11 @@ async function updateRemixVersion(packageName, nextVersion, successMessage) {
         config.devDependencies[`@remix-run/${pkg}`] = nextVersion;
       }
       if (config.peerDependencies?.[`@remix-run/${pkg}`]) {
-        config.peerDependencies[`@remix-run/${pkg}`] = nextVersion;
+        let isRelaxedPeerDep =
+          config.peerDependencies[`@remix-run/${pkg}`]?.startsWith("^");
+        config.peerDependencies[`@remix-run/${pkg}`] = `${
+          isRelaxedPeerDep ? "^" : ""
+        }${nextVersion}`;
       }
     }
   });
@@ -165,7 +176,8 @@ const updateDenoImportMap = async (importMapPath, nextVersion) => {
       let [packageName, importPath] =
         getPackageNameFromImportSpecifier(importName);
 
-      return remixPackagesFull.includes(packageName)
+      return remixPackagesFull.includes(packageName) &&
+        importName !== "@remix-run/deno"
         ? [
             importName,
             `https://esm.sh/${packageName}@${nextVersion}${

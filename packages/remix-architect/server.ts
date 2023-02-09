@@ -62,7 +62,7 @@ export function createRemixRequest(event: APIGatewayProxyEventV2): NodeRequest {
   let host = event.headers["x-forwarded-host"] || event.headers.host;
   let search = event.rawQueryString.length ? `?${event.rawQueryString}` : "";
   let scheme = process.env.ARC_SANDBOX ? "http" : "https";
-  let url = new URL(event.rawPath + search, `${scheme}://${host}`);
+  let url = new URL(`${scheme}://${host}${event.rawPath}${search}`);
   let isFormData = event.headers["content-type"]?.includes(
     "multipart/form-data"
   );

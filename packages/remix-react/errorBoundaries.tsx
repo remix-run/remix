@@ -1,7 +1,6 @@
-// TODO: We eventually might not want to import anything directly from `history`
-// and leverage `react-router` here instead
-import type { Location } from "history";
 import React, { useContext } from "react";
+import type { ErrorResponse, Location } from "@remix-run/router";
+import { isRouteErrorResponse, useRouteError } from "react-router-dom";
 
 import type {
   CatchBoundaryComponent,
@@ -110,6 +109,23 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
   );
 }
 
+export function V2_RemixRootDefaultErrorBoundary() {
+  let error = useRouteError();
+  if (isRouteErrorResponse(error)) {
+    return <RemixRootDefaultCatchBoundaryImpl caught={error} />;
+  } else if (error instanceof Error) {
+    return <RemixRootDefaultErrorBoundary error={error} />;
+  } else {
+    let errorString =
+      error == null
+        ? "Unknown Error"
+        : typeof error === "object" && "toString" in error
+        ? error.toString()
+        : JSON.stringify(error);
+    return <RemixRootDefaultErrorBoundary error={new Error(errorString)} />;
+  }
+}
+
 let RemixCatchContext = React.createContext<ThrownResponse | undefined>(
   undefined
 );
@@ -117,7 +133,7 @@ let RemixCatchContext = React.createContext<ThrownResponse | undefined>(
 /**
  * Returns the status code and thrown response data.
  *
- * @see https://remix.run/api/conventions#catchboundary
+ * @see https://remix.run/route/catch-boundary
  */
 export function useCatch<
   Result extends ThrownResponse = ThrownResponse
@@ -126,9 +142,8 @@ export function useCatch<
 }
 
 type RemixCatchBoundaryProps = React.PropsWithChildren<{
-  location: Location;
   component: CatchBoundaryComponent;
-  catch?: ThrownResponse;
+  catch?: ErrorResponse;
 }>;
 
 export function RemixCatchBoundary({
@@ -152,6 +167,14 @@ export function RemixCatchBoundary({
  */
 export function RemixRootDefaultCatchBoundary() {
   let caught = useCatch();
+  return <RemixRootDefaultCatchBoundaryImpl caught={caught} />;
+}
+
+function RemixRootDefaultCatchBoundaryImpl({
+  caught,
+}: {
+  caught: ThrownResponse;
+}) {
   return (
     <html lang="en">
       <head>

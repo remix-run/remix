@@ -15,6 +15,7 @@ export {
 
 export {
   createSession,
+  defer,
   isCookie,
   isSession,
   json,
@@ -43,6 +44,7 @@ export type {
   HeadersFunction,
   HtmlLinkDescriptor,
   HtmlMetaDescriptor,
+  JsonFunction,
   LinkDescriptor,
   LinksFunction,
   LoaderArgs,
@@ -63,8 +65,11 @@ export type {
   SessionIdStorageStrategy,
   SessionStorage,
   SignFunction,
+  TypedDeferredData,
   TypedResponse,
   UnsignFunction,
   UploadHandler,
   UploadHandlerPart,
+  V2_HtmlMetaDescriptor,
+  V2_MetaFunction,
 } from "@remix-run/server-runtime";

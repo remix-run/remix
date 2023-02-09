@@ -17,7 +17,6 @@ test.describe("mdx", () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-        import { json } from "@remix-run/node";
         import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export default function Root() {
@@ -37,10 +36,9 @@ test.describe("mdx", () => {
         `,
 
         "app/routes/blog.jsx": js`
-          import { json } from "@remix-run/node";
           import { useMatches, Outlet } from "@remix-run/react";
 
-          export default function Index() {
+          export default function Blog() {
             const matches = useMatches();
             const mdxMatch = matches[matches.length - 1];
             return (
@@ -57,6 +55,8 @@ test.describe("mdx", () => {
 meta:
   title: My First Post
   description: Isn't this awesome?
+handle:
+  someData: abc
 headers:
   Cache-Control: no-cache
 ---
@@ -64,10 +64,6 @@ headers:
 export const links = () => [
   { rel: "stylesheet", href: "app.css" }
 ]
-
-export const handle = {
-  someData: "abc"
-}
 
 import { useLoaderData } from '@remix-run/react';
 
@@ -94,8 +90,8 @@ export function ComponentUsingData() {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => {
-    await appFixture.close();
+  test.afterAll(() => {
+    appFixture.close();
   });
 
   test("can render basic markdown", async ({ page }) => {

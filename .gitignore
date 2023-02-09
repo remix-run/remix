@@ -29,3 +29,5 @@ tsconfig.tsbuildinfo
 /scripts/playground/template.local
 /scripts/playground/template/build
 /scripts/playground/template/package-lock.json
+
+/NOTES.md

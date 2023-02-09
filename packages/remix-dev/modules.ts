@@ -6,11 +6,19 @@ declare module "*.avif" {
   let asset: string;
   export default asset;
 }
+declare module "*.module.css" {
+  let styles: { readonly [key: string]: string };
+  export default styles;
+}
 declare module "*.css" {
   let asset: string;
   export default asset;
 }
 declare module "*.eot" {
+  let asset: string;
+  export default asset;
+}
+declare module "*.fbx" {
   let asset: string;
   export default asset;
 }
@@ -51,20 +59,40 @@ declare module "*.jpg" {
   export default asset;
 }
 declare module "*.md" {
-  import type { ComponentType as MdComponentType } from "react";
+  import type { ComponentType, ReactHTML } from "react";
   export let attributes: any;
   export let filename: string;
-  let Component: MdComponentType;
+  let Component: ComponentType<
+    Readonly<Record<string, unknown>> & {
+      components?: Readonly<
+        Partial<
+          Record<keyof ReactHTML | "wrapper", keyof ReactHTML | ComponentType>
+        >
+      >;
+    }
+  >;
   export default Component;
 }
 declare module "*.mdx" {
-  import type { ComponentType as MdxComponentType } from "react";
+  import type { ComponentType, ReactHTML } from "react";
   export let attributes: any;
   export let filename: string;
-  let Component: MdxComponentType;
+  let Component: ComponentType<
+    Readonly<Record<string, unknown>> & {
+      components?: Readonly<
+        Partial<
+          Record<keyof ReactHTML | "wrapper", keyof ReactHTML | ComponentType>
+        >
+      >;
+    }
+  >;
   export default Component;
 }
 declare module "*.mp3" {
+  let asset: string;
+  export default asset;
+}
+declare module "*.mov" {
   let asset: string;
   export default asset;
 }
@@ -84,6 +112,10 @@ declare module "*.png" {
   let asset: string;
   export default asset;
 }
+declare module "*.psd" {
+  let asset: string;
+  export default asset;
+}
 declare module "*.sql" {
   let asset: string;
   export default asset;
@@ -93,6 +125,10 @@ declare module "*.svg" {
   export default asset;
 }
 declare module "*.ttf" {
+  let asset: string;
+  export default asset;
+}
+declare module "*.wasm" {
   let asset: string;
   export default asset;
 }

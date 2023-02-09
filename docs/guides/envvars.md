@@ -50,8 +50,8 @@ If you're using the `@remix-run/cloudflare-pages` adapter, env variables work a 
 
 Then, in your `loader` functions, you can access environment variables directly on `context`:
 
-```js
-export const loader = async ({ context }) => {
+```tsx
+export const loader = async ({ context }: LoaderArgs) => {
   console.log(context.SOME_SECRET);
 };
 ```
@@ -81,7 +81,7 @@ Instead we recommend keeping all of your environment variables on the server (al
 
 1. **Return `ENV` for the client from the root loader** - Inside your loader you can access your server's environment variables. Loaders only run on the server and are never bundled into your client-side JavaScript.
 
-   ```tsx [3-6]
+   ```tsx lines=[3-6]
    export async function loader() {
      return json({
        ENV: {
@@ -109,7 +109,7 @@ Instead we recommend keeping all of your environment variables on the server (al
 
 2. **Put `ENV` on window** - This is how we hand off the values from the server to the client. Make sure to put this before `<Scripts/>`
 
-   ```tsx [10, 19-25]
+   ```tsx lines=[10,19-25]
    export async function loader() {
      return json({
        ENV: {
@@ -119,7 +119,7 @@ Instead we recommend keeping all of your environment variables on the server (al
    }
 
    export function Root() {
-     const data = useLoaderData();
+     const data = useLoaderData<typeof loader>();
      return (
        <html lang="en">
          <head>
@@ -144,7 +144,7 @@ Instead we recommend keeping all of your environment variables on the server (al
 
 3. **Access the values**
 
-   ```tsx [6-8]
+   ```tsx lines=[6-8]
    import { loadStripe } from "@stripe/stripe-js";
 
    export async function redirectToStripeCheckout(

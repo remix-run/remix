@@ -67,7 +67,7 @@ You can reference your frontmatter data through "attributes". The title of this 
 
 ### Advanced Example
 
-You can even export all the other things in this module that you can in regular route modules in your mdx files like `loader` and `action`:
+You can even export all the other things in this module that you can in regular route modules in your mdx files like `loader`, `action`, and `handle`:
 
 ```mdx
 ---
@@ -77,6 +77,9 @@ meta:
 
 headers:
   Cache-Control: no-cache
+
+handle:
+  someData: abc
 ---
 
 import styles from "./first-post.css";
@@ -85,18 +88,15 @@ export const links = () => [
   { rel: "stylesheet", href: styles },
 ];
 
-export const handle = {
-  someData: "abc",
-};
-
+import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
 export const loader = async () => {
-  return { mamboNumber: 5 };
+  return json({ mamboNumber: 5 });
 };
 
 export function ComponentUsingData() {
-  const { mamboNumber } = useLoaderData();
+  const { mamboNumber } = useLoaderData<typeof loader>();
   return <div id="loader">Mambo Number: {mamboNumber}</div>;
 }
 
@@ -159,7 +159,7 @@ export async function loader() {
 }
 
 export default function Index() {
-  const posts = useLoaderData();
+  const posts = useLoaderData<typeof loader>();
 
   return (
     <ul>

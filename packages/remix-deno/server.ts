@@ -1,7 +1,7 @@
 import * as path from "https://deno.land/std@0.128.0/path/mod.ts";
 import mime from "mime";
 import { createRequestHandler as createRemixRequestHandler } from "@remix-run/server-runtime";
-import type { ServerBuild } from "@remix-run/server-runtime";
+import type { AppLoadContext, ServerBuild } from "@remix-run/server-runtime";
 
 function defaultCacheControl(url: URL, assetsPublicPath = "/build/") {
   if (url.pathname.startsWith(assetsPublicPath)) {
@@ -11,7 +11,9 @@ function defaultCacheControl(url: URL, assetsPublicPath = "/build/") {
   }
 }
 
-export function createRequestHandler<Context = unknown>({
+export function createRequestHandler<
+  Context extends AppLoadContext | undefined = undefined,
+>({
   build,
   mode,
   getLoadContext,
@@ -27,8 +29,8 @@ export function createRequestHandler<Context = unknown>({
       const loadContext = await getLoadContext?.(request);
 
       return handleRequest(request, loadContext);
-    } catch (e) {
-      console.error(e);
+    } catch (error: unknown) {
+      console.error(error);
 
       return new Response("Internal Error", { status: 500 });
     }
@@ -81,7 +83,9 @@ export async function serveStaticFiles(
   }
 }
 
-export function createRequestHandlerWithStaticFiles<Context = unknown>({
+export function createRequestHandlerWithStaticFiles<
+  Context extends AppLoadContext | undefined = undefined,
+>({
   build,
   mode,
   getLoadContext,
@@ -104,7 +108,7 @@ export function createRequestHandlerWithStaticFiles<Context = unknown>({
   return async (request: Request) => {
     try {
       return await serveStaticFiles(request, staticFiles);
-    } catch (error) {
+    } catch (error: unknown) {
       if (!(error instanceof FileNotFoundError)) {
         throw error;
       }

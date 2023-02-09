@@ -1,5 +1,6 @@
 ---
 title: "@remix-run/serve"
+toc: false
 order: 3
 ---
 
@@ -21,12 +22,12 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
 
 - Any values in the module scope will be "reset"
 
-  ```ts [1-3]
+  ```tsx lines=[1-3]
   // this will be reset for every request because the module cache was
   // cleared and this will be required brand new
   const cache = new Map();
 
-  export async function loader({ params }) {
+  export async function loader({ params }: LoaderArgs) {
     if (cache.has(params.foo)) {
       return json(cache.get(params.foo));
     }
@@ -39,7 +40,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
 
   If you need a workaround for preserving cache in development, you can store it in the global variable.
 
-  ```ts lines=[1-9]
+  ```tsx lines=[1-9]
   // since the cache is stored in global it will only
   // be recreated when you restart your dev server.
   const cache = () => {
@@ -50,7 +51,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
     return global.uniqueCacheName;
   };
 
-  export async function loader({ params }) {
+  export async function loader({ params }: LoaderArgs) {
     if (cache.has(params.foo)) {
       return json(cache.get(params.foo));
     }
@@ -63,7 +64,7 @@ In development, `remix-serve` will ensure the latest code is run by purging the 
 
 - Any **module side effects** will remain in place! This may cause problems, but should probably be avoided anyway.
 
-  ```ts [3-6]
+  ```tsx lines=[3-6]
   import { json } from "@remix-run/node"; // or cloudflare/deno
 
   // this starts running the moment the module is imported

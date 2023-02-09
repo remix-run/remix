@@ -1,5 +1,84 @@
 # `@remix-run/architect`
 
+## 1.12.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.12.0`
+
+## 1.11.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.11.1`
+
+## 1.11.0
+
+### Patch Changes
+
+- Use `@architect/functions`' built-in types ([#4898](https://github.com/remix-run/remix/pull/4898))
+- Updated dependencies:
+  - `@remix-run/node@1.11.0`
+
+## 1.10.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.10.1`
+
+## 1.10.0
+
+### Patch Changes
+
+- Improve performance of `isBinaryType` ([#4761](https://github.com/remix-run/remix/pull/4761))
+- Updated dependencies:
+  - `@remix-run/node@1.10.0`
+
+## 1.9.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.9.0`
+
+## 1.8.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.8.2`
+
+## 1.8.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.8.1`
+
+## 1.8.0
+
+### Minor Changes
+
+- Importing functions and types from the `remix` package is deprecated, and all ([#3284](https://github.com/remix-run/remix/pull/3284))
+  exported modules will be removed in the next major release. For more details,
+  [see the release notes for 1.4.0](https://github.com/remix-run/remix/releases/tag/v1.4.0)
+  where these changes were first announced.
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.8.0`
+
+## 1.7.6
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.7.6`
+
 ## 1.7.5
 
 ### Patch Changes

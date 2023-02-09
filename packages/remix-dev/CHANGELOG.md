@@ -1,5 +1,119 @@
 # `@remix-run/dev`
 
+## 1.12.0
+
+### Minor Changes
+
+- Added a new development server available in the Remix config under the `unstable_dev` flag. [See the release notes](https://github.com/remix-run/remix/releases/tag/remix%401.12.0) for a full description. ([#5133](https://github.com/remix-run/remix/pull/5133))
+
+### Patch Changes
+
+- Fixed issues with `v2_routeConvention` on Windows so that new and renamed files are properly included ([#5266](https://github.com/remix-run/remix/pull/5266))
+- Server build should not be removed in `remix watch` and `remix dev` ([#5228](https://github.com/remix-run/remix/pull/5228))
+- The dev server will now clean up build directories whenever a rebuild starts ([#5223](https://github.com/remix-run/remix/pull/5223))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.12.0`
+
+## 1.11.1
+
+### Patch Changes
+
+- Fixed a bug with `v2_routeConvention` that prevented `index` modules from being recognized for route paths ([`195291a3d`](https://github.com/remix-run/remix/commit/195291a3d8c0e098931199bcc26277a45cee0eb9))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.11.1`
+
+## 1.11.0
+
+### Minor Changes
+
+- Specify file loader for `.fbx`, `.glb`, `.gltf`, `.hdr`, and `.mov` files ([#5030](https://github.com/remix-run/remix/pull/5030))
+- Added support for [Vanilla Extract](https://vanilla-extract.style) via the `unstable_vanillaExtract` future flag. **IMPORTANT:** Features marked with `unstable` are … unstable. While we're confident in the use cases they solve, the API and implementation may change without a major version bump. ([#5040](https://github.com/remix-run/remix/pull/5040))
+- Add support for CSS side-effect imports via the `unstable_cssSideEffectImports` future flag. **IMPORTANT:** Features marked with `unstable` are … unstable. While we're confident in the use cases they solve, the API and implementation may change without a major version bump. ([#4919](https://github.com/remix-run/remix/pull/4919))
+- Add support for CSS Modules via the `unstable_cssModules` future flag. **IMPORTANT:** Features marked with `unstable` are … unstable. While we're confident in the use cases they solve, the API and implementation may change without a major version bump. ([#4852](https://github.com/remix-run/remix/pull/4852))
+
+### Patch Changes
+
+- Add new "flat" routing conventions. This convention will be the default in v2 but is available now under the `v2_routeConvention` future flag. ([#4880](https://github.com/remix-run/remix/pull/4880))
+- Added support for `handle` in MDX frontmatter ([#4865](https://github.com/remix-run/remix/pull/4865))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.11.0`
+
+## 1.10.1
+
+### Patch Changes
+
+- Update babel config to transpile down to node 14 ([#5047](https://github.com/remix-run/remix/pull/5047))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.10.1`
+
+## 1.10.0
+
+### Patch Changes
+
+- Fixed several issues with TypeScript to JavaScript conversion when running `create-remix` ([#4891](https://github.com/remix-run/remix/pull/4891))
+- Resolve asset entry full path to support monorepo import of styles ([#4855](https://github.com/remix-run/remix/pull/4855))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.10.0`
+
+## 1.9.0
+
+### Minor Changes
+
+- Allow defining multiple routes for the same route module file ([#3970](https://github.com/remix-run/remix/pull/3970))
+- Added support and conventions for optional route segments ([#4706](https://github.com/remix-run/remix/pull/4706))
+
+### Patch Changes
+
+- The Remix compiler now supports new Typescript 4.9 syntax (like the `satisfies` keyword) ([#4754](https://github.com/remix-run/remix/pull/4754))
+- Optimize `parentRouteId` lookup in `defineConventionalRoutes`. ([#4800](https://github.com/remix-run/remix/pull/4800))
+- Fixed a bug in `.ts` -> `.js` conversion on Windows by using a relative unix-style path ([#4718](https://github.com/remix-run/remix/pull/4718))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.9.0`
+
+## 1.8.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.8.2`
+  - `@remix-run/serve@1.8.2`
+
+## 1.8.1
+
+### Patch Changes
+
+- Added a missing type definition for the Remix config `future` option to the `@remix-run/dev/server-build` virtual module ([#4771](https://github.com/remix-run/remix/pull/4771))
+- Updated dependencies:
+  - `@remix-run/serve@1.8.1`
+  - `@remix-run/server-runtime@1.8.1`
+
+## 1.8.0
+
+### Minor Changes
+
+- Added support for a new route `meta` API to handle arrays of tags instead of an object. For details, check out the [RFC](https://github.com/remix-run/remix/discussions/4462). ([#4610](https://github.com/remix-run/remix/pull/4610))
+
+### Patch Changes
+
+- Importing functions and types from the `remix` package is deprecated, and all exported modules will be removed in the next major release. For more details,[see the release notes for 1.4.0](https://github.com/remix-run/remix/releases/tag/v1.4.0) where these changes were first announced. ([#4661](https://github.com/remix-run/remix/pull/4661))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.8.0`
+  - `@remix-run/serve@1.8.0`
+
+## 1.7.6
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/serve@1.7.6`
+  - `@remix-run/server-runtime@1.7.6`
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/serve@1.7.6-pre.0`
+  - `@remix-run/server-runtime@1.7.6-pre.0`
+
 ## 1.7.5
 
 ### Patch Changes

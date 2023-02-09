@@ -61,7 +61,7 @@ export function createRequestHandler({
       )) as NodeResponse;
 
       await sendRemixResponse(res, response);
-    } catch (error) {
+    } catch (error: unknown) {
       // Express doesn't support async functions, so we have to pass along the
       // error manually using next().
       next(error);
@@ -93,8 +93,7 @@ export function createRemixRequest(
   req: express.Request,
   res: express.Response
 ): NodeRequest {
-  let origin = `${req.protocol}://${req.get("host")}`;
-  let url = new URL(req.url, origin);
+  let url = new URL(`${req.protocol}://${req.get("host")}${req.url}`);
 
   // Abort action/loaders once we can no longer write a response
   let controller = new NodeAbortController();
