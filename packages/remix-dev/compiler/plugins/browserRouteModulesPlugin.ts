@@ -39,15 +39,17 @@ export function browserRouteModulesPlugin(
 
           let contents = removeServerExports(sourceCode, routeFile, onLoader);
 
-          contents = await applyHMR(
-            contents,
-            {
-              ...args,
-              path: routeFile,
-            },
-            config,
-            !!build.initialOptions.sourcemap
-          );
+          if (config.future.unstable_dev) {
+            contents = await applyHMR(
+              contents,
+              {
+                ...args,
+                path: routeFile,
+              },
+              config,
+              !!build.initialOptions.sourcemap
+            );
+          }
 
           return {
             contents,

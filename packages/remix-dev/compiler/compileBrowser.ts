@@ -127,7 +127,7 @@ const createEsbuildConfig = (
     NodeModulesPolyfillPlugin(),
   ].filter(isNotNull);
 
-  if (mode === "development") {
+  if (mode === "development" && config.future.unstable_dev) {
     // TODO do this for all deps in package.json
     entryPoints["react"] = "react";
     entryPoints["react-dom"] = "react-dom";
@@ -301,7 +301,7 @@ export const createBrowserCompiler = (
     ]);
 
     let hmr: AssetsManifest["hmr"] | undefined = undefined;
-    if (options.mode === "development") {
+    if (options.mode === "development" && remixConfig.future.unstable_dev) {
       let hmrRuntimeOutput = Object.entries(metafile.outputs).find(
         ([_, output]) => output.inputs["hmr-runtime:remix:hmr"]
       )?.[0];
