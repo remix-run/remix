@@ -89,6 +89,9 @@ if (import.meta && import.meta.hot) {
         window.__remixContext.future
       );
 
+      // This is temporary API and will be more granular before release
+      router._internalSetRoutes(routes);
+
       // Wait for router to be idle before updating the manifest and route modules
       // and triggering a react-refresh
       let unsub = router.subscribe((state) => {
@@ -101,9 +104,7 @@ if (import.meta && import.meta.hot) {
           window.$RefreshRuntime$.performReactRefresh();
         }
       });
-
-      // This is temporary API and will be more granular before release
-      router._internalSetRoutesAndRevalidate(routes);
+      router.revalidate();
     }
   );
 }
