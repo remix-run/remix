@@ -39,7 +39,7 @@ let findPort = async (portPreference?: number) =>
       // prettier-ignore
       portPreference ? Number(portPreference) :
         process.env.PORT ? Number(process.env.PORT) :
-          makeRange(8002, 8100),
+          makeRange(3001, 3100),
   });
 
 let fetchAssetsManifest = async (
@@ -58,16 +58,12 @@ let fetchAssetsManifest = async (
 
 let resolveDev = (
   dev: RemixConfig["future"]["unstable_dev"],
-  flags: { port?: number; appServerPort?: number },
-  fallbackPort = 8002
+  flags: { port?: number; appServerPort?: number }
 ) => {
   if (dev === false)
     throw Error("The new dev server requires 'unstable_dev' to be set");
 
-  let port = fallbackPort;
-  // if (typeof flags.port === "number") {
-  //   port = flags.port;
-  // }
+  let port = flags.port ?? (dev === true ? undefined : dev.port);
 
   let appServerPort =
     flags.appServerPort ?? (dev === true || dev.appServerPort == undefined)
@@ -97,7 +93,7 @@ export let serve = async (
   clean(config);
   await loadEnv(config.rootDirectory);
 
-  let dev = resolveDev(config.future.unstable_dev, flags, config.devServerPort);
+  let dev = resolveDev(config.future.unstable_dev, flags);
 
   let host = getHost();
   let appServerOrigin = `http://${host ?? "localhost"}:${dev.appServerPort}`;
@@ -116,11 +112,12 @@ export let serve = async (
   };
 
   // watch and live reload on rebuilds
-  let socket = LiveReload.serve({ port: dev.port });
+  let port = await findPort(dev.port);
+  let socket = LiveReload.serve({ port });
   let prevResult: Compiler.CompileResult | undefined = undefined;
   let dispose = await Compiler.watch(config, {
     mode: "development",
-    liveReloadPort: dev.port,
+    liveReloadPort: port,
     onInitialBuild: (durationMs, result) => {
       info(`Built in ${prettyMs(durationMs)}`);
       prevResult = result;

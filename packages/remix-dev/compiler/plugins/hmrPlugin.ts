@@ -106,7 +106,7 @@ declare global {
 function remixLiveReloadConnect(config) {
   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
   let host = location.hostname;
-  let port = process.env.REMIX_DEV_SERVER_WS_PORT;
+  let port = window.__remixContext.dev.liveReloadPort;
   let socketPath = protocol + "//" + host + ":" + port + "/socket";
   let ws = new WebSocket(socketPath);
   ws.onmessage = async (event) => {
