@@ -29,6 +29,9 @@ declare global {
   };
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
+  var $RefreshRuntime$: {
+    performReactRefresh: () => void;
+  };
 }
 /* eslint-enable prefer-let/prefer-let */
 
@@ -100,7 +103,7 @@ if (import.meta && import.meta.hot) {
       });
 
       // This is temporary API and will be more granular before release
-      router.setNewRoutes(routes);
+      router._internalSetRoutesAndRevalidate(routes);
     }
   );
 }
