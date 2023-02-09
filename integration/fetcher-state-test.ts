@@ -148,7 +148,8 @@ test.describe("fetcher states", () => {
   test("represents a initial fetcher", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/page", true);
-    let text = app.getElement("#initial-state").text();
+    let text = await app.getElement("#initial-state").textContent();
+    if (!text) throw new Error("no textContent found");
     expect(JSON.parse(text)).toEqual({
       state: "idle",
       type: "init",
@@ -160,7 +161,8 @@ test.describe("fetcher states", () => {
     await app.goto("/page", true);
     await app.clickElement(`#${TYPES.actionSubmission}`);
     await page.waitForSelector("#loading", { state: "hidden" });
-    let text = app.getElement("#states").text();
+    let text = await app.getElement("#states").textContent();
+    if (!text) throw new Error("no textContent found");
     expect(JSON.parse(text)).toEqual([
       {
         state: "submitting",
@@ -208,7 +210,8 @@ test.describe("fetcher states", () => {
     await app.goto("/page", true);
     await app.clickElement(`#${TYPES.loaderSubmission}`);
     await page.waitForSelector("#loading", { state: "hidden" });
-    let text = app.getElement("#states").text();
+    let text = await app.getElement("#states").textContent();
+    if (!text) throw new Error("no textContent found");
     expect(JSON.parse(text)).toEqual([
       {
         state: "submitting",
@@ -242,7 +245,8 @@ test.describe("fetcher states", () => {
     await app.goto("/page", true);
     await app.clickElement(`#${TYPES.actionRedirect}`);
     await page.waitForSelector("#loading", { state: "hidden" });
-    let text = app.getElement("#states").text();
+    let text = await app.getElement("#states").textContent();
+    if (!text) throw new Error("no textContent found");
     expect(JSON.parse(text)).toEqual([
       {
         state: "submitting",
@@ -284,7 +288,8 @@ test.describe("fetcher states", () => {
     await app.goto("/page", true);
     await app.clickElement(`#${TYPES.normalLoad}`);
     await page.waitForSelector("#loading", { state: "hidden" });
-    let text = app.getElement("#states").text();
+    let text = await app.getElement("#states").textContent();
+    if (!text) throw new Error("no textContent found");
     expect(JSON.parse(text)).toEqual([
       {
         state: "loading",

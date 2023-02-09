@@ -998,33 +998,33 @@ test.describe("Forms", () => {
 
       await app.goto("/submitter");
       await app.clickElement("text=Add Task");
-      expect(app.getElement("#formData").inputValue()).toBe(
+      expect(await app.getElement("#formData").inputValue()).toBe(
         "tasks=first&tasks=second&tasks=&tasks=last"
       );
 
       await app.goto("/submitter");
       await app.clickElement("text=No Name");
 
-      expect(app.getElement("#formData").inputValue()).toBe(
+      expect(await app.getElement("#formData").inputValue()).toBe(
         "tasks=first&tasks=second&tasks=last"
       );
 
       await app.goto("/submitter");
       await app.clickElement("[alt='Add Task']");
 
-      expect(app.getElement("#formData").inputValue()).toMatch(
+      expect(await app.getElement("#formData").inputValue()).toMatch(
         /^tasks=first&tasks=second&tasks.x=\d+&tasks.y=\d+&tasks=last$/
       );
 
       await app.goto("/submitter");
       await app.clickElement("[alt='No Name']");
-      expect(app.getElement("#formData").inputValue()).toMatch(
+      expect(await app.getElement("#formData").inputValue()).toMatch(
         /^tasks=first&tasks=second&x=\d+&y=\d+&tasks=last$/
       );
 
       await app.goto("/submitter");
       await app.clickElement("text=Outside");
-      expect(app.getElement("#formData").inputValue()).toBe(
+      expect(await app.getElement("#formData").inputValue()).toBe(
         "tasks=outside&tasks=first&tasks=second&tasks=last"
       );
     });
@@ -1040,7 +1040,7 @@ test.describe("Forms", () => {
       await app.uploadFile(`[name=filey2]`, myFile, myFile);
       await app.clickElement("button");
 
-      expect(app.getElement("#formData").inputValue()).toBe(
+      expect(await app.getElement("#formData").inputValue()).toBe(
         "filey=myfile.txt&filey2=myfile.txt&filey2=myfile.txt&filey3="
       );
 
@@ -1049,7 +1049,7 @@ test.describe("Forms", () => {
       await app.uploadFile(`[name=filey2]`, myFile, myFile);
       await app.clickElement("button");
 
-      expect(app.getElement("#formData").inputValue()).toBe(
+      expect(await app.getElement("#formData").inputValue()).toBe(
         "filey=myfile.txt&filey2=myfile.txt&filey2=myfile.txt&filey3="
       );
     });

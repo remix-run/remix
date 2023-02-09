@@ -102,12 +102,9 @@ test.describe("file-uploads", () => {
     await app.uploadFile("#file", uploadFile);
     await app.clickSubmitButton("/file-upload");
     await page.waitForSelector("pre");
-    expect(await app.getHtml("pre")).toBe(`<pre>
-{
-  "name": "underLimit.txt",
-  "size": 1000
-}</pre
->`);
+    expect(await app.getHtml("pre")).toBe(
+      `{ "name": "underLimit.txt", "size": 1000 }`
+    );
 
     let written = await fs.readFile(
       path.join(fixture.projectDir, "uploads/underLimit.txt"),
@@ -129,10 +126,8 @@ test.describe("file-uploads", () => {
     await app.uploadFile("#file", uploadFile);
     await app.clickSubmitButton("/file-upload");
     await page.waitForSelector("pre");
-    expect(await app.getHtml("pre")).toBe(`<pre>
-{
-  "errorMessage": "Field \\"file\\" exceeded upload size of 10000 bytes."
-}</pre
->`);
+    expect(await app.getHtml("pre")).toBe(
+      `{ "errorMessage": "Field \\"file\\" exceeded upload size of 10000 bytes." }`
+    );
   });
 });
