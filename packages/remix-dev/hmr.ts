@@ -53,7 +53,7 @@ export let updates = (
         id: moduleId,
         url: route.module,
         revalidate: true,
-        reason: "Route loader changed",
+        reason: "Loader changed",
       });
       continue;
     }
@@ -67,7 +67,7 @@ export let updates = (
         id: moduleId,
         url: route.module,
         revalidate: false,
-        reason: "Route changed",
+        reason: "Component changed",
       });
       continue;
     }
