@@ -1,6 +1,6 @@
 ---
 "remix": patch
-"@remix-run/dev": minor
+"@remix-run/dev": patch
 ---
 
 feat(remix-dev/compiler): import `.csv` files as file
