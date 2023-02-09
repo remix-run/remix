@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
-import { getElement, PlaywrightFixture } from "./helpers/playwright-fixture";
+import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
 test.describe("Forms", () => {
   let fixture: Fixture;
@@ -545,9 +545,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/inbox");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${STATIC_ROUTE_NO_ACTION}`);
-          expect(el.attr("action")).toMatch("/inbox");
+          let el = await app.getElement(`#${STATIC_ROUTE_NO_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/inbox");
         });
 
         test("no action resolves to URL including search params", async ({
@@ -555,9 +555,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/inbox?foo=bar");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${STATIC_ROUTE_NO_ACTION}`);
-          expect(el.attr("action")).toMatch("/inbox?foo=bar");
+          let el = await app.getElement(`#${STATIC_ROUTE_NO_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/inbox?foo=bar");
         });
 
         test("absolute action resolves relative to the root route", async ({
@@ -565,9 +565,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/inbox");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${STATIC_ROUTE_ABSOLUTE_ACTION}`);
-          expect(el.attr("action")).toMatch("/about");
+          let el = await app.getElement(`#${STATIC_ROUTE_ABSOLUTE_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/about");
         });
 
         test("'.' action resolves relative to the closest route", async ({
@@ -575,17 +575,17 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/inbox");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${STATIC_ROUTE_CURRENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/inbox");
+          let el = await app.getElement(`#${STATIC_ROUTE_CURRENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/inbox");
         });
 
         test("'.' excludes search params", async ({ page }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/inbox?foo=bar");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${STATIC_ROUTE_CURRENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/inbox");
+          let el = await app.getElement(`#${STATIC_ROUTE_CURRENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/inbox");
         });
 
         test("'..' action resolves relative to the parent route", async ({
@@ -593,9 +593,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/inbox");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${STATIC_ROUTE_PARENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/");
+          let el = await app.getElement(`#${STATIC_ROUTE_PARENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/");
         });
 
         test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
@@ -603,9 +603,11 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/inbox");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${STATIC_ROUTE_TOO_MANY_DOTS_ACTION}`);
-          expect(el.attr("action")).toMatch("/");
+          let el = await app.getElement(
+            `#${STATIC_ROUTE_TOO_MANY_DOTS_ACTION}`
+          );
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/");
         });
       });
 
@@ -615,9 +617,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog/abc");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${DYNAMIC_ROUTE_NO_ACTION}`);
-          expect(el.attr("action")).toMatch("/blog/abc");
+          let el = await app.getElement(`#${DYNAMIC_ROUTE_NO_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/blog/abc");
         });
 
         test("no action resolves to URL including search params", async ({
@@ -625,9 +627,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog/abc?foo=bar");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${DYNAMIC_ROUTE_NO_ACTION}`);
-          expect(el.attr("action")).toMatch("/blog/abc?foo=bar");
+          let el = await app.getElement(`#${DYNAMIC_ROUTE_NO_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/blog/abc?foo=bar");
         });
 
         test("absolute action resolves relative to the root route", async ({
@@ -635,9 +637,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog/abc");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${DYNAMIC_ROUTE_ABSOLUTE_ACTION}`);
-          expect(el.attr("action")).toMatch("/about");
+          let el = await app.getElement(`#${DYNAMIC_ROUTE_ABSOLUTE_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/about");
         });
 
         test("'.' action resolves relative to the closest route", async ({
@@ -645,17 +647,17 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog/abc");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${DYNAMIC_ROUTE_CURRENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/blog/abc");
+          let el = await app.getElement(`#${DYNAMIC_ROUTE_CURRENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/blog/abc");
         });
 
         test("'.' excludes search params", async ({ page }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog/abc?foo=bar");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${DYNAMIC_ROUTE_CURRENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/blog/abc");
+          let el = await app.getElement(`#${DYNAMIC_ROUTE_CURRENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/blog/abc");
         });
 
         test("'..' action resolves relative to the parent route", async ({
@@ -663,9 +665,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog/abc");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${DYNAMIC_ROUTE_PARENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/blog");
+          let el = await app.getElement(`#${DYNAMIC_ROUTE_PARENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/blog");
         });
 
         test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
@@ -673,9 +675,11 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog/abc");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${DYNAMIC_ROUTE_TOO_MANY_DOTS_ACTION}`);
-          expect(el.attr("action")).toMatch("/");
+          let el = await app.getElement(
+            `#${DYNAMIC_ROUTE_TOO_MANY_DOTS_ACTION}`
+          );
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/");
         });
       });
 
@@ -685,9 +689,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
-          expect(el.attr("action")).toMatch("/blog");
+          let el = await app.getElement(`#${INDEX_ROUTE_NO_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/blog");
         });
 
         test("no action resolves to URL including search params", async ({
@@ -695,9 +699,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog?foo=bar");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
-          expect(el.attr("action")).toMatch("/blog?index&foo=bar");
+          let el = await app.getElement(`#${INDEX_ROUTE_NO_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/blog?index&foo=bar");
         });
 
         test("absolute action resolves relative to the root route", async ({
@@ -705,9 +709,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${INDEX_ROUTE_ABSOLUTE_ACTION}`);
-          expect(el.attr("action")).toMatch("/about");
+          let el = await app.getElement(`#${INDEX_ROUTE_ABSOLUTE_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/about");
         });
 
         test("'.' action resolves relative to the closest route", async ({
@@ -715,17 +719,17 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${INDEX_ROUTE_CURRENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/blog");
+          let el = await app.getElement(`#${INDEX_ROUTE_CURRENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/blog");
         });
 
         test("'.' excludes search params", async ({ page }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog?foo=bar");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${INDEX_ROUTE_CURRENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/blog");
+          let el = await app.getElement(`#${INDEX_ROUTE_CURRENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/blog");
         });
 
         test("'..' action resolves relative to the parent route", async ({
@@ -733,9 +737,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${INDEX_ROUTE_PARENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/");
+          let el = await app.getElement(`#${INDEX_ROUTE_PARENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/");
         });
 
         test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
@@ -743,9 +747,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${INDEX_ROUTE_TOO_MANY_DOTS_ACTION}`);
-          expect(el.attr("action")).toMatch("/");
+          let el = await app.getElement(`#${INDEX_ROUTE_TOO_MANY_DOTS_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/");
         });
 
         test("handles search params correctly on GET submissions", async ({
@@ -755,25 +759,25 @@ test.describe("Forms", () => {
 
           // Start with a query param
           await app.goto("/blog?junk=1");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
-          expect(el.attr("action")).toBe("/blog?index&junk=1");
+          let el = await app.getElement(`#${INDEX_ROUTE_NO_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toBe("/blog?index&junk=1");
           expect(app.page.url()).toMatch(/\/blog\?junk=1$/);
 
           // On submission, we replace existing parameters (reflected in the
           // form action) with the values from the form data.  We also do not
           // need to preserve the index param in the URL on GET submissions
           await app.clickElement(`#${INDEX_ROUTE_NO_ACTION} button`);
-          html = await app.getHtml();
-          el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
-          expect(el.attr("action")).toBe("/blog?index&foo=1");
+          el = await app.getElement(`#${INDEX_ROUTE_NO_ACTION}`);
+          action = await el.getAttribute("action");
+          expect(action).toBe("/blog?index&foo=1");
           expect(app.page.url()).toMatch(/\/blog\?foo=1$/);
 
           // Does not append duplicate params on re-submissions
           await app.clickElement(`#${INDEX_ROUTE_NO_ACTION} button`);
-          html = await app.getHtml();
-          el = getElement(html, `#${INDEX_ROUTE_NO_ACTION}`);
-          expect(el.attr("action")).toBe("/blog?index&foo=1");
+          el = await app.getElement(`#${INDEX_ROUTE_NO_ACTION}`);
+          action = await el.getAttribute("action");
+          expect(action).toBe("/blog?index&foo=1");
           expect(app.page.url()).toMatch(/\/blog\?foo=1$/);
         });
 
@@ -784,16 +788,16 @@ test.describe("Forms", () => {
 
           // Start with a query param
           await app.goto("/blog?junk=1");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${INDEX_ROUTE_NO_ACTION_POST}`);
-          expect(el.attr("action")).toBe("/blog?index&junk=1");
+          let el = await app.getElement(`#${INDEX_ROUTE_NO_ACTION_POST}`);
+          let action = await el.getAttribute("action");
+          expect(action).toBe("/blog?index&junk=1");
           expect(app.page.url()).toMatch(/\/blog\?junk=1$/);
 
           // Form action reflects the current params and change them on submission
           await app.clickElement(`#${INDEX_ROUTE_NO_ACTION_POST} button`);
-          html = await app.getHtml();
-          el = getElement(html, `#${INDEX_ROUTE_NO_ACTION_POST}`);
-          expect(el.attr("action")).toBe("/blog?index&junk=1");
+          el = await app.getElement(`#${INDEX_ROUTE_NO_ACTION_POST}`);
+          action = await el.getAttribute("action");
+          expect(action).toBe("/blog?index&junk=1");
           await page.waitForURL(/\/blog\?index&junk=1$/);
           expect(app.page.url()).toMatch(/\/blog\?index&junk=1$/);
         });
@@ -805,9 +809,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${LAYOUT_ROUTE_NO_ACTION}`);
-          expect(el.attr("action")).toMatch("/blog");
+          let el = await app.getElement(`#${LAYOUT_ROUTE_NO_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/blog");
         });
 
         test("no action resolves to URL including search params", async ({
@@ -815,9 +819,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog?foo=bar");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${LAYOUT_ROUTE_NO_ACTION}`);
-          expect(el.attr("action")).toMatch("/blog?foo=bar");
+          let el = await app.getElement(`#${LAYOUT_ROUTE_NO_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/blog?foo=bar");
         });
 
         test("absolute action resolves relative to the root route", async ({
@@ -825,9 +829,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${LAYOUT_ROUTE_ABSOLUTE_ACTION}`);
-          expect(el.attr("action")).toMatch("/about");
+          let el = await app.getElement(`#${LAYOUT_ROUTE_ABSOLUTE_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/about");
         });
 
         test("'.' action resolves relative to the closest route", async ({
@@ -835,17 +839,17 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${LAYOUT_ROUTE_CURRENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/blog");
+          let el = await app.getElement(`#${LAYOUT_ROUTE_CURRENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/blog");
         });
 
         test("'.' excludes search params", async ({ page }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog?foo=bar");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${LAYOUT_ROUTE_CURRENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/blog");
+          let el = await app.getElement(`#${LAYOUT_ROUTE_CURRENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/blog");
         });
 
         test("'..' action resolves relative to the parent route", async ({
@@ -853,9 +857,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${LAYOUT_ROUTE_PARENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/");
+          let el = await app.getElement(`#${LAYOUT_ROUTE_PARENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/");
         });
 
         test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
@@ -863,9 +867,11 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/blog");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${LAYOUT_ROUTE_TOO_MANY_DOTS_ACTION}`);
-          expect(el.attr("action")).toMatch("/");
+          let el = await app.getElement(
+            `#${LAYOUT_ROUTE_TOO_MANY_DOTS_ACTION}`
+          );
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/");
         });
       });
 
@@ -875,9 +881,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/projects/blarg");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${SPLAT_ROUTE_NO_ACTION}`);
-          expect(el.attr("action")).toMatch("/projects");
+          let el = await app.getElement(`#${SPLAT_ROUTE_NO_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/projects");
         });
 
         test("no action resolves to URL including search params", async ({
@@ -885,9 +891,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/projects/blarg?foo=bar");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${SPLAT_ROUTE_NO_ACTION}`);
-          expect(el.attr("action")).toMatch("/projects?foo=bar");
+          let el = await app.getElement(`#${SPLAT_ROUTE_NO_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/projects?foo=bar");
         });
 
         test("absolute action resolves relative to the root route", async ({
@@ -895,9 +901,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/projects/blarg");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${SPLAT_ROUTE_ABSOLUTE_ACTION}`);
-          expect(el.attr("action")).toMatch("/about");
+          let el = await app.getElement(`#${SPLAT_ROUTE_ABSOLUTE_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/about");
         });
 
         test("'.' action resolves relative to the closest route", async ({
@@ -905,17 +911,17 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/projects/blarg");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${SPLAT_ROUTE_CURRENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/projects");
+          let el = await app.getElement(`#${SPLAT_ROUTE_CURRENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/projects");
         });
 
         test("'.' excludes search params", async ({ page }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/projects/blarg?foo=bar");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${SPLAT_ROUTE_CURRENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/projects");
+          let el = await app.getElement(`#${SPLAT_ROUTE_CURRENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/projects");
         });
 
         test("'..' action resolves relative to the parent route", async ({
@@ -923,9 +929,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/projects/blarg");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${SPLAT_ROUTE_PARENT_ACTION}`);
-          expect(el.attr("action")).toMatch("/projects");
+          let el = await app.getElement(`#${SPLAT_ROUTE_PARENT_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/projects");
         });
 
         test("'..' action with more .. segments than parent routes resolves relative to the root route", async ({
@@ -933,9 +939,9 @@ test.describe("Forms", () => {
         }) => {
           let app = new PlaywrightFixture(appFixture, page);
           await app.goto("/projects/blarg");
-          let html = await app.getHtml();
-          let el = getElement(html, `#${SPLAT_ROUTE_TOO_MANY_DOTS_ACTION}`);
-          expect(el.attr("action")).toMatch("/");
+          let el = await app.getElement(`#${SPLAT_ROUTE_TOO_MANY_DOTS_ACTION}`);
+          let action = await el.getAttribute("action");
+          expect(action).toMatch("/");
         });
       });
     });
@@ -956,13 +962,9 @@ test.describe("Forms", () => {
           await app.clickElement(`text=Submit`);
           if (method !== "GET") {
             await page.waitForSelector("#action-method");
-            expect(await app.getHtml("pre#action-method")).toBe(
-              `<pre id="action-method">${method}</pre>`
-            );
+            expect(await app.getHtml("pre#action-method")).toBe(method);
           }
-          expect(await app.getHtml("pre#loader-method")).toBe(
-            `<pre id="loader-method">GET</pre>`
-          );
+          expect(await app.getHtml("pre#loader-method")).toBe(`GET`);
         });
       });
     });
@@ -983,13 +985,9 @@ test.describe("Forms", () => {
           await app.clickElement(`text=Submit with ${overrideMethod}`);
           if (overrideMethod !== "GET") {
             await page.waitForSelector("#action-method");
-            expect(await app.getHtml("pre#action-method")).toBe(
-              `<pre id="action-method">${overrideMethod}</pre>`
-            );
+            expect(await app.getHtml("pre#action-method")).toBe(overrideMethod);
           }
-          expect(await app.getHtml("pre#loader-method")).toBe(
-            `<pre id="loader-method">GET</pre>`
-          );
+          expect(await app.getHtml("pre#loader-method")).toBe(`GET`);
         });
       });
     });
@@ -1006,31 +1004,33 @@ test.describe("Forms", () => {
 
       await app.goto("/submitter");
       await app.clickElement("text=Add Task");
-      expect((await app.getElement("#formData")).val()).toBe(
+      expect(await (await app.getElement("#formData")).inputValue()).toBe(
         "tasks=first&tasks=second&tasks=&tasks=last"
       );
 
       await app.goto("/submitter");
       await app.clickElement("text=No Name");
-      expect((await app.getElement("#formData")).val()).toBe(
+
+      expect(await (await app.getElement("#formData")).inputValue()).toBe(
         "tasks=first&tasks=second&tasks=last"
       );
 
       await app.goto("/submitter");
       await app.clickElement("[alt='Add Task']");
-      expect((await app.getElement("#formData")).val()).toMatch(
+
+      expect(await (await app.getElement("#formData")).inputValue()).toMatch(
         /^tasks=first&tasks=second&tasks.x=\d+&tasks.y=\d+&tasks=last$/
       );
 
       await app.goto("/submitter");
       await app.clickElement("[alt='No Name']");
-      expect((await app.getElement("#formData")).val()).toMatch(
+      expect(await (await app.getElement("#formData")).inputValue()).toMatch(
         /^tasks=first&tasks=second&x=\d+&y=\d+&tasks=last$/
       );
 
       await app.goto("/submitter");
       await app.clickElement("text=Outside");
-      expect((await app.getElement("#formData")).val()).toBe(
+      expect(await (await app.getElement("#formData")).inputValue()).toBe(
         "tasks=outside&tasks=first&tasks=second&tasks=last"
       );
     });
@@ -1046,7 +1046,7 @@ test.describe("Forms", () => {
       await app.uploadFile(`[name=filey2]`, myFile, myFile);
       await app.clickElement("button");
 
-      expect((await app.getElement("#formData")).val()).toBe(
+      expect(await (await app.getElement("#formData")).inputValue()).toBe(
         "filey=myfile.txt&filey2=myfile.txt&filey2=myfile.txt&filey3="
       );
 
@@ -1055,7 +1055,7 @@ test.describe("Forms", () => {
       await app.uploadFile(`[name=filey2]`, myFile, myFile);
       await app.clickElement("button");
 
-      expect((await app.getElement("#formData")).val()).toBe(
+      expect(await (await app.getElement("#formData")).inputValue()).toBe(
         "filey=myfile.txt&filey2=myfile.txt&filey2=myfile.txt&filey3="
       );
     });
@@ -1070,8 +1070,9 @@ test.describe("Forms", () => {
       expect(html).toMatch("Pathless Layout ");
       expect(html).toMatch("Pathless Layout Index");
 
-      let el = getElement(html, `form`);
-      expect(el.attr("action")).toMatch("/pathless-layout-parent");
+      let el = await app.getElement(`form`);
+      let action = await el.getAttribute("action");
+      expect(action).toMatch("/pathless-layout-parent");
 
       expect(await app.getHtml()).toMatch("Submitted - No");
       // This submission should ignore the index route and the pathless layout

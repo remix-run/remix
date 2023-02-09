@@ -119,7 +119,7 @@ test.describe("PostCSS", () => {
   let regularStylesSheetsFixture = () => ({
     "app/routes/regular-style-sheets-test.jsx": js`
       import { Test, links as testLinks } from "~/test-components/regular-style-sheets";
-    
+
       export function links() {
         return [...testLinks()];
       }
@@ -138,7 +138,7 @@ test.describe("PostCSS", () => {
       export function Test() {
         return (
           <div data-testid="regular-style-sheets" className="regular-style-sheets-test">
-            <p>Regular style sheets test.</p>            
+            <p>Regular style sheets test.</p>
             <p>PostCSS context (base64): <span data-testid="regular-style-sheets-postcss-context" /></p>
           </div>
         );
@@ -157,7 +157,7 @@ test.describe("PostCSS", () => {
   test("regular style sheets", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/regular-style-sheets-test");
-    let locator = await page.locator("[data-testid='regular-style-sheets']");
+    let locator = page.getByTestId("regular-style-sheets");
     let padding = await locator.evaluate((el) => getComputedStyle(el).padding);
     expect(padding).toBe(TEST_PADDING_VALUE);
   });
@@ -185,7 +185,7 @@ test.describe("PostCSS", () => {
       export function Test() {
         return (
           <div data-testid="css-modules" className={styles.root}>
-            <p>CSS Modules test.</p>            
+            <p>CSS Modules test.</p>
             <p>PostCSS context (base64): <span data-testid="css-modules-postcss-context" /></p>
           </div>
         );
@@ -204,7 +204,7 @@ test.describe("PostCSS", () => {
   test("CSS Modules", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/css-modules-test");
-    let locator = await page.locator("[data-testid='css-modules']");
+    let locator = page.getByTestId("css-modules");
     let padding = await locator.evaluate((el) => getComputedStyle(el).padding);
     expect(padding).toBe(TEST_PADDING_VALUE);
   });
@@ -232,7 +232,7 @@ test.describe("PostCSS", () => {
       export function Test() {
         return (
           <div data-testid="vanilla-extract" className={styles.root}>
-            <p>Vanilla Extract test.</p>            
+            <p>Vanilla Extract test.</p>
             <p>PostCSS context (base64): <span data-testid="vanilla-extract-postcss-context" /></p>
           </div>
         );
@@ -240,7 +240,7 @@ test.describe("PostCSS", () => {
     `,
     "app/test-components/vanilla-extract/styles.css.ts": js`
       import { style, globalStyle } from "@vanilla-extract/css";
-    
+
       export const root = style({
         padding: "TEST_PADDING_VALUE",
       });
@@ -253,7 +253,7 @@ test.describe("PostCSS", () => {
   test("Vanilla Extract", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/vanilla-extract-test");
-    let locator = await page.locator("[data-testid='vanilla-extract']");
+    let locator = page.getByTestId("vanilla-extract");
     let padding = await locator.evaluate((el) => getComputedStyle(el).padding);
     expect(padding).toBe(TEST_PADDING_VALUE);
   });
@@ -281,7 +281,7 @@ test.describe("PostCSS", () => {
       export function Test() {
         return (
           <div data-testid="css-side-effect-imports" className="css-side-effect-imports-test">
-            <p>CSS side-effect imports test.</p>            
+            <p>CSS side-effect imports test.</p>
             <p>PostCSS context (base64): <span data-testid="css-side-effect-imports-postcss-context" /></p>
           </div>
         );
@@ -300,7 +300,7 @@ test.describe("PostCSS", () => {
   test("CSS side-effect imports", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/css-side-effect-imports-test");
-    let locator = await page.locator("[data-testid='css-side-effect-imports']");
+    let locator = page.getByTestId("css-side-effect-imports");
     let padding = await locator.evaluate((el) => getComputedStyle(el).padding);
     expect(padding).toBe(TEST_PADDING_VALUE);
   });
@@ -317,7 +317,7 @@ test.describe("PostCSS", () => {
   let automaticTailwindPluginInsertionFixture = () => ({
     "app/routes/automatic-tailwind-plugin-insertion-test.jsx": js`
       import { Test, links as testLinks } from "~/test-components/automatic-tailwind-plugin-insertion";
-    
+
       export function links() {
         return [...testLinks()];
       }
@@ -350,9 +350,7 @@ test.describe("PostCSS", () => {
   test("automatic Tailwind plugin insertion", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/automatic-tailwind-plugin-insertion-test");
-    let locator = await page.locator(
-      "[data-testid='automatic-tailwind-plugin-insertion']"
-    );
+    let locator = page.getByTestId("automatic-tailwind-plugin-insertion");
     let padding = await locator.evaluate((el) => getComputedStyle(el).padding);
     expect(padding).toBe(TEST_PADDING_VALUE);
   });

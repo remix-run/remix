@@ -103,7 +103,7 @@ test.describe("CSS Modules", () => {
   test("basic styles", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/basic-styles-test");
-    let locator = await page.locator("[data-testid='basic-styles']");
+    let locator = page.getByTestId("basic-styles");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -139,7 +139,7 @@ test.describe("CSS Modules", () => {
   test("global selectors", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/global-selector-test");
-    let locator = await page.locator("[data-testid='global-selector']");
+    let locator = page.getByTestId("global-selector");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -175,7 +175,7 @@ test.describe("CSS Modules", () => {
   test("nested global selectors", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/nested-global-selector-test");
-    let locator = await page.locator("[data-testid='nested-global-selector']");
+    let locator = page.getByTestId("[nested-global-selector");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -212,7 +212,7 @@ test.describe("CSS Modules", () => {
   test("local class composition", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/local-class-composition-test");
-    let locator = await page.locator("[data-testid='local-class-composition']");
+    let locator = page.getByTestId("local-class-composition");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -251,9 +251,7 @@ test.describe("CSS Modules", () => {
   test("imported class composition", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/imported-class-composition-test");
-    let locator = await page.locator(
-      "[data-testid='imported-class-composition']"
-    );
+    let locator = page.getByTestId("imported-class-composition");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -292,9 +290,7 @@ test.describe("CSS Modules", () => {
   test("root relative imported class composition", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/root-relative-imported-class-composition-test");
-    let locator = await page.locator(
-      "[data-testid='root-relative-imported-class-composition']"
-    );
+    let locator = page.getByTestId("root-relative-imported-class-composition");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -331,9 +327,7 @@ test.describe("CSS Modules", () => {
   test("global class composition", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/global-class-composition-test");
-    let locator = await page.locator(
-      "[data-testid='global-class-composition']"
-    );
+    let locator = page.getByTestId("global-class-composition");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -368,7 +362,7 @@ test.describe("CSS Modules", () => {
   test("local @value", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/local-value-test");
-    let locator = await page.locator("[data-testid='local-value']");
+    let locator = page.getByTestId("local-value");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -406,7 +400,7 @@ test.describe("CSS Modules", () => {
   test("imported @value", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/imported-value-test");
-    let locator = await page.locator("[data-testid='imported-value']");
+    let locator = page.getByTestId("imported-value");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -444,9 +438,7 @@ test.describe("CSS Modules", () => {
   test("root relative imported @value", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/root-relative-imported-value-test");
-    let locator = await page.locator(
-      "[data-testid='root-relative-imported-value']"
-    );
+    let locator = page.getByTestId("root-relative-imported-value");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -490,7 +482,7 @@ test.describe("CSS Modules", () => {
       if (res.url().endsWith(".svg")) imgStatus = res.status();
     });
     await app.goto("/image-urls-test");
-    let locator = await page.locator("[data-testid='image-urls']");
+    let locator = page.getByTestId("image-urls");
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
     );
@@ -535,9 +527,7 @@ test.describe("CSS Modules", () => {
       if (res.url().endsWith(".svg")) imgStatus = res.status();
     });
     await app.goto("/root-relative-image-urls-test");
-    let locator = await page.locator(
-      "[data-testid='root-relative-image-urls']"
-    );
+    let locator = page.getByTestId("root-relative-image-urls");
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
     );
@@ -550,7 +540,7 @@ test.describe("CSS Modules", () => {
       import { RemixBrowser } from "@remix-run/react";
       import { startTransition, StrictMode } from "react";
       import { hydrateRoot } from "react-dom/client";
-      import "./entry.client.module.css";      
+      import "./entry.client.module.css";
       const hydrate = () => {
         startTransition(() => {
           hydrateRoot(
@@ -560,14 +550,14 @@ test.describe("CSS Modules", () => {
             </StrictMode>
           );
         });
-      };      
+      };
       if (window.requestIdleCallback) {
         window.requestIdleCallback(hydrate);
       } else {
         // Safari doesn't support requestIdleCallback
         // https://caniuse.com/requestidlecallback
         window.setTimeout(hydrate, 1);
-      }        
+      }
     `,
     "app/entry.client.module.css": css`
       :global(.clientEntry) {
@@ -587,9 +577,7 @@ test.describe("CSS Modules", () => {
   test("client entry side effects", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/client-entry-side-effects-test");
-    let locator = await page.locator(
-      "[data-testid='client-entry-side-effects']"
-    );
+    let locator = page.getByTestId("client-entry-side-effects");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -647,8 +635,10 @@ test.describe("CSS Modules", () => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/deduplicated-css-test");
 
-    let element = await app.getElement("[data-testid='deduplicated-css']");
-    let deduplicatedClassName = element.data().deduplicatedClassName;
+    let element = page.getByTestId("deduplicated-css");
+    let deduplicatedClassName = await element.getAttribute(
+      "data-deduplicated-class-name"
+    );
 
     if (typeof deduplicatedClassName !== "string") {
       throw new Error(
@@ -700,11 +690,12 @@ test.describe("CSS Modules", () => {
       }
     `,
   });
+
   test("unique class names", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/unique-class-names-test");
-    let element = await app.getElement("[data-testid='unique-class-names']");
-    let classNames = element.attr("class")?.split(" ");
+    let element = page.getByTestId("unique-class-names");
+    let classNames = (await element.getAttribute("class"))?.split(" ");
     expect(new Set(classNames).size).toBe(2);
   });
 });

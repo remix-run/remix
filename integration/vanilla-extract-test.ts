@@ -80,7 +80,7 @@ test.describe("Vanilla Extract", () => {
     `,
     "app/routes/typescript-test.jsx": js`
       import * as styles from "../fixtures/typescript/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="typescript" className={styles.root}>
@@ -93,7 +93,7 @@ test.describe("Vanilla Extract", () => {
   test("TypeScript", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/typescript-test");
-    let locator = await page.locator("[data-testid='typescript']");
+    let locator = page.getByTestId("typescript");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -111,7 +111,7 @@ test.describe("Vanilla Extract", () => {
     `,
     "app/routes/javascript-test.jsx": js`
       import * as styles from "../fixtures/javascript/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="javascript" className={styles.root}>
@@ -124,7 +124,7 @@ test.describe("Vanilla Extract", () => {
   test("JavaScript", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/javascript-test");
-    let locator = await page.locator("[data-testid='javascript']");
+    let locator = page.getByTestId("javascript");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -150,7 +150,7 @@ test.describe("Vanilla Extract", () => {
     `,
     "app/routes/class-composition-test.jsx": js`
       import * as styles from "../fixtures/class-composition/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="class-composition" className={styles.root}>
@@ -163,7 +163,7 @@ test.describe("Vanilla Extract", () => {
   test("class composition", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/class-composition-test");
-    let locator = await page.locator("[data-testid='class-composition']");
+    let locator = page.getByTestId("class-composition");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -189,7 +189,7 @@ test.describe("Vanilla Extract", () => {
     `,
     "app/routes/root-relative-class-composition-test.jsx": js`
       import * as styles from "../fixtures/root-relative-class-composition/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="root-relative-class-composition" className={styles.root}>
@@ -202,9 +202,7 @@ test.describe("Vanilla Extract", () => {
   test("root-relative class composition", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/root-relative-class-composition-test");
-    let locator = await page.locator(
-      "[data-testid='root-relative-class-composition']"
-    );
+    let locator = page.getByTestId("root-relative-class-composition");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -214,14 +212,14 @@ test.describe("Vanilla Extract", () => {
   let sideEffectImportsFixture = () => ({
     "app/fixtures/side-effect-imports/styles.css.ts": js`
       import { globalStyle } from "@vanilla-extract/css";
-      
+
       globalStyle(".side-effect-imports", {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
     "app/routes/side-effect-imports-test.jsx": js`
       import "../fixtures/side-effect-imports/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="side-effect-imports" className="side-effect-imports">
@@ -234,7 +232,7 @@ test.describe("Vanilla Extract", () => {
   test("side-effect imports", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/side-effect-imports-test");
-    let locator = await page.locator("[data-testid='side-effect-imports']");
+    let locator = page.getByTestId("side-effect-imports");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -247,14 +245,14 @@ test.describe("Vanilla Extract", () => {
     `,
     "app/fixtures/side-effect-imports-within-child-compilation/nested-side-effect.css.ts": js`
       import { globalStyle } from "@vanilla-extract/css";
-      
+
       globalStyle(".side-effect-imports-within-child-compilation", {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
     "app/routes/side-effect-imports-within-child-compilation-test.jsx": js`
       import "../fixtures/side-effect-imports-within-child-compilation/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="side-effect-imports-within-child-compilation" className="side-effect-imports-within-child-compilation">
@@ -267,8 +265,8 @@ test.describe("Vanilla Extract", () => {
   test("side-effect imports within child compilation", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/side-effect-imports-within-child-compilation-test");
-    let locator = await page.locator(
-      "[data-testid='side-effect-imports-within-child-compilation']"
+    let locator = page.getByTestId(
+      "side-effect-imports-within-child-compilation"
     );
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
@@ -302,7 +300,7 @@ test.describe("Vanilla Extract", () => {
       import * as styles_b from "../fixtures/stable-identifiers/styles_b.css";
 
       const styles = new Set([styles_a.root, styles_b.root]);
-      
+
       export default function() {
         return (
           <div data-testid="stable-identifiers" className={Array.from(styles).join(' ')}>
@@ -319,7 +317,7 @@ test.describe("Vanilla Extract", () => {
     // asserting that it's the same class name.
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/stable-identifiers-test");
-    let locator = await page.locator("[data-testid='stable-identifiers']");
+    let locator = page.getByTestId("stable-identifiers");
     let { padding, classList } = await locator.evaluate((element) => ({
       padding: window.getComputedStyle(element).padding,
       classList: Array.from(element.classList),
@@ -345,7 +343,7 @@ test.describe("Vanilla Extract", () => {
     `,
     "app/routes/image-urls-via-css-url-test.jsx": js`
       import * as styles from "../fixtures/imageUrlsViaCssUrl/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="image-urls-via-css-url" className={styles.root}>
@@ -362,7 +360,7 @@ test.describe("Vanilla Extract", () => {
       if (res.url().endsWith(".svg")) imgStatus = res.status();
     });
     await app.goto("/image-urls-via-css-url-test");
-    let locator = await page.locator("[data-testid='image-urls-via-css-url']");
+    let locator = page.getByTestId("image-urls-via-css-url");
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
     );
@@ -387,7 +385,7 @@ test.describe("Vanilla Extract", () => {
     `,
     "app/routes/image-urls-via-root-relative-css-url-test.jsx": js`
       import * as styles from "../fixtures/imageUrlsViaRootRelativeCssUrl/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="image-urls-via-root-relative-css-url" className={styles.root}>
@@ -404,9 +402,7 @@ test.describe("Vanilla Extract", () => {
       if (res.url().endsWith(".svg")) imgStatus = res.status();
     });
     await app.goto("/image-urls-via-root-relative-css-url-test");
-    let locator = await page.locator(
-      "[data-testid='image-urls-via-root-relative-css-url']"
-    );
+    let locator = page.getByTestId("image-urls-via-root-relative-css-url");
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
     );
@@ -432,7 +428,7 @@ test.describe("Vanilla Extract", () => {
     `,
     "app/routes/image-urls-via-js-import-test.jsx": js`
       import * as styles from "../fixtures/imageUrlsViaJsImport/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="image-urls-via-js-import" className={styles.root}>
@@ -449,9 +445,7 @@ test.describe("Vanilla Extract", () => {
       if (res.url().endsWith(".svg")) imgStatus = res.status();
     });
     await app.goto("/image-urls-via-js-import-test");
-    let locator = await page.locator(
-      "[data-testid='image-urls-via-js-import']"
-    );
+    let locator = page.getByTestId("image-urls-via-js-import");
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
     );
@@ -477,7 +471,7 @@ test.describe("Vanilla Extract", () => {
     `,
     "app/routes/image-urls-via-root-relative-js-import-test.jsx": js`
       import * as styles from "../fixtures/imageUrlsViaRootRelativeJsImport/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="image-urls-via-root-relative-js-import" className={styles.root}>
@@ -494,9 +488,7 @@ test.describe("Vanilla Extract", () => {
       if (res.url().endsWith(".svg")) imgStatus = res.status();
     });
     await app.goto("/image-urls-via-root-relative-js-import-test");
-    let locator = await page.locator(
-      "[data-testid='image-urls-via-root-relative-js-import']"
-    );
+    let locator = page.getByTestId("image-urls-via-root-relative-js-import");
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
     );
@@ -531,7 +523,7 @@ test.describe("Vanilla Extract", () => {
     `,
     "app/routes/image-urls-via-class-composition-test.jsx": js`
       import * as styles from "../fixtures/imageUrlsViaClassComposition/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="image-urls-via-class-composition" className={styles.root}>
@@ -548,9 +540,7 @@ test.describe("Vanilla Extract", () => {
       if (res.url().endsWith(".svg")) imgStatus = res.status();
     });
     await app.goto("/image-urls-via-class-composition-test");
-    let locator = await page.locator(
-      "[data-testid='image-urls-via-class-composition']"
-    );
+    let locator = page.getByTestId("image-urls-via-class-composition");
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
     );
@@ -586,7 +576,7 @@ test.describe("Vanilla Extract", () => {
     `,
     "app/routes/image-urls-via-js-import-class-composition-test.jsx": js`
       import * as styles from "../fixtures/imageUrlsViaJsImportClassComposition/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="image-urls-via-js-import-class-composition" className={styles.root}>
@@ -603,8 +593,8 @@ test.describe("Vanilla Extract", () => {
       if (res.url().endsWith(".svg")) imgStatus = res.status();
     });
     await app.goto("/image-urls-via-js-import-class-composition-test");
-    let locator = await page.locator(
-      "[data-testid='image-urls-via-js-import-class-composition']"
+    let locator = page.getByTestId(
+      "image-urls-via-js-import-class-composition"
     );
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
@@ -616,7 +606,7 @@ test.describe("Vanilla Extract", () => {
   let standardImageUrlsViaJsImportFixture = () => ({
     "app/fixtures/standardImageUrlsViaJsImport/styles.css.ts": js`
       import { style } from "@vanilla-extract/css";
-      
+
       export { default as src } from "./image.svg";
 
       export const root = style({
@@ -631,7 +621,7 @@ test.describe("Vanilla Extract", () => {
     `,
     "app/routes/standard-image-urls-via-js-import-test.jsx": js`
       import { root, src } from "../fixtures/standardImageUrlsViaJsImport/styles.css";
-      
+
       export default function() {
         return (
           <img
@@ -656,10 +646,9 @@ test.describe("Vanilla Extract", () => {
       if (res.url().endsWith(".svg")) imgStatus = res.status();
     });
     await app.goto("/standard-image-urls-via-js-import-test");
-    let element = await app.getElement(
-      "[data-testid='standard-image-urls-via-js-import']"
-    );
-    expect(element.attr("src")).toContain(".svg");
+    let element = page.getByTestId("standard-image-urls-via-js-import");
+    let src = await element.getAttribute("src");
+    expect(src).toContain(".svg");
     expect(imgStatus).toBe(200);
   });
 
@@ -681,7 +670,7 @@ test.describe("Vanilla Extract", () => {
     `,
     "app/routes/standard-image-urls-via-root-relative-js-import-test.jsx": js`
       import { root, src } from "../fixtures/standardImageUrlsViaRootRelativeJsImport/styles.css";
-      
+
       export default function() {
         return (
           <img
@@ -700,10 +689,11 @@ test.describe("Vanilla Extract", () => {
       if (res.url().endsWith(".svg")) imgStatus = res.status();
     });
     await app.goto("/standard-image-urls-via-root-relative-js-import-test");
-    let element = await app.getElement(
-      "[data-testid='standard-image-urls-via-root-relative-js-import']"
+    let element = page.getByTestId(
+      "standard-image-urls-via-root-relative-js-import"
     );
-    expect(element.attr("src")).toContain(".svg");
+    let src = await element.getAttribute("src");
+    expect(src).toContain(".svg");
     expect(imgStatus).toBe(200);
   });
 });

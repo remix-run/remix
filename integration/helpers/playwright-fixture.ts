@@ -163,8 +163,11 @@ export class PlaywrightFixture {
    *
    * @param selector CSS Selector for the element's HTML you want
    */
-  getHtml(selector?: string) {
-    return getHtml(this.page, selector);
+  async getHtml(selector?: string) {
+    let html = selector
+      ? await this.getElement(selector).innerHTML()
+      : await this.page.content();
+    return prettyHtml(html);
   }
 
   /**
@@ -172,8 +175,12 @@ export class PlaywrightFixture {
    *
    * @param selector CSS Selector for the element's HTML you want
    */
-  async getElement(selector: string) {
-    return getElement(await getHtml(this.page), selector);
+  getElement(selector: string) {
+    let el = this.page.locator(selector);
+    if (!el) {
+      throw new Error(`No element matches selector "${selector}"`);
+    }
+    return el;
   }
 
   /**

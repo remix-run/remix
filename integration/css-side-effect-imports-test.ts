@@ -75,7 +75,7 @@ test.describe("CSS side-effect imports", () => {
     `,
     "app/routes/basic-side-effect-test.jsx": js`
       import "../basicSideEffect/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="basic-side-effect" className="basicSideEffect">
@@ -88,7 +88,7 @@ test.describe("CSS side-effect imports", () => {
   test("basic side effect", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/basic-side-effect-test");
-    let locator = await page.locator("[data-testid='basic-side-effect']");
+    let locator = page.getByTestId("basic-side-effect");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -104,7 +104,7 @@ test.describe("CSS side-effect imports", () => {
     `,
     "app/routes/root-relative-test.jsx": js`
       import "~/rootRelative/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="root-relative" className="rootRelative">
@@ -117,7 +117,7 @@ test.describe("CSS side-effect imports", () => {
   test("root relative", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/root-relative-test");
-    let locator = await page.locator("[data-testid='root-relative']");
+    let locator = page.getByTestId("root-relative");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -139,7 +139,7 @@ test.describe("CSS side-effect imports", () => {
     `,
     "app/routes/image-urls-test.jsx": js`
       import "../imageUrls/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="image-urls" className="imageUrls">
@@ -156,7 +156,7 @@ test.describe("CSS side-effect imports", () => {
       if (res.url().endsWith(".svg")) imgStatus = res.status();
     });
     await app.goto("/image-urls-test");
-    let locator = await page.locator("[data-testid='image-urls']");
+    let locator = page.getByTestId("image-urls");
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
     );
@@ -179,7 +179,7 @@ test.describe("CSS side-effect imports", () => {
     `,
     "app/routes/root-relative-image-urls-test.jsx": js`
       import "../rootRelativeImageUrls/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="root-relative-image-urls" className="rootRelativeImageUrls">
@@ -196,9 +196,7 @@ test.describe("CSS side-effect imports", () => {
       if (res.url().endsWith(".svg")) imgStatus = res.status();
     });
     await app.goto("/root-relative-image-urls-test");
-    let locator = await page.locator(
-      "[data-testid='root-relative-image-urls']"
-    );
+    let locator = page.getByTestId("root-relative-image-urls");
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
     );
@@ -238,7 +236,7 @@ test.describe("CSS side-effect imports", () => {
   test("CommonJS package", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/commonjs-package-test");
-    let locator = await page.locator("[data-testid='commonjs-package']");
+    let locator = page.getByTestId("commonjs-package");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -277,7 +275,7 @@ test.describe("CSS side-effect imports", () => {
   test("ESM package", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/esm-package-test");
-    let locator = await page.locator("[data-testid='esm-package']");
+    let locator = page.getByTestId("esm-package");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );

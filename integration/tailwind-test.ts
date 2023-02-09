@@ -98,7 +98,7 @@ test.describe("Tailwind", () => {
   test("basic usage", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/basic-usage-test");
-    let locator = await page.locator("[data-testid='basic-usage']");
+    let locator = page.getByTestId("basic-usage");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -108,7 +108,7 @@ test.describe("Tailwind", () => {
   let regularStylesSheetsFixture = () => ({
     "app/routes/regular-style-sheets-test.jsx": js`
       import { Test, links as testLinks } from "~/test-components/regular-style-sheets";
-    
+
       export function links() {
         return [...testLinks()];
       }
@@ -141,7 +141,7 @@ test.describe("Tailwind", () => {
   test("regular style sheets", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/regular-style-sheets-test");
-    let locator = await page.locator("[data-testid='regular-style-sheets']");
+    let locator = page.getByTestId("regular-style-sheets");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -176,7 +176,7 @@ test.describe("Tailwind", () => {
   test("CSS Modules", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/css-modules-test");
-    let locator = await page.locator("[data-testid='css-modules']");
+    let locator = page.getByTestId("css-modules");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -214,9 +214,7 @@ test.describe("Tailwind", () => {
   test("Vanilla Extract class composition", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/vanilla-extract-class-composition-test");
-    let locator = await page.locator(
-      "[data-testid='vanilla-extract-class-composition']"
-    );
+    let locator = page.getByTestId("vanilla-extract-class-composition");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -254,9 +252,7 @@ test.describe("Tailwind", () => {
   test("Vanilla Extract Tailwind functions", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/vanilla-extract-tailwind-functions-test");
-    let locator = await page.locator(
-      "[data-testid='vanilla-extract-tailwind-functions']"
-    );
+    let locator = page.getByTestId("vanilla-extract-tailwind-functions");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -291,7 +287,7 @@ test.describe("Tailwind", () => {
   test("CSS side-effect imports", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/css-side-effect-imports-test");
-    let locator = await page.locator("[data-testid='css-side-effect-imports']");
+    let locator = page.getByTestId("css-side-effect-imports");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
