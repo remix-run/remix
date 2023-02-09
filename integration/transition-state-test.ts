@@ -206,8 +206,9 @@ test.describe("rendering", () => {
     await page.waitForSelector(`#${STATES.NORMAL_LOAD}`);
     await page.waitForSelector("#loading-indicator", { state: "hidden" });
 
-    let transitionsCode = await app.getElement("#transitions");
-    let transitionsJson = transitionsCode.text();
+    let transitionsCode = app.getElement("#transitions");
+    let transitionsJson = await transitionsCode.textContent();
+    if (!transitionsJson) throw new Error("No transitions found");
     let transitions = JSON.parse(transitionsJson);
     expect(transitions).toEqual([
       IDLE_STATE,
@@ -232,8 +233,9 @@ test.describe("rendering", () => {
     await app.clickLink(`/${STATES.LOADING_REDIRECT}`);
     await page.waitForURL(/\?redirected/);
     await page.waitForSelector("#loading-indicator", { state: "hidden" });
-    let transitionsCode = await app.getElement("#transitions");
-    let transitionsJson = transitionsCode.text();
+    let transitionsCode = app.getElement("#transitions");
+    let transitionsJson = await transitionsCode.textContent();
+    if (!transitionsJson) throw new Error("No transitions found");
     let transitions = JSON.parse(transitionsJson);
     expect(transitions).toEqual([
       IDLE_STATE,
@@ -277,8 +279,9 @@ test.describe("rendering", () => {
     await app.clickSubmitButton(`/${STATES.SUBMITTING_LOADER}`);
     await page.waitForSelector(`#${STATES.SUBMITTING_LOADER}`);
     await page.waitForSelector("#loading-indicator", { state: "hidden" });
-    let transitionsCode = await app.getElement("#transitions");
-    let transitionsJson = transitionsCode.text();
+    let transitionsCode = app.getElement("#transitions");
+    let transitionsJson = await transitionsCode.textContent();
+    if (!transitionsJson) throw new Error("No transitions found");
     let transitions = JSON.parse(transitionsJson);
     expect(transitions).toEqual([
       IDLE_STATE,
@@ -315,8 +318,9 @@ test.describe("rendering", () => {
     await app.clickSubmitButton(`/${STATES.SUBMITTING_LOADER_REDIRECT}`);
     await page.waitForURL(/\?redirected/);
     await page.waitForSelector("#loading-indicator", { state: "hidden" });
-    let transitionsCode = await app.getElement("#transitions");
-    let transitionsJson = transitionsCode.text();
+    let transitionsCode = app.getElement("#transitions");
+    let transitionsJson = await transitionsCode.textContent();
+    if (!transitionsJson) throw new Error("No transitions found");
     let transitions = JSON.parse(transitionsJson);
     expect(transitions).toEqual([
       IDLE_STATE,
@@ -374,8 +378,9 @@ test.describe("rendering", () => {
     await app.clickSubmitButton(`/${STATES.SUBMITTING_ACTION}`);
     await page.waitForSelector(`#${STATES.SUBMITTING_ACTION}`);
     await page.waitForSelector("#loading-indicator", { state: "hidden" });
-    let transitionsCode = await app.getElement("#transitions");
-    let transitionsJson = transitionsCode.text();
+    let transitionsCode = app.getElement("#transitions");
+    let transitionsJson = await transitionsCode.textContent();
+    if (!transitionsJson) throw new Error("No transitions found");
     let transitions = JSON.parse(transitionsJson);
     expect(transitions).toEqual([
       IDLE_STATE,
@@ -427,8 +432,9 @@ test.describe("rendering", () => {
     await app.clickSubmitButton(`/${STATES.SUBMITTING_ACTION_REDIRECT}`);
     await page.waitForURL(/\?redirected/);
     await page.waitForSelector("#loading-indicator", { state: "hidden" });
-    let transitionsCode = await app.getElement("#transitions");
-    let transitionsJson = transitionsCode.text();
+    let transitionsCode = app.getElement("#transitions");
+    let transitionsJson = await transitionsCode.textContent();
+    if (!transitionsJson) throw new Error("No transitions found");
     let transitions = JSON.parse(transitionsJson);
     expect(transitions).toEqual([
       IDLE_STATE,
@@ -486,8 +492,9 @@ test.describe("rendering", () => {
     await app.clickSubmitButton(`/${STATES.FETCHER_REDIRECT}`);
     await page.waitForURL(/\?redirected/);
     await page.waitForSelector("#loading-indicator", { state: "hidden" });
-    let transitionsCode = await app.getElement("#transitions");
-    let transitionsJson = transitionsCode.text();
+    let transitionsCode = app.getElement("#transitions");
+    let transitionsJson = await transitionsCode.textContent();
+    if (!transitionsJson) throw new Error("No transitions found");
     let transitions = JSON.parse(transitionsJson);
     expect(transitions).toEqual([
       IDLE_STATE,

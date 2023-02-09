@@ -1,6 +1,11 @@
 import prettier from "prettier";
 
-import type { ActionFunction, HeadersFunction, LoaderFunction } from "../";
+import type {
+  ActionFunction,
+  HeadersFunction,
+  LoaderFunction,
+  ServerBuild,
+} from "../";
 import type { EntryRoute, ServerRoute, ServerRouteManifest } from "../routes";
 
 export function mockServerBuild(
@@ -18,7 +23,7 @@ export function mockServerBuild(
       loader?: LoaderFunction;
     }
   >
-) {
+): ServerBuild {
   return {
     assets: {
       entry: {
@@ -82,7 +87,17 @@ export function mockServerBuild(
     ),
     future: {
       unstable_dev: {},
+      unstable_cssModules: false,
+      unstable_cssSideEffectImports: false,
+      unstable_postcss: false,
+      unstable_tailwind: false,
+      unstable_vanillaExtract: false,
+      v2_errorBoundary: false,
+      v2_meta: false,
     },
+    assetsBuildDirectory: "/public/build/",
+    publicPath: "/build/",
+    dev: undefined,
   };
 }
 

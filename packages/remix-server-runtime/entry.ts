@@ -12,7 +12,7 @@ export interface EntryContext {
 }
 
 export interface FutureConfig {
-  unstable_cssModules: true;
+  unstable_cssModules: boolean;
   unstable_cssSideEffectImports: boolean;
   unstable_dev: false | { remixRequestHandlerPath?: string };
   unstable_postcss: boolean;

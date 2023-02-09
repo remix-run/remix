@@ -221,9 +221,7 @@ test.describe("compiler", () => {
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml("#built-ins")).toBe(
-      `<div id="built-ins">test${path.sep}file.txt</div>`
-    );
+    expect(await app.getHtml("#built-ins")).toBe(`test${path.sep}file.txt`);
 
     let routeModule = await fixture.getBrowserAsset(
       fixture.build.assets.routes["routes/built-ins"].module

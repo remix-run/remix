@@ -186,8 +186,8 @@ test("can upload a file with createFileUploadHandler", async ({ page }) => {
   await app.clickSubmitButton("/file-upload-handler");
   await page.waitForSelector("#message");
 
-  expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
-  expect(await app.getHtml("#size")).toMatch(">13<");
+  expect(await app.getHtml("#message")).toBe("SUCCESS");
+  expect(await app.getHtml("#size")).toBe("13");
 });
 
 test("can catch MaxPartSizeExceededError when file is too big with createFileUploadHandler", async ({
@@ -203,8 +203,8 @@ test("can catch MaxPartSizeExceededError when file is too big with createFileUpl
   await app.clickSubmitButton("/file-upload-handler");
   await page.waitForSelector("#message");
 
-  expect(await app.getHtml("#message")).toMatch(">FILE_TOO_LARGE<");
-  expect(await app.getHtml("#size")).toMatch(">13<");
+  expect(await app.getHtml("#message")).toBe("FILE_TOO_LARGE");
+  expect(await app.getHtml("#size")).toBe("13");
 });
 
 test("can upload a file with createMemoryUploadHandler", async ({ page }) => {
@@ -214,8 +214,8 @@ test("can upload a file with createMemoryUploadHandler", async ({ page }) => {
   await app.clickSubmitButton("/memory-upload-handler");
   await page.waitForSelector("#message");
 
-  expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
-  expect(await app.getHtml("#size")).toMatch(">13<");
+  expect(await app.getHtml("#message")).toBe("SUCCESS");
+  expect(await app.getHtml("#size")).toBe("13");
 });
 
 test("can upload a file with a passthrough handler", async ({ page }) => {
@@ -225,7 +225,7 @@ test("can upload a file with a passthrough handler", async ({ page }) => {
   await app.clickSubmitButton("/passthrough-upload-handler");
   await page.waitForSelector("#message");
 
-  expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
+  expect(await app.getHtml("#message")).toBe("SUCCESS");
 });
 
 test("can catch MaxPartSizeExceededError when file is too big with createMemoryUploadHandler", async ({
@@ -240,8 +240,8 @@ test("can catch MaxPartSizeExceededError when file is too big with createMemoryU
   await app.clickSubmitButton("/memory-upload-handler");
   await page.waitForSelector("#message");
 
-  expect(await app.getHtml("#message")).toMatch(">FILE_TOO_LARGE<");
-  expect(await app.getHtml("#size")).toMatch(">13<");
+  expect(await app.getHtml("#message")).toBe("FILE_TOO_LARGE");
+  expect(await app.getHtml("#size")).toBe("13");
 });
 
 test.describe("without javascript", () => {
@@ -257,8 +257,8 @@ test.describe("without javascript", () => {
     await page.click("#submit");
     await page.waitForSelector("#message");
 
-    expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
-    expect(await app.getHtml("#size")).toMatch(">13<");
+    expect(await app.getHtml("#message")).toBe("SUCCESS");
+    expect(await app.getHtml("#size")).toBe("13");
   });
 
   test("can catch MaxPartSizeExceededError when file is too big with createFileUploadHandler", async ({
@@ -273,8 +273,8 @@ test.describe("without javascript", () => {
     await page.click("#submit");
     await page.waitForSelector("#message");
 
-    expect(await app.getHtml("#message")).toMatch(">FILE_TOO_LARGE<");
-    expect(await app.getHtml("#size")).toMatch(">13<");
+    expect(await app.getHtml("#message")).toBe("FILE_TOO_LARGE");
+    expect(await app.getHtml("#size")).toBe("13");
   });
 
   test("can upload a file with createMemoryUploadHandler", async ({ page }) => {
@@ -287,8 +287,8 @@ test.describe("without javascript", () => {
     await page.click("#submit");
     await page.waitForSelector("#message");
 
-    expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
-    expect(await app.getHtml("#size")).toMatch(">13<");
+    expect(await app.getHtml("#message")).toBe("SUCCESS");
+    expect(await app.getHtml("#size")).toBe("13");
   });
 
   test("can upload a file with passthrough handler", async ({ page }) => {
@@ -301,7 +301,7 @@ test.describe("without javascript", () => {
     await page.click("#submit");
     await page.waitForSelector("#message");
 
-    expect(await app.getHtml("#message")).toMatch(">SUCCESS<");
+    expect(await app.getHtml("#message")).toBe("SUCCESS");
   });
 
   test("can catch MaxPartSizeExceededError when file is too big with createMemoryUploadHandler", async ({
@@ -316,7 +316,7 @@ test.describe("without javascript", () => {
     await page.click("#submit");
     await page.waitForSelector("#message");
 
-    expect(await app.getHtml("#message")).toMatch(">FILE_TOO_LARGE<");
-    expect(await app.getHtml("#size")).toMatch(">13<");
+    expect(await app.getHtml("#message")).toBe("FILE_TOO_LARGE");
+    expect(await app.getHtml("#size")).toBe("13");
   });
 });

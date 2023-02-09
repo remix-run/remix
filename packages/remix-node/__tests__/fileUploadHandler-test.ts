@@ -19,7 +19,7 @@ describe("NodeOnDiskFile", () => {
   });
 
   it("can read file as text", async () => {
-    expect(await file.text()).toBe(contents);
+    expect(file.text()).toBe(contents);
   });
 
   it("can get an arrayBuffer", async () => {
@@ -33,23 +33,23 @@ describe("NodeOnDiskFile", () => {
   });
 
   it("can slice file and change type", async () => {
-    let sliced = await file.slice(1, 5, "text/rofl");
+    let sliced = file.slice(1, 5, "text/rofl");
     expect(sliced.type).toBe("text/rofl");
     expect(await sliced.text()).toBe(contents.slice(1, 5));
   });
 
   it("can slice file and get text", async () => {
-    let sliced = await file.slice(1, 5);
+    let sliced = file.slice(1, 5);
     expect(await sliced.text()).toBe(contents.slice(1, 5));
   });
 
   it("can slice file twice and get text", async () => {
-    let sliced = (await file.slice(1, 5)).slice(1, 2);
+    let sliced = file.slice(1, 5).slice(1, 2);
     expect(await sliced.text()).toBe(contents.slice(1, 5).slice(1, 2));
   });
 
   it("can sice file and get an arrayBuffer", async () => {
-    let sliced = await file.slice(1, 5);
+    let sliced = file.slice(1, 5);
     let slicedRes = contents.slice(1, 5);
     let buffer = await sliced.arrayBuffer();
     expect(buffer.byteLength).toBe(slicedRes.length);
@@ -57,49 +57,49 @@ describe("NodeOnDiskFile", () => {
   });
 
   it("can slice file and use stream", async () => {
-    let sliced = await file.slice(1, 5);
+    let sliced = file.slice(1, 5);
     let slicedRes = contents.slice(1, 5);
     expect(sliced.size).toBe(slicedRes.length);
     expect(await sliced.text()).toBe(slicedRes);
   });
 
   it("can slice file with negative start and no end", async () => {
-    let sliced = await file.slice(-2);
+    let sliced = file.slice(-2);
     let slicedRes = contents.slice(-2);
     expect(sliced.size).toBe(slicedRes.length);
     expect(await sliced.text()).toBe(slicedRes);
   });
 
   it("can slice file with negative start and negative end", async () => {
-    let sliced = await file.slice(-3, -1);
+    let sliced = file.slice(-3, -1);
     let slicedRes = contents.slice(-3, -1);
     expect(sliced.size).toBe(slicedRes.length);
     expect(await sliced.text()).toBe(slicedRes);
   });
 
   it("can slice file with negative start and negative end twice", async () => {
-    let sliced = await file.slice(-3, -1).slice(1, -1);
+    let sliced = file.slice(-3, -1).slice(1, -1);
     let slicedRes = contents.slice(-3, -1).slice(1, -1);
     expect(sliced.size).toBe(slicedRes.length);
     expect(await sliced.text()).toBe(slicedRes);
   });
 
   it("can slice file with start and negative end", async () => {
-    let sliced = await file.slice(1, -2);
+    let sliced = file.slice(1, -2);
     let slicedRes = contents.slice(1, -2);
     expect(sliced.size).toBe(slicedRes.length);
     expect(await sliced.text()).toBe(slicedRes);
   });
 
   it("can slice file with negaive start and end", async () => {
-    let sliced = await file.slice(-3, 1);
+    let sliced = file.slice(-3, 1);
     let slicedRes = contents.slice(-3, 1);
     expect(sliced.size).toBe(slicedRes.length);
     expect(await sliced.text()).toBe(slicedRes);
   });
 
   it("can slice oob", async () => {
-    let sliced = await file.slice(0, 10000);
+    let sliced = file.slice(0, 10000);
     let slicedRes = contents.slice(0, 10000);
     expect(sliced.size).toBe(slicedRes.length);
     expect(await sliced.text()).toBe(slicedRes);
