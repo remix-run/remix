@@ -3,6 +3,6 @@ import "./globals";
 export type {
   GetLoadContextFunction,
   RequestHandler,
-  ServerMiddlewareFunction,
+  AdapterMiddlewareFunction,
 } from "./server";
 export { createRequestHandler } from "./server";

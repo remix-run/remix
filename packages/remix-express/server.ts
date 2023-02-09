@@ -1,6 +1,9 @@
 import type * as express from "express";
 import type { MiddlewareContext } from "@remix-run/router";
-import { UNSAFE_createMiddlewareStore as createMiddlewareStore } from "@remix-run/router";
+import {
+  UNSAFE_createMiddlewareStore as createMiddlewareStore,
+  UNSAFE_getRouteAwareMiddlewareContext as getRouteAwareMiddlewareContext,
+} from "@remix-run/router";
 import type {
   AppLoadContext,
   ServerBuild,
@@ -28,7 +31,7 @@ export type GetLoadContextFunction = (
   res: express.Response
 ) => AppLoadContext;
 
-export type ServerMiddlewareFunction = ({
+export type AdapterMiddlewareFunction = ({
   request,
   response,
   context,
@@ -50,12 +53,12 @@ export type RequestHandler = (
 export function createRequestHandler({
   build,
   getLoadContext,
-  serverMiddleware,
+  adapterMiddleware,
   mode = process.env.NODE_ENV,
 }: {
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
-  serverMiddleware?: ServerMiddlewareFunction;
+  adapterMiddleware?: AdapterMiddlewareFunction;
   mode?: string;
 }): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
@@ -68,7 +71,7 @@ export function createRequestHandler({
     ) => {
       let response: NodeResponse | undefined;
       try {
-        if (serverMiddleware) {
+        if (adapterMiddleware) {
           let context = createMiddlewareStore();
           let callRemix = async () => {
             let request = createRemixRequest(req, res);
@@ -79,9 +82,17 @@ export function createRequestHandler({
             )) as NodeResponse;
             return response;
           };
-          context.next = callRemix;
+          let routeAwareContext = getRouteAwareMiddlewareContext(
+            context,
+            -1,
+            callRemix
+          );
 
-          await serverMiddleware({ request: req, response: res, context });
+          await adapterMiddleware({
+            request: req,
+            response: res,
+            context: routeAwareContext,
+          });
 
           if (!response) {
             // User never called next(), so doesn't need to do any post-processing

@@ -3,6 +3,7 @@ import type {
   StaticHandler,
   StaticHandlerContext,
   MiddlewareContext,
+  UNSAFE_InternalMiddlewareContext as InternalMiddlewareContext,
 } from "@remix-run/router";
 import {
   UNSAFE_DEFERRED_SYMBOL as DEFERRED_SYMBOL,
@@ -33,7 +34,7 @@ import { createServerHandoffString } from "./serverHandoff";
 export type RequestHandler = (
   request: Request,
   loadContext?: AppLoadContext,
-  middlewareContext?: MiddlewareContext
+  middlewareContext?: InternalMiddlewareContext
 ) => Promise<Response>;
 
 export type CreateRequestHandlerFunction = (
@@ -57,7 +58,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   return async function requestHandler(
     request,
     loadContext = {},
-    middlewareContext?: MiddlewareContext
+    middlewareContext?: InternalMiddlewareContext
   ) {
     let url = new URL(request.url);
     let { unstable_dev, unstable_middleware } = build.future;
@@ -146,7 +147,7 @@ async function handleRemixDataRequest(
   routeId: string,
   request: Request,
   loadContext: AppLoadContext,
-  middlewareContext: MiddlewareContext | undefined
+  middlewareContext: InternalMiddlewareContext | undefined
 ) {
   try {
     let response = await staticHandler.queryRoute(request, {
@@ -268,14 +269,37 @@ async function handleRemixDocumentRequest(
   staticHandler: StaticHandler,
   request: Request,
   loadContext: AppLoadContext,
-  middlewareContext: MiddlewareContext | undefined
+  middlewareContext: InternalMiddlewareContext | undefined
 ) {
-  let context;
   try {
-    context = await staticHandler.query(request, {
-      requestContext: loadContext,
-      middlewareContext,
-    });
+    if (build.future.unstable_middleware) {
+      let response = await staticHandler.queryAndRender(
+        request,
+        (context) =>
+          renderRemixDocument(
+            build,
+            serverMode,
+            request,
+            staticHandler.dataRoutes,
+            context
+          ),
+        {
+          middlewareContext,
+        }
+      );
+      return response;
+    } else {
+      let context = await staticHandler.query(request, {
+        requestContext: loadContext,
+      });
+      return renderRemixDocument(
+        build,
+        serverMode,
+        request,
+        staticHandler.dataRoutes,
+        context
+      );
+    }
   } catch (error: unknown) {
     if (!request.signal.aborted && serverMode !== ServerMode.Test) {
       console.error(error);
@@ -283,7 +307,15 @@ async function handleRemixDocumentRequest(
 
     return new Response(null, { status: 500 });
   }
+}
 
+async function renderRemixDocument(
+  build: ServerBuild,
+  serverMode: ServerMode,
+  request: Request,
+  dataRoutes: StaticHandler["dataRoutes"],
+  context: StaticHandlerContext | Response
+) {
   if (isResponse(context)) {
     return context;
   }
@@ -321,11 +353,7 @@ async function handleRemixDocumentRequest(
     );
   } catch (error: unknown) {
     // Get a new StaticHandlerContext that contains the error at the right boundary
-    context = getStaticContextFromError(
-      staticHandler.dataRoutes,
-      context,
-      error
-    );
+    context = getStaticContextFromError(dataRoutes, context, error);
 
     // Restructure context.errors to the right Catch/Error Boundary
     if (build.future.v2_errorBoundary !== true) {
@@ -365,7 +393,7 @@ async function handleRemixResourceRequest(
   routeId: string,
   request: Request,
   loadContext: AppLoadContext,
-  middlewareContext: MiddlewareContext | undefined
+  middlewareContext: InternalMiddlewareContext | undefined
 ) {
   try {
     // Note we keep the routeId here to align with the Remix handling of
