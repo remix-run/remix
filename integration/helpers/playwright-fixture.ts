@@ -215,11 +215,11 @@ export function getElement(source: string, selector: string) {
 
 export function selectHtml(source: string, selector: string) {
   let el = getElement(source, selector);
-  return prettyHtml(cheerio.html(el)).trim();
+  return prettyHtml(cheerio.html(el));
 }
 
 export function prettyHtml(source: string): string {
-  return prettier.format(source, { parser: "html" });
+  return prettier.format(source, { parser: "html" }).trim();
 }
 
 async function doAndWait(
