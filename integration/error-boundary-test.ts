@@ -799,26 +799,16 @@ test.describe("loaderData in ErrorBoundary", () => {
       let app = new PlaywrightFixture(appFixture, page);
       await app.goto("/parent/child-with-boundary");
 
-      expect(await app.getHtml("#parent-data")).toEqual(
-        '<p id="parent-data">PARENT</p>'
-      );
-      expect(await app.getHtml("#child-data")).toEqual(
-        '<p id="child-data">CHILD</p>'
-      );
+      expect(await app.getHtml("#parent-data")).toEqual("PARENT");
+      expect(await app.getHtml("#child-data")).toEqual("CHILD");
       expect(consoleErrors).toEqual([]);
 
       await app.clickSubmitButton("/parent/child-with-boundary");
       await page.waitForSelector("#child-error");
 
-      expect(await app.getHtml("#child-error")).toEqual(
-        '<p id="child-error">Broken!</p>'
-      );
-      expect(await app.getHtml("#parent-data")).toEqual(
-        '<p id="parent-data">PARENT</p>'
-      );
-      expect(await app.getHtml("#child-data")).toEqual(
-        '<p id="child-data"></p>'
-      );
+      expect(await app.getHtml("#child-error")).toEqual("Broken!");
+      expect(await app.getHtml("#parent-data")).toEqual("PARENT");
+      expect(await app.getHtml("#child-data")).toEqual("");
 
       // Only look for this message.  Chromium browsers will also log the
       // network error but firefox does not
@@ -840,26 +830,16 @@ test.describe("loaderData in ErrorBoundary", () => {
       let app = new PlaywrightFixture(appFixture, page);
       await app.goto("/parent/child-without-boundary");
 
-      expect(await app.getHtml("#parent-data")).toEqual(
-        '<p id="parent-data">PARENT</p>'
-      );
-      expect(await app.getHtml("#child-data")).toEqual(
-        '<p id="child-data">CHILD</p>'
-      );
+      expect(await app.getHtml("#parent-data")).toEqual("PARENT");
+      expect(await app.getHtml("#child-data")).toEqual("CHILD");
       expect(consoleErrors).toEqual([]);
 
       await app.clickSubmitButton("/parent/child-without-boundary");
       await page.waitForSelector("#parent-error");
 
-      expect(await app.getHtml("#parent-error")).toEqual(
-        '<p id="parent-error">Broken!</p>'
-      );
-      expect(await app.getHtml("#parent-matches-data")).toEqual(
-        '<p id="parent-matches-data"></p>'
-      );
-      expect(await app.getHtml("#parent-data")).toEqual(
-        '<p id="parent-data"></p>'
-      );
+      expect(await app.getHtml("#parent-error")).toEqual("Broken!");
+      expect(await app.getHtml("#parent-matches-data")).toEqual("");
+      expect(await app.getHtml("#parent-data")).toEqual("");
 
       // Only look for this message.  Chromium browsers will also log the
       // network error but firefox does not

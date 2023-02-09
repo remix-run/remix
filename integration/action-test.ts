@@ -150,9 +150,7 @@ test.describe("actions", () => {
 
     await page.click("button[type=submit]");
     await page.waitForSelector("#action-text");
-    expect(await app.getHtml("#action-text")).toBe(
-      '<span id="action-text">a=1&amp;b=2</span>'
-    );
+    expect(await app.getHtml("#action-text")).toBe("a=1&amp;b=2");
   });
 
   test("redirects a thrown response on document requests", async () => {

@@ -201,7 +201,7 @@ test.describe("compiler", () => {
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml("#index")).toBe('<div id="index">true</div>');
+    expect(await app.getHtml("#index")).toBe("true");
   });
 
   test("removes server code with `*.client` files", async ({ page }) => {
@@ -210,7 +210,7 @@ test.describe("compiler", () => {
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml("#index")).toBe('<div id="index">true</div>');
+    expect(await app.getHtml("#index")).toBe("true");
   });
 
   test("removes node built-ins from client bundle when used in just loader", async ({
@@ -240,9 +240,7 @@ test.describe("compiler", () => {
     expect(res.status()).toBe(200); // server rendered fine
 
     // rendered the page instead of the error boundary
-    expect(await app.getHtml("#built-ins-polyfill")).toBe(
-      '<div id="built-ins-polyfill">test/file.txt</div>'
-    );
+    expect(await app.getHtml("#built-ins-polyfill")).toBe("test/file.txt");
 
     let routeModule = await fixture.getBrowserAsset(
       fixture.build.assets.routes["routes/built-ins-polyfill"].module
@@ -258,9 +256,7 @@ test.describe("compiler", () => {
     let res = await app.goto("/esm-only-pkg", true);
     expect(res.status()).toBe(200); // server rendered fine
     // rendered the page instead of the error boundary
-    expect(await app.getHtml("#esm-only-pkg")).toBe(
-      '<div id="esm-only-pkg">esm-only-pkg</div>'
-    );
+    expect(await app.getHtml("#esm-only-pkg")).toBe("esm-only-pkg");
   });
 
   test("allows consumption of ESM modules in CJS builds with `serverDependenciesToBundle` when the package only exports a single file", async ({
@@ -271,7 +267,7 @@ test.describe("compiler", () => {
     expect(res.status()).toBe(200); // server rendered fine
     // rendered the page instead of the error boundary
     expect(await app.getHtml("#esm-only-single-export")).toBe(
-      '<div id="esm-only-single-export">esm-only-single-export</div>'
+      "esm-only-single-export"
     );
   });
 
@@ -283,7 +279,7 @@ test.describe("compiler", () => {
     expect(res.status()).toBe(200); // server rendered fine
     // rendered the page instead of the error boundary
     expect(await app.getHtml("#esm-only-exports-pkg")).toBe(
-      '<div id="esm-only-exports-pkg">esm-only-exports-pkg</div>'
+      "esm-only-exports-pkg"
     );
   });
 
@@ -293,7 +289,7 @@ test.describe("compiler", () => {
     expect(res.status()).toBe(200); // server rendered fine
     // rendered the page instead of the error boundary
     expect(await app.getHtml("#package-with-submodule")).toBe(
-      '<div id="package-with-submodule">package-with-submodule</div>'
+      "package-with-submodule"
     );
   });
 
