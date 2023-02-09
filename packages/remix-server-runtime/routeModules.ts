@@ -1,10 +1,10 @@
-import type { Location } from "history";
+import type { Location, Params } from "@remix-run/router";
 import type { ComponentType } from "react";
-import type { Params } from "react-router-dom";
 
 import type { AppLoadContext, AppData } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { RouteData } from "./routeData";
+import type { Route } from "./routes";
 import type { SerializeFrom } from "./serialize";
 
 export interface RouteModules<RouteModule> {
@@ -37,7 +37,7 @@ export interface ActionFunction {
 /**
  * A React component that is rendered when the server throws a Response.
  */
-export type CatchBoundaryComponent = ComponentType<{}>;
+export type CatchBoundaryComponent = ComponentType;
 
 /**
  * A React component that is rendered when there is an error on a route.
@@ -131,7 +131,7 @@ export interface LoaderFunction {
  * }
  * ```
  */
-export interface MetaFunction<
+export interface V1_MetaFunction<
   Loader extends LoaderFunction | unknown = unknown,
   ParentsLoaders extends Record<string, LoaderFunction> = {}
 > {
@@ -145,13 +145,49 @@ export interface MetaFunction<
   }): HtmlMetaDescriptor;
 }
 
+// TODO: Replace in v2
+export type MetaFunction<
+  Loader extends LoaderFunction | unknown = unknown,
+  ParentsLoaders extends Record<string, LoaderFunction> = {}
+> = V1_MetaFunction<Loader, ParentsLoaders>;
+
+interface RouteMatchWithMeta<Route> {
+  params: Params;
+  pathname: string;
+  route: Route;
+  meta: V2_HtmlMetaDescriptor[];
+}
+
+interface ClientRoute extends Route {
+  loader?: LoaderFunction;
+  action: ActionFunction;
+  children?: ClientRoute[];
+  module: string;
+  hasLoader: boolean;
+}
+
+export interface V2_MetaFunction<
+  Loader extends LoaderFunction | unknown = unknown,
+  ParentsLoaders extends Record<string, LoaderFunction> = {}
+> {
+  (args: {
+    data: Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData;
+    parentsData: {
+      [k in keyof ParentsLoaders]: SerializeFrom<ParentsLoaders[k]>;
+    } & RouteData;
+    params: Params;
+    location: Location;
+    matches: RouteMatchWithMeta<ClientRoute>[];
+  }): V2_HtmlMetaDescriptor[];
+}
+
 /**
  * A name/content pair used to render `<meta>` tags in a meta function for a
  * route. The value can be either a string, which will render a single `<meta>`
  * tag, or an array of strings that will render multiple tags with the same
  * `name` attribute.
  */
-export interface HtmlMetaDescriptor {
+export interface V1_HtmlMetaDescriptor {
   charset?: "utf-8";
   charSet?: "utf-8";
   title?: string;
@@ -163,7 +199,18 @@ export interface HtmlMetaDescriptor {
     | Array<Record<string, string> | string>;
 }
 
+// TODO: Replace in v2
+export type HtmlMetaDescriptor = V1_HtmlMetaDescriptor;
+
 export type MetaDescriptor = HtmlMetaDescriptor;
+
+export type V2_HtmlMetaDescriptor =
+  | { charSet: "utf-8" }
+  | { title: string }
+  | { name: string; content: string }
+  | { property: string; content: string }
+  | { httpEquiv: string; content: string }
+  | { [name: string]: string };
 
 /**
  * A React component that is rendered for a route.

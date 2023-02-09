@@ -2,7 +2,9 @@ import fsp from "fs/promises";
 import path from "path";
 import lambdaTester from "lambda-tester";
 import {
-  // This has been added as a global in node 15+
+  // This has been added as a global in node 15+, but we expose it here while we
+  // support Node 14
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   AbortController,
   createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,
@@ -36,7 +38,9 @@ function createMockEvent(event: Partial<HandlerEvent> = {}): HandlerEvent {
     rawQuery: "",
     path: "/",
     httpMethod: "GET",
-    headers: {},
+    headers: {
+      host: "localhost:3000",
+    },
     multiValueHeaders: {},
     queryStringParameters: null,
     multiValueQueryStringParameters: null,
@@ -61,8 +65,9 @@ describe("netlify createRequestHandler", () => {
         return new Response(`URL: ${new URL(req.url).pathname}`);
       });
 
-      // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
-      // won't ever call through to the real createRequestHandler
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000/foo/bar" }))
         .expectResolve((res) => {
@@ -71,13 +76,88 @@ describe("netlify createRequestHandler", () => {
         });
     });
 
+    it("handles root // requests", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
+        return new Response(`URL: ${new URL(req.url).pathname}`);
+      });
+
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ rawUrl: "http://localhost:3000//" }))
+        .expectResolve((res) => {
+          expect(res.statusCode).toBe(200);
+          expect(res.body).toBe("URL: //");
+        });
+    });
+
+    it("handles nested // requests", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
+        return new Response(`URL: ${new URL(req.url).pathname}`);
+      });
+
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ rawUrl: "http://localhost:3000//foo//bar" }))
+        .expectResolve((res) => {
+          expect(res.statusCode).toBe(200);
+          expect(res.body).toBe("URL: //foo//bar");
+        });
+    });
+
+    it("handles root // requests (development)", async () => {
+      let oldEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = "development";
+
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
+        return new Response(`URL: ${new URL(req.url).pathname}`);
+      });
+
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ path: "//" }))
+        .expectResolve((res) => {
+          expect(res.statusCode).toBe(200);
+          expect(res.body).toBe("URL: //");
+        });
+
+      process.env.NODE_ENV = oldEnv;
+    });
+
+    it("handles nested // requests (development)", async () => {
+      let oldEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = "development";
+
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
+        return new Response(`URL: ${new URL(req.url).pathname}`);
+      });
+
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ path: "//foo//bar" }))
+        .expectResolve((res) => {
+          expect(res.statusCode).toBe(200);
+          expect(res.body).toBe("URL: //foo//bar");
+        });
+
+      process.env.NODE_ENV = oldEnv;
+    });
+
     it("handles null body", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
         return new Response(null, { status: 200 });
       });
 
-      // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
-      // won't ever call through to the real createRequestHandler
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
         .expectResolve((res) => {
@@ -90,8 +170,9 @@ describe("netlify createRequestHandler", () => {
         return new Response(null, { status: 204 });
       });
 
-      // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
-      // won't ever call through to the real createRequestHandler
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
         .expectResolve((res) => {
@@ -118,8 +199,9 @@ describe("netlify createRequestHandler", () => {
         return new Response(null, { headers });
       });
 
-      // @ts-expect-error We don't have a real app to test, but it doesn't matter. We
-      // won't ever call through to the real createRequestHandler
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
       await lambdaTester(createRequestHandler({ build: undefined }))
         .event(createMockEvent({ rawUrl: "http://localhost:3000" }))
         .expectResolve((res) => {
@@ -261,6 +343,7 @@ describe("netlify createRemixRequest", () => {
           "type": null,
         },
         Symbol(Request internals): Object {
+          "credentials": "same-origin",
           "headers": Headers {
             Symbol(query): Array [
               "cookie",
@@ -273,13 +356,7 @@ describe("netlify createRemixRequest", () => {
           "method": "GET",
           "parsedURL": "http://localhost:3000/",
           "redirect": "follow",
-          "signal": AbortSignal {
-            Symbol(kEvents): Map {},
-            Symbol(events.maxEventTargetListeners): 10,
-            Symbol(events.maxEventTargetListenersWarned): false,
-            Symbol(kAborted): false,
-            Symbol(kReason): undefined,
-          },
+          "signal": AbortSignal {},
         },
       }
     `);

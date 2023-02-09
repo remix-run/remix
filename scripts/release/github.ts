@@ -3,14 +3,18 @@ import * as semver from "semver";
 
 import {
   PR_FILES_STARTS_WITH,
-  NIGHTLY_BRANCH,
+  RELEASE_BRANCH,
   DEFAULT_BRANCH,
   PACKAGE_VERSION_TO_FOLLOW,
+  AWAITING_RELEASE_LABEL,
+  IS_NIGHTLY_RELEASE,
+  IS_STABLE_RELEASE,
 } from "./constants";
 import { gql, graphqlWithAuth, octokit } from "./octokit";
 import type { MinimalTag } from "./utils";
+import { isNightly, isStable } from "./utils";
 import { cleanupTagName } from "./utils";
-import { checkIfStringStartsWith, sortByDate } from "./utils";
+import { checkIfStringStartsWith } from "./utils";
 
 type PullRequest =
   RestEndpointMethodTypes["pulls"]["list"]["response"]["data"][number];
@@ -50,15 +54,15 @@ export async function prsMergedSinceLastTag({
   let prs: Awaited<ReturnType<typeof getMergedPRsBetweenTags>> = [];
 
   // if both the current and previous tags are prereleases
-  // we can just get the PRs for the "dev" branch
-  // but if one of them is stable, we should wind up all of them from both the main and dev branches
+  // we can just get the PRs for the `release` branch
+  // but if one of them is stable, we should wind up all of them from both the main and `release` branches
   if (currentTag.isPrerelease && previousTag.isPrerelease) {
     prs = await getMergedPRsBetweenTags(
       owner,
       repo,
       previousTag,
       currentTag,
-      NIGHTLY_BRANCH
+      RELEASE_BRANCH
     );
   } else {
     let [nightly, stable] = await Promise.all([
@@ -67,7 +71,7 @@ export async function prsMergedSinceLastTag({
         repo,
         previousTag,
         currentTag,
-        NIGHTLY_BRANCH
+        RELEASE_BRANCH
       ),
       getMergedPRsBetweenTags(
         owner,
@@ -129,41 +133,42 @@ function getPreviousTagFromCurrentTag(
       let tagName = cleanupTagName(tag.name);
       let isPrerelease = semver.prerelease(tagName) !== null;
 
-      return {
-        tag: tagName,
-        date: new Date(tag.target.tagger.date),
-        isPrerelease,
-      };
+      let date = tag.target.committer?.date
+        ? new Date(tag.target.committer.date)
+        : tag.target.tagger?.date
+        ? new Date(tag.target.tagger.date)
+        : undefined;
+
+      if (!date) return undefined;
+
+      return { tag: tagName, date, isPrerelease };
     })
     .filter((v: any): v is MinimalTag => typeof v !== "undefined")
-    .sort(sortByDate);
+    .filter((tag) => {
+      if (IS_STABLE_RELEASE) return isStable(tag.tag);
+      let isNightlyTag = isNightly(tag.tag);
+      if (IS_NIGHTLY_RELEASE) return isNightlyTag;
+      return !isNightlyTag;
+    })
+    .sort((a, b) => {
+      if (IS_NIGHTLY_RELEASE) {
+        return b.date.getTime() - a.date.getTime();
+      }
+
+      return semver.rcompare(a.tag, b.tag);
+    });
 
   let currentTagIndex = validTags.findIndex((tag) => tag.tag === currentTag);
   let currentTagInfo: MinimalTag | undefined = validTags.at(currentTagIndex);
   let previousTagInfo: MinimalTag | undefined;
 
   if (!currentTagInfo) {
-    throw new Error(`Could not find last tag ${currentTag}`);
-  }
-
-  // if the currentTag was a stable tag, then we want to find the previous stable tag
-  if (!currentTagInfo.isPrerelease) {
-    validTags = validTags
-      .filter((tag) => !tag.isPrerelease)
-      .sort((a, b) => semver.rcompare(a.tag, b.tag));
-
-    currentTagIndex = validTags.findIndex((tag) => tag.tag === currentTag);
-    currentTagInfo = validTags.at(currentTagIndex);
-    if (!currentTagInfo) {
-      throw new Error(`Could not find last stable tag ${currentTag}`);
-    }
+    throw new Error(`Could not find tag ${currentTag}`);
   }
 
   previousTagInfo = validTags.at(currentTagIndex + 1);
   if (!previousTagInfo) {
-    throw new Error(
-      `Could not find previous prerelease tag from ${currentTag}`
-    );
+    throw new Error(`Could not find previous tag from ${currentTag}`);
   }
 
   return {
@@ -217,7 +222,10 @@ interface GitHubGraphqlTag {
   name: string;
   target: {
     oid: string;
-    tagger: {
+    committer?: {
+      date: string;
+    };
+    tagger?: {
       date: string;
     };
   };
@@ -225,25 +233,44 @@ interface GitHubGraphqlTag {
 interface GitHubGraphqlTagResponse {
   repository: {
     refs: {
+      pageInfo: {
+        hasNextPage: boolean;
+        endCursor: string;
+      };
       nodes: Array<GitHubGraphqlTag>;
     };
   };
 }
 
-async function getTags(owner: string, repo: string) {
+async function getTags(
+  owner: string,
+  repo: string,
+  endCursor?: string,
+  nodes: Array<GitHubGraphqlTag> = []
+): Promise<GitHubGraphqlTag[]> {
   let response: GitHubGraphqlTagResponse = await graphqlWithAuth(
     gql`
-      query GET_TAGS($owner: String!, $repo: String!) {
+      query GET_TAGS($owner: String!, $repo: String!, $endCursor: String) {
         repository(owner: $owner, name: $repo) {
           refs(
             refPrefix: "refs/tags/"
             first: 100
             orderBy: { field: TAG_COMMIT_DATE, direction: DESC }
+            after: $endCursor
           ) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
             nodes {
               name
               target {
                 oid
+                ... on Commit {
+                  committer {
+                    date
+                  }
+                }
                 ... on Tag {
                   tagger {
                     date
@@ -255,23 +282,38 @@ async function getTags(owner: string, repo: string) {
         }
       }
     `,
-    { owner, repo }
+    { owner, repo, endCursor }
   );
 
-  return response.repository.refs.nodes.filter((node) => {
+  let filtered = response.repository.refs.nodes.filter((node) => {
     return (
-      node.name.startsWith(PACKAGE_VERSION_TO_FOLLOW) ||
+      node.name.startsWith(`${PACKAGE_VERSION_TO_FOLLOW}@`) ||
       node.name.startsWith("v0.0.0-nightly-")
     );
   });
+
+  if (response.repository.refs.pageInfo.hasNextPage) {
+    console.log("has next page", response.repository.refs.pageInfo.endCursor);
+
+    return getTags(owner, repo, response.repository.refs.pageInfo.endCursor, [
+      ...nodes,
+      ...filtered,
+    ]);
+  }
+
+  return [...nodes, ...filtered];
 }
 
 export async function getIssuesClosedByPullRequests(
   prHtmlUrl: string,
   prBody: string | null
-): Promise<Array<number>> {
+): Promise<Array<{ number: number }>> {
   let linkedIssues = await getIssuesLinkedToPullRequest(prHtmlUrl);
-  if (!prBody) return linkedIssues.map((issue) => issue.number);
+  if (!prBody) {
+    return linkedIssues.map((issue) => {
+      return { number: issue.number };
+    });
+  }
 
   /**
    * This regex matches for one of github's issue references for auto linking an issue to a PR
@@ -281,16 +323,24 @@ export async function getIssuesClosedByPullRequests(
   let regex =
     /(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)(:)?\s#([0-9]+)/gi;
   let matches = prBody.match(regex);
-  if (!matches) return linkedIssues.map((issue) => issue.number);
+  if (!matches) {
+    return linkedIssues.map((issue) => {
+      return { number: issue.number };
+    });
+  }
 
-  let issues = matches.map((match) => {
+  let issuesMatch = matches.map((match) => {
     let [, issueNumber] = match.split(" #");
     return { number: parseInt(issueNumber, 10) };
   });
 
-  return [...linkedIssues, ...issues.filter((issue) => issue !== null)].map(
-    (issue) => issue.number
+  let issues = await Promise.all(
+    issuesMatch.map(async (issue) => {
+      return { number: issue.number };
+    })
   );
+
+  return [...linkedIssues, ...issues.filter((issue) => issue !== null)];
 }
 
 interface GitHubClosingIssueReference {
@@ -305,11 +355,13 @@ interface GitHubClosingIssueReference {
   };
 }
 
+type IssuesLinkedToPullRequest = Array<{ number: number }>;
+
 async function getIssuesLinkedToPullRequest(
   prHtmlUrl: string,
-  nodes: Array<{ number: number }> = [],
+  nodes: IssuesLinkedToPullRequest = [],
   after?: string
-): Promise<Array<{ number: number }>> {
+): Promise<IssuesLinkedToPullRequest> {
   let res: GitHubClosingIssueReference = await graphqlWithAuth(
     gql`
       query GET_ISSUES_CLOSED_BY_PR($prHtmlUrl: URI!, $after: String) {
@@ -332,7 +384,11 @@ async function getIssuesLinkedToPullRequest(
   );
 
   let newNodes = res?.resource?.closingIssuesReferences?.nodes ?? [];
-  nodes.push(...newNodes);
+  nodes.push(
+    ...newNodes.map((node) => {
+      return { number: node.number };
+    })
+  );
 
   if (res?.resource?.closingIssuesReferences?.pageInfo?.hasNextPage) {
     return getIssuesLinkedToPullRequest(
@@ -380,5 +436,39 @@ export async function commentOnIssue({
     repo,
     issue_number: issue,
     body: `🤖 Hello there,\n\nWe just published version \`${version}\` which involves this issue. If you'd like to take it for a test run please try it out and let us know what you think!\n\nThanks!`,
+  });
+}
+
+export async function closeIssue({
+  owner,
+  repo,
+  issue,
+}: {
+  owner: string;
+  repo: string;
+  issue: number;
+}) {
+  await octokit.issues.update({
+    owner,
+    repo,
+    issue_number: issue,
+    state: "closed",
+  });
+}
+
+export async function removeLabel({
+  owner,
+  repo,
+  issue,
+}: {
+  owner: string;
+  repo: string;
+  issue: number;
+}) {
+  await octokit.issues.removeLabel({
+    owner,
+    repo,
+    issue_number: issue,
+    name: AWAITING_RELEASE_LABEL,
   });
 }

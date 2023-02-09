@@ -1,5 +1,63 @@
 # `@remix-run/eslint-config`
 
+## 1.12.0
+
+## 1.11.1
+
+## 1.11.0
+
+## 1.10.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.10.1) for an overview of all changes in v1.10.1.
+
+## 1.10.0
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.10.0) for an overview of all changes in v1.10.0.
+
+## 1.9.0
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.9.0) for an overview of all changes in v1.9.0.
+
+## 1.8.2
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.8.2) for an overview of all changes in v1.8.2.
+
+## 1.8.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.8.1) for an overview of all changes in v1.8.1.
+
+## 1.8.0
+
+### Patch Changes
+
+- Replace references to the old `migrate` command with the new `codemod` command ([#4646](https://github.com/remix-run/remix/pull/4646))
+
+## 1.7.6
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.7.6) for an overview of all changes in v1.7.6.
+
+## 1.7.5
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.7.5) for an overview of all changes in v1.7.5.
+
+## 1.7.4
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.7.4) for an overview of all changes in v1.7.4.
+
+## 1.7.3
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.7.3) for an overview of all changes in v1.7.3.
+
+## 1.7.2
+
+### Patch Changes
+
+- Update ESLint and plugin dependencies ([`e4ec81c77`](https://github.com/remix-run/remix/commit/e4ec81c77ef9f534450a45c9474ffba6dfd9bd24))
+
+## 1.7.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.7.1) for an overview of all changes in v1.7.1.
+
 ## 1.7.0
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.7.0) for an overview of all changes in v1.7.0.

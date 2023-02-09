@@ -6,7 +6,7 @@ import type {
   Response as NodeResponse,
 } from "@remix-run/node";
 import {
-  AbortController,
+  AbortController as NodeAbortController,
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
@@ -61,7 +61,7 @@ export function createRequestHandler({
       )) as NodeResponse;
 
       await sendRemixResponse(res, response);
-    } catch (error) {
+    } catch (error: unknown) {
       // Express doesn't support async functions, so we have to pass along the
       // error manually using next().
       next(error);
@@ -93,16 +93,17 @@ export function createRemixRequest(
   req: express.Request,
   res: express.Response
 ): NodeRequest {
-  let origin = `${req.protocol}://${req.get("host")}`;
-  let url = new URL(req.url, origin);
+  let url = new URL(`${req.protocol}://${req.get("host")}${req.url}`);
 
   // Abort action/loaders once we can no longer write a response
-  let controller = new AbortController();
+  let controller = new NodeAbortController();
   res.on("close", () => controller.abort());
 
   let init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
+    // Cast until reason/throwIfAborted added
+    // https://github.com/mysticatea/abort-controller/issues/36
     signal: controller.signal as NodeRequestInit["signal"],
   };
 

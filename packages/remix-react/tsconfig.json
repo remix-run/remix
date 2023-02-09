@@ -6,6 +6,7 @@
     "target": "ES2020",
     "module": "ES2020",
     "skipLibCheck": true,
+    "composite": true,
 
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
@@ -14,7 +15,6 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "rootDir": ".",
-    "outDir": "../../build/node_modules/@remix-run/react/dist",
-    "composite": true
+    "outDir": "../../build/node_modules/@remix-run/react/dist"
   }
 }

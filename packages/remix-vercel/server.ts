@@ -6,7 +6,7 @@ import type {
   Response as NodeResponse,
 } from "@remix-run/node";
 import {
-  AbortController,
+  AbortController as NodeAbortController,
   createRequestHandler as createRemixRequestHandler,
   Headers as NodeHeaders,
   Request as NodeRequest,
@@ -82,15 +82,17 @@ export function createRemixRequest(
   let host = req.headers["x-forwarded-host"] || req.headers["host"];
   // doesn't seem to be available on their req object!
   let protocol = req.headers["x-forwarded-proto"] || "https";
-  let url = new URL(req.url!, `${protocol}://${host}`);
+  let url = new URL(`${protocol}://${host}${req.url}`);
 
   // Abort action/loaders once we can no longer write a response
-  let controller = new AbortController();
+  let controller = new NodeAbortController();
   res.on("close", () => controller.abort());
 
   let init: NodeRequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
+    // Cast until reason/throwIfAborted added
+    // https://github.com/mysticatea/abort-controller/issues/36
     signal: controller.signal as NodeRequestInit["signal"],
   };
 

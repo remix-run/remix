@@ -23,9 +23,9 @@ This guide only covers `<Form>`. We suggest you read the docs for the other two 
 
 ## Plain HTML Forms
 
-After teaching workshops with our company <a href="https://reacttraining.com">React Training</a> for years, we've learned that a lot of newer web developers (through no fault of their own) don't actually know how `<form>` works!
+After teaching workshops with our company <a href="https://reacttraining.com">React Training</a> for years, we've learned that a lot of newer web developers (though no fault of their own) don't actually know how `<form>` works!
 
-Since Remix `<Form>` works identically to `<form>` (with a couple extra goodies for optimistic UI etc.), we're going to brush up on plain ol' HTML forms, so you can learn both HTML and Remix at the same time.
+Since Remix `<Form>` works identically to `<form>` (with a couple of extra goodies for optimistic UI etc.), we're going to brush up on plain ol' HTML forms, so you can learn both HTML and Remix at the same time.
 
 ### HTML Form HTTP Verbs
 
@@ -106,8 +106,8 @@ When the user submits this form, the browser will serialize the fields into a re
 
 The data is made available to the server's request handler so you can create the record. After that, you return a response. In this case, you'd probably redirect to the newly created project. A remix action would look something like this:
 
-```js filename=app/routes/projects
-export async function action({ request }) {
+```tsx filename=app/routes/projects.tsx
+export async function action({ request }: ActionArgs) {
   const body = await request.formData();
   const project = await createProject(body);
   return redirect(`/projects/${project.id}`);
@@ -175,14 +175,12 @@ export default function NewProject() {
 
 Now add the route action. Any form submissions that are "post" will call your data "action". Any "get" submissions (`<Form method="get">`) will be handled by your "loader".
 
-```tsx [5-11]
-import type { ActionFunction } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[1,5-9]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 
 // Note the "action" export name, this will handle our form POST
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   const formData = await request.formData();
   const project = await createProject(formData);
   return redirect(`/projects/${project.id}`);
@@ -211,10 +209,10 @@ const [errors, project] = await createProject(formData);
 
 If there are validation errors, we want to go back to the form and display them.
 
-```tsx [5,7-10]
-export const action: ActionFunction = async ({
-  request,
-}) => {
+```tsx lines=[1,5,7-10]
+import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
+
+export const action = async ({ request }: ActionArgs) => {
   const formData = await request.formData();
   const [errors, project] = await createProject(formData);
 
@@ -229,18 +227,17 @@ export const action: ActionFunction = async ({
 
 Just like `useLoaderData` returns the values from the `loader`, `useActionData` will return the data from the action. It will only be there if the navigation was a form submission, so you always have to check if you've got it or not.
 
-```tsx [2,11,21,26-30,38,43-47]
-import { redirect } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[3,10,20,25-29,37,42-46]
+import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
+import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useActionData } from "@remix-run/react";
 
-export const action: ActionFunction = async ({
-  request,
-}) => {
+export const action = async ({ request }: ActionArgs) => {
   // ...
 };
 
 export default function NewProject() {
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   return (
     <form method="post" action="/projects/new">
@@ -294,14 +291,14 @@ You can ship this code as-is. The browser will handle the pending UI and interru
 
 Let's use progressive enhancement to make this UX a bit more fancy. By changing it from `<form>` to `<Form>`, Remix will emulate the browser behavior with `fetch`. It will also give you access to the pending form data so you can build pending UI.
 
-```tsx [2, 11]
-import { redirect } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[2,11]
+import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import { useActionData, Form } from "@remix-run/react";
 
 // ...
 
 export default function NewProject() {
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   return (
     // note the capital "F" <Form> now
@@ -318,8 +315,8 @@ If you don't have the time or drive to do the rest of the job here, use `<Form r
 
 Now let's add some pending UI so the user has a clue something happened when they submit. There's a hook called `useTransition`. When there is a pending form submission, Remix will give you the serialized version of the form as a <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData">`FormData`</a> object. You'll be most interested in the <a href="https://developer.mozilla.org/en-US/docs/Web/API/FormData/get">`formData.get()`</a> method.
 
-```tsx [5, 13, 19, 65-67]
-import { redirect } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[5,13,19,65-67]
+import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import {
   useActionData,
   Form,
@@ -332,7 +329,7 @@ export default function NewProject() {
   // when the form is being processed on the server, this returns different
   // transition states to help us build pending and optimistic UI.
   const transition = useTransition();
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   return (
     <Form method="post">
@@ -431,10 +428,10 @@ function ValidationMessage({ error, isSubmitting }) {
 
 Now we can wrap our old error messages in this new fancy component, and even turn the borders of our fields red that have errors:
 
-```tsx [21-24, 31-34, 44-48, 53-56]
+```tsx lines=[21-24,31-34,44-48,53-56]
 export default function NewProject() {
   const transition = useTransition();
-  const actionData = useActionData();
+  const actionData = useActionData<typeof action>();
 
   return (
     <Form method="post">
@@ -523,9 +520,9 @@ From your components perspective, all that happened was the `useTransition` hook
 - [`useSubmit()`][use-submit]
 - [`useFetcher()`][use-fetcher]
 
-[form]: ../api/remix#form
-[use-submit]: ../api/remix#usesubmit
-[use-fetcher]: ../api/remix#usefetcher
-[use-transition]: ../api/remix#usetransition
-[actions]: ../api/conventions#action
-[loaders]: ../api/conventions#loader
+[form]: ../components/form
+[use-submit]: ../hooks/use-submit
+[use-fetcher]: ../hooks/use-fetcher
+[use-transition]: ../hooks/use-transition
+[actions]: ../route/action
+[loaders]: ../route/loader

@@ -35,6 +35,7 @@ function createApp() {
   // TODO: get supertest args into the event
   consumeEventMock.mockImplementationOnce(() => ({ body: "" }));
   let server = createServerWithHelpers(
+    // @ts-expect-error
     createRequestHandler({ build: undefined }),
     mockBridge
   );
@@ -65,6 +66,34 @@ describe("vercel createRequestHandler", () => {
 
       expect(res.status).toBe(200);
       expect(res.text).toBe("URL: /foo/bar");
+    });
+
+    it("handles root // requests", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
+        return new Response(`URL: ${new URL(req.url).pathname}`);
+      });
+
+      let request = supertest(createApp());
+      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
+      let res = await request.get("//").set({ "x-now-bridge-request-id": "2" });
+
+      expect(res.status).toBe(200);
+      expect(res.text).toBe("URL: //");
+    });
+
+    it("handles nested // requests", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
+        return new Response(`URL: ${new URL(req.url).pathname}`);
+      });
+
+      let request = supertest(createApp());
+      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
+      let res = await request
+        .get("//foo//bar")
+        .set({ "x-now-bridge-request-id": "2" });
+
+      expect(res.status).toBe(200);
+      expect(res.text).toBe("URL: //foo//bar");
     });
 
     it("handles null body", async () => {
@@ -258,6 +287,7 @@ describe("vercel createRemixRequest", () => {
           "type": null,
         },
         Symbol(Request internals): Object {
+          "credentials": "same-origin",
           "headers": Headers {
             Symbol(query): Array [
               "cache-control",

@@ -1,6 +1,21 @@
 import "./globals";
 
-export { createCloudflareKVSessionStorage } from "./sessions/cloudflareKVSessionStorage";
+import { createWorkersKVSessionStorage } from "./sessions/workersKVStorage";
+
+const warn = <T extends Function>(fn: T, message: string): T =>
+  ((...args: unknown[]) => {
+    console.warn(message);
+
+    return fn(...args);
+  }) as unknown as T;
+
+/** @deprecated Use `createWorkersKVSessionStorage` instead. */
+export const createCloudflareKVSessionStorage = warn(
+  createWorkersKVSessionStorage,
+  "`createCloudflareKVSessionStorage` is deprecated. Please use `createWorkersKVSessionStorage` instead."
+);
+
+export { createWorkersKVSessionStorage } from "./sessions/workersKVStorage";
 
 export {
   createCookie,
@@ -12,6 +27,7 @@ export {
 export {
   createRequestHandler,
   createSession,
+  defer,
   isCookie,
   isSession,
   json,
@@ -40,6 +56,8 @@ export type {
   HeadersFunction,
   HtmlLinkDescriptor,
   HtmlMetaDescriptor,
+  V2_HtmlMetaDescriptor,
+  JsonFunction,
   LinkDescriptor,
   LinksFunction,
   LoaderArgs,
@@ -48,6 +66,7 @@ export type {
   MemoryUploadHandlerOptions,
   MetaDescriptor,
   MetaFunction,
+  V2_MetaFunction,
   PageLinkDescriptor,
   RequestHandler,
   RouteComponent,
@@ -60,8 +79,9 @@ export type {
   SessionIdStorageStrategy,
   SessionStorage,
   SignFunction,
+  TypedDeferredData,
   TypedResponse,
   UnsignFunction,
-  UploadHandlerPart,
   UploadHandler,
+  UploadHandlerPart,
 } from "@remix-run/server-runtime";

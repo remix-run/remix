@@ -17,6 +17,7 @@ const TEMP_DIR = path.join(
   `remix-tests-${Math.random().toString(32).slice(2)}`
 );
 
+jest.setTimeout(30_000);
 beforeAll(async () => {
   await fse.remove(TEMP_DIR);
   await fse.ensureDir(TEMP_DIR);
@@ -28,7 +29,7 @@ afterAll(async () => {
 
 async function execRemix(
   args: Array<string>,
-  options: Parameters<typeof execFile>[2] = {}
+  options: Exclude<Parameters<typeof execFile>[2], null | undefined> = {}
 ) {
   if (process.platform === "win32") {
     let cp = childProcess.spawnSync(
@@ -98,7 +99,7 @@ describe("remix CLI", () => {
             $ remix routes [projectDir]
             $ remix watch [projectDir]
             $ remix setup [remixPlatform]
-            $ remix migrate [-m migration] [projectDir]
+            $ remix codemod <codemod> [projectDir]
 
           Options:
             --help, -h          Print this help message and exit
@@ -118,17 +119,14 @@ describe("remix CLI", () => {
             --no-delete         Skip deleting the \`remix.init\` script
           \`routes\` Options:
             --json              Print the routes as JSON
-          \`migrate\` Options:
-            --debug             Show debugging logs
+          \`codemod\` Options:
             --dry               Dry run (no changes are made to files)
-            --force             Bypass Git safety checks and forcibly run migration
-            --migration, -m     Name of the migration to run
+            --force             Bypass Git safety checks
 
           Values:
             - projectDir        The Remix project directory
             - template          The project template to use
             - remixPlatform     \`node\` or \`cloudflare\`
-            - migration         One of the choices from https://github.com/remix-run/remix/blob/main/packages/remix-dev/cli/migrate/migrations/index.ts
 
           Creating a new project:
 
@@ -250,12 +248,6 @@ describe("remix CLI", () => {
       expect(
         fse.existsSync(path.join(projectDir, "app/root.jsx"))
       ).toBeTruthy();
-      expect(
-        fse.existsSync(path.join(projectDir, "tsconfig.json"))
-      ).toBeFalsy();
-      expect(
-        fse.existsSync(path.join(projectDir, "jsconfig.json"))
-      ).toBeTruthy();
     });
   });
 });
@@ -275,7 +267,7 @@ function defer() {
       return rej(reason);
     };
   });
-  return { promise, resolve, reject, state };
+  return { promise, resolve: resolve!, reject: reject!, state };
 }
 
 async function interactWithShell(

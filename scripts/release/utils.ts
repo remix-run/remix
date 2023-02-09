@@ -1,3 +1,5 @@
+import * as semver from "semver";
+
 import { GITHUB_REPOSITORY, PACKAGE_VERSION_TO_FOLLOW } from "./constants";
 
 export function checkIfStringStartsWith(
@@ -11,10 +13,6 @@ export interface MinimalTag {
   tag: string;
   date: Date;
   isPrerelease: boolean;
-}
-
-export function sortByDate(a: MinimalTag, b: MinimalTag) {
-  return b.date.getTime() - a.date.getTime();
 }
 
 export function getGitHubUrl(type: "pull" | "issue", number: number) {
@@ -33,4 +31,12 @@ export function cleanupTagName(tagName: string) {
 
 export function cleanupRef(ref: string) {
   return ref.replace(/^refs\/tags\//, "");
+}
+
+export function isNightly(tagName: string) {
+  return tagName.startsWith("v0.0.0-nightly-");
+}
+
+export function isStable(tagName: string) {
+  return semver.prerelease(tagName) === null;
 }

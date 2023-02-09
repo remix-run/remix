@@ -10,6 +10,7 @@
       "@remix-run/cloudflare",
       "@remix-run/cloudflare-pages",
       "@remix-run/cloudflare-workers",
+      "@remix-run/css-bundle",
       "@remix-run/deno",
       "@remix-run/dev",
       "@remix-run/eslint-config",
@@ -19,6 +20,7 @@
       "@remix-run/react",
       "@remix-run/serve",
       "@remix-run/server-runtime",
+      "@remix-run/testing",
       "@remix-run/vercel"
     ]
   ],
@@ -26,5 +28,8 @@
   "access": "public",
   "baseBranch": "dev",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": [],
+  "___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH": {
+    "onlyUpdatePeerDependentsWhenOutOfRange": true
+  }
 }

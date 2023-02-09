@@ -34,7 +34,8 @@ const binaryTypes = [
   "audio/basic",
   "audio/mpeg",
   "audio/ogg",
-  "audio/wavaudio/webm",
+  "audio/wav",
+  "audio/webm",
   "audio/x-aiff",
   "audio/x-midi",
   "audio/x-wav",
@@ -63,5 +64,6 @@ const binaryTypes = [
 
 export function isBinaryType(contentType: string | null | undefined) {
   if (!contentType) return false;
-  return binaryTypes.some((t) => contentType.includes(t));
+  let [test] = contentType.split(";");
+  return binaryTypes.includes(test);
 }

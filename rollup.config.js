@@ -6,7 +6,7 @@ module.exports = function rollup(options) {
     let configPath = path.join("packages", dir, "rollup.config.js");
     try {
       fs.readFileSync(configPath);
-    } catch (e) {
+    } catch {
       return [];
     }
     let packageBuild = require(`.${path.sep}${configPath}`);

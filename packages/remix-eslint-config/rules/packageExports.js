@@ -66,7 +66,7 @@ const architectSpecificExports = {
 };
 
 const cloudflareSpecificExports = {
-  value: ["createCloudflareKVSessionStorage"],
+  value: ["createCloudflareKVSessionStorage", "createWorkersKVSessionStorage"],
   type: [],
 };
 
@@ -144,7 +144,6 @@ const reactSpecificExports = {
     "NavLinkProps",
     "RemixBrowserProps",
     "RemixServerProps",
-    "ShouldReloadFunction",
     "SubmitFunction",
     "SubmitOptions",
     "ThrownResponse",
