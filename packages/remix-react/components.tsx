@@ -997,7 +997,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
     })
     .flat(1);
 
-  let preloads = manifest.entry.imports.concat(routePreloads);
+  let preloads = isHydrated ? [] : manifest.entry.imports.concat(routePreloads);
 
   return (
     <>
