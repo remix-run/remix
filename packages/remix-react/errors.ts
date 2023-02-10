@@ -1,15 +1,10 @@
 import type { Router as RemixRouter } from "@remix-run/router";
 import { ErrorResponse } from "@remix-run/router";
 
-import type { AppData } from "./data";
-
-export interface ThrownResponse<
-  Status extends number = number,
-  Data = AppData
-> {
-  status: Status;
+export interface ThrownResponse {
+  status: number;
   statusText: string;
-  data: Data;
+  data: unknown;
 }
 
 export function deserializeErrors(

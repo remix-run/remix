@@ -2,38 +2,34 @@ import {
   AbortedDeferredError,
   UNSAFE_DeferredData as DeferredData,
 } from "@remix-run/router";
-import type { FormMethod as FormMethodRR } from "react-router-dom";
-
-export type AppData = any;
-
-export type FormMethod = FormMethodRR;
+export type { FormMethod } from "react-router-dom";
 
 export type FormEncType =
   | "application/x-www-form-urlencoded"
   | "multipart/form-data";
 
-export function isCatchResponse(response: any): boolean {
+export function isCatchResponse(response: Response): boolean {
   return (
     response instanceof Response &&
     response.headers.get("X-Remix-Catch") != null
   );
 }
 
-export function isErrorResponse(response: any): boolean {
+export function isErrorResponse(response: Response): boolean {
   return (
     response instanceof Response &&
     response.headers.get("X-Remix-Error") != null
   );
 }
 
-export function isRedirectResponse(response: any): boolean {
+export function isRedirectResponse(response: Response): boolean {
   return (
     response instanceof Response &&
     response.headers.get("X-Remix-Redirect") != null
   );
 }
 
-export function isDeferredResponse(response: any): boolean {
+export function isDeferredResponse(response: Response): boolean {
   return (
     response instanceof Response &&
     !!response.headers.get("Content-Type")?.match(/text\/remix-deferred/)
@@ -108,7 +104,7 @@ export async function parseDeferredReadableStream(
 
         deferredData = deferredData || {};
 
-        deferredData[eventKey] = new Promise<any>((resolve, reject) => {
+        deferredData[eventKey] = new Promise((resolve, reject) => {
           deferredResolvers[eventKey] = {
             resolve: (value: unknown) => {
               resolve(value);
