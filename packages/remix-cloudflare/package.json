@@ -18,10 +18,10 @@
     "@remix-run/server-runtime": "1.12.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^3.4.0"
+    "@cloudflare/workers-types": "^4.20230115.0"
   },
   "peerDependencies": {
-    "@cloudflare/workers-types": "^2.0.0 || ^3.0.0"
+    "@cloudflare/workers-types": "^2.0.0 || ^3.0.0 || ^4.0.0"
   },
   "engines": {
     "node": ">=14"
