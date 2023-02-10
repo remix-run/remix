@@ -5,6 +5,7 @@ import ts from "typescript";
 
 import type { RemixConfig } from "../../config";
 import { applyHMR } from "./hmrPlugin";
+import type { CompileOptions } from "../options";
 
 const serverOnlyExports = new Set(["action", "loader"]);
 
@@ -17,7 +18,8 @@ type OnLoader = (filename: string, code: string) => void;
 export function browserRouteModulesPlugin(
   config: RemixConfig,
   suffixMatcher: RegExp,
-  onLoader: OnLoader
+  onLoader: OnLoader,
+  mode: CompileOptions["mode"]
 ): esbuild.Plugin {
   return {
     name: "browser-route-modules",
@@ -39,7 +41,7 @@ export function browserRouteModulesPlugin(
 
           let contents = removeServerExports(sourceCode, routeFile, onLoader);
 
-          if (config.future.unstable_dev) {
+          if (mode === "development" && config.future.unstable_dev) {
             contents = await applyHMR(
               contents,
               {

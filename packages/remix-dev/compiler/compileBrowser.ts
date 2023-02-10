@@ -122,7 +122,7 @@ const createEsbuildConfig = (
     cssFilePlugin({ config, options }),
     urlImportsPlugin(),
     mdxPlugin(config),
-    browserRouteModulesPlugin(config, /\?browser$/, onLoader),
+    browserRouteModulesPlugin(config, /\?browser$/, onLoader, mode),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
   ].filter(isNotNull);
