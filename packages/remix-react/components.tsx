@@ -556,7 +556,7 @@ function V1Meta() {
   let location = useLocation();
 
   let meta: V1_HtmlMetaDescriptor = {};
-  let parentsData: { [routeId: string]: RouteData } = {};
+  let parentsData: RouteData = {};
 
   for (let match of matches) {
     let routeId = match.route.id;
@@ -656,7 +656,7 @@ function V2Meta() {
 
   let meta: V2_HtmlMetaDescriptor[] = [];
   let leafMeta: V2_HtmlMetaDescriptor[] | null = null;
-  let parentsData: { [routeId: string]: RouteData } = {};
+  let parentsData: RouteData = {};
 
   let matchesWithMeta: RouteMatchWithMeta[] = matches.map((match) => ({
     ...match,
@@ -1149,7 +1149,7 @@ export function useMatches(): RouteMatch[] {
  *
  * @see https://remix.run/hooks/use-loader-data
  */
-export function useLoaderData<T>(): SerializeFrom<T> {
+export function useLoaderData<T = unknown>(): SerializeFrom<T> {
   return useLoaderDataRR() as SerializeFrom<T>;
 }
 
@@ -1158,7 +1158,7 @@ export function useLoaderData<T>(): SerializeFrom<T> {
  *
  * @see https://remix.run/hooks/use-action-data
  */
-export function useActionData<T>(): SerializeFrom<T> | undefined {
+export function useActionData<T = unknown>(): SerializeFrom<T> | undefined {
   return useActionDataRR() as SerializeFrom<T> | undefined;
 }
 
