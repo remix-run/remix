@@ -95,8 +95,32 @@ describe("the reveal command", () => {
       expect(fse.existsSync(entryServerFile)).toBeFalsy();
       expect(fse.existsSync(entryClientFile)).toBeFalsy();
 
-      await run(["reveal", "entry.server.tsx", projectDir]);
-      await run(["reveal", "entry.client.tsx", projectDir]);
+      await run(["reveal", "entry.server", projectDir]);
+      await run(["reveal", "entry.client", projectDir]);
+
+      expect(fse.existsSync(entryServerFile)).toBeTruthy();
+      expect(fse.existsSync(entryClientFile)).toBeTruthy();
+    });
+
+    it(`generates a "${runtime}" specific entry.server.jsx file in the app directory`, async () => {
+      let projectDir = await getProjectDir(`entry.server.${runtime}-js`);
+      await run([
+        "create",
+        projectDir,
+        "--template",
+        pathToFileURL(path.join(__dirname, "fixtures", runtime)).toString(),
+        "--no-install",
+        "--typescript",
+      ]);
+
+      let entryClientFile = path.join(projectDir, "app", "entry.client.jsx");
+      let entryServerFile = path.join(projectDir, "app", "entry.server.jsx");
+
+      expect(fse.existsSync(entryServerFile)).toBeFalsy();
+      expect(fse.existsSync(entryClientFile)).toBeFalsy();
+
+      await run(["reveal", "entry.server", projectDir, "--no-typescript"]);
+      await run(["reveal", "entry.client", projectDir, "--no-typescript"]);
 
       expect(fse.existsSync(entryServerFile)).toBeTruthy();
       expect(fse.existsSync(entryClientFile)).toBeTruthy();
