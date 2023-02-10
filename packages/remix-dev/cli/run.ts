@@ -110,6 +110,13 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     $ remix routes
     $ remix routes my-app
     $ remix routes --json
+
+  ${colors.heading("Reveal the used entry point")}:
+
+    $ remix reveal entry.client
+    $ remix reveal entry.server
+    $ remix reveal entry.client --no-typescript
+    $ remix reveal entry.server --no-typescript
 `;
 
 const templateChoices = [
@@ -483,7 +490,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     }
     case "reveal": {
       // TODO: simplify getting started guide
-      await commands.generateEntry(input[1], input[2]);
+      await commands.generateEntry(input[1], input[2], flags.typescript);
       break;
     }
     case "dev":
