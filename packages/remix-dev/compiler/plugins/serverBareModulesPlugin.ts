@@ -9,11 +9,13 @@ import {
   serverBuildVirtualModule,
   assetsManifestVirtualModule,
 } from "../virtualModules";
+import { isCssSideEffectImportPath } from "./cssSideEffectImportsPlugin";
 import { createMatchPath } from "../utils/tsconfig";
+import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
 
 /**
  * A plugin responsible for resolving bare module ids based on server target.
- * This includes externalizing for node based plaforms, and bundling for single file
+ * This includes externalizing for node based platforms, and bundling for single file
  * environments such as cloudflare.
  */
 export function serverBareModulesPlugin(
@@ -23,7 +25,9 @@ export function serverBareModulesPlugin(
   let isDenoRuntime = remixConfig.serverBuildTarget === "deno";
 
   // Resolve paths according to tsconfig paths property
-  let matchPath = isDenoRuntime ? undefined : createMatchPath();
+  let matchPath = isDenoRuntime
+    ? undefined
+    : createMatchPath(remixConfig.tsconfigPath);
   function resolvePath(id: string) {
     if (!matchPath) {
       return id;
@@ -39,6 +43,11 @@ export function serverBareModulesPlugin(
       build.onResolve({ filter: /.*/ }, ({ importer, kind, path }) => {
         // If it's not a bare module ID, bundle it.
         if (!isBareModuleId(resolvePath(path))) {
+          return undefined;
+        }
+
+        // Always bundle @remix-run/css-bundle
+        if (path === "@remix-run/css-bundle") {
           return undefined;
         }
 
@@ -62,17 +71,28 @@ export function serverBareModulesPlugin(
           return undefined;
         }
 
+        // Always bundle CSS side-effect imports.
+        if (isCssSideEffectImportPath(path)) {
+          return undefined;
+        }
+
         let packageName = getNpmPackageName(path);
+        let pkgManager = getPreferredPackageManager();
 
         // Warn if we can't find an import for a package.
         if (
           onWarning &&
           !isNodeBuiltIn(packageName) &&
-          !/\bnode_modules\b/.test(importer)
+          !/\bnode_modules\b/.test(importer) &&
+          // Silence spurious warnings when using Yarn PnP. Yarn PnP doesn’t use
+          // a `node_modules` folder to keep its dependencies, so the above check
+          // will always fail.
+          (pkgManager === "npm" ||
+            (pkgManager === "yarn" && process.versions.pnp == null))
         ) {
           try {
             require.resolve(path);
-          } catch (error) {
+          } catch (error: unknown) {
             onWarning(
               `The path "${path}" is imported in ` +
                 `${relative(process.cwd(), importer)} but ` +

@@ -1,5 +1,5 @@
 ---
-title: Migrating your React Router App to Remix
+title: Migrating from React Router
 description: Migrating your React Router app to Remix can be done all at once or in stages. This guide will walk you through an iterative approach to get your app running quickly.
 ---
 
@@ -160,7 +160,7 @@ export default function Root() {
 Notice a few things here:
 
 - We got rid of the `noscript` tag. We're server rendering now, which means users who disable JavaScript will still be able to see our app (and over time, as you make [a few tweaks to improve progressive enhancement][a-few-tweaks-to-improve-progressive-enhancement], much of your app should still work).
-- Inside of the root element we render an `Outlet` component from `@remix-run/react`. This is the same component that you would normally use to render your matched route in a React Router app; it serves the same function here, but it's adapter for the router in Remix.
+- Inside of the root element we render an `Outlet` component from `@remix-run/react`. This is the same component that you would normally use to render your matched route in a React Router app; it serves the same function here, but it's adapted for the router in Remix.
 
 <docs-warning><strong>Important:</strong> be sure to delete the `index.html` from your `public` directory after you've created your root route. Keeping the file around may cause your server to send that HTML instead of your Remix app when accessing the `/` route.</docs-warning>
 
@@ -308,7 +308,7 @@ function SomeComponent() {
 }
 ```
 
-To simplify this solution, we recommend the using the [`ClientOnly` component][client-only-component] in the [`remix-utils`][remix-utils] community package. An example of its usage can be found in the [`examples` directory of the Remix repo][examples-directory-of-the-remix-repo].
+To simplify this solution, we recommend the using the [`ClientOnly` component][client-only-component] in the [`remix-utils`][remix-utils] community package. An example of its usage can be found in the [`examples` repository][examples-repository].
 
 ### `React.lazy` and `React.Suspense`
 
@@ -382,7 +382,7 @@ If you are using TypeScript, you also need to create the `remix.env.d.ts` file i
 
 ```ts filename=remix.env.d.ts
 /// <reference types="@remix-run/dev" />
-/// <reference types="@remix-run/node/globals" />
+/// <reference types="@remix-run/node" />
 ```
 
 ### A note about non-standard imports
@@ -492,7 +492,7 @@ The answer to all of these questions is up to your bundler, _not you_. We think 
 
 **Note:** Remix does not currently support CSS processing directly. If you use preprocessors like Sass, Less, or PostCSS, you can run those as a separate process in development.
 
-We also do not yet support CSS Modules, as that requires compiler integration and current approaches are not aligned with our design philosophy. We are actively working on a solution and plan to have an API for CSS Modules very soon.
+We do process [CSS Modules][css-modules], but support is currently [opt-in behind a feature flag][css-modules].
 
 </docs-info>
 
@@ -552,7 +552,7 @@ If you currently inject `<link />` tags into your page client-side in your exist
 
 Just as a `<link>` is rendered inside your route component and ultimately rendered in your root `<Links />` component, your app may use some injection trickery to render additional components in the document `<head>`. Often this is done to change the document's `<title>` or `<meta>` tags.
 
-Similar to `links`, each route can also export a `meta` function that—you guessed it—returns a value responsible for rendering `<meta>` tags for that route. This is useful because each route often has its own
+Similar to `links`, each route can also export a `meta` function that—you guessed it—returns a value responsible for rendering `<meta>` tags for that route. This is useful because each route often has its own.
 
 The API is slightly different for `meta`. Instead of an array, it returns an object where the keys represent the meta `name` attribute (or `property` in the case of OpenGraph tags) and the value is the `content` attribute. The object can also accept a `title` property that renders a `<title />` component specifically for that route.
 
@@ -598,7 +598,7 @@ import { Link, Outlet } from "@remix-run/react";
 
 ## Final Thoughts
 
-While we've done our best to provide a comprehensive migration guide, it's important to note that we built Remix from the ground up with a few key principles that differ significantly from how many React apps are currently built. While your app will likely run at this point, as you dig through our docs and explore our APIs, we think you'll be able to drastically reduce the complexity of your code and improve the end user experience of your app. It might take a bit of time to get there, but you can eat that elephant one bite at a time.
+While we've done our best to provide a comprehensive migration guide, it's important to note that we built Remix from the ground up with a few key principles that differ significantly from how many React apps are currently built. While your app will likely run at this point, as you dig through our docs and explore our APIs, we think you'll be able to drastically reduce the complexity of your code and improve the end-user experience of your app. It might take a bit of time to get there, but you can eat that elephant one bite at a time.
 
 Now then, go off and _remix your app_. We think you'll like what you build along the way! 💿
 
@@ -613,28 +613,28 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 - [Common "gotchas"][common-gotchas]
 
 [react-router]: https://reactrouter.com
-[react-router-docs]: https://reactrouter.com/docs/en/v6/getting-started/concepts
-[migration-guide-from-v5-to-v6]: https://reactrouter.com/docs/en/v6/upgrading/v5
+[react-router-docs]: https://reactrouter.com/start/concepts
+[migration-guide-from-v5-to-v6]: https://reactrouter.com/upgrading/v5
 [backwards-compatibility-package]: https://www.npmjs.com/package/react-router-dom-v5-compat
 [a-few-tweaks-to-improve-progressive-enhancement]: ../pages/philosophy#progressive-enhancement
-[routing-conventions]: ./routing.md
+[routing-conventions]: ./routing
 [a-catch-all-route]: ./routing#splats
 [hydration-mismatch]: https://reactjs.org/docs/react-dom.html#hydrate
-[loader-data]: ../api/conventions#loader
+[loader-data]: ../route/loader
 [client-only-component]: https://github.com/sergiodxa/remix-utils/blob/main/src/react/client-only.tsx
 [remix-utils]: https://www.npmjs.com/package/remix-utils
-[examples-directory-of-the-remix-repo]: https://github.com/remix-run/remix/blob/main/examples/client-only-components/app/routes/index.tsx
+[examples-repository]: https://github.com/remix-run/examples/blob/main/client-only-components/app/routes/index.tsx
 [react-lazy]: https://reactjs.org/docs/code-splitting.html#reactlazy
 [react-suspense]: https://reactjs.org/docs/react-api.html#reactsuspense
 [client-only-approach]: #client-only-components
 [loadable-components]: https://loadable-components.com/docs/loadable-vs-react-lazy
-[docs-on-configuration]: ../api/conventions#remixconfigjs
-[see-our-docs-on-route-links-for-more-information]: ../api/conventions#links
+[docs-on-configuration]: ../file-conventions/remix-config
+[see-our-docs-on-route-links-for-more-information]: ../route/links
 [react-svgr]: https://react-svgr.com
 [command-line]: https://react-svgr.com/docs/cli
 [online-playground]: https://react-svgr.com/playground
 [read-more-about-route-styles-and-why-remix-does-things-a-bit-differently]: #route-stylesheets
-[page-link-descriptor-object]: ../api/conventions#pagelinkdescriptor
+[page-link-descriptor-object]: ../route/links#pagelinkdescriptor
 [react-helmet]: https://www.npmjs.com/package/react-helmet
 [remix-philosophy]: ../pages/philosophy
 [remix-technical-explanation]: ../pages/technical-explanation
@@ -642,4 +642,5 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [routing-in-remix]: ./routing
 [styling-in-remix]: ./styling
 [frequently-asked-questions]: ../pages/faq
-[common-gotchas]: ../pages/gotchas
+[common-gotchas]: ../pages/currently
+[css-modules]: ./styling#css-modules

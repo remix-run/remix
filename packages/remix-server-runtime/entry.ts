@@ -1,22 +1,23 @@
-import type { AppState } from "./errors";
-import type {
-  RouteManifest,
-  ServerRouteManifest,
-  EntryRoute,
-  ServerRoute,
-} from "./routes";
-import type { RouteData } from "./routeData";
-import type { RouteMatch } from "./routeMatching";
+import type { StaticHandlerContext } from "@remix-run/router";
+
+import type { RouteManifest, ServerRouteManifest, EntryRoute } from "./routes";
 import type { RouteModules, EntryRouteModule } from "./routeModules";
 
 export interface EntryContext {
-  appState: AppState;
   manifest: AssetsManifest;
-  matches: RouteMatch<EntryRoute>[];
-  routeData: RouteData;
-  actionData?: RouteData;
   routeModules: RouteModules<EntryRouteModule>;
   serverHandoffString?: string;
+  staticHandlerContext: StaticHandlerContext;
+  future: FutureConfig;
+}
+
+export interface FutureConfig {
+  unstable_cssModules: true;
+  unstable_cssSideEffectImports: boolean;
+  unstable_dev: false | { remixRequestHandlerPath?: string };
+  unstable_vanillaExtract: boolean;
+  v2_errorBoundary: boolean;
+  v2_meta: boolean;
 }
 
 export interface AssetsManifest {
@@ -27,17 +28,6 @@ export interface AssetsManifest {
   routes: RouteManifest<EntryRoute>;
   url: string;
   version: string;
-}
-
-export function createEntryMatches(
-  matches: RouteMatch<ServerRoute>[],
-  routes: RouteManifest<EntryRoute>
-): RouteMatch<EntryRoute>[] {
-  return matches.map((match) => ({
-    params: match.params,
-    pathname: match.pathname,
-    route: routes[match.route.id],
-  }));
 }
 
 export function createEntryRouteModules(

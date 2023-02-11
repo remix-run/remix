@@ -4,7 +4,7 @@ title: Module Constraints
 
 # Module Constraints
 
-In order for Remix to run your app in both the server and browser environments, your application modules and third party dependencies need to be careful about **module side effects**.
+In order for Remix to run your app in both the server and browser environments, your application modules and third-party dependencies need to be careful about **module side effects**.
 
 - **Server-only code** - Remix will remove server-only code but it can't if you have module side effects that use server-only code.
 - **Browser-only code** - Remix renders on the server so your modules can't have module side effects or first-rendering logic that call browser-only APIs
@@ -34,7 +34,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  const posts = useLoaderData();
+  const posts = useLoaderData<typeof loader>();
   return <PostsView posts={posts} />;
 }
 ```
@@ -59,7 +59,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  const posts = useLoaderData();
+  const posts = useLoaderData<typeof loader>();
   return <PostsView posts={posts} />;
 }
 ```
@@ -94,7 +94,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  const posts = useLoaderData();
+  const posts = useLoaderData<typeof loader>();
   return <PostsView posts={posts} />;
 }
 ```
@@ -114,7 +114,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  const posts = useLoaderData();
+  const posts = useLoaderData<typeof loader>();
   return <PostsView posts={posts} />;
 }
 ```
@@ -140,7 +140,7 @@ export function meta() {
 }
 
 export default function Posts() {
-  const posts = useLoaderData();
+  const posts = useLoaderData<typeof loader>();
   return <PostsView posts={posts} />;
 }
 ```
@@ -201,12 +201,12 @@ export function removeTrailingSlash(url) {
 
 And then use it like this:
 
-```js bad filename=app/root.js
+```tsx bad filename=app/root.tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
 import { removeTrailingSlash } from "~/http";
 
-export const loader = async ({ request }) => {
+export const loader = async ({ request }: LoaderArgs) => {
   removeTrailingSlash(request.url);
   return json({ some: "data" });
 };
@@ -214,9 +214,9 @@ export const loader = async ({ request }) => {
 
 It reads much nicer as well when you've got a lot of these:
 
-```ts
+```tsx
 // this
-export const loader = async ({ request }) => {
+export const loader = async ({ request }: LoaderArgs) => {
   return removeTrailingSlash(request.url, () => {
     return withSession(request, (session) => {
       return requireUser(session, (user) => {
@@ -227,9 +227,9 @@ export const loader = async ({ request }) => {
 };
 ```
 
-```ts
+```tsx
 // vs. this
-export const loader = async ({ request }) => {
+export const loader = async ({ request }: LoaderArgs) => {
   removeTrailingSlash(request.url);
   const session = await getSession(request);
   const user = await requireUser(session);
@@ -257,15 +257,15 @@ export async function redirectToStripeCheckout(sessionId) {
 
 <docs-info>You need to avoid any browser-only module side effects like accessing window or initializing APIs in the module scope.</docs-info>
 
-### Initializing Browser Only APIs
+### Initializing Browser-Only APIs
 
-The most common scenario is initializing a third party API when your module is imported. There are a couple ways to easily deal with this.
+The most common scenario is initializing a third-party API when your module is imported. There are a couple ways to easily deal with this.
 
 #### Document Guard
 
 This ensures the library is only initialized if there is a `document`, meaning you're in the browser. We recommend `document` over `window` because server runtimes like Deno have a global `window` available.
 
-```js [3]
+```js lines=[3]
 import firebase from "firebase/app";
 
 if (typeof document !== "undefined") {
@@ -279,7 +279,7 @@ export { firebase };
 
 This strategy defers initialization until the library is actually used:
 
-```js [4]
+```js lines=[4]
 import { loadStripe } from "@stripe/stripe-js";
 
 export async function redirectToStripeCheckout(sessionId) {
@@ -331,7 +331,7 @@ function useLocalStorage(key) {
 
 You can fix this by moving the code into `useEffect`, which only runs in the browser.
 
-```js [2,4-6]
+```jsx lines=[2,4-6]
 function useLocalStorage(key) {
   const [state, setState] = useState(null);
 

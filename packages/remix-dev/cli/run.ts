@@ -26,9 +26,7 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     $ remix routes [${colors.arg("projectDir")}]
     $ remix watch [${colors.arg("projectDir")}]
     $ remix setup [${colors.arg("remixPlatform")}]
-    $ remix migrate [-m ${colors.arg("migration")}] [${colors.arg(
-  "projectDir"
-)}]
+    $ remix codemod <${colors.arg("codemod")}> [${colors.arg("projectDir")}]
 
   ${colors.heading("Options")}:
     --help, -h          Print this help message and exit
@@ -48,19 +46,14 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     --no-delete         Skip deleting the \`remix.init\` script
   \`routes\` Options:
     --json              Print the routes as JSON
-  \`migrate\` Options:
-    --debug             Show debugging logs
+  \`codemod\` Options:
     --dry               Dry run (no changes are made to files)
-    --force             Bypass Git safety checks and forcibly run migration
-    --migration, -m     Name of the migration to run
+    --force             Bypass Git safety checks
 
   ${colors.heading("Values")}:
     - ${colors.arg("projectDir")}        The Remix project directory
     - ${colors.arg("template")}          The project template to use
     - ${colors.arg("remixPlatform")}     \`node\` or \`cloudflare\`
-    - ${colors.arg(
-      "migration"
-    )}         One of the choices from https://github.com/remix-run/remix/blob/main/packages/remix-dev/cli/migrate/migrations/index.ts
 
   ${colors.heading("Creating a new project")}:
 
@@ -139,11 +132,12 @@ const npxInterop = {
 
 async function dev(
   projectDir: string,
-  flags: { debug?: boolean; port?: number }
+  flags: { debug?: boolean; port?: number; appServerPort?: number }
 ) {
   if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
+
   if (flags.debug) inspector.open();
-  await commands.dev(projectDir, process.env.NODE_ENV, flags.port);
+  await commands.dev(projectDir, process.env.NODE_ENV, flags);
 }
 
 /**
@@ -161,6 +155,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
 
   let args = arg(
     {
+      "--app-server-port": Number,
       "--debug": Boolean,
       "--no-delete": Boolean,
       "--dry": Boolean,
@@ -172,8 +167,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "--interactive": Boolean,
       "--no-interactive": Boolean,
       "--json": Boolean,
-      "--migration": String,
-      "-m": "--migration",
       "--port": Number,
       "-p": "--port",
       "--remix-version": String,
@@ -275,7 +268,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
                   try {
                     await validateNewProjectPath(String(input));
                     return true;
-                  } catch (error) {
+                  } catch (error: unknown) {
                     if (error instanceof Error && error.message) {
                       return error.message;
                     }
@@ -484,12 +477,8 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     case "setup":
       await commands.setup(input[1]);
       break;
-    case "migrate": {
-      let { projectDir, migrationId } = await commands.migrate.resolveInput(
-        { migrationId: flags.migration, projectId: input[1] },
-        flags
-      );
-      await commands.migrate.run({ flags, migrationId, projectDir });
+    case "codemod": {
+      await commands.codemod(input[1], input[2]);
       break;
     }
     case "dev":

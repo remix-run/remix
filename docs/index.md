@@ -8,8 +8,6 @@ hidden: true
 
 # Remix Docs
 
-Holy smokes you're here! Let's do this. Welcome to the v1 stable release of Remix! Just so we're all clear, this is newly open sourced, so stable means "the API is stable", it doesn’t mean we don't have any bugs 😅 (though, we think we're doing alright). Let us know if you think you found one on [GitHub][git-hub].
-
 ## Getting Started
 
 ```sh
@@ -55,7 +53,7 @@ We **strongly encourage you** to do one of the tutorials before anything else. R
       <p>GitHub Discussions is also the best place to get help when you're stuck. Other folks can post answers for the next person to see.</p>
     </docs-card>
   </a>
-  <a href="https://github.com/remix-run/remix/tree/main/examples" aria-label="Remix Examples">
+  <a href="https://github.com/remix-run/examples" aria-label="Remix Examples">
     <docs-card>
       <h4>Remix Examples</h4>
       <p>Have a look at the various Remix examples made by the community and carefully reviewed by our team.</p>

@@ -4,12 +4,12 @@ export {
   composeUploadHandlers as unstable_composeUploadHandlers,
   parseMultipartFormData as unstable_parseMultipartFormData,
 } from "./formData";
-export { json, redirect } from "./responses";
+export { defer, json, redirect } from "./responses";
 export { createRequestHandler } from "./server";
 export {
   createSession,
-  isSession,
   createSessionStorageFactory,
+  isSession,
 } from "./sessions";
 export { createCookieSessionStorageFactory } from "./sessions/cookieStorage";
 export { createMemorySessionStorageFactory } from "./sessions/memoryStorage";
@@ -28,7 +28,6 @@ export type {
   IsSessionFunction,
   JsonFunction,
   RedirectFunction,
-  TypedResponse,
 } from "./interface";
 
 // Remix server runtime packages should re-export these types
@@ -50,16 +49,21 @@ export type {
   HeadersFunction,
   HtmlLinkDescriptor,
   HtmlMetaDescriptor,
+  V2_HtmlMetaDescriptor,
   LinkDescriptor,
   LinksFunction,
   LoaderArgs,
   LoaderFunction,
+  MemoryUploadHandlerFilterArgs,
+  MemoryUploadHandlerOptions,
   MetaDescriptor,
   MetaFunction,
+  V2_MetaFunction,
   PageLinkDescriptor,
   RequestHandler,
   RouteComponent,
   RouteHandle,
+  SerializeFrom,
   ServerBuild,
   ServerEntryModule,
   Session,
@@ -67,9 +71,9 @@ export type {
   SessionIdStorageStrategy,
   SessionStorage,
   SignFunction,
+  TypedDeferredData,
+  TypedResponse,
   UnsignFunction,
-  UploadHandlerPart,
   UploadHandler,
-  MemoryUploadHandlerOptions,
-  MemoryUploadHandlerFilterArgs,
+  UploadHandlerPart,
 } from "./reexport";

@@ -1,10 +1,12 @@
 .DS_Store
 
+/.env
 /build/
 /packages/*/dist/
 /packages/*/LICENSE.md
 node_modules/
 yarn-error.log
+tsconfig.tsbuildinfo
 
 /jacob
 /fixtures/cloudflare
@@ -27,3 +29,5 @@ yarn-error.log
 /scripts/playground/template.local
 /scripts/playground/template/build
 /scripts/playground/template/package-lock.json
+
+/NOTES.md

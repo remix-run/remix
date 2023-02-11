@@ -1,7 +1,7 @@
 import supertest from "supertest";
-import { createRequest } from "node-mocks-http";
+import { createRequest, createResponse } from "node-mocks-http";
 import { createServerWithHelpers } from "@vercel/node-bridge/helpers";
-import type { VercelRequest } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import {
   createRequestHandler as createRemixRequestHandler,
   Response as NodeResponse,
@@ -35,6 +35,7 @@ function createApp() {
   // TODO: get supertest args into the event
   consumeEventMock.mockImplementationOnce(() => ({ body: "" }));
   let server = createServerWithHelpers(
+    // @ts-expect-error
     createRequestHandler({ build: undefined }),
     mockBridge
   );
@@ -238,8 +239,9 @@ describe("vercel createRemixRequest", () => {
         "Cache-Control": "max-age=300, s-maxage=3600",
       },
     }) as VercelRequest;
+    let response = createResponse() as unknown as VercelResponse;
 
-    expect(createRemixRequest(request)).toMatchInlineSnapshot(`
+    expect(createRemixRequest(request, response)).toMatchInlineSnapshot(`
       NodeRequest {
         "agent": undefined,
         "compress": true,
@@ -257,6 +259,7 @@ describe("vercel createRemixRequest", () => {
           "type": null,
         },
         Symbol(Request internals): Object {
+          "credentials": "same-origin",
           "headers": Headers {
             Symbol(query): Array [
               "cache-control",

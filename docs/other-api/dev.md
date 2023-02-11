@@ -40,6 +40,7 @@ remix create ./my-app --template :username/:repo
 remix create ./my-app --template https://github.com/:username/:repo
 remix create ./my-app --template https://github.com/:username/:repo/tree/:branch
 remix create ./my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
+remix create ./my-app --template https://github.com/:username/:repo/releases/latest/download/:tag.tar.gz
 remix create ./my-app --template https://example.com/remix-template.tar.gz
 ```
 
@@ -87,7 +88,7 @@ Attaches a [Node inspector][node-inspector] to develop your app in debug mode.
 
 Launches the app server on a given port.
 
-By default, the port is set to `3000`. If port `3000` is unavailable, the `dev` command will attempt to find another port that is open. Using the `--port` flag will only attempt to launch the server at the given port; if the port is unavailable the app will not start.
+By default, the port is set to `3000`. If port `3000` is unavailable, the `dev` command will attempt to find another port that is open. Using the `--port` flag will only attempt to launch the server at the given port; if the port is unavailable, the app will not start.
 
 ```sh
 remix dev --port 4001
@@ -95,6 +96,6 @@ remix dev --port 4001
 
 Alternatively, a port can be assigned to the `PORT` environment variable.
 
-[remix-app-server]: serve.md
+[remix-app-server]: ./serve
 [node-inspector]: https://nodejs.org/en/docs/guides/debugging-getting-started
 [templates-folder-of-the-remix-repository]: https://github.com/remix-run/remix/tree/main/templates

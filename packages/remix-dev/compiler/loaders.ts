@@ -3,10 +3,17 @@ import type * as esbuild from "esbuild";
 
 export const loaders: { [ext: string]: esbuild.Loader } = {
   ".aac": "file",
+  ".avif": "file",
   ".css": "file",
   ".eot": "file",
+  ".fbx": "file",
   ".flac": "file",
   ".gif": "file",
+  ".glb": "file",
+  ".gltf": "file",
+  ".gql": "text",
+  ".graphql": "text",
+  ".hdr": "file",
   ".ico": "file",
   ".jpeg": "file",
   ".jpg": "file",
@@ -17,6 +24,7 @@ export const loaders: { [ext: string]: esbuild.Loader } = {
   // the JSX for esbuild to handle
   ".md": "jsx",
   ".mdx": "jsx",
+  ".mov": "file",
   ".mp3": "file",
   ".mp4": "file",
   ".ogg": "file",
@@ -27,12 +35,14 @@ export const loaders: { [ext: string]: esbuild.Loader } = {
   ".ts": "ts",
   ".tsx": "tsx",
   ".ttf": "file",
+  ".wasm": "file",
   ".wav": "file",
   ".webm": "file",
   ".webmanifest": "file",
   ".webp": "file",
   ".woff": "file",
   ".woff2": "file",
+  ".zip": "file",
 };
 
 export function getLoaderForFile(file: string): esbuild.Loader {
