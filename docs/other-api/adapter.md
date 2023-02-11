@@ -5,6 +5,8 @@ order: 2
 
 # Server Adapters
 
+## Official Adapters
+
 Idiomatic Remix apps can generally be deployed anywhere because Remix adapt's the server's request/response to the [Web Fetch API][web-fetch-api]. It does this through adapters. We maintain a few adapters:
 
 - `@remix-run/architect`
@@ -14,7 +16,7 @@ Idiomatic Remix apps can generally be deployed anywhere because Remix adapt's th
 - `@remix-run/netlify`
 - `@remix-run/vercel`
 
-These adapters are imported into your server's entry and is not used inside of your Remix app itself.
+These adapters are imported into your server's entry and are not used inside of your Remix app itself.
 
 If you initialized your app with `npx create-remix@latest` with something other than the built-in Remix App Server, you will note a `server/index.js` file that imports and uses one of these adapters.
 
@@ -22,7 +24,13 @@ If you initialized your app with `npx create-remix@latest` with something other 
 
 Each adapter has the same API. In the future we may have helpers specific to the platform you're deploying to.
 
-## `createRequestHandler`
+## Community Adapters
+
+- [`remix-google-cloud-functions`][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
+
+## Creating an Adapter
+
+### `createRequestHandler`
 
 Creates a request handler for your server to serve the app. This is the ultimate entry point of your Remix application.
 
@@ -35,7 +43,7 @@ createRequestHandler({ build, getLoadContext });
 
 Here's a full example with express:
 
-```ts [2-4, 11-22]
+```ts lines=[2-4,11-22]
 const express = require("express");
 const {
   createRequestHandler,
@@ -127,7 +135,7 @@ import * as build from "../build";
 addEventListener("fetch", createEventHandler({ build }));
 ```
 
-Here's an example with the lower level Cloudflare Workers API:
+Here's an example with the lower-level Cloudflare Workers API:
 
 ```ts
 import {
@@ -169,3 +177,6 @@ addEventListener("fetch", (event) => {
 ```
 
 [web-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+[remix-google-cloud-functions]: https://github.com/penx/remix-google-cloud-functions
+[google-cloud-functions]: https://cloud.google.com/functions
+[firebase-functions]: https://firebase.google.com/docs/functions

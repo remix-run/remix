@@ -6,7 +6,7 @@ title: Resource Routes
 
 Resource Routes are not part of your application UI, but are still part of your application. They can send any kind of Response.
 
-Most routes in Remix are UI Routes, or routes that actually render a component. But routes don't always have to render components. There are a handful of cases where you want to use route as a general purpose endpoint to your website. Here are a few examples:
+Most routes in Remix are UI Routes, or routes that actually render a component. But routes don't always have to render components. There are a handful of cases where you want to use route as a general-purpose endpoint to your website. Here are a few examples:
 
 - JSON API for a mobile app that reuses server-side code with the Remix UI
 - Dynamically generating PDFs

@@ -1963,9 +1963,9 @@ But if there's an error, you can return an object with the error messages and th
 
 <summary>app/routes/jokes/new.tsx</summary>
 
-```tsx filename=app/routes/jokes/new.tsx lines=[2-3,6,8-12,14-18,28-32,35-38,40-46,53,64,66-74,77-85,91,93-101,104-112,115-122]
+```tsx filename=app/routes/jokes/new.tsx lines=[3,6,8-12,14-18,28-32,35-38,40-46,53,64,66-74,77-85,91,93-101,104-112,115-122]
 import type { ActionArgs } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import { useActionData } from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
@@ -2121,11 +2121,11 @@ Great! You should now have a form that validates the fields on the server and di
 
 Why don't you pop open my code example for a second. I want to show you a few things about the way I'm doing this.
 
-First I want you to notice that I've added an `ActionData` type so we could get some type safety. Keep in mind that `useActionData` can return `undefined` if the action hasn't been called yet, so we've got a bit of defensive programming going on there.
+First I want you to notice that I've passed `typeof action` to the `useActionData` generic function. This way, `actionData` type will properly be inferred, and we'll get some type safety. Keep in mind that `useActionData` can return `undefined` if the action hasn't been called yet, so we've got a bit of defensive programming going on there.
 
 You may also notice that I return the fields as well. This is so that the form can be re-rendered with the values from the server in the event that JavaScript fails to load for some reason. That's what the `defaultValue` stuff is all about as well.
 
-The `badRequest` helper function is important because it gives us typechecking that ensures our return value is of type `ActionData`, while still returning the accurate HTTP status, [`400 Bad Request`][400-bad-request], to the client. If we just return the `ActionData` value, that would result in a `200 OK` response, which isn't suitable since the form submission had errors.
+The `badRequest` helper function will automatically infer the type of the passed data, while still returning the accurate HTTP status, [`400 Bad Request`][400-bad-request], to the client. If we just used `json()` without specifying the status, that would result in a `200 OK` response, which isn't suitable since the form submission had errors.
 
 Another thing I want to call out is how all of this is just so nice and declarative. You don't have to think about state at all here. Your action gets some data, you process it and return a value. The component consumes the action data and renders based on that value. No managing state here. No thinking about race conditions. Nothing.
 
@@ -3400,7 +3400,7 @@ export async function createUserSession(
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[14,22,27,34,38,60-71]
+```tsx filename=app/routes/jokes.tsx lines=[14,22,27,52-63]
 import type { User } from "@prisma/client";
 import type {
   LinksFunction,
@@ -5543,7 +5543,7 @@ There are reasons to include JavaScript on the page. For example, some common UI
 
 Ok, so let's load JavaScript on this page now 😆
 
-💿 Use Remix's [`<Scripts />` component][meta-component] component to load all the JavaScript files in `app/root.tsx`.
+💿 Use Remix's [`<Scripts />` component][scripts-component] component to load all the JavaScript files in `app/root.tsx`.
 
 <details>
 
@@ -5890,7 +5890,7 @@ import {
   Link,
   useActionData,
   useCatch,
-  useTransition,
+  useNavigation,
 } from "@remix-run/react";
 
 import { JokeDisplay } from "~/components/joke";
@@ -5958,12 +5958,11 @@ export const action = async ({ request }: ActionArgs) => {
 
 export default function NewJokeRoute() {
   const actionData = useActionData<typeof action>();
-  const transition = useTransition();
+  const navigation = useNavigation();
 
-  if (transition.submission) {
-    const name = transition.submission.formData.get("name");
-    const content =
-      transition.submission.formData.get("content");
+  if (navigation.formData) {
+    const name = navigation.formData.get("name");
+    const content = navigation.formData.get("content");
     if (
       typeof name === "string" &&
       typeof content === "string" &&
@@ -6302,6 +6301,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [escaping-special-characters-here]: ../file-conventions/routes-files#escaping-special-characters
 [xml-document-for-rss-feed]: /jokes-tutorial/img/jokes-rss-feed.png
 [network-tab-indicating-no-java-script-is-loaded]: /jokes-tutorial/img/no-javascript.png
+[scripts-component]: ../components/scripts
 [network-tab-showing-java-script-loaded]: /jokes-tutorial/img/yes-javascript.png
 [browser-console-showing-the-log-of-a-server-side-error]: /jokes-tutorial/img/server-side-error-in-browser.png
 [form]: ../components/form

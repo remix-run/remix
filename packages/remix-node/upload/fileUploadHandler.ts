@@ -1,6 +1,6 @@
 import { randomBytes } from "crypto";
 import { createReadStream, createWriteStream, statSync } from "fs";
-import { rm, mkdir, stat as statAsync } from "fs/promises";
+import { rm, mkdir, stat as statAsync, unlink } from "fs/promises";
 import { tmpdir } from "os";
 import { basename, dirname, extname, resolve as resolvePath } from "path";
 import type { Readable } from "stream";
@@ -59,8 +59,8 @@ export type FileUploadHandlerOptions = {
   /**
    *
    * @param filename
-   * @param mimetype
-   * @param encoding
+   * @param contentType
+   * @param name
    */
   filter?(args: FileUploadHandlerFilterArgs): boolean | Promise<boolean>;
 };
@@ -230,5 +230,12 @@ export class NodeOnDiskFile implements File {
 
   public get [Symbol.toStringTag]() {
     return "File";
+  }
+
+  remove(): Promise<void> {
+    return unlink(this.filepath);
+  }
+  getFilePath(): string {
+    return this.filepath;
   }
 }

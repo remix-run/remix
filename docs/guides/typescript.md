@@ -1,5 +1,6 @@
 ---
 title: TypeScript
+toc: false
 ---
 
 # TypeScript
@@ -17,7 +18,7 @@ The Remix compiler will not do any type checking (it simply removes the types). 
     "build": "remix build",
     "dev": "remix dev",
     "start": "remix-serve build",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc"
   },
   "dependencies": {
     "@remix-run/node": "latest",
@@ -40,7 +41,7 @@ The Remix compiler will not do any type checking (it simply removes the types). 
 }
 ```
 
-Then you can run that script as part of continuous integration alongside your tests.
+Then you can run that script as part of continuous integration, alongside your tests.
 
 Remix has TypeScript type definitions built-in as well. The starter templates create a `remix.env.d.ts` file that is referenced by the `tsconfig.json`:
 

@@ -27,7 +27,7 @@ function SomeComponent() {
 }
 ```
 
-#### `transition.state`
+## `transition.state`
 
 You can know the state of the transition with `transition.state`. It will be one of:
 
@@ -68,7 +68,7 @@ function SubmitButton() {
 }
 ```
 
-#### `transition.type`
+## `transition.type`
 
 Most pending UI only cares about `transition.state`, but the transition can tell you even more information on `transition.type`.
 
@@ -114,13 +114,13 @@ function SubmitButton() {
 }
 ```
 
-#### `transition.submission`
+## `transition.submission`
 
 Any transition that started from a `<Form>` or `useSubmit` will have your form's submission attached to it. This is primarily useful to build "Optimistic UI" with the `submission.formData` [`FormData`][form-data] object.
 
 TODO: Example
 
-#### `transition.location`
+## `transition.location`
 
 This tells you what the next location is going to be. It's most useful when matching against the next URL for custom links and hooks.
 
@@ -149,5 +149,10 @@ function PendingLink({ to, children }) {
 
 Note that this link will not appear "pending" if a form is being submitted to the URL the link points to, because we only do this for "loading" states. The form will contain the pending UI for when the state is "submitting", once the action is complete, then the link will go pending.
 
+## v2 deprecation
+
+This API will be removed in v2 in favor of [`useNavigation`][use-navigation]. You can start using the new `useNavigation` hook today to make upgrading in the future easy, but you can keep using `useTransition` before v2.
+
 [usefetcher]: ./use-fetcher
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
+[use-navigation]: ./use-navigation

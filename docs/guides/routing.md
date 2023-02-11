@@ -40,7 +40,7 @@ Here's some vocabulary this document will be using regularly. They may not all m
 Nested Routing is the general idea of coupling segments of the URL to component hierarchy in the UI. We've found that in almost every case, segments of the URL determine:
 
 - The layouts to render on the page
-- The code split JavaScript bundles to load
+- The code-split JavaScript bundles to load
 - The data dependencies of those layouts
 
 Let's consider a UI to help us out. Hover or tap each button to see how each segment of the URL maps to three things: a component layout, a JavaScript bundle, and a piece of data.
@@ -305,14 +305,14 @@ Prefixing a file name with `$` will make that route path a **dynamic segment**. 
 
 For example, the `$invoiceId.jsx` route. When the url is `/sales/invoices/102000`, Remix will provide the string value `102000` to your loaders, actions, and components by the same name as the filename segment:
 
-```jsx
+```tsx
 import { useParams } from "@remix-run/react";
 
-export async function loader({ params }) {
+export async function loader({ params }: LoaderArgs) {
   const id = params.invoiceId;
 }
 
-export async function action({ params }) {
+export async function action({ params }: ActionArgs) {
   const id = params.invoiceId;
 }
 
@@ -361,8 +361,8 @@ app
 
 When the URL is `example.com/files/images/work/flyer.jpg`. The splat param will capture the trailing segments of the URL and be available to your app on `params["*"]`
 
-```jsx
-export async function loader({ params }) {
+```tsx
+export async function loader({ params }: LoaderArgs) {
   params["*"]; // "images/work/flyer.jpg"
 }
 ```

@@ -13,9 +13,9 @@ One of the primary features of Remix is simplifying interactions with the server
 - Fetch data, JavaScript modules, CSS and other assets in parallel on transitions, avoiding render+fetch waterfalls that lead to choppy UI
 - Ensure the data in the UI is in sync with the data on the server by revalidating after [actions][action]
 - Excellent scroll restoration on back/forward clicks (even across domains)
-- Handle server side errors with [error boundaries][error-boundary]
+- Handle server-side errors with [error boundaries][error-boundary]
 - Enable solid UX for "Not Found" and "Unauthorized" with [catch boundaries][catch-boundary]
-- Help you keep the happy path of your UI happy.
+- Help you keep the happy path of your UI happy
 
 ## Basics
 
@@ -47,7 +47,7 @@ export default function Products() {
 
 The component renders on the server and in the browser. The loader _only runs on the server_. That means our hard-coded products array doesn't get included in the browser bundles and it's safe to use server-only for APIs and SDKs for things like database, payment processing, content management systems, etc.
 
-If your server side modules end up in client bundles, move the imports for those modules to a file named `{something}.server.ts` with the `.server.ts` suffix to ensure they are excluded.
+If your server-side modules end up in client bundles, move the imports for those modules to a file named `{something}.server.ts` with the `.server.ts` suffix to ensure they are excluded.
 
 ## Route Params
 
@@ -174,7 +174,7 @@ export default function ProductCategory() {
 }
 ```
 
-If you are using TypeScript, you can use type inference to use Prisma Client generated types on when calling `useLoaderData`. This allows better type safety and intellisense when writing your code that uses the loaded data.
+If you are using TypeScript, you can use type inference to use Prisma Client generated types when calling `useLoaderData`. This allows better type safety and intellisense when writing code that uses the loaded data.
 
 ```tsx filename=app/routes/products/$productId.tsx
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
@@ -655,7 +655,7 @@ function SearchCheckbox({ name, value }) {
 
 ## Remix Optimizations
 
-Remix optimizes the user experiences by only loading the data for the parts of the page that are changing on navigation. For example, consider the UI you're using right now in these docs. The navbar on the side is in a parent route that fetched the dynamically generated menu of all the docs, and the child route fetched the document you're reading right now. If you click a link in the sidebar Remix knows that the parent route will remain on the page but the child route's data will change because the url param for the document will change. With this insight, Remix _will not refetch the parent route's data_.
+Remix optimizes the user experiences by only loading the data for the parts of the page that are changing on navigation. For example, consider the UI you're using right now in these docs. The navbar on the side is in a parent route that fetched the dynamically-generated menu of all the docs, and the child route fetched the document you're reading right now. If you click a link in the sidebar, Remix knows that the parent route will remain on the page - but the child route's data will change because the url param for the document will change. With this insight, Remix _will not refetch the parent route's data_.
 
 Without Remix the next question is "how do I reload all of the data?". This is built into Remix as well. Whenever an [action][action] is called (the user submitted a form or you, the programmer, called `submit` from `useSubmit`), Remix will automatically reload all of the routes on the page to capture any changes that might have happened.
 
@@ -683,7 +683,7 @@ That said, if you bring an external data library and sidestep Remix's own data c
 - Fetch data, JavaScript modules, CSS and other assets in parallel on transitions, avoiding render+fetch waterfalls that lead to choppy UI
 - Ensure the data in the UI is in sync with the data on the server by revalidating after actions
 - Excellent scroll restoration on back/forward clicks (even across domains)
-- Handle server side errors with [error boundaries][error-boundary]
+- Handle server-side errors with [error boundaries][error-boundary]
 - Enable solid UX for "Not Found" and "Unauthorized" with [catch boundaries][catch-boundary]
 - Help you keep the happy path of your UI happy.
 
