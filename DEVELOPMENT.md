@@ -48,7 +48,7 @@ Changesets will do most of the heavy lifting for our releases. When changes are 
 
 - Ensure you are on the new `release-*` branch.
 - Enter Changesets pre-release mode using the `pre` tag: `yarn changeset pre enter pre`.
-- Commit the change and push the the `release-*` branch to GitHub.
+- Commit the change and push the `release-*` branch to GitHub.
 - Wait for the release workflow to finish. The Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs.
 - Review the updated `CHANGELOG` files and make any adjustments necessary, then merge the PR into the `release-*` branch.
   - `find packages -name 'CHANGELOG.md' -mindepth 2 -maxdepth 2 -exec code {} \;`
@@ -69,7 +69,7 @@ You may need to make changes to a pre-release prior to publishing a final stable
 ### Publishing the stable release
 
 - Exit Changesets pre-release mode: `yarn changeset pre exit`.
-- Commit the deleted pre-release file along with any unpublished changesets, and push the the `release-*` branch to GitHub.
+- Commit the deleted pre-release file along with any unpublished changesets, and push the `release-*` branch to GitHub.
 - Wait for the release workflow to finish. The Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs for the stable release.
 - Review the updated `CHANGELOG` files and make any adjustments necessary.
   - We should remove the changelogs for all pre-releases ahead of publishing the stable version.
