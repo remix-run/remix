@@ -359,7 +359,7 @@ routes/
   contact-us.tsx
 ```
 
-Note that `app/index.tsx` is _not_ the the "index route" for `app/`. It is the node module resolution "index module" for the folder `routes/app/`. The index route for `app/` is `app._index/index.tsx`. The only thing that contributes to the route path is the folder name.
+Note that `app/index.tsx` is _not_ the "index route" for `app/`. It is the node module resolution "index module" for the folder `routes/app/`. The index route for `app/` is `app._index/index.tsx`. The only thing that contributes to the route path is the folder name.
 
 ```
 # these are the same route:
