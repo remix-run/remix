@@ -26,9 +26,9 @@ Each adapter has the same API. In the future we may have helpers specific to the
 
 ## Community Adapters
 
-- [`remix-google-cloud-functions`][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
 - [`@mcansh/remix-fastify`][remix-fastify] - For [Fastify][fastify].
 - [`@mcansh/remix-raw-http`][remix-raw-http] - For a good ol barebones Node server.
+- [`remix-google-cloud-functions`][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
 
 ## Creating an Adapter
 
