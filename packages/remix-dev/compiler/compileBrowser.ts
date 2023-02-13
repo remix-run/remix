@@ -83,7 +83,7 @@ const createEsbuildConfig = (
   onLoader: (filename: string, code: string) => void
 ): esbuild.BuildOptions | esbuild.BuildIncremental => {
   let isCssBuild = build === "css";
-  let entryPoints: esbuild.BuildOptions["entryPoints"];
+  let entryPoints: Record<string, string>;
 
   if (isCssBuild) {
     entryPoints = {
@@ -128,11 +128,16 @@ const createEsbuildConfig = (
   ].filter(isNotNull);
 
   if (mode === "development" && config.future.unstable_dev) {
-    // TODO do this for all deps in package.json
-    entryPoints["react"] = "react";
-    entryPoints["react-dom"] = "react-dom";
-    entryPoints["react-dom/client"] = "react-dom/client";
-    entryPoints["react-refresh/runtime"] = "react-refresh/runtime";
+    // TODO prebundle deps instead of chunking just these ones
+    entryPoints = {
+      ...entryPoints,
+      react: "react",
+      "react-dom": "react-dom",
+      "react-dom/client": "react-dom/client",
+      "react-refresh/runtime": "react-refresh/runtime",
+      "@remix-run/react": "@remix-run/react",
+      "remix:hmr": "remix:hmr",
+    };
 
     plugins.push(hmrPlugin({ remixConfig: config }));
   }

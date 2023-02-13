@@ -57,8 +57,10 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       mode === "development" &&
       typeof unstable_dev !== "boolean" &&
       url.pathname ===
-        (unstable_dev.remixRequestHandlerPath ?? "") +
-          "/__REMIX_ASSETS_MANIFEST"
+        (unstable_dev === true
+          ? "/REMIX_ASSETS_MANIFEST"
+          : (unstable_dev.remixRequestHandlerPath ?? "") +
+            "/__REMIX_ASSETS_MANIFEST")
     ) {
       if (request.method !== "GET") {
         return new Response("Method not allowed", { status: 405 });

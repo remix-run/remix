@@ -103,6 +103,7 @@ let fixture = {
               </head>
               <body className="h-full">
                 <header>
+                  <label htmlFor="root-input">Root Input</label>
                   <input id="root-input" />
                   <nav>
                     <ul>
@@ -123,31 +124,7 @@ let fixture = {
         export default function Index() {
           return (
             <main>
-              <h1>Index</h1>
-              <label htmlFor="index-input">Index Input</label>
-              <input id="index-input" />
-            </main>
-          )
-        }
-      `,
-    "app/routes/a.tsx": `
-        export default function A() {
-          return (
-            <main>
-              <h1>A</h1>
-              <label htmlFor="a-input">A Input</label>
-              <input id="a-input" />
-            </main>
-          )
-        }
-      `,
-    "app/routes/b.tsx": `
-        export default function B() {
-          return (
-            <main>
-              <h1>B</h1>
-              <label htmlFor="b-input">B Input</label>
-              <input id="b-input" />
+              <h1>Index Title</h1>
             </main>
           )
         }
@@ -178,16 +155,22 @@ let bufferize = (stream: Readable): (() => string) => {
 };
 
 test("HMR", async ({ page }) => {
+  // uncomment for debugging
+  // page.on("console", (msg) => console.log(msg.text()));
+  page.on("pageerror", (err) => console.log(err.message));
+
   let projectDir = await createFixtureProject(fixture);
 
   // spin up dev server
   let dev = execa("npm", ["run", "dev:remix"], { cwd: projectDir });
   let devStdout = bufferize(dev.stdout!);
+  let devStderr = bufferize(dev.stderr!);
   await wait(() => /💿 Built in /.test(devStdout()), { timeoutMs: 3000 });
 
   // spin up app server
   let app = execa("npm", ["run", "dev:app"], { cwd: projectDir });
   let appStdout = bufferize(app.stdout!);
+  let appStderr = bufferize(app.stderr!);
   await wait(() => /✅ app ready: /.test(appStdout()));
 
   try {
@@ -196,9 +179,12 @@ test("HMR", async ({ page }) => {
     // `<input />` value as page state that
     // would be wiped out by a full page refresh
     // but should be persisted by hmr
-    let input = page.getByLabel("Index Input");
+    let input = page.getByLabel("Root Input");
     expect(input).toBeVisible();
     await input.type("asdfasdf");
+
+    let indexPath = path.join(projectDir, "app", "routes", "index.tsx");
+    let originalIndex = fs.readFileSync(indexPath, "utf8");
 
     // make content and style changed to index route
     let newIndex = `
@@ -206,33 +192,52 @@ test("HMR", async ({ page }) => {
         return (
           <main>
             <h1 className="text-white bg-black">Changed</h1>
-            <label htmlFor="index-input">Persisted Input</label>
-            <input id="index-input" />
           </main>
         )
       }
     `;
-    fs.writeFileSync(
-      path.join(projectDir, "app", "routes", "index.tsx"),
-      newIndex
-    );
+    fs.writeFileSync(indexPath, newIndex);
 
     // detect HMR'd content and style changes
     let h1 = page.getByText("Changed");
-    await h1.waitFor({ timeout: 1000 });
+    await h1.waitFor({ timeout: 2000 });
     expect(h1).toHaveCSS("color", "rgb(255, 255, 255)");
     expect(h1).toHaveCSS("background-color", "rgb(0, 0, 0)");
 
     // verify that `<input />` value was persisted (i.e. hmr, not full page refresh)
-    let input2 = page.getByLabel("Persisted Input");
-    expect(await input2.inputValue()).toBe("asdfasdf");
+    expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
 
-    // TODO add loader
+    // undo change
+    fs.writeFileSync(indexPath, originalIndex);
+    await page.getByText("Index Title").waitFor({ timeout: 2000 });
+    expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
+
+    // add loader
+    let withLoader1 = `
+        import { json } from "@remix-run/node";
+        import { useLoaderData } from "@remix-run/react";
+
+        export let loader = () => json({ hello: "world" })
+
+        export default function Index() {
+          let { hello } = useLoaderData<typeof loader>();
+          return (
+            <main>
+              <h1>Hello, {hello}</h1>
+            </main>
+          )
+        }
+    `;
+    fs.writeFileSync(indexPath, withLoader1);
+    await page.getByText("Hello, world").waitFor({ timeout: 2000 });
+    expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
+
     // TODO update loader
-    // TODO test undo
   } finally {
     dev.kill();
     app.kill();
+    console.log(devStderr());
+    console.log(appStderr());
   }
 });
 
