@@ -12,7 +12,7 @@ function spyConsole() {
   let spy: any = {};
 
   beforeAll(() => {
-    spy.console = jest.spyOn(console, "error").mockImplementation(() => {});
+    spy.console = jest.spyOn(console, "error").mockImplementation(() => { });
   });
 
   afterAll(() => {
@@ -546,6 +546,35 @@ describe("shared server runtime", () => {
       expect(result.headers.get("X-Remix-Catch")).toBe("yes");
       expect(rootLoader.mock.calls.length).toBe(1 * DATA_CALL_MULTIPIER);
       expect(testAction.mock.calls.length).toBe(0);
+    });
+
+    test("data request 403", async () => {
+      let rootLoader = jest.fn(() => {
+        return "ok";
+      });
+      let testAction = jest.fn(() => {
+        return "root";
+      });
+      let build = mockServerBuild({
+        root: {
+          default: {},
+          loader: rootLoader,
+        },
+        "routes/test": {
+          parentId: "root",
+          action: testAction,
+          path: "test",
+        },
+      });
+      let handler = createRequestHandler(build, ServerMode.Test);
+
+      let request = new Request(`${baseUrl}/test?_data=does-not-exists`, {
+        method: "get",
+      });
+
+      let result = await handler(request);
+      expect(result.status).toBe(403);
+      expect(await result.text()).toContain("server.ts");
     });
 
     test("data request calls action", async () => {
