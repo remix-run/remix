@@ -61,7 +61,7 @@ export async function watch(
   let compiler = createRemixCompiler(config, options);
 
   // initial build
-  await compile(compiler);
+  await compile(compiler, { onCompileFailure });
   onInitialBuild?.(Date.now() - start);
 
   let restart = debounce(async () => {
