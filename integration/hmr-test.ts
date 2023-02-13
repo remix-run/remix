@@ -232,7 +232,26 @@ test("HMR", async ({ page }) => {
     await page.getByText("Hello, world").waitFor({ timeout: 2000 });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
 
-    // TODO update loader
+    let withLoader2 = `
+        import { json } from "@remix-run/node";
+        import { useLoaderData } from "@remix-run/react";
+
+        export function loader() {
+          return json({ hello: "planet" })
+        }
+
+        export default function Index() {
+          let { hello } = useLoaderData<typeof loader>();
+          return (
+            <main>
+              <h1>Hello, {hello}</h1>
+            </main>
+          )
+        }
+    `;
+    fs.writeFileSync(indexPath, withLoader2);
+    await page.getByText("Hello, planet").waitFor({ timeout: 2000 });
+    expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
   } finally {
     dev.kill();
     app.kill();
