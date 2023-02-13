@@ -137,6 +137,21 @@ function removeServerExports(
                     !("escapedText" in d.name) ||
                     !serverOnlyExports.has(d.name.escapedText as string)
                 );
+                node.declarationList.declarations.forEach((d) => {
+                  if (
+                    "escapedText" in d.name &&
+                    d.name.escapedText === "loader"
+                  ) {
+                    let printer = ts.createPrinter();
+                    let code = printer.printNode(
+                      ts.EmitHint.Unspecified,
+                      node,
+                      sourceFile
+                    );
+                    // printed = hash of loader
+                    onLoader(fileName, code);
+                  }
+                });
 
                 if (declarations.length === 0) {
                   return ts.factory.createEmptyStatement();
