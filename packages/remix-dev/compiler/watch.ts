@@ -60,9 +60,17 @@ export async function watch(
   let start = Date.now();
   let compiler = createRemixCompiler(config, options);
 
+  let onInitialBuildCalled = false;
+  let onInitialBuildWrapper = (duration: number) => {
+    if (!onInitialBuildCalled) {
+      onInitialBuildCalled = true;
+      onInitialBuild?.(duration);
+    }
+  };
+
   // initial build
-  await compile(compiler);
-  onInitialBuild?.(Date.now() - start);
+  let assetsManifest = await compile(compiler);
+  if (assetsManifest) onInitialBuildWrapper(Date.now() - start);
 
   let restart = debounce(async () => {
     onRebuildStart?.();
@@ -78,14 +86,20 @@ export async function watch(
 
     compiler = createRemixCompiler(config, options);
     let assetsManifest = await compile(compiler);
-    onRebuildFinish?.(Date.now() - start, assetsManifest);
+    if (assetsManifest) {
+      if (!onInitialBuildCalled) onInitialBuildWrapper(Date.now() - start);
+      onRebuildFinish?.(Date.now() - start, assetsManifest);
+    }
   }, 500);
 
   let rebuild = debounce(async () => {
     onRebuildStart?.();
     let start = Date.now();
     let assetsManifest = await compile(compiler, { onCompileFailure });
-    onRebuildFinish?.(Date.now() - start, assetsManifest);
+    if (assetsManifest) {
+      if (!onInitialBuildCalled) onInitialBuildWrapper(Date.now() - start);
+      onRebuildFinish?.(Date.now() - start, assetsManifest);
+    }
   }, 100);
 
   let toWatch = [config.appDirectory];
