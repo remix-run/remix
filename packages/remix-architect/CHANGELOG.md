@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- Fix fetch request creation for incoming URLs with double slashes ([#5336](https://github.com/remix-run/remix/pull/5336))
+- Fix fetch `Request` creation for incoming URLs with double slashes ([#5336](https://github.com/remix-run/remix/pull/5336))
 - Updated dependencies:
   - `@remix-run/node@1.13.0`
 
