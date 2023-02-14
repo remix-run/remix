@@ -1,0 +1,34 @@
+{
+  "private": true,
+  "sideEffects": false,
+  "type": "module",
+  "scripts": {
+    "build": "remix build",
+    "dev": "remix dev",
+    "start": "cross-env NODE_ENV=production netlify dev",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@netlify/functions": "^1.3.0",
+    "@remix-run/netlify": "*",
+    "@remix-run/node": "*",
+    "@remix-run/react": "*",
+    "cross-env": "^7.0.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "*",
+    "@remix-run/eslint-config": "*",
+    "@remix-run/serve": "*",
+    "@types/node": "^18.13.0",
+    "@types/react": "^18.0.25",
+    "@types/react-dom": "^18.0.8",
+    "eslint": "^8.27.0",
+    "netlify-cli": "^12.12.0",
+    "typescript": "^4.8.4"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}
