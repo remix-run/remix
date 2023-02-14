@@ -86,7 +86,7 @@ let fixture = {
       `,
     "app/root.tsx": `
         import type { LinksFunction } from "@remix-run/node";
-        import { Link, Links, Meta, Outlet, Scripts } from "@remix-run/react";
+        import { Link, Links, LiveReload, Meta, Outlet, Scripts } from "@remix-run/react";
 
         import styles from "./tailwind.css";
 
@@ -115,6 +115,7 @@ let fixture = {
                 </header>
                 <Outlet />
                 <Scripts />
+                <LiveReload />
               </body>
             </html>
           );
