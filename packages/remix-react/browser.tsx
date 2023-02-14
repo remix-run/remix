@@ -44,6 +44,7 @@ declare global {
 }
 
 let router: Router;
+let hmrAbortController: AbortController;
 
 if (import.meta && import.meta.hot) {
   import.meta.hot.accept(
@@ -92,10 +93,15 @@ if (import.meta && import.meta.hot) {
       // This is temporary API and will be more granular before release
       router._internalSetRoutes(routes);
 
+      if (hmrAbortController) {
+        hmrAbortController.abort();
+      }
+      hmrAbortController = new AbortController();
+      let signal = hmrAbortController.signal;
       // Wait for router to be idle before updating the manifest and route modules
       // and triggering a react-refresh
       let unsub = router.subscribe((state) => {
-        if (state.revalidation === "idle") {
+        if (state.revalidation === "idle" && !signal.aborted) {
           unsub();
           // TODO: Handle race conditions here. Should abort if a new update
           // comes in while we're waiting for the router to be idle.
