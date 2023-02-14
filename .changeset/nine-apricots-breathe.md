@@ -5,4 +5,4 @@
 "@remix-run/vercel": patch
 ---
 
-Fix Fetch Request creation for incoming URLs with double slashes
+Fix fetch request creation for incoming URLs with double slashes

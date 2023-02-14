@@ -3,4 +3,4 @@
 "@remix-run/server-runtime": patch
 ---
 
-Improve efficiency of route manifest->tree transformation
+Improve efficiency of route manifest-to-tree transformation

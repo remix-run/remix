@@ -5,4 +5,4 @@
 "@remix-run/testing": minor
 ---
 
-Add unstable built-in support for PostCSS via the `future.unstable_postcss` feature flag
+Add built-in support for PostCSS via the `future.unstable_postcss` feature flag
