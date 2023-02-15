@@ -20,6 +20,7 @@ export interface FutureConfig {
   unstable_vanillaExtract: boolean;
   v2_errorBoundary: boolean;
   v2_meta: boolean;
+  v2_routeConvention: boolean;
 }
 
 export interface AssetsManifest {
