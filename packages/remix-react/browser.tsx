@@ -49,9 +49,7 @@ let hmrAbortController: AbortController;
 if (import.meta && import.meta.hot) {
   import.meta.hot.accept(
     "remix:manifest",
-    async (
-      newManifest: EntryContext["manifest"]
-    ) => {
+    async (newManifest: EntryContext["manifest"]) => {
       let routeIds = [
         ...new Set(
           router.state.matches
@@ -101,9 +99,11 @@ if (import.meta && import.meta.hot) {
         )
       );
 
+      Object.assign(window.__remixRouteModules, newRouteModules);
       // Create new routes
       let routes = createClientRoutes(
         newManifest.routes,
+        window.__remixRouteModules,
         window.__remixContext.future
       );
 
@@ -123,7 +123,6 @@ if (import.meta && import.meta.hot) {
           // TODO: Handle race conditions here. Should abort if a new update
           // comes in while we're waiting for the router to be idle.
           Object.assign(window.__remixManifest, newManifest);
-          Object.assign(window.__remixRouteModules, newRouteModules);
           window.$RefreshRuntime$.performReactRefresh();
         }
       });
@@ -141,6 +140,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   if (!router) {
     let routes = createClientRoutes(
       window.__remixManifest.routes,
+      window.__remixRouteModules,
       window.__remixContext.future
     );
 

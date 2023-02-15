@@ -134,14 +134,17 @@ export type RouteComponent = ComponentType<{}>;
  */
 export type RouteHandle = any;
 
-export async function loadRouteModule(route: EntryRoute): Promise<RouteModule> {
-  if (route.id in window.__remixRouteModules) {
-    return window.__remixRouteModules[route.id];
+export async function loadRouteModule(
+  route: EntryRoute,
+  routeModulesCache: RouteModules
+): Promise<RouteModule> {
+  if (route.id in routeModulesCache) {
+    return routeModulesCache[route.id];
   }
 
   try {
     let routeModule = await import(/* webpackIgnore: true */ route.module);
-    window.__remixRouteModules[route.id] = routeModule;
+    routeModulesCache[route.id] = routeModule;
     return routeModule;
   } catch (error: unknown) {
     // User got caught in the middle of a deploy and the CDN no longer has the
