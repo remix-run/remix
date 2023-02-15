@@ -1,16 +1,69 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type esbuild from "esbuild";
-import ts from "typescript";
+import generate from "@babel/generator";
 
 import type { RemixConfig } from "../../config";
 import { applyHMR } from "./hmrPlugin";
 import type { CompileOptions } from "../options";
 import { getLoaderForFile } from "../loaders";
+import * as Transform from "../../transform";
 
 const serverOnlyExports = new Set(["action", "loader"]);
 
-type OnLoader = (filename: string, code: string) => void;
+let removeServerExports = (onLoader: (loader: string) => void) =>
+  Transform.create(({ types: t }) => {
+    return {
+      visitor: {
+        ExportNamedDeclaration: (path) => {
+          let { node } = path;
+          if (node.source) {
+            let specifiers = node.specifiers.filter(({ exported }) => {
+              let name = t.isIdentifier(exported)
+                ? exported.name
+                : exported.value;
+              return !serverOnlyExports.has(name);
+            });
+            if (specifiers.length === node.specifiers.length) return;
+            if (specifiers.length === 0) return path.remove();
+            path.replaceWith(
+              t.exportNamedDeclaration(
+                node.declaration,
+                specifiers,
+                node.source
+              )
+            );
+          }
+          if (t.isFunctionDeclaration(node.declaration)) {
+            let name = node.declaration.id?.name;
+            if (!name) return;
+            if (name === "loader") {
+              let { code } = generate(node);
+              onLoader(code);
+            }
+            if (serverOnlyExports.has(name)) return path.remove();
+          }
+          if (t.isVariableDeclaration(node.declaration)) {
+            let declarations = node.declaration.declarations.filter((d) => {
+              let name = t.isIdentifier(d.id) ? d.id.name : undefined;
+              if (!name) return false;
+              if (name === "loader") {
+                let { code } = generate(node);
+                onLoader(code);
+              }
+              return !serverOnlyExports.has(name);
+            });
+            if (declarations.length === 0) return path.remove();
+            if (declarations.length === node.declaration.declarations.length)
+              return;
+            path.replaceWith(
+              t.variableDeclaration(node.declaration.kind, declarations)
+            );
+          }
+        },
+      },
+    };
+  });
 
 /**
  * This plugin loads route modules for the browser build, using module shims
@@ -19,7 +72,7 @@ type OnLoader = (filename: string, code: string) => void;
 export function browserRouteModulesPlugin(
   config: RemixConfig,
   suffixMatcher: RegExp,
-  onLoader: OnLoader,
+  onLoader: (filename: string, code: string) => void,
   mode: CompileOptions["mode"]
 ): esbuild.Plugin {
   return {
@@ -40,7 +93,10 @@ export function browserRouteModulesPlugin(
 
           let sourceCode = fs.readFileSync(routeFile, "utf8");
 
-          let contents = removeServerExports(sourceCode, routeFile, onLoader);
+          let transform = removeServerExports((loader: string) =>
+            onLoader(routeFile, loader)
+          );
+          let contents = transform(sourceCode, routeFile);
 
           if (mode === "development" && config.future.unstable_dev) {
             contents = await applyHMR(
@@ -63,121 +119,4 @@ export function browserRouteModulesPlugin(
       );
     },
   };
-}
-
-function removeServerExports(
-  sourceCode: string,
-  fileName: string,
-  onLoader: OnLoader
-) {
-  let { outputText, sourceMapText } = ts.transpileModule(sourceCode, {
-    fileName,
-    compilerOptions: {
-      jsx: ts.JsxEmit.Preserve,
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ESNext,
-    },
-    transformers: {
-      before: [
-        (context) => {
-          let sourceFile: ts.SourceFile;
-          let visit: ts.Visitor = (node) => {
-            if (ts.isSourceFile(node)) {
-              sourceFile = node;
-            }
-            let modifiers = ts.getModifiers(node as ts.HasModifiers);
-
-            // TODO: if loader changes and its being re-exported or imported in some other route,
-            // need to crawl import graph for all such routes and consider them to have changed their loader too.
-            // consider diffing hashes from esbuild output files and comparing server to browser to prev browser etc.
-            // ^ maybe we can use that to detect these cases
-            if (ts.isExportDeclaration(node) && node.exportClause) {
-              if ("elements" in node.exportClause) {
-                let elements = node.exportClause.elements.filter(
-                  (n) => !serverOnlyExports.has(n.name.escapedText as string)
-                );
-                if (elements.length === 0) {
-                  return ts.factory.createEmptyStatement();
-                }
-
-                return ts.factory.createExportDeclaration(
-                  ts.getModifiers(node),
-                  node.isTypeOnly,
-                  ts.factory.createNamedExports(elements),
-                  node.moduleSpecifier,
-                  node.assertClause
-                );
-              }
-            }
-
-            if (
-              modifiers &&
-              modifiers.some((m) => m.kind === ts.SyntaxKind.ExportKeyword) &&
-              !modifiers.some((m) => m.kind === ts.SyntaxKind.DefaultKeyword)
-            ) {
-              if (ts.isFunctionDeclaration(node) && node.name) {
-                if (serverOnlyExports.has(node.name.escapedText as string)) {
-                  if (node.name.escapedText === "loader") {
-                    let printer = ts.createPrinter();
-                    let code = printer.printNode(
-                      ts.EmitHint.Unspecified,
-                      node,
-                      sourceFile
-                    );
-                    // printed = hash of loader
-                    onLoader(fileName, code);
-                  }
-                  return ts.factory.createEmptyStatement();
-                }
-              }
-
-              if (ts.isVariableStatement(node)) {
-                let declarations = node.declarationList.declarations.filter(
-                  (d) =>
-                    !d.name ||
-                    !("escapedText" in d.name) ||
-                    !serverOnlyExports.has(d.name.escapedText as string)
-                );
-                node.declarationList.declarations.forEach((d) => {
-                  if (
-                    "escapedText" in d.name &&
-                    d.name.escapedText === "loader"
-                  ) {
-                    let printer = ts.createPrinter();
-                    let code = printer.printNode(
-                      ts.EmitHint.Unspecified,
-                      node,
-                      sourceFile
-                    );
-                    // printed = hash of loader
-                    onLoader(fileName, code);
-                  }
-                });
-
-                if (declarations.length === 0) {
-                  return ts.factory.createEmptyStatement();
-                }
-
-                return ts.factory.createVariableStatement(
-                  node.modifiers,
-                  ts.factory.createVariableDeclarationList(
-                    declarations,
-                    node.declarationList.flags
-                  )
-                );
-              }
-            }
-
-            if (ts.isSourceFile(node)) {
-              return ts.visitEachChild(node, (child) => visit(child), context);
-            }
-            return node;
-          };
-          return (node) => ts.visitNode(node, visit);
-        },
-      ],
-    },
-  });
-
-  return outputText + (sourceMapText || "");
 }
