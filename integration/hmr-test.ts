@@ -3,15 +3,15 @@ import execa from "execa";
 import fs from "node:fs";
 import path from "node:path";
 import type { Readable } from "node:stream";
+import getPort, { makeRange } from "get-port";
 
 import { createFixtureProject } from "./helpers/create-fixture";
 
-let port = 3099;
-
-let fixture = {
+let fixture = (options: { port: number; appServerPort: number }) => ({
   future: {
     unstable_dev: {
-      appServerPort: port,
+      port: options.port,
+      appServerPort: options.appServerPort,
     },
     unstable_tailwind: true,
   },
@@ -63,7 +63,7 @@ let fixture = {
           })
         );
 
-        let port = ${port};
+        let port = ${options.appServerPort};
         app.listen(port, () => {
           require(BUILD_DIR);
           console.log('✅ app ready: http://localhost:' + port);
@@ -131,7 +131,7 @@ let fixture = {
         }
       `,
   },
-};
+});
 
 let sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -160,7 +160,9 @@ test("HMR", async ({ page }) => {
   // page.on("console", (msg) => console.log(msg.text()));
   page.on("pageerror", (err) => console.log(err.message));
 
-  let projectDir = await createFixtureProject(fixture);
+  let appServerPort = await getPort({ port: makeRange(3080, 3089) });
+  let port = await getPort({ port: makeRange(3090, 3099) });
+  let projectDir = await createFixtureProject(fixture({ port, appServerPort }));
 
   // spin up dev server
   let dev = execa("npm", ["run", "dev:remix"], { cwd: projectDir });
@@ -175,7 +177,7 @@ test("HMR", async ({ page }) => {
   await wait(() => /✅ app ready: /.test(appStdout()));
 
   try {
-    await page.goto(`http://localhost:${port}`);
+    await page.goto(`http://localhost:${appServerPort}`);
 
     // `<input />` value as page state that
     // would be wiped out by a full page refresh
