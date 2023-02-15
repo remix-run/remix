@@ -1,10 +1,9 @@
 import path from "node:path";
 
 import {
-  createRoutePath,
   flatRoutesUniversal,
+  getRouteInfo,
   getRouteSegments,
-  isIndexRoute,
 } from "../config/flat-routes";
 import type { ConfigRoute } from "../config/routes";
 
@@ -88,11 +87,9 @@ describe("flatRoutes", () => {
 
     for (let [input, expected] of tests) {
       it(`"${input}" -> "${expected}"`, () => {
-        let isIndex = isIndexRoute(input);
-        let [routeSegments, rawRouteSegments] = getRouteSegments(input);
-        expect(createRoutePath(routeSegments, rawRouteSegments, isIndex)).toBe(
-          expected
-        );
+        let fullRoutePath = path.join(APP_DIR, "routes", `${input}.tsx`);
+        let routeInfo = getRouteInfo(APP_DIR, "routes", fullRoutePath);
+        expect(routeInfo.path).toBe(expected);
       });
     }
 
@@ -276,7 +273,7 @@ describe("flatRoutes", () => {
       [
         "routes/folder/route.tsx",
         {
-          id: "routes/folder/route",
+          id: "routes/folder",
           parentId: "root",
           path: "folder",
         },

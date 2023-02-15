@@ -141,17 +141,6 @@ export function getRouteSegments(routeId: string) {
   let routeSegment = "";
   let rawRouteSegment = "";
   let state: State = "NORMAL";
-  let hasFolder = routeId.includes(path.posix.sep);
-
-  /**
-   * @see https://github.com/remix-run/remix/pull/5160#issuecomment-1402157424
-   */
-  if (hasFolder && (routeId.endsWith("/index") || routeId.endsWith("/route"))) {
-    let last = routeId.lastIndexOf(path.posix.sep);
-    if (last >= 0) {
-      routeId = routeId.substring(0, last);
-    }
-  }
 
   let pushRouteSegment = (segment: string, rawSegment: string) => {
     if (!segment) return;
@@ -289,7 +278,7 @@ function findParentRouteId(
   return undefined;
 }
 
-function getRouteInfo(
+export function getRouteInfo(
   appDirectory: string,
   routeDirectory: string,
   filePath: string
@@ -381,10 +370,29 @@ function isRouteModuleFile(filePath: string) {
   return basename.endsWith(`/route`) || basename.endsWith(`/index`);
 }
 
-function createFlatRouteId(filePath: string) {
+/**
+ * @see https://github.com/remix-run/remix/pull/5160#issuecomment-1402157424
+ * normalize routeId
+ * remove `/index` and `/route` suffixes
+ * they should be treated like if they weren't folders
+ * e.g. `/dashboard` and `/dashboard/index` should be the same route
+ * e.g. `/dashboard` and `/dashboard/route` should be the same route
+ */
+function isRouteInFolder(routeId: string) {
+  return (
+    (routeId.endsWith("/index") || routeId.endsWith("/route")) &&
+    routeId.includes(path.posix.sep)
+  );
+}
+
+export function createFlatRouteId(filePath: string) {
   let routeId = createRouteId(filePath);
-  if (routeId.includes(path.posix.sep) && routeId.endsWith("/index")) {
-    routeId = routeId.split(path.posix.sep).slice(0, -1).join(path.posix.sep);
+
+  if (isRouteInFolder(routeId)) {
+    let last = routeId.lastIndexOf(path.posix.sep);
+    if (last >= 0) {
+      routeId = routeId.substring(0, last);
+    }
   }
   return routeId;
 }
