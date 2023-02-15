@@ -350,7 +350,9 @@ function getRouteMap(
     }
   }
 
-  let routes = Array.from(routeMap.values());
+  let routes = Array.from(routeMap.values()).sort((a, b) => {
+    return b.segments.length - a.segments.length;
+  });
 
   // update parentIds for all routes
   for (let routeInfo of routes) {
