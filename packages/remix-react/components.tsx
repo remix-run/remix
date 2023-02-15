@@ -1406,6 +1406,10 @@ function convertRouterFetcherToRemixFetcher(
       let fetcher: FetcherStates["Done"] = {
         state: "idle",
         type: "done",
+        formMethod: undefined,
+        formAction: undefined,
+        formData: undefined,
+        formEncType: undefined,
         submission: undefined,
         data,
       };
@@ -1533,6 +1537,10 @@ function convertRouterFetcherToRemixFetcher(
   let fetcher: FetcherStates["Loading"] = {
     state: "loading",
     type: "normalLoad",
+    formMethod: undefined,
+    formAction: undefined,
+    formData: undefined,
+    formEncType: undefined,
     submission: undefined,
     data,
   };
