@@ -109,11 +109,7 @@ describe("<ScrollRestoration />", () => {
         element: (
           <>
             <Outlet />
-            <ScrollRestoration
-              data-testid="scroll-script"
-              nonce="hello"
-              crossOrigin="anonymous"
-            />
+            <ScrollRestoration />
             <Scripts />
           </>
         ),
@@ -138,11 +134,7 @@ describe("<ScrollRestoration />", () => {
         element: (
           <>
             <Outlet />
-            <ScrollRestoration
-              data-testid="scroll-script"
-              nonce="hello"
-              crossOrigin="anonymous"
-            />
+            <ScrollRestoration />
             <Scripts />
           </>
         ),
