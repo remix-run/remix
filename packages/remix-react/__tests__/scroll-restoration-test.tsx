@@ -33,7 +33,7 @@ describe("<ScrollRestoration />", () => {
     manifest: {
       routes: {
         root: {
-          hasLoader: true,
+          hasLoader: false,
           hasAction: false,
           hasCatchBoundary: false,
           hasErrorBoundary: false,
