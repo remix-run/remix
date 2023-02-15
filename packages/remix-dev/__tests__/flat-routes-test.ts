@@ -616,4 +616,76 @@ describe("flatRoutes", () => {
       });
     }
   });
+
+  describe("warns when there's a route collision", () => {
+    let consoleError = jest
+      .spyOn(global.console, "error")
+      .mockImplementation(() => {});
+
+    afterEach(consoleError.mockReset);
+
+    test("index files", () => {
+      // we'll add file manually before running the tests
+      let testFiles = [
+        "routes/_landing._index.tsx",
+        "routes/_dashboard._index.tsx",
+        "routes/._index.tsx",
+      ];
+
+      let routeManifest = flatRoutesUniversal(
+        APP_DIR,
+        testFiles.map((file) =>
+          path.join(APP_DIR, file.split("/").join(path.sep))
+        )
+      );
+
+      let routes = Object.values(routeManifest);
+
+      // we had a collision as /route and /index are the same
+      expect(routes).toHaveLength(1);
+      expect(consoleError).toHaveBeenCalledWith(
+        trimAllLines(`⚠️ Route Path Collision: "/"
+
+          The following routes all define the same URL, only the first one will be used
+
+          🟢 routes/_landing._index.tsx
+          ⭕️️ routes/_dashboard._index.tsx
+          ⭕️️ routes/._index.tsx
+        `)
+      );
+    });
+
+    test("folder/route.tsx matching folder.tsx", () => {
+      // we'll add file manually before running the tests
+      let testFiles = ["routes/dashboard/route.tsx", "routes/dashboard.tsx"];
+
+      let routeManifest = flatRoutesUniversal(
+        APP_DIR,
+        testFiles.map((file) =>
+          path.join(APP_DIR, file.split("/").join(path.sep))
+        )
+      );
+
+      let routes = Object.values(routeManifest);
+
+      // we had a collision as /route and /index are the same
+      expect(routes).toHaveLength(1);
+      expect(consoleError).toHaveBeenCalledWith(
+        trimAllLines(`⚠️ Route Path Collision: "/dashboard"
+
+          The following routes all define the same URL, only the first one will be used
+
+          🟢 routes/dashboard/route.tsx
+          ⭕️️ routes/dashboard.tsx
+        `)
+      );
+    });
+  });
 });
+
+function trimAllLines(str: string) {
+  return str
+    .split("\n")
+    .map((line) => line.trim())
+    .join("\n");
+}

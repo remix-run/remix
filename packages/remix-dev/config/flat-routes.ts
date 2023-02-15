@@ -58,7 +58,6 @@ export function flatRoutesUniversal(
   prefix: string = "routes"
 ): RouteManifest {
   let routeMap = getRouteMap(appDirectory, routePaths, prefix);
-  let uniqueRoutes = new Map<string, string>();
   let routes = Array.from(routeMap.values());
 
   function defineNestedRoutes(
@@ -75,29 +74,12 @@ export function flatRoutesUniversal(
       // remove leading slash
       routePath = routePath.replace(/^\//, "");
 
-      let index = childRoute.index;
-      let fullPath = childRoute.path;
-
-      let uniqueRouteId = (fullPath || "") + (index ? "?index" : "");
-
-      if (uniqueRouteId) {
-        let conflict = uniqueRoutes.get(uniqueRouteId);
-        if (conflict) {
-          throw new Error(
-            `Path ${JSON.stringify(fullPath)} defined by route ` +
-              `${JSON.stringify(childRoute.id)} ` +
-              `conflicts with route ${JSON.stringify(conflict)}`
-          );
-        }
-        uniqueRoutes.set(uniqueRouteId, childRoute.id);
-      }
-
       let childRouteOptions: DefineRouteOptions = {
         id: path.posix.join(prefix, childRoute.id),
         index: childRoute.index ? true : undefined,
       };
 
-      if (index) {
+      if (childRoute.index) {
         let invalidChildRoutes = routes.filter(
           (routeInfo) => routeInfo.parentId === childRoute.id
         );
@@ -340,12 +322,29 @@ function getRouteMap(
 ): Readonly<Map<string, RouteInfo>> {
   let routeMap = new Map<string, RouteInfo>();
   let nameMap = new Map<string, RouteInfo>();
+  let uniqueRoutes = new Map<string, RouteInfo>();
+  let conflicts: { [path: string]: RouteInfo[] } = {};
 
   for (let routePath of routePaths) {
     let routesDirectory = path.join(appDirectory, prefix);
     let pathWithoutAppRoutes = routePath.slice(routesDirectory.length + 1);
     if (isRouteModuleFile(pathWithoutAppRoutes)) {
       let routeInfo = getRouteInfo(appDirectory, prefix, routePath);
+
+      let uniqueRouteId =
+        (routeInfo.path || "") + (routeInfo.index ? "?index" : "");
+
+      if (uniqueRouteId) {
+        let conflict = uniqueRoutes.get(uniqueRouteId);
+        // collect conflicts for later reporting
+        if (conflict) {
+          conflicts[routeInfo.path || "/"] ||= [conflict];
+          conflicts[routeInfo.path || "/"].push(routeInfo);
+          continue;
+        }
+        uniqueRoutes.set(uniqueRouteId, routeInfo);
+      }
+
       routeMap.set(routeInfo.id, routeInfo);
       nameMap.set(routeInfo.name, routeInfo);
     }
@@ -355,6 +354,20 @@ function getRouteMap(
   for (let routeInfo of routeMap.values()) {
     let parentId = findParentRouteId(routeInfo, nameMap);
     routeInfo.parentId = parentId;
+  }
+
+  if (Object.keys(conflicts).length > 0) {
+    for (let [path, routes] of Object.entries(conflicts)) {
+      let [taken, ...rest] = routes;
+
+      console.error(
+        `⚠️ Route Path Collision: "${path}"\n\n` +
+          `The following routes all define the same URL, only the first one will be used\n\n` +
+          `🟢 ${taken.file}\n` +
+          rest.map((conflict) => `⭕️️ ${conflict.file}`).join("\n") +
+          "\n"
+      );
+    }
   }
 
   return routeMap;
