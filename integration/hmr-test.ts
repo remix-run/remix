@@ -341,12 +341,3 @@ test("HMR", async ({ page }) => {
     console.log(appStderr());
   }
 });
-
-// TODO: test complex undo flow?
-// 1. Go to route A
-// 2. Go to route B
-// 3. Modify code for route A
-// 4. Navigate to route A
-// 5. Nav to route B
-// 6. Undo changes from (3)
-// 7. Nav to route A
