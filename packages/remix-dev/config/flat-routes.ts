@@ -358,7 +358,7 @@ function getRouteMap(
   }
 
   // find routes with same segments
-  let filteredDupParams = routes.filter((routeInfo, index) => {
+  let filteredParamCollisions = routes.filter((routeInfo, index) => {
     let nextRoute = routes[index + 1];
     if (!nextRoute) return true;
 
@@ -395,7 +395,7 @@ function getRouteMap(
 
   // rebuild routeMap
   routeMap = new Map<string, RouteInfo>();
-  for (let routeInfo of filteredDupParams) {
+  for (let routeInfo of filteredParamCollisions) {
     routeMap.set(routeInfo.id, routeInfo);
   }
 
