@@ -7,6 +7,7 @@ import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
   UNSAFE_DeferredData as DeferredData,
+  ErrorResponse,
   Navigation,
   TrackedPromise,
 } from "@remix-run/router";
@@ -41,6 +42,7 @@ import {
 } from "react-router-dom";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
+import type { AppData } from "./data";
 import type { EntryContext, RemixContextObject } from "./entry";
 import {
   RemixRootDefaultErrorBoundary,
@@ -73,7 +75,6 @@ import type {
   TransitionStates,
 } from "./transition";
 import { IDLE_TRANSITION, IDLE_FETCHER } from "./transition";
-import type { RouteData } from "./routeData";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -176,7 +177,7 @@ export function RemixRouteError({ id }: { id: string }) {
   }
 
   if (isRouteErrorResponse(error)) {
-    let tError = error;
+    let tError = error as any;
     if (
       tError?.error instanceof Error &&
       tError.status !== 404 &&
@@ -190,7 +191,7 @@ export function RemixRouteError({ id }: { id: string }) {
       return (
         <RemixCatchBoundary
           component={CatchBoundary!}
-          catch={error}
+          catch={error as ErrorResponse}
         />
       );
     }
@@ -556,7 +557,7 @@ function V1Meta() {
   let location = useLocation();
 
   let meta: V1_HtmlMetaDescriptor = {};
-  let parentsData: RouteData = {};
+  let parentsData: { [routeId: string]: AppData } = {};
 
   for (let match of matches) {
     let routeId = match.route.id;
@@ -573,7 +574,7 @@ function V1Meta() {
               parentsData,
               params,
               location,
-              matches: undefined,
+              matches: undefined as any,
             })
           : routeModule.meta;
       if (routeMeta && Array.isArray(routeMeta)) {
@@ -656,7 +657,7 @@ function V2Meta() {
 
   let meta: V2_HtmlMetaDescriptor[] = [];
   let leafMeta: V2_HtmlMetaDescriptor[] | null = null;
-  let parentsData: RouteData = {};
+  let parentsData: { [routeId: string]: AppData } = {};
 
   let matchesWithMeta: RouteMatchWithMeta[] = matches.map((match) => ({
     ...match,
@@ -729,7 +730,7 @@ function V2Meta() {
           return (
             <meta
               key="charset"
-              charSet={metaProps.charSet || metaProps.charset}
+              charSet={metaProps.charSet || (metaProps as any).charset}
             />
           );
         }
@@ -1149,7 +1150,7 @@ export function useMatches(): RouteMatch[] {
  *
  * @see https://remix.run/hooks/use-loader-data
  */
-export function useLoaderData<T = unknown>(): SerializeFrom<T> {
+export function useLoaderData<T = AppData>(): SerializeFrom<T> {
   return useLoaderDataRR() as SerializeFrom<T>;
 }
 
@@ -1158,7 +1159,7 @@ export function useLoaderData<T = unknown>(): SerializeFrom<T> {
  *
  * @see https://remix.run/hooks/use-action-data
  */
-export function useActionData<T = unknown>(): SerializeFrom<T> | undefined {
+export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
   return useActionDataRR() as SerializeFrom<T> | undefined;
 }
 

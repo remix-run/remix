@@ -6,6 +6,7 @@ import type {
   ShouldRevalidateFunction,
 } from "react-router-dom";
 
+import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { EntryRoute } from "./routes";
 import type { RouteData } from "./routeData";
@@ -68,7 +69,7 @@ export interface LinksFunction {
  */
 export interface V1_MetaFunction {
   (args: {
-    data: unknown;
+    data: AppData;
     parentsData: RouteData;
     params: Params;
     location: Location;
@@ -84,11 +85,11 @@ export interface RouteMatchWithMeta extends DataRouteMatch {
 
 export interface V2_MetaFunction {
   (args: {
-    data: unknown;
+    data: AppData;
     parentsData: RouteData;
     params: Params;
     location: Location;
-    matches: RouteMatchWithMeta[] | undefined;
+    matches: RouteMatchWithMeta[];
   }): V2_HtmlMetaDescriptor[] | undefined;
 }
 
@@ -114,7 +115,7 @@ export interface V1_HtmlMetaDescriptor {
 export type HtmlMetaDescriptor = V1_HtmlMetaDescriptor;
 
 export type V2_HtmlMetaDescriptor =
-  | { charSet: "utf-8"; charset?: "utf-8" }
+  | { charSet: "utf-8" }
   | { title: string }
   | { name: string; content: string }
   | { property: string; content: string }
