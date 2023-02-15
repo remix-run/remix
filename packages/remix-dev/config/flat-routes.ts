@@ -369,7 +369,12 @@ function getRouteMap(
     for (let i = 0; i < segments.length; i++) {
       let segment = segments[i];
       let nextSegment = nextSegments[i];
-      if (segment.startsWith(":") && nextSegment.startsWith(":")) {
+
+      if (
+        segment !== nextSegment &&
+        segment.startsWith(":") &&
+        nextSegment.startsWith(":")
+      ) {
         conflicts[nextRoute.path || "/"] ||= [nextRoute];
         conflicts[nextRoute.path || "/"].push(routeInfo);
         return false;
