@@ -149,7 +149,7 @@ The following steps will get you setup to contribute changes to this repo:
    cd remix
 
    # if you are making *any* code changes, make sure to checkout the dev branch
-   git checkout -b dev
+   git checkout dev
    ```
 
 3. Install dependencies by running `yarn`. Remix uses [Yarn (version 1)][yarn-version-1], so you should too. If you install using `npm`, unnecessary `package-lock.json` files will be generated.
