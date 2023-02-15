@@ -648,9 +648,9 @@ describe("flatRoutes", () => {
 
           The following routes all define the same URL, only the first one will be used
 
-          🟢 routes/_landing._index.tsx
-          ⭕️️ routes/_dashboard._index.tsx
-          ⭕️️ routes/._index.tsx
+          🟢 routes${path.sep}_landing._index.tsx
+          ⭕️️ routes${path.sep}_dashboard._index.tsx
+          ⭕️️ routes${path.sep}._index.tsx
         `)
       );
     });
@@ -675,8 +675,8 @@ describe("flatRoutes", () => {
 
           The following routes all define the same URL, only the first one will be used
 
-          🟢 routes/dashboard/route.tsx
-          ⭕️️ routes/dashboard.tsx
+          🟢 routes${path.sep}dashboard${path.sep}route.tsx
+          ⭕️️ routes${path.sep}dashboard.tsx
         `)
       );
     });
@@ -704,8 +704,8 @@ describe("flatRoutes", () => {
 
           The following routes all define the same URL, only the first one will be used
 
-          🟢 routes/products.$productId.tsx
-          ⭕️️ routes/products.$pid.tsx
+          🟢 routes${path.sep}products.$productId.tsx
+          ⭕️️ routes${path.sep}products.$pid.tsx
         `)
       );
     });
