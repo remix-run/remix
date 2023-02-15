@@ -49,44 +49,61 @@ let hmrAbortController: AbortController;
 if (import.meta && import.meta.hot) {
   import.meta.hot.accept(
     "remix:manifest",
-    async (newManifest: EntryContext["manifest"]) => {
+    async (
+      newManifest: EntryContext["manifest"]
+    ) => {
+      let routeIds = [
+        ...new Set(
+          router.state.matches
+            .map((m) => m.route.id)
+            .concat(Object.keys(window.__remixRouteModules))
+        ),
+      ];
+
       // Load new route modules that we've seen.
-      let routeModules = Object.fromEntries(
-        (
-          await Promise.all(
-            Object.entries(__remixRouteModules).map(async ([key, value]) => {
-              if (!newManifest.routes[key]) {
-                return null;
-              }
-              let imported = await import(
-                newManifest.routes[key].module +
-                  `?t=${newManifest.hmr?.timestamp}`
-              );
-              return [
-                key,
-                {
-                  ...imported,
-                  // react-refresh takes care of updating these in-place,
-                  // if we don't preserve existing values we'll loose state.
-                  default:
-                    window.__remixRouteModules[key].default || imported.default,
-                  CatchBoundary:
-                    window.__remixRouteModules[key].CatchBoundary ||
-                    imported.CatchBoundary,
-                  ErrorBoundary:
-                    window.__remixRouteModules[key].ErrorBoundary ||
-                    imported.ErrorBoundary,
-                },
-              ];
-            })
-          )
-        ).filter(Boolean) as [string, RouteModules[string]][]
+      let newRouteModules = Object.assign(
+        {},
+        window.__remixRouteModules,
+        Object.fromEntries(
+          (
+            await Promise.all(
+              routeIds.map(async (id) => {
+                if (!newManifest.routes[id]) {
+                  return null;
+                }
+                let imported = await import(
+                  newManifest.routes[id].module +
+                    `?t=${newManifest.hmr?.timestamp}`
+                );
+                return [
+                  id,
+                  {
+                    ...imported,
+                    // react-refresh takes care of updating these in-place,
+                    // if we don't preserve existing values we'll loose state.
+                    default: imported.default
+                      ? window.__remixRouteModules[id]?.default ??
+                        imported.default
+                      : imported.default,
+                    CatchBoundary: imported.CatchBoundary
+                      ? window.__remixRouteModules[id]?.CatchBoundary ??
+                        imported.CatchBoundary
+                      : imported.CatchBoundary,
+                    ErrorBoundary: imported.ErrorBoundary
+                      ? window.__remixRouteModules[id]?.ErrorBoundary ??
+                        imported.ErrorBoundary
+                      : imported.ErrorBoundary,
+                  },
+                ];
+              })
+            )
+          ).filter(Boolean) as [string, RouteModules[string]][]
+        )
       );
 
       // Create new routes
       let routes = createClientRoutes(
         newManifest.routes,
-        routeModules,
         window.__remixContext.future
       );
 
@@ -106,7 +123,7 @@ if (import.meta && import.meta.hot) {
           // TODO: Handle race conditions here. Should abort if a new update
           // comes in while we're waiting for the router to be idle.
           Object.assign(window.__remixManifest, newManifest);
-          Object.assign(window.__remixRouteModules, routeModules);
+          Object.assign(window.__remixRouteModules, newRouteModules);
           window.$RefreshRuntime$.performReactRefresh();
         }
       });
@@ -124,7 +141,6 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   if (!router) {
     let routes = createClientRoutes(
       window.__remixManifest.routes,
-      window.__remixRouteModules,
       window.__remixContext.future
     );
 

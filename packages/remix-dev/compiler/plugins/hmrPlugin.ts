@@ -125,7 +125,8 @@ declare global {
           sourceCode,
           args,
           remixConfig,
-          !!build.initialOptions.sourcemap
+          !!build.initialOptions.sourcemap,
+          args.path.startsWith(remixConfig.appDirectory)
         );
 
         return {
@@ -142,7 +143,8 @@ export async function applyHMR(
   sourceCode: string,
   args: esbuild.OnLoadArgs,
   remixConfig: RemixConfig,
-  sourcemap: boolean
+  sourcemap: boolean,
+  timestampable: boolean = true
 ) {
   let babel = await import("@babel/core");
   // @ts-expect-error
@@ -161,6 +163,7 @@ import.meta.hot = __hmr__.createHotContext(
 //@ts-expect-error
 $id$
 );
+${timestampable ? `import.meta.hot.ts = "${Date.now()}";` : ""}
 }`.replace(/\$id\$/g, hmrId);
   let sourceCodeWithHMR = hmrPrefix + sourceCode;
 

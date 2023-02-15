@@ -88,6 +88,7 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
         import type { LinksFunction } from "@remix-run/node";
         import { Link, Links, LiveReload, Meta, Outlet, Scripts } from "@remix-run/react";
 
+        import Counter from "./components/counter";
         import styles from "./tailwind.css";
 
         export const links: LinksFunction = () => [
@@ -105,11 +106,11 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
                 <header>
                   <label htmlFor="root-input">Root Input</label>
                   <input id="root-input" />
+                  <Counter id="root-counter" />
                   <nav>
                     <ul>
                       <li><Link to="/">Home</Link></li>
-                      <li><Link to="/a">A</Link></li>
-                      <li><Link to="/b">B</Link></li>
+                      <li><Link to="/about">About</Link></li>
                     </ul>
                   </nav>
                 </header>
@@ -122,12 +123,36 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
         }
       `,
     "app/routes/index.tsx": `
+        import { useLoaderData } from "@remix-run/react";
         export default function Index() {
+          const t = useLoaderData();
           return (
             <main>
               <h1>Index Title</h1>
             </main>
           )
+        }
+      `,
+    "app/routes/about.tsx": `
+        import Counter from "../components/counter";
+        export default function About() {
+          return (
+            <main>
+              <h1>About Title</h1>
+              <Counter id="about-counter" />
+            </main>
+          )
+        }
+      `,
+    "app/components/counter.tsx": `
+        import * as React from "react";
+        export default function Counter({ id }) {
+          let [count, setCount] = React.useState(0);
+          return (
+            <p>
+              <button id={id} onClick={() => setCount(count + 1)}>inc {count}</button>
+            </p>
+          );
         }
       `,
   },
@@ -177,7 +202,7 @@ test("HMR", async ({ page }) => {
   await wait(() => /✅ app ready: /.test(appStdout()));
 
   try {
-    await page.goto(`http://localhost:${appServerPort}`);
+    await page.goto(`http://localhost:${appServerPort}`, { waitUntil: "networkidle" });
 
     // `<input />` value as page state that
     // would be wiped out by a full page refresh
@@ -186,12 +211,20 @@ test("HMR", async ({ page }) => {
     expect(input).toBeVisible();
     await input.type("asdfasdf");
 
+    let counter = await page.waitForSelector("#root-counter");
+    await counter.click();
+    await page.waitForSelector(`#root-counter:has-text("inc 1")`);
+
     let indexPath = path.join(projectDir, "app", "routes", "index.tsx");
     let originalIndex = fs.readFileSync(indexPath, "utf8");
+    let counterPath = path.join(projectDir, "app", "components", "counter.tsx");
+    let originalCounter = fs.readFileSync(counterPath, "utf8");
 
     // make content and style changed to index route
     let newIndex = `
+      import { useLoaderData } from "@remix-run/react";
       export default function Index() {
+        const t = useLoaderData();
         return (
           <main>
             <h1 className="text-white bg-black">Changed</h1>
@@ -202,6 +235,7 @@ test("HMR", async ({ page }) => {
     fs.writeFileSync(indexPath, newIndex);
 
     // detect HMR'd content and style changes
+    await page.waitForLoadState("networkidle");
     let h1 = page.getByText("Changed");
     await h1.waitFor({ timeout: 2000 });
     expect(h1).toHaveCSS("color", "rgb(255, 255, 255)");
@@ -209,11 +243,13 @@ test("HMR", async ({ page }) => {
 
     // verify that `<input />` value was persisted (i.e. hmr, not full page refresh)
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
+    await page.waitForSelector(`#root-counter:has-text("inc 1")`);
 
     // undo change
     fs.writeFileSync(indexPath, originalIndex);
     await page.getByText("Index Title").waitFor({ timeout: 2000 });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
+    await page.waitForSelector(`#root-counter:has-text("inc 1")`);
 
     // add loader
     let withLoader1 = `
@@ -234,6 +270,7 @@ test("HMR", async ({ page }) => {
     fs.writeFileSync(indexPath, withLoader1);
     await page.getByText("Hello, world").waitFor({ timeout: 2000 });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
+    await page.waitForSelector(`#root-counter:has-text("inc 1")`);
 
     let withLoader2 = `
         import { json } from "@remix-run/node";
@@ -255,6 +292,48 @@ test("HMR", async ({ page }) => {
     fs.writeFileSync(indexPath, withLoader2);
     await page.getByText("Hello, planet").waitFor({ timeout: 2000 });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
+    await page.waitForSelector(`#root-counter:has-text("inc 1")`);
+
+    // change shared component
+    let updatedCounter = `
+      import * as React from "react";
+      export default function Counter({ id }) {
+        let [count, setCount] = React.useState(0);
+        return (
+          <p>
+            <button id={id} onClick={() => setCount(count - 1)}>dec {count}</button>
+          </p>
+        );
+      }
+    `;
+    fs.writeFileSync(counterPath, updatedCounter);
+    await page.waitForSelector(`#root-counter:has-text("dec 1")`);
+    counter = await page.waitForSelector("#root-counter");
+    await counter.click();
+    await counter.click();
+    await page.waitForSelector(`#root-counter:has-text("dec -1")`);
+
+    await page.click(`a[href="/about"]`);
+    let aboutCounter = await page.waitForSelector(
+      `#about-counter:has-text("dec 0")`
+    );
+    await aboutCounter.click();
+    await page.waitForSelector(`#about-counter:has-text("dec -1")`);
+
+    // undo change
+    fs.writeFileSync(counterPath, originalCounter);
+
+    counter = await page.waitForSelector(`#root-counter:has-text("inc -1")`);
+    await counter.click();
+    counter = await page.waitForSelector(`#root-counter:has-text("inc 0")`);
+
+    aboutCounter = await page.waitForSelector(
+      `#about-counter:has-text("inc -1")`
+    );
+    await aboutCounter.click();
+    aboutCounter = await page.waitForSelector(
+      `#about-counter:has-text("inc 0")`
+    );
   } finally {
     dev.kill();
     app.kill();
