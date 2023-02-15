@@ -350,12 +350,35 @@ function getRouteMap(
     }
   }
 
+  let routes = Array.from(routeMap.values());
+
   // update parentIds for all routes
-  for (let routeInfo of routeMap.values()) {
-    let parentId = findParentRouteId(routeInfo, nameMap);
-    routeInfo.parentId = parentId;
+  for (let routeInfo of routes) {
+    routeInfo.parentId = findParentRouteId(routeInfo, nameMap);
   }
 
+  // find routes with same segments
+  let filteredDupParams = routes.filter((routeInfo, index) => {
+    let nextRoute = routes[index + 1];
+    if (!nextRoute) return true;
+
+    let segments = routeInfo.segments;
+    let nextSegments = nextRoute.segments;
+    if (segments.length !== nextSegments.length) return true;
+
+    // check last segment for param
+    let lastSegment = segments[segments.length - 1];
+    let nextLastSegment = nextSegments[nextSegments.length - 1];
+    if (lastSegment.startsWith(":") && nextLastSegment.startsWith(":")) {
+      conflicts[nextRoute.path || "/"] ||= [nextRoute];
+      conflicts[nextRoute.path || "/"].push(routeInfo);
+      return false;
+    }
+
+    return true;
+  });
+
+  // report conflicts
   if (Object.keys(conflicts).length > 0) {
     for (let [path, routes] of Object.entries(conflicts)) {
       let [taken, ...rest] = routes;
@@ -368,6 +391,12 @@ function getRouteMap(
           "\n"
       );
     }
+  }
+
+  // rebuild routeMap
+  routeMap = new Map<string, RouteInfo>();
+  for (let routeInfo of filteredDupParams) {
+    routeMap.set(routeInfo.id, routeInfo);
   }
 
   return routeMap;

@@ -680,6 +680,35 @@ describe("flatRoutes", () => {
         `)
       );
     });
+
+    test("same path, different param name", () => {
+      // we'll add file manually before running the tests
+      let testFiles = [
+        "routes/products.$pid.tsx",
+        "routes/products.$productId.tsx",
+      ];
+
+      let routeManifest = flatRoutesUniversal(
+        APP_DIR,
+        testFiles.map((file) =>
+          path.join(APP_DIR, file.split("/").join(path.sep))
+        )
+      );
+
+      let routes = Object.values(routeManifest);
+
+      // we had a collision as /route and /index are the same
+      expect(routes).toHaveLength(1);
+      expect(consoleError).toHaveBeenCalledWith(
+        trimAllLines(`⚠️ Route Path Collision: "/products/:pid"
+
+          The following routes all define the same URL, only the first one will be used
+
+          🟢 routes/products.$productId.tsx
+          ⭕️️ routes/products.$pid.tsx
+        `)
+      );
+    });
   });
 });
 
