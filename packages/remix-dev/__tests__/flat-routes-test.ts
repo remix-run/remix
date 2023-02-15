@@ -700,7 +700,7 @@ describe("flatRoutes", () => {
       // we had a collision as /route and /index are the same
       expect(routes).toHaveLength(1);
       expect(consoleError).toHaveBeenCalledWith(
-        trimAllLines(`⚠️ Route Path Collision: "/products/:pid"
+        trimAllLines(`⚠️ Route Path Collision: "/products/:productId"
 
           The following routes all define the same URL, only the first one will be used
 
