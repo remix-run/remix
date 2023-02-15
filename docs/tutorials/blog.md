@@ -202,7 +202,7 @@ A solid practice is to create a module that deals with a particular concern. In 
 touch app/models/post.server.ts
 ```
 
-We're mostly gonna copy/paste stuff from our route:
+We're mostly going to copy/paste stuff from our route:
 
 ```tsx filename=app/models/post.server.ts
 type Post = {
@@ -534,7 +534,7 @@ export default function PostSlug() {
 }
 ```
 
-Holy smokes, you did it. You have a blog. Check it out! Next, we're gonna make it easier to create new blog posts 📝
+Holy smokes, you did it. You have a blog. Check it out! Next, we're going to make it easier to create new blog posts 📝
 
 ## Nested Routing
 
@@ -700,7 +700,7 @@ Now click the link from the index route and watch the `<Outlet/>` automatically 
 
 ## Actions
 
-We're gonna get serious now. Let's build a form to create a new post in our new "new" route.
+We're going to get serious now. Let's build a form to create a new post in our new "new" route.
 
 💿 Add a form to the new route
 

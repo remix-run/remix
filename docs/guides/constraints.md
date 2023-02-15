@@ -119,7 +119,7 @@ export default function Posts() {
 }
 ```
 
-The loader is gone but the prisma dependency stayed! Had we logged something harmless like `console.log("hello!")` it would be fine. But we logged the `prisma` module so the browser's gonna have a hard time with that.
+The loader is gone but the prisma dependency stayed! Had we logged something harmless like `console.log("hello!")` it would be fine. But we logged the `prisma` module so the browser's going to have a hard time with that.
 
 To fix this, remove the side effect by simply moving the code _into the loader_.
 
