@@ -25,8 +25,8 @@ function NewEvent() {
 
 - Whether JavaScript is on the page or not, your data interactions created with `<Form>` and `action` will work.
 - After a `<Form>` submission, all of the loaders on the page will be reloaded. This ensures that any updates to your data are reflected in the UI.
-- `<Form>` automatically serializes your form's values (identically to the browser when not using JavaScript)
-- You can build "optimistic UI" and pending indicators with [`useTransition`][usetransition]
+- `<Form>` automatically serializes your form's values (identically to the browser when not using JavaScript).
+- You can build "optimistic UI" and pending indicators with [`useTransition`][usetransition].
 
 ## `action`
 

@@ -191,7 +191,7 @@ console.log(isCookie(cookie));
 
 ## Cookie API
 
-A cookie container is returned from `createCookie` and has handful of properties and methods.
+A cookie container is returned from `createCookie` and has a handful of properties and methods.
 
 ```ts
 const cookie = createCookie(name);

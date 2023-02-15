@@ -6,7 +6,7 @@ order: 3
 
 # Remix App Server
 
-While you can bring your own server, Remix ships with a built-in, production ready application server.
+While you can bring your own server, Remix ships with a built-in, production-ready application server.
 
 ```sh
 remix-serve <server-build-path>
