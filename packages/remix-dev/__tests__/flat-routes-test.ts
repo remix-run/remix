@@ -629,7 +629,7 @@ describe("flatRoutes", () => {
       let testFiles = [
         "routes/_landing._index.tsx",
         "routes/_dashboard._index.tsx",
-        "routes/._index.tsx",
+        "routes/_index.tsx",
       ];
 
       let routeManifest = flatRoutesUniversal(
@@ -650,7 +650,7 @@ describe("flatRoutes", () => {
 
           🟢 routes${path.sep}_landing._index.tsx
           ⭕️️ routes${path.sep}_dashboard._index.tsx
-          ⭕️️ routes${path.sep}._index.tsx
+          ⭕️️ routes${path.sep}_index.tsx
         `)
       );
     });
