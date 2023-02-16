@@ -2,7 +2,6 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import fse from "fs-extra";
-import stripAnsi from "strip-ansi";
 
 import { run } from "../cli/run";
 
