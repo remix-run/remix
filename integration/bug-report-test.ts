@@ -48,27 +48,29 @@ test.beforeAll(async () => {
     ////////////////////////////////////////////////////////////////////////////
     files: {
       "app/routes/index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
+        import { json, redirect } from "@remix-run/node";
+        import { useLoaderData, Form } from "@remix-run/react";
+
+        let state = 0;
 
         export function loader() {
-          return json("pizza");
+          return json(state);
+        }
+        
+        export function action() {
+          state++;
+          return redirect("/")
         }
 
         export default function Index() {
           let data = useLoaderData();
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              <h1 id="anchor">Anchor</h1>
+              <span id="testdata">{data}</span>
+              <Form method="post"><button type="submit">Submit</button></Form>
             </div>
           )
-        }
-      `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -87,22 +89,14 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("[should revalidate loader after submission redirect to the same page]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
-
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+  // We are on the index page but with an anchor in the URL. The action will redirect to "/" without the anchor.
+  await app.goto("/#anchor");
+  await page.waitForSelector('#testdata:has-text("0")')
+  await page.click("button")
+  await page.waitForSelector('#testdata:has-text("1")')
 });
 
 ////////////////////////////////////////////////////////////////////////////////
