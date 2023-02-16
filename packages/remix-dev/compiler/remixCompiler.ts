@@ -32,8 +32,8 @@ export const compile = async (
   try {
     let assetsManifestChannel = createChannel<AssetsManifest>();
     let browserPromise = compiler.browser.compile(assetsManifestChannel);
-    let serverPromise = compiler.server.compile(assetsManifestChannel);
-    await Promise.all([browserPromise, serverPromise]);
+    let serverBundlesPromises = compiler.server.compileBundles(assetsManifestChannel);
+    await Promise.all([browserPromise, ...serverBundlesPromises]);
     return assetsManifestChannel.read();
   } catch (error: unknown) {
     options.onCompileFailure?.(error as Error);

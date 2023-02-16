@@ -4,18 +4,19 @@ import type esbuild from "esbuild";
 
 import type { RemixConfig } from "../../config";
 import { getLoaderForFile } from "../loaders";
+import type { RouteManifest } from "../../config/routes";
 
 /**
  * This plugin loads route modules for the server build and prevents errors
  * while adding new files in development mode.
  */
-export function serverRouteModulesPlugin(config: RemixConfig): esbuild.Plugin {
+export function serverRouteModulesPlugin(config: RemixConfig, routes: RouteManifest): esbuild.Plugin {
   return {
     name: "server-route-modules",
     setup(build) {
       let routeFiles = new Set(
-        Object.keys(config.routes).map((key) =>
-          path.resolve(config.appDirectory, config.routes[key].file)
+        Object.keys(routes).map((key) =>
+          path.resolve(config.appDirectory, routes[key].file)
         )
       );
 

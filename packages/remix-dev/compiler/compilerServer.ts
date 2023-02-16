@@ -20,16 +20,21 @@ import { serverBareModulesPlugin } from "./plugins/serverBareModulesPlugin";
 import { serverEntryModulePlugin } from "./plugins/serverEntryModulePlugin";
 import { serverRouteModulesPlugin } from "./plugins/serverRouteModulesPlugin";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
+import type { RouteManifest } from "../config/routes";
 
 export type ServerCompiler = {
   // produce ./build/index.js
   compile: (manifestChannel: ReadChannel<AssetsManifest>) => Promise<void>;
+  // produce multiple ./build/[name].js
+  compileBundles: (manifestChannel: ReadChannel<AssetsManifest>) => Promise<void>[];
   dispose: () => void;
 };
 
 const createEsbuildConfig = (
   config: RemixConfig,
   assetsManifestChannel: ReadChannel<AssetsManifest>,
+  outfile: string,
+  routes: RouteManifest,
   options: CompileOptions
 ): esbuild.BuildOptions => {
   let stdin: esbuild.StdinOptions | undefined;
@@ -63,9 +68,9 @@ const createEsbuildConfig = (
     urlImportsPlugin(),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
-    serverRouteModulesPlugin(config),
-    serverEntryModulePlugin(config, { liveReloadPort: options.liveReloadPort }),
-    serverAssetsManifestPlugin(assetsManifestChannel.read()),
+    serverRouteModulesPlugin(config, routes),
+    serverEntryModulePlugin(config, routes, { liveReloadPort: options.liveReloadPort }),
+    serverAssetsManifestPlugin(assetsManifestChannel.read(), routes),
     serverBareModulesPlugin(config, options.onWarning),
   ].filter(isNotNull);
 
@@ -77,7 +82,7 @@ const createEsbuildConfig = (
     absWorkingDir: config.rootDirectory,
     stdin,
     entryPoints,
-    outfile: config.serverBuildPath,
+    outfile,
     conditions: config.serverConditions,
     platform: config.serverPlatform,
     format: config.serverModuleFormat,
@@ -119,9 +124,10 @@ const createEsbuildConfig = (
 
 async function writeServerBuildResult(
   config: RemixConfig,
+  serverBuildPath: string,
   outputFiles: esbuild.OutputFile[]
 ) {
-  await fse.ensureDir(path.dirname(config.serverBuildPath));
+  await fse.ensureDir(path.dirname(serverBuildPath));
 
   for (let file of outputFiles) {
     if (file.path.endsWith(".js")) {
@@ -145,7 +151,7 @@ async function writeServerBuildResult(
     } else {
       let assetPath = path.join(
         config.assetsBuildDirectory,
-        file.path.replace(path.dirname(config.serverBuildPath), "")
+        file.path.replace(path.dirname(serverBuildPath), "")
       );
 
       // Don't write CSS bundle from server build to browser assets directory,
@@ -164,20 +170,45 @@ export const createServerCompiler = (
   remixConfig: RemixConfig,
   options: CompileOptions
 ): ServerCompiler => {
-  let compile = async (manifestChannel: ReadChannel<AssetsManifest>) => {
+  // TODO: read from `remix.config.js`
+  let edgeRoutes = { ...remixConfig.routes };
+  delete edgeRoutes['routes/generate'];
+  delete edgeRoutes['routes/error'];
+  let nodeRoutes = { ...remixConfig.routes };
+  delete nodeRoutes['routes/index'];
+  let serverBundles = [
+    { serverBuildPath: "build/edge-build.js", routes: edgeRoutes },
+    { serverBuildPath: "build/node-build.js", routes: nodeRoutes },
+  ];
+
+  let compile = async (
+    manifestChannel: ReadChannel<AssetsManifest>,
+    outfile = remixConfig.serverBuildPath,
+    routes = remixConfig.routes
+  ) => {
     let esbuildConfig = createEsbuildConfig(
       remixConfig,
       manifestChannel,
+      outfile,
+      routes,
       options
     );
     let { outputFiles } = await esbuild.build({
       ...esbuildConfig,
       write: false,
     });
-    await writeServerBuildResult(remixConfig, outputFiles!);
+    await writeServerBuildResult(remixConfig, outfile, outputFiles!);
   };
+
+  let compileBundles = (manifestChannel: ReadChannel<AssetsManifest>) => {
+    return serverBundles.map(({ serverBuildPath, routes }) =>
+      compile(manifestChannel, serverBuildPath, routes)
+    );
+  };
+
   return {
     compile,
+    compileBundles,
     dispose: () => undefined,
   };
 };
