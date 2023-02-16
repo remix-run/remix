@@ -42,11 +42,6 @@ type Dev = {
   rebuildPollIntervalMs?: number;
 };
 
-interface ServerBundle {
-  serverBuildPath: string;
-  routes: string[];
-}
-
 interface FutureConfig {
   unstable_cssModules: boolean;
   unstable_cssSideEffectImports: boolean;
@@ -192,7 +187,10 @@ export interface AppConfig {
    * Configuration of server bundles to produce. If this is defined then the
    * top-level `serverBuildPath` value is ignored.
    */
-  serverBundles?: ServerBundle[];
+  serverBundles?: {
+    serverBuildPath: string;
+    routes: string[];
+  }[];
 
   /**
    * A list of filenames or a glob patterns to match files in the `app/routes`
@@ -357,7 +355,10 @@ export interface RemixConfig {
    * Configuration of server bundles to produce. If this is defined then the
    * top-level `serverBuildPath` value is ignored.
    */
-  serverBundles?: ServerBundle[];
+  serverBundles?: {
+    serverBuildPath: string;
+    routes: RouteManifest;
+  }[];
 
   /**
    * A list of directories to watch.
@@ -430,7 +431,6 @@ export async function readConfig(
   let serverMinify = appConfig.serverMinify;
   let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
   let serverPlatform = appConfig.serverPlatform || "node";
-  let serverBundles = appConfig.serverBundles;
   if (isCloudflareRuntime) {
     serverConditions ??= ["worker"];
     serverDependenciesToBundle = "all";
@@ -592,6 +592,24 @@ export async function readConfig(
       routes[route.id] = { ...route, parentId: route.parentId || "root" };
     }
   }
+
+  let serverBundles = appConfig.serverBundles?.map((bundle) => {
+    // Build up the resolved `routes` including any parent routes
+    let bundleRoutes: RouteManifest = {};
+    for (let id of bundle.routes) {
+      let currentRoute: RouteManifest[string] | undefined = routes[id];
+      do {
+        bundleRoutes[currentRoute.id] = currentRoute;
+        if (currentRoute.parentId) {
+          currentRoute = routes[currentRoute.parentId];
+        } else {
+          currentRoute = undefined;
+        }
+      } while (currentRoute);
+    }
+
+    return { serverBuildPath: bundle.serverBuildPath, routes: bundleRoutes };
+  });
 
   let watchPaths: string[] = [];
   if (typeof appConfig.watchPaths === "function") {

@@ -190,33 +190,11 @@ export const createServerCompiler = (
   };
 
   let compileBundles = (manifestChannel: ReadChannel<AssetsManifest>) => {
-    if (Array.isArray(remixConfig.serverBundles)) {
-      let serverBundles = remixConfig.serverBundles.map(bundle => {
-        // Build up the resolved `routes` including any parent routes
-        let routes: RouteManifest = {};
-        for (let id of bundle.routes) {
-          let currentRoute: RouteManifest[string] | undefined = remixConfig.routes[id];
-          do {
-            routes[currentRoute.id] = currentRoute;
-            if (currentRoute.parentId) {
-              currentRoute = remixConfig.routes[currentRoute.parentId];
-            } else {
-              currentRoute = undefined;
-            }
-          } while(currentRoute);
-        }
-
-        return {
-          serverBuildPath: bundle.serverBuildPath,
-          routes
-        }
-      });
-
-      return serverBundles.map(({ serverBuildPath, routes }) =>
+    if (remixConfig.serverBundles) {
+      return remixConfig.serverBundles.map(({ serverBuildPath, routes }) =>
         compile(manifestChannel, serverBuildPath, routes)
       );
     }
-
     return [compile(manifestChannel)];
   };
 
