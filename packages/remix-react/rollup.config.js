@@ -2,6 +2,7 @@ const path = require("path");
 const babel = require("@rollup/plugin-babel").default;
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
+const replace = require("@rollup/plugin-replace");
 
 const {
   copyToPlaygrounds,
@@ -34,6 +35,9 @@ module.exports = function rollup() {
       exports: "auto",
     },
     plugins: [
+      replace({
+        "import.meta": "null",
+      }),
       babel({
         babelHelpers: "bundled",
         exclude: /node_modules/,
