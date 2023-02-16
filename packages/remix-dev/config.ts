@@ -42,6 +42,11 @@ type Dev = {
   rebuildPollIntervalMs?: number;
 };
 
+interface ServerBundle {
+  serverBuildPath: string;
+  routes: string[];
+}
+
 interface FutureConfig {
   unstable_cssModules: boolean;
   unstable_cssSideEffectImports: boolean;
@@ -182,6 +187,12 @@ export interface AppConfig {
    * The platform the server build is targeting. Defaults to "node".
    */
   serverPlatform?: ServerPlatform;
+
+  /**
+   * Configuration of server bundles to produce. If this is defined then the
+   * top-level `serverBuildPath` value is ignored.
+   */
+  serverBundles?: ServerBundle[];
 
   /**
    * A list of filenames or a glob patterns to match files in the `app/routes`
@@ -343,6 +354,12 @@ export interface RemixConfig {
   serverPlatform: ServerPlatform;
 
   /**
+   * Configuration of server bundles to produce. If this is defined then the
+   * top-level `serverBuildPath` value is ignored.
+   */
+  serverBundles?: ServerBundle[];
+
+  /**
    * A list of directories to watch.
    */
   watchPaths: string[];
@@ -413,6 +430,7 @@ export async function readConfig(
   let serverMinify = appConfig.serverMinify;
   let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
   let serverPlatform = appConfig.serverPlatform || "node";
+  let serverBundles = appConfig.serverBundles;
   if (isCloudflareRuntime) {
     serverConditions ??= ["worker"];
     serverDependenciesToBundle = "all";
@@ -643,6 +661,7 @@ export async function readConfig(
     serverMode,
     serverModuleFormat,
     serverPlatform,
+    serverBundles,
     mdx,
     watchPaths,
     tsconfigPath,

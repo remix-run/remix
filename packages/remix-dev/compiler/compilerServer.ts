@@ -170,17 +170,6 @@ export const createServerCompiler = (
   remixConfig: RemixConfig,
   options: CompileOptions
 ): ServerCompiler => {
-  // TODO: read from `remix.config.js`
-  let edgeRoutes = { ...remixConfig.routes };
-  delete edgeRoutes['routes/generate'];
-  delete edgeRoutes['routes/error'];
-  let nodeRoutes = { ...remixConfig.routes };
-  delete nodeRoutes['routes/index'];
-  let serverBundles = [
-    { serverBuildPath: "build/edge-build.js", routes: edgeRoutes },
-    { serverBuildPath: "build/node-build.js", routes: nodeRoutes },
-  ];
-
   let compile = async (
     manifestChannel: ReadChannel<AssetsManifest>,
     outfile = remixConfig.serverBuildPath,
@@ -201,9 +190,34 @@ export const createServerCompiler = (
   };
 
   let compileBundles = (manifestChannel: ReadChannel<AssetsManifest>) => {
-    return serverBundles.map(({ serverBuildPath, routes }) =>
-      compile(manifestChannel, serverBuildPath, routes)
-    );
+    if (Array.isArray(remixConfig.serverBundles)) {
+      let serverBundles = remixConfig.serverBundles.map(bundle => {
+        // Build up the resolved `routes` including any parent routes
+        let routes: RouteManifest = {};
+        for (let id of bundle.routes) {
+          let currentRoute: RouteManifest[string] | undefined = remixConfig.routes[id];
+          do {
+            routes[currentRoute.id] = currentRoute;
+            if (currentRoute.parentId) {
+              currentRoute = remixConfig.routes[currentRoute.parentId];
+            } else {
+              currentRoute = undefined;
+            }
+          } while(currentRoute);
+        }
+
+        return {
+          serverBuildPath: bundle.serverBuildPath,
+          routes
+        }
+      });
+
+      return serverBundles.map(({ serverBuildPath, routes }) =>
+        compile(manifestChannel, serverBuildPath, routes)
+      );
+    }
+
+    return [compile(manifestChannel)];
   };
 
   return {
