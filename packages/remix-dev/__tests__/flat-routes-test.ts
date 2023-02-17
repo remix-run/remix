@@ -5,6 +5,7 @@ import {
   getRouteConflictErrorMessage,
   getRouteInfo,
   getRouteSegments,
+  normalizePath,
 } from "../config/flat-routes";
 import type { ConfigRoute } from "../config/routes";
 
@@ -599,7 +600,7 @@ describe("flatRoutes", () => {
     ];
 
     let files: [string, ConfigRoute][] = testFiles.map(([file, route]) => {
-      let filepath = file.split("/").join(path.sep);
+      let filepath = normalizePath(file);
       return [filepath, { ...route, file: filepath }];
     });
 
@@ -635,9 +636,7 @@ describe("flatRoutes", () => {
 
       let routeManifest = flatRoutesUniversal(
         APP_DIR,
-        testFiles.map((file) =>
-          path.join(APP_DIR, file.split("/").join(path.sep))
-        )
+        testFiles.map((file) => path.join(APP_DIR, normalizePath(file)))
       );
 
       let routes = Object.values(routeManifest);
@@ -655,9 +654,7 @@ describe("flatRoutes", () => {
 
       let routeManifest = flatRoutesUniversal(
         APP_DIR,
-        testFiles.map((file) =>
-          path.join(APP_DIR, file.split("/").join(path.sep))
-        )
+        testFiles.map((file) => path.join(APP_DIR, normalizePath(file)))
       );
 
       let routes = Object.values(routeManifest);
@@ -678,9 +675,7 @@ describe("flatRoutes", () => {
 
       let routeManifest = flatRoutesUniversal(
         APP_DIR,
-        testFiles.map((file) =>
-          path.join(APP_DIR, file.split("/").join(path.sep))
-        )
+        testFiles.map((file) => path.join(APP_DIR, normalizePath(file)))
       );
 
       let routes = Object.values(routeManifest);

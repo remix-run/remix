@@ -451,7 +451,7 @@ export function createFlatRouteId(filePath: string) {
   return routeId;
 }
 
-function normalizePath(filePath: string) {
+export function normalizePath(filePath: string) {
   return filePath.split("/").join(path.sep);
 }
 
