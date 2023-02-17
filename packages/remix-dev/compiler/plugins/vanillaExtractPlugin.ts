@@ -1,19 +1,24 @@
-import { dirname, join, extname } from "path";
+import { dirname, join, extname, basename, posix } from "path";
 import type { IdentifierOption } from "@vanilla-extract/integration";
 import {
   cssFileFilter,
-  virtualCssFileFilter,
+  // virtualCssFileFilter,
   processVanillaFile,
   getSourceFromVirtualCssFile,
   transform,
 } from "@vanilla-extract/integration";
 import * as fse from "fs-extra";
-import * as esbuild from "esbuild";
+import type { Plugin, OutputFile, Loader } from "esbuild";
 
 import type { RemixConfig } from "../../config";
 import type { CompileOptions } from "../options";
-import { loaders } from "../loaders";
+// import { loaders } from "../loaders";
 import { getPostcssProcessor } from "../utils/postcss";
+import { createVanillaExtractCompiler } from "./vanilla-extract/vanillaExtractCompiler";
+
+let compiler: ReturnType<typeof createVanillaExtractCompiler>;
+
+let virtualCssFileFilter = /\.vanilla\.css/;
 
 const pluginName = "vanilla-extract-plugin";
 const namespace = `${pluginName}-ns`;
@@ -26,10 +31,20 @@ export function vanillaExtractPlugin({
   config: RemixConfig;
   mode: CompileOptions["mode"];
   outputCss: boolean;
-}): esbuild.Plugin {
+}): Plugin {
   return {
     name: pluginName,
     async setup(build) {
+      let root = config.rootDirectory;
+      // let root = build.initialOptions.absWorkingDir || process.cwd();
+
+      compiler ||= createVanillaExtractCompiler({
+        root,
+        toCssImport(filePath) {
+          return posix.relative(root, filePath) + ".vanilla.css";
+        },
+      });
+
       let postcssProcessor = await getPostcssProcessor({
         config,
         context: {
@@ -53,12 +68,18 @@ export function vanillaExtractPlugin({
       build.onLoad(
         { filter: virtualCssFileFilter, namespace },
         async ({ path }) => {
-          let { source, fileName } = await getSourceFromVirtualCssFile(path);
-          let resolveDir = dirname(join(rootDirectory, fileName));
+          let [relativeFilePath] = path.split(".vanilla.css");
+
+          let { css, filePath } = compiler.getCssForFile(
+            posix.join(root, relativeFilePath)
+          );
+
+          // let { source, fileName } = await getSourceFromVirtualCssFile(path);
+          let resolveDir = dirname(join(rootDirectory, filePath));
 
           if (postcssProcessor) {
-            source = (
-              await postcssProcessor.process(source, {
+            css = (
+              await postcssProcessor.process(css, {
                 from: path,
                 to: path,
               })
@@ -66,7 +87,7 @@ export function vanillaExtractPlugin({
           }
 
           return {
-            contents: source,
+            contents: css,
             loader: "css",
             resolveDir,
           };
@@ -74,57 +95,26 @@ export function vanillaExtractPlugin({
       );
 
       build.onLoad({ filter: cssFileFilter }, async ({ path: filePath }) => {
-        let identOption: IdentifierOption =
-          mode === "production" ? "short" : "debug";
+        // let identOption: IdentifierOption =
+        //   mode === "production" ? "short" : "debug";
 
-        let { outputFiles } = await esbuild.build({
-          entryPoints: [filePath],
-          outdir: config.assetsBuildDirectory,
-          assetNames: build.initialOptions.assetNames,
-          bundle: true,
-          external: ["@vanilla-extract"],
-          platform: "node",
-          write: false,
-          plugins: [
-            vanillaExtractSideEffectsPlugin,
-            vanillaExtractTransformPlugin({ rootDirectory, identOption }),
-          ],
-          loader: loaders,
-          absWorkingDir: rootDirectory,
-          publicPath: config.publicPath,
-        });
-
-        let source = outputFiles.find((file) =>
-          file.path.endsWith(".js")
-        )?.text;
-
-        if (!source) {
-          return null;
-        }
-
-        let [contents] = await Promise.all([
-          processVanillaFile({
-            source,
-            filePath,
-            outputCss,
-            identOption,
-          }),
-          outputCss && writeAssets(outputFiles),
-        ]);
+        let { source, watchFiles } = await compiler.processVanillaFile(
+          filePath,
+          outputCss
+        );
 
         return {
-          contents,
+          contents: source,
           resolveDir: dirname(filePath),
           loader: "js",
+          watchFiles: Array.from(watchFiles || []),
         };
       });
     },
   };
 }
 
-async function writeAssets(
-  outputFiles: Array<esbuild.OutputFile>
-): Promise<void> {
+async function writeAssets(outputFiles: Array<OutputFile>): Promise<void> {
   await Promise.all(
     outputFiles
       .filter((file) => !file.path.endsWith(".js"))
@@ -135,7 +125,7 @@ async function writeAssets(
   );
 }
 
-const loaderForExtension: Record<string, esbuild.Loader> = {
+const loaderForExtension: Record<string, Loader> = {
   ".js": "js",
   ".jsx": "jsx",
   ".ts": "ts",
@@ -155,7 +145,7 @@ function vanillaExtractTransformPlugin({
 }: {
   identOption: IdentifierOption;
   rootDirectory: string;
-}): esbuild.Plugin {
+}): Plugin {
   return {
     name: "vanilla-extract-transform-plugin",
     setup(build) {
@@ -185,7 +175,7 @@ function vanillaExtractTransformPlugin({
  * to ensure that all usages of `globalStyle` are included in the CSS bundle,
  * even if a .css.ts/js file has no exports or is otherwise tree-shaken.
  */
-const vanillaExtractSideEffectsPlugin: esbuild.Plugin = {
+const vanillaExtractSideEffectsPlugin: Plugin = {
   name: "vanilla-extract-side-effects-plugin",
   setup(build) {
     let preventInfiniteLoop = {};
