@@ -6,6 +6,7 @@ import ts from "typescript";
 import type { RemixConfig } from "../../config";
 import { applyHMR } from "./hmrPlugin";
 import type { CompileOptions } from "../options";
+import { getLoaderForFile } from "../loaders";
 
 const serverOnlyExports = new Set(["action", "loader"]);
 
@@ -55,7 +56,7 @@ export function browserRouteModulesPlugin(
 
           return {
             contents,
-            loader: path.extname(routeFile).slice(1) as esbuild.Loader,
+            loader: getLoaderForFile(routeFile),
             resolveDir: path.dirname(routeFile),
           };
         }
