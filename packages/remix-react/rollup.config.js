@@ -36,7 +36,10 @@ module.exports = function rollup() {
     },
     plugins: [
       replace({
-        "import.meta": "null",
+        preventAssignment: true,
+        values: {
+          "import.meta": "null",
+        },
       }),
       babel({
         babelHelpers: "bundled",
