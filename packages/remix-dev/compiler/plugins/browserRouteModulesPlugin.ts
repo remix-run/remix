@@ -4,10 +4,12 @@ import type esbuild from "esbuild";
 import generate from "@babel/generator";
 
 import type { RemixConfig } from "../../config";
-import { applyHMR } from "./hmrPlugin";
+import invariant from "../../invariant";
+import * as Transform from "../../transform";
 import type { CompileOptions } from "../options";
 import { getLoaderForFile } from "../loaders";
-import * as Transform from "../../transform";
+import { getRouteModuleExports } from "../routeExports";
+import { applyHMR } from "./hmrPlugin";
 
 const serverOnlyExports = new Set(["action", "loader"]);
 
@@ -65,6 +67,8 @@ let removeServerExports = (onLoader: (loader: string) => void) =>
     };
   });
 
+type Route = RemixConfig["routes"][string];
+
 /**
  * This plugin loads route modules for the browser build, using module shims
  * that re-export only the route module exports that are safe for the browser.
@@ -78,6 +82,14 @@ export function browserRouteModulesPlugin(
   return {
     name: "browser-route-modules",
     async setup(build) {
+      let routesByFile: Map<string, Route> = Object.keys(config.routes).reduce(
+        (map, key) => {
+          let route = config.routes[key];
+          map.set(route.file, route);
+          return map;
+        },
+        new Map()
+      );
       build.onResolve({ filter: suffixMatcher }, (args) => {
         return {
           path: args.path,
@@ -89,6 +101,25 @@ export function browserRouteModulesPlugin(
         { filter: suffixMatcher, namespace: "browser-route-module" },
         async (args) => {
           let file = args.path.replace(suffixMatcher, "");
+
+          if (/\.mdx?$/.test(file)) {
+            let route = routesByFile.get(file);
+            invariant(route, `Cannot get route by path: ${args.path}`);
+
+            let theExports = await getRouteModuleExports(config, route.id);
+            let contents = "module.exports = {};";
+            if (theExports.length !== 0) {
+              let spec = `{ ${theExports.join(", ")} }`;
+              contents = `export ${spec} from ${JSON.stringify(`./${file}`)};`;
+            }
+
+            return {
+              contents,
+              resolveDir: config.appDirectory,
+              loader: "js",
+            };
+          }
+
           let routeFile = path.join(config.appDirectory, file);
 
           let sourceCode = fs.readFileSync(routeFile, "utf8");
