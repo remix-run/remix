@@ -360,28 +360,32 @@ function getRouteMap(
     return b.segments.length - a.segments.length;
   });
 
-  // update parentIds for all routes
   for (let i = 0; i < routes.length; i++) {
     let routeInfo = routes[i];
+    // update parentIds for all routes
     routeInfo.parentId = findParentRouteId(routeInfo, nameMap);
 
+    // remove routes that conflict with other routes
     let nextRouteInfo = routes[i + 1];
     if (!nextRouteInfo) continue;
 
     let segments = routeInfo.segments;
     let nextSegments = nextRouteInfo.segments;
+    // if segment count is different, there can't be a conflict
     if (segments.length !== nextSegments.length) continue;
 
     for (let k = 0; k < segments.length; k++) {
       let segment = segments[k];
       let nextSegment = nextSegments[k];
 
+      // if segments are different, but they're both dynamic, there's a conflict
       if (
         segment !== nextSegment &&
         segment.startsWith(":") &&
         nextSegment.startsWith(":")
       ) {
         let currentConflicts = conflicts.get(routeInfo.path || "/");
+        // collect conflicts for later reporting, marking the next route as the conflicting route
         if (!currentConflicts) {
           conflicts.set(routeInfo.path || "/", [routeInfo, nextRouteInfo]);
         } else {
@@ -389,7 +393,8 @@ function getRouteMap(
           conflicts.set(routeInfo.path || "/", currentConflicts);
         }
 
-        routeMap.delete(routeInfo.id);
+        // remove conflicting route
+        routeMap.delete(nextRouteInfo.id);
 
         continue;
       }
