@@ -20,7 +20,7 @@ export let create =
       plugins: [babelPluginSyntaxTypescript, babelRecastPlugin, plugin],
       overrides: [
         {
-          test: /\.tsx$/,
+          test: /\.[jt]sx?$/,
           plugins: [
             babelPluginSyntaxJsx,
             [babelPluginSyntaxTypescript, { isTSX: true }],
