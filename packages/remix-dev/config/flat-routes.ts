@@ -361,22 +361,20 @@ function getRouteMap(
   });
 
   // update parentIds for all routes
-  for (let routeInfo of routes) {
+  for (let i = 0; i < routes.length; i++) {
+    let routeInfo = routes[i];
     routeInfo.parentId = findParentRouteId(routeInfo, nameMap);
-  }
 
-  // find routes with same segments
-  let filteredParamCollisions = routes.filter((routeInfo, index) => {
-    let nextRoute = routes[index + 1];
-    if (!nextRoute) return true;
+    let nextRouteInfo = routes[i + 1];
+    if (!nextRouteInfo) continue;
 
     let segments = routeInfo.segments;
-    let nextSegments = nextRoute.segments;
-    if (segments.length !== nextSegments.length) return true;
+    let nextSegments = nextRouteInfo.segments;
+    if (segments.length !== nextSegments.length) continue;
 
-    for (let i = 0; i < segments.length; i++) {
-      let segment = segments[i];
-      let nextSegment = nextSegments[i];
+    for (let k = 0; k < segments.length; k++) {
+      let segment = segments[k];
+      let nextSegment = nextSegments[k];
 
       if (
         segment !== nextSegment &&
@@ -385,17 +383,18 @@ function getRouteMap(
       ) {
         let currentConflicts = conflicts.get(routeInfo.path || "/");
         if (!currentConflicts) {
-          conflicts.set(routeInfo.path || "/", [routeInfo, nextRoute]);
+          conflicts.set(routeInfo.path || "/", [routeInfo, nextRouteInfo]);
         } else {
-          currentConflicts.push(nextRoute);
+          currentConflicts.push(nextRouteInfo);
           conflicts.set(routeInfo.path || "/", currentConflicts);
         }
-        return false;
+
+        routeMap.delete(routeInfo.id);
+
+        continue;
       }
     }
-
-    return true;
-  });
+  }
 
   // report conflicts
   if (conflicts.size > 0) {
@@ -403,12 +402,6 @@ function getRouteMap(
       let filePaths = routes.map((r) => r.file);
       console.error(getRouteConflictErrorMessage(path, filePaths));
     }
-  }
-
-  // rebuild routeMap
-  routeMap = new Map<string, RouteInfo>();
-  for (let routeInfo of filteredParamCollisions) {
-    routeMap.set(routeInfo.id, routeInfo);
   }
 
   return routeMap;
