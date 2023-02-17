@@ -129,14 +129,19 @@ const createEsbuildConfig = (
 
   if (mode === "development" && config.future.unstable_dev) {
     // TODO prebundle deps instead of chunking just these ones
+    let isolateChunks = [
+      "react",
+      "react/jsx-dev-runtime",
+      "react/jsx-runtime",
+      "react-dom",
+      "react-dom/client",
+      "react-refresh/runtime",
+      "@remix-run/react",
+      "remix:hmr",
+    ];
     entryPoints = {
       ...entryPoints,
-      react: "react",
-      "react-dom": "react-dom",
-      "react-dom/client": "react-dom/client",
-      "react-refresh/runtime": "react-refresh/runtime",
-      "@remix-run/react": "@remix-run/react",
-      "remix:hmr": "remix:hmr",
+      ...Object.fromEntries(isolateChunks.map((imprt) => [imprt, imprt])),
     };
 
     plugins.push(hmrPlugin({ remixConfig: config }));
