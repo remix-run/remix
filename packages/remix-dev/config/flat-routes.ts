@@ -400,15 +400,8 @@ function getRouteMap(
   // report conflicts
   if (conflicts.size > 0) {
     for (let [path, routes] of conflicts.entries()) {
-      let [taken, ...rest] = routes;
-
-      console.error(
-        `⚠️ Route Path Collision: "${path}"\n\n` +
-          `The following routes all define the same URL, only the first one will be used\n\n` +
-          `🟢 ${taken.file}\n` +
-          rest.map((conflict) => `⭕️️ ${conflict.file}`).join("\n") +
-          "\n"
-      );
+      let filePaths = routes.map((r) => r.file);
+      console.error(getRouteConflictErrorMessage(path, filePaths));
     }
   }
 
@@ -456,4 +449,23 @@ export function createFlatRouteId(filePath: string) {
     }
   }
   return routeId;
+}
+
+function normalizePath(filePath: string) {
+  return filePath.split("/").join(path.sep);
+}
+
+export function getRouteConflictErrorMessage(
+  pathname: string,
+  routes: string[]
+) {
+  let [taken, ...others] = routes;
+
+  return (
+    `⚠️ Route Path Collision: "${pathname}"\n\n` +
+    `The following routes all define the same URL, only the first one will be used\n\n` +
+    `🟢 ${normalizePath(taken)}\n` +
+    others.map((route) => `⭕️️ ${normalizePath(route)}`).join("\n") +
+    "\n"
+  );
 }

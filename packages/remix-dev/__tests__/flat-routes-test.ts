@@ -2,6 +2,7 @@ import path from "node:path";
 
 import {
   flatRoutesUniversal,
+  getRouteConflictErrorMessage,
   getRouteInfo,
   getRouteSegments,
 } from "../config/flat-routes";
@@ -644,7 +645,7 @@ describe("flatRoutes", () => {
       // we had a collision as /route and /index are the same
       expect(routes).toHaveLength(1);
       expect(consoleError).toHaveBeenCalledWith(
-        getErrorMessage("/", testFiles)
+        getRouteConflictErrorMessage("/", testFiles)
       );
     });
 
@@ -664,7 +665,7 @@ describe("flatRoutes", () => {
       // we had a collision as /route and /index are the same
       expect(routes).toHaveLength(1);
       expect(consoleError).toHaveBeenCalledWith(
-        getErrorMessage("/dashboard", testFiles)
+        getRouteConflictErrorMessage("/dashboard", testFiles)
       );
     });
 
@@ -687,24 +688,8 @@ describe("flatRoutes", () => {
       // we had a collision as /route and /index are the same
       expect(routes).toHaveLength(1);
       expect(consoleError).toHaveBeenCalledWith(
-        getErrorMessage("/products/:pid", testFiles)
+        getRouteConflictErrorMessage("/products/:pid", testFiles)
       );
     });
   });
 });
-
-function normalizePath(filePath: string) {
-  return filePath.split("/").join(path.sep);
-}
-
-function getErrorMessage(pathname: string, routes: string[]) {
-  let [taken, ...others] = routes;
-
-  return (
-    `⚠️ Route Path Collision: "${pathname}"\n\n` +
-    `The following routes all define the same URL, only the first one will be used\n\n` +
-    `🟢 ${normalizePath(taken)}\n` +
-    others.map((route) => `⭕️️ ${normalizePath(route)}`).join("\n") +
-    "\n"
-  );
-}
