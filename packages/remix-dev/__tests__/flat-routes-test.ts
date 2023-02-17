@@ -598,6 +598,23 @@ describe("flatRoutes", () => {
           path: "*",
         },
       ],
+      [
+        "routes/$invoice/route.jsx",
+        {
+          id: "routes/$invoice/route",
+          parentId: "root",
+          path: ":invoice"
+        }
+      ],
+      [
+        "routes/$invoice._index/route.jsx",
+        {
+          id: "routes/$invoice._index/route",
+          parentId: "root",
+          path: ":invoice",
+          index: true
+        }
+      ]
     ];
 
     let files: [string, ConfigRoute][] = testFiles.map(([file, route]) => {

@@ -121,7 +121,7 @@ export function flatRoutesUniversal(
 }
 
 export function isIndexRoute(routeId: string) {
-  return routeId.endsWith("_index");
+  return routeId.endsWith("_index") || routeId.endsWith("_index/route");
 }
 
 type State =
