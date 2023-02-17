@@ -627,8 +627,8 @@ describe("flatRoutes", () => {
     test("index files", () => {
       // we'll add file manually before running the tests
       let testFiles = [
-        "routes/_landing._index.tsx",
         "routes/_dashboard._index.tsx",
+        "routes/_landing._index.tsx",
         "routes/_index.tsx",
       ];
 
@@ -644,20 +644,13 @@ describe("flatRoutes", () => {
       // we had a collision as /route and /index are the same
       expect(routes).toHaveLength(1);
       expect(consoleError).toHaveBeenCalledWith(
-        trimAllLines(`⚠️ Route Path Collision: "/"
-
-          The following routes all define the same URL, only the first one will be used
-
-          🟢 routes${path.sep}_landing._index.tsx
-          ⭕️️ routes${path.sep}_dashboard._index.tsx
-          ⭕️️ routes${path.sep}_index.tsx
-        `)
+        getErrorMessage("/", testFiles)
       );
     });
 
     test("folder/route.tsx matching folder.tsx", () => {
       // we'll add file manually before running the tests
-      let testFiles = ["routes/dashboard/route.tsx", "routes/dashboard.tsx"];
+      let testFiles = ["routes/dashboard.tsx", "routes/dashboard/route.tsx"];
 
       let routeManifest = flatRoutesUniversal(
         APP_DIR,
@@ -671,13 +664,7 @@ describe("flatRoutes", () => {
       // we had a collision as /route and /index are the same
       expect(routes).toHaveLength(1);
       expect(consoleError).toHaveBeenCalledWith(
-        trimAllLines(`⚠️ Route Path Collision: "/dashboard"
-
-          The following routes all define the same URL, only the first one will be used
-
-          🟢 routes${path.sep}dashboard${path.sep}route.tsx
-          ⭕️️ routes${path.sep}dashboard.tsx
-        `)
+        getErrorMessage("/dashboard", testFiles)
       );
     });
 
@@ -700,21 +687,24 @@ describe("flatRoutes", () => {
       // we had a collision as /route and /index are the same
       expect(routes).toHaveLength(1);
       expect(consoleError).toHaveBeenCalledWith(
-        trimAllLines(`⚠️ Route Path Collision: "/products/:productId"
-
-          The following routes all define the same URL, only the first one will be used
-
-          🟢 routes${path.sep}products.$productId.tsx
-          ⭕️️ routes${path.sep}products.$pid.tsx
-        `)
+        getErrorMessage("/products/:pid", testFiles)
       );
     });
   });
 });
 
-function trimAllLines(str: string) {
-  return str
-    .split("\n")
-    .map((line) => line.trim())
-    .join("\n");
+function normalizePath(filePath: string) {
+  return filePath.split("/").join(path.sep);
+}
+
+function getErrorMessage(pathname: string, routes: string[]) {
+  let [taken, ...others] = routes;
+
+  return (
+    `⚠️ Route Path Collision: "${pathname}"\n\n` +
+    `The following routes all define the same URL, only the first one will be used\n\n` +
+    `🟢 ${normalizePath(taken)}\n` +
+    others.map((route) => `⭕️️ ${normalizePath(route)}`).join("\n") +
+    "\n"
+  );
 }

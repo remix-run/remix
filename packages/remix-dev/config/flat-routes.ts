@@ -323,7 +323,7 @@ function getRouteMap(
   let routeMap = new Map<string, RouteInfo>();
   let nameMap = new Map<string, RouteInfo>();
   let uniqueRoutes = new Map<string, RouteInfo>();
-  let conflicts: { [path: string]: RouteInfo[] } = {};
+  let conflicts = new Map<string, RouteInfo[]>();
 
   for (let routePath of routePaths) {
     let routesDirectory = path.join(appDirectory, prefix);
@@ -338,8 +338,14 @@ function getRouteMap(
         let conflict = uniqueRoutes.get(uniqueRouteId);
         // collect conflicts for later reporting
         if (conflict) {
-          conflicts[routeInfo.path || "/"] ||= [conflict];
-          conflicts[routeInfo.path || "/"].push(routeInfo);
+          let currentConflicts = conflicts.get(routeInfo.path || "/");
+          if (!currentConflicts) {
+            conflicts.set(routeInfo.path || "/", [conflict, routeInfo]);
+          } else {
+            currentConflicts.push(routeInfo);
+            conflicts.set(routeInfo.path || "/", currentConflicts);
+          }
+
           continue;
         }
         uniqueRoutes.set(uniqueRouteId, routeInfo);
@@ -377,8 +383,13 @@ function getRouteMap(
         segment.startsWith(":") &&
         nextSegment.startsWith(":")
       ) {
-        conflicts[nextRoute.path || "/"] ||= [nextRoute];
-        conflicts[nextRoute.path || "/"].push(routeInfo);
+        let currentConflicts = conflicts.get(routeInfo.path || "/");
+        if (!currentConflicts) {
+          conflicts.set(routeInfo.path || "/", [routeInfo, nextRoute]);
+        } else {
+          currentConflicts.push(nextRoute);
+          conflicts.set(routeInfo.path || "/", currentConflicts);
+        }
         return false;
       }
     }
@@ -387,8 +398,8 @@ function getRouteMap(
   });
 
   // report conflicts
-  if (Object.keys(conflicts).length > 0) {
-    for (let [path, routes] of Object.entries(conflicts)) {
+  if (conflicts.size > 0) {
+    for (let [path, routes] of conflicts.entries()) {
       let [taken, ...rest] = routes;
 
       console.error(
