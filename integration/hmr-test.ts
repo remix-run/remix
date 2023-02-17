@@ -202,7 +202,9 @@ test("HMR", async ({ page }) => {
   await wait(() => /✅ app ready: /.test(appStdout()));
 
   try {
-    await page.goto(`http://localhost:${appServerPort}`, { waitUntil: "networkidle" });
+    await page.goto(`http://localhost:${appServerPort}`, {
+      waitUntil: "networkidle",
+    });
 
     // `<input />` value as page state that
     // would be wiped out by a full page refresh
@@ -253,19 +255,19 @@ test("HMR", async ({ page }) => {
 
     // add loader
     let withLoader1 = `
-        import { json } from "@remix-run/node";
-        import { useLoaderData } from "@remix-run/react";
+      import { json } from "@remix-run/node";
+      import { useLoaderData } from "@remix-run/react";
 
-        export let loader = () => json({ hello: "world" })
+      export let loader = () => json({ hello: "world" })
 
-        export default function Index() {
-          let { hello } = useLoaderData<typeof loader>();
-          return (
-            <main>
-              <h1>Hello, {hello}</h1>
-            </main>
-          )
-        }
+      export default function Index() {
+        let { hello } = useLoaderData<typeof loader>();
+        return (
+          <main>
+            <h1>Hello, {hello}</h1>
+          </main>
+        )
+      }
     `;
     fs.writeFileSync(indexPath, withLoader1);
     await page.getByText("Hello, world").waitFor({ timeout: 2000 });
@@ -273,21 +275,21 @@ test("HMR", async ({ page }) => {
     await page.waitForSelector(`#root-counter:has-text("inc 1")`);
 
     let withLoader2 = `
-        import { json } from "@remix-run/node";
-        import { useLoaderData } from "@remix-run/react";
+      import { json } from "@remix-run/node";
+      import { useLoaderData } from "@remix-run/react";
 
-        export function loader() {
-          return json({ hello: "planet" })
-        }
+      export function loader() {
+        return json({ hello: "planet" })
+      }
 
-        export default function Index() {
-          let { hello } = useLoaderData<typeof loader>();
-          return (
-            <main>
-              <h1>Hello, {hello}</h1>
-            </main>
-          )
-        }
+      export default function Index() {
+        let { hello } = useLoaderData<typeof loader>();
+        return (
+          <main>
+            <h1>Hello, {hello}</h1>
+          </main>
+        )
+      }
     `;
     fs.writeFileSync(indexPath, withLoader2);
     await page.getByText("Hello, planet").waitFor({ timeout: 2000 });
