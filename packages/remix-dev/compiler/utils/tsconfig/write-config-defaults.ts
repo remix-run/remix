@@ -7,16 +7,6 @@ import JSON5 from "json5";
 
 import * as colors from "../../../colors";
 
-// These are suggested values and will be set when not present in the
-// tsconfig.json
-let suggestedCompilerOptions: TsConfigJson.CompilerOptions = {
-  allowJs: true,
-  forceConsistentCasingInFileNames: true,
-  lib: ["DOM", "DOM.Iterable", "ES2019"],
-  strict: true,
-  target: "ES2019",
-};
-
 // These values are required and cannot be changed by the user
 // Keep this in sync with esbuild
 let requiredCompilerOptions: TsConfigJson.CompilerOptions = {
@@ -63,26 +53,8 @@ export function writeConfigDefaults(configPath: string) {
   if (!fullConfig.compilerOptions) fullConfig.compilerOptions = {};
   if (!config.compilerOptions) config.compilerOptions = {};
 
-  let suggestedChanges = [];
   let requiredChanges = [];
 
-  if (!("include" in fullConfig)) {
-    if (configType === "jsconfig.json") {
-      config.include = ["**/*.js", "**/*.jsx"];
-      suggestedChanges.push(
-        colors.blue("include") +
-          " was set to " +
-          colors.bold(`['**/*.js', '**/*.jsx']`)
-      );
-    } else {
-      config.include = ["remix.env.d.ts", "**/*.ts", "**/*.tsx"];
-      suggestedChanges.push(
-        colors.blue("include") +
-          " was set to " +
-          colors.bold(`['remix.env.d.ts', '**/*.ts', '**/*.tsx']`)
-      );
-    }
-  }
   // TODO: check for user's typescript version and only add baseUrl if < 4.1
   if (!("baseUrl" in fullConfig.compilerOptions)) {
     let baseUrl = path.relative(process.cwd(), path.dirname(configPath)) || ".";
@@ -92,16 +64,6 @@ export function writeConfigDefaults(configPath: string) {
         " was set to " +
         colors.bold(`'${baseUrl}'`)
     );
-  }
-  for (let key of objectKeys(suggestedCompilerOptions)) {
-    if (!(key in fullConfig.compilerOptions)) {
-      config.compilerOptions[key] = suggestedCompilerOptions[key] as any;
-      suggestedChanges.push(
-        colors.blue("compilerOptions." + key) +
-          " was set to " +
-          colors.bold(`'${suggestedCompilerOptions[key]}'`)
-      );
-    }
   }
 
   for (let key of objectKeys(requiredCompilerOptions)) {
@@ -139,25 +101,13 @@ export function writeConfigDefaults(configPath: string) {
     );
   }
 
-  if (suggestedChanges.length > 0 || requiredChanges.length > 0) {
+  if (requiredChanges.length > 0) {
     fse.writeFileSync(
       configPath,
       prettier.format(JSON.stringify(config, null, 2), {
         parser: "json",
       })
     );
-  }
-  if (suggestedChanges.length > 0) {
-    console.log(
-      `The following suggested values were added to your ${colors.blue(
-        `"${configType}"`
-      )}. These values ${colors.bold(
-        "can be changed"
-      )} to fit your project's needs:\n`
-    );
-
-    suggestedChanges.forEach((change) => console.log(`\t- ${change}`));
-    console.log("");
   }
 
   if (requiredChanges.length > 0) {
