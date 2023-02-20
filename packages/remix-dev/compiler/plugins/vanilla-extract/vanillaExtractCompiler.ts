@@ -1,4 +1,4 @@
-import { pathToFileURL, fileURLToPath } from "url";
+import { pathToFileURL } from "url";
 import { relative } from "path";
 import { setAdapter, removeAdapter } from "@vanilla-extract/css/adapter";
 import { transformCss } from "@vanilla-extract/css/transformCss";
@@ -15,19 +15,12 @@ import { ViteNodeServer } from "vite-node/server";
 import type { Adapter } from "@vanilla-extract/css";
 
 import { lock } from "./lock";
-import {
-  serializeVanillaModule,
-  stringifyFileScope,
-} from "./processVanillaFile";
+import { serializeVanillaModule } from "./processVanillaFile";
 
 type Css = Parameters<Adapter["appendCss"]>[0];
 type Composition = Parameters<Adapter["registerComposition"]>[0];
 
-const scanModule = (
-  entryModule: ModuleNode,
-  root: string,
-  cssCache: Map<string, unknown>
-) => {
+const scanModule = (entryModule: ModuleNode, root: string) => {
   let queue = [entryModule];
   let cssDeps = new Set<string>();
   let watchFiles = new Set<string>();
@@ -35,8 +28,8 @@ const scanModule = (
   for (let moduleNode of queue) {
     let relativePath = moduleNode.id && relative(root, moduleNode.id);
 
-    if (relativePath && cssCache.has(relativePath)) {
-      cssDeps.add(relativePath!);
+    if (relativePath) {
+      cssDeps.add(relativePath);
     }
 
     if (moduleNode.file) {
@@ -48,7 +41,11 @@ const scanModule = (
     }
   }
 
-  return { cssDeps, watchFiles };
+  // This ensures the root module's styles are last in terms of CSS ordering. We
+  // should probably find a way to avoid the need for this.
+  let [head, ...tail] = cssDeps;
+
+  return { cssDeps: new Set([...tail, head]), watchFiles };
 };
 
 const createViteServer = async (root: string) => {
@@ -143,7 +140,7 @@ export const createVanillaExtractCompiler = ({
 }: CreateCompilerParams): Compiler => {
   let vitePromise = createViteServer(root);
 
-  let cssCache = new Map<
+  let adapterResultCache = new Map<
     string,
     {
       css: string;
@@ -162,14 +159,10 @@ export const createVanillaExtractCompiler = ({
       let composedClassLists: Array<Composition> = [];
       let usedCompositions = new Set<string>();
 
-      let executedUrls: Array<string> = [];
-
       let cssAdapter: Adapter = {
         appendCss: (css, fileScope) => {
           let fileScopeCss = cssByFileScope.get(fileScope.filePath) ?? [];
-
           fileScopeCss.push(css);
-
           cssByFileScope.set(fileScope.filePath, fileScopeCss);
         },
         registerClassName: (className) => {
@@ -181,9 +174,7 @@ export const createVanillaExtractCompiler = ({
         markCompositionUsed: (identifier) => {
           usedCompositions.add(identifier);
         },
-        onEndFileScope: (fileScope) => {
-          executedUrls.push(fileScope.filePath);
-        },
+        onEndFileScope: () => {},
         getIdentOption: () => "debug",
       };
 
@@ -200,48 +191,40 @@ export const createVanillaExtractCompiler = ({
 
         let cssImports = [];
 
-        let { cssDeps, watchFiles } = scanModule(moduleNode, root, cssCache);
+        let { cssDeps, watchFiles } = scanModule(moduleNode, root);
 
         for (let moduleId of cssDeps) {
-          let cssEntry = cssCache.get(moduleId);
+          let cssObjs = cssByFileScope.get(moduleId);
+          let cachedAdapterResult = adapterResultCache.get(moduleId);
 
-          if (!cssEntry) {
-            throw new Error(`No CSS Entry found in cache for ${moduleId}`);
-          }
-
-          cssImports.push(`import '${toCssImport(moduleId)}';`);
-
-          cssEntry.localClassNames.forEach((localClassName) => {
-            localClassNames.add(localClassName);
-          });
-          cssEntry.usedCompositions.forEach((usedComposition) => {
-            usedCompositions.add(usedComposition);
-          });
-          composedClassLists.push(...cssEntry.composedClassLists);
-        }
-
-        for (let url of executedUrls) {
-          let cssObjs = cssByFileScope.get(url);
-          if (!cssObjs) {
+          if (!cssObjs && !cachedAdapterResult) {
             continue;
           }
 
-          let css = transformCss({
-            localClassNames: Array.from(localClassNames),
-            composedClassLists,
-            cssObjs,
-          }).join("\n");
+          if (cssObjs) {
+            let css = transformCss({
+              localClassNames: Array.from(localClassNames),
+              composedClassLists,
+              cssObjs,
+            }).join("\n");
 
-          let moduleId = url;
+            adapterResultCache.set(moduleId, {
+              localClassNames,
+              composedClassLists,
+              usedCompositions,
+              css,
+            });
+          } else if (cachedAdapterResult) {
+            cachedAdapterResult.localClassNames.forEach((localClassName) => {
+              localClassNames.add(localClassName);
+            });
+            cachedAdapterResult.usedCompositions.forEach((usedComposition) => {
+              usedCompositions.add(usedComposition);
+            });
+            composedClassLists.push(...cachedAdapterResult.composedClassLists);
+          }
 
           cssImports.push(`import '${toCssImport(moduleId)}';`);
-
-          cssCache.set(moduleId, {
-            localClassNames,
-            composedClassLists,
-            usedCompositions,
-            css,
-          });
         }
 
         removeAdapter();
@@ -273,7 +256,7 @@ export const createVanillaExtractCompiler = ({
     },
     getCssForFile(filePath: string) {
       let rootRelativePath = relative(root, filePath);
-      let result = cssCache.get(rootRelativePath);
+      let result = adapterResultCache.get(rootRelativePath);
 
       if (!result) {
         throw new Error(`No CSS for file: ${filePath}`);
