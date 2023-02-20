@@ -4,4 +4,4 @@
 "@remix-run/cloudflare-workers": minor
 ---
 
-chore: update `@cloudflare/workers-types` to v4
+feat: support `@cloudflare/workers-types` v4
