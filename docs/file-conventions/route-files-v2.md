@@ -359,7 +359,7 @@ routes/
   contact-us.tsx
 ```
 
-Note that the `route.tsx` file is the actual route module, the rest are ignored by the convention.
+Note that `app/index.tsx` is _not_ the "index route" for `app/`. It is Note's "index module" for the directory `routes/app/`. The index route for `app/` is `app._index/index.tsx`. The only thing that contributes to the route path is the directory name.
 
 ```
 # these are the same route:
@@ -368,7 +368,7 @@ routes/app/route.tsx
 
 # as are these
 routes/app._index.tsx
-route/app._index/route.tsx
+routes/app._index/route.tsx
 ```
 
 ## Scaling

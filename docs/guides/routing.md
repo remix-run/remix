@@ -40,7 +40,7 @@ Here's some vocabulary this document will be using regularly. They may not all m
 Nested Routing is the general idea of coupling segments of the URL to component hierarchy in the UI. We've found that in almost every case, segments of the URL determine:
 
 - The layouts to render on the page
-- The code split JavaScript bundles to load
+- The code-split JavaScript bundles to load
 - The data dependencies of those layouts
 
 Let's consider a UI to help us out. Hover or tap each button to see how each segment of the URL maps to three things: a component layout, a JavaScript bundle, and a piece of data.
