@@ -1,33 +1,37 @@
-const queue: Array<() => Promise<void>> = [];
-let isRunning = false;
+type AsyncFunction<T> = () => Promise<T>;
 
-export const lock = async <T>(fn: () => Promise<T>): Promise<T> => {
-  let executeNextTask = () => {
-    const nextTask = queue.pop();
+let queue: Array<() => void> = [];
+let isProcessingQueue = false;
 
-    if (nextTask) {
-      nextTask();
-    } else {
-      isRunning = false;
-    }
-  };
-
-  if (!isRunning) {
-    isRunning = true;
-    let result = await fn();
-
-    executeNextTask();
-
-    return result;
-  } else {
-    return new Promise((resolve) => {
-      queue.push(async () => {
+export async function lock<T>(fn: AsyncFunction<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let queueFn = async () => {
+      try {
         let result = await fn();
-
         resolve(result);
+      } catch (error) {
+        reject(error);
+      } finally {
+        isProcessingQueue = false;
+        processQueue();
+      }
+    };
 
-        executeNextTask();
-      });
-    });
+    queue.push(queueFn);
+
+    if (!isProcessingQueue) {
+      processQueue();
+    }
+  });
+}
+
+async function processQueue() {
+  if (isProcessingQueue || queue.length === 0) {
+    return;
   }
-};
+
+  isProcessingQueue = true;
+  let fn = queue.shift()!;
+
+  await fn();
+}

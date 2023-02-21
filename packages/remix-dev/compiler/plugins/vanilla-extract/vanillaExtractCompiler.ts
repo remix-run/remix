@@ -2,13 +2,14 @@ import { pathToFileURL } from "url";
 import { relative } from "path";
 import { setAdapter, removeAdapter } from "@vanilla-extract/css/adapter";
 import { transformCss } from "@vanilla-extract/css/transformCss";
+import type { IdentifierOption } from "@vanilla-extract/integration";
 import {
   cssFileFilter,
   getPackageInfo,
   transform,
 } from "@vanilla-extract/integration";
 import { resolvePath } from "mlly";
-import type { ModuleNode } from "vite";
+import type { AliasOptions, ModuleNode } from "vite";
 import { createServer } from "vite";
 import { ViteNodeRunner } from "vite-node/client";
 import { ViteNodeServer } from "vite-node/server";
@@ -45,10 +46,18 @@ const scanModule = (entryModule: ModuleNode, root: string) => {
   // should probably find a way to avoid the need for this.
   let [head, ...tail] = cssDeps;
 
-  return { cssDeps: new Set([...tail, head]), watchFiles };
+  return { cssDeps: [...tail, head], watchFiles };
 };
 
-const createViteServer = async (root: string) => {
+const createViteServer = async ({
+  root,
+  identOption,
+  alias,
+}: {
+  root: string;
+  identOption: IdentifierOption;
+  alias?: AliasOptions;
+}) => {
   let pkg = getPackageInfo(root);
 
   let server = await createServer({
@@ -62,6 +71,9 @@ const createViteServer = async (root: string) => {
     },
     ssr: {
       noExternal: true,
+    },
+    resolve: {
+      alias,
     },
     plugins: [
       {
@@ -85,7 +97,7 @@ const createViteServer = async (root: string) => {
               rootPath: root,
               filePath: id,
               packageName: pkg.name,
-              identOption: "debug",
+              identOption,
             });
 
             return filescopedCode;
@@ -132,13 +144,21 @@ export interface Compiler {
 
 export interface CreateCompilerParams {
   root: string;
+  identOption: IdentifierOption;
   toCssImport: (filePath: string) => string;
+  alias?: AliasOptions;
 }
 export const createVanillaExtractCompiler = ({
   root,
+  identOption,
   toCssImport,
+  alias,
 }: CreateCompilerParams): Compiler => {
-  let vitePromise = createViteServer(root);
+  let vitePromise = createViteServer({
+    root,
+    identOption,
+    alias,
+  });
 
   let adapterResultCache = new Map<
     string,
@@ -175,7 +195,7 @@ export const createVanillaExtractCompiler = ({
           usedCompositions.add(identifier);
         },
         onEndFileScope: () => {},
-        getIdentOption: () => "debug",
+        getIdentOption: () => identOption,
       };
 
       let { fileExports, cssImports, watchFiles } = await lock(async () => {

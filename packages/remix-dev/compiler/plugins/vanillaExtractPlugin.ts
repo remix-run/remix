@@ -1,18 +1,11 @@
-import { dirname, join, extname, basename, posix } from "path";
+import { dirname, join, extname, posix } from "path";
 import type { IdentifierOption } from "@vanilla-extract/integration";
-import {
-  cssFileFilter,
-  // virtualCssFileFilter,
-  processVanillaFile,
-  getSourceFromVirtualCssFile,
-  transform,
-} from "@vanilla-extract/integration";
+import { cssFileFilter, transform } from "@vanilla-extract/integration";
 import * as fse from "fs-extra";
 import type { Plugin, OutputFile, Loader } from "esbuild";
 
 import type { RemixConfig } from "../../config";
 import type { CompileOptions } from "../options";
-// import { loaders } from "../loaders";
 import { getPostcssProcessor } from "../utils/postcss";
 import { createVanillaExtractCompiler } from "./vanilla-extract/vanillaExtractCompiler";
 
@@ -36,14 +29,19 @@ export function vanillaExtractPlugin({
     name: pluginName,
     async setup(build) {
       let root = config.rootDirectory;
-      // let root = build.initialOptions.absWorkingDir || process.cwd();
 
-      compiler ||= createVanillaExtractCompiler({
-        root,
-        toCssImport(filePath) {
-          return posix.relative(root, filePath) + ".vanilla.css";
-        },
-      });
+      compiler =
+        compiler ||
+        createVanillaExtractCompiler({
+          root,
+          identOption: mode === "production" ? "short" : "debug",
+          toCssImport(filePath) {
+            return posix.relative(root, filePath) + ".vanilla.css";
+          },
+          alias: {
+            "~": config.appDirectory,
+          },
+        });
 
       let postcssProcessor = await getPostcssProcessor({
         config,
@@ -74,7 +72,6 @@ export function vanillaExtractPlugin({
             posix.join(root, relativeFilePath)
           );
 
-          // let { source, fileName } = await getSourceFromVirtualCssFile(path);
           let resolveDir = dirname(join(rootDirectory, filePath));
 
           if (postcssProcessor) {
@@ -95,9 +92,6 @@ export function vanillaExtractPlugin({
       );
 
       build.onLoad({ filter: cssFileFilter }, async ({ path: filePath }) => {
-        // let identOption: IdentifierOption =
-        //   mode === "production" ? "short" : "debug";
-
         let { source, watchFiles } = await compiler.processVanillaFile(
           filePath,
           outputCss
