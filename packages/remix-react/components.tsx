@@ -904,11 +904,11 @@ export function Scripts(props: ScriptProps) {
 
     let routeModulesScript = !isStatic
       ? " "
-      : `${matches
+      : `import ${JSON.stringify(manifest.url)};
+        ${matches
           .map(
             (match, index) =>
-              `import ${JSON.stringify(manifest.url)};
-import * as route${index} from ${JSON.stringify(
+              `import * as route${index} from ${JSON.stringify(
                 manifest.routes[match.route.id].module
               )};`
           )
