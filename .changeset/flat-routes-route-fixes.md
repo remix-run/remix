@@ -15,6 +15,7 @@ The following routes all define the same URL, only the first one will be used
 🟢️️ routes/products.$pid.tsx
 ⭕️️ routes/products.$productId.tsx
 ```
+
 ```log
 ⚠️ Route Path Collision: "/dashboard"
 
@@ -23,6 +24,7 @@ The following routes all define the same URL, only the first one will be used
 🟢️️ routes/dashboard/route.tsx
 ⭕️️ routes/dashboard.tsx
 ```
+
 ```log
 ⚠️ Route Path Collision: "/"
 
