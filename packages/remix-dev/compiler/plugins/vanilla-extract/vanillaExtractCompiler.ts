@@ -9,7 +9,7 @@ import {
   transform,
 } from "@vanilla-extract/integration";
 import { resolvePath } from "mlly";
-import type { AliasOptions, ModuleNode, Plugin as VitePlugin } from "vite";
+import type { ModuleNode, Plugin as VitePlugin } from "vite";
 import { createServer } from "vite";
 import { ViteNodeRunner } from "vite-node/client";
 import { ViteNodeServer } from "vite-node/server";
@@ -52,12 +52,10 @@ const scanModule = (entryModule: ModuleNode, root: string) => {
 const createViteServer = async ({
   root,
   identOption,
-  alias,
   vitePlugins = [],
 }: {
   root: string;
   identOption: IdentifierOption;
-  alias?: AliasOptions;
   vitePlugins?: Array<VitePlugin>;
 }) => {
   let pkg = getPackageInfo(root);
@@ -73,9 +71,6 @@ const createViteServer = async ({
     },
     ssr: {
       noExternal: true,
-    },
-    resolve: {
-      alias,
     },
     plugins: [
       {
@@ -149,20 +144,17 @@ export interface CreateCompilerParams {
   root: string;
   identOption: IdentifierOption;
   toCssImport: (filePath: string) => string;
-  alias?: AliasOptions;
   vitePlugins?: Array<VitePlugin>;
 }
 export const createVanillaExtractCompiler = ({
   root,
   identOption,
   toCssImport,
-  alias,
   vitePlugins,
 }: CreateCompilerParams): Compiler => {
   let vitePromise = createViteServer({
     root,
     identOption,
-    alias,
     vitePlugins,
   });
 

@@ -1,8 +1,6 @@
-import { dirname, join, extname, posix } from "path";
-import type { IdentifierOption } from "@vanilla-extract/integration";
-import { cssFileFilter, transform } from "@vanilla-extract/integration";
-import * as fse from "fs-extra";
-import type { Plugin, OutputFile, Loader } from "esbuild";
+import { dirname, join, posix } from "path";
+import { cssFileFilter } from "@vanilla-extract/integration";
+import type { Plugin } from "esbuild";
 
 import type { RemixConfig } from "../../config";
 import type { CompileOptions } from "../options";
@@ -17,7 +15,7 @@ let virtualCssFileFilter = /\.vanilla\.css/;
 
 const staticFileRegexp = new RegExp(
   `(${Object.keys(loaders)
-    .filter((ext) => loaders[ext] === "file")
+    .filter((ext) => ext !== ".css" && loaders[ext] === "file")
     .join("|")})$`
 );
 
@@ -46,14 +44,17 @@ export function vanillaExtractPlugin({
           toCssImport(filePath) {
             return filePath + virtualCssFileSuffix;
           },
-          alias: {
-            "~": root,
-          },
           vitePlugins: [
             {
               name: "remix-assets",
               enforce: "pre",
               async resolveId(source) {
+                if (source.startsWith("~")) {
+                  return this.resolve(
+                    posix.join(root, source.replace("~", ""))
+                  );
+                }
+
                 if (source.startsWith("/") && staticFileRegexp.test(source)) {
                   return {
                     external: true,
@@ -126,62 +127,6 @@ export function vanillaExtractPlugin({
           resolveDir: dirname(filePath),
           loader: "js",
           watchFiles: Array.from(watchFiles || []),
-        };
-      });
-    },
-  };
-}
-
-async function writeAssets(outputFiles: Array<OutputFile>): Promise<void> {
-  await Promise.all(
-    outputFiles
-      .filter((file) => !file.path.endsWith(".js"))
-      .map(async (file) => {
-        await fse.ensureDir(dirname(file.path));
-        await fse.writeFile(file.path, file.contents);
-      })
-  );
-}
-
-const loaderForExtension: Record<string, Loader> = {
-  ".js": "js",
-  ".jsx": "jsx",
-  ".ts": "ts",
-  ".tsx": "tsx",
-};
-
-/**
- * This plugin is used within the child compilation. It applies the Vanilla
- * Extract file transform to all .css.ts/js files. This is used to add "file
- * scope" annotations, which is done via function calls at the beginning and end
- * of each file so that we can tell which CSS file the styles belong to when
- * evaluating the JS. It's also done to automatically apply debug IDs.
- */
-function vanillaExtractTransformPlugin({
-  rootDirectory,
-  identOption,
-}: {
-  identOption: IdentifierOption;
-  rootDirectory: string;
-}): Plugin {
-  return {
-    name: "vanilla-extract-transform-plugin",
-    setup(build) {
-      build.onLoad({ filter: cssFileFilter }, async ({ path }) => {
-        let source = await fse.readFile(path, "utf-8");
-
-        let contents = await transform({
-          source,
-          filePath: path,
-          rootPath: rootDirectory,
-          packageName: "remix-app", // This option is designed to support scoping hashes for libraries, we can hard code an arbitrary value for simplicity
-          identOption,
-        });
-
-        return {
-          contents,
-          loader: loaderForExtension[extname(path)],
-          resolveDir: dirname(path),
         };
       });
     },
