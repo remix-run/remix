@@ -9,7 +9,7 @@ import {
   transform,
 } from "@vanilla-extract/integration";
 import { resolvePath } from "mlly";
-import type { AliasOptions, ModuleNode } from "vite";
+import type { AliasOptions, ModuleNode, Plugin as VitePlugin } from "vite";
 import { createServer } from "vite";
 import { ViteNodeRunner } from "vite-node/client";
 import { ViteNodeServer } from "vite-node/server";
@@ -53,10 +53,12 @@ const createViteServer = async ({
   root,
   identOption,
   alias,
+  vitePlugins = [],
 }: {
   root: string;
   identOption: IdentifierOption;
   alias?: AliasOptions;
+  vitePlugins?: Array<VitePlugin>;
 }) => {
   let pkg = getPackageInfo(root);
 
@@ -104,6 +106,7 @@ const createViteServer = async ({
           }
         },
       },
+      ...vitePlugins,
     ],
   });
 
@@ -147,17 +150,20 @@ export interface CreateCompilerParams {
   identOption: IdentifierOption;
   toCssImport: (filePath: string) => string;
   alias?: AliasOptions;
+  vitePlugins?: Array<VitePlugin>;
 }
 export const createVanillaExtractCompiler = ({
   root,
   identOption,
   toCssImport,
   alias,
+  vitePlugins,
 }: CreateCompilerParams): Compiler => {
   let vitePromise = createViteServer({
     root,
     identOption,
     alias,
+    vitePlugins,
   });
 
   let adapterResultCache = new Map<

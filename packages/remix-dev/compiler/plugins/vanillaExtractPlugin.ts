@@ -6,12 +6,20 @@ import type { Plugin, OutputFile, Loader } from "esbuild";
 
 import type { RemixConfig } from "../../config";
 import type { CompileOptions } from "../options";
+import { loaders } from "../loaders";
 import { getPostcssProcessor } from "../utils/postcss";
 import { createVanillaExtractCompiler } from "./vanilla-extract/vanillaExtractCompiler";
 
 let compiler: ReturnType<typeof createVanillaExtractCompiler>;
 
+let virtualCssFileSuffix = ".vanilla.css";
 let virtualCssFileFilter = /\.vanilla\.css/;
+
+const staticFileRegexp = new RegExp(
+  `(${Object.keys(loaders)
+    .filter((ext) => loaders[ext] === "file")
+    .join("|")})$`
+);
 
 const pluginName = "vanilla-extract-plugin";
 const namespace = `${pluginName}-ns`;
@@ -28,7 +36,7 @@ export function vanillaExtractPlugin({
   return {
     name: pluginName,
     async setup(build) {
-      let root = config.rootDirectory;
+      let root = config.appDirectory;
 
       compiler =
         compiler ||
@@ -36,11 +44,28 @@ export function vanillaExtractPlugin({
           root,
           identOption: mode === "production" ? "short" : "debug",
           toCssImport(filePath) {
-            return posix.relative(root, filePath) + ".vanilla.css";
+            return filePath + virtualCssFileSuffix;
           },
           alias: {
-            "~": config.appDirectory,
+            "~": root,
           },
+          vitePlugins: [
+            {
+              name: "remix-assets",
+              enforce: "pre",
+              async resolveId(source) {
+                if (source.startsWith("/") && staticFileRegexp.test(source)) {
+                  return {
+                    external: true,
+                    id: "~" + source,
+                  };
+                }
+              },
+              transform(code) {
+                return code.replace(/\/@fs\/~\//g, "~/");
+              },
+            },
+          ],
         });
 
       let postcssProcessor = await getPostcssProcessor({
@@ -49,7 +74,6 @@ export function vanillaExtractPlugin({
           vanillaExtract: true,
         },
       });
-      let { rootDirectory } = config;
 
       // Resolve virtual CSS files first to avoid resolving the same
       // file multiple times since this filter is more specific and
@@ -66,13 +90,13 @@ export function vanillaExtractPlugin({
       build.onLoad(
         { filter: virtualCssFileFilter, namespace },
         async ({ path }) => {
-          let [relativeFilePath] = path.split(".vanilla.css");
+          let [relativeFilePath] = path.split(virtualCssFileSuffix);
 
           let { css, filePath } = compiler.getCssForFile(
             posix.join(root, relativeFilePath)
           );
 
-          let resolveDir = dirname(join(rootDirectory, filePath));
+          let resolveDir = dirname(join(root, filePath));
 
           if (postcssProcessor) {
             css = (
