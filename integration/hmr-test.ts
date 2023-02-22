@@ -201,7 +201,7 @@ test("HMR", async ({ page }) => {
       if (stderr.length > 0) throw Error(stderr);
       return /💿 Built in /.test(devStdout());
     },
-    { timeoutMs: 120_000 }
+    { timeoutMs: 10_000 }
   );
 
   // spin up app server
@@ -215,7 +215,7 @@ test("HMR", async ({ page }) => {
       return /✅ app ready: /.test(appStdout());
     },
     {
-      timeoutMs: 120_000,
+      timeoutMs: 10_000,
     }
   );
 
