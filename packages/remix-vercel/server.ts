@@ -13,6 +13,8 @@ import {
   writeReadableStreamToWritable,
 } from "@remix-run/node";
 
+import type { GetEdgeLoadContextFunction } from "./edge";
+
 /**
  * A function that returns the value to use as `context` in route `loader` and
  * `action` functions.
@@ -41,6 +43,7 @@ export function createRequestHandler({
 }: {
   build: ServerBuild;
   getLoadContext?: GetLoadContextFunction;
+  getEdgeLoadContext?: GetEdgeLoadContextFunction;
   mode?: string;
 }): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);

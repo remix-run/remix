@@ -12,9 +12,19 @@
   },
   "license": "MIT",
   "main": "dist/index.js",
+  "browser": "dist/edge.js",
   "typings": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "edge-light": "./dist/edge.js",
+      "browser": "./dist/edge.js",
+      "node": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "dependencies": {
-    "@remix-run/node": "1.13.0"
+    "@remix-run/node": "1.13.0",
+    "@remix-run/server-runtime": "1.13.0"
   },
   "devDependencies": {
     "@types/supertest": "^2.0.10",
