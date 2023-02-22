@@ -13,7 +13,7 @@ let compiler: ReturnType<typeof createVanillaExtractCompiler>;
 let virtualCssFileSuffix = ".vanilla.css";
 let virtualCssFileFilter = /\.vanilla\.css/;
 
-const staticFileRegexp = new RegExp(
+const staticAssetRegexp = new RegExp(
   `(${Object.keys(loaders)
     .filter((ext) => ext !== ".css" && loaders[ext] === "file")
     .join("|")})$`
@@ -49,21 +49,23 @@ export function vanillaExtractPlugin({
               name: "remix-assets",
               enforce: "pre",
               async resolveId(source) {
+                // Handle root-relative imports within Vanilla Extract files
                 if (source.startsWith("~")) {
-                  return this.resolve(
-                    posix.join(root, source.replace("~", ""))
-                  );
+                  return await this.resolve(source.replace("~", ""));
                 }
-
-                if (source.startsWith("/") && staticFileRegexp.test(source)) {
+                // Handle static asset JS imports
+                if (source.startsWith("/") && staticAssetRegexp.test(source)) {
                   return {
                     external: true,
-                    id: "~" + source,
+                    id: "__REMIX_STATIC_ASSET_PREFIX__" + source,
                   };
                 }
               },
               transform(code) {
-                return code.replace(/\/@fs\/~\//g, "~/");
+                return code.replace(
+                  /\/@fs\/__REMIX_STATIC_ASSET_PREFIX__\//g,
+                  "~/"
+                );
               },
             },
           ],

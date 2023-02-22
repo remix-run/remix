@@ -1,6 +1,4 @@
-import { pathToFileURL } from "url";
 import { relative } from "path";
-import { setAdapter, removeAdapter } from "@vanilla-extract/css/adapter";
 import { transformCss } from "@vanilla-extract/css/transformCss";
 import type { IdentifierOption } from "@vanilla-extract/integration";
 import {
@@ -8,7 +6,6 @@ import {
   getPackageInfo,
   transform,
 } from "@vanilla-extract/integration";
-import { resolvePath } from "mlly";
 import type { ModuleNode, Plugin as VitePlugin } from "vite";
 import { createServer } from "vite";
 import { ViteNodeRunner } from "vite-node/client";
@@ -20,6 +17,8 @@ import { serializeVanillaModule } from "./processVanillaFile";
 
 type Css = Parameters<Adapter["appendCss"]>[0];
 type Composition = Parameters<Adapter["registerComposition"]>[0];
+
+const globalCssAdapterKey = "__ve_globalCssAdapter__";
 
 const scanModule = (entryModule: ModuleNode, root: string) => {
   let queue = [entryModule];
@@ -42,8 +41,7 @@ const scanModule = (entryModule: ModuleNode, root: string) => {
     }
   }
 
-  // This ensures the root module's styles are last in terms of CSS ordering. We
-  // should probably find a way to avoid the need for this.
+  // This ensures the root module's styles are last in terms of CSS ordering
   let [head, ...tail] = cssDeps;
 
   return { cssDeps: [...tail, head], watchFiles };
@@ -78,10 +76,11 @@ const createViteServer = async ({
         enforce: "pre",
         async resolveId(source, importer) {
           if (source.startsWith("@vanilla-extract/")) {
-            return {
-              external: true,
-              id: await resolvePath(source, { url: pathToFileURL(importer!) }),
-            };
+            let result = await this.resolve(source, importer, {
+              skipSelf: true,
+            });
+
+            return result ? { ...result, external: true } : null;
           }
         },
       },
@@ -97,7 +96,15 @@ const createViteServer = async ({
               identOption,
             });
 
-            return filescopedCode;
+            return `
+              import {
+                setAdapter as __ve_setAdapter__,
+                removeAdapter as __ve_removeAdapter__
+              } from '@vanilla-extract/css/adapter';
+              __ve_setAdapter__(global.${globalCssAdapterKey});
+              ${filescopedCode};
+              __ve_removeAdapter__();
+            `;
           }
         },
       },
@@ -225,7 +232,10 @@ export const createVanillaExtractCompiler = ({
 
       let { fileExports, cssImports, watchFiles, lastInvalidationTimestamp } =
         await lock(async () => {
-          setAdapter(cssAdapter);
+          // @ts-expect-error We're adding this to the global context so it's
+          // available during the eval step, regardless of which
+          // `@vanilla-extract/css` package is used
+          global[globalCssAdapterKey] = cssAdapter;
 
           let fileExports = await runner.executeFile(filePath);
 
@@ -276,8 +286,6 @@ export const createVanillaExtractCompiler = ({
 
             cssImports.push(`import '${toCssImport(cssDepModuleId)}';`);
           }
-
-          removeAdapter();
 
           return {
             fileExports,
