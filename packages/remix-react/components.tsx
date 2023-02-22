@@ -904,15 +904,19 @@ export function Scripts(props: ScriptProps) {
 
     let routeModulesScript = !isStatic
       ? " "
-      : `import ${JSON.stringify(manifest.url)};
-        ${matches
-          .map(
-            (match, index) =>
-              `import * as route${index} from ${JSON.stringify(
-                manifest.routes[match.route.id].module
-              )};`
-          )
-          .join("\n")}
+      : `${
+          manifest.hmr?.runtime
+            ? `import ${JSON.stringify(manifest.hmr.runtime)};`
+            : ""
+        }import ${JSON.stringify(manifest.url)};
+${matches
+  .map(
+    (match, index) =>
+      `import * as route${index} from ${JSON.stringify(
+        manifest.routes[match.route.id].module
+      )};`
+  )
+  .join("\n")}
 window.__remixRouteModules = {${matches
           .map(
             (match, index) => `${JSON.stringify(match.route.id)}:route${index}`
@@ -973,7 +977,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
     })
     .flat(1);
 
-  let preloads = manifest.entry.imports.concat(routePreloads);
+  let preloads = isHydrated ? [] : manifest.entry.imports.concat(routePreloads);
 
   return (
     <>
@@ -1581,7 +1585,7 @@ export const LiveReload =
                   )};
                   let socketPath = protocol + "//" + host + ":" + port + "/socket";
                   let ws = new WebSocket(socketPath);
-                  ws.onmessage = (message) => {
+                  ws.onmessage = async (message) => {
                     let event = JSON.parse(message.data);
                     if (event.type === "LOG") {
                       console.log(event.message);
@@ -1589,6 +1593,44 @@ export const LiveReload =
                     if (event.type === "RELOAD") {
                       console.log("💿 Reloading window ...");
                       window.location.reload();
+                    }
+                    if (event.type === "HMR") {
+                      if (!window.__hmr__ || !window.__hmr__.contexts) {
+                        console.log("💿 [HMR] No HMR context, reloading window ...");
+                        window.location.reload();
+                        return;
+                      }
+                      if (!event.updates || !event.updates.length) return;
+                      let updateAccepted = false;
+                      for (let update of event.updates) {
+                        console.log("[HMR] " + update.reason + " [" + update.id +"]")
+                        if (update.revalidate) {
+                          console.log("[HMR] Revalidating [" + update.id + "]");
+                        }
+                        let imported = await import(update.url +  '?t=' + event.assetsManifest.hmr.timestamp);
+                        if (window.__hmr__.contexts[update.id]) {
+                          let accepted = window.__hmr__.contexts[update.id].emit(
+                            imported
+                          );
+                          if (accepted) {
+                            console.log("[HMR] Updated accepted by", update.id);
+                            updateAccepted = true;
+                          }
+                        }
+                      }
+                      if (event.assetsManifest && window.__hmr__.contexts["remix:manifest"]) {
+                        let accepted = window.__hmr__.contexts["remix:manifest"].emit(
+                          event.assetsManifest
+                        );
+                        if (accepted) {
+                          console.log("[HMR] Updated accepted by", "remix:manifest");
+                          updateAccepted = true;
+                        }
+                      }
+                      if (!updateAccepted) {
+                        console.log("[HMR] Updated rejected, reloading...");
+                        window.location.reload();
+                      }
                     }
                   };
                   ws.onopen = () => {
