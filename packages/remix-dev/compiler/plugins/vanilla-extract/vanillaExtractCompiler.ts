@@ -140,6 +140,11 @@ export interface Compiler {
   close(): Promise<void>;
 }
 
+interface ProcessedVanillaFile {
+  source: string;
+  watchFiles: Set<string>;
+}
+
 export interface CreateCompilerParams {
   root: string;
   identOption: IdentifierOption;
@@ -168,9 +173,31 @@ export const createVanillaExtractCompiler = ({
     }
   >();
 
+  let processVanillaFileCache = new Map<
+    string,
+    {
+      lastInvalidationTimestamp: number;
+      result: ProcessedVanillaFile;
+    }
+  >();
+
   return {
-    async processVanillaFile(filePath, outputCss) {
+    async processVanillaFile(
+      filePath,
+      outputCss
+    ): Promise<ProcessedVanillaFile> {
       let { server, runner } = await vitePromise;
+
+      let cachedFile = processVanillaFileCache.get(filePath);
+      if (cachedFile) {
+        let moduleNode = server.moduleGraph.getModuleById(filePath);
+        if (
+          cachedFile.lastInvalidationTimestamp ===
+          moduleNode?.lastInvalidationTimestamp
+        ) {
+          return cachedFile.result;
+        }
+      }
 
       let cssByFileScope = new Map<string, Array<Css>>();
       let localClassNames = new Set<string>();
@@ -196,63 +223,69 @@ export const createVanillaExtractCompiler = ({
         getIdentOption: () => identOption,
       };
 
-      let { fileExports, cssImports, watchFiles } = await lock(async () => {
-        setAdapter(cssAdapter);
+      let { fileExports, cssImports, watchFiles, lastInvalidationTimestamp } =
+        await lock(async () => {
+          setAdapter(cssAdapter);
 
-        let fileExports = await runner.executeFile(filePath);
+          let fileExports = await runner.executeFile(filePath);
 
-        let moduleNode = server.moduleGraph.getModuleById(filePath);
+          let moduleNode = server.moduleGraph.getModuleById(filePath);
 
-        if (!moduleNode) {
-          throw new Error(`Can't find ModuleNode for ${filePath}`);
-        }
-
-        let cssImports = [];
-
-        let { cssDeps, watchFiles } = scanModule(moduleNode, root);
-
-        for (let moduleId of cssDeps) {
-          let cssObjs = cssByFileScope.get(moduleId);
-          let cachedAdapterResult = adapterResultCache.get(moduleId);
-
-          if (!cssObjs && !cachedAdapterResult) {
-            continue;
+          if (!moduleNode) {
+            throw new Error(`Can't find ModuleNode for ${filePath}`);
           }
 
-          if (cssObjs) {
-            let css = transformCss({
-              localClassNames: Array.from(localClassNames),
-              composedClassLists,
-              cssObjs,
-            }).join("\n");
+          let cssImports = [];
 
-            adapterResultCache.set(moduleId, {
-              localClassNames,
-              composedClassLists,
-              usedCompositions,
-              css,
-            });
-          } else if (cachedAdapterResult) {
-            cachedAdapterResult.localClassNames.forEach((localClassName) => {
-              localClassNames.add(localClassName);
-            });
-            cachedAdapterResult.usedCompositions.forEach((usedComposition) => {
-              usedCompositions.add(usedComposition);
-            });
-            composedClassLists.push(...cachedAdapterResult.composedClassLists);
+          let { cssDeps, watchFiles } = scanModule(moduleNode, root);
+
+          for (let cssDepModuleId of cssDeps) {
+            let cssObjs = cssByFileScope.get(cssDepModuleId);
+            let cachedAdapterResult = adapterResultCache.get(cssDepModuleId);
+
+            if (!cssObjs && !cachedAdapterResult) {
+              continue;
+            }
+
+            if (cssObjs) {
+              let css = transformCss({
+                localClassNames: Array.from(localClassNames),
+                composedClassLists,
+                cssObjs,
+              }).join("\n");
+
+              adapterResultCache.set(cssDepModuleId, {
+                localClassNames,
+                composedClassLists,
+                usedCompositions,
+                css,
+              });
+            } else if (cachedAdapterResult) {
+              cachedAdapterResult.localClassNames.forEach((localClassName) => {
+                localClassNames.add(localClassName);
+              });
+              cachedAdapterResult.usedCompositions.forEach(
+                (usedComposition) => {
+                  usedCompositions.add(usedComposition);
+                }
+              );
+              composedClassLists.push(
+                ...cachedAdapterResult.composedClassLists
+              );
+            }
+
+            cssImports.push(`import '${toCssImport(cssDepModuleId)}';`);
           }
 
-          cssImports.push(`import '${toCssImport(moduleId)}';`);
-        }
+          removeAdapter();
 
-        removeAdapter();
-
-        return {
-          fileExports,
-          cssImports: outputCss ? cssImports : [],
-          watchFiles,
-        };
-      });
+          return {
+            fileExports,
+            cssImports: outputCss ? cssImports : [],
+            watchFiles,
+            lastInvalidationTimestamp: moduleNode.lastInvalidationTimestamp,
+          };
+        });
 
       let unusedCompositions = composedClassLists
         .filter(({ identifier }) => !usedCompositions.has(identifier))
@@ -263,7 +296,7 @@ export const createVanillaExtractCompiler = ({
           ? RegExp(`(${unusedCompositions.join("|")})\\s`, "g")
           : null;
 
-      return {
+      let result: ProcessedVanillaFile = {
         source: serializeVanillaModule(
           cssImports,
           fileExports,
@@ -271,6 +304,13 @@ export const createVanillaExtractCompiler = ({
         ),
         watchFiles,
       };
+
+      processVanillaFileCache.set(filePath, {
+        lastInvalidationTimestamp,
+        result,
+      });
+
+      return result;
     },
     getCssForFile(filePath: string) {
       let rootRelativePath = relative(root, filePath);
