@@ -12,7 +12,9 @@ import type {
 import type { DataRouteObject, RouteObject } from "react-router-dom";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
 
-type RemixStubOptions = {
+export type PartialFutureConfig = Partial<FutureConfig>;
+
+export type RemixStubOptions = {
   /**
    *  The initial entries in the history stack. This allows you to start a test with
    *  multiple locations already in the history stack (for testing a back navigation, etc.)
@@ -39,7 +41,7 @@ type RemixStubOptions = {
    */
   initialIndex?: number;
 
-  remixConfigFuture?: Partial<FutureConfig>;
+  remixConfigFuture?: PartialFutureConfig;
 };
 
 export function createRemixStub(routes: (RouteObject | DataRouteObject)[]) {
