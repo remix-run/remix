@@ -135,7 +135,7 @@ function copyToPlaygrounds() {
  * @param {RemixAdapter} adapterName
  * @returns {import("rollup").RollupOptions}
  */
-function getAdapterConfig(adapterName) {
+function getAdapterConfig(adapterName, entrypoint = 'index.ts') {
   /** @type {`@remix-run/${RemixAdapter}`} */
   let packageName = `@remix-run/${adapterName}`;
   let sourceDir = `packages/remix-${adapterName}`;
@@ -147,7 +147,7 @@ function getAdapterConfig(adapterName) {
     external(id) {
       return isBareModuleId(id);
     },
-    input: `${sourceDir}/index.ts`,
+    input: `${sourceDir}/${entrypoint}`,
     output: {
       banner: createBanner(packageName, version),
       dir: outputDist,
