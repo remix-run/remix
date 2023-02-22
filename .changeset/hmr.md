@@ -10,10 +10,12 @@ Hot Module Replacement and Hot Data Revalidation
 - HMR provided through React Refresh
 
 Features:
+
 - HMR for component and style changes
 - HDR when loaders for current route change
 
 Known limitations for MVP:
+
 - Only implemented for React via React Refresh
 - No `import.meta.hot` API exposed yet
 - Revalidates _all_ loaders on route when loader changes are detected
