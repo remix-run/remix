@@ -5,6 +5,7 @@ import {
 } from "@remix-run/router";
 
 import { serializeError } from "./errors";
+import type { ServerMode } from "./mode";
 
 export type TypedDeferredData<Data extends Record<string, unknown>> = Pick<
   DeferredData,
@@ -142,7 +143,8 @@ function isTrackedPromise(value: any): value is TrackedPromise {
 const DEFERRED_VALUE_PLACEHOLDER_PREFIX = "__deferred_promise:";
 export function createDeferredReadableStream(
   deferredData: DeferredData,
-  signal: AbortSignal
+  signal: AbortSignal,
+  serverMode: ServerMode
 ): any {
   let encoder = new TextEncoder();
   let stream = new ReadableStream({
@@ -172,7 +174,8 @@ export function createDeferredReadableStream(
           controller,
           encoder,
           preresolvedKey,
-          deferredData.data[preresolvedKey] as TrackedPromise
+          deferredData.data[preresolvedKey] as TrackedPromise,
+          serverMode
         );
       }
 
@@ -182,7 +185,8 @@ export function createDeferredReadableStream(
             controller,
             encoder,
             settledKey,
-            deferredData.data[settledKey] as TrackedPromise
+            deferredData.data[settledKey] as TrackedPromise,
+            serverMode
           );
         }
       });
@@ -199,14 +203,18 @@ function enqueueTrackedPromise(
   controller: any,
   encoder: TextEncoder,
   settledKey: string,
-  promise: TrackedPromise
+  promise: TrackedPromise,
+  serverMode: ServerMode
 ) {
   if ("_error" in promise) {
     controller.enqueue(
       encoder.encode(
         "error:" +
           JSON.stringify({
-            [settledKey]: serializeError(promise._error),
+            [settledKey]:
+              promise._error instanceof Error
+                ? serializeError(promise._error, serverMode)
+                : promise._error,
           }) +
           "\n\n"
       )
