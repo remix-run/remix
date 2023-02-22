@@ -20,6 +20,7 @@ import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager
  */
 export function serverBareModulesPlugin(
   remixConfig: RemixConfig,
+  cwd: string,
   onWarning?: (warning: string, key: string) => void
 ): Plugin {
   // Resolve paths according to tsconfig paths property
@@ -89,11 +90,11 @@ export function serverBareModulesPlugin(
             (pkgManager === "yarn" && process.versions.pnp == null))
         ) {
           try {
-            require.resolve(path);
+            require.resolve(path, { paths: [cwd] });
           } catch (error: unknown) {
             onWarning(
               `The path "${path}" is imported in ` +
-                `${relative(process.cwd(), importer)} but ` +
+                `${relative(cwd, importer)} but ` +
                 `"${path}" was not found in your node_modules. ` +
                 `Did you forget to install it?`,
               path

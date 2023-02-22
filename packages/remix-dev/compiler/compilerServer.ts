@@ -66,7 +66,7 @@ const createEsbuildConfig = (
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config, { liveReloadPort: options.liveReloadPort }),
     serverAssetsManifestPlugin(assetsManifestChannel.read()),
-    serverBareModulesPlugin(config, options.onWarning),
+    serverBareModulesPlugin(config, process.cwd(), options.onWarning),
   ].filter(isNotNull);
 
   if (config.serverPlatform !== "node") {
