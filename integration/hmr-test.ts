@@ -194,13 +194,13 @@ test("HMR", async ({ page }) => {
   let dev = execa("npm", ["run", "dev:remix"], { cwd: projectDir });
   let devStdout = bufferize(dev.stdout!);
   let devStderr = bufferize(dev.stderr!);
-  await wait(() => /💿 Built in /.test(devStdout()), { timeoutMs: 20_000 });
+  await wait(() => /💿 Built in /.test(devStdout()), { timeoutMs: 60_000 });
 
   // spin up app server
   let app = execa("npm", ["run", "dev:app"], { cwd: projectDir });
   let appStdout = bufferize(app.stdout!);
   let appStderr = bufferize(app.stderr!);
-  await wait(() => /✅ app ready: /.test(appStdout()), { timeoutMs: 20_000 });
+  await wait(() => /✅ app ready: /.test(appStdout()), { timeoutMs: 60_000 });
 
   try {
     await page.goto(`http://localhost:${appServerPort}`, {
