@@ -21,12 +21,13 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
           "private": true,
           "sideEffects": false,
           "scripts": {
-            "dev:remix": "NODE_ENV=development node ./node_modules/@remix-run/dev/dist/cli.js dev",
-            "dev:app": "NODE_ENV=development nodemon --watch build/ ./server.js"
+            "dev:remix": "cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/dist/cli.js dev",
+            "dev:app": "cross-env NODE_ENV=development nodemon --watch build/ ./server.js"
           },
           "dependencies": {
             "@remix-run/node": "0.0.0-local-version",
             "@remix-run/react": "0.0.0-local-version",
+            "cross-env": "0.0.0-local-version",
             "express": "0.0.0-local-version",
             "isbot": "0.0.0-local-version",
             "nodemon": "0.0.0-local-version",
