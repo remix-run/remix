@@ -73,18 +73,14 @@ export async function createApp({
         : appTemplate;
 
       if (fse.statSync(filepath).isDirectory()) {
-        let remixIgnorePath = path.join(filepath, ".remixignore");
-
         fse.copySync(filepath, projectDir, {
-          filter(src, dest) {
-            if (fse.pathExistsSync(remixIgnorePath)) {
-              let remixIgnore = ignore().add(
-                fse.readFileSync(remixIgnorePath, "utf8")
-              );
-
+          filter(src) {
+            let remixIgnore = hasRemixIgnore(filepath);
+            if (remixIgnore) {
               if (filepath === src) return true;
+              let ig = ignore().add(remixIgnore.contents);
               let relative = path.relative(filepath, src);
-              return !remixIgnore.ignores(relative);
+              return !ig.ignores(relative);
             }
 
             return true;
@@ -946,20 +942,35 @@ function isValidGithubUrl(value: string | URL): value is URL | GithubUrlString {
 }
 
 function removeRemixIgnoredFiles(projectDir: string) {
-  let remixIgnorePath = path.join(projectDir, ".remixignore");
+  let remixIgnore = hasRemixIgnore(projectDir);
 
-  if (fse.existsSync(remixIgnorePath)) {
-    let remixIgnore = ignore().add(fse.readFileSync(remixIgnorePath, "utf8"));
+  if (remixIgnore) {
+    let ig = ignore().add(remixIgnore.contents);
     let files = glob.sync("**/*", { cwd: projectDir });
 
     let filesToRemove = files.filter((file) => {
-      return remixIgnore.ignores(file);
+      return ig.ignores(file);
     });
 
     for (let file of filesToRemove) {
       fse.removeSync(path.join(projectDir, file));
     }
-
-    fse.removeSync(remixIgnorePath);
   }
+}
+
+function hasRemixIgnore(projectDir: string):
+  | {
+      path: string;
+      contents: string;
+    }
+  | false {
+  let remixIgnorePath = path.join(projectDir, ".remixignore");
+  if (fse.pathExistsSync(remixIgnorePath)) {
+    let contents = fse.readFileSync(remixIgnorePath, "utf8");
+    // ignore the .remixignore file itself
+    contents += "\n\n.remixignore";
+    return { path: remixIgnorePath, contents };
+  }
+
+  return false;
 }
