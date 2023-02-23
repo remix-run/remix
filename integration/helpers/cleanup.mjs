@@ -1,5 +1,5 @@
 import * as path from "path";
-import spawn from "cross-spawn";
+import { deleteSync } from "del";
 
 if (process.env.CI) {
   console.log("Skipping cleanup in CI");
@@ -8,20 +8,14 @@ if (process.env.CI) {
 
 const pathsToRemove = [path.resolve(process.cwd(), ".tmp/integration")];
 
-for (let pathToRemove of pathsToRemove) {
-  console.log(`Removing ${path.relative(process.cwd(), pathToRemove)}`);
-  let childProcess;
-  if (process.platform === "win32") {
-    childProcess = spawn("rmdir", ["/s", "/q", pathToRemove], {
-      stdio: "inherit",
-    });
-  } else {
-    childProcess = spawn("rm", ["-rf", pathToRemove], {
-      stdio: "inherit",
-    });
+let deleted = deleteSync(pathsToRemove);
+
+for (let d of deleted) {
+  console.log(`Removed ${path.relative(process.cwd(), d)}`);
+}
+
+for (let p of pathsToRemove) {
+  if (!deleted.includes(p)) {
+    console.log(`Failed to remove ${path.relative(process.cwd(), p)}`);
   }
-  childProcess.on("error", (err) => {
-    console.error(err);
-    process.exit(1);
-  });
 }
