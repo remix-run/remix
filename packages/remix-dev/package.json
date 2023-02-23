@@ -44,6 +44,7 @@
     "fs-extra": "^10.0.0",
     "get-port": "^5.1.1",
     "gunzip-maybe": "^1.4.2",
+    "ignore": "5.2.4",
     "inquirer": "^8.2.1",
     "jsesc": "3.0.2",
     "json5": "^2.2.1",

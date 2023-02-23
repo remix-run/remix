@@ -3410,18 +3410,6 @@
   version "1.9.3"
   resolved "https://registry.npmjs.org/@vanilla-extract/css/-/css-1.9.3.tgz#59cd445e9ffa9676c4faf7f213ddf6538404c92c"
   integrity sha512-vitcD8usEOTWDLAnbtnZ46YbHADAp3Es+3xyHsMDMZOEWk03FhD+PbR58kdwtGpr258+hMryCYtQPeFh5lWFbA==
-  dependencies:
-    "@emotion/hash" "^0.9.0"
-    "@vanilla-extract/private" "^1.0.3"
-    ahocorasick "1.0.2"
-    chalk "^4.1.1"
-    css-what "^5.0.1"
-    cssesc "^3.0.0"
-    csstype "^3.0.7"
-    deep-object-diff "^1.1.0"
-    deepmerge "^4.2.2"
-    media-query-parser "^2.0.2"
-    outdent "^0.8.0"
 
 "@vanilla-extract/integration@^6.0.2":
   version "6.0.2"
@@ -7209,6 +7197,11 @@ ignore-by-default@^1.0.1:
   version "1.0.1"
   resolved "https://registry.npmjs.org/ignore-by-default/-/ignore-by-default-1.0.1.tgz#48ca6d72f6c6a3af00a9ad4ae6876be3889e2b09"
   integrity sha512-Ius2VYcGNk7T90CppJqcIkS5ooHUZyIQK+ClZfMfMNFEF9VSE73Fq+906u/CWu92x4gzZMWOwfFYckPObzdEbA==
+
+ignore@5.2.4:
+  version "5.2.4"
+  resolved "https://registry.npmjs.org/ignore/-/ignore-5.2.4.tgz#a291c0c6178ff1b960befe47fcdec301674a6324"
+  integrity sha512-MAb38BcSbH0eHNBxn7ql2NH/kX33OkB3lZ1BNdh7ENeRChHTYsTvWrMubiIAMNS2llXEEgZ1MUOBtXChP3kaFQ==
 
 ignore@^5.1.1, ignore@^5.2.0:
   version "5.2.0"

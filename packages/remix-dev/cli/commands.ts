@@ -65,7 +65,7 @@ export async function init(
   let initScriptTs = path.resolve(initScriptDir, "index.ts");
   let initScript = path.resolve(initScriptDir, "index.js");
 
-  if (await fse.pathExists(initScriptTs)) {
+  if (fse.pathExistsSync(initScriptTs)) {
     await esbuild.build({
       entryPoints: [initScriptTs],
       format: "cjs",
@@ -73,12 +73,13 @@ export async function init(
       outfile: initScript,
     });
   }
-  if (!(await fse.pathExists(initScript))) {
+
+  if (!fse.pathExistsSync(initScript)) {
     return;
   }
 
   let initPackageJson = path.resolve(initScriptDir, "package.json");
-  let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
+  let isTypeScript = fse.pathExistsSync(path.join(projectDir, "tsconfig.json"));
   let packageManager = getPreferredPackageManager();
 
   if (await fse.pathExists(initPackageJson)) {

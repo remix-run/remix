@@ -11,6 +11,8 @@ import ProxyAgent from "proxy-agent";
 import * as semver from "semver";
 import sortPackageJSON from "sort-package-json";
 import tar from "tar-fs";
+import ignore from "ignore";
+import { glob } from "glob";
 
 import * as colors from "../colors";
 import invariant from "../invariant";
@@ -71,7 +73,23 @@ export async function createApp({
         : appTemplate;
 
       if (fse.statSync(filepath).isDirectory()) {
-        await fse.copy(filepath, projectDir);
+        let remixIgnorePath = path.join(filepath, ".remixignore");
+
+        fse.copySync(filepath, projectDir, {
+          filter(src, dest) {
+            if (fse.pathExistsSync(remixIgnorePath)) {
+              let remixIgnore = ignore().add(
+                fse.readFileSync(remixIgnorePath, "utf8")
+              );
+
+              if (filepath === src) return true;
+              let relative = path.relative(filepath, src);
+              return !remixIgnore.ignores(relative);
+            }
+
+            return true;
+          },
+        });
         break;
       }
       if (appTemplate.endsWith(".tar.gz")) {
@@ -171,6 +189,9 @@ export async function createApp({
     }
   }
 
+  // remove anything ignored by `.remixignore`
+  removeRemixIgnoredFiles(projectDir);
+
   // Update remix deps
   let pkgJsonPath = path.join(projectDir, "package.json");
   let appPkg: any;
@@ -207,14 +228,18 @@ export async function createApp({
     spinner.clear();
   }
 
+  if (debug) {
+    console.log(
+      colors.warning(` 🔍  removing ignored files from ${projectDir}`)
+    );
+  }
+
   if (installDeps) {
     let packageManager = getPreferredPackageManager();
 
     let npmConfig = execSync(
       `${packageManager} config get @remix-run:registry`,
-      {
-        encoding: "utf8",
-      }
+      { encoding: "utf8" }
     );
     if (npmConfig?.startsWith("https://npm.remix.run")) {
       throw Error(
@@ -917,5 +942,24 @@ function isValidGithubUrl(value: string | URL): value is URL | GithubUrlString {
     );
   } catch (_) {
     return false;
+  }
+}
+
+function removeRemixIgnoredFiles(projectDir: string) {
+  let remixIgnorePath = path.join(projectDir, ".remixignore");
+
+  if (fse.existsSync(remixIgnorePath)) {
+    let remixIgnore = ignore().add(fse.readFileSync(remixIgnorePath, "utf8"));
+    let files = glob.sync("**/*", { cwd: projectDir });
+
+    let filesToRemove = files.filter((file) => {
+      return remixIgnore.ignores(file);
+    });
+
+    for (let file of filesToRemove) {
+      fse.removeSync(path.join(projectDir, file));
+    }
+
+    fse.removeSync(remixIgnorePath);
   }
 }
