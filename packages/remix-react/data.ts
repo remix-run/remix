@@ -29,7 +29,8 @@ export function isErrorResponse(response: any): boolean {
 export function isRedirectResponse(response: any): boolean {
   return (
     response instanceof Response &&
-    response.headers.get("X-Remix-Redirect") != null
+    (response.headers.get("X-Remix-Redirect") != null ||
+      (response.status >= 300 && response.status < 400))
   );
 }
 

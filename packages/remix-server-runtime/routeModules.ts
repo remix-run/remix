@@ -164,6 +164,9 @@ interface ClientRoute extends Route {
   children?: ClientRoute[];
   module: string;
   hasLoader: boolean;
+  hasAction: boolean;
+  hasClientAction: boolean;
+  hasClientLoader: boolean;
 }
 
 export interface V2_MetaFunction<

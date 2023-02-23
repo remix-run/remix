@@ -40,6 +40,8 @@ export interface EntryRoute extends Route {
   hasLoader: boolean;
   hasCatchBoundary: boolean;
   hasErrorBoundary: boolean;
+  hasClientAction: boolean;
+  hasClientLoader: boolean;
   imports?: string[];
   module: string;
   parentId?: string;
@@ -177,23 +179,59 @@ function createDataFunction(
   routeModules: RouteModules,
   isAction: boolean
 ): LoaderFunction | ActionFunction {
-  return async ({ request }) => {
+  let doFetch = async (request: Request) => {
+    if (isAction && !route.hasAction) {
+      let msg =
+        `Route "${route.id}" does not have an action, but you are trying ` +
+        `to submit to it. To fix this, please add an \`action\` function to the route`;
+      console.error(msg);
+      throw new Error(msg);
+    } else if (!isAction && !route.hasLoader) {
+      return null;
+    }
+
+    let result = await fetchData(request, route.id);
+
+    if (result instanceof Error) {
+      throw result;
+    }
+
+    if (isRedirectResponse(result)) {
+      throw getRedirect(result);
+    }
+
+    if (isCatchResponse(result)) {
+      throw result;
+    }
+
+    if (isDeferredResponse(result) && result.body) {
+      return await parseDeferredReadableStream(result.body);
+    }
+
+    return result;
+  };
+
+  return async ({ request, params }) => {
     let routeModulePromise = loadRouteModuleWithBlockingLinks(
       route,
       routeModules
     );
     try {
-      if (isAction && !route.hasAction) {
-        let msg =
-          `Route "${route.id}" does not have an action, but you are trying ` +
-          `to submit to it. To fix this, please add an \`action\` function to the route`;
-        console.error(msg);
-        throw new Error(msg);
-      } else if (!isAction && !route.hasLoader) {
-        return null;
-      }
+      let clientDataFunction = isAction
+        ? route.hasClientAction
+          ? (await routeModulePromise).clientAction
+          : undefined
+        : route.hasClientLoader
+        ? (await routeModulePromise).clientLoader
+        : undefined;
 
-      let result = await fetchData(request, route.id);
+      let result = clientDataFunction
+        ? clientDataFunction({
+            request,
+            params,
+            next: () => doFetch(request),
+          })
+        : await doFetch(request);
 
       if (result instanceof Error) {
         throw result;
@@ -219,6 +257,10 @@ function createDataFunction(
 }
 
 function getRedirect(response: Response): Response {
+  if (response.status >= 300 && response.status < 400) {
+    return response;
+  }
+
   let status = parseInt(response.headers.get("X-Remix-Status")!, 10) || 302;
   let url = response.headers.get("X-Remix-Redirect")!;
   let headers: Record<string, string> = {};

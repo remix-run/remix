@@ -5,6 +5,7 @@ import type {
   Location,
   ShouldRevalidateFunction,
 } from "react-router-dom";
+import type { UNSAFE_DeferredData as DeferredData } from "@remix-run/router";
 
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
@@ -27,6 +28,38 @@ export interface RouteModule {
     | V2_MetaFunction
     | V2_HtmlMetaDescriptor[];
   shouldRevalidate?: ShouldRevalidateFunction;
+  clientAction?: ClientActionFunction;
+  clientLoader?: ClientLoaderFunction;
+}
+/**
+ * The arguments passed to ActionFunction and LoaderFunction.
+ */
+export interface ClientDataFunctionArgs {
+  request: Request;
+  params: Params;
+  next: () => Promise<Response | DeferredData | null>;
+}
+
+/**
+ * A function that handles data mutations for a route client side.
+ */
+export interface ClientActionFunction {
+  (args: ClientDataFunctionArgs):
+    | Promise<Response>
+    | Response
+    | Promise<AppData>
+    | AppData;
+}
+
+/**
+ * A function that loads data for a route client side.
+ */
+export interface ClientLoaderFunction {
+  (args: ClientDataFunctionArgs):
+    | Promise<Response>
+    | Response
+    | Promise<AppData>
+    | AppData;
 }
 
 /**

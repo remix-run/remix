@@ -29,6 +29,8 @@ export interface AssetsManifest {
       hasLoader: boolean;
       hasCatchBoundary: boolean;
       hasErrorBoundary: boolean;
+      hasClientAction: boolean;
+      hasClientLoader: boolean;
     };
   };
   cssBundleHref?: string;
@@ -114,6 +116,8 @@ export async function createAssetsManifest({
           hasLoader: sourceExports.includes("loader"),
           hasCatchBoundary: sourceExports.includes("CatchBoundary"),
           hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
+          hasClientAction: sourceExports.includes("clientAction"),
+          hasClientLoader: sourceExports.includes("clientLoader"),
         };
       }
     }

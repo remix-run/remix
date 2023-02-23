@@ -31,6 +31,8 @@ export function mockServerBuild(
           hasCatchBoundary: !!config.CatchBoundary,
           hasErrorBoundary: !!config.ErrorBoundary,
           hasLoader: !!config.loader,
+          hasClientAction: false,
+          hasClientLoader: false,
           id,
           module: "",
           index: config.index,
