@@ -57,7 +57,7 @@ export type SerializedError = {
   stack?: string;
 };
 
-export async function serializeError(error: Error): Promise<SerializedError> {
+export function serializeError(error: Error): SerializedError {
   return {
     message: error.message,
     stack: error.stack,

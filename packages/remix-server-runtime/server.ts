@@ -373,8 +373,8 @@ async function handleResourceRequestRR(
   }
 }
 
-async function errorBoundaryError(error: Error, status: number) {
-  return json(await serializeError(error), {
+function errorBoundaryError(error: Error, status: number) {
+  return json(serializeError(error), {
     status,
     headers: {
       "X-Remix-Error": "yes",
