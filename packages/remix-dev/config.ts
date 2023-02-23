@@ -361,6 +361,7 @@ export interface RemixConfig {
  */
 export async function readConfig(
   remixRoot?: string,
+  fixFlag?: boolean,
   serverMode = ServerMode.Production
 ): Promise<RemixConfig> {
   if (!isValidServerMode(serverMode)) {
@@ -602,7 +603,7 @@ export async function readConfig(
   }
 
   if (tsconfigPath) {
-    writeConfigDefaults(tsconfigPath);
+    writeConfigDefaults(tsconfigPath, fixFlag);
   }
 
   let future: FutureConfig = {

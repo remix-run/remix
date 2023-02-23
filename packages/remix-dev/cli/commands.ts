@@ -202,9 +202,9 @@ export async function watch(
 export async function dev(
   remixRoot: string,
   modeArg?: string,
-  flags: { port?: number; appServerPort?: number } = {}
+  flags: { port?: number; appServerPort?: number; fix?: boolean } = {}
 ) {
-  let config = await readConfig(remixRoot);
+  let config = await readConfig(remixRoot, flags.fix);
   let mode = compiler.parseMode(modeArg ?? "", "development");
 
   if (config.future.unstable_dev !== false) {

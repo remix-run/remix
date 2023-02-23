@@ -84,6 +84,10 @@ remix dev
 
 Attaches a [Node inspector][node-inspector] to develop your app in debug mode.
 
+### `remix dev --fix`
+
+Updates the TSConfig within your application if any of the mandatory or suggested compiler options are missing.
+
 ### `remix dev --port`
 
 Launches the app server on a given port.

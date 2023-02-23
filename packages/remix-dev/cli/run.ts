@@ -41,6 +41,7 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     --sourcemap         Generate source maps for production
   \`dev\` Options:
     --debug             Attach Node.js inspector
+    --fix               Fix TSConfig.json automatically
     --port, -p          Choose the port from which to run your app
   \`init\` Options:
     --no-delete         Skip deleting the \`remix.init\` script
@@ -96,6 +97,7 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     $ remix dev
     $ remix dev my-app
     $ remix dev --debug
+    $ remix dev --fix
 
   ${colors.heading("Start your server separately and watch for changes")}:
 
@@ -139,7 +141,12 @@ const npxInterop = {
 
 async function dev(
   projectDir: string,
-  flags: { debug?: boolean; port?: number; appServerPort?: number }
+  flags: {
+    debug?: boolean;
+    fix?: boolean;
+    port?: number;
+    appServerPort?: number;
+  }
 ) {
   if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";
 
@@ -164,6 +171,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     {
       "--app-server-port": Number,
       "--debug": Boolean,
+      "--fix": Boolean,
       "--no-delete": Boolean,
       "--dry": Boolean,
       "--force": Boolean,
