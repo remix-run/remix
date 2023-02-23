@@ -67,7 +67,7 @@ const writeAssetsManifest = async (
 
   await writeFileSafe(
     path.join(config.assetsBuildDirectory, filename),
-    `window.__remixManifest=${JSON.stringify(assetsManifest)};`
+    `window.__remixManifest=JSON.parse('${JSON.stringify(assetsManifest)}');`
   );
 };
 
