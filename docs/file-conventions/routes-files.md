@@ -306,7 +306,7 @@ The Route file naming convention is changing in v2 to make file organization sim
 [loader]: ../route/loader
 [action]: ../route/action
 [meta]: ../route/meta
-[headers]: ../routes/headers
+[headers]: ../route/headers
 [links]: ../route/links
 [error-boundary]: ../route/error-boundary
 [catch-boundary]: ../route/catch-boundary
