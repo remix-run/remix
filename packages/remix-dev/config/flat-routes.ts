@@ -360,8 +360,7 @@ function getRouteMap(
     return b.segments.length - a.segments.length;
   });
 
-  for (let i = 0; i < routes.length; i++) {
-    let routeInfo = routes[i];
+  for (let routeInfo of routes) {
     // update parentIds for all routes
     routeInfo.parentId = findParentRouteId(routeInfo, nameMap);
   }
