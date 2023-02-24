@@ -18,6 +18,7 @@ import {
   paramPrefixChar,
   routeModuleExts,
 } from "./routesConvention";
+import invariant from "../invariant";
 
 export function flatRoutes(
   appDirectory: string,
@@ -360,9 +361,46 @@ function getRouteMap(
     return b.segments.length - a.segments.length;
   });
 
-  for (let routeInfo of routes) {
+  for (let i = 0; i < routes.length; i++) {
+    let routeInfo = routes.at(i);
+    invariant(routeInfo, "routeInfo should exist");
     // update parentIds for all routes
     routeInfo.parentId = findParentRouteId(routeInfo, nameMap);
+
+    let nextRouteInfo = routes.at(i + 1);
+    if (!nextRouteInfo) continue;
+
+    // use path to detect conflicts as they're normalized
+    let currentPath = routeInfo.path || "/";
+    let nextPath = nextRouteInfo.path || "/";
+
+    let segments = currentPath.split("/").filter(Boolean);
+    let nextSegments = nextPath.split("/").filter(Boolean);
+
+    // if the next route has more segments than the current route, it can't be a conflict
+    if (segments.length !== nextSegments.length) continue;
+
+    for (let j = 0; j < segments.length; j++) {
+      let segment = segments.at(j);
+      let next = nextSegments.at(j);
+
+      invariant(segment, "segment should exist");
+      if (!next) break;
+
+      // if both segments are dynamic, and they're not the same, it's a conflict
+      if (segment.startsWith(":") && next.startsWith(":") && segment !== next) {
+        let currentConflicts = conflicts.get(currentPath);
+        // collect conflicts for later reporting, marking the next route as the conflicting route
+        if (!currentConflicts) {
+          conflicts.set(routeInfo.path || "/", [routeInfo, nextRouteInfo]);
+        } else {
+          currentConflicts.push(nextRouteInfo);
+          conflicts.set(routeInfo.path || "/", currentConflicts);
+        }
+        // remove conflicting route
+        routeMap.delete(nextRouteInfo.id);
+      }
+    }
   }
 
   // report conflicts

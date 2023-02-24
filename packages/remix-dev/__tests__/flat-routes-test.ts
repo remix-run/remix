@@ -692,7 +692,7 @@ describe("flatRoutes", () => {
       );
     });
 
-    test.skip("same path, different param name", () => {
+    test("same path, different param name", () => {
       // we'll add file manually before running the tests
       let testFiles = [
         "routes/products.$pid.tsx",
