@@ -630,6 +630,7 @@ describe("flatRoutes", () => {
       let testFiles = [
         "routes/_user.$username.tsx",
         "routes/sneakers.$sneakerId.tsx",
+        "routes/products.$productId.tsx",
       ];
 
       let routeManifest = flatRoutesUniversal(
