@@ -114,6 +114,7 @@ describe("remix CLI", () => {
             --sourcemap         Generate source maps for production
           \`dev\` Options:
             --debug             Attach Node.js inspector
+            --fix               Fix TSConfig.json automatically
             --port, -p          Choose the port from which to run your app
           \`init\` Options:
             --no-delete         Skip deleting the \`remix.init\` script
@@ -169,6 +170,7 @@ describe("remix CLI", () => {
             $ remix dev
             $ remix dev my-app
             $ remix dev --debug
+            $ remix dev --fix
 
           Start your server separately and watch for changes:
 
