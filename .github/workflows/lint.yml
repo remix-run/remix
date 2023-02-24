@@ -27,6 +27,11 @@ jobs:
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
+      - name: Disable Eslint GitHub Actions Annotations
+        run: |
+          echo "::remove-matcher owner=eslint-compact::"
+          echo "::remove-matcher owner=eslint-stylish::"
+
       - name: 🔬 Lint
         run: yarn lint
 
