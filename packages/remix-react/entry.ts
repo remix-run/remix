@@ -46,4 +46,8 @@ export interface AssetsManifest {
   routes: RouteManifest<EntryRoute>;
   url: string;
   version: string;
+  hmr?: {
+    timestamp: number;
+    runtime: string;
+  };
 }
