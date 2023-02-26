@@ -12,8 +12,8 @@ export async function getFullTsConfig(configPath: string) {
     ts.sys,
     path.dirname(configPath)
   );
+
   if (fullConfig.errors.length) {
-    console.log(fullConfig.errors);
     throw new Error(
       ts.formatDiagnostic(fullConfig.errors?.[0], {
         getCanonicalFileName: (fileName) => fileName,

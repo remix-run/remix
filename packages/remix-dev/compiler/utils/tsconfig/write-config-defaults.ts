@@ -44,10 +44,11 @@ export async function writeConfigDefaults(configPath: string) {
   } = {
     esModuleInterop: { value: true },
     isolatedModules: { value: true },
-    jsx: { kind: ts.JsxEmit, value: "react-jsx" },
+    jsx: { kind: ts.JsxEmit.ReactJSX, value: "react-jsx" },
     noEmit: { value: true },
     resolveJsonModule: { value: true },
   };
+
   // this will be the user's actual tsconfig file
   let configContents = fse.readFileSync(configPath, "utf8");
 
@@ -74,7 +75,7 @@ export async function writeConfigDefaults(configPath: string) {
   let suggestedChanges = [];
   let requiredChanges = [];
 
-  if (!("include" in fullConfig.options)) {
+  if (!("include" in fullConfig.raw)) {
     if (configType === "jsconfig.json") {
       config.include = ["**/*.js", "**/*.jsx"];
       suggestedChanges.push(
@@ -141,7 +142,7 @@ export async function writeConfigDefaults(configPath: string) {
       ts.ModuleResolutionKind[fullConfig.options.moduleResolution];
 
     if (
-      !["node", "node16", "nodenext"].includes(
+      !["nodejs", "node16", "nodenext"].includes(
         configModuleResolution.toLowerCase()
       )
     ) {
