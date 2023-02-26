@@ -22,15 +22,114 @@ declare global {
     future: FutureConfig;
     // The number of active deferred keys rendered on the server
     a?: number;
+    dev?: {
+      liveReloadPort?: number;
+      hmrRuntime?: string;
+    };
   };
   var __remixRouteModules: RouteModules;
   var __remixManifest: EntryContext["manifest"];
+  var $RefreshRuntime$: {
+    performReactRefresh: () => void;
+  };
 }
 /* eslint-enable prefer-let/prefer-let */
 
 export interface RemixBrowserProps {}
 
+declare global {
+  interface ImportMeta {
+    hot: any;
+  }
+}
+
 let router: Router;
+let hmrAbortController: AbortController;
+
+if (import.meta && import.meta.hot) {
+  import.meta.hot.accept(
+    "remix:manifest",
+    async (newManifest: EntryContext["manifest"]) => {
+      let routeIds = [
+        ...new Set(
+          router.state.matches
+            .map((m) => m.route.id)
+            .concat(Object.keys(window.__remixRouteModules))
+        ),
+      ];
+
+      // Load new route modules that we've seen.
+      let newRouteModules = Object.assign(
+        {},
+        window.__remixRouteModules,
+        Object.fromEntries(
+          (
+            await Promise.all(
+              routeIds.map(async (id) => {
+                if (!newManifest.routes[id]) {
+                  return null;
+                }
+                let imported = await import(
+                  newManifest.routes[id].module +
+                    `?t=${newManifest.hmr?.timestamp}`
+                );
+                return [
+                  id,
+                  {
+                    ...imported,
+                    // react-refresh takes care of updating these in-place,
+                    // if we don't preserve existing values we'll loose state.
+                    default: imported.default
+                      ? window.__remixRouteModules[id]?.default ??
+                        imported.default
+                      : imported.default,
+                    CatchBoundary: imported.CatchBoundary
+                      ? window.__remixRouteModules[id]?.CatchBoundary ??
+                        imported.CatchBoundary
+                      : imported.CatchBoundary,
+                    ErrorBoundary: imported.ErrorBoundary
+                      ? window.__remixRouteModules[id]?.ErrorBoundary ??
+                        imported.ErrorBoundary
+                      : imported.ErrorBoundary,
+                  },
+                ];
+              })
+            )
+          ).filter(Boolean) as [string, RouteModules[string]][]
+        )
+      );
+
+      Object.assign(window.__remixRouteModules, newRouteModules);
+      // Create new routes
+      let routes = createClientRoutes(
+        newManifest.routes,
+        window.__remixRouteModules,
+        window.__remixContext.future
+      );
+
+      // This is temporary API and will be more granular before release
+      router._internalSetRoutes(routes);
+
+      if (hmrAbortController) {
+        hmrAbortController.abort();
+      }
+      hmrAbortController = new AbortController();
+      let signal = hmrAbortController.signal;
+      // Wait for router to be idle before updating the manifest and route modules
+      // and triggering a react-refresh
+      let unsub = router.subscribe((state) => {
+        if (state.revalidation === "idle" && !signal.aborted) {
+          unsub();
+          // TODO: Handle race conditions here. Should abort if a new update
+          // comes in while we're waiting for the router to be idle.
+          Object.assign(window.__remixManifest, newManifest);
+          window.$RefreshRuntime$.performReactRefresh();
+        }
+      });
+      router.revalidate();
+    }
+  );
+}
 
 /**
  * The entry point for a Remix app when it is rendered in the browser (in

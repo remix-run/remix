@@ -109,6 +109,10 @@ export type FetcherStates<TData = any> = {
   Idle: {
     state: "idle";
     type: "init";
+    formMethod: undefined;
+    formAction: undefined;
+    formData: undefined;
+    formEncType: undefined;
     submission: undefined;
     data: undefined;
   };
@@ -155,12 +159,20 @@ export type FetcherStates<TData = any> = {
   Loading: {
     state: "loading";
     type: "normalLoad";
+    formMethod: undefined;
+    formAction: undefined;
+    formData: undefined;
+    formEncType: undefined;
     submission: undefined;
     data: TData | undefined;
   };
   Done: {
     state: "idle";
     type: "done";
+    formMethod: undefined;
+    formAction: undefined;
+    formData: undefined;
+    formEncType: undefined;
     submission: undefined;
     data: TData;
   };
@@ -204,5 +216,9 @@ export const IDLE_FETCHER: FetcherStates["Idle"] = {
   state: "idle",
   type: "init",
   data: undefined,
+  formMethod: undefined,
+  formAction: undefined,
+  formData: undefined,
+  formEncType: undefined,
   submission: undefined,
 };
