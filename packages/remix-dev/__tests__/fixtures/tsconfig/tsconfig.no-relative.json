@@ -1,0 +1,16 @@
+{
+  "extends": "@remix-run/dev/__tests__/fixtures/tsconfig/tsconfig.base",
+  //comments in JSON are ok too
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "target": "ES2019",
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./app/*"]
+    },
+    "lib": ["DOM", "DOM.Iterable", "ES2019"]
+  },
+  "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"]
+}
