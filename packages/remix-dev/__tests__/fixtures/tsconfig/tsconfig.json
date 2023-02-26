@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "target": "ES2019",
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "~/*": ["./app/*"]
+    },
+    "lib": ["DOM", "DOM.Iterable", "ES2019"]
+  },
+  "include": ["remix.env.d.ts", "**/*.ts", "**/*.tsx"]
+}
