@@ -2,30 +2,10 @@ import * as path from "path";
 import fse from "fs-extra";
 import type { TsConfigJson } from "type-fest";
 import prettier from "prettier";
-import { loadTsconfig } from "tsconfig-paths/lib/tsconfig-loader";
 import JSON5 from "json5";
 
 import * as colors from "../../../colors";
-
-// These are suggested values and will be set when not present in the
-// tsconfig.json
-let suggestedCompilerOptions: TsConfigJson.CompilerOptions = {
-  allowJs: true,
-  forceConsistentCasingInFileNames: true,
-  lib: ["DOM", "DOM.Iterable", "ES2019"],
-  strict: true,
-  target: "ES2019",
-};
-
-// These values are required and cannot be changed by the user
-// Keep this in sync with esbuild
-let requiredCompilerOptions: TsConfigJson.CompilerOptions = {
-  esModuleInterop: true,
-  isolatedModules: true,
-  jsx: "react-jsx",
-  noEmit: true,
-  resolveJsonModule: true,
-};
+import { getFullTsConfig } from "./getFullTsConfig";
 
 // taken from https://github.com/sindresorhus/ts-extras/blob/781044f0412ec4a4224a1b9abce5ff0eacee3e72/source/object-keys.ts
 type ObjectKeys<T extends object> = `${Exclude<keyof T, symbol>}`;
@@ -33,12 +13,41 @@ function objectKeys<Type extends object>(value: Type): Array<ObjectKeys<Type>> {
   return Object.keys(value) as Array<ObjectKeys<Type>>;
 }
 
-export function writeConfigDefaults(configPath: string) {
+export async function writeConfigDefaults(configPath: string) {
   // check files exist
   if (!fse.existsSync(configPath)) return;
 
-  // this will be the *full* tsconfig.json with any extensions deeply merged
-  let fullConfig = loadTsconfig(configPath) as TsConfigJson | undefined;
+  let { fullConfig, ts } = await getFullTsConfig(configPath);
+
+  // These are suggested values and will be set when not present in the
+  // tsconfig.json
+  let suggestedCompilerOptions: {
+    [key in keyof TsConfigJson.CompilerOptions]: {
+      kind?: any;
+      value: TsConfigJson.CompilerOptions[key];
+    };
+  } = {
+    allowJs: { value: true },
+    forceConsistentCasingInFileNames: { value: true },
+    lib: { value: ["DOM", "DOM.Iterable", "ES2019"] },
+    strict: { value: true },
+    target: { kind: ts.ScriptTarget.ES2019, value: "ES2019" },
+  };
+
+  // These values are required and cannot be changed by the user
+  // Keep this in sync with esbuild
+  let requiredCompilerOptions: {
+    [key in keyof TsConfigJson.CompilerOptions]: {
+      kind?: any;
+      value: TsConfigJson.CompilerOptions[key];
+    };
+  } = {
+    esModuleInterop: { value: true },
+    isolatedModules: { value: true },
+    jsx: { kind: ts.JsxEmit, value: "react-jsx" },
+    noEmit: { value: true },
+    resolveJsonModule: { value: true },
+  };
   // this will be the user's actual tsconfig file
   let configContents = fse.readFileSync(configPath, "utf8");
 
@@ -47,7 +56,7 @@ export function writeConfigDefaults(configPath: string) {
     config = JSON5.parse(configContents);
   } catch (error: unknown) {}
 
-  if (!fullConfig || !config) {
+  if (!config) {
     // how did we get here? we validated a tsconfig existed in the first place
     console.warn(
       "This should never happen, please open an issue with a reproduction https://github.com/remix-run/remix/issues/new"
@@ -60,13 +69,12 @@ export function writeConfigDefaults(configPath: string) {
     | "tsconfig.json";
 
   // sanity checks to make sure we can write the compilerOptions
-  if (!fullConfig.compilerOptions) fullConfig.compilerOptions = {};
   if (!config.compilerOptions) config.compilerOptions = {};
 
   let suggestedChanges = [];
   let requiredChanges = [];
 
-  if (!("include" in fullConfig)) {
+  if (!("include" in fullConfig.options)) {
     if (configType === "jsconfig.json") {
       config.include = ["**/*.js", "**/*.jsx"];
       suggestedChanges.push(
@@ -84,7 +92,7 @@ export function writeConfigDefaults(configPath: string) {
     }
   }
   // TODO: check for user's typescript version and only add baseUrl if < 4.1
-  if (!("baseUrl" in fullConfig.compilerOptions)) {
+  if (!("baseUrl" in fullConfig.options)) {
     let baseUrl = path.relative(process.cwd(), path.dirname(configPath)) || ".";
     config.compilerOptions.baseUrl = baseUrl;
     requiredChanges.push(
@@ -94,44 +102,58 @@ export function writeConfigDefaults(configPath: string) {
     );
   }
   for (let key of objectKeys(suggestedCompilerOptions)) {
-    if (!(key in fullConfig.compilerOptions)) {
-      config.compilerOptions[key] = suggestedCompilerOptions[key] as any;
+    if (!(key in fullConfig.options)) {
+      config.compilerOptions[key] = suggestedCompilerOptions[key]?.value as any;
       suggestedChanges.push(
         colors.blue("compilerOptions." + key) +
           " was set to " +
-          colors.bold(`'${suggestedCompilerOptions[key]}'`)
+          colors.bold(`'${suggestedCompilerOptions[key]?.value}'`)
       );
     }
   }
 
   for (let key of objectKeys(requiredCompilerOptions)) {
-    if (fullConfig.compilerOptions[key] !== requiredCompilerOptions[key]) {
-      config.compilerOptions[key] = requiredCompilerOptions[key] as any;
+    let shouldPush = false;
+    if ("kind" in (requiredCompilerOptions[key] || {})) {
+      if (fullConfig.options[key] !== requiredCompilerOptions[key]?.kind) {
+        shouldPush = true;
+        config.compilerOptions[key] = requiredCompilerOptions[key]
+          ?.value as any;
+      }
+    } else {
+      if (fullConfig.options[key] !== requiredCompilerOptions[key]?.value) {
+        shouldPush = true;
+        config.compilerOptions[key] = requiredCompilerOptions[key]
+          ?.value as any;
+      }
+    }
+    if (shouldPush) {
       requiredChanges.push(
         colors.blue("compilerOptions." + key) +
           " was set to " +
-          colors.bold(`'${requiredCompilerOptions[key]}'`)
+          colors.bold(`'${requiredCompilerOptions[key]?.value}'`)
       );
     }
   }
 
-  if (typeof fullConfig.compilerOptions.moduleResolution === "undefined") {
-    fullConfig.compilerOptions.moduleResolution = "node";
-    config.compilerOptions.moduleResolution = "node";
-    requiredChanges.push(
-      colors.blue("compilerOptions.moduleResolution") +
-        " was set to " +
-        colors.bold(`'node'`)
-    );
-  }
+  if (fullConfig.options.moduleResolution) {
+    let configModuleResolution =
+      ts.ModuleResolutionKind[fullConfig.options.moduleResolution];
 
-  if (
-    !["node", "node16", "nodenext"].includes(
-      fullConfig.compilerOptions.moduleResolution.toLowerCase()
-    )
-  ) {
+    if (
+      !["node", "node16", "nodenext"].includes(
+        configModuleResolution.toLowerCase()
+      )
+    ) {
+      config.compilerOptions.moduleResolution = "node";
+      requiredChanges.push(
+        colors.blue("compilerOptions.moduleResolution") +
+          " was set to " +
+          colors.bold(`'node'`)
+      );
+    }
+  } else {
     config.compilerOptions.moduleResolution = "node";
-
     requiredChanges.push(
       colors.blue("compilerOptions.moduleResolution") +
         " was set to " +
