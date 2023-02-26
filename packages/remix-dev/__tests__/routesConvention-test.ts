@@ -14,6 +14,7 @@ describe("createRoutePath", () => {
       ["routes/$slug", "routes/:slug"],
       ["routes/sub/$slug", "routes/sub/:slug"],
       ["routes.sub/$slug", "routes/sub/:slug"],
+      ["routes/index/children", "routeschildren"],
       ["$", "*"],
       ["nested/$", "nested/*"],
       ["flat.$", "flat/*"],

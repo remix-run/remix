@@ -120,7 +120,6 @@ export let escapeEnd = "]" as const;
 export let optionalStart = "(" as const;
 export let optionalEnd = ")" as const;
 
-// TODO: Cleanup and write some tests for this function
 export function createRoutePath(partialRouteId: string): string | undefined {
   let result = "";
   let rawSegmentBuffer = "";
@@ -135,39 +134,30 @@ export function createRoutePath(partialRouteId: string): string | undefined {
     let nextChar =
       i < partialRouteId.length - 1 ? partialRouteId.charAt(i + 1) : undefined;
 
-    function isNewEscapeSequence() {
-      return (
-        !inEscapeSequence && char === escapeStart && prevChar !== escapeStart
-      );
-    }
+    let isNewEscapeSequence =
+      !inEscapeSequence && char === escapeStart && prevChar !== escapeStart;
 
-    function isCloseEscapeSequence() {
-      return inEscapeSequence && char === escapeEnd && nextChar !== escapeEnd;
-    }
+    let isCloseEscapeSequence =
+      inEscapeSequence && char === escapeEnd && nextChar !== escapeEnd;
 
-    function isStartOfLayoutSegment() {
-      return char === "_" && nextChar === "_" && !rawSegmentBuffer;
-    }
+    let isStartOfLayoutSegment =
+      char === "_" && nextChar === "_" && !rawSegmentBuffer;
 
-    function isNewOptionalSegment() {
-      return (
-        char === optionalStart &&
-        prevChar !== optionalStart &&
-        (isSegmentSeparator(prevChar) || prevChar === undefined) &&
-        !inOptionalSegment &&
-        !inEscapeSequence
-      );
-    }
+    let isNewOptionalSegment = (
+      char === optionalStart &&
+      prevChar !== optionalStart &&
+      (isSegmentSeparator(prevChar) || prevChar === undefined) &&
+      !inOptionalSegment &&
+      !inEscapeSequence
+    );
 
-    function isCloseOptionalSegment() {
-      return (
-        char === optionalEnd &&
-        nextChar !== optionalEnd &&
-        (isSegmentSeparator(nextChar) || nextChar === undefined) &&
-        inOptionalSegment &&
-        !inEscapeSequence
-      );
-    }
+    let isCloseOptionalSegment = (
+      char === optionalEnd &&
+      nextChar !== optionalEnd &&
+      (isSegmentSeparator(nextChar) || nextChar === undefined) &&
+      inOptionalSegment &&
+      !inEscapeSequence
+    );
 
     if (skipSegment) {
       if (isSegmentSeparator(char)) {
@@ -176,24 +166,24 @@ export function createRoutePath(partialRouteId: string): string | undefined {
       continue;
     }
 
-    if (isNewEscapeSequence()) {
+    if (isNewEscapeSequence) {
       inEscapeSequence++;
       continue;
     }
 
-    if (isCloseEscapeSequence()) {
+    if (isCloseEscapeSequence) {
       inEscapeSequence--;
       continue;
     }
 
-    if (isNewOptionalSegment()) {
+    if (isNewOptionalSegment) {
       inOptionalSegment++;
       optionalSegmentIndex = result.length;
       result += optionalStart;
       continue;
     }
 
-    if (isCloseOptionalSegment()) {
+    if (isCloseOptionalSegment) {
       if (optionalSegmentIndex !== null) {
         result =
           result.slice(0, optionalSegmentIndex) +
@@ -223,7 +213,7 @@ export function createRoutePath(partialRouteId: string): string | undefined {
       continue;
     }
 
-    if (isStartOfLayoutSegment()) {
+    if (isStartOfLayoutSegment) {
       skipSegment = true;
       continue;
     }
