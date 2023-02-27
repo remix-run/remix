@@ -127,8 +127,8 @@ jobs:
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: |
-          npm pkg delete pretest:integration
-          npm pkg delete posttest:integration
+          npm pkg delete scripts.pretest:integration
+          npm pkg delete scripts.posttest:integration
           yarn test:integration --project=${{ matrix.browser }}
 
   macos-integration:
@@ -181,8 +181,8 @@ jobs:
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: |
-          npm pkg delete pretest:integration
-          npm pkg delete posttest:integration
+          npm pkg delete scripts.pretest:integration
+          npm pkg delete scripts.posttest:integration
           yarn test:integration --project=${{ matrix.browser }}
 
   windows-integration:
@@ -235,6 +235,6 @@ jobs:
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: |
-          npm pkg delete pretest:integration
-          npm pkg delete posttest:integration
+          npm pkg delete scripts.pretest:integration
+          npm pkg delete scripts.posttest:integration
           yarn test:integration --project=${{ matrix.browser }}
