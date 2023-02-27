@@ -6,7 +6,7 @@ module.exports = {
     "<rootDir>/templates",
   ],
   projects: [
-    "new-integration",
+    "integration",
     "packages/create-remix",
     "packages/remix",
     "packages/remix-architect",

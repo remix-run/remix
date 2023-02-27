@@ -171,7 +171,7 @@ You can set the base in GitHub when authoring the PR with the dropdown below the
 
 ### Tests
 
-We use a mix of `jest` and `playwright` for our testing in this project. We have a suite of integration tests in the integration folder and packages have their own jest configuration, which are then referenced by the primary jest config in the root of the project.
+We use a mix of `jest` and `playwright` for our testing in this project. We have a suite of integration tests in the e2e folder and packages have their own jest configuration, which are then referenced by the primary jest config in the root of the project.
 
 The integration tests and the primary tests can be run in parallel using `npm-run-all` to make the tests run as quickly and efficiently as possible. To run these two sets of tests independently you'll need to run the individual script:
 
@@ -258,7 +258,7 @@ Thanks
 [examples-repository]: https://github.com/remix-run/examples
 [this-page]: https://github.com/remix-run/remix
 [yarn-version-1]: https://classic.yarnpkg.com/lang/en/docs/install
-[integration-bug-report-test-ts]: https://github.com/remix-run/remix/blob/dev/integration/bug-report-test.ts
+[integration-bug-report-test-ts]: https://github.com/remix-run/remix/blob/dev/e2e/bug-report-test.ts
 [pull-request]: https://help.github.com/en/github/collaborating-with-issues-and-pull-requests/creating-a-pull-request
 [yarn-workspaces]: https://classic.yarnpkg.com/en/docs/workspaces
 [vscode-playwright]: https://playwright.dev/docs/intro#using-the-vs-code-extension

@@ -79,7 +79,7 @@ module.exports = {
       },
     },
     {
-      files: ["integration/**/*.*"],
+      files: ["e2e/**/*.*"],
       env: {
         "jest/globals": false,
       },

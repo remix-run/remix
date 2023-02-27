@@ -71,8 +71,8 @@ jobs:
       - name: 🧪 Run Primary Tests
         run: "yarn test:primary"
 
-  ubuntu-integration:
-    name: '👀 Integration Test: (OS: "ubuntu-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
+  ubuntu-e2e:
+    name: '👀 e2e Test: (OS: "ubuntu-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
     strategy:
       fail-fast: false
       matrix:
@@ -99,11 +99,11 @@ jobs:
       - name: 📥 Install Playwright
         run: npx playwright install --with-deps
 
-      - name: 👀 Run Integration Tests ${{ matrix.browser }}
-        run: "yarn test:integration --project=${{ matrix.browser }}"
+      - name: 👀 Run e2e Tests ${{ matrix.browser }}
+        run: "yarn test:e2e --project=${{ matrix.browser }}"
 
-  macos-integration:
-    name: '👀 Integration Test: (OS: "macos-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
+  macos-e2e:
+    name: '👀 e2e Test: (OS: "macos-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
     strategy:
       fail-fast: false
       matrix:
@@ -130,11 +130,11 @@ jobs:
       - name: 📥 Install Playwright
         run: npx playwright install --with-deps
 
-      - name: 👀 Run Integration Tests ${{ matrix.browser }}
-        run: "yarn test:integration --project=${{ matrix.browser }}"
+      - name: 👀 Run e2e Tests ${{ matrix.browser }}
+        run: "yarn test:e2e --project=${{ matrix.browser }}"
 
-  windows-integration:
-    name: '👀 Integration Test: (OS: "windows-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
+  windows-e2e:
+    name: '👀 e2e Test: (OS: "windows-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
     strategy:
       fail-fast: false
       matrix:
@@ -161,5 +161,5 @@ jobs:
       - name: 📥 Install Playwright
         run: npx playwright install --with-deps
 
-      - name: 👀 Run Integration Tests ${{ matrix.browser }}
-        run: "yarn test:integration --project=${{ matrix.browser }}"
+      - name: 👀 Run e2e Tests ${{ matrix.browser }}
+        run: "yarn test:e2e --project=${{ matrix.browser }}"

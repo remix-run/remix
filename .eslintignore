@@ -8,7 +8,7 @@
 /packages/*/dist/
 
 # Deno
-integration/helpers/deno-template
+e2e/helpers/deno-template
 packages/remix-deno
 templates/deno
 

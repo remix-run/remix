@@ -1,7 +1,7 @@
 {
   "files": [],
   "references": [
-    { "path": "integration" },
+    { "path": "e2e" },
     { "path": "packages/create-remix" },
     { "path": "packages/remix" },
     { "path": "packages/remix-architect" },
