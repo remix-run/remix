@@ -30,6 +30,7 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: "yarn"
+          cache-dependency-path: yarn.lock
 
       - name: 📥 Install deps
         shell: bash
@@ -78,6 +79,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+          cache-dependency-path: yarn.lock
 
       - name: 📥 Install deps
         shell: bash
@@ -109,6 +111,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+          cache-dependency-path: yarn.lock
 
       - name: 📥 Install deps
         shell: bash
@@ -167,6 +170,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+          cache-dependency-path: yarn.lock
 
       - name: 📥 Install deps
         shell: bash
@@ -225,6 +229,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+          cache-dependency-path: yarn.lock
 
       - name: 📥 Install deps
         shell: bash
