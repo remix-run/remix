@@ -19,8 +19,8 @@ test.beforeAll(async () => {
           };
         }
 
-        export async function clientAction({ next }) {
-          const response = await next();
+        export async function clientAction({ serverFetch }) {
+          const response = await serverFetch();
           const data = await response.json();
           return {
             ...data,

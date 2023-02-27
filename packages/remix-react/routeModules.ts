@@ -37,7 +37,7 @@ export interface RouteModule {
 export interface ClientDataFunctionArgs {
   request: Request;
   params: Params;
-  next: () => Promise<Response | DeferredData | null>;
+  serverFetch: () => Promise<Response | DeferredData | null>;
 }
 
 /**

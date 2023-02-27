@@ -32,8 +32,8 @@ test.beforeAll(async () => {
           };
         }
 
-        export async function clientLoader({ next }) {
-          const response = await next();
+        export async function clientLoader({ serverFetch }) {
+          const response = await serverFetch();
           const data = await response.json();
           return {
             ...data,
@@ -63,8 +63,8 @@ test.beforeAll(async () => {
           });
         }
 
-        export async function clientLoader({ next }) {
-          const deferred = await next();
+        export async function clientLoader({ serverFetch }) {
+          const deferred = await serverFetch();
           deferred.data.client = "yes";
           return deferred;
         }
@@ -88,7 +88,7 @@ test.beforeAll(async () => {
           import { useEffect } from "react";
           import { useLoaderData, useRevalidator } from "@remix-run/react";
   
-          export async function clientLoader({ next }) {
+          export async function clientLoader() {
             return {
               title: "Hello from client",
               client: "yes",

@@ -14,6 +14,7 @@ import {
   isCatchResponse,
   isDeferredResponse,
   isRedirectResponse,
+  isRedirectStatusCode,
   parseDeferredReadableStream,
 } from "./data";
 import type { FutureConfig } from "./entry";
@@ -174,6 +175,26 @@ async function loadRouteModuleWithBlockingLinks(
   return routeModule;
 }
 
+async function handleDataResult(result: Response | Error) {
+  if (result instanceof Error) {
+    throw result;
+  }
+
+  if (isRedirectResponse(result)) {
+    throw getRedirect(result);
+  }
+
+  if (isCatchResponse(result)) {
+    throw result;
+  }
+
+  if (isDeferredResponse(result) && result.body) {
+    return await parseDeferredReadableStream(result.body);
+  }
+
+  return result;
+}
+
 function createDataFunction(
   route: EntryRoute,
   routeModules: RouteModules,
@@ -192,23 +213,7 @@ function createDataFunction(
 
     let result = await fetchData(request, route.id);
 
-    if (result instanceof Error) {
-      throw result;
-    }
-
-    if (isRedirectResponse(result)) {
-      throw getRedirect(result);
-    }
-
-    if (isCatchResponse(result)) {
-      throw result;
-    }
-
-    if (isDeferredResponse(result) && result.body) {
-      return await parseDeferredReadableStream(result.body);
-    }
-
-    return result;
+    return await handleDataResult(result);
   };
 
   return async ({ request, params }) => {
@@ -226,30 +231,14 @@ function createDataFunction(
         : undefined;
 
       let result = clientDataFunction
-        ? clientDataFunction({
+        ? await clientDataFunction({
             request,
             params,
-            next: () => doFetch(request),
+            serverFetch: () => doFetch(request),
           })
         : await doFetch(request);
 
-      if (result instanceof Error) {
-        throw result;
-      }
-
-      if (isRedirectResponse(result)) {
-        throw getRedirect(result);
-      }
-
-      if (isCatchResponse(result)) {
-        throw result;
-      }
-
-      if (isDeferredResponse(result) && result.body) {
-        return await parseDeferredReadableStream(result.body);
-      }
-
-      return result;
+      return await handleDataResult(result);
     } finally {
       await routeModulePromise;
     }
@@ -257,7 +246,7 @@ function createDataFunction(
 }
 
 function getRedirect(response: Response): Response {
-  if (response.status >= 300 && response.status < 400) {
+  if (isRedirectStatusCode(response.status)) {
     return response;
   }
 

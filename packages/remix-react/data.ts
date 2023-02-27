@@ -26,11 +26,17 @@ export function isErrorResponse(response: any): boolean {
   );
 }
 
+const redirectStatusCodes = new Set([301, 302, 303, 307, 308]);
+
+export function isRedirectStatusCode(statusCode: number): boolean {
+  return redirectStatusCodes.has(statusCode);
+}
+
 export function isRedirectResponse(response: any): boolean {
   return (
     response instanceof Response &&
     (response.headers.get("X-Remix-Redirect") != null ||
-      (response.status >= 300 && response.status < 400))
+      isRedirectStatusCode(response.status))
   );
 }
 

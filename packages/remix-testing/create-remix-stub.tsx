@@ -149,5 +149,7 @@ function convertToEntryRoute(
     module: "",
     hasCatchBoundary: false,
     hasErrorBoundary: false,
+    hasClientAction: false,
+    hasClientLoader: false,
   };
 }
