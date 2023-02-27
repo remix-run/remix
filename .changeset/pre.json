@@ -22,6 +22,7 @@
     "@remix-run/vercel": "1.13.0"
   },
   "changesets": [
+    "afraid-tigers-occur",
     "few-parents-leave",
     "flat-routes-route-fixes",
     "heavy-jars-accept",
