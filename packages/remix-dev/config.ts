@@ -616,7 +616,7 @@ export async function readConfig(
   }
 
   if (tsconfigPath) {
-    writeConfigDefaults(tsconfigPath);
+    await writeConfigDefaults(tsconfigPath);
   }
 
   let future: FutureConfig = {
