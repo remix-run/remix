@@ -153,7 +153,7 @@ export async function parseDeferredReadableStream(
 
         for (let [key, resolver] of Object.entries(deferredResolvers)) {
           resolver.reject(
-            new AbortedDeferredError(`Deferred ${key} will never resolved`)
+            new AbortedDeferredError(`Deferred ${key} will never be resolved`)
           );
         }
       } catch (error) {
