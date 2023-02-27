@@ -227,7 +227,7 @@ jobs:
       - name: 👀 Get installed Playwright version
         shell: bash
         id: playwright-version
-        run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_ENV
+        run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $env:GITHUB_ENV
 
       - name: 📤 Restore playwright binaries
         uses: actions/cache@v3
@@ -235,7 +235,7 @@ jobs:
         with:
           path: |
             %USERPROFILE%\AppData\Local\ms-playwright
-          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
+          key: ${{ runner.os }}-playwright-${{ $env:PLAYWRIGHT_VERSION }}
 
       - name: 📥 Install Playwright
         shell: bash
@@ -246,7 +246,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./build
-          key: remix-build-${{ env.date }}
+          key: remix-build-${{ $env:date }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         shell: bash
