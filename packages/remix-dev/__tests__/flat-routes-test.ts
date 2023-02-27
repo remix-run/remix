@@ -640,9 +640,7 @@ describe("flatRoutes", () => {
       let routes = Object.values(routeManifest);
 
       expect(routes).toHaveLength(testFiles.length);
-      expect(consoleError).not.toHaveBeenCalledWith(
-        getRouteConflictErrorMessage("/:username", testFiles)
-      );
+      expect(consoleError).not.toHaveBeenCalled();
     });
   });
 
