@@ -22,12 +22,15 @@
     "@remix-run/vercel": "1.13.0"
   },
   "changesets": [
+    "afraid-tigers-occur",
+    "eighty-toes-rhyme",
     "few-parents-leave",
     "flat-routes-route-fixes",
     "heavy-jars-accept",
     "hmr",
     "new-bulldogs-allow",
     "old-deers-kneel",
+    "red-kids-look",
     "tidy-doors-judge",
     "tidy-singers-battle",
     "twelve-seahorses-arrive",
