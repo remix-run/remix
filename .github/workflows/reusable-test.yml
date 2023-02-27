@@ -37,6 +37,17 @@ jobs:
       - name: 🏗 Build
         run: yarn build
 
+      - name: Get Date
+        id: get_date
+        run: echo "date=$(/bin/date -u "+%s")" >> $GITHUB_ENV
+        shell: bash
+
+      - name: 📤 Cache build
+        uses: actions/cache@v2
+        with:
+          path: ./build
+          key: ${{ runner.os }}-build-${{ env.get_date.date }}
+
   test:
     name: "🧪 Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }})"
     strategy:
@@ -69,7 +80,7 @@ jobs:
         run: yarn build
 
       - name: 🧪 Run Primary Tests
-        run: "yarn test:primary"
+        run: yarn test:primary
 
   ubuntu-integration:
     name: '👀 Integration Test: (OS: "ubuntu-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
@@ -99,8 +110,17 @@ jobs:
       - name: 📥 Install Playwright
         run: npx playwright install --with-deps
 
+      - name: 📥 Restore build
+        uses: actions/cache@v2
+        with:
+          path: ./build
+          key: ${{ runner.os }}-build-${{ env.get_date.date }}
+
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
-        run: "yarn test:integration --project=${{ matrix.browser }}"
+        run: |
+          npm pkg delete pretest:integration
+          npm pkg delete posttest:integration
+          yarn test:integration --project=${{ matrix.browser }}
 
   macos-integration:
     name: '👀 Integration Test: (OS: "macos-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
@@ -130,8 +150,17 @@ jobs:
       - name: 📥 Install Playwright
         run: npx playwright install --with-deps
 
+      - name: 📥 Restore build
+        uses: actions/cache@v2
+        with:
+          path: ./build
+          key: ${{ runner.os }}-build-${{ env.get_date.date }}
+
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
-        run: "yarn test:integration --project=${{ matrix.browser }}"
+        run: |
+          npm pkg delete pretest:integration
+          npm pkg delete posttest:integration
+          yarn test:integration --project=${{ matrix.browser }}
 
   windows-integration:
     name: '👀 Integration Test: (OS: "windows-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
@@ -161,5 +190,14 @@ jobs:
       - name: 📥 Install Playwright
         run: npx playwright install --with-deps
 
+      - name: 📥 Restore build
+        uses: actions/cache@v2
+        with:
+          path: ./build
+          key: ${{ runner.os }}-build-${{ env.get_date.date }}
+
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
-        run: "yarn test:integration --project=${{ matrix.browser }}"
+        run: |
+          npm pkg delete pretest:integration
+          npm pkg delete posttest:integration
+          yarn test:integration --project=${{ matrix.browser }}
