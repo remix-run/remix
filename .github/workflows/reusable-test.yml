@@ -39,7 +39,7 @@ jobs:
 
       - name: 📅 Get Date
         id: get_date
-        run: echo "date=$(/bin/date -u "+%s")" >> $GITHUB_ENV
+        run: echo "date=$(/bin/date -u +%s)" >> $GITHUB_ENV
         shell: bash
 
       - name: 📤 Cache build
@@ -80,6 +80,7 @@ jobs:
 
   ubuntu-integration:
     name: '👀 Integration Test: (OS: "ubuntu-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
+    needs: [build]
     strategy:
       fail-fast: false
       matrix:
@@ -120,6 +121,7 @@ jobs:
 
   macos-integration:
     name: '👀 Integration Test: (OS: "macos-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
+    needs: [build]
     strategy:
       fail-fast: false
       matrix:
@@ -160,6 +162,7 @@ jobs:
 
   windows-integration:
     name: '👀 Integration Test: (OS: "windows-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
+    needs: [build]
     strategy:
       fail-fast: false
       matrix:
