@@ -43,7 +43,7 @@ jobs:
         shell: bash
 
       - name: 📤 Cache build
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ./build
           key: ${{ runner.os }}-build-${{ env.get_date.date }}
@@ -107,7 +107,7 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: 📥 Restore build
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ./build
           key: ${{ runner.os }}-build-${{ env.get_date.date }}
@@ -147,7 +147,7 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: 📥 Restore build
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ./build
           key: ${{ runner.os }}-build-${{ env.get_date.date }}
@@ -187,7 +187,7 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: 📥 Restore build
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ./build
           key: ${{ runner.os }}-build-${{ env.get_date.date }}
