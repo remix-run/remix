@@ -45,7 +45,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./build
-          key: ${{ runner.os }}-build-${{ env.date }}
+          key: remix-build-${{ env.date }}
 
   test:
     name: "🧪 Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }})"
@@ -106,6 +106,7 @@ jobs:
       - name: 👀 Get installed Playwright version
         id: playwright-version
         run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_ENV
+        shell: bash
 
       - name: 📤 Restore playwright binaries
         uses: actions/cache@v3
@@ -123,7 +124,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./build
-          key: ${{ runner.os }}-build-${{ env.date }}
+          key: remix-build-${{ env.date }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: |
@@ -160,6 +161,7 @@ jobs:
       - name: 👀 Get installed Playwright version
         id: playwright-version
         run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_ENV
+        shell: bash
 
       - name: 📤 Restore playwright binaries
         uses: actions/cache@v3
@@ -177,7 +179,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./build
-          key: ${{ runner.os }}-build-${{ env.date }}
+          key: remix-build-${{ env.date }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: |
@@ -231,7 +233,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./build
-          key: ${{ runner.os }}-build-${{ env.date }}
+          key: remix-build-${{ env.date }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: |
