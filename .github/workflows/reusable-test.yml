@@ -38,7 +38,6 @@ jobs:
         run: yarn build
 
       - name: 📅 Get Date
-        id: get_date
         run: echo "date=$(/bin/date -u +%s)" >> $GITHUB_ENV
         shell: bash
 
@@ -46,7 +45,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./build
-          key: ${{ runner.os }}-build-${{ env.get_date.date }}
+          key: ${{ runner.os }}-build-${{ env.date }}
 
   test:
     name: "🧪 Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }})"
@@ -124,7 +123,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./build
-          key: ${{ runner.os }}-build-${{ env.get_date.date }}
+          key: ${{ runner.os }}-build-${{ env.date }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: |
@@ -178,7 +177,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./build
-          key: ${{ runner.os }}-build-${{ env.get_date.date }}
+          key: ${{ runner.os }}-build-${{ env.date }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: |
@@ -232,7 +231,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./build
-          key: ${{ runner.os }}-build-${{ env.get_date.date }}
+          key: ${{ runner.os }}-build-${{ env.date }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: |
