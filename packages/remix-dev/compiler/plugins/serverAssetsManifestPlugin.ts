@@ -3,6 +3,7 @@ import jsesc from "jsesc";
 
 import type { AssetsManifest } from "../../compiler/assets";
 import { assetsManifestVirtualModule } from "../../compiler/virtualModules";
+import type { RouteManifest } from "../../config/routes";
 
 /**
  * Creates a virtual module called `@remix-run/dev/assets-manifest` that exports
@@ -10,7 +11,8 @@ import { assetsManifestVirtualModule } from "../../compiler/virtualModules";
  * assets manifest in the server build.
  */
 export function serverAssetsManifestPlugin(
-  assetsManifestPromise: Promise<AssetsManifest>
+  assetsManifestPromise: Promise<AssetsManifest>,
+  routes: RouteManifest
 ): Plugin {
   let filter = assetsManifestVirtualModule.filter;
 
@@ -25,7 +27,16 @@ export function serverAssetsManifestPlugin(
       });
 
       build.onLoad({ filter }, async () => {
-        let assetsManifest = await assetsManifestPromise;
+        // Filter out the routes that are not in this bundle
+        let assetsManifest = { ...(await assetsManifestPromise) };
+        let assetsManifestRoutes = { ...assetsManifest.routes };
+        for (let id in assetsManifestRoutes) {
+          if (!(id in routes)) {
+            delete assetsManifestRoutes[id];
+          }
+        }
+        assetsManifest.routes = assetsManifestRoutes;
+
         return {
           contents: `export default ${jsesc(assetsManifest, { es6: true })};`,
           loader: "js",

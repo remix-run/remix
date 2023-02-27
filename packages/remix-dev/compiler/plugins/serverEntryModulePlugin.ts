@@ -1,6 +1,7 @@
 import type { Plugin } from "esbuild";
 
 import type { RemixConfig } from "../../config";
+import type { RouteManifest } from "../../config/routes";
 import {
   serverBuildVirtualModule,
   assetsManifestVirtualModule,
@@ -14,6 +15,7 @@ import {
  */
 export function serverEntryModulePlugin(
   config: RemixConfig,
+  routes: RouteManifest,
   options: { liveReloadPort?: number } = {}
 ): Plugin {
   let filter = serverBuildVirtualModule.filter;
@@ -34,11 +36,11 @@ export function serverEntryModulePlugin(
           loader: "js",
           contents: `
 import * as entryServer from ${JSON.stringify(`./${config.entryServerFile}`)};
-${Object.keys(config.routes)
+${Object.keys(routes)
   .map((key, index) => {
     // IMPORTANT: Any values exported from this generated module must also be
     // typed in `packages/remix-dev/server-build.ts` to avoid tsc errors.
-    let route = config.routes[key];
+    let route = routes[key];
     return `import * as route${index} from ${JSON.stringify(
       `./${route.file}`
     )};`;
@@ -61,9 +63,9 @@ ${Object.keys(config.routes)
       : ""
   }
   export const routes = {
-    ${Object.keys(config.routes)
+    ${Object.keys(routes)
       .map((key, index) => {
-        let route = config.routes[key];
+        let route = routes[key];
         return `${JSON.stringify(key)}: {
       id: ${JSON.stringify(route.id)},
       parentId: ${JSON.stringify(route.parentId)},
