@@ -32,14 +32,16 @@ jobs:
           cache: "yarn"
 
       - name: 📥 Install deps
+        shell: bash
         run: yarn --frozen-lockfile
 
       - name: 🏗 Build
+        shell: bash
         run: yarn build
 
       - name: 📅 Get Date
-        run: echo "date=$(/bin/date -u +%s)" >> $GITHUB_ENV
         shell: bash
+        run: echo "date=$(/bin/date -u +%s)" >> $GITHUB_ENV
 
       - name: 📤 Cache build
         uses: actions/cache@v3
@@ -72,9 +74,11 @@ jobs:
           cache: "yarn"
 
       - name: 📥 Install deps
+        shell: bash
         run: yarn --frozen-lockfile
 
       - name: 🧪 Run Primary Tests
+        shell: bash
         run: yarn test:primary
 
   ubuntu-integration:
@@ -101,12 +105,13 @@ jobs:
           cache: "yarn"
 
       - name: 📥 Install deps
+        shell: bash
         run: yarn --frozen-lockfile
 
       - name: 👀 Get installed Playwright version
+        shell: bash
         id: playwright-version
         run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_ENV
-        shell: bash
 
       - name: 📤 Restore playwright binaries
         uses: actions/cache@v3
@@ -117,6 +122,7 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
 
       - name: 📥 Install Playwright
+        shell: bash
         run: npx playwright install --with-deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
 
@@ -127,6 +133,7 @@ jobs:
           key: remix-build-${{ env.date }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
+        shell: bash
         run: |
           npm pkg delete scripts.pretest:integration
           npm pkg delete scripts.posttest:integration
@@ -156,12 +163,13 @@ jobs:
           cache: "yarn"
 
       - name: 📥 Install deps
+        shell: bash
         run: yarn --frozen-lockfile
 
       - name: 👀 Get installed Playwright version
+        shell: bash
         id: playwright-version
         run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_ENV
-        shell: bash
 
       - name: 📤 Restore playwright binaries
         uses: actions/cache@v3
@@ -172,6 +180,7 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
 
       - name: 📥 Install Playwright
+        shell: bash
         run: npx playwright install --with-deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
 
@@ -182,6 +191,7 @@ jobs:
           key: remix-build-${{ env.date }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
+        shell: bash
         run: |
           npm pkg delete scripts.pretest:integration
           npm pkg delete scripts.posttest:integration
@@ -211,9 +221,11 @@ jobs:
           cache: "yarn"
 
       - name: 📥 Install deps
+        shell: bash
         run: yarn --frozen-lockfile
 
       - name: 👀 Get installed Playwright version
+        shell: bash
         id: playwright-version
         run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_ENV
 
@@ -226,6 +238,7 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
 
       - name: 📥 Install Playwright
+        shell: bash
         run: npx playwright install --with-deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
 
@@ -236,6 +249,7 @@ jobs:
           key: remix-build-${{ env.date }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
+        shell: bash
         run: |
           npm pkg delete scripts.pretest:integration
           npm pkg delete scripts.posttest:integration
