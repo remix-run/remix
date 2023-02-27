@@ -107,7 +107,7 @@ jobs:
         id: playwright-version
         run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_ENV
 
-      - name: 📤 Cache playwright binaries
+      - name: 📤 Restore playwright binaries
         uses: actions/cache@v3
         id: playwright-cache
         with:
@@ -159,9 +159,9 @@ jobs:
 
       - name: 👀 Get installed Playwright version
         id: playwright-version
-        run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('./package-lock.json').dependencies['@playwright/test'].version)")" >> $GITHUB_ENV
+        run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_ENV
 
-      - name: 📤 Cache playwright binaries
+      - name: 📤 Restore playwright binaries
         uses: actions/cache@v3
         id: playwright-cache
         with:
@@ -213,9 +213,9 @@ jobs:
 
       - name: 👀 Get installed Playwright version
         id: playwright-version
-        run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('./package-lock.json').dependencies['@playwright/test'].version)")" >> $GITHUB_ENV
+        run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_ENV
 
-      - name: 📤 Cache playwright binaries
+      - name: 📤 Restore playwright binaries
         uses: actions/cache@v3
         id: playwright-cache
         with:
