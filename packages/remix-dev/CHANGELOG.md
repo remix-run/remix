@@ -1,5 +1,13 @@
 # `@remix-run/dev`
 
+## 1.14.0-pre.2
+
+### Patch Changes
+
+- chore(remix-dev): remove broken param collision check ([#5560](https://github.com/remix-run/remix/pull/5560))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.14.0-pre.2`
+
 ## 1.14.0-pre.1
 
 ### Patch Changes
