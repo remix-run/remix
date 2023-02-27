@@ -37,7 +37,7 @@ jobs:
       - name: 🏗 Build
         run: yarn build
 
-      - name: Get Date
+      - name: 📅 Get Date
         id: get_date
         run: echo "date=$(/bin/date -u "+%s")" >> $GITHUB_ENV
         shell: bash
@@ -74,10 +74,6 @@ jobs:
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
-
-      # It's faster to use the built `cli.js` in tests if its available and up-to-date
-      - name: 🏗 Build
-        run: yarn build
 
       - name: 🧪 Run Primary Tests
         run: yarn test:primary
