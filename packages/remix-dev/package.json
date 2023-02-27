@@ -88,13 +88,18 @@
     "shelljs": "^0.8.5",
     "strip-ansi": "^6.0.1",
     "tiny-invariant": "^1.2.0",
-    "type-fest": "^2.16.0"
+    "type-fest": "^2.16.0",
+    "typescript": "^4.7.4"
   },
   "peerDependencies": {
-    "@remix-run/serve": "^1.14.1"
+    "@remix-run/serve": "^1.14.1",
+    "typescript": ">=^3.0.0"
   },
   "peerDependenciesMeta": {
     "@remix-run/serve": {
+      "optional": true
+    },
+    "typescript": {
       "optional": true
     }
   },
