@@ -37,11 +37,17 @@ jobs:
 
       - name: 🏗 Build
         shell: bash
-        run: yarn build
+        if: runner.os == 'Windows'
+        run: |
+          yarn build
+          echo "date=$(/bin/date -u +%s)" >> $env:GITHUB_ENV
 
-      - name: 📅 Get Date
+      - name: 🏗 Build
         shell: bash
-        run: echo "date=$(/bin/date -u +%s)" >> $GITHUB_ENV
+        if: runner.os != 'Windows'
+        run: |
+          yarn build
+          echo "date=$(/bin/date -u +%s)" >> $GITHUB_ENV
 
       - name: 📤 Cache build
         uses: actions/cache@v3
