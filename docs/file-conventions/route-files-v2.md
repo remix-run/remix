@@ -324,7 +324,7 @@ routes/
   app_.projects.$id.roadmap.tsx
 ```
 
-Some, or all of them can be folders holding their own modules inside.
+Some, or all of them can be folders holding their own `route` module inside.
 
 ```
 routes/
@@ -359,7 +359,7 @@ routes/
   contact-us.tsx
 ```
 
-Note that the `route.tsx` file is the actual route module, the rest are ignored by the convention.
+Note that when you turn a route module into a folder, the route module becomes `folder/route.tsx`, all other modules in the folder will not become routes. For example:
 
 ```
 # these are the same route:
