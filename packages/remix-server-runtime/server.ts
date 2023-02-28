@@ -336,6 +336,9 @@ async function handleDocumentRequestRR(
         entryContext
       );
     } catch (error: any) {
+      if (serverMode !== ServerMode.Test && !request.signal.aborted) {
+        console.error(error);
+      }
       return returnLastResortErrorResponse(error, serverMode);
     }
   }
@@ -369,6 +372,9 @@ async function handleResourceRequestRR(
       error.headers.set("X-Remix-Catch", "yes");
       return error;
     }
+    if (serverMode !== ServerMode.Test && !request.signal.aborted) {
+      console.error(error);
+    }
     return returnLastResortErrorResponse(error, serverMode);
   }
 }
@@ -383,10 +389,6 @@ async function errorBoundaryError(error: Error, status: number) {
 }
 
 function returnLastResortErrorResponse(error: any, serverMode?: ServerMode) {
-  if (serverMode !== ServerMode.Test) {
-    console.error(error);
-  }
-
   let message = "Unexpected Server Error";
 
   if (serverMode !== ServerMode.Production) {
