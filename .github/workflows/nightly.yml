@@ -33,12 +33,25 @@ jobs:
           token: ${{ secrets.NIGHTLY_PAT }}
           fetch-depth: 0
 
+      - name: 🕵️ Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - name: 📤 Cache node_modules
+        id: yarn-cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
+          # this is for the *global* cache, and not `node_modules`
           cache: "yarn"
-          cache-dependency-path: yarn.lock
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile

@@ -25,19 +25,36 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
+      - name: 🕵️ Get yarn cache directory path
+        if: runner.os != 'Windows'
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - name: 🕵️ Get yarn cache directory path (Windows)
+        if: runner.os == 'Windows'
+        id: yarn-cache-dir-path-windows
+        run: echo "dir=$(yarn cache dir)" >> ${env:GITHUB_OUTPUT}
+
+      - name: 📤 Cache node_modules
+        id: yarn-cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ runner.os == 'Windows' && steps.yarn-cache-dir-path-windows.outputs.dir || steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
+          # this is for the *global* cache, and not `node_modules`
           cache: "yarn"
-          cache-dependency-path: yarn.lock
 
       - name: 📥 Install deps
-        shell: bash
         run: yarn --frozen-lockfile
 
       - name: 🏗 Build
-        shell: bash
         run: yarn build
 
       - name: 📤 Cache build
@@ -64,19 +81,30 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: ⎔ Setup node ${{ matrix.node }}
+      - name: 🕵️ Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
+
+      - name: 📤 Cache node_modules
+        id: yarn-cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
-          node-version: ${{ matrix.node }}
+          node-version-file: ".nvmrc"
+          # this is for the *global* cache, and not `node_modules`
           cache: "yarn"
-          cache-dependency-path: yarn.lock
 
       - name: 📥 Install deps
-        shell: bash
         run: yarn --frozen-lockfile
 
       - name: 🧪 Run Primary Tests
-        shell: bash
         run: yarn test:primary
 
   ubuntu-integration:
@@ -96,19 +124,23 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: ⎔ Setup node ${{ matrix.node }}
+      - name: 📤 Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
+          # this is for the *global* cache, and not `node_modules`
           cache: "yarn"
-          cache-dependency-path: yarn.lock
 
       - name: 📥 Install deps
-        shell: bash
         run: yarn --frozen-lockfile
 
       - name: 👀 Get installed Playwright version
-        shell: bash
         id: playwright-version
         run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_ENV
 
@@ -121,7 +153,6 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
 
       - name: 📥 Install Playwright
-        shell: bash
         run: npx playwright install --with-deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
 
@@ -132,7 +163,6 @@ jobs:
           key: remix-build-${{ github.sha }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
-        shell: bash
         run: |
           npm pkg delete scripts.pretest:integration
           npm pkg delete scripts.posttest:integration
@@ -155,19 +185,23 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: ⎔ Setup node ${{ matrix.node }}
+      - name: 📤 Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
+          # this is for the *global* cache, and not `node_modules`
           cache: "yarn"
-          cache-dependency-path: yarn.lock
 
       - name: 📥 Install deps
-        shell: bash
         run: yarn --frozen-lockfile
 
       - name: 👀 Get installed Playwright version
-        shell: bash
         id: playwright-version
         run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_ENV
 
@@ -180,7 +214,6 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
 
       - name: 📥 Install Playwright
-        shell: bash
         run: npx playwright install --with-deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
 
@@ -191,7 +224,6 @@ jobs:
           key: remix-build-${{ github.sha }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
-        shell: bash
         run: |
           npm pkg delete scripts.pretest:integration
           npm pkg delete scripts.posttest:integration
@@ -214,19 +246,23 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: ⎔ Setup node ${{ matrix.node }}
+      - name: 📤 Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
+      - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
+          # this is for the *global* cache, and not `node_modules`
           cache: "yarn"
-          cache-dependency-path: yarn.lock
 
       - name: 📥 Install deps
-        shell: pwsh
         run: yarn --frozen-lockfile
 
       - name: 👀 Get installed Playwright version
-        shell: pwsh
         id: playwright-version
         run: |
           chcp 65001 # set code page to utf-8
@@ -241,7 +277,6 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
 
       - name: 📥 Install Playwright
-        shell: pwsh
         run: npx playwright install --with-deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
 
@@ -252,7 +287,6 @@ jobs:
           key: remix-build-${{ github.sha }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
-        shell: bash
         run: |
           npm pkg delete scripts.pretest:integration
           npm pkg delete scripts.posttest:integration
