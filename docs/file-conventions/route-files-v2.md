@@ -324,7 +324,7 @@ routes/
   app_.projects.$id.roadmap.tsx
 ```
 
-Some, or all of them can be folders holding their own modules inside.
+Some, or all of them can be folders holding their own `route` module inside.
 
 ```
 routes/
@@ -359,7 +359,7 @@ routes/
   contact-us.tsx
 ```
 
-Note that `app/index.tsx` is _not_ the "index route" for `app/`. It is Note's "index module" for the directory `routes/app/`. The index route for `app/` is `app._index/index.tsx`. The only thing that contributes to the route path is the directory name.
+Note that when you turn a route module into a folder, the route module becomes `folder/route.tsx`, all other modules in the folder will not become routes. For example:
 
 ```
 # these are the same route:
