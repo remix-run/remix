@@ -43,6 +43,7 @@
     "fast-glob": "3.2.11",
     "fs-extra": "^10.0.0",
     "get-port": "^5.1.1",
+    "glob": "8.1.0",
     "gunzip-maybe": "^1.4.2",
     "ignore": "5.2.4",
     "inquirer": "^8.2.1",
