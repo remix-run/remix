@@ -101,6 +101,7 @@
     "node": ">=14"
   },
   "files": [
+    "cli.js",
     "dist/",
     "compiler/shims/",
     "server-build.js",
