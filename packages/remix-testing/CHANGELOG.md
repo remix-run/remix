@@ -4,11 +4,11 @@
 
 ### Patch Changes
 
-- Bump to `@remix-run/router@1.3.3` and `react-router-dom@8.6.2` ([#5594](https://github.com/remix-run/remix/pull/5594))
-- Bump to latest router versions ([`09873cb02`](https://github.com/remix-run/remix/commit/09873cb029e384954aa83e7d78c4bc40f1a16e26))
 - Updated dependencies:
   - `@remix-run/react@1.14.0`
   - `@remix-run/node@1.14.0`
+  - `@remix-run/router@1.3.3`
+  - `react-router-dom@8.6.2`
 
 ## 1.13.0
 
