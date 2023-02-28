@@ -1,22 +1,6 @@
 # `@remix-run/dev`
 
-## 1.14.0-pre.2
-
-### Patch Changes
-
-- chore(remix-dev): remove broken param collision check ([#5560](https://github.com/remix-run/remix/pull/5560))
-- Restore bug-report-test.ts (Can be removed from final release notes) ([#5590](https://github.com/remix-run/remix/pull/5590))
-- Updated dependencies:
-  - `@remix-run/server-runtime@1.14.0-pre.2`
-
-## 1.14.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/server-runtime@1.14.0-pre.1`
-
-## 1.14.0-pre.0
+## 1.14.0
 
 ### Minor Changes
 
@@ -42,6 +26,8 @@
   - Loader changes do not account for imported dependencies changing
 
 ### Patch Changes
+
+- chore(remix-dev): remove broken param collision check ([#5560](https://github.com/remix-run/remix/pull/5560))
 
 - fixes flat route inconsistencies where `route.{ext}` wasn't always being treated like `index.{ext}` when used in a folder ([#5459](https://github.com/remix-run/remix/pull/5459))
 
@@ -75,12 +61,16 @@
   ⭕️ routes/_index.tsx
   ```
 
+- Restore bug-report-test.ts (Can be removed from final release notes) ([#5590](https://github.com/remix-run/remix/pull/5590))
+
 - Log errors thrown during initial build in development. ([#5441](https://github.com/remix-run/remix/pull/5441))
+
 - sync `FutureConfig` interface between packages ([#5398](https://github.com/remix-run/remix/pull/5398))
+
 - Add file loader for importing `.csv` files ([#3920](https://github.com/remix-run/remix/pull/3920))
+
 - Updated dependencies:
-  - `@remix-run/serve@1.14.0-pre.0`
-  - `@remix-run/server-runtime@1.14.0-pre.0`
+  - `@remix-run/server-runtime@1.14.0`
 
 ## 1.13.0
 

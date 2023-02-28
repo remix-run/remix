@@ -1,18 +1,6 @@
 # `@remix-run/react`
 
-## 1.14.0-pre.2
-
-### Patch Changes
-
-- Bump to `@remix-run/router@1.3.3` and `react-router-dom@8.6.2` ([#5594](https://github.com/remix-run/remix/pull/5594))
-
-## 1.14.0-pre.1
-
-### Patch Changes
-
-- Bump to latest router versions ([`09873cb02`](https://github.com/remix-run/remix/commit/09873cb029e384954aa83e7d78c4bc40f1a16e26))
-
-## 1.14.0-pre.0
+## 1.14.0
 
 ### Minor Changes
 
@@ -35,7 +23,9 @@
 
 ### Patch Changes
 
+- Bump to `@remix-run/router@1.3.3` and `react-router-dom@8.6.2` ([#5594](https://github.com/remix-run/remix/pull/5594))
 - remove duplicate manifest imports ([#5534](https://github.com/remix-run/remix/pull/5534))
+- Bump to latest router versions ([`09873cb02`](https://github.com/remix-run/remix/commit/09873cb029e384954aa83e7d78c4bc40f1a16e26))
 - Ensure types for fetchers always include form\* submission fields ([#5476](https://github.com/remix-run/remix/pull/5476))
 - sync `FutureConfig` interface between packages ([#5398](https://github.com/remix-run/remix/pull/5398))
 
