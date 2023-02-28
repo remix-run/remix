@@ -45,6 +45,7 @@
     "changeset": "changeset",
     "changeset:version": "changeset version && node ./scripts/remove-prerelease-changelogs.mjs && node ./scripts/patchup-version.mjs",
     "changeset:release": "yarn build --tsc --publish && changeset publish",
+    "build:vercel": "yarn clean:build && yarn build --tsc --publish",
     "version": "node ./scripts/version.js",
     "version:experimental": "node ./scripts/version.js experimental",
     "watch": "rollup -c --watch --watch.onEnd=\"node scripts/copy-build-to-dist.mjs\"",
