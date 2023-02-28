@@ -25,6 +25,13 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          # this is for the *global* cache, and not `node_modules`
+          cache: "yarn"
+
       - name: 🕵️ Get yarn cache directory path
         id: yarn-cache-dir-path
         run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
@@ -37,13 +44,6 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
-
-      - name: ⎔ Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version-file: ".nvmrc"
-          # this is for the *global* cache, and not `node_modules`
-          cache: "yarn"
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
@@ -75,6 +75,13 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          # this is for the *global* cache, and not `node_modules`
+          cache: "yarn"
+
       - name: 🕵️ Get yarn cache directory path
         if: runner.os != 'Windows'
         id: yarn-cache-dir-path
@@ -93,13 +100,6 @@ jobs:
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-yarn-
-
-      - name: ⎔ Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version-file: ".nvmrc"
-          # this is for the *global* cache, and not `node_modules`
-          cache: "yarn"
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
@@ -124,18 +124,18 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: 📤 Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: "**/node_modules"
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
           # this is for the *global* cache, and not `node_modules`
           cache: "yarn"
+
+      - name: 📤 Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
@@ -185,18 +185,18 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: 📤 Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: "**/node_modules"
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
           # this is for the *global* cache, and not `node_modules`
           cache: "yarn"
+
+      - name: 📤 Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
@@ -246,18 +246,18 @@ jobs:
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: 📤 Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: "**/node_modules"
-          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
-
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
           # this is for the *global* cache, and not `node_modules`
           cache: "yarn"
+
+      - name: 📤 Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: "**/node_modules"
+          key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
