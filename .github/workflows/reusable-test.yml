@@ -37,25 +37,14 @@ jobs:
         run: yarn --frozen-lockfile
 
       - name: 🏗 Build
-        shell: pwsh
-        if: runner.os == 'Windows'
-        run: |
-          yarn build
-          chcp 65001 # set code page to utf-8
-          echo ("date=" + (Get-Date -Date ((Get-Date).DateTime) -UFormat %s)) >> $env:GITHUB_ENV
-
-      - name: 🏗 Build
         shell: bash
-        if: runner.os != 'Windows'
-        run: |
-          yarn build
-          echo "date=$(/bin/date -u +%s)" >> $GITHUB_ENV
+        run: yarn build
 
       - name: 📤 Cache build
         uses: actions/cache@v3
         with:
           path: ./build
-          key: remix-build-${{ env.date }}
+          key: remix-build-${{ github.sha }}
 
   test:
     name: "🧪 Test: (OS: ${{ matrix.os }} Node: ${{ matrix.node }})"
@@ -140,7 +129,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./build
-          key: remix-build-${{ env.date }}
+          key: remix-build-${{ github.sha }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         shell: bash
@@ -199,7 +188,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./build
-          key: remix-build-${{ env.date }}
+          key: remix-build-${{ github.sha }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         shell: bash
@@ -260,7 +249,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./build
-          key: remix-build-${{ env.date }}
+          key: remix-build-${{ github.sha }}
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         shell: bash
