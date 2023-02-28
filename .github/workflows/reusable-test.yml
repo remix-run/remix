@@ -37,11 +37,12 @@ jobs:
         run: yarn --frozen-lockfile
 
       - name: 🏗 Build
-        shell: bash
+        shell: pwsh
         if: runner.os == 'Windows'
         run: |
           yarn build
-          echo "date=$(/bin/date -u +%s)" >> $env:GITHUB_ENV
+          chcp 65001 # set code page to utf-8
+          echo ("date=" + (Get-Date -Date ((Get-Date).DateTime) -UFormat %s)) >> $env:GITHUB_ENV
 
       - name: 🏗 Build
         shell: bash
@@ -232,13 +233,15 @@ jobs:
           cache-dependency-path: yarn.lock
 
       - name: 📥 Install deps
-        shell: bash
+        shell: pwsh
         run: yarn --frozen-lockfile
 
       - name: 👀 Get installed Playwright version
-        shell: bash
+        shell: pwsh
         id: playwright-version
-        run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $env:GITHUB_ENV
+        run: |
+          chcp 65001 # set code page to utf-8
+          echo ("PLAYWRIGHT_VERSION=" + (node -e "console.log(require('@playwright/test/package.json').version)")) >> $env:GITHUB_ENV
 
       - name: 📤 Restore playwright binaries
         uses: actions/cache@v3
@@ -249,7 +252,7 @@ jobs:
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
 
       - name: 📥 Install Playwright
-        shell: bash
+        shell: pwsh
         run: npx playwright install --with-deps
         if: steps.playwright-cache.outputs.cache-hit != 'true'
 
