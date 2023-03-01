@@ -51,7 +51,7 @@ export const meta: MetaFunction = () => ({
 
   // name => content
   description: "Delicious shakes", // <meta name="description" content="Delicious shakes">
-  viewport: "width=device-width,initial-scale=1", // <meta name="viewport" content="width=device-width,initial-scale=1">
+  viewport: "width=device-width, initial-scale=1", // <meta name="viewport" content="width=device-width, initial-scale=1">
 
   // <meta {...value}>
   refresh: {
@@ -254,7 +254,7 @@ export const meta: V2_MetaFunction = () => {
   return [
     {
       name: "viewport",
-      content: "width=device-width,initial-scale=1",
+      content: "width=device-width, initial-scale=1",
     },
     { title: "New Remix App" },
   ];
@@ -296,7 +296,7 @@ export default function Root() {
         <meta charSet="utf-8" />
         <meta
           name="viewport"
-          content="width=device-width,initial-scale=1"
+          content="width=device-width, initial-scale=1"
         />
         <Meta />
         <Links />
