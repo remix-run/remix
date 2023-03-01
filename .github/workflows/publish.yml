@@ -1,0 +1,34 @@
+name: Publish @vercel/remix-run-dev
+on:
+  workflow_dispatch:
+    inputs:
+      version-postfix:
+        type: string
+        description: "Optional version postfix to be added onto the end of the @vercel/remix-run-dev version. Example: `patch.1` will become: `1.13.0-patch.1`"
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+      - name: Install
+        run: yarn --frozen-lockfile
+      - name: Build
+        run : yarn build:vercel
+      - name: Update package
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const script = require('./.github/workflow_scripts/update-package.js');
+            await script({ github, context }, ${{ inputs.version-postfix }});
+      # - name: Publish
+      #   run: # todo
+      #   env:
+      #     NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
