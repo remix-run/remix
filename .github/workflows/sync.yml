@@ -1,0 +1,15 @@
+name: Sync with upstream
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync Repo
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const script = require('./.github/workflow_scripts/sync-repo.js');
+            await script({ github, context });
