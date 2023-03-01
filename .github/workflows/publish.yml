@@ -24,12 +24,19 @@ jobs:
       - name: Build
         run : yarn build:vercel
       - name: Update package
+        id: update-package
         uses: actions/github-script@v6
         with:
           script: |
             const script = require('./.github/workflow_scripts/update-package.js');
-            await script({ github, context }, "${{ inputs.version-postfix }}");
+            return await script({ github, context }, "${{ inputs.version-postfix }}");
       - name: Publish
         run: cd packages/remix-dev && npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
+      - name: Update package
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const script = require('./.github/workflow_scripts/trigger-builder-update.js');
+            await script({ github, context }, "${{ steps.update-package.outputs.result }}");

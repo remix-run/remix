@@ -23,4 +23,6 @@ module.exports = async ({ github, context }, versionPostfix) => {
     }
 
     fs.writeFileSync(packageJSONPath, JSON.stringify(packageJSON, null, 2) + '\n');
+
+    return packageJSON.version
 };
