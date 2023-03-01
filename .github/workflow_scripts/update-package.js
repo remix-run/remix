@@ -2,9 +2,6 @@ const fs = require('fs');
 const path = require('path');
 
 module.exports = async ({ github, context }, versionPostfix) => {
-    console.log(versionPostfix);
-    console.log(__dirname);
-
     const packageJSONPath = path.join(
         __dirname,
         '..',
@@ -18,7 +15,12 @@ module.exports = async ({ github, context }, versionPostfix) => {
 
     packageJSON.name = '@vercel/remix-run-dev'
 
-    if (versionPostfix) {
-        packageJSON.version = `${packageJSON.version}-${versionPostfix}`
+    if (versionPostfix !== "") {
+        if (!/[a-z]+\.\d+/.test(versionPostfix)) {
+            throw new Error(`version-postfix, '${versionPostfix}', is invalid. Must be a word and a number seperated by a '.' character. Example: 'patch.1'`)
+        }
+        packageJSON.version = `${packageJSON.version}-${versionPostfix}`;
     }
+
+    fs.writeFileSync(packageJSONPath, JSON.stringify(packageJSON, null, 2) + '\n');
 };

@@ -16,6 +16,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v3
         with:
+          registry-url: "https://registry.npmjs.org"
           node-version-file: ".nvmrc"
           cache: "yarn"
       - name: Install
@@ -27,8 +28,8 @@ jobs:
         with:
           script: |
             const script = require('./.github/workflow_scripts/update-package.js');
-            await script({ github, context }, ${{ inputs.version-postfix }});
-      # - name: Publish
-      #   run: # todo
-      #   env:
-      #     NPM_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
+            await script({ github, context }, "${{ inputs.version-postfix }}");
+      - name: Publish
+        run: cd packages/remix-dev && npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN_ELEVATED }}
