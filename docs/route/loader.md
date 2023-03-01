@@ -118,7 +118,9 @@ This is the context passed in to your server adapter's `getLoadContext()` functi
 Using the express adapter as an example:
 
 ```js filename=server.js
-const { createRequestHandler } = require("@remix-run/express");
+const {
+  createRequestHandler,
+} = require("@remix-run/express");
 
 app.all(
   "*",
@@ -203,7 +205,10 @@ Here is a full example showing how you can create utility functions that throw r
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import type { ThrownResponse } from "@remix-run/react";
 
-export type InvoiceNotFoundResponse = ThrownResponse<404, string>;
+export type InvoiceNotFoundResponse = ThrownResponse<
+  404,
+  string
+>;
 
 export function getInvoice(id, user) {
   const invoice = db.invoice.find({ where: { id } });
@@ -220,7 +225,9 @@ import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import { getSession } from "./session";
 
 export async function requireUserSession(request) {
-  const session = await getSession(request.headers.get("cookie"));
+  const session = await getSession(
+    request.headers.get("cookie")
+  );
   if (!session) {
     // You can throw our helpers like `redirect` and `json` because they
     // return `Response` objects. A `redirect` response will redirect to
@@ -250,7 +257,10 @@ type ThrownResponses =
   | InvoiceNotFoundResponse
   | ThrownResponse<401, InvoiceCatchData>;
 
-export const loader = async ({ params, request }: LoaderArgs) => {
+export const loader = async ({
+  params,
+  request,
+}: LoaderArgs) => {
   const user = await requireUserSession(request);
   const invoice = getInvoice(params.invoiceId);
 
@@ -278,7 +288,10 @@ export function CatchBoundary() {
       return (
         <div>
           <p>You don't have access to this invoice.</p>
-          <p>Contact {caught.data.invoiceOwnerEmail} to get access</p>
+          <p>
+            Contact {caught.data.invoiceOwnerEmail} to get
+            access
+          </p>
         </div>
       );
     case 404:
@@ -289,7 +302,8 @@ export function CatchBoundary() {
   // This will be caught by the closest `ErrorBoundary`.
   return (
     <div>
-      Something went wrong: {caught.status} {caught.statusText}
+      Something went wrong: {caught.status}{" "}
+      {caught.statusText}
     </div>
   );
 }
