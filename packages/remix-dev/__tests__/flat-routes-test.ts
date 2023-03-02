@@ -3,9 +3,7 @@ import path from "node:path";
 import {
   flatRoutesUniversal,
   getRouteConflictErrorMessage,
-  getRouteInfo,
   getRouteSegments,
-  normalizePath,
 } from "../config/flat-routes";
 import type { ConfigRoute } from "../config/routes";
 
@@ -90,8 +88,8 @@ describe("flatRoutes", () => {
     for (let [input, expected] of tests) {
       it(`"${input}" -> "${expected}"`, () => {
         let fullRoutePath = path.join(APP_DIR, "routes", `${input}.tsx`);
-        let routeInfo = getRouteInfo(APP_DIR, "routes", fullRoutePath);
-        expect(routeInfo.path).toBe(expected);
+        let routeInfo = flatRoutesUniversal(APP_DIR, [fullRoutePath], "routes");
+        expect(routeInfo[input].path).toBe(expected);
       });
     }
 
@@ -600,8 +598,7 @@ describe("flatRoutes", () => {
     ];
 
     let files: [string, ConfigRoute][] = testFiles.map(([file, route]) => {
-      let filepath = normalizePath(file);
-      return [filepath, { ...route, file: filepath }];
+      return [file, { ...route, file }];
     });
 
     let routeManifest = flatRoutesUniversal(
@@ -652,6 +649,7 @@ describe("flatRoutes", () => {
     afterEach(consoleError.mockReset);
 
     test("index files", () => {
+      // we'll add file manually before running the tests
       let testFiles = [
         "routes/_dashboard._index.tsx",
         "routes/_landing._index.tsx",
@@ -660,7 +658,7 @@ describe("flatRoutes", () => {
 
       let routeManifest = flatRoutesUniversal(
         APP_DIR,
-        testFiles.map((file) => path.join(APP_DIR, normalizePath(file)))
+        testFiles.map((file) => path.join(APP_DIR, file))
       );
 
       let routes = Object.values(routeManifest);
@@ -674,11 +672,11 @@ describe("flatRoutes", () => {
 
     test("folder/route.tsx matching folder.tsx", () => {
       // we'll add file manually before running the tests
-      let testFiles = ["routes/dashboard.tsx", "routes/dashboard/route.tsx"];
+      let testFiles = ["routes/dashboard/route.tsx", "routes/dashboard.tsx"];
 
       let routeManifest = flatRoutesUniversal(
         APP_DIR,
-        testFiles.map((file) => path.join(APP_DIR, normalizePath(file)))
+        testFiles.map((file) => path.join(APP_DIR, file))
       );
 
       let routes = Object.values(routeManifest);
@@ -699,7 +697,7 @@ describe("flatRoutes", () => {
 
       let routeManifest = flatRoutesUniversal(
         APP_DIR,
-        testFiles.map((file) => path.join(APP_DIR, normalizePath(file)))
+        testFiles.map((file) => path.join(APP_DIR, file))
       );
 
       let routes = Object.values(routeManifest);

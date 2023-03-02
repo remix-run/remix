@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import globToRegex from "glob-to-regexp";
 
-import type { RouteManifest } from "./routes";
+import type { ConfigRoute, RouteManifest } from "./routes";
 import { findConfig } from "../config";
 import {
   escapeEnd,
@@ -100,7 +100,11 @@ export function flatRoutes(
       let route: string | null = null;
       // If it's a directory, don't recurse into it, instead just look for a route module
       if (entry.isDirectory()) {
-        route = findRouteModuleForFolder(filepath, ignoredFileRegex);
+        route = findRouteModuleForFolder(
+          appDirectory,
+          filepath,
+          ignoredFileRegex
+        );
       } else if (entry.isFile()) {
         route = findRouteModuleForFile(filepath, ignoredFileRegex);
       }
@@ -123,33 +127,54 @@ export function flatRoutesUniversal(
   routes: string[],
   prefix: string = "routes"
 ): RouteManifest {
+  let conflicts = new Map<string, string[]>();
   let routesDirectory = path.join(appDirectory, prefix);
   let routeManifest: RouteManifest = {};
   let prefixLookup = new PrefixLookupTrie();
   routes.sort((a, b) => b.length - a.length);
 
-  for (let route of routes) {
-    let routeExt = path.extname(route);
-    let routeDir = path.dirname(route);
+  let uniqueRouteIds = new Map<string, ConfigRoute>();
+
+  for (let file of routes) {
+    let routeExt = path.extname(file);
+    let routeDir = path.dirname(file);
     let routeId =
       routeDir === routesDirectory
-        ? path.relative(routesDirectory, route).slice(0, -routeExt.length)
+        ? path.relative(appDirectory, file).slice(0, -routeExt.length)
         : path.relative(appDirectory, routeDir);
 
+    let routeIdWithoutPrefix = routeId.slice(prefix.length + 1);
+
     let index = routeId.endsWith("_index");
-    let [segments, raw] = getRouteSegments(routeId);
+    let [segments, raw] = getRouteSegments(routeIdWithoutPrefix);
     let routePath = createRoutePath(segments, raw, index);
 
-    routeManifest[route] = {
-      file: route.slice(appDirectory.length + 1),
+    let route: ConfigRoute = {
+      file: file.slice(appDirectory.length + 1),
       id: routeId,
       path: routePath,
       parentId: "root",
     };
+    if (index) route.index = true;
 
-    if (index) {
-      routeManifest[route].index = true;
+    let conflict = uniqueRouteIds.get(route.id || "/");
+
+    // collect conflicts for later reporting
+    if (conflict) {
+      let currentConflicts = conflicts.get(route.path || "/");
+      if (!currentConflicts) {
+        conflicts.set(route.path || "/", [conflict.file, route.file]);
+      } else {
+        currentConflicts.push(route.file);
+        conflicts.set(route.path || "/", currentConflicts);
+      }
+
+      continue;
     }
+
+    uniqueRouteIds.set(route.id || "/", route);
+
+    routeManifest[file] = route;
 
     let childRoutes = prefixLookup.findAndRemove(routeId);
     prefixLookup.add(routeId);
@@ -162,25 +187,42 @@ export function flatRoutesUniversal(
         let [segments, raw] = getRouteSegments(childRouteId);
         let routePath = createRoutePath(segments, raw, index);
 
-        if (!routeManifest[route]) {
-          console.log(`Could not find parent route for ${fullChildRouteId}`);
-        }
-
-        routeManifest[fullChildRouteId] = {
+        let route: ConfigRoute = {
           file: childRouteFile.slice(appDirectory.length + 1),
           id: fullChildRouteId,
           parentId: routeId,
           path: routePath,
         };
 
-        if (index) {
-          routeManifest[fullChildRouteId].index = true;
+        if (index) route.index = true;
+
+        let conflict = uniqueRouteIds.get(route.id || "/");
+
+        // collect conflicts for later reporting
+        if (conflict) {
+          let currentConflicts = conflicts.get(route.path || "/");
+          if (!currentConflicts) {
+            conflicts.set(route.path || "/", [conflict.file, route.file]);
+          } else {
+            currentConflicts.push(route.file);
+            conflicts.set(route.path || "/", currentConflicts);
+          }
+
+          continue;
         }
+
+        uniqueRouteIds.set(route.id || "/", route);
+        routeManifest[childRouteFile] = route;
       }
     }
   }
 
-  console.log(routeManifest);
+  // report conflicts
+  if (conflicts.size > 0) {
+    for (let [path, files] of conflicts.entries()) {
+      console.error(getRouteConflictErrorMessage(path, files));
+    }
+  }
 
   return routeManifest;
 }
@@ -195,6 +237,7 @@ function findRouteModuleForFile(
 }
 
 function findRouteModuleForFolder(
+  appDirectory: string,
   filepath: string,
   ignoredFileRegex: RegExp[]
 ): string | null {
@@ -205,9 +248,15 @@ function findRouteModuleForFolder(
   let routeRouteModule = findConfig(filepath, "route", routeModuleExts);
 
   if (routeIndexModule && routeRouteModule) {
-    throw new Error(
-      `Found both an index and route module in the same directory: ${filepath}\n` +
-        `Please remove the index module: ${routeIndexModule}`
+    let [segments, raw] = getRouteSegments(
+      path.relative(appDirectory, filepath)
+    );
+    let routePath = createRoutePath(segments, raw, false);
+    console.error(
+      getRouteConflictErrorMessage(routePath || "/", [
+        path.relative(appDirectory, routeIndexModule),
+        path.relative(appDirectory, routeRouteModule),
+      ])
     );
   }
 
@@ -221,7 +270,7 @@ type State =
   | "ESCAPE"
   // we hit a `(` and are now in an optional segment until we hit a `)` or an escape sequence
   | "OPTIONAL"
-  // we previously were in a optional segment and hit a `[` and are now in an escape sequence until we hit a `]` - take characters literally and skip isSegmentSeparator checks - afterwards go back to OPTIONAL state
+  // we previously were in a opt fional segment and hit a `[` and are now in an escape sequence until we hit a `]` - take characters literally and skip isSegmentSeparator checks - afterwards go back to OPTIONAL state
   | "OPTIONAL_ESCAPE";
 
 export function getRouteSegments(routeId: string): [string[], string[]] {
@@ -386,21 +435,21 @@ export function createRoutePath(
   return result ? result.join("/") : undefined;
 }
 
-export function normalizePath(filePath: string) {
-  return filePath.split("/").join(path.sep);
-}
-
 export function getRouteConflictErrorMessage(
   pathname: string,
   routes: string[]
 ) {
   let [taken, ...others] = routes;
 
+  let pathnameWithLeadingSlash = pathname.startsWith("/")
+    ? pathname
+    : "/" + pathname;
+
   return (
-    `⚠️ Route Path Collision: "${pathname}"\n\n` +
+    `⚠️ Route Path Collision: "${pathnameWithLeadingSlash}"\n\n` +
     `The following routes all define the same URL, only the first one will be used\n\n` +
-    `🟢 ${normalizePath(taken)}\n` +
-    others.map((route) => `⭕️️ ${normalizePath(route)}`).join("\n") +
+    `🟢 ${taken}\n` +
+    others.map((route) => `⭕️️ ${route}`).join("\n") +
     "\n"
   );
 }
