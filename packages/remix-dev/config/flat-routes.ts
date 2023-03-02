@@ -172,9 +172,8 @@ export function flatRoutesUniversal(
       continue;
     }
 
-    uniqueRouteIds.set(route.id || "/", route);
-
     routeManifest[file] = route;
+    uniqueRouteIds.set(route.id || "/", route);
 
     let childRoutes = prefixLookup.findAndRemove(routeId);
     prefixLookup.add(routeId);
@@ -189,7 +188,7 @@ export function flatRoutesUniversal(
 
         let route: ConfigRoute = {
           file: childRouteFile.slice(appDirectory.length + 1),
-          id: fullChildRouteId,
+          id: childRouteId,
           parentId: routeId,
           path: routePath,
         };
