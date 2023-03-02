@@ -183,7 +183,7 @@ function warnOnceIfEsmOnlyPackage(
       if (isEsmOnly) {
         onWarning(
           `${packageName} is possibly an ESM only package and should be bundled with ` +
-            `"serverDependenciesToBundle in remix.config.js.`,
+            `"serverDependenciesToBundle" in remix.config.js.`,
           packageName + ":esm-only"
         );
       }

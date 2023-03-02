@@ -3,6 +3,7 @@ import * as esbuild from "esbuild";
 import * as fse from "fs-extra";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 
+import invariant from "../invariant";
 import type { ReadChannel } from "../channel";
 import type { RemixConfig } from "../config";
 import type { AssetsManifest } from "./assets";
@@ -24,9 +25,9 @@ import type { RouteManifest } from "../config/routes";
 
 export type ServerCompiler = {
   // produce ./build/index.js
-  compile: (manifestChannel: ReadChannel<AssetsManifest>) => Promise<void>;
+  compile: (manifestChannel: ReadChannel<AssetsManifest>) => Promise<esbuild.Metafile>;
   // produce multiple ./build/[name].js
-  compileBundles: (manifestChannel: ReadChannel<AssetsManifest>) => Promise<void>[];
+  compileBundles: (manifestChannel: ReadChannel<AssetsManifest>) => Promise<esbuild.Metafile>[];
   dispose: () => void;
 };
 
@@ -182,11 +183,14 @@ export const createServerCompiler = (
       routes,
       options
     );
-    let { outputFiles } = await esbuild.build({
+    let { metafile, outputFiles } = await esbuild.build({
       ...esbuildConfig,
       write: false,
+      metafile: true,
     });
+    invariant(metafile, "Expected metafile to be defined.");
     await writeServerBuildResult(remixConfig, outfile, outputFiles!);
+    return metafile;
   };
 
   let compileBundles = (manifestChannel: ReadChannel<AssetsManifest>) => {

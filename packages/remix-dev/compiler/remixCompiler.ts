@@ -1,3 +1,5 @@
+import type esbuild from "esbuild";
+
 import { createChannel } from "../channel";
 import type { RemixConfig } from "../config";
 import type { AssetsManifest } from "./assets";
@@ -23,20 +25,35 @@ export const createRemixCompiler = (
   };
 };
 
+export type CompileResult = {
+  assetsManifest: AssetsManifest;
+  metafile: {
+    browser: esbuild.Metafile;
+    servers: esbuild.Metafile[];
+  };
+};
+
 export const compile = async (
   compiler: RemixCompiler,
   options: {
     onCompileFailure?: OnCompileFailure;
   } = {}
-): Promise<AssetsManifest | undefined> => {
+): Promise<CompileResult | undefined> => {
   try {
     let assetsManifestChannel = createChannel<AssetsManifest>();
     let browserPromise = compiler.browser.compile(assetsManifestChannel);
     let serverBundlesPromises = compiler.server.compileBundles(assetsManifestChannel);
-    await Promise.all([browserPromise, ...serverBundlesPromises]);
-    return assetsManifestChannel.read();
+    let [browser, ...servers] = await Promise.all([browserPromise, ...serverBundlesPromises]);
+    return {
+      assetsManifest: await assetsManifestChannel.read(),
+      metafile: {
+        browser,
+        servers
+      },
+    };
   } catch (error: unknown) {
     options.onCompileFailure?.(error as Error);
+    return undefined;
   }
 };
 
