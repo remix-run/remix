@@ -42,8 +42,38 @@ module.exports = async ({ github, context }) => {
 
     } catch (err) {
         // Conflict detected
-        if (err.code === 409) {
-            // TODO(@Ethan-Arrowood): Send a slack message/generate a github issue
+        if (err.status === 409) {
+            const commit = await github.rest.repos.getCommit({
+                owner: 'remix-run',
+                repo: 'remix',
+                ref: 'main'
+            });
+            const title = `Merge Conflict ❌`;
+            const body = `Latest commit: ${commit.data.html_url}`;
+            const issues = await github.rest.issues.listForRepo({
+                owner,
+                repo,
+            });
+            const existingIssue = issues.data.find((issue) => issue.title === title);
+            if (existingIssue) {
+                if (existingIssue.body !== body) {
+                    await github.rest.issues.update({
+                        owner,
+                        repo,
+                        issue_number: existingIssue.number,
+                        body
+                    });
+                } else {
+                    console.log(`Latest merge conflict commit did not change.`)
+                }
+            } else {
+                await github.rest.issues.create({
+                    owner,
+                    repo,
+                    title,
+                    body
+                });
+            }
         }
 
         throw err

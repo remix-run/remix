@@ -2,6 +2,9 @@ name: Sync with upstream
 
 on:
   workflow_dispatch:
+  schedule:
+    # Once an hour
+    - cron: '0 * * * *'
 
 jobs:
   build:
