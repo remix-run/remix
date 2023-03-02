@@ -39,4 +39,4 @@ jobs:
         with:
           script: |
             const script = require('./.github/workflow_scripts/trigger-builder-update.js');
-            await script({ github, context }, "${{ steps.update-package.outputs.result }}");
+            await script({ github, context }, ${{ steps.update-package.outputs.result }});
