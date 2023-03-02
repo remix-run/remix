@@ -27,6 +27,7 @@ jobs:
         id: update-package
         uses: actions/github-script@v6
         with:
+          github_token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           script: |
             const script = require('./.github/workflow_scripts/update-package.js');
             return await script({ github, context }, "${{ inputs.version-postfix }}");
@@ -37,6 +38,7 @@ jobs:
       - name: Update package
         uses: actions/github-script@v6
         with:
+          github_token: ${{ secrets.GH_TOKEN_PULL_REQUESTS }}
           script: |
             const script = require('./.github/workflow_scripts/trigger-builder-update.js');
             await script({ github, context }, ${{ steps.update-package.outputs.result }});
