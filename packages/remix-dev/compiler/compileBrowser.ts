@@ -135,7 +135,7 @@ const createEsbuildConfig = (
       "react/jsx-runtime",
       "react-dom",
       "react-dom/client",
-      "react-refresh/runtime",
+      require.resolve("react-refresh/runtime"),
       "@remix-run/react",
       "remix:hmr",
     ];
