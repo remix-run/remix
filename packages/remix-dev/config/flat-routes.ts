@@ -189,36 +189,39 @@ export function flatRoutesUniversal(
           appDirectory,
           fullChildRouteId + routeExt
         );
-        let index = childRouteId.endsWith("_index");
+        let index = fullChildRouteId.endsWith("_index");
         let [segments, raw] = getRouteSegments(childRouteId);
         let routePath = createRoutePath(segments, raw, index);
 
-        let route: ConfigRoute = {
+        let childRoute: ConfigRoute = {
           file: childRouteFile.slice(appDirectory.length + 1),
           id: childRouteId,
           parentId: routeId,
           path: routePath,
         };
 
-        if (index) route.index = true;
+        if (index) childRoute.index = true;
 
-        let conflict = uniqueRouteIds.get(route.id || "/");
+        let conflict = uniqueRouteIds.get(childRoute.id || "/");
 
         // collect conflicts for later reporting
         if (conflict) {
-          let currentConflicts = conflicts.get(route.path || "/");
+          let currentConflicts = conflicts.get(childRoute.path || "/");
           if (!currentConflicts) {
-            conflicts.set(route.path || "/", [conflict.file, route.file]);
+            conflicts.set(childRoute.path || "/", [
+              conflict.file,
+              childRoute.file,
+            ]);
           } else {
-            currentConflicts.push(route.file);
-            conflicts.set(route.path || "/", currentConflicts);
+            currentConflicts.push(childRoute.file);
+            conflicts.set(childRoute.path || "/", currentConflicts);
           }
 
           continue;
         }
 
-        uniqueRouteIds.set(route.id || "/", route);
-        routeManifest[childRouteFile] = route;
+        uniqueRouteIds.set(childRoute.id || "/", childRoute);
+        routeManifest[childRouteFile] = childRoute;
       }
     }
   }
