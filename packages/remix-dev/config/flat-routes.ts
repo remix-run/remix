@@ -441,7 +441,7 @@ export function createRoutePath(
     result.push(segment);
   }
 
-  return result ? result.join("/") : undefined;
+  return result.length ? result.join("/") : undefined;
 }
 
 export function getRouteConflictErrorMessage(
