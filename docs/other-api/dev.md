@@ -96,6 +96,20 @@ remix dev --port 4001
 
 Alternatively, a port can be assigned to the `PORT` environment variable.
 
+## `remix init`
+
+If the template has a `remix.init/index.js` file at the root then that file will be executed after the project has been generated and dependencies have been installed. This gives you a chance to do anything you'd like as part of the initialization of your template. For example, in the blues stack, the `app` property has to be globally unique, so we use the `remix.init/index.js` file to change it to the name of the directory that was created for the project + a couple random characters.
+
+You could even use `remix.init/index.js` to ask further questions of the developer for additional configuration (using something like [inquirer][inquirer]). Of course, sometimes you'll need dependencies installed to do this, but those deps are only useful during initialization. So, you can also create a `remix.init/package.json` with dependencies and the Remix CLI will install those dependencies before running your script.
+
+After the init script has been run, it is deleted, so you don't need to worry about it cluttering up the finished codebase.
+
+<docs-info>You'll only ever interact with this command if you've opted out of installing dependencies when creating a new Remix app, or you're developing a custom template that includes a `remix.init/index.js` file.</docs-info>
+
+### `remix init --no-delete`
+
+Skip deleting the `remix.init` script after it has been run. Useful for creating templates.
+
 [remix-app-server]: ./serve
 [node-inspector]: https://nodejs.org/en/docs/guides/debugging-getting-started
 [templates-folder-of-the-remix-repository]: https://github.com/remix-run/remix/tree/main/templates
