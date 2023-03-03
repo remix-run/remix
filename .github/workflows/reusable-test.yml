@@ -40,6 +40,7 @@ jobs:
         id: yarn-cache
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: true
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
@@ -54,6 +55,7 @@ jobs:
       - name: 📤 Cache build
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: true
           path: ./build
           key: remix-build-${{ github.sha }}
 
@@ -96,6 +98,7 @@ jobs:
         id: yarn-cache
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: true
           path: ${{ runner.os == 'Windows' && steps.yarn-cache-dir-path-windows.outputs.dir || steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
@@ -134,6 +137,7 @@ jobs:
       - name: 📤 Cache node_modules
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: true
           path: "**/node_modules"
           key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
@@ -148,6 +152,7 @@ jobs:
         uses: actions/cache@v3
         id: playwright-cache
         with:
+          enableCrossOsArchive: true
           path: |
             ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
@@ -159,6 +164,7 @@ jobs:
       - name: 📥 Restore build
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: true
           path: ./build
           key: remix-build-${{ github.sha }}
 
@@ -195,6 +201,7 @@ jobs:
       - name: 📤 Cache node_modules
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: true
           path: "**/node_modules"
           key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
@@ -209,6 +216,7 @@ jobs:
         uses: actions/cache@v3
         id: playwright-cache
         with:
+          enableCrossOsArchive: true
           path: |
             ~/Library/Caches/ms-playwright
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
@@ -220,6 +228,7 @@ jobs:
       - name: 📥 Restore build
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: true
           path: ./build
           key: remix-build-${{ github.sha }}
 
@@ -256,6 +265,7 @@ jobs:
       - name: 📤 Cache node_modules
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: true
           path: "**/node_modules"
           key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
 
@@ -272,6 +282,7 @@ jobs:
         uses: actions/cache@v3
         id: playwright-cache
         with:
+          enableCrossOsArchive: true
           path: |
             %USERPROFILE%\AppData\Local\ms-playwright
           key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
@@ -283,6 +294,7 @@ jobs:
       - name: 📥 Restore build
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: true
           path: ./build
           key: remix-build-${{ github.sha }}
 
