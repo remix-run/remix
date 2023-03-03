@@ -69,12 +69,12 @@ class PrefixLookupTrie {
 
 export function flatRoutes(
   appDirectory: string,
-  ignoredFilePatterns?: string[],
+  ignoredFilePatterns: string[] = [],
   prefix = "routes"
 ) {
-  let ignoredFileRegex = (ignoredFilePatterns || []).map((pattern) =>
-    globToRegex(pattern)
-  );
+  let ignoredFileRegex = ignoredFilePatterns.map((pattern) => {
+    return globToRegex(pattern);
+  });
   let routesDir = path.join(appDirectory, prefix);
   let routeManifest: RouteManifest = {};
 
