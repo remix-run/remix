@@ -13,6 +13,7 @@ import {
   paramPrefixChar,
   routeModuleExts,
 } from "./routesConvention";
+import invariant from "../invariant";
 
 const PrefixLookupTrieEndSymbol = Symbol("PrefixLookupTrieEndSymbol");
 type PrefixLookupNode = {
@@ -166,8 +167,6 @@ export function flatRoutesUniversal(
         currentConflicts.push(route.file);
         conflicts.set(route.path || "/", currentConflicts);
       }
-
-      continue;
     }
 
     routeManifest[route.id] = route;
@@ -180,47 +179,53 @@ export function flatRoutesUniversal(
       for (let fullChildRouteId of childRoutes) {
         let parentId = routeId;
         let childRouteId = fullChildRouteId.slice(routeId.length + 1);
-        let childRoutePath = path.join(appDirectory, fullChildRouteId);
-        let childRouteFile = routes.find((c) => c.startsWith(childRoutePath));
+        let childRouteFilePath = path.join(appDirectory, fullChildRouteId);
+        let childRouteFile = routes.find((c) =>
+          c.startsWith(childRouteFilePath)
+        );
 
         invariant(
           childRouteFile,
-          `Could not find a route module for the route ID: ${fullChildRouteId} at ${childRoutePath}`
+          `Could not find a route module for the route ID: ${fullChildRouteId} at ${childRouteFilePath}`
         );
 
         let index = fullChildRouteId.endsWith("_index");
         let [segments, raw] = getRouteSegments(childRouteId);
-        let routePath = createRoutePath(segments, raw, index);
+
+        let childRoutePath = createRoutePath(segments, raw, index);
 
         let childRoute: ConfigRoute = {
           file: childRouteFile.slice(appDirectory.length + 1),
-          id: childRouteId,
+          id: fullChildRouteId,
           parentId,
-          path: routePath,
+          path: childRoutePath,
         };
 
         if (index) childRoute.index = true;
 
-        let conflict = uniqueRouteIds.get(childRoute.id || "/");
+        let childRouteConflicts = uniqueRouteIds.get(childRoute.id || "/");
 
         // collect conflicts for later reporting
-        if (conflict) {
+        if (childRouteConflicts) {
           let currentConflicts = conflicts.get(childRoute.path || "/");
           if (!currentConflicts) {
             conflicts.set(childRoute.path || "/", [
-              conflict.file,
+              childRouteConflicts.file,
               childRoute.file,
             ]);
           } else {
             currentConflicts.push(childRoute.file);
             conflicts.set(childRoute.path || "/", currentConflicts);
           }
-
-          continue;
         }
 
         uniqueRouteIds.set(childRoute.id || "/", childRoute);
         routeManifest[childRoute.id] = childRoute;
+        console.log({
+          childRoute,
+          childRouteManifest: routeManifest[childRoute.id],
+          routeManifest,
+        });
       }
     }
   }

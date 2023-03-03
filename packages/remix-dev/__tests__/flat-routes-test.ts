@@ -88,8 +88,12 @@ describe("flatRoutes", () => {
     for (let [input, expected] of tests) {
       it(`"${input}" -> "${expected}"`, () => {
         let fullRoutePath = path.join(APP_DIR, "routes", `${input}.tsx`);
-        let routeInfo = flatRoutesUniversal(APP_DIR, [fullRoutePath], "routes");
-        expect(routeInfo[input].path).toBe(expected);
+        let routeManifest = flatRoutesUniversal(
+          APP_DIR,
+          [fullRoutePath],
+          "routes"
+        );
+        expect(routeManifest[fullRoutePath].path).toBe(expected);
       });
     }
 
@@ -631,7 +635,7 @@ describe("flatRoutes", () => {
 
       let routeManifest = flatRoutesUniversal(
         APP_DIR,
-        testFiles.map((file) => path.join(APP_DIR, normalizePath(file)))
+        testFiles.map((file) => path.join(APP_DIR, file))
       );
 
       let routes = Object.values(routeManifest);
