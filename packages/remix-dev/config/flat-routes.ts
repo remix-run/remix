@@ -161,10 +161,6 @@ export function flatRoutesUniversal(
 
     // collect conflicts for later reporting
     if (conflict) {
-      console.log({
-        route: route.file,
-        conflict: conflict.file,
-      });
       let currentConflicts = conflicts.get(route.path || "/");
       if (!currentConflicts) {
         conflicts.set(route.path || "/", [conflict.file, route.file]);
@@ -176,7 +172,7 @@ export function flatRoutesUniversal(
       continue;
     }
 
-    routeManifest[file] = route;
+    routeManifest[route.id] = route;
     uniqueRouteIds.set(route.id || "/", route);
 
     let childRoutes = prefixLookup.findAndRemove(routeId);
@@ -184,11 +180,16 @@ export function flatRoutesUniversal(
 
     if (childRoutes.length > 0) {
       for (let fullChildRouteId of childRoutes) {
+        let parentId = routeId;
         let childRouteId = fullChildRouteId.slice(routeId.length + 1);
-        let childRouteFile = path.join(
-          appDirectory,
-          fullChildRouteId + routeExt
+        let childRoutePath = path.join(appDirectory, fullChildRouteId);
+        let childRouteFile = routes.find((c) => c.startsWith(childRoutePath));
+
+        invariant(
+          childRouteFile,
+          `Could not find a route module for the route ID: ${fullChildRouteId} at ${childRoutePath}`
         );
+
         let index = fullChildRouteId.endsWith("_index");
         let [segments, raw] = getRouteSegments(childRouteId);
         let routePath = createRoutePath(segments, raw, index);
@@ -196,7 +197,7 @@ export function flatRoutesUniversal(
         let childRoute: ConfigRoute = {
           file: childRouteFile.slice(appDirectory.length + 1),
           id: childRouteId,
-          parentId: routeId,
+          parentId,
           path: routePath,
         };
 
@@ -221,7 +222,7 @@ export function flatRoutesUniversal(
         }
 
         uniqueRouteIds.set(childRoute.id || "/", childRoute);
-        routeManifest[childRouteFile] = childRoute;
+        routeManifest[childRoute.id] = childRoute;
       }
     }
   }
