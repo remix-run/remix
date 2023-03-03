@@ -254,18 +254,20 @@ function findRouteModuleForFolder(
   let isIgnored = ignoredFileRegex.some((regex) => regex.test(filepath));
   if (isIgnored) return null;
 
-  let routeIndexModule = findConfig(filepath, "index", routeModuleExts);
   let routeRouteModule = findConfig(filepath, "route", routeModuleExts);
+  let routeIndexModule = findConfig(filepath, "index", routeModuleExts);
 
-  if (routeIndexModule && routeRouteModule) {
+  // if both a route and index module exist, throw a conflict error
+  // preferring the route module over the index module
+  if (routeRouteModule && routeIndexModule) {
     let [segments, raw] = getRouteSegments(
       path.relative(appDirectory, filepath)
     );
     let routePath = createRoutePath(segments, raw, false);
     console.error(
       getRouteConflictErrorMessage(routePath || "/", [
-        path.relative(appDirectory, routeIndexModule),
         path.relative(appDirectory, routeRouteModule),
+        path.relative(appDirectory, routeIndexModule),
       ])
     );
   }
