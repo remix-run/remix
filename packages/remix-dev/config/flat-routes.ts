@@ -76,49 +76,47 @@ export function flatRoutes(
     return globToRegex(pattern);
   });
   let routesDir = path.join(appDirectory, prefix);
-  let routeManifest: RouteManifest = {};
 
   let rootRoute = findConfig(appDirectory, "root", routeModuleExts);
 
   if (!rootRoute) {
     throw new Error(
-      `Could not find a root route module in the routes directory: ${routesDir}`
+      `Could not find a root route module in the app directory: ${appDirectory}`
     );
   }
 
-  if (fs.existsSync(routesDir)) {
-    // Only read the routes directory
-    let entries = fs.readdirSync(routesDir, {
-      withFileTypes: true,
-      encoding: "utf-8",
-    });
-
-    let routes: string[] = [];
-    for (let entry of entries) {
-      let filepath: string | undefined = path.join(routesDir, entry.name);
-
-      let route: string | null = null;
-      // If it's a directory, don't recurse into it, instead just look for a route module
-      if (entry.isDirectory()) {
-        route = findRouteModuleForFolder(
-          appDirectory,
-          filepath,
-          ignoredFileRegex
-        );
-      } else if (entry.isFile()) {
-        route = findRouteModuleForFile(filepath, ignoredFileRegex);
-      }
-
-      if (route) routes.push(route);
-    }
-
-    routeManifest = flatRoutesUniversal(appDirectory, routes, prefix);
-  } else {
+  if (!fs.existsSync(rootRoute)) {
     throw new Error(
       `Could not find the routes directory: ${routesDir}. Did you forget to create it?`
     );
   }
 
+  // Only read the routes directory
+  let entries = fs.readdirSync(routesDir, {
+    withFileTypes: true,
+    encoding: "utf-8",
+  });
+
+  let routes: string[] = [];
+  for (let entry of entries) {
+    let filepath: string | undefined = path.join(routesDir, entry.name);
+
+    let route: string | null = null;
+    // If it's a directory, don't recurse into it, instead just look for a route module
+    if (entry.isDirectory()) {
+      route = findRouteModuleForFolder(
+        appDirectory,
+        filepath,
+        ignoredFileRegex
+      );
+    } else if (entry.isFile()) {
+      route = findRouteModuleForFile(filepath, ignoredFileRegex);
+    }
+
+    if (route) routes.push(route);
+  }
+
+  let routeManifest = flatRoutesUniversal(appDirectory, routes, prefix);
   return routeManifest;
 }
 
