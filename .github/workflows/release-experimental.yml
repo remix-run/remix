@@ -57,7 +57,7 @@ jobs:
         id: yarn-cache-dir-path
         run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
 
-      - name: 📤 Cache node_modules
+      - name: 📥 Restore node_modules
         id: yarn-cache
         uses: actions/cache@v3
         with:

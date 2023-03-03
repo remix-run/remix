@@ -36,7 +36,7 @@ jobs:
         id: yarn-cache-dir-path
         run: echo "dir=$(yarn cache dir)" >> $GITHUB_OUTPUT
 
-      - name: 📤 Cache node_modules
+      - name: 📥 Restore node_modules
         id: yarn-cache
         uses: actions/cache@v3
         with:
@@ -94,7 +94,7 @@ jobs:
         id: yarn-cache-dir-path-windows
         run: echo "dir=$(yarn cache dir)" >> ${env:GITHUB_OUTPUT}
 
-      - name: 📤 Cache node_modules
+      - name: 📥 Restore node_modules
         id: yarn-cache
         uses: actions/cache@v3
         with:
@@ -134,7 +134,7 @@ jobs:
           # this is for the *global* cache, and not `node_modules`
           cache: "yarn"
 
-      - name: 📤 Cache node_modules
+      - name: 📥 Restore node_modules
         uses: actions/cache@v3
         with:
           enableCrossOsArchive: true
@@ -148,7 +148,7 @@ jobs:
         id: playwright-version
         run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_ENV
 
-      - name: 📤 Restore playwright binaries
+      - name: 📥 Restore playwright binaries
         uses: actions/cache@v3
         id: playwright-cache
         with:
@@ -198,7 +198,7 @@ jobs:
           # this is for the *global* cache, and not `node_modules`
           cache: "yarn"
 
-      - name: 📤 Cache node_modules
+      - name: 📥 Restore node_modules
         uses: actions/cache@v3
         with:
           enableCrossOsArchive: true
@@ -212,7 +212,7 @@ jobs:
         id: playwright-version
         run: echo "PLAYWRIGHT_VERSION=$(node -e "console.log(require('@playwright/test/package.json').version)")" >> $GITHUB_ENV
 
-      - name: 📤 Restore playwright binaries
+      - name: 📥 Restore playwright binaries
         uses: actions/cache@v3
         id: playwright-cache
         with:
@@ -262,7 +262,7 @@ jobs:
           # this is for the *global* cache, and not `node_modules`
           cache: "yarn"
 
-      - name: 📤 Cache node_modules
+      - name: 📥 Restore node_modules
         uses: actions/cache@v3
         with:
           enableCrossOsArchive: true
@@ -278,7 +278,7 @@ jobs:
           chcp 65001 # set code page to utf-8
           echo ("PLAYWRIGHT_VERSION=" + (node -e "console.log(require('@playwright/test/package.json').version)")) >> $env:GITHUB_ENV
 
-      - name: 📤 Restore playwright binaries
+      - name: 📥 Restore playwright binaries
         uses: actions/cache@v3
         id: playwright-cache
         with:
