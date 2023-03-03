@@ -35,7 +35,7 @@ test.describe("loader", () => {
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           import { json } from "@remix-run/node";
 
           export function loader() {
@@ -53,7 +53,7 @@ test.describe("loader", () => {
   test("returns responses for a specific route", async () => {
     let [root, index] = await Promise.all([
       fixture.requestData("/", "root"),
-      fixture.requestData("/", "routes/index"),
+      fixture.requestData("/", "routes/_index"),
     ]);
 
     expect(root.headers.get("Content-Type")).toBe(

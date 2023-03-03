@@ -69,7 +69,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/index.jsx": js`
+      "app/routes/_index.jsx": js`
         import { Link } from "@remix-run/react";
 
         export default function Index() {

@@ -80,9 +80,7 @@ test.describe("Tailwind", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => {
-    await appFixture.close();
-  });
+  test.afterAll(() => appFixture.close());
 
   let basicUsageFixture = () => ({
     "app/routes/basic-usage-test.jsx": js`
@@ -108,7 +106,7 @@ test.describe("Tailwind", () => {
   let regularStylesSheetsFixture = () => ({
     "app/routes/regular-style-sheets-test.jsx": js`
       import { Test, links as testLinks } from "~/test-components/regular-style-sheets";
-    
+
       export function links() {
         return [...testLinks()];
       }

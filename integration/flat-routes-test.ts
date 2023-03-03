@@ -13,7 +13,6 @@ let appFixture: AppFixture;
 test.describe("flat routes", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
       files: {
         "app/root.jsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -207,7 +206,6 @@ test.describe("emits warnings for route conflicts", async () => {
     console.error = () => {};
     await createFixtureProject({
       buildStdio,
-      future: { v2_routeConvention: true },
       files: {
         "routes/_dashboard._index.tsx": js`
           export default function () {

@@ -50,7 +50,7 @@ function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
         }
       `,
 
-      "app/routes/index.jsx": js`
+      "app/routes/_index.jsx": js`
         export default function() {
           return <h2 className="index">Index</h2>;
         }

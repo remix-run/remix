@@ -17,7 +17,7 @@ test.describe("mdx", () => {
     fixture = await createFixture({
       files: {
         "app/root.jsx": js`
-        import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
           export default function Root() {
             return (
@@ -51,7 +51,7 @@ test.describe("mdx", () => {
           }
         `,
 
-        "app/routes/blog/post.mdx": mdx`---
+        "app/routes/blog.post.mdx": mdx`---
 meta:
   title: My First Post
   description: Isn't this awesome?

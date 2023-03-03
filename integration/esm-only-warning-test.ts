@@ -36,7 +36,7 @@ test.beforeAll(async () => {
           "@remix-run/dev": "0.0.0-local-version",
         },
       }),
-      "app/routes/index.jsx": js`
+      "app/routes/_index.jsx": js`
         import { json } from "@remix-run/node";
         import { Link, useLoaderData } from "@remix-run/react";
         import a from "esm-only-no-exports";

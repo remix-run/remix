@@ -33,7 +33,7 @@ test.describe("rendering", () => {
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           export default function() {
             return <h2>Index</h2>;
           }

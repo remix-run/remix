@@ -10,7 +10,7 @@ let appFixture: AppFixture;
 test.beforeAll(async () => {
   fixture = await createFixture({
     files: {
-      "app/routes/index.jsx": js`
+      "app/routes/_index.jsx": js`
         import { redirect } from "@remix-run/node";
         import { Form } from "@remix-run/react";
 

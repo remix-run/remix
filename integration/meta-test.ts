@@ -54,7 +54,7 @@ test.describe("meta", () => {
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           export default function Index() {
             return <div>This is the index file</div>;
           }
@@ -180,7 +180,7 @@ test.describe("meta", () => {
           }
         `,
 
-        "app/routes/blog/index.jsx": js`
+        "app/routes/blog._index.jsx": js`
           import { Link, useLoaderData } from "@remix-run/react";
           import { json } from "@remix-run/node";
 
@@ -212,7 +212,7 @@ test.describe("meta", () => {
           }
         `,
 
-        "app/routes/blog/$pid.jsx": js`
+        "app/routes/blog.$pid.jsx": js`
           import { useLoaderData } from "@remix-run/react";
           import { json } from "@remix-run/node";
 
@@ -440,7 +440,7 @@ test.describe("v2_meta", () => {
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           export const meta = ({ data, matches }) => [
             ...matches.map((match) => match.meta),
           ];

@@ -56,7 +56,7 @@ test.describe("useFetcher", () => {
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           import { useFetcher } from "@remix-run/react";
           export default function Index() {
             let fetcher = useFetcher();
@@ -101,7 +101,7 @@ test.describe("useFetcher", () => {
           }
         `,
 
-        "app/routes/parent/index.jsx": js`
+        "app/routes/parent._index.jsx": js`
           import { useFetcher } from "@remix-run/react";
 
           export function action() {

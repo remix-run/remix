@@ -42,7 +42,7 @@ test.describe("useMatches", () => {
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           import { json } from "@remix-run/node";
           export const handle = { stuff: "index handle"};
           export const loader = () => json("INDEX");
@@ -113,7 +113,7 @@ test.describe("useMatches", () => {
     }
   },
   {
-    "id": "routes/index",
+    "id": "routes/_index",
     "pathname": "/",
     "params": {},
     "data": "INDEX",
@@ -139,7 +139,7 @@ test.describe("useMatches", () => {
     }
   },
   {
-    "id": "routes/index",
+    "id": "routes/_index",
     "pathname": "/",
     "params": {},
     "data": "INDEX",

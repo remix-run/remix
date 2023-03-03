@@ -184,7 +184,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/blog/index.jsx": js`
+        "app/routes/blog._index.jsx": js`
           import { Form } from "@remix-run/react";
           export function action() {
             return { ok: true };
@@ -218,7 +218,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/blog/$postId.jsx": js`
+        "app/routes/blog.$postId.jsx": js`
           import { Form } from "@remix-run/react";
           export default function() {
             return (
@@ -255,13 +255,13 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/projects/index.jsx": js`
+        "app/routes/projects._index.jsx": js`
           export default function() {
             return <h2>All projects</h2>
           }
         `,
 
-        "app/routes/projects/$.jsx": js`
+        "app/routes/projects.$.jsx": js`
           import { Form } from "@remix-run/react";
           export default function() {
             return (
@@ -431,7 +431,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/pathless-layout-parent/__pathless.jsx": js`
+        "app/routes/pathless-layout-parent._pathless/layout.jsx": js`
           import { Outlet } from '@remix-run/react';
 
           export default function () {
@@ -444,7 +444,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/pathless-layout-parent/__pathless/index.jsx": js`
+        "app/routes/pathless-layout-parent._pathless._index.jsx": js`
           export default function () {
             return <h3>Pathless Layout Index</h3>
           }

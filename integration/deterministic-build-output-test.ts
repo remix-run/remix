@@ -19,7 +19,7 @@ test("builds deterministically under different paths", async () => {
   //  * cssModulesPlugin (via app/routes/foo.tsx' CSS Modules import)
   //  * cssSideEffectImportsPlugin (via app/routes/foo.tsx' CSS side-effect import)
   //  * emptyModulesPlugin (via app/routes/foo.tsx' server import)
-  //  * mdx (via app/routes/index.mdx)
+  //  * mdx (via app/routes/_index.mdx)
   //  * serverAssetsManifestPlugin (implicitly tested by build)
   //  * serverEntryModulePlugin (implicitly tested by build)
   //  * serverRouteModulesPlugin (implicitly tested by build)
@@ -36,7 +36,7 @@ test("builds deterministically under different paths", async () => {
           },
         };
       `,
-      "app/routes/index.mdx": "# hello world",
+      "app/routes/_index.mdx": "# hello world",
       "app/routes/foo.tsx": js`
         export * from "~/foo/bar.server";
         import styles from "~/styles/foo.module.css";

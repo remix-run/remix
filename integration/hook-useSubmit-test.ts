@@ -11,7 +11,7 @@ test.describe("`useSubmit()` returned function", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
         import { useLoaderData, useSubmit } from "@remix-run/react";
 
         export function loader({ request }) {

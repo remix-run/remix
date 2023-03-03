@@ -8,13 +8,17 @@ test.describe("CatchBoundary", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
 
-  let ROOT_BOUNDARY_TEXT = "ROOT_TEXT";
-  let OWN_BOUNDARY_TEXT = "OWN_BOUNDARY_TEXT";
+  let ROOT_BOUNDARY_TEXT = "ROOT_TEXT" as const;
+  let OWN_BOUNDARY_TEXT = "OWN_BOUNDARY_TEXT" as const;
 
-  let HAS_BOUNDARY_LOADER = "/yes/loader";
-  let HAS_BOUNDARY_ACTION = "/yes/action";
-  let NO_BOUNDARY_ACTION = "/no/action";
-  let NO_BOUNDARY_LOADER = "/no/loader";
+  let HAS_BOUNDARY_LOADER = "/yes/loader" as const;
+  let HAS_BOUNDARY_LOADER_FILE = "/yes.loader" as const;
+  let HAS_BOUNDARY_ACTION = "/yes/action" as const;
+  let HAS_BOUNDARY_ACTION_FILE = "/yes.action" as const;
+  let NO_BOUNDARY_ACTION = "/no/action" as const;
+  let NO_BOUNDARY_ACTION_FILE = "/no.action" as const;
+  let NO_BOUNDARY_LOADER = "/no/loader" as const;
+  let NO_BOUNDARY_LOADER_FILE = "/no.loader" as const;
 
   let NOT_FOUND_HREF = "/not/found";
 
@@ -59,7 +63,7 @@ test.describe("CatchBoundary", () => {
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           import { Link, Form } from "@remix-run/react";
           export default function() {
             return (
@@ -85,7 +89,7 @@ test.describe("CatchBoundary", () => {
           }
         `,
 
-        [`app/routes${HAS_BOUNDARY_ACTION}.jsx`]: js`
+        [`app/routes${HAS_BOUNDARY_ACTION_FILE}.jsx`]: js`
           import { Form } from "@remix-run/react";
           export async function action() {
             throw new Response("", { status: 401 })
@@ -104,7 +108,7 @@ test.describe("CatchBoundary", () => {
           }
         `,
 
-        [`app/routes${NO_BOUNDARY_ACTION}.jsx`]: js`
+        [`app/routes${NO_BOUNDARY_ACTION_FILE}.jsx`]: js`
           import { Form } from "@remix-run/react";
           export function action() {
             throw new Response("", { status: 401 })
@@ -120,7 +124,7 @@ test.describe("CatchBoundary", () => {
           }
         `,
 
-        [`app/routes${HAS_BOUNDARY_LOADER}.jsx`]: js`
+        [`app/routes${HAS_BOUNDARY_LOADER_FILE}.jsx`]: js`
           import { useCatch } from '@remix-run/react';
           export function loader() {
             throw new Response("", { status: 401 })
@@ -139,7 +143,7 @@ test.describe("CatchBoundary", () => {
           }
         `,
 
-        [`app/routes${HAS_BOUNDARY_LOADER}/child.jsx`]: js`
+        [`app/routes${HAS_BOUNDARY_LOADER_FILE}.child.jsx`]: js`
           export function loader() {
             throw new Response("", { status: 404 })
           }
@@ -148,7 +152,7 @@ test.describe("CatchBoundary", () => {
           }
         `,
 
-        [`app/routes${NO_BOUNDARY_LOADER}.jsx`]: js`
+        [`app/routes${NO_BOUNDARY_LOADER_FILE}.jsx`]: js`
           export function loader() {
             throw new Response("", { status: 401 })
           }
@@ -174,7 +178,7 @@ test.describe("CatchBoundary", () => {
           }
         `,
 
-        "app/routes/action/child-catch.jsx": js`
+        "app/routes/action.child-catch.jsx": js`
           import { Form, useCatch, useLoaderData } from "@remix-run/react";
 
           export function loader() {

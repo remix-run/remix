@@ -41,7 +41,7 @@ test.describe("rendering", () => {
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           import { Link } from "@remix-run/react";
           export default function() {
             return (
@@ -73,7 +73,7 @@ test.describe("rendering", () => {
           }
         `,
 
-        [`app/routes/${PAGE}/index.jsx`]: js`
+        [`app/routes/${PAGE}._index.jsx`]: js`
           import { useLoaderData, Link } from "@remix-run/react";
 
           export function loader() {
@@ -91,7 +91,7 @@ test.describe("rendering", () => {
           }
         `,
 
-        [`app/routes/${PAGE}/${CHILD}.jsx`]: js`
+        [`app/routes/${PAGE}.${CHILD}.jsx`]: js`
           import { useLoaderData } from "@remix-run/react";
 
           export function loader() {
@@ -180,7 +180,7 @@ test.describe("rendering", () => {
           }
         `,
 
-        "app/routes/parent/child.jsx": js`
+        "app/routes/parent.child.jsx": js`
           import { redirect } from "@remix-run/node";
           import { useFetcher} from "@remix-run/react";
 
@@ -219,7 +219,7 @@ test.describe("rendering", () => {
       responses
         .map((res) => new URL(res.url()).searchParams.get("_data"))
         .sort()
-    ).toEqual([`routes/${PAGE}`, `routes/${PAGE}/index`].sort());
+    ).toEqual([`routes/${PAGE}`, `routes/${PAGE}._index`].sort());
 
     await page.waitForSelector(`h2:has-text("${PAGE_TEXT}")`);
     await page.waitForSelector(`h3:has-text("${PAGE_INDEX_TEXT}")`);
@@ -234,7 +234,7 @@ test.describe("rendering", () => {
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
-    ).toEqual([`routes/${PAGE}/${CHILD}`]);
+    ).toEqual([`routes/${PAGE}.${CHILD}`]);
 
     await page.waitForSelector(`h2:has-text("${PAGE_TEXT}")`);
     await page.waitForSelector(`h3:has-text("${CHILD_TEXT}")`);
@@ -255,7 +255,7 @@ test.describe("rendering", () => {
         .map((res) => new URL(res.url()).searchParams.get("_data"))
         .sort()
     ).toEqual(
-      [`routes/${REDIRECT}`, `routes/${PAGE}`, `routes/${PAGE}/index`].sort()
+      [`routes/${REDIRECT}`, `routes/${PAGE}`, `routes/${PAGE}._index`].sort()
     );
 
     await page.waitForSelector(`h2:has-text("${PAGE_TEXT}")`);
@@ -285,7 +285,7 @@ test.describe("rendering", () => {
 
     expect(
       responses.map((res) => new URL(res.url()).searchParams.get("_data"))
-    ).toEqual([`routes/${PAGE}/index`]);
+    ).toEqual([`routes/${PAGE}._index`]);
 
     await page.waitForSelector(`h2:has-text("${PAGE_TEXT}")`);
     await page.waitForSelector(`h3:has-text("${PAGE_INDEX_TEXT}")`);

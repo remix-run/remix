@@ -32,7 +32,7 @@ test.beforeAll(async () => {
           });
         }
       `,
-      "app/routes/index.jsx": js`
+      "app/routes/_index.jsx": js`
         export default function Index() {
           return <h1>Hello World</h1>
         }

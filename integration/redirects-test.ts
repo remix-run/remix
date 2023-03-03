@@ -39,7 +39,7 @@ test.describe("redirects", () => {
           }
         `,
 
-        [`app/routes/action/form.jsx`]: js`
+        [`app/routes/action.form.jsx`]: js`
           import { redirect } from "@remix-run/node";
           import { Form } from "@remix-run/react";
 
@@ -56,7 +56,7 @@ test.describe("redirects", () => {
           }
         `,
 
-        [`app/routes/action/1.jsx`]: js`
+        [`app/routes/action.1.jsx`]: js`
           import { redirect } from "@remix-run/node";
 
           export async function loader({ request }) {
@@ -64,7 +64,7 @@ test.describe("redirects", () => {
           };
         `,
 
-        [`app/routes/action/2.jsx`]: js`
+        [`app/routes/action.2.jsx`]: js`
           export default function () {
             return <h1>Page 2</h1>
           }
@@ -107,14 +107,14 @@ test.describe("redirects", () => {
           }
         `,
 
-        "app/routes/loader/link.jsx": js`
+        "app/routes/loader.link.jsx": js`
           import { Link } from "@remix-run/react";
           export default function Parent() {
             return <Link to="/loader/redirect">Redirect</Link>;
           }
         `,
 
-        [`app/routes/loader/redirect.jsx`]: js`
+        [`app/routes/loader.redirect.jsx`]: js`
             import { redirect } from "@remix-run/node";
             import { Form } from "@remix-run/react";
             import { session } from "~/session.server";
@@ -131,7 +131,7 @@ test.describe("redirects", () => {
             };
         `,
 
-        [`app/routes/loader/1.jsx`]: js`
+        [`app/routes/loader.1.jsx`]: js`
           import { redirect } from "@remix-run/node";
 
           export async function loader({ request }) {
@@ -139,12 +139,12 @@ test.describe("redirects", () => {
           };
         `,
 
-        [`app/routes/loader/2.jsx`]: js`
+        [`app/routes/loader.2.jsx`]: js`
           export default function () {
             return <h1>Page 2</h1>
           }
         `,
-        [`app/routes/loader/external.js`]: js`
+        [`app/routes/loader.external.js`]: js`
           import { redirect } from "@remix-run/node";
           export const loader = () => {
             return redirect("https://remix.run/");

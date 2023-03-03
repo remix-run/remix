@@ -81,7 +81,7 @@ test.describe("Revalidation", () => {
             }
           `,
 
-          "app/routes/parent/child.jsx": js`
+          "app/routes/parent.child.jsx": js`
             import { json } from "@remix-run/node";
             import { Form, useLoaderData, useRevalidator } from "@remix-run/react";
 

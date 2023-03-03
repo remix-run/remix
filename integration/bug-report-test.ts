@@ -47,7 +47,7 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
+      "app/routes/_index.jsx": js`
         import { json } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
 

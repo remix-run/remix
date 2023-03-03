@@ -112,14 +112,12 @@ test.describe("PostCSS", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => {
-    await appFixture.close();
-  });
+  test.afterAll(() => appFixture.close());
 
   let regularStylesSheetsFixture = () => ({
     "app/routes/regular-style-sheets-test.jsx": js`
       import { Test, links as testLinks } from "~/test-components/regular-style-sheets";
-    
+
       export function links() {
         return [...testLinks()];
       }
@@ -138,7 +136,7 @@ test.describe("PostCSS", () => {
       export function Test() {
         return (
           <div data-testid="regular-style-sheets" className="regular-style-sheets-test">
-            <p>Regular style sheets test.</p>            
+            <p>Regular style sheets test.</p>
             <p>PostCSS context (base64): <span data-testid="regular-style-sheets-postcss-context" /></p>
           </div>
         );
@@ -185,7 +183,7 @@ test.describe("PostCSS", () => {
       export function Test() {
         return (
           <div data-testid="css-modules" className={styles.root}>
-            <p>CSS Modules test.</p>            
+            <p>CSS Modules test.</p>
             <p>PostCSS context (base64): <span data-testid="css-modules-postcss-context" /></p>
           </div>
         );
@@ -232,7 +230,7 @@ test.describe("PostCSS", () => {
       export function Test() {
         return (
           <div data-testid="vanilla-extract" className={styles.root}>
-            <p>Vanilla Extract test.</p>            
+            <p>Vanilla Extract test.</p>
             <p>PostCSS context (base64): <span data-testid="vanilla-extract-postcss-context" /></p>
           </div>
         );
@@ -240,7 +238,7 @@ test.describe("PostCSS", () => {
     `,
     "app/test-components/vanilla-extract/styles.css.ts": js`
       import { style, globalStyle } from "@vanilla-extract/css";
-    
+
       export const root = style({
         padding: "TEST_PADDING_VALUE",
       });
@@ -281,7 +279,7 @@ test.describe("PostCSS", () => {
       export function Test() {
         return (
           <div data-testid="css-side-effect-imports" className="css-side-effect-imports-test">
-            <p>CSS side-effect imports test.</p>            
+            <p>CSS side-effect imports test.</p>
             <p>PostCSS context (base64): <span data-testid="css-side-effect-imports-postcss-context" /></p>
           </div>
         );
@@ -317,7 +315,7 @@ test.describe("PostCSS", () => {
   let automaticTailwindPluginInsertionFixture = () => ({
     "app/routes/automatic-tailwind-plugin-insertion-test.jsx": js`
       import { Test, links as testLinks } from "~/test-components/automatic-tailwind-plugin-insertion";
-    
+
       export function links() {
         return [...testLinks()];
       }

@@ -107,7 +107,7 @@ test.describe("non-aborted", () => {
           }
         `,
 
-        "app/routes/index.tsx": js`
+        "app/routes/_index.tsx": js`
           import { defer } from "@remix-run/node";
           import { Link, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";

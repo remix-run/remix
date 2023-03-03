@@ -36,7 +36,7 @@ test.describe("headers export", () => {
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           import { json } from "@remix-run/node";
 
           export function loader() {
@@ -119,7 +119,7 @@ test.describe("headers export", () => {
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           import { json } from "@remix-run/node";
 
           export function loader() {

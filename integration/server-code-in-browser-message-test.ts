@@ -20,12 +20,14 @@ test.beforeAll(async () => {
         version: "1.0.0",
         main: "index.js",
       }),
+
       "node_modules/has-side-effects/index.js": js`
         let message;
         (() => { message = process.env.___SOMETHING___ || "hello, world"; })();
         module.exports = () => message;
       `,
-      "app/routes/index.jsx": js`
+
+      "app/routes/_index.jsx": js`
         import { json } from "@remix-run/node";
         import { useLoaderData, Link } from "@remix-run/react";
         import sideEffectModules from "has-side-effects";

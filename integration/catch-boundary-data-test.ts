@@ -7,13 +7,19 @@ import { PlaywrightFixture } from "./helpers/playwright-fixture";
 let fixture: Fixture;
 let appFixture: AppFixture;
 
-let ROOT_BOUNDARY_TEXT = "ROOT_TEXT";
-let LAYOUT_BOUNDARY_TEXT = "LAYOUT_BOUNDARY_TEXT";
-let OWN_BOUNDARY_TEXT = "OWN_BOUNDARY_TEXT";
+let ROOT_BOUNDARY_TEXT = "ROOT_TEXT" as const;
+let LAYOUT_BOUNDARY_TEXT = "LAYOUT_BOUNDARY_TEXT" as const;
+let OWN_BOUNDARY_TEXT = "OWN_BOUNDARY_TEXT" as const;
 
-let NO_BOUNDARY_LOADER = "/no/loader";
-let HAS_BOUNDARY_LAYOUT_NESTED_LOADER = "/yes/loader-layout-boundary";
-let HAS_BOUNDARY_NESTED_LOADER = "/yes/loader-self-boundary";
+let NO_BOUNDARY_LOADER_FILE = "/no.loader" as const;
+let NO_BOUNDARY_LOADER = "/no/loader" as const;
+
+let HAS_BOUNDARY_LAYOUT_NESTED_LOADER_FILE =
+  "/yes.loader-layout-boundary" as const;
+let HAS_BOUNDARY_LAYOUT_NESTED_LOADER = "/yes/loader-layout-boundary" as const;
+
+let HAS_BOUNDARY_NESTED_LOADER_FILE = "/yes.loader-self-boundary" as const;
+let HAS_BOUNDARY_NESTED_LOADER = "/yes/loader-self-boundary" as const;
 
 let ROOT_DATA = "root data";
 let LAYOUT_DATA = "root data";
@@ -69,7 +75,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      "app/routes/index.jsx": js`
+      "app/routes/_index.jsx": js`
         import { Link } from "@remix-run/react";
         export default function Index() {
           return (
@@ -82,7 +88,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      [`app/routes${NO_BOUNDARY_LOADER}.jsx`]: js`
+      [`app/routes${NO_BOUNDARY_LOADER_FILE}.jsx`]: js`
         export function loader() {
           throw new Response("", { status: 401 });
         }
@@ -91,7 +97,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      [`app/routes${HAS_BOUNDARY_LAYOUT_NESTED_LOADER}.jsx`]: js`
+      [`app/routes${HAS_BOUNDARY_LAYOUT_NESTED_LOADER_FILE}.jsx`]: js`
         import { useMatches } from "@remix-run/react";
         export function loader() {
           return "${LAYOUT_DATA}";
@@ -101,7 +107,7 @@ test.beforeAll(async () => {
         }
         export function CatchBoundary() {
           let matches = useMatches();
-          let { data } = matches.find(match => match.id === "routes${HAS_BOUNDARY_LAYOUT_NESTED_LOADER}");
+          let { data } = matches.find(match => match.id === "routes${HAS_BOUNDARY_LAYOUT_NESTED_LOADER_FILE}");
 
           return (
             <div>
@@ -112,7 +118,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      [`app/routes${HAS_BOUNDARY_LAYOUT_NESTED_LOADER}/index.jsx`]: js`
+      [`app/routes${HAS_BOUNDARY_LAYOUT_NESTED_LOADER_FILE}._index.jsx`]: js`
         export function loader() {
           throw new Response("", { status: 401 });
         }
@@ -121,7 +127,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      [`app/routes${HAS_BOUNDARY_NESTED_LOADER}.jsx`]: js`
+      [`app/routes${HAS_BOUNDARY_NESTED_LOADER_FILE}.jsx`]: js`
         import { Outlet, useLoaderData } from "@remix-run/react";
         export function loader() {
           return "${LAYOUT_DATA}";
@@ -137,7 +143,7 @@ test.beforeAll(async () => {
         }
       `,
 
-      [`app/routes${HAS_BOUNDARY_NESTED_LOADER}/index.jsx`]: js`
+      [`app/routes${HAS_BOUNDARY_NESTED_LOADER_FILE}._index.jsx`]: js`
         export function loader() {
           throw new Response("", { status: 401 });
         }

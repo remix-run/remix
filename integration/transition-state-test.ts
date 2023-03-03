@@ -59,7 +59,8 @@ test.describe("rendering", () => {
             );
           }
         `,
-        "app/routes/index.jsx": js`
+
+        "app/routes/_index.jsx": js`
           import { Form, Link, useFetcher } from "@remix-run/react";
           export function loader() { return null; }
           export default function() {
@@ -115,6 +116,7 @@ test.describe("rendering", () => {
             );
           }
         `,
+
         [`app/routes/${STATES.NORMAL_LOAD}.jsx`]: js`
           export default function() {
             return (
@@ -124,6 +126,7 @@ test.describe("rendering", () => {
             );
           }
         `,
+
         [`app/routes/${STATES.LOADING_REDIRECT}.jsx`]: js`
           import { redirect } from "@remix-run/node";
           export function loader() {
@@ -137,6 +140,7 @@ test.describe("rendering", () => {
             );
           }
         `,
+
         [`app/routes/${STATES.SUBMITTING_LOADER}.jsx`]: js`
           export default function() {
             return (
@@ -146,6 +150,7 @@ test.describe("rendering", () => {
             );
           }
         `,
+
         [`app/routes/${STATES.SUBMITTING_LOADER_REDIRECT}.jsx`]: js`
           import { redirect } from "@remix-run/node";
           export function loader() {
@@ -159,6 +164,7 @@ test.describe("rendering", () => {
             );
           }
         `,
+
         [`app/routes/${STATES.SUBMITTING_ACTION}.jsx`]: js`
           export function loader() { return null; }
           export function action() { return null; }
@@ -170,6 +176,7 @@ test.describe("rendering", () => {
             );
           }
         `,
+
         [`app/routes/${STATES.SUBMITTING_ACTION_REDIRECT}.jsx`]: js`
           import { redirect } from "@remix-run/node";
           export function action() {
@@ -183,6 +190,7 @@ test.describe("rendering", () => {
             );
           }
         `,
+
         [`app/routes/${STATES.FETCHER_REDIRECT}.jsx`]: js`
           import { redirect } from "@remix-run/node";
           export function action() {

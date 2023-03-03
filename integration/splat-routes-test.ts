@@ -36,7 +36,7 @@ test.describe("rendering", () => {
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           export default function() {
             return <h2>${ROOT_INDEX}</h2>;
           }
@@ -66,19 +66,19 @@ test.describe("rendering", () => {
           }
         `,
 
-        "app/routes/nested/$.jsx": js`
+        "app/routes/nested.$.jsx": js`
           export default function() {
             return <h2>${NESTED_$}</h2>
           }
         `,
 
-        "app/routes/nested/index.jsx": js`
+        "app/routes/nested._index.jsx": js`
           export default function() {
             return <h2>${NESTED_INDEX}</h2>
           }
         `,
 
-        "app/routes/parentless/$.jsx": js`
+        "app/routes/parentless.$.jsx": js`
           export default function() {
             return <h2>${PARENTLESS_$}</h2>
           }
