@@ -161,6 +161,10 @@ export function flatRoutesUniversal(
 
     // collect conflicts for later reporting
     if (conflict) {
+      console.log({
+        route: route.file,
+        conflict: conflict.file,
+      });
       let currentConflicts = conflicts.get(route.path || "/");
       if (!currentConflicts) {
         conflicts.set(route.path || "/", [conflict.file, route.file]);
@@ -181,7 +185,10 @@ export function flatRoutesUniversal(
     if (childRoutes.length > 0) {
       for (let fullChildRouteId of childRoutes) {
         let childRouteId = fullChildRouteId.slice(routeId.length + 1);
-        let childRouteFile = path.join(routeDir, fullChildRouteId + routeExt);
+        let childRouteFile = path.join(
+          appDirectory,
+          fullChildRouteId + routeExt
+        );
         let index = childRouteId.endsWith("_index");
         let [segments, raw] = getRouteSegments(childRouteId);
         let routePath = createRoutePath(segments, raw, index);
