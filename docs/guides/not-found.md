@@ -24,8 +24,9 @@ export async function loader({ params }: LoaderArgs) {
   });
 
   if (!page) {
-    throw new Response("Not Found", {
+    throw new Response(null, {
       status: 404,
+      statusText: "Not Found",
     });
   }
 
@@ -82,8 +83,9 @@ export async function loader({ params }: LoaderArgs) {
   });
 
   if (!page) {
-    throw new Response("Not Found", {
+    throw new Response(null, {
       status: 404,
+      statusText: "Not Found",
     });
   }
 
