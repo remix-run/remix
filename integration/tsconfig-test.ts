@@ -47,7 +47,7 @@ test("should output default tsconfig if file is empty", async () => {
   let fixture = await createFixture({
     future: { v2_routeConvention: true },
     files: {
-      "tsconfig.json": json({ compilerOptions: { baseUrl: "." } }),
+      "tsconfig.json": json({}),
     },
   });
 

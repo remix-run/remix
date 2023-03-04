@@ -3,9 +3,10 @@ import fse from "fs-extra";
 import type { TsConfigJson } from "type-fest";
 import prettier from "prettier";
 import JSON5 from "json5";
+import { gte } from "semver";
 
 import * as colors from "../../../colors";
-import { getFullTsConfig } from "./getFullTsConfig";
+import { getFullTsConfig } from "./get-full-tsconfig";
 
 // taken from https://github.com/sindresorhus/ts-extras/blob/781044f0412ec4a4224a1b9abce5ff0eacee3e72/source/object-keys.ts
 type ObjectKeys<T extends object> = `${Exclude<keyof T, symbol>}`;
@@ -92,8 +93,8 @@ export async function writeConfigDefaults(configPath: string) {
       );
     }
   }
-  // TODO: check for user's typescript version and only add baseUrl if < 4.1
-  if (!("baseUrl" in fullConfig.options)) {
+
+  if (!("baseUrl" in fullConfig.options) && gte(ts.version, "4.1.0")) {
     let baseUrl = path.relative(process.cwd(), path.dirname(configPath)) || ".";
     config.compilerOptions.baseUrl = baseUrl;
     requiredChanges.push(
@@ -102,6 +103,7 @@ export async function writeConfigDefaults(configPath: string) {
         colors.bold(`'${baseUrl}'`)
     );
   }
+
   for (let key of objectKeys(suggestedCompilerOptions)) {
     if (!(key in fullConfig.options)) {
       config.compilerOptions[key] = suggestedCompilerOptions[key]?.value as any;
@@ -170,6 +172,7 @@ export async function writeConfigDefaults(configPath: string) {
       })
     );
   }
+
   if (suggestedChanges.length > 0) {
     console.log(
       `The following suggested values were added to your ${colors.blue(

@@ -1,6 +1,6 @@
 import path from "path";
 
-import { getFullTsConfig } from "../compiler/utils/tsconfig/getFullTsConfig";
+import { getFullTsConfig } from "../compiler/utils/tsconfig/get-full-tsconfig";
 
 describe("getFullTsConfig", () => {
   test('reads correct tsconfig options when "extends" is not provided', async () => {
