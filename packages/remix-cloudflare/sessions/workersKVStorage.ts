@@ -34,7 +34,7 @@ export function createWorkersKVSessionStorage<
 }: WorkersKVSessionStorageOptions): SessionStorage<Data, FlashData> {
   return createSessionStorage({
     cookie,
-    async createData(data, expires) {
+    async createData(data, expires, key='') {
       while (true) {
         let randomBytes = new Uint8Array(8);
         crypto.getRandomValues(randomBytes);
@@ -42,7 +42,7 @@ export function createWorkersKVSessionStorage<
         // than the maximum number of files allowed on an NTFS or ext4 volume
         // (2^32). However, the larger id space should help to avoid collisions
         // with existing ids when creating new sessions, which speeds things up.
-        let id = [...randomBytes]
+        let id = key ? key : [...randomBytes]
           .map((x) => x.toString(16).padStart(2, "0"))
           .join("");
 
