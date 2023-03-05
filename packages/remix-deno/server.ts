@@ -76,7 +76,10 @@ export async function serveStaticFiles(
     const file = await Deno.readFile(filePath);
     return new Response(file, { headers });
   } catch (error) {
-    if (error.code === "EISDIR" || error.code === "ENOENT") {
+    if (error.code === "EISDIR"
+        || error.code === "ENOENT"
+        || error.message.startsWith('Is a directory')
+        || error.message.startsWith('No such file or directory')) {
       throw new FileNotFoundError(filePath);
     }
     throw error;
