@@ -283,6 +283,8 @@ function usePrefetchBehavior(
   ];
 }
 
+const ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
+
 /**
  * A special kind of `<Link>` that knows whether or not it is "active".
  *
@@ -290,9 +292,7 @@ function usePrefetchBehavior(
  */
 let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
-    let isAbsolute =
-      typeof to === "string" &&
-      (/^[a-z+]+:\/\//i.test(to) || to.startsWith("//"));
+    let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
@@ -325,9 +325,7 @@ export { NavLink };
  */
 let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
-    let isAbsolute =
-      typeof to === "string" &&
-      (/^[a-z+]+:\/\//i.test(to) || to.startsWith("//"));
+    let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
@@ -906,15 +904,19 @@ export function Scripts(props: ScriptProps) {
 
     let routeModulesScript = !isStatic
       ? " "
-      : `${matches
-          .map(
-            (match, index) =>
-              `import ${JSON.stringify(manifest.url)};
-import * as route${index} from ${JSON.stringify(
-                manifest.routes[match.route.id].module
-              )};`
-          )
-          .join("\n")}
+      : `${
+          manifest.hmr?.runtime
+            ? `import ${JSON.stringify(manifest.hmr.runtime)};`
+            : ""
+        }import ${JSON.stringify(manifest.url)};
+${matches
+  .map(
+    (match, index) =>
+      `import * as route${index} from ${JSON.stringify(
+        manifest.routes[match.route.id].module
+      )};`
+  )
+  .join("\n")}
 window.__remixRouteModules = {${matches
           .map(
             (match, index) => `${JSON.stringify(match.route.id)}:route${index}`
@@ -975,7 +977,7 @@ import(${JSON.stringify(manifest.entry.module)});`;
     })
     .flat(1);
 
-  let preloads = manifest.entry.imports.concat(routePreloads);
+  let preloads = isHydrated ? [] : manifest.entry.imports.concat(routePreloads);
 
   return (
     <>
@@ -1131,18 +1133,22 @@ export interface RouteMatch {
 export function useMatches(): RouteMatch[] {
   let { routeModules } = useRemixContext();
   let matches = useMatchesRR();
-  return matches.map((match) => {
-    let remixMatch: RouteMatch = {
-      id: match.id,
-      pathname: match.pathname,
-      params: match.params,
-      data: match.data,
-      // Need to grab handle here since we don't have it at client-side route
-      // creation time
-      handle: routeModules[match.id].handle,
-    };
-    return remixMatch;
-  });
+  return React.useMemo(
+    () =>
+      matches.map((match) => {
+        let remixMatch: RouteMatch = {
+          id: match.id,
+          pathname: match.pathname,
+          params: match.params,
+          data: match.data,
+          // Need to grab handle here since we don't have it at client-side route
+          // creation time
+          handle: routeModules[match.id].handle,
+        };
+        return remixMatch;
+      }),
+    [matches, routeModules]
+  );
 }
 
 /**
@@ -1408,6 +1414,10 @@ function convertRouterFetcherToRemixFetcher(
       let fetcher: FetcherStates["Done"] = {
         state: "idle",
         type: "done",
+        formMethod: undefined,
+        formAction: undefined,
+        formData: undefined,
+        formEncType: undefined,
         submission: undefined,
         data,
       };
@@ -1535,6 +1545,10 @@ function convertRouterFetcherToRemixFetcher(
   let fetcher: FetcherStates["Loading"] = {
     state: "loading",
     type: "normalLoad",
+    formMethod: undefined,
+    formAction: undefined,
+    formData: undefined,
+    formEncType: undefined,
     submission: undefined,
     data,
   };
@@ -1570,12 +1584,12 @@ export const LiveReload =
                 function remixLiveReloadConnect(config) {
                   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
-                  let port = (window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || ${String(
+                  let port = (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || ${String(
                     port
                   )};
                   let socketPath = protocol + "//" + host + ":" + port + "/socket";
                   let ws = new WebSocket(socketPath);
-                  ws.onmessage = (message) => {
+                  ws.onmessage = async (message) => {
                     let event = JSON.parse(message.data);
                     if (event.type === "LOG") {
                       console.log(event.message);
@@ -1583,6 +1597,44 @@ export const LiveReload =
                     if (event.type === "RELOAD") {
                       console.log("💿 Reloading window ...");
                       window.location.reload();
+                    }
+                    if (event.type === "HMR") {
+                      if (!window.__hmr__ || !window.__hmr__.contexts) {
+                        console.log("💿 [HMR] No HMR context, reloading window ...");
+                        window.location.reload();
+                        return;
+                      }
+                      if (!event.updates || !event.updates.length) return;
+                      let updateAccepted = false;
+                      for (let update of event.updates) {
+                        console.log("[HMR] " + update.reason + " [" + update.id +"]")
+                        if (update.revalidate) {
+                          console.log("[HMR] Revalidating [" + update.id + "]");
+                        }
+                        let imported = await import(update.url +  '?t=' + event.assetsManifest.hmr.timestamp);
+                        if (window.__hmr__.contexts[update.id]) {
+                          let accepted = window.__hmr__.contexts[update.id].emit(
+                            imported
+                          );
+                          if (accepted) {
+                            console.log("[HMR] Updated accepted by", update.id);
+                            updateAccepted = true;
+                          }
+                        }
+                      }
+                      if (event.assetsManifest && window.__hmr__.contexts["remix:manifest"]) {
+                        let accepted = window.__hmr__.contexts["remix:manifest"].emit(
+                          event.assetsManifest
+                        );
+                        if (accepted) {
+                          console.log("[HMR] Updated accepted by", "remix:manifest");
+                          updateAccepted = true;
+                        }
+                      }
+                      if (!updateAccepted) {
+                        console.log("[HMR] Updated rejected, reloading...");
+                        window.location.reload();
+                      }
                     }
                   };
                   ws.onopen = () => {

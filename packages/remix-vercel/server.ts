@@ -82,7 +82,7 @@ export function createRemixRequest(
   let host = req.headers["x-forwarded-host"] || req.headers["host"];
   // doesn't seem to be available on their req object!
   let protocol = req.headers["x-forwarded-proto"] || "https";
-  let url = new URL(req.url!, `${protocol}://${host}`);
+  let url = new URL(`${protocol}://${host}${req.url}`);
 
   // Abort action/loaders once we can no longer write a response
   let controller = new NodeAbortController();

@@ -1,5 +1,43 @@
 # `@remix-run/react`
 
+## 1.14.0
+
+### Minor Changes
+
+- Hot Module Replacement and Hot Data Revalidation ([#5259](https://github.com/remix-run/remix/pull/5259))
+  - Requires `unstable_dev` future flag to be enabled
+  - HMR provided through React Refresh
+  - Features:
+    - HMR for component and style changes
+    - HDR when loaders for current route change
+  - Known limitations for MVP:
+    - Only implemented for React via React Refresh
+    - No `import.meta.hot` API exposed yet
+    - Revalidates _all_ loaders on route when loader changes are detected
+    - Loader changes do not account for imported dependencies changing
+
+### Patch Changes
+
+- Remove duplicate manifest imports ([#5534](https://github.com/remix-run/remix/pull/5534))
+- Ensure types for fetchers always include `form*` submission fields ([#5476](https://github.com/remix-run/remix/pull/5476))
+- Sync `FutureConfig` interface between packages ([#5398](https://github.com/remix-run/remix/pull/5398))
+- Updated dependencies:
+  - `@remix-run/router@1.3.3`
+  - `react-router-dom@8.6.2`
+
+## 1.13.0
+
+### Minor Changes
+
+- Add built-in support for PostCSS via the `future.unstable_postcss` feature flag ([#5229](https://github.com/remix-run/remix/pull/5229))
+- Add built-in support for Tailwind via the `future.unstable_tailwind` feature flag ([#5229](https://github.com/remix-run/remix/pull/5229))
+
+### Patch Changes
+
+- Bump React Router dependencies to the latest version. [See the release notes for more details.](https://github.com/remix-run/react-router/releases/tag/react-router%406.8.1) ([#5389](https://github.com/remix-run/remix/pull/5389))
+- Improve efficiency of route manifest-to-tree transformation ([#4748](https://github.com/remix-run/remix/pull/4748))
+- Added better detection for absolute urls in `<Link>` and `<NavLink>` components ([#5390](https://github.com/remix-run/remix/pull/5390))
+
 ## 1.12.0
 
 ### Minor Changes

@@ -19,7 +19,6 @@ module.exports = {
     });
   },
   serverBuildPath: "build/index.js",
-  serverBuildTarget: "node-cjs",
 };
 ```
 
@@ -103,7 +102,8 @@ either a `.js` or `.ts` file extension.
 ## serverBuildDirectory
 
 <docs-warning>This option is deprecated and will likely be removed in a future
-stable release. Use [`serverBuildPath`][server-build-path] instead.</docs-warning>
+stable release. Use [`serverBuildPath`][server-build-path]
+instead.</docs-warning>
 
 The path to the server build, relative to `remix.config.js`. Defaults to
 "build". This needs to be deployed to your server.
@@ -111,12 +111,17 @@ The path to the server build, relative to `remix.config.js`. Defaults to
 ## serverBuildPath
 
 The path to the server build file, relative to `remix.config.js`. This file
-should end in a `.js` extension and should be deployed to your server.
-
-If omitted, the default build path will be based on your
-[`serverBuildTarget`][server-build-target].
+should end in a `.js` extension and should be deployed to your server. Defaults
+to `"build/index.js"`.
 
 ## serverBuildTarget
+
+<docs-warning>This option is deprecated and will be removed in the next major version release. Use a combination of [`publicPath`][public-path],
+[`serverBuildPath`][server-build-path], [`serverConditions`][server-conditions],
+[`serverDependenciesToBundle`][server-dependencies-to-bundle]
+[`serverMainFields`][server-main-fields], [`serverMinify`][server-minify],
+[`serverModuleFormat`][server-module-format] and/or
+[`serverPlatform`][server-platform] instead.</docs-warning>
 
 The target of the server build. Defaults to `"node-cjs"`.
 
@@ -130,11 +135,34 @@ The `serverBuildTarget` can be one of the following:
 - [`"node-cjs"`][node-cjs]
 - [`"vercel"`][vercel]
 
+**Migration Table:**
+
+| serverBuildTarget    | publicPath         | serverBuildPath                         | serverConditions | serverMainFields        | serverModuleFormat | serverPlatform | serverDependenciesToBundle | serverMinify |
+| -------------------- | ------------------ | --------------------------------------- | ---------------- | ----------------------- | ------------------ | -------------- | -------------------------- | ------------ |
+| `arc`                | `/\_static/build/` | `server/index.js`                       |                  | `main, module`          | `cjs`              | `node`         |                            | `false`      |
+| `cloudflare-pages`   | `/build/`          | `functions/[[path]].js`                 | `worker`         | `browser, module, main` | `esm`              | `neutral`      | `all`                      | `true`       |
+| `cloudflare-workers` | `/build/`          | `build/index.js`                        | `worker`         | `browser, module, main` | `esm`              | `neutral`      | `all`                      | `true`       |
+| `deno`               | `/build/`          | `build/index.js`                        | `deno, worker`   | `module, main`          | `esm`              | `neutral`      | `all`                      | `false`      |
+| `netlify`            | `/build/`          | `.netlify/functions-internal/server.js` |                  | `main, module`          | `cjs`              | `node`         |                            | `false`      |
+| `node-cjs`           | `/build/`          | `build/index.js`                        |                  | `main, module`          | `cjs`              | `node`         |                            | `false`      |
+| `vercel`             | `/build/`          | `api/index.js`                          |                  | `main, module`          | `cjs`              | `node`         |                            | `false`      |
+
+## serverConditions
+
+The order of conditions to use when resolving server dependencies' `exports`
+field in `package.json`.
+
 ## serverDependenciesToBundle
 
-A list of regex patterns that determines if a module is transpiled and included in the server bundle. This can be useful when consuming ESM only packages in a CJS build, or when consuming packages with [CSS side-effect imports][css-side-effect-imports].
+A list of regex patterns that determines if a module is transpiled and included
+in the server bundle. This can be useful when consuming ESM only packages in a
+CJS build, or when consuming packages with [CSS side effect
+imports][css-side-effect-imports].
 
-For example, the `unified` ecosystem is all ESM-only. Let's also say we're using a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be able to consume those packages in a CJS app without having to use dynamic imports:
+For example, the `unified` ecosystem is all ESM-only. Let's also say we're using
+a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be
+able to consume those packages in a CJS app without having to use dynamic
+imports:
 
 ```ts filename=remix.config.js lines=[8-13]
 /** @type {import('@remix-run/dev').AppConfig} */
@@ -152,6 +180,29 @@ module.exports = {
   ],
 };
 ```
+
+If you want to bundle all server dependencies, you can set
+`serverDependenciesToBundle` to `"all"`.
+
+## serverMainFields
+
+The order of main fields to use when resolving server dependencies. Defaults to
+`["main", "module"]` when `serverModuleFormat` is set to `"cjs"`. Defaults to
+`["module", "main"]` when `serverModuleFormat` is set to `"esm"`.
+
+## serverMinify
+
+Whether to minify the server build in production or not. Defaults to `false`.
+
+## serverModuleFormat
+
+The output format of the server build, which can either be `"cjs"` or `"esm"`.
+Defaults to `"cjs"`.
+
+## serverPlatform
+
+The platform the server build is targeting, which can either be `"neutral"` or
+`"node"`. Defaults to `"node"`.
 
 ## watchPaths
 
@@ -173,8 +224,14 @@ There are a few conventions that Remix uses you should be aware of.
 <docs-info>[Dilum Sanjaya][dilum-sanjaya] made [an awesome visualization][an-awesome-visualization] of how routes in the file system map to the URL in your app that might help you understand these conventions.</docs-info>
 
 [minimatch]: https://www.npmjs.com/package/minimatch
+[public-path]: #publicpath
 [server-build-path]: #serverbuildpath
-[server-build-target]: #serverbuildtarget
+[server-conditions]: #serverconditions
+[server-dependencies-to-bundle]: #serverdependenciestobundle
+[server-main-fields]: #servermainfields
+[server-minify]: #serverminify
+[server-module-format]: #servermoduleformat
+[server-platform]: #serverplatform
 [arc]: https://arc.codes
 [cloudflare-pages]: https://pages.cloudflare.com
 [cloudflare-workers]: https://workers.cloudflare.com

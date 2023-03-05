@@ -74,7 +74,7 @@ This is awesome for the checkbox, but the sidebar will say 2/4 while the checkbo
 +-----------------+----------------------------┘
 ```
 
-Because Remix will automatically reload the routes, the sidebar will quickly update and be correct. But for a moment, it's gonna feel a little funny.
+Because Remix will automatically reload the routes, the sidebar will quickly update and be correct. But for a moment, it's going to feel a little funny.
 
 This is where `useFetchers` comes in. Up in the sidebar, we can access all the inflight fetcher states from the checkboxes - even though it's not the component that created them.
 
