@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { RouterState } from "@remix-run/router";
 import type {
   DataRouteMatch,
   Params,
@@ -9,7 +10,8 @@ import type {
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { EntryRoute } from "./routes";
-import type { RouteData } from "./routeData";
+
+type RouteData = RouterState["loaderData"];
 
 export interface RouteModules {
   [routeId: string]: RouteModule;
@@ -174,9 +176,9 @@ export interface ShouldReloadFunction {
 }
 
 interface Submission {
-  action: string;
-  method: string;
-  formData: FormData;
-  encType: string;
-  key: string;
+      action: string;
+      method: string;
+      formData: FormData;
+      encType: string;
+      key: string;
 }

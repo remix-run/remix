@@ -1,5 +1,7 @@
 import {
   defer as routerDefer,
+  json as routerJson,
+  redirect as routerRedirect,
   type UNSAFE_DeferredData as DeferredData,
   type TrackedPromise,
 } from "@remix-run/router";
@@ -13,11 +15,15 @@ export type TypedDeferredData<Data extends Record<string, unknown>> = Pick<
   data: Data;
 };
 
+// TODO: The RR version of this is the same minus the generic.  Should we add
+// that over there and remove this?
 export type DeferFunction = <Data extends Record<string, unknown>>(
   data: Data,
   init?: number | ResponseInit
 ) => TypedDeferredData<Data>;
 
+// TODO: The RR version of this is identical except it's generic doesn't
+// `extends unknown`.  Should we add that over there and remove this?
 export type JsonFunction = <Data extends unknown>(
   data: Data,
   init?: number | ResponseInit
@@ -39,28 +45,18 @@ export type TypedResponse<T extends unknown = unknown> = Omit<
  * @see https://remix.run/utils/json
  */
 export const json: JsonFunction = (data, init = {}) => {
-  let responseInit = typeof init === "number" ? { status: init } : init;
-
-  let headers = new Headers(responseInit.headers);
-  if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json; charset=utf-8");
-  }
-
-  return new Response(JSON.stringify(data), {
-    ...responseInit,
-    headers,
-  });
+  return routerJson(data, init);
 };
 
 /**
- * This is a shortcut for creating `application/json` responses. Converts `data`
- * to JSON and sets the `Content-Type` header.
+ * This is a shortcut for creating Remix deferred responses
  *
- * @see https://remix.run/api/remix#json
+ * @see https://remix.run/docs/utils/defer
  */
 export const defer: DeferFunction = (data, init = {}) => {
   let responseInit = typeof init === "number" ? { status: init } : init;
 
+  // TODO: Do we need this or is this copy/paste from json()?
   let headers = new Headers(responseInit.headers);
   if (!headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json; charset=utf-8");
@@ -72,6 +68,8 @@ export const defer: DeferFunction = (data, init = {}) => {
   }) as TypedDeferredData<typeof data>;
 };
 
+// TODO: The RR version is identical minus `TypedResponse` and it just returns
+// a `Response`.  Should we add that over there?
 export type RedirectFunction = (
   url: string,
   init?: number | ResponseInit
@@ -84,20 +82,7 @@ export type RedirectFunction = (
  * @see https://remix.run/utils/redirect
  */
 export const redirect: RedirectFunction = (url, init = 302) => {
-  let responseInit = init;
-  if (typeof responseInit === "number") {
-    responseInit = { status: responseInit };
-  } else if (typeof responseInit.status === "undefined") {
-    responseInit.status = 302;
-  }
-
-  let headers = new Headers(responseInit.headers);
-  headers.set("Location", url);
-
-  return new Response(null, {
-    ...responseInit,
-    headers,
-  }) as TypedResponse<never>;
+  return routerRedirect(url, init) as TypedResponse<never>;
 };
 
 export function isDeferredData(value: any): value is DeferredData {
@@ -122,6 +107,7 @@ export function isResponse(value: any): value is Response {
   );
 }
 
+//TODO(v2): Can we leverage this stuff from RR?
 const redirectStatusCodes = new Set([301, 302, 303, 307, 308]);
 export function isRedirectStatusCode(statusCode: number): boolean {
   return redirectStatusCodes.has(statusCode);

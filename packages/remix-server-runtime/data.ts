@@ -21,6 +21,8 @@ export interface AppLoadContext {
 
 /**
  * Data for a route that was returned from a `loader()`.
+ *
+ * @deprecated
  */
 export type AppData = any;
 

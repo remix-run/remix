@@ -43,7 +43,10 @@ import { isRouteErrorResponse } from "@remix-run/router";
  * line.
  */
 
-// TODO Re-export as ErrorResponse?
+/**
+ * @deprecated in favor of the `ErrorResponse` class in React Router.
+ * TODO: Need to add generics in RR
+ */
 export interface ThrownResponse<T = any> {
   status: number;
   statusText: string;

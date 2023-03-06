@@ -109,19 +109,6 @@ function useRemixContext(): RemixContextObject {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// RemixEntry
-
-export function RemixEntry(props: {
-  context: EntryContext;
-  action: NavigationType;
-  location: Location;
-  navigator: Navigator;
-  static?: boolean;
-}) {
-  return <h1>Not Implemented!</h1>;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // RemixRoute
 
 export function RemixRoute({ id }: { id: string }) {
@@ -743,6 +730,8 @@ export function Meta() {
   return future?.v2_meta ? <V2Meta /> : <V1Meta />;
 }
 
+// TODO: The RR version is just missing the generic and resolve is
+// `TrackedPromise | any`.  Should we add the generic in RR?
 export interface AwaitProps<Resolve> {
   children: React.ReactNode | ((value: Awaited<Resolve>) => React.ReactNode);
   errorElement?: React.ReactNode;
@@ -1103,6 +1092,8 @@ function dedupe(array: any[]) {
 }
 
 // TODO: Can this be re-exported from RR?
+// Yes, but data -> unknown and handle -> unknown.  Is handle forced to
+// be an object in remix?
 export interface RouteMatch {
   /**
    * The id of the matched route

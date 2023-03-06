@@ -1,11 +1,12 @@
-import type { Location, Params } from "@remix-run/router";
+import type { Location, Params, RouterState } from "@remix-run/router";
 import type { ComponentType } from "react";
 
 import type { AppLoadContext, AppData } from "./data";
 import type { LinkDescriptor } from "./links";
-import type { RouteData } from "./routeData";
 import type { Route } from "./routes";
 import type { SerializeFrom } from "./serialize";
+
+type RouteData = RouterState["loaderData"];
 
 export interface RouteModules<RouteModule> {
   [routeId: string]: RouteModule;
@@ -13,6 +14,10 @@ export interface RouteModules<RouteModule> {
 
 /**
  * The arguments passed to ActionFunction and LoaderFunction.
+ *
+ * @deprecated in favor of React Router `LoaderFunctionArgs` and `ActionFunctionArgs`
+ * TODO: In RR context is optional and typed as `any` - can we drop this in v2
+ * in favor of that?
  */
 export interface DataFunctionArgs {
   request: Request;
@@ -20,11 +25,20 @@ export interface DataFunctionArgs {
   params: Params;
 }
 
+/**
+ * @deprecated in favor of React Router `LoaderFunctionArgs`
+ */
 export type LoaderArgs = DataFunctionArgs;
+
+/**
+ * @deprecated in favor of React Router `ActionFunctionArgs`
+ */
 export type ActionArgs = DataFunctionArgs;
 
 /**
  * A function that handles data mutations for a route.
+ *
+ * @deprecated in favor of React Router `ActionFunction`
  */
 export interface ActionFunction {
   (args: DataFunctionArgs):
@@ -66,6 +80,8 @@ export interface LinksFunction {
 
 /**
  * A function that loads data for a route.
+ *
+ * @deprecated in favor of React Router `LoaderFunction`
  */
 export interface LoaderFunction {
   (args: DataFunctionArgs):

@@ -3,6 +3,10 @@ import { ErrorResponse } from "@remix-run/router";
 
 import type { AppData } from "./data";
 
+/**
+ * @deprecated in favor of React Router `ErrorResponse`
+ * TODO: Need to add generics in RR
+ */
 export interface ThrownResponse<
   Status extends number = number,
   Data = AppData
