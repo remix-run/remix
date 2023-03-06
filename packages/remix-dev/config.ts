@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import fse from "fs-extra";
 import getPort from "get-port";
 import NPMCliPackageJson from "@npmcli/package-json";
-import { lte } from "semver";
+import { coerce } from "semver";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -469,14 +469,19 @@ export async function readConfig(
   let pkgJson = await NPMCliPackageJson.load(remixRoot);
   let deps = pkgJson.content.dependencies ?? {};
 
-  let reactVersion = lte(deps.react, "18.0.0") ? "17" : "18";
-  if (!reactVersion) {
+  let maybeReactVersion = coerce(deps.react);
+  if (!maybeReactVersion) {
     let react = ["react", "react-dom"];
     let list = conjunctionListFormat(react);
     throw new Error(
       `Could not determine React version. Please install the following packages: ${list}`
     );
   }
+
+  let reactVersion =
+    maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
+      ? "18"
+      : "17";
 
   let serverRuntime = deps["@remix-run/deno"]
     ? "deno"
