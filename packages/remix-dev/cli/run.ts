@@ -25,7 +25,6 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     $ remix dev [${colors.arg("projectDir")}]
     $ remix routes [${colors.arg("projectDir")}]
     $ remix watch [${colors.arg("projectDir")}]
-    $ remix setup [${colors.arg("remixPlatform")}]
     $ remix codemod <${colors.arg("codemod")}> [${colors.arg("projectDir")}]
 
   ${colors.heading("Options")}:
