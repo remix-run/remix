@@ -127,7 +127,6 @@ export function flatRoutesUniversal(
   prefix: string = "routes"
 ): RouteManifest {
   let conflicts = new Map<string, string[]>();
-  let routesDirectory = path.join(appDirectory, prefix);
   let routeManifest: RouteManifest = {};
   let prefixLookup = new PrefixLookupTrie();
   routes.sort((a, b) => b.length - a.length);
@@ -135,97 +134,58 @@ export function flatRoutesUniversal(
   let uniqueRouteIds = new Map<string, ConfigRoute>();
 
   for (let file of routes) {
-    let routeExt = path.extname(file);
-    let routeDir = path.dirname(file);
-    let routeId =
-      routeDir === routesDirectory
-        ? path.relative(appDirectory, file).slice(0, -routeExt.length)
-        : path.relative(appDirectory, routeDir);
-
-    let routeIdWithoutPrefix = routeId.slice(prefix.length + 1);
-
-    let index = routeId.endsWith("_index");
-    let [segments, raw] = getRouteSegments(routeIdWithoutPrefix);
-    let routePath = createRoutePath(segments, raw, index);
-
-    let route: ConfigRoute = {
-      file: file.slice(appDirectory.length + 1),
-      id: routeId,
-      path: routePath,
-      parentId: "root",
-    };
-    if (index) route.index = true;
+    let route = getRouteInfo(appDirectory, prefix, file);
 
     let conflict = uniqueRouteIds.get(route.id || "/");
 
     // collect conflicts for later reporting
     if (conflict) {
-      let currentConflicts = conflicts.get(route.path || "/");
-      if (!currentConflicts) {
-        conflicts.set(route.path || "/", [conflict.file, route.file]);
-      } else {
-        currentConflicts.push(route.file);
-        conflicts.set(route.path || "/", currentConflicts);
-      }
+      // prettier-ignore
+      let currentConflicts = conflicts.get(route.path || "/") || [conflict.file];
+      conflicts.set(route.path || "/", [...currentConflicts, route.file]);
     }
 
     routeManifest[route.id] = route;
     uniqueRouteIds.set(route.id || "/", route);
 
-    let childRoutes = prefixLookup.findAndRemove(routeId);
-    prefixLookup.add(routeId);
+    let childRoutes = prefixLookup.findAndRemove(route.id);
+    prefixLookup.add(route.id);
 
     if (childRoutes.length > 0) {
       for (let fullChildRouteId of childRoutes) {
-        let parentId = routeId;
-        let childRouteId = fullChildRouteId.slice(routeId.length + 1);
         let childRouteFilePath = path.join(appDirectory, fullChildRouteId);
-        let childRouteFile = routes.find((c) =>
-          c.startsWith(childRouteFilePath)
-        );
+        // TODO: refactor to not use this, but for it's fine for now...
+        // TODO: we get the routeId back which could be either `{routeId}.tsx` or `{routeId}/{route|index}.tsx`
+        let childRouteFile = routes.find((c) => {
+          return c.startsWith(childRouteFilePath);
+        });
 
         invariant(
           childRouteFile,
           `Could not find a route module for the route ID: ${fullChildRouteId} at ${childRouteFilePath}`
         );
 
-        let index = fullChildRouteId.endsWith("_index");
-        let [segments, raw] = getRouteSegments(childRouteId);
-
-        let childRoutePath = createRoutePath(segments, raw, index);
-
-        let childRoute: ConfigRoute = {
-          file: childRouteFile.slice(appDirectory.length + 1),
-          id: fullChildRouteId,
-          parentId,
-          path: childRoutePath,
-        };
-
-        if (index) childRoute.index = true;
+        let childRoute = getRouteInfo(
+          appDirectory,
+          prefix,
+          childRouteFile,
+          route.id
+        );
 
         let childRouteConflicts = uniqueRouteIds.get(childRoute.id || "/");
 
         // collect conflicts for later reporting
         if (childRouteConflicts) {
-          let currentConflicts = conflicts.get(childRoute.path || "/");
-          if (!currentConflicts) {
-            conflicts.set(childRoute.path || "/", [
-              childRouteConflicts.file,
-              childRoute.file,
-            ]);
-          } else {
-            currentConflicts.push(childRoute.file);
-            conflicts.set(childRoute.path || "/", currentConflicts);
-          }
+          // prettier-ignore
+          let currentConflicts = conflicts.get(childRoute.path || "/") || [childRouteConflicts.file];
+          conflicts.set(childRoute.path || "/", [
+            ...currentConflicts,
+            childRoute.file,
+          ]);
         }
 
         uniqueRouteIds.set(childRoute.id || "/", childRoute);
         routeManifest[childRoute.id] = childRoute;
-        console.log({
-          childRoute,
-          childRouteManifest: routeManifest[childRoute.id],
-          routeManifest,
-        });
       }
     }
   }
@@ -467,4 +427,34 @@ export function getRouteConflictErrorMessage(
     others.map((route) => `⭕️️ ${route}`).join("\n") +
     "\n"
   );
+}
+
+export function getRouteInfo(
+  appDirectory: string,
+  prefix: string,
+  file: string,
+  parentId?: string
+) {
+  let routeExt = path.extname(file);
+  let routeDir = path.dirname(file);
+  let routeId =
+    routeDir === path.join(appDirectory, prefix)
+      ? path.relative(appDirectory, file).slice(0, -routeExt.length)
+      : path.relative(appDirectory, routeDir);
+
+  let routeIdWithoutPrefix = routeId.slice(prefix.length + 1);
+
+  let index = routeId.endsWith("_index");
+  let [segments, raw] = getRouteSegments(routeIdWithoutPrefix);
+  let routePath = createRoutePath(segments, raw, index);
+
+  let route: ConfigRoute = {
+    file: file.slice(appDirectory.length + 1),
+    id: routeId,
+    path: routePath,
+    parentId: parentId ? parentId : "root",
+  };
+  if (index) route.index = true;
+
+  return route;
 }
