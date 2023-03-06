@@ -307,7 +307,9 @@ export async function generateEntry(
   }
 
   let reactVersion =
-    maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
+    maybeReactVersion.major >= 18
+      ? maybeReactVersion.major
+      : maybeReactVersion.raw === "0.0.0"
       ? 18
       : 17;
 

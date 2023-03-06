@@ -479,7 +479,9 @@ export async function readConfig(
   }
 
   let reactVersion =
-    maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
+    maybeReactVersion.major >= 18
+      ? maybeReactVersion.major
+      : maybeReactVersion.raw === "0.0.0"
       ? 18
       : 17;
 
@@ -520,7 +522,7 @@ export async function readConfig(
   if (userEntryServerFile) {
     entryServerFile = userEntryServerFile;
   } else {
-    if (!deps["isbot"] && reactVersion === 18) {
+    if (!deps["isbot"] && reactVersion >= 18) {
       console.log(
         "adding `isbot` to your package.json, you should commit this change"
       );
