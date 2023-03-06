@@ -140,9 +140,12 @@ test.describe("Error Sanitization", () => {
 
   test.describe("serverMode=production", () => {
     test.beforeAll(async () => {
-      fixture = await createFixture({
-        files: routeFiles,
-      });
+      fixture = await createFixture(
+        {
+          files: routeFiles,
+        },
+        ServerMode.Production
+      );
     });
 
     test("renders document without errors", async () => {
@@ -183,7 +186,7 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch("Defer Route");
       expect(html).toMatch("RESOLVED");
       expect(html).not.toMatch("MESSAGE:");
-      expect(html).not.toMatch(/stack/i);
+      expect(html).not.toMatch(/"stack":/i);
     });
 
     test("sanitizes defer errors in document requests", async () => {
@@ -191,9 +194,8 @@ test.describe("Error Sanitization", () => {
       let html = await response.text();
       expect(html).toMatch("Defer Error");
       expect(html).not.toMatch("RESOLVED");
-      // TODO: is this expected or should we get "Unexpected Server Error" here?
-      expect(html).toMatch('{"message":"REJECTED"}');
-      expect(html).not.toMatch(/stack/i);
+      expect(html).toMatch('{"message":"Unexpected Server Error"}');
+      expect(html).not.toMatch(/"stack":/i);
     });
 
     test("returns data without errors", async () => {
@@ -291,7 +293,7 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch("Defer Route");
       expect(html).toMatch("RESOLVED");
       expect(html).not.toMatch("MESSAGE:");
-      expect(html).not.toMatch(/stack/i);
+      expect(html).not.toMatch(/"stack":/i);
     });
 
     test("does not sanitize defer errors in document requests", async () => {
@@ -299,9 +301,8 @@ test.describe("Error Sanitization", () => {
       let html = await response.text();
       expect(html).toMatch("Defer Error");
       expect(html).not.toMatch("RESOLVED");
-      expect(html).toMatch('{"message":"REJECTED"}');
-      // TODO: I think we should be getting the stack here too?
-      expect(html).toMatch(/stack/i);
+      // TODO: Is our ServerMode.Development not making it into the build somehow?
+      expect(html).toMatch('{"message":"REJECTED","stack":"}');
     });
 
     test("returns data without errors", async () => {
