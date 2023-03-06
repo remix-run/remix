@@ -142,8 +142,7 @@ export function createClientRoutes(
       manifest,
       routeModulesCache,
       future,
-      route.id,
-      routesByParentId
+      route.id
     );
     if (children.length > 0) dataRoute.children = children;
     return dataRoute;

@@ -314,7 +314,7 @@ Given the following URLs, the search params would be parsed as follows:
 
 ### Data Reloads
 
-When multiple nested routes are rendering and the search params change, all of the routes will be reloaded (instead of just the new or changed routes). This is because search params are a cross-cutting concern and could effect any loader. If you would like to prevent some of your routes from reloading in this scenario, use [shouldReload][should-reload].
+When multiple nested routes are rendering and the search params change, all of the routes will be reloaded (instead of just the new or changed routes). This is because search params are a cross-cutting concern and could effect any loader. If you would like to prevent some of your routes from reloading in this scenario, use [shouldRevalidate][should-revalidate].
 
 ### Search Params in Components
 
@@ -667,7 +667,7 @@ There are three cases where Remix will reload all of your routes:
 - If the url search params change (any loader could use them)
 - The user clicks a link to the exact same URL they are already at (this will also replace the current entry in the history stack)
 
-All of these behaviors emulate the browser's default behavior. In these cases, Remix doesn't know enough about your code to optimize the data loading, but you can optimize it yourself with [unstable_shouldReload][should-reload].
+All of these behaviors emulate the browser's default behavior. In these cases, Remix doesn't know enough about your code to optimize the data loading, but you can optimize it yourself with [shouldRevalidate][should-revalidate].
 
 ## Data Libraries
 
@@ -746,7 +746,7 @@ export default function RouteComp() {
 [prisma]: https://prisma.io
 [request]: https://developer.mozilla.org/en-US/docs/Web/API/Request
 [search-params-getall]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams/getAll
-[should-reload]: ../route/should-reload
+[should-revalidate]: ../route/should-revalidate
 [url-search-params]: https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams
 [url]: https://developer.mozilla.org/en-US/docs/Web/API/URL
 [use-submit]: ../hooks/use-submit
