@@ -1,6 +1,9 @@
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
-  serverBuildTarget: "deno",
+  serverConditions: ["deno", "worker"],
+  serverMainFields: ["browser", "module", "main"],
+  serverModuleFormat: "esm",
+  serverPlatform: "neutral",
   server: "./server.ts",
   /*
   If live reload causes page to re-render without changes (live reload is too fast),
