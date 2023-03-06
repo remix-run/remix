@@ -418,7 +418,9 @@ test.describe("ErrorBoundary", () => {
     await page.waitForSelector("#child-error");
     // Preserves parent loader data
     expect(await app.getHtml("#parent-data")).toMatch("PARENT");
-    expect(await app.getHtml("#child-error")).toMatch("Broken!");
+    expect(await app.getHtml("#child-error")).toMatch(
+      "Unexpected Server Error"
+    );
   });
 
   test("renders own boundary in fetcher action submission without action from other routes", async ({
@@ -988,9 +990,12 @@ test.describe("Default ErrorBoundary", () => {
 
   test.describe("When the root route does not have a boundary", () => {
     test.beforeAll(async () => {
-      fixture = await createFixture({
-        files: getFiles({ includeRootErrorBoundary: false }),
-      });
+      fixture = await createFixture(
+        {
+          files: getFiles({ includeRootErrorBoundary: false }),
+        },
+        ServerMode.Development
+      );
       appFixture = await createAppFixture(fixture, ServerMode.Development);
     });
 
@@ -1074,7 +1079,8 @@ test.describe("Default ErrorBoundary", () => {
         expect(res.status).toBe(500);
         let text = await res.text();
         expect(text).toMatch("Root Error Boundary");
-        expect(text).toMatch("Loader Error");
+        expect(text).toMatch("Unexpected Server Error");
+        expect(text).not.toMatch("Loader Error");
         expect(text).not.toMatch("Application Error");
       });
 
@@ -1083,7 +1089,8 @@ test.describe("Default ErrorBoundary", () => {
         expect(res.status).toBe(500);
         let text = await res.text();
         expect(text).toMatch("Root Error Boundary");
-        expect(text).toMatch("Render Error");
+        expect(text).toMatch("Unexpected Server Error");
+        expect(text).not.toMatch("Render Error");
         expect(text).not.toMatch("Application Error");
       });
     });
