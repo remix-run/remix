@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import fse from "fs-extra";
 import getPort from "get-port";
 import NPMCliPackageJson from "@npmcli/package-json";
+import { lte } from "semver";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -468,6 +469,49 @@ export async function readConfig(
   let pkgJson = await NPMCliPackageJson.load(remixRoot);
   let deps = pkgJson.content.dependencies ?? {};
 
+  let reactVersion = lte(deps.react, "18.0.0") ? "17" : "18";
+  if (!reactVersion) {
+    let react = ["react", "react-dom"];
+    let list = conjunctionListFormat(react);
+    throw new Error(
+      `Could not determine React version. Please install the following packages: ${list}`
+    );
+  }
+
+  let serverRuntime = deps["@remix-run/deno"]
+    ? "deno"
+    : deps["@remix-run/cloudflare"]
+    ? "cloudflare"
+    : deps["@remix-run/node"]
+    ? "node"
+    : undefined;
+
+  if (!serverRuntime) {
+    let serverRuntimes = [
+      "@remix-run/deno",
+      "@remix-run/cloudflare",
+      "@remix-run/node",
+    ];
+    let formattedList = disjunctionListFormat.format(serverRuntimes);
+    throw new Error(
+      `Could not determine server runtime. Please install one of the following: ${formattedList}`
+    );
+  }
+
+  let clientRuntime = deps["@remix-run/react"] ? "react" : undefined;
+
+  if (!clientRuntime) {
+    throw new Error(
+      `Could not determine runtime. Please install the following: @remix-run/react`
+    );
+  }
+
+  if (userEntryClientFile) {
+    entryClientFile = userEntryClientFile;
+  } else {
+    entryClientFile = `entry.client.${clientRuntime}-${reactVersion}.tsx`;
+  }
+
   if (userEntryServerFile) {
     entryServerFile = userEntryServerFile;
   } else {
@@ -493,41 +537,7 @@ export async function readConfig(
       });
     }
 
-    let serverRuntime = deps["@remix-run/deno"]
-      ? "deno"
-      : deps["@remix-run/cloudflare"]
-      ? "cloudflare"
-      : deps["@remix-run/node"]
-      ? "node"
-      : undefined;
-
-    if (!serverRuntime) {
-      let serverRuntimes = [
-        "@remix-run/deno",
-        "@remix-run/cloudflare",
-        "@remix-run/node",
-      ];
-      let formattedList = listFormat.format(serverRuntimes);
-      throw new Error(
-        `Could not determine server runtime. Please install one of the following: ${formattedList}`
-      );
-    }
-
-    entryServerFile = `entry.server.${serverRuntime}.tsx`;
-  }
-
-  if (userEntryClientFile) {
-    entryClientFile = userEntryClientFile;
-  } else {
-    let clientRuntime = deps["@remix-run/react"] ? "react" : undefined;
-
-    if (!clientRuntime) {
-      throw new Error(
-        `Could not determine runtime. Please install the following: @remix-run/react`
-      );
-    }
-
-    entryClientFile = `entry.client.${clientRuntime}.tsx`;
+    entryServerFile = `${serverRuntime}/entry.server.${clientRuntime}-${reactVersion}.tsx`;
   }
 
   let entryClientFilePath = userEntryClientFile
@@ -740,9 +750,16 @@ const resolveServerBuildPath = (
 
 // @ts-expect-error available in node 12+
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
-let listFormat = new Intl.ListFormat("en", {
+let conjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "conjunction",
+});
+
+// @ts-expect-error available in node 12+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
+let disjunctionListFormat = new Intl.ListFormat("en", {
+  style: "long",
+  type: "disjunction",
 });
 
 export let browserBuildDirectoryWarning =
