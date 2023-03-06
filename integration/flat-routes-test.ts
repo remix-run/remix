@@ -5,6 +5,7 @@ import { PlaywrightFixture } from "./helpers/playwright-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import { createFixtureProject } from "./helpers/create-fixture";
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
+import { flatRoutesWarning } from "../build/node_modules/@remix-run/dev/dist/config";
 
 let fixture: Fixture;
 let appFixture: AppFixture;
@@ -188,9 +189,7 @@ test.describe("warns when v1 routesConvention is used", () => {
 
   test("warns about conflicting routes", () => {
     console.log(buildOutput);
-    expect(buildOutput).toContain(
-      `The old route convention has been deprecated in favor of "flat routes". Please enable it via your remix.config https://remix.run/docs/en/main/file-conventions/route-files-v2`
-    );
+    expect(buildOutput).toContain(flatRoutesWarning);
   });
 });
 
