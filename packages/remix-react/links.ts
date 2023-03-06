@@ -338,6 +338,15 @@ export async function getStylesheetPrefetchLinks(
     .flat(1)
     .filter(isHtmlLinkDescriptor)
     .filter((link) => link.rel === "stylesheet" || link.rel === "preload")
+    .filter(
+      // Dedupe links by rel and href
+      (link, indexToFind, linksArr) => {
+        let foundIndex = linksArr.findIndex(needle => {
+          return needle.href === link.href && needle.rel === link.rel;
+        });
+        return foundIndex === indexToFind
+      }
+    )
     .map((link) =>
       link.rel === "preload"
         ? ({ ...link, rel: "prefetch" } as HtmlLinkDescriptor)
