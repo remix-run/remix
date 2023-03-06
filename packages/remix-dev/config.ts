@@ -731,5 +731,6 @@ let listFormat = new Intl.ListFormat("en", {
   type: "conjunction",
 });
 
-export let serverBuildTargetWarning = `The "serverBuildTarget" config option is deprecated. Use a combination of "publicPath", "serverBuildPath", "serverConditions", "serverDependenciesToBundle", "serverMainFields", "serverMinify", "serverModuleFormat" and/or "serverPlatform" instead.`;
-export let flatRoutesWarning = `The old route convention has been deprecated in favor of "flat routes". Please enable it via your remix.config https://remix.run/docs/en/main/file-conventions/route-files-v2`;
+export let serverBuildTargetWarning = `⚠️ DEPRECATED: The "serverBuildTarget" config option is deprecated. Use a combination of "publicPath", "serverBuildPath", "serverConditions", "serverDependenciesToBundle", "serverMainFields", "serverMinify", "serverModuleFormat" and/or "serverPlatform" instead.`;
+
+export let flatRoutesWarning = `⚠️ DEPRECATED: The old nested folders route convention has been deprecated in favor of "flat routes".  Please enable the new routing convention via the \`future.v2_routeConvention\` flag in your \`remix.config.js\` file.  For more information, please see https://remix.run/docs/en/main/file-conventions/route-files-v2.`;
