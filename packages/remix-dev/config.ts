@@ -472,7 +472,7 @@ export async function readConfig(
   let maybeReactVersion = coerce(deps.react);
   if (!maybeReactVersion) {
     let react = ["react", "react-dom"];
-    let list = conjunctionListFormat(react);
+    let list = conjunctionListFormat.format(react);
     throw new Error(
       `Could not determine React version. Please install the following packages: ${list}`
     );
