@@ -1,14 +1,16 @@
-import { dirname, join, posix } from "path";
-import { cssFileFilter } from "@vanilla-extract/integration";
+import { dirname, join } from "path";
+import {
+  cssFileFilter,
+  unstable_createCompiler,
+} from "@vanilla-extract/integration";
 import type { Plugin } from "esbuild";
 
 import type { RemixConfig } from "../../config";
 import type { CompileOptions } from "../options";
 import { loaders } from "../loaders";
 import { getPostcssProcessor } from "../utils/postcss";
-import { createVanillaExtractCompiler } from "./vanilla-extract/vanillaExtractCompiler";
 
-let compiler: ReturnType<typeof createVanillaExtractCompiler>;
+let compiler: ReturnType<typeof unstable_createCompiler>;
 
 let virtualCssFileSuffix = ".vanilla.css";
 let virtualCssFileFilter = /\.vanilla\.css/;
@@ -38,12 +40,9 @@ export function vanillaExtractPlugin({
 
       compiler =
         compiler ||
-        createVanillaExtractCompiler({
+        unstable_createCompiler({
           root,
-          identOption: mode === "production" ? "short" : "debug",
-          toCssImport(filePath) {
-            return filePath + virtualCssFileSuffix;
-          },
+          identifiers: mode === "production" ? "short" : "debug",
           vitePlugins: [
             {
               name: "remix-assets",
@@ -94,11 +93,7 @@ export function vanillaExtractPlugin({
         { filter: virtualCssFileFilter, namespace },
         async ({ path }) => {
           let [relativeFilePath] = path.split(virtualCssFileSuffix);
-
-          let { css, filePath } = compiler.getCssForFile(
-            posix.join(root, relativeFilePath)
-          );
-
+          let { css, filePath } = compiler.getCssForFile(relativeFilePath);
           let resolveDir = dirname(join(root, filePath));
 
           if (postcssProcessor) {
@@ -121,7 +116,7 @@ export function vanillaExtractPlugin({
       build.onLoad({ filter: cssFileFilter }, async ({ path: filePath }) => {
         let { source, watchFiles } = await compiler.processVanillaFile(
           filePath,
-          outputCss
+          { outputCss }
         );
 
         return {
