@@ -176,9 +176,9 @@ export interface ShouldReloadFunction {
 }
 
 interface Submission {
-      action: string;
-      method: string;
-      formData: FormData;
-      encType: string;
-      key: string;
+  action: string;
+  method: string;
+  formData: FormData;
+  encType: string;
+  key: string;
 }
