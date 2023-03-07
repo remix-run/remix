@@ -113,7 +113,7 @@ export async function init(
  * longer necessary and we can remove it in v3.
  * @deprecated
  */
-export async function setup() {
+export async function setup(platformArg?: string) {
   console.warn(
     "The setup command is no longer necessary as of v2. This is a no-op."
   );
