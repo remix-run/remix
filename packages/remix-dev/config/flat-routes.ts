@@ -138,11 +138,12 @@ export function flatRoutesUniversal(
 
     let conflict = uniqueRouteIds.get(route.id || "/");
 
-    // collect conflicts for later reporting
     if (conflict) {
-      // prettier-ignore
-      let currentConflicts = conflicts.get(route.path || "/") || [conflict.file];
-      conflicts.set(route.path || "/", [...currentConflicts, route.file]);
+      let currentConflicts = conflicts.get(route.path || "/");
+      if (!currentConflicts) currentConflicts = [conflict.file];
+      currentConflicts.push(route.file);
+      conflicts.set(route.path || "/", currentConflicts);
+      continue;
     }
 
     routeManifest[route.id] = route;
@@ -174,14 +175,12 @@ export function flatRoutesUniversal(
 
         let childRouteConflicts = uniqueRouteIds.get(childRoute.id || "/");
 
-        // collect conflicts for later reporting
         if (childRouteConflicts) {
-          // prettier-ignore
-          let currentConflicts = conflicts.get(childRoute.path || "/") || [childRouteConflicts.file];
-          conflicts.set(childRoute.path || "/", [
-            ...currentConflicts,
-            childRoute.file,
-          ]);
+          let currentConflicts = conflicts.get(route.path || "/");
+          if (!currentConflicts) currentConflicts = [childRouteConflicts.file];
+          currentConflicts.push(childRoute.file);
+          conflicts.set(route.path || "/", currentConflicts);
+          continue;
         }
 
         uniqueRouteIds.set(childRoute.id || "/", childRoute);
@@ -442,9 +441,7 @@ export function getRouteInfo(
       ? path.relative(appDirectory, file).slice(0, -routeExt.length)
       : path.relative(appDirectory, routeDir);
 
-  let routeIdWithoutPrefix = parentId
-    ? routeId.slice(parentId.length + 1)
-    : routeId.slice(prefix.length + 1);
+  let routeIdWithoutPrefix = routeId.slice(prefix.length + 1);
 
   let index = routeId.endsWith("_index");
   let [segments, raw] = getRouteSegments(routeIdWithoutPrefix);

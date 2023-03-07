@@ -622,14 +622,11 @@ describe("flatRoutes", () => {
 
     test("same number of segments and the same dynamic segment index", () => {
       let testFiles = [
-        "routes/_user.$username.tsx",
-        "routes/sneakers.$sneakerId.tsx",
+        path.join(APP_DIR, "routes", "_user.$username.tsx"),
+        path.join(APP_DIR, "routes", "sneakers.$sneakerId.tsx"),
       ];
 
-      let routeManifest = flatRoutesUniversal(
-        APP_DIR,
-        testFiles.map((file) => path.join(APP_DIR, file))
-      );
+      let routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
 
       let routes = Object.values(routeManifest);
 
@@ -648,15 +645,12 @@ describe("flatRoutes", () => {
     test("index files", () => {
       // we'll add file manually before running the tests
       let testFiles = [
-        "routes/_dashboard._index.tsx",
-        "routes/_landing._index.tsx",
-        "routes/_index.tsx",
+        path.join(APP_DIR, "routes", "_dashboard._index.tsx"),
+        path.join(APP_DIR, "routes", "_landing._index.tsx"),
+        path.join(APP_DIR, "routes", "_index.tsx"),
       ];
 
-      let routeManifest = flatRoutesUniversal(
-        APP_DIR,
-        testFiles.map((file) => path.join(APP_DIR, file))
-      );
+      let routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
 
       let routes = Object.values(routeManifest);
 
