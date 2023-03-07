@@ -432,7 +432,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/pathless-layout-parent._pathless.jsx": js`
+        "app/routes/pathless-layout-parent._pathless.nested.jsx": js`
           import { Outlet } from '@remix-run/react';
 
           export default function () {
@@ -445,7 +445,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/pathless-layout-parent._pathless._index.jsx": js`
+        "app/routes/pathless-layout-parent._pathless.nested._index.jsx": js`
           export default function () {
             return <h3>Pathless Layout Index</h3>
           }
@@ -1065,7 +1065,7 @@ test.describe("Forms", () => {
       page,
     }) => {
       let app = new PlaywrightFixture(appFixture, page);
-      await app.goto("/pathless-layout-parent");
+      await app.goto("/pathless-layout-parent/nested");
       let html = await app.getHtml();
       expect(html).toMatch("Pathless Layout Parent");
       expect(html).toMatch("Pathless Layout ");
