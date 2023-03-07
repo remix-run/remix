@@ -242,5 +242,5 @@ title: Conventions
 [moved-42]: ../route/catch-boundary
 [moved-43]: ../route/error-boundary
 [moved-44]: ../route/handle
-[moved-45]: ../route/should-reload
+[moved-45]: ../route/should-revalidate
 [moved-46]: ../other-api/asset-imports
