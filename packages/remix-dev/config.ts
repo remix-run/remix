@@ -469,57 +469,51 @@ export async function readConfig(
   let pkgJson = await NPMCliPackageJson.load(remixRoot);
   let deps = pkgJson.content.dependencies ?? {};
 
-  let maybeReactVersion = coerce(deps.react);
-  if (!maybeReactVersion) {
-    let react = ["react", "react-dom"];
-    let list = conjunctionListFormat.format(react);
-    throw new Error(
-      `Could not determine React version. Please install the following packages: ${list}`
-    );
-  }
-
-  let type =
-    maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
-      ? ("stream" as const)
-      : ("string" as const);
-
-  let serverRuntime = deps["@remix-run/deno"]
-    ? "deno"
-    : deps["@remix-run/cloudflare"]
-    ? "cloudflare"
-    : deps["@remix-run/node"]
-    ? "node"
-    : undefined;
-
-  if (!serverRuntime) {
-    let serverRuntimes = [
-      "@remix-run/deno",
-      "@remix-run/cloudflare",
-      "@remix-run/node",
-    ];
-    let formattedList = disjunctionListFormat.format(serverRuntimes);
-    throw new Error(
-      `Could not determine server runtime. Please install one of the following: ${formattedList}`
-    );
-  }
-
-  let clientRuntime = deps["@remix-run/react"] ? "react" : undefined;
-
-  if (!clientRuntime) {
-    throw new Error(
-      `Could not determine runtime. Please install the following: @remix-run/react`
-    );
-  }
-
-  if (userEntryClientFile) {
-    entryClientFile = userEntryClientFile;
-  } else {
-    entryClientFile = `entry.client.${clientRuntime}-${type}.tsx`;
-  }
-
   if (userEntryServerFile) {
     entryServerFile = userEntryServerFile;
   } else {
+    let serverRuntime = deps["@remix-run/deno"]
+      ? "deno"
+      : deps["@remix-run/cloudflare"]
+      ? "cloudflare"
+      : deps["@remix-run/node"]
+      ? "node"
+      : undefined;
+
+    if (!serverRuntime) {
+      let serverRuntimes = [
+        "@remix-run/deno",
+        "@remix-run/cloudflare",
+        "@remix-run/node",
+      ];
+      let formattedList = disjunctionListFormat.format(serverRuntimes);
+      throw new Error(
+        `Could not determine server runtime. Please install one of the following: ${formattedList}`
+      );
+    }
+
+    let clientRuntime = deps["@remix-run/react"] ? "react" : undefined;
+
+    if (!clientRuntime) {
+      throw new Error(
+        `Could not determine runtime. Please install the following: @remix-run/react`
+      );
+    }
+
+    let maybeReactVersion = coerce(deps.react);
+    if (!maybeReactVersion) {
+      let react = ["react", "react-dom"];
+      let list = conjunctionListFormat.format(react);
+      throw new Error(
+        `Could not determine React version. Please install the following packages: ${list}`
+      );
+    }
+
+    let type: "stream" | "string" =
+      maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
+        ? "stream"
+        : "string";
+
     if (!deps["isbot"] && type === "stream") {
       console.log(
         "adding `isbot` to your package.json, you should commit this change"
@@ -543,6 +537,34 @@ export async function readConfig(
     }
 
     entryServerFile = `${serverRuntime}/entry.server.${clientRuntime}-${type}.tsx`;
+  }
+
+  if (userEntryClientFile) {
+    entryClientFile = userEntryClientFile;
+  } else {
+    let clientRuntime = deps["@remix-run/react"] ? "react" : undefined;
+
+    if (!clientRuntime) {
+      throw new Error(
+        `Could not determine runtime. Please install the following: @remix-run/react`
+      );
+    }
+
+    let maybeReactVersion = coerce(deps.react);
+    if (!maybeReactVersion) {
+      let react = ["react", "react-dom"];
+      let list = conjunctionListFormat.format(react);
+      throw new Error(
+        `Could not determine React version. Please install the following packages: ${list}`
+      );
+    }
+
+    let type: "stream" | "string" =
+      maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
+        ? "stream"
+        : "string";
+
+    entryClientFile = `entry.client.${clientRuntime}-${type}.tsx`;
   }
 
   let entryClientFilePath = userEntryClientFile
