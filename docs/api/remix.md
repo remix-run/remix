@@ -76,26 +76,6 @@ title: Remix Packages
 
 [Moved →][moved-14]
 
-### `useTransition`
-
-[Moved →][moved-15]
-
-#### `transition.state`
-
-[Moved →][moved-16]
-
-#### `transition.type`
-
-[Moved →][moved-17]
-
-#### `transition.submission`
-
-[Moved →][moved-18]
-
-#### `transition.location`
-
-[Moved →][moved-19]
-
 ### `useFetcher`
 
 [Moved →][moved-20]
@@ -309,11 +289,6 @@ title: Remix Packages
 [moved-12]: ../hooks/use-action-data#notes-about-resubmissions
 [moved-13]: ../hooks/use-form-action
 [moved-14]: ../hooks/use-submit
-[moved-15]: ../hooks/use-transition
-[moved-16]: ../hooks/use-transition#transitionstate
-[moved-17]: ../hooks/use-transition#transitiontype
-[moved-18]: ../hooks/use-transition#transitionsubmission
-[moved-19]: ../hooks/use-transition#transitionlocation
 [moved-20]: ../hooks/use-fetcher
 [moved-21]: ../hooks/use-fetcher#fetcherstate
 [moved-22]: ../hooks/use-fetcher#fetchertype
