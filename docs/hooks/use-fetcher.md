@@ -44,8 +44,10 @@ function SomeComponent() {
 
   // build UI with these
   fetcher.state;
-  fetcher.type;
-  fetcher.submission;
+  fetcher.formMethod;
+  fetcher.formAction;
+  fetcher.formData;
+  fetcher.formEncType;
   fetcher.data;
 }
 ```
@@ -71,6 +73,8 @@ You can know the state of the fetcher with `fetcher.state`. It will be one of:
 
 #### `fetcher.type`
 
+<docs-error>`fetcher.type` is deprecated and will be removed in v2.</docs-error>
+
 This is the type of state the fetcher is in. It's like `fetcher.state`, but more granular. Depending on the fetcher's state, the types can be the following:
 
 - `state === "idle"`
@@ -89,7 +93,46 @@ This is the type of state the fetcher is in. It's like `fetcher.state`, but more
   - **actionRedirect** - The action from an "actionSubmission" returned a redirect and the page is transitioning to the new location.
   - **normalLoad** - A route's loader is being called without a submission (`fetcher.load()`).
 
+##### Moving away from `fetcher.type`
+
+The `type` field has been been deprecated and will be removed in v2. We've found that `state` is sufficient for almost all use-cases, and when it's not you can derive sub-types via `fetcher.state` and other fields. Here's a few examples:
+
+```js
+function Component() {
+  let fetcher = useFetcher();
+
+  let isDone =
+    fetcher.state === "idle" && fetcher.data != null;
+
+  let isActionSubmission = fetcher.state === "submitting";
+
+  let isActionReload =
+    fetcher.state === "loading" &&
+    fetcher.formMethod != null &&
+    fetcher.formMethod != "get" &&
+    // If we returned data, we must be reloading
+    fetcher.data != null;
+
+  let isActionRedirect =
+    fetcher.state === "loading" &&
+    fetcher.formMethod != null &&
+    navigation.formMethod != "get" &&
+    // If we have no data we must have redirected
+    fetcher.data == null;
+
+  let isLoaderSubmission =
+    navigation.state === "loading" &&
+    navigation.state.formMethod === "get";
+
+  let isNormalLoad =
+    navigation.state === "loading" &&
+    navigation.state.formMethod == null;
+}
+```
+
 #### `fetcher.submission`
+
+<docs-error>`fetcher.submission` is deprecated and will be removed in v2. Instead, the fields inside of `submission` have been flattened onto the `fetcher` itself (`fetcher.formMethod`, `fetcher.formAction`, `fetcher.formData`, `fetcher.formEncType`)</docs-error>
 
 When using `<fetcher.Form>` or `fetcher.submit()`, the form submission is available to build optimistic UI.
 
@@ -153,7 +196,7 @@ function SomeComponent() {
   const fetcher = useFetcher();
 
   useEffect(() => {
-    if (fetcher.type === "init") {
+    if (fetcher.state === "idle" && fetcher.data == null) {
       fetcher.load("/some/route");
     }
   }, [fetcher]);
@@ -204,7 +247,10 @@ function NewsletterSignup() {
   const ref = useRef();
 
   useEffect(() => {
-    if (newsletter.type === "done" && newsletter.data.ok) {
+    if (
+      newsletter.state === "idle" &&
+      newsletter.data?.ok
+    ) {
       ref.current.reset();
     }
   }, [newsletter]);
@@ -225,7 +271,7 @@ function NewsletterSignup() {
         </button>
       </p>
 
-      {newsletter.type === "done" ? (
+      {newsletter.state === "idle" && newsletter.data ? (
         newsletter.data.ok ? (
           <p>Thanks for subscribing!</p>
         ) : newsletter.data.error ? (
@@ -283,18 +329,12 @@ export function NewsletterSignup() {
       Form={newsletter.Form}
       data={newsletter.data}
       state={newsletter.state}
-      type={newsletter.type}
     />
   );
 }
 
 // used here and in the route
-export function NewsletterForm({
-  Form,
-  data,
-  state,
-  type,
-}) {
+export function NewsletterForm({ Form, data, state }) {
   // refactor a bit in here, just read from props instead of useFetcher
 }
 ```
@@ -309,12 +349,7 @@ import { NewsletterForm } from "~/NewsletterSignup";
 export default function NewsletterSignupRoute() {
   const data = useActionData<typeof action>();
   return (
-    <NewsletterForm
-      Form={Form}
-      data={data}
-      state="idle"
-      type="done"
-    />
+    <NewsletterForm Form={Form} data={data} state="idle" />
   );
 }
 ```
@@ -355,7 +390,11 @@ function UserAvatar({ partialUser }) {
   const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
-    if (showDetails && userDetails.type === "init") {
+    if (
+      showDetails &&
+      userDetails.state === "idle" &&
+      !userDetails.data
+    ) {
       userDetails.load(`/users/${user.id}/details`);
     }
   }, [showDetails, userDetails]);
@@ -367,7 +406,7 @@ function UserAvatar({ partialUser }) {
     >
       <img src={partialUser.profileImageUrl} />
       {showDetails ? (
-        userDetails.type === "done" ? (
+        userDetails.state === "idle" && userDetails.data ? (
           <UserPopup user={userDetails.data} />
         ) : (
           <UserPopupLoading />
