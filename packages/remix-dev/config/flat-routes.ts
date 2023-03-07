@@ -322,7 +322,6 @@ function getRouteMap(
 ): Readonly<Map<string, RouteInfo>> {
   let routeMap = new Map<string, RouteInfo>();
   let nameMap = new Map<string, RouteInfo>();
-  let uniqueRoutes = new Map<string, RouteInfo>();
   let conflicts = new Map<string, RouteInfo[]>();
 
   for (let routePath of routePaths) {
@@ -331,26 +330,19 @@ function getRouteMap(
     if (isRouteModuleFile(pathWithoutAppRoutes)) {
       let routeInfo = getRouteInfo(appDirectory, prefix, routePath);
 
-      let uniqueRouteId =
-        (routeInfo.path || "") + (routeInfo.index ? "?index" : "");
-
-      if (uniqueRouteId) {
-        let conflict = uniqueRoutes.get(uniqueRouteId);
-        // collect conflicts for later reporting
-        if (conflict) {
-          let currentConflicts = conflicts.get(routeInfo.path || "/");
-          if (!currentConflicts) {
-            conflicts.set(routeInfo.path || "/", [conflict, routeInfo]);
-          } else {
-            currentConflicts.push(routeInfo);
-            conflicts.set(routeInfo.path || "/", currentConflicts);
-          }
-
-          continue;
+      let conflict = routeMap.get(routeInfo.id);
+      // collect conflicts for later reporting
+      if (conflict) {
+        let currentConflicts = conflicts.get(routeInfo.path || "/");
+        if (!currentConflicts) {
+          conflicts.set(routeInfo.path || "/", [conflict, routeInfo]);
+        } else {
+          currentConflicts.push(routeInfo);
+          conflicts.set(routeInfo.path || "/", currentConflicts);
         }
-        uniqueRoutes.set(uniqueRouteId, routeInfo);
-      }
 
+        continue;
+      }
       routeMap.set(routeInfo.id, routeInfo);
       nameMap.set(routeInfo.name, routeInfo);
     }
