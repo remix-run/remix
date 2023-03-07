@@ -49,6 +49,7 @@ test.describe("Forms", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
+      future: { v2_routeConvention: true },
       files: {
         "app/routes/get-submission.jsx": js`
           import { useLoaderData, Form } from "@remix-run/react";
@@ -431,7 +432,7 @@ test.describe("Forms", () => {
           }
         `,
 
-        "app/routes/pathless-layout-parent._pathless/layout.jsx": js`
+        "app/routes/pathless-layout-parent._pathless.jsx": js`
           import { Outlet } from '@remix-run/react';
 
           export default function () {

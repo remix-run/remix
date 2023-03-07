@@ -25,17 +25,14 @@ test("builds deterministically under different paths", async () => {
   //  * serverRouteModulesPlugin (implicitly tested by build)
   //  * vanillaExtractPlugin (via app/routes/foo.tsx' .css.ts file import)
   let init = {
+    future: {
+      unstable_cssModules: true,
+      unstable_cssSideEffectImports: true,
+      unstable_postcss: true,
+      unstable_vanillaExtract: true,
+      v2_routeConvention: true,
+    },
     files: {
-      "remix.config.js": js`
-        module.exports = {
-          future: {
-            unstable_cssModules: true,
-            unstable_cssSideEffectImports: true,
-            unstable_postcss: true,
-            unstable_vanillaExtract: true,
-          },
-        };
-      `,
       "app/routes/_index.mdx": "# hello world",
       "app/routes/foo.tsx": js`
         export * from "~/foo/bar.server";

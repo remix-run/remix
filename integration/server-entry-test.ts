@@ -11,6 +11,7 @@ test.describe("Server Entry", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
+      future: { v2_routeConvention: true },
       files: {
         "app/entry.server.jsx": js`
           export default function handleRequest() {

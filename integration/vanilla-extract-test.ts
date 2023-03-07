@@ -12,20 +12,17 @@ test.describe("Vanilla Extract", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
+      future: {
+        v2_routeConvention: true,
+        // Enable all CSS future flags to
+        // ensure features don't clash
+        unstable_cssModules: true,
+        unstable_cssSideEffectImports: true,
+        unstable_postcss: true,
+        unstable_tailwind: true,
+        unstable_vanillaExtract: true,
+      },
       files: {
-        "remix.config.js": js`
-          module.exports = {
-            future: {
-              // Enable all CSS future flags to
-              // ensure features don't clash
-              unstable_cssModules: true,
-              unstable_cssSideEffectImports: true,
-              unstable_postcss: true,
-              unstable_tailwind: true,
-              unstable_vanillaExtract: true,
-            },
-          };
-        `,
         "app/root.jsx": js`
           import { Links, Outlet } from "@remix-run/react";
           import { cssBundleHref } from "@remix-run/css-bundle";

@@ -33,20 +33,15 @@ test.describe("PostCSS", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
+      future: {
+        v2_routeConvention: true,
+        unstable_cssModules: true,
+        unstable_cssSideEffectImports: true,
+        unstable_postcss: true,
+        unstable_tailwind: true,
+        unstable_vanillaExtract: true,
+      },
       files: {
-        "remix.config.js": js`
-          module.exports = {
-            future: {
-              // Enable all CSS future flags to
-              // ensure features don't clash
-              unstable_cssModules: true,
-              unstable_cssSideEffectImports: true,
-              unstable_postcss: true,
-              unstable_tailwind: true,
-              unstable_vanillaExtract: true,
-            },
-          };
-        `,
         // We provide a test plugin that replaces the strings
         // "TEST_PADDING_VALUE" and "TEST_POSTCSS_CONTEXT".
         // This lets us assert that the plugin is being run

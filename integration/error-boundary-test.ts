@@ -41,6 +41,7 @@ test.describe("ErrorBoundary", () => {
     _consoleError = console.error;
     console.error = () => {};
     fixture = await createFixture({
+      future: { v2_routeConvention: true },
       files: {
         "app/root.jsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -490,6 +491,9 @@ test.describe("ErrorBoundary", () => {
 
     test.beforeAll(async () => {
       fixture = await createFixture({
+        future: {
+          v2_routeConvention: true,
+        },
         files: {
           "app/root.jsx": js`
             import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -655,6 +659,7 @@ test.describe("loaderData in ErrorBoundary", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
+      future: { v2_routeConvention: true },
       files: {
         "app/root.jsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -998,6 +1003,9 @@ test.describe("Default ErrorBoundary", () => {
   test.describe("When the root route does not have a boundary", () => {
     test.beforeAll(async () => {
       fixture = await createFixture({
+        future: {
+          v2_routeConvention: true,
+        },
         files: getFiles({ includeRootErrorBoundary: false }),
       });
       appFixture = await createAppFixture(fixture, ServerMode.Development);
@@ -1066,6 +1074,9 @@ test.describe("Default ErrorBoundary", () => {
   test.describe("When the root route has a boundary", () => {
     test.beforeAll(async () => {
       fixture = await createFixture({
+        future: {
+          v2_routeConvention: true,
+        },
         files: getFiles({ includeRootErrorBoundary: true }),
       });
       appFixture = await createAppFixture(fixture, ServerMode.Development);
@@ -1129,6 +1140,9 @@ test.describe("Default ErrorBoundary", () => {
   test.describe("When the root route has a boundary but it also throws 😦", () => {
     test.beforeAll(async () => {
       fixture = await createFixture({
+        future: {
+          v2_routeConvention: true,
+        },
         files: getFiles({
           includeRootErrorBoundary: true,
           rootErrorBoundaryThrows: true,

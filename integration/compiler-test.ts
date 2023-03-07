@@ -22,6 +22,19 @@ test.describe("compiler", () => {
     fixture = await createFixture({
       setup: "node",
       files: {
+        "remix.config.js": js`
+          let { getDependenciesToBundle } = require("@remix-run/dev");
+          module.exports = {
+            future: {
+              v2_routeConvention: true,
+            },
+            serverDependenciesToBundle: [
+              "esm-only-pkg",
+              "esm-only-single-export",
+              ...getDependenciesToBundle("esm-only-exports-pkg"),
+            ],
+          };
+        `,
         "app/fake.server.js": js`
           export const hello = "server";
         `,
@@ -33,7 +46,6 @@ test.describe("compiler", () => {
           import { hello as serverHello } from "./fake.server.js";
           export default clientHello || serverHello;
         `,
-
         "app/routes/_index.jsx": js`
           import fake from "~/fake.js";
 
@@ -100,17 +112,6 @@ test.describe("compiler", () => {
           export default function PackageWithSubModule() {
             return <div id="package-with-submodule">{submodule()}</div>;
           }
-        `,
-
-        "remix.config.js": js`
-          let { getDependenciesToBundle } = require("@remix-run/dev");
-          module.exports = {
-            serverDependenciesToBundle: [
-              "esm-only-pkg",
-              "esm-only-single-export",
-              ...getDependenciesToBundle("esm-only-exports-pkg"),
-            ],
-          };
         `,
         "node_modules/esm-only-pkg/package.json": json({
           name: "esm-only-pkg",
@@ -385,6 +386,7 @@ test.describe("compiler", () => {
 
       await expect(() =>
         createFixtureProject({
+          future: { v2_routeConvention: true },
           buildStdio,
           files: {
             "app/routes/_index.jsx": js`
