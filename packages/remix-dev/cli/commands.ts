@@ -306,12 +306,10 @@ export async function generateEntry(
     );
   }
 
-  let reactVersion =
-    maybeReactVersion.major >= 18
-      ? maybeReactVersion.major
-      : maybeReactVersion.raw === "0.0.0"
-      ? 18
-      : 17;
+  let type =
+    maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
+      ? ("stream" as const)
+      : ("string" as const);
 
   let serverRuntime = deps["@remix-run/deno"]
     ? "deno"
@@ -350,12 +348,12 @@ export async function generateEntry(
   let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
   let defaultEntryClient = path.resolve(
     defaultsDirectory,
-    `entry.client.${clientRuntime}-${reactVersion}.tsx`
+    `entry.client.${clientRuntime}-${type}.tsx`
   );
   let defaultEntryServer = path.resolve(
     defaultsDirectory,
     serverRuntime,
-    `entry.server.${clientRuntime}-${reactVersion}.tsx`
+    `entry.server.${clientRuntime}-${type}.tsx`
   );
 
   let isServerEntry = entry === "entry.server";
