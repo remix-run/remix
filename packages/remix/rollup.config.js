@@ -62,5 +62,88 @@ module.exports = function rollup() {
         copyToPlaygrounds(),
       ],
     },
+
+    {
+      external() {
+        return true;
+      },
+      input: `${sourceDir}/cloudflare.ts`,
+      output: {
+        format: "esm",
+        dir: path.join(outputDist, "esm"),
+        banner: createBanner(packageName, version),
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts", ".tsx"],
+        }),
+        copyPublishFiles(packageName),
+        copyToPlaygrounds(),
+      ],
+    },
+
+    {
+      external() {
+        return true;
+      },
+      input: `${sourceDir}/deno.ts`,
+      output: {
+        format: "esm",
+        dir: path.join(outputDist, "esm"),
+        banner: createBanner(packageName, version),
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts", ".tsx"],
+        }),
+        copyPublishFiles(packageName),
+        copyToPlaygrounds(),
+      ],
+    },
+
+    {
+      external() {
+        return true;
+      },
+      input: `${sourceDir}/nodeish.ts`,
+      output: {
+        format: "cjs",
+        dir: outputDist,
+        banner: createBanner(packageName, version),
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts", ".tsx"],
+        }),
+        copyPublishFiles(packageName),
+        copyToPlaygrounds(),
+      ],
+    },
+    {
+      external() {
+        return true;
+      },
+      input: `${sourceDir}/nodeish.ts`,
+      output: {
+        format: "esm",
+        dir: path.join(outputDist, "esm"),
+        banner: createBanner(packageName, version),
+      },
+      plugins: [
+        babel({
+          babelHelpers: "bundled",
+          exclude: /node_modules/,
+          extensions: [".ts", ".tsx"],
+        }),
+        copyPublishFiles(packageName),
+        copyToPlaygrounds(),
+      ],
+    },
   ];
 };
