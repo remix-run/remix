@@ -442,7 +442,9 @@ export function getRouteInfo(
       ? path.relative(appDirectory, file).slice(0, -routeExt.length)
       : path.relative(appDirectory, routeDir);
 
-  let routeIdWithoutPrefix = routeId.slice(prefix.length + 1);
+  let routeIdWithoutPrefix = parentId
+    ? routeId.slice(parentId.length + 1)
+    : routeId.slice(prefix.length + 1);
 
   let index = routeId.endsWith("_index");
   let [segments, raw] = getRouteSegments(routeIdWithoutPrefix);

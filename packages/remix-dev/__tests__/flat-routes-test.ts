@@ -238,7 +238,7 @@ describe("flatRoutes", () => {
         {
           id: "routes/app.calendar.$day",
           parentId: "routes/app",
-          path: "app/calendar/:day",
+          path: "calendar/:day",
         },
       ],
       [
@@ -247,7 +247,7 @@ describe("flatRoutes", () => {
           id: "routes/app.calendar._index",
           index: true,
           parentId: "routes/app",
-          path: "app/calendar",
+          path: "calendar",
         },
       ],
       [
@@ -255,7 +255,7 @@ describe("flatRoutes", () => {
         {
           id: "routes/app.projects",
           parentId: "routes/app",
-          path: "app/projects",
+          path: "projects",
         },
       ],
       [
@@ -263,7 +263,7 @@ describe("flatRoutes", () => {
         {
           id: "routes/app.projects.$id",
           parentId: "routes/app.projects",
-          path: "app/projects/:id",
+          path: ":id",
         },
       ],
       [
@@ -306,7 +306,7 @@ describe("flatRoutes", () => {
         {
           id: "routes/app.skip",
           parentId: "routes/app",
-          path: "app/skip",
+          path: "skip",
         },
       ],
       [
