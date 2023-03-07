@@ -1665,8 +1665,9 @@ function convertRouterFetcherToRemixFetcher(
 
 // Dead Code Elimination magic for production builds.
 // This way devs don't have to worry about doing the NODE_ENV check themselves.
-// If running an un-bundled server outside of `remix dev` you will still need
+// If running an un-bundled server outside `remix dev` you will still need
 // to set the REMIX_DEV_SERVER_WS_PORT manually.
+let js = String.raw;
 export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
@@ -1682,7 +1683,15 @@ export const LiveReload =
          */
         nonce?: string;
       }) {
-        let js = String.raw;
+        React.useEffect(() => {
+          warnOnce(
+            Boolean(nonce),
+            "⚠️ DEPRECATED: `LiveReload`'s `nonce` prop has been " +
+              "deprecated as it's no longer relevant and will be removed in Remix " +
+              "v2. Please update your code by removing the `nonce` prop."
+          );
+        }, [nonce]);
+
         return (
           <script
             nonce={nonce}
