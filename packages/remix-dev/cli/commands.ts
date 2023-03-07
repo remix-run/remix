@@ -334,9 +334,9 @@ export async function generateEntry(
     return;
   }
 
-  let clientRuntime = deps["@remix-run/react"] ? "react" : undefined;
+  let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
 
-  if (!clientRuntime) {
+  if (!clientRenderer) {
     console.error(
       colors.error(
         `Could not determine runtime. Please install the following: @remix-run/react`
@@ -348,12 +348,12 @@ export async function generateEntry(
   let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
   let defaultEntryClient = path.resolve(
     defaultsDirectory,
-    `entry.client.${clientRuntime}-${type}.tsx`
+    `entry.client.${clientRenderer}-${type}.tsx`
   );
   let defaultEntryServer = path.resolve(
     defaultsDirectory,
     serverRuntime,
-    `entry.server.${clientRuntime}-${type}.tsx`
+    `entry.server.${clientRenderer}-${type}.tsx`
   );
 
   let isServerEntry = entry === "entry.server";

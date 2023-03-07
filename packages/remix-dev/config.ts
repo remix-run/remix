@@ -492,11 +492,11 @@ export async function readConfig(
       );
     }
 
-    let clientRuntime = deps["@remix-run/react"] ? "react" : undefined;
+    let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
 
-    if (!clientRuntime) {
+    if (!clientRenderer) {
       throw new Error(
-        `Could not determine runtime. Please install the following: @remix-run/react`
+        `Could not determine renderer. Please install the following: @remix-run/react`
       );
     }
 
@@ -536,15 +536,15 @@ export async function readConfig(
       });
     }
 
-    entryServerFile = `${serverRuntime}/entry.server.${clientRuntime}-${type}.tsx`;
+    entryServerFile = `${serverRuntime}/entry.server.${clientRenderer}-${type}.tsx`;
   }
 
   if (userEntryClientFile) {
     entryClientFile = userEntryClientFile;
   } else {
-    let clientRuntime = deps["@remix-run/react"] ? "react" : undefined;
+    let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
 
-    if (!clientRuntime) {
+    if (!clientRenderer) {
       throw new Error(
         `Could not determine runtime. Please install the following: @remix-run/react`
       );
@@ -564,7 +564,7 @@ export async function readConfig(
         ? "stream"
         : "string";
 
-    entryClientFile = `entry.client.${clientRuntime}-${type}.tsx`;
+    entryClientFile = `entry.client.${clientRenderer}-${type}.tsx`;
   }
 
   let entryClientFilePath = userEntryClientFile
