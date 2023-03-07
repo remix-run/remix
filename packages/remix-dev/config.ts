@@ -119,14 +119,6 @@ export interface AppConfig {
   server?: string;
 
   /**
-   * The path to the server build, relative to `remix.config.js`. Defaults to
-   * "build".
-   *
-   * @deprecated Use {@link AppConfig.serverBuildPath} instead.
-   */
-  serverBuildDirectory?: string;
-
-  /**
    * The path to the server build file, relative to `remix.config.js`. This file
    * should end in a `.js` extension and should be deployed to your server.
    */
@@ -382,7 +374,10 @@ export async function readConfig(
     warnOnce(errorBoundaryWarning, "v2_errorBoundary");
   }
 
-  let serverBuildPath = resolveServerBuildPath(rootDirectory, appConfig);
+  let serverBuildPath = path.resolve(
+    rootDirectory,
+    appConfig.serverBuildPath ?? "build/index.js"
+  );
   let serverBuildTargetEntryModule = `export * from ${JSON.stringify(
     serverBuildVirtualModule.id
   )};`;
@@ -651,26 +646,6 @@ export function findConfig(
   return undefined;
 }
 
-const resolveServerBuildPath = (
-  rootDirectory: string,
-  appConfig: AppConfig
-) => {
-  let serverBuildPath = "build/index.js";
-
-  // retain deprecated behavior for now
-  if (appConfig.serverBuildDirectory) {
-    warnOnce(serverBuildDirectoryWarning, "serverBuildDirectory");
-
-    serverBuildPath = path.join(appConfig.serverBuildDirectory, "index.js");
-  }
-
-  if (appConfig.serverBuildPath) {
-    serverBuildPath = appConfig.serverBuildPath;
-  }
-
-  return path.resolve(rootDirectory, serverBuildPath);
-};
-
 // @ts-expect-error available in node 12+
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
 let listFormat = new Intl.ListFormat("en", {
@@ -681,10 +656,6 @@ let listFormat = new Intl.ListFormat("en", {
 export let browserBuildDirectoryWarning =
   "⚠️ DEPRECATED: The `browserBuildDirectory` config option is deprecated. " +
   "Use `assetsBuildDirectory` instead.";
-
-export let serverBuildDirectoryWarning =
-  "⚠️ DEPRECATED: The `serverBuildDirectory` config option is deprecated. " +
-  "Use `serverBuildPath` instead.";
 
 export let serverBuildTargetWarning =
   "⚠️ DEPRECATED: The `serverBuildTarget` config option is deprecated. Use a " +
