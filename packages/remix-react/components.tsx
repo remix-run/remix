@@ -41,7 +41,7 @@ import {
 } from "react-router-dom";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
-import type { AppData } from "./data";
+import type { AppData, FormMethod } from "./data";
 import type { EntryContext, RemixContextObject } from "./entry";
 import {
   RemixRootDefaultErrorBoundary,
@@ -65,14 +65,7 @@ import type {
   V1_HtmlMetaDescriptor,
   V2_HtmlMetaDescriptor,
 } from "./routeModules";
-import type {
-  Fetcher,
-  FetcherStates,
-  LoaderSubmission,
-  ActionSubmission,
-} from "./transition";
-import { IDLE_FETCHER } from "./transition";
-import { warnOnce } from "./warnings";
+import type { Fetcher, FetcherStates } from "./transition";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -1183,9 +1176,7 @@ export function useFetchers(): Fetcher[] {
       formAction: f.formAction,
       formData: f.formData,
       formEncType: f.formEncType,
-      " _hasFetcherDoneAnything ": f[" _hasFetcherDoneAnything "],
     });
-    addFetcherDeprecationWarnings(fetcher);
     return fetcher;
   });
 }
@@ -1217,7 +1208,6 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
       formAction: fetcherRR.formAction,
       formData: fetcherRR.formData,
       formEncType: fetcherRR.formEncType,
-      " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
     });
     let fetcherWithComponents = {
       ...remixFetcher,
@@ -1225,114 +1215,29 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
       submit: fetcherRR.submit,
       Form: fetcherRR.Form,
     };
-    addFetcherDeprecationWarnings(fetcherWithComponents);
     return fetcherWithComponents;
   }, [fetcherRR]);
-}
-
-function addFetcherDeprecationWarnings(fetcher: Fetcher) {
-  let type: Fetcher["type"] = fetcher.type;
-  Object.defineProperty(fetcher, "type", {
-    get() {
-      warnOnce(
-        false,
-        "⚠️ DEPRECATED: The `useFetcher().type` field has been deprecated and " +
-          "will be removed in Remix v2.  Please update your code to rely on " +
-          "`fetcher.state`.\n\nSee https://remix.run/docs/hooks/use-fetcher for " +
-          "more information."
-      );
-      return type;
-    },
-    set(value: Fetcher["type"]) {
-      // Devs should *not* be doing this but we don't want to break their
-      // current app if they are
-      type = value;
-    },
-    // These settings should make this behave like a normal object `type` field
-    configurable: true,
-    enumerable: true,
-  });
-
-  let submission: Fetcher["submission"] = fetcher.submission;
-  Object.defineProperty(fetcher, "submission", {
-    get() {
-      warnOnce(
-        false,
-        "⚠️ DEPRECATED: The `useFetcher().submission` field has been deprecated and " +
-          "will be removed in Remix v2.  The submission fields now live directly " +
-          "on the fetcher (`fetcher.formData`).\n\n" +
-          "See https://remix.run/docs/hooks/use-fetcher for more information."
-      );
-      return submission;
-    },
-    set(value: Fetcher["submission"]) {
-      // Devs should *not* be doing this but we don't want to break their
-      // current app if they are
-      submission = value;
-    },
-    // These settings should make this behave like a normal object `type` field
-    configurable: true,
-    enumerable: true,
-  });
 }
 
 function convertRouterFetcherToRemixFetcher(
   fetcherRR: Omit<ReturnType<typeof useFetcherRR>, "load" | "submit" | "Form">
 ): Fetcher {
-  let { state, formMethod, formAction, formEncType, formData, data } =
+  let { state, data, formMethod, formAction, formData, formEncType } =
     fetcherRR;
 
-  let isActionSubmission =
-    formMethod != null &&
-    ["POST", "PUT", "PATCH", "DELETE"].includes(formMethod.toUpperCase());
-
-  if (state === "idle") {
-    if (fetcherRR[" _hasFetcherDoneAnything "] === true) {
-      let fetcher: FetcherStates["Done"] = {
-        state: "idle",
-        type: "done",
-        formMethod: undefined,
-        formAction: undefined,
-        formData: undefined,
-        formEncType: undefined,
-        submission: undefined,
-        data,
-      };
-      return fetcher;
-    } else {
-      let fetcher: FetcherStates["Idle"] = IDLE_FETCHER;
-      return fetcher;
-    }
-  }
-
-  if (
-    state === "submitting" &&
-    formMethod &&
-    formAction &&
-    formEncType &&
-    formData
-  ) {
-    if (isActionSubmission) {
-      // Actively submitting to an action
-      let fetcher: FetcherStates["SubmittingAction"] = {
+  if (state === "submitting") {
+    if (formMethod && formAction && formData && formEncType) {
+      let fetcher: FetcherStates["Submitting"] = {
         state,
-        type: "actionSubmission",
-        formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
-        formAction: formAction,
-        formEncType: formEncType,
-        formData: formData,
-        submission: {
-          method: formMethod.toUpperCase() as ActionSubmission["method"],
-          action: formAction,
-          encType: formEncType,
-          formData: formData,
-          key: "",
-        },
         data,
+        formMethod: formMethod.toUpperCase() as FormMethod,
+        formAction,
+        formData,
+        formEncType,
       };
       return fetcher;
     } else {
-      // @remix-run/router doesn't mark loader submissions as state: "submitting"
+      // "submitting" will always have these fields
       invariant(
         false,
         "Encountered an unexpected fetcher scenario in useFetcher()"
@@ -1341,93 +1246,24 @@ function convertRouterFetcherToRemixFetcher(
   }
 
   if (state === "loading") {
-    if (formMethod && formAction && formEncType && formData) {
-      if (isActionSubmission) {
-        if (data) {
-          // In a loading state but we have data - must be an actionReload
-          let fetcher: FetcherStates["ReloadingAction"] = {
-            state,
-            type: "actionReload",
-            formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
-            formAction: formAction,
-            formEncType: formEncType,
-            formData: formData,
-            submission: {
-              method: formMethod.toUpperCase() as ActionSubmission["method"],
-              action: formAction,
-              encType: formEncType,
-              formData: formData,
-              key: "",
-            },
-            data,
-          };
-          return fetcher;
-        } else {
-          let fetcher: FetcherStates["LoadingActionRedirect"] = {
-            state,
-            type: "actionRedirect",
-            formMethod: formMethod.toUpperCase() as ActionSubmission["method"],
-            formAction: formAction,
-            formEncType: formEncType,
-            formData: formData,
-            submission: {
-              method: formMethod.toUpperCase() as ActionSubmission["method"],
-              action: formAction,
-              encType: formEncType,
-              formData: formData,
-              key: "",
-            },
-            data: undefined,
-          };
-          return fetcher;
-        }
-      } else {
-        // The new router fixes a bug in useTransition where the submission
-        // "action" represents the request URL not the state of the <form> in
-        // the DOM.  Back-port it here to maintain behavior, but useNavigation
-        // will fix this bug.
-        let url = new URL(formAction, window.location.origin);
-
-        // This typing override should be safe since this is only running for
-        // GET submissions and over in @remix-run/router we have an invariant
-        // if you have any non-string values in your FormData when we attempt
-        // to convert them to URLSearchParams
-        url.search = new URLSearchParams(
-          formData.entries() as unknown as [string, string][]
-        ).toString();
-
-        // Actively "submitting" to a loader
-        let fetcher: FetcherStates["SubmittingLoader"] = {
-          state: "submitting",
-          type: "loaderSubmission",
-          formMethod: formMethod.toUpperCase() as LoaderSubmission["method"],
-          formAction: formAction,
-          formEncType: formEncType,
-          formData: formData,
-          submission: {
-            method: formMethod.toUpperCase() as LoaderSubmission["method"],
-            action: url.pathname + url.search,
-            encType: formEncType,
-            formData: formData,
-            key: "",
-          },
-          data,
-        };
-        return fetcher;
-      }
-    }
+    let fetcher: FetcherStates["Loading"] = {
+      state,
+      data,
+      formMethod: formMethod?.toUpperCase() as FormMethod,
+      formAction,
+      formData,
+      formEncType,
+    };
+    return fetcher;
   }
 
-  // If all else fails, it's a normal load!
-  let fetcher: FetcherStates["Loading"] = {
-    state: "loading",
-    type: "normalLoad",
+  let fetcher: FetcherStates["Idle"] = {
+    state,
+    data,
     formMethod: undefined,
     formAction: undefined,
     formData: undefined,
     formEncType: undefined,
-    submission: undefined,
-    data,
   };
   return fetcher;
 }
