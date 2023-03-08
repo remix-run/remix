@@ -25,7 +25,6 @@
   "devDependencies": {
     "@remix-run/web-file": "^3.0.2",
     "@types/cookie": "^0.4.0",
-    "@types/react": "^18.0.15",
     "@types/set-cookie-parser": "^2.4.1"
   },
   "engines": {
