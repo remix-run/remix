@@ -8,7 +8,6 @@ import type {
   AgnosticDataRouteMatch,
   UNSAFE_DeferredData as DeferredData,
   ErrorResponse,
-  Navigation,
   TrackedPromise,
 } from "@remix-run/router";
 import type {
@@ -67,15 +66,12 @@ import type {
   V2_HtmlMetaDescriptor,
 } from "./routeModules";
 import type {
-  Transition,
   Fetcher,
   FetcherStates,
   LoaderSubmission,
   ActionSubmission,
-  TransitionStates,
 } from "./transition";
-import { IDLE_TRANSITION, IDLE_FETCHER } from "./transition";
-import { warnOnce } from "./warnings";
+import { IDLE_FETCHER } from "./transition";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
