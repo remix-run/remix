@@ -251,10 +251,6 @@ test.describe("navigation states", () => {
           hash: "",
           state: {
             _isRedirect: true,
-            // These were private API for transition manager that are no longer
-            // needed with the new router so OK to disappear
-            // setCookie: false,
-            // type: "loader",
           },
           key: expect.any(String),
         },
@@ -275,7 +271,7 @@ test.describe("navigation states", () => {
     expect(navigations).toEqual([
       IDLE_STATE,
       {
-        state: "submitting",
+        state: "loading",
         location: {
           pathname: `/${STATES.SUBMITTING_LOADER}`,
           search: "?key=value",
@@ -283,11 +279,8 @@ test.describe("navigation states", () => {
           state: null,
           key: expect.any(String),
         },
-        // Note: This is a bug in Remix but we're going to keep it that way
-        // in useTransition (including the back-compat version) and it'll be
-        // fixed with useNavigation
-        formMethod: "GET",
-        formAction: `/${STATES.SUBMITTING_LOADER}?key=value`,
+        formMethod: "get",
+        formAction: `/${STATES.SUBMITTING_LOADER}`,
         formEncType: "application/x-www-form-urlencoded",
         formData: expect.any(Object),
       },
@@ -309,7 +302,7 @@ test.describe("navigation states", () => {
     expect(navigations).toEqual([
       IDLE_STATE,
       {
-        state: "submitting",
+        state: "loading",
         location: {
           pathname: `/${STATES.SUBMITTING_LOADER_REDIRECT}`,
           search: "",
@@ -317,28 +310,23 @@ test.describe("navigation states", () => {
           state: null,
           key: expect.any(String),
         },
-        formMethod: "GET",
+        formMethod: "get",
         formAction: `/${STATES.SUBMITTING_LOADER_REDIRECT}`,
         formEncType: "application/x-www-form-urlencoded",
         formData: expect.any(Object),
       },
       {
         state: "loading",
-        type: "loaderSubmissionRedirect",
         location: {
           pathname: "/",
           search: "?redirected",
           hash: "",
           state: {
             _isRedirect: true,
-            // These were private API for transition manager that are no longer
-            // needed with the new router so OK to disappear
-            // setCookie: false,
-            // type: "loader",
           },
           key: expect.any(String),
         },
-        formMethod: "GET",
+        formMethod: "get",
         formAction: `/${STATES.SUBMITTING_LOADER_REDIRECT}`,
         formEncType: "application/x-www-form-urlencoded",
         formData: expect.any(Object),
@@ -367,7 +355,7 @@ test.describe("navigation states", () => {
           state: null,
           key: expect.any(String),
         },
-        formMethod: "POST",
+        formMethod: "post",
         formAction: `/${STATES.SUBMITTING_ACTION}`,
         formEncType: "application/x-www-form-urlencoded",
         formData: expect.any(Object),
@@ -381,7 +369,7 @@ test.describe("navigation states", () => {
           state: null,
           key: expect.any(String),
         },
-        formMethod: "POST",
+        formMethod: "post",
         formAction: `/${STATES.SUBMITTING_ACTION}`,
         formEncType: "application/x-www-form-urlencoded",
         formData: expect.any(Object),
@@ -412,7 +400,7 @@ test.describe("navigation states", () => {
           state: null,
           key: expect.any(String),
         },
-        formMethod: "POST",
+        formMethod: "post",
         formAction: `/${STATES.SUBMITTING_ACTION_REDIRECT}`,
         formEncType: "application/x-www-form-urlencoded",
         formData: expect.any(Object),
@@ -425,14 +413,10 @@ test.describe("navigation states", () => {
           hash: "",
           state: {
             _isRedirect: true,
-            // These were private API for transition manager that are no longer
-            // needed with the new router so OK to disappear
-            // setCookie: false,
-            // type: "loader",
           },
           key: expect.any(String),
         },
-        formMethod: "POST",
+        formMethod: "post",
         formAction: `/${STATES.SUBMITTING_ACTION_REDIRECT}`,
         formEncType: "application/x-www-form-urlencoded",
         formData: expect.any(Object),
@@ -462,11 +446,6 @@ test.describe("navigation states", () => {
           hash: "",
           state: {
             _isRedirect: true,
-            _isFetchActionRedirect: true,
-            // These were private API for transition manager that are no longer
-            // needed with the new router so OK to disappear
-            // setCookie: false,
-            // type: "loader",
           },
           key: expect.any(String),
         },
