@@ -3,7 +3,7 @@ import path from "node:path";
 import {
   flatRoutesUniversal,
   getRouteConflictErrorMessage,
-  getRouteInfo,
+  getRouteIdConflictErrorMessage,
   getRouteSegments,
 } from "../config/flat-routes";
 import type { ConfigRoute } from "../config/routes";
@@ -18,19 +18,20 @@ describe("flatRoutes", () => {
       ["routes.$slug", "routes/:slug"],
       ["routes.sub.$slug", "routes/sub/:slug"],
       ["$", "*"],
-      ["nested.$", "nested/*"],
       ["flat.$", "flat/*"],
       ["$slug", ":slug"],
-      ["nested.$slug", "nested/:slug"],
+      ["nested/index", "nested"],
+      ["nested.$", "*"],
+      ["nested.$slug", ":slug"],
+      ["nested._layout.$param", ":param"],
+
       ["flat.$slug", "flat/:slug"],
       ["flat.sub", "flat/sub"],
-      ["nested/index", "nested"],
       ["flat._index", "flat"],
       ["_index", undefined],
       ["_layout/index", undefined],
       ["_layout.test", "test"],
-      ["_layout.$slug", ":slug"],
-      ["nested._layout.$slug", "nested/:slug"],
+      ["_layout.$param", ":param"],
       ["$slug[.]json", ":slug.json"],
       ["sub.[sitemap.xml]", "sub/sitemap.xml"],
       ["posts.$slug.[image.jpg]", "posts/:slug/image.jpg"],
@@ -54,8 +55,8 @@ describe("flatRoutes", () => {
       ["(flat).($slug)", "flat?/:slug?"],
       ["flat.(sub)", "flat/sub?"],
       ["_layout.(test)", "test?"],
-      ["_layout.($slug)", ":slug?"],
-      ["(nested)._layout.($slug)", "nested?/:slug?"],
+      ["_layout.($user)", ":user?"],
+      ["(nested)._layout.($param)", "nested?/:param?"],
       ["($slug[.]json)", ":slug.json?"],
       ["(sub).([sitemap.xml])", "sub?/sitemap.xml?"],
       ["(sub).[(sitemap.xml)]", "sub?/(sitemap.xml)"],
@@ -73,18 +74,22 @@ describe("flatRoutes", () => {
       ["([i]ndex).([[]).([[]])", "index?/[?/[]?"],
 
       // Opting out of parent layout
-      ["app_.projects.$id.roadmap", "app/projects/:id/roadmap"],
+      ["user_.projects.$id.roadmap", "user/projects/:id/roadmap"],
       ["app.projects_.$id.roadmap", "app/projects/:id/roadmap"],
-      ["app_.projects_.$id.roadmap", "app/projects/:id/roadmap"],
+      ["shop_.projects_.$id.roadmap", "shop/projects/:id/roadmap"],
     ];
+
+    let manifest = flatRoutesUniversal(
+      APP_DIR,
+      tests.map((t) => path.join(APP_DIR, "routes", t[0] + ".tsx"))
+    );
 
     for (let [input, expected] of tests) {
       it(`"${input}" -> "${expected}"`, () => {
-        let routeInfo = getRouteInfo(
-          APP_DIR,
-          "routes",
-          path.join(APP_DIR, "routes", `${input}.tsx`)
-        );
+        if (input.endsWith("/route") || input.endsWith("/index")) {
+          input = input.replace(/\/(route|index)$/, "");
+        }
+        let routeInfo = manifest[path.join("routes", input)];
         expect(routeInfo.path).toBe(expected);
       });
     }
@@ -315,7 +320,7 @@ describe("flatRoutes", () => {
           id: "routes/app.skip_.layout",
           index: undefined,
           parentId: "routes/app",
-          path: "app/skip/layout",
+          path: "skip/layout",
         },
       ],
 
@@ -474,7 +479,7 @@ describe("flatRoutes", () => {
         "routes/(_[i]ndex).([[]).([[]]).tsx",
         {
           id: "routes/(_[i]ndex).([[]).([[]])",
-          parentId: "routes/([_index])",
+          parentId: "root",
           path: "_index?/[?/[]?",
         },
       ],
@@ -568,7 +573,7 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/brand/index.tsx",
+        "routes/brand.tsx",
         {
           id: "routes/brand",
           parentId: "root",
@@ -581,7 +586,6 @@ describe("flatRoutes", () => {
           id: "routes/brand._index",
           parentId: "routes/brand",
           index: true,
-          path: "brand",
         },
       ],
       [
@@ -604,7 +608,7 @@ describe("flatRoutes", () => {
     );
     let routes = Object.values(routeManifest);
 
-    // expect(routes).toHaveLength(files.length);
+    expect(routes).toHaveLength(files.length);
 
     for (let [file, route] of files) {
       test(`hierarchy for ${file} - ${route.path}`, () => {
@@ -645,12 +649,15 @@ describe("flatRoutes", () => {
     test("index files", () => {
       // we'll add file manually before running the tests
       let testFiles = [
-        path.join(APP_DIR, "routes", "_dashboard._index.tsx"),
-        path.join(APP_DIR, "routes", "_landing._index.tsx"),
-        path.join(APP_DIR, "routes", "_index.tsx"),
+        "routes/_dashboard._index.tsx",
+        "routes/_landing._index.tsx",
+        "routes/_index.tsx",
       ];
 
-      let routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
+      let routeManifest = flatRoutesUniversal(
+        APP_DIR,
+        testFiles.map((file) => path.join(APP_DIR, file))
+      );
 
       let routes = Object.values(routeManifest);
 
@@ -663,19 +670,19 @@ describe("flatRoutes", () => {
 
     test("folder/route.tsx matching folder.tsx", () => {
       // we'll add file manually before running the tests
-      let testFiles = ["routes/dashboard/route.tsx", "routes/dashboard.tsx"];
+      let testFiles = [
+        path.join(APP_DIR, "routes/dashboard/route.tsx"),
+        path.join(APP_DIR, "routes/dashboard.tsx"),
+      ];
 
-      let routeManifest = flatRoutesUniversal(
-        APP_DIR,
-        testFiles.map((file) => path.join(APP_DIR, file))
-      );
+      let routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
 
       let routes = Object.values(routeManifest);
 
       // we had a collision as /route and /index are the same
       expect(routes).toHaveLength(1);
       expect(consoleError).toHaveBeenCalledWith(
-        getRouteConflictErrorMessage("/dashboard", testFiles)
+        getRouteIdConflictErrorMessage("routes/dashboard", testFiles)
       );
     });
 

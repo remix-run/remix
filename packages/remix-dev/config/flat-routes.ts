@@ -13,7 +13,6 @@ import {
   paramPrefixChar,
   routeModuleExts,
 } from "./routesConvention";
-import invariant from "../invariant";
 
 const PrefixLookupTrieEndSymbol = Symbol("PrefixLookupTrieEndSymbol");
 type PrefixLookupNode = {
@@ -40,26 +39,30 @@ class PrefixLookupTrie {
     node[PrefixLookupTrieEndSymbol] = true;
   }
 
-  findAndRemove(prefix: string): string[] {
+  findAndRemove(
+    prefix: string,
+    filter: (nodeValue: string) => boolean
+  ): string[] {
     let node = this.root;
     for (let char of prefix) {
       if (!node[char]) return [];
       node = node[char];
     }
 
-    return this.#findAndRemoveRecursive([], node, prefix);
+    return this.#findAndRemoveRecursive([], node, prefix, filter);
   }
 
   #findAndRemoveRecursive(
     values: string[],
     node: PrefixLookupNode,
-    prefix: string
+    prefix: string,
+    filter: (nodeValue: string) => boolean
   ): string[] {
     for (let char of Object.keys(node)) {
-      this.#findAndRemoveRecursive(values, node[char], prefix + char);
+      this.#findAndRemoveRecursive(values, node[char], prefix + char, filter);
     }
 
-    if (node[PrefixLookupTrieEndSymbol]) {
+    if (node[PrefixLookupTrieEndSymbol] && filter(prefix)) {
       node[PrefixLookupTrieEndSymbol] = false;
       values.push(prefix);
     }
@@ -126,73 +129,117 @@ export function flatRoutesUniversal(
   routes: string[],
   prefix: string = "routes"
 ): RouteManifest {
-  let conflicts = new Map<string, string[]>();
+  let conflicts = new Map<string, ConfigRoute[]>();
   let routeManifest: RouteManifest = {};
   let prefixLookup = new PrefixLookupTrie();
-  routes.sort((a, b) => b.length - a.length);
+  let uniqueRoutes = new Map<string, ConfigRoute>();
+  let routeIdConflicts = new Map<string, string[]>();
 
-  let uniqueRouteIds = new Map<string, ConfigRoute>();
+  // id -> file
+  let routeIds = new Map<string, string>();
 
   for (let file of routes) {
-    let route = getRouteInfo(appDirectory, prefix, file);
+    let routeExt = path.extname(file);
+    let routeDir = path.dirname(file);
+    let routeId =
+      routeDir === path.join(appDirectory, prefix)
+        ? path.relative(appDirectory, file).slice(0, -routeExt.length)
+        : path.relative(appDirectory, routeDir);
 
-    let conflict = uniqueRouteIds.get(route.id || "/");
-
+    let conflict = routeIds.get(routeId);
     if (conflict) {
-      let currentConflicts = conflicts.get(route.path || "/");
-      if (!currentConflicts) currentConflicts = [conflict.file];
-      currentConflicts.push(route.file);
-      conflicts.set(route.path || "/", currentConflicts);
+      let currentConflicts = routeIdConflicts.get(routeId) || [conflict];
+      currentConflicts.push(file);
+      routeIdConflicts.set(routeId, currentConflicts);
       continue;
     }
 
-    routeManifest[route.id] = route;
-    uniqueRouteIds.set(route.id || "/", route);
+    routeIds.set(routeId, file);
+  }
 
-    let childRoutes = prefixLookup.findAndRemove(route.id);
-    prefixLookup.add(route.id);
+  let sortedRouteIds = Array.from(routeIds).sort(
+    ([a], [b]) => b.length - a.length
+  );
 
-    if (childRoutes.length > 0) {
-      for (let fullChildRouteId of childRoutes) {
-        let childRouteFilePath = path.join(appDirectory, fullChildRouteId);
-        // TODO: refactor to not use this, but for it's fine for now...
-        // TODO: we get the routeId back which could be either `{routeId}.tsx` or `{routeId}/{route|index}.tsx`
-        let childRouteFile = routes.find((c) => {
-          return c.startsWith(childRouteFilePath);
-        });
+  for (let [routeId, file] of sortedRouteIds) {
+    let index = routeId.endsWith("_index");
+    let [segments, raw] = getRouteSegments(routeId.slice(prefix.length + 1));
+    let pathname = createRoutePath(segments, raw, index);
 
-        invariant(
-          childRouteFile,
-          `Could not find a route module for the route ID: ${fullChildRouteId} at ${childRouteFilePath}`
-        );
+    routeManifest[routeId] = {
+      file: file.slice(appDirectory.length + 1),
+      id: routeId,
+      path: pathname,
+    };
+    if (index) routeManifest[routeId].index = true;
+    let childRouteIds = prefixLookup.findAndRemove(routeId, (value) => {
+      return [".", "/"].includes(value.slice(routeId.length).charAt(0));
+    });
+    prefixLookup.add(routeId);
 
-        let childRoute = getRouteInfo(
-          appDirectory,
-          prefix,
-          childRouteFile,
-          route.id
-        );
-
-        let childRouteConflicts = uniqueRouteIds.get(childRoute.id || "/");
-
-        if (childRouteConflicts) {
-          let currentConflicts = conflicts.get(route.path || "/");
-          if (!currentConflicts) currentConflicts = [childRouteConflicts.file];
-          currentConflicts.push(childRoute.file);
-          conflicts.set(route.path || "/", currentConflicts);
-          continue;
-        }
-
-        uniqueRouteIds.set(childRoute.id || "/", childRoute);
-        routeManifest[childRoute.id] = childRoute;
+    if (childRouteIds.length > 0) {
+      for (let childRouteId of childRouteIds) {
+        routeManifest[childRouteId].parentId = routeId;
       }
+    }
+  }
+
+  // path creation
+  let parentChildrenMap = new Map<string, ConfigRoute[]>();
+  for (let [routeId] of sortedRouteIds) {
+    let config = routeManifest[routeId];
+    if (!config.parentId) continue;
+    let existingChildren = parentChildrenMap.get(config.parentId) || [];
+    existingChildren.push(config);
+    parentChildrenMap.set(config.parentId, existingChildren);
+  }
+
+  for (let [routeId] of sortedRouteIds) {
+    let config = routeManifest[routeId];
+    let originalPathname = config.path || "";
+    let pathname = config.path;
+    let parentConfig = config.parentId ? routeManifest[config.parentId] : null;
+    if (parentConfig?.path && pathname) {
+      pathname = pathname
+        .slice(parentConfig.path.length)
+        .replace(/^\//, "")
+        .replace(/\/$/, "");
+    }
+
+    let conflictRouteId = originalPathname + (config.index ? "?index" : "");
+    let conflict = uniqueRoutes.get(conflictRouteId);
+
+    if (!config.parentId) config.parentId = "root";
+    config.path = pathname || undefined;
+    uniqueRoutes.set(conflictRouteId, config);
+
+    if (conflict && (originalPathname || config.index)) {
+      let currentConflicts = conflicts.get(originalPathname);
+      if (!currentConflicts) currentConflicts = [conflict];
+      currentConflicts.push(config);
+      conflicts.set(originalPathname, currentConflicts);
+      continue;
+    }
+  }
+
+  if (routeIdConflicts.size > 0) {
+    for (let [routeId, files] of routeIdConflicts.entries()) {
+      console.error(getRouteIdConflictErrorMessage(routeId, files));
     }
   }
 
   // report conflicts
   if (conflicts.size > 0) {
-    for (let [path, files] of conflicts.entries()) {
-      console.error(getRouteConflictErrorMessage(path, files));
+    for (let [path, routes] of conflicts.entries()) {
+      for (let i = 1; i < routes.length; i++) {
+        delete routeManifest[routes[i].id];
+      }
+      console.error(
+        getRouteConflictErrorMessage(
+          path,
+          routes.map((r) => r.file)
+        )
+      );
     }
   }
 
@@ -381,7 +428,7 @@ export function getRouteSegments(routeId: string): [string[], string[]] {
 export function createRoutePath(
   routeSegments: string[],
   rawRouteSegments: string[],
-  isIndex: boolean
+  isIndex?: boolean
 ) {
   let result: string[] = [];
 
@@ -428,32 +475,17 @@ export function getRouteConflictErrorMessage(
   );
 }
 
-export function getRouteInfo(
-  appDirectory: string,
-  prefix: string,
-  file: string,
-  parentId?: string
+export function getRouteIdConflictErrorMessage(
+  routeId: string,
+  files: string[]
 ) {
-  let routeExt = path.extname(file);
-  let routeDir = path.dirname(file);
-  let routeId =
-    routeDir === path.join(appDirectory, prefix)
-      ? path.relative(appDirectory, file).slice(0, -routeExt.length)
-      : path.relative(appDirectory, routeDir);
+  let [taken, ...others] = files;
 
-  let routeIdWithoutPrefix = routeId.slice(prefix.length + 1);
-
-  let index = routeId.endsWith("_index");
-  let [segments, raw] = getRouteSegments(routeIdWithoutPrefix);
-  let routePath = createRoutePath(segments, raw, index);
-
-  let route: ConfigRoute = {
-    file: file.slice(appDirectory.length + 1),
-    id: routeId,
-    path: routePath,
-    parentId: parentId ? parentId : "root",
-  };
-  if (index) route.index = true;
-
-  return route;
+  return (
+    `⚠️ Route ID Collision: "${routeId}"\n\n` +
+    `The following routes all define the same Route ID, only the first one will be used\n\n` +
+    `🟢 ${taken}\n` +
+    others.map((route) => `⭕️️ ${route}`).join("\n") +
+    "\n"
+  );
 }
