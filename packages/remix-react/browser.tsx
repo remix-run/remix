@@ -84,10 +84,6 @@ if (import.meta && import.meta.hot) {
                       ? window.__remixRouteModules[id]?.default ??
                         imported.default
                       : imported.default,
-                    CatchBoundary: imported.CatchBoundary
-                      ? window.__remixRouteModules[id]?.CatchBoundary ??
-                        imported.CatchBoundary
-                      : imported.CatchBoundary,
                     ErrorBoundary: imported.ErrorBoundary
                       ? window.__remixRouteModules[id]?.ErrorBoundary ??
                         imported.ErrorBoundary
@@ -139,18 +135,6 @@ if (import.meta && import.meta.hot) {
  */
 export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   if (!router) {
-    if (!window.__remixContext.future.v2_errorBoundary) {
-      warnOnce(
-        false,
-        "⚠️  DEPRECATED: The separation of `CatchBoundary` and `ErrorBoundary` has " +
-          "been deprecated and Remix v2 will use a singular `ErrorBoundary` for " +
-          "all thrown values (`Response` and `Error`). Please migrate to the new " +
-          "behavior in Remix v1 via the `future.v2_errorBoundary` flag in your " +
-          "`remix.config.js` file. For more information, see " +
-          "https://remix.run/docs/route/error-boundary-v2"
-      );
-    }
-
     let routes = createClientRoutes(
       window.__remixManifest.routes,
       window.__remixRouteModules,

@@ -38,7 +38,6 @@ interface Route {
 export interface EntryRoute extends Route {
   hasAction: boolean;
   hasLoader: boolean;
-  hasCatchBoundary: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
   module: string;
@@ -72,12 +71,7 @@ export function createServerRoutes(
   > = groupRoutesByParentId(manifest)
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
-    let hasErrorBoundary =
-      future.v2_errorBoundary === true
-        ? route.id === "root" || route.hasErrorBoundary
-        : route.id === "root" ||
-          route.hasCatchBoundary ||
-          route.hasErrorBoundary;
+    let hasErrorBoundary = route.id === "root" || route.hasErrorBoundary;
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       element: <RemixRoute id={route.id} />,
@@ -115,13 +109,7 @@ export function createClientRoutes(
   > = groupRoutesByParentId(manifest)
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
-    let hasErrorBoundary =
-      future.v2_errorBoundary === true
-        ? route.id === "root" || route.hasErrorBoundary
-        : route.id === "root" ||
-          route.hasCatchBoundary ||
-          route.hasErrorBoundary;
-
+    let hasErrorBoundary = route.id === "root" || route.hasErrorBoundary;
     let dataRoute: DataRouteObject = {
       caseSensitive: route.caseSensitive,
       element: <RemixRoute id={route.id} />,

@@ -43,12 +43,7 @@ import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
 import type { EntryContext, RemixContextObject } from "./entry";
-import {
-  RemixRootDefaultErrorBoundary,
-  RemixRootDefaultCatchBoundary,
-  RemixCatchBoundary,
-  V2_RemixRootDefaultErrorBoundary,
-} from "./errorBoundaries";
+import { V2_RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
@@ -143,7 +138,7 @@ export function RemixRoute({ id }: { id: string }) {
 }
 
 export function RemixRouteError({ id }: { id: string }) {
-  let { future, routeModules } = useRemixContext();
+  let { routeModules } = useRemixContext();
 
   // This checks prevent cryptic error messages such as: 'Cannot read properties of undefined (reading 'root')'
   invariant(
@@ -153,51 +148,15 @@ export function RemixRouteError({ id }: { id: string }) {
   );
 
   let error = useRouteError();
-  let { CatchBoundary, ErrorBoundary } = routeModules[id];
-
-  if (future.v2_errorBoundary) {
-    // Provide defaults for the root route if they are not present
-    if (id === "root") {
-      ErrorBoundary ||= V2_RemixRootDefaultErrorBoundary;
-    }
-    if (ErrorBoundary) {
-      // TODO: Unsure if we can satisfy the typings here
-      // @ts-expect-error
-      return <ErrorBoundary />;
-    }
-    throw error;
-  }
+  let { ErrorBoundary } = routeModules[id];
 
   // Provide defaults for the root route if they are not present
-  if (id === "root") {
-    CatchBoundary ||= RemixRootDefaultCatchBoundary;
-    ErrorBoundary ||= RemixRootDefaultErrorBoundary;
+  if (!ErrorBoundary && id === "root") {
+    ErrorBoundary = V2_RemixRootDefaultErrorBoundary;
   }
 
-  if (isRouteErrorResponse(error)) {
-    let tError = error as any;
-    if (
-      tError?.error instanceof Error &&
-      tError.status !== 404 &&
-      ErrorBoundary
-    ) {
-      // Internal framework-thrown ErrorResponses
-      return <ErrorBoundary error={tError.error} />;
-    }
-    if (CatchBoundary) {
-      // User-thrown ErrorResponses
-      return (
-        <RemixCatchBoundary
-          component={CatchBoundary!}
-          catch={error as ErrorResponse}
-        />
-      );
-    }
-  }
-
-  if (error instanceof Error && ErrorBoundary) {
-    // User- or framework-thrown Errors
-    return <ErrorBoundary error={error} />;
+  if (ErrorBoundary) {
+    return <ErrorBoundary />;
   }
 
   throw error;

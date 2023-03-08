@@ -35,23 +35,7 @@ export interface ActionFunction {
 }
 
 /**
- * A React component that is rendered when the server throws a Response.
- *
- * @deprecated Please enable the v2_errorBoundary flag
- */
-export type CatchBoundaryComponent = ComponentType;
-
-/**
  * A React component that is rendered when there is an error on a route.
- *
- * @deprecated Please enable the v2_errorBoundary flag
- */
-export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
-
-/**
- * V2 version of the ErrorBoundary that eliminates the distinction between
- * Error and Catch Boundaries and behaves like RR 6.4 errorElement and captures
- * errors with useRouteError()
  */
 export type V2_ErrorBoundaryComponent = ComponentType;
 
@@ -243,8 +227,7 @@ export type RouteComponent = ComponentType<{}>;
 export type RouteHandle = any;
 
 export interface EntryRouteModule {
-  CatchBoundary?: CatchBoundaryComponent;
-  ErrorBoundary?: ErrorBoundaryComponent | V2_ErrorBoundaryComponent;
+  ErrorBoundary?: V2_ErrorBoundaryComponent;
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
