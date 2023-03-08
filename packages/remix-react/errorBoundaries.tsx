@@ -2,11 +2,11 @@ import React from "react";
 import type { Location } from "@remix-run/router";
 import { isRouteErrorResponse, useRouteError } from "react-router-dom";
 
-import type { V2_ErrorBoundaryComponent } from "./routeModules";
+import type { ErrorBoundaryComponent } from "./routeModules";
 
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
   location: Location;
-  component: V2_ErrorBoundaryComponent;
+  component: ErrorBoundaryComponent;
   error?: Error;
 }>;
 

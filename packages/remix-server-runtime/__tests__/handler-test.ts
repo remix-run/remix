@@ -17,7 +17,6 @@ describe("createRequestHandler", () => {
       assets: {} as any,
       entry: { module: {} as any },
       future: {
-        v2_errorBoundary: false,
         v2_meta: false,
       },
     });
