@@ -4,6 +4,8 @@ title: CatchBoundary
 
 # `CatchBoundary`
 
+<docs-warning>The separation of `CatchBoundary` and `ErrorBoundary` has been deprecated and Remix v2 will use a singular `ErrorBoundary` for all thrown Responses and Errors. It is recommended that you opt-into the new behavior in Remix v1 via the `future.v2_errorBoundary` flag in your `remix.config.js` file. Please refer to the [ErrorBoundary (v2)][error-boundary-v2] docs for more information.</docs-warning>
+
 A `CatchBoundary` is a React component that renders whenever an action or loader throws a `Response`.
 
 **Note:** We use the word "catch" to represent the codepath taken when a `Response` type is thrown; you thought about bailing from the "happy path". This is different from an uncaught error you did not expect to occur.
@@ -29,3 +31,5 @@ export function CatchBoundary() {
   );
 }
 ```
+
+[error-boundary-v2]: ./error-boundary-v2
