@@ -1,5 +1,12 @@
 # `@remix-run/react`
 
+## 1.14.1-pre.0
+
+### Patch Changes
+
+- Deprecate `useTransition` in favor of `useNavigation` ([#5687](https://github.com/remix-run/remix/pull/5687))
+- Memoize `useMatches` in the Remix layer ([#5603](https://github.com/remix-run/remix/pull/5603))
+
 ## 1.14.0
 
 ### Minor Changes
