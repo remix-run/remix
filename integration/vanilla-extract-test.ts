@@ -6,14 +6,21 @@ import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 
 const TEST_PADDING_VALUE = "20px";
 
-test.describe("Vanilla Extract", () => {
-  let fixture: Fixture;
-  let appFixture: AppFixture;
+const configurations = [
+  { name: "Cached", config: "{ cached: true }" },
+  { name: "Uncached", config: "true" },
+] as const;
 
-  test.beforeAll(async () => {
-    fixture = await createFixture({
-      files: {
-        "remix.config.js": js`
+test.describe("Vanilla Extract", () => {
+  configurations.forEach((configuration) => {
+    test.describe(configuration.name, () => {
+      let fixture: Fixture;
+      let appFixture: AppFixture;
+
+      test.beforeAll(async () => {
+        fixture = await createFixture({
+          files: {
+            "remix.config.js": js`
           module.exports = {
             future: {
               // Enable all CSS future flags to
@@ -22,11 +29,11 @@ test.describe("Vanilla Extract", () => {
               unstable_cssSideEffectImports: true,
               unstable_postcss: true,
               unstable_tailwind: true,
-              unstable_vanillaExtract: true,
+              unstable_vanillaExtract: ${configuration.config},
             },
           };
         `,
-        "app/root.jsx": js`
+            "app/root.jsx": js`
           import { Links, Outlet } from "@remix-run/react";
           import { cssBundleHref } from "@remix-run/css-bundle";
           export function links() {
@@ -45,32 +52,30 @@ test.describe("Vanilla Extract", () => {
             )
           }
         `,
-        ...typeScriptFixture(),
-        ...javaScriptFixture(),
-        ...classCompositionFixture(),
-        ...rootRelativeClassCompositionFixture(),
-        ...sideEffectImportsFixture(),
-        ...sideEffectImportsWithinChildCompilationFixture(),
-        ...stableIdentifiersFixture(),
-        ...imageUrlsViaCssUrlFixture(),
-        ...imageUrlsViaRootRelativeCssUrlFixture(),
-        ...imageUrlsViaJsImportFixture(),
-        ...imageUrlsViaRootRelativeJsImportFixture(),
-        ...imageUrlsViaClassCompositionFixture(),
-        ...imageUrlsViaJsImportClassCompositionFixture(),
-        ...standardImageUrlsViaJsImportFixture(),
-        ...standardImageUrlsViaRootRelativeJsImportFixture(),
-      },
-    });
-    appFixture = await createAppFixture(fixture);
-  });
+            ...typeScriptFixture(),
+            ...javaScriptFixture(),
+            ...classCompositionFixture(),
+            ...rootRelativeClassCompositionFixture(),
+            ...sideEffectImportsFixture(),
+            ...sideEffectImportsWithinChildCompilationFixture(),
+            ...stableIdentifiersFixture(),
+            ...imageUrlsViaCssUrlFixture(),
+            ...imageUrlsViaRootRelativeCssUrlFixture(),
+            ...imageUrlsViaJsImportFixture(),
+            ...imageUrlsViaRootRelativeJsImportFixture(),
+            ...imageUrlsViaClassCompositionFixture(),
+            ...imageUrlsViaJsImportClassCompositionFixture(),
+          },
+        });
+        appFixture = await createAppFixture(fixture);
+      });
 
-  test.afterAll(async () => {
-    await appFixture.close();
-  });
+      test.afterAll(async () => {
+        await appFixture.close();
+      });
 
-  let typeScriptFixture = () => ({
-    "app/fixtures/typescript/styles.css.ts": js`
+      let typeScriptFixture = () => ({
+        "app/fixtures/typescript/styles.css.ts": js`
       import { style } from "@vanilla-extract/css";
 
       export const root = style({
@@ -78,7 +83,7 @@ test.describe("Vanilla Extract", () => {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/routes/typescript-test.jsx": js`
+        "app/routes/typescript-test.jsx": js`
       import * as styles from "../fixtures/typescript/styles.css";
       
       export default function() {
@@ -89,19 +94,19 @@ test.describe("Vanilla Extract", () => {
         )
       }
     `,
-  });
-  test("TypeScript", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/typescript-test");
-    let locator = await page.locator("[data-testid='typescript']");
-    let padding = await locator.evaluate(
-      (element) => window.getComputedStyle(element).padding
-    );
-    expect(padding).toBe(TEST_PADDING_VALUE);
-  });
+      });
+      test("TypeScript", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/typescript-test");
+        let locator = await page.locator("[data-testid='typescript']");
+        let padding = await locator.evaluate(
+          (element) => window.getComputedStyle(element).padding
+        );
+        expect(padding).toBe(TEST_PADDING_VALUE);
+      });
 
-  let javaScriptFixture = () => ({
-    "app/fixtures/javascript/styles.css.js": js`
+      let javaScriptFixture = () => ({
+        "app/fixtures/javascript/styles.css.js": js`
       import { style } from "@vanilla-extract/css";
 
       export const root = style({
@@ -109,7 +114,7 @@ test.describe("Vanilla Extract", () => {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/routes/javascript-test.jsx": js`
+        "app/routes/javascript-test.jsx": js`
       import * as styles from "../fixtures/javascript/styles.css";
       
       export default function() {
@@ -120,19 +125,19 @@ test.describe("Vanilla Extract", () => {
         )
       }
     `,
-  });
-  test("JavaScript", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/javascript-test");
-    let locator = await page.locator("[data-testid='javascript']");
-    let padding = await locator.evaluate(
-      (element) => window.getComputedStyle(element).padding
-    );
-    expect(padding).toBe(TEST_PADDING_VALUE);
-  });
+      });
+      test("JavaScript", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/javascript-test");
+        let locator = await page.locator("[data-testid='javascript']");
+        let padding = await locator.evaluate(
+          (element) => window.getComputedStyle(element).padding
+        );
+        expect(padding).toBe(TEST_PADDING_VALUE);
+      });
 
-  let classCompositionFixture = () => ({
-    "app/fixtures/class-composition/styles.css.ts": js`
+      let classCompositionFixture = () => ({
+        "app/fixtures/class-composition/styles.css.ts": js`
       import { style } from "@vanilla-extract/css";
       import { padding } from "./padding.css";
 
@@ -141,14 +146,14 @@ test.describe("Vanilla Extract", () => {
         { background: 'peachpuff' },
       ]);
     `,
-    "app/fixtures/class-composition/padding.css.ts": js`
+        "app/fixtures/class-composition/padding.css.ts": js`
       import { style } from "@vanilla-extract/css";
 
       export const padding = style({
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/routes/class-composition-test.jsx": js`
+        "app/routes/class-composition-test.jsx": js`
       import * as styles from "../fixtures/class-composition/styles.css";
       
       export default function() {
@@ -159,19 +164,19 @@ test.describe("Vanilla Extract", () => {
         )
       }
     `,
-  });
-  test("class composition", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/class-composition-test");
-    let locator = await page.locator("[data-testid='class-composition']");
-    let padding = await locator.evaluate(
-      (element) => window.getComputedStyle(element).padding
-    );
-    expect(padding).toBe(TEST_PADDING_VALUE);
-  });
+      });
+      test("class composition", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/class-composition-test");
+        let locator = await page.locator("[data-testid='class-composition']");
+        let padding = await locator.evaluate(
+          (element) => window.getComputedStyle(element).padding
+        );
+        expect(padding).toBe(TEST_PADDING_VALUE);
+      });
 
-  let rootRelativeClassCompositionFixture = () => ({
-    "app/fixtures/root-relative-class-composition/styles.css.ts": js`
+      let rootRelativeClassCompositionFixture = () => ({
+        "app/fixtures/root-relative-class-composition/styles.css.ts": js`
       import { style } from "@vanilla-extract/css";
       import { padding } from "~/fixtures/root-relative-class-composition/padding.css";
 
@@ -180,14 +185,14 @@ test.describe("Vanilla Extract", () => {
         { background: 'peachpuff' },
       ]);
     `,
-    "app/fixtures/root-relative-class-composition/padding.css.ts": js`
+        "app/fixtures/root-relative-class-composition/padding.css.ts": js`
       import { style } from "@vanilla-extract/css";
 
       export const padding = style({
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/routes/root-relative-class-composition-test.jsx": js`
+        "app/routes/root-relative-class-composition-test.jsx": js`
       import * as styles from "../fixtures/root-relative-class-composition/styles.css";
       
       export default function() {
@@ -198,28 +203,28 @@ test.describe("Vanilla Extract", () => {
         )
       }
     `,
-  });
-  test("root-relative class composition", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/root-relative-class-composition-test");
-    let locator = await page.locator(
-      "[data-testid='root-relative-class-composition']"
-    );
-    let padding = await locator.evaluate(
-      (element) => window.getComputedStyle(element).padding
-    );
-    expect(padding).toBe(TEST_PADDING_VALUE);
-  });
+      });
+      test("root-relative class composition", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/root-relative-class-composition-test");
+        let locator = await page.locator(
+          "[data-testid='root-relative-class-composition']"
+        );
+        let padding = await locator.evaluate(
+          (element) => window.getComputedStyle(element).padding
+        );
+        expect(padding).toBe(TEST_PADDING_VALUE);
+      });
 
-  let sideEffectImportsFixture = () => ({
-    "app/fixtures/side-effect-imports/styles.css.ts": js`
+      let sideEffectImportsFixture = () => ({
+        "app/fixtures/side-effect-imports/styles.css.ts": js`
       import { globalStyle } from "@vanilla-extract/css";
       
       globalStyle(".side-effect-imports", {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/routes/side-effect-imports-test.jsx": js`
+        "app/routes/side-effect-imports-test.jsx": js`
       import "../fixtures/side-effect-imports/styles.css";
       
       export default function() {
@@ -230,29 +235,29 @@ test.describe("Vanilla Extract", () => {
         )
       }
     `,
-  });
-  test("side-effect imports", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/side-effect-imports-test");
-    let locator = await page.locator("[data-testid='side-effect-imports']");
-    let padding = await locator.evaluate(
-      (element) => window.getComputedStyle(element).padding
-    );
-    expect(padding).toBe(TEST_PADDING_VALUE);
-  });
+      });
+      test("side-effect imports", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/side-effect-imports-test");
+        let locator = await page.locator("[data-testid='side-effect-imports']");
+        let padding = await locator.evaluate(
+          (element) => window.getComputedStyle(element).padding
+        );
+        expect(padding).toBe(TEST_PADDING_VALUE);
+      });
 
-  let sideEffectImportsWithinChildCompilationFixture = () => ({
-    "app/fixtures/side-effect-imports-within-child-compilation/styles.css.ts": js`
+      let sideEffectImportsWithinChildCompilationFixture = () => ({
+        "app/fixtures/side-effect-imports-within-child-compilation/styles.css.ts": js`
       import "./nested-side-effect.css";
     `,
-    "app/fixtures/side-effect-imports-within-child-compilation/nested-side-effect.css.ts": js`
+        "app/fixtures/side-effect-imports-within-child-compilation/nested-side-effect.css.ts": js`
       import { globalStyle } from "@vanilla-extract/css";
       
       globalStyle(".side-effect-imports-within-child-compilation", {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/routes/side-effect-imports-within-child-compilation-test.jsx": js`
+        "app/routes/side-effect-imports-within-child-compilation-test.jsx": js`
       import "../fixtures/side-effect-imports-within-child-compilation/styles.css";
       
       export default function() {
@@ -263,33 +268,31 @@ test.describe("Vanilla Extract", () => {
         )
       }
     `,
-  });
-  test("side-effect imports within child compilation", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/side-effect-imports-within-child-compilation-test");
-    let locator = await page.locator(
-      "[data-testid='side-effect-imports-within-child-compilation']"
-    );
-    let padding = await locator.evaluate(
-      (element) => window.getComputedStyle(element).padding
-    );
-    expect(padding).toBe(TEST_PADDING_VALUE);
-  });
+      });
+      test("side-effect imports within child compilation", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/side-effect-imports-within-child-compilation-test");
+        let locator = await page.locator(
+          "[data-testid='side-effect-imports-within-child-compilation']"
+        );
+        let padding = await locator.evaluate(
+          (element) => window.getComputedStyle(element).padding
+        );
+        expect(padding).toBe(TEST_PADDING_VALUE);
+      });
 
-  let stableIdentifiersFixture = () => ({
-    "app/fixtures/stable-identifiers/styles_a.css.ts": js`
-      import { style } from "@vanilla-extract/css";
+      let stableIdentifiersFixture = () => ({
+        "app/fixtures/stable-identifiers/styles_a.css.ts": js`
       import { shared } from "./shared.css";
 
-      export const root = style([shared]);
+      export const root = shared;
     `,
-    "app/fixtures/stable-identifiers/styles_b.css.ts": js`
-      import { style } from "@vanilla-extract/css";
+        "app/fixtures/stable-identifiers/styles_b.css.ts": js`
       import { shared } from "./shared.css";
 
-      export const root = style([shared]);
+      export const root = shared;
     `,
-    "app/fixtures/stable-identifiers/shared.css.ts": js`
+        "app/fixtures/stable-identifiers/shared.css.ts": js`
       import { style } from "@vanilla-extract/css";
 
       export const shared = style({
@@ -297,7 +300,7 @@ test.describe("Vanilla Extract", () => {
         background: 'peachpuff',
       });
     `,
-    "app/routes/stable-identifiers-test.jsx": js`
+        "app/routes/stable-identifiers-test.jsx": js`
       import * as styles_a from "../fixtures/stable-identifiers/styles_a.css";
       import * as styles_b from "../fixtures/stable-identifiers/styles_b.css";
 
@@ -311,25 +314,25 @@ test.describe("Vanilla Extract", () => {
         )
       }
     `,
-  });
-  test("stable identifiers", async ({ page }) => {
-    // This test ensures that file scoping is working as expected and
-    // identifiers are stable across different .css.ts contexts. We test this by
-    // using the same shared style in two different .css.ts files and then
-    // asserting that it's the same class name.
-    let app = new PlaywrightFixture(appFixture, page);
-    await app.goto("/stable-identifiers-test");
-    let locator = await page.locator("[data-testid='stable-identifiers']");
-    let { padding, classList } = await locator.evaluate((element) => ({
-      padding: window.getComputedStyle(element).padding,
-      classList: Array.from(element.classList),
-    }));
-    expect(padding).toBe(TEST_PADDING_VALUE);
-    expect(classList.length).toBe(1);
-  });
+      });
+      test("stable identifiers", async ({ page }) => {
+        // This test ensures that file scoping is working as expected and
+        // identifiers are stable across different .css.ts contexts. We test this by
+        // using the same shared style in two different .css.ts files and then
+        // asserting that it's the same class name.
+        let app = new PlaywrightFixture(appFixture, page);
+        await app.goto("/stable-identifiers-test");
+        let locator = await page.locator("[data-testid='stable-identifiers']");
+        let { padding, classList } = await locator.evaluate((element) => ({
+          padding: window.getComputedStyle(element).padding,
+          classList: Array.from(element.classList),
+        }));
+        expect(padding).toBe(TEST_PADDING_VALUE);
+        expect(classList.length).toBe(1);
+      });
 
-  let imageUrlsViaCssUrlFixture = () => ({
-    "app/fixtures/imageUrlsViaCssUrl/styles.css.ts": js`
+      let imageUrlsViaCssUrlFixture = () => ({
+        "app/fixtures/imageUrlsViaCssUrl/styles.css.ts": js`
       import { style } from "@vanilla-extract/css";
 
       export const root = style({
@@ -338,12 +341,12 @@ test.describe("Vanilla Extract", () => {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/fixtures/imageUrlsViaCssUrl/image.svg": `
+        "app/fixtures/imageUrlsViaCssUrl/image.svg": `
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-via-css-url-test.jsx": js`
+        "app/routes/image-urls-via-css-url-test.jsx": js`
       import * as styles from "../fixtures/imageUrlsViaCssUrl/styles.css";
       
       export default function() {
@@ -354,24 +357,26 @@ test.describe("Vanilla Extract", () => {
         )
       }
     `,
-  });
-  test("image URLs via CSS URL", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    let imgStatus: number | null = null;
-    app.page.on("response", (res) => {
-      if (res.url().endsWith(".svg")) imgStatus = res.status();
-    });
-    await app.goto("/image-urls-via-css-url-test");
-    let locator = await page.locator("[data-testid='image-urls-via-css-url']");
-    let backgroundImage = await locator.evaluate(
-      (element) => window.getComputedStyle(element).backgroundImage
-    );
-    expect(backgroundImage).toContain(".svg");
-    expect(imgStatus).toBe(200);
-  });
+      });
+      test("image URLs via CSS URL", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        let imgStatus: number | null = null;
+        app.page.on("response", (res) => {
+          if (res.url().endsWith(".svg")) imgStatus = res.status();
+        });
+        await app.goto("/image-urls-via-css-url-test");
+        let locator = await page.locator(
+          "[data-testid='image-urls-via-css-url']"
+        );
+        let backgroundImage = await locator.evaluate(
+          (element) => window.getComputedStyle(element).backgroundImage
+        );
+        expect(backgroundImage).toContain(".svg");
+        expect(imgStatus).toBe(200);
+      });
 
-  let imageUrlsViaRootRelativeCssUrlFixture = () => ({
-    "app/fixtures/imageUrlsViaRootRelativeCssUrl/styles.css.ts": js`
+      let imageUrlsViaRootRelativeCssUrlFixture = () => ({
+        "app/fixtures/imageUrlsViaRootRelativeCssUrl/styles.css.ts": js`
       import { style } from "@vanilla-extract/css";
 
       export const root = style({
@@ -380,12 +385,12 @@ test.describe("Vanilla Extract", () => {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/fixtures/imageUrlsViaRootRelativeCssUrl/image.svg": `
+        "app/fixtures/imageUrlsViaRootRelativeCssUrl/image.svg": `
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-via-root-relative-css-url-test.jsx": js`
+        "app/routes/image-urls-via-root-relative-css-url-test.jsx": js`
       import * as styles from "../fixtures/imageUrlsViaRootRelativeCssUrl/styles.css";
       
       export default function() {
@@ -396,26 +401,26 @@ test.describe("Vanilla Extract", () => {
         )
       }
     `,
-  });
-  test("image URLs via root-relative CSS URL", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    let imgStatus: number | null = null;
-    app.page.on("response", (res) => {
-      if (res.url().endsWith(".svg")) imgStatus = res.status();
-    });
-    await app.goto("/image-urls-via-root-relative-css-url-test");
-    let locator = await page.locator(
-      "[data-testid='image-urls-via-root-relative-css-url']"
-    );
-    let backgroundImage = await locator.evaluate(
-      (element) => window.getComputedStyle(element).backgroundImage
-    );
-    expect(backgroundImage).toContain(".svg");
-    expect(imgStatus).toBe(200);
-  });
+      });
+      test("image URLs via root-relative CSS URL", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        let imgStatus: number | null = null;
+        app.page.on("response", (res) => {
+          if (res.url().endsWith(".svg")) imgStatus = res.status();
+        });
+        await app.goto("/image-urls-via-root-relative-css-url-test");
+        let locator = await page.locator(
+          "[data-testid='image-urls-via-root-relative-css-url']"
+        );
+        let backgroundImage = await locator.evaluate(
+          (element) => window.getComputedStyle(element).backgroundImage
+        );
+        expect(backgroundImage).toContain(".svg");
+        expect(imgStatus).toBe(200);
+      });
 
-  let imageUrlsViaJsImportFixture = () => ({
-    "app/fixtures/imageUrlsViaJsImport/styles.css.ts": js`
+      let imageUrlsViaJsImportFixture = () => ({
+        "app/fixtures/imageUrlsViaJsImport/styles.css.ts": js`
       import { style } from "@vanilla-extract/css";
       import href from "./image.svg";
 
@@ -425,12 +430,12 @@ test.describe("Vanilla Extract", () => {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/fixtures/imageUrlsViaJsImport/image.svg": `
+        "app/fixtures/imageUrlsViaJsImport/image.svg": `
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-via-js-import-test.jsx": js`
+        "app/routes/image-urls-via-js-import-test.jsx": js`
       import * as styles from "../fixtures/imageUrlsViaJsImport/styles.css";
       
       export default function() {
@@ -441,26 +446,26 @@ test.describe("Vanilla Extract", () => {
         )
       }
     `,
-  });
-  test("image URLs via JS import", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    let imgStatus: number | null = null;
-    app.page.on("response", (res) => {
-      if (res.url().endsWith(".svg")) imgStatus = res.status();
-    });
-    await app.goto("/image-urls-via-js-import-test");
-    let locator = await page.locator(
-      "[data-testid='image-urls-via-js-import']"
-    );
-    let backgroundImage = await locator.evaluate(
-      (element) => window.getComputedStyle(element).backgroundImage
-    );
-    expect(backgroundImage).toContain(".svg");
-    expect(imgStatus).toBe(200);
-  });
+      });
+      test("image URLs via JS import", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        let imgStatus: number | null = null;
+        app.page.on("response", (res) => {
+          if (res.url().endsWith(".svg")) imgStatus = res.status();
+        });
+        await app.goto("/image-urls-via-js-import-test");
+        let locator = await page.locator(
+          "[data-testid='image-urls-via-js-import']"
+        );
+        let backgroundImage = await locator.evaluate(
+          (element) => window.getComputedStyle(element).backgroundImage
+        );
+        expect(backgroundImage).toContain(".svg");
+        expect(imgStatus).toBe(200);
+      });
 
-  let imageUrlsViaRootRelativeJsImportFixture = () => ({
-    "app/fixtures/imageUrlsViaRootRelativeJsImport/styles.css.ts": js`
+      let imageUrlsViaRootRelativeJsImportFixture = () => ({
+        "app/fixtures/imageUrlsViaRootRelativeJsImport/styles.css.ts": js`
       import { style } from "@vanilla-extract/css";
       import href from "~/fixtures/imageUrlsViaRootRelativeJsImport/image.svg";
 
@@ -470,12 +475,12 @@ test.describe("Vanilla Extract", () => {
         padding: ${JSON.stringify(TEST_PADDING_VALUE)}
       });
     `,
-    "app/fixtures/imageUrlsViaRootRelativeJsImport/image.svg": `
+        "app/fixtures/imageUrlsViaRootRelativeJsImport/image.svg": `
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-via-root-relative-js-import-test.jsx": js`
+        "app/routes/image-urls-via-root-relative-js-import-test.jsx": js`
       import * as styles from "../fixtures/imageUrlsViaRootRelativeJsImport/styles.css";
       
       export default function() {
@@ -486,26 +491,26 @@ test.describe("Vanilla Extract", () => {
         )
       }
     `,
-  });
-  test("image URLs via root-relative JS import", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    let imgStatus: number | null = null;
-    app.page.on("response", (res) => {
-      if (res.url().endsWith(".svg")) imgStatus = res.status();
-    });
-    await app.goto("/image-urls-via-root-relative-js-import-test");
-    let locator = await page.locator(
-      "[data-testid='image-urls-via-root-relative-js-import']"
-    );
-    let backgroundImage = await locator.evaluate(
-      (element) => window.getComputedStyle(element).backgroundImage
-    );
-    expect(backgroundImage).toContain(".svg");
-    expect(imgStatus).toBe(200);
-  });
+      });
+      test("image URLs via root-relative JS import", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        let imgStatus: number | null = null;
+        app.page.on("response", (res) => {
+          if (res.url().endsWith(".svg")) imgStatus = res.status();
+        });
+        await app.goto("/image-urls-via-root-relative-js-import-test");
+        let locator = await page.locator(
+          "[data-testid='image-urls-via-root-relative-js-import']"
+        );
+        let backgroundImage = await locator.evaluate(
+          (element) => window.getComputedStyle(element).backgroundImage
+        );
+        expect(backgroundImage).toContain(".svg");
+        expect(imgStatus).toBe(200);
+      });
 
-  let imageUrlsViaClassCompositionFixture = () => ({
-    "app/fixtures/imageUrlsViaClassComposition/styles.css.ts": js`
+      let imageUrlsViaClassCompositionFixture = () => ({
+        "app/fixtures/imageUrlsViaClassComposition/styles.css.ts": js`
       import { style } from "@vanilla-extract/css";
       import { backgroundImage } from "./nested/backgroundImage.css";
 
@@ -517,19 +522,19 @@ test.describe("Vanilla Extract", () => {
         }
       ]);
     `,
-    "app/fixtures/imageUrlsViaClassComposition/nested/backgroundImage.css.ts": js`
+        "app/fixtures/imageUrlsViaClassComposition/nested/backgroundImage.css.ts": js`
       import { style } from "@vanilla-extract/css";
 
       export const backgroundImage = style({
         backgroundImage: 'url(../image.svg)',
       });
     `,
-    "app/fixtures/imageUrlsViaClassComposition/image.svg": `
+        "app/fixtures/imageUrlsViaClassComposition/image.svg": `
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-via-class-composition-test.jsx": js`
+        "app/routes/image-urls-via-class-composition-test.jsx": js`
       import * as styles from "../fixtures/imageUrlsViaClassComposition/styles.css";
       
       export default function() {
@@ -540,26 +545,26 @@ test.describe("Vanilla Extract", () => {
         )
       }
     `,
-  });
-  test("image URLs via class composition", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    let imgStatus: number | null = null;
-    app.page.on("response", (res) => {
-      if (res.url().endsWith(".svg")) imgStatus = res.status();
-    });
-    await app.goto("/image-urls-via-class-composition-test");
-    let locator = await page.locator(
-      "[data-testid='image-urls-via-class-composition']"
-    );
-    let backgroundImage = await locator.evaluate(
-      (element) => window.getComputedStyle(element).backgroundImage
-    );
-    expect(backgroundImage).toContain(".svg");
-    expect(imgStatus).toBe(200);
-  });
+      });
+      test("image URLs via class composition", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        let imgStatus: number | null = null;
+        app.page.on("response", (res) => {
+          if (res.url().endsWith(".svg")) imgStatus = res.status();
+        });
+        await app.goto("/image-urls-via-class-composition-test");
+        let locator = await page.locator(
+          "[data-testid='image-urls-via-class-composition']"
+        );
+        let backgroundImage = await locator.evaluate(
+          (element) => window.getComputedStyle(element).backgroundImage
+        );
+        expect(backgroundImage).toContain(".svg");
+        expect(imgStatus).toBe(200);
+      });
 
-  let imageUrlsViaJsImportClassCompositionFixture = () => ({
-    "app/fixtures/imageUrlsViaJsImportClassComposition/styles.css.ts": js`
+      let imageUrlsViaJsImportClassCompositionFixture = () => ({
+        "app/fixtures/imageUrlsViaJsImportClassComposition/styles.css.ts": js`
       import { style } from "@vanilla-extract/css";
       import { backgroundImage } from "./nested/backgroundImage.css";
 
@@ -571,7 +576,7 @@ test.describe("Vanilla Extract", () => {
         }
       ]);
     `,
-    "app/fixtures/imageUrlsViaJsImportClassComposition/nested/backgroundImage.css.ts": js`
+        "app/fixtures/imageUrlsViaJsImportClassComposition/nested/backgroundImage.css.ts": js`
       import { style } from "@vanilla-extract/css";
       import href from "../image.svg";
 
@@ -579,12 +584,12 @@ test.describe("Vanilla Extract", () => {
         backgroundImage: 'url(' + href + ')',
       });
     `,
-    "app/fixtures/imageUrlsViaJsImportClassComposition/image.svg": `
+        "app/fixtures/imageUrlsViaJsImportClassComposition/image.svg": `
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <circle cx="50" cy="50" r="50" fill="coral" />
       </svg>
     `,
-    "app/routes/image-urls-via-js-import-class-composition-test.jsx": js`
+        "app/routes/image-urls-via-js-import-class-composition-test.jsx": js`
       import * as styles from "../fixtures/imageUrlsViaJsImportClassComposition/styles.css";
       
       export default function() {
@@ -595,115 +600,23 @@ test.describe("Vanilla Extract", () => {
         )
       }
     `,
-  });
-  test("image URLs via JS import class composition", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    let imgStatus: number | null = null;
-    app.page.on("response", (res) => {
-      if (res.url().endsWith(".svg")) imgStatus = res.status();
-    });
-    await app.goto("/image-urls-via-js-import-class-composition-test");
-    let locator = await page.locator(
-      "[data-testid='image-urls-via-js-import-class-composition']"
-    );
-    let backgroundImage = await locator.evaluate(
-      (element) => window.getComputedStyle(element).backgroundImage
-    );
-    expect(backgroundImage).toContain(".svg");
-    expect(imgStatus).toBe(200);
-  });
-
-  let standardImageUrlsViaJsImportFixture = () => ({
-    "app/fixtures/standardImageUrlsViaJsImport/styles.css.ts": js`
-      import { style } from "@vanilla-extract/css";
-      
-      export { default as src } from "./image.svg";
-
-      export const root = style({
-        width: 200,
-        height: 200,
       });
-    `,
-    "app/fixtures/standardImageUrlsViaJsImport/image.svg": `
-      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="50" fill="coral" />
-      </svg>
-    `,
-    "app/routes/standard-image-urls-via-js-import-test.jsx": js`
-      import { root, src } from "../fixtures/standardImageUrlsViaJsImport/styles.css";
-      
-      export default function() {
-        return (
-          <img
-            data-testid="standard-image-urls-via-js-import"
-            src={src}
-            className={root}
-          />
-        )
-      }
-    `,
-  });
-  test("standard image URLs via JS import", async ({ page }) => {
-    // This ensures that image URLs are fully resolved within the CSS file
-    // rather than using some intermediary format that needs to be resolved
-    // later. This is important to ensure that image import semantics are the
-    // same throughout the app, regardless of whether it's in a JS file or a
-    // Vanilla Extract context, e.g. you might want to export the image URL
-    // from the CSS file and use it for preloading.
-    let app = new PlaywrightFixture(appFixture, page);
-    let imgStatus: number | null = null;
-    app.page.on("response", (res) => {
-      if (res.url().endsWith(".svg")) imgStatus = res.status();
-    });
-    await app.goto("/standard-image-urls-via-js-import-test");
-    let element = await app.getElement(
-      "[data-testid='standard-image-urls-via-js-import']"
-    );
-    expect(element.attr("src")).toContain(".svg");
-    expect(imgStatus).toBe(200);
-  });
-
-  let standardImageUrlsViaRootRelativeJsImportFixture = () => ({
-    "app/fixtures/standardImageUrlsViaRootRelativeJsImport/styles.css.ts": js`
-      import { style } from "@vanilla-extract/css";
-
-      export { default as src } from "~/fixtures/standardImageUrlsViaRootRelativeJsImport/image.svg";
-
-      export const root = style({
-        width: 200,
-        height: 200,
+      test("image URLs via JS import class composition", async ({ page }) => {
+        let app = new PlaywrightFixture(appFixture, page);
+        let imgStatus: number | null = null;
+        app.page.on("response", (res) => {
+          if (res.url().endsWith(".svg")) imgStatus = res.status();
+        });
+        await app.goto("/image-urls-via-js-import-class-composition-test");
+        let locator = await page.locator(
+          "[data-testid='image-urls-via-js-import-class-composition']"
+        );
+        let backgroundImage = await locator.evaluate(
+          (element) => window.getComputedStyle(element).backgroundImage
+        );
+        expect(backgroundImage).toContain(".svg");
+        expect(imgStatus).toBe(200);
       });
-    `,
-    "app/fixtures/standardImageUrlsViaRootRelativeJsImport/image.svg": `
-      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="50" fill="coral" />
-      </svg>
-    `,
-    "app/routes/standard-image-urls-via-root-relative-js-import-test.jsx": js`
-      import { root, src } from "../fixtures/standardImageUrlsViaRootRelativeJsImport/styles.css";
-      
-      export default function() {
-        return (
-          <img
-            data-testid="standard-image-urls-via-root-relative-js-import"
-            src={src}
-            className={root}
-          />
-        )
-      }
-    `,
-  });
-  test("standard image URLs via root-relative JS import", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    let imgStatus: number | null = null;
-    app.page.on("response", (res) => {
-      if (res.url().endsWith(".svg")) imgStatus = res.status();
     });
-    await app.goto("/standard-image-urls-via-root-relative-js-import-test");
-    let element = await app.getElement(
-      "[data-testid='standard-image-urls-via-root-relative-js-import']"
-    );
-    expect(element.attr("src")).toContain(".svg");
-    expect(imgStatus).toBe(200);
   });
 });

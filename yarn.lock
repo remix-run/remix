@@ -1629,11 +1629,6 @@
   dependencies:
     "@edge-runtime/primitives" "^1.0.1"
 
-"@emotion/hash@^0.8.0":
-  version "0.8.0"
-  resolved "https://registry.npmjs.org/@emotion/hash/-/hash-0.8.0.tgz#bbbff68978fefdbe68ccb533bc8cbe1d1afb5413"
-  integrity sha512-kBJtf7PH6aWwZ6fka3zQ0p6SBYzx4fl1LoZXE2RrnYST9Xljm7WfKJrU4g/Xr3Beg72MLrp1AWNUmuYJTL7Cow==
-
 "@emotion/hash@^0.9.0":
   version "0.9.0"
   resolved "https://registry.npmjs.org/@emotion/hash/-/hash-0.9.0.tgz"
@@ -3504,28 +3499,10 @@
   dependencies:
     "@babel/core" "^7.20.7"
 
-"@vanilla-extract/css@^0.0.0-create-compiler-api-2023264641":
-  version "0.0.0-transform-perf-2022820614"
-  resolved "https://registry.npmjs.org/@vanilla-extract/css/-/css-0.0.0-transform-perf-2022820614.tgz#36102382051d11647cee9819277283d3f2f7b70f"
-  integrity sha512-giCKT4ERcGlTIe2fYJxiSofZChw3M5CoHcjL2juY2BixaWdYetbi1n0Slw3Nia24Su6dXPaKRcGotyooapxolw==
-  dependencies:
-    "@emotion/hash" "^0.8.0"
-    "@vanilla-extract/private" "^1.0.3"
-    ahocorasick "^1.0.2"
-    chalk "^4.1.1"
-    css-what "^5.0.1"
-    cssesc "^3.0.0"
-    csstype "^3.0.7"
-    deep-object-diff "^1.1.0"
-    deepmerge "^4.2.2"
-    escape-string-regexp "^4.0.0"
-    media-query-parser "^2.0.2"
-    outdent "^0.8.0"
-
-"@vanilla-extract/css@^1.9.2":
-  version "1.9.2"
-  resolved "https://registry.npmjs.org/@vanilla-extract/css/-/css-1.9.2.tgz"
-  integrity sha512-CE5+R89LOl9XG5dRwEIvVyl/YcS2GkqjdE/XnGJ+p7Fp6Exu08fifv7tY87XxFeCIRAbc9psM+h4lF+wC3Y0fg==
+"@vanilla-extract/css@0.0.0-create-compiler-api-2023282247", "@vanilla-extract/css@^0.0.0-create-compiler-api-2023282247":
+  version "0.0.0-create-compiler-api-2023282247"
+  resolved "https://registry.npmjs.org/@vanilla-extract/css/-/css-0.0.0-create-compiler-api-2023282247.tgz#4884cce2e10219214d2148e0502cc8cc7cb9ea0d"
+  integrity sha512-uNGJ5geyUe5jCDm0q4YPbvmhpplDzIHBZu9q/v9THyttwr3GH3CRUCBwVdjr+se9XCksJ7qjJcP55yphwihKew==
   dependencies:
     "@emotion/hash" "^0.9.0"
     "@vanilla-extract/private" "^1.0.3"
@@ -3534,20 +3511,20 @@
     css-what "^5.0.1"
     cssesc "^3.0.0"
     csstype "^3.0.7"
-    deep-object-diff "^1.1.0"
+    deep-object-diff "^1.1.9"
     deepmerge "^4.2.2"
     media-query-parser "^2.0.2"
     outdent "^0.8.0"
 
-"@vanilla-extract/integration@0.0.0-create-compiler-api-2023264641":
-  version "0.0.0-create-compiler-api-2023264641"
-  resolved "https://registry.npmjs.org/@vanilla-extract/integration/-/integration-0.0.0-create-compiler-api-2023264641.tgz#610f6c39ee77a21c03a07d637469eac44831f59c"
-  integrity sha512-J5hFvXXsiYGhs12N6LruEZONPkkaAd5u4dwHvUZjjUFOiydzwNofo5JTB3PYM1jj7xJxpr9Q7285yCLBXSSPpg==
+"@vanilla-extract/integration@0.0.0-create-compiler-api-2023282247":
+  version "0.0.0-create-compiler-api-2023282247"
+  resolved "https://registry.npmjs.org/@vanilla-extract/integration/-/integration-0.0.0-create-compiler-api-2023282247.tgz#57486b4bdce1c2b95474d78fdafeaf6e55c29c13"
+  integrity sha512-mCJQJHEeW2vDVwIMDmG8+zcA/O8r0o6ArHyv2oGEAFN33E/11Er41VWE0olbvW+HF6ckkZjeRWWdWlBaxMDA+g==
   dependencies:
     "@babel/core" "^7.20.7"
     "@babel/plugin-syntax-typescript" "^7.20.0"
     "@vanilla-extract/babel-plugin-debug-ids" "^1.0.2"
-    "@vanilla-extract/css" "^0.0.0-create-compiler-api-2023264641"
+    "@vanilla-extract/css" "^0.0.0-create-compiler-api-2023282247"
     esbuild "0.17.6"
     eval "0.1.6"
     find-up "^5.0.0"
@@ -3715,7 +3692,7 @@ aggregate-error@^3.0.0:
     clean-stack "^2.0.0"
     indent-string "^4.0.0"
 
-ahocorasick@1.0.2, ahocorasick@^1.0.2:
+ahocorasick@1.0.2:
   version "1.0.2"
   resolved "https://registry.npmjs.org/ahocorasick/-/ahocorasick-1.0.2.tgz"
   integrity sha512-hCOfMzbFx5IDutmWLAt6MZwOUjIfSM9G9FyVxytmE4Rs/5YDPWQrD/+IR1w+FweD9H2oOZEnv36TmkjhNURBVA==
@@ -5383,9 +5360,9 @@ deep-is@^0.1.3, deep-is@~0.1.3:
   resolved "https://registry.npmjs.org/deep-is/-/deep-is-0.1.4.tgz"
   integrity sha512-oIPzksmTg4/MriiaYGO+okXDT7ztn/w3Eptv/+gSIdMdKsJo0u4CfYNFJPy+4SKMuCqGw2wxnA+URMg3t8a/bQ==
 
-deep-object-diff@^1.1.0:
+deep-object-diff@^1.1.9:
   version "1.1.9"
-  resolved "https://registry.npmjs.org/deep-object-diff/-/deep-object-diff-1.1.9.tgz"
+  resolved "https://registry.npmjs.org/deep-object-diff/-/deep-object-diff-1.1.9.tgz#6df7ef035ad6a0caa44479c536ed7b02570f4595"
   integrity sha512-Rn+RuwkmkDwCi2/oXOFS9Gsr5lJZu/yTGpK7wAaAIE75CC+LCGEZHpY6VQJa/RoJcrmaA/docWJZvYohlNkWPA==
 
 deepmerge@^4.2.2:

@@ -30,7 +30,7 @@
     "@esbuild-plugins/node-modules-polyfill": "^0.1.4",
     "@npmcli/package-json": "^2.0.0",
     "@remix-run/server-runtime": "1.14.0",
-    "@vanilla-extract/integration": "0.0.0-create-compiler-api-2023264641",
+    "@vanilla-extract/integration": "0.0.0-create-compiler-api-2023282247",
     "arg": "^5.0.1",
     "cacache": "^15.0.5",
     "chalk": "^4.1.2",
