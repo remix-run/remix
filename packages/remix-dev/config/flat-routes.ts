@@ -140,25 +140,26 @@ export function flatRoutesUniversal(
   let routeIds = new Map<string, string>();
 
   for (let file of routes) {
-    let normalized = normalizeSlashes(file);
-    let routeExt = path.extname(normalized);
-    let routeDir = path.dirname(normalized);
+    let normalizedFile = normalizeSlashes(file);
+    let routeExt = path.extname(normalizedFile);
+    let routeDir = path.dirname(normalizedFile);
+    let normalizedApp = normalizeSlashes(appDirectory);
     let routeId =
-      routeDir === path.posix.join(appDirectory, prefix)
+      routeDir === path.posix.join(normalizedApp, prefix)
         ? path.posix
-            .relative(appDirectory, normalized)
+            .relative(normalizedApp, normalizedFile)
             .slice(0, -routeExt.length)
-        : path.posix.relative(appDirectory, routeDir);
+        : path.posix.relative(normalizedApp, routeDir);
 
     let conflict = routeIds.get(routeId);
     if (conflict) {
       let currentConflicts = routeIdConflicts.get(routeId) || [conflict];
-      currentConflicts.push(normalized);
+      currentConflicts.push(normalizedFile);
       routeIdConflicts.set(routeId, currentConflicts);
       continue;
     }
 
-    routeIds.set(routeId, normalized);
+    routeIds.set(routeId, normalizedFile);
   }
 
   let sortedRouteIds = Array.from(routeIds).sort(
