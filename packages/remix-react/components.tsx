@@ -601,7 +601,7 @@ function V1Meta() {
         }
 
         if (["charset", "charSet"].includes(name)) {
-          return <meta key="charset" charSet={value as string} />;
+          return <meta key="charSet" charSet={value as string} />;
         }
 
         if (name === "title") {
@@ -727,7 +727,7 @@ function V2Meta() {
           // to do that? Seems like a nice convenience IMO.
           return (
             <meta
-              key="charset"
+              key="charSet"
               charSet={metaProps.charSet || (metaProps as any).charset}
             />
           );
