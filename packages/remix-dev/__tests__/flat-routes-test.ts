@@ -696,7 +696,10 @@ describe("flatRoutes", () => {
       // we had a collision as /route and /index are the same
       expect(routes).toHaveLength(1);
       expect(consoleError).toHaveBeenCalledWith(
-        getRouteIdConflictErrorMessage("routes/dashboard", testFiles)
+        getRouteIdConflictErrorMessage(
+          "routes/dashboard",
+          testFiles.map((file) => path.relative(APP_DIR, file))
+        )
       );
     });
 
