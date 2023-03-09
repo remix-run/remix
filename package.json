@@ -86,7 +86,7 @@
     "@types/semver": "^7.3.4",
     "@types/ssri": "^7.1.0",
     "@types/use-sync-external-store": "^0.0.3",
-    "@vanilla-extract/css": "0.0.0-create-compiler-api-20232961929",
+    "@vanilla-extract/css": "0.0.0-create-compiler-api-202329212823",
     "abort-controller": "^3.0.0",
     "abortcontroller-polyfill": "^1.7.3",
     "aws-sdk": "^2.1055.0",
@@ -137,7 +137,7 @@
     "unist-util-visit": "^4.1.1"
   },
   "resolutions": {
-    "@vanilla-extract/css": "0.0.0-create-compiler-api-20232961929"
+    "@vanilla-extract/css": "0.0.0-create-compiler-api-202329212823"
   },
   "engines": {
     "node": ">=14"

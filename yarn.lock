@@ -3499,10 +3499,10 @@
   dependencies:
     "@babel/core" "^7.20.7"
 
-"@vanilla-extract/css@0.0.0-create-compiler-api-20232961929", "@vanilla-extract/css@^0.0.0-create-compiler-api-20232961929":
-  version "0.0.0-create-compiler-api-20232961929"
-  resolved "https://registry.npmjs.org/@vanilla-extract/css/-/css-0.0.0-create-compiler-api-20232961929.tgz#b74d601fac2a6e102312cb311810291dd2511711"
-  integrity sha512-cz7CLwpMLRmpCxBzPU7GQiFpoxWfNvpOHdlxOAnKlWMX4rG//StpBSMV+Y7Exhqscfu5F39w2nbsC+I0uYEx5A==
+"@vanilla-extract/css@0.0.0-create-compiler-api-202329212823", "@vanilla-extract/css@^0.0.0-create-compiler-api-202329212823":
+  version "0.0.0-create-compiler-api-202329212823"
+  resolved "https://registry.npmjs.org/@vanilla-extract/css/-/css-0.0.0-create-compiler-api-202329212823.tgz#8d7c3ef67b789d212ed8c7498154ab65363025a6"
+  integrity sha512-tUG3roPsKK6cC8r332wkXuupVIUmI1BOYzMKaQ6j0At4Apla9e0EDHU2f/E2AZAvj621bibXjHCHgk9pQLG+hQ==
   dependencies:
     "@emotion/hash" "^0.9.0"
     "@vanilla-extract/private" "^1.0.3"
@@ -3516,15 +3516,15 @@
     media-query-parser "^2.0.2"
     outdent "^0.8.0"
 
-"@vanilla-extract/integration@0.0.0-create-compiler-api-20232961929":
-  version "0.0.0-create-compiler-api-20232961929"
-  resolved "https://registry.npmjs.org/@vanilla-extract/integration/-/integration-0.0.0-create-compiler-api-20232961929.tgz#eb91b35e98049df9962bd075a3c012df53f358d9"
-  integrity sha512-RJxW/m4lBb5KTXaBHlYpxi83tfGlRuF1QrEz+mnJRC9qwCoXdjJte76ix4obed9W2DFS0AsqHXZlWwU4VGzy2Q==
+"@vanilla-extract/integration@0.0.0-create-compiler-api-202329212823":
+  version "0.0.0-create-compiler-api-202329212823"
+  resolved "https://registry.npmjs.org/@vanilla-extract/integration/-/integration-0.0.0-create-compiler-api-202329212823.tgz#c461cfe1a263fad040da5c0146f2d43d9cc0c187"
+  integrity sha512-NjWfVkED0IzSn+F8Hkud6rw4ISvgLQNR7BZwqYnEdGFyG5bdtCorOiBY161IDeQ+9lr9duHnJoU6Qf26cENXxQ==
   dependencies:
     "@babel/core" "^7.20.7"
     "@babel/plugin-syntax-typescript" "^7.20.0"
     "@vanilla-extract/babel-plugin-debug-ids" "^1.0.2"
-    "@vanilla-extract/css" "^0.0.0-create-compiler-api-20232961929"
+    "@vanilla-extract/css" "^0.0.0-create-compiler-api-202329212823"
     esbuild "0.17.6"
     eval "0.1.6"
     find-up "^5.0.0"
