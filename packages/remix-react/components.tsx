@@ -1168,17 +1168,7 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  */
 export function useFetchers(): Fetcher[] {
   let fetchers = useFetchersRR();
-  return fetchers.map((f) => {
-    let fetcher = convertRouterFetcherToRemixFetcher({
-      state: f.state,
-      data: f.data,
-      formMethod: f.formMethod,
-      formAction: f.formAction,
-      formData: f.formData,
-      formEncType: f.formEncType,
-    });
-    return fetcher;
-  });
+  return fetchers.map((f) => convertRouterFetcherToRemixFetcher(f));
 }
 
 export type FetcherWithComponents<TData> = Fetcher<TData> & {
@@ -1201,14 +1191,7 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
   let fetcherRR = useFetcherRR();
 
   return React.useMemo(() => {
-    let remixFetcher = convertRouterFetcherToRemixFetcher({
-      state: fetcherRR.state,
-      data: fetcherRR.data,
-      formMethod: fetcherRR.formMethod,
-      formAction: fetcherRR.formAction,
-      formData: fetcherRR.formData,
-      formEncType: fetcherRR.formEncType,
-    });
+    let remixFetcher = convertRouterFetcherToRemixFetcher(fetcherRR);
     let fetcherWithComponents = {
       ...remixFetcher,
       load: fetcherRR.load,
