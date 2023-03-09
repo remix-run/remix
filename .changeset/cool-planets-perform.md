@@ -1,5 +1,5 @@
 ---
-"@remix-run/dev": minor
+"@remix-run/dev": patch
 ---
 
 Allow moduleResolution:"bundler" on tsconfig.json
