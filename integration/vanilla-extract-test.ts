@@ -7,8 +7,8 @@ import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 const TEST_PADDING_VALUE = "20px";
 
 const configurations = [
-  { name: "Cached", config: { cached: true } },
-  { name: "Uncached", config: "true" },
+  { name: "Cached", config: { cache: true } },
+  { name: "Uncached", config: true },
 ] as const;
 
 test.describe("Vanilla Extract", () => {
