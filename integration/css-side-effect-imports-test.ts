@@ -26,7 +26,10 @@ test.describe("CSS side-effect imports", () => {
               // ensure features don't clash
               unstable_cssModules: true,
               unstable_cssSideEffectImports: true,
+              unstable_postcss: true,
+              unstable_tailwind: true,
               unstable_vanillaExtract: true,
+              v2_routeConvention: true,
             },
           };
         `,
@@ -60,9 +63,7 @@ test.describe("CSS side-effect imports", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => {
-    await appFixture.close();
-  });
+  test.afterAll(() => appFixture.close());
 
   let basicSideEffectFixture = () => ({
     "app/basicSideEffect/styles.css": css`
@@ -73,7 +74,7 @@ test.describe("CSS side-effect imports", () => {
     `,
     "app/routes/basic-side-effect-test.jsx": js`
       import "../basicSideEffect/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="basic-side-effect" className="basicSideEffect">
@@ -102,7 +103,7 @@ test.describe("CSS side-effect imports", () => {
     `,
     "app/routes/root-relative-test.jsx": js`
       import "~/rootRelative/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="root-relative" className="rootRelative">
@@ -137,7 +138,7 @@ test.describe("CSS side-effect imports", () => {
     `,
     "app/routes/image-urls-test.jsx": js`
       import "../imageUrls/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="image-urls" className="imageUrls">
@@ -177,7 +178,7 @@ test.describe("CSS side-effect imports", () => {
     `,
     "app/routes/root-relative-image-urls-test.jsx": js`
       import "../rootRelativeImageUrls/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="root-relative-image-urls" className="rootRelativeImageUrls">

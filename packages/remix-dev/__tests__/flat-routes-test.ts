@@ -1,10 +1,11 @@
 import path from "node:path";
 
 import {
-  createRoutePath,
   flatRoutesUniversal,
+  getRouteConflictErrorMessage,
+  getRouteInfo,
   getRouteSegments,
-  isIndexRoute,
+  normalizePath,
 } from "../config/flat-routes";
 import type { ConfigRoute } from "../config/routes";
 
@@ -88,9 +89,9 @@ describe("flatRoutes", () => {
 
     for (let [input, expected] of tests) {
       it(`"${input}" -> "${expected}"`, () => {
-        let routeSegments = getRouteSegments(input);
-        let isIndex = isIndexRoute(input);
-        expect(createRoutePath(routeSegments, isIndex)).toBe(expected);
+        let fullRoutePath = path.join(APP_DIR, "routes", `${input}.tsx`);
+        let routeInfo = getRouteInfo(APP_DIR, "routes", fullRoutePath);
+        expect(routeInfo.path).toBe(expected);
       });
     }
 
@@ -182,7 +183,7 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/_landing.tsx",
+        "routes/_landing/index.tsx",
         {
           id: "routes/_landing",
           parentId: "root",
@@ -190,12 +191,12 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/_landing._index.tsx",
+        "routes/_landing._index/index.tsx",
         {
           id: "routes/_landing._index",
-          index: true,
           parentId: "routes/_landing",
           path: undefined,
+          index: true,
         },
       ],
       [
@@ -207,43 +208,26 @@ describe("flatRoutes", () => {
         },
       ],
       [
-        "routes/about.tsx",
+        "routes/_about.tsx",
         {
-          id: "routes/about",
+          id: "routes/_about",
           parentId: "root",
-          path: "about",
-        },
-      ],
-      [
-        "routes/about._index.tsx",
-        {
-          id: "routes/about._index",
-          index: true,
-          parentId: "routes/about",
           path: undefined,
         },
       ],
       [
-        "routes/about.$.tsx",
+        "routes/_about.faq.tsx",
         {
-          id: "routes/about.$",
-          parentId: "routes/about",
-          path: "*",
-        },
-      ],
-      [
-        "routes/about.faq.tsx",
-        {
-          id: "routes/about.faq",
-          parentId: "routes/about",
+          id: "routes/_about.faq",
+          parentId: "routes/_about",
           path: "faq",
         },
       ],
       [
-        "routes/about.$splat.tsx",
+        "routes/_about.$splat.tsx",
         {
-          id: "routes/about.$splat",
-          parentId: "routes/about",
+          id: "routes/_about.$splat",
+          parentId: "routes/_about",
           path: ":splat",
         },
       ],
@@ -288,6 +272,22 @@ describe("flatRoutes", () => {
           path: ":id",
         },
       ],
+      [
+        "routes/folder/route.tsx",
+        {
+          id: "routes/folder",
+          parentId: "root",
+          path: "folder",
+        },
+      ],
+      [
+        "routes/[route].tsx",
+        {
+          id: "routes/[route]",
+          parentId: "root",
+          path: "route",
+        },
+      ],
 
       // Opt out of parent layout
       [
@@ -326,17 +326,9 @@ describe("flatRoutes", () => {
       ],
 
       [
-        "routes/app.skipall.tsx",
+        "routes/app_.skipall_._index.tsx",
         {
-          id: "routes/app.skipall",
-          parentId: "routes/app",
-          path: "skipall",
-        },
-      ],
-      [
-        "routes/app_.skipall_/index.tsx",
-        {
-          id: "routes/app_.skipall_/index",
+          id: "routes/app_.skipall_._index",
           index: true,
           parentId: "root",
           path: "app/skipall",
@@ -345,34 +337,34 @@ describe("flatRoutes", () => {
 
       // Escaping route segments
       [
-        "routes/about.[$splat].tsx",
+        "routes/_about.[$splat].tsx",
         {
-          id: "routes/about.[$splat]",
-          parentId: "routes/about",
+          id: "routes/_about.[$splat]",
+          parentId: "routes/_about",
           path: "$splat",
         },
       ],
       [
-        "routes/about.[[].tsx",
+        "routes/_about.[[].tsx",
         {
-          id: "routes/about.[[]",
-          parentId: "routes/about",
+          id: "routes/_about.[[]",
+          parentId: "routes/_about",
           path: "[",
         },
       ],
       [
-        "routes/about.[]].tsx",
+        "routes/_about.[]].tsx",
         {
-          id: "routes/about.[]]",
-          parentId: "routes/about",
+          id: "routes/_about.[]]",
+          parentId: "routes/_about",
           path: "]",
         },
       ],
       [
-        "routes/about.[.].tsx",
+        "routes/_about.[.].tsx",
         {
-          id: "routes/about.[.]",
-          parentId: "routes/about",
+          id: "routes/_about.[.]",
+          parentId: "routes/_about",
           path: ".",
         },
       ],
@@ -477,18 +469,18 @@ describe("flatRoutes", () => {
 
       // Optional + escaped route segments
       [
-        "routes/([index]).tsx",
+        "routes/([_index]).tsx",
         {
-          id: "routes/([index])",
+          id: "routes/([_index])",
           parentId: "root",
-          path: "index?",
+          path: "_index?",
         },
       ],
       [
-        "routes/([i]ndex).([[]).([[]]).tsx",
+        "routes/(_[i]ndex).([[]).([[]]).tsx",
         {
-          id: "routes/([i]ndex).([[]).([[]])",
-          parentId: "routes/([index])",
+          id: "routes/(_[i]ndex).([[]).([[]])",
+          parentId: "routes/([_index])",
           path: "[?/[]?",
         },
       ],
@@ -584,9 +576,16 @@ describe("flatRoutes", () => {
       [
         "routes/brand/index.tsx",
         {
-          id: "routes/brand/index",
+          id: "routes/brand",
           parentId: "root",
           path: "brand",
+        },
+      ],
+      [
+        "routes/brand._index.tsx",
+        {
+          id: "routes/brand._index",
+          parentId: "routes/brand",
           index: true,
         },
       ],
@@ -600,12 +599,10 @@ describe("flatRoutes", () => {
       ],
     ];
 
-    let files: [string, Omit<ConfigRoute, "file">][] = testFiles.map(
-      ([file, route]) => {
-        let filepath = file.split("/").join(path.sep);
-        return [filepath, { ...route, file: filepath }];
-      }
-    );
+    let files: [string, ConfigRoute][] = testFiles.map(([file, route]) => {
+      let filepath = normalizePath(file);
+      return [filepath, { ...route, file: filepath }];
+    });
 
     let routeManifest = flatRoutesUniversal(
       APP_DIR,
@@ -620,5 +617,98 @@ describe("flatRoutes", () => {
         expect(routes).toContainEqual(route);
       });
     }
+  });
+
+  describe("doesn't warn when there's not a route collision", () => {
+    let consoleError = jest
+      .spyOn(global.console, "error")
+      .mockImplementation(() => {});
+
+    afterEach(consoleError.mockReset);
+
+    test("same number of segments and the same dynamic segment index", () => {
+      let testFiles = [
+        "routes/_user.$username.tsx",
+        "routes/sneakers.$sneakerId.tsx",
+      ];
+
+      let routeManifest = flatRoutesUniversal(
+        APP_DIR,
+        testFiles.map((file) => path.join(APP_DIR, normalizePath(file)))
+      );
+
+      let routes = Object.values(routeManifest);
+
+      expect(routes).toHaveLength(testFiles.length);
+      expect(consoleError).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("warns when there's a route collision", () => {
+    let consoleError = jest
+      .spyOn(global.console, "error")
+      .mockImplementation(() => {});
+
+    afterEach(consoleError.mockReset);
+
+    test("index files", () => {
+      let testFiles = [
+        "routes/_dashboard._index.tsx",
+        "routes/_landing._index.tsx",
+        "routes/_index.tsx",
+      ];
+
+      let routeManifest = flatRoutesUniversal(
+        APP_DIR,
+        testFiles.map((file) => path.join(APP_DIR, normalizePath(file)))
+      );
+
+      let routes = Object.values(routeManifest);
+
+      // we had a collision as /route and /index are the same
+      expect(routes).toHaveLength(1);
+      expect(consoleError).toHaveBeenCalledWith(
+        getRouteConflictErrorMessage("/", testFiles)
+      );
+    });
+
+    test("folder/route.tsx matching folder.tsx", () => {
+      // we'll add file manually before running the tests
+      let testFiles = ["routes/dashboard.tsx", "routes/dashboard/route.tsx"];
+
+      let routeManifest = flatRoutesUniversal(
+        APP_DIR,
+        testFiles.map((file) => path.join(APP_DIR, normalizePath(file)))
+      );
+
+      let routes = Object.values(routeManifest);
+
+      // we had a collision as /route and /index are the same
+      expect(routes).toHaveLength(1);
+      expect(consoleError).toHaveBeenCalledWith(
+        getRouteConflictErrorMessage("/dashboard", testFiles)
+      );
+    });
+
+    test.skip("same path, different param name", () => {
+      // we'll add file manually before running the tests
+      let testFiles = [
+        "routes/products.$pid.tsx",
+        "routes/products.$productId.tsx",
+      ];
+
+      let routeManifest = flatRoutesUniversal(
+        APP_DIR,
+        testFiles.map((file) => path.join(APP_DIR, normalizePath(file)))
+      );
+
+      let routes = Object.values(routeManifest);
+
+      // we had a collision as /route and /index are the same
+      expect(routes).toHaveLength(1);
+      expect(consoleError).toHaveBeenCalledWith(
+        getRouteConflictErrorMessage("/products/:pid", testFiles)
+      );
+    });
   });
 });

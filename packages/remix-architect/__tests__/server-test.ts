@@ -101,6 +101,38 @@ describe("architect createRequestHandler", () => {
         });
     });
 
+    it("handles root // requests", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
+        return new Response(`URL: ${new URL(req.url).pathname}`);
+      });
+
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ rawPath: "//" }))
+        .expectResolve((res) => {
+          expect(res.statusCode).toBe(200);
+          expect(res.body).toBe("URL: //");
+        });
+    });
+
+    it("handles nested // requests", async () => {
+      mockedCreateRequestHandler.mockImplementation(() => async (req) => {
+        return new Response(`URL: ${new URL(req.url).pathname}`);
+      });
+
+      // We don't have a real app to test, but it doesn't matter. We won't ever
+      // call through to the real createRequestHandler
+      // @ts-expect-error
+      await lambdaTester(createRequestHandler({ build: undefined }))
+        .event(createMockEvent({ rawPath: "//foo//bar" }))
+        .expectResolve((res) => {
+          expect(res.statusCode).toBe(200);
+          expect(res.body).toBe("URL: //foo//bar");
+        });
+    });
+
     it("handles null body", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
         return new Response(null, { status: 200 });

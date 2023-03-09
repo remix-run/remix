@@ -9,6 +9,7 @@ test.describe("cloudflare compiler", () => {
 
   test.beforeAll(async () => {
     projectDir = await createFixtureProject({
+      future: { v2_routeConvention: true },
       setup: "cloudflare",
       template: "cf-template",
       files: {
@@ -18,8 +19,10 @@ test.describe("cloudflare compiler", () => {
           sideEffects: false,
           main: "build/index.js",
           dependencies: {
+            "@remix-run/cloudflare": "0.0.0-local-version",
             "@remix-run/cloudflare-workers": "0.0.0-local-version",
             "@remix-run/react": "0.0.0-local-version",
+            isbot: "0.0.0-local-version",
             react: "0.0.0-local-version",
             "react-dom": "0.0.0-local-version",
             "worker-pkg": "0.0.0-local-version",
@@ -32,7 +35,7 @@ test.describe("cloudflare compiler", () => {
             "@remix-run/eslint-config": "0.0.0-local-version",
           },
         }),
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           import fake from "worker-pkg";
           import { content as browserPackage } from "browser-pkg";
           import { content as esmOnlyPackage } from "esm-only-pkg";
