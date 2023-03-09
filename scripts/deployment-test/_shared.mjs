@@ -49,13 +49,14 @@ export async function addCypress(directory, url) {
   await pkgJson.save();
 }
 
-export function getSpawnOpts(dir, env = {}) {
+export function getSpawnOpts(dir = __dirname, env = {}) {
   return {
     cwd: dir,
     stdio: "inherit",
     env: {
       PATH: process.env.PATH,
       HOME: process.env.HOME,
+      NODE_ENV: "development",
       ...env,
     },
   };
