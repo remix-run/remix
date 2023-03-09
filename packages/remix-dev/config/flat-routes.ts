@@ -129,7 +129,7 @@ export function flatRoutesUniversal(
   routes: string[],
   prefix: string = "routes"
 ): RouteManifest {
-  let conflicts = new Map<string, ConfigRoute[]>();
+  let urlConflicts = new Map<string, ConfigRoute[]>();
   let routeManifest: RouteManifest = {};
   let prefixLookup = new PrefixLookupTrie();
   let uniqueRoutes = new Map<string, ConfigRoute>();
@@ -148,10 +148,8 @@ export function flatRoutesUniversal(
 
     let conflict = routeIds.get(routeId);
     if (conflict) {
-      let currentConflicts = routeIdConflicts.get(routeId) || [
-        path.relative(appDirectory, conflict),
-      ];
-      currentConflicts.push(path.relative(appDirectory, file));
+      let currentConflicts = routeIdConflicts.get(routeId) || [conflict];
+      currentConflicts.push(file);
       routeIdConflicts.set(routeId, currentConflicts);
       continue;
     }
@@ -216,10 +214,10 @@ export function flatRoutesUniversal(
     uniqueRoutes.set(conflictRouteId, config);
 
     if (conflict && (originalPathname || config.index)) {
-      let currentConflicts = conflicts.get(originalPathname);
+      let currentConflicts = urlConflicts.get(originalPathname);
       if (!currentConflicts) currentConflicts = [conflict];
       currentConflicts.push(config);
-      conflicts.set(originalPathname, currentConflicts);
+      urlConflicts.set(originalPathname, currentConflicts);
       continue;
     }
   }
@@ -231,17 +229,14 @@ export function flatRoutesUniversal(
   }
 
   // report conflicts
-  if (conflicts.size > 0) {
-    for (let [path, routes] of conflicts.entries()) {
+  if (urlConflicts.size > 0) {
+    for (let [path, routes] of urlConflicts.entries()) {
+      // delete all but the first route from the manifest
       for (let i = 1; i < routes.length; i++) {
         delete routeManifest[routes[i].id];
       }
-      console.error(
-        getRouteConflictErrorMessage(
-          path,
-          routes.map((r) => r.file)
-        )
-      );
+      let files = routes.map((r) => r.file);
+      console.error(getRoutePathConflictErrorMessage(path, files));
     }
   }
 
@@ -276,9 +271,9 @@ function findRouteModuleForFolder(
     );
     let routePath = createRoutePath(segments, raw, false);
     console.error(
-      getRouteConflictErrorMessage(routePath || "/", [
-        path.relative(appDirectory, routeRouteModule),
-        path.relative(appDirectory, routeIndexModule),
+      getRoutePathConflictErrorMessage(routePath || "/", [
+        routeRouteModule,
+        routeIndexModule,
       ])
     );
   }
@@ -458,18 +453,18 @@ export function createRoutePath(
   return result.length ? result.join("/") : undefined;
 }
 
-export function getRouteConflictErrorMessage(
+export function getRoutePathConflictErrorMessage(
   pathname: string,
   routes: string[]
 ) {
   let [taken, ...others] = routes;
 
-  let pathnameWithLeadingSlash = pathname.startsWith("/")
-    ? pathname
-    : "/" + pathname;
+  if (!pathname.startsWith("/")) {
+    pathname = "/" + pathname;
+  }
 
   return (
-    `⚠️ Route Path Collision: "${pathnameWithLeadingSlash}"\n\n` +
+    `⚠️ Route Path Collision: "${pathname}"\n\n` +
     `The following routes all define the same URL, only the first one will be used\n\n` +
     `🟢 ${taken}\n` +
     others.map((route) => `⭕️️ ${route}`).join("\n") +
