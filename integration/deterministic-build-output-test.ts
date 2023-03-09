@@ -3,33 +3,158 @@ import globby from "globby";
 import fs from "fs";
 import path from "path";
 
+import type { FixtureInit } from "./helpers/create-fixture";
 import { createFixtureProject, js, css } from "./helpers/create-fixture";
 
-const configurations = [
+const testCases: Array<{ name: string; init: FixtureInit }> = [
   {
-    name: "future flags enabled",
-    future: {
-      unstable_cssModules: true,
-      unstable_cssSideEffectImports: true,
-      unstable_postcss: true,
-      unstable_vanillaExtract: true,
-      v2_routeConvention: true,
-    },
-  },
-  {
-    name: "Vanilla Extract cache enabled",
-    future: {
-      unstable_cssModules: true,
-      unstable_cssSideEffectImports: true,
-      unstable_postcss: true,
-      unstable_vanillaExtract: { cache: true },
-      v2_routeConvention: true,
-    },
-  },
-] as const;
+    name: "all future flags enabled",
+    init: {
+      future: {
+        unstable_cssModules: true,
+        unstable_cssSideEffectImports: true,
+        unstable_postcss: true,
+        unstable_vanillaExtract: true,
+        v2_routeConvention: true,
+      },
+      files: {
+        "app/routes/_index.mdx": "# hello world",
+        "app/routes/foo.tsx": js`
+          export * from "~/foo/bar.server";
+          import styles from "~/styles/foo.module.css";
+          import { vanilla } from "~/styles/vanilla.css";
+          import "~/styles/side-effect.css";
+          export default () => <div className={[styles.foo, vanilla].join(' ')}>YAY</div>;
+        `,
+        "app/foo/bar.server.ts": "export const meta = () => []",
+        "app/styles/foo.module.css": css`
+          .foo {
+            background-image: url(~/images/foo.svg);
+            composes: bar from "~/styles/bar.module.css";
+            composes: baz from "./baz.module.css";
+          }
+        `,
+        "app/styles/bar.module.css": css`
+          .bar {
+            background-color: peachpuff;
+          }
+        `,
+        "app/styles/baz.module.css": css`
+          .baz {
+            color: coral;
+          }
+        `,
+        "app/images/foo.svg": `
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="50" fill="coral" />
+          </svg>
+        `,
+        "app/styles/vanilla.css.ts": css`
+          import { style } from "@vanilla-extract/css";
+          import { chocolate } from "./chocolate.css";
+          import imageUrl from "~/images/foo.svg";
 
-configurations.forEach((configuration) => {
-  test.describe(configuration.name, () => {
+          export const vanilla = style([
+            chocolate,
+            {
+              backgroundImage: [
+                "url(" + imageUrl + ")",
+                "url(~/images/foo.svg)",
+              ],
+            }
+          ]);
+        `,
+        "app/styles/chocolate.css.ts": css`
+          import { style } from "@vanilla-extract/css";
+
+          export const chocolate = style({
+            color: "chocolate",
+          });
+        `,
+        "app/styles/side-effect.css": css`
+          .side-effect {
+            color: mintcream;
+          }
+        `,
+      },
+    },
+  },
+  {
+    name: "Vanilla Extract with cache enabled",
+    init: {
+      future: {
+        unstable_cssModules: true,
+        unstable_cssSideEffectImports: true,
+        unstable_postcss: true,
+        unstable_vanillaExtract: { cache: true },
+        v2_routeConvention: true,
+      },
+      files: {
+        "app/routes/_index.mdx": "# hello world",
+        "app/routes/foo.tsx": js`
+          export * from "~/foo/bar.server";
+          import styles from "~/styles/foo.module.css";
+          import { vanilla } from "~/styles/vanilla.css";
+          import "~/styles/side-effect.css";
+          export default () => <div className={[styles.foo, vanilla].join(' ')}>YAY</div>;
+        `,
+        "app/foo/bar.server.ts": "export const meta = () => []",
+        "app/styles/foo.module.css": css`
+          .foo {
+            background-image: url(~/images/foo.svg);
+            composes: bar from "~/styles/bar.module.css";
+            composes: baz from "./baz.module.css";
+          }
+        `,
+        "app/styles/bar.module.css": css`
+          .bar {
+            background-color: peachpuff;
+          }
+        `,
+        "app/styles/baz.module.css": css`
+          .baz {
+            color: coral;
+          }
+        `,
+        "app/images/foo.svg": `
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="50" fill="coral" />
+          </svg>
+        `,
+        "app/styles/vanilla.css.ts": css`
+          import { style } from "@vanilla-extract/css";
+          import { chocolate } from "./chocolate.css";
+          import imageUrl from "~/images/foo.svg";
+
+          export const vanilla = style([
+            chocolate,
+            {
+              backgroundImage: [
+                "url(" + imageUrl + ")",
+                "url(~/images/foo.svg)",
+              ],
+            }
+          ]);
+        `,
+        "app/styles/chocolate.css.ts": css`
+          import { style } from "@vanilla-extract/css";
+
+          export const chocolate = style({
+            color: "chocolate",
+          });
+        `,
+        "app/styles/side-effect.css": css`
+          .side-effect {
+            color: mintcream;
+          }
+        `,
+      },
+    },
+  },
+];
+
+testCases.forEach((testCase) => {
+  test.describe(testCase.name, () => {
     test("builds deterministically under different paths", async () => {
       // This test validates various flavors of remix virtual modules to ensure
       // we get identical builds regardless of the parent paths. If a virtual
@@ -49,71 +174,8 @@ configurations.forEach((configuration) => {
       //  * serverEntryModulePlugin (implicitly tested by build)
       //  * serverRouteModulesPlugin (implicitly tested by build)
       //  * vanillaExtractPlugin (via app/routes/foo.tsx' .css.ts file import)
-      let init = {
-        future: configuration.future,
-        files: {
-          "app/routes/_index.mdx": "# hello world",
-          "app/routes/foo.tsx": js`
-            export * from "~/foo/bar.server";
-            import styles from "~/styles/foo.module.css";
-            import { vanilla } from "~/styles/vanilla.css";
-            import "~/styles/side-effect.css";
-            export default () => <div className={[styles.foo, vanilla].join(' ')}>YAY</div>;
-          `,
-          "app/foo/bar.server.ts": "export const meta = () => []",
-          "app/styles/foo.module.css": css`
-            .foo {
-              background-image: url(~/images/foo.svg);
-              composes: bar from "~/styles/bar.module.css";
-              composes: baz from "./baz.module.css";
-            }
-          `,
-          "app/styles/bar.module.css": css`
-            .bar {
-              background-color: peachpuff;
-            }
-          `,
-          "app/styles/baz.module.css": css`
-            .baz {
-              color: coral;
-            }
-          `,
-          "app/images/foo.svg": `
-            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="50" cy="50" r="50" fill="coral" />
-            </svg>
-          `,
-          "app/styles/vanilla.css.ts": css`
-            import { style } from "@vanilla-extract/css";
-            import { chocolate } from "./chocolate.css";
-            import imageUrl from "~/images/foo.svg";
-    
-            export const vanilla = style([
-              chocolate,
-              {
-                backgroundImage: [
-                  "url(" + imageUrl + ")",
-                  "url(~/images/foo.svg)",
-                ],
-              }
-            ]);
-          `,
-          "app/styles/chocolate.css.ts": css`
-            import { style } from "@vanilla-extract/css";
-    
-            export const chocolate = style({
-              color: "chocolate",
-            });
-          `,
-          "app/styles/side-effect.css": css`
-            .side-effect {
-              color: mintcream;
-            }
-          `,
-        },
-      };
-      let dir1 = await createFixtureProject(init);
-      let dir2 = await createFixtureProject(init);
+      let dir1 = await createFixtureProject(testCase.init);
+      let dir2 = await createFixtureProject(testCase.init);
 
       expect(dir1).not.toEqual(dir2);
 
