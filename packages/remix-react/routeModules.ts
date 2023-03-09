@@ -32,12 +32,16 @@ export interface RouteModule {
 /**
  * A React component that is rendered when the server throws a Response.
  *
+ * @deprecated Please enable the v2_errorBoundary flag
+ *
  * @see https://remix.run/route/catch-boundary
  */
 export type CatchBoundaryComponent = ComponentType<{}>;
 
 /**
  * A React component that is rendered when there is an error on a route.
+ *
+ * @deprecated Please enable the v2_errorBoundary flag
  *
  * @see https://remix.run/route/error-boundary
  */
