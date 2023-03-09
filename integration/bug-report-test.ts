@@ -71,6 +71,40 @@ test.beforeAll(async () => {
           return <div>cheeseburger</div>;
         }
       `,
+
+      "app/entry.server.tsx": js`
+        import { renderToString } from "react-dom/server";
+        import type {
+          EntryContext,
+          HandleDataRequestFunction,
+        } from "@remix-run/node"; // or cloudflare/deno
+        import { RemixServer } from "@remix-run/react";
+        export default function handleRequest(
+          request: Request,
+          responseStatusCode: number,
+          responseHeaders: Headers,
+          remixContext: EntryContext
+        ) {
+          const markup = renderToString(
+            <RemixServer context={remixContext} url={request.url} />
+          );
+          responseHeaders.set("Content-Type", "text/html");
+          return new Response("<!DOCTYPE html>" + markup, {
+            status: responseStatusCode,
+            headers: responseHeaders,
+          });
+        }
+
+        export const handleDataRequest: HandleDataRequestFunction =
+          (
+            response: Response,
+            // same args that get passed to the action or loader that was called
+            { request, params, context }
+          ) => {
+            response.headers.set("x-custom", "yay!");
+            return response;
+          };   
+      `,
     },
   });
 
@@ -87,22 +121,18 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("[remix will throw TypeError for non existing route with any _data]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  await app.goto("/does-not-exist?_data=does-not-exist");
+  expect(await app.getHtml()).toContain("TypeError: Cannot read properties of null (reading 'find')");
+});
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
+test("[remix will throw TypeError for non existing data route]", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
 
-  // Go check out the other tests to see what else you can do.
+  await app.goto("/?_data=does-not-exist");
+  expect(await app.getHtml()).toContain("TypeError: Cannot read properties of undefined (reading 'params')");
 });
 
 ////////////////////////////////////////////////////////////////////////////////
