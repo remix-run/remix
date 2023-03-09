@@ -1573,10 +1573,10 @@
   dependencies:
     mime "^2.5.2"
 
-"@cloudflare/workers-types@^3.4.0":
-  version "3.4.0"
-  resolved "https://registry.npmjs.org/@cloudflare/workers-types/-/workers-types-3.4.0.tgz"
-  integrity sha512-i/3czUrt6YqbOWl44OtIqd0cSZvEVXp/1oD/DZylC4PHZL3q/BhbamdEVeVhc/HPk4iD/7MZ2HGaIMO4Z4b12A==
+"@cloudflare/workers-types@^4.20230307.0":
+  version "4.20230307.0"
+  resolved "https://registry.npmjs.org/@cloudflare/workers-types/-/workers-types-4.20230307.0.tgz#58a20fe167a5c48e20edba8e1fbfe4231bcfa223"
+  integrity sha512-Go968aDDcqONHQcUdgIiPRkPdT4QTzD0ecHJsI1u7ZiHPMOoZn+Dy7hYsdUJ5ldX9wTZDrICBM1rDKTRaDUitg==
 
 "@colors/colors@1.5.0":
   version "1.5.0"
