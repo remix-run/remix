@@ -21,5 +21,13 @@
     "@remix-run/testing": "1.14.0",
     "@remix-run/vercel": "1.14.0"
   },
-  "changesets": []
+  "changesets": [
+    "add-ico-types",
+    "cool-planets-perform",
+    "deprecate-use-transition",
+    "dirty-wolves-knock",
+    "fix-x-route-imports",
+    "four-feet-grab",
+    "lazy-dots-sip"
+  ]
 }
