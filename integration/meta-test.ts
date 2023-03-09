@@ -442,7 +442,7 @@ test.describe("v2_meta", () => {
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           export const meta = ({ data, matches }) =>
             matches.flatMap((match) => match.meta);
 
@@ -464,7 +464,7 @@ test.describe("v2_meta", () => {
           }
         `,
 
-        "app/routes/authors/$authorId.jsx": js`
+        "app/routes/authors.$authorId.jsx": js`
           import { json } from "@remix-run/node";
 
           export async function loader({ params }) {
