@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-serverBuildTarget deprecation warning
+Add `serverBuildTarget` deprecation warning

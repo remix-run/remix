@@ -2,4 +2,4 @@
 "@remix-run/react": patch
 ---
 
-Memoize `useMatches` in the Remix layer
+Memoize return value of `useMatches`

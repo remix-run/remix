@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Allow moduleResolution:"bundler" on tsconfig.json
+Allow `moduleResolution: "bundler"` in tsconfig.json

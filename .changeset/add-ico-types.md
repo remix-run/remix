@@ -3,4 +3,4 @@
 "@remix-run/dev": patch
 ---
 
-add types for importing `*.ico` files
+Add types for importing `*.ico` files
