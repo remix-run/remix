@@ -3,6 +3,7 @@ import path from "node:path";
 import globToRegex from "glob-to-regexp";
 
 import type { ConfigRoute, RouteManifest } from "./routes";
+import { normalizeSlashes } from "./routes";
 import { findConfig } from "../config";
 import {
   escapeEnd,
@@ -139,22 +140,25 @@ export function flatRoutesUniversal(
   let routeIds = new Map<string, string>();
 
   for (let file of routes) {
-    let routeExt = path.extname(file);
-    let routeDir = path.dirname(file);
+    let normalized = normalizeSlashes(file);
+    let routeExt = path.extname(normalized);
+    let routeDir = path.dirname(normalized);
     let routeId =
-      routeDir === path.join(appDirectory, prefix)
-        ? path.relative(appDirectory, file).slice(0, -routeExt.length)
-        : path.relative(appDirectory, routeDir);
+      routeDir === path.posix.join(appDirectory, prefix)
+        ? path.posix
+            .relative(appDirectory, normalized)
+            .slice(0, -routeExt.length)
+        : path.posix.relative(appDirectory, routeDir);
 
     let conflict = routeIds.get(routeId);
     if (conflict) {
       let currentConflicts = routeIdConflicts.get(routeId) || [conflict];
-      currentConflicts.push(file);
+      currentConflicts.push(normalized);
       routeIdConflicts.set(routeId, currentConflicts);
       continue;
     }
 
-    routeIds.set(routeId, file);
+    routeIds.set(routeId, normalized);
   }
 
   let sortedRouteIds = Array.from(routeIds).sort(
