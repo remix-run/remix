@@ -115,7 +115,7 @@ export async function init(
  */
 export async function setup(platformArg?: string) {
   console.warn(
-    "The setup command is no longer necessary as of v2. This is a no-op."
+    "WARNING: The setup command is no longer necessary as of v2. This is a no-op. Please remove this from your dev and CI scripts, as it will be removed in v3."
   );
 }
 

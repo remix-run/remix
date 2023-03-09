@@ -226,7 +226,6 @@ module.exports = {
 };
 
 /**
- * @typedef {Record<string, { values?: string[]; types?: string[] }>} MagicExports
  * @typedef {"architect" | "cloudflare-pages" | "cloudflare-workers" | "express" | "netlify" | "vercel"} RemixAdapter
  * @typedef {"cloudflare" | "node" | "deno"} RemixRuntime
  * @typedef {`@remix-run/${RemixAdapter | RemixRuntime | "dev" | "eslint-config" | "react" | "serve" | "server-runtime"}`} ScopedRemixPackage
