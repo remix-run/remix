@@ -7,6 +7,7 @@ import {
   getRouteSegments,
 } from "../config/flat-routes";
 import type { ConfigRoute } from "../config/routes";
+import { normalizeSlashes } from "../config/routes";
 
 let APP_DIR = path.join("test", "root", "app");
 
@@ -89,7 +90,7 @@ describe("flatRoutes", () => {
         if (input.endsWith("/route") || input.endsWith("/index")) {
           input = input.replace(/\/(route|index)$/, "");
         }
-        let routeInfo = manifest[path.join("routes", input)];
+        let routeInfo = manifest[path.posix.join("routes", input)];
         expect(routeInfo.path).toBe(expected);
       });
     }
@@ -653,16 +654,20 @@ describe("flatRoutes", () => {
         path.join("routes", "_index.tsx"),
       ];
 
-      let routeManifest = flatRoutesUniversal(
-        APP_DIR,
-        testFiles.map((file) => path.join(APP_DIR, file))
-      );
+      // route manifest uses the full path
+      let fullPaths = testFiles.map((file) => path.join(APP_DIR, file));
+
+      // this is for the expected error message,
+      // which uses the relative path from the app directory internally
+      let normalizedTestFiles = testFiles.map((file) => normalizeSlashes(file));
+
+      let routeManifest = flatRoutesUniversal(APP_DIR, fullPaths);
 
       let routes = Object.values(routeManifest);
 
       expect(routes).toHaveLength(1);
       expect(consoleError).toHaveBeenCalledWith(
-        getRoutePathConflictErrorMessage("/", testFiles)
+        getRoutePathConflictErrorMessage("/", normalizedTestFiles)
       );
     });
 
@@ -682,19 +687,26 @@ describe("flatRoutes", () => {
 
     test("folder/route.tsx matching folder.tsx", () => {
       let testFiles = [
-        path.join(APP_DIR, "routes", "dashboard", "route.tsx"),
-        path.join(APP_DIR, "routes", "dashboard.tsx"),
+        path.join("routes", "dashboard", "route.tsx"),
+        path.join("routes", "dashboard.tsx"),
       ];
 
-      let routeManifest = flatRoutesUniversal(APP_DIR, testFiles);
+      // route manifest uses the full path
+      let fullPaths = testFiles.map((file) => path.join(APP_DIR, file));
+
+      // this is for the expected error message,
+      // which uses the relative path from the app directory internally
+      let normalizedTestFiles = testFiles.map((file) => normalizeSlashes(file));
+
+      let routeManifest = flatRoutesUniversal(APP_DIR, fullPaths);
 
       let routes = Object.values(routeManifest);
 
       expect(routes).toHaveLength(1);
       expect(consoleError).toHaveBeenCalledWith(
         getRouteIdConflictErrorMessage(
-          path.join("routes", "dashboard"),
-          testFiles
+          path.posix.join("routes", "dashboard"),
+          normalizedTestFiles
         )
       );
     });

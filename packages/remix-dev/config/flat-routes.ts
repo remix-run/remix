@@ -153,8 +153,11 @@ export function flatRoutesUniversal(
 
     let conflict = routeIds.get(routeId);
     if (conflict) {
-      let currentConflicts = routeIdConflicts.get(routeId) || [conflict];
-      currentConflicts.push(normalizedFile);
+      let currentConflicts = routeIdConflicts.get(routeId);
+      if (!currentConflicts) {
+        currentConflicts = [path.posix.relative(normalizedApp, conflict)];
+      }
+      currentConflicts.push(path.posix.relative(normalizedApp, normalizedFile));
       routeIdConflicts.set(routeId, currentConflicts);
       continue;
     }
