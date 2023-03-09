@@ -15,17 +15,17 @@ export default function handleRequest(
 ) {
   return isbot(request.headers.get("user-agent"))
     ? handleBotRequest(
-        request,
-        responseStatusCode,
-        responseHeaders,
-        remixContext
-      )
+      request,
+      responseStatusCode,
+      responseHeaders,
+      remixContext
+    )
     : handleBrowserRequest(
-        request,
-        responseStatusCode,
-        responseHeaders,
-        remixContext
-      );
+      request,
+      responseStatusCode,
+      responseHeaders,
+      remixContext
+    );
 }
 
 function handleBotRequest(
@@ -46,6 +46,14 @@ function handleBotRequest(
           const body = new PassThrough();
 
           responseHeaders.set("Content-Type", "text/html");
+          responseHeaders.set(
+            "Link",
+            httpPushLinks(remixContext)
+              .map((link: string) => `<${link}>; rel=preload; as=script; crossorigin=anonymous`)
+              .concat(responseHeaders.get("Link") as string)
+              .filter(Boolean)
+              .join(",")
+          );
 
           resolve(
             new Response(body, {
@@ -88,6 +96,13 @@ function handleBrowserRequest(
           const body = new PassThrough();
 
           responseHeaders.set("Content-Type", "text/html");
+          responseHeaders.set(
+            "Link",
+            httpPushLinks(remixContext).map((link: string) => `<${link}>; rel=preload; as=script; crossorigin=anonymous`)
+              .concat(responseHeaders.get("Link") as string)
+              .filter(Boolean)
+              .join(",")
+          );
 
           resolve(
             new Response(body, {
@@ -110,4 +125,13 @@ function handleBrowserRequest(
 
     setTimeout(abort, ABORT_DELAY);
   });
+}
+
+
+function httpPushLinks(remixContext: EntryContext) {
+  return [
+    remixContext.manifest.url,
+    remixContext.manifest.entry.module,
+    ...remixContext.manifest.entry.imports,
+  ];
 }
