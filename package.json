@@ -102,6 +102,7 @@
     "eslint-plugin-markdown": "^2.2.1",
     "eslint-plugin-prefer-let": "^3.0.1",
     "express": "^4.17.1",
+    "front-matter": "^4.0.2",
     "glob": "8.0.3",
     "isbot": "^3.5.1",
     "jest": "^27.5.1",

@@ -8,29 +8,23 @@ import { createFixtureProject, js, css } from "./helpers/create-fixture";
 const configurations = [
   {
     name: "future flags enabled",
-    remixConfig: js`
-      module.exports = {
-        future: {
-          unstable_cssModules: true,
-          unstable_cssSideEffectImports: true,
-          unstable_postcss: true,
-          unstable_vanillaExtract: true,
-        },
-      };
-    `,
+    future: {
+      unstable_cssModules: true,
+      unstable_cssSideEffectImports: true,
+      unstable_postcss: true,
+      unstable_vanillaExtract: true,
+      v2_routeConvention: true,
+    },
   },
   {
     name: "Vanilla Extract cache enabled",
-    remixConfig: js`
-      module.exports = {
-        future: {
-          unstable_cssModules: true,
-          unstable_cssSideEffectImports: true,
-          unstable_postcss: true,
-          unstable_vanillaExtract: { cache: true },
-        },
-      };
-    `,
+    future: {
+      unstable_cssModules: true,
+      unstable_cssSideEffectImports: true,
+      unstable_postcss: true,
+      unstable_vanillaExtract: { cache: true },
+      v2_routeConvention: true,
+    },
   },
 ] as const;
 
@@ -50,15 +44,15 @@ configurations.forEach((configuration) => {
       //  * cssModulesPlugin (via app/routes/foo.tsx' CSS Modules import)
       //  * cssSideEffectImportsPlugin (via app/routes/foo.tsx' CSS side-effect import)
       //  * emptyModulesPlugin (via app/routes/foo.tsx' server import)
-      //  * mdx (via app/routes/index.mdx)
+      //  * mdx (via app/routes/_index.mdx)
       //  * serverAssetsManifestPlugin (implicitly tested by build)
       //  * serverEntryModulePlugin (implicitly tested by build)
       //  * serverRouteModulesPlugin (implicitly tested by build)
       //  * vanillaExtractPlugin (via app/routes/foo.tsx' .css.ts file import)
       let init = {
+        future: configuration.future,
         files: {
-          "remix.config.js": configuration.remixConfig,
-          "app/routes/index.mdx": "# hello world",
+          "app/routes/_index.mdx": "# hello world",
           "app/routes/foo.tsx": js`
             export * from "~/foo/bar.server";
             import styles from "~/styles/foo.module.css";
@@ -93,7 +87,7 @@ configurations.forEach((configuration) => {
             import { style } from "@vanilla-extract/css";
             import { chocolate } from "./chocolate.css";
             import imageUrl from "~/images/foo.svg";
-
+    
             export const vanilla = style([
               chocolate,
               {
@@ -106,7 +100,7 @@ configurations.forEach((configuration) => {
           `,
           "app/styles/chocolate.css.ts": css`
             import { style } from "@vanilla-extract/css";
-
+    
             export const chocolate = style({
               color: "chocolate",
             });
