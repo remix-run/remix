@@ -293,7 +293,7 @@ function SomeComponent() {
 
 See the [React Suspense](https://beta.reactjs.org/reference/react/Suspense#providing-a-fallback-for-server-errors-and-server-only-content) docs for more information on how this works.
 
-If you're using React 17 or a non streaming API (eg. `renderToString`), we recommend using the [`ClientOnly` component](https://github.com/sergiodxa/remix-utils/blob/main/src/react/client-only.tsx) in the [`remix-utils`](https://www.npmjs.com/package/remix-utils) community package. An example of its usage can be found in the [`examples` directory of the Remix repo](https://github.com/remix-run/remix/blob/main/examples/client-only-components/app/routes/index.tsx).
+If you're using React 17 or a non streaming API (eg. `renderToString`), we recommend using the [`ClientOnly` component](https://github.com/sergiodxa/remix-utils/blob/main/src/react/client-only.tsx) from the [`remix-utils`](https://www.npmjs.com/package/remix-utils) community package. An example of its usage can be found in the [remix-run/examples repo](https://github.com/remix-run/examples/blob/main/client-only-components).
 
 ### `React.lazy` and `React.Suspense`
 
