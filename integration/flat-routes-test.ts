@@ -209,7 +209,7 @@ test.describe("warns when v1 routesConvention is used", () => {
     console.error = originalConsoleError;
   });
 
-  test("warns about conflicting routes", () => {
+  test("v2_routeConvention is not enabled", () => {
     console.log(buildOutput);
     expect(buildOutput).toContain(flatRoutesWarning);
   });
