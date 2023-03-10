@@ -33,6 +33,7 @@ test.describe("non-aborted", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
+      future: { v2_routeConvention: true },
       ////////////////////////////////////////////////////////////////////////////
       // 💿 Next, add files to this object, just like files in a real app,
       // `createFixture` will make an app and run your tests against it.
@@ -40,7 +41,7 @@ test.describe("non-aborted", () => {
       files: {
         "app/components/counter.tsx": js`
           import { useState } from "react";
-  
+
           export default function Counter({ id }) {
             let [count, setCount] = useState(0);
             return (
@@ -53,7 +54,7 @@ test.describe("non-aborted", () => {
         `,
         "app/components/interactive.tsx": js`
           import { useEffect, useState } from "react";
-  
+
           export default function Interactive() {
             let [interactive, setInteractive] = useState(false);
             useEffect(() => {
@@ -71,17 +72,17 @@ test.describe("non-aborted", () => {
           import { Links, Meta, Outlet, Scripts, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
           import Interactive from "~/components/interactive";
-  
+
           export const meta: MetaFunction = () => ({
             charset: "utf-8",
             title: "New Remix App",
             viewport: "width=device-width,initial-scale=1",
           });
-  
+
           export const loader = () => defer({
             id: "${ROOT_ID}",
           });
-  
+
           export default function Root() {
             let { id } = useLoaderData();
             return (
@@ -107,17 +108,17 @@ test.describe("non-aborted", () => {
           }
         `,
 
-        "app/routes/index.tsx": js`
+        "app/routes/_index.tsx": js`
           import { defer } from "@remix-run/node";
           import { Link, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
-  
+
           export function loader() {
             return defer({
               id: "${INDEX_ID}",
             });
           }
-  
+
           export default function Index() {
             let { id } = useLoaderData();
             return (
@@ -143,14 +144,14 @@ test.describe("non-aborted", () => {
           import { defer } from "@remix-run/node";
           import { Await, Link, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
-  
+
           export function loader() {
             return defer({
               deferredId: "${DEFERRED_ID}",
               resolvedId: Promise.resolve("${RESOLVED_DEFERRED_ID}"),
             });
           }
-  
+
           export default function Deferred() {
             let { deferredId, resolvedId } = useLoaderData();
             return (
@@ -178,7 +179,7 @@ test.describe("non-aborted", () => {
           import { defer } from "@remix-run/node";
           import { Await, Link, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
-  
+
           export function loader() {
             return defer({
               deferredId: "${DEFERRED_ID}",
@@ -189,7 +190,7 @@ test.describe("non-aborted", () => {
               ),
             });
           }
-  
+
           export default function Deferred() {
             let { deferredId, resolvedId } = useLoaderData();
             return (
@@ -217,14 +218,14 @@ test.describe("non-aborted", () => {
           import { defer } from "@remix-run/node";
           import { Await, Link, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
-  
+
           export function loader() {
             return defer({
               deferredId: "${DEFERRED_ID}",
               resolvedId: Promise.resolve("${RESOLVED_DEFERRED_ID}"),
             });
           }
-  
+
           export default function Deferred() {
             let { deferredId, resolvedId } = useLoaderData();
             return (
@@ -252,7 +253,7 @@ test.describe("non-aborted", () => {
           import { defer } from "@remix-run/node";
           import { Await, Link, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
-  
+
           export function loader() {
             return defer({
               deferredId: "${DEFERRED_ID}",
@@ -263,7 +264,7 @@ test.describe("non-aborted", () => {
               ),
             });
           }
-  
+
           export default function Deferred() {
             let { deferredId, resolvedId } = useLoaderData();
             return (
@@ -291,14 +292,14 @@ test.describe("non-aborted", () => {
           import { defer } from "@remix-run/node";
           import { Await, Link, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
-  
+
           export function loader() {
             return defer({
               deferredId: "${DEFERRED_ID}",
               resolvedId: Promise.reject(new Error("${RESOLVED_DEFERRED_ID}")),
             });
           }
-  
+
           export default function Deferred() {
             let { deferredId, resolvedId } = useLoaderData();
             return (
@@ -332,7 +333,7 @@ test.describe("non-aborted", () => {
           import { defer } from "@remix-run/node";
           import { Await, Link, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
-  
+
           export function loader() {
             return defer({
               deferredId: "${DEFERRED_ID}",
@@ -343,7 +344,7 @@ test.describe("non-aborted", () => {
               ),
             });
           }
-  
+
           export default function Deferred() {
             let { deferredId, resolvedId } = useLoaderData();
             return (
@@ -377,14 +378,14 @@ test.describe("non-aborted", () => {
           import { defer } from "@remix-run/node";
           import { Await, Link, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
-  
+
           export function loader() {
             return defer({
               deferredId: "${DEFERRED_ID}",
               resolvedId: Promise.reject(new Error("${RESOLVED_DEFERRED_ID}")),
             });
           }
-  
+
           export default function Deferred() {
             let { deferredId, resolvedId } = useLoaderData();
             return (
@@ -421,7 +422,7 @@ test.describe("non-aborted", () => {
           import { defer } from "@remix-run/node";
           import { Await, Link, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
-  
+
           export function loader() {
             return defer({
               deferredId: "${DEFERRED_ID}",
@@ -432,7 +433,7 @@ test.describe("non-aborted", () => {
               ),
             });
           }
-  
+
           export default function Deferred() {
             let { deferredId, resolvedId } = useLoaderData();
             return (
@@ -469,18 +470,18 @@ test.describe("non-aborted", () => {
           import { defer } from "@remix-run/node";
           import { Await, Link, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
-  
+
           export function loader() {
             global.__deferredManualResolveCache = global.__deferredManualResolveCache || {
               nextId: 1,
               deferreds: {},
             };
-  
+
             let id = "" + global.__deferredManualResolveCache.nextId++;
             let promise = new Promise((resolve, reject) => {
               global.__deferredManualResolveCache.deferreds[id] = { resolve, reject };
             });
-  
+
             return defer({
               deferredId: "${DEFERRED_ID}",
               resolvedId: new Promise(
@@ -492,7 +493,7 @@ test.describe("non-aborted", () => {
               manualValue: promise,
             });
           }
-  
+
           export default function Deferred() {
             let { deferredId, resolvedId, id, manualValue } = useLoaderData();
             return (
@@ -529,6 +530,23 @@ test.describe("non-aborted", () => {
                 </Suspense>
               </div>
             );
+          }
+        `,
+
+        "app/routes/headers.jsx": js`
+          import { defer } from "@remix-run/node";
+          export function loader() {
+            return defer({}, { headers: { "x-custom-header": "value from loader" } });
+          }
+          export function headers({ loaderHeaders }) {
+            return {
+              "x-custom-header": loaderHeaders.get("x-custom-header")
+            }
+          }
+          export default function Component() {
+            return (
+              <div>Headers</div>
+            )
           }
         `,
       },
@@ -901,6 +919,20 @@ test.describe("non-aborted", () => {
     await ensureInteractivity(page, ERROR_BOUNDARY_ID);
     await ensureInteractivity(page, ROOT_ID, 2);
   });
+
+  test("returns headers on document requests", async ({ page }) => {
+    let response = await fixture.requestDocument("/headers");
+    expect(response.headers.get("x-custom-header")).toEqual(
+      "value from loader"
+    );
+  });
+
+  test("returns headers on data requests", async ({ page }) => {
+    let response = await fixture.requestData("/headers", "routes/headers");
+    expect(response.headers.get("x-custom-header")).toEqual(
+      "value from loader"
+    );
+  });
 });
 
 test.describe("aborted", () => {
@@ -909,6 +941,7 @@ test.describe("aborted", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
+      future: { v2_routeConvention: true },
       ////////////////////////////////////////////////////////////////////////////
       // 💿 Next, add files to this object, just like files in a real app,
       // `createFixture` will make an app and run your tests against it.
@@ -921,9 +954,9 @@ test.describe("aborted", () => {
           import { RemixServer } from "@remix-run/react";
           import isbot from "isbot";
           import { renderToPipeableStream } from "react-dom/server";
-          
+
           const ABORT_DELAY = 1;
-          
+
           export default function handleRequest(
             request: Request,
             responseStatusCode: number,
@@ -944,7 +977,7 @@ test.describe("aborted", () => {
                   remixContext
                 );
           }
-          
+
           function handleBotRequest(
             request: Request,
             responseStatusCode: number,
@@ -953,7 +986,7 @@ test.describe("aborted", () => {
           ) {
             return new Promise((resolve, reject) => {
               let didError = false;
-          
+
               let { pipe, abort } = renderToPipeableStream(
                 <RemixServer
                   context={remixContext}
@@ -963,16 +996,16 @@ test.describe("aborted", () => {
                 {
                   onAllReady() {
                     let body = new PassThrough();
-          
+
                     responseHeaders.set("Content-Type", "text/html");
-          
+
                     resolve(
                       new Response(body, {
                         headers: responseHeaders,
                         status: didError ? 500 : responseStatusCode,
                       })
                     );
-          
+
                     pipe(body);
                   },
                   onShellError(error: unknown) {
@@ -980,16 +1013,16 @@ test.describe("aborted", () => {
                   },
                   onError(error: unknown) {
                     didError = true;
-          
+
                     console.error(error);
                   },
                 }
               );
-          
+
               setTimeout(abort, ABORT_DELAY);
             });
           }
-          
+
           function handleBrowserRequest(
             request: Request,
             responseStatusCode: number,
@@ -998,7 +1031,7 @@ test.describe("aborted", () => {
           ) {
             return new Promise((resolve, reject) => {
               let didError = false;
-          
+
               let { pipe, abort } = renderToPipeableStream(
                 <RemixServer
                   context={remixContext}
@@ -1008,16 +1041,16 @@ test.describe("aborted", () => {
                 {
                   onShellReady() {
                     let body = new PassThrough();
-          
+
                     responseHeaders.set("Content-Type", "text/html");
-          
+
                     resolve(
                       new Response(body, {
                         headers: responseHeaders,
                         status: didError ? 500 : responseStatusCode,
                       })
                     );
-          
+
                     pipe(body);
                   },
                   onShellError(err: unknown) {
@@ -1025,19 +1058,19 @@ test.describe("aborted", () => {
                   },
                   onError(error: unknown) {
                     didError = true;
-          
+
                     console.error(error);
                   },
                 }
               );
-          
+
               setTimeout(abort, ABORT_DELAY);
             });
-          }        
+          }
         `,
         "app/components/counter.tsx": js`
           import { useState } from "react";
-  
+
           export default function Counter({ id }) {
             let [count, setCount] = useState(0);
             return (
@@ -1050,7 +1083,7 @@ test.describe("aborted", () => {
         `,
         "app/components/interactive.tsx": js`
           import { useEffect, useState } from "react";
-  
+
           export default function Interactive() {
             let [interactive, setInteractive] = useState(false);
             useEffect(() => {
@@ -1068,17 +1101,17 @@ test.describe("aborted", () => {
           import { Links, Meta, Outlet, Scripts, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
           import Interactive from "~/components/interactive";
-  
+
           export const meta: MetaFunction = () => ({
             charset: "utf-8",
             title: "New Remix App",
             viewport: "width=device-width,initial-scale=1",
           });
-  
+
           export const loader = () => defer({
             id: "${ROOT_ID}",
           });
-  
+
           export default function Root() {
             let { id } = useLoaderData();
             return (
@@ -1109,7 +1142,7 @@ test.describe("aborted", () => {
           import { defer } from "@remix-run/node";
           import { Await, Link, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
-  
+
           export function loader() {
             return defer({
               deferredId: "${DEFERRED_ID}",
@@ -1120,7 +1153,7 @@ test.describe("aborted", () => {
               ),
             });
           }
-  
+
           export default function Deferred() {
             let { deferredId, resolvedId } = useLoaderData();
             return (
@@ -1154,7 +1187,7 @@ test.describe("aborted", () => {
           import { defer } from "@remix-run/node";
           import { Await, Link, useLoaderData } from "@remix-run/react";
           import Counter from "~/components/counter";
-  
+
           export function loader() {
             return defer({
               deferredId: "${DEFERRED_ID}",
@@ -1165,7 +1198,7 @@ test.describe("aborted", () => {
               ),
             });
           }
-  
+
           export default function Deferred() {
             let { deferredId, resolvedId } = useLoaderData();
             return (
