@@ -1361,8 +1361,8 @@ function convertNavigationToTransition(navigation: Navigation): Transition {
  */
 export function useFetchers(): Fetcher[] {
   let fetchers = useFetchersRR();
-  return fetchers.map((f) =>
-    convertRouterFetcherToRemixFetcher({
+  return fetchers.map((f) => {
+    let fetcher = convertRouterFetcherToRemixFetcher({
       state: f.state,
       data: f.data,
       formMethod: f.formMethod,
@@ -1370,8 +1370,10 @@ export function useFetchers(): Fetcher[] {
       formData: f.formData,
       formEncType: f.formEncType,
       " _hasFetcherDoneAnything ": f[" _hasFetcherDoneAnything "],
-    })
-  );
+    });
+    addFetcherDeprecationWarnings(fetcher);
+    return fetcher;
+  });
 }
 
 export type FetcherWithComponents<TData> = Fetcher<TData> & {
@@ -1403,13 +1405,61 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
       formEncType: fetcherRR.formEncType,
       " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
     });
-    return {
+    let fetcherWithComponents = {
       ...remixFetcher,
       load: fetcherRR.load,
       submit: fetcherRR.submit,
       Form: fetcherRR.Form,
     };
+    addFetcherDeprecationWarnings(fetcherWithComponents);
+    return fetcherWithComponents;
   }, [fetcherRR]);
+}
+
+function addFetcherDeprecationWarnings(fetcher: Fetcher) {
+  let type: Fetcher["type"] = fetcher.type;
+  Object.defineProperty(fetcher, "type", {
+    get() {
+      warnOnce(
+        false,
+        "⚠️ DEPRECATED: The `useFetcher().type` field has been deprecated and " +
+          "will be removed in Remix v2.  Please update your code to rely on " +
+          "`fetcher.state`.\n\nSee https://remix.run/docs/hooks/use-fetcher for " +
+          "more information."
+      );
+      return type;
+    },
+    set(value: Fetcher["type"]) {
+      // Devs should *not* be doing this but we don't want to break their
+      // current app if they are
+      type = value;
+    },
+    // These settings should make this behave like a normal object `type` field
+    configurable: true,
+    enumerable: true,
+  });
+
+  let submission: Fetcher["submission"] = fetcher.submission;
+  Object.defineProperty(fetcher, "submission", {
+    get() {
+      warnOnce(
+        false,
+        "⚠️ DEPRECATED: The `useFetcher().submission` field has been deprecated and " +
+          "will be removed in Remix v2.  The submission fields now live directly " +
+          "on the fetcher (`fetcher.formData`).\n\n" +
+          "See https://remix.run/docs/hooks/use-fetcher for more information."
+      );
+      return submission;
+    },
+    set(value: Fetcher["submission"]) {
+      // Devs should *not* be doing this but we don't want to break their
+      // current app if they are
+      submission = value;
+    },
+    // These settings should make this behave like a normal object `type` field
+    configurable: true,
+    enumerable: true,
+  });
 }
 
 function convertRouterFetcherToRemixFetcher(
