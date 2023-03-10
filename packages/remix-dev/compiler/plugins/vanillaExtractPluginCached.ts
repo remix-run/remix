@@ -1,4 +1,4 @@
-import { dirname, join } from "path";
+import { dirname, resolve } from "path";
 import type { Compiler } from "@vanilla-extract/integration";
 import { cssFileFilter, createCompiler } from "@vanilla-extract/integration";
 import type { Plugin } from "esbuild";
@@ -89,7 +89,7 @@ export function vanillaExtractPluginCached({
         async ({ path }) => {
           let [relativeFilePath] = path.split(".vanilla.css");
           let { css, filePath } = compiler.getCssForFile(relativeFilePath);
-          let resolveDir = dirname(join(root, filePath));
+          let resolveDir = dirname(resolve(root, filePath));
 
           if (postcssProcessor) {
             css = (
@@ -118,7 +118,11 @@ export function vanillaExtractPluginCached({
           contents: source,
           resolveDir: dirname(filePath),
           loader: "js",
-          watchFiles: Array.from(watchFiles || []),
+          watchFiles: (Array.from(watchFiles) || []).map((watchFile) =>
+            watchFile.startsWith("~")
+              ? resolve(root, watchFile.replace("~", "."))
+              : watchFile
+          ),
         };
       });
     },
