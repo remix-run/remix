@@ -3499,10 +3499,10 @@
   dependencies:
     "@babel/core" "^7.20.7"
 
-"@vanilla-extract/css@0.0.0-create-compiler-api-202329212823", "@vanilla-extract/css@^0.0.0-create-compiler-api-202329212823":
-  version "0.0.0-create-compiler-api-202329212823"
-  resolved "https://registry.npmjs.org/@vanilla-extract/css/-/css-0.0.0-create-compiler-api-202329212823.tgz#8d7c3ef67b789d212ed8c7498154ab65363025a6"
-  integrity sha512-tUG3roPsKK6cC8r332wkXuupVIUmI1BOYzMKaQ6j0At4Apla9e0EDHU2f/E2AZAvj621bibXjHCHgk9pQLG+hQ==
+"@vanilla-extract/css@^1.1.0", "@vanilla-extract/css@^1.10.0":
+  version "1.10.0"
+  resolved "https://registry.npmjs.org/@vanilla-extract/css/-/css-1.10.0.tgz#4ed13c89c5f4e452f306440415d4591bba8ac01b"
+  integrity sha512-s/EFfLDKbU1c2jnELNl+l14AufvIyryDh09ZZxRRqKjRKitiKvEjoiUy964pGKmfHngc9O0mkbzqrbhWaH+96Q==
   dependencies:
     "@emotion/hash" "^0.9.0"
     "@vanilla-extract/private" "^1.0.3"
@@ -3516,15 +3516,15 @@
     media-query-parser "^2.0.2"
     outdent "^0.8.0"
 
-"@vanilla-extract/integration@0.0.0-create-compiler-api-202329212823":
-  version "0.0.0-create-compiler-api-202329212823"
-  resolved "https://registry.npmjs.org/@vanilla-extract/integration/-/integration-0.0.0-create-compiler-api-202329212823.tgz#c461cfe1a263fad040da5c0146f2d43d9cc0c187"
-  integrity sha512-NjWfVkED0IzSn+F8Hkud6rw4ISvgLQNR7BZwqYnEdGFyG5bdtCorOiBY161IDeQ+9lr9duHnJoU6Qf26cENXxQ==
+"@vanilla-extract/integration@^6.2.0":
+  version "6.2.0"
+  resolved "https://registry.npmjs.org/@vanilla-extract/integration/-/integration-6.2.0.tgz#b45927c5e9efb78a8c3c66ccc2aacdfb996a6b9e"
+  integrity sha512-sHF571lXE7tdk0Sx3kcbbopmpyiYfRIxhHET2vGjH0Mddch1NK93VztWyliaBdPltR++OuvYruzzYAt3Ob18VQ==
   dependencies:
     "@babel/core" "^7.20.7"
     "@babel/plugin-syntax-typescript" "^7.20.0"
     "@vanilla-extract/babel-plugin-debug-ids" "^1.0.2"
-    "@vanilla-extract/css" "^0.0.0-create-compiler-api-202329212823"
+    "@vanilla-extract/css" "^1.10.0"
     esbuild "0.17.6"
     eval "0.1.6"
     find-up "^5.0.0"
