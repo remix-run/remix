@@ -14,6 +14,7 @@ import withApp from "./utils/withApp";
 let CODEMOD = "replace-remix-magic-imports";
 let FIXTURE = path.join(__dirname, "fixtures/replace-remix-magic-imports");
 
+// TODO: Should we keep this codemod around post v2?
 it("replaces `remix` magic imports", async () => {
   await withApp(FIXTURE, async (projectDir) => {
     await git.initialCommit(projectDir);
