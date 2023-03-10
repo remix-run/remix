@@ -602,7 +602,7 @@ function V1Meta() {
         }
 
         if (["charset", "charSet"].includes(name)) {
-          return <meta key="charset" charSet={value as string} />;
+          return <meta key="charSet" charSet={value as string} />;
         }
 
         if (name === "title") {
@@ -719,24 +719,59 @@ function V2Meta() {
           return null;
         }
 
+        if ("tagName" in metaProps) {
+          let tagName = metaProps.tagName;
+          delete metaProps.tagName;
+          if (!isValidMetaTag(tagName)) {
+            console.warn(
+              `A meta object uses an invalid tagName: ${tagName}. Expected either 'link' or 'meta'`
+            );
+            return null;
+          }
+          let Comp = tagName;
+          return <Comp key={JSON.stringify(metaProps)} {...metaProps} />;
+        }
+
         if ("title" in metaProps) {
           return <title key="title">{String(metaProps.title)}</title>;
         }
 
-        if ("charSet" in metaProps || "charset" in metaProps) {
-          // TODO: We normalize this for the user in v1, but should we continue
-          // to do that? Seems like a nice convenience IMO.
+        if ("charset" in metaProps) {
+          metaProps.charSet ??= metaProps.charset;
+          delete metaProps.charset;
+        }
+
+        if ("charSet" in metaProps && metaProps.charSet != null) {
+          return typeof metaProps.charSet === "string" ? (
+            <meta key="charSet" charSet={metaProps.charSet} />
+          ) : null;
+        }
+
+        if ("script:ld+json" in metaProps) {
+          let json: string | null = null;
+          try {
+            json = JSON.stringify(metaProps["script:ld+json"]);
+          } catch (err) {}
           return (
-            <meta
-              key="charset"
-              charSet={metaProps.charSet || (metaProps as any).charset}
-            />
+            json != null && (
+              <script
+                key="script:ld+json"
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                  __html: JSON.stringify(metaProps["script:ld+json"]),
+                }}
+              />
+            )
           );
         }
         return <meta key={JSON.stringify(metaProps)} {...metaProps} />;
       })}
     </>
   );
+}
+
+function isValidMetaTag(tagName: unknown): tagName is "meta" | "link" {
+  return typeof tagName === "string" && /^(meta|link)$/.test(tagName);
 }
 
 export function Meta() {
