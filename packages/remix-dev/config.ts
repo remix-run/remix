@@ -13,6 +13,7 @@ import { serverBuildVirtualModule } from "./compiler/virtualModules";
 import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
 import { flatRoutes } from "./config/flat-routes";
 import { getPreferredPackageManager } from "./cli/getPreferredPackageManager";
+import { warnOnce } from "./compiler/warnings";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -374,6 +375,10 @@ export async function readConfig(
     }
   }
 
+  if (!appConfig.future?.v2_errorBoundary) {
+    warnOnce(errorBoundaryWarning, "v2_errorBoundary");
+  }
+
   let serverBuildPath = resolveServerBuildPath(rootDirectory, appConfig);
   let serverBuildTargetEntryModule = `export * from ${JSON.stringify(
     serverBuildVirtualModule.id
@@ -510,9 +515,14 @@ export async function readConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  let routesConvention = appConfig.future?.v2_routeConvention
-    ? flatRoutes
-    : defineConventionalRoutes;
+  let routesConvention: typeof flatRoutes;
+
+  if (appConfig.future?.v2_routeConvention) {
+    routesConvention = flatRoutes;
+  } else {
+    warnOnce(flatRoutesWarning, "v2_routeConvention");
+    routesConvention = defineConventionalRoutes;
+  }
 
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
     let conventionalRoutes = routesConvention(
@@ -659,3 +669,13 @@ let listFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "conjunction",
 });
+
+export let flatRoutesWarning = `⚠️ DEPRECATED: The old nested folders route convention has been deprecated in favor of "flat routes".  Please enable the new routing convention via the \`future.v2_routeConvention\` flag in your \`remix.config.js\` file.  For more information, please see https://remix.run/docs/en/main/file-conventions/route-files-v2.`;
+
+export const errorBoundaryWarning =
+  "⚠️ DEPRECATED: The separation of `CatchBoundary` and `ErrorBoundary` has " +
+  "been deprecated and Remix v2 will use a singular `ErrorBoundary` for " +
+  "all thrown values (`Response` and `Error`). Please migrate to the new " +
+  "behavior in Remix v1 via the `future.v2_errorBoundary` flag in your " +
+  "`remix.config.js` file. For more information, see " +
+  "https://remix.run/docs/route/error-boundary-v2";
