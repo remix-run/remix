@@ -16,7 +16,6 @@ import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
 import { log } from "../logging";
 import { createApp } from "./create";
 import { getPreferredPackageManager } from "./getPreferredPackageManager";
-import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 import runCodemod from "../codemod";
 import { CodemodError } from "../codemod/utils/error";
 import { TaskError } from "../codemod/utils/task";
@@ -108,25 +107,16 @@ export async function init(
   }
 }
 
+/**
+ * Keep the function around in v2 so that users with `remix setup` in a script
+ * or postinstall hook can still run a build, but inform them that it's no
+ * longer necessary and we can remove it in v3.
+ * @deprecated
+ */
 export async function setup(platformArg?: string) {
-  let platform: SetupPlatform;
-  if (
-    platformArg === "cloudflare-workers" ||
-    platformArg === "cloudflare-pages"
-  ) {
-    console.warn(
-      `Using '${platformArg}' as a platform value is deprecated. Use ` +
-        "'cloudflare' instead."
-    );
-    console.log("HINT: check the `postinstall` script in `package.json`");
-    platform = SetupPlatform.Cloudflare;
-  } else {
-    platform = isSetupPlatform(platformArg) ? platformArg : SetupPlatform.Node;
-  }
-
-  await setupRemix(platform);
-
-  log(`Successfully setup Remix for ${platform}.`);
+  console.warn(
+    "WARNING: The setup command is no longer necessary as of v2. This is a no-op. Please remove this from your dev and CI scripts, as it will be removed in v3."
+  );
 }
 
 export async function routes(
