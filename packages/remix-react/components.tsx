@@ -72,6 +72,7 @@ import type {
   ActionSubmission,
 } from "./transition";
 import { IDLE_FETCHER } from "./transition";
+import { warnOnce } from "./warnings";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
