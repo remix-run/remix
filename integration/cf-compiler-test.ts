@@ -40,6 +40,13 @@ test.describe("cloudflare compiler", () => {
           import { content as browserPackage } from "browser-pkg";
           import { content as esmOnlyPackage } from "esm-only-pkg";
           import { content as cjsOnlyPackage } from "cjs-only-pkg";
+          import hooks from "node:async_hooks";
+
+          export async function loader() {
+            console.log(hooks);
+
+            return null;
+          }
 
           export default function Index() {
             return (

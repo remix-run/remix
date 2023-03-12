@@ -30,6 +30,7 @@ import {
 import { writeFileSafe } from "./utils/fs";
 import invariant from "../invariant";
 import { hmrPlugin } from "./plugins/hmrPlugin";
+import { NodeProtocolExternalPlugin } from "./plugins/nodeProtocolExternalPlugin";
 
 export type BrowserCompiler = {
   // produce ./public/build/
@@ -128,6 +129,7 @@ const createEsbuildConfig = (
       : browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
+    NodeProtocolExternalPlugin(),
   ].filter(isNotNull);
 
   if (mode === "development" && config.future.unstable_dev) {
