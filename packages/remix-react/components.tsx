@@ -75,6 +75,7 @@ import type {
   TransitionStates,
 } from "./transition";
 import { IDLE_TRANSITION, IDLE_FETCHER } from "./transition";
+import { warnOnce } from "./warnings";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -1133,18 +1134,22 @@ export interface RouteMatch {
 export function useMatches(): RouteMatch[] {
   let { routeModules } = useRemixContext();
   let matches = useMatchesRR();
-  return matches.map((match) => {
-    let remixMatch: RouteMatch = {
-      id: match.id,
-      pathname: match.pathname,
-      params: match.params,
-      data: match.data,
-      // Need to grab handle here since we don't have it at client-side route
-      // creation time
-      handle: routeModules[match.id].handle,
-    };
-    return remixMatch;
-  });
+  return React.useMemo(
+    () =>
+      matches.map((match) => {
+        let remixMatch: RouteMatch = {
+          id: match.id,
+          pathname: match.pathname,
+          params: match.params,
+          data: match.data,
+          // Need to grab handle here since we don't have it at client-side route
+          // creation time
+          handle: routeModules[match.id].handle,
+        };
+        return remixMatch;
+      }),
+    [matches, routeModules]
+  );
 }
 
 /**
@@ -1169,10 +1174,22 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  * Returns everything you need to know about a page transition to build pending
  * navigation indicators and optimistic UI on data mutations.
  *
+ * @deprecated in favor of useNavigation
+ *
  * @see https://remix.run/hooks/use-transition
  */
 export function useTransition(): Transition {
   let navigation = useNavigation();
+
+  React.useEffect(() => {
+    warnOnce(
+      false,
+      "⚠️ DEPRECATED: The `useTransition` hook has been deprecated in favor of " +
+        "`useNavigation` and will be removed in Remix v2.  Please update your " +
+        "code to leverage `useNavigation`.\n\nSee https://remix.run/docs/hooks/use-transition " +
+        "and https://remix.run/docs/hooks/use-navigation for more information."
+    );
+  }, []);
 
   return React.useMemo(
     () => convertNavigationToTransition(navigation),
