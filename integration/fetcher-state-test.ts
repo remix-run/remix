@@ -80,12 +80,11 @@ test.describe("fetcher states", () => {
             const fetcher = useFetcher();
             return (
               <>
-                {fetcher.type === 'init' ?
+                {fetcher.state === 'idle' && fetcher.data == null ?
                   <pre id="initial-state">
                     {
                       JSON.stringify({
                         state: fetcher.state,
-                        type: fetcher.type,
                         formMethod: fetcher.formMethod,
                         formAction: fetcher.formAction,
                         formData: fetcher.formData,
@@ -144,7 +143,11 @@ test.describe("fetcher states", () => {
     let text = (await app.getElement("#initial-state")).text();
     expect(JSON.parse(text)).toEqual({
       state: "idle",
-      type: "init",
+      data: undefined,
+      formData: undefined,
+      formAction: undefined,
+      formMethod: undefined,
+      formEncType: undefined,
     });
   });
 
@@ -189,7 +192,7 @@ test.describe("fetcher states", () => {
     let text = (await app.getElement("#states")).text();
     expect(JSON.parse(text)).toEqual([
       {
-        state: "submitting",
+        state: "loading",
         formData: { key: "value" },
         formAction: "/page",
         formMethod: "GET",
