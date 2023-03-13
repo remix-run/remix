@@ -37,7 +37,7 @@ export interface ActionFunction {
 /**
  * A React component that is rendered when there is an error on a route.
  */
-export type V2_ErrorBoundaryComponent = ComponentType;
+export type ErrorBoundaryComponent = ComponentType;
 
 /**
  * A function that returns HTTP headers to be used for a route. These headers
@@ -227,7 +227,7 @@ export type RouteComponent = ComponentType<{}>;
 export type RouteHandle = any;
 
 export interface EntryRouteModule {
-  ErrorBoundary?: V2_ErrorBoundaryComponent;
+  ErrorBoundary?: ErrorBoundaryComponent;
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;

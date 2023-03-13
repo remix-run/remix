@@ -19,7 +19,6 @@ test.describe("actions", () => {
     fixture = await createFixture({
       future: {
         v2_routeConvention: true,
-        v2_errorBoundary: true,
       },
       files: {
         "app/routes/urlencoded.jsx": js`

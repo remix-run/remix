@@ -369,7 +369,7 @@ export async function loader({ params }: LoaderArgs) {
 
 You can add splats at any level of your route hierarchy. Any sibling routes will match first (like `/files/mine`).
 
-It's common to add a `routes/$.jsx` file build custom 404 pages with data from a loader (without it, Remix renders your root `CatchBoundary` with no ability to load data for the page when the URL doesn't match any routes).
+It's common to add a `routes/$.jsx` file build custom 404 pages with data from a loader (without it, Remix renders your root `ErrorBoundary` with no ability to load data for the page when the URL doesn't match any routes).
 
 ## Conclusion
 
