@@ -95,6 +95,8 @@ test("shouldn't change suggested config if set", async () => {
 });
 
 test("shouldn't change suggested config for moduleResolution: bundler", async () => {
+  // this test is slow because it installs dependencies
+  test.slow();
   let config = {
     ...DEFAULT_CONFIG,
     compilerOptions: {
@@ -105,9 +107,37 @@ test("shouldn't change suggested config for moduleResolution: bundler", async ()
   };
 
   let fixture = await createFixture({
+    installDependencies: true,
     future: { v2_routeConvention: true },
     files: {
       "tsconfig.json": json(config),
+      "package.json": json({
+        name: "remix-template-remix",
+        private: true,
+        sideEffects: false,
+        scripts: {
+          build: "node ./build/node_modules/@remix-run/dev/dist/cli.js build",
+          dev: "node ./build/node_modules/@remix-run/dev/dist/cli.js dev",
+          start: "node ./build/node_modules/@remix-run/serve/dist/cli.js build",
+        },
+        dependencies: {
+          "@remix-run/node": "*",
+          "@remix-run/react": "*",
+          "@remix-run/serve": "*",
+          isbot: "*",
+          react: "*",
+          "react-dom": "*",
+        },
+        devDependencies: {
+          "@remix-run/dev": "*",
+          "@types/react": "*",
+          "@types/react-dom": "*",
+          typescript: "5.0.0-beta",
+        },
+        engines: {
+          node: ">=14",
+        },
+      }),
     },
   });
 

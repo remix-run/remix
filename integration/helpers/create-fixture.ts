@@ -16,6 +16,7 @@ import { createRequestHandler as createExpressHandler } from "../../build/node_m
 const TMP_DIR = path.join(process.cwd(), ".tmp", "integration");
 
 interface FixtureInit {
+  installDependencies?: boolean;
   buildStdio?: Writable;
   sourcemap?: boolean;
   files?: { [filename: string]: string };
@@ -150,6 +151,27 @@ export async function createFixtureProject(
 
   await fse.ensureDir(projectDir);
   await fse.copy(integrationTemplateDir, projectDir);
+
+  await writeTestFiles(init, projectDir);
+
+  if (init.installDependencies) {
+    let installSpawn = spawnSync("npm", ["install"], { cwd: projectDir });
+
+    // These logs are helpful for debugging. Remove comments if needed.
+    // console.log("spawning `npm install`:\n");
+    // console.log("  STDOUT:");
+    // console.log("  " + installSpawn.stdout.toString("utf-8"));
+    // console.log("  STDERR:");
+    // console.log("  " + installSpawn.stderr.toString("utf-8"));
+    if (installSpawn.error || installSpawn.status) {
+      console.error(installSpawn.stderr.toString("utf-8"));
+      throw (
+        installSpawn.error ||
+        new Error(`Install failed, check the output above`)
+      );
+    }
+  }
+
   await fse.copy(
     path.join(__dirname, "../../build/node_modules"),
     path.join(projectDir, "node_modules"),
@@ -192,7 +214,6 @@ export async function createFixtureProject(
     fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);
   }
 
-  await writeTestFiles(init, projectDir);
   build(projectDir, init.buildStdio, init.sourcemap);
 
   return projectDir;
