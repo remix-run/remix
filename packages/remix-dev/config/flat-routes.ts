@@ -104,7 +104,7 @@ export function flatRoutes(
 
   let routes: string[] = [];
   for (let entry of entries) {
-    let filepath: string | undefined = path.join(routesDir, entry.name);
+    let filepath = path.join(routesDir, entry.name);
 
     let route: string | null = null;
     // If it's a directory, don't recurse into it, instead just look for a route module
@@ -115,7 +115,7 @@ export function flatRoutes(
         ignoredFileRegex
       );
     } else if (entry.isFile()) {
-      route = findRouteModuleForFile(filepath, ignoredFileRegex);
+      route = findRouteModuleForFile(appDirectory, filepath, ignoredFileRegex);
     }
 
     if (route) routes.push(route);
@@ -252,10 +252,12 @@ export function flatRoutesUniversal(
 }
 
 function findRouteModuleForFile(
+  appDirectory: string,
   filepath: string,
   ignoredFileRegex: RegExp[]
 ): string | null {
-  let isIgnored = ignoredFileRegex.some((regex) => regex.test(filepath));
+  let relativePath = path.relative(appDirectory, filepath);
+  let isIgnored = ignoredFileRegex.some((regex) => regex.test(relativePath));
   if (isIgnored) return null;
   return filepath;
 }
@@ -265,7 +267,8 @@ function findRouteModuleForFolder(
   filepath: string,
   ignoredFileRegex: RegExp[]
 ): string | null {
-  let isIgnored = ignoredFileRegex.some((regex) => regex.test(filepath));
+  let relativePath = path.relative(appDirectory, filepath);
+  let isIgnored = ignoredFileRegex.some((regex) => regex.test(relativePath));
   if (isIgnored) return null;
 
   let routeRouteModule = findConfig(filepath, "route", routeModuleExts);
