@@ -7,7 +7,6 @@ import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
   UNSAFE_DeferredData as DeferredData,
-  ErrorResponse,
   TrackedPromise,
 } from "@remix-run/router";
 import type {
@@ -26,7 +25,6 @@ import {
   NavLink as RouterNavLink,
   UNSAFE_DataRouterContext as DataRouterContext,
   UNSAFE_DataRouterStateContext as DataRouterStateContext,
-  isRouteErrorResponse,
   matchRoutes,
   useAsyncError,
   useFetcher as useFetcherRR,
@@ -43,7 +41,7 @@ import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
 import type { EntryContext, RemixContextObject } from "./entry";
-import { V2_RemixRootDefaultErrorBoundary } from "./errorBoundaries";
+import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
@@ -150,13 +148,13 @@ export function RemixRouteError({ id }: { id: string }) {
   let error = useRouteError();
   let { ErrorBoundary } = routeModules[id];
 
-  // Provide defaults for the root route if they are not present
-  if (!ErrorBoundary && id === "root") {
-    ErrorBoundary = V2_RemixRootDefaultErrorBoundary;
-  }
-
   if (ErrorBoundary) {
     return <ErrorBoundary />;
+  }
+
+  if (id === "root") {
+    // Provide defaults for the root route if they are not present
+    return <RemixRootDefaultErrorBoundary error={error} />;
   }
 
   throw error;

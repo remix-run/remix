@@ -1,12 +1,9 @@
 import React from "react";
 import type { Location } from "@remix-run/router";
-import { isRouteErrorResponse, useRouteError } from "react-router-dom";
-
-import type { ErrorBoundaryComponent } from "./routeModules";
+import { isRouteErrorResponse } from "react-router-dom";
 
 type RemixErrorBoundaryProps = React.PropsWithChildren<{
   location: Location;
-  component: ErrorBoundaryComponent;
   error?: Error;
 }>;
 
@@ -55,16 +52,14 @@ export class RemixErrorBoundary extends React.Component<
 
   render() {
     if (this.state.error) {
-      return <this.props.component error={this.state.error} />;
+      return <RemixRootDefaultErrorBoundary error={this.state.error} />;
     } else {
       return this.props.children;
     }
   }
 }
 
-export function V2_RemixRootDefaultErrorBoundary() {
-  let error = useRouteError();
-
+export function RemixRootDefaultErrorBoundary({ error }: { error: unknown }) {
   console.error(error);
 
   if (isRouteErrorResponse(error)) {

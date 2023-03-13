@@ -7,14 +7,10 @@ import { useSyncExternalStore } from "use-sync-external-store/shim";
 
 import { RemixContext } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
-import {
-  RemixErrorBoundary,
-  RemixRootDefaultErrorBoundary,
-} from "./errorBoundaries";
+import { RemixErrorBoundary } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
 import type { RouteModules } from "./routeModules";
 import { createClientRoutes } from "./routes";
-import { warnOnce } from "./warnings";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
@@ -170,10 +166,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         future: window.__remixContext.future,
       }}
     >
-      <RemixErrorBoundary
-        location={location}
-        component={RemixRootDefaultErrorBoundary}
-      >
+      <RemixErrorBoundary location={location}>
         <RouterProvider router={router} fallbackElement={null} />
       </RemixErrorBoundary>
     </RemixContext.Provider>
