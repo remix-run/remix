@@ -21,7 +21,7 @@ test.describe("flat routes", () => {
             future: {
               v2_routeConvention: true,
             },
-            ignoredRouteFiles: ['./ignore-me-pls'],
+            ignoredRouteFiles: ['${IGNORED_ROUTE}'],
           };
         `,
         "app/root.jsx": js`
