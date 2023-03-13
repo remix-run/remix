@@ -1,10 +1,9 @@
-import type { Location, Params } from "@remix-run/router";
+import type { AgnosticRouteMatch, Location, Params } from "@remix-run/router";
 import type { ComponentType } from "react";
 
 import type { AppLoadContext, AppData } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { RouteData } from "./routeData";
-import type { Route } from "./routes";
 import type { SerializeFrom } from "./serialize";
 
 export interface RouteModules<RouteModule> {
@@ -162,32 +161,37 @@ export type MetaFunction<
   ParentsLoaders extends Record<string, LoaderFunction> = {}
 > = V1_MetaFunction<Loader, ParentsLoaders>;
 
-interface RouteMatchWithMeta<Route> {
-  params: Params;
-  pathname: string;
-  route: Route;
+interface V2_ServerRuntimeMetaMatch<
+  RouteId extends string = string,
+  Loader extends LoaderFunction | unknown = unknown
+> {
+  id: RouteId;
+  pathname: AgnosticRouteMatch["pathname"];
+  data: Loader extends LoaderFunction ? SerializeFrom<Loader> : unknown;
+  handle?: unknown;
+  params: AgnosticRouteMatch["params"];
   meta: V2_ServerRuntimeMetaDescriptor[];
 }
 
-interface ClientRoute extends Route {
-  loader?: LoaderFunction;
-  action: ActionFunction;
-  children?: ClientRoute[];
-  module: string;
-  hasLoader: boolean;
-}
+type V2_ServerRuntimeMetaMatches<
+  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+> = Array<
+  {
+    [K in keyof MatchLoaders]: V2_ServerRuntimeMetaMatch<
+      Exclude<K, number | symbol>,
+      MatchLoaders[K]
+    >;
+  }[keyof MatchLoaders]
+>;
 
 export interface V2_ServerRuntimeMetaArgs<
   Loader extends LoaderFunction | unknown = unknown,
-  ParentsLoaders extends Record<string, LoaderFunction> = {}
+  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
 > {
   data: Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData;
-  parentsData: {
-    [k in keyof ParentsLoaders]: SerializeFrom<ParentsLoaders[k]>;
-  } & RouteData;
   params: Params;
   location: Location;
-  matches: RouteMatchWithMeta<ClientRoute>[];
+  matches: V2_ServerRuntimeMetaMatches<MatchLoaders>;
 }
 
 export interface V2_ServerRuntimeMetaFunction<
