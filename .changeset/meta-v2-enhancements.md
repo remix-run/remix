@@ -21,7 +21,7 @@ We have made a few changes to the API for route module `meta` functions when usi
     // after
     export function meta({ matches }) {
       return {
-        title: matches.find((match) => match.route === 'routes/some-route').data.title,
+        title: matches.find((match) => match.id === 'routes/some-route').data.title,
       };
     };
     ```
