@@ -1,6 +1,8 @@
-import type { ActionFunction } from "remix";
-import { Form, redirect, json, useActionData, useTransition } from "remix";
+import type { ActionFunction } from "@remix-run/server-runtime";
+import { redirect, json } from "@remix-run/server-runtime";
+import { Form, useActionData, useNavigation } from "@remix-run/react";
 import invariant from "tiny-invariant";
+
 import { createPost } from "~/models/post.server";
 
 type ActionData =
@@ -37,8 +39,8 @@ const inputClassName = `w-full rounded border border-gray-500 px-2 py-1 text-lg`
 export default function NewPost() {
   const errors = useActionData();
 
-  const transition = useTransition();
-  const isCreating = Boolean(transition.submission);
+  const navigation = useNavigation();
+  const isCreating = Boolean(navigation.formData);
 
   return (
     <Form method="post">
