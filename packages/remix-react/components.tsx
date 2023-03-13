@@ -710,7 +710,9 @@ function V2Meta() {
       // @ts-expect-error
       get route() {
         console.warn(
-          "`match.route` is deprecated and will be removed in Remix version 2."
+          "The meta function in " +
+            _match.route.path +
+            " accesses the `route` property on `matches`. This is deprecated and will be removed in Remix version 2. See"
         );
         return _match.route;
       },
