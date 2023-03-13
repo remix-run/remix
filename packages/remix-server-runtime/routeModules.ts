@@ -166,7 +166,7 @@ interface RouteMatchWithMeta<Route> {
   params: Params;
   pathname: string;
   route: Route;
-  meta: V2_HtmlMetaDescriptor[];
+  meta: V2_ServerRuntimeMetaDescriptor[];
 }
 
 interface ClientRoute extends Route {
@@ -177,19 +177,26 @@ interface ClientRoute extends Route {
   hasLoader: boolean;
 }
 
-export interface V2_MetaFunction<
+export interface V2_ServerRuntimeMetaArgs<
   Loader extends LoaderFunction | unknown = unknown,
   ParentsLoaders extends Record<string, LoaderFunction> = {}
 > {
-  (args: {
-    data: Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData;
-    parentsData: {
-      [k in keyof ParentsLoaders]: SerializeFrom<ParentsLoaders[k]>;
-    } & RouteData;
-    params: Params;
-    location: Location;
-    matches: RouteMatchWithMeta<ClientRoute>[];
-  }): V2_HtmlMetaDescriptor[];
+  data: Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData;
+  parentsData: {
+    [k in keyof ParentsLoaders]: SerializeFrom<ParentsLoaders[k]>;
+  } & RouteData;
+  params: Params;
+  location: Location;
+  matches: RouteMatchWithMeta<ClientRoute>[];
+}
+
+export interface V2_ServerRuntimeMetaFunction<
+  Loader extends LoaderFunction | unknown = unknown,
+  ParentsLoaders extends Record<string, LoaderFunction> = {}
+> {
+  (
+    args: V2_ServerRuntimeMetaArgs<Loader, ParentsLoaders>
+  ): V2_ServerRuntimeMetaDescriptor[];
 }
 
 /**
@@ -215,7 +222,7 @@ export type HtmlMetaDescriptor = V1_HtmlMetaDescriptor;
 
 export type MetaDescriptor = HtmlMetaDescriptor;
 
-export type V2_HtmlMetaDescriptor =
+export type V2_ServerRuntimeMetaDescriptor =
   | { charSet: "utf-8" }
   | { title: string }
   | { name: string; content: string }

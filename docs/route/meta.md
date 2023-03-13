@@ -135,7 +135,7 @@ module.exports = {
 The meta export allows you to add `<meta>` tags for every route in your app, including nested routes. These tags are important for SEO, browser behavior, and more.
 
 ```tsx
-import type { V2_MetaFunction } from "@remix-run/node"; // or cloudflare/deno
+import type { V2_MetaFunction } from "@remix-run/react";
 
 export const meta: V2_MetaFunction = () => {
   return [
@@ -150,7 +150,7 @@ export const meta: V2_MetaFunction = () => {
 };
 ```
 
-Meta functions return an array of `V2_HtmlMetaDescriptor` objects. These objects map one-to-one with normal HTML meta tags:
+Meta functions return an array of `V2_MetaDescriptor` objects. These objects map one-to-one with normal HTML meta tags:
 
 ```tsx
 const description = {
@@ -187,14 +187,7 @@ const title = {
 
 This is a list of the current route matches. You have access to many things, particularly the meta from the parent matches and data.
 
-It's most useful for merging the parent meta into the child meta since the child meta value is what will be used:
-
-```tsx
-export const meta: V2_MetaFunction = ({ matches }) => {
-  let parentMeta = matches.map((match) => match.meta ?? []);
-  return [...parentMeta, { title: "Projects" }];
-};
-```
+The interface for `matches` is similar to the return value of [`useMatches`][use-matches], but each match will include the output of its `meta` function. This is useful for [merging metadata across the route hierarchy](#md-merging-with-parent-meta).
 
 ## `data`
 
@@ -320,12 +313,23 @@ Usually you only need to add meta to what the parent has already defined. You ca
 
 ```tsx
 export const meta: V2_MetaFunction = ({ matches }) => {
-  let parentMeta = matches.map((match) => match.meta ?? []);
+  let parentMeta = matches.flatMap(
+    (match) => match.meta ?? []
+  );
   return [...parentMeta, { title: "Projects" }];
 };
 ```
 
-Note that this _will not_ override something like `title`. This is only additive.
+Note that this _will not_ override something like `title`. This is only additive. If the inherited route meta includes a `title` tag, you can override with `Array.prototype.filter`:
+
+```tsx
+export const meta: V2_MetaFunction = ({ matches }) => {
+  let parentMeta = matches
+    .flatMap((match) => match.meta ?? [])
+    .filter((meta) => !("title" in meta));
+  return [...parentMeta, { title: "Projects" }];
+};
+```
 
 ### Meta Merging helper
 
@@ -343,3 +347,4 @@ If you can't avoid the merge problem with global meta or index routes, we've cre
 [index-route]: ../guides/routing#index-routes
 [merge-meta]: https://gist.github.com/ryanflorence/ec1849c6d690cfbffcb408ecd633e069
 [url-params]: ../guides/routing#dynamic-segments
+[use-matches]: ../hooks/use-matches
