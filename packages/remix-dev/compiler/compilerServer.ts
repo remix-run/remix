@@ -13,6 +13,7 @@ import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
 import { cssSideEffectImportsPlugin } from "./plugins/cssSideEffectImportsPlugin";
 import { vanillaExtractPlugin } from "./plugins/vanillaExtractPlugin";
 import { cssFilePlugin } from "./plugins/cssFilePlugin";
+import { absoluteCssUrlsPlugin } from "./plugins/absoluteCssUrlsPlugin";
 import { deprecatedRemixPackagePlugin } from "./plugins/deprecatedRemixPackagePlugin";
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
@@ -63,6 +64,7 @@ const createEsbuildConfig = (
       ? cssSideEffectImportsPlugin({ config, options })
       : null,
     cssFilePlugin({ config, options }),
+    absoluteCssUrlsPlugin(),
     urlImportsPlugin(),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),

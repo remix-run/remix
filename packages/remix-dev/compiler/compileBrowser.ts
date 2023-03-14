@@ -16,6 +16,7 @@ import type { CompileOptions } from "./options";
 import { browserRouteModulesPlugin } from "./plugins/browserRouteModulesPlugin";
 import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "./plugins/browserRouteModulesPlugin_v2";
 import { cssFilePlugin } from "./plugins/cssFilePlugin";
+import { absoluteCssUrlsPlugin } from "./plugins/absoluteCssUrlsPlugin";
 import { deprecatedRemixPackagePlugin } from "./plugins/deprecatedRemixPackagePlugin";
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
@@ -122,6 +123,7 @@ const createEsbuildConfig = (
       ? cssSideEffectImportsPlugin({ config, options })
       : null,
     cssFilePlugin({ config, options }),
+    absoluteCssUrlsPlugin(),
     urlImportsPlugin(),
     mdxPlugin(config),
     config.future.unstable_dev
