@@ -1,18 +1,4 @@
-export interface Submission {
-  action: string;
-  method: string;
-  formData: FormData;
-  encType: string;
-  key: string;
-}
-
-export interface ActionSubmission extends Submission {
-  method: "POST" | "PUT" | "PATCH" | "DELETE";
-}
-
-export interface LoaderSubmission extends Submission {
-  method: "GET";
-}
+import type { FormEncType, V7_FormMethod } from "react-router-dom";
 
 // Thanks https://github.com/sindresorhus/type-fest!
 type JsonObject = { [Key in string]: JsonValue } & {
@@ -41,110 +27,35 @@ type FetcherSubmissionDataTypes =
       json: undefined;
       text: string;
     };
-
-export type FetcherSubmission = {
-  action: string;
-  method: string;
-  encType: string;
-  key: string;
-} & FetcherSubmissionDataTypes;
-
-export type FetcherActionSubmission = FetcherSubmission & {
-  method: "POST" | "PUT" | "PATCH" | "DELETE";
+type EmptyFetcherSubmissionDataType = {
+  formData: undefined;
+  json: undefined;
+  text: undefined;
 };
 
-export type FetcherLoaderSubmission = FetcherSubmission & {
-  method: "GET";
-};
-
-// TODO: keep data around on resubmission?
 export type FetcherStates<TData = any> = {
   Idle: {
     state: "idle";
-    type: "init";
     formMethod: undefined;
     formAction: undefined;
     formEncType: undefined;
-    formData: undefined;
-    json: undefined;
-    text: undefined;
-    submission: undefined;
-    data: undefined;
-  };
-  SubmittingAction: {
-    state: "submitting";
-    type: "actionSubmission";
-    formMethod: FetcherActionSubmission["method"];
-    formAction: string;
-    formEncType: string;
-    submission: FetcherActionSubmission;
     data: TData | undefined;
-  } & FetcherSubmissionDataTypes;
-  SubmittingLoader: {
-    state: "submitting";
-    type: "loaderSubmission";
-    formMethod: FetcherLoaderSubmission["method"];
-    formAction: string;
-    formEncType: string;
-    submission: FetcherLoaderSubmission;
-    data: TData | undefined;
-  } & FetcherSubmissionDataTypes;
-  ReloadingAction: {
-    state: "loading";
-    type: "actionReload";
-    formMethod: FetcherActionSubmission["method"];
-    formAction: string;
-    formEncType: string;
-    submission: FetcherActionSubmission;
-    data: TData;
-  } & FetcherSubmissionDataTypes;
-  LoadingActionRedirect: {
-    state: "loading";
-    type: "actionRedirect";
-    formMethod: FetcherActionSubmission["method"];
-    formAction: string;
-    formEncType: string;
-    submission: FetcherActionSubmission;
-    data: undefined;
-  } & FetcherSubmissionDataTypes;
+  } & EmptyFetcherSubmissionDataType;
   Loading: {
     state: "loading";
-    type: "normalLoad";
-    formMethod: undefined;
-    formAction: undefined;
-    formData: undefined;
-    formEncType: undefined;
-    json: undefined;
-    text: undefined;
-    submission: undefined;
+    formMethod: V7_FormMethod | undefined;
+    formAction: string | undefined;
+    formEncType: FormEncType | undefined;
     data: TData | undefined;
-  };
-  Done: {
-    state: "idle";
-    type: "done";
-    formMethod: undefined;
-    formAction: undefined;
-    formEncType: undefined;
-    formData: undefined;
-    json: undefined;
-    text: undefined;
-    submission: undefined;
-    data: TData;
-  };
+  } & (EmptyFetcherSubmissionDataType | FetcherSubmissionDataTypes);
+  Submitting: {
+    state: "submitting";
+    formMethod: V7_FormMethod;
+    formAction: string;
+    formEncType: FormEncType;
+    data: TData | undefined;
+  } & FetcherSubmissionDataTypes;
 };
 
 export type Fetcher<TData = any> =
   FetcherStates<TData>[keyof FetcherStates<TData>];
-
-export const IDLE_FETCHER: FetcherStates["Idle"] = {
-  state: "idle",
-  type: "init",
-  data: undefined,
-  formMethod: undefined,
-  formAction: undefined,
-  formEncType: undefined,
-  formData: undefined,
-  json: undefined,
-  text: undefined,
-  submission: undefined,
-};
