@@ -182,9 +182,9 @@ export interface V2_MetaFunction<
   ParentsLoaders extends Record<string, LoaderFunction> = {}
 > {
   (args: {
-    data: Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData;
+    data: Loader extends LoaderFunction ? SerializeFrom<Loader> | undefined : AppData;
     parentsData: {
-      [k in keyof ParentsLoaders]: SerializeFrom<ParentsLoaders[k]>;
+      [k in keyof ParentsLoaders]: SerializeFrom<ParentsLoaders[k]> | undefined;
     } & RouteData;
     params: Params;
     location: Location;
