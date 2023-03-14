@@ -348,9 +348,9 @@ describe("the create command", () => {
       "--no-typescript",
     ]);
     expect(output.trim()).toBe(
-      flatRoutesWarning +
-        "\n\n" +
-        errorBoundaryWarning +
+      errorBoundaryWarning +
+        "\n" +
+        flatRoutesWarning +
         "\n\n" +
         getOptOutOfInstallMessage() +
         "\n\n" +
