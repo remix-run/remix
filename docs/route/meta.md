@@ -4,9 +4,9 @@ title: meta
 
 # `meta`
 
-The meta export defines object representations of `<meta>` tags for a route. These tags are important for SEO, browser behavior, and more.
+The `meta` export allows you to add metadata HTML tags for every route in your app. These tags are important for things like search engine optimization (SEO) and browser directives for determining certain behaviors. They can also be used by social media sites to display rich previews of your app.
 
-The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route besides layout routes (their index route will set the meta).
+The meta export will set meta tags for your html document. We highly recommend setting the title and description on every route aside from layout routes, as a layout's index route will set the meta for the index path.
 
 ```tsx
 import type { MetaFunction } from "@remix-run/node"; // or cloudflare/deno
@@ -132,16 +132,14 @@ module.exports = {
 };
 ```
 
-The meta export allows you to add `<meta>` tags for every route in your app, including nested routes. These tags are important for SEO, browser behavior, and more.
+The `meta` export allows you to add metadata HTML tags for every route in your app. These tags are important for things like search engine optimization (SEO) and browser directives for determining certain behaviors. They can also be used by social media sites to display rich previews of your app.
 
 ```tsx
 import type { V2_MetaFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const meta: V2_MetaFunction = () => {
   return [
-    {
-      title: "New Remix App",
-    },
+    { title: "New Remix App" },
     {
       name: "description",
       content: "This app is a wildly dynamic web app",
@@ -150,14 +148,12 @@ export const meta: V2_MetaFunction = () => {
 };
 ```
 
-Meta functions return an array of `V2_MetaDescriptor` objects. These objects map one-to-one with HTML tags. So this meta function:
+The `meta` function should return an array of `V2_MetaDescriptor` objects. These objects map one-to-one with HTML tags. So this meta function:
 
 ```tsx
 export const meta: V2_MetaFunction = () => {
   return [
-    {
-      title: "Very cool app | Remix",
-    },
+    { title: "Very cool app | Remix" },
     {
       property: "og:title",
       content: "Very cool app",
@@ -178,27 +174,64 @@ export const meta: V2_MetaFunction = () => {
 <meta name="description" content="This app is the best" />
 ```
 
-The one exception is the `title` tag since it's not a `<meta>` tag but acts as one.
+By default, meta descriptors will render a `<meta>` tag in most cases. The two exceptions are:
+
+- `{ title }` renders a `<title>` tag
+- `{ "script:ld+json" }` renders a `<script type="application/ld+json">` tag, and its value should be a serializable object that is stringified and injected into the tag.
 
 ```tsx
-const title = {
-  title: "My highly dynamic web *APP* with deep sessions",
+export const meta: V2_MetaFunction = () => {
+  return [
+    {
+      "script:ld+json": {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        name: "Remix",
+        url: "https://remix.run",
+      },
+    },
+  ];
 };
-// becomes
-<title>
-  My highly dynamic web *APP* with deep sessions
-</title>;
 ```
 
-## `matches`
+A meta descriptor can also render a `<link>` tag by setting the `tagName` property to `"link"`. This is useful for `<link>` tags associated with SEO like `canonical` URLs. For asset links like stylesheets and favicons, you should use the [`links` export][links-export] instead.
 
-This is a list of the current route matches. You have access to many things, particularly the meta from the parent matches and data.
+```tsx
+export const meta: V2_MetaFunction = () => {
+  return [
+    {
+      tagName: "link",
+      rel: "canonical",
+      href: "https://remix.run",
+    },
+  ];
+};
+```
+
+## `meta` Function Parameters
+
+### `location`
+
+This is the current router `Location` object. This is useful for generating tags for routes at specific paths or query parameters.
+
+```tsx
+export const meta: V2_MetaFunction = ({ location }) => {
+  let searchQuery = new URLSearchParams(
+    location.search
+  ).get("q");
+  return [{ title: `Search results for "${searchQuery}"` }];
+};
+```
+
+### `matches`
+
+This is an array of the current route matches. You have access to many things, particularly the meta from the parent matches and data.
 
 The interface for `matches` is similar to the return value of [`useMatches`][use-matches], but each match will include the output of its `meta` function. This is useful for [merging metadata across the route hierarchy][merging-metadata-across-the-route-hierarchy].
 
-## `data`
+### `data`
 
-This is the data from your loader.
+This is the data from your route's loader.
 
 ```tsx
 export async function loader({ params }: LoaderArgs) {
@@ -214,9 +247,13 @@ export const meta: V2_MetaFunction<typeof loader> = ({
 };
 ```
 
-## `parentsData`
+### `params`
 
-Often you'll need the data from a parent route, you can look it up by route ID on `parentsData`.
+The route's URL params. See [Dynamic Segments in the Routing Guide][url-params].
+
+## Accessing Data from Parent Route Loaders
+
+In addition to the current route's data, often you'll want to access data from a route higher up in the route hierarchy. You can look it up by its route ID in `matches`.
 
 ```tsx filename=routes/project/$pid/tasks/$tid.tsx
 import type { loader as projectDetailsLoader } from "../../../$pid";
@@ -228,16 +265,14 @@ export async function loader({ params }: LoaderArgs) {
 export const meta: V2_MetaFunction<
   typeof loader,
   { "routes/project/$pid": typeof projectDetailsLoader }
-> = ({ data, parentsData }) => {
-  let project = parentsData["routes/project/$pid"].project;
+> = ({ data, matches }) => {
+  let project = matches.find(
+    (match) => match.id === "routes/project/$pid"
+  ).project;
   let task = data.task;
   return [{ title: `${project.name}: ${task.name}` }];
 };
 ```
-
-## `params`
-
-The route URL params. See [Dynamic Segments in the Routing Guide][url-params].
 
 ## Gotchas with `meta` and Nested Routes
 
@@ -250,7 +285,7 @@ This can get quite tricky when you're new.
 Consider a route like `/projects/123`, there are likely three matching routes: `root.tsx`, `projects.tsx`, and `projects/$id.tsx`. All three may export meta descriptors.
 
 ```tsx bad filename=app/root.tsx
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   return [
     {
       name: "viewport",
@@ -262,13 +297,13 @@ export const meta: V2_MetaFunction = () => {
 ```
 
 ```tsx bad filename=app/routes/projects.tsx
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   return [{ title: "Projects" }];
 };
 ```
 
 ```tsx bad filename=app/routes/projects/$id.tsx
-export const meta: V2_MetaFunction<typeof loader> = ({
+export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
   return [{ title: data.project.name }];
@@ -277,7 +312,7 @@ export const meta: V2_MetaFunction<typeof loader> = ({
 
 With this code, we will lose the `viewport` meta tag at `/projects` and `/projects/123` because only the last meta is used and the code doesn't merge with the parent.
 
-### Global Meta
+### Global `meta`
 
 Nearly every app will have global meta like the `viewport` and `charSet`. We recommend using normal `<meta>` tags inside of the [root route][root-route] instead of the `meta` export so you simply don't have to deal with merging:
 
@@ -310,16 +345,16 @@ export default function Root() {
 }
 ```
 
-### Avoid Meta in Parent Routes
+### Avoid `meta` in Parent Routes
 
 You can also avoid the merge problem by simply not exporting meta that you want to override from parent routes. Instead of defining meta on the parent route, use the [index route][index-route]. This way you can avoid complex merge logic for things like the title. Otherwise you will need to find the parent title descriptor and replace it with the child's title. It's much easier to simply not need to override by using index routes.
 
-### Merging with Parent Meta
+### Merging with Parent `meta`
 
 Usually you only need to add meta to what the parent has already defined. You can merge parent meta with the spread operator and the [`matches`][matches] arg:
 
 ```tsx
-export const meta: V2_MetaFunction = ({ matches }) => {
+export const meta: MetaFunction = ({ matches }) => {
   let parentMeta = matches.flatMap(
     (match) => match.meta ?? []
   );
@@ -330,7 +365,7 @@ export const meta: V2_MetaFunction = ({ matches }) => {
 Note that this _will not_ override something like `title`. This is only additive. If the inherited route meta includes a `title` tag, you can override with `Array.prototype.filter`:
 
 ```tsx
-export const meta: V2_MetaFunction = ({ matches }) => {
+export const meta: MetaFunction = ({ matches }) => {
   let parentMeta = matches
     .flatMap((match) => match.meta ?? [])
     .filter((meta) => !("title" in meta));
@@ -338,7 +373,7 @@ export const meta: V2_MetaFunction = ({ matches }) => {
 };
 ```
 
-### Meta Merging helper
+### `meta` Merging helper
 
 If you can't avoid the merge problem with global meta or index routes, we've created a helper that you can put in your app that can override and append to parent meta easily.
 
@@ -356,3 +391,4 @@ If you can't avoid the merge problem with global meta or index routes, we've cre
 [url-params]: ../guides/routing#dynamic-segments
 [use-matches]: ../hooks/use-matches
 [merging-metadata-across-the-route-hierarchy]: #md-merging-with-parent-meta
+[links-export]: ./links
