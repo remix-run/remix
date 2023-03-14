@@ -671,23 +671,6 @@ describe("flatRoutes", () => {
       );
     });
 
-    test("nested index files", () => {
-      let testFiles = [
-        path.join("routes", "_index", "index.tsx"),
-        path.join("routes", "_index", "utils.ts"),
-      ];
-
-      // route manifest uses the full path
-      let fullPaths = testFiles.map((file) => path.join(APP_DIR, file));
-
-      let routeManifest = flatRoutesUniversal(APP_DIR, fullPaths);
-
-      let routes = Object.values(routeManifest);
-
-      expect(routes).toHaveLength(1);
-      expect(consoleError).not.toHaveBeenCalled();
-    });
-
     test("folder/route.tsx matching folder.tsx", () => {
       let testFiles = [
         path.join("routes", "dashboard", "route.tsx"),

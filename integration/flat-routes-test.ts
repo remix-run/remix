@@ -270,3 +270,45 @@ test.describe("emits warnings for route conflicts", async () => {
     expect(buildOutput).toContain(`⚠️ Route Path Collision: "/"`);
   });
 });
+
+test.describe("", () => {
+  let buildStdio = new PassThrough();
+  let buildOutput: string;
+
+  let originalConsoleLog = console.log;
+  let originalConsoleWarn = console.warn;
+  let originalConsoleError = console.error;
+
+  test.beforeAll(async () => {
+    console.log = () => {};
+    console.warn = () => {};
+    console.error = () => {};
+    await createFixtureProject({
+      buildStdio,
+      future: { v2_routeConvention: true },
+      files: {
+        "app/routes/_index/route.jsx": js``,
+        "app/routes/_index/utils.js": js``,
+      },
+    });
+
+    let chunks: Buffer[] = [];
+    buildOutput = await new Promise<string>((resolve, reject) => {
+      buildStdio.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      buildStdio.on("error", (err) => reject(err));
+      buildStdio.on("end", () =>
+        resolve(Buffer.concat(chunks).toString("utf8"))
+      );
+    });
+  });
+
+  test.afterAll(() => {
+    console.log = originalConsoleLog;
+    console.warn = originalConsoleWarn;
+    console.error = originalConsoleError;
+  });
+
+  test("doesn't emit a warning for nested index files with co-located files", () => {
+    expect(buildOutput).not.toContain(`Route Path Collision`);
+  });
+});
