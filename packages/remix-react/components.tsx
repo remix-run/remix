@@ -62,9 +62,12 @@ import {
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml, escapeHtml } from "./markup";
 import type {
-  RouteMatchWithMeta,
   V1_HtmlMetaDescriptor,
-  V2_HtmlMetaDescriptor,
+  V1_MetaFunction,
+  V2_MetaDescriptor,
+  V2_MetaFunction,
+  V2_MetaMatch,
+  V2_MetaMatches,
 } from "./routeModules";
 import type {
   Transition,
@@ -568,12 +571,11 @@ function V1Meta() {
     if (routeModule.meta) {
       let routeMeta =
         typeof routeModule.meta === "function"
-          ? routeModule.meta({
+          ? (routeModule.meta as V1_MetaFunction)({
               data,
               parentsData,
               params,
               location,
-              matches: undefined as any,
             })
           : routeModule.meta;
       if (routeMeta && Array.isArray(routeMeta)) {
@@ -651,39 +653,28 @@ function V1Meta() {
 
 function V2Meta() {
   let { routeModules } = useRemixContext();
-  let { matches, loaderData } = useDataRouterStateContext();
+  let { matches: _matches, loaderData } = useDataRouterStateContext();
   let location = useLocation();
 
-  let meta: V2_HtmlMetaDescriptor[] = [];
-  let leafMeta: V2_HtmlMetaDescriptor[] | null = null;
-  let parentsData: { [routeId: string]: AppData } = {};
-
-  let matchesWithMeta: RouteMatchWithMeta[] = matches.map((match) => ({
-    ...match,
-    meta: [],
-  }));
-
-  let index = -1;
-  for (let match of matches) {
-    index++;
-    let routeId = match.route.id;
+  let meta: V2_MetaDescriptor[] = [];
+  let leafMeta: V2_MetaDescriptor[] | null = null;
+  let matches: V2_MetaMatches = [];
+  for (let i = 0; i < _matches.length; i++) {
+    let _match = _matches[i];
+    let routeId = _match.route.id;
     let data = loaderData[routeId];
-    let params = match.params;
-
+    let params = _match.params;
     let routeModule = routeModules[routeId];
-
-    let routeMeta: V2_HtmlMetaDescriptor[] | V1_HtmlMetaDescriptor | undefined =
-      [];
+    let routeMeta: V2_MetaDescriptor[] | V1_HtmlMetaDescriptor | undefined = [];
 
     if (routeModule?.meta) {
       routeMeta =
         typeof routeModule.meta === "function"
-          ? routeModule.meta({
+          ? (routeModule.meta as V2_MetaFunction)({
               data,
-              parentsData,
               params,
               location,
-              matches: matchesWithMeta,
+              matches,
             })
           : routeModule.meta;
     } else if (leafMeta) {
@@ -697,7 +688,7 @@ function V2Meta() {
     if (!Array.isArray(routeMeta)) {
       throw new Error(
         "The `v2_meta` API is enabled in the Remix config, but the route at " +
-          match.route.path +
+          _match.route.path +
           " returns an invalid value. In v2, all route meta functions must " +
           "return an array of meta objects." +
           // TODO: Add link to the docs once they are written
@@ -706,9 +697,28 @@ function V2Meta() {
       );
     }
 
-    matchesWithMeta[index].meta = routeMeta;
+    let match: V2_MetaMatch = {
+      id: routeId,
+      data,
+      meta: routeMeta,
+      params: _match.params,
+      pathname: _match.pathname,
+      handle: _match.route.handle,
+      // TODO: Remove in v2. Only leaving it for now because we used it in
+      // examples and there's no reason to crash someone's build for one line.
+      // They'll get a TS error from the type updates anyway.
+      // @ts-expect-error
+      get route() {
+        console.warn(
+          "The meta function in " +
+            _match.route.path +
+            " accesses the `route` property on `matches`. This is deprecated and will be removed in Remix version 2. See"
+        );
+        return _match.route;
+      },
+    };
+    matches[i] = match;
     meta = routeMeta;
-    parentsData[routeId] = data;
     leafMeta = meta;
   }
 

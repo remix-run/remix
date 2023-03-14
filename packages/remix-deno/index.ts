@@ -60,6 +60,11 @@ export type {
   SerializeFrom,
   ServerBuild,
   ServerEntryModule,
+  V2_ServerRuntimeMetaArgs as V2_MetaArgs,
+  V2_ServerRuntimeMetaDescriptor as V2_MetaDescriptor,
+  // TODO: Remove in v2
+  V2_ServerRuntimeMetaDescriptor as V2_HtmlMetaDescriptor,
+  V2_ServerRuntimeMetaFunction as V2_MetaFunction,
   Session,
   SessionData,
   SessionIdStorageStrategy,
@@ -70,6 +75,4 @@ export type {
   UnsignFunction,
   UploadHandler,
   UploadHandlerPart,
-  V2_HtmlMetaDescriptor,
-  V2_MetaFunction,
 } from "@remix-run/server-runtime";

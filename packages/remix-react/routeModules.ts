@@ -5,6 +5,7 @@ import type {
   Location,
   ShouldRevalidateFunction,
 } from "react-router-dom";
+import type { LoaderFunction, SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
@@ -25,7 +26,7 @@ export interface RouteModule {
     | V1_MetaFunction
     | V1_HtmlMetaDescriptor
     | V2_MetaFunction
-    | V2_HtmlMetaDescriptor[];
+    | V2_MetaDescriptor[];
   shouldRevalidate?: ShouldRevalidateFunction;
 }
 
@@ -84,17 +85,47 @@ export interface V1_MetaFunction {
 export type MetaFunction = V1_MetaFunction;
 
 export interface RouteMatchWithMeta extends DataRouteMatch {
-  meta: V2_HtmlMetaDescriptor[];
+  meta: V2_MetaDescriptor[];
 }
 
-export interface V2_MetaFunction {
-  (args: {
-    data: AppData;
-    parentsData: RouteData;
-    params: Params;
-    location: Location;
-    matches: RouteMatchWithMeta[];
-  }): V2_HtmlMetaDescriptor[] | undefined;
+export interface V2_MetaMatch<
+  RouteId extends string = string,
+  Loader extends LoaderFunction | unknown = unknown
+> {
+  id: RouteId;
+  pathname: DataRouteMatch["pathname"];
+  data: Loader extends LoaderFunction ? SerializeFrom<Loader> : unknown;
+  handle?: unknown;
+  params: DataRouteMatch["params"];
+  meta: V2_MetaDescriptor[];
+}
+
+export type V2_MetaMatches<
+  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+> = Array<
+  {
+    [K in keyof MatchLoaders]: V2_MetaMatch<
+      Exclude<K, number | symbol>,
+      MatchLoaders[K]
+    >;
+  }[keyof MatchLoaders]
+>;
+
+export interface V2_MetaArgs<
+  Loader extends LoaderFunction | unknown = unknown,
+  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+> {
+  data: Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData;
+  params: Params;
+  location: Location;
+  matches: V2_MetaMatches<MatchLoaders>;
+}
+
+export interface V2_MetaFunction<
+  Loader extends LoaderFunction | unknown = unknown,
+  MatchLoaders extends Record<string, unknown> = Record<string, unknown>
+> {
+  (args: V2_MetaArgs<Loader, MatchLoaders>): V2_MetaDescriptor[] | undefined;
 }
 
 /**
@@ -118,7 +149,7 @@ export interface V1_HtmlMetaDescriptor {
 // TODO: Replace in v2
 export type HtmlMetaDescriptor = V1_HtmlMetaDescriptor;
 
-export type V2_HtmlMetaDescriptor =
+export type V2_MetaDescriptor =
   | { charSet: "utf-8" }
   | { title: string }
   | { name: string; content: string }
