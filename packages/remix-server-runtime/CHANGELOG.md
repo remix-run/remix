@@ -1,5 +1,36 @@
 # `@remix-run/server-runtime`
 
+## 1.14.2
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.14.2) for an overview of all changes in v1.14.2.
+
+## 1.14.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.14.1) for an overview of all changes in v1.14.1.
+
+## 1.14.0
+
+### Minor Changes
+
+- Hot Module Replacement and Hot Data Revalidation ([#5259](https://github.com/remix-run/remix/pull/5259))
+  - Requires `unstable_dev` future flag to be enabled
+  - HMR provided through React Refresh
+  - Features:
+    - HMR for component and style changes
+    - HDR when loaders for current route change
+  - Known limitations for MVP:
+    - Only implemented for React via React Refresh
+    - No `import.meta.hot` API exposed yet
+    - Revalidates _all_ loaders on route when loader changes are detected
+    - Loader changes do not account for imported dependencies changing
+
+### Patch Changes
+
+- Sync `FutureConfig` interface between packages ([#5398](https://github.com/remix-run/remix/pull/5398))
+- Updated dependencies:
+  - `@remix-run/router@1.3.3`
+  - `react-router-dom@8.6.2`
+
 ## 1.13.0
 
 ### Minor Changes
@@ -24,6 +55,8 @@
 - Bump React Router dependencies to the latest version. [See the release notes for more details.](https://github.com/remix-run/react-router/releases/tag/react-router%406.8.0) ([#5242](https://github.com/remix-run/remix/pull/5242))
 
 ## 1.11.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.11.1) for an overview of all changes in v1.11.1.
 
 ## 1.11.0
 

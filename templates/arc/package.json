@@ -5,7 +5,7 @@
     "build": "remix build",
     "dev:remix": "remix watch",
     "dev:arc": "cross-env NODE_ENV=development arc sandbox",
-    "dev": "remix build && run-p \"dev:*\"",
+    "dev": "npm-run-all build --parallel \"dev:*\"",
     "start": "cross-env NODE_ENV=production arc sandbox",
     "typecheck": "tsc"
   },

@@ -3,4 +3,4 @@
 "@remix-run/dev": patch
 ---
 
-Add file loader for importing `.csv` files
+use path.resolve when re-exporting entry.client

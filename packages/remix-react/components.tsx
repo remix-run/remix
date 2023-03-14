@@ -75,6 +75,7 @@ import type {
   TransitionStates,
 } from "./transition";
 import { IDLE_TRANSITION, IDLE_FETCHER } from "./transition";
+import { warnOnce } from "./warnings";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -601,7 +602,7 @@ function V1Meta() {
         }
 
         if (["charset", "charSet"].includes(name)) {
-          return <meta key="charset" charSet={value as string} />;
+          return <meta key="charSet" charSet={value as string} />;
         }
 
         if (name === "title") {
@@ -718,24 +719,59 @@ function V2Meta() {
           return null;
         }
 
+        if ("tagName" in metaProps) {
+          let tagName = metaProps.tagName;
+          delete metaProps.tagName;
+          if (!isValidMetaTag(tagName)) {
+            console.warn(
+              `A meta object uses an invalid tagName: ${tagName}. Expected either 'link' or 'meta'`
+            );
+            return null;
+          }
+          let Comp = tagName;
+          return <Comp key={JSON.stringify(metaProps)} {...metaProps} />;
+        }
+
         if ("title" in metaProps) {
           return <title key="title">{String(metaProps.title)}</title>;
         }
 
-        if ("charSet" in metaProps || "charset" in metaProps) {
-          // TODO: We normalize this for the user in v1, but should we continue
-          // to do that? Seems like a nice convenience IMO.
+        if ("charset" in metaProps) {
+          metaProps.charSet ??= metaProps.charset;
+          delete metaProps.charset;
+        }
+
+        if ("charSet" in metaProps && metaProps.charSet != null) {
+          return typeof metaProps.charSet === "string" ? (
+            <meta key="charSet" charSet={metaProps.charSet} />
+          ) : null;
+        }
+
+        if ("script:ld+json" in metaProps) {
+          let json: string | null = null;
+          try {
+            json = JSON.stringify(metaProps["script:ld+json"]);
+          } catch (err) {}
           return (
-            <meta
-              key="charset"
-              charSet={metaProps.charSet || (metaProps as any).charset}
-            />
+            json != null && (
+              <script
+                key="script:ld+json"
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                  __html: JSON.stringify(metaProps["script:ld+json"]),
+                }}
+              />
+            )
           );
         }
         return <meta key={JSON.stringify(metaProps)} {...metaProps} />;
       })}
     </>
   );
+}
+
+function isValidMetaTag(tagName: unknown): tagName is "meta" | "link" {
+  return typeof tagName === "string" && /^(meta|link)$/.test(tagName);
 }
 
 export function Meta() {
@@ -1141,18 +1177,22 @@ export interface RouteMatch {
 export function useMatches(): RouteMatch[] {
   let { routeModules } = useRemixContext();
   let matches = useMatchesRR();
-  return matches.map((match) => {
-    let remixMatch: RouteMatch = {
-      id: match.id,
-      pathname: match.pathname,
-      params: match.params,
-      data: match.data,
-      // Need to grab handle here since we don't have it at client-side route
-      // creation time
-      handle: routeModules[match.id].handle,
-    };
-    return remixMatch;
-  });
+  return React.useMemo(
+    () =>
+      matches.map((match) => {
+        let remixMatch: RouteMatch = {
+          id: match.id,
+          pathname: match.pathname,
+          params: match.params,
+          data: match.data,
+          // Need to grab handle here since we don't have it at client-side route
+          // creation time
+          handle: routeModules[match.id].handle,
+        };
+        return remixMatch;
+      }),
+    [matches, routeModules]
+  );
 }
 
 /**
@@ -1177,10 +1217,22 @@ export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
  * Returns everything you need to know about a page transition to build pending
  * navigation indicators and optimistic UI on data mutations.
  *
+ * @deprecated in favor of useNavigation
+ *
  * @see https://remix.run/hooks/use-transition
  */
 export function useTransition(): Transition {
   let navigation = useNavigation();
+
+  React.useEffect(() => {
+    warnOnce(
+      false,
+      "⚠️ DEPRECATED: The `useTransition` hook has been deprecated in favor of " +
+        "`useNavigation` and will be removed in Remix v2.  Please update your " +
+        "code to leverage `useNavigation`.\n\nSee https://remix.run/docs/hooks/use-transition " +
+        "and https://remix.run/docs/hooks/use-navigation for more information."
+    );
+  }, []);
 
   return React.useMemo(
     () => convertNavigationToTransition(navigation),
@@ -1352,8 +1404,8 @@ function convertNavigationToTransition(navigation: Navigation): Transition {
  */
 export function useFetchers(): Fetcher[] {
   let fetchers = useFetchersRR();
-  return fetchers.map((f) =>
-    convertRouterFetcherToRemixFetcher({
+  return fetchers.map((f) => {
+    let fetcher = convertRouterFetcherToRemixFetcher({
       state: f.state,
       data: f.data,
       formMethod: f.formMethod,
@@ -1361,8 +1413,10 @@ export function useFetchers(): Fetcher[] {
       formData: f.formData,
       formEncType: f.formEncType,
       " _hasFetcherDoneAnything ": f[" _hasFetcherDoneAnything "],
-    })
-  );
+    });
+    addFetcherDeprecationWarnings(fetcher);
+    return fetcher;
+  });
 }
 
 export type FetcherWithComponents<TData> = Fetcher<TData> & {
@@ -1394,13 +1448,61 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
       formEncType: fetcherRR.formEncType,
       " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
     });
-    return {
+    let fetcherWithComponents = {
       ...remixFetcher,
       load: fetcherRR.load,
       submit: fetcherRR.submit,
       Form: fetcherRR.Form,
     };
+    addFetcherDeprecationWarnings(fetcherWithComponents);
+    return fetcherWithComponents;
   }, [fetcherRR]);
+}
+
+function addFetcherDeprecationWarnings(fetcher: Fetcher) {
+  let type: Fetcher["type"] = fetcher.type;
+  Object.defineProperty(fetcher, "type", {
+    get() {
+      warnOnce(
+        false,
+        "⚠️ DEPRECATED: The `useFetcher().type` field has been deprecated and " +
+          "will be removed in Remix v2.  Please update your code to rely on " +
+          "`fetcher.state`.\n\nSee https://remix.run/docs/hooks/use-fetcher for " +
+          "more information."
+      );
+      return type;
+    },
+    set(value: Fetcher["type"]) {
+      // Devs should *not* be doing this but we don't want to break their
+      // current app if they are
+      type = value;
+    },
+    // These settings should make this behave like a normal object `type` field
+    configurable: true,
+    enumerable: true,
+  });
+
+  let submission: Fetcher["submission"] = fetcher.submission;
+  Object.defineProperty(fetcher, "submission", {
+    get() {
+      warnOnce(
+        false,
+        "⚠️ DEPRECATED: The `useFetcher().submission` field has been deprecated and " +
+          "will be removed in Remix v2.  The submission fields now live directly " +
+          "on the fetcher (`fetcher.formData`).\n\n" +
+          "See https://remix.run/docs/hooks/use-fetcher for more information."
+      );
+      return submission;
+    },
+    set(value: Fetcher["submission"]) {
+      // Devs should *not* be doing this but we don't want to break their
+      // current app if they are
+      submission = value;
+    },
+    // These settings should make this behave like a normal object `type` field
+    configurable: true,
+    enumerable: true,
+  });
 }
 
 function convertRouterFetcherToRemixFetcher(

@@ -1,5 +1,41 @@
 # `@remix-run/react`
 
+## 1.14.2
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.14.2) for an overview of all changes in v1.14.2.
+
+## 1.14.1
+
+### Patch Changes
+
+- Deprecate `useTransition` in favor of `useNavigation` ([#5687](https://github.com/remix-run/remix/pull/5687))
+- Memoize return value of `useMatches` ([#5603](https://github.com/remix-run/remix/pull/5603))
+
+## 1.14.0
+
+### Minor Changes
+
+- Hot Module Replacement and Hot Data Revalidation ([#5259](https://github.com/remix-run/remix/pull/5259))
+  - Requires `unstable_dev` future flag to be enabled
+  - HMR provided through React Refresh
+  - Features:
+    - HMR for component and style changes
+    - HDR when loaders for current route change
+  - Known limitations for MVP:
+    - Only implemented for React via React Refresh
+    - No `import.meta.hot` API exposed yet
+    - Revalidates _all_ loaders on route when loader changes are detected
+    - Loader changes do not account for imported dependencies changing
+
+### Patch Changes
+
+- Remove duplicate manifest imports ([#5534](https://github.com/remix-run/remix/pull/5534))
+- Ensure types for fetchers always include `form*` submission fields ([#5476](https://github.com/remix-run/remix/pull/5476))
+- Sync `FutureConfig` interface between packages ([#5398](https://github.com/remix-run/remix/pull/5398))
+- Updated dependencies:
+  - `@remix-run/router@1.3.3`
+  - `react-router-dom@8.6.2`
+
 ## 1.13.0
 
 ### Minor Changes
@@ -27,6 +63,8 @@
 - Added support for `unstable_useBlocker` and `unstable_usePrompt` from React Router ([#5151](https://github.com/remix-run/remix/pull/5151))
 
 ## 1.11.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.11.1) for an overview of all changes in v1.11.1.
 
 ## 1.11.0
 

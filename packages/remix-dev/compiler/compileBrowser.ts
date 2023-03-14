@@ -14,6 +14,7 @@ import { getAppDependencies } from "./dependencies";
 import { loaders } from "./loaders";
 import type { CompileOptions } from "./options";
 import { browserRouteModulesPlugin } from "./plugins/browserRouteModulesPlugin";
+import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "./plugins/browserRouteModulesPlugin_v2";
 import { cssFilePlugin } from "./plugins/cssFilePlugin";
 import { deprecatedRemixPackagePlugin } from "./plugins/deprecatedRemixPackagePlugin";
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
@@ -71,11 +72,12 @@ const writeAssetsManifest = async (
   );
 };
 
-const isCssBundlingEnabled = (config: RemixConfig) =>
-  config.future.unstable_cssModules ||
-  config.future.unstable_cssSideEffectImports ||
-  config.future.unstable_vanillaExtract;
-
+const isCssBundlingEnabled = (config: RemixConfig): boolean =>
+  Boolean(
+    config.future.unstable_cssModules ||
+      config.future.unstable_cssSideEffectImports ||
+      config.future.unstable_vanillaExtract
+  );
 const createEsbuildConfig = (
   build: "app" | "css",
   config: RemixConfig,
@@ -122,7 +124,9 @@ const createEsbuildConfig = (
     cssFilePlugin({ config, options }),
     urlImportsPlugin(),
     mdxPlugin(config),
-    browserRouteModulesPlugin(config, /\?browser$/, onLoader, mode),
+    config.future.unstable_dev
+      ? browserRouteModulesPlugin_v2(config, /\?browser$/, onLoader, mode)
+      : browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
   ].filter(isNotNull);

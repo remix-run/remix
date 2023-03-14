@@ -2,7 +2,6 @@ import path from "path";
 import { sync as spawnSync } from "cross-spawn";
 import fse from "fs-extra";
 import toml from "@iarna/toml";
-import { createApp } from "@remix-run/dev";
 
 import {
   addCypress,
@@ -20,15 +19,6 @@ let APP_NAME = getAppName("fly");
 let PROJECT_DIR = getAppDirectory(APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:3000";
 
-async function createNewApp() {
-  await createApp({
-    appTemplate: "fly",
-    installDeps: false,
-    useTypeScript: true,
-    projectDir: PROJECT_DIR,
-  });
-}
-
 let spawnOpts = getSpawnOpts(PROJECT_DIR, {
   // these would usually be here by default, but I'd rather be explicit, so there is no spreading internally
   FLY_API_TOKEN: process.env.FLY_API_TOKEN,
@@ -36,7 +26,19 @@ let spawnOpts = getSpawnOpts(PROJECT_DIR, {
 
 async function createAndDeployApp() {
   // create a new remix app
-  await createNewApp();
+  spawnSync(
+    "npx",
+    [
+      "--yes",
+      "create-remix@latest",
+      PROJECT_DIR,
+      "--template",
+      "fly",
+      "--no-install",
+      "--typescript",
+    ],
+    getSpawnOpts()
+  );
 
   // validate dependencies are available
   let [valid, errors] = await validatePackageVersions(PROJECT_DIR);
