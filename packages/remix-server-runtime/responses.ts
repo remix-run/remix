@@ -15,22 +15,16 @@ export type TypedDeferredData<Data extends Record<string, unknown>> = Pick<
   data: Data;
 };
 
-// TODO: The RR version of this is the same minus the generic.  Should we add
-// that over there and remove this?
 export type DeferFunction = <Data extends Record<string, unknown>>(
   data: Data,
   init?: number | ResponseInit
 ) => TypedDeferredData<Data>;
 
-// TODO: The RR version of this is identical except it's generic doesn't
-// `extends unknown`.  Should we add that over there and remove this?
 export type JsonFunction = <Data extends unknown>(
   data: Data,
   init?: number | ResponseInit
 ) => TypedResponse<Data>;
 
-// must be a type since this is a subtype of response
-// interfaces must conform to the types they extend
 export type TypedResponse<T extends unknown = unknown> = Omit<
   Response,
   "json"
@@ -68,8 +62,6 @@ export const defer: DeferFunction = (data, init = {}) => {
   }) as TypedDeferredData<typeof data>;
 };
 
-// TODO: The RR version is identical minus `TypedResponse` and it just returns
-// a `Response`.  Should we add that over there?
 export type RedirectFunction = (
   url: string,
   init?: number | ResponseInit
@@ -107,7 +99,6 @@ export function isResponse(value: any): value is Response {
   );
 }
 
-//TODO(v2): Can we leverage this stuff from RR?
 const redirectStatusCodes = new Set([301, 302, 303, 307, 308]);
 export function isRedirectStatusCode(statusCode: number): boolean {
   return redirectStatusCodes.has(statusCode);

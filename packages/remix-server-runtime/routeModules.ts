@@ -16,8 +16,6 @@ export interface RouteModules<RouteModule> {
  * The arguments passed to ActionFunction and LoaderFunction.
  *
  * @deprecated in favor of React Router `LoaderFunctionArgs` and `ActionFunctionArgs`
- * TODO: In RR context is optional and typed as `any` - can we drop this in v2
- * in favor of that?
  */
 export interface DataFunctionArgs {
   request: Request;
