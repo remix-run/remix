@@ -194,7 +194,7 @@ const title = {
 
 This is a list of the current route matches. You have access to many things, particularly the meta from the parent matches and data.
 
-The interface for `matches` is similar to the return value of [`useMatches`][use-matches], but each match will include the output of its `meta` function. This is useful for [merging metadata across the route hierarchy](#md-merging-with-parent-meta).
+The interface for `matches` is similar to the return value of [`useMatches`][use-matches], but each match will include the output of its `meta` function. This is useful for [merging metadata across the route hierarchy][merging-metadata-across-the-route-hierarchy].
 
 ## `data`
 
@@ -355,3 +355,4 @@ If you can't avoid the merge problem with global meta or index routes, we've cre
 [merge-meta]: https://gist.github.com/ryanflorence/ec1849c6d690cfbffcb408ecd633e069
 [url-params]: ../guides/routing#dynamic-segments
 [use-matches]: ../hooks/use-matches
+[merging-metadata-across-the-route-hierarchy]: #md-merging-with-parent-meta
