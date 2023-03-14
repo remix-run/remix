@@ -39,7 +39,6 @@ export type VanillaExtractOptions = {
 };
 
 interface FutureConfig {
-  unstable_cssModules: boolean;
   unstable_cssSideEffectImports: boolean;
   unstable_dev: boolean | Dev;
   unstable_postcss: boolean;
@@ -575,7 +574,6 @@ export async function readConfig(
   }
 
   let future: FutureConfig = {
-    unstable_cssModules: appConfig.future?.unstable_cssModules === true,
     unstable_cssSideEffectImports:
       appConfig.future?.unstable_cssSideEffectImports === true,
     unstable_dev: appConfig.future?.unstable_dev ?? false,
