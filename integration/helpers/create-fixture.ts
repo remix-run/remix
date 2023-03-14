@@ -210,7 +210,6 @@ function build(
     buildArgs.push("--sourcemap");
   }
 
-  console.log("Building with NODE_ENV =", mode || ServerMode.Production);
   let buildSpawn = spawnSync("node", buildArgs, {
     cwd: projectDir,
     env: {
