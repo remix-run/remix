@@ -21,5 +21,7 @@
     "@remix-run/testing": "1.14.1",
     "@remix-run/vercel": "1.14.1"
   },
-  "changesets": []
+  "changesets": [
+    "premature-deprecations"
+  ]
 }
