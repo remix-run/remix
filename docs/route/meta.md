@@ -7,7 +7,7 @@ title: meta
 The `meta` export allows you to add metadata HTML tags for every route in your app. These tags are important for things like search engine optimization (SEO) and browser directives for determining certain behaviors. They can also be used by social media sites to display rich previews of your app.
 
 ```tsx
-import type { MetaFunction } from "@remix-run/node";
+import type { MetaFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const meta: MetaFunction = () => {
   return [
