@@ -672,12 +672,15 @@ describe("flatRoutes", () => {
     });
 
     test("nested index files", () => {
-      let testFiles = ["routes/_index/index.tsx", "routes/_index/utils.ts"];
+      let testFiles = [
+        path.join("routes", "_index", "index.tsx"),
+        path.join("routes", "_index", "utils.ts"),
+      ];
 
-      let routeManifest = flatRoutesUniversal(
-        APP_DIR,
-        testFiles.map((file) => path.join(APP_DIR, normalizePath(file)))
-      );
+      // route manifest uses the full path
+      let fullPaths = testFiles.map((file) => path.join(APP_DIR, file));
+
+      let routeManifest = flatRoutesUniversal(APP_DIR, fullPaths);
 
       let routes = Object.values(routeManifest);
 
