@@ -150,25 +150,32 @@ export const meta: V2_MetaFunction = () => {
 };
 ```
 
-Meta functions return an array of `V2_MetaDescriptor` objects. These objects map one-to-one with normal HTML meta tags:
+Meta functions return an array of `V2_MetaDescriptor` objects. These objects map one-to-one with HTML tags. So this meta function:
 
 ```tsx
-const description = {
-  name: "description",
-  content: "This is my website description",
+export const meta: V2_MetaFunction = () => {
+  return [
+    {
+      title: "Very cool app | Remix",
+    },
+    {
+      property: "og:title",
+      content: "Very cool app",
+    },
+    {
+      name: "description",
+      content: "This app is the best",
+    },
+  ];
 };
-// becomes
-<meta
-  name="description"
-  content="This is my website description"
-/>;
+```
 
-const ogTitle = {
-  property: "og:title",
-  content: "My Website Title",
-};
-// becomes
-<meta property="og:title" content="My Website Title" />;
+…produces this HTML:
+
+```html
+<title>Very cool app | Remix</title>
+<meta property="og:title" content="Very cool app" />;
+<meta name="description" content="This app is the best" />
 ```
 
 The one exception is the `title` tag since it's not a `<meta>` tag but acts as one.
