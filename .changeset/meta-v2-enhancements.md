@@ -14,15 +14,15 @@ We have made a few changes to the API for route module `meta` functions when usi
     ```tsx
     // before
     export function meta({ parentsData }) {
-      return {
-        title: parentsData['routes/some-route'].title,
-      };
+      return [
+        { title: parentsData['routes/some-route'].title },
+      ];
     };
     // after
     export function meta({ matches }) {
-      return {
-        title: matches.find((match) => match.id === 'routes/some-route').data.title,
-      };
+      return [
+        { title: matches.find((match) => match.id === 'routes/some-route').data.title },
+      ];
     };
     ```
   - The `route` property on route matches has been removed, as relevant match data is attached directly to the match object
