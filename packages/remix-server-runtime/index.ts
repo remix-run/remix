@@ -65,6 +65,7 @@ export type {
   SerializeFrom,
   ServerBuild,
   ServerEntryModule,
+  V2_ServerRuntimeMetaArgs,
   V2_ServerRuntimeMetaDescriptor,
   V2_ServerRuntimeMetaFunction,
   Session,

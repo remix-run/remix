@@ -135,7 +135,7 @@ module.exports = {
 The meta export allows you to add `<meta>` tags for every route in your app, including nested routes. These tags are important for SEO, browser behavior, and more.
 
 ```tsx
-import type { V2_MetaFunction } from "@remix-run/react";
+import type { V2_MetaFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const meta: V2_MetaFunction = () => {
   return [

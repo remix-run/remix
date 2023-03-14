@@ -47,6 +47,7 @@ export type {
   MetaFunction,
   RouteComponent,
   RouteHandle,
+  V2_ServerRuntimeMetaArgs,
   V2_ServerRuntimeMetaDescriptor,
   V2_ServerRuntimeMetaFunction,
 } from "./routeModules";
