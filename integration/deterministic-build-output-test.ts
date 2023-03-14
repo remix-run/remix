@@ -65,7 +65,7 @@ test("builds deterministically under different paths", async () => {
           <circle cx="50" cy="50" r="50" fill="coral" />
         </svg>
       `,
-      "app/styles/vanilla.css.ts": css`
+      "app/styles/vanilla.css.ts": js`
         import { style } from "@vanilla-extract/css";
         import { chocolate } from "./chocolate.css";
         import imageUrl from "~/images/foo.svg";
@@ -80,7 +80,7 @@ test("builds deterministically under different paths", async () => {
           }
         ]);
       `,
-      "app/styles/chocolate.css.ts": css`
+      "app/styles/chocolate.css.ts": js`
         import { style } from "@vanilla-extract/css";
 
         export const chocolate = style({
@@ -125,7 +125,6 @@ test("builds Vanilla Extract files deterministically under different paths with 
     },
     files: {
       "app/routes/foo.tsx": js`
-        export * from "~/foo/bar.server";
         import { vanilla } from "~/styles/vanilla.css";
         export default () => <div className={vanilla}>YAY</div>;
       `,
@@ -134,7 +133,7 @@ test("builds Vanilla Extract files deterministically under different paths with 
           <circle cx="50" cy="50" r="50" fill="coral" />
         </svg>
       `,
-      "app/styles/vanilla.css.ts": css`
+      "app/styles/vanilla.css.ts": js`
         import { style } from "@vanilla-extract/css";
         import { chocolate } from "./chocolate.css";
         import imageUrl from "~/images/foo.svg";
@@ -149,7 +148,7 @@ test("builds Vanilla Extract files deterministically under different paths with 
           }
         ]);
       `,
-      "app/styles/chocolate.css.ts": css`
+      "app/styles/chocolate.css.ts": js`
         import { style } from "@vanilla-extract/css";
 
         export const chocolate = style({
