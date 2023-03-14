@@ -2,7 +2,6 @@ import path from "path";
 import { sync as spawnSync } from "cross-spawn";
 import fse from "fs-extra";
 import fetch from "node-fetch";
-import { createApp } from "@remix-run/dev";
 import PackageJson from "@npmcli/package-json";
 
 import {
@@ -21,18 +20,21 @@ let APP_NAME = getAppName("cf-pages");
 let PROJECT_DIR = getAppDirectory(APP_NAME);
 let CYPRESS_DEV_URL = "http://localhost:8788";
 
-async function createNewApp() {
-  await createApp({
-    appTemplate: "cloudflare-pages",
-    installDeps: false,
-    useTypeScript: true,
-    projectDir: PROJECT_DIR,
-  });
-}
-
 async function createAndDeployApp() {
   // create a new remix app
-  await createNewApp();
+  spawnSync(
+    "npx",
+    [
+      "--yes",
+      "create-remix@latest",
+      PROJECT_DIR,
+      "--template",
+      "cloudflare-pages",
+      "--no-install",
+      "--typescript",
+    ],
+    getSpawnOpts()
+  );
 
   // validate dependencies are available
   let [valid, errors] = await validatePackageVersions(PROJECT_DIR);

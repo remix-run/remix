@@ -43,13 +43,17 @@ type Dev = {
   rebuildPollIntervalMs?: number;
 };
 
+export type VanillaExtractOptions = {
+  cache?: boolean;
+};
+
 interface FutureConfig {
   unstable_cssModules: boolean;
   unstable_cssSideEffectImports: boolean;
   unstable_dev: boolean | Dev;
   unstable_postcss: boolean;
   unstable_tailwind: boolean;
-  unstable_vanillaExtract: boolean;
+  unstable_vanillaExtract: boolean | VanillaExtractOptions;
   v2_errorBoundary: boolean;
   v2_meta: boolean;
   v2_routeConvention: boolean;
@@ -401,6 +405,10 @@ export async function readConfig(
     warnOnce(serverBuildTargetWarning, "v2_serverBuildTarget");
   }
 
+  if (!appConfig.future?.v2_errorBoundary) {
+    warnOnce(errorBoundaryWarning, "v2_errorBoundary");
+  }
+
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
     appConfig.serverBuildTarget ?? ""
   );
@@ -622,7 +630,7 @@ export async function readConfig(
     unstable_dev: appConfig.future?.unstable_dev ?? false,
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
-    unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract === true,
+    unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract ?? false,
     v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
     v2_meta: appConfig.future?.v2_meta === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
@@ -734,3 +742,11 @@ let listFormat = new Intl.ListFormat("en", {
 export let serverBuildTargetWarning = `⚠️ DEPRECATED: The "serverBuildTarget" config option is deprecated. Use a combination of "publicPath", "serverBuildPath", "serverConditions", "serverDependenciesToBundle", "serverMainFields", "serverMinify", "serverModuleFormat" and/or "serverPlatform" instead.`;
 
 export let flatRoutesWarning = `⚠️ DEPRECATED: The old nested folders route convention has been deprecated in favor of "flat routes".  Please enable the new routing convention via the \`future.v2_routeConvention\` flag in your \`remix.config.js\` file.  For more information, please see https://remix.run/docs/en/main/file-conventions/route-files-v2.`;
+
+export const errorBoundaryWarning =
+  "⚠️ DEPRECATED: The separation of `CatchBoundary` and `ErrorBoundary` has " +
+  "been deprecated and Remix v2 will use a singular `ErrorBoundary` for " +
+  "all thrown values (`Response` and `Error`). Please migrate to the new " +
+  "behavior in Remix v1 via the `future.v2_errorBoundary` flag in your " +
+  "`remix.config.js` file. For more information, see " +
+  "https://remix.run/docs/route/error-boundary-v2";
