@@ -314,7 +314,7 @@ Given the following URLs, the search params would be parsed as follows:
 
 ### Data Reloads
 
-When multiple nested routes are rendering and the search params change, all of the routes will be reloaded (instead of just the new or changed routes). This is because search params are a cross-cutting concern and could effect any loader. If you would like to prevent some of your routes from reloading in this scenario, use [shouldRevalidate][should-revalidate].
+When multiple nested routes are rendering and the search params change, all of the routes will be reloaded (instead of just the new or changed routes). This is because search params are a cross-cutting concern and could affect any loader. If you would like to prevent some of your routes from reloading in this scenario, use [shouldRevalidate][should-revalidate].
 
 ### Search Params in Components
 
