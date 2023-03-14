@@ -1,6 +1,8 @@
 # `@remix-run/react`
 
-## 1.14.2-pre.0
+## 1.14.2
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.14.2) for an overview of all changes in v1.14.2.
 
 ## 1.14.1
 
@@ -61,6 +63,8 @@
 - Added support for `unstable_useBlocker` and `unstable_usePrompt` from React Router ([#5151](https://github.com/remix-run/remix/pull/5151))
 
 ## 1.11.1
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.11.1) for an overview of all changes in v1.11.1.
 
 ## 1.11.0
 
