@@ -3581,9 +3581,9 @@
   integrity sha512-BEO6al7BYqcnfX15W2cnGR+Q566ACXAT9UQykORCWW80lmkpWsnEob6zJS1ZVBKsSJC8+7vJkHwlp+lXG1UCdw==
 
 "@xmldom/xmldom@^0.7.5":
-  version "0.7.5"
-  resolved "https://registry.npmjs.org/@xmldom/xmldom/-/xmldom-0.7.5.tgz"
-  integrity sha512-V3BIhmY36fXZ1OtVcI9W+FxQqxVLsPKcNjWigIaa81dLC9IolJl5Mt4Cvhmr0flUnjSpTdrbMTSbXqYqV5dT6A==
+  version "0.7.9"
+  resolved "https://registry.npmjs.org/@xmldom/xmldom/-/xmldom-0.7.9.tgz#7f9278a50e737920e21b297b8a35286e9942c056"
+  integrity sha512-yceMpm/xd4W2a85iqZyO09gTnHvXF6pyiWjD2jcOJs7hRoZtNNOO1eJlhHj1ixA+xip2hOyGn+LgcvLCMo5zXA==
 
 "@yarnpkg/lockfile@^1.1.0":
   version "1.1.0"
