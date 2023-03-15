@@ -21,7 +21,6 @@ test.describe("Tailwind", () => {
         v2_routeConvention: true,
         // Enable all CSS future flags to
         // ensure features don't clash
-        unstable_cssModules: true,
         unstable_cssSideEffectImports: true,
         unstable_postcss: true,
         unstable_tailwind: true,

@@ -63,7 +63,6 @@ export function createRemixStub(routes: (RouteObject | DataRouteObject)[]) {
     if (remixContextRef.current == null) {
       remixContextRef.current = {
         future: {
-          unstable_cssModules: false,
           unstable_cssSideEffectImports: false,
           unstable_dev: false,
           unstable_postcss: false,
