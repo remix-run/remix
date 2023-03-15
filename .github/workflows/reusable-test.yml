@@ -96,8 +96,8 @@ jobs:
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
-      - name: 📥 Install Playwright
-        run: npx playwright install --with-deps
+      - name: 📥 Install Playwright (${{ matrix.browser }})
+        run: npx playwright install ${{ matrix.browser }} --with-deps
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: "yarn test:integration --project=${{ matrix.browser }}"
@@ -127,8 +127,8 @@ jobs:
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
-      - name: 📥 Install Playwright
-        run: npx playwright install --with-deps
+      - name: 📥 Install Playwright (${{ matrix.browser }})
+        run: npx playwright install ${{ matrix.browser }} --with-deps
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: "yarn test:integration --project=${{ matrix.browser }}"
@@ -158,8 +158,8 @@ jobs:
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
 
-      - name: 📥 Install Playwright
-        run: npx playwright install --with-deps
+      - name: 📥 Install Playwright (${{ matrix.browser }})
+        run: npx playwright install ${{ matrix.browser }} --with-deps
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: "yarn test:integration --project=${{ matrix.browser }}"
