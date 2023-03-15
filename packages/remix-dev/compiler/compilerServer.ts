@@ -53,9 +53,7 @@ const createEsbuildConfig = (
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    config.future.unstable_cssModules
-      ? cssModulesPlugin({ config, mode, outputCss })
-      : null,
+    cssModulesPlugin({ config, mode, outputCss }),
     config.future.unstable_vanillaExtract
       ? vanillaExtractPlugin({ config, mode, outputCss })
       : null,
