@@ -69,6 +69,9 @@ export type { ThrownResponse } from "./errors";
 export type { HtmlLinkDescriptor } from "./links";
 export type {
   HtmlMetaDescriptor,
+  V2_MetaArgs,
+  V2_MetaDescriptor,
+  V2_MetaFunction,
   RouteModules as UNSAFE_RouteModules,
 } from "./routeModules";
 
