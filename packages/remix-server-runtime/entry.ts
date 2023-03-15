@@ -23,7 +23,6 @@ type VanillaExtractOptions = {
 };
 
 export interface FutureConfig {
-  unstable_cssModules: boolean;
   unstable_cssSideEffectImports: boolean;
   unstable_dev: boolean | Dev;
   unstable_postcss: boolean;
