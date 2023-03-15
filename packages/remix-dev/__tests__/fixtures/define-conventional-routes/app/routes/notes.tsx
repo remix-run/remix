@@ -1,5 +1,6 @@
-import { Form, json, useLoaderData, Outlet, Link, NavLink } from "remix";
-import type { LoaderFunction } from "remix";
+import { json } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/node";
+import { Form, useLoaderData, Outlet, Link, NavLink } from "@remix-run/react";
 
 import { requireUserId } from "~/session.server";
 import { useUser } from "~/utils";
@@ -10,14 +11,14 @@ type LoaderData = {
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const userId = await requireUserId(request);
-  const noteListItems = await getNoteListItems({ userId });
+  let userId = await requireUserId(request);
+  let noteListItems = await getNoteListItems({ userId });
   return json<LoaderData>({ noteListItems });
 };
 
 export default function NotesPage() {
-  const data = useLoaderData() as LoaderData;
-  const user = useUser();
+  let data = useLoaderData() as LoaderData;
+  let user = useUser();
 
   return (
     <div className="flex h-full min-h-screen flex-col">

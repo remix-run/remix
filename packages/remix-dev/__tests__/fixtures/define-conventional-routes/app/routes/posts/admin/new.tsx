@@ -9,18 +9,18 @@ type ActionData =
   | { title: null | string; slug: null | string; markdown: null | string }
   | undefined;
 export const action: ActionFunction = async ({ request }) => {
-  const formData = await request.formData();
+  let formData = await request.formData();
 
-  const title = formData.get("title");
-  const slug = formData.get("slug");
-  const markdown = formData.get("markdown");
+  let title = formData.get("title");
+  let slug = formData.get("slug");
+  let markdown = formData.get("markdown");
 
-  const errors: ActionData = {
+  let errors: ActionData = {
     title: title ? null : "Title is required",
     slug: slug ? null : "Slug is required",
     markdown: markdown ? null : "Markdown is required",
   };
-  const hasErrors = Object.values(errors).some((errorMessage) => errorMessage);
+  let hasErrors = Object.values(errors).some((errorMessage) => errorMessage);
   if (hasErrors) {
     return json<ActionData>(errors);
   }
@@ -37,10 +37,10 @@ export const action: ActionFunction = async ({ request }) => {
 const inputClassName = `w-full rounded border border-gray-500 px-2 py-1 text-lg`;
 
 export default function NewPost() {
-  const errors = useActionData();
+  let errors = useActionData();
 
-  const navigation = useNavigation();
-  const isCreating = Boolean(navigation.formData);
+  let navigation = useNavigation();
+  let isCreating = Boolean(navigation.formData);
 
   return (
     <Form method="post">

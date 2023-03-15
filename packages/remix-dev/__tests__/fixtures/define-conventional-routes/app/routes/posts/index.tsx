@@ -1,4 +1,6 @@
-import { Link, json, useLoaderData } from "remix";
+import { Link, useLoaderData } from "@remix-run/react";
+import { json } from "@remix-run/node";
+
 import { getPosts } from "~/models/post.server";
 
 type LoaderData = {
@@ -13,7 +15,7 @@ export const loader = async () => {
 };
 
 export default function Posts() {
-  const { posts } = useLoaderData() as LoaderData;
+  let { posts } = useLoaderData() as LoaderData;
   return (
     <main>
       <h1>Posts</h1>

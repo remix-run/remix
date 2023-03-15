@@ -1,6 +1,7 @@
 import * as React from "react";
-import { Form, json, redirect, useActionData } from "remix";
-import type { ActionFunction } from "remix";
+import type { ActionFunction } from "@remix-run/node";
+import { json, redirect } from "@remix-run/node";
+import { Form, useActionData } from "@remix-run/react";
 import Alert from "@reach/alert";
 
 import { createNote } from "~/models/note.server";
@@ -14,11 +15,11 @@ type ActionData = {
 };
 
 export const action: ActionFunction = async ({ request }) => {
-  const userId = await requireUserId(request);
+  let userId = await requireUserId(request);
 
-  const formData = await request.formData();
-  const title = formData.get("title");
-  const body = formData.get("body");
+  let formData = await request.formData();
+  let title = formData.get("title");
+  let body = formData.get("body");
 
   if (typeof title !== "string" || title.length === 0) {
     return json<ActionData>(
@@ -34,15 +35,15 @@ export const action: ActionFunction = async ({ request }) => {
     );
   }
 
-  const note = await createNote({ title, body, userId });
+  let note = await createNote({ title, body, userId });
 
   return redirect(`/notes/${note.id}`);
 };
 
 export default function NewNotePage() {
-  const actionData = useActionData() as ActionData;
-  const titleRef = React.useRef<HTMLInputElement>(null);
-  const bodyRef = React.useRef<HTMLTextAreaElement>(null);
+  let actionData = useActionData() as ActionData;
+  let titleRef = React.useRef<HTMLInputElement>(null);
+  let bodyRef = React.useRef<HTMLTextAreaElement>(null);
 
   React.useEffect(() => {
     if (actionData?.errors?.title) {

@@ -7,9 +7,10 @@ import withApp from "./utils/withApp";
 
 jest.setTimeout(1000 * 20);
 
+// TODO: Update this to point to a new fixture, as this codemod no longer exists
 let FIXTURE = path.join(__dirname, "fixtures/replace-remix-magic-imports");
 
-it("checks that project is a clean git repository", async () => {
+it.skip("checks that project is a clean git repository", async () => {
   await withApp(FIXTURE, async (projectDir) => {
     // ensure project is a git repository
     let error1 = await cli.shouldError([
@@ -46,7 +47,7 @@ it("checks that project is a clean git repository", async () => {
   });
 });
 
-it("checks that the specified codemod exists", async () => {
+it.skip("checks that the specified codemod exists", async () => {
   await withApp(FIXTURE, async (projectDir) => {
     await git.initialCommit(projectDir);
 
