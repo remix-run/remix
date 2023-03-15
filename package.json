@@ -125,7 +125,7 @@
     "rollup": "^2.36.1",
     "rollup-plugin-copy": "^3.3.0",
     "semver": "^7.3.7",
-    "simple-git": "^3.2.4",
+    "simple-git": "^3.16.0",
     "sort-package-json": "^1.55.0",
     "strip-indent": "^3.0.0",
     "tailwindcss": "^3.1.8",
