@@ -157,7 +157,7 @@ This can get quite tricky when you're new.
 Consider a route like `/projects/123`, there are likely three matching routes: `root.tsx`, `projects.tsx`, and `projects/$id.tsx`. All three may export meta descriptors.
 
 ```tsx bad filename=app/root.tsx
-export const meta: MetaFunction = () => {
+export const meta: V2_MetaFunction = () => {
   return [
     {
       name: "viewport",
@@ -169,13 +169,13 @@ export const meta: MetaFunction = () => {
 ```
 
 ```tsx bad filename=app/routes/projects.tsx
-export const meta: MetaFunction = () => {
+export const meta: V2_MetaFunction = () => {
   return [{ title: "Projects" }];
 };
 ```
 
 ```tsx bad filename=app/routes/projects/$id.tsx
-export const meta: MetaFunction<typeof loader> = ({
+export const meta: V2_MetaFunction<typeof loader> = ({
   data,
 }) => {
   return [{ title: data.project.name }];
@@ -226,7 +226,7 @@ You can also avoid the merge problem by simply not exporting meta that you want 
 Usually you only need to add meta to what the parent has already defined. You can merge parent meta with the spread operator and the [`matches`][matches] arg:
 
 ```tsx
-export const meta: MetaFunction = ({ matches }) => {
+export const meta: V2_MetaFunction = ({ matches }) => {
   let parentMeta = matches.flatMap(
     (match) => match.meta ?? []
   );
@@ -237,7 +237,7 @@ export const meta: MetaFunction = ({ matches }) => {
 Note that this _will not_ override something like `title`. This is only additive. If the inherited route meta includes a `title` tag, you can override with `Array.prototype.filter`:
 
 ```tsx
-export const meta: MetaFunction = ({ matches }) => {
+export const meta: V2_MetaFunction = ({ matches }) => {
   let parentMeta = matches
     .flatMap((match) => match.meta ?? [])
     .filter((meta) => !("title" in meta));
