@@ -21,7 +21,5 @@
     "@remix-run/testing": "1.14.2",
     "@remix-run/vercel": "1.14.2"
   },
-  "changesets": [
-    "dev-server-resilient-to-build-failures"
-  ]
+  "changesets": ["dev-server-resilient-to-build-failures"]
 }
