@@ -35,7 +35,7 @@ test.describe("PostCSS", () => {
     fixture = await createFixture({
       future: {
         v2_routeConvention: true,
-        unstable_cssModules: true,
+        v2_cssModules: true,
         unstable_cssSideEffectImports: true,
         unstable_postcss: true,
         unstable_tailwind: true,

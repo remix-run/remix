@@ -935,13 +935,13 @@ With this link tag inserted into the page, you're now ready to start using the v
 
 First, ensure you've set up [CSS bundling][css-bundling] in your application.
 
-Then, to enable [CSS Modules], set the `future.unstable_cssModules` feature flag in `remix.config.js`.
+Then, to enable [CSS Modules], set the `future.v2_cssModules` feature flag in `remix.config.js`.
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
-    unstable_cssModules: true,
+    v2_cssModules: true,
   },
   // ...
 };

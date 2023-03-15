@@ -74,7 +74,7 @@ const writeAssetsManifest = async (
 
 const isCssBundlingEnabled = (config: RemixConfig): boolean =>
   Boolean(
-    config.future.unstable_cssModules ||
+    config.future.v2_cssModules ||
       config.future.unstable_cssSideEffectImports ||
       config.future.unstable_vanillaExtract
   );
@@ -112,7 +112,7 @@ const createEsbuildConfig = (
     isCssBundlingEnabled(config) && isCssBuild
       ? cssBundleEntryModulePlugin(config)
       : null,
-    config.future.unstable_cssModules
+    config.future.v2_cssModules
       ? cssModulesPlugin({ config, mode, outputCss })
       : null,
     config.future.unstable_vanillaExtract

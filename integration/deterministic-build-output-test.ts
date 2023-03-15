@@ -27,7 +27,7 @@ test("builds deterministically under different paths", async () => {
   //  * vanillaExtractPlugin (via app/routes/foo.tsx' .css.ts file import)
   let init: FixtureInit = {
     future: {
-      unstable_cssModules: true,
+      v2_cssModules: true,
       unstable_cssSideEffectImports: true,
       unstable_postcss: true,
       unstable_vanillaExtract: true,
