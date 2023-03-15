@@ -41,6 +41,10 @@ test.describe("cloudflare compiler", () => {
           import { content as esmOnlyPackage } from "esm-only-pkg";
           import { content as cjsOnlyPackage } from "cjs-only-pkg";
 
+          export const meta = () => {
+            return [{ title: "New Remix App" }];
+          };
+
           export default function Index() {
             return (
               <ul>
