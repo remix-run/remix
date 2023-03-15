@@ -26,7 +26,7 @@ const config: PlaywrightTestConfig = {
       use: devices["Desktop Safari"],
     },
     {
-      name: "edge",
+      name: "msedge",
       use: devices["Desktop Edge"],
     },
     {
