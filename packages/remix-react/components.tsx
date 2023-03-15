@@ -1310,9 +1310,6 @@ export const LiveReload =
       }: {
         port?: number;
         timeoutMs?: number;
-        /**
-         * @deprecated this property is no longer relevant.
-         */
         nonce?: string;
       }) {
         let js = String.raw;
