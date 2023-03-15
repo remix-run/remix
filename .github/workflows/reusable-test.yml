@@ -101,6 +101,7 @@ jobs:
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: "yarn test:integration --project=${{ matrix.browser }}"
+        shell: bash
 
   macos-integration:
     name: '👀 Integration Test: (OS: "macos-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
@@ -132,6 +133,7 @@ jobs:
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: "yarn test:integration --project=${{ matrix.browser }}"
+        shell: bash
 
   windows-integration:
     name: '👀 Integration Test: (OS: "windows-latest" Node: "${{ matrix.node }}" Browser: "${{ matrix.browser }}")'
@@ -163,3 +165,4 @@ jobs:
 
       - name: 👀 Run Integration Tests ${{ matrix.browser }}
         run: "yarn test:integration --project=${{ matrix.browser }}"
+        shell: bash
