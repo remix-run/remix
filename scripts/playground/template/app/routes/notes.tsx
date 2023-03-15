@@ -1,4 +1,4 @@
-import type { LoaderArgs } from "@remix-run/node";
+import type { LoaderArgs, V2_MetaFunction } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { Form, Link, NavLink, Outlet, useLoaderData } from "@remix-run/react";
 
@@ -11,6 +11,10 @@ export async function loader({ request }: LoaderArgs) {
   let noteListItems = await getNoteListItems({ userId });
   return json({ noteListItems });
 }
+
+export const meta: V2_MetaFunction = () => {
+  return [{ title: "Remix Notes" }];
+};
 
 export default function NotesPage() {
   let data = useLoaderData<typeof loader>();
