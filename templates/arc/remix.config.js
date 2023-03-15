@@ -8,5 +8,6 @@ module.exports = {
   // assetsBuildDirectory: "public/build",
   future: {
     v2_meta: true,
+    v2_routeConvention: true,
   },
 };
