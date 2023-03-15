@@ -2,7 +2,7 @@ import type { PlaywrightTestConfig } from "@playwright/test";
 import { devices } from "@playwright/test";
 
 const config: PlaywrightTestConfig = {
-  testDir: ".",
+  testDir: "integration",
   testMatch: ["**/*-test.ts"],
   /* Maximum time one test can run for. */
   timeout: process.platform === "win32" ? 60_000 : 30_000,
