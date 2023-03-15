@@ -72,6 +72,9 @@ export type { HtmlLinkDescriptor } from "./links";
 export type {
   CatchBoundaryComponent,
   HtmlMetaDescriptor,
+  V2_MetaArgs,
+  V2_MetaDescriptor,
+  V2_MetaFunction,
   RouteModules as UNSAFE_RouteModules,
   ShouldReloadFunction,
 } from "./routeModules";
