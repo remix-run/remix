@@ -6,4 +6,7 @@ module.exports = {
   serverBuildPath: "server/index.js",
   // appDirectory: "app",
   // assetsBuildDirectory: "public/build",
+  future: {
+    v2_meta: true,
+  },
 };
