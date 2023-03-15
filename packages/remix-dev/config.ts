@@ -43,13 +43,17 @@ type Dev = {
   rebuildPollIntervalMs?: number;
 };
 
+export type VanillaExtractOptions = {
+  cache?: boolean;
+};
+
 interface FutureConfig {
   unstable_cssModules: boolean;
   unstable_cssSideEffectImports: boolean;
   unstable_dev: boolean | Dev;
   unstable_postcss: boolean;
   unstable_tailwind: boolean;
-  unstable_vanillaExtract: boolean;
+  unstable_vanillaExtract: boolean | VanillaExtractOptions;
   v2_errorBoundary: boolean;
   v2_meta: boolean;
   v2_routeConvention: boolean;
@@ -397,12 +401,12 @@ export async function readConfig(
     }
   }
 
-  if (!appConfig.future?.v2_errorBoundary) {
-    warnOnce(errorBoundaryWarning, "v2_errorBoundary");
-  }
-
   if (appConfig.serverBuildTarget) {
     warnOnce(serverBuildTargetWarning, "v2_serverBuildTarget");
+  }
+
+  if (!appConfig.future?.v2_errorBoundary) {
+    warnOnce(errorBoundaryWarning, "v2_errorBoundary");
   }
 
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
@@ -534,6 +538,10 @@ export async function readConfig(
     ? path.resolve(appDirectory, userEntryServerFile)
     : path.resolve(defaultsDirectory, entryServerFile);
 
+  if (appConfig.browserBuildDirectory) {
+    warnOnce(browserBuildDirectoryWarning, "browserBuildDirectory");
+  }
+
   let assetsBuildDirectory =
     appConfig.assetsBuildDirectory ||
     appConfig.browserBuildDirectory ||
@@ -626,7 +634,7 @@ export async function readConfig(
     unstable_dev: appConfig.future?.unstable_dev ?? false,
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
-    unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract === true,
+    unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract ?? false,
     v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
     v2_meta: appConfig.future?.v2_meta === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
@@ -735,7 +743,8 @@ let listFormat = new Intl.ListFormat("en", {
   type: "conjunction",
 });
 
-export let serverBuildTargetWarning = `⚠️ DEPRECATED: The "serverBuildTarget" config option is deprecated. Use a combination of "publicPath", "serverBuildPath", "serverConditions", "serverDependenciesToBundle", "serverMainFields", "serverMinify", "serverModuleFormat" and/or "serverPlatform" instead.`;
+export let browserBuildDirectoryWarning = `⚠️ DEPRECATED: The \`browserBuildDirectory\` config option is deprecated. Use \`assetsBuildDirectory\` instead.`;
+export let serverBuildTargetWarning = `⚠️ DEPRECATED: The \`serverBuildTarget\` config option is deprecated. Use a combination of \`publicPath\`, \`serverBuildPath\`, \`serverConditions\`, \`serverDependenciesToBundle\`, \`serverMainFields\`, \`serverMinify\`, \`serverModuleFormat\` and/or \`serverPlatform\` instead.`;
 
 export let flatRoutesWarning = `⚠️ DEPRECATED: The old nested folders route convention has been deprecated in favor of "flat routes".  Please enable the new routing convention via the \`future.v2_routeConvention\` flag in your \`remix.config.js\` file.  For more information, please see https://remix.run/docs/en/main/file-conventions/route-files-v2.`;
 
