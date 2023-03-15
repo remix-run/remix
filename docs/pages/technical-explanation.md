@@ -142,7 +142,7 @@ You can actually use Remix as just a server-side framework without using any bro
 
 In this way, **Remix scales down**. Not every page in your application needs a bunch of JavaScript in the browser and not every user interaction requires any extra flair than the browser's default behaviors. In Remix you can build it the simple way first, and then scale up without changing the fundamental model. Additionally, the majority of the app works before JavaScript loads in the browser, which makes Remix apps resilient to choppy network conditions by design.
 
-If you're not familiar with traditional back-end web frameworks, you can think of Remix routes as React components that are already their own API route and already know how to load and submit data to themselves on the server.
+If you're not familiar with traditional back-end web frameworks, you can think of Remix routes as React components that are already have their own API route and already know how to load and submit data to themselves on the server.
 
 ## Browser Framework
 
