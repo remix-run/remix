@@ -5,11 +5,13 @@ import * as git from "./utils/git";
 import * as log from "./utils/log";
 import { task } from "./utils/task";
 import type { Options } from "./codemod";
-import replaceRemixMagicImports from "./replace-remix-magic-imports";
 import { CodemodError } from "./utils/error";
 
+// TODO: Consider removing this when we decide whether or not to remove codemods
+// from remix-dev
 const codemods = {
-  "replace-remix-magic-imports": replaceRemixMagicImports,
+  noop: (dir: string, opts?: { dry: boolean; force: boolean }) =>
+    Promise.resolve(),
 } as const;
 
 type CodemodName = keyof typeof codemods;
