@@ -827,15 +827,15 @@ Here's some sample code to show how you might use Styled Components with Remix (
      ScrollRestoration,
    } from "@remix-run/react";
 
-   export const meta: MetaFunction = () => ({
-     charset: "utf-8",
-     viewport: "width=device-width,initial-scale=1",
-   });
-
    export default function App() {
      return (
        <html lang="en">
          <head>
+           <meta charSet="utf-8" />
+           <meta
+             name="viewport"
+             content="width=device-width, initial-scale=1"
+           />
            <Meta />
            <Links />
            {typeof document === "undefined"

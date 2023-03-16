@@ -72,11 +72,9 @@ test.describe("non-aborted", () => {
           import Counter from "~/components/counter";
           import Interactive from "~/components/interactive";
 
-          export const meta: MetaFunction = () => ({
-            charset: "utf-8",
-            title: "New Remix App",
-            viewport: "width=device-width,initial-scale=1",
-          });
+          export function meta() {
+            return [{ title: "New Remix App" }];
+          }
 
           export const loader = () => defer({
             id: "${ROOT_ID}",
@@ -87,6 +85,8 @@ test.describe("non-aborted", () => {
             return (
               <html lang="en">
                 <head>
+                  <meta charSet="utf-8" />
+                  <meta name="viewport" content="width=device-width,initial-scale=1" />
                   <Meta />
                   <Links />
                 </head>
@@ -1101,11 +1101,9 @@ test.describe("aborted", () => {
           import Counter from "~/components/counter";
           import Interactive from "~/components/interactive";
 
-          export const meta: MetaFunction = () => ({
-            charset: "utf-8",
-            title: "New Remix App",
-            viewport: "width=device-width,initial-scale=1",
-          });
+          export function meta() {
+            return [{ title: "New Remix App" }];
+          }
 
           export const loader = () => defer({
             id: "${ROOT_ID}",
@@ -1116,6 +1114,8 @@ test.describe("aborted", () => {
             return (
               <html lang="en">
                 <head>
+                  <meta charSet="utf-8" />
+                  <meta name="viewport" content="width=device-width,initial-scale=1" />
                   <Meta />
                   <Links />
                 </head>
