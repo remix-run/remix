@@ -552,6 +552,16 @@ export function Meta() {
     let routeModule = routeModules[routeId];
     let routeMeta: MetaDescriptor[] | undefined = [];
 
+    let match: MetaMatch = {
+      id: routeId,
+      data,
+      meta: [],
+      params: _match.params,
+      pathname: _match.pathname,
+      handle: _match.route.handle,
+    };
+    matches[i] = match;
+
     if (routeModule?.meta) {
       routeMeta =
         typeof routeModule.meta === "function"
@@ -561,35 +571,32 @@ export function Meta() {
               location,
               matches,
             })
+          : Array.isArray(routeModule.meta)
+          ? [...routeModule.meta]
           : routeModule.meta;
     } else if (leafMeta) {
       // We only assign the route's meta to the nearest leaf if there is no meta
       // export in the route. The meta function may return a falsey value which
       // is effectively the same as an empty array.
-      routeMeta = leafMeta;
+      routeMeta = [...leafMeta];
     }
 
     routeMeta = routeMeta || [];
     if (!Array.isArray(routeMeta)) {
       throw new Error(
-        "The route at " +
+        "The `v2_meta` API is enabled in the Remix config, but the route at " +
           _match.route.path +
-          " returns an invalid value. All route meta functions must " +
+          " returns an invalid value. In v2, all route meta functions must " +
           "return an array of meta objects." +
-          "\n\nTo reference the meta function API, see https://remix.run/route/meta"
+          // TODO: Add link to the docs once they are written
+          // "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta." +
+          "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
       );
     }
 
-    let match: MetaMatch = {
-      id: routeId,
-      data,
-      meta: routeMeta,
-      params: _match.params,
-      pathname: _match.pathname,
-      handle: _match.route.handle,
-    };
+    match.meta = routeMeta;
     matches[i] = match;
-    meta = routeMeta;
+    meta = [...routeMeta];
     leafMeta = meta;
   }
 
