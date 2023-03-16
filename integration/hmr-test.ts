@@ -94,7 +94,8 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
 
     "app/styles.module.css": css`
       .test {
-        color: initial;
+        color: black;
+        background: white;
       }
     `,
 
@@ -259,6 +260,30 @@ test("HMR", async ({ page }) => {
     let cssModulePath = path.join(projectDir, "app", "styles.module.css");
     let originalCssModule = fs.readFileSync(cssModulePath, "utf8");
 
+    let newIndex = `
+      import { useLoaderData } from "@remix-run/react";
+      import styles from "~/styles.module.css";
+      export default function Index() {
+        const t = useLoaderData();
+        return (
+          <main>
+            <h1 id="changed" className={styles.test}>Changed</h1>
+          </main>
+        )
+      }
+    `;
+    fs.writeFileSync(indexPath, newIndex);
+
+    // detect HMR'd content
+    await page.waitForLoadState("networkidle");
+
+    let h1 = page.getByText("Changed");
+    await h1.waitFor({ timeout: 2000 });
+
+    // Assert original styles are applied
+    expect(h1).toHaveCSS("color", "rgb(0, 0, 0)");
+    expect(h1).toHaveCSS("background-color", "rgb(255, 255, 255)");
+
     // make content and style changed to index route
     let newCssModule = `
       .test {
@@ -271,27 +296,18 @@ test("HMR", async ({ page }) => {
     // detect HMR'd style changes
     await page.waitForLoadState("networkidle");
 
-    let newIndex = `
-      import { useLoaderData } from "@remix-run/react";
-      import styles from "~/styles.module.css";
-      export default function Index() {
-        const t = useLoaderData();
-        return (
-          <main>
-            <h1 className={styles.test}>Changed</h1>
-          </main>
-        )
-      }
-    `;
-    fs.writeFileSync(indexPath, newIndex);
-
-    // detect HMR'd content
-    await page.waitForLoadState("networkidle");
-
-    let h1 = page.getByText("Changed");
-    await h1.waitFor({ timeout: 5000 });
-    expect(h1).toHaveCSS("color", "rgb(255, 255, 255)");
-    expect(h1).toHaveCSS("background-color", "rgb(0, 0, 0)");
+    // Assert updated styles are eventually applied
+    await expect
+      .poll(async () =>
+        h1.evaluate((element) => {
+          let { color, backgroundColor } = getComputedStyle(element);
+          return { color, backgroundColor };
+        })
+      )
+      .toEqual({
+        color: "rgb(255, 255, 255)",
+        backgroundColor: "rgb(0, 0, 0)",
+      });
 
     // verify that `<input />` value was persisted (i.e. hmr, not full page refresh)
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
