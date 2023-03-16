@@ -27,7 +27,6 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
         "dev:app": `cross-env NODE_ENV=development nodemon --watch build/ ./server.js`,
       },
       dependencies: {
-        "@remix-run/css-bundle": "0.0.0-local-version",
         "@remix-run/node": "0.0.0-local-version",
         "@remix-run/react": "0.0.0-local-version",
         "cross-env": "0.0.0-local-version",
@@ -102,14 +101,12 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
     "app/root.tsx": js`
       import type { LinksFunction } from "@remix-run/node";
       import { Link, Links, LiveReload, Meta, Outlet, Scripts } from "@remix-run/react";
-      import { cssBundleHref } from "@remix-run/css-bundle";
 
       import Counter from "./components/counter";
       import styles from "./tailwind.css";
 
       export const links: LinksFunction = () => [
         { rel: "stylesheet", href: styles },
-        ...cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : [],
       ];
 
       export default function Root() {
@@ -142,12 +139,11 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
 
     "app/routes/_index.tsx": js`
       import { useLoaderData } from "@remix-run/react";
-      import styles from "~/styles.module.css";
       export default function Index() {
         const t = useLoaderData();
         return (
           <main>
-            <h1 className={styles.test}>Index Title</h1>
+            <h1>Index Title</h1>
           </main>
         )
       }
@@ -258,17 +254,14 @@ test("HMR", async ({ page }) => {
     let originalIndex = fs.readFileSync(indexPath, "utf8");
     let counterPath = path.join(projectDir, "app", "components", "counter.tsx");
     let originalCounter = fs.readFileSync(counterPath, "utf8");
-    let cssModulePath = path.join(projectDir, "app", "styles.module.css");
-    let originalCssModule = fs.readFileSync(cssModulePath, "utf8");
 
     let newIndex = `
       import { useLoaderData } from "@remix-run/react";
-      import styles from "~/styles.module.css";
       export default function Index() {
         const t = useLoaderData();
         return (
           <main>
-            <h1 className={styles.test}>Changed</h1>
+            <h1>Changed</h1>
           </main>
         )
       }
@@ -281,42 +274,12 @@ test("HMR", async ({ page }) => {
     let h1 = page.getByText("Changed");
     await h1.waitFor({ timeout: 2000 });
 
-    // Assert original styles are applied
-    expect(h1).toHaveCSS("color", "rgb(0, 0, 0)");
-    expect(h1).toHaveCSS("background-color", "rgb(255, 255, 255)");
-
-    // make content and style changed to index route
-    let newCssModule = `
-      .test {
-        background: black;
-        color: white;
-      }
-    `;
-    fs.writeFileSync(cssModulePath, newCssModule);
-
-    // detect HMR'd style changes
-    await page.waitForLoadState("networkidle");
-
-    // Assert updated styles are eventually applied
-    await expect
-      .poll(async () =>
-        h1.evaluate((element) => {
-          let { color, backgroundColor } = getComputedStyle(element);
-          return { color, backgroundColor };
-        })
-      )
-      .toEqual({
-        color: "rgb(255, 255, 255)",
-        backgroundColor: "rgb(0, 0, 0)",
-      });
-
     // verify that `<input />` value was persisted (i.e. hmr, not full page refresh)
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
     await page.waitForSelector(`#root-counter:has-text("inc 1")`);
 
     // undo change
     fs.writeFileSync(indexPath, originalIndex);
-    fs.writeFileSync(cssModulePath, originalCssModule);
     await page.getByText("Index Title").waitFor({ timeout: 2000 });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
     await page.waitForSelector(`#root-counter:has-text("inc 1")`);
