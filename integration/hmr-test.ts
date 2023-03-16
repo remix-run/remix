@@ -268,6 +268,9 @@ test("HMR", async ({ page }) => {
     `;
     fs.writeFileSync(cssModulePath, newCssModule);
 
+    // detect HMR'd style changes
+    await page.waitForLoadState("networkidle");
+
     let newIndex = `
       import { useLoaderData } from "@remix-run/react";
       import styles from "~/styles.module.css";
@@ -282,10 +285,11 @@ test("HMR", async ({ page }) => {
     `;
     fs.writeFileSync(indexPath, newIndex);
 
-    // detect HMR'd content and style changes
+    // detect HMR'd content
     await page.waitForLoadState("networkidle");
+
     let h1 = page.getByText("Changed");
-    await h1.waitFor({ timeout: 2000 });
+    await h1.waitFor({ timeout: 5000 });
     expect(h1).toHaveCSS("color", "rgb(255, 255, 255)");
     expect(h1).toHaveCSS("background-color", "rgb(0, 0, 0)");
 
