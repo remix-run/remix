@@ -45,7 +45,6 @@ interface FutureConfig {
   unstable_tailwind: boolean;
   unstable_vanillaExtract: boolean | VanillaExtractOptions;
   v2_errorBoundary: boolean;
-  v2_meta: boolean;
   v2_routeConvention: boolean;
 }
 
@@ -79,14 +78,6 @@ export interface AppConfig {
    * "public/build".
    */
   assetsBuildDirectory?: string;
-
-  /**
-   * The path to the browser build, relative to remix.config.js. Defaults to
-   * "public/build".
-   *
-   * @deprecated Use `{@link AppConfig.assetsBuildDirectory}` instead
-   */
-  browserBuildDirectory?: string;
 
   /**
    * The URL prefix of the browser build with a trailing slash. Defaults to
@@ -485,14 +476,8 @@ export async function readConfig(
     ? path.resolve(appDirectory, userEntryServerFile)
     : path.resolve(defaultsDirectory, entryServerFile);
 
-  if (appConfig.browserBuildDirectory) {
-    warnOnce(browserBuildDirectoryWarning, "browserBuildDirectory");
-  }
-
   let assetsBuildDirectory =
-    appConfig.assetsBuildDirectory ||
-    appConfig.browserBuildDirectory ||
-    path.join("public", "build");
+    appConfig.assetsBuildDirectory || path.join("public", "build");
 
   let absoluteAssetsBuildDirectory = path.resolve(
     rootDirectory,
@@ -580,7 +565,6 @@ export async function readConfig(
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract ?? false,
     v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
-    v2_meta: appConfig.future?.v2_meta === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
@@ -652,10 +636,6 @@ let listFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "conjunction",
 });
-
-export let browserBuildDirectoryWarning =
-  "⚠️ DEPRECATED: The `browserBuildDirectory` config option is deprecated. " +
-  "Use `assetsBuildDirectory` instead.";
 
 export let serverBuildTargetWarning =
   "⚠️ DEPRECATED: The `serverBuildTarget` config option is deprecated. Use a " +
