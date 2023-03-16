@@ -7,6 +7,14 @@
 import { execa } from "execa";
 import semver from "semver";
 
+// TODO: actually use the dry run flag
+let DRY_RUN = true; // process.env.DRY_RUN;
+
+if (!DRY_RUN) {
+  console.log("NOT DRY RUN\n\n", "you have 5 seconds to cancel");
+  await new Promise((resolve) => setTimeout(resolve, 5_000));
+}
+
 let tagCommand = [
   "tag",
   "-l",
@@ -111,11 +119,28 @@ function getPrListCommand(sha) {
 let prs = await findMergedPRs(gitCommits);
 console.log(prs);
 
+for (let pr of prs) {
+  let comment = `🤖 Hello there,\n\nWe just published version \`${latest.clean}\` which includes this pull request. If you'd like to take it for a test run please try it out and let us know what you think!\n\nThanks!`;
+
+  let commentCommand = ["pr", "comment", pr, "--body", comment];
+
+  if (!DRY_RUN) {
+    let commentResult = await execa("gh", commentCommand);
+    if (commentResult.stderr) {
+      console.error(commentResult.stderr);
+    }
+  }
+}
+
 /**
  * @param {string[]} commits
  * @returns {Promise<number[]>}
  */
 function findMergedPRs(commits) {
+  let CHANGESET_PR_TITLES = [
+    "chore: update version for release",
+    "chore: update version for release (pre)",
+  ];
   let result = commits.map(async (commit) => {
     let prCommand = getPrListCommand(commit);
 
@@ -138,8 +163,3 @@ function findMergedPRs(commits) {
     return prs.filter(Boolean);
   });
 }
-
-let CHANGESET_PR_TITLES = [
-  "chore: update version for release",
-  "chore: update version for release (pre)",
-];
