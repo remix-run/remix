@@ -142,11 +142,12 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
 
     "app/routes/_index.tsx": js`
       import { useLoaderData } from "@remix-run/react";
+      import styles from "~/styles.module.css";
       export default function Index() {
         const t = useLoaderData();
         return (
           <main>
-            <h1>Index Title</h1>
+            <h1 className={styles.test}>Index Title</h1>
           </main>
         )
       }
