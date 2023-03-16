@@ -667,40 +667,10 @@ function V2Meta() {
     let routeModule = routeModules[routeId];
     let routeMeta: V2_MetaDescriptor[] | V1_HtmlMetaDescriptor | undefined = [];
 
-    if (routeModule?.meta) {
-      routeMeta =
-        typeof routeModule.meta === "function"
-          ? (routeModule.meta as V2_MetaFunction)({
-              data,
-              params,
-              location,
-              matches,
-            })
-          : routeModule.meta;
-    } else if (leafMeta) {
-      // We only assign the route's meta to the nearest leaf if there is no meta
-      // export in the route. The meta function may return a falsey value which
-      // is effectively the same as an empty array.
-      routeMeta = leafMeta;
-    }
-
-    routeMeta = routeMeta || [];
-    if (!Array.isArray(routeMeta)) {
-      throw new Error(
-        "The `v2_meta` API is enabled in the Remix config, but the route at " +
-          _match.route.path +
-          " returns an invalid value. In v2, all route meta functions must " +
-          "return an array of meta objects." +
-          // TODO: Add link to the docs once they are written
-          // "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta." +
-          "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
-      );
-    }
-
     let match: V2_MetaMatch = {
       id: routeId,
       data,
-      meta: routeMeta,
+      meta: [],
       params: _match.params,
       pathname: _match.pathname,
       handle: _match.route.handle,
@@ -718,7 +688,42 @@ function V2Meta() {
       },
     };
     matches[i] = match;
-    meta = routeMeta;
+
+    if (routeModule?.meta) {
+      routeMeta =
+        typeof routeModule.meta === "function"
+          ? (routeModule.meta as V2_MetaFunction)({
+              data,
+              params,
+              location,
+              matches,
+            })
+          : Array.isArray(routeModule.meta)
+          ? [...routeModule.meta]
+          : routeModule.meta;
+    } else if (leafMeta) {
+      // We only assign the route's meta to the nearest leaf if there is no meta
+      // export in the route. The meta function may return a falsey value which
+      // is effectively the same as an empty array.
+      routeMeta = [...leafMeta];
+    }
+
+    routeMeta = routeMeta || [];
+    if (!Array.isArray(routeMeta)) {
+      throw new Error(
+        "The `v2_meta` API is enabled in the Remix config, but the route at " +
+          _match.route.path +
+          " returns an invalid value. In v2, all route meta functions must " +
+          "return an array of meta objects." +
+          // TODO: Add link to the docs once they are written
+          // "\n\nTo reference future flags and the v2 meta API, see https://remix.run/file-conventions/remix-config#future-v2-meta." +
+          "\n\nTo reference the v1 meta function API, see https://remix.run/route/meta"
+      );
+    }
+
+    match.meta = routeMeta;
+    matches[i] = match;
+    meta = [...routeMeta];
     leafMeta = meta;
   }
 
