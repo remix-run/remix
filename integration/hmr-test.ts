@@ -268,7 +268,7 @@ test("HMR", async ({ page }) => {
         const t = useLoaderData();
         return (
           <main>
-            <h1 id="changed" className={styles.test}>Changed</h1>
+            <h1 className={styles.test}>Changed</h1>
           </main>
         )
       }
