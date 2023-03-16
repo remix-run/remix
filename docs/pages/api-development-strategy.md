@@ -55,7 +55,6 @@ The lifecycle is thus either:
 | `v2_dev`                 | Enable the new development server (including HMR/HDR support)         |
 | `v2_errorBoundary`       | Combine `ErrorBoundary`/`CatchBoundary` into a single `ErrorBoundary` |
 | `v2_headers`             | Leverage ancestor `headers` if children do not export `headers`       |
-| `v2_meta`                | Enable the new API for your `meta` functions                          |
 | `v2_normalizeFormMethod` | Normalize `useNavigation().formMethod` to be an uppercase HTTP Method |
 | `v2_routeConvention`     | Enable the flat routes style of file-based routing                    |
 

@@ -346,6 +346,10 @@ test.describe("compiler", () => {
               return json({ main: notInstalledMain(), sub: notInstalledSub() });
             }
 
+            export const meta = () => {
+              return [{ title: "New Remix App" }];
+            };
+
             export default function Index() {
                 let data = useLoaderData();
                 return null;

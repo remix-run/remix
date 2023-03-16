@@ -18,8 +18,7 @@ describe("createRequestHandler", () => {
       entry: { module: {} as any },
       future: {
         v2_errorBoundary: false,
-        v2_meta: false,
-      },
+      } as any,
     });
 
     let response = await handler(

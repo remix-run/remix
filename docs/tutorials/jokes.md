@@ -4892,7 +4892,7 @@ But before you get started, remember that we're in charge of rendering everythin
 ```tsx filename=app/root.tsx lines=[3,9,33-42,46,56-69]
 import type {
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   isRouteErrorResponse,
@@ -4922,7 +4922,7 @@ export const links: LinksFunction = () => [
   },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Learn Remix and laugh at the same time!";
 
@@ -5019,7 +5019,7 @@ export function ErrorBoundary() {
 import type {
   ActionArgs,
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   Link,
@@ -5040,7 +5040,7 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Login to submit your own jokes to Remix Jokes!";
 
@@ -5286,7 +5286,7 @@ export default function Login() {
 import type {
   ActionArgs,
   LoaderArgs,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -5303,7 +5303,7 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const meta: V2_MetaFunction<typeof loader> = ({
+export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
   const { description, title } = data
@@ -5711,7 +5711,7 @@ Ok, so let's load JavaScript on this page now 😆
 ```tsx filename=app/root.tsx lines=[11,75]
 import type {
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   isRouteErrorResponse,
@@ -5742,7 +5742,7 @@ export const links: LinksFunction = () => [
   },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Learn Remix and laugh at the same time!";
 
@@ -5843,7 +5843,7 @@ export function ErrorBoundary() {
 ```tsx filename=app/root.tsx lines=[92]
 import type {
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   isRouteErrorResponse,
@@ -5874,7 +5874,7 @@ export const links: LinksFunction = () => [
   },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Learn Remix and laugh at the same time!";
 
@@ -5973,7 +5973,7 @@ export function ErrorBoundary() {
 import type {
   ActionArgs,
   LoaderArgs,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -5990,7 +5990,7 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const meta: V2_MetaFunction<typeof loader> = ({
+export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
   const { description, title } = data
@@ -6383,7 +6383,7 @@ Remix has its own [`<Form />`][form] component. When JavaScript is not yet loade
 import type {
   ActionArgs,
   LinksFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import {
   Form,
@@ -6405,7 +6405,7 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
 ];
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   const description =
     "Login to submit your own jokes to Remix Jokes!";
 
@@ -6753,7 +6753,7 @@ export default function JokesRoute() {
 import type {
   ActionArgs,
   LoaderArgs,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -6771,7 +6771,7 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const meta: V2_MetaFunction<typeof loader> = ({
+export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
   const { description, title } = data
@@ -7258,7 +7258,7 @@ export function JokeDisplay({
 import type {
   ActionArgs,
   LoaderArgs,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -7275,7 +7275,7 @@ import {
   requireUserId,
 } from "~/utils/session.server";
 
-export const meta: V2_MetaFunction<typeof loader> = ({
+export const meta: MetaFunction<typeof loader> = ({
   data,
 }) => {
   const { description, title } = data

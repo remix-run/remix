@@ -1,5 +1,4 @@
 import type { ComponentType } from "react";
-import type { RouterState } from "@remix-run/router";
 import type {
   DataRouteMatch,
   Params,
@@ -12,8 +11,6 @@ import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { EntryRoute } from "./routes";
 
-type RouteData = RouterState["loaderData"];
-
 export interface RouteModules {
   [routeId: string]: RouteModule;
 }
@@ -24,11 +21,7 @@ export interface RouteModule {
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;
-  meta?:
-    | V1_MetaFunction
-    | V1_HtmlMetaDescriptor
-    | V2_MetaFunction
-    | V2_MetaDescriptor[];
+  meta?: MetaFunction;
   shouldRevalidate?: ShouldRevalidateFunction;
 }
 
@@ -67,30 +60,7 @@ export interface LinksFunction {
   (): LinkDescriptor[];
 }
 
-/**
- * A function that returns an object of name + content pairs to use for
- * `<meta>` tags for a route. These tags will be merged with (and take
- * precedence over) tags from parent routes.
- *
- * @see https://remix.run/route/meta
- */
-export interface V1_MetaFunction {
-  (args: {
-    data: AppData;
-    parentsData: RouteData;
-    params: Params;
-    location: Location;
-  }): HtmlMetaDescriptor;
-}
-
-// TODO: Replace in v2
-export type MetaFunction = V1_MetaFunction;
-
-export interface RouteMatchWithMeta extends DataRouteMatch {
-  meta: V2_MetaDescriptor[];
-}
-
-export interface V2_MetaMatch<
+export interface MetaMatch<
   RouteId extends string = string,
   Loader extends LoaderFunction | unknown = unknown
 > {
@@ -99,21 +69,21 @@ export interface V2_MetaMatch<
   data: Loader extends LoaderFunction ? SerializeFrom<Loader> : unknown;
   handle?: unknown;
   params: DataRouteMatch["params"];
-  meta: V2_MetaDescriptor[];
+  meta: MetaDescriptor[];
 }
 
-export type V2_MetaMatches<
+export type MetaMatches<
   MatchLoaders extends Record<string, unknown> = Record<string, unknown>
 > = Array<
   {
-    [K in keyof MatchLoaders]: V2_MetaMatch<
+    [K in keyof MatchLoaders]: MetaMatch<
       Exclude<K, number | symbol>,
       MatchLoaders[K]
     >;
   }[keyof MatchLoaders]
 >;
 
-export interface V2_MetaArgs<
+export interface MetaArgs<
   Loader extends LoaderFunction | unknown = unknown,
   MatchLoaders extends Record<string, unknown> = Record<string, unknown>
 > {
@@ -122,38 +92,17 @@ export interface V2_MetaArgs<
     | undefined;
   params: Params;
   location: Location;
-  matches: V2_MetaMatches<MatchLoaders>;
+  matches: MetaMatches<MatchLoaders>;
 }
 
-export interface V2_MetaFunction<
+export interface MetaFunction<
   Loader extends LoaderFunction | unknown = unknown,
   MatchLoaders extends Record<string, unknown> = Record<string, unknown>
 > {
-  (args: V2_MetaArgs<Loader, MatchLoaders>): V2_MetaDescriptor[] | undefined;
+  (args: MetaArgs<Loader, MatchLoaders>): MetaDescriptor[] | undefined;
 }
 
-/**
- * A name/content pair used to render `<meta>` tags in a meta function for a
- * route. The value can be either a string, which will render a single `<meta>`
- * tag, or an array of strings that will render multiple tags with the same
- * `name` attribute.
- */
-export interface V1_HtmlMetaDescriptor {
-  charset?: "utf-8";
-  charSet?: "utf-8";
-  title?: string;
-  [name: string]:
-    | null
-    | string
-    | undefined
-    | Record<string, string>
-    | Array<Record<string, string> | string>;
-}
-
-// TODO: Replace in v2
-export type HtmlMetaDescriptor = V1_HtmlMetaDescriptor;
-
-export type V2_MetaDescriptor =
+export type MetaDescriptor =
   | { charSet: "utf-8" }
   | { title: string }
   | { name: string; content: string }

@@ -1,4 +1,4 @@
-import type { V2_MetaFunction, ActionArgs, LoaderArgs } from "@remix-run/node";
+import type { ActionArgs, LoaderArgs, MetaFunction } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form, useCatch, useLoaderData } from "@remix-run/react";
 import invariant from "tiny-invariant";
@@ -16,7 +16,7 @@ export async function loader({ request, params }: LoaderArgs) {
   return json({ note });
 }
 
-export const meta: V2_MetaFunction<typeof loader> = ({ data }) => {
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
   return [{ title: "Note: " + data.note.title }];
 };
 
