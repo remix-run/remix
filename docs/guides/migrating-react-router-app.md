@@ -552,9 +552,9 @@ If you currently inject `<link />` tags into your page client-side in your exist
 
 Just as a `<link>` is rendered inside your route component and ultimately rendered in your root `<Links />` component, your app may use some injection trickery to render additional components in the document `<head>`. Often this is done to change the document's `<title>` or `<meta>` tags.
 
-Similar to `links`, each route can also export a `meta` function that—you guessed it—returns values responsible for rendering `<meta>` tags for that route. This is useful because each route often has its own.
+Similar to `links`, each route can also export a `meta` function that returns values responsible for rendering `<meta>` tags for that route (as well as a few other tags relevant for metadata, such as `<title>`, `<link rel="canonical">` and `<script type="application/ld+json">`).
 
-The behavior is slightly different for `meta`. Instead of merging values from other `meta` functions in the route hierarchy, **each leaf route is responsible for rendering its own tags**. This is because:
+The behavior for `meta` is slightly different from `links`. Instead of merging values from other `meta` functions in the route hierarchy, **each leaf route is responsible for rendering its own tags**. This is because:
 
 - You often want more fine-grained control over metadata for optimal SEO
 - In the case of some tags that follow the [Open Graph protocol](https://ogp.me/), the ordering of some tags impacts their how they are interpreted by crawlers and social media sites, and its it's less predictable for Remix to assume how complex metadata should be merged
