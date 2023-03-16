@@ -20,6 +20,7 @@ import { deprecatedRemixPackagePlugin } from "./plugins/deprecatedRemixPackagePl
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
+import { cssBundleUpdatePlugin } from "./plugins/cssBundleUpdatePlugin";
 import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
 import { cssSideEffectImportsPlugin } from "./plugins/cssSideEffectImportsPlugin";
 import { vanillaExtractPlugin } from "./plugins/vanillaExtractPlugin";
@@ -78,6 +79,12 @@ const isCssBundlingEnabled = (config: RemixConfig): boolean =>
       config.future.unstable_cssSideEffectImports ||
       config.future.unstable_vanillaExtract
   );
+
+let cssBundleHrefPromise: Promise<string | undefined>;
+
+// Allow plugins to access the latest value of the CSS bundle during rebuilds
+const getCssBundleHref = () => cssBundleHrefPromise;
+
 const createEsbuildConfig = (
   build: "app" | "css",
   config: RemixConfig,
@@ -109,6 +116,7 @@ const createEsbuildConfig = (
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
+    build === "css" ? cssBundleUpdatePlugin({ getCssBundleHref }) : null,
     isCssBundlingEnabled(config) && isCssBuild
       ? cssBundleEntryModulePlugin(config)
       : null,
@@ -131,7 +139,7 @@ const createEsbuildConfig = (
     NodeModulesPolyfillPlugin(),
   ].filter(isNotNull);
 
-  if (mode === "development" && config.future.unstable_dev) {
+  if (build === "app" && mode === "development" && config.future.unstable_dev) {
     // TODO prebundle deps instead of chunking just these ones
     let isolateChunks = [
       require.resolve("react"),
@@ -305,12 +313,20 @@ export const createBrowserCompiler = (
           }),
       ]);
 
-      // Return the CSS bundle path so we can use it to generate the manifest
-      return cssBundlePath;
+      let cssBundleHref =
+        remixConfig.publicPath +
+        path.relative(
+          remixConfig.assetsBuildDirectory,
+          path.resolve(cssBundlePath)
+        );
+
+      return cssBundleHref;
     };
 
-    let [cssBundlePath, metafile] = await Promise.all([
-      cssBuildTask(),
+    cssBundleHrefPromise = cssBuildTask();
+
+    let [cssBundleHref, metafile] = await Promise.all([
+      cssBundleHrefPromise,
       appBuildTask(),
     ]);
 
@@ -336,7 +352,7 @@ export const createBrowserCompiler = (
     let manifest = await createAssetsManifest({
       config: remixConfig,
       metafile: appCompiler.metafile!,
-      cssBundlePath,
+      cssBundleHref,
       hmr,
     });
     await writeAssetsManifest(remixConfig, manifest);
