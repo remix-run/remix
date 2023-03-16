@@ -72,9 +72,9 @@ test.describe("non-aborted", () => {
           import Counter from "~/components/counter";
           import Interactive from "~/components/interactive";
 
-          export const meta: MetaFunction = () => ({
-            title: "New Remix App",
-          });
+          export function meta() {
+            return [{ title: "New Remix App" }];
+          }
 
           export const loader = () => defer({
             id: "${ROOT_ID}",
@@ -1101,9 +1101,9 @@ test.describe("aborted", () => {
           import Counter from "~/components/counter";
           import Interactive from "~/components/interactive";
 
-          export const meta: MetaFunction = () => ({
-            title: "New Remix App",
-          });
+          export function meta() {
+            return [{ title: "New Remix App" }];
+          }
 
           export const loader = () => defer({
             id: "${ROOT_ID}",
