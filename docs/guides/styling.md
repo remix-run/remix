@@ -827,15 +827,15 @@ Here's some sample code to show how you might use Styled Components with Remix (
      ScrollRestoration,
    } from "@remix-run/react";
 
-   export const meta: MetaFunction = () => ({
-     charset: "utf-8",
-     viewport: "width=device-width,initial-scale=1",
-   });
-
    export default function App() {
      return (
        <html lang="en">
          <head>
+           <meta charSet="utf-8" />
+           <meta
+             name="viewport"
+             content="width=device-width, initial-scale=1"
+           />
            <Meta />
            <Links />
            {typeof document === "undefined"
@@ -895,8 +895,6 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 
 ## CSS Bundling
 
-<docs-warning>CSS-bundling features are unstable and currently only available behind feature flags. We're confident in the use cases they solve, but the API and implementation may change in the future.</docs-warning>
-
 <docs-warning>When using CSS-bundling features, you should avoid using `export *` due to an [issue with esbuild's CSS tree shaking][esbuild-css-tree-shaking-issue].</docs-warning>
 
 Many common approaches to CSS within the React community are only possible when bundling CSS, meaning that the CSS files you write during development are collected into a separate bundle as part of the build process.
@@ -931,23 +929,11 @@ With this link tag inserted into the page, you're now ready to start using the v
 
 ### CSS Modules
 
-<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
-
 First, ensure you've set up [CSS bundling][css-bundling] in your application.
 
-Then, to enable [CSS Modules], set the `future.unstable_cssModules` feature flag in `remix.config.js`.
+<docs-warning>If you're using v1, you'll also need to set the `future.unstable_cssModules` feature flag to `true` in `remix.config.js`.</docs-warning>
 
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  future: {
-    unstable_cssModules: true,
-  },
-  // ...
-};
-```
-
-With this feature flag enabled, you can now opt into CSS Modules via the `.module.css` file name convention. For example:
+You can then opt into [CSS Modules] via the `.module.css` file name convention. For example:
 
 ```css filename=app/components/button/styles.module.css
 .root {

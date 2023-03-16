@@ -72,12 +72,6 @@ const writeAssetsManifest = async (
   );
 };
 
-const isCssBundlingEnabled = (config: RemixConfig): boolean =>
-  Boolean(
-    config.future.unstable_cssModules ||
-      config.future.unstable_cssSideEffectImports ||
-      config.future.unstable_vanillaExtract
-  );
 const createEsbuildConfig = (
   build: "app" | "css",
   config: RemixConfig,
@@ -109,12 +103,8 @@ const createEsbuildConfig = (
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    isCssBundlingEnabled(config) && isCssBuild
-      ? cssBundleEntryModulePlugin(config)
-      : null,
-    config.future.unstable_cssModules
-      ? cssModulesPlugin({ config, mode, outputCss })
-      : null,
+    isCssBuild ? cssBundleEntryModulePlugin(config) : null,
+    cssModulesPlugin({ config, mode, outputCss }),
     config.future.unstable_vanillaExtract
       ? vanillaExtractPlugin({ config, mode, outputCss })
       : null,
@@ -134,13 +124,13 @@ const createEsbuildConfig = (
   if (mode === "development" && config.future.unstable_dev) {
     // TODO prebundle deps instead of chunking just these ones
     let isolateChunks = [
-      "react",
-      "react/jsx-dev-runtime",
-      "react/jsx-runtime",
-      "react-dom",
-      "react-dom/client",
-      "react-refresh/runtime",
-      "@remix-run/react",
+      require.resolve("react"),
+      require.resolve("react/jsx-dev-runtime"),
+      require.resolve("react/jsx-runtime"),
+      require.resolve("react-dom"),
+      require.resolve("react-dom/client"),
+      require.resolve("react-refresh/runtime"),
+      require.resolve("@remix-run/react"),
       "remix:hmr",
     ];
     entryPoints = {
@@ -230,10 +220,6 @@ export const createBrowserCompiler = (
     };
 
     let cssBuildTask = async () => {
-      if (!isCssBundlingEnabled(remixConfig)) {
-        return;
-      }
-
       // The types aren't great when combining write: false and incremental: true
       //  so we need to assert that it's an incremental build
       cssCompiler = (await (!cssCompiler

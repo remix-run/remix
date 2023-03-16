@@ -39,13 +39,11 @@ export type VanillaExtractOptions = {
 };
 
 interface FutureConfig {
-  unstable_cssModules: boolean;
   unstable_cssSideEffectImports: boolean;
   unstable_dev: boolean | Dev;
   unstable_postcss: boolean;
   unstable_tailwind: boolean;
   unstable_vanillaExtract: boolean | VanillaExtractOptions;
-  v2_meta: boolean;
   v2_routeConvention: boolean;
 }
 
@@ -574,14 +572,12 @@ export async function readConfig(
   }
 
   let future: FutureConfig = {
-    unstable_cssModules: appConfig.future?.unstable_cssModules === true,
     unstable_cssSideEffectImports:
       appConfig.future?.unstable_cssSideEffectImports === true,
     unstable_dev: appConfig.future?.unstable_dev ?? false,
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract ?? false,
-    v2_meta: appConfig.future?.v2_meta === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
@@ -655,6 +651,8 @@ const resolveServerBuildPath = (
 
   // retain deprecated behavior for now
   if (appConfig.serverBuildDirectory) {
+    warnOnce(serverBuildDirectoryWarning, "serverBuildDirectory");
+
     serverBuildPath = path.join(appConfig.serverBuildDirectory, "index.js");
   }
 
@@ -672,6 +670,23 @@ let listFormat = new Intl.ListFormat("en", {
   type: "conjunction",
 });
 
-export let browserBuildDirectoryWarning = `⚠️ DEPRECATED: The \`browserBuildDirectory\` config option is deprecated. Use \`assetsBuildDirectory\` instead.`;
+export let browserBuildDirectoryWarning =
+  "⚠️ DEPRECATED: The `browserBuildDirectory` config option is deprecated. " +
+  "Use `assetsBuildDirectory` instead.";
 
-export let flatRoutesWarning = `⚠️ DEPRECATED: The old nested folders route convention has been deprecated in favor of "flat routes".  Please enable the new routing convention via the \`future.v2_routeConvention\` flag in your \`remix.config.js\` file.  For more information, please see https://remix.run/docs/en/main/file-conventions/route-files-v2.`;
+export let serverBuildDirectoryWarning =
+  "⚠️ DEPRECATED: The `serverBuildDirectory` config option is deprecated. " +
+  "Use `serverBuildPath` instead.";
+
+export let serverBuildTargetWarning =
+  "⚠️ DEPRECATED: The `serverBuildTarget` config option is deprecated. Use a " +
+  "combination of `publicPath`, `serverBuildPath`, `serverConditions`, " +
+  "`serverDependenciesToBundle`, `serverMainFields`, `serverMinify`, " +
+  "`serverModuleFormat` and/or `serverPlatform` instead.";
+
+export let flatRoutesWarning =
+  "⚠️ DEPRECATED: The old nested folders route convention has been " +
+  "deprecated in favor of 'flat routes'.  Please enable the new routing " +
+  "convention via the `future.v2_routeConvention` flag in your " +
+  "`remix.config.js` file.  For more information, please see " +
+  "https://remix.run/docs/en/main/file-conventions/route-files-v2.";

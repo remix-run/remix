@@ -101,7 +101,6 @@ function itPrefetchesPageLinks<
         url: "",
         version: "",
       },
-      future: { v2_meta: false },
     };
 
     beforeEach(() => {

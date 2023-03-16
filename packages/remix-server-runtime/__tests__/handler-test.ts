@@ -16,9 +16,7 @@ describe("createRequestHandler", () => {
       },
       assets: {} as any,
       entry: { module: {} as any },
-      future: {
-        v2_meta: false,
-      },
+      future: {} as any,
     });
 
     let response = await handler(

@@ -59,9 +59,7 @@ export async function action({ request }: ActionArgs) {
 }
 
 export const meta: MetaFunction = () => {
-  return {
-    title: "Login",
-  };
+  return [{ title: "Login" }];
 };
 
 export default function LoginPage() {

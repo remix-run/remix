@@ -158,7 +158,7 @@ title: Conventions
 
 [Moved →][moved-36]
 
-#### `HtmlMetaDescriptor`
+#### `MetaDescriptor`
 
 [Moved →][moved-37]
 
