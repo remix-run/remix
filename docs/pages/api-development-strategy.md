@@ -1,0 +1,102 @@
+---
+title: API Development Strategy
+description: Remix's strategy tp provide a smooth upgrade experience for application developers
+---
+
+# API Development Strategy
+
+Let's cut to the chase - major version upgrades can be a _pain_. Especially for something as foundational to your application as the framework or router it's built on.
+
+We've all been there as application developers, and even as framework developers over the lifetime of React Router. Even as recently as v6, we dumped a [migration guide][react-router-v6-migration-guide] on our users initially and improved on that with the [backwards-compatibility package][react-router-v6-back-compat]. But we realize that neither of these are _great_ and we think there's room for improvement.
+
+For Remix and React Router, we want to do our best to give you the smoothest upgrade experience possible.
+
+<docs-info>This strategy is discussed in more detail in our [Future Flags][future-flags-blog-post] blog post, so give that a read if you want any more info at the end of this doc!</docs-info>
+
+## Goals
+
+Our goals for major Remix and React Router releases are:
+
+- Developers can opt-into SemVer-major features individually _as they are released_ instead of having to wait to adopt them all at once when a new major version hits NPM
+- Having opted into features ahead-of-time, developers can upgrade to new major versions in a single short-lived branch/commit (hours, not weeks)
+
+Current approaches tend to try to give you an **off-ramp** from v1 to v2 _after v2 is released_. Instead, we want to provide you a bunch of small **on-ramps** to _eventual_ v2 features as they are released _in v1 releases_. If all goes as plan and you stay up to date as new on-ramps come out, then your code _as it's written today_ should "just work"[^1] when you upgrade to a new major version. This effectively makes major version upgrades no more painful than minor version upgrades 🤯.
+
+[^1]: This is our hope for JS codebases since our flags can drive runtime behavior. This likely won't be quite true in TS codebases since we often need to expose two types in v1. For example, we may have `SomeType` in v1 originally. Then we introduce `V2_SomeType` with our future flag in v1. Then when we release v2 we'll rename `V2_SomeType -> SomeType`, and your code wil need to make that update if you had opted into the future flag. We're hoping it's a matter of a few IDE rename operations 🤞.
+
+We understand this is a lofty goal, and we know it may not work out exactly as we plan all the time, but we're serious about stability and want to makes sure that our process is considering the burden a major version upgrade can put on our application developers.
+
+### Implementation
+
+We plan to do this via what we're calling **Future Flags** in the `remix.config.js` file. Think of these as **feature flags for future features** (now say that 5 times fast 😉). As we implement new features, we always try to do them in a backwards-compatible way. But when we can't and decide a breaking change is warranted, we don't table that feature up for an _eventual_ v2 release. Instead, we add a **Future Flag** and implement the new feature alongside the current behavior in a v1 minor release. This allows users to start using the feature, providing feedback, and
+reporting bugs _immediately_.
+
+That way, not only can you adopt features incrementally (and eagerly without a major version bump), we can also work out any kinks incrementally _before_ releasing v2. Eventually we also then add deprecation warnings to the v1 releases to nudge users to the new behavior. Then in v2 we remove the old v1 approach, remove the deprecations, and remove the flag - thus making the flagged behavior the new default in v2. If at the time v2 is released, an application has opted into _all_ future flags and updated their code - then they should just be able to update their Remix dependencies to v2 and delete the future flags from their `remix.config.js` and be running on v2 in a matter of minutes.
+
+### Unstable vs. V2 Flags
+
+Future flags come in 2 forms:
+
+**`future.unstable_feature`**
+
+`unstable_` flags allow us to iterate on the API with early adopters as if we're in `v0.x.x` versions, but for a specific feature. This avoids churning the API for all users and arriving at better APIs in the final release. This _does not mean_ that we think the feature is bug-ridden! We _absolutely_ want early adopters to start using these features so we can iterate on (and/or gain confidence in) the API.
+
+**`future.v2_feature`**
+
+`v2_` indicates a breaking change from v1 behavior and implies (1) that the API is considered stable and will not under any more breaking changes and (2) that the API will become the default behavior in v2. A `v2_` flag _does not_ mean the feature is bug-free - no software is! Our recommendation is to upgrade to v2 flags as you have the time, as it will make your v2 upgrade _much_ smoother.
+
+### Example New Feature Flow
+
+Consider a new feature we want to implement in Remix - let's call it "speedy routing" since speed is all the hype these days. The decision flow for this new feature would go something like this:
+
+- Can we implement this feature in a backwards-compatible way?
+  - If yes, are we confident in the API for this feature?
+    - 🚀 If yes, awesome! We can implement it and ship it without any flags
+    - If no, that's ok too!
+      - Let's get this out to the community for feedback on the API
+      - 🚀 We implement this feature behind a `future.unstable_speedyRouting` flag
+      - Early adopters can use the feature and provide feedback and we can iterate if needed
+      - When we feel the API is stable, we remove the future flag and the non-breaking change lands in v1
+  - If no, are we confident in the API for this feature?
+    - If yes, awesome!
+      - 🚀 We implement this feature behind a `future.v2_speedyRouting` flag
+      - Early adopters can use the feature and report any bugs they find
+      - At some pint we add deprecation warnings to v1
+      - When v2 releases this becomes the new default behavior
+    - If no, that's ok too!
+      - Let's get this out to the community for feedback on the API
+      - 🚀 We implement this feature behind a `future.unstable_speedyRouting` flag
+      - Early adopters can use the feature provide feedback and we can iterate if needed
+      - 🚀 When we feel the API is stable, we convert it to a `future.v2_speedyRouting` flag
+      - Early adopters can use the feature and report any bugs they find
+      - At some pint we add deprecation warnings to v1
+      - When v2 releases this becomes the new default behavior
+
+The lifecycle is thus either:
+
+- Non-Breaking + Stable API Feature -> Lands in v1
+- Non-Breaking + Unstable API -> `future_unstable_` flag -> Lands in v1
+- Breaking + Stable API Feature -> `future.v2_` flag -> Lands in v1
+- Breaking + Unstable API -> `future_unstable_` flag -> `future.v2_` flag -> Lands in v1
+
+### Current Future Flags
+
+Here's the current future flags in Remix v1 today:
+
+| Flag                            | Description                                                           |
+| ------------------------------- | --------------------------------------------------------------------- |
+| `unstable_cssModules`           | Enable CSS Modules Support                                            |
+| `unstable_cssSideEffectImports` | Enable CSS Side Effect imports                                        |
+| `unstable_dev`                  | Enable the new development server (including HMR/HDR support)         |
+| `unstable_postcss`              | Enable PostCSS Support                                                |
+| `unstable_tailwind`             | Enable TailwindCSS support                                            |
+| `unstable_vanillaExtract`       | Enable Vanilla Extract Support                                        |
+| `v2_errorBoundary`              | Combine `ErrorBoundary`/`CatchBoundary` into a single `ErrorBoundary` |
+| `v2_meta`                       | Enable the new API for your `meta` functions                          |
+| `v2_routeConvention`            | Enable the flat routes style of file-based routing                    |
+
+We're in the process of preparing for our v2 release, so all `future.unstable_` flags are being stabilized into `future.v2_` flags (except for those which are not breaking changes, like PostCSS/Tailwind/Vanilla Extract support). This includes adding deprecation warnings for apps still using the old way. Once we stabilize them all we'll do a final Remix 1.15.0 release and let that run for a bit to give folks time to opt into any flags they haven't yet added. Then we'll plan to release Remix 2.0.0 and start working on releasing flag-driven Remix v3 features.
+
+[future-flags-blog-post]: https://remix.run/blog/future-flags
+[react-router-v6-migration-guide]: https://reactrouter.com/en/main/upgrading/v5#introduction
+[react-router-v6-back-compat]: https://reactrouter.com/en/main/upgrading/v5#backwards-compatibility-package
