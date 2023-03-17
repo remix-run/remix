@@ -94,8 +94,7 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
 
     "app/styles.module.css": css`
       .test {
-        color: black;
-        background: orange;
+        color: initial;
       }
     `,
 
@@ -257,25 +256,38 @@ test("HMR", async ({ page }) => {
     let originalIndex = fs.readFileSync(indexPath, "utf8");
     let counterPath = path.join(projectDir, "app", "components", "counter.tsx");
     let originalCounter = fs.readFileSync(counterPath, "utf8");
+    let cssModulePath = path.join(projectDir, "app", "styles.module.css");
+    let originalCssModule = fs.readFileSync(cssModulePath, "utf8");
+
+    // make content and style changed to index route
+    let newCssModule = `
+      .test {
+        background: black;
+        color: white;
+      }
+    `;
+    fs.writeFileSync(cssModulePath, newCssModule);
 
     let newIndex = `
       import { useLoaderData } from "@remix-run/react";
+      import styles from "~/styles.module.css";
       export default function Index() {
         const t = useLoaderData();
         return (
           <main>
-            <h1>Changed</h1>
+            <h1 className={styles.test}>Changed</h1>
           </main>
         )
       }
     `;
     fs.writeFileSync(indexPath, newIndex);
 
-    // detect HMR'd content
+    // detect HMR'd content and style changes
     await page.waitForLoadState("networkidle");
-
     let h1 = page.getByText("Changed");
-    await h1.waitFor({ timeout: 10000 });
+    await h1.waitFor({ timeout: 2000 });
+    expect(h1).toHaveCSS("color", "rgb(255, 255, 255)");
+    expect(h1).toHaveCSS("background-color", "rgb(0, 0, 0)");
 
     // verify that `<input />` value was persisted (i.e. hmr, not full page refresh)
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
@@ -283,6 +295,7 @@ test("HMR", async ({ page }) => {
 
     // undo change
     fs.writeFileSync(indexPath, originalIndex);
+    fs.writeFileSync(cssModulePath, originalCssModule);
     await page.getByText("Index Title").waitFor({ timeout: 2000 });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
     await page.waitForSelector(`#root-counter:has-text("inc 1")`);
