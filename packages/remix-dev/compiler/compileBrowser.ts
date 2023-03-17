@@ -117,7 +117,6 @@ const createEsbuildConfig = (
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    build === "app" ? cssBundleUpdatePlugin({ getCssBundleHref }) : null,
     isCssBundlingEnabled(config) && isCssBuild
       ? cssBundleEntryModulePlugin(config)
       : null,
@@ -158,6 +157,10 @@ const createEsbuildConfig = (
     };
 
     plugins.push(hmrPlugin({ remixConfig: config }));
+
+    if (isCssBundlingEnabled(config)) {
+      plugins.push(cssBundleUpdatePlugin({ getCssBundleHref }));
+    }
   }
 
   return {
