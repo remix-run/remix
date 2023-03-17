@@ -33,17 +33,12 @@ if (gitTagsResult.stderr) {
   process.exit(gitTagsResult.exitCode);
 }
 
-let gitTags = gitTagsResult.stdout
-  .split("\n")
-  .slice(1) // TODO: remove - just testing various scenarios
-  .map((tag) => {
-    let clean = tag.replace(/^remix@/, "");
-    return { tag, clean };
-  });
+let gitTags = gitTagsResult.stdout.split("\n").map((tag) => {
+  let clean = tag.replace(/^remix@/, "");
+  return { tag, clean };
+});
 
 let [latest, previous] = gitTags;
-
-console.log({ latest, previous });
 
 let isStable = semver.prerelease(latest.clean) === null;
 let isNightly = latest.clean.startsWith("v0.0.0-nightly-");
@@ -56,29 +51,18 @@ if (isPreRelease) {
   let preRelease = semver.prerelease(latest.clean);
   if (preRelease.join(".") === "pre.0") {
     console.log(`first pre-release: ${latest.clean}`);
-    let stable = gitTags.find((tag) => {
-      return semver.prerelease(tag.clean) === null;
-    });
-    console.log(`stable: ${stable.clean}`);
-    previous = stable;
+    let stableTags = getStableTags(gitTags);
+    previous = stableTags[0];
   }
 } else if (isStable) {
   console.log(`stable: ${latest.clean}`);
-  let stable = gitTags.find((tag) => {
-    return semver.prerelease(tag.clean) === null && tag.clean !== latest.clean;
-  });
-  previous = stable;
+  let stableTags = getStableTags(gitTags);
+  previous = stableTags[1];
 } else {
   console.log(`nightly: ${latest.clean}`);
 }
 
-console.log({
-  latest,
-  previous,
-  isPreRelease,
-  isStable,
-  isNightly,
-});
+console.log({ latest, previous, isPreRelease, isStable, isNightly });
 
 /**
  * @param {string} start
@@ -116,7 +100,7 @@ function getPrListCommand(sha) {
     "--state",
     "merged",
     "--json",
-    "number,title",
+    "number,title,url,body",
   ];
 }
 
@@ -124,46 +108,157 @@ let prs = await findMergedPRs(gitCommits);
 console.log(prs);
 
 for (let pr of prs) {
-  let comment = `🤖 Hello there,\n\nWe just published version \`${latest.clean}\` which includes this pull request. If you'd like to take it for a test run please try it out and let us know what you think!\n\nThanks!`;
-
-  let commentCommand = ["pr", "comment", pr, "--body", comment];
+  let prComment = `🤖 Hello there,\n\nWe just published version \`${latest.clean}\` which includes this pull request. If you'd like to take it for a test run please try it out and let us know what you think!\n\nThanks!`;
+  let issueComment = `🤖 Hello there,\n\nWe just published version \`${latest.clean}\` which involves this issue. If you'd like to take it for a test run please try it out and let us know what you think!\n\nThanks!`;
 
   if (!DRY_RUN) {
+    let commentCommand = ["pr", "comment", pr, "--body", prComment];
     let commentResult = await execa("gh", commentCommand);
     if (commentResult.stderr) {
       console.error(commentResult.stderr);
     }
+
+    for (let issue of pr.issues) {
+      let issueCommentCommand = [
+        "issue",
+        "comment",
+        issue,
+        "--body",
+        issueComment,
+      ];
+      let issueCommentResult = await execa("gh", issueCommentCommand);
+      if (issueCommentResult.stderr) {
+        console.error(issueCommentResult.stderr);
+      }
+
+      let closeCommand = ["issue", "close", issue];
+      let closeResult = await execa("gh", closeCommand);
+      if (closeResult.stderr) {
+        console.error(closeResult.stderr);
+      }
+    }
   }
+}
+
+/**
+ * @param {string} prHtmlUrl
+ */
+async function getIssuesLinkedToPullRequest(prHtmlUrl) {
+  let query =
+    "\
+    query ($prHtmlUrl: URI!, $endCursor: String) {\
+      resource(url: $prHtmlUrl) {\
+        ... on PullRequest {\
+          closingIssuesReferences(first: 100, after: $endCursor) {\
+            nodes {\
+              number\
+            }\
+            pageInfo {\
+              hasNextPage\
+              endCursor\
+            }\
+          }\
+        }\
+      }\
+    }\
+  ";
+
+  let result = await execa("gh", [
+    "api",
+    "graphql",
+    "--paginate",
+    "--field",
+    `prHtmlUrl=${prHtmlUrl}`,
+    "--raw-field",
+    `query=${query}`,
+  ]);
+
+  if (result.stderr) {
+    console.error(result.stderr);
+  }
+
+  console.log(result.stdout);
+
+  let json = JSON.parse(result.stdout);
+
+  return json.data.resource.closingIssuesReferences.nodes.map(
+    (node) => node.number
+  );
+}
+
+/**
+ * @param {string} prBody - the body of the PR
+ * @returns {Promise<number[]>} - the issue numbers that were closed via the PR body
+ */
+async function getIssuesClosedViaBody(prBody) {
+  if (!prBody) return [];
+
+  /**
+   * This regex matches for one of github's issue references for auto linking an issue to a PR
+   * as that only happens when the PR is sent to the default branch of the repo
+   * https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword
+   */
+  let regex =
+    /(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)(:)?\s#([0-9]+)/gi;
+
+  let matches = prBody.match(regex);
+  if (!matches) return [];
+
+  let issuesMatch = matches.map((match) => {
+    let [, issueNumber] = match.split(" #");
+    return parseInt(issueNumber, 10);
+  });
+
+  return issuesMatch;
 }
 
 /**
  * @param {string[]} commits
  * @returns {Promise<number[]>}
  */
-function findMergedPRs(commits) {
+async function findMergedPRs(commits) {
   let CHANGESET_PR_TITLES = [
     "chore: update version for release",
     "chore: update version for release (pre)",
   ];
-  let result = commits.map(async (commit) => {
-    let prCommand = getPrListCommand(commit);
+  let result = await Promise.all(
+    commits.map(async (commit) => {
+      let prCommand = getPrListCommand(commit);
 
-    let prResult = await execa("gh", prCommand);
-    // TODO: remove log
-    console.log(prResult.stdout);
-    if (prResult.stderr) {
-      console.error(prResult.stderr);
-      throw new Error(prResult.stderr);
-    }
-    let [pr] = JSON.parse(prResult.stdout);
-    if (!pr || CHANGESET_PR_TITLES.includes(pr.title.toLowerCase())) {
-      return;
-    }
+      let prResult = await execa("gh", prCommand);
+      if (prResult.stderr) {
+        console.error(prResult.stderr);
+        throw new Error(prResult.stderr);
+      }
+      let [pr] = JSON.parse(prResult.stdout);
+      if (!pr || CHANGESET_PR_TITLES.includes(pr.title.toLowerCase())) {
+        return;
+      }
 
-    return pr.number;
-  });
+      let linkedIssues = await getIssuesLinkedToPullRequest(pr.url);
 
-  return Promise.all(result).then((prs) => {
-    return prs.filter(Boolean);
+      let issuesClosedViaBody = await getIssuesClosedViaBody(pr.body);
+
+      console.log({ linkedIssues, issuesClosedViaBody });
+
+      let uniqueIssues = new Set([...linkedIssues, ...issuesClosedViaBody]);
+
+      return {
+        number: pr.number,
+        issues: [...uniqueIssues],
+      };
+    })
+  );
+
+  return result.filter(Boolean);
+}
+
+/**
+ * @param {string[]} tags
+ * @returns {string[]}
+ */
+function getStableTags(tags) {
+  return tags.filter((tag) => {
+    return semver.prerelease(tag.clean) === null;
   });
 }
