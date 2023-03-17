@@ -79,14 +79,6 @@ export interface AppConfig {
   assetsBuildDirectory?: string;
 
   /**
-   * The path to the browser build, relative to remix.config.js. Defaults to
-   * "public/build".
-   *
-   * @deprecated Use `{@link AppConfig.assetsBuildDirectory}` instead
-   */
-  browserBuildDirectory?: string;
-
-  /**
    * The URL prefix of the browser build with a trailing slash. Defaults to
    * `"/build/"`. This is the path the browser will use to find assets.
    */
@@ -115,14 +107,6 @@ export interface AppConfig {
    * file can use either a `.js` or `.ts` file extension.
    */
   server?: string;
-
-  /**
-   * The path to the server build, relative to `remix.config.js`. Defaults to
-   * "build".
-   *
-   * @deprecated Use {@link AppConfig.serverBuildPath} instead.
-   */
-  serverBuildDirectory?: string;
 
   /**
    * The path to the server build file, relative to `remix.config.js`. This file
@@ -376,7 +360,10 @@ export async function readConfig(
     }
   }
 
-  let serverBuildPath = resolveServerBuildPath(rootDirectory, appConfig);
+  let serverBuildPath = path.resolve(
+    rootDirectory,
+    appConfig.serverBuildPath ?? "build/index.js"
+  );
   let serverBuildTargetEntryModule = `export * from ${JSON.stringify(
     serverBuildVirtualModule.id
   )};`;
@@ -484,14 +471,8 @@ export async function readConfig(
     ? path.resolve(appDirectory, userEntryServerFile)
     : path.resolve(defaultsDirectory, entryServerFile);
 
-  if (appConfig.browserBuildDirectory) {
-    warnOnce(browserBuildDirectoryWarning, "browserBuildDirectory");
-  }
-
   let assetsBuildDirectory =
-    appConfig.assetsBuildDirectory ||
-    appConfig.browserBuildDirectory ||
-    path.join("public", "build");
+    appConfig.assetsBuildDirectory || path.join("public", "build");
 
   let absoluteAssetsBuildDirectory = path.resolve(
     rootDirectory,
@@ -643,40 +624,12 @@ export function findConfig(
   return undefined;
 }
 
-const resolveServerBuildPath = (
-  rootDirectory: string,
-  appConfig: AppConfig
-) => {
-  let serverBuildPath = "build/index.js";
-
-  // retain deprecated behavior for now
-  if (appConfig.serverBuildDirectory) {
-    warnOnce(serverBuildDirectoryWarning, "serverBuildDirectory");
-
-    serverBuildPath = path.join(appConfig.serverBuildDirectory, "index.js");
-  }
-
-  if (appConfig.serverBuildPath) {
-    serverBuildPath = appConfig.serverBuildPath;
-  }
-
-  return path.resolve(rootDirectory, serverBuildPath);
-};
-
 // @ts-expect-error available in node 12+
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
 let listFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "conjunction",
 });
-
-export let browserBuildDirectoryWarning =
-  "⚠️ DEPRECATED: The `browserBuildDirectory` config option is deprecated. " +
-  "Use `assetsBuildDirectory` instead.";
-
-export let serverBuildDirectoryWarning =
-  "⚠️ DEPRECATED: The `serverBuildDirectory` config option is deprecated. " +
-  "Use `serverBuildPath` instead.";
 
 export let serverBuildTargetWarning =
   "⚠️ DEPRECATED: The `serverBuildTarget` config option is deprecated. Use a " +
