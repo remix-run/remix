@@ -6,7 +6,8 @@ import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfil
 import postcss from "postcss";
 import postcssDiscardDuplicates from "postcss-discard-duplicates";
 
-import type { WriteChannel } from "../channel";
+import type { Channel } from "../channel";
+import { createChannel } from "../channel";
 import type { RemixConfig } from "../config";
 import type { AssetsManifest } from "./assets";
 import { createAssetsManifest } from "./assets";
@@ -80,10 +81,10 @@ const isCssBundlingEnabled = (config: RemixConfig): boolean =>
       config.future.unstable_vanillaExtract
   );
 
-let cssBundleHrefPromise: Promise<string | undefined>;
+let cssBundleHrefChannel: Channel<string | undefined>;
 
 // Allow plugins to access the latest value of the CSS bundle during rebuilds
-const getCssBundleHref = () => cssBundleHrefPromise;
+const getCssBundleHref = () => cssBundleHrefChannel.read();
 
 const createEsbuildConfig = (
   build: "app" | "css",
@@ -116,7 +117,7 @@ const createEsbuildConfig = (
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    build === "css" ? cssBundleUpdatePlugin({ getCssBundleHref }) : null,
+    build === "app" ? cssBundleUpdatePlugin({ getCssBundleHref }) : null,
     isCssBundlingEnabled(config) && isCssBuild
       ? cssBundleEntryModulePlugin(config)
       : null,
@@ -242,6 +243,8 @@ export const createBrowserCompiler = (
         return;
       }
 
+      cssBundleHrefChannel = createChannel();
+
       // The types aren't great when combining write: false and incremental: true
       //  so we need to assert that it's an incremental build
       cssCompiler = (await (!cssCompiler
@@ -276,6 +279,7 @@ export const createBrowserCompiler = (
       );
 
       if (!cssBundleFile) {
+        cssBundleHrefChannel.write(undefined);
         return;
       }
 
@@ -323,10 +327,18 @@ export const createBrowserCompiler = (
       return cssBundleHref;
     };
 
-    cssBundleHrefPromise = cssBuildTask();
+    let cssBuildTaskPromise = cssBuildTask();
+
+    cssBuildTaskPromise
+      .then((cssBundleHref) => {
+        cssBundleHrefChannel.write(cssBundleHref);
+      })
+      .catch(() => {
+        cssBundleHrefChannel.write(undefined);
+      });
 
     let [cssBundleHref, metafile] = await Promise.all([
-      cssBundleHrefPromise,
+      cssBuildTaskPromise,
       appBuildTask(),
     ]);
 
