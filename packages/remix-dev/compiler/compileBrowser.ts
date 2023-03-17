@@ -83,9 +83,6 @@ const isCssBundlingEnabled = (config: RemixConfig): boolean =>
 
 let cssBundleHrefChannel: Channel<string | undefined>;
 
-// Allow plugins to access the latest value of the CSS bundle during rebuilds
-const getCssBundleHref = () => cssBundleHrefChannel.read();
-
 const createEsbuildConfig = (
   build: "app" | "css",
   config: RemixConfig,
@@ -159,7 +156,11 @@ const createEsbuildConfig = (
     plugins.push(hmrPlugin({ remixConfig: config }));
 
     if (isCssBundlingEnabled(config)) {
-      plugins.push(cssBundleUpdatePlugin({ getCssBundleHref }));
+      plugins.push(
+        cssBundleUpdatePlugin({
+          getCssBundleHref: cssBundleHrefChannel.read,
+        })
+      );
     }
   }
 
