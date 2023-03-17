@@ -20,20 +20,13 @@ Our goals for major Remix and React Router releases are:
 - Developers can opt-into SemVer-major features individually _as they are released_ instead of having to wait to adopt them all at once when a new major version hits NPM
 - Having opted into features ahead-of-time, developers can upgrade to new major versions in a single short-lived branch/commit (hours, not weeks)
 
-Current approaches tend to try to give you an **off-ramp** from v1 to v2 _after v2 is released_. Instead, we want to provide you a bunch of small **on-ramps** to _eventual_ v2 features as they are released _in v1 releases_. If all goes as plan and you stay up to date as new on-ramps come out, then your code _as it's written today_ should "just work"[^1] when you upgrade to a new major version. This effectively makes major version upgrades no more painful than minor version upgrades 🤯.
+## Implementation
 
-[^1]: This is our hope for JS codebases since our flags can drive runtime behavior. This likely won't be quite true in TS codebases since we often need to expose two types in v1. For example, we may have `SomeType` in v1 originally. Then we introduce `V2_SomeType` with our future flag in v1. Then when we release v2 we'll rename `V2_SomeType -> SomeType`, and your code wil need to make that update if you had opted into the future flag. We're hoping it's a matter of a few IDE rename operations 🤞.
-
-We understand this is a lofty goal, and we know it may not work out exactly as we plan all the time, but we're serious about stability and want to makes sure that our process is considering the burden a major version upgrade can put on our application developers.
-
-### Implementation
-
-We plan to do this via what we're calling **Future Flags** in the `remix.config.js` file. Think of these as **feature flags for future features** (now say that 5 times fast 😉). As we implement new features, we always try to do them in a backwards-compatible way. But when we can't and decide a breaking change is warranted, we don't table that feature up for an _eventual_ v2 release. Instead, we add a **Future Flag** and implement the new feature alongside the current behavior in a v1 minor release. This allows users to start using the feature, providing feedback, and
-reporting bugs _immediately_.
+We plan to do this via what we're calling **Future Flags** in the `remix.config.js` file. Think of these as **feature flags for future features**. As we implement new features, we always try to do them in a backwards-compatible way. But when a breaking change is warranted, we don't table that feature up for an _eventual_ v2 release. Instead, we add a **Future Flag** and implement the new feature alongside the current behavior in a v1 minor release. This allows users to start using the feature, providing feedback, and reporting bugs _immediately_.
 
 That way, not only can you adopt features incrementally (and eagerly without a major version bump), we can also work out any kinks incrementally _before_ releasing v2. Eventually we also then add deprecation warnings to the v1 releases to nudge users to the new behavior. Then in v2 we remove the old v1 approach, remove the deprecations, and remove the flag - thus making the flagged behavior the new default in v2. If at the time v2 is released, an application has opted into _all_ future flags and updated their code - then they should just be able to update their Remix dependencies to v2 and delete the future flags from their `remix.config.js` and be running on v2 in a matter of minutes.
 
-### Unstable vs. V2 Flags
+## Unstable vs. V2 Flags
 
 Future flags come in 2 forms:
 
@@ -58,7 +51,7 @@ The lifecycle is thus either:
 - Breaking + Stable API Feature -> `future.v2_` flag -> Lands in v2
 - Breaking + Unstable API -> `future.unstable_` flag -> `future.v2_` flag -> Lands in v2
 
-### Current Future Flags
+## Current Future Flags
 
 Here's the current future flags in Remix v1 today:
 
