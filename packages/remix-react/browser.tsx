@@ -5,10 +5,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import { RemixContext } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
-import {
-  RemixErrorBoundary,
-  RemixRootDefaultErrorBoundary,
-} from "./errorBoundaries";
+import { RemixErrorBoundary } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
 import type { RouteModules } from "./routeModules";
 import {
@@ -93,15 +90,11 @@ if (import.meta && import.meta.hot) {
                   {
                     ...imported,
                     // react-refresh takes care of updating these in-place,
-                    // if we don't preserve existing values we'll loose state.
+                    // if we don't preserve existing values we'll lose state.
                     default: imported.default
                       ? window.__remixRouteModules[id]?.default ??
                         imported.default
                       : imported.default,
-                    CatchBoundary: imported.CatchBoundary
-                      ? window.__remixRouteModules[id]?.CatchBoundary ??
-                        imported.CatchBoundary
-                      : imported.CatchBoundary,
                     ErrorBoundary: imported.ErrorBoundary
                       ? window.__remixRouteModules[id]?.ErrorBoundary ??
                         imported.ErrorBoundary
@@ -210,7 +203,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   }, [location]);
 
   // We need to include a wrapper RemixErrorBoundary here in case the root error
-  // boundary also throws and we need to bubble up outside of the router entirely.
+  // boundary also throws, and we need to bubble up outside the router entirely.
   // Then we need a stateful location here so the user can back-button navigate
   // out of there
   return (
@@ -221,10 +214,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         future: window.__remixContext.future,
       }}
     >
-      <RemixErrorBoundary
-        location={location}
-        component={RemixRootDefaultErrorBoundary}
-      >
+      <RemixErrorBoundary location={location}>
         <RouterProvider
           router={router}
           fallbackElement={null}

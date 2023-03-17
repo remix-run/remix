@@ -43,7 +43,6 @@ test.describe("non-aborted", () => {
       config: {
         future: {
           v2_routeConvention: true,
-          v2_errorBoundary: true,
           v2_normalizeFormMethod: true,
         },
       },

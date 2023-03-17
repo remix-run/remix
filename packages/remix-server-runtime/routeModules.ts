@@ -38,33 +38,10 @@ export interface ActionFunction {
 }
 
 /**
- * A React component that is rendered when the server throws a Response.
- *
- * @deprecated Please enable the v2_errorBoundary flag to eliminate the need
- * for this type.  If you are still using this, please use `@remix-run/react`'s
- * `CatchBoundaryComponent` type
- */
-export type CatchBoundaryComponent = any;
-
-/**
- * A React component that is rendered when there is an error on a route.
- *
- * @deprecated Please enable the v2_errorBoundary flag to eliminate the need
- * for this type.  If you are still using this, please use `@remix-run/react`'s
- * `ErrorBoundaryComponent` type
+ * ErrorBoundary that behaves like RR 6.4 errorElement and captures
+ * errors with useRouteError()
  */
 export type ErrorBoundaryComponent = any;
-
-/**
- * V2 version of the ErrorBoundary that eliminates the distinction between
- * Error and Catch Boundaries and behaves like RR 6.4 errorElement and captures
- * errors with useRouteError()
- *
- * @deprecated Please enable the v2_errorBoundary flag to eliminate the need
- * for this type.  If you are still using this, please use `@remix-run/react`'s
- * `V2_ErrorBoundaryComponent` type
- */
-export type V2_ErrorBoundaryComponent = any;
 
 export type HeadersArgs = {
   loaderHeaders: Headers;
@@ -232,8 +209,7 @@ export type RouteComponent = any;
 export type RouteHandle = any;
 
 export interface EntryRouteModule {
-  CatchBoundary?: CatchBoundaryComponent;
-  ErrorBoundary?: ErrorBoundaryComponent | V2_ErrorBoundaryComponent;
+  ErrorBoundary?: ErrorBoundaryComponent;
   default: RouteComponent;
   handle?: RouteHandle;
   links?: LinksFunction;

@@ -24,7 +24,6 @@ import {
   Outlet,
   UNSAFE_DataRouterContext as DataRouterContext,
   UNSAFE_DataRouterStateContext as DataRouterStateContext,
-  isRouteErrorResponse,
   matchRoutes,
   useAsyncError,
   useFetcher as useFetcherRR,
@@ -42,12 +41,7 @@ import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
 import type { RemixContextObject } from "./entry";
-import {
-  RemixRootDefaultErrorBoundary,
-  RemixRootDefaultCatchBoundary,
-  RemixCatchBoundary,
-  V2_RemixRootDefaultErrorBoundary,
-} from "./errorBoundaries";
+import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 import invariant from "./invariant";
 import {
   getDataLinkHrefs,
@@ -99,7 +93,7 @@ function useRemixContext(): RemixContextObject {
 // RemixRoute
 
 export function RemixRoute({ id }: { id: string }) {
-  let { routeModules, future } = useRemixContext();
+  let { routeModules } = useRemixContext();
 
   invariant(
     routeModules,
@@ -107,13 +101,10 @@ export function RemixRoute({ id }: { id: string }) {
       "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
   );
 
-  let { default: Component, ErrorBoundary, CatchBoundary } = routeModules[id];
+  let { default: Component, ErrorBoundary } = routeModules[id];
 
   // Default Component to Outlet if we expose boundary UI components
-  if (
-    !Component &&
-    (ErrorBoundary || (!future.v2_errorBoundary && CatchBoundary))
-  ) {
+  if (!Component && ErrorBoundary) {
     Component = Outlet;
   }
 
@@ -127,7 +118,7 @@ export function RemixRoute({ id }: { id: string }) {
 }
 
 export function RemixRouteError({ id }: { id: string }) {
-  let { future, routeModules } = useRemixContext();
+  let { routeModules } = useRemixContext();
 
   // This checks prevent cryptic error messages such as: 'Cannot read properties of undefined (reading 'root')'
   invariant(
@@ -137,42 +128,15 @@ export function RemixRouteError({ id }: { id: string }) {
   );
 
   let error = useRouteError();
-  let { CatchBoundary, ErrorBoundary } = routeModules[id];
+  let { ErrorBoundary } = routeModules[id];
 
-  if (future.v2_errorBoundary) {
-    // Provide defaults for the root route if they are not present
-    if (id === "root") {
-      ErrorBoundary ||= V2_RemixRootDefaultErrorBoundary;
-    }
-    if (ErrorBoundary) {
-      // TODO: Unsure if we can satisfy the typings here
-      // @ts-expect-error
-      return <ErrorBoundary />;
-    }
-    throw error;
+  if (ErrorBoundary) {
+    return <ErrorBoundary />;
   }
 
-  // Provide defaults for the root route if they are not present
   if (id === "root") {
-    CatchBoundary ||= RemixRootDefaultCatchBoundary;
-    ErrorBoundary ||= RemixRootDefaultErrorBoundary;
-  }
-
-  if (isRouteErrorResponse(error)) {
-    let tError = error;
-    if (!!tError?.error && tError.status !== 404 && ErrorBoundary) {
-      // Internal framework-thrown ErrorResponses
-      return <ErrorBoundary error={tError.error} />;
-    }
-    if (CatchBoundary) {
-      // User-thrown ErrorResponses
-      return <RemixCatchBoundary catch={error} component={CatchBoundary} />;
-    }
-  }
-
-  if (error instanceof Error && ErrorBoundary) {
-    // User- or framework-thrown Errors
-    return <ErrorBoundary error={error} />;
+    // Provide defaults for the root route if they are not present
+    return <RemixRootDefaultErrorBoundary error={error} />;
   }
 
   throw error;
@@ -276,7 +240,7 @@ function usePrefetchBehavior<T extends HTMLAnchorElement>(
 const ABSOLUTE_URL_REGEX = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
 
 /**
- * A special kind of `<Link>` that knows whether or not it is "active".
+ * A special kind of `<Link>` that knows whether it is "active".
  *
  * @see https://remix.run/components/nav-link
  */
@@ -436,7 +400,7 @@ export function Links() {
 }
 
 /**
- * This component renders all of the `<link rel="prefetch">` and
+ * This component renders all the `<link rel="prefetch">` and
  * `<link rel="modulepreload"/>` tags for all the assets (data, modules, css) of
  * a given page.
  *
@@ -757,7 +721,7 @@ export function Scripts(props: ScriptProps) {
     //   resolution by the subsequently streamed chunks.
     // - __remixContext.r is a function that takes a routeID, key and value or error and resolves
     //   the promise created by __remixContext.n.
-    // - __remixContext.t is a a map or routeId to keys to an object containing `e` and `r` methods
+    // - __remixContext.t is a map or routeId to keys to an object containing `e` and `r` methods
     //   to resolve or reject the promise created by __remixContext.n.
     // - __remixContext.a is the active number of deferred scripts that should be rendered to match
     //   the SSR tree for hydration on the client.

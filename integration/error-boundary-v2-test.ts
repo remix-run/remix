@@ -6,19 +6,13 @@ import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import { PlaywrightFixture } from "./helpers/playwright-fixture";
 
-test.describe("V2 Singular ErrorBoundary (future.v2_errorBoundary)", () => {
+test.describe("V2 Singular ErrorBoundary", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
   let oldConsoleError: () => void;
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: {
-          v2_errorBoundary: true,
-          v2_routeConvention: true,
-        },
-      },
       files: {
         "app/root.jsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
