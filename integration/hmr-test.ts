@@ -94,19 +94,21 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
     "app/styles.module.css": css`
       .test {
         color: black;
-        background: white;
+        background: orange;
       }
     `,
 
     "app/root.tsx": js`
       import type { LinksFunction } from "@remix-run/node";
       import { Link, Links, LiveReload, Meta, Outlet, Scripts } from "@remix-run/react";
+      import { cssBundleHref } from "@remix-run/css-bundle";
 
       import Counter from "./components/counter";
       import styles from "./tailwind.css";
 
       export const links: LinksFunction = () => [
         { rel: "stylesheet", href: styles },
+        ...cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : [],
       ];
 
       export default function Root() {
@@ -139,11 +141,12 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
 
     "app/routes/_index.tsx": js`
       import { useLoaderData } from "@remix-run/react";
+      import styles from "~/styles.module.css";
       export default function Index() {
         const t = useLoaderData();
         return (
           <main>
-            <h1>Index Title</h1>
+            <h1 className={styles.test}>Index Title</h1>
           </main>
         )
       }
@@ -257,11 +260,12 @@ test("HMR", async ({ page }) => {
 
     let newIndex = `
       import { useLoaderData } from "@remix-run/react";
+      import styles from "~/styles.module.css";
       export default function Index() {
         const t = useLoaderData();
         return (
           <main>
-            <h1>Changed</h1>
+            <h1 className={styles.test}>Changed</h1>
           </main>
         )
       }
