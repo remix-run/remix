@@ -111,9 +111,11 @@ for (let pr of prs) {
   let prComment = `🤖 Hello there,\n\nWe just published version \`${latest.clean}\` which includes this pull request. If you'd like to take it for a test run please try it out and let us know what you think!\n\nThanks!`;
   let issueComment = `🤖 Hello there,\n\nWe just published version \`${latest.clean}\` which involves this issue. If you'd like to take it for a test run please try it out and let us know what you think!\n\nThanks!`;
 
+  let promises = [];
+
   if (!DRY_RUN) {
     let commentCommand = ["pr", "comment", pr, "--body", prComment];
-    let commentResult = await execa("gh", commentCommand);
+    let commentResult = promises.push(execa("gh", commentCommand));
     if (commentResult.stderr) {
       console.error(commentResult.stderr);
     }
@@ -126,17 +128,23 @@ for (let pr of prs) {
         "--body",
         issueComment,
       ];
-      let issueCommentResult = await execa("gh", issueCommentCommand);
+      let issueCommentResult = promises.push(execa("gh", issueCommentCommand));
       if (issueCommentResult.stderr) {
         console.error(issueCommentResult.stderr);
       }
 
       let closeCommand = ["issue", "close", issue];
-      let closeResult = await execa("gh", closeCommand);
+      let closeResult = promises.push(execa("gh", closeCommand));
       if (closeResult.stderr) {
         console.error(closeResult.stderr);
       }
     }
+  }
+
+  let results = await Promise.allSettled(promises);
+  let failures = results.filter((result) => result.status === "rejected");
+  if (failures.length > 0) {
+    console.error(`the following commands failed:`, failures);
   }
 }
 
