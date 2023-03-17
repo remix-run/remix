@@ -139,7 +139,7 @@ const createEsbuildConfig = (
     NodeModulesPolyfillPlugin(),
   ].filter(isNotNull);
 
-  if (mode === "development" && config.future.unstable_dev) {
+  if (build === "app" && mode === "development" && config.future.unstable_dev) {
     // TODO prebundle deps instead of chunking just these ones
     let isolateChunks = [
       require.resolve("react"),
