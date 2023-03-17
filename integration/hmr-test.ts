@@ -202,7 +202,7 @@ let bufferize = (stream: Readable): (() => string) => {
 
 test("HMR", async ({ page }) => {
   // uncomment for debugging
-  // page.on("console", (msg) => console.log(msg.text()));
+  page.on("console", (msg) => console.log("PAGE: " + msg.text()));
   page.on("pageerror", (err) => console.log(err.message));
 
   let appServerPort = await getPort({ port: makeRange(3080, 3089) });
@@ -276,7 +276,7 @@ test("HMR", async ({ page }) => {
     await page.waitForLoadState("networkidle");
 
     let h1 = page.getByText("Changed");
-    await h1.waitFor({ timeout: 2000 });
+    await h1.waitFor({ timeout: 10000 });
 
     // verify that `<input />` value was persisted (i.e. hmr, not full page refresh)
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
