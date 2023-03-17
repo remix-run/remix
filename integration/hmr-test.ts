@@ -27,6 +27,7 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
         "dev:app": `cross-env NODE_ENV=development nodemon --watch build/ ./server.js`,
       },
       dependencies: {
+        "@remix-run/css-bundle": "0.0.0-local-version",
         "@remix-run/node": "0.0.0-local-version",
         "@remix-run/react": "0.0.0-local-version",
         "cross-env": "0.0.0-local-version",
