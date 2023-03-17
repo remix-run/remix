@@ -54,9 +54,9 @@ The decision flow for a new feature looks something like this:
 The lifecycle is thus either:
 
 - Non-Breaking + Stable API Feature -> Lands in v1
-- Non-Breaking + Unstable API -> `future_unstable_` flag -> Lands in v1
+- Non-Breaking + Unstable API -> `future.unstable_` flag -> Lands in v1
 - Breaking + Stable API Feature -> `future.v2_` flag -> Lands in v2
-- Breaking + Unstable API -> `future_unstable_` flag -> `future.v2_` flag -> Lands in v2
+- Breaking + Unstable API -> `future.unstable_` flag -> `future.v2_` flag -> Lands in v2
 
 ### Current Future Flags
 
@@ -77,6 +77,6 @@ Here's the current future flags in Remix v1 today:
 We're in the process of preparing for our v2 release, so all `future.unstable_` flags are being stabilized into `future.v2_` flags (except for those which are not breaking changes, like PostCSS/Tailwind/Vanilla Extract support). This includes adding deprecation warnings for apps still using the old way. Once we stabilize them all we'll do a final Remix 1.15.0 release and let that run for a bit to give folks time to opt into any flags they haven't yet added. Then we'll plan to release Remix 2.0.0 and start working on releasing flag-driven Remix v3 features.
 
 [future-flags-blog-post]: https://remix.run/blog/future-flags
-[react-router-v6-migration-guide]: https://reactrouter.com/en/main/upgrading/v5#introduction
-[react-router-v6-back-compat]: https://reactrouter.com/en/main/upgrading/v5#backwards-compatibility-package
+[react-router-v6-migration-guide]: https://reactrouter.com/upgrading/v5#introduction
+[react-router-v6-back-compat]: https://reactrouter.com/upgrading/v5#backwards-compatibility-package
 [feature-flowchart]: /docs-images/feature-flowchart.png
