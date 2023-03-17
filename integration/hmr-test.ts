@@ -153,11 +153,10 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
 
     "app/routes/about.tsx": js`
       import Counter from "../components/counter";
-      import styles from "~/styles.module.css";
       export default function About() {
         return (
           <main>
-            <h1 className={styles.test}>About Title</h1>
+            <h1>About Title</h1>
             <Counter id="about-counter" />
           </main>
         )
