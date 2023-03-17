@@ -6,7 +6,7 @@ import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfil
 import postcss from "postcss";
 import postcssDiscardDuplicates from "postcss-discard-duplicates";
 
-import type { Channel } from "../channel";
+import type { Channel, WriteChannel } from "../channel";
 import { createChannel } from "../channel";
 import type { RemixConfig } from "../config";
 import type { AssetsManifest } from "./assets";
