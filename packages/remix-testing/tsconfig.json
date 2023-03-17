@@ -13,6 +13,7 @@
     "strict": true,
     "jsx": "react",
     "declaration": true,
+    "declarationMap": true,
     "emitDeclarationOnly": true,
     "rootDir": ".",
     "outDir": "../../build/node_modules/@remix-run/testing/dist"

@@ -13,6 +13,7 @@
     "strict": true,
     "skipLibCheck": true,
     "declaration": true,
+    "declarationMap": true,
     "emitDeclarationOnly": true,
     "rootDir": ".",
     "outDir": "../../build/node_modules/@remix-run/dev/dist"

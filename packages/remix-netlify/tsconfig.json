@@ -10,6 +10,7 @@
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "declaration": true,
+    "declarationMap": true,
     "emitDeclarationOnly": true,
     "rootDir": ".",
     "outDir": "../../build/node_modules/@remix-run/netlify/dist"

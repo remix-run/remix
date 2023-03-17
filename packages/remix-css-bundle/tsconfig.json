@@ -5,10 +5,13 @@
     "lib": ["ES2019", "DOM.Iterable"],
     "target": "ES2019",
     "module": "CommonJS",
+    "composite": true,
+
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "declaration": true,
+    "declarationMap": true,
     "emitDeclarationOnly": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,

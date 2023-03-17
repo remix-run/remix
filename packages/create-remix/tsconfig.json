@@ -13,6 +13,7 @@
     "strict": true,
     "resolveJsonModule": true,
     "declaration": true,
+    "declarationMap": true,
     "emitDeclarationOnly": true,
     "rootDir": ".",
     "outDir": "../../build/node_modules/create-remix/dist"
