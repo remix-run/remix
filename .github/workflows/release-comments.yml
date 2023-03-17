@@ -26,20 +26,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version-file: ".nvmrc"
-          cache: "npm"
-          cache-dependency-path: scripts/release/package-lock.json
+          cache: "yarn"
 
       - name: 📥 Install deps
-        run: npm ci
-        working-directory: ./scripts/release
+        run: yarn --frozen-lockfile
 
       - name: 📝 Comment on issues
         working-directory: ./scripts/release
-        run: node -r esbuild-register ./comment.ts
+        run: node ./comment.mjs
         env:
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ github.token }}
-          VERSION: ${{ inputs.ref }}
-          DEFAULT_BRANCH: "main"
-          RELEASE_BRANCH: ${{ inputs.release_branch }}
           PACKAGE_VERSION_TO_FOLLOW: ${{ inputs.package_version_to_follow }}

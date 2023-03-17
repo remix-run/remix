@@ -10,6 +10,13 @@ import semver from "semver";
 // TODO: actually use the dry run flag
 let DRY_RUN = true; // process.env.DRY_RUN;
 
+let PACKAGE_VERSION_TO_FOLLOW = process.env.PACKAGE_VERSION_TO_FOLLOW;
+
+if (!PACKAGE_VERSION_TO_FOLLOW) {
+  console.error("PACKAGE_VERSION_TO_FOLLOW is required");
+  process.exit(1);
+}
+
 if (!DRY_RUN) {
   console.log("NOT DRY RUN\n\n", "you have 5 seconds to cancel");
   await new Promise((resolve) => setTimeout(resolve, 5_000));
@@ -18,7 +25,7 @@ if (!DRY_RUN) {
 let tagCommand = [
   "tag",
   "-l",
-  "remix@*",
+  `${PACKAGE_VERSION_TO_FOLLOW}@*`,
   "v0.0.0-nightly-*",
   "--sort",
   "-creatordate",
@@ -33,8 +40,9 @@ if (gitTagsResult.stderr) {
   process.exit(gitTagsResult.exitCode);
 }
 
+let packageRegex = new RegExp(`^${PACKAGE_VERSION_TO_FOLLOW}@`);
 let gitTags = gitTagsResult.stdout.split("\n").map((tag) => {
-  let clean = tag.replace(/^remix@/, "");
+  let clean = tag.replace(packageRegex, "");
   return { tag, clean };
 });
 
