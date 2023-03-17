@@ -141,12 +141,11 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
 
     "app/routes/_index.tsx": js`
       import { useLoaderData } from "@remix-run/react";
-      import styles from "~/styles.module.css";
       export default function Index() {
         const t = useLoaderData();
         return (
           <main>
-            <h1 className={styles.test}>Index Title</h1>
+            <h1>Index Title</h1>
           </main>
         )
       }
@@ -154,10 +153,11 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
 
     "app/routes/about.tsx": js`
       import Counter from "../components/counter";
+      import styles from "~/styles.module.css";
       export default function About() {
         return (
           <main>
-            <h1>About Title</h1>
+            <h1 className={styles.test}>About Title</h1>
             <Counter id="about-counter" />
           </main>
         )
@@ -260,12 +260,11 @@ test("HMR", async ({ page }) => {
 
     let newIndex = `
       import { useLoaderData } from "@remix-run/react";
-      import styles from "~/styles.module.css";
       export default function Index() {
         const t = useLoaderData();
         return (
           <main>
-            <h1 className={styles.test}>Changed</h1>
+            <h1>Changed</h1>
           </main>
         )
       }
