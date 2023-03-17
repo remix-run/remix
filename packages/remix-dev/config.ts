@@ -44,7 +44,6 @@ interface FutureConfig {
   unstable_postcss: boolean;
   unstable_tailwind: boolean;
   unstable_vanillaExtract: boolean | VanillaExtractOptions;
-  v2_errorBoundary: boolean;
   v2_routeConvention: boolean;
 }
 
@@ -361,10 +360,6 @@ export async function readConfig(
     }
   }
 
-  if (!appConfig.future?.v2_errorBoundary) {
-    warnOnce(errorBoundaryWarning, "v2_errorBoundary");
-  }
-
   let serverBuildPath = path.resolve(
     rootDirectory,
     appConfig.serverBuildPath ?? "build/index.js"
@@ -564,7 +559,6 @@ export async function readConfig(
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract ?? false,
-    v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
@@ -649,11 +643,3 @@ export let flatRoutesWarning =
   "convention via the `future.v2_routeConvention` flag in your " +
   "`remix.config.js` file.  For more information, please see " +
   "https://remix.run/docs/en/main/file-conventions/route-files-v2.";
-
-export const errorBoundaryWarning =
-  "⚠️ DEPRECATED: The separation of `CatchBoundary` and `ErrorBoundary` has " +
-  "been deprecated and Remix v2 will use a singular `ErrorBoundary` for " +
-  "all thrown values (`Response` and `Error`). Please migrate to the new " +
-  "behavior in Remix v1 via the `future.v2_errorBoundary` flag in your " +
-  "`remix.config.js` file. For more information, see " +
-  "https://remix.run/docs/route/error-boundary-v2";

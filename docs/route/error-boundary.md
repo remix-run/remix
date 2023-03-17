@@ -4,28 +4,52 @@ title: ErrorBoundary
 
 # `ErrorBoundary`
 
-<docs-warning>The separation of `CatchBoundary` and `ErrorBoundary` has been deprecated and Remix v2 will use a singular `ErrorBoundary` for all thrown Responses and Errors. It is recommended that you opt-into the new behavior in Remix v1 via the `future.v2_errorBoundary` flag in your `remix.config.js` file. Please refer to the [ErrorBoundary (v2)][error-boundary-v2] docs for more information.</docs-warning>
-
-An `ErrorBoundary` is a React component that renders whenever there is an error anywhere on the route, either during rendering or during data loading.
-
-**Note:** We use the word "error" to mean an uncaught exception; something you didn't anticipate happening. This is different from other types of "errors" that you are able to recover from easily, for example a 404 error where you can still show something in the user interface to indicate you weren't able to find some data.
+<docs-info>The Remix `ErrorBoundary` is an implementation of the React Router [`errorElement`/`ErrorBoundary`][rr-error-boundary].</docs-info>
 
 A Remix `ErrorBoundary` component works just like normal React [error boundaries][error-boundaries], but with a few extra capabilities. When there is an error in your route component, the `ErrorBoundary` will be rendered in its place, nested inside any parent routes. `ErrorBoundary` components also render when there is an error in the `loader` or `action` functions for a route, so all errors for that route may be handled in one spot.
 
-An `ErrorBoundary` component receives one prop: the `error` that occurred.
+The most common use-cases tend to be:
+
+- You may intentionally throw a 4xx `Response` to trigger an error UI
+  - Throwing a 400 on bad user input
+  - Throwing a 401 for unauthorized access
+  - Throwing a 404 when you can't find requested data
+- React may unintentionally throw an `Error` if it encounters a runtime error during rendering
+
+To obtain the thrown object, you can use the [`useRouteError`][use-route-error] hook. When a `Response` is thrown, it will be automatically unwrapped into an `ErrorResponse` instance with `state`/`statusText`/`data` fields so that you don't need to bother with `await response.json()` in your component. To differentiate thrown `Response`'s from thrown `Error`'s' you can use the [`isRouteErrorResponse`][is-route-error-response] utility.
 
 ```tsx
-export function ErrorBoundary({ error }) {
-  return (
-    <div>
-      <h1>Error</h1>
-      <p>{error.message}</p>
-      <p>The stack trace is:</p>
-      <pre>{error.stack}</pre>
-    </div>
-  );
+import { isRouteErrorResponse } from "@remix-run/node";
+import { useRouteError } from "@remix-run/react";
+
+export function ErrorBoundary() {
+  let error = useRouteError();
+
+  if (isRouteErrorResponse(error)) {
+    return (
+      <div>
+        <h1>
+          {error.status} {error.statusText}
+        </h1>
+        <p>{error.data}</p>
+      </div>
+    );
+  } else if (error instanceof Error) {
+    return (
+      <div>
+        <h1>Error</h1>
+        <p>{error.message}</p>
+        <p>The stack trace is:</p>
+        <pre>{error.stack}</pre>
+      </div>
+    );
+  } else {
+    return <h1>Unknown Error</h1>;
+  }
 }
 ```
 
 [error-boundaries]: https://reactjs.org/docs/error-boundaries.html
-[error-boundary-v2]: ./error-boundary-v2
+[rr-error-boundary]: https://reactrouter.com/en/main/route/error-element
+[use-route-error]: ../hooks/use-route-error
+[is-route-error-response]: ../utils/is-route-error-response.md

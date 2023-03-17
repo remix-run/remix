@@ -27,7 +27,6 @@ export interface AssetsManifest {
       imports?: string[];
       hasAction: boolean;
       hasLoader: boolean;
-      hasCatchBoundary: boolean;
       hasErrorBoundary: boolean;
     };
   };
@@ -112,7 +111,6 @@ export async function createAssetsManifest({
           imports: resolveImports(output.imports),
           hasAction: sourceExports.includes("action"),
           hasLoader: sourceExports.includes("loader"),
-          hasCatchBoundary: sourceExports.includes("CatchBoundary"),
           hasErrorBoundary: sourceExports.includes("ErrorBoundary"),
         };
       }

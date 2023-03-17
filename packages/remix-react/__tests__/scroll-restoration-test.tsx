@@ -24,7 +24,6 @@ describe("<ScrollRestoration />", () => {
         root: {
           hasLoader: false,
           hasAction: false,
-          hasCatchBoundary: false,
           hasErrorBoundary: false,
           id: "root",
           module: "root.js",

@@ -35,7 +35,6 @@ test.describe("non-aborted", () => {
     fixture = await createFixture({
       future: {
         v2_routeConvention: true,
-        v2_errorBoundary: true,
       },
       files: {
         "app/components/counter.tsx": js`
