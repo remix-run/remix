@@ -12,5 +12,6 @@ module.exports = {
   future: {
     v2_meta: true,
     v2_routeConvention: true,
+    v2_errorBoundary: true,
   },
 };
