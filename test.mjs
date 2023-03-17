@@ -35,13 +35,15 @@ if (gitTagsResult.stderr) {
 
 let gitTags = gitTagsResult.stdout
   .split("\n")
-  .slice(2) // TODO: remove - just testing various scenarios
+  .slice(1) // TODO: remove - just testing various scenarios
   .map((tag) => {
     let clean = tag.replace(/^remix@/, "");
     return { tag, clean };
   });
 
 let [latest, previous] = gitTags;
+
+console.log({ latest, previous });
 
 let isStable = semver.prerelease(latest.clean) === null;
 let isNightly = latest.clean.startsWith("v0.0.0-nightly-");
@@ -53,15 +55,17 @@ if (isPreRelease) {
   console.log(`pre-release: ${latest.clean}`);
   let preRelease = semver.prerelease(latest.clean);
   if (preRelease.join(".") === "pre.0") {
+    console.log(`first pre-release: ${latest.clean}`);
     let stable = gitTags.find((tag) => {
       return semver.prerelease(tag.clean) === null;
     });
+    console.log(`stable: ${stable.clean}`);
     previous = stable;
   }
 } else if (isStable) {
   console.log(`stable: ${latest.clean}`);
   let stable = gitTags.find((tag) => {
-    return semver.prerelease(tag.clean) === null;
+    return semver.prerelease(tag.clean) === null && tag.clean !== latest.clean;
   });
   previous = stable;
 } else {
