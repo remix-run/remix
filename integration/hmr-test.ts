@@ -202,7 +202,7 @@ let bufferize = (stream: Readable): (() => string) => {
 
 test("HMR", async ({ page }) => {
   // uncomment for debugging
-  page.on("console", (msg) => console.log("PAGE: " + msg.text()));
+  // page.on("console", (msg) => console.log(msg.text()));
   page.on("pageerror", (err) => console.log(err.message));
 
   let appServerPort = await getPort({ port: makeRange(3080, 3089) });
