@@ -5,11 +5,7 @@ description: Remix's strategy tp provide a smooth upgrade experience for applica
 
 # API Development Strategy
 
-Let's cut to the chase - major version upgrades can be a _pain_. Especially for something as foundational to your application as the framework or router it's built on.
-
-We've all been there as application developers, and even as framework developers over the lifetime of React Router. Even as recently as v6, we dumped a [migration guide][react-router-v6-migration-guide] on our users initially and improved on that with the [backwards-compatibility package][react-router-v6-back-compat]. But we realize that neither of these are _great_ and we think there's room for improvement.
-
-For Remix and React Router, we want to do our best to give you the smoothest upgrade experience possible.
+Let's cut to the chase - major version upgrades can be a _pain_. Especially for something as foundational to your application as the framework or router it's built on. For Remix and React Router, we want to do our best to give you the smoothest upgrade experience possible.
 
 <docs-info>This strategy is discussed in more detail in our [Future Flags][future-flags-blog-post] blog post, so give that a read if you want any more info at the end of this doc!</docs-info>
 
