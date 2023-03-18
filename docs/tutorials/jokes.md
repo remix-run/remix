@@ -1802,7 +1802,6 @@ const [randomJoke] = await db.joke.findMany({
 <summary>app/routes/jokes/index.tsx</summary>
 
 ```tsx filename=app/routes/jokes/index.tsx lines=[5,7-15,18]
-import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData, Link } from "@remix-run/react";
 
@@ -2523,7 +2522,6 @@ import type {
   ActionArgs,
   LinksFunction,
 } from "@remix-run/node";
-import { json } from "@remix-run/node";
 import {
   Link,
   useActionData,
@@ -3133,7 +3131,7 @@ You may also notice that our solution makes use of the `login` route's `redirect
 
 ```tsx filename=app/routes/jokes/new.tsx lines=[7,22,51]
 import type { ActionArgs } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import { useActionData } from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
@@ -3505,10 +3503,7 @@ export default function JokesRoute() {
 <summary>app/routes/logout.tsx</summary>
 
 ```tsx filename=app/routes/logout.tsx
-import type {
-  ActionArgs,
-  LoaderArgs,
-} from "@remix-run/node";
+import type { ActionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 
 import { logout } from "~/utils/session.server";
@@ -3692,7 +3687,6 @@ import type {
   ActionArgs,
   LinksFunction,
 } from "@remix-run/node";
-import { json } from "@remix-run/node";
 import {
   Link,
   useActionData,
@@ -5017,7 +5011,6 @@ import type {
   LinksFunction,
   MetaFunction,
 } from "@remix-run/node";
-import { json } from "@remix-run/node";
 import {
   Link,
   useActionData,
@@ -5755,7 +5748,6 @@ import type {
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
-  Link,
   useCatch,
   useLoaderData,
   useParams,
