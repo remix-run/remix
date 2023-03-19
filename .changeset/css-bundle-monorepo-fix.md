@@ -3,4 +3,4 @@
 "@remix-run/dev": patch
 ---
 
-add types for importing `*.ico` files
+use path.resolve when re-exporting entry.client

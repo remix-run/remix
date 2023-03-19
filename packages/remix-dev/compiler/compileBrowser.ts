@@ -72,11 +72,12 @@ const writeAssetsManifest = async (
   );
 };
 
-const isCssBundlingEnabled = (config: RemixConfig) =>
-  config.future.unstable_cssModules ||
-  config.future.unstable_cssSideEffectImports ||
-  config.future.unstable_vanillaExtract;
-
+const isCssBundlingEnabled = (config: RemixConfig): boolean =>
+  Boolean(
+    config.future.unstable_cssModules ||
+      config.future.unstable_cssSideEffectImports ||
+      config.future.unstable_vanillaExtract
+  );
 const createEsbuildConfig = (
   build: "app" | "css",
   config: RemixConfig,
@@ -133,13 +134,13 @@ const createEsbuildConfig = (
   if (mode === "development" && config.future.unstable_dev) {
     // TODO prebundle deps instead of chunking just these ones
     let isolateChunks = [
-      "react",
-      "react/jsx-dev-runtime",
-      "react/jsx-runtime",
-      "react-dom",
-      "react-dom/client",
-      "react-refresh/runtime",
-      "@remix-run/react",
+      require.resolve("react"),
+      require.resolve("react/jsx-dev-runtime"),
+      require.resolve("react/jsx-runtime"),
+      require.resolve("react-dom"),
+      require.resolve("react-dom/client"),
+      require.resolve("react-refresh/runtime"),
+      require.resolve("@remix-run/react"),
       "remix:hmr",
     ];
     entryPoints = {

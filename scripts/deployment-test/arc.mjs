@@ -4,7 +4,6 @@ import AWS from "aws-sdk";
 import fse from "fs-extra";
 import arcParser from "@architect/parser";
 import { toLogicalID } from "@architect/utils";
-import { createApp } from "@remix-run/dev";
 import destroy from "@architect/destroy";
 import PackageJson from "@npmcli/package-json";
 
@@ -25,15 +24,7 @@ let PROJECT_DIR = getAppDirectory(APP_NAME);
 let ARC_CONFIG_PATH = path.join(PROJECT_DIR, "app.arc");
 let CYPRESS_DEV_URL = "http://localhost:3333";
 
-async function createNewApp() {
-  await createApp({
-    appTemplate: "arc",
-    installDeps: false,
-    useTypeScript: true,
-    projectDir: PROJECT_DIR,
-  });
-}
-
+/** @type {import('aws-sdk').ApiGatewayV2.ClientConfiguration} */
 let options = {
   region: "us-west-2",
   apiVersion: "latest",
@@ -51,7 +42,20 @@ async function getArcDeployment() {
 }
 
 async function createAndDeployApp() {
-  await createNewApp();
+  // create a new remix app
+  spawnSync(
+    "npx",
+    [
+      "--yes",
+      "create-remix@latest",
+      PROJECT_DIR,
+      "--template",
+      "arc",
+      "--no-install",
+      "--typescript",
+    ],
+    getSpawnOpts()
+  );
 
   // validate dependencies are available
   let [valid, errors] = await validatePackageVersions(PROJECT_DIR);
