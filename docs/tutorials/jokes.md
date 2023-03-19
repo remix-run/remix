@@ -1801,7 +1801,7 @@ const [randomJoke] = await db.joke.findMany({
 
 <summary>app/routes/jokes/index.tsx</summary>
 
-```tsx filename=app/routes/jokes/index.tsx lines=[5,7-15,18]
+```tsx filename=app/routes/jokes/index.tsx lines=[1-2,4,6-14,17]
 import { json } from "@remix-run/node";
 import { useLoaderData, Link } from "@remix-run/react";
 
@@ -2517,7 +2517,7 @@ Great, now that we've got the UI looking nice, let's add some logic. This will b
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[2,5,8,13-14,20-24,26-30,32-38,40-112,115,138-141,150-153,164-172,174-182,190-198,200-208,210-219]
+```tsx filename=app/routes/login.tsx lines=[2,7,12-13,19-23,25-29,31-37,39-111,114,137-140,149-152,163-171,173-181,189-197,199-207,209-218]
 import type {
   ActionArgs,
   LinksFunction,
@@ -3682,7 +3682,7 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[18,102-110]
+```tsx filename=app/routes/login.tsx lines=[17,101-109]
 import type {
   ActionArgs,
   LinksFunction,
@@ -5005,7 +5005,7 @@ export default function IndexRoute() {
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[4,22-25]
+```tsx filename=app/routes/login.tsx lines=[4,21-24]
 import type {
   ActionArgs,
   LinksFunction,
@@ -5740,7 +5740,7 @@ export function JokeDisplay({
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[14,89]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[13,88]
 import type {
   ActionArgs,
   LoaderArgs,
