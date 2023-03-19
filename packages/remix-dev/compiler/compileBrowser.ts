@@ -157,11 +157,7 @@ const createEsbuildConfig = (
     plugins.push(hmrPlugin({ remixConfig: config }));
 
     if (isCssBundlingEnabled(config)) {
-      plugins.push(
-        cssBundleUpdatePlugin({
-          getCssBundleHref,
-        })
-      );
+      plugins.push(cssBundleUpdatePlugin({ getCssBundleHref }));
     }
   }
 
@@ -247,8 +243,6 @@ export const createBrowserCompiler = (
       if (!isCssBundlingEnabled(remixConfig)) {
         return;
       }
-
-      cssBundleHrefChannel = createChannel();
 
       try {
         // The types aren't great when combining write: false and incremental: true
@@ -340,10 +334,13 @@ export const createBrowserCompiler = (
       }
     };
 
-    let cssBuildTaskPromise = cssBuildTask();
+    // Reset the channel to co-ordinate the CSS and app builds
+    if (isCssBundlingEnabled(remixConfig)) {
+      cssBundleHrefChannel = createChannel();
+    }
 
     let [cssBundleHref, metafile] = await Promise.all([
-      cssBuildTaskPromise,
+      cssBuildTask(),
       appBuildTask(),
     ]);
 
