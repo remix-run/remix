@@ -184,7 +184,7 @@ Inside of your `$.jsx` file, all we need to do is export the code from our old r
 export { default } from "~/old-app/app";
 ```
 
-<docs-warning><strong>Important:</strong> make sure that you still have the `app/routes/index.[jsx|tsx]` file. Remix will not automatically render your `/` React Router fallback route, which means a blank page will be rendered without the index file in the `routes` directory.</docs-warning>
+<docs-warning><strong>Important:</strong> make sure `app/routes/index.[jsx|tsx]` exists in your Remix app. Remix will not automatically render your `/` React Router fallback route, which means a blank page will be rendered without the index file in the `routes` directory.</docs-warning>
 
 ## Replacing the bundler with Remix
 
