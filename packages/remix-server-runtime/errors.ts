@@ -44,7 +44,8 @@ import { isRouteErrorResponse } from "@remix-run/router";
  */
 
 /**
- * @deprecated in favor of the `ErrorResponse` class in React Router.
+ * @deprecated in favor of the `ErrorResponse` class in React Router.  Please
+ * enable the `future.v2_errorBoundary` flag to ease your migration to Remix v2.
  */
 export interface ThrownResponse<T = any> {
   status: number;

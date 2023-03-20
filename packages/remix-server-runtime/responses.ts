@@ -48,18 +48,7 @@ export const json: JsonFunction = (data, init = {}) => {
  * @see https://remix.run/docs/utils/defer
  */
 export const defer: DeferFunction = (data, init = {}) => {
-  let responseInit = typeof init === "number" ? { status: init } : init;
-
-  // TODO: Do we need this or is this copy/paste from json()?
-  let headers = new Headers(responseInit.headers);
-  if (!headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json; charset=utf-8");
-  }
-
-  return routerDefer(data, {
-    ...responseInit,
-    headers,
-  }) as TypedDeferredData<typeof data>;
+  return routerDefer(data, init) as TypedDeferredData<typeof data>;
 };
 
 export type RedirectFunction = (

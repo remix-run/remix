@@ -3,6 +3,11 @@ import {
   UNSAFE_DeferredData as DeferredData,
 } from "@remix-run/router";
 
+/**
+ * Data for a route that was returned from a `loader()`.
+ *
+ * Note: This moves to unknown in ReactRouter and eventually likely in Remix
+ */
 export type AppData = any;
 
 export function isCatchResponse(response: any): boolean {

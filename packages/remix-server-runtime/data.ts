@@ -22,7 +22,7 @@ export interface AppLoadContext {
 /**
  * Data for a route that was returned from a `loader()`.
  *
- * @deprecated
+ * Note: This moves to unknown in ReactRouter and eventually likely in Remix
  */
 export type AppData = any;
 
