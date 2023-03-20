@@ -19,7 +19,10 @@ export interface RouteModules<RouteModule> {
 /**
  * The arguments passed to ActionFunction and LoaderFunction.
  *
- * @deprecated in favor of React Router `LoaderFunctionArgs` and `ActionFunctionArgs`
+ * Note this is almost identical to React Router's version but over there the
+ * context is optional since it's only there during static handler invocations.
+ * Keeping Remix's own definition for now so it can differentiate between
+ * client/server
  */
 export interface DataFunctionArgs {
   request: Request;
@@ -27,20 +30,12 @@ export interface DataFunctionArgs {
   params: Params;
 }
 
-/**
- * @deprecated in favor of React Router `LoaderFunctionArgs`
- */
 export type LoaderArgs = DataFunctionArgs;
 
-/**
- * @deprecated in favor of React Router `ActionFunctionArgs`
- */
 export type ActionArgs = DataFunctionArgs;
 
 /**
  * A function that handles data mutations for a route.
- *
- * @deprecated in favor of React Router `ActionFunction`
  */
 export interface ActionFunction {
   (args: DataFunctionArgs):
@@ -93,8 +88,6 @@ export interface LinksFunction {
 
 /**
  * A function that loads data for a route.
- *
- * @deprecated in favor of React Router `LoaderFunction`
  */
 export interface LoaderFunction {
   (args: DataFunctionArgs):
