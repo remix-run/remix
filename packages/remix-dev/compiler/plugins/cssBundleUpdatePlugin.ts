@@ -16,7 +16,7 @@ export function cssBundleUpdatePlugin({
   getCssBundleHref: () => Promise<string | undefined>;
 }): Plugin {
   return {
-    name: "css-bundle-update-plugin",
+    name: pluginName,
     async setup(build) {
       let isRebuild = false;
       build.onEnd(() => {

@@ -82,6 +82,8 @@ const isCssBundlingEnabled = (config: RemixConfig): boolean =>
   );
 
 let cssBundleHrefChannel: Channel<string | undefined>;
+
+// This function gives esbuild access to the latest channel value on rebuilds
 let getCssBundleHref = () => cssBundleHrefChannel.read();
 
 const createEsbuildConfig = (
