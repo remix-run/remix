@@ -25,6 +25,8 @@ export type JsonFunction = <Data extends unknown>(
   init?: number | ResponseInit
 ) => TypedResponse<Data>;
 
+// must be a type since this is a subtype of response
+// interfaces must conform to the types they extend
 export type TypedResponse<T extends unknown = unknown> = Omit<
   Response,
   "json"
