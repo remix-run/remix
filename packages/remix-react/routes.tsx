@@ -41,6 +41,7 @@ export interface EntryRoute extends Route {
   hasCatchBoundary: boolean;
   hasErrorBoundary: boolean;
   imports?: string[];
+  dynamicImports?: string[];
   module: string;
   parentId?: string;
 }

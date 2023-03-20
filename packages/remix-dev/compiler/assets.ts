@@ -15,6 +15,7 @@ export interface AssetsManifest {
   entry: {
     module: string;
     imports: string[];
+    dynamicImports?: string[];
   };
   routes: {
     [routeId: string]: {
@@ -25,6 +26,7 @@ export interface AssetsManifest {
       caseSensitive?: boolean;
       module: string;
       imports?: string[];
+      dynamicImports?: string[];
       hasAction: boolean;
       hasLoader: boolean;
       hasCatchBoundary: boolean;
@@ -65,6 +67,14 @@ export async function createAssetsManifest({
       .map((im) => resolveUrl(im.path));
   }
 
+  function resolveDynamicImports(
+    imports: esbuild.Metafile["outputs"][string]["imports"]
+  ): string[] {
+    return imports
+      .filter((im) => im.kind === "dynamic-import")
+      .map((im) => resolveUrl(im.path));
+  }
+
   let routesByFile: Map<string, Route[]> = Object.keys(config.routes).reduce(
     (map, key) => {
       let route = config.routes[key];
@@ -88,6 +98,7 @@ export async function createAssetsManifest({
       entry = {
         module: resolveUrl(key),
         imports: resolveImports(output.imports),
+        dynamicImports: resolveDynamicImports(output.imports),
       };
       // Only parse routes otherwise dynamic imports can fall into here and fail the build
     } else if (output.entryPoint.startsWith("browser-route-module:")) {
@@ -110,6 +121,7 @@ export async function createAssetsManifest({
           caseSensitive: route.caseSensitive,
           module: resolveUrl(key),
           imports: resolveImports(output.imports),
+          dynamicImports: resolveDynamicImports(output.imports),
           hasAction: sourceExports.includes("action"),
           hasLoader: sourceExports.includes("loader"),
           hasCatchBoundary: sourceExports.includes("CatchBoundary"),

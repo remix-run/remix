@@ -70,9 +70,25 @@ if (import.meta && import.meta.hot) {
                 if (!newManifest.routes[id]) {
                   return null;
                 }
+
+                let newManifestEntry = newManifest.routes[id];
+
+                // Dynamic imports need to be re-imported as well. Let's fetch
+                // those first so that the route bundle picks up the new code
+                // when it's re-imported below.
+                if (
+                  newManifestEntry.dynamicImports &&
+                  newManifestEntry.dynamicImports.length > 0
+                ) {
+                  await Promise.all(
+                    newManifestEntry.dynamicImports?.map(
+                      (i) => import(`${i}?t=${newManifest.hmr?.timestamp}`)
+                    )
+                  );
+                }
+
                 let imported = await import(
-                  newManifest.routes[id].module +
-                    `?t=${newManifest.hmr?.timestamp}`
+                  newManifestEntry.module + `?t=${newManifest.hmr?.timestamp}`
                 );
                 return [
                   id,
