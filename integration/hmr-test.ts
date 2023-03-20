@@ -127,6 +127,7 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
                   <ul>
                     <li><Link to="/">Home</Link></li>
                     <li><Link to="/about">About</Link></li>
+                    <li><Link to="/lazy-test">Lazy</Link></li>
                   </ul>
                 </nav>
               </header>
@@ -171,6 +172,27 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
           <p>
             <button id={id} onClick={() => setCount(count + 1)}>inc {count}</button>
           </p>
+        );
+      }
+    `,
+
+    "app/routes/lazy-test.tsx": js`
+      import * as React from "react";
+      const LazyComponent = React.lazy(() => import("../components/lazy"));
+
+      export default function LazyTest() {
+        return (
+          <React.Suspense fallback={<p>Loading...</p>}>
+            <LazyComponent />
+          </React.Suspense>
+        )
+      }
+    `,
+
+    "app/components/lazy.tsx": js`
+      export default function Lazy() {
+        return (
+          <p id="lazy-test">This is a lazy component.</p>
         );
       }
     `,
@@ -258,6 +280,7 @@ test("HMR", async ({ page }) => {
     let originalCounter = fs.readFileSync(counterPath, "utf8");
     let cssModulePath = path.join(projectDir, "app", "styles.module.css");
     let originalCssModule = fs.readFileSync(cssModulePath, "utf8");
+    let lazyPath = path.join(projectDir, "app", "components", "lazy.tsx");
 
     // make content and style changed to index route
     let newCssModule = `
@@ -383,6 +406,30 @@ test("HMR", async ({ page }) => {
     aboutCounter = await page.waitForSelector(
       `#about-counter:has-text("inc 0")`
     );
+
+    // change lazy component
+    await page.click(`a[href="/lazy-test"]`);
+    await page.waitForSelector(
+      `#lazy-test:has-text("This is a lazy component.")`
+    );
+    await page.waitForLoadState("networkidle");
+
+    let updatedLazy = `
+      export default function Lazy() {
+        return (
+          <p id="lazy-test" className="text-white bg-black">Changed</p>
+        );
+      }
+    `;
+
+    fs.writeFileSync(lazyPath, updatedLazy);
+
+    // detect HMR'd content and style changes
+    await page.waitForLoadState("networkidle");
+    let lazy = page.getByText("Changed");
+    await lazy.waitFor({ timeout: 5000 });
+    expect(lazy).toHaveCSS("color", "rgb(255, 255, 255)");
+    expect(lazy).toHaveCSS("background-color", "rgb(0, 0, 0)");
   } finally {
     dev.kill();
     app.kill();
