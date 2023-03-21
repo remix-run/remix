@@ -15,6 +15,7 @@ import type {
   LinkProps,
   NavLinkProps,
   FormProps,
+  Params,
   SubmitFunction,
 } from "react-router-dom";
 import {
