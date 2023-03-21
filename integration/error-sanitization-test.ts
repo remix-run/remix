@@ -186,7 +186,9 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch("Defer Route");
       expect(html).toMatch("RESOLVED");
       expect(html).not.toMatch("MESSAGE:");
-      expect(html).not.toMatch(/"stack":/i);
+      // Defer errors are not not part of the JSON blob but rather rejected
+      // against a pending promise and therefore are inlined JS.
+      expect(html).not.toMatch("x.stack=e.stack;");
     });
 
     test("sanitizes defer errors in document requests", async () => {
@@ -195,7 +197,9 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch("Defer Error");
       expect(html).not.toMatch("RESOLVED");
       expect(html).toMatch('{"message":"Unexpected Server Error"}');
-      expect(html).not.toMatch(/"stack":/i);
+      // Defer errors are not not part of the JSON blob but rather rejected
+      // against a pending promise and therefore are inlined JS.
+      expect(html).toMatch("x.stack=undefined;");
     });
 
     test("returns data without errors", async () => {
@@ -254,6 +258,14 @@ test.describe("Error Sanitization", () => {
         ServerMode.Development
       );
     });
+    let ogEnv = process.env.NODE_ENV;
+    test.beforeEach(() => {
+      ogEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = "development";
+    });
+    test.afterEach(() => {
+      process.env.NODE_ENV = ogEnv;
+    });
 
     test("renders document without errors", async () => {
       let response = await fixture.requestDocument("/");
@@ -301,8 +313,9 @@ test.describe("Error Sanitization", () => {
       let html = await response.text();
       expect(html).toMatch("Defer Error");
       expect(html).not.toMatch("RESOLVED");
-      // TODO: Is our ServerMode.Development not making it into the build somehow?
-      expect(html).toMatch('{"message":"REJECTED","stack":"}');
+      // Defer errors are not not part of the JSON blob but rather rejected
+      // against a pending promise and therefore are inlined JS.
+      expect(html).toMatch("x.stack=e.stack;");
     });
 
     test("returns data without errors", async () => {
