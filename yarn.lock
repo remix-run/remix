@@ -2505,10 +2505,10 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/router@0.0.0-experimental-cec61865":
-  version "0.0.0-experimental-cec61865"
-  resolved "https://registry.npmjs.org/@remix-run/router/-/router-0.0.0-experimental-cec61865.tgz#b3450b05a3a5cd4d79c1cfcf8503827f50cfb7fc"
-  integrity sha512-RMf+sRJ83a6nHhNpjuWs9TDUW0bRl4cTmf5bFqq4TjEEfda2dTXLwSTWveSzEiXiO6ggFR+zfk0RNypfdRfGHg==
+"@remix-run/router@1.5.0-pre.0":
+  version "1.5.0-pre.0"
+  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.5.0-pre.0.tgz#ff4ca3e1307a4c7beac9581a4e0389e2d955670c"
+  integrity sha512-HQEHqdS8KhhUkcphyhjaSH27svCEjYEj+KHDyFiSyblsOKSgro0wbMzO37Jkl8neYrBcld8nzzKw83KnlRkV0g==
 
 "@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
@@ -11039,20 +11039,20 @@ react-refresh@^0.14.0:
   resolved "https://registry.npmjs.org/react-refresh/-/react-refresh-0.14.0.tgz"
   integrity sha512-wViHqhAd8OHeLS/IRMJjTSDHF3U9eWi62F/MledQGPdJGDhodXJ9PBLNGr6WWL7qlH12Mt3TyTpbS+hGXMjCzQ==
 
-react-router-dom@0.0.0-experimental-cec61865:
-  version "0.0.0-experimental-cec61865"
-  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-0.0.0-experimental-cec61865.tgz#3f59202dc4d0d0657ff0ca9533ced0619414af2c"
-  integrity sha512-cn/NFsp0DyQbLQUIdAGlckeBKRvLrJqiFXcS851GfvD923VAFmzeR880MRZBZSay9tyAe3fE8WI8DcnSHQRBvg==
+react-router-dom@6.10.0-pre.0:
+  version "6.10.0-pre.0"
+  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.10.0-pre.0.tgz#7976dfbb72381b55d2204fd9656482c63b1bf03a"
+  integrity sha512-mD8mCzd1TnYFp90VxfwtN8rsklI+dLTqHLrPaHB4l5UnTD24oWI4BV9Xpno74RQnz4oeUvNpEkaxpQ11FQ/xpw==
   dependencies:
-    "@remix-run/router" "0.0.0-experimental-cec61865"
-    react-router "0.0.0-experimental-cec61865"
+    "@remix-run/router" "1.5.0-pre.0"
+    react-router "6.10.0-pre.0"
 
-react-router@0.0.0-experimental-cec61865:
-  version "0.0.0-experimental-cec61865"
-  resolved "https://registry.npmjs.org/react-router/-/react-router-0.0.0-experimental-cec61865.tgz#b545f7a48e48566244bd1f8e84f828eb97dac117"
-  integrity sha512-1EwcUwuZUrEs1/cQEFgaZSFg5i1FaBGxODAzM+cV2ACR7EmWV3oO28Bq5w71I1n00hIs05OBUceRyrevKSSWwA==
+react-router@6.10.0-pre.0:
+  version "6.10.0-pre.0"
+  resolved "https://registry.npmjs.org/react-router/-/react-router-6.10.0-pre.0.tgz#6b843a2090e24c26ae260e4cac7acb79c5479bc0"
+  integrity sha512-YjPpAZR04AN1AdCCok6N+65UyO1fN7fVMizUlPITeYsO9IoHhYQD8g0t1DcheH7s+ezP3xXYBimr9zzlKzR3kQ==
   dependencies:
-    "@remix-run/router" "0.0.0-experimental-cec61865"
+    "@remix-run/router" "1.5.0-pre.0"
 
 react@^18.2.0:
   version "18.2.0"
