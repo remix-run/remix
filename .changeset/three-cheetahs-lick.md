@@ -1,7 +1,7 @@
 ---
-"@remix-run/dev": patch
-"@remix-run/react": patch
-"@remix-run/server-runtime": patch
+"@remix-run/dev": minor
+"@remix-run/react": minor
+"@remix-run/server-runtime": minor
 ---
 
 Deprecate `CatchBoundary` in favor of `future.v2_errorBoundary`

@@ -2,7 +2,6 @@
 "@remix-run/dev": minor
 "@remix-run/react": minor
 "@remix-run/server-runtime": minor
-"@remix-run/testing": minor
 ---
 
 Added a new `future.v2_normalizeFormMethod` flag to normalize the exposed `useNavigation().formMethod` as an uppercase HTTP method to align with the previous `useTransition` behavior as well as the `fetch()` behavior of normalizing to uppercase HTTP methods.

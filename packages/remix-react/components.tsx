@@ -13,12 +13,9 @@ import type {
 } from "@remix-run/router";
 import type {
   LinkProps,
-  NavigationType,
-  Navigator,
-  Params,
   NavLinkProps,
-  Location,
   FormProps,
+  Params,
   SubmitFunction,
 } from "react-router-dom";
 import {
@@ -43,7 +40,7 @@ import {
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
-import type { EntryContext, RemixContextObject } from "./entry";
+import type { RemixContextObject } from "./entry";
 import {
   RemixRootDefaultErrorBoundary,
   RemixRootDefaultCatchBoundary,

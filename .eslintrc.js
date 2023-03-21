@@ -18,6 +18,7 @@ module.exports = {
         "no-undef": OFF,
         "no-unused-expressions": OFF,
         "no-unused-vars": OFF,
+        "@typescript-eslint/no-redeclare": OFF,
       },
     },
     {
