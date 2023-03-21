@@ -9,7 +9,7 @@ export function NodeProtocolExternalPlugin(): esbuild.Plugin {
     name: "node-protocol-external",
     setup(pluginBuild) {
       pluginBuild.onResolve({ filter: /node:.*/ }, () => {
-        return { external: true };
+        return { external: true, sideEffects: false };
       });
     },
   };
