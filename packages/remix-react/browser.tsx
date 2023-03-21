@@ -151,6 +151,16 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       );
     }
 
+    if (!window.__remixContext.future.v2_normalizeFormMethod) {
+      warnOnce(
+        false,
+        "⚠️  DEPRECATED: Please enable the `future.v2_normalizeFormMethod` flag to " +
+          "prepare for the Remix v2 release. Lowercase `useNavigation().formMethod`" +
+          "values are being normalized to uppercase in v2 to align with the `fetch()` " +
+          "behavior.  For more information, see https://remix.run/docs/hooks/use-navigation"
+      );
+    }
+
     let routes = createClientRoutes(
       window.__remixManifest.routes,
       window.__remixRouteModules,
