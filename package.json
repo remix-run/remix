@@ -23,7 +23,7 @@
     "packages/remix-vercel"
   ],
   "scripts": {
-    "bug-report-test": "playwright test --config ./integration/playwright.config.ts integration/bug-report-test.ts",
+    "bug-report-test": "yarn test:integration bug-report --project chromium",
     "build": "node scripts/build.mjs",
     "clean": "git clean -fdX .",
     "clean:build": "node ./scripts/clean-build.mjs",
