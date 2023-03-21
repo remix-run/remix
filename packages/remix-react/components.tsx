@@ -113,19 +113,6 @@ function useRemixContext(): RemixContextObject {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// RemixEntry
-
-export function RemixEntry(props: {
-  context: EntryContext;
-  action: NavigationType;
-  location: Location;
-  navigator: Navigator;
-  static?: boolean;
-}) {
-  return <h1>Not Implemented!</h1>;
-}
-
-////////////////////////////////////////////////////////////////////////////////
 // RemixRoute
 
 export function RemixRoute({ id }: { id: string }) {
