@@ -4,7 +4,6 @@
 
 ### Minor Changes
 
-- Add deprecation warnings for `v2_normalizeFormMethod` ([#5863](https://github.com/remix-run/remix/pull/5863))
 - Added a new `future.v2_normalizeFormMethod` flag to normalize the exposed `useNavigation().formMethod` as an uppercase HTTP method to align with the previous `useTransition` behavior as well as the `fetch()` behavior of normalizing to uppercase HTTP methods. ([#5815](https://github.com/remix-run/remix/pull/5815))
 
   - When `future.v2_normalizeFormMethod === false`,
@@ -14,10 +13,12 @@
     - `useNavigation().formMethod` is uppercase
     - `useFetcher().formMethod` is uppercase
 
-- show deprecation warning when `browserBuildDirectory` config is used ([#5702](https://github.com/remix-run/remix/pull/5702))
 - Add experimental support for Vanilla Extract caching which can be enabled by setting `future.unstable_vanillaExtract: { cache: true }` in `remix.config`. This is considered experimental due to the use of a brand new Vanilla Extract compiler under the hood. Note that in order to use this feature, you must be using at least `v1.10.0` of `@vanilla-extract/css`. ([#5735](https://github.com/remix-run/remix/pull/5735))
-- show deprecation warning when `serverBuildDirectory` config is used ([#5704](https://github.com/remix-run/remix/pull/5704))
 - add support for tailwind.config.{mjs,ts} ([#5850](https://github.com/remix-run/remix/pull/5850))
+- Add deprecation warnings for `v2_normalizeFormMethod` ([#5863](https://github.com/remix-run/remix/pull/5863))
+- show deprecation warning when `browserBuildDirectory` config is used ([#5702](https://github.com/remix-run/remix/pull/5702))
+- show deprecation warning when `serverBuildDirectory` config is used ([#5704](https://github.com/remix-run/remix/pull/5704))
+- Deprecate `CatchBoundary` in favor of `future.v2_errorBoundary` ([#5718](https://github.com/remix-run/remix/pull/5718))
 
 ### Patch Changes
 
@@ -28,11 +29,7 @@
 - flat routes perf improvements ([#5634](https://github.com/remix-run/remix/pull/5634))
 - resolves an issue when resolving react-refresh for pnpm users ([#5637](https://github.com/remix-run/remix/pull/5637))
 - add optional entry file support for React 17 ([#5681](https://github.com/remix-run/remix/pull/5681))
-- bumps json5 to resolve a potential security vulneratility ([#5799](https://github.com/remix-run/remix/pull/5799))
-
-  also resolves some other security vulnerabilities in the root package.json used for building/testing remix
-
-- Deprecate `CatchBoundary` in favor of `future.v2_errorBoundary` ([#5718](https://github.com/remix-run/remix/pull/5718))
+- bumps json5 to resolve a potential security vulneratility ([#5799](https://github.com/remix-run/remix/pull/5799)). Also resolves some other security vulnerabilities in the root package.json used for building/testing remix.
 - Updated dependencies:
   - `@remix-run/server-runtime@1.15.0-pre.0`
   - `@remix-run/serve@1.15.0-pre.0`

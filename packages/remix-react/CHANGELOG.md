@@ -37,7 +37,6 @@
       ```
   - Added support for generating `<script type='application/ld+json' />` and meta-related `<link />` tags to document head via the route `meta` function when using the `v2_meta` future flag
 
-- Add deprecation warnings for `v2_normalizeFormMethod` ([#5863](https://github.com/remix-run/remix/pull/5863))
 - Added a new `future.v2_normalizeFormMethod` flag to normalize the exposed `useNavigation().formMethod` as an uppercase HTTP method to align with the previous `useTransition` behavior as well as the `fetch()` behavior of normalizing to uppercase HTTP methods. ([#5815](https://github.com/remix-run/remix/pull/5815))
 
   - When `future.v2_normalizeFormMethod === false`,
@@ -47,14 +46,15 @@
     - `useNavigation().formMethod` is uppercase
     - `useFetcher().formMethod` is uppercase
 
-- show deprecation warning when `imagesizes` & `imagesizes` properties are returned from `links` function ([#5706](https://github.com/remix-run/remix/pull/5706))
 - Add experimental support for Vanilla Extract caching which can be enabled by setting `future.unstable_vanillaExtract: { cache: true }` in `remix.config`. This is considered experimental due to the use of a brand new Vanilla Extract compiler under the hood. Note that in order to use this feature, you must be using at least `v1.10.0` of `@vanilla-extract/css`. ([#5735](https://github.com/remix-run/remix/pull/5735))
-
-### Patch Changes
-
+- Add deprecation warnings for `v2_normalizeFormMethod` ([#5863](https://github.com/remix-run/remix/pull/5863))
+- show deprecation warning when `imagesizes` & `imagesizes` properties are returned from `links` function ([#5706](https://github.com/remix-run/remix/pull/5706))
 - Deprecate `fetcher.type` and `fetcher.submission` for Remix v2 ([#5691](https://github.com/remix-run/remix/pull/5691))
 - Add type deprecations for types now in React Router ([#5679](https://github.com/remix-run/remix/pull/5679))
 - Deprecate `CatchBoundary` in favor of `future.v2_errorBoundary` ([#5718](https://github.com/remix-run/remix/pull/5718))
+
+### Patch Changes
+
 - Update to `react-router-dom@6.10.0-pre.0` and `@remix-run/router@1.5.0-pre.0` ([#5866](https://github.com/remix-run/remix/pull/5866))
 
 ## 1.14.3

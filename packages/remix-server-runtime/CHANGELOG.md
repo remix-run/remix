@@ -47,12 +47,12 @@
     - `useFetcher().formMethod` is uppercase
 
 - Add experimental support for Vanilla Extract caching which can be enabled by setting `future.unstable_vanillaExtract: { cache: true }` in `remix.config`. This is considered experimental due to the use of a brand new Vanilla Extract compiler under the hood. Note that in order to use this feature, you must be using at least `v1.10.0` of `@vanilla-extract/css`. ([#5735](https://github.com/remix-run/remix/pull/5735))
+- Deprecate `CatchBoundary` in favor of `future.v2_errorBoundary` ([#5718](https://github.com/remix-run/remix/pull/5718))
+- Add type deprecations for types now in React Router ([#5679](https://github.com/remix-run/remix/pull/5679))
 
 ### Patch Changes
 
-- Add type deprecations for types now in React Router ([#5679](https://github.com/remix-run/remix/pull/5679))
 - Don't log server errors for aborted requests as that is an expected flow ([#5602](https://github.com/remix-run/remix/pull/5602))
-- Deprecate `CatchBoundary` in favor of `future.v2_errorBoundary` ([#5718](https://github.com/remix-run/remix/pull/5718))
 - Ensure stack traces are removed from all server side errors in production ([#5541](https://github.com/remix-run/remix/pull/5541))
 - Update to `react-router-dom@6.10.0-pre.0` and `@remix-run/router@1.5.0-pre.0` ([#5866](https://github.com/remix-run/remix/pull/5866))
 
