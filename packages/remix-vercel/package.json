@@ -17,6 +17,7 @@
     "@remix-run/node": "1.14.3"
   },
   "devDependencies": {
+    "@types/node": "^18.15.5",
     "@types/supertest": "^2.0.10",
     "@vercel/node": "^2.4.2",
     "@vercel/node-bridge": "^3.0.0",

@@ -1,14 +1,6 @@
-import type {
-  AppLoadContext,
-  ServerBuild,
-  RequestInit as NodeRequestInit,
-  Response as NodeResponse,
-} from "@remix-run/node";
+import type { AppLoadContext, ServerBuild } from "@remix-run/node";
 import {
-  AbortController as NodeAbortController,
   createRequestHandler as createRemixRequestHandler,
-  Headers as NodeHeaders,
-  Request as NodeRequest,
   readableStreamToString,
 } from "@remix-run/node";
 import type {
@@ -49,13 +41,13 @@ export function createRequestHandler({
     let request = createRemixRequest(event);
     let loadContext = getLoadContext?.(event, context);
 
-    let response = (await handleRequest(request, loadContext)) as NodeResponse;
+    let response = await handleRequest(request, loadContext);
 
     return sendRemixResponse(response);
   };
 }
 
-export function createRemixRequest(event: HandlerEvent): NodeRequest {
+export function createRemixRequest(event: HandlerEvent): Request {
   let url: URL;
 
   if (process.env.NODE_ENV !== "development") {
@@ -68,14 +60,12 @@ export function createRemixRequest(event: HandlerEvent): NodeRequest {
 
   // Note: No current way to abort these for Netlify, but our router expects
   // requests to contain a signal so it can detect aborted requests
-  let controller = new NodeAbortController();
+  let controller = new AbortController();
 
-  let init: NodeRequestInit = {
+  let init: RequestInit = {
     method: event.httpMethod,
     headers: createRemixHeaders(event.multiValueHeaders),
-    // Cast until reason/throwIfAborted added
-    // https://github.com/mysticatea/abort-controller/issues/36
-    signal: controller.signal as NodeRequestInit["signal"],
+    signal: controller.signal,
   };
 
   if (event.httpMethod !== "GET" && event.httpMethod !== "HEAD" && event.body) {
@@ -89,13 +79,17 @@ export function createRemixRequest(event: HandlerEvent): NodeRequest {
       : event.body;
   }
 
-  return new NodeRequest(url.href, init);
+  if (init.body) {
+    (init as any).duplex = "half";
+  }
+
+  return new Request(url.href, init);
 }
 
 export function createRemixHeaders(
   requestHeaders: HandlerEvent["multiValueHeaders"]
-): NodeHeaders {
-  let headers = new NodeHeaders();
+): Headers {
+  let headers = new Headers();
 
   for (let [key, values] of Object.entries(requestHeaders)) {
     if (values) {
@@ -134,7 +128,7 @@ function getRawPath(event: HandlerEvent): string {
 }
 
 export async function sendRemixResponse(
-  nodeResponse: NodeResponse
+  nodeResponse: Response
 ): Promise<HandlerResponse> {
   let contentType = nodeResponse.headers.get("Content-Type");
   let body: string | undefined;
@@ -148,7 +142,11 @@ export async function sendRemixResponse(
     }
   }
 
-  let multiValueHeaders = nodeResponse.headers.raw();
+  let multiValueHeaders: Record<string, string[]> = {};
+  for (let [key, value] of nodeResponse.headers) {
+    multiValueHeaders[key] = multiValueHeaders[key] || [];
+    multiValueHeaders[key].push(value);
+  }
 
   return {
     statusCode: nodeResponse.status,

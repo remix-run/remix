@@ -16,9 +16,6 @@
   "sideEffects": false,
   "dependencies": {
     "@remix-run/server-runtime": "1.14.3",
-    "@remix-run/web-fetch": "^4.3.2",
-    "@remix-run/web-file": "^3.0.2",
-    "@remix-run/web-stream": "^1.0.3",
     "@web3-storage/multipart-parser": "^1.0.0",
     "abort-controller": "^3.0.0",
     "cookie-signature": "^1.1.0",
@@ -27,6 +24,7 @@
   },
   "devDependencies": {
     "@types/cookie-signature": "^1.0.3",
+    "@types/node": "^18.15.5",
     "@types/source-map-support": "^0.5.4"
   },
   "engines": {

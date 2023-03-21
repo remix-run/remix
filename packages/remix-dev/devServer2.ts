@@ -4,7 +4,6 @@ import getPort, { makeRange } from "get-port";
 import os from "os";
 import path from "node:path";
 import prettyMs from "pretty-ms";
-import fetch from "node-fetch";
 
 import { type AssetsManifest } from "./assets-manifest";
 import * as Compiler from "./compiler";

@@ -2,14 +2,7 @@ import fsp from "fs/promises";
 import path from "path";
 import lambdaTester from "lambda-tester";
 import type { APIGatewayProxyEventV2 } from "aws-lambda";
-import {
-  // This has been added as a global in node 15+, but we expose it here while we
-  // support Node 14
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  AbortController,
-  createRequestHandler as createRemixRequestHandler,
-  Response as NodeResponse,
-} from "@remix-run/node";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node";
 
 import {
   createRequestHandler,
@@ -206,8 +199,12 @@ describe("architect createRemixHeaders", () => {
     it("handles empty headers", () => {
       expect(createRemixHeaders({}, undefined)).toMatchInlineSnapshot(`
         Headers {
-          Symbol(query): Array [],
-          Symbol(context): null,
+          Symbol(headers list): HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {},
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "none",
         }
       `);
     });
@@ -216,11 +213,17 @@ describe("architect createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": "bar" }, undefined))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar",
-          ],
-          Symbol(context): null,
+          Symbol(headers list): HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {
+              "x-foo" => {
+                "name": "x-foo",
+                "value": "bar",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "none",
         }
       `);
     });
@@ -229,13 +232,21 @@ describe("architect createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": "bar", "x-bar": "baz" }, undefined))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar",
-            "x-bar",
-            "baz",
-          ],
-          Symbol(context): null,
+          Symbol(headers list): HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {
+              "x-foo" => {
+                "name": "x-foo",
+                "value": "bar",
+              },
+              "x-bar" => {
+                "name": "x-bar",
+                "value": "baz",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "none",
         }
       `);
     });
@@ -244,11 +255,17 @@ describe("architect createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": "bar, baz" }, undefined))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar, baz",
-          ],
-          Symbol(context): null,
+          Symbol(headers list): HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {
+              "x-foo" => {
+                "name": "x-foo",
+                "value": "bar, baz",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "none",
         }
       `);
     });
@@ -258,13 +275,21 @@ describe("architect createRemixHeaders", () => {
         createRemixHeaders({ "x-foo": "bar, baz", "x-bar": "baz" }, undefined)
       ).toMatchInlineSnapshot(`
         Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar, baz",
-            "x-bar",
-            "baz",
-          ],
-          Symbol(context): null,
+          Symbol(headers list): HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {
+              "x-foo" => {
+                "name": "x-foo",
+                "value": "bar, baz",
+              },
+              "x-bar" => {
+                "name": "x-bar",
+                "value": "baz",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "none",
         }
       `);
     });
@@ -277,13 +302,21 @@ describe("architect createRemixHeaders", () => {
         ])
       ).toMatchInlineSnapshot(`
         Headers {
-          Symbol(query): Array [
-            "x-something-else",
-            "true",
-            "cookie",
-            "__session=some_value; __other=some_other_value",
-          ],
-          Symbol(context): null,
+          Symbol(headers list): HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {
+              "x-something-else" => {
+                "name": "x-something-else",
+                "value": "true",
+              },
+              "cookie" => {
+                "name": "Cookie",
+                "value": "__session=some_value; __other=some_other_value",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "none",
         }
       `);
     });
@@ -299,47 +332,143 @@ describe("architect createRemixRequest", () => {
         })
       )
     ).toMatchInlineSnapshot(`
-      NodeRequest {
-        "agent": undefined,
-        "compress": true,
-        "counter": 0,
-        "follow": 20,
-        "highWaterMark": 16384,
-        "insecureHTTPParser": false,
-        "size": 0,
-        Symbol(Body internals): Object {
-          "body": null,
-          "boundary": null,
-          "disturbed": false,
-          "error": null,
-          "size": 0,
-          "type": null,
-        },
-        Symbol(Request internals): Object {
-          "credentials": "same-origin",
-          "headers": Headers {
-            Symbol(query): Array [
-              "accept",
-              "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-              "accept-encoding",
-              "gzip, deflate",
-              "accept-language",
-              "en-US,en;q=0.9",
-              "cookie",
-              "__session=value",
-              "host",
-              "localhost:3333",
-              "upgrade-insecure-requests",
-              "1",
-              "user-agent",
-              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
-            ],
-            Symbol(context): null,
+      Request {
+        Symbol(realm): {
+          "settingsObject": {
+            "baseUrl": undefined,
           },
+        },
+        Symbol(state): {
+          "body": null,
+          "cache": "default",
+          "client": {
+            "baseUrl": undefined,
+          },
+          "credentials": "same-origin",
+          "cryptoGraphicsNonceMetadata": "",
+          "destination": "",
+          "done": false,
+          "headersList": HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {
+              "accept" => {
+                "name": "accept",
+                "value": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              },
+              "accept-encoding" => {
+                "name": "accept-encoding",
+                "value": "gzip, deflate",
+              },
+              "accept-language" => {
+                "name": "accept-language",
+                "value": "en-US,en;q=0.9",
+              },
+              "cookie" => {
+                "name": "cookie",
+                "value": "__session=value",
+              },
+              "host" => {
+                "name": "host",
+                "value": "localhost:3333",
+              },
+              "upgrade-insecure-requests" => {
+                "name": "upgrade-insecure-requests",
+                "value": "1",
+              },
+              "user-agent" => {
+                "name": "user-agent",
+                "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          "historyNavigation": false,
+          "initiator": "",
+          "integrity": "",
+          "keepalive": false,
+          "localURLsOnly": false,
           "method": "GET",
-          "parsedURL": "https://localhost:3333/",
+          "mode": "cors",
+          "origin": "client",
+          "parserMetadata": "",
+          "policyContainer": "client",
+          "preventNoCacheCacheControlHeaderModification": false,
+          "priority": null,
           "redirect": "follow",
-          "signal": AbortSignal {},
+          "redirectCount": 0,
+          "referrer": "client",
+          "referrerPolicy": "",
+          "reloadNavigation": false,
+          "replacesClientId": "",
+          "reservedClient": null,
+          "responseTainting": "basic",
+          "serviceWorkers": "all",
+          "taintedOrigin": false,
+          "timingAllowFailed": false,
+          "unsafeRequest": false,
+          "url": "https://localhost:3333/",
+          "urlList": [
+            "https://localhost:3333/",
+          ],
+          "useCORSPreflightFlag": false,
+          "useCredentials": false,
+          "userActivation": false,
+          "window": "client",
+        },
+        Symbol(signal): AbortSignal {
+          Symbol(kEvents): Map {},
+          Symbol(events.maxEventTargetListeners): 10,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): Map {},
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(realm): {
+            "settingsObject": {
+              "baseUrl": undefined,
+            },
+          },
+        },
+        Symbol(headers): Headers {
+          Symbol(headers list): HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {
+              "accept" => {
+                "name": "accept",
+                "value": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+              },
+              "accept-encoding" => {
+                "name": "accept-encoding",
+                "value": "gzip, deflate",
+              },
+              "accept-language" => {
+                "name": "accept-language",
+                "value": "en-US,en;q=0.9",
+              },
+              "cookie" => {
+                "name": "cookie",
+                "value": "__session=value",
+              },
+              "host" => {
+                "name": "host",
+                "value": "localhost:3333",
+              },
+              "upgrade-insecure-requests" => {
+                "name": "upgrade-insecure-requests",
+                "value": "1",
+              },
+              "user-agent" => {
+                "name": "user-agent",
+                "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "request",
+          Symbol(realm): {
+            "settingsObject": {
+              "baseUrl": undefined,
+            },
+          },
         },
       }
     `);
@@ -348,14 +477,14 @@ describe("architect createRemixRequest", () => {
 
 describe("sendRemixResponse", () => {
   it("handles regular responses", async () => {
-    let response = new NodeResponse("anything");
+    let response = new Response("anything");
     let result = await sendRemixResponse(response);
     expect(result.body).toBe("anything");
   });
 
   it("handles resource routes with regular data", async () => {
     let json = JSON.stringify({ foo: "bar" });
-    let response = new NodeResponse(json, {
+    let response = new Response(json, {
       headers: {
         "Content-Type": "application/json",
         "content-length": json.length.toString(),
@@ -370,7 +499,7 @@ describe("sendRemixResponse", () => {
   it("handles resource routes with binary data", async () => {
     let image = await fsp.readFile(path.join(__dirname, "554828.jpeg"));
 
-    let response = new NodeResponse(image, {
+    let response = new Response(image, {
       headers: {
         "content-type": "image/jpeg",
         "content-length": image.length.toString(),

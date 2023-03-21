@@ -63,7 +63,7 @@ export async function createFixture(init: FixtureInit) {
   };
 
   let postDocument = async (href: string, data: URLSearchParams | FormData) => {
-    return requestDocument(href, {
+    let init: RequestInit = {
       method: "POST",
       body: data,
       headers: {
@@ -72,7 +72,11 @@ export async function createFixture(init: FixtureInit) {
             ? "application/x-www-form-urlencoded"
             : "multipart/form-data",
       },
-    });
+    };
+    if (init.body) {
+      (init as any).duplex = "half";
+    }
+    return requestDocument(href, init);
   };
 
   let getBrowserAsset = async (asset: string) => {

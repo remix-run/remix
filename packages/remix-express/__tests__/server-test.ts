@@ -1,10 +1,7 @@
 import express from "express";
 import supertest from "supertest";
 import { createRequest, createResponse } from "node-mocks-http";
-import {
-  createRequestHandler as createRemixRequestHandler,
-  Response as NodeResponse,
-} from "@remix-run/node";
+import { createRequestHandler as createRemixRequestHandler } from "@remix-run/node";
 import { Readable } from "stream";
 
 import {
@@ -103,7 +100,9 @@ describe("express createRequestHandler", () => {
     it("handles body as stream", async () => {
       mockedCreateRequestHandler.mockImplementation(() => async () => {
         let stream = Readable.from("hello world");
-        return new NodeResponse(stream, { status: 200 }) as unknown as Response;
+        return new Response(stream as any, {
+          status: 200,
+        }) as unknown as Response;
       });
 
       let request = supertest(createApp());
@@ -161,8 +160,12 @@ describe("express createRemixHeaders", () => {
     it("handles empty headers", () => {
       expect(createRemixHeaders({})).toMatchInlineSnapshot(`
         Headers {
-          Symbol(query): Array [],
-          Symbol(context): null,
+          Symbol(headers list): HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {},
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "none",
         }
       `);
     });
@@ -170,11 +173,17 @@ describe("express createRemixHeaders", () => {
     it("handles simple headers", () => {
       expect(createRemixHeaders({ "x-foo": "bar" })).toMatchInlineSnapshot(`
         Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar",
-          ],
-          Symbol(context): null,
+          Symbol(headers list): HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {
+              "x-foo" => {
+                "name": "x-foo",
+                "value": "bar",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "none",
         }
       `);
     });
@@ -183,13 +192,21 @@ describe("express createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": "bar", "x-bar": "baz" }))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar",
-            "x-bar",
-            "baz",
-          ],
-          Symbol(context): null,
+          Symbol(headers list): HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {
+              "x-foo" => {
+                "name": "x-foo",
+                "value": "bar",
+              },
+              "x-bar" => {
+                "name": "x-bar",
+                "value": "baz",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "none",
         }
       `);
     });
@@ -198,11 +215,17 @@ describe("express createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": "bar, baz" }))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar, baz",
-          ],
-          Symbol(context): null,
+          Symbol(headers list): HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {
+              "x-foo" => {
+                "name": "x-foo",
+                "value": "bar, baz",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "none",
         }
       `);
     });
@@ -211,13 +234,21 @@ describe("express createRemixHeaders", () => {
       expect(createRemixHeaders({ "x-foo": "bar, baz", "x-bar": "baz" }))
         .toMatchInlineSnapshot(`
         Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar, baz",
-            "x-bar",
-            "baz",
-          ],
-          Symbol(context): null,
+          Symbol(headers list): HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {
+              "x-foo" => {
+                "name": "x-foo",
+                "value": "bar, baz",
+              },
+              "x-bar" => {
+                "name": "x-bar",
+                "value": "baz",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "none",
         }
       `);
     });
@@ -232,13 +263,20 @@ describe("express createRemixHeaders", () => {
         })
       ).toMatchInlineSnapshot(`
         Headers {
-          Symbol(query): Array [
-            "set-cookie",
-            "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-            "set-cookie",
-            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
-          ],
-          Symbol(context): null,
+          Symbol(headers list): HeadersList {
+            "cookies": [
+              "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
+              "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
+            ],
+            Symbol(headers map): Map {
+              "set-cookie" => {
+                "name": "set-cookie",
+                "value": "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax, __other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "none",
         }
       `);
     });
@@ -261,37 +299,103 @@ describe("express createRemixRequest", () => {
 
     expect(createRemixRequest(expressRequest, expressResponse))
       .toMatchInlineSnapshot(`
-      NodeRequest {
-        "agent": undefined,
-        "compress": true,
-        "counter": 0,
-        "follow": 20,
-        "highWaterMark": 16384,
-        "insecureHTTPParser": false,
-        "size": 0,
-        Symbol(Body internals): Object {
-          "body": null,
-          "boundary": null,
-          "disturbed": false,
-          "error": null,
-          "size": 0,
-          "type": null,
-        },
-        Symbol(Request internals): Object {
-          "credentials": "same-origin",
-          "headers": Headers {
-            Symbol(query): Array [
-              "cache-control",
-              "max-age=300, s-maxage=3600",
-              "host",
-              "localhost:3000",
-            ],
-            Symbol(context): null,
+      Request {
+        Symbol(realm): {
+          "settingsObject": {
+            "baseUrl": undefined,
           },
+        },
+        Symbol(state): {
+          "body": null,
+          "cache": "default",
+          "client": {
+            "baseUrl": undefined,
+          },
+          "credentials": "same-origin",
+          "cryptoGraphicsNonceMetadata": "",
+          "destination": "",
+          "done": false,
+          "headersList": HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {
+              "cache-control" => {
+                "name": "cache-control",
+                "value": "max-age=300, s-maxage=3600",
+              },
+              "host" => {
+                "name": "host",
+                "value": "localhost:3000",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          "historyNavigation": false,
+          "initiator": "",
+          "integrity": "",
+          "keepalive": false,
+          "localURLsOnly": false,
           "method": "GET",
-          "parsedURL": "http://localhost:3000/foo/bar",
+          "mode": "cors",
+          "origin": "client",
+          "parserMetadata": "",
+          "policyContainer": "client",
+          "preventNoCacheCacheControlHeaderModification": false,
+          "priority": null,
           "redirect": "follow",
-          "signal": AbortSignal {},
+          "redirectCount": 0,
+          "referrer": "client",
+          "referrerPolicy": "",
+          "reloadNavigation": false,
+          "replacesClientId": "",
+          "reservedClient": null,
+          "responseTainting": "basic",
+          "serviceWorkers": "all",
+          "taintedOrigin": false,
+          "timingAllowFailed": false,
+          "unsafeRequest": false,
+          "url": "http://localhost:3000/foo/bar",
+          "urlList": [
+            "http://localhost:3000/foo/bar",
+          ],
+          "useCORSPreflightFlag": false,
+          "useCredentials": false,
+          "userActivation": false,
+          "window": "client",
+        },
+        Symbol(signal): AbortSignal {
+          Symbol(kEvents): Map {},
+          Symbol(events.maxEventTargetListeners): 10,
+          Symbol(events.maxEventTargetListenersWarned): false,
+          Symbol(kHandlers): Map {},
+          Symbol(kAborted): false,
+          Symbol(kReason): undefined,
+          Symbol(realm): {
+            "settingsObject": {
+              "baseUrl": undefined,
+            },
+          },
+        },
+        Symbol(headers): Headers {
+          Symbol(headers list): HeadersList {
+            "cookies": null,
+            Symbol(headers map): Map {
+              "cache-control" => {
+                "name": "cache-control",
+                "value": "max-age=300, s-maxage=3600",
+              },
+              "host" => {
+                "name": "host",
+                "value": "localhost:3000",
+              },
+            },
+            Symbol(headers map sorted): null,
+          },
+          Symbol(guard): "request",
+          Symbol(realm): {
+            "settingsObject": {
+              "baseUrl": undefined,
+            },
+          },
         },
       }
     `);

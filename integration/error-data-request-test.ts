@@ -128,7 +128,8 @@ test.describe("ErrorBoundary", () => {
     );
   });
 
-  test("returns a 405 x-remix-error on a data fetch with a bad method", async () => {
+  // Can't make a TRACE request with node fetch() API.
+  test.skip("returns a 405 x-remix-error on a data fetch with a bad method", async () => {
     let response = await fixture.requestData(
       `/loader-return-json`,
       "routes/loader-return-json",

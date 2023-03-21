@@ -25,7 +25,6 @@
     "source-map": "^0.7.3"
   },
   "devDependencies": {
-    "@remix-run/web-file": "^3.0.2",
     "@types/set-cookie-parser": "^2.4.1"
   },
   "engines": {

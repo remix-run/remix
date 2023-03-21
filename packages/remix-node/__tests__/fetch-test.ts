@@ -1,7 +1,5 @@
 import { PassThrough } from "stream";
 
-import { Request } from "../fetch";
-
 let test = {
   source: [
     [
@@ -74,13 +72,16 @@ describe("Request", () => {
     test.source.forEach((chunk) => body.write(chunk));
     body.end();
 
-    let req = new Request("http://test.com", {
+    let init: RequestInit = {
       method: "post",
-      body,
+      body: body as any,
       headers: {
         "Content-Type": "multipart/form-data; boundary=" + test.boundary,
       },
-    });
+    };
+    (init as any).duplex = "half";
+
+    let req = new Request("http://test.com", init);
 
     let cloned = req.clone();
     let formData = await req.formData();

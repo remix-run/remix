@@ -10,14 +10,17 @@ module.exports = {
   testEnvironment: "node",
   modulePathIgnorePatterns: ignorePatterns,
   watchPathIgnorePatterns: [...ignorePatterns, "\\/node_modules\\/"],
+  transformIgnorePatterns: [
+    "\\/node_modules\\/(?!@web3-storage\\/multipart-parser\\/).+\\.js$",
+  ],
   testMatch: ["<rootDir>/**/*-test.[jt]s?(x)"],
   setupFiles: ["<rootDir>/__tests__/setup.ts"],
   transform: {
     "\\.[jt]sx?$": require.resolve("./transform"),
   },
-  watchPlugins: [
-    require.resolve("jest-watch-select-projects"),
-    require.resolve("jest-watch-typeahead/filename"),
-    require.resolve("jest-watch-typeahead/testname"),
-  ],
+  // watchPlugins: [
+  //   require.resolve("jest-watch-select-projects"),
+  //   require.resolve("jest-watch-typeahead/filename"),
+  //   require.resolve("jest-watch-typeahead/testname"),
+  // ],
 };

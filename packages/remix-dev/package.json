@@ -78,6 +78,7 @@
     "@types/inquirer": "^8.2.0",
     "@types/jsesc": "^3.0.1",
     "@types/lodash.debounce": "^4.0.6",
+    "@types/node-fetch": "^2.5.7",
     "@types/npmcli__package-json": "^2.0.0",
     "@types/shelljs": "^0.8.11",
     "@types/tar-fs": "^2.0.1",

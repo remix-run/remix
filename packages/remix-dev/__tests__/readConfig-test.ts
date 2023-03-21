@@ -33,7 +33,7 @@ describe("readConfig", () => {
         },
       },
       `
-      Object {
+      {
         "appDirectory": Any<String>,
         "assetsBuildDirectory": Any<String>,
         "cacheDirectory": Any<String>,
@@ -43,7 +43,7 @@ describe("readConfig", () => {
         "entryClientFilePath": Any<String>,
         "entryServerFile": "entry.server.tsx",
         "entryServerFilePath": Any<String>,
-        "future": Object {
+        "future": {
           "unstable_cssSideEffectImports": Any<Boolean>,
           "unstable_dev": false,
           "unstable_postcss": Any<Boolean>,
@@ -55,19 +55,19 @@ describe("readConfig", () => {
         "publicPath": "/build/",
         "relativeAssetsBuildDirectory": Any<String>,
         "rootDirectory": Any<String>,
-        "routes": Object {
-          "root": Object {
+        "routes": {
+          "root": {
             "file": "root.tsx",
             "id": "root",
             "path": "",
           },
         },
         "serverBuildPath": Any<String>,
-        "serverBuildTargetEntryModule": "export * from \\"@remix-run/dev/server-build\\";",
+        "serverBuildTargetEntryModule": "export * from "@remix-run/dev/server-build";",
         "serverConditions": undefined,
-        "serverDependenciesToBundle": Array [],
+        "serverDependenciesToBundle": [],
         "serverEntryPoint": undefined,
-        "serverMainFields": Array [
+        "serverMainFields": [
           "main",
           "module",
         ],
@@ -76,7 +76,7 @@ describe("readConfig", () => {
         "serverModuleFormat": "cjs",
         "serverPlatform": "node",
         "tsconfigPath": Any<String>,
-        "watchPaths": Array [],
+        "watchPaths": [],
       }
     `
     );

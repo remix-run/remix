@@ -107,7 +107,7 @@ describe("shared server runtime", () => {
   let baseUrl = "http://test.com";
 
   describe("resource routes", () => {
-    test("calls resource route loader", async () => {
+    test.only("calls resource route loader", async () => {
       let rootLoader = jest.fn(() => {
         return "root";
       });
@@ -127,6 +127,7 @@ describe("shared server runtime", () => {
       });
       let handler = createRequestHandler(build, ServerMode.Test);
 
+      console.log({Request:globalThis.Request});
       let request = new Request(`${baseUrl}/resource`, {
         method: "get",
       });

@@ -367,6 +367,7 @@ async function downloadAndExtractTarball(
 
   try {
     await pipeline(
+      // here
       response.body.pipe(gunzip()),
       tar.extract(projectDir, {
         map(header) {

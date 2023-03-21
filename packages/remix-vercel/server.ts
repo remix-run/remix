@@ -1,15 +1,8 @@
+import stream from "stream";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import type {
-  AppLoadContext,
-  ServerBuild,
-  RequestInit as NodeRequestInit,
-  Response as NodeResponse,
-} from "@remix-run/node";
+import type { AppLoadContext, ServerBuild } from "@remix-run/node";
 import {
-  AbortController as NodeAbortController,
   createRequestHandler as createRemixRequestHandler,
-  Headers as NodeHeaders,
-  Request as NodeRequest,
   writeReadableStreamToWritable,
 } from "@remix-run/node";
 
@@ -49,7 +42,7 @@ export function createRequestHandler({
     let request = createRemixRequest(req, res);
     let loadContext = getLoadContext?.(req, res);
 
-    let response = (await handleRequest(request, loadContext)) as NodeResponse;
+    let response = await handleRequest(request, loadContext);
 
     await sendRemixResponse(res, response);
   };
@@ -57,8 +50,8 @@ export function createRequestHandler({
 
 export function createRemixHeaders(
   requestHeaders: VercelRequest["headers"]
-): NodeHeaders {
-  let headers = new NodeHeaders();
+): Headers {
+  let headers = new Headers();
 
   for (let key in requestHeaders) {
     let header = requestHeaders[key]!;
@@ -78,37 +71,39 @@ export function createRemixHeaders(
 export function createRemixRequest(
   req: VercelRequest,
   res: VercelResponse
-): NodeRequest {
+): Request {
   let host = req.headers["x-forwarded-host"] || req.headers["host"];
   // doesn't seem to be available on their req object!
   let protocol = req.headers["x-forwarded-proto"] || "https";
   let url = new URL(`${protocol}://${host}${req.url}`);
 
   // Abort action/loaders once we can no longer write a response
-  let controller = new NodeAbortController();
+  let controller = new AbortController();
   res.on("close", () => controller.abort());
 
-  let init: NodeRequestInit = {
+  let init: RequestInit = {
     method: req.method,
     headers: createRemixHeaders(req.headers),
-    // Cast until reason/throwIfAborted added
-    // https://github.com/mysticatea/abort-controller/issues/36
-    signal: controller.signal as NodeRequestInit["signal"],
+    signal: controller.signal,
   };
 
   if (req.method !== "GET" && req.method !== "HEAD") {
-    init.body = req;
+    init.body = stream.Readable.toWeb(req) as ReadableStream<any>;
   }
 
-  return new NodeRequest(url.href, init);
+  return new Request(url.href, init);
 }
 
 export async function sendRemixResponse(
   res: VercelResponse,
-  nodeResponse: NodeResponse
+  nodeResponse: Response
 ): Promise<void> {
   res.statusMessage = nodeResponse.statusText;
-  let multiValueHeaders = nodeResponse.headers.raw();
+  let multiValueHeaders: Record<string, string[]> = {};
+  for (let [key, value] of nodeResponse.headers) {
+    multiValueHeaders[key] = multiValueHeaders[key] || [];
+    multiValueHeaders[key].push(value);
+  }
   res.writeHead(
     nodeResponse.status,
     nodeResponse.statusText,
