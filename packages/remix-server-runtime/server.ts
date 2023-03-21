@@ -301,7 +301,8 @@ async function handleDocumentRequestRR(
       request,
       context.statusCode,
       headers,
-      entryContext
+      entryContext,
+      loadContext
     );
   } catch (error: unknown) {
     // Get a new StaticHandlerContext that contains the error at the right boundary
@@ -340,7 +341,8 @@ async function handleDocumentRequestRR(
         request,
         context.statusCode,
         headers,
-        entryContext
+        entryContext,
+        loadContext
       );
     } catch (error: any) {
       logServerErrorIfNotAborted(error, request, serverMode);
