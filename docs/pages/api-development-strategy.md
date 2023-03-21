@@ -1,6 +1,6 @@
 ---
 title: API Development Strategy
-description: Remix's strategy tp provide a smooth upgrade experience for application developers
+description: Remix's strategy to provide a smooth upgrade experience for application developers
 ---
 
 # API Development Strategy
