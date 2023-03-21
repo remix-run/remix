@@ -27,7 +27,7 @@
     - The `route` property on route matches has been removed, as relevant match data is attached directly to the match object
       ```tsx
       // before
-      export function meta({ parentsData }) {
+      export function meta({ matches }) {
         let rootModule = matches.find((match) => match.route.id === "root");
       }
       // after
