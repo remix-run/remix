@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
 
-import { PlaywrightFixture } from "./helpers/playwright-fixture";
 import type { Fixture, AppFixture } from "./helpers/create-fixture";
 import { createAppFixture, createFixture, js } from "./helpers/create-fixture";
 
@@ -48,28 +47,21 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/_index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
-
-        export function loader() {
-          return json("pizza");
-        }
-
+      "app/routes/_index/route.jsx": js`
         export default function Index() {
-          let data = useLoaderData();
-          return (
-            <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
-            </div>
-          )
+          return <span>Index</span>
         }
       `,
 
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+      "app/routes/feature/route.jsx": js`
+        export default function FeatureRoute() {
+          return <span>FeatureRoute</span>;
+        }
+      `,
+
+      "app/routes/feature/SomeComponent.js": js`
+        export default function SomeComponent() {
+          return <span>SomeComponent</span>;
         }
       `,
     },
@@ -88,22 +80,24 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
+test("index folder with router path should result in 200", async () => {
   let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+  expect(await response.status).toBe(200);
+});
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+test("folder with route.tsx should result in 200", async () => {
+  let response = await fixture.requestDocument("/feature");
+  expect(await response.status).toBe(200);
+});
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
+test("path without matching files should result in a 404", async () => {
+  let response = await fixture.requestDocument("/feature/NotExisting");
+  expect(await response.status).toBe(404);
+});
 
-  // Go check out the other tests to see what else you can do.
+test("random files in a route folder should result in a 404 as they are not routes", async () => {
+  let response = await fixture.requestDocument("/feature/SomeComponent");
+  expect(await response.status).toBe(404);
 });
 
 ////////////////////////////////////////////////////////////////////////////////
