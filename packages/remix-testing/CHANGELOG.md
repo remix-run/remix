@@ -1,5 +1,25 @@
 # `@remix-run/testing`
 
+## 1.15.0-pre.0
+
+### Minor Changes
+
+- Added a new `future.v2_normalizeFormMethod` flag to normalize the exposed `useNavigation().formMethod` as an uppercase HTTP method to align with the previous `useTransition` behavior as well as the `fetch()` behavior of normalizing to uppercase HTTP methods. ([#5815](https://github.com/remix-run/remix/pull/5815))
+
+  - When `future.v2_normalizeFormMethod === false`,
+    - `useNavigation().formMethod` is lowercase
+    - `useFetcher().formMethod` is uppercase
+  - When `future.v2_normalizeFormMethod === true`:
+    - `useNavigation().formMethod` is uppercase
+    - `useFetcher().formMethod` is uppercase
+
+### Patch Changes
+
+- Update to `react-router-dom@6.10.0-pre.0` and `@remix-run/router@1.5.0-pre.0` ([#5866](https://github.com/remix-run/remix/pull/5866))
+- Updated dependencies:
+  - `@remix-run/react@1.15.0-pre.0`
+  - `@remix-run/node@1.15.0-pre.0`
+
 ## 1.14.3
 
 ### Patch Changes

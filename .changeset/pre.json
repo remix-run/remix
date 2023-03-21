@@ -21,5 +21,28 @@
     "@remix-run/testing": "1.14.3",
     "@remix-run/vercel": "1.14.3"
   },
-  "changesets": []
+  "changesets": [
+    "css-bundle-hmr",
+    "css-bundle-monorepo-fix",
+    "css-side-effect-import-extensions",
+    "deprecate-fetcher-type-submission",
+    "entry-client-no-ric",
+    "flat-boxes-brake",
+    "flat-routes-perf",
+    "fluffy-dragons-reflect",
+    "meta-v2-enhancements",
+    "no-log-on-aborted-request",
+    "normalize-form-method-deprecation",
+    "normalize-form-method",
+    "optional-entries-react-17",
+    "proud-nails-hunt",
+    "security-dep-bumps",
+    "thick-actors-juggle",
+    "three-cheetahs-lick",
+    "tidy-jokes-sparkle",
+    "vanilla-extract-cache",
+    "wet-colts-remain",
+    "wild-beers-agree",
+    "young-clocks-wink"
+  ]
 }
