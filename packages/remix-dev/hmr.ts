@@ -8,7 +8,6 @@ export type Update = {
   url: string;
   revalidate: boolean;
   reason: string;
-  dynamicImports?: string[];
 };
 
 // route id: filepaths relative to app/ dir without extension
