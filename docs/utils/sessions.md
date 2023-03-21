@@ -317,7 +317,7 @@ The advantage of file-backed sessions is that only the session ID is stored in t
 
 <docs-info>If you are deploying to a serverless function, ensure you have access to a persistent file system. They usually don't have one without extra configuration.</docs-info>
 
-```js filename=app/sesions.js
+```js filename=app/sessions.js
 import {
   createCookie,
   createFileSessionStorage,
