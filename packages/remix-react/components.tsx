@@ -853,8 +853,9 @@ export function Scripts(props: ScriptProps) {
       : [
           "__remixContext.p = function(v,e,p,x) {",
           "  if (typeof e !== 'undefined') {",
-          "    x=new Error(e.message);",
-          process.env.NODE_ENV === "development" ? `x.stack=e.stack;` : "",
+          process.env.NODE_ENV === "development"
+            ? "    x=new Error(e.message);\n    x.stack=e.stack;"
+            : '    x=new Error("Unexpected Server Error");\n    x.stack=undefined;',
           "    p=Promise.reject(x);",
           "  } else {",
           "    p=Promise.resolve(v);",
@@ -873,8 +874,9 @@ export function Scripts(props: ScriptProps) {
           "__remixContext.r = function(i,k,v,e,p,x) {",
           "  p = __remixContext.t[i][k];",
           "  if (typeof e !== 'undefined') {",
-          "    x=new Error(e.message);",
-          process.env.NODE_ENV === "development" ? `x.stack=e.stack;` : "",
+          process.env.NODE_ENV === "development"
+            ? "    x=new Error(e.message);\n    x.stack=e.stack;"
+            : '    x=new Error("Unexpected Server Error");\n    x.stack=undefined;',
           "    p.e(x);",
           "  } else {",
           "    p.r(v);",
@@ -904,13 +906,16 @@ export function Scripts(props: ScriptProps) {
                 } else {
                   let trackedPromise = deferredData.data[key] as TrackedPromise;
                   if (typeof trackedPromise._error !== "undefined") {
-                    let toSerialize: { message: string; stack?: string } = {
-                      message: trackedPromise._error.message,
-                      stack: undefined,
-                    };
-                    if (process.env.NODE_ENV === "development") {
-                      toSerialize.stack = trackedPromise._error.stack;
-                    }
+                    let toSerialize: { message: string; stack?: string } =
+                      process.env.NODE_ENV === "development"
+                        ? {
+                            message: trackedPromise._error.message,
+                            stack: trackedPromise._error.stack,
+                          }
+                        : {
+                            message: "Unexpected Server Error",
+                            stack: undefined,
+                          };
                     return `${JSON.stringify(
                       key
                     )}:__remixContext.p(!1, ${escapeHtml(
@@ -1116,13 +1121,16 @@ function ErrorDeferredHydrationScript({
   routeId: string;
 }) {
   let error = useAsyncError() as Error;
-  let toSerialize: { message: string; stack?: string } = {
-    message: error.message,
-    stack: undefined,
-  };
-  if (process.env.NODE_ENV === "development") {
-    toSerialize.stack = error.stack;
-  }
+  let toSerialize: { message: string; stack?: string } =
+    process.env.NODE_ENV === "development"
+      ? {
+          message: error.message,
+          stack: error.stack,
+        }
+      : {
+          message: "Unexpected Server Error",
+          stack: undefined,
+        };
 
   return (
     <script
