@@ -30,7 +30,7 @@ import { writeFileSafe } from "./utils/fs";
 import invariant from "../invariant";
 import { hmrPlugin } from "./plugins/hmrPlugin";
 import { NodeProtocolExternalPlugin } from "./plugins/nodeProtocolExternalPlugin";
-import { createCSSCompiler } from "./css/compiler";
+import * as CSS from "./css";
 
 export type BrowserCompiler = {
   // produce ./public/build/
@@ -215,7 +215,7 @@ export const createBrowserCompiler = (
   options: CompileOptions
 ): BrowserCompiler => {
   let appCompiler: esbuild.BuildIncremental;
-  let cssCompiler = createCSSCompiler(remixConfig, options);
+  let cssCompiler = CSS.compiler.create(remixConfig, options);
 
   let hmrRoutes: Record<string, { loaderHash: string }> = {};
   let onLoader = (filename: string, code: string) => {

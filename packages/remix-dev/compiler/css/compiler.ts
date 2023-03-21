@@ -185,10 +185,7 @@ const createEsbuildConfig = (
   };
 };
 
-export let createCSSCompiler = (
-  remixConfig: RemixConfig,
-  options: CompileOptions
-) => {
+export let create = (remixConfig: RemixConfig, options: CompileOptions) => {
   let cssCompiler: esbuild.BuildIncremental;
   let onLoader = () => {};
   let cssBuildTask = async (
