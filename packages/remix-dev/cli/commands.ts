@@ -5,6 +5,7 @@ import ora from "ora";
 import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
 import NPMCliPackageJson from "@npmcli/package-json";
+import { coerce } from "semver";
 
 import * as colors from "../colors";
 import * as compiler from "../compiler";
@@ -247,9 +248,16 @@ let entries = ["entry.client", "entry.server"];
 
 // @ts-expect-error available in node 12+
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
-let listFormat = new Intl.ListFormat("en", {
+let conjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "conjunction",
+});
+
+// @ts-expect-error available in node 12+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
+let disjunctionListFormat = new Intl.ListFormat("en", {
+  style: "long",
+  type: "disjunction",
 });
 
 export async function generateEntry(
@@ -268,7 +276,7 @@ export async function generateEntry(
 
   if (!entries.includes(entry)) {
     let entriesArray = Array.from(entries);
-    let list = listFormat.format(entriesArray);
+    let list = conjunctionListFormat.format(entriesArray);
 
     console.error(
       colors.error(`Invalid entry file. Valid entry files are ${list}`)
@@ -278,6 +286,20 @@ export async function generateEntry(
 
   let pkgJson = await NPMCliPackageJson.load(config.rootDirectory);
   let deps = pkgJson.content.dependencies ?? {};
+
+  let maybeReactVersion = coerce(deps.react);
+  if (!maybeReactVersion) {
+    let react = ["react", "react-dom"];
+    let list = conjunctionListFormat.format(react);
+    throw new Error(
+      `Could not determine React version. Please install the following packages: ${list}`
+    );
+  }
+
+  let type =
+    maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
+      ? ("stream" as const)
+      : ("string" as const);
 
   let serverRuntime = deps["@remix-run/deno"]
     ? "deno"
@@ -293,7 +315,7 @@ export async function generateEntry(
       "@remix-run/cloudflare",
       "@remix-run/node",
     ];
-    let formattedList = listFormat.format(serverRuntimes);
+    let formattedList = disjunctionListFormat.format(serverRuntimes);
     console.error(
       colors.error(
         `Could not determine server runtime. Please install one of the following: ${formattedList}`
@@ -302,9 +324,9 @@ export async function generateEntry(
     return;
   }
 
-  let clientRuntime = deps["@remix-run/react"] ? "react" : undefined;
+  let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
 
-  if (!clientRuntime) {
+  if (!clientRenderer) {
     console.error(
       colors.error(
         `Could not determine runtime. Please install the following: @remix-run/react`
@@ -316,11 +338,12 @@ export async function generateEntry(
   let defaultsDirectory = path.resolve(__dirname, "..", "config", "defaults");
   let defaultEntryClient = path.resolve(
     defaultsDirectory,
-    `entry.client.${clientRuntime}.tsx`
+    `entry.client.${clientRenderer}-${type}.tsx`
   );
   let defaultEntryServer = path.resolve(
     defaultsDirectory,
-    `entry.server.${serverRuntime}.tsx`
+    serverRuntime,
+    `entry.server.${clientRenderer}-${type}.tsx`
   );
 
   let isServerEntry = entry === "entry.server";

@@ -23,7 +23,7 @@
     "packages/remix-vercel"
   ],
   "scripts": {
-    "bug-report-test": "playwright test --config ./integration/playwright.config.ts integration/bug-report-test.ts",
+    "bug-report-test": "yarn test:integration bug-report --project chromium",
     "build": "node scripts/build.mjs",
     "clean": "git clean -fdX .",
     "clean:build": "node ./scripts/clean-build.mjs",
@@ -128,7 +128,7 @@
     "simple-git": "^3.16.0",
     "sort-package-json": "^1.55.0",
     "strip-indent": "^3.0.0",
-    "tailwindcss": "^3.1.8",
+    "tailwindcss": "0.0.0-insiders.6a2c58a",
     "to-vfile": "7.2.3",
     "type-fest": "^2.16.0",
     "typescript": "^4.9.5",

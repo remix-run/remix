@@ -36,6 +36,7 @@ export interface FutureConfig {
   unstable_postcss: boolean;
   unstable_tailwind: boolean;
   unstable_vanillaExtract: boolean | VanillaExtractOptions;
+  v2_normalizeFormMethod: boolean;
   v2_routeConvention: boolean;
 }
 

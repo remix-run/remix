@@ -10,12 +10,10 @@ import type {
   TrackedPromise,
 } from "@remix-run/router";
 import type {
+  FormMethod,
   LinkProps,
-  NavigationType,
-  Navigator,
   Params,
   NavLinkProps,
-  Location,
   FormProps,
   SubmitFunction,
 } from "react-router-dom";
@@ -39,8 +37,8 @@ import {
 } from "react-router-dom";
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
-import type { AppData, FormMethod } from "./data";
-import type { EntryContext, RemixContextObject } from "./entry";
+import type { AppData } from "./data";
+import type { RemixContextObject } from "./entry";
 import { RemixRootDefaultErrorBoundary } from "./errorBoundaries";
 import invariant from "./invariant";
 import {
@@ -55,6 +53,7 @@ import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml, escapeHtml } from "./markup";
 import type { MetaDescriptor, MetaMatch, MetaMatches } from "./routeModules";
 import type { Fetcher, FetcherStates } from "./transition";
+import { warnOnce } from "./warnings";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -86,19 +85,6 @@ function useRemixContext(): RemixContextObject {
   let context = React.useContext(RemixContext);
   invariant(context, "You must render this element inside a <Remix> element");
   return context;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// RemixEntry
-
-export function RemixEntry(props: {
-  context: EntryContext;
-  action: NavigationType;
-  location: Location;
-  navigator: Navigator;
-  static?: boolean;
-}) {
-  return <h1>Not Implemented!</h1>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -322,6 +308,16 @@ export function Links() {
     () => getLinksForMatches(matches, routeModules, manifest),
     [matches, routeModules, manifest]
   );
+
+  React.useEffect(() => {
+    warnOnce(
+      links.some((link) => "imagesizes" in link || "imagesrcset" in link),
+      "⚠️ DEPRECATED: The `imagesizes` & `imagesrcset` properties in " +
+        "your links have been deprecated in favor of `imageSizes` & " +
+        "`imageSrcSet` and support will be removed in Remix v2. Please update " +
+        "your code to use the new property names instead."
+    );
+  }, [links]);
 
   return (
     <>
@@ -691,8 +687,9 @@ export function Scripts(props: ScriptProps) {
       : [
           "__remixContext.p = function(v,e,p,x) {",
           "  if (typeof e !== 'undefined') {",
-          "    x=new Error(e.message);",
-          process.env.NODE_ENV === "development" ? `x.stack=e.stack;` : "",
+          process.env.NODE_ENV === "development"
+            ? "    x=new Error(e.message);\n    x.stack=e.stack;"
+            : '    x=new Error("Unexpected Server Error");\n    x.stack=undefined;',
           "    p=Promise.reject(x);",
           "  } else {",
           "    p=Promise.resolve(v);",
@@ -711,8 +708,9 @@ export function Scripts(props: ScriptProps) {
           "__remixContext.r = function(i,k,v,e,p,x) {",
           "  p = __remixContext.t[i][k];",
           "  if (typeof e !== 'undefined') {",
-          "    x=new Error(e.message);",
-          process.env.NODE_ENV === "development" ? `x.stack=e.stack;` : "",
+          process.env.NODE_ENV === "development"
+            ? "    x=new Error(e.message);\n    x.stack=e.stack;"
+            : '    x=new Error("Unexpected Server Error");\n    x.stack=undefined;',
           "    p.e(x);",
           "  } else {",
           "    p.r(v);",
@@ -742,13 +740,16 @@ export function Scripts(props: ScriptProps) {
                 } else {
                   let trackedPromise = deferredData.data[key] as TrackedPromise;
                   if (typeof trackedPromise._error !== "undefined") {
-                    let toSerialize: { message: string; stack?: string } = {
-                      message: trackedPromise._error.message,
-                      stack: undefined,
-                    };
-                    if (process.env.NODE_ENV === "development") {
-                      toSerialize.stack = trackedPromise._error.stack;
-                    }
+                    let toSerialize: { message: string; stack?: string } =
+                      process.env.NODE_ENV === "development"
+                        ? {
+                            message: trackedPromise._error.message,
+                            stack: trackedPromise._error.stack,
+                          }
+                        : {
+                            message: "Unexpected Server Error",
+                            stack: undefined,
+                          };
                     return `${JSON.stringify(
                       key
                     )}:__remixContext.p(!1, ${escapeHtml(
@@ -954,13 +955,16 @@ function ErrorDeferredHydrationScript({
   routeId: string;
 }) {
   let error = useAsyncError() as Error;
-  let toSerialize: { message: string; stack?: string } = {
-    message: error.message,
-    stack: undefined,
-  };
-  if (process.env.NODE_ENV === "development") {
-    toSerialize.stack = error.stack;
-  }
+  let toSerialize: { message: string; stack?: string } =
+    process.env.NODE_ENV === "development"
+      ? {
+          message: error.message,
+          stack: error.stack,
+        }
+      : {
+          message: "Unexpected Server Error",
+          stack: undefined,
+        };
 
   return (
     <script

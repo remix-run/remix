@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { RouterState } from "@remix-run/router";
 import type {
   DataRouteMatch,
   Params,
@@ -10,7 +11,8 @@ import type { LoaderFunction, SerializeFrom } from "@remix-run/server-runtime";
 import type { AppData } from "./data";
 import type { LinkDescriptor } from "./links";
 import type { EntryRoute } from "./routes";
-import type { RouteData } from "./routeData";
+
+type RouteData = RouterState["loaderData"];
 
 export interface RouteModules {
   [routeId: string]: RouteModule;

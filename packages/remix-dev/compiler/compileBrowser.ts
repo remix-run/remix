@@ -6,7 +6,8 @@ import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfil
 import postcss from "postcss";
 import postcssDiscardDuplicates from "postcss-discard-duplicates";
 
-import type { WriteChannel } from "../channel";
+import type { Channel, WriteChannel } from "../channel";
+import { createChannel } from "../channel";
 import type { RemixConfig } from "../config";
 import type { AssetsManifest } from "./assets";
 import { createAssetsManifest } from "./assets";
@@ -20,6 +21,7 @@ import { deprecatedRemixPackagePlugin } from "./plugins/deprecatedRemixPackagePl
 import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
 import { mdxPlugin } from "./plugins/mdx";
 import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
+import { cssBundleUpdatePlugin } from "./plugins/cssBundleUpdatePlugin";
 import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
 import { cssSideEffectImportsPlugin } from "./plugins/cssSideEffectImportsPlugin";
 import { vanillaExtractPlugin } from "./plugins/vanillaExtractPlugin";
@@ -30,6 +32,7 @@ import {
 import { writeFileSafe } from "./utils/fs";
 import invariant from "../invariant";
 import { hmrPlugin } from "./plugins/hmrPlugin";
+import { NodeProtocolExternalPlugin } from "./plugins/nodeProtocolExternalPlugin";
 
 export type BrowserCompiler = {
   // produce ./public/build/
@@ -71,6 +74,18 @@ const writeAssetsManifest = async (
     `window.__remixManifest=${JSON.stringify(assetsManifest)};`
   );
 };
+
+const isCssBundlingEnabled = (config: RemixConfig): boolean =>
+  Boolean(
+    config.future.unstable_cssModules ||
+      config.future.unstable_cssSideEffectImports ||
+      config.future.unstable_vanillaExtract
+  );
+
+let cssBundleHrefChannel: Channel<string | undefined>;
+
+// This function gives esbuild access to the latest channel value on rebuilds
+let getCssBundleHref = () => cssBundleHrefChannel.read();
 
 const createEsbuildConfig = (
   build: "app" | "css",
@@ -119,9 +134,10 @@ const createEsbuildConfig = (
       : browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
+    NodeProtocolExternalPlugin(),
   ].filter(isNotNull);
 
-  if (mode === "development" && config.future.unstable_dev) {
+  if (build === "app" && mode === "development" && config.future.unstable_dev) {
     // TODO prebundle deps instead of chunking just these ones
     let isolateChunks = [
       require.resolve("react"),
@@ -139,6 +155,10 @@ const createEsbuildConfig = (
     };
 
     plugins.push(hmrPlugin({ remixConfig: config }));
+
+    if (isCssBundlingEnabled(config)) {
+      plugins.push(cssBundleUpdatePlugin({ getCssBundleHref }));
+    }
   }
 
   return {
@@ -220,82 +240,106 @@ export const createBrowserCompiler = (
     };
 
     let cssBuildTask = async () => {
-      // The types aren't great when combining write: false and incremental: true
-      //  so we need to assert that it's an incremental build
-      cssCompiler = (await (!cssCompiler
-        ? esbuild.build({
-            ...createEsbuildConfig("css", remixConfig, options, onLoader),
-            metafile: true,
-            incremental: true,
-            write: false,
-          })
-        : cssCompiler.rebuild())) as esbuild.BuildIncremental;
-
-      invariant(
-        cssCompiler.metafile,
-        "Expected CSS compiler metafile to be defined. This is likely a bug in Remix. Please open an issue at https://github.com/remix-run/remix/issues/new"
-      );
-
-      let outputFiles = cssCompiler.outputFiles || [];
-
-      let isCssBundleFile = (
-        outputFile: esbuild.OutputFile,
-        extension: ".css" | ".css.map"
-      ): boolean => {
-        return (
-          path.dirname(outputFile.path) === remixConfig.assetsBuildDirectory &&
-          path.basename(outputFile.path).startsWith("css-bundle") &&
-          outputFile.path.endsWith(extension)
-        );
-      };
-
-      let cssBundleFile = outputFiles.find((outputFile) =>
-        isCssBundleFile(outputFile, ".css")
-      );
-
-      if (!cssBundleFile) {
+      if (!isCssBundlingEnabled(remixConfig)) {
         return;
       }
 
-      let cssBundlePath = cssBundleFile.path;
+      try {
+        // The types aren't great when combining write: false and incremental: true
+        //  so we need to assert that it's an incremental build
+        cssCompiler = (await (!cssCompiler
+          ? esbuild.build({
+              ...createEsbuildConfig("css", remixConfig, options, onLoader),
+              metafile: true,
+              incremental: true,
+              write: false,
+            })
+          : cssCompiler.rebuild())) as esbuild.BuildIncremental;
 
-      let { css, map } = await postcss([
-        // We need to discard duplicate rules since "composes"
-        // in CSS Modules can result in duplicate styles
-        postcssDiscardDuplicates(),
-      ]).process(cssBundleFile.text, {
-        from: cssBundlePath,
-        to: cssBundlePath,
-        map: options.sourcemap && {
-          prev: outputFiles.find((outputFile) =>
-            isCssBundleFile(outputFile, ".css.map")
-          )?.text,
-          inline: false,
-          annotation: false,
-          sourcesContent: true,
-        },
-      });
+        invariant(
+          cssCompiler.metafile,
+          "Expected CSS compiler metafile to be defined. This is likely a bug in Remix. Please open an issue at https://github.com/remix-run/remix/issues/new"
+        );
 
-      await fse.ensureDir(path.dirname(cssBundlePath));
+        let outputFiles = cssCompiler.outputFiles || [];
 
-      await Promise.all([
-        fse.writeFile(cssBundlePath, css),
-        options.mode !== "production" && map
-          ? fse.writeFile(`${cssBundlePath}.map`, map.toString()) // Write our updated source map rather than esbuild's
-          : null,
-        ...outputFiles
-          .filter((outputFile) => !/\.(css|js|map)$/.test(outputFile.path))
-          .map(async (asset) => {
-            await fse.ensureDir(path.dirname(asset.path));
-            await fse.writeFile(asset.path, asset.contents);
-          }),
-      ]);
+        let isCssBundleFile = (
+          outputFile: esbuild.OutputFile,
+          extension: ".css" | ".css.map"
+        ): boolean => {
+          return (
+            path.dirname(outputFile.path) ===
+              remixConfig.assetsBuildDirectory &&
+            path.basename(outputFile.path).startsWith("css-bundle") &&
+            outputFile.path.endsWith(extension)
+          );
+        };
 
-      // Return the CSS bundle path so we can use it to generate the manifest
-      return cssBundlePath;
+        let cssBundleFile = outputFiles.find((outputFile) =>
+          isCssBundleFile(outputFile, ".css")
+        );
+
+        if (!cssBundleFile) {
+          cssBundleHrefChannel.write(undefined);
+          return;
+        }
+
+        let cssBundlePath = cssBundleFile.path;
+
+        let cssBundleHref =
+          remixConfig.publicPath +
+          path.relative(
+            remixConfig.assetsBuildDirectory,
+            path.resolve(cssBundlePath)
+          );
+
+        cssBundleHrefChannel.write(cssBundleHref);
+
+        let { css, map } = await postcss([
+          // We need to discard duplicate rules since "composes"
+          // in CSS Modules can result in duplicate styles
+          postcssDiscardDuplicates(),
+        ]).process(cssBundleFile.text, {
+          from: cssBundlePath,
+          to: cssBundlePath,
+          map: options.sourcemap && {
+            prev: outputFiles.find((outputFile) =>
+              isCssBundleFile(outputFile, ".css.map")
+            )?.text,
+            inline: false,
+            annotation: false,
+            sourcesContent: true,
+          },
+        });
+
+        await fse.ensureDir(path.dirname(cssBundlePath));
+
+        await Promise.all([
+          fse.writeFile(cssBundlePath, css),
+          options.mode !== "production" && map
+            ? fse.writeFile(`${cssBundlePath}.map`, map.toString()) // Write our updated source map rather than esbuild's
+            : null,
+          ...outputFiles
+            .filter((outputFile) => !/\.(css|js|map)$/.test(outputFile.path))
+            .map(async (asset) => {
+              await fse.ensureDir(path.dirname(asset.path));
+              await fse.writeFile(asset.path, asset.contents);
+            }),
+        ]);
+
+        return cssBundleHref;
+      } catch (error) {
+        cssBundleHrefChannel.write(undefined);
+        throw error;
+      }
     };
 
-    let [cssBundlePath, metafile] = await Promise.all([
+    // Reset the channel to co-ordinate the CSS and app builds
+    if (isCssBundlingEnabled(remixConfig)) {
+      cssBundleHrefChannel = createChannel();
+    }
+
+    let [cssBundleHref, metafile] = await Promise.all([
       cssBuildTask(),
       appBuildTask(),
     ]);
@@ -322,7 +366,7 @@ export const createBrowserCompiler = (
     let manifest = await createAssetsManifest({
       config: remixConfig,
       metafile: appCompiler.metafile!,
-      cssBundlePath,
+      cssBundleHref,
       hmr,
     });
     await writeAssetsManifest(remixConfig, manifest);

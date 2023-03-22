@@ -1,4 +1,4 @@
-import type { FormEncType, FormMethod } from "./data";
+import type { FormEncType, FormMethod } from "react-router-dom";
 
 export type FetcherStates<TData = any> = {
   Idle: {

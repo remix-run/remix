@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import fse from "fs-extra";
 import getPort from "get-port";
 import NPMCliPackageJson from "@npmcli/package-json";
+import { coerce } from "semver";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
@@ -44,6 +45,7 @@ interface FutureConfig {
   unstable_postcss: boolean;
   unstable_tailwind: boolean;
   unstable_vanillaExtract: boolean | VanillaExtractOptions;
+  v2_normalizeFormMethod: boolean;
   v2_routeConvention: boolean;
 }
 
@@ -404,7 +406,49 @@ export async function readConfig(
   if (userEntryServerFile) {
     entryServerFile = userEntryServerFile;
   } else {
-    if (!deps["isbot"]) {
+    let serverRuntime = deps["@remix-run/deno"]
+      ? "deno"
+      : deps["@remix-run/cloudflare"]
+      ? "cloudflare"
+      : deps["@remix-run/node"]
+      ? "node"
+      : undefined;
+
+    if (!serverRuntime) {
+      let serverRuntimes = [
+        "@remix-run/deno",
+        "@remix-run/cloudflare",
+        "@remix-run/node",
+      ];
+      let formattedList = disjunctionListFormat.format(serverRuntimes);
+      throw new Error(
+        `Could not determine server runtime. Please install one of the following: ${formattedList}`
+      );
+    }
+
+    let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
+
+    if (!clientRenderer) {
+      throw new Error(
+        `Could not determine renderer. Please install the following: @remix-run/react`
+      );
+    }
+
+    let maybeReactVersion = coerce(deps.react);
+    if (!maybeReactVersion) {
+      let react = ["react", "react-dom"];
+      let list = conjunctionListFormat.format(react);
+      throw new Error(
+        `Could not determine React version. Please install the following packages: ${list}`
+      );
+    }
+
+    let type: "stream" | "string" =
+      maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
+        ? "stream"
+        : "string";
+
+    if (!deps["isbot"] && type === "stream") {
       console.log(
         "adding `isbot` to your package.json, you should commit this change"
       );
@@ -426,41 +470,35 @@ export async function readConfig(
       });
     }
 
-    let serverRuntime = deps["@remix-run/deno"]
-      ? "deno"
-      : deps["@remix-run/cloudflare"]
-      ? "cloudflare"
-      : deps["@remix-run/node"]
-      ? "node"
-      : undefined;
-
-    if (!serverRuntime) {
-      let serverRuntimes = [
-        "@remix-run/deno",
-        "@remix-run/cloudflare",
-        "@remix-run/node",
-      ];
-      let formattedList = listFormat.format(serverRuntimes);
-      throw new Error(
-        `Could not determine server runtime. Please install one of the following: ${formattedList}`
-      );
-    }
-
-    entryServerFile = `entry.server.${serverRuntime}.tsx`;
+    entryServerFile = `${serverRuntime}/entry.server.${clientRenderer}-${type}.tsx`;
   }
 
   if (userEntryClientFile) {
     entryClientFile = userEntryClientFile;
   } else {
-    let clientRuntime = deps["@remix-run/react"] ? "react" : undefined;
+    let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
 
-    if (!clientRuntime) {
+    if (!clientRenderer) {
       throw new Error(
         `Could not determine runtime. Please install the following: @remix-run/react`
       );
     }
 
-    entryClientFile = `entry.client.${clientRuntime}.tsx`;
+    let maybeReactVersion = coerce(deps.react);
+    if (!maybeReactVersion) {
+      let react = ["react", "react-dom"];
+      let list = conjunctionListFormat.format(react);
+      throw new Error(
+        `Could not determine React version. Please install the following packages: ${list}`
+      );
+    }
+
+    let type: "stream" | "string" =
+      maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
+        ? "stream"
+        : "string";
+
+    entryClientFile = `entry.client.${clientRenderer}-${type}.tsx`;
   }
 
   let entryClientFilePath = userEntryClientFile
@@ -624,13 +662,42 @@ export function findConfig(
   return undefined;
 }
 
-// @ts-expect-error available in node 12+
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat#browser_compatibility
-let listFormat = new Intl.ListFormat("en", {
+// adds types for `Intl.ListFormat` to the global namespace
+// we could also update our `tsconfig.json` to include `lib: ["es2021"]`
+declare namespace Intl {
+  type ListType = "conjunction" | "disjunction";
+
+  interface ListFormatOptions {
+    localeMatcher?: "lookup" | "best fit";
+    type?: ListType;
+    style?: "long" | "short" | "narrow";
+  }
+
+  interface ListFormatPart {
+    type: "element" | "literal";
+    value: string;
+  }
+
+  class ListFormat {
+    constructor(locales?: string | string[], options?: ListFormatOptions);
+    format(values: any[]): string;
+    formatToParts(values: any[]): ListFormatPart[];
+    supportedLocalesOf(
+      locales: string | string[],
+      options?: ListFormatOptions
+    ): string[];
+  }
+}
+
+let conjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "conjunction",
 });
 
+let disjunctionListFormat = new Intl.ListFormat("en", {
+  style: "long",
+  type: "disjunction",
+});
 export let serverBuildTargetWarning =
   "⚠️ DEPRECATED: The `serverBuildTarget` config option is deprecated. Use a " +
   "combination of `publicPath`, `serverBuildPath`, `serverConditions`, " +
