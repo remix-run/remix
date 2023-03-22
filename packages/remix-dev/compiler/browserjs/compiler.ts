@@ -3,31 +3,31 @@ import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 
-import type { RemixConfig } from "../config";
-import type { AssetsManifest } from "./assets";
-import { getAppDependencies } from "./dependencies";
-import { loaders } from "./loaders";
-import type { CompileOptions } from "./options";
-import { browserRouteModulesPlugin } from "./plugins/browserRouteModulesPlugin";
-import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "./plugins/browserRouteModulesPlugin_v2";
-import { cssFilePlugin } from "./plugins/cssFilePlugin";
-import { deprecatedRemixPackagePlugin } from "./plugins/deprecatedRemixPackagePlugin";
-import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
-import { mdxPlugin } from "./plugins/mdx";
-import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
-import { cssBundleUpdatePlugin } from "./plugins/cssBundleUpdatePlugin";
-import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
-import { cssSideEffectImportsPlugin } from "./plugins/cssSideEffectImportsPlugin";
-import { vanillaExtractPlugin } from "./plugins/vanillaExtractPlugin";
+import type { RemixConfig } from "../../config";
+import type { AssetsManifest } from "../assets";
+import { getAppDependencies } from "../dependencies";
+import { loaders } from "../loaders";
+import type { CompileOptions } from "../options";
+import { browserRouteModulesPlugin } from "../plugins/browserRouteModulesPlugin";
+import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "../plugins/browserRouteModulesPlugin_v2";
+import { cssFilePlugin } from "../plugins/cssFilePlugin";
+import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackagePlugin";
+import { emptyModulesPlugin } from "../plugins/emptyModulesPlugin";
+import { mdxPlugin } from "../plugins/mdx";
+import { urlImportsPlugin } from "../plugins/urlImportsPlugin";
+import { cssBundleUpdatePlugin } from "../plugins/cssBundleUpdatePlugin";
+import { cssModulesPlugin } from "../plugins/cssModulesPlugin";
+import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImportsPlugin";
+import { vanillaExtractPlugin } from "../plugins/vanillaExtractPlugin";
 import {
   cssBundleEntryModulePlugin,
   cssBundleEntryModuleId,
-} from "./plugins/cssBundleEntryModulePlugin";
-import invariant from "../invariant";
-import { hmrPlugin } from "./plugins/hmrPlugin";
-import { NodeProtocolExternalPlugin } from "./plugins/nodeProtocolExternalPlugin";
-import { createMatchPath } from "./utils/tsconfig";
-import { getPreferredPackageManager } from "../cli/getPreferredPackageManager";
+} from "../plugins/cssBundleEntryModulePlugin";
+import invariant from "../../invariant";
+import { hmrPlugin } from "../plugins/hmrPlugin";
+import { NodeProtocolExternalPlugin } from "../plugins/nodeProtocolExternalPlugin";
+import { createMatchPath } from "../utils/tsconfig";
+import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
 
 export type BrowserCompiler = {
   // produce ./public/build/
@@ -260,7 +260,7 @@ const createEsbuildConfig = (
   };
 };
 
-export const createBrowserCompiler = (
+export const create = (
   remixConfig: RemixConfig,
   options: CompileOptions,
   readCssBundleHref: () => Promise<string | undefined>

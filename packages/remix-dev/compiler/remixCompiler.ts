@@ -4,7 +4,7 @@ import type esbuild from "esbuild";
 import type { RemixConfig } from "../config";
 import type { AssetsManifest } from "./assets";
 import { createAssetsManifest } from "./assets";
-import { createBrowserCompiler } from "./compileBrowser";
+import * as BrowserJS from "./browserjs";
 import { createServerCompiler } from "./compilerServer";
 import type { CompileOptions } from "./options";
 import { writeFileSafe } from "./utils/fs";
@@ -34,7 +34,7 @@ export let create = (
     cssBundleHrefChannel.write(cssBundleHref);
   let readCssBundleHref = () => cssBundleHrefChannel.read();
   let css = CSS.compiler.create(config, options, writeCssBundleHref);
-  let browser = createBrowserCompiler(config, options, readCssBundleHref);
+  let browser = BrowserJS.compiler.create(config, options, readCssBundleHref);
   let server = createServerCompiler(config, options);
   return {
     compile: async () => {
