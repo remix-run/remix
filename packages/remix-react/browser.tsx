@@ -14,7 +14,7 @@ import {
 import { deserializeErrors } from "./errors";
 import type { RouteModules } from "./routeModules";
 import { createClientRoutes } from "./routes";
-import { warnOnce } from "./warnings";
+import { logDeprecationOnce } from "./warnings";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
@@ -140,8 +140,7 @@ if (import.meta && import.meta.hot) {
 export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
   if (!router) {
     if (!window.__remixContext.future.v2_errorBoundary) {
-      warnOnce(
-        false,
+      logDeprecationOnce(
         "⚠️  DEPRECATED: The separation of `CatchBoundary` and `ErrorBoundary` has " +
           "been deprecated and Remix v2 will use a singular `ErrorBoundary` for " +
           "all thrown values (`Response` and `Error`). Please migrate to the new " +
@@ -152,8 +151,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     }
 
     if (!window.__remixContext.future.v2_normalizeFormMethod) {
-      warnOnce(
-        false,
+      logDeprecationOnce(
         "⚠️  DEPRECATED: Please enable the `future.v2_normalizeFormMethod` flag to " +
           "prepare for the Remix v2 release. Lowercase `useNavigation().formMethod`" +
           "values are being normalized to uppercase in v2 to align with the `fetch()` " +

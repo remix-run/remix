@@ -78,7 +78,7 @@ import type {
   TransitionStates,
 } from "./transition";
 import { IDLE_TRANSITION, IDLE_FETCHER } from "./transition";
-import { warnOnce } from "./warnings";
+import { logDeprecationOnce } from "./warnings";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -371,13 +371,14 @@ export function Links() {
   );
 
   React.useEffect(() => {
-    warnOnce(
-      links.some((link) => "imagesizes" in link || "imagesrcset" in link),
-      "⚠️ DEPRECATED: The `imagesizes` & `imagesrcset` properties in " +
-        "your links have been deprecated in favor of `imageSizes` & " +
-        "`imageSrcSet` and support will be removed in Remix v2. Please update " +
-        "your code to use the new property names instead."
-    );
+    if (links.some((link) => "imagesizes" in link || "imagesrcset" in link)) {
+      logDeprecationOnce(
+        "⚠️ DEPRECATED: The `imagesizes` & `imagesrcset` properties in " +
+          "your links have been deprecated in favor of `imageSizes` & " +
+          "`imageSrcSet` and support will be removed in Remix v2. Please update " +
+          "your code to use the new property names instead."
+      );
+    }
   }, [links]);
 
   return (
@@ -1237,8 +1238,7 @@ export function useTransition(): Transition {
   let navigation = useNavigation();
 
   React.useEffect(() => {
-    warnOnce(
-      false,
+    logDeprecationOnce(
       "⚠️ DEPRECATED: The `useTransition` hook has been deprecated in favor of " +
         "`useNavigation` and will be removed in Remix v2.  Please update your " +
         "code to leverage `useNavigation`.\n\nSee https://remix.run/docs/hooks/use-transition " +
@@ -1475,8 +1475,7 @@ function addFetcherDeprecationWarnings(fetcher: Fetcher) {
   let type: Fetcher["type"] = fetcher.type;
   Object.defineProperty(fetcher, "type", {
     get() {
-      warnOnce(
-        false,
+      logDeprecationOnce(
         "⚠️ DEPRECATED: The `useFetcher().type` field has been deprecated and " +
           "will be removed in Remix v2.  Please update your code to rely on " +
           "`fetcher.state`.\n\nSee https://remix.run/docs/hooks/use-fetcher for " +
@@ -1497,8 +1496,7 @@ function addFetcherDeprecationWarnings(fetcher: Fetcher) {
   let submission: Fetcher["submission"] = fetcher.submission;
   Object.defineProperty(fetcher, "submission", {
     get() {
-      warnOnce(
-        false,
+      logDeprecationOnce(
         "⚠️ DEPRECATED: The `useFetcher().submission` field has been deprecated and " +
           "will be removed in Remix v2.  The submission fields now live directly " +
           "on the fetcher (`fetcher.formData`).\n\n" +
