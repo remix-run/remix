@@ -68,7 +68,6 @@ export function createRemixStub(routes: (RouteObject | DataRouteObject)[]) {
           unstable_postcss: false,
           unstable_tailwind: false,
           unstable_vanillaExtract: false,
-          v2_routeConvention: false,
           ...remixConfigFuture,
         },
         manifest: createManifest(routerRef.current.routes),

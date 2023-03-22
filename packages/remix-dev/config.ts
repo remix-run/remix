@@ -43,7 +43,6 @@ interface FutureConfig {
   unstable_postcss: boolean;
   unstable_tailwind: boolean;
   unstable_vanillaExtract: boolean | VanillaExtractOptions;
-  v2_routeConvention: boolean;
 }
 
 /**
@@ -549,7 +548,6 @@ export async function readConfig(
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract ?? false,
-    v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
   return {
@@ -626,10 +624,3 @@ export let serverBuildTargetWarning =
   "combination of `publicPath`, `serverBuildPath`, `serverConditions`, " +
   "`serverDependenciesToBundle`, `serverMainFields`, `serverMinify`, " +
   "`serverModuleFormat` and/or `serverPlatform` instead.";
-
-export let flatRoutesWarning =
-  "⚠️ DEPRECATED: The old nested folders route convention has been " +
-  "deprecated in favor of 'flat routes'.  Please enable the new routing " +
-  "convention via the `future.v2_routeConvention` flag in your " +
-  "`remix.config.js` file.  For more information, please see " +
-  "https://remix.run/docs/en/main/file-conventions/route-files-v2.";
