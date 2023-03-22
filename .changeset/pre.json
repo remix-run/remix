@@ -22,6 +22,7 @@
     "@remix-run/vercel": "1.14.3"
   },
   "changesets": [
+    "bump-router-dependency",
     "css-bundle-hmr",
     "css-bundle-monorepo-fix",
     "css-side-effect-import-extensions",
@@ -30,6 +31,7 @@
     "flat-boxes-brake",
     "flat-routes-perf",
     "fluffy-dragons-reflect",
+    "mean-deers-wink",
     "meta-v2-enhancements",
     "no-log-on-aborted-request",
     "normalize-form-method-deprecation",
