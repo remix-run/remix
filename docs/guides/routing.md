@@ -77,7 +77,7 @@ app
 ```
 
 - `root.jsx` is the "root route" that serves as the layout for the entire application. Every route will render inside of its `<Outlet/>`.
-- Note that there are files that match the same name as a folder, this indicates a component layout hierarchy. For example, `sales.jsx` is the **parent route** for all of the **child routes** inside of `app/routes/sales/*`. When a route inside of the sales directory matches, it will render inside of the `sales.jsx` route's `<Outlet>`
+- Note that there are files that match the same name as a folder, this indicates a component layout hierarchy. For example, `sales.jsx` is the **parent route** for all of the **child routes** inside of `app/routes/sales.*`. When a route inside of the sales directory matches, it will render inside of the `sales.jsx` route's `<Outlet>`
 - The `index.jsx` routes will render inside of the parent `<Outlet>` when the url is only as deep as the parent's path (like `example.com/sales` instead of `example.com/sales/customers`)
 
 ## Rendering Route Layout Hierarchies
@@ -137,7 +137,7 @@ export default function Root() {
 }
 ```
 
-Next up is the sales route, which also renders an outlet for its child routes (all of the routes inside of `app/routes/sales/*.jsx`).
+Next up is the sales route, which also renders an outlet for its child routes (all of the routes inside of `app/routes/sales.*.jsx`).
 
 ```jsx filename=app/routes/sales.jsx lines=[8]
 import { Outlet } from "@remix-run/react";
@@ -159,7 +159,7 @@ And so on down the route tree. This is a powerful abstraction that makes somethi
 
 Index routes are often difficult to understand at first. It's easiest to think of them as _the default child route_ for a parent route. When there is no child route to render, we render the index route.
 
-Consider the URL `example.com/sales`. If our app didn't have an index route at `app/routes/sales/index.jsx` the UI would look like this!
+Consider the URL `example.com/sales`. If our app didn't have an index route at `app/routes/sales._index.jsx` the UI would look like this!
 
 <iframe src="/_docs/routing-index" class="w-full aspect-[4/3] rounded-lg overflow-hidden mb-4"></iframe>
 
@@ -253,7 +253,7 @@ If we remove "edit" from the URL like this: "example.com/sales/invoices/2000", t
 - Nested files: layout nesting + nested urls
 - Flat files: no layout nesting + nested urls
 
-You can introduce nesting or non-nesting at any level of your routes, like `app/routes/invoices/$id.edit.js`, which matches the URL `/invoices/123/edit` but does not create nesting inside of `$id.js`.
+You can introduce nesting or non-nesting at any level of your routes, like `app/routes/invoices.$id.edit.js`, which matches the URL `/invoices/123/edit` but does not create nesting inside of `$id.js`.
 
 ## Pathless Layout Routes
 

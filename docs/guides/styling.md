@@ -100,7 +100,7 @@ export function links() {
 }
 ```
 
-```tsx filename=app/routes/dashboard/accounts.tsx
+```tsx filename=app/routes/dashboard.accounts.tsx
 import styles from "~/styles/accounts.css";
 
 export function links() {
@@ -108,7 +108,7 @@ export function links() {
 }
 ```
 
-```tsx filename=app/routes/dashboard/sales.tsx
+```tsx filename=app/routes/dashboard.sales.tsx
 import styles from "~/styles/sales.css";
 
 export function links() {

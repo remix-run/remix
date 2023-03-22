@@ -52,7 +52,7 @@ import SomeComponent from "~/components/some-component";
 
 ### Example
 
-By creating a `app/routes/posts/first-post.mdx` we can start writing a blog post:
+By creating a `app/routes/posts.first-post.mdx` we can start writing a blog post:
 
 ```mdx
 ---
