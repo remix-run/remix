@@ -6,7 +6,6 @@ import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfil
 import postcss from "postcss";
 import postcssDiscardDuplicates from "postcss-discard-duplicates";
 
-import type { WriteChannel } from "../../channel";
 import type { RemixConfig } from "../../config";
 import { getAppDependencies } from "../dependencies";
 import { loaders } from "../loaders";
@@ -185,12 +184,14 @@ const createEsbuildConfig = (
   };
 };
 
-export let create = (remixConfig: RemixConfig, options: CompileOptions) => {
+export let create = (
+  remixConfig: RemixConfig,
+  options: CompileOptions,
+  writeCssBundleHref: (cssBundleHref?: string) => void
+) => {
   let cssCompiler: esbuild.BuildIncremental;
   let onLoader = () => {};
-  let cssBuildTask = async (
-    cssBundleHrefChannel: WriteChannel<string | undefined>
-  ) => {
+  let cssBuildTask = async () => {
     if (!isCssBundlingEnabled(remixConfig)) {
       return;
     }
@@ -230,7 +231,7 @@ export let create = (remixConfig: RemixConfig, options: CompileOptions) => {
       );
 
       if (!cssBundleFile) {
-        cssBundleHrefChannel.write(undefined);
+        writeCssBundleHref(undefined);
         return;
       }
 
@@ -243,7 +244,7 @@ export let create = (remixConfig: RemixConfig, options: CompileOptions) => {
           path.resolve(cssBundlePath)
         );
 
-      cssBundleHrefChannel.write(cssBundleHref);
+      writeCssBundleHref(cssBundleHref);
 
       let { css, map } = await postcss([
         // We need to discard duplicate rules since "composes"
@@ -279,7 +280,7 @@ export let create = (remixConfig: RemixConfig, options: CompileOptions) => {
 
       return cssBundleHref;
     } catch (error) {
-      cssBundleHrefChannel.write(undefined);
+      writeCssBundleHref(undefined);
       throw error;
     }
   };

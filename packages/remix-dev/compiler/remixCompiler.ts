@@ -8,6 +8,9 @@ import { createBrowserCompiler } from "./compileBrowser";
 import { createServerCompiler } from "./compilerServer";
 import type { CompileOptions } from "./options";
 import { writeFileSafe } from "./utils/fs";
+import type { Channel } from "../channel";
+import { createChannel } from "../channel";
+import * as CSS from "./css";
 
 export type CompileResult = {
   assetsManifest: AssetsManifest;
@@ -26,12 +29,23 @@ export let create = (
   config: RemixConfig,
   options: CompileOptions
 ): Compiler => {
-  let browser = createBrowserCompiler(config, options);
+  let cssBundleHrefChannel: Channel<string | undefined>;
+  let writeCssBundleHref = (cssBundleHref?: string) =>
+    cssBundleHrefChannel.write(cssBundleHref);
+  let readCssBundleHref = () => cssBundleHrefChannel.read();
+  let css = CSS.compiler.create(config, options, writeCssBundleHref);
+  let browser = createBrowserCompiler(config, options, readCssBundleHref);
   let server = createServerCompiler(config, options);
   return {
     compile: async () => {
+      // TODO: only reset cssBundleHrefChannel if css bundling is enabled?
+      // otherwise we could just write `undefined` to the channel immediately
+      cssBundleHrefChannel = createChannel();
       try {
-        let { metafile, hmr, cssBundleHref } = await browser.compile();
+        let [cssBundleHref, { metafile, hmr }] = await Promise.all([
+          css.compile(),
+          browser.compile(),
+        ]);
         let manifest = await createAssetsManifest({
           config,
           metafile: metafile,
@@ -56,6 +70,7 @@ export let create = (
       }
     },
     dispose: () => {
+      css.dispose();
       browser.dispose();
       server.dispose();
     },

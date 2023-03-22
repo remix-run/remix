@@ -3,8 +3,6 @@ import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 
-import type { Channel } from "../channel";
-import { createChannel } from "../channel";
 import type { RemixConfig } from "../config";
 import type { AssetsManifest } from "./assets";
 import { getAppDependencies } from "./dependencies";
@@ -28,7 +26,6 @@ import {
 import invariant from "../invariant";
 import { hmrPlugin } from "./plugins/hmrPlugin";
 import { NodeProtocolExternalPlugin } from "./plugins/nodeProtocolExternalPlugin";
-import * as CSS from "./css";
 import { createMatchPath } from "./utils/tsconfig";
 import { getPreferredPackageManager } from "../cli/getPreferredPackageManager";
 
@@ -37,7 +34,6 @@ export type BrowserCompiler = {
   compile: () => Promise<{
     metafile: esbuild.Metafile;
     hmr?: AssetsManifest["hmr"];
-    cssBundleHref?: string;
   }>;
   dispose: () => void;
 };
@@ -83,16 +79,12 @@ const isCssBundlingEnabled = (config: RemixConfig): boolean =>
       config.future.unstable_vanillaExtract
   );
 
-let cssBundleHrefChannel: Channel<string | undefined>;
-
-// This function gives esbuild access to the latest channel value on rebuilds
-let getCssBundleHref = () => cssBundleHrefChannel.read();
-
 const createEsbuildConfig = (
   build: "app" | "css",
   config: RemixConfig,
   options: CompileOptions,
-  onLoader: (filename: string, code: string) => void
+  onLoader: (filename: string, code: string) => void,
+  readCssBundleHref: () => Promise<string | undefined>
 ): esbuild.BuildOptions | esbuild.BuildIncremental => {
   let isCssBuild = build === "css";
   let entryPoints: Record<string, string>;
@@ -215,7 +207,9 @@ const createEsbuildConfig = (
     plugins.push(hmrPlugin({ remixConfig: config }));
 
     if (isCssBundlingEnabled(config)) {
-      plugins.push(cssBundleUpdatePlugin({ getCssBundleHref }));
+      plugins.push(
+        cssBundleUpdatePlugin({ getCssBundleHref: readCssBundleHref })
+      );
     }
   }
 
@@ -268,10 +262,10 @@ const createEsbuildConfig = (
 
 export const createBrowserCompiler = (
   remixConfig: RemixConfig,
-  options: CompileOptions
+  options: CompileOptions,
+  readCssBundleHref: () => Promise<string | undefined>
 ): BrowserCompiler => {
   let appCompiler: esbuild.BuildIncremental;
-  let cssCompiler = CSS.compiler.create(remixConfig, options);
 
   let hmrRoutes: Record<string, { loaderHash: string }> = {};
   let onLoader = (filename: string, code: string) => {
@@ -284,7 +278,13 @@ export const createBrowserCompiler = (
     let appBuildTask = async () => {
       appCompiler = await (!appCompiler
         ? esbuild.build({
-            ...createEsbuildConfig("app", remixConfig, options, onLoader),
+            ...createEsbuildConfig(
+              "app",
+              remixConfig,
+              options,
+              onLoader,
+              readCssBundleHref
+            ),
             metafile: true,
             incremental: true,
           })
@@ -297,15 +297,7 @@ export const createBrowserCompiler = (
       return appCompiler.metafile;
     };
 
-    // Reset the channel to co-ordinate the CSS and app builds
-    if (isCssBundlingEnabled(remixConfig)) {
-      cssBundleHrefChannel = createChannel();
-    }
-
-    let [cssBundleHref, metafile] = await Promise.all([
-      cssCompiler.compile(cssBundleHrefChannel),
-      appBuildTask(),
-    ]);
+    let metafile = await appBuildTask();
 
     let hmr: AssetsManifest["hmr"] | undefined = undefined;
     if (options.mode === "development" && remixConfig.future.unstable_dev) {
@@ -326,15 +318,12 @@ export const createBrowserCompiler = (
       };
     }
 
-    return { metafile, hmr, cssBundleHref };
+    return { metafile, hmr };
   };
 
   return {
     compile,
-    dispose: () => {
-      appCompiler?.rebuild.dispose();
-      cssCompiler.dispose();
-    },
+    dispose: () => appCompiler?.rebuild.dispose(),
   };
 };
 
