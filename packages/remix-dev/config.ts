@@ -860,4 +860,4 @@ export const formMethodWarning =
 export const metaWarning =
   "⚠️  DEPRECATED: Please enable the `future.v2_meta` flag to " +
   "prepare for the Remix v2 release. For more information, see " +
-  "https://remix.run/docs/en/1.14.3/route/meta#md-metav2.";
+  "https://remix.run/docs/route/meta#md-metav2.";
