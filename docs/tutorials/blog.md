@@ -61,7 +61,7 @@ If you want, take a minute and poke around the UI a bit. Feel free to create an 
 
 We're going to make a new route to render at the "/posts" URL. Before we do that, let's link to it.
 
-💿 Add a link to posts in `app/routes/index.tsx`
+💿 Add a link to posts in `app/routes/_index.tsx`
 
 Go ahead and copy/paste this:
 

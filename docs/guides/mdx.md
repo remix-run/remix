@@ -129,7 +129,7 @@ import Component, {
 
 The following example demonstrates how you might build a simple blog with MDX, including individual pages for the posts themselves and an index page that shows all posts.
 
-In `app/routes/index.jsx`:
+In `app/routes/_index.jsx`:
 
 ```tsx
 import { json } from "@remix-run/node"; // or cloudflare/deno
