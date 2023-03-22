@@ -29,7 +29,7 @@ import { NodeProtocolExternalPlugin } from "../plugins/nodeProtocolExternalPlugi
 import { createMatchPath } from "../utils/tsconfig";
 import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
 
-export type BrowserCompiler = {
+type Compiler = {
   // produce ./public/build/
   compile: () => Promise<{
     metafile: esbuild.Metafile;
@@ -264,7 +264,7 @@ export const create = (
   remixConfig: RemixConfig,
   options: CompileOptions,
   readCssBundleHref: () => Promise<string | undefined>
-): BrowserCompiler => {
+): Compiler => {
   let appCompiler: esbuild.BuildIncremental;
 
   let hmrRoutes: Record<string, { loaderHash: string }> = {};
