@@ -1,5 +1,12 @@
 # `@remix-run/react`
 
+## 1.15.0-pre.1
+
+### Patch Changes
+
+- Update to `react-router-dom@6.10.0-pre.1` ([#5875](https://github.com/remix-run/remix/pull/5875))
+- don't warn about runtime deprecation warnings in production ([#5874](https://github.com/remix-run/remix/pull/5874))
+
 ## 1.15.0-pre.0
 
 ### Minor Changes
