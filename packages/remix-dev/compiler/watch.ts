@@ -6,8 +6,8 @@ import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { logCompileFailure } from "./onCompileFailure";
 import type { CompileOptions } from "./options";
-import type { CompileResult } from "./remixCompiler";
-import * as Compiler from "./remixCompiler";
+import type { CompileResult } from "./compiler";
+import * as Compiler from "./compiler";
 import { warnOnce } from "./warnings";
 
 function isEntryPoint(config: RemixConfig, file: string): boolean {
