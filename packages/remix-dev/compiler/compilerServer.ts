@@ -4,7 +4,6 @@ import * as fse from "fs-extra";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 
 import invariant from "../invariant";
-import type { ReadChannel } from "../channel";
 import type { RemixConfig } from "../config";
 import type { AssetsManifest } from "./assets";
 import { loaders } from "./loaders";
@@ -25,15 +24,13 @@ import { NodeProtocolExternalPlugin } from "./plugins/nodeProtocolExternalPlugin
 
 export type ServerCompiler = {
   // produce ./build/index.js
-  compile: (
-    manifestChannel: ReadChannel<AssetsManifest>
-  ) => Promise<esbuild.Metafile>;
+  compile: (manifest: AssetsManifest) => Promise<esbuild.Metafile>;
   dispose: () => void;
 };
 
 const createEsbuildConfig = (
   config: RemixConfig,
-  assetsManifestChannel: ReadChannel<AssetsManifest>,
+  manifest: AssetsManifest,
   options: CompileOptions
 ): esbuild.BuildOptions => {
   let stdin: esbuild.StdinOptions | undefined;
@@ -69,7 +66,7 @@ const createEsbuildConfig = (
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config, { liveReloadPort: options.liveReloadPort }),
-    serverAssetsManifestPlugin(assetsManifestChannel.read()),
+    serverAssetsManifestPlugin(manifest),
     serverBareModulesPlugin(config, options.onWarning),
     NodeProtocolExternalPlugin(),
   ].filter(isNotNull);
@@ -169,12 +166,8 @@ export const createServerCompiler = (
   remixConfig: RemixConfig,
   options: CompileOptions
 ): ServerCompiler => {
-  let compile = async (manifestChannel: ReadChannel<AssetsManifest>) => {
-    let esbuildConfig = createEsbuildConfig(
-      remixConfig,
-      manifestChannel,
-      options
-    );
+  let compile = async (manifest: AssetsManifest) => {
+    let esbuildConfig = createEsbuildConfig(remixConfig, manifest, options);
     let { metafile, outputFiles } = await esbuild.build({
       ...esbuildConfig,
       write: false,

@@ -9,9 +9,7 @@ import { assetsManifestVirtualModule } from "../../compiler/virtualModules";
  * the assets manifest. This is used in the server entry module to access the
  * assets manifest in the server build.
  */
-export function serverAssetsManifestPlugin(
-  assetsManifestPromise: Promise<AssetsManifest>
-): Plugin {
+export function serverAssetsManifestPlugin(manifest: AssetsManifest): Plugin {
   let filter = assetsManifestVirtualModule.filter;
 
   return {
@@ -25,9 +23,8 @@ export function serverAssetsManifestPlugin(
       });
 
       build.onLoad({ filter }, async () => {
-        let assetsManifest = await assetsManifestPromise;
         return {
-          contents: `export default ${jsesc(assetsManifest, { es6: true })};`,
+          contents: `export default ${jsesc(manifest, { es6: true })};`,
           loader: "js",
         };
       });

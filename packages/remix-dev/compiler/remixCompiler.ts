@@ -1,16 +1,19 @@
+import * as path from "path";
 import type esbuild from "esbuild";
 
-import { createChannel } from "../channel";
 import type { RemixConfig } from "../config";
 import type { AssetsManifest } from "./assets";
+import { createAssetsManifest } from "./assets";
 import type { BrowserCompiler } from "./compileBrowser";
 import { createBrowserCompiler } from "./compileBrowser";
 import type { ServerCompiler } from "./compilerServer";
 import { createServerCompiler } from "./compilerServer";
 import type { OnCompileFailure } from "./onCompileFailure";
 import type { CompileOptions } from "./options";
+import { writeFileSafe } from "./utils/fs";
 
 type RemixCompiler = {
+  config: RemixConfig;
   browser: BrowserCompiler;
   server: ServerCompiler;
 };
@@ -20,6 +23,7 @@ export const createRemixCompiler = (
   options: CompileOptions
 ): RemixCompiler => {
   return {
+    config: remixConfig,
     browser: createBrowserCompiler(remixConfig, options),
     server: createServerCompiler(remixConfig, options),
   };
@@ -40,20 +44,23 @@ export const compile = async (
   } = {}
 ): Promise<CompileResult | undefined> => {
   try {
-    let assetsManifestChannel = createChannel<AssetsManifest>();
-    let browserPromise = compiler.browser.compile(assetsManifestChannel);
-    let serverPromise = compiler.server.compile(assetsManifestChannel);
+    let { metafile, hmr, cssBundleHref } = await compiler.browser.compile();
+    let manifest = await createAssetsManifest({
+      config: compiler.config,
+      metafile: metafile,
+      cssBundleHref,
+      hmr,
+    });
+    let [serverMetafile] = await Promise.all([
+      compiler.server.compile(manifest),
+      writeAssetsManifest(compiler.config, manifest),
+    ]);
 
-    // await browser/server _before_ assets manifest channel
-    // to fix https://github.com/remix-run/remix/issues/5631
-    // this is temporary and is actively being refactored
-    let browser = await browserPromise;
-    let server = await serverPromise;
     return {
-      assetsManifest: await assetsManifestChannel.read(),
+      assetsManifest: manifest,
       metafile: {
-        browser,
-        server,
+        browser: metafile,
+        server: serverMetafile,
       },
     };
   } catch (error: unknown) {
@@ -65,4 +72,18 @@ export const compile = async (
 export const dispose = (compiler: RemixCompiler): void => {
   compiler.browser.dispose();
   compiler.server.dispose();
+};
+
+const writeAssetsManifest = async (
+  config: RemixConfig,
+  assetsManifest: AssetsManifest
+) => {
+  let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
+
+  assetsManifest.url = config.publicPath + filename;
+
+  await writeFileSafe(
+    path.join(config.assetsBuildDirectory, filename),
+    `window.__remixManifest=${JSON.stringify(assetsManifest)};`
+  );
 };

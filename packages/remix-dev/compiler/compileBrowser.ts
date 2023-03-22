@@ -3,11 +3,10 @@ import { builtinModules as nodeBuiltins } from "module";
 import * as esbuild from "esbuild";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 
-import type { Channel, WriteChannel } from "../channel";
+import type { Channel } from "../channel";
 import { createChannel } from "../channel";
 import type { RemixConfig } from "../config";
 import type { AssetsManifest } from "./assets";
-import { createAssetsManifest } from "./assets";
 import { getAppDependencies } from "./dependencies";
 import { loaders } from "./loaders";
 import type { CompileOptions } from "./options";
@@ -26,19 +25,37 @@ import {
   cssBundleEntryModulePlugin,
   cssBundleEntryModuleId,
 } from "./plugins/cssBundleEntryModulePlugin";
-import { writeFileSafe } from "./utils/fs";
 import invariant from "../invariant";
 import { hmrPlugin } from "./plugins/hmrPlugin";
 import { NodeProtocolExternalPlugin } from "./plugins/nodeProtocolExternalPlugin";
 import * as CSS from "./css";
+import { createMatchPath } from "./utils/tsconfig";
+import { getPreferredPackageManager } from "../cli/getPreferredPackageManager";
 
 export type BrowserCompiler = {
   // produce ./public/build/
-  compile: (
-    manifestChannel: WriteChannel<AssetsManifest>
-  ) => Promise<esbuild.Metafile>;
+  compile: () => Promise<{
+    metafile: esbuild.Metafile;
+    hmr?: AssetsManifest["hmr"];
+    cssBundleHref?: string;
+  }>;
   dispose: () => void;
 };
+
+function getNpmPackageName(id: string): string {
+  let split = id.split("/");
+  let packageName = split[0];
+  if (packageName.startsWith("@")) packageName += `/${split[1]}`;
+  return packageName;
+}
+
+function isBareModuleId(id: string): boolean {
+  return !id.startsWith("node:") && !id.startsWith(".") && !path.isAbsolute(id);
+}
+
+function isNodeBuiltIn(packageName: string) {
+  return nodeBuiltins.includes(packageName);
+}
 
 const getExternals = (remixConfig: RemixConfig): string[] => {
   // For the browser build, exclude node built-ins that don't have a
@@ -57,20 +74,6 @@ const getExternals = (remixConfig: RemixConfig): string[] => {
     );
   }
   return nodeBuiltins.filter((mod) => !dependencies.includes(mod));
-};
-
-const writeAssetsManifest = async (
-  config: RemixConfig,
-  assetsManifest: AssetsManifest
-) => {
-  let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
-
-  assetsManifest.url = config.publicPath + filename;
-
-  await writeFileSafe(
-    path.join(config.assetsBuildDirectory, filename),
-    `window.__remixManifest=${JSON.stringify(assetsManifest)};`
-  );
 };
 
 const isCssBundlingEnabled = (config: RemixConfig): boolean =>
@@ -114,6 +117,18 @@ const createEsbuildConfig = (
   let { mode } = options;
   let outputCss = isCssBuild;
 
+  let matchPath = config.tsconfigPath
+    ? createMatchPath(config.tsconfigPath)
+    : undefined;
+  function resolvePath(id: string) {
+    if (!matchPath) {
+      return id;
+    }
+    return (
+      matchPath(id, undefined, undefined, [".ts", ".tsx", ".js", ".jsx"]) || id
+    );
+  }
+
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
     isCssBundlingEnabled(config) && isCssBuild
@@ -137,6 +152,47 @@ const createEsbuildConfig = (
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
     NodeProtocolExternalPlugin(),
+    {
+      // TODO: should be removed when error handling for compiler is improved
+      name: "warn-on-unresolved-imports",
+      setup: (build) => {
+        build.onResolve({ filter: /.*/ }, (args) => {
+          if (!isBareModuleId(resolvePath(args.path))) {
+            return undefined;
+          }
+
+          if (args.path === "remix:hmr") {
+            return undefined;
+          }
+
+          let packageName = getNpmPackageName(args.path);
+          let pkgManager = getPreferredPackageManager();
+          if (
+            options.onWarning &&
+            !isNodeBuiltIn(packageName) &&
+            !/\bnode_modules\b/.test(args.importer) &&
+            // Silence spurious warnings when using Yarn PnP. Yarn PnP doesn’t use
+            // a `node_modules` folder to keep its dependencies, so the above check
+            // will always fail.
+            (pkgManager === "npm" ||
+              (pkgManager === "yarn" && process.versions.pnp == null))
+          ) {
+            try {
+              require.resolve(args.path);
+            } catch (error: unknown) {
+              options.onWarning(
+                `The path "${args.path}" is imported in ` +
+                  `${path.relative(process.cwd(), args.importer)} but ` +
+                  `"${args.path}" was not found in your node_modules. ` +
+                  `Did you forget to install it?`,
+                args.path
+              );
+            }
+          }
+          return undefined;
+        });
+      },
+    } as esbuild.Plugin,
   ].filter(isNotNull);
 
   if (build === "app" && mode === "development" && config.future.unstable_dev) {
@@ -223,7 +279,7 @@ export const createBrowserCompiler = (
     hmrRoutes[key] = { loaderHash: code };
   };
 
-  let compile = async (manifestChannel: WriteChannel<AssetsManifest>) => {
+  let compile = async () => {
     hmrRoutes = {};
     let appBuildTask = async () => {
       appCompiler = await (!appCompiler
@@ -270,15 +326,7 @@ export const createBrowserCompiler = (
       };
     }
 
-    let manifest = await createAssetsManifest({
-      config: remixConfig,
-      metafile: appCompiler.metafile!,
-      cssBundleHref,
-      hmr,
-    });
-    await writeAssetsManifest(remixConfig, manifest);
-    manifestChannel.write(manifest);
-    return metafile;
+    return { metafile, hmr, cssBundleHref };
   };
 
   return {
