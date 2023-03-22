@@ -3,26 +3,26 @@ import * as esbuild from "esbuild";
 import * as fse from "fs-extra";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 
-import invariant from "../invariant";
-import type { RemixConfig } from "../config";
-import type { AssetsManifest } from "./assets";
-import { loaders } from "./loaders";
-import type { CompileOptions } from "./options";
-import { cssModulesPlugin } from "./plugins/cssModulesPlugin";
-import { cssSideEffectImportsPlugin } from "./plugins/cssSideEffectImportsPlugin";
-import { vanillaExtractPlugin } from "./plugins/vanillaExtractPlugin";
-import { cssFilePlugin } from "./plugins/cssFilePlugin";
-import { deprecatedRemixPackagePlugin } from "./plugins/deprecatedRemixPackagePlugin";
-import { emptyModulesPlugin } from "./plugins/emptyModulesPlugin";
-import { mdxPlugin } from "./plugins/mdx";
-import { serverAssetsManifestPlugin } from "./plugins/serverAssetsManifestPlugin";
-import { serverBareModulesPlugin } from "./plugins/serverBareModulesPlugin";
-import { serverEntryModulePlugin } from "./plugins/serverEntryModulePlugin";
-import { serverRouteModulesPlugin } from "./plugins/serverRouteModulesPlugin";
-import { urlImportsPlugin } from "./plugins/urlImportsPlugin";
-import { NodeProtocolExternalPlugin } from "./plugins/nodeProtocolExternalPlugin";
+import invariant from "../../invariant";
+import type { RemixConfig } from "../../config";
+import type { AssetsManifest } from "../assets";
+import { loaders } from "../loaders";
+import type { CompileOptions } from "../options";
+import { cssModulesPlugin } from "../plugins/cssModulesPlugin";
+import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImportsPlugin";
+import { vanillaExtractPlugin } from "../plugins/vanillaExtractPlugin";
+import { cssFilePlugin } from "../plugins/cssFilePlugin";
+import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackagePlugin";
+import { emptyModulesPlugin } from "../plugins/emptyModulesPlugin";
+import { mdxPlugin } from "../plugins/mdx";
+import { serverAssetsManifestPlugin } from "../plugins/serverAssetsManifestPlugin";
+import { serverBareModulesPlugin } from "../plugins/serverBareModulesPlugin";
+import { serverEntryModulePlugin } from "../plugins/serverEntryModulePlugin";
+import { serverRouteModulesPlugin } from "../plugins/serverRouteModulesPlugin";
+import { urlImportsPlugin } from "../plugins/urlImportsPlugin";
+import { NodeProtocolExternalPlugin } from "../plugins/nodeProtocolExternalPlugin";
 
-export type ServerCompiler = {
+type Compiler = {
   // produce ./build/index.js
   compile: (manifest: AssetsManifest) => Promise<esbuild.Metafile>;
   dispose: () => void;
@@ -162,10 +162,10 @@ async function writeServerBuildResult(
   }
 }
 
-export const createServerCompiler = (
+export const create = (
   remixConfig: RemixConfig,
   options: CompileOptions
-): ServerCompiler => {
+): Compiler => {
   let compile = async (manifest: AssetsManifest) => {
     let esbuildConfig = createEsbuildConfig(remixConfig, manifest, options);
     let { metafile, outputFiles } = await esbuild.build({

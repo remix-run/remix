@@ -5,7 +5,7 @@ import type { RemixConfig } from "../config";
 import type { AssetsManifest } from "./assets";
 import { createAssetsManifest } from "./assets";
 import * as BrowserJS from "./browserjs";
-import { createServerCompiler } from "./compilerServer";
+import * as ServerJS from "./serverjs";
 import type { CompileOptions } from "./options";
 import { writeFileSafe } from "./utils/fs";
 import type { Channel } from "../channel";
@@ -35,7 +35,7 @@ export let create = (
   let readCssBundleHref = () => cssBundleHrefChannel.read();
   let css = CSS.compiler.create(config, options, writeCssBundleHref);
   let browser = BrowserJS.compiler.create(config, options, readCssBundleHref);
-  let server = createServerCompiler(config, options);
+  let server = ServerJS.compiler.create(config, options);
   return {
     compile: async () => {
       // TODO: only reset cssBundleHrefChannel if css bundling is enabled?
