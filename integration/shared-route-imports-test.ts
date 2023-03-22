@@ -9,7 +9,6 @@ let appFixture: AppFixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    future: { v2_routeConvention: true },
     files: {
       "app/routes/parent.jsx": js`
         import { createContext, useContext } from "react";

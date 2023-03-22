@@ -29,7 +29,6 @@ test.describe("CSS side-effect imports", () => {
               unstable_postcss: true,
               unstable_tailwind: true,
               unstable_vanillaExtract: true,
-              v2_routeConvention: true,
             },
           };
         `,

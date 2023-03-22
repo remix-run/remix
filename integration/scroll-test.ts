@@ -9,7 +9,6 @@ let appFixture: AppFixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    future: { v2_routeConvention: true },
     files: {
       "app/routes/_index.jsx": js`
         import { redirect } from "@remix-run/node";
