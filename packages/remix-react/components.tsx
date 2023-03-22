@@ -368,13 +368,15 @@ export function Links() {
   );
 
   React.useEffect(() => {
-    warnOnce(
-      links.some((link) => "imagesizes" in link || "imagesrcset" in link),
-      "⚠️ DEPRECATED: The `imagesizes` & `imagesrcset` properties in " +
-        "your links have been deprecated in favor of `imageSizes` & " +
-        "`imageSrcSet` and support will be removed in Remix v2. Please update " +
-        "your code to use the new property names instead."
-    );
+    if (links.some((link) => "imagesizes" in link || "imagesrcset" in link)) {
+      warnOnce(
+        false,
+        "⚠️ DEPRECATED: The `imagesizes` & `imagesrcset` properties in " +
+          "your links have been deprecated in favor of `imageSizes` & " +
+          "`imageSrcSet` and support will be removed in Remix v2. Please update " +
+          "your code to use the new property names instead."
+      );
+    }
   }, [links]);
 
   return (
