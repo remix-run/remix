@@ -22,9 +22,9 @@ export class PlaywrightFixture {
    * @param waitForHydration Will wait for the network to be idle, so
    * everything should be loaded and ready to go
    */
-  async goto(href: string, waitForHydration?: true): Promise<Response> {
+  async goto(href: string, waitForHydration?: true | string): Promise<Response> {
     let response = await this.page.goto(this.app.serverUrl + href, {
-      waitUntil: waitForHydration ? "networkidle" : undefined,
+      waitUntil: waitForHydration === true ? "networkidle" : undefined,
     });
     if (response == null)
       throw new Error(

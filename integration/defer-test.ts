@@ -19,7 +19,6 @@ const MANUAL_ERROR_ID = "MANUAL_ERROR_ID";
 declare global {
   // eslint-disable-next-line prefer-let/prefer-let
   var __deferredManualResolveCache: {
-    nextId: number;
     deferreds: Record<
       string,
       { resolve: (value: any) => void; reject: (error: Error) => void }
@@ -471,11 +470,10 @@ test.describe("non-aborted", () => {
 
           export function loader() {
             global.__deferredManualResolveCache = global.__deferredManualResolveCache || {
-              nextId: 1,
               deferreds: {},
             };
 
-            let id = "" + global.__deferredManualResolveCache.nextId++;
+            let id = "" + (Math.random() + 1).toString(36).substring(7);
             let promise = new Promise((resolve, reject) => {
               global.__deferredManualResolveCache.deferreds[id] = { resolve, reject };
             });

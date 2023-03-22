@@ -1,5 +1,3 @@
-// import { Blob, File } from "@remix-run/web-file";
-
 import { parseMultipartFormData } from "../formData";
 
 class CustomError extends Error {
@@ -8,7 +6,7 @@ class CustomError extends Error {
   }
 }
 
-describe.skip("parseMultipartFormData", () => {
+describe("parseMultipartFormData", () => {
   it("can use a custom upload handler", async () => {
     let formData = new FormData();
     formData.set("a", "value");
@@ -109,11 +107,14 @@ describe.skip("parseMultipartFormData", () => {
         },
       });
 
-      let req = new Request("https://test.com", {
+      let init: RequestInit = {
         method: "post",
         body,
         headers: underlyingRequest.headers,
-      });
+      };
+      (init as any).duplex = "half";
+
+      let req = new Request("https://test.com", init);
 
       let error: Error;
       try {
@@ -149,11 +150,14 @@ describe.skip("parseMultipartFormData", () => {
         },
       });
 
-      let req = new Request("https://test.com", {
+      let init: RequestInit = {
         method: "post",
         body,
         headers: underlyingRequest.headers,
-      });
+      };
+      (init as any).duplex = "half";
+
+      let req = new Request("https://test.com", init);
 
       let error: Error;
       try {

@@ -2,14 +2,16 @@ import sourceMapSupport from "source-map-support";
 
 sourceMapSupport.install();
 
+export { Blob, File } from "./fetch";
+
 export { installGlobals } from "./globals";
 
 export { createFileSessionStorage } from "./sessions/fileStorage";
 
-// export {
-//   createFileUploadHandler as unstable_createFileUploadHandler,
-//   NodeOnDiskFile,
-// } from "./upload/fileUploadHandler";
+export {
+  createFileUploadHandler as unstable_createFileUploadHandler,
+  NodeOnDiskFile,
+} from "./upload/fileUploadHandler";
 
 export {
   createCookie,

@@ -41,7 +41,8 @@ test("renders a nested route", () => {
   expect(screen.getByText("INDEX")).toBeInTheDocument();
 });
 
-test("loaders work", async () => {
+// This should be fixed when node ships undici 5.21.0 or greater
+test.skip("loaders work", async () => {
   function App() {
     let data = useLoaderData();
     return <pre data-testid="data">Message: {data.message}</pre>;
