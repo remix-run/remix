@@ -401,14 +401,14 @@ describe("shared server runtime", () => {
         root: {
           default: {},
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           index: true,
         },
       });
       let handler = createRequestHandler(build, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?_data=routes/index`, {
+      let request = new Request(`${baseUrl}/?_data=routes/_index`, {
         method: "get",
       });
 
@@ -430,7 +430,7 @@ describe("shared server runtime", () => {
           default: {},
           loader: rootLoader,
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           loader: indexLoader,
           index: true,
@@ -438,7 +438,7 @@ describe("shared server runtime", () => {
       });
       let handler = createRequestHandler(build, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?_data=routes/index`, {
+      let request = new Request(`${baseUrl}/?_data=routes/_index`, {
         method: "get",
       });
 
@@ -691,7 +691,7 @@ describe("shared server runtime", () => {
           loader: rootLoader,
           action: rootAction,
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           index: true,
         },
@@ -721,7 +721,7 @@ describe("shared server runtime", () => {
           default: {},
           loader: rootLoader,
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           action: indexAction,
           index: true,
@@ -729,7 +729,7 @@ describe("shared server runtime", () => {
       });
       let handler = createRequestHandler(build, ServerMode.Test);
 
-      let request = new Request(`${baseUrl}/?index&_data=routes/index`, {
+      let request = new Request(`${baseUrl}/?index&_data=routes/_index`, {
         method: "post",
       });
 
@@ -815,7 +815,7 @@ describe("shared server runtime", () => {
           loader: rootLoader,
           ErrorBoundary: {},
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           index: true,
           default: {},
@@ -857,7 +857,7 @@ describe("shared server runtime", () => {
           loader: rootLoader,
           ErrorBoundary: {},
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           index: true,
           default: {},
@@ -881,7 +881,7 @@ describe("shared server runtime", () => {
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
       let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
       expect(context.errors).toBeTruthy();
-      expect(context.errors!["routes/index"].status).toBe(400);
+      expect(context.errors!["routes/_index"].status).toBe(400);
       expect(context.loaderData).toEqual({
         root: "root",
       });
@@ -952,7 +952,7 @@ describe("shared server runtime", () => {
           loader: rootLoader,
           ErrorBoundary: {},
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           index: true,
           default: {},
@@ -981,7 +981,7 @@ describe("shared server runtime", () => {
       expect(context.errors!.root.status).toBe(400);
       expect(context.loaderData).toEqual({
         root: null,
-        "routes/index": null,
+        "routes/_index": null,
       });
     });
 
@@ -1050,7 +1050,7 @@ describe("shared server runtime", () => {
           loader: rootLoader,
           ErrorBoundary: {},
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           index: true,
           default: {},
@@ -1076,10 +1076,10 @@ describe("shared server runtime", () => {
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
       let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
       expect(context.errors).toBeTruthy();
-      expect(context.errors!["routes/index"].status).toBe(400);
+      expect(context.errors!["routes/_index"].status).toBe(400);
       expect(context.loaderData).toEqual({
         root: "root",
-        "routes/index": null,
+        "routes/_index": null,
       });
     });
 
@@ -1212,7 +1212,7 @@ describe("shared server runtime", () => {
           loader: rootLoader,
           ErrorBoundary: {},
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           index: true,
           default: {},
@@ -1254,7 +1254,7 @@ describe("shared server runtime", () => {
           loader: rootLoader,
           ErrorBoundary: {},
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           index: true,
           default: {},
@@ -1278,7 +1278,7 @@ describe("shared server runtime", () => {
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
       let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
       expect(context.errors).toBeTruthy();
-      expect(context.errors!["routes/index"].message).toBe("index");
+      expect(context.errors!["routes/_index"].message).toBe("index");
       expect(context.loaderData).toEqual({
         root: "root",
       });
@@ -1349,7 +1349,7 @@ describe("shared server runtime", () => {
           loader: rootLoader,
           ErrorBoundary: {},
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           index: true,
           default: {},
@@ -1378,7 +1378,7 @@ describe("shared server runtime", () => {
       expect(context.errors!.root.message).toBe("index");
       expect(context.loaderData).toEqual({
         root: null,
-        "routes/index": null,
+        "routes/_index": null,
       });
     });
 
@@ -1447,7 +1447,7 @@ describe("shared server runtime", () => {
           loader: rootLoader,
           ErrorBoundary: {},
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           index: true,
           default: {},
@@ -1473,10 +1473,10 @@ describe("shared server runtime", () => {
       expect(calls.length).toBe(1 * DATA_CALL_MULTIPIER);
       let context = calls[0][3].staticHandlerContext as StaticHandlerContext;
       expect(context.errors).toBeTruthy();
-      expect(context.errors!["routes/index"].message).toBe("index");
+      expect(context.errors!["routes/_index"].message).toBe("index");
       expect(context.loaderData).toEqual({
         root: "root",
-        "routes/index": null,
+        "routes/_index": null,
       });
     });
 
@@ -1609,7 +1609,7 @@ describe("shared server runtime", () => {
           loader: rootLoader,
           ErrorBoundary: {},
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           default: {},
           loader: indexLoader,
@@ -1654,7 +1654,7 @@ describe("shared server runtime", () => {
           loader: rootLoader,
           ErrorBoundary: {},
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           default: {},
           loader: indexLoader,
@@ -1694,7 +1694,7 @@ describe("shared server runtime", () => {
           loader: rootLoader,
           ErrorBoundary: {},
         },
-        "routes/index": {
+        "routes/_index": {
           parentId: "root",
           default: {},
           loader: indexLoader,
