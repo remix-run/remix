@@ -4,30 +4,10 @@ import type esbuild from "esbuild";
 import type { RemixConfig } from "../config";
 import type { AssetsManifest } from "./assets";
 import { createAssetsManifest } from "./assets";
-import type { BrowserCompiler } from "./compileBrowser";
 import { createBrowserCompiler } from "./compileBrowser";
-import type { ServerCompiler } from "./compilerServer";
 import { createServerCompiler } from "./compilerServer";
-import type { OnCompileFailure } from "./onCompileFailure";
 import type { CompileOptions } from "./options";
 import { writeFileSafe } from "./utils/fs";
-
-type RemixCompiler = {
-  config: RemixConfig;
-  browser: BrowserCompiler;
-  server: ServerCompiler;
-};
-
-export const createRemixCompiler = (
-  remixConfig: RemixConfig,
-  options: CompileOptions
-): RemixCompiler => {
-  return {
-    config: remixConfig,
-    browser: createBrowserCompiler(remixConfig, options),
-    server: createServerCompiler(remixConfig, options),
-  };
-};
 
 export type CompileResult = {
   assetsManifest: AssetsManifest;
@@ -37,41 +17,49 @@ export type CompileResult = {
   };
 };
 
-export const compile = async (
-  compiler: RemixCompiler,
-  options: {
-    onCompileFailure?: OnCompileFailure;
-  } = {}
-): Promise<CompileResult | undefined> => {
-  try {
-    let { metafile, hmr, cssBundleHref } = await compiler.browser.compile();
-    let manifest = await createAssetsManifest({
-      config: compiler.config,
-      metafile: metafile,
-      cssBundleHref,
-      hmr,
-    });
-    let [serverMetafile] = await Promise.all([
-      compiler.server.compile(manifest),
-      writeAssetsManifest(compiler.config, manifest),
-    ]);
-
-    return {
-      assetsManifest: manifest,
-      metafile: {
-        browser: metafile,
-        server: serverMetafile,
-      },
-    };
-  } catch (error: unknown) {
-    options.onCompileFailure?.(error as Error);
-    return undefined;
-  }
+type Compiler = {
+  compile: () => Promise<CompileResult | undefined>;
+  dispose: () => void;
 };
 
-export const dispose = (compiler: RemixCompiler): void => {
-  compiler.browser.dispose();
-  compiler.server.dispose();
+export let create = (
+  config: RemixConfig,
+  options: CompileOptions
+): Compiler => {
+  let browser = createBrowserCompiler(config, options);
+  let server = createServerCompiler(config, options);
+  return {
+    compile: async () => {
+      try {
+        let { metafile, hmr, cssBundleHref } = await browser.compile();
+        let manifest = await createAssetsManifest({
+          config,
+          metafile: metafile,
+          cssBundleHref,
+          hmr,
+        });
+        let [serverMetafile] = await Promise.all([
+          server.compile(manifest),
+          writeAssetsManifest(config, manifest),
+        ]);
+
+        return {
+          assetsManifest: manifest,
+          metafile: {
+            browser: metafile,
+            server: serverMetafile,
+          },
+        };
+      } catch (error: unknown) {
+        options.onCompileFailure?.(error as Error);
+        return undefined;
+      }
+    },
+    dispose: () => {
+      browser.dispose();
+      server.dispose();
+    },
+  };
 };
 
 const writeAssetsManifest = async (
