@@ -151,6 +151,16 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       );
     }
 
+    if (!window.__remixContext.future.v2_normalizeFormMethod) {
+      warnOnce(
+        false,
+        "⚠️  DEPRECATED: Please enable the `future.v2_normalizeFormMethod` flag to " +
+          "prepare for the Remix v2 release. Lowercase `useNavigation().formMethod`" +
+          "values are being normalized to uppercase in v2 to align with the `fetch()` " +
+          "behavior.  For more information, see https://remix.run/docs/hooks/use-navigation"
+      );
+    }
+
     let routes = createClientRoutes(
       window.__remixManifest.routes,
       window.__remixRouteModules,
@@ -165,7 +175,18 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       };
     }
 
-    router = createBrowserRouter(routes, { hydrationData });
+    router = createBrowserRouter(routes, {
+      hydrationData,
+      future: {
+        // Pass through the Remix future flag to avoid a v1 breaking change in
+        // useNavigation() - users can control the casing via the flag in v1.
+        // useFetcher still always uppercases in the back-compat layer in v1.
+        // In v2 we can just always pass true here and remove the back-compat
+        // layer
+        v7_normalizeFormMethod:
+          window.__remixContext.future.v2_normalizeFormMethod,
+      },
+    });
   }
 
   // We need to include a wrapper RemixErrorBoundary here in case the root error
