@@ -1,20 +1,9 @@
 ---
-title: Route File Naming (v2)
+title: Route File Naming
 new: true
 ---
 
-# Route File Naming (v2)
-
-You can opt in to the new route file naming convention with a future flag in Remix config.
-
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  future: {
-    v2_routeConvention: true,
-  },
-};
-```
+# Route File Naming
 
 While you can configure routes in [remix.config.js][remix-config], most routes are created with this file system convention. Add a file, get a route.
 
@@ -388,8 +377,6 @@ There's also the [Flat Routes][flat-routes] third-party package with configurabl
 [routing-guide]: ../guides/routing
 [root-route]: #root-route
 [resource-route]: ../guides/resource-routes
-[routeconvention-v2]: ./route-files-v2
-[flatroutes-rfc]: https://github.com/remix-run/remix/discussions/4482
 [root-route]: #root-route
 [index-route]: ../guides/routing#index-routes
 [nested-routing]: ../guides/routing#what-is-nested-routing

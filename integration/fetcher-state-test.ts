@@ -26,9 +26,6 @@ test.describe("fetcher states", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
       files: {
         "app/root.jsx": js`
           import { useMemo, useRef } from "react";

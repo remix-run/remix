@@ -9,7 +9,7 @@ description: Frequently Asked Questions about Remix
 
 You can't 😅. During a client-side transition, to make your app as speedy as possible, Remix will call all of your loaders _in parallel_, in separate fetch requests. Each one of them needs to have its own authentication check.
 
-This is probably not different than what you were doing before Remix, it might just be more obvious now. Outside of Remix, when you make multiple fetches to your "API Routes", each of those endpoints needs to validate the user session. In other words, Remix route loaders are their own "API Route" and must be treated as such.
+This is probably not different from what you were doing before Remix, it might just be more obvious now. Outside of Remix, when you make multiple fetches to your "API Routes", each of those endpoints needs to validate the user session. In other words, Remix route loaders are their own "API Route" and must be treated as such.
 
 We recommend you create a function that validates the user session that can be added to any routes that require it.
 
@@ -81,7 +81,7 @@ We find option (1) to be the simplest because you don't have to mess around with
 
 HTML buttons can send a value, so it's the easiest way to implement this:
 
-```tsx filename=app/routes/projects/$id.tsx lines=[3-4,33,39]
+```tsx filename=app/routes/projects.$id.tsx lines=[3-4,33,39]
 export async function action({ request }: ActionArgs) {
   const formData = await request.formData();
   const intent = formData.get("intent");

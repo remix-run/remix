@@ -36,9 +36,6 @@ test.describe("PostCSS enabled", () => {
       config: {
         postcss: true,
         tailwind: true,
-        future: {
-          v2_routeConvention: true,
-        },
       },
       files: {
         // We provide a test plugin that replaces the strings

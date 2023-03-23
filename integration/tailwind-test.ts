@@ -45,9 +45,6 @@ function runTests(ext: typeof extensions[number]) {
     fixture = await createFixture({
       config: {
         tailwind: true,
-        future: {
-          v2_routeConvention: true,
-        },
       },
       files: {
         [tailwindConfigName]: tailwindConfig,

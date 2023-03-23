@@ -42,7 +42,6 @@ test.describe("non-aborted", () => {
     fixture = await createFixture({
       config: {
         future: {
-          v2_routeConvention: true,
           v2_normalizeFormMethod: true,
         },
       },
@@ -949,13 +948,6 @@ test.describe("aborted", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: { v2_routeConvention: true },
-      },
-      ////////////////////////////////////////////////////////////////////////////
-      // 💿 Next, add files to this object, just like files in a real app,
-      // `createFixture` will make an app and run your tests against it.
-      ////////////////////////////////////////////////////////////////////////////
       files: {
         "app/entry.server.tsx": js`
           import { PassThrough } from "stream";

@@ -26,11 +26,6 @@ let LAYOUT_DATA = "root data";
 
 test.beforeAll(async () => {
   fixture = await createFixture({
-    config: {
-      future: {
-        v2_routeConvention: true,
-      },
-    },
     files: {
       "app/root.jsx": js`
         import { json } from "@remix-run/node";

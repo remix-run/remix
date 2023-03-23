@@ -28,9 +28,6 @@ test("builds deterministically under different paths", async () => {
   let init: FixtureInit = {
     config: {
       postcss: true,
-      future: {
-        v2_routeConvention: true,
-      },
     },
     files: {
       "postcss.config.js": js`

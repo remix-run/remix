@@ -19,7 +19,6 @@ test.describe("actions", () => {
     fixture = await createFixture({
       config: {
         future: {
-          v2_routeConvention: true,
           v2_normalizeFormMethod: true,
         },
       },

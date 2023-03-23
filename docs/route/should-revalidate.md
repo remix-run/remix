@@ -54,7 +54,7 @@ export function shouldRevalidate({
 
 ## `defaultShouldRevalidate`
 
-By default, Remix doesn't call every loader all of the time. There are reliable optimizations it can make by default. For example, only loaders with changing params are called. Consider navigating from the following URL to the one below it:
+By default, Remix doesn't call every loader all the time. There are reliable optimizations it can make by default. For example, only loaders with changing params are called. Consider navigating from the following URL to the one below it:
 
 - `/projects/123/tasks/abc`
 - `/projects/123/tasks/def`
@@ -87,12 +87,12 @@ export function shouldRevalidate() {
 
 These are the [URL params][url-params] from the URL that can be compared to the `nextParams` to decide if you need to reload or not. Perhaps you're using only a partial piece of the param for data loading, you don't need to revalidate if a superfluous part of the param changed.
 
-For instance, consider an event slug with the id and an human-friendly title:
+For instance, consider an event slug with the id and a human-friendly title:
 
 - `/events/blink-182-united-center-saint-paul--ae3f9`
 - `/events/blink-182-little-caesars-arena-detroit--e87ad`
 
-```tsx filename=app/routes/events/$slug.tsx
+```tsx filename=app/routes/events.$slug.tsx
 export async function loader({ params }: LoaderArgs) {
   const id = params.slug.split("--")[1];
   return loadEvent(id);
@@ -223,7 +223,7 @@ There are a lot of ways to do this, and the rest of the code in the app matters,
 - did the params stay the same?
 - was it a GET and not a mutation?
 
-If the params didn't change, and we didn't do a POST, then we know our loader will return the same data it did last time, so we can opt-out of the revalidation when the child route changes the search params.
+If the params didn't change, and we didn't do a POST, then we know our loader will return the same data it did last time, so we can opt out of the revalidation when the child route changes the search params.
 
 ```tsx
 export function shouldRevalidate({

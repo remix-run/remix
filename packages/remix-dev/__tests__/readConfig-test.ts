@@ -29,7 +29,6 @@ describe("readConfig", () => {
           unstable_tailwind: expect.any(Boolean),
           v2_headers: expect.any(Boolean),
           v2_normalizeFormMethod: expect.any(Boolean),
-          v2_routeConvention: expect.any(Boolean),
         },
       },
       `
@@ -49,7 +48,6 @@ describe("readConfig", () => {
           "v2_dev": false,
           "v2_headers": Any<Boolean>,
           "v2_normalizeFormMethod": Any<Boolean>,
-          "v2_routeConvention": Any<Boolean>,
         },
         "mdx": undefined,
         "postcss": false,

@@ -5,15 +5,6 @@ import { makeRe } from "minimatch";
 import type { ConfigRoute, RouteManifest } from "./routes";
 import { normalizeSlashes } from "./routes";
 import { findConfig } from "../config";
-import {
-  escapeEnd,
-  escapeStart,
-  isSegmentSeparator,
-  optionalEnd,
-  optionalStart,
-  paramPrefixChar,
-  routeModuleExts,
-} from "./routesConvention";
 
 const PrefixLookupTrieEndSymbol = Symbol("PrefixLookupTrieEndSymbol");
 type PrefixLookupNode = {
@@ -542,4 +533,18 @@ export function getRouteIdConflictErrorMessage(
     others.map((route) => `⭕️️ ${route}`).join("\n") +
     "\n"
   );
+}
+
+const routeModuleExts = [".js", ".jsx", ".ts", ".tsx", ".md", ".mdx"];
+
+const paramPrefixChar = "$" as const;
+const escapeStart = "[" as const;
+const escapeEnd = "]" as const;
+
+const optionalStart = "(" as const;
+const optionalEnd = ")" as const;
+
+export function isSegmentSeparator(checkChar: string | undefined) {
+  if (!checkChar) return false;
+  return ["/", ".", path.win32.sep].includes(checkChar);
 }

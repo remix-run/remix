@@ -34,7 +34,6 @@ export interface FutureConfig {
   unstable_tailwind: boolean;
   v2_headers: boolean;
   v2_normalizeFormMethod: boolean;
-  v2_routeConvention: boolean;
 }
 
 export interface AssetsManifest {

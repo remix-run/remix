@@ -146,7 +146,7 @@ export { db };
 
 And then your routes can import it and make queries against it:
 
-```tsx filename=app/routes/products/$categoryId.tsx
+```tsx filename=app/routes/products.$categoryId.tsx
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
@@ -176,7 +176,7 @@ export default function ProductCategory() {
 
 If you are using TypeScript, you can use type inference to use Prisma Client generated types when calling `useLoaderData`. This allows better type safety and intellisense when writing code that uses the loaded data.
 
-```tsx filename=app/routes/products/$productId.tsx
+```tsx filename=app/routes/products.$productId.tsx
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
@@ -324,7 +324,7 @@ Sometimes you need to read and change the search params from your component inst
 
 Perhaps the most common way to set search params is letting the user control them with a form:
 
-```tsx filename=app/routes/products/shoes.tsx lines=[8,9,16,17]
+```tsx filename=app/routes/products.shoes.tsx lines=[8,9,16,17]
 export default function ProductFilters() {
   return (
     <Form method="get">
