@@ -1238,7 +1238,7 @@ export function useTransition(): Transition {
     logDeprecationOnce(
       "⚠️ DEPRECATED: The `useTransition` hook has been deprecated in favor of " +
         "`useNavigation` and will be removed in Remix v2.  Please update your " +
-        "code to leverage `useNavigation`.\n\nfor more information, see " +
+        "code to leverage `useNavigation`. For more information, see " +
         "https://remix.run/docs/en/1.15.0/hooks/use-transition and " +
         "https://remix.run/docs/en/1.15.0/hooks/use-navigation."
     );
