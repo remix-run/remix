@@ -1,8 +1,8 @@
 import type { Plugin } from "esbuild";
 import jsesc from "jsesc";
 
-import type { AssetsManifest } from "../../compiler/assets";
-import { assetsManifestVirtualModule } from "../../compiler/virtualModules";
+import type { AssetsManifest } from "../../assets";
+import { assetsManifestVirtualModule } from "../virtualModules";
 
 /**
  * Creates a virtual module called `@remix-run/dev/assets-manifest` that exports

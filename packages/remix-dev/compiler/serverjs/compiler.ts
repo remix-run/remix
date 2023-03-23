@@ -15,10 +15,10 @@ import { cssFilePlugin } from "../plugins/cssFilePlugin";
 import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackagePlugin";
 import { emptyModulesPlugin } from "../plugins/emptyModulesPlugin";
 import { mdxPlugin } from "../plugins/mdx";
-import { serverAssetsManifestPlugin } from "../plugins/serverAssetsManifestPlugin";
-import { serverBareModulesPlugin } from "../plugins/serverBareModulesPlugin";
-import { serverEntryModulePlugin } from "../plugins/serverEntryModulePlugin";
-import { serverRouteModulesPlugin } from "../plugins/serverRouteModulesPlugin";
+import { serverAssetsManifestPlugin } from "./plugins/manifest";
+import { serverBareModulesPlugin } from "./plugins/bareImports";
+import { serverEntryModulePlugin } from "./plugins/entry";
+import { serverRouteModulesPlugin } from "./plugins/routes";
 import { urlImportsPlugin } from "../plugins/urlImportsPlugin";
 import { NodeProtocolExternalPlugin } from "../plugins/nodeProtocolExternalPlugin";
 
