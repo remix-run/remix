@@ -10,7 +10,7 @@ import { loaders } from "../loaders";
 import type { CompileOptions } from "../options";
 import { cssModulesPlugin } from "../plugins/cssModulesPlugin";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImportsPlugin";
-import { vanillaExtractPlugin } from "../plugins/vanillaExtractPlugin";
+import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 import { cssFilePlugin } from "../plugins/cssFilePlugin";
 import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackagePlugin";
 import { emptyModulesPlugin } from "../plugins/emptyModulesPlugin";

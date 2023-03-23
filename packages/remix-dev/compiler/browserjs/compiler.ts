@@ -18,7 +18,7 @@ import { urlImportsPlugin } from "../plugins/urlImportsPlugin";
 import { cssBundleUpdatePlugin } from "./plugins/cssBundleUpdate";
 import { cssModulesPlugin } from "../plugins/cssModulesPlugin";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImportsPlugin";
-import { vanillaExtractPlugin } from "../plugins/vanillaExtractPlugin";
+import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 // import {
 //   cssBundleEntryModulePlugin,
 //   cssBundleEntryModuleId,
