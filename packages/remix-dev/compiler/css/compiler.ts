@@ -24,7 +24,7 @@ import { vanillaExtractPlugin } from "../plugins/vanillaExtractPlugin";
 import {
   cssBundleEntryModulePlugin,
   cssBundleEntryModuleId,
-} from "../plugins/cssBundleEntryModulePlugin";
+} from "./plugins/bundleEntry";
 import invariant from "../../invariant";
 // import { hmrPlugin } from "../plugins/hmrPlugin";
 import { NodeProtocolExternalPlugin } from "../plugins/nodeProtocolExternalPlugin";

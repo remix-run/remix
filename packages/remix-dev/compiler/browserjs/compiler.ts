@@ -19,10 +19,10 @@ import { cssBundleUpdatePlugin } from "./plugins/cssBundleUpdate";
 import { cssModulesPlugin } from "../plugins/cssModulesPlugin";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImportsPlugin";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtractPlugin";
-import {
-  cssBundleEntryModulePlugin,
-  cssBundleEntryModuleId,
-} from "../plugins/cssBundleEntryModulePlugin";
+// import {
+//   cssBundleEntryModulePlugin,
+//   cssBundleEntryModuleId,
+// } from "../plugins/cssBundleEntryModulePlugin";
 import invariant from "../../invariant";
 import { hmrPlugin } from "./plugins/hmr";
 import { NodeProtocolExternalPlugin } from "../plugins/nodeProtocolExternalPlugin";
@@ -91,7 +91,7 @@ const createEsbuildConfig = (
 
   if (isCssBuild) {
     entryPoints = {
-      "css-bundle": cssBundleEntryModuleId,
+      // "css-bundle": cssBundleEntryModuleId,
     };
   } else {
     entryPoints = {
@@ -123,9 +123,9 @@ const createEsbuildConfig = (
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    isCssBundlingEnabled(config) && isCssBuild
-      ? cssBundleEntryModulePlugin(config)
-      : null,
+    // isCssBundlingEnabled(config) && isCssBuild
+    //   ? cssBundleEntryModulePlugin(config)
+    //   : null,
     config.future.unstable_cssModules
       ? cssModulesPlugin({ config, mode, outputCss })
       : null,
