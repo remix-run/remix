@@ -10,8 +10,8 @@ import type { RemixConfig } from "../../config";
 import { getAppDependencies } from "../dependencies";
 import { loaders } from "../loaders";
 import type { CompileOptions } from "../options";
-import { browserRouteModulesPlugin } from "../plugins/browserRouteModulesPlugin";
-import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "../plugins/browserRouteModulesPlugin_v2";
+// import { browserRouteModulesPlugin } from "../plugins/browserRouteModulesPlugin";
+// import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "../plugins/browserRouteModulesPlugin_v2";
 import { cssFilePlugin } from "../plugins/cssFilePlugin";
 import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackagePlugin";
 import { emptyModulesPlugin } from "../plugins/emptyModulesPlugin";
@@ -26,7 +26,7 @@ import {
   cssBundleEntryModuleId,
 } from "../plugins/cssBundleEntryModulePlugin";
 import invariant from "../../invariant";
-import { hmrPlugin } from "../plugins/hmrPlugin";
+// import { hmrPlugin } from "../plugins/hmrPlugin";
 import { NodeProtocolExternalPlugin } from "../plugins/nodeProtocolExternalPlugin";
 
 function isNotNull<Value>(value: Value): value is Exclude<Value, null> {
@@ -62,8 +62,8 @@ const getExternals = (remixConfig: RemixConfig): string[] => {
 const createEsbuildConfig = (
   build: "app" | "css",
   config: RemixConfig,
-  options: CompileOptions,
-  onLoader: (filename: string, code: string) => void
+  options: CompileOptions
+  // onLoader: (filename: string, code: string) => void
 ): esbuild.BuildOptions | esbuild.BuildIncremental => {
   let isCssBuild = build === "css";
   let entryPoints: Record<string, string>;
@@ -105,9 +105,9 @@ const createEsbuildConfig = (
     cssFilePlugin({ config, options }),
     urlImportsPlugin(),
     mdxPlugin(config),
-    config.future.unstable_dev
-      ? browserRouteModulesPlugin_v2(config, /\?browser$/, onLoader, mode)
-      : browserRouteModulesPlugin(config, /\?browser$/),
+    // config.future.unstable_dev
+    //   ? browserRouteModulesPlugin_v2(config, /\?browser$/, onLoader, mode)
+    //   : browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
     NodeProtocolExternalPlugin(),
@@ -130,7 +130,7 @@ const createEsbuildConfig = (
       ...Object.fromEntries(isolateChunks.map((imprt) => [imprt, imprt])),
     };
 
-    plugins.push(hmrPlugin({ remixConfig: config }));
+    // plugins.push(hmrPlugin({ remixConfig: config }));
 
     if (isCssBundlingEnabled(config)) {
       // plugins.push(cssBundleUpdatePlugin({ getCssBundleHref }));
@@ -190,7 +190,7 @@ export let create = (
   writeCssBundleHref: (cssBundleHref?: string) => void
 ) => {
   let cssCompiler: esbuild.BuildIncremental;
-  let onLoader = () => {};
+  // let onLoader = () => {};
   let cssBuildTask = async () => {
     if (!isCssBundlingEnabled(remixConfig)) {
       return;
@@ -201,7 +201,7 @@ export let create = (
       //  so we need to assert that it's an incremental build
       cssCompiler = (await (!cssCompiler
         ? esbuild.build({
-            ...createEsbuildConfig("css", remixConfig, options, onLoader),
+            ...createEsbuildConfig("css", remixConfig, options /* onLoader */),
             metafile: true,
             incremental: true,
             write: false,

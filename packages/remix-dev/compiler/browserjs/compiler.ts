@@ -8,14 +8,14 @@ import type { AssetsManifest } from "../assets";
 import { getAppDependencies } from "../dependencies";
 import { loaders } from "../loaders";
 import type { CompileOptions } from "../options";
-import { browserRouteModulesPlugin } from "../plugins/browserRouteModulesPlugin";
-import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "../plugins/browserRouteModulesPlugin_v2";
+import { browserRouteModulesPlugin } from "./plugins/routes";
+import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "./plugins/routes_unstable";
 import { cssFilePlugin } from "../plugins/cssFilePlugin";
 import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackagePlugin";
 import { emptyModulesPlugin } from "../plugins/emptyModulesPlugin";
 import { mdxPlugin } from "../plugins/mdx";
 import { urlImportsPlugin } from "../plugins/urlImportsPlugin";
-import { cssBundleUpdatePlugin } from "../plugins/cssBundleUpdatePlugin";
+import { cssBundleUpdatePlugin } from "./plugins/cssBundleUpdate";
 import { cssModulesPlugin } from "../plugins/cssModulesPlugin";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImportsPlugin";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtractPlugin";
@@ -24,7 +24,7 @@ import {
   cssBundleEntryModuleId,
 } from "../plugins/cssBundleEntryModulePlugin";
 import invariant from "../../invariant";
-import { hmrPlugin } from "../plugins/hmrPlugin";
+import { hmrPlugin } from "./plugins/hmr";
 import { NodeProtocolExternalPlugin } from "../plugins/nodeProtocolExternalPlugin";
 import { createMatchPath } from "../utils/tsconfig";
 import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
