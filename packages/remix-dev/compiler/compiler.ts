@@ -2,8 +2,7 @@ import * as path from "path";
 import type esbuild from "esbuild";
 
 import type { RemixConfig } from "../config";
-import type { AssetsManifest } from "./assets";
-import { createAssetsManifest } from "./assets";
+import * as Manifest from "./manifest";
 import * as BrowserJS from "./browserjs";
 import * as ServerJS from "./serverjs";
 import type { CompileOptions } from "./options";
@@ -13,7 +12,7 @@ import { createChannel } from "../channel";
 import * as CSS from "./css";
 
 export type CompileResult = {
-  assetsManifest: AssetsManifest;
+  assetsManifest: Manifest.Type;
   metafile: {
     browser: esbuild.Metafile;
     server: esbuild.Metafile;
@@ -46,7 +45,7 @@ export let create = (
           css.compile(),
           browser.compile(),
         ]);
-        let manifest = await createAssetsManifest({
+        let manifest = await Manifest.create({
           config,
           metafile: metafile,
           cssBundleHref,
@@ -79,7 +78,7 @@ export let create = (
 
 const writeAssetsManifest = async (
   config: RemixConfig,
-  assetsManifest: AssetsManifest
+  assetsManifest: Manifest.Type
 ) => {
   let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
 
