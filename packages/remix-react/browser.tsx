@@ -146,7 +146,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
           "all thrown values (`Response` and `Error`). Please migrate to the new " +
           "behavior in Remix v1 via the `future.v2_errorBoundary` flag in your " +
           "`remix.config.js` file. For more information, see " +
-          "https://remix.run/docs/route/error-boundary-v2"
+          "https://remix.run/docs/en/1.15.0/route/error-boundary-v2"
       );
     }
 
@@ -155,7 +155,8 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
         "⚠️  DEPRECATED: Please enable the `future.v2_normalizeFormMethod` flag to " +
           "prepare for the Remix v2 release. Lowercase `useNavigation().formMethod`" +
           "values are being normalized to uppercase in v2 to align with the `fetch()` " +
-          "behavior.  For more information, see https://remix.run/docs/hooks/use-navigation"
+          "behavior.  For more information, see " +
+          "https://remix.run/docs/en/1.15.0/hooks/use-navigation"
       );
     }
 

@@ -1238,8 +1238,9 @@ export function useTransition(): Transition {
     logDeprecationOnce(
       "⚠️ DEPRECATED: The `useTransition` hook has been deprecated in favor of " +
         "`useNavigation` and will be removed in Remix v2.  Please update your " +
-        "code to leverage `useNavigation`.\n\nSee https://remix.run/docs/hooks/use-transition " +
-        "and https://remix.run/docs/hooks/use-navigation for more information."
+        "code to leverage `useNavigation`. For more information, see " +
+        "https://remix.run/docs/en/1.15.0/hooks/use-transition and " +
+        "https://remix.run/docs/en/1.15.0/hooks/use-navigation."
     );
   }, []);
 
@@ -1475,8 +1476,8 @@ function addFetcherDeprecationWarnings(fetcher: Fetcher) {
       logDeprecationOnce(
         "⚠️ DEPRECATED: The `useFetcher().type` field has been deprecated and " +
           "will be removed in Remix v2.  Please update your code to rely on " +
-          "`fetcher.state`.\n\nSee https://remix.run/docs/hooks/use-fetcher for " +
-          "more information."
+          "`fetcher.state`. For more information, see " +
+          "https://remix.run/docs/en/1.15.0/hooks/use-fetcher."
       );
       return type;
     },
@@ -1496,8 +1497,8 @@ function addFetcherDeprecationWarnings(fetcher: Fetcher) {
       logDeprecationOnce(
         "⚠️ DEPRECATED: The `useFetcher().submission` field has been deprecated and " +
           "will be removed in Remix v2.  The submission fields now live directly " +
-          "on the fetcher (`fetcher.formData`).\n\n" +
-          "See https://remix.run/docs/hooks/use-fetcher for more information."
+          "on the fetcher (`fetcher.formData`). For more information, see " +
+          "https://remix.run/docs/en/1.15.0/hooks/use-fetcher."
       );
       return submission;
     },
