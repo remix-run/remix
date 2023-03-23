@@ -16,7 +16,7 @@ import { cssFilePlugin } from "../plugins/cssImports";
 import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackage";
 import { emptyModulesPlugin } from "../plugins/emptyModules";
 import { mdxPlugin } from "../plugins/mdx";
-import { urlImportsPlugin } from "../plugins/urlImportsPlugin";
+import { externalPlugin } from "../plugins/external";
 // import { cssBundleUpdatePlugin } from "../plugins/cssBundleUpdatePlugin";
 import { cssModulesPlugin } from "../plugins/cssModuleImports";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
@@ -27,7 +27,6 @@ import {
 } from "./plugins/bundleEntry";
 import invariant from "../../invariant";
 // import { hmrPlugin } from "../plugins/hmrPlugin";
-import { NodeProtocolExternalPlugin } from "../plugins/nodeProtocolExternalPlugin";
 
 function isNotNull<Value>(value: Value): value is Exclude<Value, null> {
   return value !== null;
@@ -103,14 +102,14 @@ const createEsbuildConfig = (
       ? cssSideEffectImportsPlugin({ config, options })
       : null,
     cssFilePlugin({ config, options }),
-    urlImportsPlugin(),
+    externalPlugin(/^https?:\/\//, { sideEffects: false }),
     mdxPlugin(config),
     // config.future.unstable_dev
     //   ? browserRouteModulesPlugin_v2(config, /\?browser$/, onLoader, mode)
     //   : browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
-    NodeProtocolExternalPlugin(),
+    externalPlugin(/^node:.*/, { sideEffects: false }),
   ].filter(isNotNull);
 
   if (build === "app" && mode === "development" && config.future.unstable_dev) {

@@ -14,7 +14,7 @@ import { cssFilePlugin } from "../plugins/cssImports";
 import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackage";
 import { emptyModulesPlugin } from "../plugins/emptyModules";
 import { mdxPlugin } from "../plugins/mdx";
-import { urlImportsPlugin } from "../plugins/urlImportsPlugin";
+import { externalPlugin } from "../plugins/external";
 import { cssBundleUpdatePlugin } from "./plugins/cssBundleUpdate";
 import { cssModulesPlugin } from "../plugins/cssModuleImports";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
@@ -25,7 +25,6 @@ import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 // } from "../plugins/cssBundleEntryModulePlugin";
 import invariant from "../../invariant";
 import { hmrPlugin } from "./plugins/hmr";
-import { NodeProtocolExternalPlugin } from "../plugins/nodeProtocolExternalPlugin";
 import { createMatchPath } from "../utils/tsconfig";
 import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
 
@@ -136,14 +135,14 @@ const createEsbuildConfig = (
       ? cssSideEffectImportsPlugin({ config, options })
       : null,
     cssFilePlugin({ config, options }),
-    urlImportsPlugin(),
+    externalPlugin(/^https?:\/\//, { sideEffects: false }),
     mdxPlugin(config),
     config.future.unstable_dev
       ? browserRouteModulesPlugin_v2(config, /\?browser$/, onLoader, mode)
       : browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
-    NodeProtocolExternalPlugin(),
+    externalPlugin(/^node:.*/, { sideEffects: false }),
     {
       // TODO: should be removed when error handling for compiler is improved
       name: "warn-on-unresolved-imports",

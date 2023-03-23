@@ -19,8 +19,7 @@ import { serverAssetsManifestPlugin } from "./plugins/manifest";
 import { serverBareModulesPlugin } from "./plugins/bareImports";
 import { serverEntryModulePlugin } from "./plugins/entry";
 import { serverRouteModulesPlugin } from "./plugins/routes";
-import { urlImportsPlugin } from "../plugins/urlImportsPlugin";
-import { NodeProtocolExternalPlugin } from "../plugins/nodeProtocolExternalPlugin";
+import { externalPlugin } from "../plugins/external";
 
 type Compiler = {
   // produce ./build/index.js
@@ -61,14 +60,14 @@ const createEsbuildConfig = (
       ? cssSideEffectImportsPlugin({ config, options })
       : null,
     cssFilePlugin({ config, options }),
-    urlImportsPlugin(),
+    externalPlugin(/^https?:\/\//, { sideEffects: false }),
     mdxPlugin(config),
     emptyModulesPlugin(config, /\.client(\.[jt]sx?)?$/),
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config, { liveReloadPort: options.liveReloadPort }),
     serverAssetsManifestPlugin(manifest),
     serverBareModulesPlugin(config, options.onWarning),
-    NodeProtocolExternalPlugin(),
+    externalPlugin(/^node:.*/, { sideEffects: false }),
   ].filter(isNotNull);
 
   if (config.serverPlatform !== "node") {
