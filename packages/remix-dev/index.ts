@@ -7,4 +7,4 @@ export { createApp } from "./cli/create";
 export { CliError } from "./cli/error";
 
 export type { AssetsManifest } from "./compiler/assets";
-export { getDependenciesToBundle } from "./compiler/dependencies";
+export { getDependenciesToBundle } from "./dependencies";

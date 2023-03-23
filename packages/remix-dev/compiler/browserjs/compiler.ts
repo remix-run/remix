@@ -5,7 +5,7 @@ import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfil
 
 import type { RemixConfig } from "../../config";
 import type { AssetsManifest } from "../assets";
-import { getAppDependencies } from "../dependencies";
+import { getAppDependencies } from "../../dependencies";
 import { loaders } from "../loaders";
 import type { CompileOptions } from "../options";
 import { browserRouteModulesPlugin } from "./plugins/routes";
