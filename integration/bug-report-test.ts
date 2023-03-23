@@ -48,29 +48,46 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/_index.jsx": js`
+      "app/routes/post/route.jsx": js`
         import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
-
+        import { useLoaderData } from "@remix-run/react";
+        import { Content } from "./content";
+        import { Heading } from "./heading";
+        
         export function loader() {
-          return json("pizza");
+          return json({
+            title: "Some post title",
+            content: "Some post content",
+          });
         }
-
-        export default function Index() {
-          let data = useLoaderData();
+        
+        export default function Post() {
+          const data = useLoaderData();
+        
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              <Heading title={data.title} />
+              <Content content={data.content} />
             </div>
-          )
-        }
+          );
+        }      
       `,
-
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+      // According to the docs, these should NOT be route modules
+      // This component is without a loader, so it will throw an error
+      "app/routes/post/heading.jsx": js`
+        export const Heading = ({ title }) => {
+          return <h1>{title}</h1>;
+        };      
+      `,
+      // This component has a loader, thus it renders the loader data
+      "app/routes/post/content.jsx": js`
+        export function loader() {
+          return "unexpected content";
         }
+        
+        export const Content = ({ content }) => {
+          return <article>{content}</article>;
+        };           
       `,
     },
   });
@@ -88,22 +105,26 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
-  let app = new PlaywrightFixture(appFixture, page);
-  // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
+test("requests to `/post` route", async () => {
+  let response = await fixture.requestDocument("/post");
+  expect(response.status).toBe(200);
+  expect(await response.text()).toMatch("Some post content");
+});
 
-  // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+test("requests to `/post/content` route should return 404", async () => {
+  let response = await fixture.requestDocument("/post/content");
+  // It should be 404 because the the modules inside routes/post are not supposed be route modules
+  expect(response.status).not.toBe(200);
+  expect(response.status).toBe(404);
+  expect(await response.text()).not.toMatch("unexpected content");
+});
 
-  // If you're not sure what's going on, you can "poke" the app, it'll
-  // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
-
-  // Go check out the other tests to see what else you can do.
+test("requests to `/post/heading` route should return 404", async () => {
+  let response = await fixture.requestDocument("/post/heading");
+  
+  // It should be 404 because the the modules inside routes/post are not supposed be route modules
+  expect(response.status).toBe(404);
+  expect(response.status).not.toBe(500);
 });
 
 ////////////////////////////////////////////////////////////////////////////////
