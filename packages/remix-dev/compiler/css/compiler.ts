@@ -12,14 +12,14 @@ import { loaders } from "../loaders";
 import type { CompileOptions } from "../options";
 // import { browserRouteModulesPlugin } from "../plugins/browserRouteModulesPlugin";
 // import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "../plugins/browserRouteModulesPlugin_v2";
-import { cssFilePlugin } from "../plugins/cssFilePlugin";
+import { cssFilePlugin } from "../plugins/cssImports";
 import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackagePlugin";
 import { emptyModulesPlugin } from "../plugins/emptyModulesPlugin";
 import { mdxPlugin } from "../plugins/mdx";
 import { urlImportsPlugin } from "../plugins/urlImportsPlugin";
 // import { cssBundleUpdatePlugin } from "../plugins/cssBundleUpdatePlugin";
-import { cssModulesPlugin } from "../plugins/cssModulesPlugin";
-import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImportsPlugin";
+import { cssModulesPlugin } from "../plugins/cssModuleImports";
+import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 import {
   cssBundleEntryModulePlugin,

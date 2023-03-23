@@ -9,7 +9,7 @@ import {
   serverBuildVirtualModule,
   assetsManifestVirtualModule,
 } from "../virtualModules";
-import { isCssSideEffectImportPath } from "../../plugins/cssSideEffectImportsPlugin";
+import { isCssSideEffectImportPath } from "../../plugins/cssSideEffectImports";
 import { createMatchPath } from "../../utils/tsconfig";
 import { getPreferredPackageManager } from "../../../cli/getPreferredPackageManager";
 
