@@ -10,9 +10,6 @@ test.describe("pathless layout routes", () => {
   test.beforeAll(async () => {
     appFixture = await createAppFixture(
       await createFixture({
-        future: {
-          v2_routeConvention: true,
-        },
         files: {
           "app/routes/_layout.jsx": js`
             import { Outlet } from "@remix-run/react";

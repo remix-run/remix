@@ -9,15 +9,6 @@ import type {
 } from "./routes";
 import { normalizeSlashes } from "./routes";
 import { createRouteId, defineRoutes } from "./routes";
-import {
-  escapeEnd,
-  escapeStart,
-  isSegmentSeparator,
-  optionalEnd,
-  optionalStart,
-  paramPrefixChar,
-  routeModuleExts,
-} from "./routesConvention";
 
 export function flatRoutes(
   appDirectory: string,
@@ -431,3 +422,17 @@ export function getRouteConflictErrorMessage(
     "\n"
   );
 }
+
+export const routeModuleExts = [".js", ".jsx", ".ts", ".tsx", ".md", ".mdx"];
+
+export function isSegmentSeparator(checkChar: string | undefined) {
+  if (!checkChar) return false;
+  return ["/", ".", path.win32.sep].includes(checkChar);
+}
+
+export let paramPrefixChar = "$" as const;
+export let escapeStart = "[" as const;
+export let escapeEnd = "]" as const;
+
+export let optionalStart = "(" as const;
+export let optionalEnd = ")" as const;

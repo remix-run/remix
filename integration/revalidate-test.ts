@@ -10,9 +10,6 @@ test.describe("Revalidation", () => {
   test.beforeAll(async () => {
     appFixture = await createAppFixture(
       await createFixture({
-        future: {
-          v2_routeConvention: true,
-        },
         files: {
           "app/root.jsx": js`
             import { Link, Outlet, Scripts, useNavigation } from "@remix-run/react";

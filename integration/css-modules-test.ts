@@ -20,7 +20,6 @@ test.describe("CSS Modules", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       future: {
-        v2_routeConvention: true,
         // Enable all CSS future flags to
         // ensure features don't clash
         unstable_cssSideEffectImports: true,

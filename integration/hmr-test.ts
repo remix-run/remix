@@ -14,7 +14,6 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
       appServerPort: options.appServerPort,
     },
     unstable_tailwind: true,
-    v2_routeConvention: true,
   },
   files: {
     "package.json": json({

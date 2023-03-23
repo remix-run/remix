@@ -30,7 +30,7 @@ Then, you can `import` the cookie and use it in your `loader` and/or `action`. T
 
 **Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.js` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
-```tsx filename=app/routes/index.tsx lines=[8,12-13,19-20,24]
+```tsx filename=app/routes/_index.tsx lines=[8,12-13,19-20,24]
 import type {
   ActionArgs,
   LoaderArgs,

@@ -25,9 +25,7 @@ test.describe("compiler", () => {
         "remix.config.js": js`
           let { getDependenciesToBundle } = require("@remix-run/dev");
           module.exports = {
-            future: {
-              v2_routeConvention: true,
-            },
+
             serverDependenciesToBundle: [
               "esm-only-pkg",
               "esm-only-single-export",
@@ -329,7 +327,6 @@ test.describe("compiler", () => {
 
       await expect(() =>
         createFixtureProject({
-          future: { v2_routeConvention: true },
           buildStdio,
           files: {
             "app/routes/_index.jsx": js`
