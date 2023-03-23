@@ -14,7 +14,7 @@ import { serverBuildVirtualModule } from "./compiler/serverjs/virtualModules";
 import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
 import { flatRoutes } from "./config/flat-routes";
 import { getPreferredPackageManager } from "./cli/getPreferredPackageManager";
-import { warnOnce } from "./compiler/warnings";
+import { warnOnce } from "./warnOnce";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];

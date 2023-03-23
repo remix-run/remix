@@ -1,5 +1,5 @@
 import type { RemixConfig } from "../config";
-import { warnOnce } from "./warnings";
+import { warnOnce } from "../warnOnce";
 import { logCompileFailure } from "./onCompileFailure";
 import type { CompileOptions } from "./options";
 import * as Compiler from "./compiler";

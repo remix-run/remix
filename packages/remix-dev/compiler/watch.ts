@@ -4,11 +4,11 @@ import * as path from "path";
 
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
+import { warnOnce } from "../warnOnce";
 import { logCompileFailure } from "./onCompileFailure";
 import type { CompileOptions } from "./options";
 import type { CompileResult } from "./compiler";
 import * as Compiler from "./compiler";
-import { warnOnce } from "./warnings";
 
 function isEntryPoint(config: RemixConfig, file: string): boolean {
   let appFile = path.relative(config.appDirectory, file);
