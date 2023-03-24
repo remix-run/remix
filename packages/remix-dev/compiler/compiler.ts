@@ -1,12 +1,12 @@
 import * as path from "path";
 import type esbuild from "esbuild";
+import { promises as fsp } from "fs";
 
 import type { RemixConfig } from "../config";
 import * as Manifest from "./manifest";
 import * as BrowserJS from "./browserjs";
 import * as ServerJS from "./serverjs";
 import type { CompileOptions } from "./options";
-import { writeFileSafe } from "./utils/fs";
 import type { Channel } from "../channel";
 import { createChannel } from "../channel";
 import * as CSS from "./css";
@@ -89,3 +89,9 @@ const writeAssetsManifest = async (
     `window.__remixManifest=${JSON.stringify(assetsManifest)};`
   );
 };
+
+async function writeFileSafe(file: string, contents: string): Promise<string> {
+  await fsp.mkdir(path.dirname(file), { recursive: true });
+  await fsp.writeFile(file, contents);
+  return file;
+}
