@@ -451,7 +451,6 @@ test.describe("navigation states", () => {
           search: "?redirected",
           hash: "",
           state: {
-            _isFetchActionRedirect: true,
             _isRedirect: true,
           },
           key: expect.any(String),

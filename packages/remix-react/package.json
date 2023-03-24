@@ -16,8 +16,8 @@
   "typings": "dist/index.d.ts",
   "module": "dist/esm/index.js",
   "dependencies": {
-    "@remix-run/router": "0.0.0-experimental-633882d6",
-    "react-router-dom": "0.0.0-experimental-633882d6",
+    "@remix-run/router": "0.0.0-experimental-0db28b07",
+    "react-router-dom": "0.0.0-experimental-0db28b07",
     "use-sync-external-store": "1.2.0"
   },
   "devDependencies": {

@@ -27,7 +27,7 @@ const routeFiles = {
   `,
 
   "app/routes/index.jsx": js`
-    import { useLoaderData, useLocation } from "@remix-run/react";
+    import { useLoaderData, useLocation, useRouteError } from "@remix-run/react";
 
     export function loader({ request }) {
       if (new URL(request.url).searchParams.has('loader')) {
@@ -52,7 +52,8 @@ const routeFiles = {
       );
     }
 
-    export function ErrorBoundary({ error }) {
+    export function ErrorBoundary() {
+      let error = useRouteError()
       return (
         <>
           <h1>Index Error</h1>
@@ -66,7 +67,7 @@ const routeFiles = {
   "app/routes/defer.jsx": js`
     import * as React from 'react';
     import { defer } from "@remix-run/server-runtime";
-    import { Await, useLoaderData, useRouteError } from "@remix-run/react";
+    import { Await, useAsyncError, useLoaderData, useRouteError } from "@remix-run/react";
 
     export function loader({ request }) {
       if (new URL(request.url).searchParams.has('loader')) {
@@ -95,16 +96,17 @@ const routeFiles = {
     }
 
     function AwaitError() {
-      let error = useRouteError();
+      let error = useAsyncError();
       return (
         <>
           <h2>Defer Error</h2>
-          <p>{error}</p>
+          <p>{error.message}</p>
         </>
       );
     }
 
-    export function ErrorBoundary({ error }) {
+    export function ErrorBoundary() {
+      let error = useRouteError();
       return (
         <>
           <h1>Index Error</h1>
