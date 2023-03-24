@@ -17,9 +17,6 @@ test.describe("flat routes", () => {
         "remix.config.js": js`
           /** @type {import('@remix-run/dev').AppConfig} */
           module.exports = {
-            future: {
-              v2_routeConvention: true,
-            },
             ignoredRouteFiles: ['${IGNORED_ROUTE}'],
           };
         `,
@@ -237,7 +234,6 @@ test.describe("", () => {
     console.error = () => {};
     await createFixtureProject({
       buildStdio,
-      future: { v2_routeConvention: true },
       files: {
         "app/routes/_index/route.jsx": js``,
         "app/routes/_index/utils.js": js``,

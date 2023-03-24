@@ -50,7 +50,6 @@ function runTests(ext: typeof extensions[number]) {
         unstable_postcss: true,
         unstable_tailwind: true,
         unstable_vanillaExtract: true,
-        v2_routeConvention: true,
       },
 
       files: {
