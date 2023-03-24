@@ -14,7 +14,7 @@ function hydrate() {
       document,
       <StrictMode>
         <RemixBrowser />
-      </StrictMode>
+      </StrictMode>,
     );
   });
 }
