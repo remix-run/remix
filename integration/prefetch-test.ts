@@ -8,7 +8,6 @@ import { PlaywrightFixture } from "./helpers/playwright-fixture";
 // Generate the test app using the given prefetch mode
 function fixtureFactory(mode: RemixLinkProps["prefetch"]) {
   return {
-    future: { v2_routeConvention: true },
     files: {
       "app/root.jsx": js`
         import {

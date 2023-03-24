@@ -29,7 +29,6 @@ export interface FutureConfig {
   unstable_tailwind: boolean;
   unstable_vanillaExtract: boolean | VanillaExtractOptions;
   v2_normalizeFormMethod: boolean;
-  v2_routeConvention: boolean;
 }
 
 export interface AssetsManifest {

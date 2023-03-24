@@ -249,13 +249,13 @@ You can programmatically create routes via the [`remix.config.js`][remix-config-
 
 Each file we put in the `app/routes` directory is called a Route Module and by following [the route filename convention][the-route-filename-convention], we can create the routing URL structure we're looking for. Remix uses [React Router][react-router] under the hood to handle this routing.
 
-💿 Let's start with the index route (`/`). To do that, create a file at `app/routes/index.tsx` and `export default` a component from that route module. For now, you can have it just say "Hello Index Route" or something.
+💿 Let's start with the index route (`/`). To do that, create a file at `app/routes/_index.tsx` and `export default` a component from that route module. For now, you can have it just say "Hello Index Route" or something.
 
 <details>
 
-<summary>app/routes/index.tsx</summary>
+<summary>app/routes/_index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx
+```tsx filename=app/routes/_index.tsx
 export default function IndexRoute() {
   return <div>Hello Index Route</div>;
 }
@@ -263,7 +263,7 @@ export default function IndexRoute() {
 
 </details>
 
-React Router supports "nested routing" which means we have parent-child relationships in our routes. The `app/routes/index.tsx` is a child of the `app/root.tsx` route. In nested routing, parents are responsible for laying out their children.
+React Router supports "nested routing" which means we have parent-child relationships in our routes. The `app/routes/_index.tsx` is a child of the `app/root.tsx` route. In nested routing, parents are responsible for laying out their children.
 
 💿 Update the `app/root.tsx` to position children. You'll do this with the `<Outlet />` component from `@remix-run/react`:
 
@@ -452,13 +452,13 @@ body {
 }
 ```
 
-💿 Now update `app/routes/index.tsx` to import that css file. Then add a `links` export (as described in [the documentation][links]) to add that link to the page.
+💿 Now update `app/routes/_index.tsx` to import that css file. Then add a `links` export (as described in [the documentation][links]) to add that link to the page.
 
 <details>
 
-<summary>app/routes/index.tsx</summary>
+<summary>app/routes/_index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx lines=[1,3,5-7]
+```tsx filename=app/routes/_index.tsx lines=[1,3,5-7]
 import type { LinksFunction } from "@remix-run/node";
 
 import stylesUrl from "~/styles/index.css";
@@ -1282,9 +1282,9 @@ export default function JokesRoute() {
 
 <details>
 
-<summary>app/routes/index.tsx</summary>
+<summary>app/routes/_index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx lines=[2,11-26]
+```tsx filename=app/routes/_index.tsx lines=[2,11-26]
 import type { LinksFunction } from "@remix-run/node";
 import { Link } from "@remix-run/react";
 
@@ -4836,7 +4836,7 @@ Meta tags are useful for SEO and social media. The tricky bit is that often the 
 
 This is why Remix has the [`meta`][meta] export. Why don't you go through and add a useful few meta tags to the following routes:
 
-- `app/routes/index.tsx`
+- `app/routes/_index.tsx`
 - `app/routes/login.tsx`
 - `app/routes/jokes/$jokeId.tsx` - (this one you can reference the joke's name in the title which is fun)
 
@@ -4958,9 +4958,9 @@ export function ErrorBoundary({ error }: { error: Error }) {
 
 <details>
 
-<summary>app/routes/index.tsx</summary>
+<summary>app/routes/_index.tsx</summary>
 
-```tsx filename=app/routes/index.tsx lines=[3,13-17]
+```tsx filename=app/routes/_index.tsx lines=[3,13-17]
 import type {
   LinksFunction,
   MetaFunction,
@@ -5523,7 +5523,7 @@ export const loader = async ({ request }: LoaderArgs) => {
 
 Wahoo! You can seriously do anything you can imagine with this API. You could even make a JSON API for a native version of your app if you wanted to. Lots of power here.
 
-💿 Feel free to throw a link to that RSS feed on `app/routes/index.tsx` and `app/routes/jokes.tsx` pages. Note that if you use `<Link />` you'll want to use the `reloadDocument` prop because you can't do a client-side transition to a URL that's not technically part of the React app.
+💿 Feel free to throw a link to that RSS feed on `app/routes/_index.tsx` and `app/routes/jokes.tsx` pages. Note that if you use `<Link />` you'll want to use the `reloadDocument` prop because you can't do a client-side transition to a URL that's not technically part of the React app.
 
 ## JavaScript...
 

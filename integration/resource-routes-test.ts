@@ -13,7 +13,6 @@ test.describe("loader in an app", async () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
       files: {
         "app/routes/_index.jsx": js`
           import { Form, Link } from "@remix-run/react";

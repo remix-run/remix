@@ -17,7 +17,6 @@ test.describe("useFetcher", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
       files: {
         "app/routes/resource-route-action-only.ts": js`
           import { json } from "@remix-run/node";

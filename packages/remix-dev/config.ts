@@ -8,7 +8,6 @@ import { coerce } from "semver";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
-import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/virtualModules";
 import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
@@ -46,7 +45,6 @@ interface FutureConfig {
   unstable_tailwind: boolean;
   unstable_vanillaExtract: boolean | VanillaExtractOptions;
   v2_normalizeFormMethod: boolean;
-  v2_routeConvention: boolean;
 }
 
 /**
@@ -535,17 +533,8 @@ export async function readConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  let routesConvention: typeof flatRoutes;
-
-  if (appConfig.future?.v2_routeConvention) {
-    routesConvention = flatRoutes;
-  } else {
-    warnOnce(flatRoutesWarning, "v2_routeConvention");
-    routesConvention = defineConventionalRoutes;
-  }
-
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
-    let conventionalRoutes = routesConvention(
+    let conventionalRoutes = flatRoutes(
       appDirectory,
       appConfig.ignoredRouteFiles
     );
@@ -598,7 +587,6 @@ export async function readConfig(
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract ?? false,
     v2_normalizeFormMethod: appConfig.future?.v2_normalizeFormMethod === true,
-    v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
   return {
@@ -704,10 +692,3 @@ export let serverBuildTargetWarning =
   "combination of `publicPath`, `serverBuildPath`, `serverConditions`, " +
   "`serverDependenciesToBundle`, `serverMainFields`, `serverMinify`, " +
   "`serverModuleFormat` and/or `serverPlatform` instead.";
-
-export let flatRoutesWarning =
-  "⚠️ DEPRECATED: The old nested folders route convention has been " +
-  "deprecated in favor of 'flat routes'.  Please enable the new routing " +
-  "convention via the `future.v2_routeConvention` flag in your " +
-  "`remix.config.js` file.  For more information, please see " +
-  "https://remix.run/docs/en/main/file-conventions/route-files-v2.";

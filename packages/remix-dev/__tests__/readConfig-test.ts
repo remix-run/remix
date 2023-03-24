@@ -30,7 +30,6 @@ describe("readConfig", () => {
           unstable_tailwind: expect.any(Boolean),
           unstable_vanillaExtract: expect.any(Boolean),
           v2_normalizeFormMethod: expect.any(Boolean),
-          v2_routeConvention: expect.any(Boolean),
         },
       },
       `
@@ -51,7 +50,6 @@ describe("readConfig", () => {
           "unstable_tailwind": Any<Boolean>,
           "unstable_vanillaExtract": Any<Boolean>,
           "v2_normalizeFormMethod": Any<Boolean>,
-          "v2_routeConvention": Any<Boolean>,
         },
         "mdx": undefined,
         "publicPath": "/build/",

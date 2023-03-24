@@ -100,7 +100,7 @@ export function links() {
 }
 ```
 
-```tsx filename=app/routes/dashboard/accounts.tsx
+```tsx filename=app/routes/dashboard.accounts.tsx
 import styles from "~/styles/accounts.css";
 
 export function links() {
@@ -108,7 +108,7 @@ export function links() {
 }
 ```
 
-```tsx filename=app/routes/dashboard/sales.tsx
+```tsx filename=app/routes/dashboard.sales.tsx
 import styles from "~/styles/sales.css";
 
 export function links() {
@@ -232,9 +232,9 @@ Note that the primary button's `links` include the base button's links. This way
 
 Because these buttons are not routes, and therefore not associated with a URL segment, Remix doesn't know when to prefetch, load, or unload the styles. We need to "surface" the links up to the routes that use the components.
 
-Consider that `routes/index.js` uses the primary button component:
+Consider that `routes/_index.js` uses the primary button component:
 
-```tsx filename=app/routes/index.js lines=[2-5,9]
+```tsx filename=app/routes/_index.js lines=[2-5,9]
 import styles from "~/styles/index.css";
 import {
   PrimaryButton,

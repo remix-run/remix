@@ -22,7 +22,7 @@ Remix can help you build optimistic UI with [`useNavigation`][use-navigation] an
 
 Consider the workflow for viewing and creating a new project. The project route loads the project and renders it.
 
-```tsx filename=app/routes/project/$id.tsx
+```tsx filename=app/routes/project.$id.tsx
 import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
@@ -59,7 +59,7 @@ export function ProjectView({ project }) {
 
 Now we can get to the fun part. Here's what a "new project" route might look like:
 
-```tsx filename=app/routes/projects/new.tsx
+```tsx filename=app/routes/projects.new.tsx
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import { Form } from "@remix-run/react";
@@ -92,7 +92,7 @@ export default function NewProject() {
 
 At this point, typically you'd render a busy spinner on the page while the user waits for the project to be sent to the server, added to the database, and sent back to the browser and then redirected to the project. Remix makes that pretty easy:
 
-```tsx filename=app/routes/projects/new.tsx lines=[3,15,27,29-31]
+```tsx filename=app/routes/projects.new.tsx lines=[3,15,27,29-31]
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import { Form, useNavigation } from "@remix-run/react";
@@ -133,7 +133,7 @@ export default function NewProject() {
 
 Since we know that almost every time this form is submitted it's going to succeed, we can just skip the busy spinners and show the UI as we know it's going to be: the `<ProjectView>`.
 
-```tsx filename=app/routes/projects/new.tsx lines=[5,17-23,31-32]
+```tsx filename=app/routes/projects.new.tsx lines=[5,17-23,31-32]
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { redirect } from "@remix-run/node"; // or cloudflare/deno
 import { Form, useNavigation } from "@remix-run/react";
@@ -178,7 +178,7 @@ One of the hardest parts about implementing optimistic UI is how to handle failu
 
 If you want to have more control over the UI when an error occurs and put the user right back where they were without losing any state, you can catch your own error and send it down through action data.
 
-```tsx filename=app/routes/projects/new.tsx lines=[5,15-23,27,47]
+```tsx filename=app/routes/projects.new.tsx lines=[5,15-23,27,47]
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import {
@@ -235,7 +235,7 @@ Now in the rare case of an error on the server, the UI reverts back to the form,
 
 For this to work best, you'll want a bit of client-side validation so that form-validation issues on the server don't cause the app to flash between optimistic UI and validation messages. Fortunately, [HTML usually has everything you need][html-input] built-in. The browser will validate the fields before the form is even submitted to the server to avoid sending bad data and getting flashes of optimistic UI.
 
-```tsx filename=app/routes/projects/new.tsx lines=[43,45]
+```tsx filename=app/routes/projects.new.tsx lines=[43,45]
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json, redirect } from "@remix-run/node"; // or cloudflare/deno
 import {

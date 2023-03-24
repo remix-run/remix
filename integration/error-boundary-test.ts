@@ -42,12 +42,9 @@ test.describe("ErrorBoundary", () => {
     console.error = () => {};
     fixture = await createFixture(
       {
-        future: {
-          v2_routeConvention: true,
-        },
         files: {
           "app/root.jsx": js`
-              import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
 
               export default function Root() {
                 return (
@@ -497,9 +494,6 @@ test.describe("ErrorBoundary", () => {
 
     test.beforeAll(async () => {
       fixture = await createFixture({
-        future: {
-          v2_routeConvention: true,
-        },
         files: {
           "app/root.jsx": js`
               import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -665,9 +659,6 @@ test.describe("loaderData in ErrorBoundary", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: {
-        v2_routeConvention: true,
-      },
       files: {
         "app/root.jsx": js`
             import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
@@ -1016,10 +1007,6 @@ test.describe("Default ErrorBoundary", () => {
     test.beforeAll(async () => {
       fixture = await createFixture(
         {
-          future: {
-            v2_routeConvention: true,
-            v2_errorBoundary: true,
-          },
           files: getFiles({ includeRootErrorBoundary: false }),
         },
         ServerMode.Development
@@ -1091,9 +1078,6 @@ test.describe("Default ErrorBoundary", () => {
     test.beforeAll(async () => {
       fixture = await createFixture(
         {
-          future: {
-            v2_routeConvention: true,
-          },
           files: getFiles({ includeRootErrorBoundary: true }),
         },
         ServerMode.Development
@@ -1159,9 +1143,6 @@ test.describe("Default ErrorBoundary", () => {
   test.describe("When the root route has a boundary but it also throws 😦", () => {
     test.beforeAll(async () => {
       fixture = await createFixture({
-        future: {
-          v2_routeConvention: true,
-        },
         files: getFiles({
           includeRootErrorBoundary: true,
           rootErrorBoundaryThrows: true,

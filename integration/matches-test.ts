@@ -10,7 +10,6 @@ test.describe("useMatches", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
       files: {
         "app/root.jsx": js`
           import * as React from 'react';

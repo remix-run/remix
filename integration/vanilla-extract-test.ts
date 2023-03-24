@@ -20,7 +20,6 @@ test.describe("Vanilla Extract", () => {
       test.beforeAll(async () => {
         fixture = await createFixture({
           future: {
-            v2_routeConvention: true,
             // Enable all CSS future flags to
             // ensure features don't clash
             unstable_cssSideEffectImports: true,
@@ -71,7 +70,7 @@ test.describe("Vanilla Extract", () => {
       let typeScriptFixture = () => ({
         "app/fixtures/typescript/styles.css.ts": js`
           import { style } from "@vanilla-extract/css";
-    
+
           export const root = style({
             background: 'peachpuff',
             padding: ${JSON.stringify(TEST_PADDING_VALUE)}
@@ -79,7 +78,7 @@ test.describe("Vanilla Extract", () => {
         `,
         "app/routes/typescript-test.jsx": js`
           import * as styles from "../fixtures/typescript/styles.css";
-    
+
           export default function() {
             return (
               <div data-testid="typescript" className={styles.root}>
@@ -102,7 +101,7 @@ test.describe("Vanilla Extract", () => {
       let javaScriptFixture = () => ({
         "app/fixtures/javascript/styles.css.js": js`
           import { style } from "@vanilla-extract/css";
-    
+
           export const root = style({
             background: 'peachpuff',
             padding: ${JSON.stringify(TEST_PADDING_VALUE)}
@@ -110,7 +109,7 @@ test.describe("Vanilla Extract", () => {
         `,
         "app/routes/javascript-test.jsx": js`
           import * as styles from "../fixtures/javascript/styles.css";
-    
+
           export default function() {
             return (
               <div data-testid="javascript" className={styles.root}>
@@ -134,7 +133,7 @@ test.describe("Vanilla Extract", () => {
         "app/fixtures/class-composition/styles.css.ts": js`
           import { style } from "@vanilla-extract/css";
           import { padding } from "./padding.css";
-    
+
           export const root = style([
             padding,
             { background: 'peachpuff' },
@@ -142,14 +141,14 @@ test.describe("Vanilla Extract", () => {
         `,
         "app/fixtures/class-composition/padding.css.ts": js`
           import { style } from "@vanilla-extract/css";
-    
+
           export const padding = style({
             padding: ${JSON.stringify(TEST_PADDING_VALUE)}
           });
         `,
         "app/routes/class-composition-test.jsx": js`
           import * as styles from "../fixtures/class-composition/styles.css";
-    
+
           export default function() {
             return (
               <div data-testid="class-composition" className={styles.root}>
@@ -173,7 +172,7 @@ test.describe("Vanilla Extract", () => {
         "app/fixtures/root-relative-class-composition/styles.css.ts": js`
           import { style } from "@vanilla-extract/css";
           import { padding } from "~/fixtures/root-relative-class-composition/padding.css";
-    
+
           export const root = style([
             padding,
             { background: 'peachpuff' },
@@ -181,14 +180,14 @@ test.describe("Vanilla Extract", () => {
         `,
         "app/fixtures/root-relative-class-composition/padding.css.ts": js`
           import { style } from "@vanilla-extract/css";
-    
+
           export const padding = style({
             padding: ${JSON.stringify(TEST_PADDING_VALUE)}
           });
         `,
         "app/routes/root-relative-class-composition-test.jsx": js`
           import * as styles from "../fixtures/root-relative-class-composition/styles.css";
-    
+
           export default function() {
             return (
               <div data-testid="root-relative-class-composition" className={styles.root}>
@@ -213,14 +212,14 @@ test.describe("Vanilla Extract", () => {
       let sideEffectImportsFixture = () => ({
         "app/fixtures/side-effect-imports/styles.css.ts": js`
           import { globalStyle } from "@vanilla-extract/css";
-    
+
           globalStyle(".side-effect-imports", {
             padding: ${JSON.stringify(TEST_PADDING_VALUE)}
           });
         `,
         "app/routes/side-effect-imports-test.jsx": js`
           import "../fixtures/side-effect-imports/styles.css";
-    
+
           export default function() {
             return (
               <div data-testid="side-effect-imports" className="side-effect-imports">
@@ -246,14 +245,14 @@ test.describe("Vanilla Extract", () => {
         `,
         "app/fixtures/side-effect-imports-within-child-compilation/nested-side-effect.css.ts": js`
           import { globalStyle } from "@vanilla-extract/css";
-    
+
           globalStyle(".side-effect-imports-within-child-compilation", {
             padding: ${JSON.stringify(TEST_PADDING_VALUE)}
           });
         `,
         "app/routes/side-effect-imports-within-child-compilation-test.jsx": js`
           import "../fixtures/side-effect-imports-within-child-compilation/styles.css";
-    
+
           export default function() {
             return (
               <div data-testid="side-effect-imports-within-child-compilation" className="side-effect-imports-within-child-compilation">
@@ -279,18 +278,18 @@ test.describe("Vanilla Extract", () => {
         "app/fixtures/stable-identifiers/styles_a.css.ts": js`
           import { style } from "@vanilla-extract/css";
           import { shared } from "./shared.css";
-    
+
           export const root = shared;
         `,
         "app/fixtures/stable-identifiers/styles_b.css.ts": js`
           import { style } from "@vanilla-extract/css";
           import { shared } from "./shared.css";
-    
+
           export const root = shared;
         `,
         "app/fixtures/stable-identifiers/shared.css.ts": js`
           import { style } from "@vanilla-extract/css";
-    
+
           export const shared = style({
             padding: ${JSON.stringify(TEST_PADDING_VALUE)},
             background: 'peachpuff',
@@ -299,9 +298,9 @@ test.describe("Vanilla Extract", () => {
         "app/routes/stable-identifiers-test.jsx": js`
           import * as styles_a from "../fixtures/stable-identifiers/styles_a.css";
           import * as styles_b from "../fixtures/stable-identifiers/styles_b.css";
-    
+
           const styles = new Set([styles_a.root, styles_b.root]);
-    
+
           export default function() {
             return (
               <div data-testid="stable-identifiers" className={Array.from(styles).join(' ')}>
@@ -330,7 +329,7 @@ test.describe("Vanilla Extract", () => {
       let imageUrlsViaCssUrlFixture = () => ({
         "app/fixtures/imageUrlsViaCssUrl/styles.css.ts": js`
           import { style } from "@vanilla-extract/css";
-    
+
           export const root = style({
             backgroundColor: 'peachpuff',
             backgroundImage: 'url("./image.svg")',
@@ -344,7 +343,7 @@ test.describe("Vanilla Extract", () => {
         `,
         "app/routes/image-urls-via-css-url-test.jsx": js`
           import * as styles from "../fixtures/imageUrlsViaCssUrl/styles.css";
-    
+
           export default function() {
             return (
               <div data-testid="image-urls-via-css-url" className={styles.root}>
@@ -374,7 +373,7 @@ test.describe("Vanilla Extract", () => {
       let imageUrlsViaRootRelativeCssUrlFixture = () => ({
         "app/fixtures/imageUrlsViaRootRelativeCssUrl/styles.css.ts": js`
           import { style } from "@vanilla-extract/css";
-    
+
           export const root = style({
             backgroundColor: 'peachpuff',
             backgroundImage: 'url("~/fixtures/imageUrlsViaRootRelativeCssUrl/image.svg")',
@@ -388,7 +387,7 @@ test.describe("Vanilla Extract", () => {
         `,
         "app/routes/image-urls-via-root-relative-css-url-test.jsx": js`
           import * as styles from "../fixtures/imageUrlsViaRootRelativeCssUrl/styles.css";
-    
+
           export default function() {
             return (
               <div data-testid="image-urls-via-root-relative-css-url" className={styles.root}>
@@ -419,7 +418,7 @@ test.describe("Vanilla Extract", () => {
         "app/fixtures/imageUrlsViaJsImport/styles.css.ts": js`
           import { style } from "@vanilla-extract/css";
           import href from "./image.svg";
-    
+
           export const root = style({
             backgroundColor: 'peachpuff',
             backgroundImage: 'url(' + href + ')',
@@ -433,7 +432,7 @@ test.describe("Vanilla Extract", () => {
         `,
         "app/routes/image-urls-via-js-import-test.jsx": js`
           import * as styles from "../fixtures/imageUrlsViaJsImport/styles.css";
-    
+
           export default function() {
             return (
               <div data-testid="image-urls-via-js-import" className={styles.root}>
@@ -464,7 +463,7 @@ test.describe("Vanilla Extract", () => {
         "app/fixtures/imageUrlsViaRootRelativeJsImport/styles.css.ts": js`
           import { style } from "@vanilla-extract/css";
           import href from "~/fixtures/imageUrlsViaRootRelativeJsImport/image.svg";
-    
+
           export const root = style({
             backgroundColor: 'peachpuff',
             backgroundImage: 'url(' + href + ')',
@@ -478,7 +477,7 @@ test.describe("Vanilla Extract", () => {
         `,
         "app/routes/image-urls-via-root-relative-js-import-test.jsx": js`
           import * as styles from "../fixtures/imageUrlsViaRootRelativeJsImport/styles.css";
-    
+
           export default function() {
             return (
               <div data-testid="image-urls-via-root-relative-js-import" className={styles.root}>
@@ -509,7 +508,7 @@ test.describe("Vanilla Extract", () => {
         "app/fixtures/imageUrlsViaClassComposition/styles.css.ts": js`
           import { style } from "@vanilla-extract/css";
           import { backgroundImage } from "./nested/backgroundImage.css";
-    
+
           export const root = style([
             backgroundImage,
             {
@@ -520,7 +519,7 @@ test.describe("Vanilla Extract", () => {
         `,
         "app/fixtures/imageUrlsViaClassComposition/nested/backgroundImage.css.ts": js`
           import { style } from "@vanilla-extract/css";
-    
+
           export const backgroundImage = style({
             backgroundImage: 'url(../image.svg)',
           });
@@ -532,7 +531,7 @@ test.describe("Vanilla Extract", () => {
         `,
         "app/routes/image-urls-via-class-composition-test.jsx": js`
           import * as styles from "../fixtures/imageUrlsViaClassComposition/styles.css";
-    
+
           export default function() {
             return (
               <div data-testid="image-urls-via-class-composition" className={styles.root}>
@@ -563,7 +562,7 @@ test.describe("Vanilla Extract", () => {
         "app/fixtures/imageUrlsViaJsImportClassComposition/styles.css.ts": js`
           import { style } from "@vanilla-extract/css";
           import { backgroundImage } from "./nested/backgroundImage.css";
-    
+
           export const root = style([
             backgroundImage,
             {
@@ -575,7 +574,7 @@ test.describe("Vanilla Extract", () => {
         "app/fixtures/imageUrlsViaJsImportClassComposition/nested/backgroundImage.css.ts": js`
           import { style } from "@vanilla-extract/css";
           import href from "../image.svg";
-    
+
           export const backgroundImage = style({
             backgroundImage: 'url(' + href + ')',
           });
@@ -587,7 +586,7 @@ test.describe("Vanilla Extract", () => {
         `,
         "app/routes/image-urls-via-js-import-class-composition-test.jsx": js`
           import * as styles from "../fixtures/imageUrlsViaJsImportClassComposition/styles.css";
-    
+
           export default function() {
             return (
               <div data-testid="image-urls-via-js-import-class-composition" className={styles.root}>

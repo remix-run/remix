@@ -45,7 +45,6 @@ const DEFAULT_CONFIG: SerializableTsConfigJson = {
 // https://github.com/dividab/tsconfig-paths/pull/208
 test("should output default tsconfig if file is empty", async () => {
   let fixture = await createFixture({
-    future: { v2_routeConvention: true },
     files: {
       "tsconfig.json": json({ compilerOptions: { baseUrl: "." } }),
     },
@@ -65,7 +64,6 @@ test("should add/update mandatory config", async () => {
   };
   delete config.compilerOptions.moduleResolution; // this is required by esbuild
   let fixture = await createFixture({
-    future: { v2_routeConvention: true },
     files: { "tsconfig.json": json(config) },
   });
 
@@ -84,7 +82,6 @@ test("shouldn't change suggested config if set", async () => {
   };
 
   let fixture = await createFixture({
-    future: { v2_routeConvention: true },
     files: {
       "tsconfig.json": json(config),
     },
@@ -105,7 +102,6 @@ test("shouldn't change suggested config for moduleResolution: bundler", async ()
   };
 
   let fixture = await createFixture({
-    future: { v2_routeConvention: true },
     files: {
       "tsconfig.json": json(config),
     },
@@ -128,7 +124,6 @@ test("allows for `extends` in tsconfig", async () => {
   };
 
   let fixture = await createFixture({
-    future: { v2_routeConvention: true },
     files: {
       "tsconfig.json": json(config),
       "tsconfig.base.json": json(baseConfig),
@@ -155,7 +150,6 @@ test("works with jsconfig", async () => {
   };
 
   let fixture = await createFixture({
-    future: { v2_routeConvention: true },
     files: {
       "jsconfig.json": json(config),
     },
