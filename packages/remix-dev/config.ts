@@ -44,7 +44,6 @@ interface FutureConfig {
   unstable_postcss: boolean;
   unstable_tailwind: boolean;
   unstable_vanillaExtract: boolean | VanillaExtractOptions;
-  v2_normalizeFormMethod: boolean;
 }
 
 /**
@@ -586,7 +585,6 @@ export async function readConfig(
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract ?? false,
-    v2_normalizeFormMethod: appConfig.future?.v2_normalizeFormMethod === true,
   };
 
   return {
