@@ -88,6 +88,7 @@ const createEsbuildConfig = (
   let isCssBuild = build === "css";
   let entryPoints: Record<string, string>;
 
+  let routeModulePaths = new Map<string, string>();
   if (isCssBuild) {
     entryPoints = {
       // "css-bundle": cssBundleEntryModuleId,
@@ -101,7 +102,16 @@ const createEsbuildConfig = (
       // All route entry points are virtual modules that will be loaded by the
       // browserEntryPointsPlugin. This allows us to tree-shake server-only code
       // that we don't want to run in the browser (i.e. action & loader).
-      entryPoints[id] = config.routes[id].file + "?browser";
+      entryPoints[id] = config.routes[id].file;
+      if (!config.future.unstable_dev) {
+        entryPoints[id] += "?browser";
+      } else {
+        routeModulePaths.set(config.routes[id].file, config.routes[id].file);
+        routeModulePaths.set(
+          path.resolve(config.appDirectory, config.routes[id].file),
+          config.routes[id].file
+        );
+      }
     }
   }
 
@@ -138,7 +148,12 @@ const createEsbuildConfig = (
     externalPlugin(/^https?:\/\//, { sideEffects: false }),
     mdxPlugin(config),
     config.future.unstable_dev
-      ? browserRouteModulesPlugin_v2(config, /\?browser$/, onLoader, mode)
+      ? browserRouteModulesPlugin_v2(
+          config,
+          routeModulePaths,
+          onLoader,
+          mode
+        )
       : browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),

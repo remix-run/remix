@@ -4,6 +4,7 @@ import type esbuild from "esbuild";
 import generate from "@babel/generator";
 
 import type { RemixConfig } from "../../../config";
+import { routeModuleExts } from "../../../config/routesConvention";
 import invariant from "../../../invariant";
 import * as Transform from "../../../transform";
 import type { CompileOptions } from "../../options";
@@ -75,7 +76,7 @@ type Route = RemixConfig["routes"][string];
  */
 export function browserRouteModulesPlugin(
   config: RemixConfig,
-  suffixMatcher: RegExp,
+  routeModulePaths: Map<string, string>,
   onLoader: (filename: string, code: string) => void,
   mode: CompileOptions["mode"]
 ): esbuild.Plugin {
@@ -90,17 +91,26 @@ export function browserRouteModulesPlugin(
         },
         new Map()
       );
-      build.onResolve({ filter: suffixMatcher }, (args) => {
+      build.onResolve({ filter: /.*/ }, (args) => {
+        // We have to map all imports from route modules back to the virtual
+        // module in the graph otherwise we will be duplicating portions of 
+        // route modules across the build.
+        let routeModulePath = routeModulePaths.get(args.path);
+        if (!routeModulePath && args.resolveDir && args.path.startsWith(".")) {
+          let lookup = resolvePath(path.join(args.resolveDir, args.path));
+          routeModulePath = routeModulePaths.get(lookup);
+        }
+        if (!routeModulePath) return;
         return {
-          path: args.path,
+          path: routeModulePath,
           namespace: "browser-route-module",
         };
       });
 
       build.onLoad(
-        { filter: suffixMatcher, namespace: "browser-route-module" },
+        { filter: /.*/, namespace: "browser-route-module" },
         async (args) => {
-          let file = args.path.replace(suffixMatcher, "");
+          let file = args.path;
 
           if (/\.mdx?$/.test(file)) {
             let route = routesByFile.get(file);
@@ -150,4 +160,19 @@ export function browserRouteModulesPlugin(
       );
     },
   };
+}
+
+function resolvePath(path: string) {
+  if (fs.existsSync(path) && fs.statSync(path).isFile()) {
+    return path;
+  }
+
+  for (let ext of routeModuleExts) {
+    let withExt = path + ext;
+    if (fs.existsSync(withExt) && fs.statSync(withExt).isFile()) {
+      return withExt;
+    }
+  }
+
+  return path;
 }
