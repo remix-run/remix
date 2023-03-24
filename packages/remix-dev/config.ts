@@ -597,6 +597,7 @@ export async function readConfig(
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract ?? false,
+    v2_normalizeFormMethod: appConfig.future?.v2_normalizeFormMethod === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 

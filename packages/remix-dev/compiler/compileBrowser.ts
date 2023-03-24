@@ -75,13 +75,6 @@ const writeAssetsManifest = async (
   );
 };
 
-const isCssBundlingEnabled = (config: RemixConfig): boolean =>
-  Boolean(
-    config.future.unstable_cssModules ||
-      config.future.unstable_cssSideEffectImports ||
-      config.future.unstable_vanillaExtract
-  );
-
 let cssBundleHrefChannel: Channel<string | undefined>;
 
 // This function gives esbuild access to the latest channel value on rebuilds
@@ -155,10 +148,7 @@ const createEsbuildConfig = (
     };
 
     plugins.push(hmrPlugin({ remixConfig: config }));
-
-    if (isCssBundlingEnabled(config)) {
-      plugins.push(cssBundleUpdatePlugin({ getCssBundleHref }));
-    }
+    plugins.push(cssBundleUpdatePlugin({ getCssBundleHref }));
   }
 
   return {
@@ -240,10 +230,6 @@ export const createBrowserCompiler = (
     };
 
     let cssBuildTask = async () => {
-      if (!isCssBundlingEnabled(remixConfig)) {
-        return;
-      }
-
       try {
         // The types aren't great when combining write: false and incremental: true
         //  so we need to assert that it's an incremental build
@@ -335,9 +321,7 @@ export const createBrowserCompiler = (
     };
 
     // Reset the channel to co-ordinate the CSS and app builds
-    if (isCssBundlingEnabled(remixConfig)) {
-      cssBundleHrefChannel = createChannel();
-    }
+    cssBundleHrefChannel = createChannel();
 
     let [cssBundleHref, metafile] = await Promise.all([
       cssBuildTask(),
