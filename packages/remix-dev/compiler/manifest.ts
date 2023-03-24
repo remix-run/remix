@@ -5,7 +5,6 @@ import type { RemixConfig } from "../config";
 import invariant from "../invariant";
 import { getRouteModuleExports } from "./routeExports";
 import { getHash } from "./utils/crypto";
-import { createUrl } from "./utils/url";
 
 type Route = RemixConfig["routes"][string];
 
@@ -128,6 +127,10 @@ export async function create({
   ).slice(0, 8);
 
   return { version, entry, routes, cssBundleHref, hmr };
+}
+
+function createUrl(publicPath: string, file: string): string {
+  return publicPath + file.split(path.win32.sep).join("/");
 }
 
 type ImportsCache = { [routeId: string]: string[] };
