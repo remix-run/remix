@@ -18,9 +18,6 @@ const IDLE_STATE = {
   state: "idle",
 };
 
-// These are a copy of the tests from navigation-state-test to test with
-// future.v2_normalizeFormMethod enabled.  Once we're in v2, we can delete
-// the other file and keep this one.
 test.describe("navigation states", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
@@ -34,11 +31,6 @@ test.describe("navigation states", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: {
-          v2_normalizeFormMethod: true,
-        },
-      },
       files: {
         "app/root.jsx": js`
           import { useMemo, useRef } from "react";

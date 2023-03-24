@@ -128,7 +128,6 @@ export function createRemixStub(
           unstable_postcss: false,
           unstable_tailwind: false,
           v2_headers: false,
-          v2_normalizeFormMethod: false,
           ...remixConfigFuture,
         },
         manifest: createManifest(routerRef.current.routes),

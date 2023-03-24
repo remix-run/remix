@@ -1,6 +1,8 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export type {
+  Fetcher,
+  FetcherWithComponents,
   FormEncType,
   FormMethod,
   FormProps,
@@ -21,6 +23,8 @@ export {
   useAsyncValue,
   isRouteErrorResponse,
   useBeforeUnload,
+  useFetcher,
+  useFetchers,
   useFormAction,
   useHref,
   useLocation,
@@ -42,7 +46,6 @@ export {
 
 export type {
   AwaitProps,
-  FetcherWithComponents,
   RouteMatch,
   RemixNavLinkProps as NavLinkProps,
   RemixLinkProps as LinkProps,
@@ -56,8 +59,6 @@ export {
   NavLink,
   PrefetchPageLinks,
   LiveReload,
-  useFetcher,
-  useFetchers,
   useLoaderData,
   useRouteLoaderData,
   useMatches,
@@ -77,8 +78,6 @@ export { ScrollRestoration } from "./scroll-restoration";
 
 export type { RemixServerProps } from "./server";
 export { RemixServer } from "./server";
-
-export type { Fetcher } from "./transition";
 
 export type {
   FutureConfig as UNSAFE_FutureConfig,

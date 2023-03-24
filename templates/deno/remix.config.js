@@ -20,6 +20,5 @@ module.exports = {
   // publicPath: "/build/",
   future: {
     v2_headers: true,
-    v2_normalizeFormMethod: true,
   },
 };

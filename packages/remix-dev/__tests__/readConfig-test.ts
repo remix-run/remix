@@ -28,7 +28,6 @@ describe("readConfig", () => {
           unstable_postcss: expect.any(Boolean),
           unstable_tailwind: expect.any(Boolean),
           v2_headers: expect.any(Boolean),
-          v2_normalizeFormMethod: expect.any(Boolean),
         },
       },
       `
@@ -47,7 +46,6 @@ describe("readConfig", () => {
           "unstable_tailwind": Any<Boolean>,
           "v2_dev": false,
           "v2_headers": Any<Boolean>,
-          "v2_normalizeFormMethod": Any<Boolean>,
         },
         "mdx": undefined,
         "postcss": false,

@@ -17,11 +17,6 @@ test.describe("actions", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: {
-          v2_normalizeFormMethod: true,
-        },
-      },
       files: {
         "app/routes/urlencoded.jsx": js`
           import { Form, useActionData } from "@remix-run/react";

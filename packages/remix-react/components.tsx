@@ -9,14 +9,7 @@ import type {
   UNSAFE_DeferredData as DeferredData,
   TrackedPromise,
 } from "@remix-run/router";
-import type {
-  LinkProps,
-  NavLinkProps,
-  FormProps,
-  Params,
-  SubmitFunction,
-  V7_FormMethod,
-} from "react-router-dom";
+import type { LinkProps, NavLinkProps, Params } from "react-router-dom";
 import {
   Await as AwaitRR,
   Link as RouterLink,
@@ -26,8 +19,6 @@ import {
   UNSAFE_DataRouterStateContext as DataRouterStateContext,
   matchRoutes,
   useAsyncError,
-  useFetcher as useFetcherRR,
-  useFetchers as useFetchersRR,
   useActionData as useActionDataRR,
   useLoaderData as useLoaderDataRR,
   useRouteLoaderData as useRouteLoaderDataRR,
@@ -54,7 +45,6 @@ import {
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml, escapeHtml } from "./markup";
 import type { MetaDescriptor, MetaMatch, MetaMatches } from "./routeModules";
-import type { Fetcher, FetcherStates } from "./transition";
 import { logDeprecationOnce } from "./warnings";
 
 function useDataRouterContext() {
@@ -1111,122 +1101,6 @@ export function useRouteLoaderData<T = AppData>(
  */
 export function useActionData<T = AppData>(): SerializeFrom<T> | undefined {
   return useActionDataRR() as SerializeFrom<T> | undefined;
-}
-
-/**
- * Provides all fetchers currently on the page. Useful for layouts and parent
- * routes that need to provide pending/optimistic UI regarding the fetch.
- *
- * @see https://remix.run/api/remix#usefetchers
- */
-export function useFetchers(): Fetcher[] {
-  let fetchers = useFetchersRR();
-  return fetchers.map((f) => convertRouterFetcherToRemixFetcher(f));
-}
-
-export type FetcherWithComponents<TData> = Fetcher<TData> & {
-  Form: React.ForwardRefExoticComponent<
-    FormProps & React.RefAttributes<HTMLFormElement>
-  >;
-  submit: SubmitFunction;
-  load: (href: string) => void;
-};
-
-/**
- * Interacts with route loaders and actions without causing a navigation. Great
- * for any interaction that stays on the same page.
- *
- * @see https://remix.run/hooks/use-fetcher
- */
-export function useFetcher<TData = any>(): FetcherWithComponents<
-  SerializeFrom<TData>
-> {
-  let fetcherRR = useFetcherRR();
-
-  return React.useMemo(() => {
-    let remixFetcher = convertRouterFetcherToRemixFetcher(fetcherRR);
-    let fetcherWithComponents = {
-      ...remixFetcher,
-      load: fetcherRR.load,
-      submit: fetcherRR.submit,
-      Form: fetcherRR.Form,
-    };
-    return fetcherWithComponents;
-  }, [fetcherRR]);
-}
-
-function convertRouterFetcherToRemixFetcher(
-  fetcherRR: Omit<ReturnType<typeof useFetcherRR>, "load" | "submit" | "Form">
-): Fetcher {
-  let {
-    state,
-    formMethod,
-    formAction,
-    formEncType,
-    formData,
-    json,
-    text,
-    data,
-  } = fetcherRR;
-
-  if (state === "submitting") {
-    if (
-      formMethod &&
-      formAction &&
-      formEncType &&
-      (formData || json !== undefined || text !== undefined)
-    ) {
-      // @ts-expect-error formData/json/text are mutually exclusive in the type,
-      // so TS can't be sure these meet that criteria, but as a straight
-      // assignment from the RR fetcher we know they will
-      let fetcher: FetcherStates["Submitting"] = {
-        state,
-        formMethod: formMethod.toUpperCase() as V7_FormMethod,
-        formAction,
-        formEncType,
-        formData,
-        json,
-        text,
-        data,
-      };
-      return fetcher;
-    } else {
-      // "submitting" will always have these fields
-      invariant(
-        false,
-        "Encountered an unexpected fetcher scenario in useFetcher()"
-      );
-    }
-  }
-
-  if (state === "loading") {
-    // @ts-expect-error formData/json/text are mutually exclusive in the type,
-    // so TS can't be sure these meet that criteria, but as a straight
-    // assignment from the RR fetcher we know they will
-    let fetcher: FetcherStates["Loading"] = {
-      state,
-      formMethod: formMethod?.toUpperCase() as V7_FormMethod,
-      formAction,
-      formEncType,
-      formData,
-      json,
-      text,
-      data,
-    };
-    return fetcher;
-  }
-
-  let fetcher: FetcherStates["Idle"] = {
-    state: "idle",
-    formMethod: undefined,
-    formAction: undefined,
-    formEncType: undefined,
-    formData: undefined,
-    json: undefined,
-    text: undefined,
-    data,
-  };
-  return fetcher;
 }
 
 // Dead Code Elimination magic for production builds.

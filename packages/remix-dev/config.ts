@@ -46,7 +46,6 @@ interface FutureConfig {
   /** @deprecated Use the `tailwind` config option instead */
   unstable_tailwind: boolean;
   v2_headers: boolean;
-  v2_normalizeFormMethod: boolean;
 }
 
 /**
@@ -386,10 +385,6 @@ export async function readConfig(
     }
   }
 
-  if (!appConfig.future?.v2_normalizeFormMethod) {
-    formMethodWarning();
-  }
-
   if (!appConfig.future?.v2_headers) {
     headersWarning();
   }
@@ -701,7 +696,6 @@ export async function readConfig(
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     v2_headers: appConfig.future?.v2_headers === true,
-    v2_normalizeFormMethod: appConfig.future?.v2_normalizeFormMethod === true,
   };
 
   return {
@@ -826,12 +820,6 @@ let futureFlagWarning =
       ],
     });
   };
-
-let formMethodWarning = futureFlagWarning({
-  message: "The `formMethod` API is changing in v2",
-  flag: "v2_normalizeFormMethod",
-  link: "https://remix.run/docs/en/v1.15.0/pages/v2#formMethod",
-});
 
 let headersWarning = futureFlagWarning({
   message: "The route `headers` API is changing in v2",

@@ -40,11 +40,6 @@ test.describe("non-aborted", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      config: {
-        future: {
-          v2_normalizeFormMethod: true,
-        },
-      },
       files: {
         "app/components/counter.tsx": js`
           import { useState } from "react";

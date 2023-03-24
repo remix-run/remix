@@ -33,7 +33,6 @@ export interface FutureConfig {
   /** @deprecated Use the `tailwind` config option instead */
   unstable_tailwind: boolean;
   v2_headers: boolean;
-  v2_normalizeFormMethod: boolean;
 }
 
 export interface AssetsManifest {
