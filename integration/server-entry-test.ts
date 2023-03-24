@@ -48,7 +48,7 @@ test.describe("Default Server Entry", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           export default function () {
             return <p>Hello World</p>
           }
@@ -69,7 +69,7 @@ test.describe("Default Server Entry (React 17)", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           export default function () {
             return <p>Hello World</p>
           }
