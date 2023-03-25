@@ -5,39 +5,9 @@ import type { RemixConfig } from "../config";
 import invariant from "../invariant";
 import { getRouteModuleExports } from "./routeExports";
 import { getHash } from "./utils/crypto";
+import { type Manifest } from "../manifest";
 
 type Route = RemixConfig["routes"][string];
-
-type Manifest = {
-  version: string;
-  url?: string;
-  entry: {
-    module: string;
-    imports: string[];
-  };
-  routes: {
-    [routeId: string]: {
-      id: string;
-      parentId?: string;
-      path?: string;
-      index?: boolean;
-      caseSensitive?: boolean;
-      module: string;
-      imports?: string[];
-      hasAction: boolean;
-      hasLoader: boolean;
-      hasCatchBoundary: boolean;
-      hasErrorBoundary: boolean;
-    };
-  };
-  cssBundleHref?: string;
-  hmr?: {
-    timestamp: number;
-    runtime: string;
-    routes: Record<string, { loaderHash: string }>;
-  };
-};
-export type Type = Manifest;
 
 export async function create({
   config,

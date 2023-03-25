@@ -1,9 +1,9 @@
 import * as path from "path";
-import type esbuild from "esbuild";
 import { promises as fsp } from "fs";
 
 import type { RemixConfig } from "../config";
-import * as Manifest from "./manifest";
+import { type Manifest } from "../manifest";
+import { create as createManifest } from "./manifest";
 import * as BrowserJS from "./browserjs";
 import * as ServerJS from "./serverjs";
 import type { CompileOptions } from "./options";
@@ -11,16 +11,8 @@ import type { Channel } from "../channel";
 import { createChannel } from "../channel";
 import * as CSS from "./css";
 
-export type CompileResult = {
-  assetsManifest: Manifest.Type;
-  metafile: {
-    browser: esbuild.Metafile;
-    server: esbuild.Metafile;
-  };
-};
-
 type Compiler = {
-  compile: () => Promise<CompileResult | undefined>;
+  compile: () => Promise<Manifest | undefined>;
   dispose: () => void;
 };
 
@@ -45,24 +37,18 @@ export let create = (
           css.compile(),
           browser.compile(),
         ]);
-        let manifest = await Manifest.create({
+        let manifest = await createManifest({
           config,
           metafile: metafile,
           cssBundleHref,
           hmr,
         });
-        let [serverMetafile] = await Promise.all([
+        await Promise.all([
           server.compile(manifest),
           writeAssetsManifest(config, manifest),
         ]);
 
-        return {
-          assetsManifest: manifest,
-          metafile: {
-            browser: metafile,
-            server: serverMetafile,
-          },
-        };
+        return manifest;
       } catch (error: unknown) {
         options.onCompileFailure?.(error as Error);
         return undefined;
@@ -78,7 +64,7 @@ export let create = (
 
 const writeAssetsManifest = async (
   config: RemixConfig,
-  assetsManifest: Manifest.Type
+  assetsManifest: Manifest
 ) => {
   let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
 
