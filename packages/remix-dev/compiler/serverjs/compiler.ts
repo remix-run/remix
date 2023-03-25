@@ -6,7 +6,7 @@ import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfil
 import invariant from "../../invariant";
 import type { RemixConfig } from "../../config";
 import { type Manifest } from "../../manifest";
-import { loaders } from "../loaders";
+import { loaders } from "../utils/loaders";
 import type { CompileOptions } from "../options";
 import { cssModulesPlugin } from "../plugins/cssModuleImports";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";

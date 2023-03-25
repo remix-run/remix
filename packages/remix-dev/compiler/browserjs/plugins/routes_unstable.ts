@@ -7,7 +7,7 @@ import type { RemixConfig } from "../../../config";
 import invariant from "../../../invariant";
 import * as Transform from "../../../transform";
 import type { CompileOptions } from "../../options";
-import { getLoaderForFile } from "../../loaders";
+import { getLoaderForFile } from "../../utils/loaders";
 import { getRouteModuleExports } from "../../routeExports";
 import { applyHMR } from "./hmr";
 
