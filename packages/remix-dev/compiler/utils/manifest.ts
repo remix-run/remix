@@ -1,11 +1,12 @@
 import * as path from "path";
+import { promises as fsp } from "fs";
 import type * as esbuild from "esbuild";
 
-import type { RemixConfig } from "../config";
-import invariant from "../invariant";
-import { getRouteModuleExports } from "./routeExports";
-import { getHash } from "./utils/crypto";
-import { type Manifest } from "../manifest";
+import type { RemixConfig } from "../../config";
+import invariant from "../../invariant";
+import { type Manifest } from "../../manifest";
+import { getRouteModuleExports } from "../routeExports";
+import { getHash } from "./crypto";
 
 type Route = RemixConfig["routes"][string];
 
@@ -97,6 +98,23 @@ export async function create({
   ).slice(0, 8);
 
   return { version, entry, routes, cssBundleHref, hmr };
+}
+
+export const write = async (config: RemixConfig, assetsManifest: Manifest) => {
+  let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
+
+  assetsManifest.url = config.publicPath + filename;
+
+  await writeFileSafe(
+    path.join(config.assetsBuildDirectory, filename),
+    `window.__remixManifest=${JSON.stringify(assetsManifest)};`
+  );
+};
+
+async function writeFileSafe(file: string, contents: string): Promise<string> {
+  await fsp.mkdir(path.dirname(file), { recursive: true });
+  await fsp.writeFile(file, contents);
+  return file;
 }
 
 function createUrl(publicPath: string, file: string): string {

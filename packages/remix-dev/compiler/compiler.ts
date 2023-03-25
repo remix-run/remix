@@ -1,9 +1,9 @@
-import * as path from "path";
-import { promises as fsp } from "fs";
-
 import type { RemixConfig } from "../config";
 import { type Manifest } from "../manifest";
-import { create as createManifest } from "./manifest";
+import {
+  create as createManifest,
+  write as writeManifest,
+} from "./utils/manifest";
 import * as BrowserJS from "./browserjs";
 import * as ServerJS from "./serverjs";
 import type { CompileOptions } from "./options";
@@ -45,7 +45,7 @@ export let create = (
         });
         await Promise.all([
           server.compile(manifest),
-          writeAssetsManifest(config, manifest),
+          writeManifest(config, manifest),
         ]);
 
         return manifest;
@@ -61,23 +61,3 @@ export let create = (
     },
   };
 };
-
-const writeAssetsManifest = async (
-  config: RemixConfig,
-  assetsManifest: Manifest
-) => {
-  let filename = `manifest-${assetsManifest.version.toUpperCase()}.js`;
-
-  assetsManifest.url = config.publicPath + filename;
-
-  await writeFileSafe(
-    path.join(config.assetsBuildDirectory, filename),
-    `window.__remixManifest=${JSON.stringify(assetsManifest)};`
-  );
-};
-
-async function writeFileSafe(file: string, contents: string): Promise<string> {
-  await fsp.mkdir(path.dirname(file), { recursive: true });
-  await fsp.writeFile(file, contents);
-  return file;
-}
