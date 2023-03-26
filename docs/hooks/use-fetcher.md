@@ -72,7 +72,7 @@ You can know the state of the fetcher with `fetcher.state`. It will be one of:
 
 ## `fetcher.type`
 
-<docs-warning>`fetcher.type` is deprecated and will be removed in v2. [See the v2 guide][v2]</docs-warning>
+<docs-warning>`fetcher.type` will be removed in v2. For instructions on preparing for this change see the [v2 guide][v2guide].</docs-warning>
 
 This is the type of state the fetcher is in. It's like `fetcher.state`, but more granular. Depending on the fetcher's state, the types can be the following:
 
@@ -94,7 +94,7 @@ This is the type of state the fetcher is in. It's like `fetcher.state`, but more
 
 ## `fetcher.submission`
 
-<docs-warning>`fetcher.submission` is deprecated and will be removed in v2. Instead, the fields inside of `submission` have been flattened onto the `fetcher` itself (`fetcher.formMethod`, `fetcher.formAction`, `fetcher.formData`, `fetcher.formEncType`)</docs-warning>
+<docs-warning>`fetcher.submission` will be flattened into the fetcher object itself in v2. For instructions on preparing for this change see the [v2 guide][v2guide].</docs-warning>
 
 When using `<fetcher.Form>` or `fetcher.submit()`, the form submission is available to build optimistic UI.
 
@@ -438,4 +438,4 @@ function CitySearchCombobox() {
 [usetransition]: ./use-transition
 [useactiondata]: ./use-action-data
 [useloaderdata]: ./use-loader-data
-[v2]: ../pages/v2#usefetcher
+[v2guide]: ../pages/v2#usefetcher

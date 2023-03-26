@@ -360,7 +360,7 @@ let linksWarning =
   "https://remix.run/docs/en/v1.15.0/pages/v2#links-imagesizes-and-imagesrcset";
 
 let useTransitionWarning =
-  "⚠️ REMIX FUTURE CHANGE: `useTransition` will be removed in favor of `useNavigation`. " +
+  "⚠️ REMIX FUTURE CHANGE: `useTransition` will be removed in v2 in favor of `useNavigation`. " +
   "You can prepare for this change at your convenience by updating to `useNavigation`." +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#usetransition";
