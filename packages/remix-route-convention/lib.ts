@@ -5,7 +5,7 @@ import type {
   RouteManifest,
   DefineRouteFunction,
   DefineRoutesFunction,
-} from "@remix-run/dev/config/routes";
+} from "@remix-run/dev/dist/config/routes";
 import {
   createRouteId,
   escapeStart,
@@ -13,7 +13,7 @@ import {
   optionalStart,
   optionalEnd,
   paramPrefixChar,
-} from "@remix-run/dev/config/routes";
+} from "@remix-run/dev/dist/config/routes";
 
 const routeModuleExts = [".js", ".jsx", ".ts", ".tsx", ".md", ".mdx"];
 
