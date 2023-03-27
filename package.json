@@ -20,7 +20,8 @@
     "packages/remix-serve",
     "packages/remix-server-runtime",
     "packages/remix-testing",
-    "packages/remix-vercel"
+    "packages/remix-vercel",
+    "packages/remix-route-convention"
   ],
   "scripts": {
     "bug-report-test": "yarn test:integration bug-report --project chromium",

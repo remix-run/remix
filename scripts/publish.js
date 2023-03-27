@@ -58,6 +58,7 @@ async function run() {
     "serve",
     "css-bundle",
     "testing",
+    "route-convention",
   ]) {
     publish(path.join(buildDir, "@remix-run", name), tag);
   }

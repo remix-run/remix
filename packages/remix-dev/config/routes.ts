@@ -188,3 +188,12 @@ export function normalizeSlashes(file: string) {
 function stripFileExtension(file: string) {
   return file.replace(/\.[a-z0-9]+$/i, "");
 }
+
+export let paramPrefixChar = "$" as const;
+export let escapeStart = "[" as const;
+export let escapeEnd = "]" as const;
+
+export let optionalStart = "(" as const;
+export let optionalEnd = ")" as const;
+
+export const routeModuleExts = [".js", ".jsx", ".ts", ".tsx", ".md", ".mdx"];

@@ -1,0 +1,33 @@
+{
+  "name": "@remix-run/route-convention",
+  "version": "1.14.3",
+  "homepage": "https://remix.run",
+  "bugs": {
+    "url": "https://github.com/remix-run/remix/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remix-run/remix",
+    "directory": "packages/remix-route-convention"
+  },
+  "license": "MIT",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "module": "dist/esm/index.js",
+  "dependencies": {
+    "@remix-run/dev": "1.14.3",
+    "minimatch": "^3.0.5"
+  },
+  "devDependencies": {},
+  "peerDependencies": {},
+  "peerDependenciesMeta": {},
+  "engines": {
+    "node": ">=14"
+  },
+  "files": [
+    "dist/",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "README.md"
+  ]
+}

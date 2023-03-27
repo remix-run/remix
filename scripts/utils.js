@@ -24,6 +24,7 @@ let remixPackages = {
     "eslint-config",
     "css-bundle",
     "testing",
+    "route-convention",
   ],
   get all() {
     return [...this.adapters, ...this.runtimes, ...this.core, "serve"];

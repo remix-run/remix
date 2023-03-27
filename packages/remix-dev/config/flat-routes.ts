@@ -3,7 +3,14 @@ import path from "node:path";
 import globToRegex from "glob-to-regexp";
 
 import type { ConfigRoute, RouteManifest } from "./routes";
-import { normalizeSlashes } from "./routes";
+import {
+  escapeEnd,
+  escapeStart,
+  optionalEnd,
+  optionalStart,
+  paramPrefixChar,
+} from "./routes";
+import { normalizeSlashes, routeModuleExts } from "./routes";
 import { findConfig } from "../config";
 
 const PrefixLookupTrieEndSymbol = Symbol("PrefixLookupTrieEndSymbol");
@@ -489,16 +496,7 @@ export function getRouteIdConflictErrorMessage(
   );
 }
 
-export const routeModuleExts = [".js", ".jsx", ".ts", ".tsx", ".md", ".mdx"];
-
 export function isSegmentSeparator(checkChar: string | undefined) {
   if (!checkChar) return false;
   return ["/", ".", path.win32.sep].includes(checkChar);
 }
-
-export let paramPrefixChar = "$" as const;
-export let escapeStart = "[" as const;
-export let escapeEnd = "]" as const;
-
-export let optionalStart = "(" as const;
-export let optionalEnd = ")" as const;

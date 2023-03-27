@@ -21,7 +21,8 @@
       "@remix-run/serve",
       "@remix-run/server-runtime",
       "@remix-run/testing",
-      "@remix-run/vercel"
+      "@remix-run/vercel",
+      "@remix-run/route-convention"
     ]
   ],
   "linked": [],
