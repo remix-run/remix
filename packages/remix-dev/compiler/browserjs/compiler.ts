@@ -107,9 +107,6 @@ const createEsbuildConfig = (
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    // isCssBundlingEnabled(config) && isCssBuild
-    //   ? cssBundleEntryModulePlugin(config)
-    //   : null,
     config.future.unstable_cssModules
       ? cssModulesPlugin({ config, mode, outputCss: false })
       : null,
