@@ -122,7 +122,7 @@ export function createRoutesFromFolders(
 }
 
 // TODO: Cleanup and write some tests for this function
-function createRoutePath(partialRouteId: string): string | undefined {
+export function createRoutePath(partialRouteId: string): string | undefined {
   let result = "";
   let rawSegmentBuffer = "";
 
