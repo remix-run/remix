@@ -6,11 +6,12 @@ import type { ConfigRoute, RouteManifest } from "./routes";
 import {
   escapeEnd,
   escapeStart,
+  normalizeSlashes,
   optionalEnd,
   optionalStart,
   paramPrefixChar,
+  routeModuleExts,
 } from "./routes";
-import { normalizeSlashes, routeModuleExts } from "./routes";
 import { findConfig } from "../config";
 
 const PrefixLookupTrieEndSymbol = Symbol("PrefixLookupTrieEndSymbol");
