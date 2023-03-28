@@ -25,8 +25,6 @@ describe("readConfig", () => {
         entryServerFilePath: expect.any(String),
         tsconfigPath: expect.any(String),
         future: {
-          unstable_postcss: expect.any(Boolean),
-          unstable_tailwind: expect.any(Boolean),
           v2_headers: expect.any(Boolean),
         },
       },
@@ -42,8 +40,6 @@ describe("readConfig", () => {
         "entryServerFile": "entry.server.tsx",
         "entryServerFilePath": Any<String>,
         "future": Object {
-          "unstable_postcss": Any<Boolean>,
-          "unstable_tailwind": Any<Boolean>,
           "v2_dev": false,
           "v2_headers": Any<Boolean>,
         },
