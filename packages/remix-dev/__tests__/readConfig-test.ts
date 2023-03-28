@@ -24,12 +24,6 @@ describe("readConfig", () => {
         entryClientFilePath: expect.any(String),
         entryServerFilePath: expect.any(String),
         tsconfigPath: expect.any(String),
-        future: {
-          unstable_cssSideEffectImports: expect.any(Boolean),
-          unstable_postcss: expect.any(Boolean),
-          unstable_tailwind: expect.any(Boolean),
-          unstable_vanillaExtract: expect.any(Boolean),
-        },
       },
       `
       Object {
@@ -43,11 +37,7 @@ describe("readConfig", () => {
         "entryServerFile": "entry.server.tsx",
         "entryServerFilePath": Any<String>,
         "future": Object {
-          "unstable_cssSideEffectImports": Any<Boolean>,
           "unstable_dev": false,
-          "unstable_postcss": Any<Boolean>,
-          "unstable_tailwind": Any<Boolean>,
-          "unstable_vanillaExtract": Any<Boolean>,
         },
         "mdx": undefined,
         "publicPath": "/build/",

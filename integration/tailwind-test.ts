@@ -43,15 +43,6 @@ function runTests(ext: typeof extensions[number]) {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: {
-        // Enable all CSS future flags to
-        // ensure features don't clash
-        unstable_cssSideEffectImports: true,
-        unstable_postcss: true,
-        unstable_tailwind: true,
-        unstable_vanillaExtract: true,
-      },
-
       files: {
         [tailwindConfigName]: tailwindConfig,
 

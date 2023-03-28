@@ -3,13 +3,12 @@ import type { Compiler } from "@vanilla-extract/integration";
 import { cssFileFilter, createCompiler } from "@vanilla-extract/integration";
 import type { Plugin } from "esbuild";
 
-import type { RemixConfig } from "../../../config";
-import type { CompileOptions } from "../../options";
-import { loaders } from "../../loaders";
-import { getPostcssProcessor } from "../../utils/postcss";
-import { vanillaExtractSideEffectsPlugin } from "./sideEffects";
+import type { RemixConfig } from "../../config";
+import type { CompileOptions } from "../options";
+import { loaders } from "../loaders";
+import { getPostcssProcessor } from "../utils/postcss";
 
-const pluginName = "vanilla-extract-plugin-cached";
+const pluginName = "vanilla-extract-plugin";
 const namespace = `${pluginName}-ns`;
 const virtualCssFileFilter = /\.vanilla.css$/;
 
@@ -21,7 +20,7 @@ const staticAssetRegexp = new RegExp(
 
 let compiler: Compiler;
 
-export function vanillaExtractPluginCached({
+export function vanillaExtractPlugin({
   config,
   mode,
   outputCss,
@@ -82,7 +81,35 @@ export function vanillaExtractPluginCached({
         };
       });
 
-      vanillaExtractSideEffectsPlugin.setup(build);
+      // Mark all .css.ts/js files as having side effects. This is to ensure
+      // that all usages of `globalStyle` are included in the CSS bundle, even
+      // if a .css.ts/js file has no exports or is otherwise tree-shaken.
+      let preventInfiniteLoop = {};
+      build.onResolve(
+        { filter: /\.css(\.(j|t)sx?)?(\?.*)?$/, namespace: "file" },
+        async (args) => {
+          if (args.pluginData === preventInfiniteLoop) {
+            return null;
+          }
+
+          let resolvedPath = (
+            await build.resolve(args.path, {
+              resolveDir: args.resolveDir,
+              kind: args.kind,
+              pluginData: preventInfiniteLoop,
+            })
+          ).path;
+
+          if (!cssFileFilter.test(resolvedPath)) {
+            return null;
+          }
+
+          return {
+            path: resolvedPath,
+            sideEffects: true,
+          };
+        }
+      );
 
       build.onLoad(
         { filter: virtualCssFileFilter, namespace },

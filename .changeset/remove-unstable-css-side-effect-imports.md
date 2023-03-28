@@ -5,4 +5,4 @@
 "@remix-run/testing": major
 ---
 
-Remove `unstable_cssModules` option. CSS Modules is now supported automatically.
+Remove `unstable_cssSideEffectImports` option. CSS side-effect imports are now supported automatically.

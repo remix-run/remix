@@ -19,14 +19,6 @@ test.describe("CSS Modules", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: {
-        // Enable all CSS future flags to
-        // ensure features don't clash
-        unstable_cssSideEffectImports: true,
-        unstable_postcss: true,
-        unstable_tailwind: true,
-        unstable_vanillaExtract: true,
-      },
       files: {
         "app/root.jsx": js`
           import { Links, Outlet } from "@remix-run/react";

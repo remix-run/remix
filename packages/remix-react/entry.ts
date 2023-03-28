@@ -26,16 +26,8 @@ type Dev = {
   rebuildPollIntervalMs?: number;
 };
 
-type VanillaExtractOptions = {
-  cache?: boolean;
-};
-
 export interface FutureConfig {
-  unstable_cssSideEffectImports: boolean;
   unstable_dev: boolean | Dev;
-  unstable_postcss: boolean;
-  unstable_tailwind: boolean;
-  unstable_vanillaExtract: boolean | VanillaExtractOptions;
 }
 
 export interface AssetsManifest {

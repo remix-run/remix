@@ -33,12 +33,6 @@ test.describe("PostCSS", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: {
-        unstable_cssSideEffectImports: true,
-        unstable_postcss: true,
-        unstable_tailwind: true,
-        unstable_vanillaExtract: true,
-      },
       files: {
         // We provide a test plugin that replaces the strings
         // "TEST_PADDING_VALUE" and "TEST_POSTCSS_CONTEXT".

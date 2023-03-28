@@ -5,4 +5,4 @@
 "@remix-run/testing": major
 ---
 
-Remove `unstable_cssModules` option. CSS Modules is now supported automatically.
+Remove `unstable_vanillaExtract` option. Vanilla Extract is now supported automatically.
