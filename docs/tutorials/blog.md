@@ -61,7 +61,7 @@ If you want, take a minute and poke around the UI a bit. Feel free to create an 
 
 We're going to make a new route to render at the "/posts" URL. Before we do that, let's link to it.
 
-💿 Add a link to posts in `app/routes/index.tsx`
+💿 Add a link to posts in `app/routes/_index.tsx`
 
 Go ahead and copy/paste this:
 
@@ -90,11 +90,11 @@ The Remix Indie stack has [tailwind][tailwind] support pre-configured. If you'd 
 
 Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
-💿 Create a new file in `app/routes/posts/index.tsx`
+💿 Create a new file in `app/routes/posts/_index.tsx`
 
 ```sh
 mkdir app/routes/posts
-touch app/routes/posts/index.tsx
+touch app/routes/posts/_index.tsx
 ```
 
 <docs-info>Any time you see terminal commands to create files or folders, you can of course do that however you'd like, but using `mkdir` and `touch` is just a way for us to make it clear which files you should be creating.</docs-info>
@@ -105,7 +105,7 @@ Now if you navigate to the `/posts` route, you'll get an error indicating there'
 
 💿 Make the posts component
 
-```tsx filename=app/routes/posts/index.tsx
+```tsx filename=app/routes/posts/_index.tsx
 export default function Posts() {
   return (
     <main>
@@ -129,7 +129,7 @@ So let's get to it and provide some data to our component.
 
 💿 Make the posts route "loader"
 
-```tsx filename=app/routes/posts/index.tsx lines=[1-2,4-17,20-21]
+```tsx filename=app/routes/posts/_index.tsx lines=[1-2,4-17,20-21]
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
@@ -167,7 +167,7 @@ Whatever you return from your loader will be exposed to the client, even if the 
 
 💿 Render links to our posts
 
-```tsx filename=app/routes/posts/index.tsx lines=[2,10-21] nocopy
+```tsx filename=app/routes/posts/_index.tsx lines=[2,10-21] nocopy
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 
@@ -232,7 +232,7 @@ Note that we're making the `getPosts` function `async` because even though it's 
 
 💿 Update the posts route to use our new posts module:
 
-```tsx filename=app/routes/posts/index.tsx nocopy
+```tsx filename=app/routes/posts/_index.tsx nocopy
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 
@@ -548,7 +548,7 @@ Let's make a new "admin" section of the app.
 
 💿 First, let's add a link to the admin section on the posts index route:
 
-```tsx filename=app/routes/posts/index.tsx
+```tsx filename=app/routes/posts/_index.tsx
 // ...
 <Link to="admin" className="text-red-600 underline">
   Admin
@@ -618,10 +618,10 @@ Let's fill in that placeholder with an index route for admin. Hang with us, we'r
 
 ```sh
 mkdir app/routes/posts/admin
-touch app/routes/posts/admin/index.tsx
+touch app/routes/posts/admin/_index.tsx
 ```
 
-```tsx filename=app/routes/posts/admin/index.tsx
+```tsx filename=app/routes/posts/admin/_index.tsx
 import { Link } from "@remix-run/react";
 
 export default function AdminIndex() {
