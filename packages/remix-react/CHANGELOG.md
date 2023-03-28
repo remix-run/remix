@@ -1,5 +1,11 @@
 # `@remix-run/react`
 
+## 1.15.0-pre.3
+
+### Patch Changes
+
+- Update deprecation warnings with hardcoded links ([#5889](https://github.com/remix-run/remix/pull/5889))
+
 ## 1.15.0-pre.2
 
 ## 1.15.0-pre.1
