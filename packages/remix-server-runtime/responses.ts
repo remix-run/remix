@@ -13,6 +13,7 @@ export type TypedDeferredData<Data extends Record<string, unknown>> = Pick<
   DeferredData,
   "init"
 > & {
+  "  __dataType": Data;
   data: Data;
 };
 
@@ -51,7 +52,7 @@ export const json: JsonFunction = (data, init = {}) => {
  * @see https://remix.run/docs/utils/defer
  */
 export const defer: DeferFunction = (data, init = {}) => {
-  return routerDefer(data, init) as TypedDeferredData<typeof data>;
+  return routerDefer(data, init) as unknown as TypedDeferredData<typeof data>;
 };
 
 export type RedirectFunction = (
