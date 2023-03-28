@@ -98,8 +98,11 @@ export let serve = async (
   let host = getHost();
   let appServerOrigin = `http://${host ?? "localhost"}:${dev.appServerPort}`;
 
+  let currentBuildHash;
   let waitForAppServer = async (buildHash: string) => {
+    currentBuildHash = buildHash;
     while (true) {
+      if (buildHash !== currentBuildHash) return;
       // TODO AbortController signal to cancel responses?
       let assetsManifest = await fetchAssetsManifest(
         appServerOrigin,
