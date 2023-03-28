@@ -164,26 +164,6 @@ Notice a few things here:
 
 <docs-warning><strong>Important:</strong> be sure to delete the `index.html` from your `public` directory after you've created your root route. Keeping the file around may cause your server to send that HTML instead of your Remix app when accessing the `/` route.</docs-warning>
 
-## Adapting your existing app code
-
-First, move the root of your existing React code into your `app` directory. So if your root app code lives in an `src` directory in the project root, it should now be in `app/src`.
-
-We also suggest renaming this directory to make it clear that this is your old code so that, eventually, you can delete it after migrating all of its contents. The beauty of this approach is that you don't have to do it all at once for your app to run as usual. In our demo project we name this directory `old-app`.
-
-Lastly, in your root `App` component (the one that would have been mounted to the `root` element), remove the `<BrowserRouter>` from React Router. Remix takes care of this for you without needing to render the provider directly.
-
-## Creating a catch-all route
-
-Remix needs routes beyond the root route to know what to render in `<Outlet />`. Fortunately you already render `<Route>` components in your app, and Remix can use those as you migrate to use our [routing conventions][routing-conventions].
-
-To start, create a new directory in `app` called `routes`. In that directory, create a file called `$.jsx`. This is called [a **catch-all route**][a-catch-all-route] and it will be useful to let your old app handle routes that you haven't moved into the `routes` directory yet.
-
-Inside of your `$.jsx` file, all we need to do is export the code from our old root `App`:
-
-```js filename=$.jsx
-export { default } from "~/old-app/app";
-```
-
 ## Replacing the bundler with Remix
 
 Remix provides its own bundler and CLI tools for development and building your app. Chances are your app used something like Create React App to bootstrap, or perhaps you have a custom build set up with Webpack.
