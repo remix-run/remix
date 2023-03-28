@@ -84,12 +84,9 @@ const createEsbuildConfig = (
     deprecatedRemixPackagePlugin(options.onWarning),
     isCssBuild ? cssBundleEntryModulePlugin(config) : null,
     cssModulesPlugin({ config, mode, outputCss }),
-    config.future.unstable_vanillaExtract
-      ? vanillaExtractPlugin({ config, mode, outputCss })
-      : null,
-    config.future.unstable_cssSideEffectImports
-      ? cssSideEffectImportsPlugin({ config, options })
-      : null,
+    vanillaExtractPlugin({ config, mode, outputCss }),
+
+    cssSideEffectImportsPlugin({ config, options }),
     cssFilePlugin({ config, options }),
     externalPlugin(/^https?:\/\//, { sideEffects: false }),
     mdxPlugin(config),
@@ -130,17 +127,7 @@ const createEsbuildConfig = (
     outdir: config.assetsBuildDirectory,
     platform: "browser",
     format: "esm",
-    external: [
-      // This allows Vanilla Extract to bundle asset imports, e.g. `import href
-      // from './image.svg'` resolves to a string like "/build/_assets/XXXX.svg"
-      // which will then appear in the compiled CSS, e.g. `background:
-      // url("/build/_assets/XXXX.svg")`. If we don't mark this path as
-      // external, esbuild will try to bundle it again but won't find it.
-      config.future.unstable_vanillaExtract
-        ? `${config.publicPath}_assets/*`
-        : null,
-      ...getExternals(config),
-    ].filter(isNotNull),
+    external: getExternals(config),
     loader: loaders,
     bundle: true,
     logLevel: "silent",

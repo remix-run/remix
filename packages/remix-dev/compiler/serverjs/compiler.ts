@@ -51,12 +51,8 @@ const createEsbuildConfig = (
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
     cssModulesPlugin({ config, mode, outputCss }),
-    config.future.unstable_vanillaExtract
-      ? vanillaExtractPlugin({ config, mode, outputCss })
-      : null,
-    config.future.unstable_cssSideEffectImports
-      ? cssSideEffectImportsPlugin({ config, options })
-      : null,
+    vanillaExtractPlugin({ config, mode, outputCss }),
+    cssSideEffectImportsPlugin({ config, options }),
     cssFilePlugin({ config, options }),
     externalPlugin(/^https?:\/\//, { sideEffects: false }),
     mdxPlugin(config),

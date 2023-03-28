@@ -5,4 +5,4 @@
 "@remix-run/testing": major
 ---
 
-Remove `unstable_cssModules` option. CSS Modules is now supported automatically.
+Remove `unstable_postcss` option. PostCSS is now supported automatically.

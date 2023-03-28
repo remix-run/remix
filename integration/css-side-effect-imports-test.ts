@@ -22,14 +22,6 @@ test.describe("CSS side-effect imports", () => {
         "remix.config.js": js`
           module.exports = {
             serverDependenciesToBundle: [/@test-package/],
-            future: {
-              // Enable all CSS future flags to
-              // ensure features don't clash
-              unstable_cssSideEffectImports: true,
-              unstable_postcss: true,
-              unstable_tailwind: true,
-              unstable_vanillaExtract: true,
-            },
           };
         `,
         "app/root.jsx": js`
