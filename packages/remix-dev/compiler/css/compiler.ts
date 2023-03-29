@@ -8,16 +8,12 @@ import postcssDiscardDuplicates from "postcss-discard-duplicates";
 
 import type { RemixConfig } from "../../config";
 import { getAppDependencies } from "../../dependencies";
-import { loaders } from "../loaders";
+import { loaders } from "../utils/loaders";
 import type { CompileOptions } from "../options";
-// import { browserRouteModulesPlugin } from "../plugins/browserRouteModulesPlugin";
-// import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "../plugins/browserRouteModulesPlugin_v2";
 import { cssFilePlugin } from "../plugins/cssImports";
-import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackage";
 import { emptyModulesPlugin } from "../plugins/emptyModules";
 import { mdxPlugin } from "../plugins/mdx";
 import { externalPlugin } from "../plugins/external";
-// import { cssBundleUpdatePlugin } from "../plugins/cssBundleUpdatePlugin";
 import { cssModulesPlugin } from "../plugins/cssModuleImports";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
@@ -25,8 +21,6 @@ import {
   cssBundleEntryModulePlugin,
   cssBundleEntryModuleId,
 } from "./plugins/bundleEntry";
-import invariant from "../../invariant";
-// import { hmrPlugin } from "../plugins/hmrPlugin";
 
 function isNotNull<Value>(value: Value): value is Exclude<Value, null> {
   return value !== null;
@@ -52,78 +46,28 @@ const getExternals = (remixConfig: RemixConfig): string[] => {
 };
 
 const createEsbuildConfig = (
-  build: "app" | "css",
   config: RemixConfig,
   options: CompileOptions
-  // onLoader: (filename: string, code: string) => void
-): esbuild.BuildOptions | esbuild.BuildIncremental => {
-  let isCssBuild = build === "css";
-  let entryPoints: Record<string, string>;
-
-  if (isCssBuild) {
-    entryPoints = {
-      "css-bundle": cssBundleEntryModuleId,
-    };
-  } else {
-    entryPoints = {
-      "entry.client": config.entryClientFilePath,
-    };
-
-    for (let id of Object.keys(config.routes)) {
-      // All route entry points are virtual modules that will be loaded by the
-      // browserEntryPointsPlugin. This allows us to tree-shake server-only code
-      // that we don't want to run in the browser (i.e. action & loader).
-      entryPoints[id] = config.routes[id].file + "?browser";
-    }
-  }
-
+): esbuild.BuildOptions => {
   let { mode } = options;
-  let outputCss = isCssBuild;
 
   let plugins: esbuild.Plugin[] = [
-    deprecatedRemixPackagePlugin(options.onWarning),
-    isCssBuild ? cssBundleEntryModulePlugin(config) : null,
-    cssModulesPlugin({ config, mode, outputCss }),
-    vanillaExtractPlugin({ config, mode, outputCss }),
-
+    cssBundleEntryModulePlugin(config),
+    cssModulesPlugin({ config, mode, outputCss: true }),
+    vanillaExtractPlugin({ config, mode, outputCss: true }),
     cssSideEffectImportsPlugin({ config, options }),
     cssFilePlugin({ config, options }),
     externalPlugin(/^https?:\/\//, { sideEffects: false }),
     mdxPlugin(config),
-    // config.future.unstable_dev
-    //   ? browserRouteModulesPlugin_v2(config, /\?browser$/, onLoader, mode)
-    //   : browserRouteModulesPlugin(config, /\?browser$/),
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
     externalPlugin(/^node:.*/, { sideEffects: false }),
   ].filter(isNotNull);
 
-  if (build === "app" && mode === "development" && config.future.unstable_dev) {
-    // TODO prebundle deps instead of chunking just these ones
-    let isolateChunks = [
-      require.resolve("react"),
-      require.resolve("react/jsx-dev-runtime"),
-      require.resolve("react/jsx-runtime"),
-      require.resolve("react-dom"),
-      require.resolve("react-dom/client"),
-      require.resolve("react-refresh/runtime"),
-      require.resolve("@remix-run/react"),
-      "remix:hmr",
-    ];
-    entryPoints = {
-      ...entryPoints,
-      ...Object.fromEntries(isolateChunks.map((imprt) => [imprt, imprt])),
-    };
-
-    // plugins.push(hmrPlugin({ remixConfig: config }));
-
-    // if (isCssBundlingEnabled(config)) {
-    // plugins.push(cssBundleUpdatePlugin({ getCssBundleHref }));
-    // }
-  }
-
   return {
-    entryPoints,
+    entryPoints: {
+      "css-bundle": cssBundleEntryModuleId,
+    },
     outdir: config.assetsBuildDirectory,
     platform: "browser",
     format: "esm",
@@ -131,7 +75,6 @@ const createEsbuildConfig = (
     loader: loaders,
     bundle: true,
     logLevel: "silent",
-    splitting: !isCssBuild,
     sourcemap: options.sourcemap,
     // As pointed out by https://github.com/evanw/esbuild/issues/2440, when tsconfig is set to
     // `undefined`, esbuild will keep looking for a tsconfig.json recursively up. This unwanted
@@ -159,32 +102,19 @@ const createEsbuildConfig = (
   };
 };
 
-export let create = (
+export let create = async (
   remixConfig: RemixConfig,
   options: CompileOptions,
   writeCssBundleHref: (cssBundleHref?: string) => void
 ) => {
-  let cssCompiler: esbuild.BuildIncremental;
-  // let onLoader = () => {};
-  let cssBuildTask = async () => {
+  let ctx = await esbuild.context({
+    ...createEsbuildConfig(remixConfig, options),
+    metafile: true,
+    write: false,
+  });
+  let compile = async () => {
     try {
-      // The types aren't great when combining write: false and incremental: true
-      //  so we need to assert that it's an incremental build
-      cssCompiler = (await (!cssCompiler
-        ? esbuild.build({
-            ...createEsbuildConfig("css", remixConfig, options /* onLoader */),
-            metafile: true,
-            incremental: true,
-            write: false,
-          })
-        : cssCompiler.rebuild())) as esbuild.BuildIncremental;
-
-      invariant(
-        cssCompiler.metafile,
-        "Expected CSS compiler metafile to be defined. This is likely a bug in Remix. Please open an issue at https://github.com/remix-run/remix/issues/new"
-      );
-
-      let outputFiles = cssCompiler.outputFiles || [];
+      let { outputFiles } = await ctx.rebuild();
 
       let isCssBundleFile = (
         outputFile: esbuild.OutputFile,
@@ -256,7 +186,7 @@ export let create = (
     }
   };
   return {
-    compile: cssBuildTask,
-    dispose: () => cssCompiler.rebuild.dispose(),
+    compile,
+    dispose: ctx.dispose,
   };
 };

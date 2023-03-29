@@ -3,10 +3,9 @@ import * as esbuild from "esbuild";
 import * as fse from "fs-extra";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 
-import invariant from "../../invariant";
 import type { RemixConfig } from "../../config";
-import type * as Manifest from "../manifest";
-import { loaders } from "../loaders";
+import { type Manifest } from "../../manifest";
+import { loaders } from "../utils/loaders";
 import type { CompileOptions } from "../options";
 import { cssModulesPlugin } from "../plugins/cssModuleImports";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
@@ -23,13 +22,13 @@ import { externalPlugin } from "../plugins/external";
 
 type Compiler = {
   // produce ./build/index.js
-  compile: (manifest: Manifest.Type) => Promise<esbuild.Metafile>;
+  compile: (manifest: Manifest) => Promise<esbuild.Metafile>;
   dispose: () => void;
 };
 
 const createEsbuildConfig = (
   config: RemixConfig,
-  manifest: Manifest.Type,
+  manifest: Manifest,
   options: CompileOptions
 ): esbuild.BuildOptions => {
   let stdin: esbuild.StdinOptions | undefined;
@@ -159,14 +158,13 @@ export const create = (
   remixConfig: RemixConfig,
   options: CompileOptions
 ): Compiler => {
-  let compile = async (manifest: Manifest.Type) => {
+  let compile = async (manifest: Manifest) => {
     let esbuildConfig = createEsbuildConfig(remixConfig, manifest, options);
     let { metafile, outputFiles } = await esbuild.build({
       ...esbuildConfig,
       write: false,
       metafile: true,
     });
-    invariant(metafile, "Expected metafile to be defined.");
     await writeServerBuildResult(remixConfig, outputFiles!);
     return metafile;
   };

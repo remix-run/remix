@@ -4,9 +4,9 @@ import * as esbuild from "esbuild";
 import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 
 import type { RemixConfig } from "../../config";
-import type * as Manifest from "../manifest";
+import { type Manifest } from "../../manifest";
 import { getAppDependencies } from "../../dependencies";
-import { loaders } from "../loaders";
+import { loaders } from "../utils/loaders";
 import type { CompileOptions } from "../options";
 import { browserRouteModulesPlugin } from "./plugins/routes";
 import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "./plugins/routes_unstable";
@@ -19,10 +19,6 @@ import { cssBundleUpdatePlugin } from "./plugins/cssBundleUpdate";
 import { cssModulesPlugin } from "../plugins/cssModuleImports";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
-// import {
-//   cssBundleEntryModulePlugin,
-//   cssBundleEntryModuleId,
-// } from "../plugins/cssBundleEntryModulePlugin";
 import invariant from "../../invariant";
 import { hmrPlugin } from "./plugins/hmr";
 import { createMatchPath } from "../utils/tsconfig";
@@ -32,7 +28,7 @@ type Compiler = {
   // produce ./public/build/
   compile: () => Promise<{
     metafile: esbuild.Metafile;
-    hmr?: Manifest.Type["hmr"];
+    hmr?: Manifest["hmr"];
   }>;
   dispose: () => void;
 };
@@ -72,34 +68,23 @@ const getExternals = (remixConfig: RemixConfig): string[] => {
 };
 
 const createEsbuildConfig = (
-  build: "app" | "css",
   config: RemixConfig,
   options: CompileOptions,
   onLoader: (filename: string, code: string) => void,
   readCssBundleHref: () => Promise<string | undefined>
-): esbuild.BuildOptions | esbuild.BuildIncremental => {
-  let isCssBuild = build === "css";
-  let entryPoints: Record<string, string>;
+): esbuild.BuildOptions => {
+  let entryPoints: Record<string, string> = {
+    "entry.client": config.entryClientFilePath,
+  };
 
-  if (isCssBuild) {
-    entryPoints = {
-      // "css-bundle": cssBundleEntryModuleId,
-    };
-  } else {
-    entryPoints = {
-      "entry.client": config.entryClientFilePath,
-    };
-
-    for (let id of Object.keys(config.routes)) {
-      // All route entry points are virtual modules that will be loaded by the
-      // browserEntryPointsPlugin. This allows us to tree-shake server-only code
-      // that we don't want to run in the browser (i.e. action & loader).
-      entryPoints[id] = config.routes[id].file + "?browser";
-    }
+  for (let id of Object.keys(config.routes)) {
+    // All route entry points are virtual modules that will be loaded by the
+    // browserEntryPointsPlugin. This allows us to tree-shake server-only code
+    // that we don't want to run in the browser (i.e. action & loader).
+    entryPoints[id] = config.routes[id].file + "?browser";
   }
 
   let { mode } = options;
-  let outputCss = isCssBuild;
 
   let matchPath = config.tsconfigPath
     ? createMatchPath(config.tsconfigPath)
@@ -115,8 +100,8 @@ const createEsbuildConfig = (
 
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
-    cssModulesPlugin({ config, mode, outputCss }),
-    vanillaExtractPlugin({ config, mode, outputCss }),
+    cssModulesPlugin({ config, mode, outputCss: false }),
+    vanillaExtractPlugin({ config, mode, outputCss: false }),
     cssSideEffectImportsPlugin({ config, options }),
     cssFilePlugin({ config, options }),
     externalPlugin(/^https?:\/\//, { sideEffects: false }),
@@ -170,7 +155,7 @@ const createEsbuildConfig = (
     } as esbuild.Plugin,
   ].filter(isNotNull);
 
-  if (build === "app" && mode === "development" && config.future.unstable_dev) {
+  if (mode === "development" && config.future.unstable_dev) {
     // TODO prebundle deps instead of chunking just these ones
     let isolateChunks = [
       require.resolve("react"),
@@ -202,7 +187,7 @@ const createEsbuildConfig = (
     loader: loaders,
     bundle: true,
     logLevel: "silent",
-    splitting: !isCssBuild,
+    splitting: true,
     sourcemap: options.sourcemap,
     // As pointed out by https://github.com/evanw/esbuild/issues/2440, when tsconfig is set to
     // `undefined`, esbuild will keep looking for a tsconfig.json recursively up. This unwanted
@@ -230,46 +215,27 @@ const createEsbuildConfig = (
   };
 };
 
-export const create = (
+export const create = async (
   remixConfig: RemixConfig,
   options: CompileOptions,
   readCssBundleHref: () => Promise<string | undefined>
-): Compiler => {
-  let appCompiler: esbuild.BuildIncremental;
-
+): Promise<Compiler> => {
   let hmrRoutes: Record<string, { loaderHash: string }> = {};
   let onLoader = (filename: string, code: string) => {
     let key = path.relative(remixConfig.rootDirectory, filename);
     hmrRoutes[key] = { loaderHash: code };
   };
 
+  let ctx = await esbuild.context({
+    ...createEsbuildConfig(remixConfig, options, onLoader, readCssBundleHref),
+    metafile: true, // TODO is this needed when using context api?
+  });
+
   let compile = async () => {
     hmrRoutes = {};
-    let appBuildTask = async () => {
-      appCompiler = await (!appCompiler
-        ? esbuild.build({
-            ...createEsbuildConfig(
-              "app",
-              remixConfig,
-              options,
-              onLoader,
-              readCssBundleHref
-            ),
-            metafile: true,
-            incremental: true,
-          })
-        : appCompiler.rebuild());
+    let { metafile } = await ctx.rebuild();
 
-      invariant(
-        appCompiler.metafile,
-        "Expected app compiler metafile to be defined. This is likely a bug in Remix. Please open an issue at https://github.com/remix-run/remix/issues/new"
-      );
-      return appCompiler.metafile;
-    };
-
-    let metafile = await appBuildTask();
-
-    let hmr: Manifest.Type["hmr"] | undefined = undefined;
+    let hmr: Manifest["hmr"] | undefined = undefined;
     if (options.mode === "development" && remixConfig.future.unstable_dev) {
       let hmrRuntimeOutput = Object.entries(metafile.outputs).find(
         ([_, output]) => output.inputs["hmr-runtime:remix:hmr"]
@@ -293,7 +259,7 @@ export const create = (
 
   return {
     compile,
-    dispose: () => appCompiler?.rebuild.dispose(),
+    dispose: ctx.dispose,
   };
 };
 
