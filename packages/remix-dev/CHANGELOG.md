@@ -1,5 +1,21 @@
 # `@remix-run/dev`
 
+## 1.14.3
+
+### Patch Changes
+
+- dev server is resilient to build failures ([#5795](https://github.com/remix-run/remix/pull/5795))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.14.3`
+
+## 1.14.2
+
+### Patch Changes
+
+- remove premature deprecation warnings ([#5790](https://github.com/remix-run/remix/pull/5790))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.14.2`
+
 ## 1.14.1
 
 ### Patch Changes
