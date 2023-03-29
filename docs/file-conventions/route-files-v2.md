@@ -8,6 +8,7 @@ new: true
 You can opt-in to the new route file naming convention with a future flag in Remix config.
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
     v2_routeConvention: true,
@@ -32,7 +33,7 @@ The file in `app/root.tsx` is your root layout, or "root route" (very sorry for 
 
 The root route typically looks something like this. It serves as the root layout of the entire app, all other routes will render inside the `<Outlet />`.
 
-```jsx
+```tsx
 import {
   Links,
   Meta,
@@ -125,8 +126,8 @@ app/
 
 Remix will parse the value from the URL and pass it to various APIs. We call these values "URL Parameters". The most useful places to access the URL params are in [loaders][loader] and [actions][action].
 
-```jsx
-export function loader({ params }) {
+```tsx
+export function loader({ params }: LoaderArgs) {
   return fakeDb.getAllConcertsForCity(params.city);
 }
 ```
@@ -135,8 +136,8 @@ You'll note the property name on the `params` object maps directly to the name o
 
 Routes can have multiple dynamic segments, like `concerts.$city.$date`, both are accessed on the params object by name:
 
-```jsx
-export function loader({ params }) {
+```tsx
+export function loader({ params }: LoaderArgs) {
   return fake.db.getConcerts({
     date: params.date,
     city: params.city,

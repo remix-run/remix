@@ -58,7 +58,7 @@ import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
-export async function loader(args: LoaderArgs) {
+export async function loader() {
   return json({ name: "Ryan", date: new Date() });
 }
 
@@ -117,7 +117,7 @@ This is the context passed in to your server adapter's `getLoadContext()` functi
 
 Using the express adapter as an example:
 
-```js filename=server.js
+```ts filename=server.ts
 const {
   createRequestHandler,
 } = require("@remix-run/express");

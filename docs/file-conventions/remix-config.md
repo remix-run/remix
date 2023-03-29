@@ -6,7 +6,7 @@ title: remix.config.js
 
 This file has a few build and development configuration options, but does not actually run on your server.
 
-```tsx filename=remix.config.js
+```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   appDirectory: "app",
@@ -27,7 +27,7 @@ module.exports = {
 The path to the `app` directory, relative to remix.config.js. Defaults to
 `"app"`.
 
-```js
+```js filename=remix.config.js
 // default
 exports.appDirectory = "./app";
 
@@ -71,7 +71,7 @@ The URL prefix of the browser build with a trailing slash. Defaults to
 A function for defining custom routes, in addition to those already defined
 using the filesystem convention in `app/routes`. Both sets of routes will be merged.
 
-```tsx
+```js filename=remix.config.js
 exports.routes = async (defineRoutes) => {
   // If you need to do async work, do it before calling `defineRoutes`, we use
   // the call stack of `route` inside to set nesting.
@@ -152,7 +152,7 @@ a `@sindresorhus/slugify` which is ESM-only as well. Here's how you would be
 able to consume those packages in a CJS app without having to use dynamic
 imports:
 
-```ts filename=remix.config.js lines=[8-13]
+```js filename=remix.config.js lines=[8-13]
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   appDirectory: "app",
@@ -196,7 +196,7 @@ The platform the server build is targeting, which can either be `"neutral"` or
 
 An array, string, or async function that defines custom directories, relative to the project root, to watch while running [remix dev][remix-dev]. These directories are in addition to [`appDirectory`][app-directory].
 
-```tsx
+```js filename=remix.config.js
 exports.watchPaths = async () => {
   return ["./some/path/*"];
 };

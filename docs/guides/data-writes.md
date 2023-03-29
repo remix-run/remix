@@ -118,7 +118,7 @@ The browser started at `/projects/new`, then posted to `/projects` with the form
 
 If you're newer to web development, you may not have ever used a form this way. Lots of folks have always done:
 
-```js
+```html
 <form
   onSubmit={(event) => {
     event.preventDefault();

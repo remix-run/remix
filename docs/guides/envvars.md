@@ -40,7 +40,7 @@ SOME_SECRET=super-secret
 
 Then, when running `remix dev` you will be able to access those values in your loaders/actions:
 
-```js
+```tsx
 export async function loader() {
   console.log(process.env.SOME_SECRET);
 }
