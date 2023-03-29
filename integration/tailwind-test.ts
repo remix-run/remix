@@ -315,10 +315,88 @@ function runTests(ext: typeof extensions[number]) {
   });
 }
 
-test.describe("Tailwind", () => {
+test.describe("Tailwind enabled (default)", () => {
   for (let ext of extensions) {
     test.describe(`tailwind.config.${ext}`, () => {
       runTests(ext);
     });
   }
+});
+
+test.describe("Tailwind disabled", () => {
+  let fixture: Fixture;
+  let appFixture: AppFixture;
+
+  test.beforeAll(async () => {
+    fixture = await createFixture({
+      files: {
+        "remix.config.js": js`
+          module.exports = {
+            tailwind: false,
+          };
+        `,
+
+        "tailwind.config.js": js`
+          module.exports = {
+            content: ["./app/**/*.{ts,tsx,jsx,js}"],
+            theme: {
+              spacing: {
+                'test': ${JSON.stringify(TEST_PADDING_VALUE)}
+              },
+            },
+          };
+        `,
+
+        "app/tailwind.css": css`
+          @tailwind base;
+          @tailwind components;
+          @tailwind utilities;
+        `,
+
+        "app/root.jsx": js`
+          import { Links, Outlet } from "@remix-run/react";
+          import tailwindHref from "./tailwind.css"
+          export function links() {
+            return [
+              { rel: "stylesheet", href: tailwindHref },
+            ];
+          }
+          export default function Root() {
+            return (
+              <html>
+                <head>
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                </body>
+              </html>
+            )
+          }
+        `,
+        "app/routes/tailwind-disabled-test.jsx": js`
+          export default function() {
+            return (
+              <div data-testid="tailwind-disabled" className="p-test">
+                Tailwind disabled test
+              </div>
+            );
+          }
+        `,
+      },
+    });
+    appFixture = await createAppFixture(fixture);
+  });
+
+  test.afterAll(() => appFixture.close());
+
+  test("ignores Tailwind config", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/tailwind-disabled-test");
+    let locator = page.getByTestId("tailwind-disabled");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).not.toBe(TEST_PADDING_VALUE);
+  });
 });

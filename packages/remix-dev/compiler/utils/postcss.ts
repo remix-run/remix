@@ -65,6 +65,10 @@ export async function getPostcssProcessor({
   config,
   context = defaultContext,
 }: Options): Promise<Processor | null> {
+  if (!config.postcss) {
+    return null;
+  }
+
   let cacheKey = getCacheKey({ config, context });
   let cachedProcessor = processorCache.get(cacheKey);
   if (cachedProcessor !== undefined) {
@@ -89,6 +93,10 @@ let tailwindPluginCache = new Map<string, AcceptedPlugin | null>();
 async function loadTailwindPlugin(
   config: RemixConfig
 ): Promise<AcceptedPlugin | null> {
+  if (!config.tailwind) {
+    return null;
+  }
+
   let { rootDirectory } = config;
   let cacheKey = rootDirectory;
   let cachedTailwindPlugin = tailwindPluginCache.get(cacheKey);

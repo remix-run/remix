@@ -40,6 +40,7 @@ describe("readConfig", () => {
           "unstable_dev": false,
         },
         "mdx": undefined,
+        "postcss": true,
         "publicPath": "/build/",
         "relativeAssetsBuildDirectory": Any<String>,
         "rootDirectory": Any<String>,
@@ -63,6 +64,7 @@ describe("readConfig", () => {
         "serverMode": "production",
         "serverModuleFormat": "cjs",
         "serverPlatform": "node",
+        "tailwind": true,
         "tsconfigPath": Any<String>,
         "watchPaths": Array [],
       }

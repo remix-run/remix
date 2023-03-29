@@ -27,7 +27,7 @@ async function jsonFromBase64CssContent({
   return JSON.parse(json);
 }
 
-test.describe("PostCSS", () => {
+test.describe("PostCSS enabled (default)", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
 
@@ -340,5 +340,95 @@ test.describe("PostCSS", () => {
     );
     let padding = await locator.evaluate((el) => getComputedStyle(el).padding);
     expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+});
+
+test.describe("PostCSS disabled", () => {
+  let fixture: Fixture;
+  let appFixture: AppFixture;
+
+  test.beforeAll(async () => {
+    fixture = await createFixture({
+      files: {
+        "remix.config.js": js`
+          module.exports = {
+            postcss: false,
+          };
+        `,
+        "postcss.config.js": js`
+          module.exports = (ctx) => ({
+            plugins: [
+              {
+                postcssPlugin: 'replace',
+                Declaration (decl) {
+                  decl.value = decl.value
+                    .replaceAll(
+                      "TEST_PADDING_VALUE",
+                      ${JSON.stringify(TEST_PADDING_VALUE)},
+                    );
+                },
+              },
+            ],
+          });
+        `,
+        "app/root.jsx": js`
+          import { Links, Outlet } from "@remix-run/react";
+          export default function Root() {
+            return (
+              <html>
+                <head>
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                </body>
+              </html>
+            )
+          }
+        `,
+        "app/routes/postcss-disabled-test.jsx": js`
+          import { Test, links as testLinks } from "~/test-components/postcss-disabled";
+
+          export function links() {
+            return [...testLinks()];
+          }
+
+          export default function() {
+            return <Test />;
+          }
+        `,
+        "app/test-components/postcss-disabled/index.jsx": js`
+          import stylesHref from "./styles.css";
+
+          export function links() {
+            return [{ rel: 'stylesheet', href: stylesHref }];
+          }
+
+          export function Test() {
+            return (
+              <div data-testid="postcss-disabled" className="postcss-disabled-test">
+                <p>PostCSS disabled test.</p>
+              </div>
+            );
+          }
+        `,
+        "app/test-components/postcss-disabled/styles.css": css`
+          .postcss-disabled-test {
+            padding: TEST_PADDING_VALUE;
+          }
+        `,
+      },
+    });
+    appFixture = await createAppFixture(fixture);
+  });
+
+  test.afterAll(() => appFixture.close());
+
+  test("ignores PostCSS config", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/postcss-disabled-test");
+    let locator = await page.locator("[data-testid='postcss-disabled']");
+    let padding = await locator.evaluate((el) => getComputedStyle(el).padding);
+    expect(padding).not.toBe(TEST_PADDING_VALUE);
   });
 });
