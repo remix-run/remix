@@ -19,6 +19,10 @@ const defaultContext: RemixPostcssContext = {
   vanillaExtract: false,
 };
 
+function isPostcssEnabled(config: RemixConfig) {
+  return config.postcss || config.tailwind;
+}
+
 function getCacheKey({ config, context }: Required<Options>) {
   return [config.rootDirectory, context.vanillaExtract].join("|");
 }
@@ -28,6 +32,10 @@ export async function loadPostcssPlugins({
   config,
   context = defaultContext,
 }: Options): Promise<Array<AcceptedPlugin>> {
+  if (!isPostcssEnabled(config)) {
+    return [];
+  }
+
   let { rootDirectory } = config;
   let cacheKey = getCacheKey({ config, context });
   let cachedPlugins = pluginsCache.get(cacheKey);
@@ -37,23 +45,27 @@ export async function loadPostcssPlugins({
 
   let plugins: Array<AcceptedPlugin> = [];
 
-  try {
-    let postcssConfig = await loadConfig(
-      // We're nesting our custom context values in a "remix"
-      // namespace to avoid clashing with other tools.
-      // @ts-expect-error Custom context values aren't type safe.
-      { remix: context },
-      rootDirectory
-    );
+  if (config.postcss) {
+    try {
+      let postcssConfig = await loadConfig(
+        // We're nesting our custom context values in a "remix"
+        // namespace to avoid clashing with other tools.
+        // @ts-expect-error Custom context values aren't type safe.
+        { remix: context },
+        rootDirectory
+      );
 
-    plugins.push(...postcssConfig.plugins);
-  } catch (err) {
-    // If they don't have a PostCSS config, just ignore it.
+      plugins.push(...postcssConfig.plugins);
+    } catch (err) {
+      // If they don't have a PostCSS config, just ignore it.
+    }
   }
 
-  let tailwindPlugin = await loadTailwindPlugin(config);
-  if (tailwindPlugin && !hasTailwindPlugin(plugins)) {
-    plugins.push(tailwindPlugin);
+  if (config.tailwind) {
+    let tailwindPlugin = await loadTailwindPlugin(config);
+    if (tailwindPlugin && !hasTailwindPlugin(plugins)) {
+      plugins.push(tailwindPlugin);
+    }
   }
 
   pluginsCache.set(cacheKey, plugins);
@@ -65,6 +77,10 @@ export async function getPostcssProcessor({
   config,
   context = defaultContext,
 }: Options): Promise<Processor | null> {
+  if (!config.postcss) {
+    return null;
+  }
+
   let cacheKey = getCacheKey({ config, context });
   let cachedProcessor = processorCache.get(cacheKey);
   if (cachedProcessor !== undefined) {
@@ -89,6 +105,10 @@ let tailwindPluginCache = new Map<string, AcceptedPlugin | null>();
 async function loadTailwindPlugin(
   config: RemixConfig
 ): Promise<AcceptedPlugin | null> {
+  if (!config.tailwind) {
+    return null;
+  }
+
   let { rootDirectory } = config;
   let cacheKey = rootDirectory;
   let cachedTailwindPlugin = tailwindPluginCache.get(cacheKey);

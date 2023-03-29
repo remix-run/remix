@@ -455,6 +455,8 @@ Note that if you're also using Remix's [built-in PostCSS support][built-in-post-
 
 If you're using VS Code, it's recommended you install the [Tailwind IntelliSense extension][tailwind-intelli-sense-extension] for the best developer experience.
 
+<docs-info>Built-in Tailwind support can be disabled by setting the `tailwind` option to `false` in `remix.config.js`.</docs-info>
+
 ## Remote Stylesheets
 
 You can load stylesheets from any server, here's an example of loading a modern css reset from unpkg.
@@ -505,6 +507,8 @@ module.exports = (ctx) => {
       };
 };
 ```
+
+<docs-info>Built-in PostCSS support can be disabled by setting the `postcss` option to `false` in `remix.config.js`.</docs-info>
 
 ## CSS Preprocessors
 

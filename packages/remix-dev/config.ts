@@ -92,6 +92,12 @@ export interface AppConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
+   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Defaults to `true`.
+   */
+  postcss?: boolean;
+
+  /**
    * A server entrypoint, relative to the root directory that becomes your
    * server's main module. If specified, Remix will compile this file along with
    * your application into a single file to be deployed to your server. This
@@ -143,6 +149,12 @@ export interface AppConfig {
    * The platform the server build is targeting. Defaults to "node".
    */
   serverPlatform?: ServerPlatform;
+
+  /**
+   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
+   * Defaults to `true`.
+   */
+  tailwind?: boolean;
 
   /**
    * A list of filenames or a glob patterns to match files in the `app/routes`
@@ -237,6 +249,12 @@ export interface RemixConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
+   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Defaults to `true`.
+   */
+  postcss: boolean;
+
+  /**
    * The path to the server build file. This file should end in a `.js`.
    */
   serverBuildPath: string;
@@ -296,6 +314,12 @@ export interface RemixConfig {
    * The platform the server build is targeting. Defaults to "node".
    */
   serverPlatform: ServerPlatform;
+
+  /**
+   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
+   * Defaults to `true`.
+   */
+  tailwind: boolean;
 
   /**
    * A list of directories to watch.
@@ -370,6 +394,8 @@ export async function readConfig(
   serverMinify ??= false;
 
   let mdx = appConfig.mdx;
+  let postcss = appConfig.postcss ?? true;
+  let tailwind = appConfig.tailwind ?? true;
 
   let appDirectory = path.resolve(
     rootDirectory,
@@ -599,6 +625,8 @@ export async function readConfig(
     serverModuleFormat,
     serverPlatform,
     mdx,
+    postcss,
+    tailwind,
     watchPaths,
     tsconfigPath,
     future,
