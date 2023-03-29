@@ -142,7 +142,7 @@ if (typeof window === "undefined") {
 }
 ```
 
-This works fine in a Node.js environment, however, Deno actually supports `window`! So if you really want to check whether you're running in the browser, it's better to check for `document` instead:
+This works fine in a Node.js environment, however, Deno actually supports `document`! So if you really want to check whether you're running in the browser, it's better to check for `document` instead:
 
 ```ts good
 if (typeof document === "undefined") {
