@@ -3,6 +3,7 @@ import { type Manifest } from "../manifest";
 import * as ServerJS from "./serverjs";
 import type { CompileOptions } from "./options";
 import * as AssetsCompiler from "./assets";
+import { createChannel } from "../channel";
 
 type Compiler = {
   compile: () => Promise<Manifest | undefined>;
@@ -13,13 +14,20 @@ export let create = async (
   config: RemixConfig,
   options: CompileOptions
 ): Promise<Compiler> => {
-  let assets = await AssetsCompiler.create(config, options);
-  let server = ServerJS.compiler.create(config, options);
+  let channels = {
+    manifest: createChannel<Manifest>(),
+  };
+
+  let assets = await AssetsCompiler.create(config, options, channels);
+  let server = await ServerJS.compiler.create(config, options, channels);
   return {
     compile: async () => {
+      channels.manifest = createChannel();
       try {
-        let manifest = await assets.compile();
-        await server.compile(manifest);
+        let [manifest] = await Promise.all([
+          assets.compile(),
+          server.compile(),
+        ]);
 
         return manifest;
       } catch (error: unknown) {

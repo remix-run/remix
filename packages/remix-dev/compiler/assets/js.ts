@@ -191,11 +191,7 @@ const createEsbuildConfig = (
     plugins.push(hmrPlugin({ remixConfig: config }));
 
     if (isCssBundlingEnabled(config)) {
-      plugins.push(
-        cssBundleUpdatePlugin({
-          getCssBundleHref: () => channels.cssBundleHref.read(),
-        })
-      );
+      plugins.push(cssBundleUpdatePlugin(channels));
     }
   }
 
