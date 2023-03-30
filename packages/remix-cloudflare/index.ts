@@ -21,6 +21,7 @@ export {
   createCookie,
   createCookieSessionStorage,
   createMemorySessionStorage,
+  createRedisSessionStorage,
   createSessionStorage,
 } from "./implementations";
 
