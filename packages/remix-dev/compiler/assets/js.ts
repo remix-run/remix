@@ -22,8 +22,6 @@ import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 import invariant from "../../invariant";
 import { hmrPlugin } from "./plugins/hmr";
-import { createMatchPath } from "../utils/tsconfig";
-import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
 import { type ReadChannel } from "../../channel";
 
 type Compiler = {
@@ -34,21 +32,6 @@ type Compiler = {
   }>;
   dispose: () => void;
 };
-
-function getNpmPackageName(id: string): string {
-  let split = id.split("/");
-  let packageName = split[0];
-  if (packageName.startsWith("@")) packageName += `/${split[1]}`;
-  return packageName;
-}
-
-function isBareModuleId(id: string): boolean {
-  return !id.startsWith("node:") && !id.startsWith(".") && !path.isAbsolute(id);
-}
-
-function isNodeBuiltIn(packageName: string) {
-  return nodeBuiltins.includes(packageName);
-}
 
 const getExternals = (remixConfig: RemixConfig): string[] => {
   // For the browser build, exclude node built-ins that don't have a
@@ -95,18 +78,6 @@ const createEsbuildConfig = (
 
   let { mode } = options;
 
-  let matchPath = config.tsconfigPath
-    ? createMatchPath(config.tsconfigPath)
-    : undefined;
-  function resolvePath(id: string) {
-    if (!matchPath) {
-      return id;
-    }
-    return (
-      matchPath(id, undefined, undefined, [".ts", ".tsx", ".js", ".jsx"]) || id
-    );
-  }
-
   let plugins: esbuild.Plugin[] = [
     deprecatedRemixPackagePlugin(options.onWarning),
     config.future.unstable_cssModules
@@ -128,47 +99,6 @@ const createEsbuildConfig = (
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
     externalPlugin(/^node:.*/, { sideEffects: false }),
-    {
-      // TODO: should be removed when error handling for compiler is improved
-      name: "warn-on-unresolved-imports",
-      setup: (build) => {
-        build.onResolve({ filter: /.*/ }, (args) => {
-          if (!isBareModuleId(resolvePath(args.path))) {
-            return undefined;
-          }
-
-          if (args.path === "remix:hmr") {
-            return undefined;
-          }
-
-          let packageName = getNpmPackageName(args.path);
-          let pkgManager = getPreferredPackageManager();
-          if (
-            options.onWarning &&
-            !isNodeBuiltIn(packageName) &&
-            !/\bnode_modules\b/.test(args.importer) &&
-            // Silence spurious warnings when using Yarn PnP. Yarn PnP doesn’t use
-            // a `node_modules` folder to keep its dependencies, so the above check
-            // will always fail.
-            (pkgManager === "npm" ||
-              (pkgManager === "yarn" && process.versions.pnp == null))
-          ) {
-            try {
-              require.resolve(args.path);
-            } catch (error: unknown) {
-              options.onWarning(
-                `The path "${args.path}" is imported in ` +
-                  `${path.relative(process.cwd(), args.importer)} but ` +
-                  `"${args.path}" was not found in your node_modules. ` +
-                  `Did you forget to install it?`,
-                args.path
-              );
-            }
-          }
-          return undefined;
-        });
-      },
-    } as esbuild.Plugin,
   ].filter(isNotNull);
 
   if (mode === "development" && config.future.unstable_dev) {
@@ -255,7 +185,7 @@ export const create = async (
 
   let ctx = await esbuild.context({
     ...createEsbuildConfig(remixConfig, options, onLoader, channels),
-    metafile: true, // TODO is this needed when using context api?
+    metafile: true,
   });
 
   let compile = async () => {
