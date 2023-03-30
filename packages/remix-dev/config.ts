@@ -10,7 +10,7 @@ import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { writeConfigDefaults } from "./config/write-tsconfig-defaults";
-import { serverBuildVirtualModule } from "./compiler/serverjs/virtualModules";
+import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
 import { getPreferredPackageManager } from "./cli/getPreferredPackageManager";
 import { warnOnce } from "./warnOnce";

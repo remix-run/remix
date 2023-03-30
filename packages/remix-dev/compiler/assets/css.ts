@@ -21,7 +21,8 @@ import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 import {
   cssBundleEntryModulePlugin,
   cssBundleEntryModuleId,
-} from "./plugins/bundleEntry";
+} from "./plugins/cssBundleEntry";
+import type { WriteChannel } from "../../channel";
 
 function isNotNull<Value>(value: Value): value is Exclude<Value, null> {
   return value !== null;
@@ -107,7 +108,7 @@ const createEsbuildConfig = (
 export let create = async (
   remixConfig: RemixConfig,
   options: CompileOptions,
-  writeCssBundleHref: (cssBundleHref?: string) => void
+  channels: { cssBundleHref: WriteChannel<string | undefined> }
 ) => {
   let ctx = await esbuild.context({
     ...createEsbuildConfig(remixConfig, options),
@@ -134,7 +135,7 @@ export let create = async (
       );
 
       if (!cssBundleFile) {
-        writeCssBundleHref(undefined);
+        channels.cssBundleHref.write(undefined);
         return;
       }
 
@@ -147,7 +148,7 @@ export let create = async (
           path.resolve(cssBundlePath)
         );
 
-      writeCssBundleHref(cssBundleHref);
+      channels.cssBundleHref.write(cssBundleHref);
 
       let { css, map } = await postcss([
         // We need to discard duplicate rules since "composes"
@@ -183,7 +184,7 @@ export let create = async (
 
       return cssBundleHref;
     } catch (error) {
-      writeCssBundleHref(undefined);
+      channels.cssBundleHref.write(undefined);
       throw error;
     }
   };
