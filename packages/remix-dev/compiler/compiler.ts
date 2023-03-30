@@ -1,9 +1,9 @@
+import { createChannel } from "../channel";
 import type { RemixConfig } from "../config";
 import { type Manifest } from "../manifest";
-import * as ServerJS from "./serverjs";
 import type { CompileOptions } from "./options";
 import * as AssetsCompiler from "./assets";
-import { createChannel } from "../channel";
+import * as ServerCompiler from "./server";
 
 type Compiler = {
   compile: () => Promise<Manifest | undefined>;
@@ -19,7 +19,7 @@ export let create = async (
   };
 
   let assets = await AssetsCompiler.create(config, options, channels);
-  let server = await ServerJS.compiler.create(config, options, channels);
+  let server = await ServerCompiler.create(config, options, channels);
   return {
     compile: async () => {
       channels.manifest = createChannel();
