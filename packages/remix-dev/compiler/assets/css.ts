@@ -21,7 +21,7 @@ import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 import {
   cssBundleEntryModulePlugin,
   cssBundleEntryModuleId,
-} from "./plugins/bundleEntry";
+} from "./plugins/cssBundleEntry";
 
 function isNotNull<Value>(value: Value): value is Exclude<Value, null> {
   return value !== null;
