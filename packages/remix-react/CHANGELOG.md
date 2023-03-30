@@ -1,5 +1,12 @@
 # `@remix-run/react`
 
+## 1.15.0-pre.3
+
+### Patch Changes
+
+- - Bump React Router dependencies to the latest version. [See the release notes for more details.](https://github.com/remix-run/react-router/releases/tag/react-router%406.10.0) ([`e14699547`](https://github.com/remix-run/remix/commit/e1469954737a2e45636b6aef73dc9ae251fb1b20))
+- Update deprecation warnings with hardcoded links ([#5889](https://github.com/remix-run/remix/pull/5889))
+
 ## 1.15.0-pre.2
 
 ## 1.15.0-pre.1

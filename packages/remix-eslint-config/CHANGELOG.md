@@ -1,5 +1,11 @@
 # `@remix-run/eslint-config`
 
+## 1.15.0-pre.3
+
+### Patch Changes
+
+- Update TypeScript `peerDependency` to allow for `^5.0.0` ([`6b6ee66a2`](https://github.com/remix-run/remix/commit/6b6ee66a2fef1a7b00ce4c95abed144ab80017e3))
+
 ## 1.15.0-pre.2
 
 ## 1.15.0-pre.1

@@ -22,7 +22,9 @@
     "@remix-run/vercel": "1.14.3"
   },
   "changesets": [
+    "big-squids-hug",
     "bump-router-dependency",
+    "chatty-impalas-grow",
     "css-bundle-hmr",
     "css-bundle-monorepo-fix",
     "css-side-effect-import-extensions",
@@ -40,9 +42,11 @@
     "optional-entries-react-17",
     "proud-nails-hunt",
     "security-dep-bumps",
+    "shy-forks-dance",
     "thick-actors-juggle",
     "three-cheetahs-lick",
     "tidy-jokes-sparkle",
+    "v2-preparation-guide",
     "vanilla-extract-cache",
     "wet-colts-remain",
     "wild-beers-agree",
