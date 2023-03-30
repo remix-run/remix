@@ -8,3 +8,4 @@ export type {
 } from "./sessions";
 export type { CreateCookieSessionStorageFunction } from "./sessions/cookieStorage";
 export type { CreateMemorySessionStorageFunction } from "./sessions/memoryStorage";
+export type { CreateRedisSessionStorageFunction } from "./sessions/redisStorage";

@@ -2,6 +2,7 @@ import {
   createCookieFactory,
   createCookieSessionStorageFactory,
   createMemorySessionStorageFactory,
+  createRedisSessionStorageFactory,
   createSessionStorageFactory,
 } from "@remix-run/server-runtime";
 
@@ -13,3 +14,5 @@ export const createCookieSessionStorage =
 export const createSessionStorage = createSessionStorageFactory(createCookie);
 export const createMemorySessionStorage =
   createMemorySessionStorageFactory(createSessionStorage);
+export const createRedisSessionStorage =
+  createRedisSessionStorageFactory(createSessionStorage);
