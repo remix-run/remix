@@ -1,10 +1,11 @@
 import type { Redis } from "ioredis";
+
 import type {
   CreateSessionStorageFunction,
   SessionData,
   SessionIdStorageStrategy,
   SessionStorage,
-} from "@remix-run/server-runtime";
+} from "../sessions";
 
 interface RedisSessionStorageOptions {
   cookie?: SessionIdStorageStrategy["cookie"];
@@ -34,10 +35,9 @@ export const createRedisSessionStorageFactory =
       cookie,
       async createData(data, expires) {
         let id = generateSessionId();
+        await redis.set(id, JSON.stringify(data));
         if (expires) {
-          await redis.set(id, JSON.stringify(data), "EX", expires.getSeconds());
-        } else {
-          await redis.set(id, JSON.stringify(data));
+          await redis.expireat(id, Math.floor(expires.getTime() / 1000));
         }
         return id;
       },
@@ -49,10 +49,9 @@ export const createRedisSessionStorageFactory =
       },
 
       async updateData(id, data, expires) {
+        await redis.set(id, JSON.stringify(data));
         if (expires) {
-          await redis.set(id, JSON.stringify(data), "EX", expires.getSeconds());
-        } else {
-          await redis.set(id, JSON.stringify(data));
+          await redis.expireat(id, Math.floor(expires.getTime() / 1000));
         }
       },
 
