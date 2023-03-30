@@ -1,12 +1,19 @@
 ---
 title: ErrorBoundary (v2)
+new: true
 ---
 
 # `ErrorBoundary (v2)`
 
-<docs-info>You can opt into the Remix v2 `ErrorBoundary` behavior via the `future.v2_errorBoundary` flag in your `remix.config.js`</docs-info>
+You can opt-in to the new ErrorBoundary API with a future flag in Remix config.
 
-<docs-info>The Remix `ErrorBoundary` is an implementation of the React Router [`errorElement`/`ErrorBoundary`][rr-error-boundary].</docs-info>
+```js filename=remix.config.js
+module.exports = {
+  future: {
+    v2_errorBoundary: true,
+  },
+};
+```
 
 A Remix `ErrorBoundary` component works just like normal React [error boundaries][error-boundaries], but with a few extra capabilities. When there is an error in your route component, the `ErrorBoundary` will be rendered in its place, nested inside any parent routes. `ErrorBoundary` components also render when there is an error in the `loader` or `action` functions for a route, so all errors for that route may be handled in one spot.
 
@@ -21,8 +28,10 @@ The most common use-cases tend to be:
 To obtain the thrown object, you can use the [`useRouteError`][use-route-error] hook. When a `Response` is thrown, it will be automatically unwrapped into an `ErrorResponse` instance with `state`/`statusText`/`data` fields so that you don't need to bother with `await response.json()` in your component. To differentiate thrown `Response`'s from thrown `Error`'s' you can use the [`isRouteErrorResponse`][is-route-error-response] utility.
 
 ```tsx
-import { isRouteErrorResponse } from "@remix-run/node";
-import { useRouteError } from "@remix-run/react";
+import {
+  isRouteErrorResponse,
+  useRouteError,
+} from "@remix-run/react";
 
 export function ErrorBoundary() {
   let error = useRouteError();
