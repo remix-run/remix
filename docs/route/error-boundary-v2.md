@@ -28,8 +28,10 @@ The most common use-cases tend to be:
 To obtain the thrown object, you can use the [`useRouteError`][use-route-error] hook. When a `Response` is thrown, it will be automatically unwrapped into an `ErrorResponse` instance with `state`/`statusText`/`data` fields so that you don't need to bother with `await response.json()` in your component. To differentiate thrown `Response`'s from thrown `Error`'s' you can use the [`isRouteErrorResponse`][is-route-error-response] utility.
 
 ```tsx
-import { isRouteErrorResponse } from "@remix-run/node";
-import { useRouteError } from "@remix-run/react";
+import {
+  isRouteErrorResponse,
+  useRouteError,
+} from "@remix-run/react";
 
 export function ErrorBoundary() {
   let error = useRouteError();
