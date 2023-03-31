@@ -1,24 +1,10 @@
 # `@remix-run/react`
 
-## 1.15.0-pre.3
-
-### Patch Changes
-
-- - Bump React Router dependencies to the latest version. [See the release notes for more details.](https://github.com/remix-run/react-router/releases/tag/react-router%406.10.0) ([`e14699547`](https://github.com/remix-run/remix/commit/e1469954737a2e45636b6aef73dc9ae251fb1b20))
-- Update deprecation warnings with hardcoded links ([#5889](https://github.com/remix-run/remix/pull/5889))
-
-## 1.15.0-pre.2
-
-## 1.15.0-pre.1
-
-### Patch Changes
-
-- Update to `react-router-dom@6.10.0-pre.1` ([#5875](https://github.com/remix-run/remix/pull/5875))
-- don't warn about runtime deprecation warnings in production ([#5874](https://github.com/remix-run/remix/pull/5874))
-
-## 1.15.0-pre.0
+## 1.15.0
 
 ### Minor Changes
+
+- Deprecated `fetcher.type` and `fetcher.submission` for Remix v2 ([#5691](https://github.com/remix-run/remix/pull/5691))
 
 - We have made a few changes to the API for route module `meta` functions when using the `future.v2_meta` flag. **These changes are _only_ breaking for users who have opted in.** ([#5746](https://github.com/remix-run/remix/pull/5746))
 
@@ -53,6 +39,8 @@
       ```
   - Added support for generating `<script type='application/ld+json' />` and meta-related `<link />` tags to document head via the route `meta` function when using the `v2_meta` future flag
 
+- Added deprecation warning for `v2_normalizeFormMethod` ([#5863](https://github.com/remix-run/remix/pull/5863))
+
 - Added a new `future.v2_normalizeFormMethod` flag to normalize the exposed `useNavigation().formMethod` as an uppercase HTTP method to align with the previous `useTransition` behavior as well as the `fetch()` behavior of normalizing to uppercase HTTP methods. ([#5815](https://github.com/remix-run/remix/pull/5815))
 
   - When `future.v2_normalizeFormMethod === false`,
@@ -62,16 +50,16 @@
     - `useNavigation().formMethod` is uppercase
     - `useFetcher().formMethod` is uppercase
 
-- Add experimental support for Vanilla Extract caching which can be enabled by setting `future.unstable_vanillaExtract: { cache: true }` in `remix.config`. This is considered experimental due to the use of a brand new Vanilla Extract compiler under the hood. Note that in order to use this feature, you must be using at least `v1.10.0` of `@vanilla-extract/css`. ([#5735](https://github.com/remix-run/remix/pull/5735))
-- Add deprecation warnings for `v2_normalizeFormMethod` ([#5863](https://github.com/remix-run/remix/pull/5863))
-- show deprecation warning when `imagesizes` & `imagesizes` properties are returned from `links` function ([#5706](https://github.com/remix-run/remix/pull/5706))
-- Deprecate `fetcher.type` and `fetcher.submission` for Remix v2 ([#5691](https://github.com/remix-run/remix/pull/5691))
-- Add type deprecations for types now in React Router ([#5679](https://github.com/remix-run/remix/pull/5679))
-- Deprecate `CatchBoundary` in favor of `future.v2_errorBoundary` ([#5718](https://github.com/remix-run/remix/pull/5718))
+- Added deprecation warning for normalizing `imagesizes` & `imagesrcset` properties returned from the route `links` function. Both properties should be in camelCase (`imageSizes`/ `imageSrcSet`) to align with their respective JavaScript properties. ([#5706](https://github.com/remix-run/remix/pull/5706))
+
+- Added deprecation warning for `CatchBoundary` in favor of `future.v2_errorBoundary` ([#5718](https://github.com/remix-run/remix/pull/5718))
+
+- Added experimental support for Vanilla Extract caching, which can be enabled by setting `future.unstable_vanillaExtract: { cache: true }` in `remix.config`. This is considered experimental due to the use of a brand new Vanilla Extract compiler under the hood. In order to use this feature, you must be using at least `v1.10.0` of `@vanilla-extract/css`. ([#5735](https://github.com/remix-run/remix/pull/5735))
 
 ### Patch Changes
 
-- Update to `react-router-dom@6.10.0-pre.0` and `@remix-run/router@1.5.0-pre.0` ([#5866](https://github.com/remix-run/remix/pull/5866))
+- Bumped React Router dependencies to the latest version. [See the release notes for more details.](https://github.com/remix-run/react-router/releases/tag/react-router%406.10.0) ([`e14699547`](https://github.com/remix-run/remix/commit/e1469954737a2e45636b6aef73dc9ae251fb1b20))
+- Added type deprecations for types now in React Router ([#5679](https://github.com/remix-run/remix/pull/5679))
 
 ## 1.14.3
 
