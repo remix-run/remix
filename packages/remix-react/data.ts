@@ -2,15 +2,13 @@ import {
   AbortedDeferredError,
   UNSAFE_DeferredData as DeferredData,
 } from "@remix-run/router";
-import type { FormMethod as FormMethodRR } from "react-router-dom";
 
+/**
+ * Data for a route that was returned from a `loader()`.
+ *
+ * Note: This moves to unknown in ReactRouter and eventually likely in Remix
+ */
 export type AppData = any;
-
-export type FormMethod = FormMethodRR;
-
-export type FormEncType =
-  | "application/x-www-form-urlencoded"
-  | "multipart/form-data";
 
 export function isCatchResponse(response: any): boolean {
   return (

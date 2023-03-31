@@ -116,8 +116,7 @@ to `"build/index.js"`.
 
 ## serverBuildTarget
 
-<docs-warning>This option is deprecated and will likely be removed in a future
-stable release. Use a combination of [`publicPath`][public-path],
+<docs-warning>This option is deprecated and will be removed in the next major version release. Use a combination of [`publicPath`][public-path],
 [`serverBuildPath`][server-build-path], [`serverConditions`][server-conditions],
 [`serverDependenciesToBundle`][server-dependencies-to-bundle]
 [`serverMainFields`][server-main-fields], [`serverMinify`][server-minify],

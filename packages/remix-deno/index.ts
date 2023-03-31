@@ -70,6 +70,9 @@ export type {
   UnsignFunction,
   UploadHandler,
   UploadHandlerPart,
-  V2_HtmlMetaDescriptor,
-  V2_MetaFunction,
+  V2_ServerRuntimeMetaArgs as V2_MetaArgs,
+  // TODO: Remove in v2
+  V2_ServerRuntimeMetaDescriptor as V2_HtmlMetaDescriptor,
+  V2_ServerRuntimeMetaDescriptor as V2_MetaDescriptor,
+  V2_ServerRuntimeMetaFunction as V2_MetaFunction,
 } from "@remix-run/server-runtime";

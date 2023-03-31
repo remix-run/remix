@@ -1,6 +1,7 @@
 ---
 title: API Development Strategy
-description: Remix's strategy to provide a smooth upgrade experience for application developers
+description: Remix's strategy tp provide a smooth upgrade experience for application developers
+new: true
 ---
 
 # API Development Strategy
@@ -61,6 +62,7 @@ Here's the current future flags in Remix v1 today:
 | `unstable_vanillaExtract`       | Enable Vanilla Extract Support                                        |
 | `v2_errorBoundary`              | Combine `ErrorBoundary`/`CatchBoundary` into a single `ErrorBoundary` |
 | `v2_meta`                       | Enable the new API for your `meta` functions                          |
+| `v2_normalizeFormMethod`        | Normalize `useNavigation().formMethod` to be an uppercase HTTP Method |
 | `v2_routeConvention`            | Enable the flat routes style of file-based routing                    |
 
 We're in the process of preparing for our v2 release, so all `future.unstable_` flags are being stabilized into `future.v2_` flags (except for those which are not breaking changes, like PostCSS/Tailwind/Vanilla Extract support). This includes adding deprecation warnings for apps still using the old way. Once we stabilize them all we'll do a final Remix 1.15.0 release and let that run for a bit to give folks time to opt into any flags they haven't yet added. Then we'll plan to release Remix 2.0.0 and start working on releasing flag-driven Remix v3 features.

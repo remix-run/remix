@@ -13,12 +13,9 @@ import type {
 } from "@remix-run/router";
 import type {
   LinkProps,
-  NavigationType,
-  Navigator,
-  Params,
   NavLinkProps,
-  Location,
   FormProps,
+  Params,
   SubmitFunction,
 } from "react-router-dom";
 import {
@@ -43,7 +40,7 @@ import {
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
-import type { EntryContext, RemixContextObject } from "./entry";
+import type { RemixContextObject } from "./entry";
 import {
   RemixRootDefaultErrorBoundary,
   RemixRootDefaultCatchBoundary,
@@ -62,9 +59,12 @@ import {
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml, escapeHtml } from "./markup";
 import type {
-  RouteMatchWithMeta,
   V1_HtmlMetaDescriptor,
-  V2_HtmlMetaDescriptor,
+  V1_MetaFunction,
+  V2_MetaDescriptor,
+  V2_MetaFunction,
+  V2_MetaMatch,
+  V2_MetaMatches,
 } from "./routeModules";
 import type {
   Transition,
@@ -75,7 +75,7 @@ import type {
   TransitionStates,
 } from "./transition";
 import { IDLE_TRANSITION, IDLE_FETCHER } from "./transition";
-import { warnOnce } from "./warnings";
+import { logDeprecationOnce } from "./warnings";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -107,19 +107,6 @@ function useRemixContext(): RemixContextObject {
   let context = React.useContext(RemixContext);
   invariant(context, "You must render this element inside a <Remix> element");
   return context;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// RemixEntry
-
-export function RemixEntry(props: {
-  context: EntryContext;
-  action: NavigationType;
-  location: Location;
-  navigator: Navigator;
-  static?: boolean;
-}) {
-  return <h1>Not Implemented!</h1>;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -366,6 +353,30 @@ export function composeEventHandlers<
   };
 }
 
+let linksWarning =
+  "⚠️ REMIX FUTURE CHANGE: The behavior of links `imagesizes` and `imagesrcset` will be changing in v2. " +
+  "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`." +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#links-imagesizes-and-imagesrcset";
+
+let useTransitionWarning =
+  "⚠️ REMIX FUTURE CHANGE: `useTransition` will be removed in v2 in favor of `useNavigation`. " +
+  "You can prepare for this change at your convenience by updating to `useNavigation`." +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#usetransition";
+
+let fetcherTypeWarning =
+  "⚠️ REMIX FUTURE CHANGE: `fetcher.type` will be removed in v2. " +
+  "Please use `fetcher.state`, `fetcher.formData`, and `fetcher.data` to achieve the same UX." +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#usefetcher";
+
+let fetcherSubmissionWarning =
+  "⚠️ REMIX FUTURE CHANGE : `fetcher.submission` will be removed in v2. " +
+  "The submission fields are now part of the fetcher object itself (`fetcher.formData`). " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#usefetcher";
+
 /**
  * Renders the `<link>` tags for the current routes.
  *
@@ -379,6 +390,12 @@ export function Links() {
     () => getLinksForMatches(matches, routeModules, manifest),
     [matches, routeModules, manifest]
   );
+
+  React.useEffect(() => {
+    if (links.some((link) => "imagesizes" in link || "imagesrcset" in link)) {
+      logDeprecationOnce(linksWarning);
+    }
+  }, [links]);
 
   return (
     <>
@@ -568,12 +585,11 @@ function V1Meta() {
     if (routeModule.meta) {
       let routeMeta =
         typeof routeModule.meta === "function"
-          ? routeModule.meta({
+          ? (routeModule.meta as V1_MetaFunction)({
               data,
               parentsData,
               params,
               location,
-              matches: undefined as any,
             })
           : routeModule.meta;
       if (routeMeta && Array.isArray(routeMeta)) {
@@ -602,7 +618,7 @@ function V1Meta() {
         }
 
         if (["charset", "charSet"].includes(name)) {
-          return <meta key="charset" charSet={value as string} />;
+          return <meta key="charSet" charSet={value as string} />;
         }
 
         if (name === "title") {
@@ -651,53 +667,66 @@ function V1Meta() {
 
 function V2Meta() {
   let { routeModules } = useRemixContext();
-  let { matches, loaderData } = useDataRouterStateContext();
+  let { matches: _matches, loaderData } = useDataRouterStateContext();
   let location = useLocation();
 
-  let meta: V2_HtmlMetaDescriptor[] = [];
-  let leafMeta: V2_HtmlMetaDescriptor[] | null = null;
-  let parentsData: { [routeId: string]: AppData } = {};
-
-  let matchesWithMeta: RouteMatchWithMeta[] = matches.map((match) => ({
-    ...match,
-    meta: [],
-  }));
-
-  let index = -1;
-  for (let match of matches) {
-    index++;
-    let routeId = match.route.id;
+  let meta: V2_MetaDescriptor[] = [];
+  let leafMeta: V2_MetaDescriptor[] | null = null;
+  let matches: V2_MetaMatches = [];
+  for (let i = 0; i < _matches.length; i++) {
+    let _match = _matches[i];
+    let routeId = _match.route.id;
     let data = loaderData[routeId];
-    let params = match.params;
-
+    let params = _match.params;
     let routeModule = routeModules[routeId];
+    let routeMeta: V2_MetaDescriptor[] | V1_HtmlMetaDescriptor | undefined = [];
 
-    let routeMeta: V2_HtmlMetaDescriptor[] | V1_HtmlMetaDescriptor | undefined =
-      [];
+    let match: V2_MetaMatch = {
+      id: routeId,
+      data,
+      meta: [],
+      params: _match.params,
+      pathname: _match.pathname,
+      handle: _match.route.handle,
+      // TODO: Remove in v2. Only leaving it for now because we used it in
+      // examples and there's no reason to crash someone's build for one line.
+      // They'll get a TS error from the type updates anyway.
+      // @ts-expect-error
+      get route() {
+        console.warn(
+          "The meta function in " +
+            _match.route.path +
+            " accesses the `route` property on `matches`. This is deprecated and will be removed in Remix version 2. See"
+        );
+        return _match.route;
+      },
+    };
+    matches[i] = match;
 
     if (routeModule?.meta) {
       routeMeta =
         typeof routeModule.meta === "function"
-          ? routeModule.meta({
+          ? (routeModule.meta as V2_MetaFunction)({
               data,
-              parentsData,
               params,
               location,
-              matches: matchesWithMeta,
+              matches,
             })
+          : Array.isArray(routeModule.meta)
+          ? [...routeModule.meta]
           : routeModule.meta;
     } else if (leafMeta) {
       // We only assign the route's meta to the nearest leaf if there is no meta
       // export in the route. The meta function may return a falsey value which
       // is effectively the same as an empty array.
-      routeMeta = leafMeta;
+      routeMeta = [...leafMeta];
     }
 
     routeMeta = routeMeta || [];
     if (!Array.isArray(routeMeta)) {
       throw new Error(
         "The `v2_meta` API is enabled in the Remix config, but the route at " +
-          match.route.path +
+          _match.route.path +
           " returns an invalid value. In v2, all route meta functions must " +
           "return an array of meta objects." +
           // TODO: Add link to the docs once they are written
@@ -706,9 +735,9 @@ function V2Meta() {
       );
     }
 
-    matchesWithMeta[index].meta = routeMeta;
-    meta = routeMeta;
-    parentsData[routeId] = data;
+    match.meta = routeMeta;
+    matches[i] = match;
+    meta = [...routeMeta];
     leafMeta = meta;
   }
 
@@ -719,24 +748,59 @@ function V2Meta() {
           return null;
         }
 
+        if ("tagName" in metaProps) {
+          let tagName = metaProps.tagName;
+          delete metaProps.tagName;
+          if (!isValidMetaTag(tagName)) {
+            console.warn(
+              `A meta object uses an invalid tagName: ${tagName}. Expected either 'link' or 'meta'`
+            );
+            return null;
+          }
+          let Comp = tagName;
+          return <Comp key={JSON.stringify(metaProps)} {...metaProps} />;
+        }
+
         if ("title" in metaProps) {
           return <title key="title">{String(metaProps.title)}</title>;
         }
 
-        if ("charSet" in metaProps || "charset" in metaProps) {
-          // TODO: We normalize this for the user in v1, but should we continue
-          // to do that? Seems like a nice convenience IMO.
+        if ("charset" in metaProps) {
+          metaProps.charSet ??= metaProps.charset;
+          delete metaProps.charset;
+        }
+
+        if ("charSet" in metaProps && metaProps.charSet != null) {
+          return typeof metaProps.charSet === "string" ? (
+            <meta key="charSet" charSet={metaProps.charSet} />
+          ) : null;
+        }
+
+        if ("script:ld+json" in metaProps) {
+          let json: string | null = null;
+          try {
+            json = JSON.stringify(metaProps["script:ld+json"]);
+          } catch (err) {}
           return (
-            <meta
-              key="charset"
-              charSet={metaProps.charSet || (metaProps as any).charset}
-            />
+            json != null && (
+              <script
+                key="script:ld+json"
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                  __html: JSON.stringify(metaProps["script:ld+json"]),
+                }}
+              />
+            )
           );
         }
         return <meta key={JSON.stringify(metaProps)} {...metaProps} />;
       })}
     </>
   );
+}
+
+function isValidMetaTag(tagName: unknown): tagName is "meta" | "link" {
+  return typeof tagName === "string" && /^(meta|link)$/.test(tagName);
 }
 
 export function Meta() {
@@ -816,8 +880,9 @@ export function Scripts(props: ScriptProps) {
       : [
           "__remixContext.p = function(v,e,p,x) {",
           "  if (typeof e !== 'undefined') {",
-          "    x=new Error(e.message);",
-          process.env.NODE_ENV === "development" ? `x.stack=e.stack;` : "",
+          process.env.NODE_ENV === "development"
+            ? "    x=new Error(e.message);\n    x.stack=e.stack;"
+            : '    x=new Error("Unexpected Server Error");\n    x.stack=undefined;',
           "    p=Promise.reject(x);",
           "  } else {",
           "    p=Promise.resolve(v);",
@@ -836,8 +901,9 @@ export function Scripts(props: ScriptProps) {
           "__remixContext.r = function(i,k,v,e,p,x) {",
           "  p = __remixContext.t[i][k];",
           "  if (typeof e !== 'undefined') {",
-          "    x=new Error(e.message);",
-          process.env.NODE_ENV === "development" ? `x.stack=e.stack;` : "",
+          process.env.NODE_ENV === "development"
+            ? "    x=new Error(e.message);\n    x.stack=e.stack;"
+            : '    x=new Error("Unexpected Server Error");\n    x.stack=undefined;',
           "    p.e(x);",
           "  } else {",
           "    p.r(v);",
@@ -867,13 +933,16 @@ export function Scripts(props: ScriptProps) {
                 } else {
                   let trackedPromise = deferredData.data[key] as TrackedPromise;
                   if (typeof trackedPromise._error !== "undefined") {
-                    let toSerialize: { message: string; stack?: string } = {
-                      message: trackedPromise._error.message,
-                      stack: undefined,
-                    };
-                    if (process.env.NODE_ENV === "development") {
-                      toSerialize.stack = trackedPromise._error.stack;
-                    }
+                    let toSerialize: { message: string; stack?: string } =
+                      process.env.NODE_ENV === "development"
+                        ? {
+                            message: trackedPromise._error.message,
+                            stack: trackedPromise._error.stack,
+                          }
+                        : {
+                            message: "Unexpected Server Error",
+                            stack: undefined,
+                          };
                     return `${JSON.stringify(
                       key
                     )}:__remixContext.p(!1, ${escapeHtml(
@@ -1079,13 +1148,16 @@ function ErrorDeferredHydrationScript({
   routeId: string;
 }) {
   let error = useAsyncError() as Error;
-  let toSerialize: { message: string; stack?: string } = {
-    message: error.message,
-    stack: undefined,
-  };
-  if (process.env.NODE_ENV === "development") {
-    toSerialize.stack = error.stack;
-  }
+  let toSerialize: { message: string; stack?: string } =
+    process.env.NODE_ENV === "development"
+      ? {
+          message: error.message,
+          stack: error.stack,
+        }
+      : {
+          message: "Unexpected Server Error",
+          stack: undefined,
+        };
 
   return (
     <script
@@ -1182,13 +1254,7 @@ export function useTransition(): Transition {
   let navigation = useNavigation();
 
   React.useEffect(() => {
-    warnOnce(
-      false,
-      "⚠️ DEPRECATED: The `useTransition` hook has been deprecated in favor of " +
-        "`useNavigation` and will be removed in Remix v2.  Please update your " +
-        "code to leverage `useNavigation`.\n\nSee https://remix.run/docs/hooks/use-transition " +
-        "and https://remix.run/docs/hooks/use-navigation for more information."
-    );
+    logDeprecationOnce(useTransitionWarning);
   }, []);
 
   return React.useMemo(
@@ -1361,8 +1427,8 @@ function convertNavigationToTransition(navigation: Navigation): Transition {
  */
 export function useFetchers(): Fetcher[] {
   let fetchers = useFetchersRR();
-  return fetchers.map((f) =>
-    convertRouterFetcherToRemixFetcher({
+  return fetchers.map((f) => {
+    let fetcher = convertRouterFetcherToRemixFetcher({
       state: f.state,
       data: f.data,
       formMethod: f.formMethod,
@@ -1370,8 +1436,10 @@ export function useFetchers(): Fetcher[] {
       formData: f.formData,
       formEncType: f.formEncType,
       " _hasFetcherDoneAnything ": f[" _hasFetcherDoneAnything "],
-    })
-  );
+    });
+    addFetcherDeprecationWarnings(fetcher);
+    return fetcher;
+  });
 }
 
 export type FetcherWithComponents<TData> = Fetcher<TData> & {
@@ -1403,13 +1471,49 @@ export function useFetcher<TData = any>(): FetcherWithComponents<
       formEncType: fetcherRR.formEncType,
       " _hasFetcherDoneAnything ": fetcherRR[" _hasFetcherDoneAnything "],
     });
-    return {
+    let fetcherWithComponents = {
       ...remixFetcher,
       load: fetcherRR.load,
       submit: fetcherRR.submit,
       Form: fetcherRR.Form,
     };
+    addFetcherDeprecationWarnings(fetcherWithComponents);
+    return fetcherWithComponents;
   }, [fetcherRR]);
+}
+
+function addFetcherDeprecationWarnings(fetcher: Fetcher) {
+  let type: Fetcher["type"] = fetcher.type;
+  Object.defineProperty(fetcher, "type", {
+    get() {
+      logDeprecationOnce(fetcherTypeWarning);
+      return type;
+    },
+    set(value: Fetcher["type"]) {
+      // Devs should *not* be doing this but we don't want to break their
+      // current app if they are
+      type = value;
+    },
+    // These settings should make this behave like a normal object `type` field
+    configurable: true,
+    enumerable: true,
+  });
+
+  let submission: Fetcher["submission"] = fetcher.submission;
+  Object.defineProperty(fetcher, "submission", {
+    get() {
+      logDeprecationOnce(fetcherSubmissionWarning);
+      return submission;
+    },
+    set(value: Fetcher["submission"]) {
+      // Devs should *not* be doing this but we don't want to break their
+      // current app if they are
+      submission = value;
+    },
+    // These settings should make this behave like a normal object `type` field
+    configurable: true,
+    enumerable: true,
+  });
 }
 
 function convertRouterFetcherToRemixFetcher(
@@ -1582,9 +1686,6 @@ export const LiveReload =
       }: {
         port?: number;
         timeoutMs?: number;
-        /**
-         * @deprecated this property is no longer relevant.
-         */
         nonce?: string;
       }) {
         let js = String.raw;

@@ -22,4 +22,4 @@ jobs:
     if: github.repository == 'remix-run/remix'
     uses: ./.github/workflows/reusable-test.yml
     with:
-      node_version: '["19.7"]'
+      node_version: '["latest"]'
