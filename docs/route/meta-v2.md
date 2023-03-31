@@ -64,7 +64,7 @@ export const meta: V2_MetaFunction = () => {
 };
 ```
 
-A meta descriptor can also render a `<link>` tag by setting the `tagName` property to `"link"`. This is useful for `<link>` tags associated with SEO like `canonical` URLs. For asset links like stylesheets and favicons, you should use the [`links` export][links-export] instead.
+A meta descriptor can also render a `<link>` tag by setting the `tagName` property to `"link"`. This is useful for `<link>` tags associated with SEO like `canonical` URLs. For asset links like stylesheets and favicons, you should use the \[`links` export]\[links-export] instead.
 
 ```tsx
 export const meta: V2_MetaFunction = () => {
@@ -97,7 +97,7 @@ export const meta: V2_MetaFunction = ({ location }) => {
 
 This is an array of the current route matches. You have access to many things, particularly the meta from the parent matches and data.
 
-The interface for `matches` is similar to the return value of [`useMatches`][use-matches], but each match will include the output of its `meta` function. This is useful for [merging metadata across the route hierarchy][merging-metadata-across-the-route-hierarchy].
+The interface for `matches` is similar to the return value of \[`useMatches`]\[use-matches], but each match will include the output of its `meta` function. This is useful for \[merging metadata across the route hierarchy]\[merging-metadata-across-the-route-hierarchy].
 
 ### `data`
 
@@ -119,7 +119,7 @@ export const meta: V2_MetaFunction<typeof loader> = ({
 
 ### `params`
 
-The route's URL params. See [Dynamic Segments in the Routing Guide][url-params].
+The route's URL params. See \[Dynamic Segments in the Routing Guide]\[url-params].
 
 ## Accessing Data from Parent Route Loaders
 
@@ -184,7 +184,7 @@ With this code, we will lose the `viewport` meta tag at `/projects` and `/projec
 
 ### Global `meta`
 
-Nearly every app will have global meta like the `viewport` and `charSet`. We recommend using normal `<meta>` tags inside of the [root route][root-route] instead of the `meta` export so you simply don't have to deal with merging:
+Nearly every app will have global meta like the `viewport` and `charSet`. We recommend using normal `<meta>` tags inside of the \[root route]\[root-route] instead of the `meta` export so you simply don't have to deal with merging:
 
 ```tsx filename=app/root.tsx lines=[12-16]
 import {
@@ -217,11 +217,11 @@ export default function Root() {
 
 ### Avoid `meta` in Parent Routes
 
-You can also avoid the merge problem by simply not exporting meta that you want to override from parent routes. Instead of defining meta on the parent route, use the [index route][index-route]. This way you can avoid complex merge logic for things like the title. Otherwise you will need to find the parent title descriptor and replace it with the child's title. It's much easier to simply not need to override by using index routes.
+You can also avoid the merge problem by simply not exporting meta that you want to override from parent routes. Instead of defining meta on the parent route, use the \[index route]\[index-route]. This way you can avoid complex merge logic for things like the title. Otherwise you will need to find the parent title descriptor and replace it with the child's title. It's much easier to simply not need to override by using index routes.
 
 ### Merging with Parent `meta`
 
-Usually you only need to add meta to what the parent has already defined. You can merge parent meta with the spread operator and the [`matches`][matches] arg:
+Usually you only need to add meta to what the parent has already defined. You can merge parent meta with the spread operator and the \[`matches`]\[matches] arg:
 
 ```tsx
 export const meta: V2_MetaFunction = ({ matches }) => {
@@ -247,4 +247,4 @@ export const meta: V2_MetaFunction = ({ matches }) => {
 
 If you can't avoid the merge problem with global meta or index routes, we've created a helper that you can put in your app that can override and append to parent meta easily.
 
-- [View Gist for `merge-meta.ts`][merge-meta]
+- \[View Gist for `merge-meta.ts`]\[merge-meta]
