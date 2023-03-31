@@ -2,4 +2,4 @@
 "@remix-run/dev": minor
 ---
 
-show deprecation warning when `browserBuildDirectory` config is used
+Added deprecation warning for `browserBuildDirectory` in `remix.config`

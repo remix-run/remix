@@ -3,4 +3,4 @@
 "@remix-run/dev": patch
 ---
 
-use path.resolve when re-exporting entry.client
+We now use `path.resolve` when re-exporting `entry.client`

@@ -2,4 +2,4 @@
 "@remix-run/dev": patch
 ---
 
-Add deprecation warning for `future.v2_meta`
+Added deprecation warning for `future.v2_meta`

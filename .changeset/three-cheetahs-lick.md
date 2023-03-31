@@ -4,4 +4,4 @@
 "@remix-run/server-runtime": minor
 ---
 
-Deprecate `CatchBoundary` in favor of `future.v2_errorBoundary`
+Added deprecation warning for `CatchBoundary` in favor of `future.v2_errorBoundary`

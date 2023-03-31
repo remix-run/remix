@@ -3,4 +3,4 @@
 "@remix-run/dev": patch
 ---
 
-Ensure changes to CSS inserted via `@remix-run/css-bundle` are picked up during HMR
+Fixed issue to ensure changes to CSS inserted via `@remix-run/css-bundle` are picked up during HMR

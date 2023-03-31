@@ -3,4 +3,4 @@
 "@remix-run/react": minor
 ---
 
-Add deprecation warnings for `v2_normalizeFormMethod`
+Added deprecation warning for `v2_normalizeFormMethod`

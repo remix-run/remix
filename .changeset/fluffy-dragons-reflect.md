@@ -3,4 +3,4 @@
 "@remix-run/dev": patch
 ---
 
-resolves an issue when resolving react-refresh for pnpm users
+Fixed resolution issues for pnpm users installing `react-refresh`

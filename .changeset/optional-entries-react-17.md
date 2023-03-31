@@ -3,4 +3,4 @@
 "@remix-run/dev": patch
 ---
 
-add optional entry file support for React 17
+Added optional entry file support for React 17
