@@ -135,18 +135,6 @@ The `serverBuildTarget` can be one of the following:
 - [`"node-cjs"`][node-cjs]
 - [`"vercel"`][vercel]
 
-**Migration Table:**
-
-| serverBuildTarget    | publicPath         | serverBuildPath                         | serverConditions | serverMainFields        | serverModuleFormat | serverPlatform | serverDependenciesToBundle | serverMinify |
-| -------------------- | ------------------ | --------------------------------------- | ---------------- | ----------------------- | ------------------ | -------------- | -------------------------- | ------------ |
-| `arc`                | `/\_static/build/` | `server/index.js`                       |                  | `main, module`          | `cjs`              | `node`         |                            | `false`      |
-| `cloudflare-pages`   | `/build/`          | `functions/[[path]].js`                 | `worker`         | `browser, module, main` | `esm`              | `neutral`      | `all`                      | `true`       |
-| `cloudflare-workers` | `/build/`          | `build/index.js`                        | `worker`         | `browser, module, main` | `esm`              | `neutral`      | `all`                      | `true`       |
-| `deno`               | `/build/`          | `build/index.js`                        | `deno, worker`   | `module, main`          | `esm`              | `neutral`      | `all`                      | `false`      |
-| `netlify`            | `/build/`          | `.netlify/functions-internal/server.js` |                  | `main, module`          | `cjs`              | `node`         |                            | `false`      |
-| `node-cjs`           | `/build/`          | `build/index.js`                        |                  | `main, module`          | `cjs`              | `node`         |                            | `false`      |
-| `vercel`             | `/build/`          | `api/index.js`                          |                  | `main, module`          | `cjs`              | `node`         |                            | `false`      |
-
 ## serverConditions
 
 The order of conditions to use when resolving server dependencies' `exports`

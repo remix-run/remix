@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/eslint-config",
-  "version": "1.14.3",
+  "version": "1.15.0",
   "description": "ESLint configuration for Remix projects",
   "bugs": {
     "url": "https://github.com/remix-run/remix/issues"
@@ -50,7 +50,7 @@
   "peerDependencies": {
     "eslint": "^8.0.0",
     "react": "^17.0.0 || ^18.0.0",
-    "typescript": "^4.0.0"
+    "typescript": "^4.0.0 || ^5.0.0"
   },
   "peerDependenciesMeta": {
     "typescript": {

@@ -1706,6 +1706,12 @@ And to make it even cooler, you don't necessarily need prisma or direct database
 
 Oh, you've just got REST endpoints you hit? That's fine too! You can easily filter out the extra data before sending it off in your loader. Because it all happens on the server, you can save your user's download size easily without having to convince your backend engineers to change their entire API. Neat!
 
+Filtering out data you don't render isn't just about sending less over the wire, you should also filter out any sensitive data you don't want exposed to the client.
+
+<docs-error>
+Whatever you return from your loader will be exposed to the client, even if the component doesn't render it. Treat your loaders with the same care as public API endpoints.
+</docs-error>
+
 ### Network Type Safety
 
 In our code we're using the `useLoaderData`'s type generic and specifying our `LoaderData` so we can get nice auto-complete, but it's not _really_ getting us type safety because the `loader` and the `useLoaderData` are running in completely different environments. Remix ensures we get what the server sent, but who really knows? Maybe in a fit of rage, your co-worker set up your server to automatically remove references to dogs (they prefer cats).
@@ -1795,8 +1801,7 @@ const [randomJoke] = await db.joke.findMany({
 
 <summary>app/routes/jokes/index.tsx</summary>
 
-```tsx filename=app/routes/jokes/index.tsx lines=[5,7-15,18]
-import type { LoaderArgs } from "@remix-run/node";
+```tsx filename=app/routes/jokes/index.tsx lines=[1-2,4,6-14,17]
 import { json } from "@remix-run/node";
 import { useLoaderData, Link } from "@remix-run/react";
 
@@ -2512,12 +2517,11 @@ Great, now that we've got the UI looking nice, let's add some logic. This will b
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[2,5,8,13-14,20-24,26-30,32-38,40-112,115,138-141,150-153,164-172,174-182,190-198,200-208,210-219]
+```tsx filename=app/routes/login.tsx lines=[2,7,12-13,19-23,25-29,31-37,39-111,114,137-140,149-152,163-171,173-181,189-197,199-207,209-218]
 import type {
   ActionArgs,
   LinksFunction,
 } from "@remix-run/node";
-import { json } from "@remix-run/node";
 import {
   Link,
   useActionData,
@@ -3127,7 +3131,7 @@ You may also notice that our solution makes use of the `login` route's `redirect
 
 ```tsx filename=app/routes/jokes/new.tsx lines=[7,22,51]
 import type { ActionArgs } from "@remix-run/node";
-import { json, redirect } from "@remix-run/node";
+import { redirect } from "@remix-run/node";
 import { useActionData } from "@remix-run/react";
 
 import { db } from "~/utils/db.server";
@@ -3499,10 +3503,7 @@ export default function JokesRoute() {
 <summary>app/routes/logout.tsx</summary>
 
 ```tsx filename=app/routes/logout.tsx
-import type {
-  ActionArgs,
-  LoaderArgs,
-} from "@remix-run/node";
+import type { ActionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 
 import { logout } from "~/utils/session.server";
@@ -3681,12 +3682,11 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[18,102-110]
+```tsx filename=app/routes/login.tsx lines=[17,101-109]
 import type {
   ActionArgs,
   LinksFunction,
 } from "@remix-run/node";
-import { json } from "@remix-run/node";
 import {
   Link,
   useActionData,
@@ -5005,13 +5005,12 @@ export default function IndexRoute() {
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[4,22-25]
+```tsx filename=app/routes/login.tsx lines=[4,21-24]
 import type {
   ActionArgs,
   LinksFunction,
   MetaFunction,
 } from "@remix-run/node";
-import { json } from "@remix-run/node";
 import {
   Link,
   useActionData,
@@ -5741,7 +5740,7 @@ export function JokeDisplay({
 
 <summary>app/routes/jokes/$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes/$jokeId.tsx lines=[14,89]
+```tsx filename=app/routes/jokes/$jokeId.tsx lines=[13,88]
 import type {
   ActionArgs,
   LoaderArgs,
@@ -5749,7 +5748,6 @@ import type {
 } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
-  Link,
   useCatch,
   useLoaderData,
   useParams,
