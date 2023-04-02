@@ -361,6 +361,8 @@ With the server up and running again, you should be able to go to `http://localh
 
 ## Dynamic Route Params
 
+**Note about dynamic route and V2 conventions** - Before starting this section you may want to review the docs regarding V2 changes to routing conventions in "[Preparing for V2](docs/en/1.15.0/pages/v2#file-system-route-convention)" documentation. There are new "future flags" contained in `remix.config.js` that are set to `true` by default for a new installation, causing dynamic routes as described in this tutorial to not work correctly. Specifically, look at the `v2_routeConvention: true` setting. The solution is to follow the new V2 routing conventions as they are described in the link above, or simply change this "future flag" to `false`, then following the tutorial as described - this is not a requirement going forward as it is only a convention, and it is up to the developer whether to adopt the new routing conventions for V2 as the V1 conventions will continue to work.
+
 Now let's make a route to actually view the post. We want these URLs to work:
 
 ```
