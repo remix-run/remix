@@ -15,6 +15,17 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
     },
   },
   files: {
+    "remix.config.js": js`
+      module.exports = {
+        tailwind: true,
+        future: {
+          unstable_dev: {
+            port: ${options.port},
+            appServerPort: ${options.appServerPort},
+          },
+        },
+      };
+    `,
     "package.json": json({
       private: true,
       sideEffects: false,

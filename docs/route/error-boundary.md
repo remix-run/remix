@@ -50,6 +50,13 @@ export function ErrorBoundary() {
 ```
 
 [error-boundaries]: https://reactjs.org/docs/error-boundaries.html
+
+<<<<<<< HEAD
 [rr-error-boundary]: https://reactrouter.com/en/main/route/error-element
 [use-route-error]: ../hooks/use-route-error
 [is-route-error-response]: ../utils/is-route-error-response.md
+=======
+[error-boundary-v2]: ./error-boundary-v2
+[v2guide]: ../pages/v2#catchboundary-and-errorboundary
+
+> > > > > > > dev

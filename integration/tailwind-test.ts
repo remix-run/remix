@@ -44,6 +44,12 @@ function runTests(ext: typeof extensions[number]) {
   test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
+        "remix.config.js": js`
+          module.exports = {
+            tailwind: true,
+          };
+        `,
+
         [tailwindConfigName]: tailwindConfig,
 
         "app/tailwind.css": css`

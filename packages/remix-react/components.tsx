@@ -9,7 +9,7 @@ import type {
   UNSAFE_DeferredData as DeferredData,
   TrackedPromise,
 } from "@remix-run/router";
-import type { LinkProps, Params, NavLinkProps } from "react-router-dom";
+import type { LinkProps, NavLinkProps, Params } from "react-router-dom";
 import {
   Await as AwaitRR,
   Link as RouterLink,
@@ -43,7 +43,6 @@ import {
 import type { HtmlLinkDescriptor, PrefetchPageDescriptor } from "./links";
 import { createHtml, escapeHtml } from "./markup";
 import type { MetaDescriptor, MetaMatch, MetaMatches } from "./routeModules";
-import { logDeprecationOnce } from "./warnings";
 
 function useDataRouterContext() {
   let context = React.useContext(DataRouterContext);
@@ -298,17 +297,6 @@ export function Links() {
     () => getLinksForMatches(matches, routeModules, manifest),
     [matches, routeModules, manifest]
   );
-
-  React.useEffect(() => {
-    if (links.some((link) => "imagesizes" in link || "imagesrcset" in link)) {
-      logDeprecationOnce(
-        "⚠️ DEPRECATED: The `imagesizes` & `imagesrcset` properties in " +
-          "your links have been deprecated in favor of `imageSizes` & " +
-          "`imageSrcSet` and support will be removed in Remix v2. Please update " +
-          "your code to use the new property names instead."
-      );
-    }
-  }, [links]);
 
   return (
     <>

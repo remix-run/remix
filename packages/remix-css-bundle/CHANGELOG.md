@@ -1,5 +1,13 @@
 # @remix-run/css-bundle
 
+## 1.15.0
+
+### Patch Changes
+
+- Fixed issue to ensure changes to CSS inserted via `@remix-run/css-bundle` are picked up during HMR ([#5823](https://github.com/remix-run/remix/pull/5823))
+- Updated dependencies:
+  - `@remix-run/dev@1.15.0`
+
 ## 1.14.3
 
 ### Patch Changes

@@ -34,6 +34,12 @@ test.describe("PostCSS enabled (default)", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
+        "remix.config.js": js`
+          module.exports = {
+            postcss: true,
+            tailwind: true,
+          };
+        `,
         // We provide a test plugin that replaces the strings
         // "TEST_PADDING_VALUE" and "TEST_POSTCSS_CONTEXT".
         // This lets us assert that the plugin is being run

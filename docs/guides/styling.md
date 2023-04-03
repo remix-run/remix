@@ -1,5 +1,6 @@
 ---
 title: Styling
+new: true
 ---
 
 # Styling
@@ -795,5 +796,5 @@ module.exports = {
 [css-bundling]: #css-bundling
 [vanilla-extract]: https://vanilla-extract.style
 [sprinkles]: https://vanilla-extract.style/documentation/packages/sprinkles
-[built-in-post-css-support]: #built-in-postcss-support
+[built-in-post-css-support]: #postcss
 [vanilla-extract-2]: #vanilla-extract

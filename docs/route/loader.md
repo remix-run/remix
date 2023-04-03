@@ -45,6 +45,10 @@ export default function Users() {
 
 Because `prisma` is only used in the loader it will be removed from the browser bundle by the compiler, as illustrated by the highlighted lines.
 
+<docs-error>
+Note that whatever you return from your loader will be exposed to the client, even if the component doesn't render it. Treat your loaders with the same care as public API endpoints.
+</docs-error>
+
 ## Type Safety
 
 You can get type safety over the network for your loader and component with `LoaderArgs` and `useLoaderData<typeof loader>`.

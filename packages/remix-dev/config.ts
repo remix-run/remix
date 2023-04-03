@@ -13,7 +13,6 @@ import { writeConfigDefaults } from "./config/write-tsconfig-defaults";
 import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
 import { getPreferredPackageManager } from "./cli/getPreferredPackageManager";
-import { warnOnce } from "./warnOnce";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -43,8 +42,8 @@ interface FutureConfig {
  */
 export interface AppConfig {
   /**
-   * The path to the `app` directory, relative to `remix.config.js`. Defaults
-   * to `"app"`.
+   * The path to the `app` directory, relative to `remix.config.js`. Defaults to
+   * `"app"`.
    */
   appDirectory?: string;
 
@@ -92,8 +91,8 @@ export interface AppConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
-   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
-   * Defaults to `true`.
+   * Whether or not to process CSS using PostCSS if `postcss.config.js` is
+   * present. Defaults to `true`.
    */
   postcss?: boolean;
 
@@ -135,8 +134,8 @@ export interface AppConfig {
   serverMainFields?: string[];
 
   /**
-   * Whether to minify the server build in production or not.
-   * Defaults to `false`.
+   * Whether or not to minify the server build in production or not. Defaults to
+   * `false`.
    */
   serverMinify?: boolean;
 
@@ -151,8 +150,8 @@ export interface AppConfig {
   serverPlatform?: ServerPlatform;
 
   /**
-   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
-   * Defaults to `true`.
+   * Whether or not to support Tailwind functions and directives in CSS files if
+   * `tailwindcss` is installed. Defaults to `true`.
    */
   tailwind?: boolean;
 
@@ -164,7 +163,8 @@ export interface AppConfig {
   ignoredRouteFiles?: string[];
 
   /**
-   * A function for defining custom directories to watch while running `remix dev`, in addition to `appDirectory`.
+   * A function for defining custom directories to watch while running `remix
+   * dev`, in addition to `appDirectory`.
    */
   watchPaths?:
     | string
@@ -249,8 +249,8 @@ export interface RemixConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
-   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
-   * Defaults to `true`.
+   * Whether or not to process CSS using PostCSS if `postcss.config.js` is
+   * present. Defaults to `true`.
    */
   postcss: boolean;
 
@@ -295,8 +295,8 @@ export interface RemixConfig {
   serverMainFields: string[];
 
   /**
-   * Whether to minify the server build in production or not.
-   * Defaults to `false`.
+   * Whether or not to minify the server build in production or not. Defaults to
+   * `false`.
    */
   serverMinify: boolean;
 
@@ -316,8 +316,8 @@ export interface RemixConfig {
   serverPlatform: ServerPlatform;
 
   /**
-   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
-   * Defaults to `true`.
+   * Whether or not to support Tailwind functions and directives in CSS files if
+   * `tailwindcss` is installed. Defaults to `true`.
    */
   tailwind: boolean;
 
@@ -360,8 +360,8 @@ export async function readConfig(
       // shout out to next
       // https://github.com/vercel/next.js/blob/b15a976e11bf1dc867c241a4c1734757427d609c/packages/next/server/config.ts#L748-L765
       if (process.env.NODE_ENV === "test") {
-        // dynamic import does not currently work inside of vm which
-        // jest relies on so we fall back to require for this case
+        // dynamic import does not currently work inside of vm which jest relies
+        // on so we fall back to require for this case
         // https://github.com/nodejs/node/issues/35889
         appConfigModule = require(configFile);
       } else {
