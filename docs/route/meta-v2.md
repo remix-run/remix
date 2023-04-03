@@ -253,7 +253,7 @@ If you can't avoid the merge problem with global meta or index routes, we've cre
 [use-matches]: ../hooks/use-matches
 [merging-metadata-across-the-route-hierarchy]: #merging-with-parent-meta
 [url-params]: ../guides/routing#dynamic-segments
-[root-route]: ../file-conventions/route-files-v2#root-route
+[root-route]: ../file-conventions/root
 [index-route]: ../guides/routing#index-routes
 [matches]: #matches
 [merge-meta]: https://gist.github.com/ryanflorence/ec1849c6d690cfbffcb408ecd633e069
