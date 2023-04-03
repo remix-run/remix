@@ -57,8 +57,6 @@ Here's the current future flags in Remix v1 today:
 | `unstable_cssModules`           | Enable CSS Modules Support                                            |
 | `unstable_cssSideEffectImports` | Enable CSS Side Effect imports                                        |
 | `unstable_dev`                  | Enable the new development server (including HMR/HDR support)         |
-| `unstable_postcss`              | Enable PostCSS Support                                                |
-| `unstable_tailwind`             | Enable TailwindCSS support                                            |
 | `unstable_vanillaExtract`       | Enable Vanilla Extract Support                                        |
 | `v2_errorBoundary`              | Combine `ErrorBoundary`/`CatchBoundary` into a single `ErrorBoundary` |
 | `v2_meta`                       | Enable the new API for your `meta` functions                          |

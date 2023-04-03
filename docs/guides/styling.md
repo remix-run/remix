@@ -403,31 +403,23 @@ export function links() {
 
 Perhaps the most popular way to style a Remix application in the community is to use [Tailwind CSS][tailwind]. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
 
-There are a couple of options for integrating Tailwind into your Remix application. You can use Remix's built-in support, or integrate Tailwind manually using their CLI.
-
-### Built-in Tailwind Support
-
-<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
-
-First, to enable built-in Tailwind support, set the `future.unstable_tailwind` feature flag in `remix.config.js`.
+To use the built-in Tailwind support, first enable the `tailwind` option in `remix.config.js`:
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
-  future: {
-    unstable_tailwind: true,
-  },
+  tailwind: true,
   // ...
 };
 ```
 
-Then install Tailwind:
+Install Tailwind as a dev dependency:
 
 ```sh
 npm install -D tailwindcss
 ```
 
-Initialize a config file:
+Then initialize a config file:
 
 ```sh
 npx tailwindcss init
@@ -472,114 +464,6 @@ With this setup in place, you can also use [Tailwind's functions and directives]
 
 Note that if you're also using Remix's [built-in PostCSS support][built-in-post-css-support], the Tailwind PostCSS plugin will be automatically included if it's missing, but you can also choose to manually include the Tailwind plugin in your PostCSS config instead if you'd prefer.
 
-### Manual Tailwind Integration
-
-It's also possible to use Tailwind without leveraging the built-in support by using the `tailwindcss` CLI directly.
-
-First install a couple of dev dependencies:
-
-```sh
-npm install -D npm-run-all tailwindcss
-```
-
-Secondly, initialize a Tailwind config file:
-
-```sh
-npx tailwindcss init
-```
-
-Now we can tell it which files to generate classes from:
-
-```js filename=tailwind.config.js lines=[3]
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: ["./app/**/*.{ts,tsx,jsx,js}"],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-};
-```
-
-Update the package scripts to generate the Tailwind file during dev and for the production build
-
-```json filename=package.json lines=[4-10]
-{
-  // ...
-  "scripts": {
-    "build": "run-s \"build:*\"",
-    "build:css": "npm run generate:css -- --minify",
-    "build:remix": "remix build",
-    "dev": "run-p \"dev:*\"",
-    "dev:css": "npm run generate:css -- --watch",
-    "dev:remix": "remix dev",
-    "generate:css": "npx tailwindcss -o ./app/tailwind.css",
-    "start": "remix-serve build"
-  }
-  // ...
-}
-```
-
-Finally, import the generated CSS file into your app:
-
-```tsx filename=app/root.tsx
-import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
-
-// ...
-
-import styles from "./tailwind.css";
-
-export const links: LinksFunction = () => [
-  { rel: "stylesheet", href: styles },
-];
-```
-
-If you want to use Tailwind's `@apply` method to extract custom classes, create a css file in the root directory, eg `./styles/tailwind.css`:
-
-```css filename=styles/tailwind.css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer components {
-  .custom-class {
-    @apply ...;
-  }
-}
-```
-
-Then alter how Tailwind is generating your css:
-
-```json filename=package.json lines=[10]
-{
-  // ...
-  "scripts": {
-    "build": "run-s \"build:*\"",
-    "build:css": "npm run generate:css -- --minify",
-    "build:remix": "remix build",
-    "dev": "run-p \"dev:*\"",
-    "dev:css": "npm run generate:css -- --watch",
-    "dev:remix": "remix dev",
-    "generate:css": "npx tailwindcss -i ./styles/tailwind.css -o ./app/tailwind.css",
-    "start": "remix-serve build"
-  }
-  // ...
-}
-```
-
-It isn't required, but it's recommended to add the generated file to your `.gitignore` list:
-
-```sh filename=.gitignore lines=[8]
-node_modules
-
-/.cache
-/build
-/public/build
-.env
-
-/app/tailwind.css
-```
-
 If you're using VS Code, it's recommended you install the [Tailwind IntelliSense extension][tailwind-intelli-sense-extension] for the best developer experience.
 
 ## Remote Stylesheets
@@ -601,43 +485,33 @@ export const links: LinksFunction = () => {
 
 ## PostCSS
 
-[PostCSS][postcss] is a popular tool with a rich plugin ecosystem, commonly used to prefix CSS for older browsers, transpile future CSS syntax, inline images, lint your styles and more.
+[PostCSS][postcss] is a popular tool with a rich plugin ecosystem, commonly used to prefix CSS for older browsers, transpile future CSS syntax, inline images, lint your styles and more. When a PostCSS config is detected, Remix will automatically run PostCSS across all CSS in your project.
 
-There are a couple of options for integrating PostCSS into your Remix application. You can use Remix's built-in support, or integrate PostCSS manually using their CLI.
+For example, to use [Autoprefixer][autoprefixer], first enable the `postcss` option in `remix.config.js`:
 
-### Built-in PostCSS Support
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  postcss: true,
+  // ...
+};
+```
 
-<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+Install the PostCSS plugin.
 
-When a PostCSS config is detected, Remix will automatically run PostCSS across all CSS in your project. For example, to use [Autoprefixer][autoprefixer]:
+```sh
+npm install -D autoprefixer
+```
 
-1. Enable built-in PostCSS support by setting the the `future.unstable_postcss` feature flag in `remix.config.js`.
+Then add `postcss.config.js` in the Remix root referencing the plugin.
 
-   ```js filename=remix.config.js
-   /** @type {import('@remix-run/dev').AppConfig} */
-   module.exports = {
-     future: {
-       unstable_postcss: true,
-     },
-     // ...
-   };
-   ```
-
-2. Install any desired PostCSS plugins.
-
-   ```sh
-   npm install -D autoprefixer
-   ```
-
-3. Add `postcss.config.js` in the Remix root with configuration for your plugins.
-
-   ```js filename=postcss.config.js
-   module.exports = {
-     plugins: {
-       autoprefixer: {},
-     },
-   };
-   ```
+```js filename=postcss.config.js
+module.exports = {
+  plugins: {
+    autoprefixer: {},
+  },
+};
+```
 
 If you're using [Vanilla Extract][vanilla-extract-2], since it's already playing the role of CSS preprocessor, you may want to apply a different set of PostCSS plugins relative to other styles. To support this, you can export a function from `postcss.config.js` which is given a context object that lets you know when Remix is processing a Vanilla Extract file.
 
@@ -651,105 +525,6 @@ module.exports = (ctx) => {
         // PostCSS plugins for other styles...
       };
 };
-```
-
-### Manual PostCSS Integration
-
-It's also possible to use PostCSS without leveraging the built-in support. Here's the gist of it:
-
-1. Use the `postcss` CLI directly alongside Remix
-2. Build CSS into the Remix app directory from a styles source directory
-3. Import your stylesheet to your modules like any other stylesheet
-
-Here's how to set it up:
-
-1. Install PostCSS along with its CLI and any desired plugins in your app.
-
-   ```sh
-   npm install -D postcss-cli postcss autoprefixer
-   ```
-
-2. Add `postcss.config.js` in the Remix root with configuration for your plugins.
-
-   ```js filename=postcss.config.js
-   module.exports = {
-     plugins: {
-       autoprefixer: {},
-     },
-   };
-   ```
-
-3. Add stylesheets to a `styles/` folder _next to `app/`_, we'll point postcss at this folder to build _into_ the `app/styles` folder next.
-
-   ```sh
-   mkdir styles
-   touch styles/app.css
-   ```
-
-4. Add some scripts to your `package.json`
-
-   ```json
-   {
-     "scripts": {
-       "dev:css": "postcss styles --base styles --dir app/styles -w",
-       "build:css": "postcss styles --base styles --dir app/styles --env production"
-     }
-   }
-   ```
-
-   These commands will process files from `./styles` into `./app/styles` where your Remix modules can import them.
-
-   ```
-   .
-   ├── app
-   │   └── styles (processed files)
-   │       ├── app.css
-   │       └── routes
-   │           └── index.css
-   └── styles (source files)
-       ├── app.css
-       └── routes
-           └── index.css
-   ```
-
-   We recommend adding `app/styles` to your `.gitignore`.
-
-5. Use it! When you're developing styles, open a terminal tab and run your new watch script:
-
-   ```sh
-   npm run dev:css
-   ```
-
-   When you're building for production, run
-
-   ```sh
-   npm run build:css
-   ```
-
-   Then import like any other css file:
-
-   ```tsx filename=root.tsx
-   import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
-
-   import styles from "./styles/app.css";
-
-   export const links: LinksFunction = () => {
-     return [{ rel: "stylesheet", href: styles }];
-   };
-   ```
-
-You might want to use something like `concurrently` to avoid needing two terminal tabs to watch your CSS and run `remix dev`.
-
-```sh
-npm add -D concurrently
-```
-
-```json filename=package.json
-{
-  "scripts": {
-    "dev": "concurrently \"npm run dev:css\" \"remix dev\""
-  }
-}
 ```
 
 ## CSS Preprocessors
@@ -1084,5 +859,5 @@ module.exports = {
 [css-bundling]: #css-bundling
 [vanilla-extract]: https://vanilla-extract.style
 [sprinkles]: https://vanilla-extract.style/documentation/packages/sprinkles
-[built-in-post-css-support]: #built-in-postcss-support
+[built-in-post-css-support]: #postcss
 [vanilla-extract-2]: #vanilla-extract
