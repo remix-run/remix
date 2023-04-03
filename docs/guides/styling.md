@@ -1,5 +1,6 @@
 ---
 title: Styling
+new: true
 ---
 
 # Styling

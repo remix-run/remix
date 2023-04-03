@@ -8,6 +8,18 @@ import getPort, { makeRange } from "get-port";
 import { createFixtureProject, css, js, json } from "./helpers/create-fixture";
 
 let fixture = (options: { port: number; appServerPort: number }) => ({
+  future: {
+    unstable_dev: {
+      port: options.port,
+      appServerPort: options.appServerPort,
+    },
+    unstable_cssModules: true,
+    unstable_tailwind: true,
+    v2_routeConvention: true,
+    v2_errorBoundary: true,
+    v2_normalizeFormMethod: true,
+    v2_meta: true,
+  },
   files: {
     "remix.config.js": js`
       module.exports = {
@@ -21,6 +33,7 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
           v2_routeConvention: true,
           v2_errorBoundary: true,
           v2_normalizeFormMethod: true,
+          v2_meta: true,
         },
       };
     `,

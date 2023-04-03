@@ -7,7 +7,7 @@ order: 2
 
 ## Official Adapters
 
-Idiomatic Remix apps can generally be deployed anywhere because Remix adapt's the server's request/response to the [Web Fetch API][web-fetch-api]. It does this through adapters. We maintain a few adapters:
+Idiomatic Remix apps can generally be deployed anywhere because Remix adapts the server's request/response to the [Web Fetch API][web-fetch-api]. It does this through adapters. We maintain a few adapters:
 
 - `@remix-run/architect`
 - `@remix-run/cloudflare-pages`
@@ -26,6 +26,7 @@ Each adapter has the same API. In the future we may have helpers specific to the
 
 ## Community Adapters
 
+- [`@fastly/remix-server-adapter`][fastly-remix-server-adapter] - For [Fastly Compute@Edge][fastly-compute-at-edge].
 - [`@mcansh/remix-fastify`][remix-fastify] - For [Fastify][fastify].
 - [`@mcansh/remix-raw-http`][remix-raw-http] - For a good ol barebones Node server.
 - [`remix-google-cloud-functions`][remix-google-cloud-functions] - For [Google Cloud][google-cloud-functions] and [Firebase][firebase-functions] functions.
@@ -179,6 +180,8 @@ addEventListener("fetch", (event) => {
 ```
 
 [web-fetch-api]: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API
+[fastly-remix-server-adapter]: https://github.com/fastly/remix-compute-js/tree/main/packages/remix-server-adapter
+[fastly-compute-at-edge]: https://developer.fastly.com/learning/compute/
 [remix-google-cloud-functions]: https://github.com/penx/remix-google-cloud-functions
 [google-cloud-functions]: https://cloud.google.com/functions
 [firebase-functions]: https://firebase.google.com/docs/functions

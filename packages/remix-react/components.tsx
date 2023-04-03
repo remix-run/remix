@@ -13,12 +13,9 @@ import type {
 } from "@remix-run/router";
 import type {
   LinkProps,
-  NavigationType,
-  Navigator,
-  Params,
   NavLinkProps,
-  Location,
   FormProps,
+  Params,
   SubmitFunction,
 } from "react-router-dom";
 import {
@@ -43,7 +40,7 @@ import {
 import type { SerializeFrom } from "@remix-run/server-runtime";
 
 import type { AppData } from "./data";
-import type { EntryContext, RemixContextObject } from "./entry";
+import type { RemixContextObject } from "./entry";
 import {
   RemixRootDefaultErrorBoundary,
   RemixRootDefaultCatchBoundary,
@@ -356,6 +353,30 @@ export function composeEventHandlers<
   };
 }
 
+let linksWarning =
+  "⚠️ REMIX FUTURE CHANGE: The behavior of links `imagesizes` and `imagesrcset` will be changing in v2. " +
+  "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`." +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#links-imagesizes-and-imagesrcset";
+
+let useTransitionWarning =
+  "⚠️ REMIX FUTURE CHANGE: `useTransition` will be removed in v2 in favor of `useNavigation`. " +
+  "You can prepare for this change at your convenience by updating to `useNavigation`." +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#usetransition";
+
+let fetcherTypeWarning =
+  "⚠️ REMIX FUTURE CHANGE: `fetcher.type` will be removed in v2. " +
+  "Please use `fetcher.state`, `fetcher.formData`, and `fetcher.data` to achieve the same UX." +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#usefetcher";
+
+let fetcherSubmissionWarning =
+  "⚠️ REMIX FUTURE CHANGE : `fetcher.submission` will be removed in v2. " +
+  "The submission fields are now part of the fetcher object itself (`fetcher.formData`). " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#usefetcher";
+
 /**
  * Renders the `<link>` tags for the current routes.
  *
@@ -372,12 +393,7 @@ export function Links() {
 
   React.useEffect(() => {
     if (links.some((link) => "imagesizes" in link || "imagesrcset" in link)) {
-      logDeprecationOnce(
-        "⚠️ DEPRECATED: The `imagesizes` & `imagesrcset` properties in " +
-          "your links have been deprecated in favor of `imageSizes` & " +
-          "`imageSrcSet` and support will be removed in Remix v2. Please update " +
-          "your code to use the new property names instead."
-      );
+      logDeprecationOnce(linksWarning);
     }
   }, [links]);
 
@@ -1238,12 +1254,7 @@ export function useTransition(): Transition {
   let navigation = useNavigation();
 
   React.useEffect(() => {
-    logDeprecationOnce(
-      "⚠️ DEPRECATED: The `useTransition` hook has been deprecated in favor of " +
-        "`useNavigation` and will be removed in Remix v2.  Please update your " +
-        "code to leverage `useNavigation`.\n\nSee https://remix.run/docs/hooks/use-transition " +
-        "and https://remix.run/docs/hooks/use-navigation for more information."
-    );
+    logDeprecationOnce(useTransitionWarning);
   }, []);
 
   return React.useMemo(
@@ -1475,12 +1486,7 @@ function addFetcherDeprecationWarnings(fetcher: Fetcher) {
   let type: Fetcher["type"] = fetcher.type;
   Object.defineProperty(fetcher, "type", {
     get() {
-      logDeprecationOnce(
-        "⚠️ DEPRECATED: The `useFetcher().type` field has been deprecated and " +
-          "will be removed in Remix v2.  Please update your code to rely on " +
-          "`fetcher.state`.\n\nSee https://remix.run/docs/hooks/use-fetcher for " +
-          "more information."
-      );
+      logDeprecationOnce(fetcherTypeWarning);
       return type;
     },
     set(value: Fetcher["type"]) {
@@ -1496,12 +1502,7 @@ function addFetcherDeprecationWarnings(fetcher: Fetcher) {
   let submission: Fetcher["submission"] = fetcher.submission;
   Object.defineProperty(fetcher, "submission", {
     get() {
-      logDeprecationOnce(
-        "⚠️ DEPRECATED: The `useFetcher().submission` field has been deprecated and " +
-          "will be removed in Remix v2.  The submission fields now live directly " +
-          "on the fetcher (`fetcher.formData`).\n\n" +
-          "See https://remix.run/docs/hooks/use-fetcher for more information."
-      );
+      logDeprecationOnce(fetcherSubmissionWarning);
       return submission;
     },
     set(value: Fetcher["submission"]) {

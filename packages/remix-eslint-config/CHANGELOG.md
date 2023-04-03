@@ -1,5 +1,11 @@
 # `@remix-run/eslint-config`
 
+## 1.15.0
+
+### Patch Changes
+
+- Updated TypeScript `peerDependency` to allow for `^5.0.0` ([`6b6ee66a2`](https://github.com/remix-run/remix/commit/6b6ee66a2fef1a7b00ce4c95abed144ab80017e3))
+
 ## 1.14.3
 
 No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.14.2) for an overview of all changes in v1.14.3.
