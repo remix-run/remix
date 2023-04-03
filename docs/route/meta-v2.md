@@ -249,7 +249,7 @@ If you can't avoid the merge problem with global meta or index routes, we've cre
 
 - [View Gist for `merge-meta.ts`][merge-meta]
 
-[links-export]: ../guides/migrating-react-router-app#route-links-exports
+[links-export]: ./links
 [use-matches]: ../hooks/use-matches
 [merging-metadata-across-the-route-hierarchy]: #merging-with-parent-meta
 [url-params]: ../guides/routing#dynamic-segments
