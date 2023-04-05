@@ -18,7 +18,7 @@ Let's say you have a banner on your e-commerce site that prompts users to check 
 
 First, create a cookie:
 
-```js filename=app/cookies.server.ts
+```ts filename=app/cookies.server.ts
 import { createCookie } from "@remix-run/node"; // or cloudflare/deno
 
 export const userPrefs = createCookie("user-prefs", {
@@ -28,7 +28,7 @@ export const userPrefs = createCookie("user-prefs", {
 
 Then, you can `import` the cookie and use it in your `loader` and/or `action`. The `loader` in this case just checks the value of the user preference so you can use it in your component for deciding whether to render the banner. When the button is clicked, the `<form>` calls the `action` on the server and reloads the page without the banner.
 
-**Note:** We recommend (for now) that you create all the cookies your app needs in `app/cookies.server.ts` and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
+**Note:** We recommend (for now) that you create all the cookies your app needs in a `*.server.ts` file and `import` them into your route modules. This allows the Remix compiler to correctly prune these imports out of the browser build where they are not needed. We hope to eventually remove this caveat.
 
 ```tsx filename=app/routes/index.tsx lines=[8,12-13,19-20,24]
 import type {
