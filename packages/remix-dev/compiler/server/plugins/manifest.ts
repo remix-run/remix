@@ -3,6 +3,7 @@ import jsesc from "jsesc";
 
 import type { ReadChannel } from "../../../channel";
 import { type Manifest } from "../../../manifest";
+import { CancelError } from "../../error";
 import { assetsManifestVirtualModule } from "../virtualModules";
 
 /**
@@ -26,10 +27,14 @@ export function serverAssetsManifestPlugin(channels: {
       });
 
       build.onLoad({ filter }, async () => {
+        let manifest = await channels.manifest.read().catch(() => {
+          throw CancelError({
+            fasdf,
+          });
+          throw Error("Canceled by manifest channel");
+        });
         return {
-          contents: `export default ${jsesc(await channels.manifest.read(), {
-            es6: true,
-          })};`,
+          contents: `export default ${jsesc(manifest, { es6: true })};`,
           loader: "js",
         };
       });

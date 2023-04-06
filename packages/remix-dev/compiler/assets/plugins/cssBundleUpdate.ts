@@ -53,7 +53,9 @@ export function cssBundleUpdatePlugin(channels: {
 
       build.onLoad({ filter: /.*/, namespace }, async (args) => {
         let [cssBundleHref, contents] = await Promise.all([
-          channels.cssBundleHref.read(),
+          channels.cssBundleHref.read().catch(() => {
+            throw Error("Canceled by CSS bundle href channel");
+          }),
           readFile(args.path, "utf8"),
         ]);
 

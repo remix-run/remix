@@ -12,6 +12,7 @@ import {
 import { isCssSideEffectImportPath } from "../../plugins/cssSideEffectImports";
 import { createMatchPath } from "../../utils/tsconfig";
 import { getPreferredPackageManager } from "../../../cli/getPreferredPackageManager";
+import type { Logger } from "../../logger";
 
 /**
  * A plugin responsible for resolving bare module ids based on server target.
@@ -20,7 +21,7 @@ import { getPreferredPackageManager } from "../../../cli/getPreferredPackageMana
  */
 export function serverBareModulesPlugin(
   remixConfig: RemixConfig,
-  onWarning?: (warning: string, key: string) => void
+  logger: Logger
 ): Plugin {
   // Resolve paths according to tsconfig paths property
   let matchPath = remixConfig.tsconfigPath
@@ -79,7 +80,6 @@ export function serverBareModulesPlugin(
 
         // Warn if we can't find an import for a package.
         if (
-          onWarning &&
           !isNodeBuiltIn(packageName) &&
           !/\bnode_modules\b/.test(importer) &&
           // Silence spurious warnings when using Yarn PnP. Yarn PnP doesn’t use
@@ -91,13 +91,14 @@ export function serverBareModulesPlugin(
           try {
             require.resolve(path);
           } catch (error: unknown) {
-            onWarning(
-              `The path "${path}" is imported in ` +
-                `${relative(process.cwd(), importer)} but ` +
-                `"${path}" was not found in your node_modules. ` +
-                `Did you forget to install it?`,
-              path
-            );
+            // throw Error("wowow");
+            // logger.warn(
+            //   `The path "${path}" is imported in ` +
+            //     `${relative(process.cwd(), importer)} but ` +
+            //     `"${path}" was not found in your node_modules. ` +
+            //     `Did you forget to install it?`,
+            //   path
+            // );
           }
         }
 
@@ -115,12 +116,11 @@ export function serverBareModulesPlugin(
         }
 
         if (
-          onWarning &&
           !isNodeBuiltIn(packageName) &&
           kind !== "dynamic-import" &&
           remixConfig.serverPlatform === "node"
         ) {
-          warnOnceIfEsmOnlyPackage(packageName, path, onWarning);
+          warnOnceIfEsmOnlyPackage(packageName, path, logger.warn);
         }
 
         // Externalize everything else if we've gotten here.
@@ -151,7 +151,7 @@ function isBareModuleId(id: string): boolean {
 function warnOnceIfEsmOnlyPackage(
   packageName: string,
   fullImportPath: string,
-  onWarning: (msg: string, key: string) => void
+  warn: (msg: string, key: string) => void
 ) {
   try {
     let packageDir = resolveModuleBasePath(packageName, fullImportPath);
@@ -180,7 +180,7 @@ function warnOnceIfEsmOnlyPackage(
       }
 
       if (isEsmOnly) {
-        onWarning(
+        warn(
           `${packageName} is possibly an ESM only package and should be bundled with ` +
             `"serverDependenciesToBundle" in remix.config.js.`,
           packageName + ":esm-only"

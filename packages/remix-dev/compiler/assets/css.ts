@@ -23,6 +23,7 @@ import {
   cssBundleEntryModuleId,
 } from "./plugins/cssBundleEntry";
 import type { WriteChannel } from "../../channel";
+import { ok, err } from "../result";
 
 function isNotNull<Value>(value: Value): value is Exclude<Value, null> {
   return value !== null;
@@ -140,7 +141,7 @@ export let create = async (
   });
   let compile = async () => {
     if (!isCssBundlingEnabled(remixConfig)) {
-      return;
+      return ok(undefined);
     }
 
     try {
@@ -163,7 +164,7 @@ export let create = async (
 
       if (!cssBundleFile) {
         channels.cssBundleHref.write(undefined);
-        return;
+        return ok(undefined);
       }
 
       let cssBundlePath = cssBundleFile.path;
@@ -209,14 +210,15 @@ export let create = async (
           }),
       ]);
 
-      return cssBundleHref;
+      return ok(cssBundleHref);
     } catch (error) {
-      channels.cssBundleHref.write(undefined);
-      throw error;
+      channels.cssBundleHref.reject();
+      return err(error);
     }
   };
   return {
     compile,
+    cancel: ctx.cancel,
     dispose: ctx.dispose,
   };
 };

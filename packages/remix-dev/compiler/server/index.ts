@@ -21,10 +21,13 @@ import { serverEntryModulePlugin } from "./plugins/entry";
 import { serverRouteModulesPlugin } from "./plugins/routes";
 import { externalPlugin } from "../plugins/external";
 import type { ReadChannel } from "../../channel";
+import { ok, err } from "../result";
+import { type Type as Result } from "../result";
 
 type Compiler = {
   // produce ./build/index.js
-  compile: () => Promise<void>;
+  compile: () => Promise<Result<void>>;
+  cancel: () => Promise<void>;
   dispose: () => void;
 };
 
@@ -50,7 +53,7 @@ const createEsbuildConfig = (
   let outputCss = false;
 
   let plugins: esbuild.Plugin[] = [
-    deprecatedRemixPackagePlugin(options.onWarning),
+    deprecatedRemixPackagePlugin(options), // TODO warn
     config.future.unstable_cssModules
       ? cssModulesPlugin({ config, mode, outputCss })
       : null,
@@ -68,7 +71,7 @@ const createEsbuildConfig = (
     serverRouteModulesPlugin(config),
     serverEntryModulePlugin(config, { liveReloadPort: options.liveReloadPort }),
     serverAssetsManifestPlugin(channels),
-    serverBareModulesPlugin(config, options.onWarning),
+    serverBareModulesPlugin(config, options.logger), // TODO warn
     externalPlugin(/^node:.*/, { sideEffects: false }),
   ].filter(isNotNull);
 
@@ -173,11 +176,17 @@ export const create = async (
     write: false,
   });
   let compile = async () => {
-    let { outputFiles } = await ctx.rebuild();
-    await writeServerBuildResult(remixConfig, outputFiles!);
+    try {
+      let { outputFiles } = await ctx.rebuild();
+      await writeServerBuildResult(remixConfig, outputFiles!);
+      return ok();
+    } catch (error) {
+      return err(error);
+    }
   };
   return {
     compile,
+    cancel: ctx.cancel,
     dispose: () => undefined,
   };
 };

@@ -1,8 +1,7 @@
 import type { RemixConfig } from "../config";
-import { warnOnce } from "../warnOnce";
-import { logCompileFailure } from "./onCompileFailure";
 import type { CompileOptions } from "./options";
 import * as Compiler from "./compiler";
+import * as Logger from "./logger";
 
 export async function build(
   config: RemixConfig,
@@ -10,16 +9,18 @@ export async function build(
     mode = "production",
     target = "node14",
     sourcemap = false,
-    onWarning = warnOnce,
-    onCompileFailure = logCompileFailure,
+    logger = Logger.create(),
   }: Partial<CompileOptions> = {}
 ): Promise<void> {
   let compiler = await Compiler.create(config, {
     mode,
     target,
     sourcemap,
-    onWarning,
-    onCompileFailure,
+    logger,
   });
-  await compiler.compile();
+  let result = await compiler.compile();
+  if (!result.ok) {
+    // TODO: throw Remix-specific error
+    throw Error(JSON.stringify(result.error, undefined, 2));
+  }
 }

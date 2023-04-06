@@ -23,13 +23,18 @@ import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 import invariant from "../../invariant";
 import { hmrPlugin } from "./plugins/hmr";
 import { type ReadChannel } from "../../channel";
+import type { Type as Result } from "../result";
+import { ok, err } from "../result";
 
 type Compiler = {
   // produce ./public/build/
-  compile: () => Promise<{
-    metafile: esbuild.Metafile;
-    hmr?: Manifest["hmr"];
-  }>;
+  compile: () => Promise<
+    Result<{
+      metafile: esbuild.Metafile;
+      hmr?: Manifest["hmr"];
+    }>
+  >;
+  cancel: () => Promise<void>;
   dispose: () => void;
 };
 
@@ -79,7 +84,7 @@ const createEsbuildConfig = (
   let { mode } = options;
 
   let plugins: esbuild.Plugin[] = [
-    deprecatedRemixPackagePlugin(options.onWarning),
+    deprecatedRemixPackagePlugin(options),
     config.future.unstable_cssModules
       ? cssModulesPlugin({ config, mode, outputCss: false })
       : null,
@@ -190,32 +195,37 @@ export const create = async (
 
   let compile = async () => {
     hmrRoutes = {};
-    let { metafile } = await ctx.rebuild();
+    try {
+      let { metafile } = await ctx.rebuild();
 
-    let hmr: Manifest["hmr"] | undefined = undefined;
-    if (options.mode === "development" && remixConfig.future.unstable_dev) {
-      let hmrRuntimeOutput = Object.entries(metafile.outputs).find(
-        ([_, output]) => output.inputs["hmr-runtime:remix:hmr"]
-      )?.[0];
-      invariant(hmrRuntimeOutput, "Expected to find HMR runtime in outputs");
-      let hmrRuntime =
-        remixConfig.publicPath +
-        path.relative(
-          remixConfig.assetsBuildDirectory,
-          path.resolve(hmrRuntimeOutput)
-        );
-      hmr = {
-        runtime: hmrRuntime,
-        routes: hmrRoutes,
-        timestamp: Date.now(),
-      };
+      let hmr: Manifest["hmr"] | undefined = undefined;
+      if (options.mode === "development" && remixConfig.future.unstable_dev) {
+        let hmrRuntimeOutput = Object.entries(metafile.outputs).find(
+          ([_, output]) => output.inputs["hmr-runtime:remix:hmr"]
+        )?.[0];
+        invariant(hmrRuntimeOutput, "Expected to find HMR runtime in outputs");
+        let hmrRuntime =
+          remixConfig.publicPath +
+          path.relative(
+            remixConfig.assetsBuildDirectory,
+            path.resolve(hmrRuntimeOutput)
+          );
+        hmr = {
+          runtime: hmrRuntime,
+          routes: hmrRoutes,
+          timestamp: Date.now(),
+        };
+      }
+
+      return ok({ metafile, hmr });
+    } catch (error) {
+      return err(error);
     }
-
-    return { metafile, hmr };
   };
 
   return {
     compile,
+    cancel: ctx.cancel,
     dispose: ctx.dispose,
   };
 };

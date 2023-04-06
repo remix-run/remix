@@ -1,4 +1,4 @@
-import type * as esbuild from "esbuild";
+import type { Logger } from "./logger";
 
 const modes = ["development", "production", "test"] as const;
 
@@ -25,6 +25,5 @@ export type CompileOptions = {
   liveReloadPort?: number;
   target: Target;
   sourcemap: boolean;
-  onWarning?: (message: string, key: string) => void;
-  onCompileFailure?: (failure: Error | esbuild.BuildFailure) => void;
+  logger: Logger;
 };
