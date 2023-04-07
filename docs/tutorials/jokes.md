@@ -3,7 +3,7 @@ title: App Tutorial (long)
 order: 4
 ---
 
-<docs-warning>This tutorial does not use the [future v2 APIs][v2] so you may get warnings about preparing for v2. You can ignore them and focus on the tutorial</docs-warning>
+<docs-warning>This tutorial does not use the \[future v2 APIs]\[v2] so you may get warnings about preparing for v2. You can ignore them and focus on the tutorial</docs-warning>
 
 # Jokes App Tutorial
 
