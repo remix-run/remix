@@ -61,7 +61,7 @@ If you want, take a minute and poke around the UI a bit. Feel free to create an 
 
 We're going to make a new route to render at the "/posts" URL. Before we do that, let's link to it.
 
-💿 Add a link to posts in `app/routes/index.tsx`
+💿 Add a link to posts in `app/routes/_index.tsx`
 
 Go ahead and copy/paste this:
 
@@ -90,22 +90,19 @@ The Remix Indie stack has [tailwind][tailwind] support pre-configured. If you'd 
 
 Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
-💿 Create a new file in `app/routes/posts/index.tsx`
+💿 Create a new file in `app/routes/posts._index.tsx`
 
 ```sh
-mkdir app/routes/posts
-touch app/routes/posts/index.tsx
+touch app/routes/posts._index.tsx
 ```
 
 <docs-info>Any time you see terminal commands to create files or folders, you can of course do that however you'd like, but using `mkdir` and `touch` is just a way for us to make it clear which files you should be creating.</docs-info>
-
-We could have named it just `posts.tsx` but we'll have another route soon and it'll be nice to put them by each other. An index route will render at the folder's path (just like index.html on a web server).
 
 Now if you navigate to the `/posts` route, you'll get an error indicating there's no way to handle the request. That's because we haven't done anything in that route yet! Let's add a component and export it as the default:
 
 💿 Make the posts component
 
-```tsx filename=app/routes/posts/index.tsx
+```tsx filename=app/routes/posts._index.tsx
 export default function Posts() {
   return (
     <main>
@@ -129,7 +126,7 @@ So let's get to it and provide some data to our component.
 
 💿 Make the posts route "loader"
 
-```tsx filename=app/routes/posts/index.tsx lines=[1-2,4-17,20-21]
+```tsx filename=app/routes/posts._index.tsx lines=[1-2,4-17,20-21]
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
@@ -167,7 +164,7 @@ Whatever you return from your loader will be exposed to the client, even if the 
 
 💿 Render links to our posts
 
-```tsx filename=app/routes/posts/index.tsx lines=[2,10-21] nocopy
+```tsx filename=app/routes/posts._index.tsx lines=[2,10-21] nocopy
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 
@@ -232,7 +229,7 @@ Note that we're making the `getPosts` function `async` because even though it's 
 
 💿 Update the posts route to use our new posts module:
 
-```tsx filename=app/routes/posts/index.tsx nocopy
+```tsx filename=app/routes/posts._index.tsx nocopy
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 
@@ -370,13 +367,13 @@ Now let's make a route to actually view the post. We want these URLs to work:
 
 Instead of creating a route for every single one of our posts, we can use a "dynamic segment" in the url. Remix will parse and pass to us so we can look up the post dynamically.
 
-💿 Create a dynamic route at "app/routes/posts/$slug.tsx"
+💿 Create a dynamic route at "app/routes/posts.$slug.tsx"
 
 ```sh
-touch app/routes/posts/\$slug.tsx
+touch app/routes/posts.\$slug.tsx
 ```
 
-```tsx filename=app/routes/posts/$slug.tsx
+```tsx filename=app/routes/posts.$slug.tsx
 export default function PostSlug() {
   return (
     <main className="mx-auto max-w-4xl">
@@ -392,7 +389,7 @@ You can click one of your posts and should see the new page.
 
 💿 Add a loader to access the params
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[1-3,5-7,10,14]
+```tsx filename=app/routes/posts.$slug.tsx lines=[1-3,5-7,10,14]
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
@@ -433,7 +430,7 @@ export async function getPost(slug: string) {
 
 💿 Use the new `getPost` function in the route
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[5,8-9,13,17]
+```tsx filename=app/routes/posts.$slug.tsx lines=[5,8-9,13,17]
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
@@ -461,7 +458,7 @@ Check that out! We're now pulling our posts from a data source instead of includ
 
 Let's make TypeScript happy with our code:
 
-```tsx filename=app/routes/posts/$slug.tsx lines=[4,9,12]
+```tsx filename=app/routes/posts.$slug.tsx lines=[4,9,12]
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
@@ -506,7 +503,7 @@ npm add @types/marked -D
 
 Now that `marked` has been installed, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
 
-```tsx filename=app/routes/post/$slug.ts lines=[4,15-16,20,26]
+```tsx filename=app/routes/post.$slug.ts lines=[4,15-16,20,26]
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
@@ -548,7 +545,7 @@ Let's make a new "admin" section of the app.
 
 💿 First, let's add a link to the admin section on the posts index route:
 
-```tsx filename=app/routes/posts/index.tsx
+```tsx filename=app/routes/posts._index.tsx
 // ...
 <Link to="admin" className="text-red-600 underline">
   Admin
@@ -563,10 +560,10 @@ Put that anywhere in the component. I stuck it right under the `<h1>`.
 💿 Create an admin route within the `posts` directory:
 
 ```sh
-touch app/routes/posts/admin.tsx
+touch app/routes/posts.admin.tsx
 ```
 
-```tsx filename=app/routes/posts/admin.tsx
+```tsx filename=app/routes/posts.admin.tsx
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 
@@ -614,14 +611,13 @@ Now, if you click on the Admin link, it'll take you to [http://localhost:3000/po
 
 Let's fill in that placeholder with an index route for admin. Hang with us, we're introducing "nested routes" here where your route file nesting becomes UI component nesting.
 
-💿 Create a folder for `admin.tsx`'s child routes, with an index inside
+💿 Create a "index route" for the admin page.
 
 ```sh
-mkdir app/routes/posts/admin
-touch app/routes/posts/admin/index.tsx
+touch app/routes/posts/admin._index.tsx
 ```
 
-```tsx filename=app/routes/posts/admin/index.tsx
+```tsx filename=app/routes/posts/admin._index.tsx
 import { Link } from "@remix-run/react";
 
 export default function AdminIndex() {
@@ -635,11 +631,11 @@ export default function AdminIndex() {
 }
 ```
 
-If you refresh you're not going to see it yet. Every route inside of `app/routes/posts/admin/` can now render _inside_ of `app/routes/posts/admin.tsx` when their URL matches. You get to control which part of the `admin.tsx` layout the child routes render.
+If you refresh you're not going to see it yet. Every route inside of `app/routes/posts/admin/` can now render _inside_ of `app/routes/posts.admin.tsx` when their URL matches. You get to control where the `admin.tsx` renders its child routes.
 
 💿 Add an outlet to the admin page
 
-```tsx filename=app/routes/posts/admin.tsx lines=[4,37]
+```tsx filename=app/routes/posts.admin.tsx lines=[4,37]
 import { json } from "@remix-run/node";
 import {
   Link,
@@ -688,13 +684,13 @@ Hang with us for a minute, index routes can be confusing at first. Just know tha
 
 Maybe this will help, let's add the "/posts/admin/new" route and see what happens when we click the link.
 
-💿 Create the `app/routes/posts/admin/new.tsx` route
+💿 Create the `app/routes/posts.admin.new.tsx` route
 
 ```sh
-touch app/routes/posts/admin/new.tsx
+touch app/routes/posts.admin.new.tsx
 ```
 
-```tsx filename=app/routes/posts/admin/new.tsx
+```tsx filename=app/routes/posts.admin.new.tsx
 export default function NewPost() {
   return <h2>New Post</h2>;
 }
@@ -708,7 +704,7 @@ We're going to get serious now. Let's build a form to create a new post in our n
 
 💿 Add a form to the new route
 
-```tsx filename=app/routes/posts/admin/new.tsx
+```tsx filename=app/routes/posts.admin.new.tsx
 import { Form } from "@remix-run/react";
 
 const inputClassName = `w-full rounded border border-gray-500 px-2 py-1 text-lg`;
@@ -776,7 +772,7 @@ export async function createPost(post) {
 
 💿 Call `createPost` from the new post route's action
 
-```tsx filename=app/routes/posts/admin/new.tsx
+```tsx filename=app/routes/posts.admin.new.tsx
 import type { ActionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { Form } from "@remix-run/react";
@@ -825,7 +821,7 @@ Let's add some validation before we create the post.
 
 💿 Validate if the form data contains what we need, and return the errors if not
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[2,14-24]
+```tsx filename=app/routes/posts.admin.new.tsx lines=[2,14-24]
 import type { ActionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import { Form } from "@remix-run/react";
@@ -863,7 +859,7 @@ Notice we don't return a redirect this time, we actually return the errors. Thes
 
 💿 Add validation messages to the UI
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[3,10,17-19,26-28,35-39]
+```tsx filename=app/routes/posts.admin.new.tsx lines=[3,10,17-19,26-28,35-39]
 import type { ActionArgs } from "@remix-run/node";
 import { redirect, json } from "@remix-run/node";
 import { Form, useActionData } from "@remix-run/react";
@@ -927,7 +923,7 @@ export default function NewPost() {
 
 TypeScript is still mad, because someone could call our API with non-string values, so let's add some invariants to make it happy.
 
-```tsx filename=app/routes/posts/admin/new.tsx nocopy
+```tsx filename=app/routes.posts.admin.new.tsx nocopy
 //...
 import invariant from "tiny-invariant";
 // ..
@@ -961,7 +957,7 @@ Let's slow this down and add some "pending UI" to our form.
 
 💿 Slow down our action with a fake delay
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[3-4]
+```tsx filename=app/routes/posts.admin.new.tsx lines=[3-4]
 // ...
 export const action = async ({ request }: ActionArgs) => {
   // TODO: remove me
@@ -974,7 +970,7 @@ export const action = async ({ request }: ActionArgs) => {
 
 💿 Add some pending UI with `useNavigation`
 
-```tsx filename=app/routes/posts/admin/new.tsx lines=[6,14-15,24,26]
+```tsx filename=app/routes/posts.admin.new.tsx lines=[6,14-15,24,26]
 import type { ActionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -1016,7 +1012,7 @@ Tada! You just implemented JavaScript-enabled progressive enhancement! 🥳 With
 
 That's it for today! Here are some bits of homework to implement if you wanna go deeper:
 
-**Update/Delete posts:** make an `/admin/$slug.tsx` page for your posts. This should open an edit page for the post that allows you to update the post or even delete it. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts/$slug.tsx` and `app/routes/posts/admin/new.tsx`. You just gotta put it together.
+**Update/Delete posts:** make an `app/routes/admin.$slug.tsx` page for your posts. This should open an edit page for the post that allows you to update the post or even delete it. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes.posts.$slug.tsx` and `app/routes/posts.admin.new.tsx`. You just gotta put it together.
 
 **Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly and if the tweet is deleted it reverts back to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Optimistic UI guide][the-optimistic-ui-guide].
 
