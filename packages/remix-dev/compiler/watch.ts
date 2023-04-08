@@ -30,6 +30,18 @@ export type WatchOptions = Partial<CompileOptions> & {
   onInitialBuild?(durationMs: number, manifest?: Manifest): void;
 };
 
+let _compile = async (
+  compiler: Compiler.Type
+): Promise<Manifest | undefined> => {
+  let result = await compiler.compile();
+  if (!result.ok) {
+    // TODO handle errors
+    console.error("TODO");
+    return;
+  }
+  return result.value;
+};
+
 export async function watch(
   config: RemixConfig,
   {
@@ -61,13 +73,13 @@ export async function watch(
   let compiler = await Compiler.create(config, options);
 
   // initial build
-  let manifest = await compiler.compile();
+  let manifest = await _compile(compiler);
   onInitialBuild?.(Date.now() - start, manifest);
 
   let restart = debounce(async () => {
     onRebuildStart?.();
     let start = Date.now();
-    compiler.dispose();
+    await compiler.dispose();
 
     try {
       config = await reloadConfig(config.rootDirectory);
@@ -77,14 +89,14 @@ export async function watch(
     }
 
     compiler = await Compiler.create(config, options);
-    let manifest = await compiler.compile();
+    let manifest = await _compile(compiler);
     onRebuildFinish?.(Date.now() - start, manifest);
   }, 500);
 
   let rebuild = debounce(async () => {
     onRebuildStart?.();
     let start = Date.now();
-    let manifest = await compiler.compile();
+    let manifest = await _compile(compiler);
     onRebuildFinish?.(Date.now() - start, manifest);
   }, 100);
 

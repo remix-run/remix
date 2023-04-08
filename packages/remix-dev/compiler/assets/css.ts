@@ -10,6 +10,8 @@ import type { RemixConfig } from "../../config";
 import { getAppDependencies } from "../../dependencies";
 import type * as Channel from "../utils/channel";
 import { loaders } from "../utils/loaders";
+import type { Result } from "../utils/result";
+import { ok, err } from "../utils/result";
 import type { CompileOptions } from "../options";
 import { cssFilePlugin } from "../plugins/cssImports";
 import { absoluteCssUrlsPlugin } from "../plugins/absoluteCssUrlsPlugin";
@@ -128,11 +130,16 @@ const createEsbuildConfig = (
   };
 };
 
+type Compiler = {
+  compile: () => Promise<Result<string> | Result<undefined>>;
+  dispose: () => Promise<void>;
+};
+
 export let create = async (
   remixConfig: RemixConfig,
   options: CompileOptions,
   channels: { cssBundleHref: Channel.Write<string | undefined> }
-) => {
+): Promise<Compiler> => {
   let ctx = await esbuild.context({
     ...createEsbuildConfig(remixConfig, options),
     metafile: true,
@@ -140,7 +147,7 @@ export let create = async (
   });
   let compile = async () => {
     if (!isCssBundlingEnabled(remixConfig)) {
-      return;
+      return ok(undefined);
     }
 
     try {
@@ -163,7 +170,7 @@ export let create = async (
 
       if (!cssBundleFile) {
         channels.cssBundleHref.resolve(undefined);
-        return;
+        return ok(undefined);
       }
 
       let cssBundlePath = cssBundleFile.path;
@@ -209,10 +216,10 @@ export let create = async (
           }),
       ]);
 
-      return cssBundleHref;
+      return ok(cssBundleHref);
     } catch (error) {
       channels.cssBundleHref.reject();
-      throw error;
+      return err(error);
     }
   };
   return {

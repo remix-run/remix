@@ -8,6 +8,8 @@ import { type Manifest } from "../../manifest";
 import { getAppDependencies } from "../../dependencies";
 import type * as Channel from "../utils/channel";
 import { loaders } from "../utils/loaders";
+import type { Result } from "../utils/result";
+import { ok, err } from "../utils/result";
 import type { CompileOptions } from "../options";
 import { browserRouteModulesPlugin } from "./plugins/routes";
 import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "./plugins/routes_unstable";
@@ -28,11 +30,13 @@ import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager
 
 type Compiler = {
   // produce ./public/build/
-  compile: () => Promise<{
-    metafile: esbuild.Metafile;
-    hmr?: Manifest["hmr"];
-  }>;
-  dispose: () => void;
+  compile: () => Promise<
+    Result<{
+      metafile: esbuild.Metafile;
+      hmr?: Manifest["hmr"];
+    }>
+  >;
+  dispose: () => Promise<void>;
 };
 
 function getNpmPackageName(id: string): string {
@@ -260,28 +264,32 @@ export const create = async (
 
   let compile = async () => {
     hmrRoutes = {};
-    let { metafile } = await ctx.rebuild();
+    try {
+      let { metafile } = await ctx.rebuild();
 
-    let hmr: Manifest["hmr"] | undefined = undefined;
-    if (options.mode === "development" && remixConfig.future.unstable_dev) {
-      let hmrRuntimeOutput = Object.entries(metafile.outputs).find(
-        ([_, output]) => output.inputs["hmr-runtime:remix:hmr"]
-      )?.[0];
-      invariant(hmrRuntimeOutput, "Expected to find HMR runtime in outputs");
-      let hmrRuntime =
-        remixConfig.publicPath +
-        path.relative(
-          remixConfig.assetsBuildDirectory,
-          path.resolve(hmrRuntimeOutput)
-        );
-      hmr = {
-        runtime: hmrRuntime,
-        routes: hmrRoutes,
-        timestamp: Date.now(),
-      };
+      let hmr: Manifest["hmr"] | undefined = undefined;
+      if (options.mode === "development" && remixConfig.future.unstable_dev) {
+        let hmrRuntimeOutput = Object.entries(metafile.outputs).find(
+          ([_, output]) => output.inputs["hmr-runtime:remix:hmr"]
+        )?.[0];
+        invariant(hmrRuntimeOutput, "Expected to find HMR runtime in outputs");
+        let hmrRuntime =
+          remixConfig.publicPath +
+          path.relative(
+            remixConfig.assetsBuildDirectory,
+            path.resolve(hmrRuntimeOutput)
+          );
+        hmr = {
+          runtime: hmrRuntime,
+          routes: hmrRoutes,
+          timestamp: Date.now(),
+        };
+      }
+
+      return ok({ metafile, hmr });
+    } catch (error) {
+      return err(error);
     }
-
-    return { metafile, hmr };
   };
 
   return {

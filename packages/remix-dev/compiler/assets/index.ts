@@ -2,6 +2,7 @@ import type { RemixConfig } from "../../config";
 import type { Manifest } from "../../manifest";
 import type { CompileOptions } from "../options";
 import * as Channel from "../utils/channel";
+import { ok, err } from "../utils/result";
 import * as CssCompiler from "./css";
 import * as JsCompiler from "./js";
 import {
@@ -35,27 +36,30 @@ export let create = async (
       compiler.js.compile(),
     ]);
 
-    // TODO error handling
-    // if (!js.ok || !css.ok) {
-    // }
+    if (!css.ok || !js.ok) {
+      channels.manifest.reject();
+      let errors: Record<string, unknown> = {};
+      if (!css.ok) errors.css = css.error;
+      if (!js.ok) errors.js = js.error;
+      return err(errors);
+    }
 
     // manifest
     let manifest = await createManifest({
       config,
-      cssBundleHref: css,
-      metafile: js.metafile,
-      hmr: js.hmr,
+      cssBundleHref: css.value,
+      metafile: js.value.metafile,
+      hmr: js.value.hmr,
     });
     channels.manifest.resolve(manifest);
     await writeManifestFile(config, manifest);
 
-    return manifest;
+    return ok(manifest);
   };
   return {
     compile,
-    dispose: () => {
-      compiler.css.dispose();
-      compiler.js.dispose();
+    dispose: async () => {
+      await Promise.all([compiler.css.dispose(), compiler.js.dispose()]);
     },
   };
 };

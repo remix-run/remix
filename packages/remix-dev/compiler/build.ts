@@ -21,5 +21,9 @@ export async function build(
     onWarning,
     onCompileFailure,
   });
-  await compiler.compile();
+  let result = await compiler.compile();
+  if (!result.ok) {
+    // TODO handle errors
+    throw Error("TODO");
+  }
 }

@@ -7,6 +7,8 @@ import type { RemixConfig } from "../../config";
 import { type Manifest } from "../../manifest";
 import type * as Channel from "../utils/channel";
 import { loaders } from "../utils/loaders";
+import type { Result } from "../utils/result";
+import { ok, err } from "../utils/result";
 import type { CompileOptions } from "../options";
 import { cssModulesPlugin } from "../plugins/cssModuleImports";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
@@ -24,8 +26,8 @@ import { externalPlugin } from "../plugins/external";
 
 type Compiler = {
   // produce ./build/index.js
-  compile: () => Promise<void>;
-  dispose: () => void;
+  compile: () => Promise<Result<void>>;
+  dispose: () => Promise<void>;
 };
 
 const createEsbuildConfig = (
@@ -173,12 +175,17 @@ export const create = async (
     write: false,
   });
   let compile = async () => {
-    let { outputFiles } = await ctx.rebuild();
-    await writeServerBuildResult(remixConfig, outputFiles!);
+    try {
+      let { outputFiles } = await ctx.rebuild();
+      await writeServerBuildResult(remixConfig, outputFiles!);
+      return ok();
+    } catch (error) {
+      return err(error);
+    }
   };
   return {
     compile,
-    dispose: () => undefined,
+    dispose: ctx.dispose,
   };
 };
 
