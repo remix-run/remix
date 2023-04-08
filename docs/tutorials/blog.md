@@ -90,13 +90,15 @@ The Remix Indie stack has [tailwind][tailwind] support pre-configured. If you'd 
 
 Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
-💿 Create a new file in `app/routes/posts._index.tsx`
+💿 Create a new file `app/routes/posts._index.tsx`
 
 ```sh
 touch app/routes/posts._index.tsx
 ```
 
 <docs-info>Any time you see terminal commands to create files or folders, you can of course do that however you'd like, but using `mkdir` and `touch` is just a way for us to make it clear which files you should be creating.</docs-info>
+
+We could have named it just `posts.tsx` but we'll have another route soon and it'll be nice to put them by each other. An index route will render at the route's parent path (just like index.html on a web server).
 
 Now if you navigate to the `/posts` route, you'll get an error indicating there's no way to handle the request. That's because we haven't done anything in that route yet! Let's add a component and export it as the default:
 
@@ -503,7 +505,7 @@ npm add @types/marked -D
 
 Now that `marked` has been installed, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
 
-```tsx filename=app/routes/post.$slug.ts lines=[4,15-16,20,26]
+```tsx filename=app/routes/post.$slug.tsx lines=[4,15-16,20,26]
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
@@ -614,10 +616,10 @@ Let's fill in that placeholder with an index route for admin. Hang with us, we'r
 💿 Create a "index route" for the admin page.
 
 ```sh
-touch app/routes/posts/admin._index.tsx
+touch app/routes/posts.admin._index.tsx
 ```
 
-```tsx filename=app/routes/posts/admin._index.tsx
+```tsx filename=app/routes/posts.admin._index.tsx
 import { Link } from "@remix-run/react";
 
 export default function AdminIndex() {
@@ -631,7 +633,7 @@ export default function AdminIndex() {
 }
 ```
 
-If you refresh you're not going to see it yet. Every route inside of `app/routes/posts/admin/` can now render _inside_ of `app/routes/posts.admin.tsx` when their URL matches. You get to control where the `admin.tsx` renders its child routes.
+If you refresh you're not going to see it yet. Every route named `app/routes/posts.admin.*.tsx` can now render _inside_ of `app/routes/posts.admin.tsx` when their URL matches. You get to control which part of the `posts.admin.tsx` layout the child routes render into.
 
 💿 Add an outlet to the admin page
 
@@ -682,7 +684,7 @@ export default function PostAdmin() {
 
 Hang with us for a minute, index routes can be confusing at first. Just know that when the URL matches the parent route's path, the index will render inside the outlet.
 
-Maybe this will help, let's add the "/posts/admin/new" route and see what happens when we click the link.
+Maybe this will help, let's add the `/posts/admin/new` route and see what happens when we click the link.
 
 💿 Create the `app/routes/posts.admin.new.tsx` route
 
@@ -923,7 +925,7 @@ export default function NewPost() {
 
 TypeScript is still mad, because someone could call our API with non-string values, so let's add some invariants to make it happy.
 
-```tsx filename=app/routes.posts.admin.new.tsx nocopy
+```tsx filename=app/routes/posts.admin.new.tsx nocopy
 //...
 import invariant from "tiny-invariant";
 // ..
@@ -1012,7 +1014,7 @@ Tada! You just implemented JavaScript-enabled progressive enhancement! 🥳 With
 
 That's it for today! Here are some bits of homework to implement if you wanna go deeper:
 
-**Update/Delete posts:** make an `app/routes/admin.$slug.tsx` page for your posts. This should open an edit page for the post that allows you to update the post or even delete it. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes.posts.$slug.tsx` and `app/routes/posts.admin.new.tsx`. You just gotta put it together.
+**Update/Delete posts:** make a `posts.admin.$slug.tsx` page for your posts. This should open an edit page for the post that allows you to update the post or even delete it. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts.$slug.tsx` and `app/routes/posts.admin.new.tsx`. You just gotta put it together.
 
 **Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly and if the tweet is deleted it reverts back to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Optimistic UI guide][the-optimistic-ui-guide].
 
