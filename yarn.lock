@@ -13125,9 +13125,9 @@ vite@^4.1.4:
     fsevents "~2.3.2"
 
 vm2@^3.9.8:
-  version "3.9.11"
-  resolved "https://registry.npmjs.org/vm2/-/vm2-3.9.11.tgz"
-  integrity sha512-PFG8iJRSjvvBdisowQ7iVF580DXb1uCIiGaXgm7tynMR1uTBlv7UJlB1zdv5KJ+Tmq1f0Upnj3fayoEOPpCBKg==
+  version "3.9.15"
+  resolved "https://registry.npmjs.org/vm2/-/vm2-3.9.15.tgz#c544e6a9bc31e4e40d2e5f532342cf799ea56a6e"
+  integrity sha512-XqNqknHGw2avJo13gbIwLNZUumvrSHc9mLqoadFZTpo3KaNEJoe1I0lqTFhRXmXD7WkLyG01aaraXdXT0pa4ag==
   dependencies:
     acorn "^8.7.0"
     acorn-walk "^8.2.0"
