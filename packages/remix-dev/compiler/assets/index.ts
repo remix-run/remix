@@ -1,8 +1,7 @@
-import type { Channel } from "../../channel";
-import { createChannel } from "../../channel";
 import type { RemixConfig } from "../../config";
 import type { Manifest } from "../../manifest";
 import type { CompileOptions } from "../options";
+import * as Channel from "../utils/channel";
 import * as CssCompiler from "./css";
 import * as JsCompiler from "./js";
 import {
@@ -13,11 +12,11 @@ import {
 export let create = async (
   config: RemixConfig,
   options: CompileOptions,
-  channels: { manifest: Channel<Manifest> }
+  channels: { manifest: Channel.Type<Manifest> }
 ) => {
   // setup channels
   let _channels = {
-    cssBundleHref: createChannel<string | undefined>(),
+    cssBundleHref: Channel.create<string | undefined>(),
   };
 
   // create subcompilers
@@ -28,7 +27,7 @@ export let create = async (
 
   let compile = async () => {
     // reset channels
-    _channels.cssBundleHref = createChannel();
+    _channels.cssBundleHref = Channel.create();
 
     // parallel builds
     let [css, js] = await Promise.all([
@@ -47,7 +46,7 @@ export let create = async (
       metafile: js.metafile,
       hmr: js.hmr,
     });
-    channels.manifest.write(manifest);
+    channels.manifest.resolve(manifest);
     await writeManifestFile(config, manifest);
 
     return manifest;

@@ -5,6 +5,7 @@ import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfil
 
 import type { RemixConfig } from "../../config";
 import { type Manifest } from "../../manifest";
+import type * as Channel from "../utils/channel";
 import { loaders } from "../utils/loaders";
 import type { CompileOptions } from "../options";
 import { cssModulesPlugin } from "../plugins/cssModuleImports";
@@ -20,7 +21,6 @@ import { serverBareModulesPlugin } from "./plugins/bareImports";
 import { serverEntryModulePlugin } from "./plugins/entry";
 import { serverRouteModulesPlugin } from "./plugins/routes";
 import { externalPlugin } from "../plugins/external";
-import type { ReadChannel } from "../../channel";
 
 type Compiler = {
   // produce ./build/index.js
@@ -31,7 +31,7 @@ type Compiler = {
 const createEsbuildConfig = (
   config: RemixConfig,
   options: CompileOptions,
-  channels: { manifest: ReadChannel<Manifest> }
+  channels: { manifest: Channel.Read<Manifest> }
 ): esbuild.BuildOptions => {
   let stdin: esbuild.StdinOptions | undefined;
   let entryPoints: string[] | undefined;
@@ -166,7 +166,7 @@ async function writeServerBuildResult(
 export const create = async (
   remixConfig: RemixConfig,
   options: CompileOptions,
-  channels: { manifest: ReadChannel<Manifest> }
+  channels: { manifest: Channel.Read<Manifest> }
 ): Promise<Compiler> => {
   let ctx = await esbuild.context({
     ...createEsbuildConfig(remixConfig, options, channels),

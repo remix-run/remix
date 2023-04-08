@@ -1,7 +1,7 @@
 import type { Plugin } from "esbuild";
 import { readFile } from "fs-extra";
 
-import type { ReadChannel } from "../../../channel";
+import type * as Channel from "../../utils/channel";
 
 const pluginName = "css-bundle-update-plugin";
 const namespace = `${pluginName}-ns`;
@@ -13,7 +13,7 @@ const namespace = `${pluginName}-ns`;
  * disk so it never triggers an update.
  */
 export function cssBundleUpdatePlugin(channels: {
-  cssBundleHref: ReadChannel<string | undefined>;
+  cssBundleHref: Channel.Read<string | undefined>;
 }): Plugin {
   return {
     name: pluginName,
@@ -53,7 +53,7 @@ export function cssBundleUpdatePlugin(channels: {
 
       build.onLoad({ filter: /.*/, namespace }, async (args) => {
         let [cssBundleHref, contents] = await Promise.all([
-          channels.cssBundleHref.read(),
+          channels.cssBundleHref.promise,
           readFile(args.path, "utf8"),
         ]);
 

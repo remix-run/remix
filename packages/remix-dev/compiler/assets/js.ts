@@ -6,6 +6,7 @@ import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfil
 import type { RemixConfig } from "../../config";
 import { type Manifest } from "../../manifest";
 import { getAppDependencies } from "../../dependencies";
+import type * as Channel from "../utils/channel";
 import { loaders } from "../utils/loaders";
 import type { CompileOptions } from "../options";
 import { browserRouteModulesPlugin } from "./plugins/routes";
@@ -24,7 +25,6 @@ import invariant from "../../invariant";
 import { hmrPlugin } from "./plugins/hmr";
 import { createMatchPath } from "../utils/tsconfig";
 import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
-import { type ReadChannel } from "../../channel";
 
 type Compiler = {
   // produce ./public/build/
@@ -80,7 +80,7 @@ const createEsbuildConfig = (
   config: RemixConfig,
   options: CompileOptions,
   onLoader: (filename: string, code: string) => void,
-  channels: { cssBundleHref: ReadChannel<string | undefined> }
+  channels: { cssBundleHref: Channel.Read<string | undefined> }
 ): esbuild.BuildOptions => {
   let entryPoints: Record<string, string> = {
     "entry.client": config.entryClientFilePath,
@@ -245,7 +245,7 @@ const createEsbuildConfig = (
 export const create = async (
   remixConfig: RemixConfig,
   options: CompileOptions,
-  channels: { cssBundleHref: ReadChannel<string | undefined> }
+  channels: { cssBundleHref: Channel.Read<string | undefined> }
 ): Promise<Compiler> => {
   let hmrRoutes: Record<string, { loaderHash: string }> = {};
   let onLoader = (filename: string, code: string) => {

@@ -8,6 +8,7 @@ import postcssDiscardDuplicates from "postcss-discard-duplicates";
 
 import type { RemixConfig } from "../../config";
 import { getAppDependencies } from "../../dependencies";
+import type * as Channel from "../utils/channel";
 import { loaders } from "../utils/loaders";
 import type { CompileOptions } from "../options";
 import { cssFilePlugin } from "../plugins/cssImports";
@@ -22,7 +23,6 @@ import {
   cssBundleEntryModulePlugin,
   cssBundleEntryModuleId,
 } from "./plugins/cssBundleEntry";
-import type { WriteChannel } from "../../channel";
 
 function isNotNull<Value>(value: Value): value is Exclude<Value, null> {
   return value !== null;
@@ -131,7 +131,7 @@ const createEsbuildConfig = (
 export let create = async (
   remixConfig: RemixConfig,
   options: CompileOptions,
-  channels: { cssBundleHref: WriteChannel<string | undefined> }
+  channels: { cssBundleHref: Channel.Write<string | undefined> }
 ) => {
   let ctx = await esbuild.context({
     ...createEsbuildConfig(remixConfig, options),
@@ -162,7 +162,7 @@ export let create = async (
       );
 
       if (!cssBundleFile) {
-        channels.cssBundleHref.write(undefined);
+        channels.cssBundleHref.resolve(undefined);
         return;
       }
 
@@ -175,7 +175,7 @@ export let create = async (
           path.resolve(cssBundlePath)
         );
 
-      channels.cssBundleHref.write(cssBundleHref);
+      channels.cssBundleHref.resolve(cssBundleHref);
 
       let { css, map } = await postcss([
         // We need to discard duplicate rules since "composes"
@@ -211,7 +211,7 @@ export let create = async (
 
       return cssBundleHref;
     } catch (error) {
-      channels.cssBundleHref.write(undefined);
+      channels.cssBundleHref.reject();
       throw error;
     }
   };
