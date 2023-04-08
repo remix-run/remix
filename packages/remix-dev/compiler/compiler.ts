@@ -7,8 +7,14 @@ import type { CompileOptions } from "./options";
 import * as AssetsCompiler from "./assets";
 import * as ServerCompiler from "./server";
 
+type Err = {
+  assetsCss?: unknown;
+  assetsJs?: unknown;
+  server?: unknown;
+};
+
 export type Type = {
-  compile: () => Promise<Result<Manifest>>;
+  compile: () => Promise<Result<Manifest, Err>>;
   dispose: () => Promise<void>;
 };
 
@@ -34,8 +40,11 @@ export let create = async (
       ]);
 
       if (!assets.ok || !server.ok) {
-        let errors: Record<string, unknown> = {};
-        if (!assets.ok) errors.assets = assets.error;
+        let errors: Err = {};
+        if (!assets.ok) {
+          errors.assetsCss = assets.error.css;
+          errors.assetsJs = assets.error.js;
+        }
         if (!server.ok) errors.server = server.error;
         return err(errors);
       }

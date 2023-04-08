@@ -2,6 +2,7 @@ import type { RemixConfig } from "../../config";
 import type { Manifest } from "../../manifest";
 import type { CompileOptions } from "../options";
 import * as Channel from "../utils/channel";
+import type { Result } from "../utils/result";
 import { ok, err } from "../utils/result";
 import * as CssCompiler from "./css";
 import * as JsCompiler from "./js";
@@ -10,11 +11,18 @@ import {
   write as writeManifestFile,
 } from "./manifest";
 
+type Err = { css?: unknown; js?: unknown };
+
+type Compiler = {
+  compile: () => Promise<Result<Manifest, Err>>;
+  dispose: () => Promise<void>;
+};
+
 export let create = async (
   config: RemixConfig,
   options: CompileOptions,
   channels: { manifest: Channel.Type<Manifest> }
-) => {
+): Promise<Compiler> => {
   // setup channels
   let _channels = {
     cssBundleHref: Channel.create<string | undefined>(),
@@ -38,7 +46,7 @@ export let create = async (
 
     if (!css.ok || !js.ok) {
       channels.manifest.reject();
-      let errors: Record<string, unknown> = {};
+      let errors: Err = {};
       if (!css.ok) errors.css = css.error;
       if (!js.ok) errors.js = js.error;
       return err(errors);
