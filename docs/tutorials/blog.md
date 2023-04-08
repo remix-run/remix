@@ -65,7 +65,7 @@ We're going to make a new route to render at the "/posts" URL. Before we do that
 
 Go ahead and copy/paste this:
 
-```tsx
+```tsx filename=app/routes/_index.tsx
 <div className="mx-auto mt-16 max-w-7xl text-center">
   <Link
     to="/posts"
@@ -84,21 +84,21 @@ You can put it anywhere you like. I stuck it right above the icons of all the te
 
 ![Screenshot of the app showing the blog post link][screenshot-of-the-app-showing-the-blog-post-link]
 
-<docs-info>You may have noticed we're using <a href="https://tailwindcss.com">tailwind</a> classes.</docs-info>
+<docs-info>You may have noticed we're using <a href="https://tailwindcss.com">Tailwind CSS</a> classes.</docs-info>
 
-The Remix Indie stack has [tailwind][tailwind] support pre-configured. If you'd prefer to not use tailwind, you're welcome to remove it and use something else. Learn more about your styling options with Remix in [the styling guide][the-styling-guide].
+The Remix Indie stack has [Tailwind CSS][tailwind] support pre-configured. If you'd prefer to not use Tailwind CSS, you're welcome to remove it and use something else. Learn more about your styling options with Remix in [the styling guide][the-styling-guide].
 
 Back in the browser go ahead and click the link. You should see a 404 page since we've not created this route yet. Let's create the route now:
 
-💿 Create a new file `app/routes/posts._index.tsx`
+💿 Create a new file at `app/routes/posts._index.tsx`
 
 ```sh
 touch app/routes/posts._index.tsx
 ```
 
-<docs-info>Any time you see terminal commands to create files or folders, you can of course do that however you'd like, but using `mkdir` and `touch` is just a way for us to make it clear which files you should be creating.</docs-info>
+<docs-info>Any time you see terminal commands to create files or folders, you can of course do that however you'd like, but using `touch` is just a way for us to make it clear which files you should be creating.</docs-info>
 
-We could have named it just `posts.tsx` but we'll have another route soon and it'll be nice to put them by each other. An index route will render at the route's parent path (just like index.html on a web server).
+We could have named it just `posts.tsx` but we'll have another route soon, and it'll be nice to put them by each other. An index route will render at the parent's path (just like `index.html` on a web server).
 
 Now if you navigate to the `/posts` route, you'll get an error indicating there's no way to handle the request. That's because we haven't done anything in that route yet! Let's add a component and export it as the default:
 
@@ -120,13 +120,13 @@ You might need to refresh the browser to see our new, bare-bones posts route.
 
 Data loading is built into Remix.
 
-If your web dev background is primarily in the last few years, you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also its own API route and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
+If your web dev background is primarily in the last few years, you're probably used to creating two things here: an API route to provide data and a frontend component that consumes it. In Remix your frontend component is also its own API route, and it already knows how to talk to itself on the server from the browser. That is, you don't have to fetch it.
 
 If your background is a bit farther back than that with MVC web frameworks like Rails, then you can think of your Remix routes as backend views using React for templating, but then they know how to seamlessly hydrate in the browser to add some flair instead of writing detached jQuery code to dress up the user interactions. It's progressive enhancement realized in its fullest. Additionally, your routes are their own controller.
 
 So let's get to it and provide some data to our component.
 
-💿 Make the posts route "loader"
+💿 Make the posts route `loader`
 
 ```tsx filename=app/routes/posts._index.tsx lines=[1-2,4-17,20-21]
 import { json } from "@remix-run/node";
@@ -149,7 +149,6 @@ export const loader = async () => {
 
 export default function Posts() {
   const { posts } = useLoaderData<typeof loader>();
-  console.log(posts);
   return (
     <main>
       <h1>Posts</h1>
@@ -158,7 +157,7 @@ export default function Posts() {
 }
 ```
 
-Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
+`loader` functions are the backend "API" for their component, and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
 
 <docs-error>
 Whatever you return from your loader will be exposed to the client, even if the component doesn't render it. Treat your loaders with the same care as public API endpoints.
@@ -231,7 +230,7 @@ Note that we're making the `getPosts` function `async` because even though it's 
 
 💿 Update the posts route to use our new posts module:
 
-```tsx filename=app/routes/posts._index.tsx nocopy
+```tsx filename=app/routes/posts._index.tsx lines=[4,6-8] nocopy
 import { json } from "@remix-run/node";
 import { Link, useLoaderData } from "@remix-run/react";
 
@@ -350,7 +349,7 @@ export async function getPosts() {
 
 <docs-success>Notice we're able to remove the return type, but everything is still fully typed. The TypeScript feature of Prisma is one of its greatest strengths. Less manual typing, but still type safe!</docs-success>
 
-<docs-info>The `~/db.server` import is importing the file at `app/db.server.ts`. The `~` is a fancy alias to the `app` directory so you don't have to worry about how many `../../`s to include in your import as you move files around.</docs-info>
+<docs-info>The `~/db.server` import is importing the file at `app/db.server.ts`. The `~` is a fancy alias to the `app` directory, so you don't have to worry about how many `../../`s to include in your import as you move files around.</docs-info>
 
 💿 Now that the Prisma client has been updated, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
 
@@ -367,12 +366,12 @@ Now let's make a route to actually view the post. We want these URLs to work:
 /posts/90s-mixtape
 ```
 
-Instead of creating a route for every single one of our posts, we can use a "dynamic segment" in the url. Remix will parse and pass to us so we can look up the post dynamically.
+Instead of creating a route for every single one of our posts, we can use a "dynamic segment" in the url. Remix will parse and pass to us, so we can look up the post dynamically.
 
-💿 Create a dynamic route at "app/routes/posts.$slug.tsx"
+💿 Create a dynamic route at `app/routes/posts.$slug.tsx`
 
 ```sh
-touch app/routes/posts.\$slug.tsx
+touch app/routes/posts.$slug.tsx
 ```
 
 ```tsx filename=app/routes/posts.$slug.tsx
@@ -489,11 +488,11 @@ export default function PostSlug() {
 }
 ```
 
-Quick note on that `invariant` for the params. Because `params` comes from the URL, we can't be totally sure that `params.slug` will be defined--maybe you change the name of the file to `$postId.ts`! It's good practice to validate that stuff with `invariant`, and it makes TypeScript happy too.
+Quick note on that `invariant` for the params. Because `params` comes from the URL, we can't be totally sure that `params.slug` will be defined--maybe you change the name of the file to `posts.$postId.ts`! It's a good practice to validate that stuff with `invariant`, and it makes TypeScript happy too.
 
 We also have an invariant for the post. We'll handle the `404` case better later. Keep going!
 
-Now let's get that markdown parsed and rendered to HTML to the page. There are a lot of markdown parsers, we'll use "marked" for this tutorial because it's really easy to get working.
+Now let's get that markdown parsed and rendered to HTML to the page. There are a lot of Markdown parsers, we'll use `marked` for this tutorial because it's really easy to get working.
 
 💿 Parse the markdown into HTML
 
@@ -505,7 +504,7 @@ npm add @types/marked -D
 
 Now that `marked` has been installed, we will need to restart our server. So stop the dev server and start it back up again with `npm run dev`.
 
-```tsx filename=app/routes/post.$slug.tsx lines=[4,15-16,20,26]
+```tsx filename=app/routes/posts.$slug.tsx lines=[4,15-16,20,26]
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
@@ -521,11 +520,11 @@ export const loader = async ({ params }: LoaderArgs) => {
   invariant(post, `Post not found: ${params.slug}`);
 
   const html = marked(post.markdown);
-  return json({ post, html });
+  return json({ html, post });
 };
 
 export default function PostSlug() {
-  const { post, html } = useLoaderData<typeof loader>();
+  const { html, post } = useLoaderData<typeof loader>();
   return (
     <main className="mx-auto max-w-4xl">
       <h1 className="my-6 border-b-2 text-center text-3xl">
@@ -613,7 +612,7 @@ Now, if you click on the Admin link, it'll take you to [http://localhost:3000/po
 
 Let's fill in that placeholder with an index route for admin. Hang with us, we're introducing "nested routes" here where your route file nesting becomes UI component nesting.
 
-💿 Create a "index route" for the admin page.
+💿 Create an index route for `posts.admin.tsx`'s child routes
 
 ```sh
 touch app/routes/posts.admin._index.tsx
@@ -633,7 +632,7 @@ export default function AdminIndex() {
 }
 ```
 
-If you refresh you're not going to see it yet. Every route named `app/routes/posts.admin.*.tsx` can now render _inside_ of `app/routes/posts.admin.tsx` when their URL matches. You get to control which part of the `posts.admin.tsx` layout the child routes render into.
+If you refresh you're not going to see it yet. Every route that starts with `app/routes/posts.admin.` can now render _inside_ of `app/routes/posts.admin.tsx` when their URL matches. You get to control which part of the `posts.admin.tsx` layout the child routes render.
 
 💿 Add an outlet to the admin page
 
@@ -682,11 +681,11 @@ export default function PostAdmin() {
 }
 ```
 
-Hang with us for a minute, index routes can be confusing at first. Just know that when the URL matches the parent route's path, the index will render inside the outlet.
+Hang with us for a minute, index routes can be confusing at first. Just know that when the URL matches the parent route's path, the index will render inside the `Outlet`.
 
 Maybe this will help, let's add the `/posts/admin/new` route and see what happens when we click the link.
 
-💿 Create the `app/routes/posts.admin.new.tsx` route
+💿 Create the `app/routes/posts.admin.new.tsx` file
 
 ```sh
 touch app/routes/posts.admin.new.tsx
@@ -774,7 +773,7 @@ export async function createPost(post) {
 
 💿 Call `createPost` from the new post route's action
 
-```tsx filename=app/routes/posts.admin.new.tsx
+```tsx filename=app/routes/posts.admin.new.tsx lines=[1-2,5,7-17] nocopy
 import type { ActionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { Form } from "@remix-run/react";
@@ -798,7 +797,10 @@ export const action = async ({ request }: ActionArgs) => {
 
 That's it. Remix (and the browser) will take care of the rest. Click the submit button and watch the sidebar that lists our posts update automatically.
 
-In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and don't forget, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN! [Request][mdn-request] [Request.formData][mdn-request-form-data].
+In HTML an input's `name` attribute is sent over the network and available by the same name on the request's `formData`. Oh, and don't forget, the `request` and `formData` objects are both straight out of the web specification. So if you want to learn more about either of them, head over to MDN!
+
+- [`Request`][mdn-request]
+- [`Request.formData`][mdn-request-form-data].
 
 TypeScript is mad again, let's add some types.
 
@@ -972,7 +974,7 @@ export const action = async ({ request }: ActionArgs) => {
 
 💿 Add some pending UI with `useNavigation`
 
-```tsx filename=app/routes/posts.admin.new.tsx lines=[6,14-15,24,26]
+```tsx filename=app/routes/posts.admin.new.tsx lines=[6,14-17,26,28]
 import type { ActionArgs } from "@remix-run/node";
 import { json, redirect } from "@remix-run/node";
 import {
@@ -1012,15 +1014,15 @@ Tada! You just implemented JavaScript-enabled progressive enhancement! 🥳 With
 
 ## Homework
 
-That's it for today! Here are some bits of homework to implement if you wanna go deeper:
+That's it for today! Here are some bits of homework to implement if you want to go deeper:
 
-**Update/Delete posts:** make a `posts.admin.$slug.tsx` page for your posts. This should open an edit page for the post that allows you to update the post or even delete it. The links are already there in the sidebar but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts.$slug.tsx` and `app/routes/posts.admin.new.tsx`. You just gotta put it together.
+**Update/Delete posts:** make a `posts.admin.$slug.tsx` page for your posts. This should open an edit page for the post that allows you to update the post or even delete it. The links are already there in the sidebar, but they return 404! Create a new route that reads the posts, and puts them into the fields. All the code you need is already in `app/routes/posts.$slug.tsx` and `app/routes/posts.admin.new.tsx`. You just gotta put it together.
 
 **Optimistic UI:** You know how when you favorite a tweet, the heart goes red instantly and if the tweet is deleted it reverts back to empty? That's Optimistic UI: assume the request will succeed, and render what the user will see if it does. So your homework is to make it so when you hit "Create" it renders the post in the left nav and renders the "Create a New Post" link (or if you add update/delete do it for those too). You'll find this ends up being easier than you think even if it takes you a second to arrive there (and if you've implemented this pattern in the past, you'll find Remix makes this much easier). Learn more from [the Optimistic UI guide][the-optimistic-ui-guide].
 
-**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip, if you want to make it so you're the only one who can make posts, then simply check the user's email in your loaders and actions and if it's not yours redirect them [somewhere][somewhere] 😈
+**Authenticated users only:** Another cool bit of homework you could do is make it so only authenticated users can create posts. You've already got authentication all set up for you thanks to the Indie Stack. Tip, if you want to make it, so you're the only one who can make posts, then simply check the user's email in your loaders and actions and if it's not yours redirect them [somewhere][somewhere] 😈
 
-**Customize the app:** If you're happy with tailwind, keep it around, otherwise, check [the styling guide][the-styling-guide] to learn of other options. Remove the `Notes` model and routes, etc. Whatever you want to make this thing yours.
+**Customize the app:** If you're happy with Tailwind CSS, keep it around, otherwise, check [the styling guide][the-styling-guide] to learn of other options. Remove the `Notes` model and routes, etc. Whatever you want to make this thing yours.
 
 **Deploy the app:** Check the README of your project. It has instructions you can follow to get your app deployed to Fly.io. Then you can actually start blogging!
 
