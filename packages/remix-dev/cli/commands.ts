@@ -171,10 +171,6 @@ export async function build(
   await compiler.build(config, {
     mode,
     sourcemap,
-    onCompileFailure: (failure) => {
-      compiler.logCompileFailure(failure);
-      throw Error();
-    },
   });
 
   log(`Built in ${prettyMs(Date.now() - start)}`);

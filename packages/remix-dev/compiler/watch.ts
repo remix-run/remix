@@ -6,7 +6,6 @@ import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { type Manifest } from "../manifest";
 import { warnOnce } from "../warnOnce";
-import { logCompileFailure } from "./onCompileFailure";
 import type { CompileOptions } from "./options";
 import * as Compiler from "./compiler";
 
@@ -51,7 +50,6 @@ export async function watch(
     sourcemap = true,
     reloadConfig = readConfig,
     onWarning = warnOnce,
-    onCompileFailure = logCompileFailure,
     onRebuildStart,
     onRebuildFinish,
     onFileCreated,
@@ -65,7 +63,6 @@ export async function watch(
     liveReloadPort,
     target,
     sourcemap,
-    onCompileFailure,
     onWarning,
   };
 
@@ -84,7 +81,8 @@ export async function watch(
     try {
       config = await reloadConfig(config.rootDirectory);
     } catch (error: unknown) {
-      onCompileFailure(error as Error);
+      // TODO handle errors
+      console.error("TODO");
       return;
     }
 
@@ -129,7 +127,8 @@ export async function watch(
       try {
         config = await reloadConfig(config.rootDirectory);
       } catch (error: unknown) {
-        onCompileFailure(error as Error);
+        // TODO handle errors
+        console.error("TODO");
         return;
       }
 
