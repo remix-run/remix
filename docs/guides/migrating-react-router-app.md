@@ -55,7 +55,7 @@ export default function handleRequest(
   responseHeaders,
   remixContext
 ) {
-  let markup = renderToString(
+  const markup = renderToString(
     <RemixServer context={remixContext} url={request.url} />
   );
   responseHeaders.set("Content-Type", "text/html");
@@ -252,7 +252,7 @@ A common pain-point in migrating a client-rendered codebase to a server-rendered
 
 ```jsx
 function Count() {
-  let [count, setCount] = React.useState(
+  const [count, setCount] = React.useState(
     () => localStorage.getItem("count") || 0
   );
 
@@ -291,7 +291,7 @@ One potential solution here is using a different caching mechanism that can be u
 let isHydrating = true;
 
 function SomeComponent() {
-  let [isHydrated, setIsHydrated] = React.useState(
+  const [isHydrated, setIsHydrated] = React.useState(
     !isHydrating
   );
 
