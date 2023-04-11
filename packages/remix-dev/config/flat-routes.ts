@@ -77,7 +77,9 @@ export function flatRoutes(
   ignoredFilePatterns: string[] = [],
   prefix = "routes"
 ) {
-  let ignoredFileRegex = ignoredFilePatterns.map((re) => minimatch.makeRe(re));
+  let ignoredFileRegex = ignoredFilePatterns
+    .map((re) => minimatch.makeRe(re))
+    .filter((re: any): re is RegExp => !!re);
   let routesDir = path.join(appDirectory, prefix);
 
   let rootRoute = findConfig(appDirectory, "root", routeModuleExts);
