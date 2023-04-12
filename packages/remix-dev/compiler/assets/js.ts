@@ -148,7 +148,6 @@ const createEsbuildConfig = (
           let packageName = getNpmPackageName(args.path);
           let pkgManager = getPreferredPackageManager();
           if (
-            options.onWarning &&
             !isNodeBuiltIn(packageName) &&
             !/\bnode_modules\b/.test(args.importer) &&
             // Silence spurious warnings when using Yarn PnP. Yarn PnP doesn’t use

@@ -6,7 +6,9 @@ import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
 import NPMCliPackageJson from "@npmcli/package-json";
 import { coerce } from "semver";
+import { dim } from "picocolors";
 
+import { create as createLogger } from "../tux/log";
 import * as colors from "../colors";
 import * as compiler from "../compiler";
 import * as devServer from "../devServer";
@@ -14,7 +16,6 @@ import * as devServer_unstable from "../devServer_unstable";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
-import { log } from "../logging";
 import { createApp } from "./create";
 import { getPreferredPackageManager } from "./getPreferredPackageManager";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
@@ -22,6 +23,7 @@ import runCodemod from "../codemod";
 import { CodemodError } from "../codemod/utils/error";
 import { TaskError } from "../codemod/utils/task";
 import { transpile as convertFileToJS } from "./useJavascript";
+import { header } from "../tux/title";
 
 export async function create({
   appTemplate,
@@ -127,7 +129,7 @@ export async function setup(platformArg?: string) {
 
   await setupRemix(platform);
 
-  log(`Successfully setup Remix for ${platform}.`);
+  console.log(`Successfully setup Remix for ${platform}.`);
 }
 
 export async function routes(
@@ -148,33 +150,52 @@ export async function build(
 ): Promise<void> {
   let mode = compiler.parseMode(modeArg ?? "", "production");
 
-  log(`Building Remix app in ${mode} mode...`);
+  // TODO: version
+  console.info(header("remix", `${mode} build`));
+  let logger = createLogger();
 
+  logger.debug("wowowowowow");
+  logger.info("wowowowowow");
+  logger.warn("wowowowowow");
+  logger.error("wowowowowow");
   if (modeArg === "production" && sourcemap) {
-    console.warn(
-      "\n⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️"
-    );
-    console.warn(
+    logger.warn(
       "You have enabled source maps in production. This will make your " +
         "server-side code visible to the public and is highly discouraged! If " +
         "you insist, please ensure you are using environment variables for " +
         "secrets and not hard-coding them into your source!"
     );
-    console.warn(
-      "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n"
-    );
   }
 
-  let start = Date.now();
-  let config = await readConfig(remixRoot);
-  fse.emptyDirSync(config.assetsBuildDirectory);
-  await compiler.build(config, {
-    mode,
-    sourcemap,
-  });
-
-  log(`Built in ${prettyMs(Date.now() - start)}`);
+  try {
+    let start = Date.now();
+    let config = await readConfig(remixRoot);
+    let result = await compiler.build(config, { mode, sourcemap });
+    if (!result.ok) {
+      if (result.error.assetsCss) {
+        logger.error(getErrorMessage(result.error.assetsCss));
+      }
+      if (result.error.assetsJs) {
+        logger.error(getErrorMessage(result.error.assetsJs));
+      }
+      if (result.error.server) {
+        logger.error(getErrorMessage(result.error.server));
+      }
+      process.exit(1);
+    }
+    logger.info(`Built in ${prettyMs(Date.now() - start)}`);
+  } catch (error) {
+    logger.error(getErrorMessage(error));
+    logger.info("This is a Remix bug; file a bug report!");
+    process.exit(1);
+  }
 }
+
+let getErrorMessage = (error: unknown) => {
+  if (error instanceof Error)
+    return error.message + "\n\n" + dim(error.stack) + "\n";
+  return String(error);
+};
 
 export async function watch(
   remixRootOrConfig: string | RemixConfig,

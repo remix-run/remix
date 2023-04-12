@@ -5,7 +5,6 @@ import * as path from "path";
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { type Manifest } from "../manifest";
-import { warnOnce } from "../warnOnce";
 import type { CompileOptions } from "./options";
 import * as Compiler from "./compiler";
 
@@ -49,7 +48,6 @@ export async function watch(
     target = "node14",
     sourcemap = true,
     reloadConfig = readConfig,
-    onWarning = warnOnce,
     onRebuildStart,
     onRebuildFinish,
     onFileCreated,
@@ -63,7 +61,6 @@ export async function watch(
     liveReloadPort,
     target,
     sourcemap,
-    onWarning,
   };
 
   let start = Date.now();

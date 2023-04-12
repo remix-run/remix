@@ -1,3 +1,5 @@
+import fse from "fs-extra";
+
 import type { RemixConfig } from "../../config";
 import type { Manifest } from "../../manifest";
 import type { CompileOptions } from "../options";
@@ -39,6 +41,7 @@ export let create = async (
     _channels.cssBundleHref = Channel.create();
 
     // parallel builds
+    fse.emptyDirSync(config.assetsBuildDirectory);
     let [css, js] = await Promise.all([
       compiler.css.compile(),
       compiler.js.compile(),
