@@ -12,7 +12,7 @@ These CSS bundling features were previously only available via `future.unstable_
 **CSS Bundle Setup**
 
 In order to use these features, you first need to set up CSS bundling in your project. First install the `@remix-run/css-bundle` package.
-  
+
 ```sh
 npm i @remix-run/css-bundle
 ```
@@ -25,9 +25,7 @@ import { cssBundleHref } from "@remix-run/css-bundle";
 
 export const links: LinksFunction = () => {
   return [
-    ...(cssBundleHref
-      ? [{ rel: "stylesheet", href: cssBundleHref }]
-      : []),
+    ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
     // ...
   ];
 };
@@ -48,17 +46,9 @@ To use [CSS Modules](https://github.com/css-modules/css-modules), you can opt in
 ```tsx
 import styles from "./styles.module.css";
 
-export const Button = React.forwardRef(
-  ({ children, ...props }, ref) => {
-    return (
-      <button
-        {...props}
-        ref={ref}
-        className={styles.root}
-      />
-    );
-  }
-);
+export const Button = React.forwardRef(({ children, ...props }, ref) => {
+  return <button {...props} ref={ref} className={styles.root} />;
+});
 Button.displayName = "Button";
 ```
 
@@ -85,17 +75,9 @@ export const root = style({
 ```tsx
 import * as styles from "./styles.css"; // Note that `.ts` is omitted here
 
-export const Button = React.forwardRef(
-  ({ children, ...props }, ref) => {
-    return (
-      <button
-        {...props}
-        ref={ref}
-        className={styles.root}
-      />
-    );
-  }
-);
+export const Button = React.forwardRef(({ children, ...props }, ref) => {
+  return <button {...props} ref={ref} className={styles.root} />;
+});
 Button.displayName = "Button";
 ```
 
