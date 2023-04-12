@@ -2,7 +2,7 @@ import type { Channel } from "../../channel";
 import { createChannel } from "../../channel";
 import type { RemixConfig } from "../../config";
 import type { Manifest } from "../../manifest";
-import type { CompileOptions } from "../options";
+import type { Options } from "../options";
 import * as CssCompiler from "./css";
 import * as JsCompiler from "./js";
 import {
@@ -12,7 +12,7 @@ import {
 
 export let create = async (
   config: RemixConfig,
-  options: CompileOptions,
+  options: Options,
   channels: { manifest: Channel<Manifest> }
 ) => {
   // setup channels

@@ -6,7 +6,7 @@ import generate from "@babel/generator";
 import type { RemixConfig } from "../../../config";
 import invariant from "../../../invariant";
 import * as Transform from "../../../transform";
-import type { CompileOptions } from "../../options";
+import type { Options } from "../../options";
 import { getLoaderForFile } from "../../utils/loaders";
 import { getRouteModuleExports } from "../../utils/routeExports";
 import { applyHMR } from "./hmr";
@@ -77,7 +77,7 @@ export function browserRouteModulesPlugin(
   config: RemixConfig,
   suffixMatcher: RegExp,
   onLoader: (filename: string, code: string) => void,
-  mode: CompileOptions["mode"]
+  mode: Options["mode"]
 ): esbuild.Plugin {
   return {
     name: "browser-route-modules",

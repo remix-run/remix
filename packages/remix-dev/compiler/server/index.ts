@@ -6,7 +6,7 @@ import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfil
 import type { RemixConfig } from "../../config";
 import { type Manifest } from "../../manifest";
 import { loaders } from "../utils/loaders";
-import type { CompileOptions } from "../options";
+import type { Options } from "../options";
 import { cssModulesPlugin } from "../plugins/cssModuleImports";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
@@ -30,7 +30,7 @@ type Compiler = {
 
 const createEsbuildConfig = (
   config: RemixConfig,
-  options: CompileOptions,
+  options: Options,
   channels: { manifest: ReadChannel<Manifest> }
 ): esbuild.BuildOptions => {
   let stdin: esbuild.StdinOptions | undefined;
@@ -158,7 +158,7 @@ async function writeServerBuildResult(
 
 export const create = async (
   remixConfig: RemixConfig,
-  options: CompileOptions,
+  options: Options,
   channels: { manifest: ReadChannel<Manifest> }
 ): Promise<Compiler> => {
   let ctx = await esbuild.context({

@@ -8,7 +8,7 @@ type Target =
   | "cloudflare-workers"
   | "node14";
 
-export type CompileOptions = {
+export type Options = {
   mode: Mode;
   liveReloadPort?: number;
   target: Target;

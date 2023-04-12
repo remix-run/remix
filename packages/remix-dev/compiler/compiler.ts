@@ -1,7 +1,7 @@
 import { createChannel } from "../channel";
 import type { RemixConfig } from "../config";
 import { type Manifest } from "../manifest";
-import type { CompileOptions } from "./options";
+import type { Options } from "./options";
 import * as AssetsCompiler from "./assets";
 import * as ServerCompiler from "./server";
 
@@ -12,7 +12,7 @@ type Compiler = {
 
 export let create = async (
   config: RemixConfig,
-  options: CompileOptions
+  options: Options
 ): Promise<Compiler> => {
   let channels = {
     manifest: createChannel<Manifest>(),

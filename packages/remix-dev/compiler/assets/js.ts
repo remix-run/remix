@@ -7,7 +7,7 @@ import type { RemixConfig } from "../../config";
 import { type Manifest } from "../../manifest";
 import { getAppDependencies } from "../../dependencies";
 import { loaders } from "../utils/loaders";
-import type { CompileOptions } from "../options";
+import type { Options } from "../options";
 import { browserRouteModulesPlugin } from "./plugins/routes";
 import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "./plugins/routes_unstable";
 import { cssFilePlugin } from "../plugins/cssImports";
@@ -71,7 +71,7 @@ const getExternals = (remixConfig: RemixConfig): string[] => {
 
 const createEsbuildConfig = (
   config: RemixConfig,
-  options: CompileOptions,
+  options: Options,
   onLoader: (filename: string, code: string) => void,
   channels: { cssBundleHref: ReadChannel<string | undefined> }
 ): esbuild.BuildOptions => {
@@ -218,7 +218,7 @@ const createEsbuildConfig = (
 
 export const create = async (
   remixConfig: RemixConfig,
-  options: CompileOptions,
+  options: Options,
   channels: { cssBundleHref: ReadChannel<string | undefined> }
 ): Promise<Compiler> => {
   let hmrRoutes: Record<string, { loaderHash: string }> = {};

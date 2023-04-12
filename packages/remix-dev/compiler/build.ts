@@ -1,7 +1,7 @@
 import type { RemixConfig } from "../config";
 import { warnOnce } from "../warnOnce";
 import { logCompileFailure } from "./onCompileFailure";
-import type { CompileOptions } from "./options";
+import type { Options } from "./options";
 import * as Compiler from "./compiler";
 
 export async function build(
@@ -12,7 +12,7 @@ export async function build(
     sourcemap = false,
     onWarning = warnOnce,
     onCompileFailure = logCompileFailure,
-  }: Partial<CompileOptions> = {}
+  }: Partial<Options> = {}
 ): Promise<void> {
   let compiler = await Compiler.create(config, {
     mode,

@@ -4,7 +4,7 @@ import fse from "fs-extra";
 import postcss from "postcss";
 import postcssModules from "postcss-modules";
 
-import type { CompileOptions } from "../options";
+import type { Options } from "../options";
 import type { RemixConfig } from "../../config";
 import { loadPostcssPlugins } from "../utils/postcss";
 
@@ -25,7 +25,7 @@ export const cssModulesPlugin = ({
   outputCss,
 }: {
   config: RemixConfig;
-  mode: CompileOptions["mode"];
+  mode: Options["mode"];
   outputCss: boolean;
 }): Plugin => {
   return {

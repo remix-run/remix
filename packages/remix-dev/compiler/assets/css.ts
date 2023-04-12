@@ -9,7 +9,7 @@ import postcssDiscardDuplicates from "postcss-discard-duplicates";
 import type { RemixConfig } from "../../config";
 import { getAppDependencies } from "../../dependencies";
 import { loaders } from "../utils/loaders";
-import type { CompileOptions } from "../options";
+import type { Options } from "../options";
 import { cssFilePlugin } from "../plugins/cssImports";
 import { absoluteCssUrlsPlugin } from "../plugins/absoluteCssUrlsPlugin";
 import { emptyModulesPlugin } from "../plugins/emptyModules";
@@ -45,7 +45,7 @@ const getExternals = (remixConfig: RemixConfig): string[] => {
 
 const createEsbuildConfig = (
   config: RemixConfig,
-  options: CompileOptions
+  options: Options
 ): esbuild.BuildOptions => {
   let { mode } = options;
 
@@ -103,7 +103,7 @@ const createEsbuildConfig = (
 
 export let create = async (
   remixConfig: RemixConfig,
-  options: CompileOptions,
+  options: Options,
   channels: { cssBundleHref: WriteChannel<string | undefined> }
 ) => {
   let ctx = await esbuild.context({

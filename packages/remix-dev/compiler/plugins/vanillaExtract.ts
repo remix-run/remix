@@ -4,7 +4,7 @@ import { cssFileFilter, createCompiler } from "@vanilla-extract/integration";
 import type { Plugin } from "esbuild";
 
 import type { RemixConfig } from "../../config";
-import type { CompileOptions } from "../options";
+import type { Options } from "../options";
 import { loaders } from "../utils/loaders";
 import { getPostcssProcessor } from "../utils/postcss";
 
@@ -19,7 +19,7 @@ const staticAssetRegexp = new RegExp(
 );
 
 let compiler: Compiler | undefined;
-function getCompiler(root: string, mode: CompileOptions["mode"]) {
+function getCompiler(root: string, mode: Options["mode"]) {
   compiler =
     compiler ||
     createCompiler({
@@ -59,7 +59,7 @@ export function vanillaExtractPlugin({
   outputCss,
 }: {
   config: RemixConfig;
-  mode: CompileOptions["mode"];
+  mode: Options["mode"];
   outputCss: boolean;
 }): Plugin {
   return {

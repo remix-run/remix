@@ -7,7 +7,7 @@ import { readConfig } from "../config";
 import { type Manifest } from "../manifest";
 import { warnOnce } from "../warnOnce";
 import { logCompileFailure } from "./onCompileFailure";
-import type { CompileOptions } from "./options";
+import type { Options } from "./options";
 import * as Compiler from "./compiler";
 
 function isEntryPoint(config: RemixConfig, file: string): boolean {
@@ -20,7 +20,7 @@ function isEntryPoint(config: RemixConfig, file: string): boolean {
   return entryPoints.includes(appFile);
 }
 
-export type WatchOptions = Partial<CompileOptions> & {
+export type WatchOptions = Partial<Options> & {
   reloadConfig?(root: string): Promise<RemixConfig>;
   onRebuildStart?(): void;
   onRebuildFinish?(durationMs: number, manifest?: Manifest): void;
@@ -48,7 +48,7 @@ export async function watch(
     onInitialBuild,
   }: WatchOptions = {}
 ): Promise<() => Promise<void>> {
-  let options: CompileOptions = {
+  let options: Options = {
     mode,
     liveReloadPort,
     target,
