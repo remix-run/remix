@@ -321,7 +321,7 @@ function runTests(ext: typeof extensions[number]) {
   });
 }
 
-test.describe("Tailwind enabled (default)", () => {
+test.describe("Tailwind enabled", () => {
   for (let ext of extensions) {
     test.describe(`tailwind.config.${ext}`, () => {
       runTests(ext);

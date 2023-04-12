@@ -24,10 +24,6 @@ import {
 } from "./plugins/cssBundleEntry";
 import type { WriteChannel } from "../../channel";
 
-function isNotNull<Value>(value: Value): value is Exclude<Value, null> {
-  return value !== null;
-}
-
 const getExternals = (remixConfig: RemixConfig): string[] => {
   // For the browser build, exclude node built-ins that don't have a
   // browser-safe alternative installed in node_modules. Nothing should
@@ -65,7 +61,7 @@ const createEsbuildConfig = (
     emptyModulesPlugin(config, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
     externalPlugin(/^node:.*/, { sideEffects: false }),
-  ].filter(isNotNull);
+  ];
 
   return {
     entryPoints: {

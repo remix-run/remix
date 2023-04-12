@@ -27,7 +27,7 @@ async function jsonFromBase64CssContent({
   return JSON.parse(json);
 }
 
-test.describe("PostCSS enabled (default)", () => {
+test.describe("PostCSS enabled", () => {
   let fixture: Fixture;
   let appFixture: AppFixture;
 
@@ -51,12 +51,12 @@ test.describe("PostCSS enabled (default)", () => {
                 postcssPlugin: 'replace',
                 Declaration (decl) {
                   decl.value = decl.value
-                    .replaceAll(
-                      "TEST_PADDING_VALUE",
+                    .replace(
+                      /TEST_PADDING_VALUE/g,
                       ${JSON.stringify(TEST_PADDING_VALUE)},
                     )
-                    .replaceAll(
-                      "TEST_POSTCSS_CONTEXT",
+                    .replace(
+                      /TEST_POSTCSS_CONTEXT/g,
                       Buffer.from(JSON.stringify(ctx)).toString("base64"),
                     );
                 },
@@ -368,8 +368,8 @@ test.describe("PostCSS disabled", () => {
                 postcssPlugin: 'replace',
                 Declaration (decl) {
                   decl.value = decl.value
-                    .replaceAll(
-                      "TEST_PADDING_VALUE",
+                    .replace(
+                      /TEST_PADDING_VALUE/g,
                       ${JSON.stringify(TEST_PADDING_VALUE)},
                     );
                 },
@@ -394,22 +394,18 @@ test.describe("PostCSS disabled", () => {
         `,
         "app/routes/postcss-disabled-test.jsx": js`
           import { Test, links as testLinks } from "~/test-components/postcss-disabled";
-
           export function links() {
             return [...testLinks()];
           }
-
           export default function() {
             return <Test />;
           }
         `,
         "app/test-components/postcss-disabled/index.jsx": js`
           import stylesHref from "./styles.css";
-
           export function links() {
             return [{ rel: 'stylesheet', href: stylesHref }];
           }
-
           export function Test() {
             return (
               <div data-testid="postcss-disabled" className="postcss-disabled-test">

@@ -46,11 +46,10 @@ const createEsbuildConfig = (
   }
 
   let { mode } = options;
-  let outputCss = false;
 
   let plugins: esbuild.Plugin[] = [
-    cssModulesPlugin({ config, mode, outputCss }),
-    vanillaExtractPlugin({ config, mode, outputCss }),
+    cssModulesPlugin({ config, mode, outputCss: false }),
+    vanillaExtractPlugin({ config, mode, outputCss: false }),
     cssSideEffectImportsPlugin({ config, options }),
     cssFilePlugin({ config, options }),
     absoluteCssUrlsPlugin(),
@@ -62,7 +61,7 @@ const createEsbuildConfig = (
     serverAssetsManifestPlugin(channels),
     serverBareModulesPlugin(config, options.onWarning),
     externalPlugin(/^node:.*/, { sideEffects: false }),
-  ].filter(isNotNull);
+  ];
 
   if (config.serverPlatform !== "node") {
     plugins.unshift(NodeModulesPolyfillPlugin());
@@ -173,7 +172,3 @@ export const create = async (
     dispose: () => undefined,
   };
 };
-
-function isNotNull<Value>(value: Value): value is Exclude<Value, null> {
-  return value !== null;
-}

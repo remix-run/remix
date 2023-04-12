@@ -48,18 +48,5 @@ The lifecycle is thus either:
 - Breaking + Stable API Feature -> `future.v2_` flag -> Lands in v2
 - Breaking + Unstable API -> `future.unstable_` flag -> `future.v2_` flag -> Lands in v2
 
-## Current Future Flags
-
-Here's the current future flags in Remix v1 today:
-
-| Flag                            | Description                                                   |
-| ------------------------------- | ------------------------------------------------------------- |
-| `unstable_cssModules`           | Enable CSS Modules Support                                    |
-| `unstable_cssSideEffectImports` | Enable CSS Side Effect imports                                |
-| `unstable_dev`                  | Enable the new development server (including HMR/HDR support) |
-| `unstable_postcss`              | Enable PostCSS Support                                        |
-| `unstable_tailwind`             | Enable TailwindCSS support                                    |
-| `unstable_vanillaExtract`       | Enable Vanilla Extract Support                                |
-
 [future-flags-blog-post]: https://remix.run/blog/future-flags
 [feature-flowchart]: /docs-images/feature-flowchart.png
