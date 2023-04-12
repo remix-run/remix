@@ -671,8 +671,6 @@ NOTE: You may run into hydration warnings when using Styled Components. Hopefull
 
 ## CSS Bundling
 
-<docs-warning>CSS-bundling features are unstable and currently only available behind feature flags. We're confident in the use cases they solve, but the API and implementation may change in the future.</docs-warning>
-
 <docs-warning>When using CSS-bundling features, you should avoid using `export *` due to an [issue with esbuild's CSS tree shaking][esbuild-css-tree-shaking-issue].</docs-warning>
 
 Many common approaches to CSS within the React community are only possible when bundling CSS, meaning that the CSS files you write during development are collected into a separate bundle as part of the build process.
@@ -707,23 +705,9 @@ With this link tag inserted into the page, you're now ready to start using the v
 
 ### CSS Modules
 
-<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves but the API and implementation may change in the future.</docs-warning>
+To use the built-in CSS Modules support, first ensure you've set up [CSS bundling][css-bundling] in your application.
 
-First, ensure you've set up [CSS bundling][css-bundling] in your application.
-
-Then, to enable [CSS Modules], set the `future.unstable_cssModules` feature flag in `remix.config.js`.
-
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  future: {
-    unstable_cssModules: true,
-  },
-  // ...
-};
-```
-
-With this feature flag enabled, you can now opt into CSS Modules via the `.module.css` file name convention. For example:
+You can then opt into [CSS Modules] via the `.module.css` file name convention. For example:
 
 ```css filename=app/components/button/styles.module.css
 .root {
@@ -752,31 +736,17 @@ Button.displayName = "Button";
 
 ### Vanilla Extract
 
-<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves, but the API and implementation may change in the future.</docs-warning>
-
 [Vanilla Extract][vanilla-extract] is a zero-runtime CSS-in-TypeScript (or JavaScript) library that lets you use TypeScript as your CSS preprocessor. Styles are written in separate `*.css.ts` (or `*.css.js`) files and all code within them is executed during the build process rather than in your user's browser. If you want to keep your CSS bundle size to a minimum, Vanilla Extract also provides an official library called [Sprinkles][sprinkles] that lets you define a custom set of utility classes and a type-safe function for accessing them at runtime.
 
-First, ensure you've set up [CSS bundling][css-bundling] in your application.
+To use the built-in Vanilla Extract support, first ensure you've set up [CSS bundling][css-bundling] in your application.
 
-Next, install Vanilla Extract's core styling package as a dev dependency.
+Then, install Vanilla Extract's core styling package as a dev dependency.
 
 ```sh
 npm install -D @vanilla-extract/css
 ```
 
-Then, to enable Vanilla Extract, set the `future.unstable_vanillaExtract` feature flag in `remix.config.js`.
-
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  future: {
-    unstable_vanillaExtract: true,
-  },
-  // ...
-};
-```
-
-With this feature flag enabled, you can now opt into Vanilla Extract via the `.css.ts`/`.css.js` file name convention. For example:
+You can then opt into Vanilla Extract via the `.css.ts`/`.css.js` file name convention. For example:
 
 ```ts filename=app/components/button/styles.css.ts
 import { style } from "@vanilla-extract/css";
@@ -807,23 +777,9 @@ Button.displayName = "Button";
 
 ### CSS Side-Effect Imports
 
-<docs-warning>This feature is unstable and currently only available behind a feature flag. We're confident in the use cases it solves, but the API and implementation may change in the future.</docs-warning>
-
 Some NPM packages use side-effect imports of plain CSS files (e.g. `import "./styles.css"`) to declare the CSS dependencies of JavaScript files. If you want to consume one of these packages, first ensure you've set up [CSS bundling][css-bundling] in your application.
 
-Then, set the `future.unstable_cssSideEffectImports` feature flag in `remix.config.js`.
-
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  future: {
-    unstable_cssSideEffectImports: true,
-  },
-  // ...
-};
-```
-
-Finally, since JavaScript runtimes don't support importing CSS in this way, you'll also need to add any relevant packages to the [`serverDependenciesToBundle`][server-dependencies-to-bundle] option in your `remix.config.js` file. This ensures that any CSS imports are compiled out of your code before running it on the server. For example, to use React Spectrum:
+Since JavaScript runtimes don't support importing CSS in this way, you'll need to add any relevant packages to the [`serverDependenciesToBundle`][server-dependencies-to-bundle] option in your `remix.config.js` file. This ensures that any CSS imports are compiled out of your code before running it on the server. For example, to use React Spectrum:
 
 ```js filename=remix.config.js
 /** @type {import('@remix-run/dev').AppConfig} */
@@ -833,9 +789,6 @@ module.exports = {
     /^@react-spectrum/,
     /^@spectrum-icons/,
   ],
-  future: {
-    unstable_cssSideEffectImports: true,
-  },
   // ...
 };
 ```
