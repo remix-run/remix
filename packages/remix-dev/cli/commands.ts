@@ -146,7 +146,7 @@ export async function build(
   modeArg?: string,
   sourcemap: boolean = false
 ): Promise<void> {
-  let mode = compiler.parseMode(modeArg ?? "", "production");
+  let mode = parseMode(modeArg) ?? "production";
 
   log(`Building Remix app in ${mode} mode...`);
 
@@ -184,7 +184,7 @@ export async function watch(
   remixRootOrConfig: string | RemixConfig,
   modeArg?: string
 ): Promise<void> {
-  let mode = compiler.parseMode(modeArg ?? "", "development");
+  let mode = parseMode(modeArg) ?? "development";
   console.log(`Watching Remix app in ${mode} mode...`);
 
   let config =
@@ -206,7 +206,7 @@ export async function dev(
   flags: { port?: number; appServerPort?: number } = {}
 ) {
   let config = await readConfig(remixRoot);
-  let mode = compiler.parseMode(modeArg ?? "", "development");
+  let mode = parseMode(modeArg) ?? "development";
 
   if (config.future.unstable_dev !== false) {
     await devServer_unstable.serve(config, flags);
@@ -429,3 +429,14 @@ async function createClientEntry(
   let contents = await fse.readFile(inputFile, "utf-8");
   return contents;
 }
+
+let parseMode = (
+  mode?: string
+): compiler.CompileOptions["mode"] | undefined => {
+  if (mode === undefined) return undefined;
+  if (mode === "development") return mode;
+  if (mode === "production") return mode;
+  if (mode === "test") return mode;
+  console.error(`Unrecognized mode: ${mode}`);
+  process.exit(1);
+};
