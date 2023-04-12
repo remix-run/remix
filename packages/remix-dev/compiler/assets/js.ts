@@ -154,7 +154,7 @@ const createEsbuildConfig = (
         });
       },
     } as esbuild.Plugin,
-  ].filter(isNotNull);
+  ];
 
   if (mode === "development" && config.future.unstable_dev) {
     // TODO prebundle deps instead of chunking just these ones
@@ -261,7 +261,3 @@ export const create = async (
     dispose: ctx.dispose,
   };
 };
-
-function isNotNull<Value>(value: Value): value is Exclude<Value, null> {
-  return value !== null;
-}

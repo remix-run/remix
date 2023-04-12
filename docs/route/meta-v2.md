@@ -86,7 +86,7 @@ This is the current router `Location` object. This is useful for generating tags
 
 ```tsx
 export const meta: V2_MetaFunction = ({ location }) => {
-  let searchQuery = new URLSearchParams(
+  const searchQuery = new URLSearchParams(
     location.search
   ).get("q");
   return [{ title: `Search results for "${searchQuery}"` }];
@@ -136,10 +136,10 @@ export const meta: V2_MetaFunction<
   typeof loader,
   { "routes/project/$pid": typeof projectDetailsLoader }
 > = ({ data, matches }) => {
-  let project = matches.find(
+  const project = matches.find(
     (match) => match.id === "routes/project/$pid"
   ).project;
-  let task = data.task;
+  const task = data.task;
   return [{ title: `${project.name}: ${task.name}` }];
 };
 ```
@@ -225,7 +225,7 @@ Usually you only need to add meta to what the parent has already defined. You ca
 
 ```tsx
 export const meta: V2_MetaFunction = ({ matches }) => {
-  let parentMeta = matches.flatMap(
+  const parentMeta = matches.flatMap(
     (match) => match.meta ?? []
   );
   return [...parentMeta, { title: "Projects" }];
@@ -236,7 +236,7 @@ Note that this _will not_ override something like `title`. This is only additive
 
 ```tsx
 export const meta: V2_MetaFunction = ({ matches }) => {
-  let parentMeta = matches
+  const parentMeta = matches
     .flatMap((match) => match.meta ?? [])
     .filter((meta) => !("title" in meta));
   return [...parentMeta, { title: "Projects" }];

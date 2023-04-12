@@ -18,7 +18,40 @@ const staticAssetRegexp = new RegExp(
     .join("|")})$`
 );
 
-let compiler: Compiler;
+let compiler: Compiler | undefined;
+function getCompiler(root: string, mode: CompileOptions["mode"]) {
+  compiler =
+    compiler ||
+    createCompiler({
+      root,
+      identifiers: mode === "production" ? "short" : "debug",
+      vitePlugins: [
+        {
+          name: "remix-assets",
+          enforce: "pre",
+          async resolveId(source) {
+            // Handle root-relative imports within Vanilla Extract files
+            if (source.startsWith("~")) {
+              return await this.resolve(source.replace("~", ""));
+            }
+            // Handle static asset JS imports
+            if (source.startsWith("/") && staticAssetRegexp.test(source)) {
+              return {
+                external: true,
+                id: "~" + source,
+              };
+            }
+          },
+          transform(code) {
+            // Translate Vite's fs import format for root-relative imports
+            return code.replace(/\/@fs\/~\//g, "~/");
+          },
+        },
+      ],
+    });
+
+  return compiler;
+}
 
 export function vanillaExtractPlugin({
   config,
@@ -33,36 +66,6 @@ export function vanillaExtractPlugin({
     name: pluginName,
     async setup(build) {
       let root = config.appDirectory;
-
-      compiler =
-        compiler ||
-        createCompiler({
-          root,
-          identifiers: mode === "production" ? "short" : "debug",
-          vitePlugins: [
-            {
-              name: "remix-assets",
-              enforce: "pre",
-              async resolveId(source) {
-                // Handle root-relative imports within Vanilla Extract files
-                if (source.startsWith("~")) {
-                  return await this.resolve(source.replace("~", ""));
-                }
-                // Handle static asset JS imports
-                if (source.startsWith("/") && staticAssetRegexp.test(source)) {
-                  return {
-                    external: true,
-                    id: "~" + source,
-                  };
-                }
-              },
-              transform(code) {
-                // Translate Vite's fs import format for root-relative imports
-                return code.replace(/\/@fs\/~\//g, "~/");
-              },
-            },
-          ],
-        });
 
       let postcssProcessor = await getPostcssProcessor({
         config,
@@ -115,6 +118,7 @@ export function vanillaExtractPlugin({
         { filter: virtualCssFileFilter, namespace },
         async ({ path }) => {
           let [relativeFilePath] = path.split(".vanilla.css");
+          let compiler = getCompiler(root, mode);
           let { css, filePath } = compiler.getCssForFile(relativeFilePath);
           let resolveDir = dirname(resolve(root, filePath));
 
@@ -136,6 +140,7 @@ export function vanillaExtractPlugin({
       );
 
       build.onLoad({ filter: cssFileFilter }, async ({ path: filePath }) => {
+        let compiler = getCompiler(root, mode);
         let { source, watchFiles } = await compiler.processVanillaFile(
           filePath,
           { outputCss }
