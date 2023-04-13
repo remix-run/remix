@@ -21,7 +21,8 @@ import runCodemod from "../codemod";
 import { CodemodError } from "../codemod/utils/error";
 import { TaskError } from "../codemod/utils/task";
 import { transpile as convertFileToJS } from "./useJavascript";
-import { warnOnce } from "../warnOnce";
+import { logger } from "../tux/logger";
+import { toError } from "../compiler/utils/error";
 
 export async function create({
   appTemplate,
@@ -148,39 +149,49 @@ export async function build(
 ): Promise<void> {
   let mode = parseMode(modeArg) ?? "production";
 
-  console.log(`Building Remix app in ${mode} mode...`);
+  logger.info(`building in ${mode} mode`);
 
   if (modeArg === "production" && sourcemap) {
-    console.warn(
-      "\n⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️"
-    );
-    console.warn(
-      "You have enabled source maps in production. This will make your " +
+    logger.warn(
+      "Sourcemaps enabled in production\n\n" +
+        "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n" +
+        "Sourcemaps in production will make your " +
         "server-side code visible to the public and is highly discouraged! If " +
         "you insist, please ensure you are using environment variables for " +
-        "secrets and not hard-coding them into your source!"
-    );
-    console.warn(
-      "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n"
+        "secrets and not hard-coding them into your source!\n" +
+        "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n"
     );
   }
 
-  let start = Date.now();
-  let config = await readConfig(remixRoot);
-  await compiler.build({
-    config,
-    options: {
-      mode,
-      sourcemap,
-      onWarning: warnOnce,
-      onCompileFailure: (failure) => {
-        compiler.logCompileFailure(failure);
-        throw Error();
+  try {
+    let start = Date.now();
+    let config = await readConfig(remixRoot);
+    let result = await compiler.build({
+      config,
+      options: {
+        mode,
+        sourcemap,
+        logger,
       },
-    },
-  });
-
-  console.log(`built in ${prettyMs(Date.now() - start)}`);
+    });
+    if (!result.ok) {
+      let { assetsCss, assetsJs, server } = result.error;
+      if (assetsCss) logger.thrown(assetsCss);
+      if (assetsJs) logger.thrown(assetsJs);
+      if (server) logger.thrown(server);
+      logger.error("build failed");
+      process.exit(1);
+    }
+    logger.info(`built in ${prettyMs(Date.now() - start)}`);
+  } catch (thrown) {
+    let error = toError(thrown);
+    let msg = "build failed";
+    if (error.stack) {
+      msg += `\n\n${error.stack}`;
+    }
+    logger.error(msg);
+    process.exit(1);
+  }
 }
 
 export async function watch(

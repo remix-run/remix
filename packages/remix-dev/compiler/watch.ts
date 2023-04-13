@@ -7,6 +7,7 @@ import { readConfig } from "../config";
 import { type Manifest } from "../manifest";
 import * as Compiler from "./compiler";
 import type { Context } from "./context";
+import { logger } from "../tux/logger";
 
 function isEntryPoint(config: RemixConfig, file: string): boolean {
   let appFile = path.relative(config.appDirectory, file);
@@ -31,8 +32,11 @@ export type WatchOptions = {
 let _compile = async (compiler: Compiler.T): Promise<Manifest | undefined> => {
   let result = await compiler.compile();
   if (!result.ok) {
-    // TODO handle errors
-    console.error("TODO");
+    let { assetsCss, assetsJs, server } = result.error;
+    if (assetsCss) logger.thrown(assetsCss);
+    if (assetsJs) logger.thrown(assetsJs);
+    if (server) logger.thrown(server);
+    logger.error("build failed");
     return;
   }
   return result.value;
@@ -64,8 +68,8 @@ export async function watch(
 
     try {
       config = await reloadConfig(config.rootDirectory);
-    } catch (error: unknown) {
-      options.onCompileFailure?.(error as Error);
+    } catch (error) {
+      logger.thrown(error);
       return;
     }
 
@@ -99,7 +103,7 @@ export async function watch(
         pollInterval: 100,
       },
     })
-    .on("error", (error) => console.error(error))
+    .on("error", (error) => options.logger.thrown(error))
     .on("change", async (file) => {
       onFileChanged?.(file);
       await rebuild();
@@ -109,8 +113,8 @@ export async function watch(
 
       try {
         config = await reloadConfig(config.rootDirectory);
-      } catch (error: unknown) {
-        options.onCompileFailure?.(error as Error);
+      } catch (error) {
+        logger.thrown(error);
         return;
       }
 

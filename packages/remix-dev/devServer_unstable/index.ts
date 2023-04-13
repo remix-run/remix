@@ -12,7 +12,7 @@ import { type RemixConfig } from "../config";
 import { loadEnv } from "./env";
 import * as LiveReload from "./liveReload";
 import * as HMR from "./hmr";
-import { warnOnce } from "../warnOnce";
+import { logger } from "../tux/logger";
 
 let info = (message: string) => console.info(`💿 ${message}`);
 
@@ -123,7 +123,7 @@ export let serve = async (
         mode: "development",
         liveReloadPort: port,
         sourcemap: true,
-        onWarning: warnOnce,
+        logger,
       },
     },
     {
