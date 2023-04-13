@@ -1,3 +1,5 @@
+import fse from "fs-extra";
+
 import * as Channel from "../utils/channel";
 import type { Result } from "../utils/result";
 import { ok, err } from "../utils/result";
@@ -33,6 +35,8 @@ export let create = async (
   };
 
   let compile = async () => {
+    fse.emptyDirSync(ctx.config.assetsBuildDirectory);
+
     // reset channels
     _channels.cssBundleHref = Channel.create();
 

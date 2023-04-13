@@ -167,7 +167,6 @@ export async function build(
 
   let start = Date.now();
   let config = await readConfig(remixRoot);
-  fse.emptyDirSync(config.assetsBuildDirectory);
   await compiler.build({
     config,
     options: {
