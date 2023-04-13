@@ -9,6 +9,8 @@ import postcssDiscardDuplicates from "postcss-discard-duplicates";
 import type { RemixConfig } from "../../config";
 import { getAppDependencies } from "../../dependencies";
 import { loaders } from "../utils/loaders";
+import type { Result } from "../utils/result";
+import { ok, err } from "../utils/result";
 import { cssFilePlugin } from "../plugins/cssImports";
 import { absoluteCssUrlsPlugin } from "../plugins/absoluteCssUrlsPlugin";
 import { emptyModulesPlugin } from "../plugins/emptyModules";
@@ -96,10 +98,15 @@ const createEsbuildConfig = (ctx: Context): esbuild.BuildOptions => {
   };
 };
 
+type Compiler = {
+  compile: () => Promise<Result<string> | Result<undefined>>;
+  dispose: () => Promise<void>;
+};
+
 export let create = async (
   ctx: Context,
   channels: { cssBundleHref: Channel.Write<string | undefined> }
-) => {
+): Promise<Compiler> => {
   let compiler = await esbuild.context({
     ...createEsbuildConfig(ctx),
     metafile: true,
@@ -126,7 +133,7 @@ export let create = async (
 
       if (!cssBundleFile) {
         channels.cssBundleHref.resolve(undefined);
-        return;
+        return ok(undefined);
       }
 
       let cssBundlePath = cssBundleFile.path;
@@ -172,10 +179,10 @@ export let create = async (
           }),
       ]);
 
-      return cssBundleHref;
+      return ok(cssBundleHref);
     } catch (error) {
       channels.cssBundleHref.reject();
-      throw error;
+      return err(error);
     }
   };
   return {

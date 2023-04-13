@@ -1,7 +1,7 @@
 import * as Compiler from "./compiler";
 import type { Context } from "./context";
 
-export async function build(ctx: Context): Promise<void> {
+export async function build(ctx: Context) {
   let compiler = await Compiler.create(ctx);
-  await compiler.compile();
+  return compiler.compile();
 }

@@ -6,6 +6,8 @@ import { polyfillNode as NodeModulesPolyfillPlugin } from "esbuild-plugin-polyfi
 import type { RemixConfig } from "../../config";
 import { type Manifest } from "../../manifest";
 import { loaders } from "../utils/loaders";
+import type { Result } from "../utils/result";
+import { ok, err } from "../utils/result";
 import { cssModulesPlugin } from "../plugins/cssModuleImports";
 import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
@@ -24,7 +26,7 @@ import type { Context } from "../context";
 
 type Compiler = {
   // produce ./build/index.js
-  compile: () => Promise<void>;
+  compile: () => Promise<Result<void>>;
   dispose: () => Promise<void>;
 };
 
@@ -162,8 +164,13 @@ export const create = async (
     write: false,
   });
   let compile = async () => {
-    let { outputFiles } = await compiler.rebuild();
-    await writeServerBuildResult(ctx.config, outputFiles!);
+    try {
+      let { outputFiles } = await compiler.rebuild();
+      await writeServerBuildResult(ctx.config, outputFiles!);
+      return ok();
+    } catch (error) {
+      return err(error);
+    }
   };
   return {
     compile,

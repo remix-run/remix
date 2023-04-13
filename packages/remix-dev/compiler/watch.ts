@@ -28,6 +28,16 @@ export type WatchOptions = {
   onInitialBuild?(durationMs: number, manifest?: Manifest): void;
 };
 
+let _compile = async (compiler: Compiler.T): Promise<Manifest | undefined> => {
+  let result = await compiler.compile();
+  if (!result.ok) {
+    // TODO handle errors
+    console.error("TODO");
+    return;
+  }
+  return result.value;
+};
+
 export async function watch(
   { config, options }: Context,
   {
@@ -44,7 +54,7 @@ export async function watch(
   let compiler = await Compiler.create({ config, options });
 
   // initial build
-  let manifest = await compiler.compile();
+  let manifest = await _compile(compiler);
   onInitialBuild?.(Date.now() - start, manifest);
 
   let restart = debounce(async () => {
@@ -60,14 +70,14 @@ export async function watch(
     }
 
     compiler = await Compiler.create({ config, options });
-    let manifest = await compiler.compile();
+    let manifest = await _compile(compiler);
     onRebuildFinish?.(Date.now() - start, manifest);
   }, 500);
 
   let rebuild = debounce(async () => {
     onRebuildStart?.();
     let start = Date.now();
-    let manifest = await compiler.compile();
+    let manifest = await _compile(compiler);
     onRebuildFinish?.(Date.now() - start, manifest);
   }, 100);
 
