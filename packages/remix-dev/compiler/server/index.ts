@@ -19,7 +19,7 @@ import { serverBareModulesPlugin } from "./plugins/bareImports";
 import { serverEntryModulePlugin } from "./plugins/entry";
 import { serverRouteModulesPlugin } from "./plugins/routes";
 import { externalPlugin } from "../plugins/external";
-import type { ReadChannel } from "../../channel";
+import type * as Channel from "../utils/channel";
 import type { Context } from "../context";
 
 type Compiler = {
@@ -30,7 +30,7 @@ type Compiler = {
 
 const createEsbuildConfig = (
   ctx: Context,
-  channels: { manifest: ReadChannel<Manifest> }
+  channels: { manifest: Channel.Read<Manifest> }
 ): esbuild.BuildOptions => {
   let stdin: esbuild.StdinOptions | undefined;
   let entryPoints: string[] | undefined;
@@ -155,7 +155,7 @@ async function writeServerBuildResult(
 
 export const create = async (
   ctx: Context,
-  channels: { manifest: ReadChannel<Manifest> }
+  channels: { manifest: Channel.Read<Manifest> }
 ): Promise<Compiler> => {
   let compiler = await esbuild.context({
     ...createEsbuildConfig(ctx, channels),

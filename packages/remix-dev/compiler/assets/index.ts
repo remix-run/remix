@@ -1,5 +1,4 @@
-import type { Channel } from "../../channel";
-import { createChannel } from "../../channel";
+import * as Channel from "../utils/channel";
 import type { Manifest } from "../../manifest";
 import type { Context } from "../context";
 import * as CssCompiler from "./css";
@@ -11,11 +10,11 @@ import {
 
 export let create = async (
   ctx: Context,
-  channels: { manifest: Channel<Manifest> }
+  channels: { manifest: Channel.WriteRead<Manifest> }
 ) => {
   // setup channels
   let _channels = {
-    cssBundleHref: createChannel<string | undefined>(),
+    cssBundleHref: Channel.create<string | undefined>(),
   };
 
   // create subcompilers
@@ -26,7 +25,7 @@ export let create = async (
 
   let compile = async () => {
     // reset channels
-    _channels.cssBundleHref = createChannel();
+    _channels.cssBundleHref = Channel.create();
 
     // parallel builds
     let [css, js] = await Promise.all([
@@ -45,7 +44,7 @@ export let create = async (
       metafile: js.metafile,
       hmr: js.hmr,
     });
-    channels.manifest.write(manifest);
+    channels.manifest.resolve(manifest);
     await writeManifestFile(ctx.config, manifest);
 
     return manifest;

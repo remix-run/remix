@@ -21,7 +21,7 @@ import {
   cssBundleEntryModulePlugin,
   cssBundleEntryModuleId,
 } from "./plugins/cssBundleEntry";
-import type { WriteChannel } from "../../channel";
+import type * as Channel from "../utils/channel";
 import type { Context } from "../context";
 
 const getExternals = (config: RemixConfig): string[] => {
@@ -98,7 +98,7 @@ const createEsbuildConfig = (ctx: Context): esbuild.BuildOptions => {
 
 export let create = async (
   ctx: Context,
-  channels: { cssBundleHref: WriteChannel<string | undefined> }
+  channels: { cssBundleHref: Channel.Write<string | undefined> }
 ) => {
   let compiler = await esbuild.context({
     ...createEsbuildConfig(ctx),
@@ -125,7 +125,7 @@ export let create = async (
       );
 
       if (!cssBundleFile) {
-        channels.cssBundleHref.write(undefined);
+        channels.cssBundleHref.resolve(undefined);
         return;
       }
 
@@ -138,7 +138,7 @@ export let create = async (
           path.resolve(cssBundlePath)
         );
 
-      channels.cssBundleHref.write(cssBundleHref);
+      channels.cssBundleHref.resolve(cssBundleHref);
 
       let { css, map } = await postcss([
         // We need to discard duplicate rules since "composes"
@@ -174,7 +174,7 @@ export let create = async (
 
       return cssBundleHref;
     } catch (error) {
-      channels.cssBundleHref.write(undefined);
+      channels.cssBundleHref.reject();
       throw error;
     }
   };

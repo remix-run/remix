@@ -23,7 +23,7 @@ import invariant from "../../invariant";
 import { hmrPlugin } from "./plugins/hmr";
 import { createMatchPath } from "../utils/tsconfig";
 import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
-import { type ReadChannel } from "../../channel";
+import type * as Channel from "../utils/channel";
 import type { Context } from "../context";
 
 type Compiler = {
@@ -72,7 +72,7 @@ const getExternals = (remixConfig: RemixConfig): string[] => {
 const createEsbuildConfig = (
   ctx: Context,
   onLoader: (filename: string, code: string) => void,
-  channels: { cssBundleHref: ReadChannel<string | undefined> }
+  channels: { cssBundleHref: Channel.Read<string | undefined> }
 ): esbuild.BuildOptions => {
   let entryPoints: Record<string, string> = {
     "entry.client": ctx.config.entryClientFilePath,
@@ -215,7 +215,7 @@ const createEsbuildConfig = (
 
 export const create = async (
   ctx: Context,
-  channels: { cssBundleHref: ReadChannel<string | undefined> }
+  channels: { cssBundleHref: Channel.Read<string | undefined> }
 ): Promise<Compiler> => {
   let hmrRoutes: Record<string, { loaderHash: string }> = {};
   let onLoader = (filename: string, code: string) => {

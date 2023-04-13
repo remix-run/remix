@@ -1,4 +1,4 @@
-import { createChannel } from "../channel";
+import * as Channel from "./utils/channel";
 import { type Manifest } from "../manifest";
 import * as AssetsCompiler from "./assets";
 import type { Context } from "./context";
@@ -11,14 +11,14 @@ type Compiler = {
 
 export let create = async (ctx: Context): Promise<Compiler> => {
   let channels = {
-    manifest: createChannel<Manifest>(),
+    manifest: Channel.create<Manifest>(),
   };
 
   let assets = await AssetsCompiler.create(ctx, channels);
   let server = await ServerCompiler.create(ctx, channels);
   return {
     compile: async () => {
-      channels.manifest = createChannel();
+      channels.manifest = Channel.create();
       try {
         let [manifest] = await Promise.all([
           assets.compile(),
