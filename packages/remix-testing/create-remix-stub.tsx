@@ -57,13 +57,6 @@ function patchRoutesWithContext(
   context: AppLoadContext
 ): (RouteObject | DataRouteObject)[] {
   return routes.map((route) => {
-    if (route.children) {
-      return {
-        ...route,
-        children: patchRoutesWithContext(route.children, context),
-      };
-    }
-
     if (route.loader) {
       let loader = route.loader;
       route.loader = (args) => loader({ ...args, context });
@@ -72,6 +65,13 @@ function patchRoutesWithContext(
     if (route.action) {
       let action = route.action;
       route.action = (args) => action({ ...args, context });
+    }
+
+    if (route.children) {
+      return {
+        ...route,
+        children: patchRoutesWithContext(route.children, context),
+      };
     }
 
     return route as RouteObject | DataRouteObject;

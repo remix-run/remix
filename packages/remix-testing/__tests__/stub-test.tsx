@@ -82,26 +82,47 @@ test("can pass a predefined loader", () => {
 test("can pass context values", async () => {
   function App() {
     let data = useLoaderData();
-    return <pre data-testid="data">Context: {data.context}</pre>;
+    return (
+      <div>
+        <pre data-testid="root">Context: {data.context}</pre>;
+        <Outlet />
+      </div>
+    );
+  }
+
+  function Hello() {
+    let data = useLoaderData();
+    return <pre data-testid="hello">Context: {data.context}</pre>;
   }
 
   let RemixStub = unstable_createRemixStub(
     [
       {
         path: "/",
-        index: true,
         element: <App />,
         loader({ context }) {
           return json(context);
         },
+        children: [
+          {
+            path: "hello",
+            element: <Hello />,
+            loader({ context }) {
+              return json(context);
+            },
+          },
+        ],
       },
     ],
     { context: "hello" }
   );
 
-  render(<RemixStub />);
+  render(<RemixStub initialEntries={["/hello"]} />);
 
-  expect(await screen.findByTestId("data")).toHaveTextContent(
+  expect(await screen.findByTestId("root")).toHaveTextContent(
+    /context: hello/i
+  );
+  expect(await screen.findByTestId("hello")).toHaveTextContent(
     /context: hello/i
   );
 });
