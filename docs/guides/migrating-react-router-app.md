@@ -451,7 +451,7 @@ Create React App and many other build tools support importing CSS in your compon
 
 ### Route `links` exports
 
-In Remix, stylesheets can be loaded from route component files. Importing them does not do anything magical with your styles, rather it returns a URL that can be used to load the stylesheet as you see fit. You can render the stylesheet directly in your component or use our [`links` export][see-our-docs-on-route-links-for-more-information].
+In Remix, regular stylesheets can be loaded from route component files. Importing them does not do anything magical with your styles, rather it returns a URL that can be used to load the stylesheet as you see fit. You can render the stylesheet directly in your component or use our [`links` export][see-our-docs-on-route-links-for-more-information].
 
 Let's move our app's stylesheet and a few other assets to the `links` function in our root route:
 
