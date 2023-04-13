@@ -31,7 +31,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          token: ${{ secrets.NIGHTLY_PAT }}
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
@@ -62,7 +61,7 @@ jobs:
           publish: yarn run changeset:release
           createGithubReleases: false
         env:
-          GITHUB_TOKEN: ${{ secrets.NIGHTLY_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   find_package_version:
@@ -87,7 +86,7 @@ jobs:
 
       - id: find_package_version
         run: |
-          package_version=$(node ./scripts/release/find-release-from-changeset.js)
+          package_version=$(node ./scripts/find-release-from-changeset.js)
           echo "package_version=${package_version}" >> $GITHUB_OUTPUT
         env:
           PACKAGE_VERSION_TO_FOLLOW: "remix"
@@ -98,10 +97,6 @@ jobs:
     if: github.repository == 'remix-run/remix' && needs.find_package_version.outputs.package_version != ''
     needs: [release, find_package_version]
     uses: ./.github/workflows/release-comments.yml
-    with:
-      ref: refs/tags/remix@${{ needs.find_package_version.outputs.package_version }}
-      package_version_to_follow: "remix"
-      release_branch: ${{ github.ref_name }}
 
   deployments:
     name: 🚀 Deployment Tests

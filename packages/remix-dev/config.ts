@@ -10,11 +10,11 @@ import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
-import { serverBuildVirtualModule } from "./compiler/virtualModules";
-import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
+import { writeConfigDefaults } from "./config/write-tsconfig-defaults";
+import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
 import { getPreferredPackageManager } from "./cli/getPreferredPackageManager";
-import { warnOnce } from "./compiler/warnings";
+import { warnOnce } from "./warnOnce";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -44,17 +44,12 @@ type Dev = {
   rebuildPollIntervalMs?: number;
 };
 
-export type VanillaExtractOptions = {
-  cache?: boolean;
-};
-
 interface FutureConfig {
-  unstable_cssModules: boolean;
-  unstable_cssSideEffectImports: boolean;
   unstable_dev: boolean | Dev;
+  /** @deprecated Use the `postcss` config option instead */
   unstable_postcss: boolean;
+  /** @deprecated Use the `tailwind` config option instead */
   unstable_tailwind: boolean;
-  unstable_vanillaExtract: boolean | VanillaExtractOptions;
   v2_errorBoundary: boolean;
   v2_meta: boolean;
   v2_normalizeFormMethod: boolean;
@@ -123,6 +118,12 @@ export interface AppConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
+   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Defaults to `false`.
+   */
+  postcss?: boolean;
+
+  /**
    * A server entrypoint, relative to the root directory that becomes your
    * server's main module. If specified, Remix will compile this file along with
    * your application into a single file to be deployed to your server. This
@@ -189,6 +190,12 @@ export interface AppConfig {
    * The platform the server build is targeting. Defaults to "node".
    */
   serverPlatform?: ServerPlatform;
+
+  /**
+   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
+   * Defaults to `false`.
+   */
+  tailwind?: boolean;
 
   /**
    * A list of filenames or a glob patterns to match files in the `app/routes`
@@ -283,6 +290,12 @@ export interface RemixConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
+   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Defaults to `false`.
+   */
+  postcss: boolean;
+
+  /**
    * The path to the server build file. This file should end in a `.js`.
    */
   serverBuildPath: string;
@@ -350,6 +363,12 @@ export interface RemixConfig {
   serverPlatform: ServerPlatform;
 
   /**
+   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
+   * Defaults to `false`.
+   */
+  tailwind: boolean;
+
+  /**
    * A list of directories to watch.
    */
   watchPaths: string[];
@@ -415,6 +434,10 @@ export async function readConfig(
     warnOnce(formMethodWarning, "v2_normalizeFormMethod");
   }
 
+  if (!appConfig.future?.v2_meta) {
+    warnOnce(metaWarning, "v2_meta");
+  }
+
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
     appConfig.serverBuildTarget ?? ""
   );
@@ -451,7 +474,43 @@ export async function readConfig(
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
   serverMinify ??= false;
 
+  if (appConfig.future) {
+    if ("unstable_cssModules" in appConfig.future) {
+      warnOnce(
+        'The "future.unstable_cssModules" config option has been removed as this feature is now enabled automatically.'
+      );
+    }
+
+    if ("unstable_cssSideEffectImports" in appConfig.future) {
+      warnOnce(
+        'The "future.unstable_cssSideEffectImports" config option has been removed as this feature is now enabled automatically.'
+      );
+    }
+
+    if ("unstable_vanillaExtract" in appConfig.future) {
+      warnOnce(
+        'The "future.unstable_vanillaExtract" config option has been removed as this feature is now enabled automatically.'
+      );
+    }
+
+    if (appConfig.future.unstable_postcss !== undefined) {
+      warnOnce(
+        'The "future.unstable_postcss" config option has been deprecated as this feature is now considered stable. Use the "postcss" config option instead.'
+      );
+    }
+
+    if (appConfig.future.unstable_tailwind !== undefined) {
+      warnOnce(
+        'The "future.unstable_tailwind" config option has been deprecated as this feature is now considered stable. Use the "tailwind" config option instead.'
+      );
+    }
+  }
+
   let mdx = appConfig.mdx;
+  let postcss =
+    appConfig.postcss ?? appConfig.future?.unstable_postcss === true;
+  let tailwind =
+    appConfig.tailwind ?? appConfig.future?.unstable_tailwind === true;
 
   let appDirectory = path.resolve(
     rootDirectory,
@@ -670,13 +729,9 @@ export async function readConfig(
   }
 
   let future: FutureConfig = {
-    unstable_cssModules: appConfig.future?.unstable_cssModules === true,
-    unstable_cssSideEffectImports:
-      appConfig.future?.unstable_cssSideEffectImports === true,
     unstable_dev: appConfig.future?.unstable_dev ?? false,
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
-    unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract ?? false,
     v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
     v2_meta: appConfig.future?.v2_meta === true,
     v2_normalizeFormMethod: appConfig.future?.v2_normalizeFormMethod === true,
@@ -709,6 +764,8 @@ export async function readConfig(
     serverModuleFormat,
     serverPlatform,
     mdx,
+    postcss,
+    tailwind,
     watchPaths,
     tsconfigPath,
     future,
@@ -819,36 +876,44 @@ let disjunctionListFormat = new Intl.ListFormat("en", {
 });
 
 export let browserBuildDirectoryWarning =
-  "⚠️ DEPRECATED: The `browserBuildDirectory` config option is deprecated. " +
-  "Use `assetsBuildDirectory` instead.";
+  "⚠️ REMIX FUTURE CHANGE: The `browserBuildDirectory` config option will be removed in v2. " +
+  "Use `assetsBuildDirectory` instead. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#browserbuilddirectory";
 
 export let serverBuildDirectoryWarning =
-  "⚠️ DEPRECATED: The `serverBuildDirectory` config option is deprecated. " +
-  "Use `serverBuildPath` instead.";
+  "⚠️ REMIX FUTURE CHANGE: The `serverBuildDirectory` config option will be removed in v2. " +
+  "Use `serverBuildPath` instead. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#serverbuilddirectory";
 
 export let serverBuildTargetWarning =
-  "⚠️ DEPRECATED: The `serverBuildTarget` config option is deprecated. Use a " +
-  "combination of `publicPath`, `serverBuildPath`, `serverConditions`, " +
-  "`serverDependenciesToBundle`, `serverMainFields`, `serverMinify`, " +
-  "`serverModuleFormat` and/or `serverPlatform` instead.";
+  "⚠️ REMIX FUTURE CHANGE: The `serverBuildTarget` config option will be removed in v2. " +
+  "Use a combination of server module config values to achieve the same build output. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#serverbuildtarget";
 
 export let flatRoutesWarning =
-  "⚠️ DEPRECATED: The old nested folders route convention has been " +
-  "deprecated in favor of 'flat routes'.  Please enable the new routing " +
-  "convention via the `future.v2_routeConvention` flag in your " +
-  "`remix.config.js` file.  For more information, please see " +
-  "https://remix.run/docs/en/main/file-conventions/route-files-v2.";
+  "⚠️ REMIX FUTURE CHANGE: The route file convention is changing in v2. " +
+  "You can prepare for this change at your convenience with the `v2_routeConvention` future flag. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#file-system-route-convention";
 
 export const errorBoundaryWarning =
-  "⚠️ DEPRECATED: The separation of `CatchBoundary` and `ErrorBoundary` has " +
-  "been deprecated and Remix v2 will use a singular `ErrorBoundary` for " +
-  "all thrown values (`Response` and `Error`). Please migrate to the new " +
-  "behavior in Remix v1 via the `future.v2_errorBoundary` flag in your " +
-  "`remix.config.js` file. For more information, see " +
-  "https://remix.run/docs/route/error-boundary-v2";
+  "⚠️ REMIX FUTURE CHANGE: The behaviors of `CatchBoundary` and `ErrorBoundary` are changing in v2. " +
+  "You can prepare for this change at your convenience with the `v2_errorBoundary` future flag. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#catchboundary-and-errorboundary";
 
 export const formMethodWarning =
-  "⚠️  DEPRECATED: Please enable the `future.v2_normalizeFormMethod` flag to " +
-  "prepare for the Remix v2 release. Lowercase `useNavigation().formMethod`" +
-  "values are being normalized to uppercase in v2 to align with the `fetch()` " +
-  "behavior.  For more information, see https://remix.run/docs/hooks/use-navigation";
+  "⚠️ REMIX FUTURE CHANGE: APIs that provide `formMethod` will be changing in v2. " +
+  "All values will be uppercase (GET, POST, etc.) instead of lowercase (get, post, etc.) " +
+  "You can prepare for this change at your convenience with the `v2_normalizeFormMethod` future flag. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#formMethod";
+
+export const metaWarning =
+  "⚠️ REMIX FUTURE CHANGE: The route `meta` export signature is changing in v2. " +
+  "You can prepare for this change at your convenience with the `v2_meta` future flag. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#meta";
