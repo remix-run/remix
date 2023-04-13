@@ -2,6 +2,7 @@ import * as React from "react";
 import { render, screen } from "@testing-library/react";
 import { unstable_createRemixStub } from "@remix-run/testing";
 import { Outlet, useLoaderData, useMatches } from "@remix-run/react";
+import type { DataFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 
 test("renders a route", () => {
@@ -65,6 +66,24 @@ test("loaders work", async () => {
   );
 });
 
+test("can pass a predefined loader", () => {
+  async function loader({ context }: DataFunctionArgs) {
+    if (context.something) {
+      return json({ cya: "later" });
+    }
+    return json({ hi: "there" });
+  }
+
+  unstable_createRemixStub(
+    [
+      {
+        path: "/example",
+        loader,
+      },
+    ],
+    { something: true }
+  );
+});
 
 test("can pass context values", async () => {
   function App() {
@@ -92,6 +111,7 @@ test("can pass context values", async () => {
     /context: hello/i
   );
 });
+
 test("all routes have ids", () => {
   function Home() {
     let matches = useMatches();

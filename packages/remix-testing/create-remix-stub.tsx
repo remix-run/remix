@@ -9,9 +9,18 @@ import type {
   UNSAFE_RouteModules as RouteModules,
   UNSAFE_RemixContextObject as RemixContextObject,
 } from "@remix-run/react";
-import type { DataRouteObject, RouteObject } from "react-router-dom";
+import type {
+  DataRouteObject,
+  IndexRouteObject,
+  NonIndexRouteObject,
+  RouteObject,
+} from "react-router-dom";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
-import type { AppLoadContext } from "@remix-run/server-runtime";
+import type {
+  ActionFunction,
+  AppLoadContext,
+  LoaderFunction,
+} from "@remix-run/server-runtime";
 
 type RemixStubOptions = {
   /**
@@ -44,10 +53,10 @@ type RemixStubOptions = {
 };
 
 function patchRoutesWithContext(
-  route: (RouteObject | DataRouteObject)[],
+  routes: (StubRouteObject | StubDataRouteObject)[],
   context: AppLoadContext
 ): (RouteObject | DataRouteObject)[] {
-  return route.map((route) => {
+  return routes.map((route) => {
     if (route.children) {
       return {
         ...route,
@@ -65,12 +74,31 @@ function patchRoutesWithContext(
       route.action = (args) => action({ ...args, context });
     }
 
-    return route;
-  });
+    return route as RouteObject | DataRouteObject;
+  }) as (RouteObject | DataRouteObject)[];
 }
 
+interface StubIndexRouteObject
+  extends Omit<IndexRouteObject, "loader" | "action"> {
+  loader?: LoaderFunction;
+  action?: ActionFunction;
+}
+
+interface StubNonIndexRouteObject
+  extends Omit<NonIndexRouteObject, "loader" | "action"> {
+  loader?: LoaderFunction;
+  action?: ActionFunction;
+}
+
+type StubRouteObject = StubIndexRouteObject | StubNonIndexRouteObject;
+
+type StubDataRouteObject = StubRouteObject & {
+  children?: DataRouteObject[];
+  id: string;
+};
+
 export function createRemixStub(
-  routes: (RouteObject | DataRouteObject)[],
+  routes: (StubRouteObject | StubDataRouteObject)[],
   context: AppLoadContext = {}
 ) {
   return function RemixStub({
@@ -84,9 +112,9 @@ export function createRemixStub(
 
     if (routerRef.current == null) {
       // update the routes to include context in the loader/action
-      routes = patchRoutesWithContext(routes, context);
+      let patched = patchRoutesWithContext(routes, context);
 
-      routerRef.current = createMemoryRouter(routes, {
+      routerRef.current = createMemoryRouter(patched, {
         initialEntries,
         initialIndex,
         hydrationData,
