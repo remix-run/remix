@@ -32,7 +32,7 @@ type Compiler = {
     metafile: esbuild.Metafile;
     hmr?: Manifest["hmr"];
   }>;
-  dispose: () => void;
+  dispose: () => Promise<void>;
 };
 
 function getNpmPackageName(id: string): string {

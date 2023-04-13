@@ -50,7 +50,7 @@ export async function watch(
   let restart = debounce(async () => {
     onRebuildStart?.();
     let start = Date.now();
-    compiler.dispose();
+    await compiler.dispose();
 
     try {
       config = await reloadConfig(config.rootDirectory);
@@ -112,7 +112,9 @@ export async function watch(
     });
 
   return async () => {
-    await watcher.close().catch(() => undefined);
-    compiler.dispose();
+    await Promise.all([
+      watcher.close().catch(() => undefined),
+      compiler.dispose(),
+    ]);
   };
 }

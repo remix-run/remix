@@ -25,7 +25,7 @@ import type { Context } from "../context";
 type Compiler = {
   // produce ./build/index.js
   compile: () => Promise<void>;
-  dispose: () => void;
+  dispose: () => Promise<void>;
 };
 
 const createEsbuildConfig = (
@@ -167,6 +167,6 @@ export const create = async (
   };
   return {
     compile,
-    dispose: () => undefined,
+    dispose: compiler.dispose,
   };
 };

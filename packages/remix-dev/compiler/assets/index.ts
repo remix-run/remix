@@ -51,9 +51,8 @@ export let create = async (
   };
   return {
     compile,
-    dispose: () => {
-      compiler.css.dispose();
-      compiler.js.dispose();
+    dispose: async () => {
+      await Promise.all([compiler.css.dispose(), compiler.js.dispose()]);
     },
   };
 };

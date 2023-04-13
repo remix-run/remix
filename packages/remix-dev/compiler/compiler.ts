@@ -6,7 +6,7 @@ import * as ServerCompiler from "./server";
 
 type Compiler = {
   compile: () => Promise<Manifest | undefined>;
-  dispose: () => void;
+  dispose: () => Promise<void>;
 };
 
 export let create = async (ctx: Context): Promise<Compiler> => {
@@ -31,9 +31,8 @@ export let create = async (ctx: Context): Promise<Compiler> => {
         return undefined;
       }
     },
-    dispose: () => {
-      assets.dispose();
-      server.dispose();
+    dispose: async () => {
+      await Promise.all([assets.dispose(), server.dispose()]);
     },
   };
 };
