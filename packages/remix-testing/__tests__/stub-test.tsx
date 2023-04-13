@@ -67,22 +67,16 @@ test("loaders work", async () => {
 });
 
 test("can pass a predefined loader", () => {
-  async function loader({ context }: DataFunctionArgs) {
-    if (context.something) {
-      return json({ cya: "later" });
-    }
+  async function loader(_args: DataFunctionArgs) {
     return json({ hi: "there" });
   }
 
-  unstable_createRemixStub(
-    [
-      {
-        path: "/example",
-        loader,
-      },
-    ],
-    { something: true }
-  );
+  unstable_createRemixStub([
+    {
+      path: "/example",
+      loader,
+    },
+  ]);
 });
 
 test("can pass context values", async () => {
