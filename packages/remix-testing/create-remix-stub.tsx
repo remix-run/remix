@@ -11,6 +11,7 @@ import type {
 } from "@remix-run/react";
 import type { DataRouteObject, RouteObject } from "react-router-dom";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import type { AppLoadContext } from "@remix-run/server-runtime";
 
 type RemixStubOptions = {
   /**
@@ -42,7 +43,36 @@ type RemixStubOptions = {
   remixConfigFuture?: Partial<FutureConfig>;
 };
 
-export function createRemixStub(routes: (RouteObject | DataRouteObject)[]) {
+function patchRoutesWithContext(
+  route: (RouteObject | DataRouteObject)[],
+  context: AppLoadContext
+): (RouteObject | DataRouteObject)[] {
+  return route.map((route) => {
+    if (route.children) {
+      return {
+        ...route,
+        children: patchRoutesWithContext(route.children, context),
+      };
+    }
+
+    if (route.loader) {
+      let loader = route.loader;
+      route.loader = (args) => loader({ ...args, context });
+    }
+
+    if (route.action) {
+      let action = route.action;
+      route.action = (args) => action({ ...args, context });
+    }
+
+    return route;
+  });
+}
+
+export function createRemixStub(
+  routes: (RouteObject | DataRouteObject)[],
+  context: AppLoadContext = {}
+) {
   return function RemixStub({
     initialEntries,
     initialIndex,
@@ -53,6 +83,9 @@ export function createRemixStub(routes: (RouteObject | DataRouteObject)[]) {
     let remixContextRef = React.useRef<RemixContextObject>();
 
     if (routerRef.current == null) {
+      // update the routes to include context in the loader/action
+      routes = patchRoutesWithContext(routes, context);
+
       routerRef.current = createMemoryRouter(routes, {
         initialEntries,
         initialIndex,

@@ -65,6 +65,33 @@ test("loaders work", async () => {
   );
 });
 
+
+test("can pass context values", async () => {
+  function App() {
+    let data = useLoaderData();
+    return <pre data-testid="data">Context: {data.context}</pre>;
+  }
+
+  let RemixStub = unstable_createRemixStub(
+    [
+      {
+        path: "/",
+        index: true,
+        element: <App />,
+        loader({ context }) {
+          return json(context);
+        },
+      },
+    ],
+    { context: "hello" }
+  );
+
+  render(<RemixStub />);
+
+  expect(await screen.findByTestId("data")).toHaveTextContent(
+    /context: hello/i
+  );
+});
 test("all routes have ids", () => {
   function Home() {
     let matches = useMatches();
