@@ -22,6 +22,7 @@ import runCodemod from "../codemod";
 import { CodemodError } from "../codemod/utils/error";
 import { TaskError } from "../codemod/utils/task";
 import { transpile as convertFileToJS } from "./useJavascript";
+import { warnOnce } from "../warnOnce";
 
 export async function create({
   appTemplate,
@@ -168,16 +169,22 @@ export async function build(
   let start = Date.now();
   let config = await readConfig(remixRoot);
   fse.emptyDirSync(config.assetsBuildDirectory);
-  await compiler.build(config, {
-    mode,
-    sourcemap,
-    onCompileFailure: (failure) => {
-      compiler.logCompileFailure(failure);
-      throw Error();
+  await compiler.build({
+    config,
+    options: {
+      // TODO: remove target in v2
+      target: "node14",
+      mode,
+      sourcemap,
+      onWarning: warnOnce,
+      onCompileFailure: (failure) => {
+        compiler.logCompileFailure(failure);
+        throw Error();
+      },
     },
   });
 
-  log(`Built in ${prettyMs(Date.now() - start)}`);
+  log(`built in ${prettyMs(Date.now() - start)}`);
 }
 
 export async function watch(
@@ -193,7 +200,6 @@ export async function watch(
       : await readConfig(remixRootOrConfig);
 
   devServer.liveReload(config, {
-    mode,
     onInitialBuild: (durationMs) =>
       console.log(`💿 Built in ${prettyMs(durationMs)}`),
   });
@@ -202,18 +208,16 @@ export async function watch(
 
 export async function dev(
   remixRoot: string,
-  modeArg?: string,
   flags: { port?: number; appServerPort?: number } = {}
 ) {
   let config = await readConfig(remixRoot);
-  let mode = parseMode(modeArg) ?? "development";
 
   if (config.future.unstable_dev !== false) {
     await devServer_unstable.serve(config, flags);
     return await new Promise(() => {});
   }
 
-  await devServer.serve(config, mode, flags.port);
+  await devServer.serve(config, flags.port);
   return await new Promise(() => {});
 }
 
