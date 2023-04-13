@@ -8,7 +8,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@netlify/functions": "^1.3.0",
+    "@netlify/functions": "^1.4.0",
     "@remix-run/netlify": "*",
     "@remix-run/node": "*",
     "@remix-run/react": "*",
