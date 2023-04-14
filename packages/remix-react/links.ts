@@ -173,23 +173,10 @@ interface HtmlLinkPreloadImage extends HtmlLinkProps {
 export type HtmlLinkDescriptor =
   // Must have an href *unless* it's a `<link rel="preload" as="image">` with an
   // `imageSrcSet` and `imageSizes` props
-  (
-    | (HtmlLinkProps & Pick<Required<HtmlLinkProps>, "href">)
-    | (HtmlLinkPreloadImage &
-        Pick<Required<HtmlLinkPreloadImage>, "imageSizes">)
-    | (HtmlLinkPreloadImage &
-        Pick<Required<HtmlLinkPreloadImage>, "href"> & { imageSizes?: never })
-  ) & {
-    /**
-     * @deprecated Use `imageSrcSet` instead.
-     */
-    imagesrcset?: string;
-
-    /**
-     * @deprecated Use `imageSizes` instead.
-     */
-    imagesizes?: string;
-  };
+  | (HtmlLinkProps & Pick<Required<HtmlLinkProps>, "href">)
+  | (HtmlLinkPreloadImage & Pick<Required<HtmlLinkPreloadImage>, "imageSizes">)
+  | (HtmlLinkPreloadImage &
+      Pick<Required<HtmlLinkPreloadImage>, "href"> & { imageSizes?: never });
 
 export interface PrefetchPageDescriptor
   extends Omit<
@@ -200,8 +187,6 @@ export interface PrefetchPageDescriptor
     | "sizes"
     | "imageSrcSet"
     | "imageSizes"
-    | "imagesrcset"
-    | "imagesizes"
     | "as"
     | "color"
     | "title"
@@ -302,23 +287,22 @@ export function isPageLinkDescriptor(
   return object != null && typeof object.page === "string";
 }
 
-export function isHtmlLinkDescriptor(
-  object: any
-): object is HtmlLinkDescriptor {
-  if (object == null) return false;
+function isHtmlLinkDescriptor(object: any): object is HtmlLinkDescriptor {
+  if (object == null) {
+    return false;
+  }
 
-  // <link> may not have an href if <link rel="preload"> is used with imagesrcset + imagesizes
+  // <link> may not have an href if <link rel="preload"> is used with imageSrcSet + imageSizes
   // https://github.com/remix-run/remix/issues/184
   // https://html.spec.whatwg.org/commit-snapshots/cb4f5ff75de5f4cbd7013c4abad02f21c77d4d1c/#attr-link-imagesrcset
   if (object.href == null) {
     return (
       object.rel === "preload" &&
-      (typeof object.imageSrcSet === "string" ||
-        typeof object.imagesrcset === "string") &&
-      (typeof object.imageSizes === "string" ||
-        typeof object.imagesizes === "string")
+      typeof object.imageSrcSet === "string" &&
+      typeof object.imageSizes === "string"
     );
   }
+
   return typeof object.rel === "string" && typeof object.href === "string";
 }
 
