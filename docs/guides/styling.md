@@ -53,15 +53,14 @@ export function links() {
 ```
 
 Remix also has built-in support for the following:
-- [Tailwind](#tailwind)
-- [PostCSS](#postcss)
-- [CSS Modules](#css-modules)
-- [Vanilla Extract](#vanilla-extract)
-- [CSS side-effect imports](#css-side-effect-imports)
+
+- [Tailwind][tailwind-2]
+- [PostCSS][post-css]
+- [CSS Modules][css-modules]
+- [Vanilla Extract][vanilla-extract-3]
+- [CSS side-effect imports][css-side-effect-imports-2]
 
 ## CSS Ecosystem and Performance
-
-
 
 In general, stylesheets added to the page with `<link>` tend to provide the best user experience:
 
@@ -812,3 +811,8 @@ module.exports = {
 [built-in-post-css-support]: #postcss
 [vanilla-extract-2]: #vanilla-extract
 [css-side-effect-imports]: #css-side-effect-imports
+[tailwind-2]: #tailwind
+[post-css]: #postcss
+[css-modules]: #css-modules
+[vanilla-extract-3]: #vanilla-extract
+[css-side-effect-imports-2]: #css-side-effect-imports

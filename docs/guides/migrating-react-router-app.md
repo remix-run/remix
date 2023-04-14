@@ -513,7 +513,6 @@ module.exports = {
 };
 ```
 
-
 ### CSS bundling
 
 Remix has built-in support for [CSS Modules][css-modules], [Vanilla Extract][vanilla-extract] and [CSS side-effect imports][css-side-effect-imports]. In order to make use of these features, you'll need to set up CSS bundling in your application.
