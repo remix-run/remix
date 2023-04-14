@@ -1670,9 +1670,9 @@ export default function JokesRoute() {
             <Link to=".">Get a random joke</Link>
             <p>Here are a few more jokes to check out:</p>
             <ul>
-              {data.jokeListItems.map((joke) => (
-                <li key={joke.id}>
-                  <Link to={joke.id}>{joke.name}</Link>
+              {data.jokeListItems.map(({ id, name }) => (
+                <li key={id}>
+                  <Link to={id}>{name}</Link>
                 </li>
               ))}
             </ul>
@@ -1980,7 +1980,7 @@ But if there's an error, you can return an object with the error messages and th
 
 <summary>app/routes/jokes.new.tsx</summary>
 
-```tsx filename=app/routes/jokes.new.tsx lines=[3,6,8-12,14-18,28-32,35-38,40-46,53,64,66-74,77-85,91,93-101,104-112,115-122]
+```tsx filename=app/routes/jokes.new.tsx lines=[3,6,8-12,14-18,28-32,35-38,40-46,53,63,66-73,76-84,90,92-99,102-110,115-122]
 import type { ActionArgs } from "@remix-run/node";
 import { redirect } from "@remix-run/node";
 import { useActionData } from "@remix-run/react";
@@ -2046,10 +2046,9 @@ export default function NewJokeRoute() {
               defaultValue={actionData?.fields?.name}
               name="name"
               type="text"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.name) ||
-                undefined
-              }
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.name
+              )}
               aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
@@ -2073,10 +2072,9 @@ export default function NewJokeRoute() {
             <textarea
               defaultValue={actionData?.fields?.content}
               name="content"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.content) ||
-                undefined
-              }
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.content
+              )}
               aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
@@ -2095,6 +2093,14 @@ export default function NewJokeRoute() {
           ) : null}
         </div>
         <div>
+          {actionData?.formError ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
+              {actionData.formError}
+            </p>
+          ) : null}
           <button type="submit" className="button">
             Add
           </button>
@@ -2522,7 +2528,7 @@ Great, now that we've got the UI looking nice, let's add some logic. This will b
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[2,7,12-13,19-23,25-29,31-37,39-110,115,136-139,148-151,162-170,172-180,188-196,198-206,208-217]
+```tsx filename=app/routes/login.tsx lines=[2,7,12-13,19-23,25-29,31-37,39-110,113,136-139,148-151,162-170,172-180,188-196,198-206,208-217]
 import type {
   ActionArgs,
   LinksFunction,
@@ -2541,14 +2547,14 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
 ];
 
-function validateUsername(username: unknown) {
-  if (typeof username !== "string" || username.length < 3) {
+function validateUsername(username: string) {
+  if (username.length < 3) {
     return "Usernames must be at least 3 characters long";
   }
 }
 
-function validatePassword(password: unknown) {
-  if (typeof password !== "string" || password.length < 6) {
+function validatePassword(password: string) {
+  if (password.length < 6) {
     return "Passwords must be at least 6 characters long";
   }
 }
@@ -2824,7 +2830,7 @@ Great, with that in place, we can now update `app/routes/login.tsx` to use it:
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[6,14-22] nocopy
+```tsx filename=app/routes/login.tsx lines=[6,14-23] nocopy
 // ...
 
 import stylesUrl from "~/styles/login.css";
@@ -3220,10 +3226,9 @@ export default function NewJokeRoute() {
               defaultValue={actionData?.fields?.name}
               name="name"
               type="text"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.name) ||
-                undefined
-              }
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.name
+              )}
               aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
@@ -3247,10 +3252,9 @@ export default function NewJokeRoute() {
             <textarea
               defaultValue={actionData?.fields?.content}
               name="content"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.content) ||
-                undefined
-              }
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.content
+              )}
               aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
@@ -3269,6 +3273,14 @@ export default function NewJokeRoute() {
           ) : null}
         </div>
         <div>
+          {actionData?.formError ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
+              {actionData.formError}
+            </p>
+          ) : null}
           <button type="submit" className="button">
             Add
           </button>
@@ -3493,9 +3505,9 @@ export default function JokesRoute() {
             <Link to=".">Get a random joke</Link>
             <p>Here are a few more jokes to check out:</p>
             <ul>
-              {data.jokeListItems.map((joke) => (
-                <li key={joke.id}>
-                  <Link to={joke.id}>{joke.name}</Link>
+              {data.jokeListItems.map(({ id, name }) => (
+                <li key={id}>
+                  <Link to={id}>{name}</Link>
                 </li>
               ))}
             </ul>
@@ -3704,7 +3716,7 @@ export async function createUserSession(
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[17,101-109]
+```tsx filename=app/routes/login.tsx lines=[17,102-110]
 import type {
   ActionArgs,
   LinksFunction,
@@ -3728,14 +3740,14 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesUrl },
 ];
 
-function validateUsername(username: unknown) {
-  if (typeof username !== "string" || username.length < 3) {
+function validateUsername(username: string) {
+  if (username.length < 3) {
     return "Usernames must be at least 3 characters long";
   }
 }
 
-function validatePassword(password: unknown) {
-  if (typeof password !== "string" || password.length < 6) {
+function validatePassword(password: string) {
+  if (password.length < 6) {
     return "Passwords must be at least 6 characters long";
   }
 }
@@ -4060,7 +4072,7 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes.$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes.$jokeId.tsx lines=[6,11-16] nocopy
+```tsx filename=app/routes/jokes.$jokeId.tsx lines=[6,11-19] nocopy
 // ...
 
 import {
@@ -4074,7 +4086,10 @@ import {
 export function ErrorBoundary() {
   const { jokeId } = useParams();
   return (
-    <div className="error-container">{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+    <div className="error-container">
+      There was an error loading joke by the id "${jokeId}".
+      Sorry.
+    </div>
   );
 }
 ```
@@ -4258,7 +4273,7 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes.$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes.$jokeId.tsx lines=[4,8,18-20,29,31-37]
+```tsx filename=app/routes/jokes.$jokeId.tsx lines=[4,8,18-20,39,41-47]
 import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import {
@@ -4308,7 +4323,10 @@ export function ErrorBoundary() {
   }
 
   return (
-    <div className="error-container">{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+    <div className="error-container">
+      There was an error loading joke by the id "${jokeId}".
+      Sorry.
+    </div>
   );
 }
 ```
@@ -4319,7 +4337,7 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes._index.tsx</summary>
 
-```tsx filename=app/routes/jokes._index.tsx lines=[3,6,18-22,41,43-49]
+```tsx filename=app/routes/jokes._index.tsx lines=[3,6,18-22,41,43-50]
 import { json } from "@remix-run/node";
 import {
   isRouteErrorResponse,
@@ -4365,7 +4383,8 @@ export function ErrorBoundary() {
   if (isRouteErrorResponse(error) && error.status === 404) {
     return (
       <div className="error-container">
-        There are no jokes to display.
+        <p>There are no jokes to display.</p>
+        <Link to="new">Add your own</Link>
       </div>
     );
   }
@@ -4384,7 +4403,7 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes.new.tsx</summary>
 
-```tsx filename=app/routes/jokes.new.tsx lines=[3,5,7,10,16,20-26,148,150-157]
+```tsx filename=app/routes/jokes.new.tsx lines=[3,5,7,10,16,20-26,154,156-163]
 import type {
   ActionArgs,
   LoaderArgs,
@@ -4473,10 +4492,9 @@ export default function NewJokeRoute() {
               defaultValue={actionData?.fields?.name}
               name="name"
               type="text"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.name) ||
-                undefined
-              }
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.name
+              )}
               aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
@@ -4500,10 +4518,9 @@ export default function NewJokeRoute() {
             <textarea
               defaultValue={actionData?.fields?.content}
               name="content"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.content) ||
-                undefined
-              }
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.content
+              )}
               aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
@@ -4522,6 +4539,14 @@ export default function NewJokeRoute() {
           ) : null}
         </div>
         <div>
+          {actionData?.formError ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
+              {actionData.formError}
+            </p>
+          ) : null}
           <button type="submit" className="button">
             Add
           </button>
@@ -4697,7 +4722,10 @@ export function ErrorBoundary() {
   }
 
   return (
-    <div className="error-container">{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+    <div className="error-container">
+      There was an error loading joke by the id "${jokeId}".
+      Sorry.
+    </div>
   );
 }
 ```
@@ -4832,7 +4860,10 @@ export function ErrorBoundary() {
   }
 
   return (
-    <div className="error-container">{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+    <div className="error-container">
+      There was an error loading joke by the id "${jokeId}".
+      Sorry.
+    </div>
   );
 }
 ```
@@ -5018,14 +5049,14 @@ export const meta: V2_MetaFunction = () => {
   ];
 };
 
-function validateUsername(username: unknown) {
-  if (typeof username !== "string" || username.length < 3) {
+function validateUsername(username: string) {
+  if (username.length < 3) {
     return "Usernames must be at least 3 characters long";
   }
 }
 
-function validatePassword(password: unknown) {
-  if (typeof password !== "string" || password.length < 6) {
+function validatePassword(password: string) {
+  if (password.length < 6) {
     return "Passwords must be at least 6 characters long";
   }
 }
@@ -5389,7 +5420,10 @@ export function ErrorBoundary() {
   }
 
   return (
-    <div className="error-container">{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+    <div className="error-container">
+      There was an error loading joke by the id "${jokeId}".
+      Sorry.
+    </div>
   );
 }
 ```
@@ -5619,9 +5653,9 @@ export default function JokesRoute() {
             <Link to=".">Get a random joke</Link>
             <p>Here are a few more jokes to check out:</p>
             <ul>
-              {data.jokeListItems.map((joke) => (
-                <li key={joke.id}>
-                  <Link to={joke.id}>{joke.name}</Link>
+              {data.jokeListItems.map(({ id, name }) => (
+                <li key={id}>
+                  <Link to={id}>{name}</Link>
                 </li>
               ))}
             </ul>
@@ -6074,7 +6108,10 @@ export function ErrorBoundary() {
   }
 
   return (
-    <div className="error-container">{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+    <div className="error-container">
+      There was an error loading joke by the id "${jokeId}".
+      Sorry.
+    </div>
   );
 }
 ```
@@ -6132,7 +6169,8 @@ export function ErrorBoundary() {
   if (isRouteErrorResponse(error) && error.status === 404) {
     return (
       <div className="error-container">
-        There are no jokes to display.
+        <p>There are no jokes to display.</p>
+        <Link to="new">Add your own</Link>
       </div>
     );
   }
@@ -6151,7 +6189,7 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes.new.tsx</summary>
 
-```tsx filename=app/routes/jokes.new.tsx lines=[149]
+```tsx filename=app/routes/jokes.new.tsx lines=[155]
 import type {
   ActionArgs,
   LoaderArgs,
@@ -6240,10 +6278,9 @@ export default function NewJokeRoute() {
               defaultValue={actionData?.fields?.name}
               name="name"
               type="text"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.name) ||
-                undefined
-              }
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.name
+              )}
               aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
@@ -6267,10 +6304,9 @@ export default function NewJokeRoute() {
             <textarea
               defaultValue={actionData?.fields?.content}
               name="content"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.content) ||
-                undefined
-              }
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.content
+              )}
               aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
@@ -6289,6 +6325,14 @@ export default function NewJokeRoute() {
           ) : null}
         </div>
         <div>
+          {actionData?.formError ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
+              {actionData.formError}
+            </p>
+          ) : null}
           <button type="submit" className="button">
             Add
           </button>
@@ -6333,7 +6377,7 @@ Remix has its own [`<Form />`][form] component. When JavaScript is not yet loade
 
 <summary>app/routes/login.tsx</summary>
 
-```tsx filename=app/routes/login.tsx lines=[7,93,195]
+```tsx filename=app/routes/login.tsx lines=[7,143,245]
 import type {
   ActionArgs,
   LinksFunction,
@@ -6370,14 +6414,14 @@ export const meta: V2_MetaFunction = () => {
   ];
 };
 
-function validateUsername(username: unknown) {
-  if (typeof username !== "string" || username.length < 3) {
+function validateUsername(username: string) {
+  if (username.length < 3) {
     return "Usernames must be at least 3 characters long";
   }
 }
 
-function validatePassword(password: unknown) {
-  if (typeof password !== "string" || password.length < 6) {
+function validatePassword(password: string) {
+  if (password.length < 6) {
     return "Passwords must be at least 6 characters long";
   }
 }
@@ -6601,7 +6645,7 @@ export default function Login() {
 
 <summary>app/routes/jokes.tsx</summary>
 
-```tsx filename=app/routes/jokes.tsx lines=[]
+```tsx filename=app/routes/jokes.tsx lines=[7,52,56]
 import type {
   LinksFunction,
   LoaderArgs,
@@ -6670,9 +6714,9 @@ export default function JokesRoute() {
             <Link to=".">Get a random joke</Link>
             <p>Here are a few more jokes to check out:</p>
             <ul>
-              {data.jokeListItems.map((joke) => (
-                <li key={joke.id}>
-                  <Link to={joke.id}>{joke.name}</Link>
+              {data.jokeListItems.map(({ id, name }) => (
+                <li key={id}>
+                  <Link to={id}>{name}</Link>
                 </li>
               ))}
             </ul>
@@ -6703,7 +6747,7 @@ export default function JokesRoute() {
 
 <summary>app/routes/jokes.$jokeId.tsx</summary>
 
-```tsx filename=app/routes/jokes.$jokeId.tsx lines=[8,46,55]
+```tsx filename=app/routes/jokes.$jokeId.tsx lines=[8,97,106]
 import type {
   ActionArgs,
   LoaderArgs,
@@ -6845,7 +6889,10 @@ export function ErrorBoundary() {
   }
 
   return (
-    <div className="error-container">{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+    <div className="error-container">
+      There was an error loading joke by the id "${jokeId}".
+      Sorry.
+    </div>
   );
 }
 ```
@@ -6856,7 +6903,7 @@ export function ErrorBoundary() {
 
 <summary>app/routes/jokes.new.tsx</summary>
 
-```tsx filename=app/routes/jokes.new.tsx lines=[7,82,93]
+```tsx filename=app/routes/jokes.new.tsx lines=[7,82,149]
 import type {
   ActionArgs,
   LoaderArgs,
@@ -6946,10 +6993,9 @@ export default function NewJokeRoute() {
               defaultValue={actionData?.fields?.name}
               name="name"
               type="text"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.name) ||
-                undefined
-              }
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.name
+              )}
               aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
@@ -6973,10 +7019,9 @@ export default function NewJokeRoute() {
             <textarea
               defaultValue={actionData?.fields?.content}
               name="content"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.content) ||
-                undefined
-              }
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.content
+              )}
               aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
@@ -6995,6 +7040,14 @@ export default function NewJokeRoute() {
           ) : null}
         </div>
         <div>
+          {actionData?.formError ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
+              {actionData.formError}
+            </p>
+          ) : null}
           <button type="submit" className="button">
             Add
           </button>
@@ -7110,10 +7163,10 @@ export default function JokesRoute() {
             <Link to=".">Get a random joke</Link>
             <p>Here are a few more jokes to check out:</p>
             <ul>
-              {data.jokeListItems.map((joke) => (
-                <li key={joke.id}>
-                  <Link prefetch="intent" to={joke.id}>
-                    {joke.name}
+              {data.jokeListItems.map(({ id, name }) => (
+                <li key={id}>
+                  <Link prefetch="intent" to={id}>
+                    {name}
                   </Link>
                 </li>
               ))}
@@ -7324,7 +7377,10 @@ export function ErrorBoundary() {
   }
 
   return (
-    <div className="error-container">{`There was an error loading joke by the id ${jokeId}. Sorry.`}</div>
+    <div className="error-container">
+      There was an error loading joke by the id "${jokeId}".
+      Sorry.
+    </div>
   );
 }
 ```
@@ -7447,10 +7503,9 @@ export default function NewJokeRoute() {
               defaultValue={actionData?.fields?.name}
               name="name"
               type="text"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.name) ||
-                undefined
-              }
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.name
+              )}
               aria-errormessage={
                 actionData?.fieldErrors?.name
                   ? "name-error"
@@ -7474,10 +7529,9 @@ export default function NewJokeRoute() {
             <textarea
               defaultValue={actionData?.fields?.content}
               name="content"
-              aria-invalid={
-                Boolean(actionData?.fieldErrors?.content) ||
-                undefined
-              }
+              aria-invalid={Boolean(
+                actionData?.fieldErrors?.content
+              )}
               aria-errormessage={
                 actionData?.fieldErrors?.content
                   ? "content-error"
@@ -7496,6 +7550,14 @@ export default function NewJokeRoute() {
           ) : null}
         </div>
         <div>
+          {actionData?.formError ? (
+            <p
+              className="form-validation-error"
+              role="alert"
+            >
+              {actionData.formError}
+            </p>
+          ) : null}
           <button type="submit" className="button">
             Add
           </button>
