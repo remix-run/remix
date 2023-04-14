@@ -387,7 +387,7 @@ If you are using TypeScript, you also need to create the `remix.env.d.ts` file i
 
 ### A note about non-standard imports
 
-At this point, you _might_ be able to run your app with no changes. If you are using Create React App or a highly-configured Webpack app, you likely use `import` to include non-JavaScript modules like stylesheets and images.
+At this point, you _might_ be able to run your app with no changes. If you are using Create React App or a highly-configured bundler setup, you likely use `import` to include non-JavaScript modules like stylesheets and images.
 
 Remix does not support most non-standard imports, and we think for good reason. Below is a non-exhaustive list of some of the differences you'll encounter in Remix, and how to refactor as you migrate.
 
@@ -407,7 +407,7 @@ In Remix, this works basically the same way. For assets like fonts that are load
 
 #### SVG imports
 
-Create React App and some Webpack plugins allow you to import SVG files as a React component. This is a common use case for SVG files, but it's not supported by default in Remix.
+Create React App and some other build tools allow you to import SVG files as a React component. This is a common use case for SVG files, but it's not supported by default in Remix.
 
 ```js bad nocopy
 // This will not work in Remix!
@@ -447,58 +447,11 @@ export default function Icon() {
 
 #### CSS imports
 
-Create React App and many Webpack plugins support importing CSS in your components in many ways. While this is common practice in the React ecosystem, it's not supported the same way in Remix for a few different reasons. We'll discuss this in depth in the next section, but for now just know that you need to import your stylesheets in route modules. Importing stylesheets directly in non-route components is not currently supported.
-
-[Read more about route styles and why Remix does things a bit differently.][read-more-about-route-styles-and-why-remix-does-things-a-bit-differently]
-
-### Route styles
-
-Let's talk a bit more about styles. Remix does not handle CSS imports the same way your bundler likely does, and we think that's for a good reason.
-
-Assume you have a plain CSS import in your `App` component:
-
-```jsx filename=app.jsx lines=[5]
-import { Outlet } from "react-router-dom";
-
-import Logo from "./logo";
-import SiteNav from "./site-nav";
-import "./styles.css";
-
-export default function App() {
-  return (
-    <div>
-      <header>
-        <Logo />
-        <SiteNav />
-      </header>
-      <main>
-        <Outlet />
-      </main>
-      <footer>&copy; Remix Software</footer>
-    </div>
-  );
-}
-```
-
-While this is a convenient API, consider a few questions:
-
-- How do the styles actually end up on the page? Do you get a `<link />` or an inline `<style />` in the `<head>`?
-- If other components also import CSS, where do they end up in relation other component styles? This has important implications on how the styles are applied due to the cascading nature of CSS.
-- As the styles are static assets, are we caching them? Can they be preloaded or lazy loaded?
-
-The answer to all of these questions is up to your bundler, _not you_. We think there's a better way, and it's one that happens to be as old as HTML2: `<link rel="stylesheet" />`.
-
-<docs-info>
-
-**Note:** Remix does not currently support CSS processing directly. If you use preprocessors like Sass, Less, or PostCSS, you can run those as a separate process in development.
-
-We do process [CSS Modules][css-modules], but support is currently [opt-in behind a feature flag][css-modules].
-
-</docs-info>
+Create React App and many other build tools support importing CSS in your components in various ways. Remix supports importing regular CSS files along with several popular CSS bundling solutions described below.
 
 ### Route `links` exports
 
-In Remix, stylesheets can only be loaded from route component files. Importing them does not do anything magical with your styles, rather it returns a URL that can be used to load the stylesheet as you see fit. You can render the stylesheet directly in your component or use our [`links` export][see-our-docs-on-route-links-for-more-information].
+In Remix, regular stylesheets can be loaded from route component files. Importing them does not do anything magical with your styles, rather it returns a URL that can be used to load the stylesheet as you see fit. You can render the stylesheet directly in your component or use our [`links` export][see-our-docs-on-route-links-for-more-information].
 
 Let's move our app's stylesheet and a few other assets to the `links` function in our root route:
 
@@ -547,6 +500,53 @@ export default function Root() {
 You'll notice on line 32 that we've rendered a `<Links />` component that replaced all of our individual `<link />` components. This is inconsequential if we only ever use links in the root route, but all child routes may export their own links that will also be rendered here. The `links` function can also return a [`PageLinkDescriptor` object][page-link-descriptor-object] that allows you to prefetch the resources for a page the user is likely to navigate to.
 
 If you currently inject `<link />` tags into your page client-side in your existing route components, either directly or via an abstraction like [`react-helmet`][react-helmet], you can stop doing that and instead use the `links` export. You get to delete a lot of code and possibly a dependency or two!
+
+### PostCSS
+
+To enable [PostCSS] support, set the `postcss` option to `true` in `remix.config.js`. Remix will then automatically process your styles with PostCSS if a `postcss.config.js` file is present.
+
+```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
+module.exports = {
+  postcss: true,
+  // ...
+};
+```
+
+
+### CSS bundling
+
+Remix has built-in support for [CSS Modules][css-modules], [Vanilla Extract][vanilla-extract] and [CSS side-effect imports][css-side-effect-imports]. In order to make use of these features, you'll need to set up CSS bundling in your application.
+
+First, to get access to the generated CSS bundle, install the `@remix-run/css-bundle` package.
+
+```sh
+npm install @remix-run/css-bundle
+```
+
+Then, import `cssBundleHref` and add it to a link descriptor—most likely in `root.tsx` so that it applies to your entire application.
+
+```tsx filename=root.tsx lines=[2,6-8]
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+import { cssBundleHref } from "@remix-run/css-bundle";
+
+export const links: LinksFunction = () => {
+  return [
+    ...(cssBundleHref
+      ? [{ rel: "stylesheet", href: cssBundleHref }]
+      : []),
+    // ...
+  ];
+};
+```
+
+[See our docs on CSS bundling for more information.][css-bundling]
+
+<docs-info>
+
+**Note:** Remix does not currently support Sass/Less processing directly, but you can still run those as a separate process to generate CSS files that can then be imported into your Remix app.
+
+</docs-info>
 
 ### Rendering components in `<head>`
 
@@ -613,7 +613,6 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [react-svgr]: https://react-svgr.com
 [command-line]: https://react-svgr.com/docs/cli
 [online-playground]: https://react-svgr.com/playground
-[read-more-about-route-styles-and-why-remix-does-things-a-bit-differently]: #route-stylesheets
 [page-link-descriptor-object]: ../route/links#pagelinkdescriptor
 [react-helmet]: https://www.npmjs.com/package/react-helmet
 [remix-philosophy]: ../pages/philosophy
@@ -623,4 +622,8 @@ Now then, go off and _remix your app_. We think you'll like what you build along
 [styling-in-remix]: ./styling
 [frequently-asked-questions]: ../pages/faq
 [common-gotchas]: ../pages/currently
+[postcss]: ./styling#postcss
 [css-modules]: ./styling#css-modules
+[vanilla-extract]: ./styling#vanilla-extract
+[css-side-effect-imports]: ./styling#css-side-effect-imports
+[css-bundling]: ./styling#css-bundling
