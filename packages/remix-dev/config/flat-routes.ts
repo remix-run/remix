@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { minimatch } from "minimatch";
+import { makeRe } from "minimatch";
 
 import type { ConfigRoute, RouteManifest } from "./routes";
 import { normalizeSlashes } from "./routes";
@@ -78,7 +78,7 @@ export function flatRoutes(
   prefix = "routes"
 ) {
   let ignoredFileRegex = ignoredFilePatterns
-    .map((re) => minimatch.makeRe(re))
+    .map((re) => makeRe(re))
     .filter((re: any): re is RegExp => !!re);
   let routesDir = path.join(appDirectory, prefix);
 
