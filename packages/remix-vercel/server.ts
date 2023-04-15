@@ -1,4 +1,7 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type {
+  IncomingMessage as VercelRequest,
+  ServerResponse as VercelResponse,
+} from "node:http";
 import type {
   AppLoadContext,
   ServerBuild,
