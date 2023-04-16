@@ -135,7 +135,10 @@ import { createEventHandler } from "@remix-run/cloudflare-workers";
 
 import * as build from "../build";
 
-addEventListener("fetch", createEventHandler({ build }));
+addEventListener(
+  "fetch",
+  createEventHandler({ build, mode: process.env.NODE_ENV })
+);
 ```
 
 Here's an example with the lower-level Cloudflare Workers API:
@@ -148,7 +151,10 @@ import {
 
 import * as build from "../build";
 
-const handleRequest = createRequestHandler({ build });
+const handleRequest = createRequestHandler({
+  build,
+  mode: process.env.NODE_ENV,
+});
 
 const handleEvent = async (event: FetchEvent) => {
   let response = await handleAsset(event, build);
