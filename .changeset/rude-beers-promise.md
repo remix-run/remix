@@ -4,4 +4,4 @@
 "@remix-run/server-runtime": patch
 ---
 
-Fix `ServerBuild` type for compatibility with TypeScript exact optional property types.
+Fix `ServerBuild` compatibility with `exactOptionalPropertyTypes` TypeScript setting
