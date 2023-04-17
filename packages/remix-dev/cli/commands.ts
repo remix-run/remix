@@ -171,8 +171,6 @@ export async function build(
   await compiler.build({
     config,
     options: {
-      // TODO: remove target in v2
-      target: "node14",
       mode,
       sourcemap,
       onWarning: warnOnce,
