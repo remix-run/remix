@@ -1681,10 +1681,10 @@
   dependencies:
     mime "^2.5.2"
 
-"@cloudflare/workers-types@^3.4.0":
-  version "3.4.0"
-  resolved "https://registry.npmjs.org/@cloudflare/workers-types/-/workers-types-3.4.0.tgz"
-  integrity sha512-i/3czUrt6YqbOWl44OtIqd0cSZvEVXp/1oD/DZylC4PHZL3q/BhbamdEVeVhc/HPk4iD/7MZ2HGaIMO4Z4b12A==
+"@cloudflare/workers-types@^4.20230518.0":
+  version "4.20230628.0"
+  resolved "https://registry.npmjs.org/@cloudflare/workers-types/-/workers-types-4.20230628.0.tgz#2aacc7ec8c250cd02213b331f1e267cc25db7299"
+  integrity sha512-dpOFJJPEEWahLJKhj+xRY+VwXu/s/634CVsLVnTNDCfs2KXZx9nwQ/04M0OKBJFdc6jheWwAAv/AGvRvrTDkDg==
 
 "@colors/colors@1.5.0":
   version "1.5.0"
