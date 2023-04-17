@@ -1,15 +1,20 @@
-import * as path from "path";
-import { pathToFileURL } from "url";
-import * as fse from "fs-extra";
+import { execSync } from "node:child_process";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import fse from "fs-extra";
 import getPort from "get-port";
+import NPMCliPackageJson from "@npmcli/package-json";
+import { coerce } from "semver";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
 import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
-import { serverBuildVirtualModule } from "./compiler/virtualModules";
-import { writeConfigDefaults } from "./compiler/utils/tsconfig/write-config-defaults";
+import { writeConfigDefaults } from "./config/write-tsconfig-defaults";
+import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
+import { getPreferredPackageManager } from "./cli/getPreferredPackageManager";
+import { warnOnce } from "./warnOnce";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -40,14 +45,14 @@ type Dev = {
 };
 
 interface FutureConfig {
-  unstable_cssModules: boolean;
-  unstable_cssSideEffectImports: boolean;
   unstable_dev: boolean | Dev;
+  /** @deprecated Use the `postcss` config option instead */
   unstable_postcss: boolean;
+  /** @deprecated Use the `tailwind` config option instead */
   unstable_tailwind: boolean;
-  unstable_vanillaExtract: boolean;
   v2_errorBoundary: boolean;
   v2_meta: boolean;
+  v2_normalizeFormMethod: boolean;
   v2_routeConvention: boolean;
 }
 
@@ -111,6 +116,12 @@ export interface AppConfig {
    * Additional MDX remark / rehype plugins.
    */
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
+
+  /**
+   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Defaults to `false`.
+   */
+  postcss?: boolean;
 
   /**
    * A server entrypoint, relative to the root directory that becomes your
@@ -181,6 +192,12 @@ export interface AppConfig {
   serverPlatform?: ServerPlatform;
 
   /**
+   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
+   * Defaults to `false`.
+   */
+  tailwind?: boolean;
+
+  /**
    * A list of filenames or a glob patterns to match files in the `app/routes`
    * directory that Remix will ignore. Matching files will not be recognized as
    * routes.
@@ -223,9 +240,19 @@ export interface RemixConfig {
   entryClientFile: string;
 
   /**
+   * The absolute path to the entry.client file.
+   */
+  entryClientFilePath: string;
+
+  /**
    * The path to the entry.server file, relative to `config.appDirectory`.
    */
   entryServerFile: string;
+
+  /**
+   * The absolute path to the entry.server file.
+   */
+  entryServerFilePath: string;
 
   /**
    * An object of all available routes, keyed by route id.
@@ -261,6 +288,12 @@ export interface RemixConfig {
    * Additional MDX remark / rehype plugins.
    */
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
+
+  /**
+   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
+   * Defaults to `false`.
+   */
+  postcss: boolean;
 
   /**
    * The path to the server build file. This file should end in a `.js`.
@@ -330,6 +363,12 @@ export interface RemixConfig {
   serverPlatform: ServerPlatform;
 
   /**
+   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
+   * Defaults to `false`.
+   */
+  tailwind: boolean;
+
+  /**
    * A list of directories to watch.
    */
   watchPaths: string[];
@@ -383,6 +422,22 @@ export async function readConfig(
     }
   }
 
+  if (appConfig.serverBuildTarget) {
+    warnOnce(serverBuildTargetWarning, "v2_serverBuildTarget");
+  }
+
+  if (!appConfig.future?.v2_errorBoundary) {
+    warnOnce(errorBoundaryWarning, "v2_errorBoundary");
+  }
+
+  if (!appConfig.future?.v2_normalizeFormMethod) {
+    warnOnce(formMethodWarning, "v2_normalizeFormMethod");
+  }
+
+  if (!appConfig.future?.v2_meta) {
+    warnOnce(metaWarning, "v2_meta");
+  }
+
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
     appConfig.serverBuildTarget ?? ""
   );
@@ -419,7 +474,43 @@ export async function readConfig(
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
   serverMinify ??= false;
 
+  if (appConfig.future) {
+    if ("unstable_cssModules" in appConfig.future) {
+      warnOnce(
+        'The "future.unstable_cssModules" config option has been removed as this feature is now enabled automatically.'
+      );
+    }
+
+    if ("unstable_cssSideEffectImports" in appConfig.future) {
+      warnOnce(
+        'The "future.unstable_cssSideEffectImports" config option has been removed as this feature is now enabled automatically.'
+      );
+    }
+
+    if ("unstable_vanillaExtract" in appConfig.future) {
+      warnOnce(
+        'The "future.unstable_vanillaExtract" config option has been removed as this feature is now enabled automatically.'
+      );
+    }
+
+    if (appConfig.future.unstable_postcss !== undefined) {
+      warnOnce(
+        'The "future.unstable_postcss" config option has been deprecated as this feature is now considered stable. Use the "postcss" config option instead.'
+      );
+    }
+
+    if (appConfig.future.unstable_tailwind !== undefined) {
+      warnOnce(
+        'The "future.unstable_tailwind" config option has been deprecated as this feature is now considered stable. Use the "tailwind" config option instead.'
+      );
+    }
+  }
+
   let mdx = appConfig.mdx;
+  let postcss =
+    appConfig.postcss ?? appConfig.future?.unstable_postcss === true;
+  let tailwind =
+    appConfig.tailwind ?? appConfig.future?.unstable_tailwind === true;
 
   let appDirectory = path.resolve(
     rootDirectory,
@@ -431,14 +522,125 @@ export async function readConfig(
     appConfig.cacheDirectory || ".cache"
   );
 
-  let entryClientFile = findEntry(appDirectory, "entry.client");
-  if (!entryClientFile) {
-    throw new Error(`Missing "entry.client" file in ${appDirectory}`);
+  let defaultsDirectory = path.resolve(__dirname, "config", "defaults");
+
+  let userEntryClientFile = findEntry(appDirectory, "entry.client");
+  let userEntryServerFile = findEntry(appDirectory, "entry.server");
+
+  let entryServerFile: string;
+  let entryClientFile: string;
+
+  let pkgJson = await NPMCliPackageJson.load(remixRoot);
+  let deps = pkgJson.content.dependencies ?? {};
+
+  if (userEntryServerFile) {
+    entryServerFile = userEntryServerFile;
+  } else {
+    let serverRuntime = deps["@remix-run/deno"]
+      ? "deno"
+      : deps["@remix-run/cloudflare"]
+      ? "cloudflare"
+      : deps["@remix-run/node"]
+      ? "node"
+      : undefined;
+
+    if (!serverRuntime) {
+      let serverRuntimes = [
+        "@remix-run/deno",
+        "@remix-run/cloudflare",
+        "@remix-run/node",
+      ];
+      let formattedList = disjunctionListFormat.format(serverRuntimes);
+      throw new Error(
+        `Could not determine server runtime. Please install one of the following: ${formattedList}`
+      );
+    }
+
+    let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
+
+    if (!clientRenderer) {
+      throw new Error(
+        `Could not determine renderer. Please install the following: @remix-run/react`
+      );
+    }
+
+    let maybeReactVersion = coerce(deps.react);
+    if (!maybeReactVersion) {
+      let react = ["react", "react-dom"];
+      let list = conjunctionListFormat.format(react);
+      throw new Error(
+        `Could not determine React version. Please install the following packages: ${list}`
+      );
+    }
+
+    let type: "stream" | "string" =
+      maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
+        ? "stream"
+        : "string";
+
+    if (!deps["isbot"] && type === "stream") {
+      console.log(
+        "adding `isbot` to your package.json, you should commit this change"
+      );
+
+      pkgJson.update({
+        dependencies: {
+          ...pkgJson.content.dependencies,
+          isbot: "latest",
+        },
+      });
+
+      await pkgJson.save();
+
+      let packageManager = getPreferredPackageManager();
+
+      execSync(`${packageManager} install`, {
+        cwd: remixRoot,
+        stdio: "inherit",
+      });
+    }
+
+    entryServerFile = `${serverRuntime}/entry.server.${clientRenderer}-${type}.tsx`;
   }
 
-  let entryServerFile = findEntry(appDirectory, "entry.server");
-  if (!entryServerFile) {
-    throw new Error(`Missing "entry.server" file in ${appDirectory}`);
+  if (userEntryClientFile) {
+    entryClientFile = userEntryClientFile;
+  } else {
+    let clientRenderer = deps["@remix-run/react"] ? "react" : undefined;
+
+    if (!clientRenderer) {
+      throw new Error(
+        `Could not determine runtime. Please install the following: @remix-run/react`
+      );
+    }
+
+    let maybeReactVersion = coerce(deps.react);
+    if (!maybeReactVersion) {
+      let react = ["react", "react-dom"];
+      let list = conjunctionListFormat.format(react);
+      throw new Error(
+        `Could not determine React version. Please install the following packages: ${list}`
+      );
+    }
+
+    let type: "stream" | "string" =
+      maybeReactVersion.major >= 18 || maybeReactVersion.raw === "0.0.0"
+        ? "stream"
+        : "string";
+
+    entryClientFile = `entry.client.${clientRenderer}-${type}.tsx`;
+  }
+
+  let entryClientFilePath = userEntryClientFile
+    ? path.resolve(appDirectory, userEntryClientFile)
+    : path.resolve(defaultsDirectory, entryClientFile);
+
+  let entryServerFilePath = userEntryServerFile
+    ? path.resolve(appDirectory, userEntryServerFile)
+    : path.resolve(defaultsDirectory, entryServerFile);
+
+  if (appConfig.browserBuildDirectory) {
+    warnOnce(browserBuildDirectoryWarning, "browserBuildDirectory");
   }
 
   let assetsBuildDirectory =
@@ -455,7 +657,7 @@ export async function readConfig(
     Number(process.env.REMIX_DEV_SERVER_WS_PORT) ||
     (await getPort({ port: Number(appConfig.devServerPort) || 8002 }));
   // set env variable so un-bundled servers can use it
-  process.env.REMIX_DEV_SERVER_WS_PORT = `${devServerPort}`;
+  process.env.REMIX_DEV_SERVER_WS_PORT = String(devServerPort);
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
   let defaultPublicPath =
@@ -471,9 +673,14 @@ export async function readConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  let routesConvention = appConfig.future?.v2_routeConvention
-    ? flatRoutes
-    : defineConventionalRoutes;
+  let routesConvention: typeof flatRoutes;
+
+  if (appConfig.future?.v2_routeConvention) {
+    routesConvention = flatRoutes;
+  } else {
+    warnOnce(flatRoutesWarning, "v2_routeConvention");
+    routesConvention = defineConventionalRoutes;
+  }
 
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
     let conventionalRoutes = routesConvention(
@@ -522,15 +729,12 @@ export async function readConfig(
   }
 
   let future: FutureConfig = {
-    unstable_cssModules: appConfig.future?.unstable_cssModules === true,
-    unstable_cssSideEffectImports:
-      appConfig.future?.unstable_cssSideEffectImports === true,
     unstable_dev: appConfig.future?.unstable_dev ?? false,
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
-    unstable_vanillaExtract: appConfig.future?.unstable_vanillaExtract === true,
     v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
     v2_meta: appConfig.future?.v2_meta === true,
+    v2_normalizeFormMethod: appConfig.future?.v2_normalizeFormMethod === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
@@ -538,7 +742,9 @@ export async function readConfig(
     appDirectory,
     cacheDirectory,
     entryClientFile,
+    entryClientFilePath,
     entryServerFile,
+    entryServerFilePath,
     devServerPort,
     devServerBroadcastDelay,
     assetsBuildDirectory: absoluteAssetsBuildDirectory,
@@ -558,6 +764,8 @@ export async function readConfig(
     serverModuleFormat,
     serverPlatform,
     mdx,
+    postcss,
+    tailwind,
     watchPaths,
     tsconfigPath,
     future,
@@ -618,6 +826,8 @@ const resolveServerBuildPath = (
 
   // retain deprecated behavior for now
   if (appConfig.serverBuildDirectory) {
+    warnOnce(serverBuildDirectoryWarning, "serverBuildDirectory");
+
     serverBuildPath = path.join(appConfig.serverBuildDirectory, "index.js");
   }
 
@@ -627,3 +837,83 @@ const resolveServerBuildPath = (
 
   return path.resolve(rootDirectory, serverBuildPath);
 };
+
+// adds types for `Intl.ListFormat` to the global namespace
+// we could also update our `tsconfig.json` to include `lib: ["es2021"]`
+declare namespace Intl {
+  type ListType = "conjunction" | "disjunction";
+
+  interface ListFormatOptions {
+    localeMatcher?: "lookup" | "best fit";
+    type?: ListType;
+    style?: "long" | "short" | "narrow";
+  }
+
+  interface ListFormatPart {
+    type: "element" | "literal";
+    value: string;
+  }
+
+  class ListFormat {
+    constructor(locales?: string | string[], options?: ListFormatOptions);
+    format(values: any[]): string;
+    formatToParts(values: any[]): ListFormatPart[];
+    supportedLocalesOf(
+      locales: string | string[],
+      options?: ListFormatOptions
+    ): string[];
+  }
+}
+
+let conjunctionListFormat = new Intl.ListFormat("en", {
+  style: "long",
+  type: "conjunction",
+});
+
+let disjunctionListFormat = new Intl.ListFormat("en", {
+  style: "long",
+  type: "disjunction",
+});
+
+export let browserBuildDirectoryWarning =
+  "⚠️ REMIX FUTURE CHANGE: The `browserBuildDirectory` config option will be removed in v2. " +
+  "Use `assetsBuildDirectory` instead. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#browserbuilddirectory";
+
+export let serverBuildDirectoryWarning =
+  "⚠️ REMIX FUTURE CHANGE: The `serverBuildDirectory` config option will be removed in v2. " +
+  "Use `serverBuildPath` instead. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#serverbuilddirectory";
+
+export let serverBuildTargetWarning =
+  "⚠️ REMIX FUTURE CHANGE: The `serverBuildTarget` config option will be removed in v2. " +
+  "Use a combination of server module config values to achieve the same build output. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#serverbuildtarget";
+
+export let flatRoutesWarning =
+  "⚠️ REMIX FUTURE CHANGE: The route file convention is changing in v2. " +
+  "You can prepare for this change at your convenience with the `v2_routeConvention` future flag. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#file-system-route-convention";
+
+export const errorBoundaryWarning =
+  "⚠️ REMIX FUTURE CHANGE: The behaviors of `CatchBoundary` and `ErrorBoundary` are changing in v2. " +
+  "You can prepare for this change at your convenience with the `v2_errorBoundary` future flag. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#catchboundary-and-errorboundary";
+
+export const formMethodWarning =
+  "⚠️ REMIX FUTURE CHANGE: APIs that provide `formMethod` will be changing in v2. " +
+  "All values will be uppercase (GET, POST, etc.) instead of lowercase (get, post, etc.) " +
+  "You can prepare for this change at your convenience with the `v2_normalizeFormMethod` future flag. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#formMethod";
+
+export const metaWarning =
+  "⚠️ REMIX FUTURE CHANGE: The route `meta` export signature is changing in v2. " +
+  "You can prepare for this change at your convenience with the `v2_meta` future flag. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.15.0/pages/v2#meta";

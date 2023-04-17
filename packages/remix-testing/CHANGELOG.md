@@ -1,5 +1,48 @@
 # `@remix-run/testing`
 
+## 1.15.0
+
+### Patch Changes
+
+- Bumped React Router dependencies to the latest version. [See the release notes for more details.](https://github.com/remix-run/react-router/releases/tag/react-router%406.10.0) ([`e14699547`](https://github.com/remix-run/remix/commit/e1469954737a2e45636b6aef73dc9ae251fb1b20))
+- Updated dependencies:
+  - `@remix-run/react@1.15.0`
+  - `@remix-run/node@1.15.0`
+
+## 1.14.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.14.3`
+  - `@remix-run/react@1.14.3`
+
+## 1.14.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/node@1.14.2`
+  - `@remix-run/react@1.14.2`
+
+## 1.14.1
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@1.14.1`
+  - `@remix-run/node@1.14.1`
+
+## 1.14.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/react@1.14.0`
+  - `@remix-run/node@1.14.0`
+  - `@remix-run/router@1.3.3`
+  - `react-router-dom@8.6.2`
+
 ## 1.13.0
 
 ### Minor Changes

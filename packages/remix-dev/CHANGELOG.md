@@ -1,5 +1,118 @@
 # `@remix-run/dev`
 
+## 1.15.0
+
+### Minor Changes
+
+- Added deprecation warning for `v2_normalizeFormMethod` ([#5863](https://github.com/remix-run/remix/pull/5863))
+
+- Added a new `future.v2_normalizeFormMethod` flag to normalize the exposed `useNavigation().formMethod` as an uppercase HTTP method to align with the previous `useTransition` behavior as well as the `fetch()` behavior of normalizing to uppercase HTTP methods. ([#5815](https://github.com/remix-run/remix/pull/5815))
+
+  - When `future.v2_normalizeFormMethod === false`,
+    - `useNavigation().formMethod` is lowercase
+    - `useFetcher().formMethod` is uppercase
+  - When `future.v2_normalizeFormMethod === true`:
+    - `useNavigation().formMethod` is uppercase
+    - `useFetcher().formMethod` is uppercase
+
+- Added deprecation warning for `browserBuildDirectory` in `remix.config` ([#5702](https://github.com/remix-run/remix/pull/5702))
+
+- Added deprecation warning for `CatchBoundary` in favor of `future.v2_errorBoundary` ([#5718](https://github.com/remix-run/remix/pull/5718))
+
+- Added experimental support for Vanilla Extract caching, which can be enabled by setting `future.unstable_vanillaExtract: { cache: true }` in `remix.config`. This is considered experimental due to the use of a brand new Vanilla Extract compiler under the hood. In order to use this feature, you must be using at least `v1.10.0` of `@vanilla-extract/css`. ([#5735](https://github.com/remix-run/remix/pull/5735))
+
+- Added deprecation warning for `serverBuildDirectory` in `remix.config` ([#5704](https://github.com/remix-run/remix/pull/5704))
+
+### Patch Changes
+
+- Fixed issue to ensure changes to CSS inserted via `@remix-run/css-bundle` are picked up during HMR ([#5823](https://github.com/remix-run/remix/pull/5823))
+- We now use `path.resolve` when re-exporting `entry.client` ([#5707](https://github.com/remix-run/remix/pull/5707))
+- Added support for `.mjs` and `.cjs` extensions when detecting CSS side-effect imports ([#5564](https://github.com/remix-run/remix/pull/5564))
+- Fixed resolution issues for pnpm users installing `react-refresh` ([#5637](https://github.com/remix-run/remix/pull/5637))
+- Added deprecation warning for `future.v2_meta` ([#5878](https://github.com/remix-run/remix/pull/5878))
+- Added optional entry file support for React 17 ([#5681](https://github.com/remix-run/remix/pull/5681))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.15.0`
+
+## 1.14.3
+
+### Patch Changes
+
+- dev server is resilient to build failures ([#5795](https://github.com/remix-run/remix/pull/5795))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.14.3`
+
+## 1.14.2
+
+### Patch Changes
+
+- remove premature deprecation warnings ([#5790](https://github.com/remix-run/remix/pull/5790))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.14.2`
+
+## 1.14.1
+
+### Patch Changes
+
+- Add types for importing `*.ico` files ([#5430](https://github.com/remix-run/remix/pull/5430))
+- Allow `moduleResolution: "bundler"` in tsconfig.json ([#5576](https://github.com/remix-run/remix/pull/5576))
+- Fix issue with x-route imports creating multiple entries in the module graph ([#5721](https://github.com/remix-run/remix/pull/5721))
+- Add `serverBuildTarget` deprecation warning ([#5624](https://github.com/remix-run/remix/pull/5624))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.14.1`
+
+## 1.14.0
+
+### Minor Changes
+
+- Hot Module Replacement and Hot Data Revalidation ([#5259](https://github.com/remix-run/remix/pull/5259))
+  - Requires `unstable_dev` future flag to be enabled
+  - HMR provided through React Refresh
+  - Features:
+    - HMR for component and style changes
+    - HDR when loaders for current route change
+  - Known limitations for MVP:
+    - Only implemented for React via React Refresh
+    - No `import.meta.hot` API exposed yet
+    - Revalidates _all_ loaders on route when loader changes are detected
+    - Loader changes do not account for imported dependencies changing
+- Make `entry.client` and `entry.server` files optional ([#4600](https://github.com/remix-run/remix/pull/4600))
+  - we'll use a bundled version of each unless you provide your own
+
+### Patch Changes
+
+- Fixes flat route inconsistencies where `route.{ext}` wasn't always being treated like `index.{ext}` when used in a folder ([#5459](https://github.com/remix-run/remix/pull/5459))
+
+  - Route conflict no longer throw errors and instead display a helpful warning that we're using the first one we found.
+
+    ```log
+    ⚠️ Route Path Collision: "/dashboard"
+
+    The following routes all define the same URL, only the first one will be used
+
+    🟢️️ routes/dashboard/route.tsx
+    ⭕️️ routes/dashboard.tsx
+    ```
+
+    ```log
+    ⚠️ Route Path Collision: "/"
+
+    The following routes all define the same URL, only the first one will be used
+
+    🟢️️ routes/_landing._index.tsx
+    ⭕️️ routes/_dashboard._index.tsx
+    ⭕️ routes/_index.tsx
+    ```
+
+- Log errors thrown during initial build in development. ([#5441](https://github.com/remix-run/remix/pull/5441))
+
+- Sync `FutureConfig` interface between packages ([#5398](https://github.com/remix-run/remix/pull/5398))
+
+- Add file loader for importing `.csv` files ([#3920](https://github.com/remix-run/remix/pull/3920))
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.14.0`
+
 ## 1.13.0
 
 ### Minor Changes

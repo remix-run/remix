@@ -117,6 +117,12 @@ describe("type serializer", () => {
     type response = LoaderData<AppData>;
     isEqual<response, { arg1: string; arg2?: number }>(true);
   });
+
+  it("allows data key in value", () => {
+    type AppData = { data: { hello: string } };
+    type response = LoaderData<AppData>;
+    isEqual<response, { data: { hello: string } }>(true);
+  });
 });
 
 describe("deferred type serializer", () => {
@@ -260,5 +266,11 @@ describe("deferred type serializer", () => {
       response,
       { hello: SerializedAppData; lazy: Promise<SerializedAppData> }
     >(true);
+  });
+
+  it("allows data key in value", () => {
+    type AppData = { data: Promise<{ hello: string }> };
+    type response = LoaderData<AppData>;
+    isEqual<response, { data: Promise<{ hello: string }> }>(true);
   });
 });
