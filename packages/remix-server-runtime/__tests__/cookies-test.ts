@@ -19,7 +19,7 @@ function getCookieFromSetCookie(setCookie: string): string {
   return setCookie.split(/;\s*/)[0];
 }
 
-describe("isCookies", () => {
+describe("isCookie", () => {
   it("returns `true` for Cookie objects", () => {
     expect(isCookie(createCookie("my-cookie"))).toBe(true);
   });
