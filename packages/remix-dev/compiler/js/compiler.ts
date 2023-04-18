@@ -244,7 +244,7 @@ export const create = async (
 
   let compiler = await esbuild.context({
     ...createEsbuildConfig(ctx, onLoader, channels),
-    metafile: true, // TODO is this needed when using context api?
+    metafile: true,
   });
 
   let compile = async () => {
