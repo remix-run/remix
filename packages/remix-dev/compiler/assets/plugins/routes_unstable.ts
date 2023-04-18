@@ -3,14 +3,12 @@ import * as path from "node:path";
 import type esbuild from "esbuild";
 import generate from "@babel/generator";
 
-import type { RemixConfig } from "../../../config";
 import { routeModuleExts } from "../../../config/routesConvention";
-import invariant from "../../../invariant";
 import * as Transform from "../../../transform";
 import { getLoaderForFile } from "../../utils/loaders";
-import { getRouteModuleExports } from "../../utils/routeExports";
 import { applyHMR } from "./hmr";
 import type { Context } from "../../context";
+import { processMDX } from "../../plugins/mdx";
 
 const serverOnlyExports = new Set(["action", "loader"]);
 
@@ -68,8 +66,6 @@ let removeServerExports = (onLoader: (loader: string) => void) =>
     };
   });
 
-type Route = RemixConfig["routes"][string];
-
 /**
  * This plugin loads route modules for the browser build, using module shims
  * that re-export only the route module exports that are safe for the browser.
@@ -82,55 +78,44 @@ export function browserRouteModulesPlugin(
   return {
     name: "browser-route-modules",
     async setup(build) {
-      let routesByFile: Map<string, Route> = Object.keys(config.routes).reduce(
-        (map, key) => {
-          let route = config.routes[key];
-          map.set(route.file, route);
-          return map;
-        },
-        new Map()
-      );
       build.onResolve({ filter: /.*/ }, (args) => {
         // We have to map all imports from route modules back to the virtual
-         // module in the graph otherwise we will be duplicating portions of 
-         // route modules across the build.
-         let routeModulePath = routeModulePaths.get(args.path);
-         if (!routeModulePath && args.resolveDir && args.path.startsWith(".")) {
-           let lookup = resolvePath(path.join(args.resolveDir, args.path));
-           routeModulePath = routeModulePaths.get(lookup);
-         }
-         if (!routeModulePath) return;
-         return {
-           path: routeModulePath,
-           namespace: "browser-route-module",
-         };
+        // module in the graph otherwise we will be duplicating portions of
+        // route modules across the build.
+        let routeModulePath = routeModulePaths.get(args.path);
+        if (!routeModulePath && args.resolveDir && args.path.startsWith(".")) {
+          let lookup = resolvePath(path.join(args.resolveDir, args.path));
+          routeModulePath = routeModulePaths.get(lookup);
+        }
+        if (!routeModulePath) return;
+        return {
+          path: routeModulePath,
+          namespace: "browser-route-module",
+        };
       });
 
       build.onLoad(
         { filter: /.*/, namespace: "browser-route-module" },
         async (args) => {
           let file = args.path;
+          let routeFile = path.resolve(config.appDirectory, file);
 
-          // TODO: this will be broken
           if (/\.mdx?$/.test(file)) {
-            let route = routesByFile.get(file);
-            invariant(route, `Cannot get route by path: ${args.path}`);
-
-            let theExports = await getRouteModuleExports(config, route.id);
-            let contents = "module.exports = {};";
-            if (theExports.length !== 0) {
-              let spec = `{ ${theExports.join(", ")} }`;
-              contents = `export ${spec} from ${JSON.stringify(`./${file}`)};`;
+            let mdxResult = await processMDX(config, args.path, routeFile);
+            if (!mdxResult.contents || mdxResult.errors?.length) {
+              return mdxResult;
             }
 
-            return {
-              contents,
-              resolveDir: config.appDirectory,
-              loader: "js",
-            };
+            let transform = removeServerExports((loader: string) =>
+              onLoader(routeFile, loader)
+            );
+            mdxResult.contents = transform(
+              mdxResult.contents,
+              // Trick babel into allowing JSX syntax.
+              args.path + ".jsx"
+            );
+            return mdxResult;
           }
-
-          let routeFile = path.join(config.appDirectory, file);
 
           let sourceCode = fs.readFileSync(routeFile, "utf8");
 

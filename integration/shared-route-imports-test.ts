@@ -38,6 +38,34 @@ test.describe("v1 compiler", () => {
             return <p>{useParentContext()}</p>;
           }
         `,
+
+        "app/routes/markdown-parent.mdx": `import { createContext, useContext } from 'react';
+import { Outlet } from '@remix-run/react';
+
+export const ParentContext = createContext("❌");
+
+export function useParentContext() {
+  return useContext(ParentContext);
+}
+
+export function ParentProvider() {
+  return (
+    <ParentContext.Provider value="✅">
+      <Outlet />
+    </ParentContext.Provider>
+  );
+}
+
+<ParentProvider />
+`,
+        "app/routes/markdown-parent.child.mdx": `import { useParentContext } from "./markdown-parent.mdx";
+
+export function UseParentContext() {
+  return <p>{useParentContext()}</p>;
+}
+
+<UseParentContext />
+`,
       },
     });
 
@@ -53,6 +81,15 @@ test.describe("v1 compiler", () => {
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/parent/child", true);
+
+    await page.waitForSelector("p:has-text('✅')");
+  });
+
+  test("should render context value from context provider exported from mdx", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/markdown-parent/child", true);
 
     await page.waitForSelector("p:has-text('✅')");
   });
@@ -89,6 +126,37 @@ test.describe("v2 compiler", () => {
             return <p>{useParentContext()}</p>;
           }
         `,
+
+        "app/routes/markdown-parent.mdx": `import { createContext, useContext } from 'react';
+import { Outlet } from '@remix-run/react';
+
+export const ParentContext = createContext("❌");
+
+export function useParentContext() {
+  return useContext(ParentContext);
+}
+
+export function ParentProvider() {
+  return (
+    <ParentContext.Provider value="✅">
+      <Outlet />
+    </ParentContext.Provider>
+  );
+}
+
+<ParentProvider />
+`,
+        "app/routes/markdown-parent.child.mdx": `import { useParentContext } from "./markdown-parent.mdx";
+
+export function UseParentContext() {
+  const value = useParentContext();
+  return (
+    <p>{value}</p>
+  );
+}
+
+<UseParentContext />
+`,
       },
     });
 
@@ -99,7 +167,7 @@ test.describe("v2 compiler", () => {
     appFixture.close();
   });
 
-  test.only("should render context value from context provider", async ({
+  test("should render context value from context provider", async ({
     page,
   }) => {
     let app = new PlaywrightFixture(appFixture, page);
@@ -107,8 +175,13 @@ test.describe("v2 compiler", () => {
 
     await page.waitForSelector("p:has-text('✅')");
   });
-});
 
-////////////////////////////////////////////////////////////////////////////////
-// 💿 Finally, push your changes to your fork of Remix and open a pull request!
-////////////////////////////////////////////////////////////////////////////////
+  test("should render context value from context provider exported from mdx", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/markdown-parent/child", true);
+
+    await page.waitForSelector("p:has-text('✅')");
+  });
+});
