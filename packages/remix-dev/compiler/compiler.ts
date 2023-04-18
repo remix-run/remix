@@ -32,15 +32,33 @@ export let create = async (ctx: Context): Promise<Compiler> => {
   };
 
   let compile = async () => {
+    let hasThrown = false;
+    let cancelAndThrow = (error: unknown) => {
+      // An earlier error from a failed task has already been thrown; ignore this error.
+      // Safe to cast as `never` here as subsequent errors are only thrown from canceled tasks.
+      if (hasThrown) return undefined as never;
+
+      subcompiler.css.cancel();
+      subcompiler.js.cancel();
+      subcompiler.server.cancel();
+
+      // Only throw the first error encountered during compilation
+      // otherwise subsequent errors will be unhandled and will crash the compiler.
+      // `try`/`catch` won't handle subsequent errors either, so that isn't a viable alternative.
+      // `Promise.all` _could_ be used, but the resulting promise chaining is complex and hard to follow.
+      hasThrown = true;
+      throw error;
+    };
+
     // reset channels
     channels.cssBundleHref = createChannel();
     channels.manifest = createChannel();
 
     // kickoff compilations in parallel
     let tasks = {
-      css: subcompiler.css.compile(),
-      js: subcompiler.js.compile(),
-      server: subcompiler.server.compile(),
+      css: subcompiler.css.compile().catch(cancelAndThrow),
+      js: subcompiler.js.compile().catch(cancelAndThrow),
+      server: subcompiler.server.compile().catch(cancelAndThrow),
     };
 
     // keep track of manually written artifacts
@@ -51,11 +69,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     } = {};
 
     // css compilation
-    let css = await tasks.css.catch((error) => {
-      subcompiler.js.cancel();
-      subcompiler.server.cancel();
-      throw error;
-    });
+    let css = await tasks.css;
 
     // css bundle
     let cssBundleHref =
@@ -72,10 +86,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
 
     // js compilation (implicitly writes artifacts/js)
     // TODO: js task should not return metafile, but rather js assets
-    let { metafile, hmr } = await tasks.js.catch((error) => {
-      subcompiler.server.cancel();
-      throw error;
-    });
+    let { metafile, hmr } = await tasks.js;
 
     // artifacts/manifest
     let manifest = await createManifest({
