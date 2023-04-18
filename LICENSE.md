@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) Remix Software 2021
+Copyright (c) Remix Software 2021  
 Copyright (c) Shopify Inc. 2022
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
