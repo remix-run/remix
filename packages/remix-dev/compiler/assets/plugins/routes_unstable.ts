@@ -78,6 +78,11 @@ export function browserRouteModulesPlugin(
   return {
     name: "browser-route-modules",
     async setup(build) {
+      let [xdm, { default: remarkFrontmatter }] = await Promise.all([
+        import("xdm"),
+        import("remark-frontmatter") as any,
+      ]);
+
       build.onResolve({ filter: /.*/ }, (args) => {
         // We have to map all imports from route modules back to the virtual
         // module in the graph otherwise we will be duplicating portions of
@@ -101,7 +106,13 @@ export function browserRouteModulesPlugin(
           let routeFile = path.resolve(config.appDirectory, file);
 
           if (/\.mdx?$/.test(file)) {
-            let mdxResult = await processMDX(config, args.path, routeFile);
+            let mdxResult = await processMDX(
+              xdm,
+              remarkFrontmatter,
+              config,
+              args.path,
+              routeFile
+            );
             if (!mdxResult.contents || mdxResult.errors?.length) {
               return mdxResult;
             }

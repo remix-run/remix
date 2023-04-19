@@ -11,6 +11,11 @@ export function mdxPlugin({ config }: Pick<Context, "config">): esbuild.Plugin {
   return {
     name: "remix-mdx",
     async setup(build) {
+      let [xdm, { default: remarkFrontmatter }] = await Promise.all([
+        import("xdm"),
+        import("remark-frontmatter") as any,
+      ]);
+
       build.onResolve({ filter: /\.mdx?$/ }, (args) => {
         let matchPath = createMatchPath(config.tsconfigPath);
         // Resolve paths according to tsconfig paths property
@@ -41,24 +46,33 @@ export function mdxPlugin({ config }: Pick<Context, "config">): esbuild.Plugin {
 
       build.onLoad({ filter: /\.mdx?$/ }, async (args) => {
         let absolutePath = path.join(config.appDirectory, args.path);
-        
-        return processMDX(config, args.path, absolutePath);
+
+        return processMDX(
+          xdm,
+          remarkFrontmatter,
+          config,
+          args.path,
+          absolutePath
+        );
       });
     },
   };
 }
 
-export async function processMDX(config: Pick<Context, "config">["config"], argsPath: string, absolutePath: string) {
+export async function processMDX(
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  xdm: typeof import("xdm"),
+  // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+  remarkFrontmatter: typeof import("remark-frontmatter")["default"],
+  config: Pick<Context, "config">["config"],
+  argsPath: string,
+  absolutePath: string
+) {
   try {
-    let [xdm, { default: remarkFrontmatter }] = await Promise.all([
-      import("xdm"),
-      import("remark-frontmatter") as any,
-    ]);
-
     let fileContents = await fsp.readFile(absolutePath, "utf-8");
 
     let rehypePlugins = [];
-    let remarkPlugins = [
+    let remarkPlugins: any[] = [
       remarkFrontmatter,
       [remarkMdxFrontmatter, { name: "attributes" }],
     ];
@@ -108,14 +122,11 @@ ${remixExports}`;
                     ? message.column
                     : undefined,
                 line:
-                  typeof message.line === "number"
-                    ? message.line
-                    : undefined,
+                  typeof message.line === "number" ? message.line : undefined,
               }
             : undefined,
         text: message.message,
-        detail:
-          typeof message.note === "string" ? message.note : undefined,
+        detail: typeof message.note === "string" ? message.note : undefined,
       });
     });
 
