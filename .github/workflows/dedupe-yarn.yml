@@ -1,4 +1,4 @@
-name: 👔 Deduple yarn.lock
+name: 👔 Deduplicate yarn.lock
 
 on:
   push:
