@@ -384,7 +384,14 @@ let fetcherSubmissionWarning =
  */
 export function Links() {
   let { manifest, routeModules } = useRemixContext();
-  let { matches } = useDataRouterStateContext();
+  let { errors, matches: routerMatches } = useDataRouterStateContext();
+
+  let matches = errors
+    ? routerMatches.slice(
+        0,
+        routerMatches.findIndex((m) => errors![m.route.id]) + 1
+      )
+    : routerMatches;
 
   let links = React.useMemo(
     () => getLinksForMatches(matches, routeModules, manifest),
@@ -569,8 +576,19 @@ function PrefetchPageLinksImpl({
  */
 function V1Meta() {
   let { routeModules } = useRemixContext();
-  let { matches, loaderData } = useDataRouterStateContext();
+  let {
+    errors,
+    matches: routerMatches,
+    loaderData,
+  } = useDataRouterStateContext();
   let location = useLocation();
+
+  let matches = errors
+    ? routerMatches.slice(
+        0,
+        routerMatches.findIndex((m) => errors![m.route.id]) + 1
+      )
+    : routerMatches;
 
   let meta: V1_HtmlMetaDescriptor = {};
   let parentsData: { [routeId: string]: AppData } = {};
@@ -667,8 +685,19 @@ function V1Meta() {
 
 function V2Meta() {
   let { routeModules } = useRemixContext();
-  let { matches: _matches, loaderData } = useDataRouterStateContext();
+  let {
+    errors,
+    matches: routerMatches,
+    loaderData,
+  } = useDataRouterStateContext();
   let location = useLocation();
+
+  let _matches = errors
+    ? routerMatches.slice(
+        0,
+        routerMatches.findIndex((m) => errors![m.route.id]) + 1
+      )
+    : routerMatches;
 
   let meta: V2_MetaDescriptor[] = [];
   let leafMeta: V2_MetaDescriptor[] | null = null;
