@@ -98,7 +98,7 @@ export async function loader({ params }: LoaderArgs) {
   return loadEvent(id);
 }
 
-export async function shouldRevalidate({
+export function shouldRevalidate({
   currentParams,
   nextParams,
   defaultShouldRevalidate,
