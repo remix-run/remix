@@ -92,7 +92,7 @@ These descriptors allow you to prefetch the resources for a page the user is lik
 ```tsx
 export const links: LinksFunction = () => {
   return [{ page: "/posts/public" }];
-}
+};
 ```
 
 This loads up the JavaScript modules, loader data, and the stylesheets (defined in the `links` exports of the next routes) into the browser cache before the user even navigates there.

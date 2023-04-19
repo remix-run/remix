@@ -622,7 +622,7 @@ export const links: LinksFunction = () => {
     { rel: "manifest", href: "/manifest.json" },
     { rel: "stylesheet", href: stylesheetUrl },
   ];
-}
+};
 
 export default function Root() {
   return (
@@ -673,7 +673,7 @@ export const meta: MetaFunction = () => {
     "og:image:url": "https://remix.run/og-image.png",
     "og:image:alt": "Just doin a bunch of hoodrat stuff",
   };
-}
+};
 
 export default function About() {
   return (

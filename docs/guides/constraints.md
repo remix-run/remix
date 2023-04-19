@@ -252,7 +252,9 @@ import { loadStripe } from "@stripe/stripe-js";
 
 const stripe = await loadStripe(window.ENV.stripe);
 
-export async function redirectToStripeCheckout(sessionId: string) {
+export async function redirectToStripeCheckout(
+  sessionId: string
+) {
   return stripe.redirectToCheckout({ sessionId });
 }
 ```
@@ -284,7 +286,9 @@ This strategy defers initialization until the library is actually used:
 ```ts lines=[4]
 import { loadStripe } from "@stripe/stripe-js";
 
-export async function redirectToStripeCheckout(sessionId: string) {
+export async function redirectToStripeCheckout(
+  sessionId: string
+) {
   const stripe = await loadStripe(window.ENV.stripe);
   return stripe.redirectToCheckout({ sessionId });
 }
@@ -303,7 +307,9 @@ async function getStripe() {
   return _stripe;
 }
 
-export async function redirectToStripeCheckout(sessionId: string) {
+export async function redirectToStripeCheckout(
+  sessionId: string
+) {
   const stripe = await getStripe();
   return stripe.redirectToCheckout({ sessionId });
 }
