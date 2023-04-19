@@ -1,0 +1,46 @@
+name: 👔 Deduple yarn.lock
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - ./yarn.lock
+
+jobs:
+  format:
+    if: github.repository == 'remix-run/remix'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛑 Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.11.0
+
+      - name: ⬇️ Checkout repo
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.FORMAT_PAT }}
+
+      - name: ⎔ Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: ".nvmrc"
+          cache: "yarn"
+
+      - name: 👔 Dedupe yarn.lock
+        run: npx yarn-deduplicate && rm -rf ./node_modules && yarn
+
+      - name: 💪 Commit
+        run: |
+          git config --local user.email "hello@remix.run"
+          git config --local user.name "Remix Run Bot"
+
+          git add .
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "💿 no formatting changed"
+            exit 0
+          fi
+          git commit -m "chore: format"
+          git push
+          echo "💿 pushed formatting changes https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
