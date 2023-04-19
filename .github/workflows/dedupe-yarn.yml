@@ -41,6 +41,6 @@ jobs:
             echo "💿 no formatting changed"
             exit 0
           fi
-          git commit -m "chore: format"
+          git commit -m "chore: dedupe yarn.lock"
           git push
-          echo "💿 pushed formatting changes https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
+          echo "💿 https://github.com/$GITHUB_REPOSITORY/commit/$(git rev-parse HEAD)"
