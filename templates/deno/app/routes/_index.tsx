@@ -1,5 +1,5 @@
 import * as React from "react";
-import type { MetaFunction } from "@remix-run/react";
+import type { MetaFunction } from "@remix-run/deno";
 
 export const meta: MetaFunction = () => {
   return [{ title: "New Remix App" }];
