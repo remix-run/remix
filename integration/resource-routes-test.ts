@@ -245,7 +245,7 @@ test.describe("Development server", async () => {
   });
 
   function runTests() {
-    test.only("should not treat an ErrorBoundary-only route as a resource route", async ({
+    test("should not treat an ErrorBoundary-only route as a resource route", async ({
       page,
     }) => {
       let app = new PlaywrightFixture(appFixture, page);
