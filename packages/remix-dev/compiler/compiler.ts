@@ -4,8 +4,7 @@ import type { Context } from "./context";
 import * as CSS from "./css";
 import * as JS from "./js";
 import * as Server from "./server";
-import type { Channel } from "../channel";
-import { createChannel } from "../channel";
+import * as Channel from "../channel";
 import type { Manifest } from "../manifest";
 import { create as createManifest, write as writeManifest } from "./manifest";
 
@@ -21,8 +20,8 @@ export let create = async (ctx: Context): Promise<Compiler> => {
   // so instead use a mutable reference (`channels`) that is compiler-scoped
   // and gets reset on each build
   let channels = {
-    cssBundleHref: undefined as unknown as Channel<string | undefined>,
-    manifest: undefined as unknown as Channel<Manifest>,
+    cssBundleHref: undefined as unknown as Channel.Type<string | undefined>,
+    manifest: undefined as unknown as Channel.Type<Manifest>,
   };
 
   let subcompiler = {
@@ -33,16 +32,19 @@ export let create = async (ctx: Context): Promise<Compiler> => {
 
   let compile = async () => {
     let hasThrown = false;
-    let cancelAndThrow = (error: unknown) => {
+    let cancelAndThrow = async (error: unknown) => {
       // An earlier error from a failed task has already been thrown; ignore this error.
       // Safe to cast as `never` here as subsequent errors are only thrown from canceled tasks.
       if (hasThrown) return undefined as never;
 
-      // subcompiler.css.cancel();
-      // subcompiler.js.cancel();
-      // subcompiler.server.cancel();
-      // channels.cssBundleHref.reject("css bundle");
-      channels.manifest.reject("manifest");
+      // resolve channels with error so that downstream tasks don't hang waiting for results from upstream tasks
+      channels.cssBundleHref.err();
+      channels.manifest.err();
+
+      // optimization: cancel tasks
+      subcompiler.css.cancel();
+      subcompiler.js.cancel();
+      subcompiler.server.cancel();
 
       // Only throw the first error encountered during compilation
       // otherwise subsequent errors will be unhandled and will crash the compiler.
@@ -53,8 +55,8 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     };
 
     // reset channels
-    channels.cssBundleHref = createChannel();
-    channels.manifest = createChannel();
+    channels.cssBundleHref = Channel.create();
+    channels.manifest = Channel.create();
 
     // kickoff compilations in parallel
     let tasks = {
@@ -81,7 +83,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
           ctx.config.assetsBuildDirectory,
           path.resolve(css.bundle.path)
         );
-    channels.cssBundleHref.write(cssBundleHref);
+    channels.cssBundleHref.ok(cssBundleHref);
     if (css.bundle) {
       writes.cssBundle = CSS.writeBundle(ctx, css.outputFiles);
     }
@@ -97,7 +99,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
       metafile,
       hmr,
     });
-    channels.manifest.write(manifest);
+    channels.manifest.ok(manifest);
     writes.manifest = writeManifest(ctx.config, manifest);
 
     // server compilation
