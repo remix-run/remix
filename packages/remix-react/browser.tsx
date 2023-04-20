@@ -1,9 +1,7 @@
 import type { HydrationState, Router } from "@remix-run/router";
 import type { ReactElement } from "react";
 import * as React from "react";
-import type { Location } from "react-router-dom";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import { useSyncExternalStore } from "use-sync-external-store/shim";
 
 import { RemixContext } from "./components";
 import type { EntryContext, FutureConfig } from "./entry";
@@ -123,7 +121,8 @@ if (import.meta && import.meta.hot) {
           // TODO: Handle race conditions here. Should abort if a new update
           // comes in while we're waiting for the router to be idle.
           Object.assign(window.__remixManifest, newManifest);
-          window.$RefreshRuntime$.performReactRefresh();
+          // Ensure RouterProvider setState has flushed before re-rendering
+          setTimeout(() => window.$RefreshRuntime$.performReactRefresh(), 1);
         }
       });
       router.revalidate();
@@ -166,16 +165,20 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     });
   }
 
+  let [location, setLocation] = React.useState(router.state.location);
+
+  React.useEffect(() => {
+    return router.subscribe((newState) => {
+      if (newState.location !== location) {
+        setLocation(newState.location);
+      }
+    });
+  }, [location]);
+
   // We need to include a wrapper RemixErrorBoundary here in case the root error
   // boundary also throws and we need to bubble up outside of the router entirely.
   // Then we need a stateful location here so the user can back-button navigate
   // out of there
-  let location: Location = useSyncExternalStore(
-    router.subscribe,
-    () => router.state.location,
-    () => router.state.location
-  );
-
   return (
     <RemixContext.Provider
       value={{
