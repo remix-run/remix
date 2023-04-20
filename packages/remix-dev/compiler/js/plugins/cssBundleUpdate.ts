@@ -52,10 +52,12 @@ export function cssBundleUpdatePlugin(channels: {
       });
 
       build.onLoad({ filter: /.*/, namespace }, async (args) => {
-        let [cssBundleHref, contents] = await Promise.all([
-          channels.cssBundleHref.read(),
-          readFile(args.path, "utf8"),
-        ]);
+        let cssBundleHref = await channels.cssBundleHref
+          .read()
+          .catch((error) => {
+            throw error;
+          });
+        let contents = await readFile(args.path, "utf8");
 
         if (cssBundleHref) {
           contents = contents.replace(

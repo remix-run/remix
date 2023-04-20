@@ -38,9 +38,11 @@ export let create = async (ctx: Context): Promise<Compiler> => {
       // Safe to cast as `never` here as subsequent errors are only thrown from canceled tasks.
       if (hasThrown) return undefined as never;
 
-      subcompiler.css.cancel();
-      subcompiler.js.cancel();
-      subcompiler.server.cancel();
+      // subcompiler.css.cancel();
+      // subcompiler.js.cancel();
+      // subcompiler.server.cancel();
+      // channels.cssBundleHref.reject("css bundle");
+      channels.manifest.reject("manifest");
 
       // Only throw the first error encountered during compilation
       // otherwise subsequent errors will be unhandled and will crash the compiler.

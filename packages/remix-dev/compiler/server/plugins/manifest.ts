@@ -26,8 +26,11 @@ export function serverAssetsManifestPlugin(channels: {
       });
 
       build.onLoad({ filter }, async () => {
+        let manifest = await channels.manifest.read().catch((error) => {
+          throw error;
+        });
         return {
-          contents: `export default ${jsesc(await channels.manifest.read(), {
+          contents: `export default ${jsesc(manifest, {
             es6: true,
           })};`,
           loader: "js",
