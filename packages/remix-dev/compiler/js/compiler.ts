@@ -22,7 +22,7 @@ import invariant from "../../invariant";
 import { hmrPlugin } from "./plugins/hmr";
 import { createMatchPath } from "../utils/tsconfig";
 import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
-import { type ReadChannel } from "../../channel";
+import type * as Channel from "../../channel";
 import type { Context } from "../context";
 
 type Compiler = {
@@ -31,7 +31,8 @@ type Compiler = {
     metafile: esbuild.Metafile;
     hmr?: Manifest["hmr"];
   }>;
-  dispose: () => void;
+  cancel: () => Promise<void>;
+  dispose: () => Promise<void>;
 };
 
 function getNpmPackageName(id: string): string {
@@ -71,17 +72,35 @@ const getExternals = (remixConfig: RemixConfig): string[] => {
 const createEsbuildConfig = (
   ctx: Context,
   onLoader: (filename: string, code: string) => void,
-  channels: { cssBundleHref: ReadChannel<string | undefined> }
+  channels: { cssBundleHref: Channel.Type<string | undefined> }
 ): esbuild.BuildOptions => {
   let entryPoints: Record<string, string> = {
     "entry.client": ctx.config.entryClientFilePath,
   };
 
+  let routeModulePaths = new Map<string, string>();
   for (let id of Object.keys(ctx.config.routes)) {
-    // All route entry points are virtual modules that will be loaded by the
-    // browserEntryPointsPlugin. This allows us to tree-shake server-only code
-    // that we don't want to run in the browser (i.e. action & loader).
-    entryPoints[id] = ctx.config.routes[id].file + "?browser";
+    entryPoints[id] = ctx.config.routes[id].file;
+    if (ctx.config.future.unstable_dev) {
+      // In V2 we are doing AST transforms to remove server code, this means we
+      // have to re-map all route modules back to the same module in the graph
+      // otherwise we will have duplicate modules in the graph. We have to resolve
+      // the path as we get the relative for the entrypoint and absolute for imports
+      // from other modules.
+      routeModulePaths.set(
+        ctx.config.routes[id].file,
+        ctx.config.routes[id].file
+      );
+      routeModulePaths.set(
+        path.resolve(ctx.config.appDirectory, ctx.config.routes[id].file),
+        ctx.config.routes[id].file
+      );
+    } else {
+      // All route entry points are virtual modules that will be loaded by the
+      // browserEntryPointsPlugin. This allows us to tree-shake server-only code
+      // that we don't want to run in the browser (i.e. action & loader).
+      entryPoints[id] += "?browser";
+    }
   }
 
   let matchPath = ctx.config.tsconfigPath
@@ -103,10 +122,10 @@ const createEsbuildConfig = (
     cssFilePlugin(ctx),
     absoluteCssUrlsPlugin(),
     externalPlugin(/^https?:\/\//, { sideEffects: false }),
-    mdxPlugin(ctx),
     ctx.config.future.unstable_dev
-      ? browserRouteModulesPlugin_v2(ctx, /\?browser$/, onLoader)
+      ? browserRouteModulesPlugin_v2(ctx, routeModulePaths, onLoader)
       : browserRouteModulesPlugin(ctx, /\?browser$/),
+    mdxPlugin(ctx),
     emptyModulesPlugin(ctx, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
     externalPlugin(/^node:.*/, { sideEffects: false }),
@@ -213,7 +232,7 @@ const createEsbuildConfig = (
 
 export const create = async (
   ctx: Context,
-  channels: { cssBundleHref: ReadChannel<string | undefined> }
+  channels: { cssBundleHref: Channel.Type<string | undefined> }
 ): Promise<Compiler> => {
   let hmrRoutes: Record<string, { loaderHash: string }> = {};
   let onLoader = (filename: string, code: string) => {
@@ -223,7 +242,7 @@ export const create = async (
 
   let compiler = await esbuild.context({
     ...createEsbuildConfig(ctx, onLoader, channels),
-    metafile: true, // TODO is this needed when using context api?
+    metafile: true,
   });
 
   let compile = async () => {
@@ -254,6 +273,7 @@ export const create = async (
 
   return {
     compile,
+    cancel: compiler.cancel,
     dispose: compiler.dispose,
   };
 };
