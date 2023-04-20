@@ -13,14 +13,17 @@ jobs:
     if: github.repository == 'remix-run/remix'
     runs-on: ubuntu-latest
 
+    permissions:
+      # Give the default GITHUB_TOKEN write permission to commit and push the
+      # added or changed files to the repository.
+      contents: write
+
     steps:
       - name: 🛑 Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.11.0
 
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.FORMAT_PAT }}
 
       - name: ⎔ Setup node
         uses: actions/setup-node@v3
