@@ -4,6 +4,7 @@ import prettyMs from "pretty-ms";
 import execa from "execa";
 import express from "express";
 
+import * as Channel from "../channel";
 import { type Manifest } from "../manifest";
 import * as Compiler from "../compiler";
 import { type RemixConfig } from "../config";
@@ -26,8 +27,8 @@ export let serve = async (
   let websocket = Socket.serve({ port: options.websocketPort });
 
   let state: {
-    appServerBuildHash?: string;
     latestBuildHash?: string;
+    buildHashChannel?: Channel.Type<void>;
     appServer?: execa.ExecaChildProcess;
     prevManifest?: Manifest;
   } = {};
@@ -74,6 +75,7 @@ export let serve = async (
         websocket.log(`Rebuilt in ${prettyMs(durationMs)}`);
 
         state.latestBuildHash = manifest.version;
+        state.buildHashChannel = Channel.create();
         console.log(`Waiting (${state.latestBuildHash})`);
         if (options.restart) {
           console.log(`restarting: ${options.command}`);
@@ -82,15 +84,15 @@ export let serve = async (
             state.appServer = startAppServer(options.command);
           }
         }
-        await wait(() => state.appServerBuildHash === state.latestBuildHash);
-
-        console.log("fasdfasd");
+        await state.buildHashChannel.result;
 
         if (manifest.hmr && state.prevManifest) {
           let updates = HMR.updates(config, manifest, state.prevManifest);
           websocket.hmr(manifest, updates);
+          console.log("> HMR");
         } else {
           websocket.reload();
+          console.log("> Reload");
         }
         state.prevManifest = manifest;
       },
@@ -107,10 +109,12 @@ export let serve = async (
     .use(express.json())
     .post("/ping", (req, res) => {
       let { buildHash } = req.body;
-      if (typeof buildHash === "string") {
-        state.appServerBuildHash = buildHash;
-      } else {
+      if (typeof buildHash !== "string") {
         console.warn(`Unrecognized payload: ${req.body}`);
+        res.sendStatus(400);
+      }
+      if (buildHash === state.latestBuildHash) {
+        state.buildHashChannel?.ok();
       }
       res.sendStatus(200);
     })
@@ -133,12 +137,3 @@ let clean = (config: RemixConfig) => {
 };
 
 let relativePath = (file: string) => path.relative(process.cwd(), file);
-
-let sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-let wait = async (condition: () => boolean) => {
-  while (!condition()) {
-    console.log("sleep...");
-    await sleep(2500);
-  }
-};
