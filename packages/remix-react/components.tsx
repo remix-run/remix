@@ -1729,9 +1729,11 @@ export const LiveReload =
                       }
                       if (!event.updates || !event.updates.length) return;
                       let updateAccepted = false;
+                      let needsRevalidation = false;
                       for (let update of event.updates) {
                         console.log("[HMR] " + update.reason + " [" + update.id +"]")
                         if (update.revalidate) {
+                          needsRevalidation = true;
                           console.log("[HMR] Revalidating [" + update.id + "]");
                         }
                         let imported = await import(update.url +  '?t=' + event.assetsManifest.hmr.timestamp);
@@ -1747,7 +1749,7 @@ export const LiveReload =
                       }
                       if (event.assetsManifest && window.__hmr__.contexts["remix:manifest"]) {
                         let accepted = window.__hmr__.contexts["remix:manifest"].emit(
-                          event.assetsManifest
+                          { needsRevalidation, assetsManifest: event.assetsManifest }
                         );
                         if (accepted) {
                           console.log("[HMR] Updated accepted by", "remix:manifest");
