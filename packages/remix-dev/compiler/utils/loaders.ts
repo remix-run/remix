@@ -8,6 +8,9 @@ export const loaders: { [ext: string]: esbuild.Loader } = {
   ".csv": "file",
   ".eot": "file",
   ".fbx": "file",
+  // Any extension type that isn't explicitly supported here can 
+  // be loaded as a file by using the .file extension
+  ".file": "file",
   ".flac": "file",
   ".gif": "file",
   ".glb": "file",
