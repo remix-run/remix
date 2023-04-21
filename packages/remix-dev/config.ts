@@ -670,7 +670,7 @@ export async function readConfig(
   }
 
   let routes: RouteManifest = {
-    root: { path: "", id: "root", file: rootRouteFile },
+    root: { id: "root", file: rootRouteFile },
   };
 
   let routesConvention: typeof flatRoutes;
