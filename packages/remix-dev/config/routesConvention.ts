@@ -79,21 +79,10 @@ export function defineConventionalRoutes(
       /**
        * We do not try to detect path collisions for pathless layout route
        * files because, by definition, they create the potential for route
-       * collisions _at that level in the tree_.  For example, consider the
-       * following route structure:
+       * collisions _at that level in the tree_.
        *
-       *   routes/
-       *     parent.tsx
-       *     parent/
-       *       __pathless.tsx
-       *
-       * The route path for both parent.tsx and parent/__pathless.tsx
-       * is the same (/parent), but it's not expected you are matching at that
-       * level.  It's up to you to handle that in your `parent.tsx` or provide
-       * an index route in your pathless route folder.
-       *
-       * Consider this more complex example where a user may want multiple
-       * pathless layout routes for different subfolders
+       * Consider example where a user may want multiple pathless layout routes
+       * for different subfolders
        *
        *   routes/
        *     account.tsx
