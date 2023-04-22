@@ -34,9 +34,6 @@ export let serve = async (
   } = {};
 
   let startAppServer = (command: string) => {
-    console.log({
-      cwd: process.cwd(),
-    });
     return execa.command(command, {
       stdio: "inherit",
       env: {
@@ -61,7 +58,7 @@ export let serve = async (
       onInitialBuild: (durationMs, manifest) => {
         console.info(`💿 Built in ${prettyMs(durationMs)}`);
         state.prevManifest = manifest;
-        if (options.command) {
+        if (options.command && manifest) {
           console.log(`starting: ${options.command}`);
           state.appServer = startAppServer(options.command);
         }
@@ -74,10 +71,11 @@ export let serve = async (
         if (!manifest) return;
         websocket.log(`Rebuilt in ${prettyMs(durationMs)}`);
 
+        // TODO: should we restart the app server when build failed?
         state.latestBuildHash = manifest.version;
         state.buildHashChannel = Channel.create();
         console.log(`Waiting (${state.latestBuildHash})`);
-        if (options.restart) {
+        if (state.appServer === undefined || options.restart) {
           console.log(`restarting: ${options.command}`);
           state.appServer?.kill();
           if (options.command) {

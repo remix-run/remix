@@ -25,8 +25,6 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     manifest: undefined as unknown as Channel.Type<Manifest>,
   };
 
-  console.log(ctx.options);
-
   let subcompiler = {
     css: await CSS.createCompiler(ctx),
     js: await JS.createCompiler(ctx, channels),
