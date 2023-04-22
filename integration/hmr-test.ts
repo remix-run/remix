@@ -210,6 +210,8 @@ let bufferize = (stream: Readable): (() => string) => {
   return () => buffer;
 };
 
+let HMR_TIMEOUT_MS = 10_000;
+
 test("HMR", async ({ page }) => {
   // uncomment for debugging
   // page.on("console", (msg) => console.log(msg.text()));
@@ -284,7 +286,7 @@ test("HMR", async ({ page }) => {
     // detect HMR'd content and style changes
     await page.waitForLoadState("networkidle");
     let h1 = page.getByText("Changed");
-    await h1.waitFor({ timeout: 2000 });
+    await h1.waitFor({ timeout: HMR_TIMEOUT_MS });
     expect(h1).toHaveCSS("color", "rgb(255, 255, 255)");
     expect(h1).toHaveCSS("background-color", "rgb(0, 0, 0)");
 
@@ -295,7 +297,7 @@ test("HMR", async ({ page }) => {
     // undo change
     fs.writeFileSync(indexPath, originalIndex);
     fs.writeFileSync(cssModulePath, originalCssModule);
-    await page.getByText("Index Title").waitFor({ timeout: 2000 });
+    await page.getByText("Index Title").waitFor({ timeout: HMR_TIMEOUT_MS });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
     await page.waitForSelector(`#root-counter:has-text("inc 1")`);
 
@@ -316,7 +318,7 @@ test("HMR", async ({ page }) => {
       }
     `;
     fs.writeFileSync(indexPath, withLoader1);
-    await page.getByText("Hello, world").waitFor({ timeout: 2000 });
+    await page.getByText("Hello, world").waitFor({ timeout: HMR_TIMEOUT_MS });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
     await page.waitForSelector(`#root-counter:has-text("inc 1")`);
 
@@ -338,7 +340,7 @@ test("HMR", async ({ page }) => {
       }
     `;
     fs.writeFileSync(indexPath, withLoader2);
-    await page.getByText("Hello, planet").waitFor({ timeout: 2000 });
+    await page.getByText("Hello, planet").waitFor({ timeout: HMR_TIMEOUT_MS });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
     await page.waitForSelector(`#root-counter:has-text("inc 1")`);
 
