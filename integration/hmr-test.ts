@@ -7,15 +7,19 @@ import getPort, { makeRange } from "get-port";
 
 import { createFixtureProject, css, js, json } from "./helpers/create-fixture";
 
-let fixture = (options: { port: number; appServerPort: number }) => ({
+let fixture = (options: {
+  appServerPort: number;
+  httpPort: number;
+  webSocketPort: number;
+}) => ({
   files: {
     "remix.config.js": js`
       module.exports = {
         tailwind: true,
         future: {
           unstable_dev: {
-            port: ${options.port},
-            appServerPort: ${options.appServerPort},
+            httpPort: ${options.httpPort},
+            webSocketPort: ${options.webSocketPort},
           },
           v2_routeConvention: true,
           v2_errorBoundary: true,
@@ -28,8 +32,7 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
       private: true,
       sideEffects: false,
       scripts: {
-        "dev:remix": `cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/dist/cli.js dev`,
-        "dev:app": `cross-env NODE_ENV=development nodemon --watch build/ ./server.js`,
+        dev: `cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/dist/cli.js dev -c "nodemon --watch build/ ./server.js"`,
       },
       dependencies: {
         "@remix-run/css-bundle": "0.0.0-local-version",
@@ -58,6 +61,7 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
       let path = require("path");
       let express = require("express");
       let { createRequestHandler } = require("@remix-run/express");
+      let { ping } = require("@remix-run/dev");
 
       const app = express();
       app.use(express.static("public", { immutable: true, maxAge: "1y" }));
@@ -75,8 +79,11 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
 
       let port = ${options.appServerPort};
       app.listen(port, () => {
-        require(BUILD_DIR);
+        let build = require(BUILD_DIR);
         console.log('✅ app ready: http://localhost:' + port);
+        if (process.env.NODE_ENV === 'development') {
+          ping(build);
+        }
       });
     `,
 
@@ -209,36 +216,24 @@ test("HMR", async ({ page }) => {
   // page.on("console", (msg) => console.log(msg.text()));
   page.on("pageerror", (err) => console.log(err.message));
 
-  let appServerPort = await getPort({ port: makeRange(3080, 3089) });
-  let port = await getPort({ port: makeRange(3090, 3099) });
-  let projectDir = await createFixtureProject(fixture({ port, appServerPort }));
+  let appServerPort = await getPort({ port: makeRange(3070, 3079) });
+  let httpPort = await getPort({ port: makeRange(3080, 3089) });
+  let webSocketPort = await getPort({ port: makeRange(3090, 3099) });
+  let projectDir = await createFixtureProject(
+    fixture({ appServerPort, httpPort, webSocketPort })
+  );
 
   // spin up dev server
-  let dev = execa("npm", ["run", "dev:remix"], { cwd: projectDir });
+  let dev = execa("npm", ["run", "dev"], { cwd: projectDir });
   let devStdout = bufferize(dev.stdout!);
   let devStderr = bufferize(dev.stderr!);
   await wait(
     () => {
       let stderr = devStderr();
       if (stderr.length > 0) throw Error(stderr);
-      return /💿 Built in /.test(devStdout());
+      return /✅ app ready: /.test(devStdout());
     },
     { timeoutMs: 10_000 }
-  );
-
-  // spin up app server
-  let app = execa("npm", ["run", "dev:app"], { cwd: projectDir });
-  let appStdout = bufferize(app.stdout!);
-  let appStderr = bufferize(app.stderr!);
-  await wait(
-    () => {
-      let stderr = appStderr();
-      if (stderr.length > 0) throw Error(stderr);
-      return /✅ app ready: /.test(appStdout());
-    },
-    {
-      timeoutMs: 10_000,
-    }
   );
 
   try {
@@ -390,8 +385,6 @@ test("HMR", async ({ page }) => {
     );
   } finally {
     dev.kill();
-    app.kill();
     console.log(devStderr());
-    console.log(appStderr());
   }
 });
