@@ -32,7 +32,7 @@ let fixture = (options: {
       private: true,
       sideEffects: false,
       scripts: {
-        dev: `cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/dist/cli.js dev -c "nodemon --watch build/ ./server.js"`,
+        dev: `cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/dist/cli.js dev -c "node ./server.js"`,
       },
       dependencies: {
         "@remix-run/css-bundle": "0.0.0-local-version",
@@ -41,7 +41,6 @@ let fixture = (options: {
         "cross-env": "0.0.0-local-version",
         express: "0.0.0-local-version",
         isbot: "0.0.0-local-version",
-        nodemon: "0.0.0-local-version",
         react: "0.0.0-local-version",
         "react-dom": "0.0.0-local-version",
         tailwindcss: "0.0.0-local-version",
