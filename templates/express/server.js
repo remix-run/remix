@@ -1,11 +1,13 @@
-import path from "path";
-import express from "express";
-import compression from "compression";
-import morgan from "morgan";
-import { createRequestHandler } from "@remix-run/express";
-import { installGlobals } from "@remix-run/node";
+const path = require("path");
+const express = require("express");
+const compression = require("compression");
+const morgan = require("morgan");
+const { createRequestHandler } = require("@remix-run/express");
+const { installGlobals } = require("@remix-run/node");
 
 installGlobals();
+
+const BUILD_DIR = path.join(process.cwd(), "build");
 
 const app = express();
 
@@ -26,33 +28,34 @@ app.use(express.static("public", { maxAge: "1h" }));
 
 app.use(morgan("tiny"));
 
-const BUILD_DIR = path.join(process.cwd(), "build");
-const MODE = process.env.NODE_ENV;
 app.all(
   "*",
-  MODE === "production"
-    ? createRequestHandler({ build: require(BUILD_DIR), mode: MODE })
-    : (...args) => {
+  process.env.NODE_ENV === "development"
+    ? (req, res, next) => {
         purgeRequireCache();
 
         return createRequestHandler({
           build: require(BUILD_DIR),
-          mode: MODE,
-        })(...args);
+          mode: process.env.NODE_ENV,
+        })(req, res, next);
       }
+    : createRequestHandler({
+        build: require(BUILD_DIR),
+        mode: process.env.NODE_ENV,
+      })
 );
-
 const port = process.env.PORT || 3000;
+
 app.listen(port, () => {
-  console.log(`✅ Express server listening on port ${port}`);
+  console.log(`Express server listening on port ${port}`);
 });
 
 function purgeRequireCache() {
   // purge require cache on requests for "server side HMR" this won't let
   // you have in-memory objects between requests in development,
   // alternatively you can set up nodemon/pm2-dev to restart the server on
-  // file changes, we prefer the DX of this though, so we've included it
-  // for you by default
+  // file changes, but then you'll have to reconnect to databases/etc on each
+  // change. We prefer the DX of this, so we've included it for you by default
   for (const key in require.cache) {
     if (key.startsWith(BUILD_DIR)) {
       delete require.cache[key];
