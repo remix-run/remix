@@ -116,6 +116,15 @@ module.exports = {
 };
 ```
 
+In rare circumstances, some Node.js packages are ESM-only and does not work properly when bundled. In such cases, you can use dynamic import to import the module. For example:
+
+```js filename=index.js
+export const loader = async (args: LoaderArgs) => {
+  const lib = await import('that-esm-only-lib-that-shall-not-be-bundled')
+  return lib.handleRequest(args.request)
+}
+```
+
 > Why does this happen?
 
 Remix compiles your server build to CJS and doesn't bundle your node modules. CJS modules can't import ESM modules.
