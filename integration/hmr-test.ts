@@ -384,8 +384,16 @@ test("HMR", async ({ page }) => {
     aboutCounter = await page.waitForSelector(
       `#about-counter:has-text("inc 0")`
     );
+  } catch (e) {
+    console.log("stdout begin -----------------------");
+    console.log(devStdout());
+    console.log("stdout end -------------------------");
+
+    console.log("stderr begin -----------------------");
+    console.log(devStderr());
+    console.log("stderr end -------------------------");
+    throw e;
   } finally {
     dev.kill();
-    console.log(devStderr());
   }
 });
