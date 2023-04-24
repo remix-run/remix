@@ -72,10 +72,10 @@ app.all(
 
 app.listen(3000, () => {
   let build = require(BUILD_DIR);
-  console.log('Ready: http://localhost:' + port);
+  console.log("Ready: http://localhost:" + port);
 
   // in development, call `ping` _after_ your server is ready
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === "development") {
     ping(build);
   }
 });
@@ -129,7 +129,7 @@ If you've customized the dev server's origin (e.g. for Docker or SSL support), y
 ping(build, {
   scheme: "https", // defaults to http
   host: "mycustomhost", // defaults to localhost
-  port: 3003 // defaults to REMIX_DEV_HTTP_PORT environment variable
+  port: 3003, // defaults to REMIX_DEV_HTTP_PORT environment variable
 });
 ```
 
@@ -142,6 +142,7 @@ For example, if you rely on require cache purging to keep your app server runnin
 🚨 It is then your responsibility to call `ping` whenever server changes are incorporated in your app server. 🚨
 
 So for require cache purging, you'd want to:
+
 1. Purge the require cache
 2. `require` your server build
 3. Call `ping` within a `if (process.env.NODE_ENV === 'development')`
