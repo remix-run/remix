@@ -22,7 +22,6 @@ export let serve = async (
     restart: boolean;
   }
 ) => {
-  console.log(options);
   await loadEnv(config.rootDirectory);
   let websocket = Socket.serve({ port: options.websocketPort });
 
