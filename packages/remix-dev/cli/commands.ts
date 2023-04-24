@@ -219,7 +219,7 @@ export async function dev(
 ) {
   if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
     console.warn(
-      `NODE_ENV=${process.env.NODE_ENV} overwritten to 'development'`
+      `Expected NODE_ENV to be 'development' but got ${process.env.NODE_ENV}`
     );
   }
   // if (flags.debug) inspector.open();
