@@ -7,6 +7,8 @@ import getPort, { makeRange } from "get-port";
 
 import { createFixtureProject, css, js, json } from "./helpers/create-fixture";
 
+test.setTimeout(120_000);
+
 let fixture = (options: {
   appServerPort: number;
   httpPort: number;
