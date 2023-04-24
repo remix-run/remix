@@ -222,7 +222,7 @@ export async function dev(
       `Expected NODE_ENV to be 'development' but got ${process.env.NODE_ENV}`
     );
   }
-  // if (flags.debug) inspector.open();
+  if (flags.debug) inspector.open();
 
   let config = await readConfig(remixRoot);
 
