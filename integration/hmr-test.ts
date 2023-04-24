@@ -219,9 +219,10 @@ test("HMR", async ({ page }) => {
   // page.on("console", (msg) => console.log(msg.text()));
   page.on("pageerror", (err) => console.log(err.message));
 
-  let appServerPort = await getPort({ port: makeRange(3070, 3079) });
-  let httpPort = await getPort({ port: makeRange(3080, 3089) });
-  let webSocketPort = await getPort({ port: makeRange(3090, 3099) });
+  let portRange = makeRange(3080, 3099);
+  let appServerPort = await getPort({ port: portRange });
+  let httpPort = await getPort({ port: portRange });
+  let webSocketPort = await getPort({ port: portRange });
   let projectDir = await createFixtureProject(
     fixture({ appServerPort, httpPort, webSocketPort })
   );
