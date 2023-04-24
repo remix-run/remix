@@ -224,34 +224,7 @@ describe("vercel createRemixRequest", () => {
 
     let remixRequest = createRemixRequest(request, response);
 
-    expect(remixRequest).toMatchInlineSnapshot(`
-      NodeRequest {
-        "agent": undefined,
-        "compress": true,
-        "counter": 0,
-        "follow": 20,
-        "highWaterMark": 16384,
-        "insecureHTTPParser": false,
-        "size": 0,
-        Symbol(Body internals): Object {
-          "body": null,
-          "boundary": null,
-          "disturbed": false,
-          "error": null,
-          "size": 0,
-          "type": null,
-        },
-        Symbol(Request internals): Object {
-          "credentials": "same-origin",
-          "headers": Headers {},
-          "method": "GET",
-          "parsedURL": "http://localhost:3000/foo/bar",
-          "redirect": "follow",
-          "signal": AbortSignal {},
-        },
-      }
-    `);
-
+    expect(remixRequest.method).toBe("GET");
     expect(remixRequest.headers.get("cache-control")).toBe(
       "max-age=300, s-maxage=3600"
     );

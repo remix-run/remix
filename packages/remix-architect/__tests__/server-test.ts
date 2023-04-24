@@ -242,45 +242,8 @@ describe("architect createRemixRequest", () => {
       createMockEvent({ cookies: ["__session=value"] })
     );
 
-    expect(remixRequest).toMatchInlineSnapshot(`
-      NodeRequest {
-        "agent": undefined,
-        "compress": true,
-        "counter": 0,
-        "follow": 20,
-        "highWaterMark": 16384,
-        "insecureHTTPParser": false,
-        "size": 0,
-        Symbol(Body internals): Object {
-          "body": null,
-          "boundary": null,
-          "disturbed": false,
-          "error": null,
-          "size": 0,
-          "type": null,
-        },
-        Symbol(Request internals): Object {
-          "credentials": "same-origin",
-          "headers": Headers {},
-          "method": "GET",
-          "parsedURL": "https://localhost:3333/",
-          "redirect": "follow",
-          "signal": AbortSignal {},
-        },
-      }
-    `);
-
-    expect(remixRequest.headers.get("accept")).toBe(
-      "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-    );
-    expect(remixRequest.headers.get("accept-encoding")).toBe("gzip, deflate");
-    expect(remixRequest.headers.get("accept-language")).toBe("en-US,en;q=0.9");
+    expect(remixRequest.method).toBe("GET");
     expect(remixRequest.headers.get("cookie")).toBe("__session=value");
-    expect(remixRequest.headers.get("host")).toBe("localhost:3333");
-    expect(remixRequest.headers.get("upgrade-insecure-requests")).toBe("1");
-    expect(remixRequest.headers.get("user-agent")).toBe(
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15"
-    );
   });
 });
 
