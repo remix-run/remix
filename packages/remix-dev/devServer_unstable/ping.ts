@@ -1,16 +1,25 @@
 import type { ServerBuild } from "@remix-run/server-runtime";
 
-export let ping = (build: ServerBuild) => {
-  let httpPort = Number(process.env.REMIX_DEV_HTTP_PORT);
-  if (!httpPort) throw Error("REMIX_DEV_HTTP_PORT not set");
-  if (isNaN(httpPort))
-    throw Error(`REMIX_DEV_HTTP_PORT must be a number. Got: ${httpPort}`);
+export let ping = (
+  build: ServerBuild,
+  options: {
+    scheme?: string;
+    host?: string;
+    port?: number;
+  } = {}
+) => {
+  let scheme = options.scheme ?? "http";
+  let host = options.host ?? "localhost";
+  let port = options.port ?? Number(process.env.REMIX_DEV_HTTP_PORT);
+  if (!port) throw Error("Dev server port not set");
+  if (isNaN(port))
+    throw Error(
+      `Dev server port must be a number. Got: ${JSON.stringify(port)}`
+    );
 
-  fetch(`http://localhost:${httpPort}/ping`, {
+  fetch(`${scheme}://${host}:${port}/ping`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ buildHash: build.assets.version }),
   });
 };
