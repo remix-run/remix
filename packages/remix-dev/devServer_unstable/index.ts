@@ -76,7 +76,7 @@ export let serve = async (
         console.log(`Waiting (${state.latestBuildHash})`);
         if (state.appServer === undefined || options.restart) {
           console.log(`restarting: ${options.command}`);
-          state.appServer?.kill();
+          await kill(state.appServer);
           if (options.command) {
             state.appServer = startAppServer(options.command);
           }
@@ -120,7 +120,7 @@ export let serve = async (
     });
 
   return new Promise(() => {}).finally(async () => {
-    state.appServer?.kill();
+    await kill(state.appServer);
     websocket.close();
     httpServer.close();
     await dispose();
@@ -134,3 +134,13 @@ let clean = (config: RemixConfig) => {
 };
 
 let relativePath = (file: string) => path.relative(process.cwd(), file);
+
+let kill = async (p?: execa.ExecaChildProcess) => {
+  if (p === undefined) return;
+  // `execa`'s `kill` is not reliable on windows
+  if (process.platform === "win32") {
+    await execa("taskkill", ["/pid", String(p.pid), "/f", "/t"]);
+    return;
+  }
+  p.kill();
+};
