@@ -176,52 +176,22 @@ describe("vercel createRemixHeaders", () => {
 
     it("handles simple headers", () => {
       let headers = createRemixHeaders({ "x-foo": "bar" });
-      expect(headers.raw()).toMatchInlineSnapshot(`
-        Object {
-          "x-foo": Array [
-            "bar",
-          ],
-        }
-      `);
+      expect(headers.get("x-foo")).toBe("bar");
     });
 
     it("handles multiple headers", () => {
       let headers = createRemixHeaders({ "x-foo": "bar", "x-bar": "baz" });
-      expect(headers.raw()).toMatchInlineSnapshot(`
-        Object {
-          "x-bar": Array [
-            "baz",
-          ],
-          "x-foo": Array [
-            "bar",
-          ],
-        }
-      `);
+      expect(headers.get("x-foo")).toBe("bar");
+      expect(headers.get("x-bar")).toBe("baz");
     });
 
     it("handles headers with multiple values", () => {
-      let headers = createRemixHeaders({ "x-foo": "bar, baz" });
-      expect(headers.raw()).toMatchInlineSnapshot(`
-        Object {
-          "x-foo": Array [
-            "bar, baz",
-          ],
-        }
-      `);
-    });
-
-    it("handles headers with multiple values and multiple headers", () => {
-      let headers = createRemixHeaders({ "x-foo": "bar, baz", "x-bar": "baz" });
-      expect(headers.raw()).toMatchInlineSnapshot(`
-        Object {
-          "x-bar": Array [
-            "baz",
-          ],
-          "x-foo": Array [
-            "bar, baz",
-          ],
-        }
-      `);
+      let headers = createRemixHeaders({
+        "x-foo": ["bar", "baz"],
+        "x-bar": "baz",
+      });
+      expect(headers.getAll("x-foo")).toEqual(["bar", "baz"]);
+      expect(headers.getAll("x-bar")).toEqual(["baz"]);
     });
 
     it("handles multiple set-cookie headers", () => {
@@ -231,14 +201,10 @@ describe("vercel createRemixHeaders", () => {
           "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
         ],
       });
-      expect(headers.raw()).toMatchInlineSnapshot(`
-        Object {
-          "set-cookie": Array [
-            "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-            "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
-          ],
-        }
-      `);
+      expect(headers.getAll("set-cookie")).toEqual([
+        "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
+        "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
+      ]);
     });
   });
 });
@@ -286,18 +252,10 @@ describe("vercel createRemixRequest", () => {
       }
     `);
 
-    expect(remixRequest.headers.raw()).toMatchInlineSnapshot(`
-      Object {
-        "cache-control": Array [
-          "max-age=300, s-maxage=3600",
-        ],
-        "x-forwarded-host": Array [
-          "localhost:3000",
-        ],
-        "x-forwarded-proto": Array [
-          "http",
-        ],
-      }
-    `);
+    expect(remixRequest.headers.get("cache-control")).toBe(
+      "max-age=300, s-maxage=3600"
+    );
+    expect(remixRequest.headers.get("x-forwarded-host")).toBe("localhost:3000");
+    expect(remixRequest.headers.get("x-forwarded-proto")).toBe("http");
   });
 });

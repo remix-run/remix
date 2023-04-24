@@ -227,57 +227,22 @@ describe("netlify createRemixHeaders", () => {
 
     it("handles simple headers", () => {
       let headers = createRemixHeaders({ "x-foo": ["bar"] });
-      expect(headers.raw()).toMatchInlineSnapshot(`
-        Object {
-          "x-foo": Array [
-            "bar",
-          ],
-        }
-      `);
+      expect(headers.get("x-foo")).toBe("bar");
     });
 
     it("handles multiple headers", () => {
       let headers = createRemixHeaders({ "x-foo": ["bar"], "x-bar": ["baz"] });
-      expect(headers.raw()).toMatchInlineSnapshot(`
-        Object {
-          "x-bar": Array [
-            "baz",
-          ],
-          "x-foo": Array [
-            "bar",
-          ],
-        }
-      `);
+      expect(headers.get("x-foo")).toBe("bar");
+      expect(headers.get("x-bar")).toBe("baz");
     });
 
     it("handles headers with multiple values", () => {
-      let headers = createRemixHeaders({ "x-foo": ["bar", "baz"] });
-      expect(headers.raw()).toMatchInlineSnapshot(`
-        Object {
-          "x-foo": Array [
-            "bar",
-            "baz",
-          ],
-        }
-      `);
-    });
-
-    it("handles headers with multiple values and multiple headers", () => {
       let headers = createRemixHeaders({
         "x-foo": ["bar", "baz"],
         "x-bar": ["baz"],
       });
-      expect(headers.raw()).toMatchInlineSnapshot(`
-        Object {
-          "x-bar": Array [
-            "baz",
-          ],
-          "x-foo": Array [
-            "bar",
-            "baz",
-          ],
-        }
-      `);
+      expect(headers.getAll("x-foo")).toEqual(["bar", "baz"]);
+      expect(headers.get("x-bar")).toBe("baz");
     });
 
     it("handles multiple set-cookie headers", () => {
@@ -287,14 +252,10 @@ describe("netlify createRemixHeaders", () => {
           "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
         ],
       });
-      expect(headers.raw()).toMatchInlineSnapshot(`
-        Object {
-          "set-cookie": Array [
-            "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-            "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
-          ],
-        }
-      `);
+      expect(headers.getAll("set-cookie")).toEqual([
+        "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
+        "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
+      ]);
     });
   });
 });
@@ -302,12 +263,9 @@ describe("netlify createRemixHeaders", () => {
 describe("netlify createRemixRequest", () => {
   it("creates a request with the correct headers", () => {
     let remixRequest = createRemixRequest(
-      createMockEvent({
-        multiValueHeaders: {
-          Cookie: ["__session=value", "__other=value"],
-        },
-      })
+      createMockEvent({ multiValueHeaders: { Cookie: ["__session=value"] } })
     );
+
     expect(remixRequest).toMatchInlineSnapshot(`
       NodeRequest {
         "agent": undefined,
@@ -335,14 +293,8 @@ describe("netlify createRemixRequest", () => {
         },
       }
     `);
-    expect(remixRequest.headers.raw()).toMatchInlineSnapshot(`
-      Object {
-        "cookie": Array [
-          "__session=value",
-          "__other=value",
-        ],
-      }
-    `);
+
+    expect(remixRequest.headers.get("cookie")).toBe("__session=value");
   });
 });
 
