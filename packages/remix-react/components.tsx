@@ -22,6 +22,7 @@ import {
   Await as AwaitRR,
   Link as RouterLink,
   NavLink as RouterNavLink,
+  Outlet,
   UNSAFE_DataRouterContext as DataRouterContext,
   UNSAFE_DataRouterStateContext as DataRouterStateContext,
   isRouteErrorResponse,
@@ -113,7 +114,7 @@ function useRemixContext(): RemixContextObject {
 // RemixRoute
 
 export function RemixRoute({ id }: { id: string }) {
-  let { routeModules } = useRemixContext();
+  let { routeModules, future } = useRemixContext();
 
   invariant(
     routeModules,
@@ -121,7 +122,15 @@ export function RemixRoute({ id }: { id: string }) {
       "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
   );
 
-  let { default: Component } = routeModules[id];
+  let { default: Component, ErrorBoundary, CatchBoundary } = routeModules[id];
+
+  // Default Component to Outlet if we expose boundary UI components
+  if (
+    !Component &&
+    (ErrorBoundary || (!future.v2_errorBoundary && CatchBoundary))
+  ) {
+    Component = Outlet;
+  }
 
   invariant(
     Component,
