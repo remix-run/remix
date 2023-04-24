@@ -11,6 +11,7 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
   files: {
     "remix.config.js": js`
       module.exports = {
+        serverModuleFormat: "cjs",
         tailwind: true,
         future: {
           unstable_dev: {
