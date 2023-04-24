@@ -107,9 +107,7 @@ describe("express createRequestHandler", () => {
       });
 
       let request = supertest(createApp());
-      // note: vercel's createServerWithHelpers requires a x-now-bridge-request-id
-      let res = await request.get("/").set({ "x-now-bridge-request-id": "2" });
-
+      let res = await request.get("/");
       expect(res.status).toBe(200);
       expect(res.text).toBe("hello world");
     });
@@ -159,86 +157,64 @@ describe("express createRequestHandler", () => {
 describe("express createRemixHeaders", () => {
   describe("creates fetch headers from express headers", () => {
     it("handles empty headers", () => {
-      expect(createRemixHeaders({})).toMatchInlineSnapshot(`
-        Headers {
-          Symbol(query): Array [],
-          Symbol(context): null,
-        }
-      `);
+      let headers = createRemixHeaders({});
+      expect(headers.raw()).toMatchInlineSnapshot(`Object {}`);
     });
 
     it("handles simple headers", () => {
-      expect(createRemixHeaders({ "x-foo": "bar" })).toMatchInlineSnapshot(`
-        Headers {
-          Symbol(query): Array [
-            "x-foo",
+      let headers = createRemixHeaders({ "x-foo": "bar" });
+      expect(headers.raw()).toMatchInlineSnapshot(`
+        Object {
+          "x-foo": Array [
             "bar",
           ],
-          Symbol(context): null,
         }
       `);
     });
 
     it("handles multiple headers", () => {
-      expect(createRemixHeaders({ "x-foo": "bar", "x-bar": "baz" }))
-        .toMatchInlineSnapshot(`
-        Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar",
-            "x-bar",
-            "baz",
-          ],
-          Symbol(context): null,
-        }
-      `);
+      let headers = createRemixHeaders({ "x-foo": "bar", "x-bar": "baz" });
+      expect(headers).toMatchInlineSnapshot(`Headers {}`);
     });
 
     it("handles headers with multiple values", () => {
-      expect(createRemixHeaders({ "x-foo": "bar, baz" }))
-        .toMatchInlineSnapshot(`
-        Headers {
-          Symbol(query): Array [
-            "x-foo",
+      let headers = createRemixHeaders({ "x-foo": "bar, baz" });
+      expect(headers.raw()).toMatchInlineSnapshot(`
+        Object {
+          "x-foo": Array [
             "bar, baz",
           ],
-          Symbol(context): null,
         }
       `);
     });
 
     it("handles headers with multiple values and multiple headers", () => {
-      expect(createRemixHeaders({ "x-foo": "bar, baz", "x-bar": "baz" }))
-        .toMatchInlineSnapshot(`
-        Headers {
-          Symbol(query): Array [
-            "x-foo",
-            "bar, baz",
-            "x-bar",
+      let headers = createRemixHeaders({ "x-foo": "bar, baz", "x-bar": "baz" });
+      expect(headers.raw()).toMatchInlineSnapshot(`
+        Object {
+          "x-bar": Array [
             "baz",
           ],
-          Symbol(context): null,
+          "x-foo": Array [
+            "bar, baz",
+          ],
         }
       `);
     });
 
     it("handles multiple set-cookie headers", () => {
-      expect(
-        createRemixHeaders({
-          "set-cookie": [
+      let headers = createRemixHeaders({
+        "set-cookie": [
+          "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
+          "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
+        ],
+      });
+      expect(headers.raw()).toMatchInlineSnapshot(`
+        Object {
+          "set-cookie": Array [
             "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
+            "__other=some_other_value; Path=/; Secure; HttpOnly; Expires=Wed, 21 Oct 2015 07:28:00 GMT; SameSite=Lax",
           ],
-        })
-      ).toMatchInlineSnapshot(`
-        Headers {
-          Symbol(query): Array [
-            "set-cookie",
-            "__session=some_value; Path=/; Secure; HttpOnly; MaxAge=7200; SameSite=Lax",
-            "set-cookie",
-            "__other=some_other_value; Path=/; Secure; HttpOnly; MaxAge=3600; SameSite=Lax",
-          ],
-          Symbol(context): null,
         }
       `);
     });
@@ -259,8 +235,9 @@ describe("express createRemixRequest", () => {
     });
     let expressResponse = createResponse();
 
-    expect(createRemixRequest(expressRequest, expressResponse))
-      .toMatchInlineSnapshot(`
+    let remixRequest = createRemixRequest(expressRequest, expressResponse);
+
+    expect(remixRequest).toMatchInlineSnapshot(`
       NodeRequest {
         "agent": undefined,
         "compress": true,
@@ -279,20 +256,23 @@ describe("express createRemixRequest", () => {
         },
         Symbol(Request internals): Object {
           "credentials": "same-origin",
-          "headers": Headers {
-            Symbol(query): Array [
-              "cache-control",
-              "max-age=300, s-maxage=3600",
-              "host",
-              "localhost:3000",
-            ],
-            Symbol(context): null,
-          },
+          "headers": Headers {},
           "method": "GET",
           "parsedURL": "http://localhost:3000/foo/bar",
           "redirect": "follow",
           "signal": AbortSignal {},
         },
+      }
+    `);
+
+    expect(remixRequest.headers.raw()).toMatchInlineSnapshot(`
+      Object {
+        "cache-control": Array [
+          "max-age=300, s-maxage=3600",
+        ],
+        "host": Array [
+          "localhost:3000",
+        ],
       }
     `);
   });
