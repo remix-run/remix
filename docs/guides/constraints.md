@@ -101,11 +101,11 @@ export default function Posts() {
 
 That `console.log` _does something_. The module is imported and then immediately logs to the console. The compiler won't remove it because it has to run when the module is imported. It will bundle something like this:
 
-```tsx bad lines=[4,6]
+```tsx bad lines=[3,6]
 import { useLoaderData } from "@remix-run/react";
 
-import PostsView from "../PostsView";
 import { prisma } from "../db"; //😬
+import PostsView from "../PostsView";
 
 console.log(prisma); //🥶
 
