@@ -3,6 +3,9 @@ import express from "express";
 import compression from "compression";
 import morgan from "morgan";
 import { createRequestHandler } from "@remix-run/express";
+import { installGlobals } from "@remix-run/node";
+
+installGlobals();
 
 const app = express();
 
