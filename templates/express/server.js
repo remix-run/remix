@@ -28,10 +28,7 @@ app.use(express.static("public", { maxAge: "1h" }));
 app.use(morgan("tiny"));
 
 const MODE = process.env.NODE_ENV;
-app.all(
-  "*",
-  createRequestHandler({ build, mode: MODE })
-);
+app.all("*", createRequestHandler({ build, mode: MODE }));
 
 const port = process.env.PORT || 3000;
 app.listen(port, async () => {
