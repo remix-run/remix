@@ -167,7 +167,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
 
   let [location, setLocation] = React.useState(router.state.location);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     return router.subscribe((newState) => {
       if (newState.location !== location) {
         setLocation(newState.location);
