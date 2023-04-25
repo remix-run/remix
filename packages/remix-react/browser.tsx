@@ -13,7 +13,10 @@ import {
 } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
 import type { RouteModules } from "./routeModules";
-import { createClientRoutes, createClientRoutesWithHMRRevalidationOptOut } from "./routes";
+import {
+  createClientRoutes,
+  createClientRoutesWithHMRRevalidationOptOut,
+} from "./routes";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
@@ -117,7 +120,7 @@ if (import.meta && import.meta.hot) {
         needsRevalidation,
         assetsManifest.routes,
         window.__remixRouteModules,
-        window.__remixContext.future,
+        window.__remixContext.future
       );
 
       // This is temporary API and will be more granular before release
