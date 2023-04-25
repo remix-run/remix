@@ -134,8 +134,8 @@ export function createClientRoutes(
       // handle gets added in via useMatches since we aren't guaranteed to
       // have the route module available here
       handle: undefined,
-      loader: createDataFunction(route, routeModulesCache, false),
-      action: createDataFunction(route, routeModulesCache, true),
+      loader: createLoaderFunction(route, routeModulesCache),
+      action: createActionFunction(route, routeModulesCache),
       shouldRevalidate: createShouldRevalidate(route, routeModulesCache),
     };
     let children = createClientRoutes(
@@ -172,50 +172,72 @@ async function loadRouteModuleWithBlockingLinks(
   return routeModule;
 }
 
-function createDataFunction(
+function createLoaderFunction(
   route: EntryRoute,
-  routeModules: RouteModules,
-  isAction: boolean
-): LoaderFunction | ActionFunction {
+  routeModules: RouteModules
+): LoaderFunction {
   return async ({ request }) => {
     let routeModulePromise = loadRouteModuleWithBlockingLinks(
       route,
       routeModules
     );
     try {
-      if (isAction && !route.hasAction) {
-        let msg =
-          `Route "${route.id}" does not have an action, but you are trying ` +
-          `to submit to it. To fix this, please add an \`action\` function to the route`;
-        console.error(msg);
-        throw new Error(msg);
-      } else if (!isAction && !route.hasLoader) {
+      if (!route.hasLoader) {
         return null;
       }
-
-      let result = await fetchData(request, route.id);
-
-      if (result instanceof Error) {
-        throw result;
-      }
-
-      if (isRedirectResponse(result)) {
-        throw getRedirect(result);
-      }
-
-      if (isCatchResponse(result)) {
-        throw result;
-      }
-
-      if (isDeferredResponse(result) && result.body) {
-        return await parseDeferredReadableStream(result.body);
-      }
-
+      let result = await fetchAndProcessResult(request, route.id);
       return result;
     } finally {
       await routeModulePromise;
     }
   };
+}
+
+function createActionFunction(
+  route: EntryRoute,
+  routeModules: RouteModules
+): ActionFunction {
+  return async ({ request }) => {
+    let routeModulePromise = loadRouteModuleWithBlockingLinks(
+      route,
+      routeModules
+    );
+    try {
+      if (!route.hasAction) {
+        let msg =
+          `Route "${route.id}" does not have an action, but you are trying ` +
+          `to submit to it. To fix this, please add an \`action\` function to the route`;
+        console.error(msg);
+        throw new Error(msg);
+      }
+      let result = await fetchAndProcessResult(request, route.id);
+      return result;
+    } finally {
+      await routeModulePromise;
+    }
+  };
+}
+
+async function fetchAndProcessResult(request: Request, routeId: string) {
+  let result = await fetchData(request, routeId);
+
+  if (result instanceof Error) {
+    throw result;
+  }
+
+  if (isRedirectResponse(result)) {
+    throw getRedirect(result);
+  }
+
+  if (isCatchResponse(result)) {
+    throw result;
+  }
+
+  if (isDeferredResponse(result) && result.body) {
+    return await parseDeferredReadableStream(result.body);
+  }
+
+  return result;
 }
 
 function getRedirect(response: Response): Response {

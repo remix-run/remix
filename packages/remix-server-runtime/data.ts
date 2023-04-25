@@ -43,6 +43,7 @@ export async function callRouteActionRR({
     request: stripDataParam(stripIndexParam(request)),
     context: loadContext,
     params,
+    payload: undefined,
   });
 
   if (result === undefined) {

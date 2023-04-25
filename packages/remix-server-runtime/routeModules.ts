@@ -32,17 +32,13 @@ export interface DataFunctionArgs {
 
 export type LoaderArgs = DataFunctionArgs;
 
-export type ActionArgs = DataFunctionArgs;
+export type ActionArgs = DataFunctionArgs & { payload: undefined };
 
 /**
  * A function that handles data mutations for a route.
  */
 export interface ActionFunction {
-  (args: DataFunctionArgs):
-    | Promise<Response>
-    | Response
-    | Promise<AppData>
-    | AppData;
+  (args: ActionArgs): Promise<Response> | Response | Promise<AppData> | AppData;
 }
 
 /**
@@ -90,11 +86,7 @@ export interface LinksFunction {
  * A function that loads data for a route.
  */
 export interface LoaderFunction {
-  (args: DataFunctionArgs):
-    | Promise<Response>
-    | Response
-    | Promise<AppData>
-    | AppData;
+  (args: LoaderArgs): Promise<Response> | Response | Promise<AppData> | AppData;
 }
 
 /**
