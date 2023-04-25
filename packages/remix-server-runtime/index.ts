@@ -79,4 +79,6 @@ export type {
   UnsignFunction,
   UploadHandler,
   UploadHandlerPart,
+  EncryptFunction,
+  DecryptFunction,
 } from "./reexport";
