@@ -53,6 +53,7 @@ export let serve = async (
         mode: "development",
         sourcemap: true,
         onWarning: warnOnce,
+        devHttpPort: options.httpPort,
         devWebsocketPort: options.websocketPort,
       },
     },
