@@ -108,7 +108,6 @@
     "jest-watch-typeahead": "^0.6.5",
     "jsonfile": "^6.0.1",
     "lodash": "^4.17.21",
-    "nodemon": "^2.0.20",
     "npm-run-all": "^4.1.5",
     "patch-package": "^6.5.0",
     "prettier": "2.7.1",

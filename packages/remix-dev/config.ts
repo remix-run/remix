@@ -13,7 +13,7 @@ import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { writeConfigDefaults } from "./config/write-tsconfig-defaults";
 import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
-import { getPreferredPackageManager } from "./cli/getPreferredPackageManager";
+import { detectPackageManager } from "./cli/detectPackageManager";
 import { warnOnce } from "./warnOnce";
 
 export interface RemixMdxConfig {
@@ -38,10 +38,14 @@ export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
 type Dev = {
-  port?: number;
-  appServerPort?: number;
-  remixRequestHandlerPath?: string;
-  rebuildPollIntervalMs?: number;
+  port?: number; // TODO: remove in v2
+
+  command?: string;
+  httpScheme?: string;
+  httpHost?: string;
+  httpPort?: number;
+  websocketPort?: number;
+  restart?: boolean;
 };
 
 interface FutureConfig {
@@ -453,6 +457,11 @@ export async function readConfig(
   let serverEntryPoint = appConfig.server;
   let serverMainFields = appConfig.serverMainFields;
   let serverMinify = appConfig.serverMinify;
+
+  if (!appConfig.serverModuleFormat) {
+    warnOnce(serverModuleFormatWarning, "serverModuleFormatWarning");
+  }
+
   let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
   let serverPlatform = appConfig.serverPlatform || "node";
   if (isCloudflareRuntime) {
@@ -592,7 +601,7 @@ export async function readConfig(
 
       await pkgJson.save();
 
-      let packageManager = getPreferredPackageManager();
+      let packageManager = detectPackageManager() ?? "npm";
 
       execSync(`${packageManager} install`, {
         cwd: remixRoot,
@@ -670,7 +679,7 @@ export async function readConfig(
   }
 
   let routes: RouteManifest = {
-    root: { path: "", id: "root", file: rootRouteFile },
+    root: { id: "root", file: rootRouteFile },
   };
 
   let routesConvention: typeof flatRoutes;
@@ -892,6 +901,12 @@ export let serverBuildTargetWarning =
   "Use a combination of server module config values to achieve the same build output. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#serverbuildtarget";
+
+export const serverModuleFormatWarning =
+  "⚠️ REMIX FUTURE CHANGE: The `serverModuleFormat` config default option will be changing in v2 " +
+  "from `cjs` to `esm`. You can prepare for this change by explicitly specifying `serverModuleFormat: 'cjs'`. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.16.0/pages/v2#servermoduleformat";
 
 export let flatRoutesWarning =
   "⚠️ REMIX FUTURE CHANGE: The route file convention is changing in v2. " +

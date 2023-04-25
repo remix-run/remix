@@ -1,6 +1,8 @@
 import * as path from "path";
 import { execSync } from "child_process";
+import inspector from "inspector";
 import * as fse from "fs-extra";
+import getPort, { makeRange } from "get-port";
 import ora from "ora";
 import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
@@ -15,13 +17,14 @@ import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
 import { createApp } from "./create";
-import { getPreferredPackageManager } from "./getPreferredPackageManager";
+import { detectPackageManager } from "./detectPackageManager";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 import runCodemod from "../codemod";
 import { CodemodError } from "../codemod/utils/error";
 import { TaskError } from "../codemod/utils/task";
 import { transpile as convertFileToJS } from "./useJavascript";
 import { warnOnce } from "../warnOnce";
+import type { Options } from "../compiler/options";
 
 export async function create({
   appTemplate,
@@ -80,7 +83,7 @@ export async function init(
 
   let initPackageJson = path.resolve(initScriptDir, "package.json");
   let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
-  let packageManager = getPreferredPackageManager();
+  let packageManager = detectPackageManager() ?? "npm";
 
   if (await fse.pathExists(initPackageJson)) {
     execSync(`${packageManager} install`, {
@@ -167,23 +170,27 @@ export async function build(
 
   let start = Date.now();
   let config = await readConfig(remixRoot);
+  let options: Options = {
+    mode,
+    sourcemap,
+    onWarning: warnOnce,
+  };
+  if (config.future.unstable_dev) {
+    let dev = await resolveDev(config.future.unstable_dev);
+    options.devHttpOrigin = dev.httpOrigin;
+    options.devWebsocketPort = dev.websocketPort;
+  }
+
   fse.emptyDirSync(config.assetsBuildDirectory);
-  await compiler.build({
-    config,
-    options: {
-      mode,
-      sourcemap,
-      onWarning: warnOnce,
-      onCompileFailure: (failure) => {
-        compiler.logCompileFailure(failure);
-        throw Error();
-      },
-    },
+  await compiler.build({ config, options }).catch((thrown) => {
+    compiler.logThrown(thrown);
+    process.exit(1);
   });
 
-  console.log(`built in ${prettyMs(Date.now() - start)}`);
+  console.log(`Built in ${prettyMs(Date.now() - start)}`);
 }
 
+// TODO: replace watch in v2
 export async function watch(
   remixRootOrConfig: string | RemixConfig,
   modeArg?: string
@@ -196,26 +203,42 @@ export async function watch(
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
 
-  devServer.liveReload(config, {
-    onInitialBuild: (durationMs) =>
-      console.log(`💿 Built in ${prettyMs(durationMs)}`),
-  });
+  devServer.liveReload(config);
   return await new Promise(() => {});
 }
 
 export async function dev(
   remixRoot: string,
-  flags: { port?: number; appServerPort?: number } = {}
+  flags: {
+    debug?: boolean;
+    port?: number; // TODO: remove for v2
+
+    // unstable_dev
+    command?: string;
+    httpScheme?: string;
+    httpHost?: string;
+    httpPort?: number;
+    restart?: boolean;
+    websocketPort?: number;
+  } = {}
 ) {
+  if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
+    console.warn(
+      `Forcing NODE_ENV to be 'development'. Was: ${process.env.NODE_ENV}`
+    );
+  }
+  process.env.NODE_ENV = "development";
+  if (flags.debug) inspector.open();
+
   let config = await readConfig(remixRoot);
 
-  if (config.future.unstable_dev !== false) {
-    await devServer_unstable.serve(config, flags);
+  if (config.future.unstable_dev === false) {
+    await devServer.serve(config, flags.port);
     return await new Promise(() => {});
   }
 
-  await devServer.serve(config, flags.port);
-  return await new Promise(() => {});
+  let { unstable_dev } = config.future;
+  await devServer_unstable.serve(config, await resolveDev(unstable_dev, flags));
 }
 
 export async function codemod(
@@ -440,4 +463,54 @@ let parseMode = (
   if (mode === "test") return mode;
   console.error(`Unrecognized mode: ${mode}`);
   process.exit(1);
+};
+
+let findPort = async () => getPort({ port: makeRange(3001, 3100) });
+
+let resolveDev = async (
+  dev: Exclude<RemixConfig["future"]["unstable_dev"], false>,
+  flags: {
+    command?: string;
+    httpScheme?: string;
+    httpHost?: string;
+    httpPort?: number;
+    restart?: boolean;
+    websocketPort?: number;
+  } = {}
+): Promise<{
+  command?: string;
+  httpOrigin: {
+    scheme: string;
+    host: string;
+    port: number;
+  };
+  restart: boolean;
+  websocketPort: number;
+}> => {
+  let command = flags.command ?? (dev === true ? undefined : dev.command);
+  let httpScheme =
+    flags.httpScheme ?? (dev === true ? undefined : dev.httpScheme) ?? "http";
+  let httpHost =
+    flags.httpHost ?? (dev === true ? undefined : dev.httpHost) ?? "localhost";
+  let httpPort =
+    flags.httpPort ??
+    (dev === true ? undefined : dev.httpPort) ??
+    (await findPort());
+  let websocketPort =
+    flags.websocketPort ??
+    (dev === true ? undefined : dev.websocketPort) ??
+    (await findPort());
+  let restart =
+    flags.restart ?? (dev === true ? undefined : dev.restart) ?? true;
+
+  return {
+    command,
+    httpOrigin: {
+      scheme: httpScheme,
+      host: httpHost,
+      port: httpPort,
+    },
+    websocketPort,
+    restart,
+  };
 };

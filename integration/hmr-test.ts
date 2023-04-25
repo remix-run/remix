@@ -7,15 +7,22 @@ import getPort, { makeRange } from "get-port";
 
 import { createFixtureProject, css, js, json } from "./helpers/create-fixture";
 
-let fixture = (options: { port: number; appServerPort: number }) => ({
+test.setTimeout(120_000);
+
+let fixture = (options: {
+  appServerPort: number;
+  httpPort: number;
+  webSocketPort: number;
+}) => ({
   files: {
     "remix.config.js": js`
       module.exports = {
+        serverModuleFormat: "cjs",
         tailwind: true,
         future: {
           unstable_dev: {
-            port: ${options.port},
-            appServerPort: ${options.appServerPort},
+            httpPort: ${options.httpPort},
+            webSocketPort: ${options.webSocketPort},
           },
           v2_routeConvention: true,
           v2_errorBoundary: true,
@@ -28,8 +35,7 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
       private: true,
       sideEffects: false,
       scripts: {
-        "dev:remix": `cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/dist/cli.js dev`,
-        "dev:app": `cross-env NODE_ENV=development nodemon --watch build/ ./server.js`,
+        dev: `cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/dist/cli.js dev -c "node ./server.js"`,
       },
       dependencies: {
         "@remix-run/css-bundle": "0.0.0-local-version",
@@ -38,7 +44,6 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
         "cross-env": "0.0.0-local-version",
         express: "0.0.0-local-version",
         isbot: "0.0.0-local-version",
-        nodemon: "0.0.0-local-version",
         react: "0.0.0-local-version",
         "react-dom": "0.0.0-local-version",
         tailwindcss: "0.0.0-local-version",
@@ -58,6 +63,7 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
       let path = require("path");
       let express = require("express");
       let { createRequestHandler } = require("@remix-run/express");
+      let { devReady } = require("@remix-run/node");
 
       const app = express();
       app.use(express.static("public", { immutable: true, maxAge: "1y" }));
@@ -75,8 +81,11 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
 
       let port = ${options.appServerPort};
       app.listen(port, () => {
-        require(BUILD_DIR);
+        let build = require(BUILD_DIR);
         console.log('✅ app ready: http://localhost:' + port);
+        if (process.env.NODE_ENV === 'development') {
+          devReady(build);
+        }
       });
     `,
 
@@ -146,6 +155,9 @@ let fixture = (options: { port: number; appServerPort: number }) => ({
 
     "app/routes/_index.tsx": js`
       import { useLoaderData } from "@remix-run/react";
+      export function shouldRevalidate(args) {
+        return args.defaultShouldRevalidate;
+      }
       export default function Index() {
         const t = useLoaderData();
         return (
@@ -204,44 +216,42 @@ let bufferize = (stream: Readable): (() => string) => {
   return () => buffer;
 };
 
+let HMR_TIMEOUT_MS = 10_000;
+
 test("HMR", async ({ page }) => {
   // uncomment for debugging
   // page.on("console", (msg) => console.log(msg.text()));
   page.on("pageerror", (err) => console.log(err.message));
+  let dataRequests = 0;
+  page.on("request", (request) => {
+    let url = new URL(request.url());
+    if (url.searchParams.has("_data")) {
+      dataRequests++;
+    }
+  });
 
-  let appServerPort = await getPort({ port: makeRange(3080, 3089) });
-  let port = await getPort({ port: makeRange(3090, 3099) });
-  let projectDir = await createFixtureProject(fixture({ port, appServerPort }));
+  let portRange = makeRange(3080, 3099);
+  let appServerPort = await getPort({ port: portRange });
+  let httpPort = await getPort({ port: portRange });
+  let webSocketPort = await getPort({ port: portRange });
+  let projectDir = await createFixtureProject(
+    fixture({ appServerPort, httpPort, webSocketPort })
+  );
 
   // spin up dev server
-  let dev = execa("npm", ["run", "dev:remix"], { cwd: projectDir });
+  let dev = execa("npm", ["run", "dev"], { cwd: projectDir });
   let devStdout = bufferize(dev.stdout!);
   let devStderr = bufferize(dev.stderr!);
-  await wait(
-    () => {
-      let stderr = devStderr();
-      if (stderr.length > 0) throw Error(stderr);
-      return /💿 Built in /.test(devStdout());
-    },
-    { timeoutMs: 10_000 }
-  );
-
-  // spin up app server
-  let app = execa("npm", ["run", "dev:app"], { cwd: projectDir });
-  let appStdout = bufferize(app.stdout!);
-  let appStderr = bufferize(app.stderr!);
-  await wait(
-    () => {
-      let stderr = appStderr();
-      if (stderr.length > 0) throw Error(stderr);
-      return /✅ app ready: /.test(appStdout());
-    },
-    {
-      timeoutMs: 10_000,
-    }
-  );
-
   try {
+    await wait(
+      () => {
+        let stderr = devStderr();
+        if (stderr.length > 0) throw Error(stderr);
+        return /✅ app ready: /.test(devStdout());
+      },
+      { timeoutMs: 10_000 }
+    );
+
     await page.goto(`http://localhost:${appServerPort}`, {
       waitUntil: "networkidle",
     });
@@ -276,6 +286,9 @@ test("HMR", async ({ page }) => {
     let newIndex = `
       import { useLoaderData } from "@remix-run/react";
       import styles from "~/styles.module.css";
+      export function shouldRevalidate(args) {
+        return args.defaultShouldRevalidate;
+      }
       export default function Index() {
         const t = useLoaderData();
         return (
@@ -289,8 +302,9 @@ test("HMR", async ({ page }) => {
 
     // detect HMR'd content and style changes
     await page.waitForLoadState("networkidle");
+
     let h1 = page.getByText("Changed");
-    await h1.waitFor({ timeout: 2000 });
+    await h1.waitFor({ timeout: HMR_TIMEOUT_MS });
     expect(h1).toHaveCSS("color", "rgb(255, 255, 255)");
     expect(h1).toHaveCSS("background-color", "rgb(0, 0, 0)");
 
@@ -301,17 +315,23 @@ test("HMR", async ({ page }) => {
     // undo change
     fs.writeFileSync(indexPath, originalIndex);
     fs.writeFileSync(cssModulePath, originalCssModule);
-    await page.getByText("Index Title").waitFor({ timeout: 2000 });
+    await page.getByText("Index Title").waitFor({ timeout: HMR_TIMEOUT_MS });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
     await page.waitForSelector(`#root-counter:has-text("inc 1")`);
+
+    // We should not have done any revalidation yet as only UI has changed
+    expect(dataRequests).toBe(0);
 
     // add loader
     let withLoader1 = `
       import { json } from "@remix-run/node";
       import { useLoaderData } from "@remix-run/react";
 
-      export let loader = () => json({ hello: "world" })
+      export let loader = () => json({ hello: "world" });
 
+      export function shouldRevalidate(args) {
+        return args.defaultShouldRevalidate;
+      }
       export default function Index() {
         let { hello } = useLoaderData<typeof loader>();
         return (
@@ -322,9 +342,13 @@ test("HMR", async ({ page }) => {
       }
     `;
     fs.writeFileSync(indexPath, withLoader1);
-    await page.getByText("Hello, world").waitFor({ timeout: 2000 });
+    await page.waitForLoadState("networkidle");
+
+    await page.getByText("Hello, world").waitFor({ timeout: HMR_TIMEOUT_MS });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
     await page.waitForSelector(`#root-counter:has-text("inc 1")`);
+
+    expect(dataRequests).toBe(1);
 
     let withLoader2 = `
       import { json } from "@remix-run/node";
@@ -334,6 +358,9 @@ test("HMR", async ({ page }) => {
         return json({ hello: "planet" })
       }
 
+      export function shouldRevalidate(args) {
+        return args.defaultShouldRevalidate;
+      }
       export default function Index() {
         let { hello } = useLoaderData<typeof loader>();
         return (
@@ -344,9 +371,13 @@ test("HMR", async ({ page }) => {
       }
     `;
     fs.writeFileSync(indexPath, withLoader2);
-    await page.getByText("Hello, planet").waitFor({ timeout: 2000 });
+    await page.waitForLoadState("networkidle");
+
+    await page.getByText("Hello, planet").waitFor({ timeout: HMR_TIMEOUT_MS });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
     await page.waitForSelector(`#root-counter:has-text("inc 1")`);
+
+    expect(dataRequests).toBe(2);
 
     // change shared component
     let updatedCounter = `
@@ -388,10 +419,20 @@ test("HMR", async ({ page }) => {
     aboutCounter = await page.waitForSelector(
       `#about-counter:has-text("inc 0")`
     );
+
+    // This should not have triggered any revalidation but our detection is
+    // failing for x-module changes for route module imports
+    // expect(dataRequests).toBe(2);
+  } catch (e) {
+    console.log("stdout begin -----------------------");
+    console.log(devStdout());
+    console.log("stdout end -------------------------");
+
+    console.log("stderr begin -----------------------");
+    console.log(devStderr());
+    console.log("stderr end -------------------------");
+    throw e;
   } finally {
     dev.kill();
-    app.kill();
-    console.log(devStderr());
-    console.log(appStderr());
   }
 });
