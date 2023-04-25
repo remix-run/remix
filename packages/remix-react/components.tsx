@@ -1689,6 +1689,7 @@ export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
+        // TODO: remove REMIX_DEV_SERVER_WS_PORT in v2
         port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
         timeoutMs = 1000,
         nonce = undefined,
@@ -1707,7 +1708,7 @@ export const LiveReload =
                 function remixLiveReloadConnect(config) {
                   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
-                  let port = (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || ${String(
+                  let port = (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.websocketPort) || ${String(
                     port
                   )};
                   let socketPath = protocol + "//" + host + ":" + port + "/socket";
@@ -1729,9 +1730,11 @@ export const LiveReload =
                       }
                       if (!event.updates || !event.updates.length) return;
                       let updateAccepted = false;
+                      let needsRevalidation = false;
                       for (let update of event.updates) {
                         console.log("[HMR] " + update.reason + " [" + update.id +"]")
                         if (update.revalidate) {
+                          needsRevalidation = true;
                           console.log("[HMR] Revalidating [" + update.id + "]");
                         }
                         let imported = await import(update.url +  '?t=' + event.assetsManifest.hmr.timestamp);
@@ -1747,7 +1750,7 @@ export const LiveReload =
                       }
                       if (event.assetsManifest && window.__hmr__.contexts["remix:manifest"]) {
                         let accepted = window.__hmr__.contexts["remix:manifest"].emit(
-                          event.assetsManifest
+                          { needsRevalidation, assetsManifest: event.assetsManifest }
                         );
                         if (accepted) {
                           console.log("[HMR] Updated accepted by", "remix:manifest");

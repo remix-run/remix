@@ -11,7 +11,10 @@ import {
 } from "./errorBoundaries";
 import { deserializeErrors } from "./errors";
 import type { RouteModules } from "./routeModules";
-import { createClientRoutes } from "./routes";
+import {
+  createClientRoutes,
+  createClientRoutesWithHMRRevalidationOptOut,
+} from "./routes";
 
 /* eslint-disable prefer-let/prefer-let */
 declare global {
@@ -21,7 +24,7 @@ declare global {
     // The number of active deferred keys rendered on the server
     a?: number;
     dev?: {
-      liveReloadPort?: number;
+      websocketPort?: number;
       hmrRuntime?: string;
     };
   };
@@ -42,12 +45,18 @@ declare global {
 }
 
 let router: Router;
-let hmrAbortController: AbortController;
+let hmrAbortController: AbortController | undefined;
 
 if (import.meta && import.meta.hot) {
   import.meta.hot.accept(
     "remix:manifest",
-    async (newManifest: EntryContext["manifest"]) => {
+    async ({
+      assetsManifest,
+      needsRevalidation,
+    }: {
+      assetsManifest: EntryContext["manifest"];
+      needsRevalidation: boolean;
+    }) => {
       let routeIds = [
         ...new Set(
           router.state.matches
@@ -55,6 +64,12 @@ if (import.meta && import.meta.hot) {
             .concat(Object.keys(window.__remixRouteModules))
         ),
       ];
+
+      if (hmrAbortController) {
+        hmrAbortController.abort();
+      }
+      hmrAbortController = new AbortController();
+      let signal = hmrAbortController.signal;
 
       // Load new route modules that we've seen.
       let newRouteModules = Object.assign(
@@ -64,12 +79,12 @@ if (import.meta && import.meta.hot) {
           (
             await Promise.all(
               routeIds.map(async (id) => {
-                if (!newManifest.routes[id]) {
+                if (!assetsManifest.routes[id]) {
                   return null;
                 }
                 let imported = await import(
-                  newManifest.routes[id].module +
-                    `?t=${newManifest.hmr?.timestamp}`
+                  assetsManifest.routes[id].module +
+                    `?t=${assetsManifest.hmr?.timestamp}`
                 );
                 return [
                   id,
@@ -99,8 +114,9 @@ if (import.meta && import.meta.hot) {
 
       Object.assign(window.__remixRouteModules, newRouteModules);
       // Create new routes
-      let routes = createClientRoutes(
-        newManifest.routes,
+      let routes = createClientRoutesWithHMRRevalidationOptOut(
+        needsRevalidation,
+        assetsManifest.routes,
         window.__remixRouteModules,
         window.__remixContext.future
       );
@@ -108,21 +124,19 @@ if (import.meta && import.meta.hot) {
       // This is temporary API and will be more granular before release
       router._internalSetRoutes(routes);
 
-      if (hmrAbortController) {
-        hmrAbortController.abort();
-      }
-      hmrAbortController = new AbortController();
-      let signal = hmrAbortController.signal;
       // Wait for router to be idle before updating the manifest and route modules
       // and triggering a react-refresh
       let unsub = router.subscribe((state) => {
-        if (state.revalidation === "idle" && !signal.aborted) {
+        if (state.revalidation === "idle") {
           unsub();
-          // TODO: Handle race conditions here. Should abort if a new update
-          // comes in while we're waiting for the router to be idle.
-          Object.assign(window.__remixManifest, newManifest);
+          // Abort if a new update comes in while we're waiting for the
+          // router to be idle.
+          if (signal.aborted) return;
           // Ensure RouterProvider setState has flushed before re-rendering
-          setTimeout(() => window.$RefreshRuntime$.performReactRefresh(), 1);
+          setTimeout(() => {
+            Object.assign(window.__remixManifest, assetsManifest);
+            window.$RefreshRuntime$.performReactRefresh();
+          }, 0);
         }
       });
       router.revalidate();
