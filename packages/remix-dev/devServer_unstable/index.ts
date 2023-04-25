@@ -14,11 +14,18 @@ import * as HMR from "./hmr";
 import { warnOnce } from "../warnOnce";
 import { detectPackageManager } from "../cli/detectPackageManager";
 
+let stringifyOrigin = (o: { scheme: string; host: string; port: number }) =>
+  `${o.scheme}://${o.host}:${o.port}`;
+
 export let serve = async (
   initialConfig: RemixConfig,
   options: {
     command?: string;
-    httpPort: number;
+    httpOrigin: {
+      scheme: string;
+      host: string;
+      port: number;
+    };
     websocketPort: number;
     restart: boolean;
   }
@@ -42,7 +49,7 @@ export let serve = async (
       env: {
         NODE_ENV: "development",
         PATH: `${bin}:${process.env.PATH}`,
-        REMIX_DEV_HTTP_PORT: String(options.httpPort),
+        REMIX_DEV_HTTP_ORIGIN: stringifyOrigin(options.httpOrigin),
       },
     });
   };
@@ -54,7 +61,7 @@ export let serve = async (
         mode: "development",
         sourcemap: true,
         onWarning: warnOnce,
-        devHttpPort: options.httpPort,
+        devHttpOrigin: options.httpOrigin,
         devWebsocketPort: options.websocketPort,
       },
     },
@@ -122,8 +129,8 @@ export let serve = async (
       }
       res.sendStatus(200);
     })
-    .listen(options.httpPort, () => {
-      console.log(`dev server listening on port ${options.httpPort}`);
+    .listen(options.httpOrigin.port, () => {
+      console.log("Remix dev server ready");
     });
 
   return new Promise(() => {}).finally(async () => {
