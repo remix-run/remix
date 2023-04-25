@@ -21,7 +21,7 @@ export const unsign: UnsignFunction = async (
 const ALGORITHM_NAME = "aes-256-gcm";
 const ALGORITHM_NONCE_SIZE = 16;
 const ALGORITHM_TAG_SIZE = 16;
-const ALGORITHM_KEY_SIZE = 16;
+const ALGORITHM_KEY_SIZE = 32;
 
 export function key(encryption_key: string) {
   return Buffer.from(
@@ -32,7 +32,7 @@ export function key(encryption_key: string) {
       `build better web`,
       ALGORITHM_KEY_SIZE
     )
-  ).toString("hex");
+  );
 }
 
 export const encrypt: EncryptFunction = async (

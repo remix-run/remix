@@ -5,9 +5,14 @@ import {
   createSessionStorageFactory,
 } from "@remix-run/server-runtime";
 
-import { sign, unsign } from "./crypto";
+import { sign, unsign, encrypt, decrypt } from "./crypto";
 
-export const createCookie = createCookieFactory({ sign, unsign });
+export const createCookie = createCookieFactory({
+  sign,
+  unsign,
+  encrypt,
+  decrypt,
+});
 export const createCookieSessionStorage =
   createCookieSessionStorageFactory(createCookie);
 export const createSessionStorage = createSessionStorageFactory(createCookie);
