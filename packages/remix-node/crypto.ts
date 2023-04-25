@@ -63,7 +63,11 @@ export const decrypt: DecryptFunction = async (
     let tag = buff.subarray(ciphertext.length + ALGORITHM_NONCE_SIZE);
 
     // Create the cipher instance.
-    let cipher = crypto.createDecipheriv(ALGORITHM_NAME, key(encryption_key), iv);
+    let cipher = crypto.createDecipheriv(
+      ALGORITHM_NAME,
+      key(encryption_key),
+      iv
+    );
 
     // Decrypt and return result.
     cipher.setAuthTag(tag);
