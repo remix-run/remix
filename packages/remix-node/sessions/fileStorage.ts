@@ -61,7 +61,7 @@ export function createFileSessionStorage<Data = SessionData, FlashData = Data>({
     },
     async readData(id) {
       try {
-        let file = getFile(dir, id);
+        let file = getFile(dir, `${id}`);
         let content = JSON.parse(await fsp.readFile(file, "utf-8"));
         let data = content.data;
         let expires =
@@ -108,5 +108,5 @@ function getFile(dir: string, id: string): string {
   // (remaining 6 bytes) to reduce the chance of having very large directories,
   // which should speed up file access. This is a maximum of 2^16 directories,
   // each with 2^48 files.
-  return path.join(dir, id.slice(0, 4), id.slice(4));
+  return path.join(dir, id?.slice(0, 4), id?.slice(4));
 }

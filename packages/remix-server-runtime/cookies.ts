@@ -1,7 +1,12 @@
 import type { CookieParseOptions, CookieSerializeOptions } from "cookie";
 import { parse, serialize } from "cookie";
 
-import type { SignFunction, UnsignFunction } from "./crypto";
+import type {
+  DecryptFunction,
+  EncryptFunction,
+  SignFunction,
+  UnsignFunction,
+} from "./crypto";
 import { warnOnce } from "./warnings";
 
 export type { CookieParseOptions, CookieSerializeOptions };
@@ -16,6 +21,8 @@ export interface CookieSignatureOptions {
    * cookies that were signed with older secrets still work.
    */
   secrets?: string[];
+
+  encryptionKey?: string;
 }
 
 export type CookieOptions = CookieParseOptions &
@@ -81,12 +88,20 @@ export const createCookieFactory =
   ({
     sign,
     unsign,
+    encrypt,
+    decrypt,
   }: {
     sign: SignFunction;
     unsign: UnsignFunction;
+    encrypt?: EncryptFunction;
+    decrypt?: DecryptFunction;
   }): CreateCookieFunction =>
   (name, cookieOptions = {}) => {
-    let { secrets = [], ...options } = {
+    let {
+      secrets = [],
+      encryptionKey,
+      ...options
+    } = {
       path: "/",
       sameSite: "lax" as const,
       ...cookieOptions,
@@ -113,13 +128,27 @@ export const createCookieFactory =
         return name in cookies
           ? cookies[name] === ""
             ? ""
-            : await decodeCookieValue(unsign, cookies[name], secrets)
+            : await decodeCookieValue(
+                unsign,
+                cookies[name],
+                secrets,
+                decrypt,
+                encryptionKey
+              )
           : null;
       },
       async serialize(value, serializeOptions) {
         return serialize(
           name,
-          value === "" ? "" : await encodeCookieValue(sign, value, secrets),
+          value === ""
+            ? ""
+            : await encodeCookieValue(
+                sign,
+                value,
+                secrets,
+                encrypt,
+                encryptionKey
+              ),
           {
             ...options,
             ...serializeOptions,
@@ -149,9 +178,15 @@ export const isCookie: IsCookieFunction = (object): object is Cookie => {
 async function encodeCookieValue(
   sign: SignFunction,
   value: any,
-  secrets: string[]
+  secrets: string[],
+  encrypt?: EncryptFunction,
+  encryptionKey?: string
 ): Promise<string> {
   let encoded = encodeData(value);
+
+  if (encryptionKey && encrypt) {
+    encoded = await encrypt(encoded, encryptionKey);
+  }
 
   if (secrets.length > 0) {
     encoded = await sign(encoded, secrets[0]);
@@ -163,20 +198,34 @@ async function encodeCookieValue(
 async function decodeCookieValue(
   unsign: UnsignFunction,
   value: string,
-  secrets: string[]
+  secrets: string[],
+  decrypt?: DecryptFunction,
+  decryptionKey?: string
 ): Promise<any> {
+  let tryDecrypt = async (cipher: string) => {
+    let decrypted = cipher;
+    if (decryptionKey && decrypt) {
+      let payload = await decrypt(cipher, decryptionKey);
+      if (payload) {
+        decrypted = payload;
+      }
+    }
+
+    return decrypted;
+  };
+
   if (secrets.length > 0) {
     for (let secret of secrets) {
       let unsignedValue = await unsign(value, secret);
       if (unsignedValue !== false) {
-        return decodeData(unsignedValue);
+        return decodeData(await tryDecrypt(unsignedValue));
       }
     }
 
     return null;
   }
 
-  return decodeData(value);
+  return decodeData(await tryDecrypt(value));
 }
 
 function encodeData(value: any): string {

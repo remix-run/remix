@@ -5,6 +5,13 @@ export type UnsignFunction = (
   secret: string
 ) => Promise<string | false>;
 
+export type EncryptFunction = (value: string, key: string) => Promise<string>;
+
+export type DecryptFunction = (
+  cookie: string,
+  key: string
+) => Promise<string | false>;
+
 // TODO: Once node v16 is available on AWS we should use the globally provided
 // webcrypto "crypto" variable and re-enable this code-path in "./cookies.ts"
 // instead of referencing the sign and unsign globals.

@@ -43,6 +43,7 @@ describe("File session storage", () => {
     expect(session.get("user")).toBe("mjackson");
 
     let setCookie = await commitSession(session);
+
     session = await getSession(
       // Tamper with the cookie...
       getCookieFromSetCookie(setCookie).slice(0, -1)
@@ -92,4 +93,39 @@ describe("File session storage", () => {
       expect(setCookie2).not.toEqual(setCookie);
     });
   });
+
+
+  it("persists encrypted session data across requests", async () => {
+    let { getSession, commitSession } = createFileSessionStorage({
+      dir,
+      cookie: { encryptionKey: 'secret_key' },
+    });
+    let session = await getSession();
+    session.set("user", "mjackson");
+    let setCookie = await commitSession(session);
+    session = await getSession(getCookieFromSetCookie(setCookie));
+
+    expect(session.get("user")).toEqual("mjackson");
+  });
+
+  it("returns an empty session for cookies that are not encrypted properly", async () => {
+    let { getSession, commitSession } = createFileSessionStorage({
+      dir,
+      cookie: { encryptionKey: 'secret_key' },
+    });
+    let session = await getSession();
+    session.set("user", "mjackson");
+
+    expect(session.get("user")).toBe("mjackson");
+
+    let setCookie = await commitSession(session);
+
+    session = await getSession(
+      // Tamper with the cookie...
+      getCookieFromSetCookie(setCookie).slice(0, -1)
+    );
+
+    expect(session.get("user")).toBeUndefined();
+  });
+
 });
