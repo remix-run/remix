@@ -46,7 +46,7 @@ For any other servers, specify the command you use to run your production server
 }
 ```
 
-## 3. Call `ping` in your app server
+## 3. Call `devReady` in your app server
 
 For example, in an Express server:
 
@@ -56,7 +56,7 @@ import path from "node:path";
 
 import express from "express";
 import { createRequestHandler } from "@remix-run/express";
-import { ping } from "@remix-run/dev";
+import { devReady } from "@remix-run/node";
 
 let BUILD_DIR = path.join(process.cwd(), "build"); // path to Remix's server build directory (`build/` by default)
 
@@ -74,9 +74,9 @@ app.listen(3000, () => {
   let build = require(BUILD_DIR);
   console.log("Ready: http://localhost:" + port);
 
-  // in development, call `ping` _after_ your server is ready
+  // in development, call `devReady` _after_ your server is ready
   if (process.env.NODE_ENV === "development") {
-    ping(build);
+    devReady(build);
   }
 });
 ```
@@ -101,7 +101,7 @@ Example:
 {
   future: {
     unstable_dev: {
-      // Port internally used by the dev server to receive app server `ping`s
+      // Port internally used by the dev server to receive app server `devReady` messages
       httpPort: 3001, // by default, Remix chooses an open port in the range 3001-3099
       // Port internally used by the dev server to send live reload, HMR, and HDR updates to the browser
       websocketPort: 3002, // by default, Remix chooses an open port in the range 3001-3099
@@ -123,10 +123,10 @@ remix dev -c 'node ./server.mjs' --http-port=3001 --websocket-port=3002 --no-res
 
 ### Dev server scheme/host/port
 
-If you've customized the dev server's origin (e.g. for Docker or SSL support), you can use the `ping` options to specify the scheme/host/port for the dev server:
+If you've customized the dev server's origin (e.g. for Docker or SSL support), you can use the `devReady` options to specify the scheme/host/port for the dev server:
 
 ```js
-ping(build, {
+devReady(build, {
   scheme: "https", // defaults to http
   host: "mycustomhost", // defaults to localhost
   port: 3003, // defaults to REMIX_DEV_HTTP_PORT environment variable
@@ -139,13 +139,13 @@ If you want to manage app server updates yourself, you can use the `--no-restart
 
 For example, if you rely on require cache purging to keep your app server running while server changes are pulled in, then you'll want to use `--no-restart`.
 
-🚨 It is then your responsibility to call `ping` whenever server changes are incorporated in your app server. 🚨
+🚨 It is then your responsibility to call `devReady` whenever server changes are incorporated in your app server. 🚨
 
 So for require cache purging, you'd want to:
 
 1. Purge the require cache
 2. `require` your server build
-3. Call `ping` within a `if (process.env.NODE_ENV === 'development')`
+3. Call `devReady` within a `if (process.env.NODE_ENV === 'development')`
 
 ([Looking at you, Kent](https://github.com/kentcdodds/kentcdodds.com/blob/main/server/index.ts#L298) 😆)
 
