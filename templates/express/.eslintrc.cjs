@@ -1,4 +1,4 @@
 /** @type {import('eslint').Linter.Config} */
-export default {
+module.exports = {
   extends: ["@remix-run/eslint-config", "@remix-run/eslint-config/node"],
 };
