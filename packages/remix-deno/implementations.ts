@@ -5,7 +5,7 @@ import {
   createSessionStorageFactory,
 } from "@remix-run/server-runtime";
 
-import { sign, unsign, encrypt, decrypt } from "./crypto.ts";
+import { decrypt, encrypt, sign, unsign } from "./crypto.ts";
 
 export const createCookie = createCookieFactory({
   sign,
@@ -13,8 +13,10 @@ export const createCookie = createCookieFactory({
   encrypt,
   decrypt,
 });
-export const createCookieSessionStorage =
-  createCookieSessionStorageFactory(createCookie);
+export const createCookieSessionStorage = createCookieSessionStorageFactory(
+  createCookie,
+);
 export const createSessionStorage = createSessionStorageFactory(createCookie);
-export const createMemorySessionStorage =
-  createMemorySessionStorageFactory(createSessionStorage);
+export const createMemorySessionStorage = createMemorySessionStorageFactory(
+  createSessionStorage,
+);
