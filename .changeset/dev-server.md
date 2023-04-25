@@ -7,6 +7,8 @@ Dev server improvements
 
 - Push-based app server syncing that doesn't rely on polling
 - App server as a managed subprocess
+- Gracefully handle new files and routes without crashing
+- Statically serve static assets to avoid fetch errors during app server reboots
 
 # Guide
 
@@ -90,10 +92,15 @@ $ npm run dev
 # Ready: http://localhost:3000
 ```
 
-Make sure you navigate to your app server's URL in the browser, in this example `http://localhost:3000`.
-Note: Any ports configured for the dev server are internal only (e.g. `--http-port` and `--websocket-port`)
+Make sure you navigate to your app server's URL in the browser, not the dev server's URL.
+In this example, that would be `http://localhost:3000`.
 
 # Configuration
+
+Most users won't need to configure the dev server, but you might need to if:
+
+- You are setting up custom origins for SSL support or for Docker networking
+- You want to handle server updates yourself (e.g. via require cache purging)
 
 Example:
 
@@ -101,10 +108,14 @@ Example:
 {
   future: {
     unstable_dev: {
-      // Port internally used by the dev server to receive app server `devReady` messages
-      httpPort: 3001, // by default, Remix chooses an open port in the range 3001-3099
-      // Port internally used by the dev server to send live reload, HMR, and HDR updates to the browser
-      websocketPort: 3002, // by default, Remix chooses an open port in the range 3001-3099
+      // HTTP(S) scheme used when sending `devReady` messages to the dev server
+      httpScheme: "https", // default: `"http"`
+      // HTTP(S) host used when sending `devReady` messages to the dev server
+      httpHost: "mycustomhost", // default: `"localhost"`
+      // HTTP(S) port internally used by the dev server to statically serve built assets and to receive app server `devReady` messages
+      httpPort: 8001, // default: Remix chooses an open port in the range 3001-3099
+      // Websocket port internally used by the dev server for sending updates to the browser (Live reload, HMR, HDR)
+      websocketPort: 8002, // default: Remix chooses an open port in the range 3001-3099
       // Whether the app server should be restarted when app is rebuilt
       // See `Advanced > restart` for more
       restart: false, // default: `true`
@@ -113,25 +124,13 @@ Example:
 }
 ```
 
-You can also configure via flags:
+You can also configure via flags. For example:
 
 ```sh
 remix dev -c 'node ./server.mjs' --http-port=3001 --websocket-port=3002 --no-restart
 ```
 
-## Advanced
-
-### Dev server scheme/host/port
-
-If you've customized the dev server's origin (e.g. for Docker or SSL support), you can use the `devReady` options to specify the scheme/host/port for the dev server:
-
-```js
-devReady(build, {
-  scheme: "https", // defaults to http
-  host: "mycustomhost", // defaults to localhost
-  port: 3003, // defaults to REMIX_DEV_HTTP_PORT environment variable
-});
-```
+See `remix dev --help` for more details.
 
 ### restart
 
@@ -151,7 +150,8 @@ So for require cache purging, you'd want to:
 
 ---
 
-The ultimate solution here would be to implement _server-side_ HMR (not to be confused with the more popular client-side HMR).
+The ultimate solution for `--no-restart` would be for you to implement _server-side_ HMR for your app server.
+Note: server-side HMR is not to be confused with the client-side HMR provided by Remix.
 Then your app server could continuously update itself with new build with 0 downtime and without losing in-memory data that wasn't affected by the server changes.
 
-That's left as an exercise to the reader.
+This is left as an exercise to the reader.
