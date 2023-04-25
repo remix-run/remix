@@ -156,6 +156,48 @@ export async function loader({ request }: LoaderArgs) {
 }
 ```
 
+
+## Encrypting cookies
+
+It is possible to encrypt a cookie to automatically verify its contents when it is received. Since it's relatively easy to read even signed cookie, this is a good idea to carry sensitive data in cookie, like authentication information (see [sessions][sessions]).
+
+To encrypt a cookie, provide `encryption_key` when you first create the cookie:
+We use HKDF to derive encryption key so providing HASH is not recommended to avoid collisions best is to provide any text or hex you like can be random and we will handle key-size matching
+
+```js
+const cookie = createCookie("user-prefs", {
+  encryption_key: "my_encryption_secret",
+});
+```
+
+Cookies that have `encryption_key` will be stored and verified in a way that ensures the cookie's integrity and only server side readability.
+
+Secrets wont be rotated since we use AES-GCM. Cookies that have been encrypted with old encryption_key ****_will not_**** be decoded successfully in `cookie.parse()`, but it will be re-encrypted outgoing cookies created in `cookie.serialize()`.
+
+```ts filename=app/cookies.ts
+export const cookie = createCookie("user-prefs", {
+  secrets: ["n3wsecr3t", "olds3cret"],
+  encryption_key: "my_encryption_secret", //  can be used with signing
+});
+```
+
+```tsx filename=app/routes/route.tsx
+import { cookie } from "~/cookies";
+
+export async function loader({ request }: LoaderArgs) {
+  const oldCookie = request.headers.get("Cookie");
+  // oldCookie may have been signed with "olds3cret", but still parses ok
+  const value = await cookie.parse(oldCookie);
+
+  new Response("...", {
+    headers: {
+      // Set-Cookie is signed with "n3wsecr3t"
+      "Set-Cookie": await cookie.serialize(value),
+    },
+  });
+}
+```
+
 ## `createCookie`
 
 Creates a logical container for managing a browser cookie from the server.
