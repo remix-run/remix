@@ -176,9 +176,13 @@ export async function build(
     sourcemap,
     onWarning: warnOnce,
   };
-  if (config.future.unstable_dev) {
-    let dev = await resolveDev(config);
-    options.devHttpOrigin = dev.httpOrigin;
+  if (mode === "development" && config.future.unstable_dev) {
+    let dev = await resolveDevBuild(config);
+    options.devHttpOrigin = {
+      scheme: dev.httpScheme,
+      host: dev.httpHost,
+      port: dev.httpPort,
+    };
     options.devWebsocketPort = dev.websocketPort;
   }
 
@@ -238,7 +242,7 @@ export async function dev(
     return await new Promise(() => {});
   }
 
-  await devServer_unstable.serve(config, await resolveDev(config, flags));
+  await devServer_unstable.serve(config, await resolveDevServe(config, flags));
 }
 
 export async function codemod(
@@ -467,28 +471,63 @@ let parseMode = (
 
 let findPort = async () => getPort({ port: makeRange(3001, 3100) });
 
-let resolveDev = async (
-  config: RemixConfig,
-  flags: {
-    command?: string;
-    httpScheme?: string;
-    httpHost?: string;
-    httpPort?: number;
-    restart?: boolean;
-    websocketPort?: number;
-  } = {}
-): Promise<{
-  command?: string;
-  httpOrigin: {
-    scheme: string;
-    host: string;
-    port: number;
-  };
-  restart: boolean;
+type DevBuildFlags = {
+  httpScheme: string;
+  httpHost: string;
+  httpPort: number;
   websocketPort: number;
-}> => {
+};
+let resolveDevBuild = async (
+  config: RemixConfig,
+  flags: Partial<DevBuildFlags> = {}
+): Promise<DevBuildFlags> => {
+  let dev = config.future.unstable_dev;
+  if (dev === false) throw Error("This should never happen");
+
+  // prettier-ignore
+  let httpScheme =
+    flags.httpScheme ??
+    (dev === true ? undefined : dev.httpScheme) ??
+    "http";
+  // prettier-ignore
+  let httpHost =
+    flags.httpHost ??
+    (dev === true ? undefined : dev.httpHost) ??
+    "localhost";
+  // prettier-ignore
+  let httpPort =
+    flags.httpPort ??
+    (dev === true ? undefined : dev.httpPort) ??
+    (await findPort());
+  // prettier-ignore
+  let websocketPort =
+    flags.websocketPort ??
+    (dev === true ? undefined : dev.websocketPort) ??
+    (await findPort());
+
+  return {
+    httpScheme,
+    httpHost,
+    httpPort,
+    websocketPort,
+  };
+};
+
+type DevServeFlags = DevBuildFlags & {
+  command: string;
+  restart: boolean;
+};
+let resolveDevServe = async (
+  config: RemixConfig,
+  flags: Partial<DevServeFlags> = {}
+): Promise<DevServeFlags> => {
   let dev = config.future.unstable_dev;
   if (dev === false) throw Error("Cannot resolve dev options");
+
+  let { httpScheme, httpHost, httpPort, websocketPort } = await resolveDevBuild(
+    config,
+    flags
+  );
 
   // prettier-ignore
   let command =
@@ -513,36 +552,14 @@ let resolveDev = async (
       process.exit(1);
     }
   }
-  // prettier-ignore
-  let httpScheme =
-    flags.httpScheme ??
-    (dev === true ? undefined : dev.httpScheme) ??
-    "http";
-  // prettier-ignore
-  let httpHost =
-    flags.httpHost ??
-    (dev === true ? undefined : dev.httpHost) ??
-    "localhost";
-  // prettier-ignore
-  let httpPort =
-    flags.httpPort ??
-    (dev === true ? undefined : dev.httpPort) ??
-    (await findPort());
-  // prettier-ignore
-  let websocketPort =
-    flags.websocketPort ??
-    (dev === true ? undefined : dev.websocketPort) ??
-    (await findPort());
   let restart =
     flags.restart ?? (dev === true ? undefined : dev.restart) ?? true;
 
   return {
     command,
-    httpOrigin: {
-      scheme: httpScheme,
-      host: httpHost,
-      port: httpPort,
-    },
+    httpScheme,
+    httpHost,
+    httpPort,
     websocketPort,
     restart,
   };
