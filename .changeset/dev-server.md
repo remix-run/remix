@@ -26,7 +26,6 @@ Enable `unstable_dev` in `remix.config.js`:
 
 ## 2. Update `package.json` scripts
 
-
 For Remix app server:
 
 ```json
