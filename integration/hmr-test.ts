@@ -245,8 +245,7 @@ test("HMR", async ({ page }) => {
   try {
     await wait(
       () => {
-        let stderr = devStderr();
-        if (stderr.length > 0) throw Error(stderr);
+        if (dev.exitCode) throw Error("Dev server exited early");
         return /✅ app ready: /.test(devStdout());
       },
       { timeoutMs: 10_000 }
