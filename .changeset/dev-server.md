@@ -26,24 +26,23 @@ Enable `unstable_dev` in `remix.config.js`:
 
 ## 2. Update `package.json` scripts
 
-Specify the command to run your app server with the `-c`/`--command` flag:
 
 For Remix app server:
 
 ```json
 {
   "scripts": {
-    "dev": "NODE_ENV=development remix dev -c 'node_modules/.bin/remix-serve build'"
+    "dev": "remix dev"
   }
 }
 ```
 
-For any other servers, specify the command you use to run your production server.
+For any other servers, specify the command to run your app server with the `-c`/`--command` flag:
 
 ```json
 {
   "scripts": {
-    "dev": "NODE_ENV=development remix dev -c 'node ./server.js'"
+    "dev": "remix dev -c 'node ./server.js'"
   }
 }
 ```
@@ -102,12 +101,12 @@ Most users won't need to configure the dev server, but you might need to if:
 - You are setting up custom origins for SSL support or for Docker networking
 - You want to handle server updates yourself (e.g. via require cache purging)
 
-Example:
-
 ```js
 {
   future: {
     unstable_dev: {
+      // Command to run your app server
+      command: "wrangler", // default: `remix-serve ./build`
       // HTTP(S) scheme used when sending `devReady` messages to the dev server
       httpScheme: "https", // default: `"http"`
       // HTTP(S) host used when sending `devReady` messages to the dev server
@@ -127,7 +126,7 @@ Example:
 You can also configure via flags. For example:
 
 ```sh
-remix dev -c 'node ./server.mjs' --http-port=3001 --websocket-port=3002 --no-restart
+remix dev -c 'nodemon ./server.mjs' --http-port=3001 --websocket-port=3002 --no-restart
 ```
 
 See `remix dev --help` for more details.
