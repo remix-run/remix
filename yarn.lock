@@ -2467,10 +2467,10 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/router@1.5.0":
-  version "1.5.0"
-  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.5.0.tgz#57618e57942a5f0131374a9fdb0167e25a117fdc"
-  integrity sha512-bkUDCp8o1MvFO+qxkODcbhSqRa6P2GXgrGZVpt0dCXNW2HCSCqYI0ZoAqEOSAjRWmmlKcYgFvN4B4S+zo/f8kg==
+"@remix-run/router@1.6.0-pre.0":
+  version "1.6.0-pre.0"
+  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.6.0-pre.0.tgz#feaf7da8fc2f2ed1c764b82925867c154291f1a4"
+  integrity sha512-5NxLiXhnnAItn69LXumQvonUMMp58DaqF+IOuMLGm9gwkqi5M6Lejn1kUcR1MZeyhbBAqYAWws/ZAkyz89cfjg==
 
 "@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
@@ -3331,11 +3331,6 @@
   version "2.0.6"
   resolved "https://registry.npmjs.org/@types/unist/-/unist-2.0.6.tgz"
   integrity sha512-PBjIUxZHOuj0R15/xuwJYjFi+KZdNFrehocChv4g5hu6aFroHue8m0lBP0POdK2nKzbw0cgV1mws8+V/JAcEkQ==
-
-"@types/use-sync-external-store@^0.0.3":
-  version "0.0.3"
-  resolved "https://registry.npmjs.org/@types/use-sync-external-store/-/use-sync-external-store-0.0.3.tgz"
-  integrity sha512-EwmlvuaxPNej9+T4v5AuBPJa2x2UOJVdjCtDHgcDqitUeOtjnJKJ+apYjVcAoBEMjKW1VVFGZLUb5+qqa09XFA==
 
 "@types/ws@^7.4.1":
   version "7.4.7"
@@ -11193,20 +11188,20 @@ react-refresh@^0.14.0:
   resolved "https://registry.npmjs.org/react-refresh/-/react-refresh-0.14.0.tgz"
   integrity sha512-wViHqhAd8OHeLS/IRMJjTSDHF3U9eWi62F/MledQGPdJGDhodXJ9PBLNGr6WWL7qlH12Mt3TyTpbS+hGXMjCzQ==
 
-react-router-dom@6.10.0:
-  version "6.10.0"
-  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.10.0.tgz#090ddc5c84dc41b583ce08468c4007c84245f61f"
-  integrity sha512-E5dfxRPuXKJqzwSe/qGcqdwa18QiWC6f3H3cWXM24qj4N0/beCIf/CWTipop2xm7mR0RCS99NnaqPNjHtrAzCg==
+react-router-dom@6.11.0-pre.1:
+  version "6.11.0-pre.1"
+  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.11.0-pre.1.tgz#66e076c2777108b2bac1729e33bde9161a8e83f5"
+  integrity sha512-EEdmUk06pGPrjU87mFxKlQQMc5a/RIMA2gEwnmdAyIHdo/FAWGb917yOEDIh4pnv/wH0eSX0Wgsnuua9/k6X+g==
   dependencies:
-    "@remix-run/router" "1.5.0"
-    react-router "6.10.0"
+    "@remix-run/router" "1.6.0-pre.0"
+    react-router "6.11.0-pre.1"
 
-react-router@6.10.0:
-  version "6.10.0"
-  resolved "https://registry.npmjs.org/react-router/-/react-router-6.10.0.tgz#230f824fde9dd0270781b5cb497912de32c0a971"
-  integrity sha512-Nrg0BWpQqrC3ZFFkyewrflCud9dio9ME3ojHCF/WLsprJVzkq3q3UeEhMCAW1dobjeGbWgjNn/PVF6m46ANxXQ==
+react-router@6.11.0-pre.1:
+  version "6.11.0-pre.1"
+  resolved "https://registry.npmjs.org/react-router/-/react-router-6.11.0-pre.1.tgz#cbeade3bec425aab45e0a49060c7735ba98a8bbb"
+  integrity sha512-CBOpqUysQxG598u9I0ngzoXXxMXYDEkBW6sSL9O1xyFJg3dYa0ytaVlKap9QAKOYsYTiMlkMiAGFKbyp81ErHA==
   dependencies:
-    "@remix-run/router" "1.5.0"
+    "@remix-run/router" "1.6.0-pre.0"
 
 react@^18.2.0:
   version "18.2.0"
@@ -13123,11 +13118,6 @@ uri-js@^4.2.2:
   integrity sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==
   dependencies:
     punycode "^2.1.0"
-
-use-sync-external-store@1.2.0:
-  version "1.2.0"
-  resolved "https://registry.npmjs.org/use-sync-external-store/-/use-sync-external-store-1.2.0.tgz"
-  integrity sha512-eEgnFxGQ1Ife9bzYs6VLi8/4X6CObHMw9Qr9tPY43iKwsPw8xE8+EFsf/2cFZ5S3esXgpWgtSCtLNS41F+sKPA==
 
 util-deprecate@^1.0.1, util-deprecate@^1.0.2, util-deprecate@~1.0.1:
   version "1.0.2"
