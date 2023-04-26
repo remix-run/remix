@@ -48,7 +48,10 @@ Let's start by creating two new files:
 ```tsx filename=app/entry.server.tsx
 import { PassThrough } from "stream";
 
-import type { EntryContext } from "@remix-run/node";
+import type {
+  AppLoadContext,
+  EntryContext,
+} from "@remix-run/node";
 import { Response } from "@remix-run/node";
 import { RemixServer } from "@remix-run/react";
 import isbot from "isbot";
@@ -60,7 +63,8 @@ export default function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
-  remixContext: EntryContext
+  remixContext: EntryContext,
+  loadContext: AppLoadContext
 ) {
   return isbot(request.headers.get("user-agent"))
     ? handleBotRequest(

@@ -91,8 +91,11 @@ All that said, you can avoid this entire problem by _not defining headers in par
 
 Note that you can also add headers in your `entry.server` file for things that should be global, for example:
 
-```tsx lines=[16]
-import type { EntryContext } from "@remix-run/node"; // or cloudflare/deno
+```tsx lines=[20]
+import type {
+  AppLoadContext,
+  EntryContext,
+} from "@remix-run/node"; // or cloudflare/deno
 import { RemixServer } from "@remix-run/react";
 import { renderToString } from "react-dom/server";
 
@@ -100,7 +103,8 @@ export default function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
-  remixContext: EntryContext
+  remixContext: EntryContext,
+  loadContext: AppLoadContext
 ) {
   const markup = renderToString(
     <RemixServer context={remixContext} url={request.url} />
