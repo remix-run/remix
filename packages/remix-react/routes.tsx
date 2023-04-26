@@ -151,8 +151,8 @@ export function createClientRoutes(
       // handle gets added in via useMatches since we aren't guaranteed to
       // have the route module available here
       handle: undefined,
-      loader: createLoaderFunction(route, routeModulesCache),
-      action: createActionFunction(route, routeModulesCache),
+      loader: createDataFunction(route, routeModulesCache, false),
+      action: createDataFunction(route, routeModulesCache, true),
       shouldRevalidate: createShouldRevalidate(
         route,
         routeModulesCache,
@@ -209,72 +209,50 @@ async function loadRouteModuleWithBlockingLinks(
   return routeModule;
 }
 
-function createLoaderFunction(
+function createDataFunction(
   route: EntryRoute,
-  routeModules: RouteModules
-): LoaderFunction {
+  routeModules: RouteModules,
+  isAction: boolean
+): LoaderFunction | ActionFunction {
   return async ({ request }) => {
     let routeModulePromise = loadRouteModuleWithBlockingLinks(
       route,
       routeModules
     );
     try {
-      if (!route.hasLoader) {
-        return null;
-      }
-      let result = await fetchAndProcessResult(request, route.id);
-      return result;
-    } finally {
-      await routeModulePromise;
-    }
-  };
-}
-
-function createActionFunction(
-  route: EntryRoute,
-  routeModules: RouteModules
-): ActionFunction {
-  return async ({ request }) => {
-    let routeModulePromise = loadRouteModuleWithBlockingLinks(
-      route,
-      routeModules
-    );
-    try {
-      if (!route.hasAction) {
+      if (isAction && !route.hasAction) {
         let msg =
           `Route "${route.id}" does not have an action, but you are trying ` +
           `to submit to it. To fix this, please add an \`action\` function to the route`;
         console.error(msg);
         throw new Error(msg);
+      } else if (!isAction && !route.hasLoader) {
+        return null;
       }
-      let result = await fetchAndProcessResult(request, route.id);
+
+      let result = await fetchData(request, route.id);
+
+      if (result instanceof Error) {
+        throw result;
+      }
+
+      if (isRedirectResponse(result)) {
+        throw getRedirect(result);
+      }
+
+      if (isCatchResponse(result)) {
+        throw result;
+      }
+
+      if (isDeferredResponse(result) && result.body) {
+        return await parseDeferredReadableStream(result.body);
+      }
+
       return result;
     } finally {
       await routeModulePromise;
     }
   };
-}
-
-async function fetchAndProcessResult(request: Request, routeId: string) {
-  let result = await fetchData(request, routeId);
-
-  if (result instanceof Error) {
-    throw result;
-  }
-
-  if (isRedirectResponse(result)) {
-    throw getRedirect(result);
-  }
-
-  if (isCatchResponse(result)) {
-    throw result;
-  }
-
-  if (isDeferredResponse(result) && result.body) {
-    return await parseDeferredReadableStream(result.body);
-  }
-
-  return result;
 }
 
 function getRedirect(response: Response): Response {
