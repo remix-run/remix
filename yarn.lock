@@ -2467,10 +2467,10 @@
     "@changesets/types" "^5.0.0"
     dotenv "^8.1.0"
 
-"@remix-run/router@0.0.0-experimental-f92aa2e1":
-  version "0.0.0-experimental-f92aa2e1"
-  resolved "https://registry.npmjs.org/@remix-run/router/-/router-0.0.0-experimental-f92aa2e1.tgz#9a363362e0a9dcb27cde0af3338a1dbb5a3cfd6e"
-  integrity sha512-YiSq87j1MCpefY5F1oUfM4kAGD9rXi3eqxUrNhf5KMEwH/19ngNV5Ak9eOxo4lsIKyz5qB0mHcqBkKIjAsd+Rg==
+"@remix-run/router@1.6.0-pre.0":
+  version "1.6.0-pre.0"
+  resolved "https://registry.npmjs.org/@remix-run/router/-/router-1.6.0-pre.0.tgz#feaf7da8fc2f2ed1c764b82925867c154291f1a4"
+  integrity sha512-5NxLiXhnnAItn69LXumQvonUMMp58DaqF+IOuMLGm9gwkqi5M6Lejn1kUcR1MZeyhbBAqYAWws/ZAkyz89cfjg==
 
 "@remix-run/web-blob@^3.0.3", "@remix-run/web-blob@^3.0.4":
   version "3.0.4"
@@ -11188,20 +11188,20 @@ react-refresh@^0.14.0:
   resolved "https://registry.npmjs.org/react-refresh/-/react-refresh-0.14.0.tgz"
   integrity sha512-wViHqhAd8OHeLS/IRMJjTSDHF3U9eWi62F/MledQGPdJGDhodXJ9PBLNGr6WWL7qlH12Mt3TyTpbS+hGXMjCzQ==
 
-react-router-dom@0.0.0-experimental-f92aa2e1:
-  version "0.0.0-experimental-f92aa2e1"
-  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-0.0.0-experimental-f92aa2e1.tgz#732faa96ddf845471ca9b8d246b4d48fdc7ddc98"
-  integrity sha512-hVY4YaFiAmfRvRZfU57Bu4TRODREPnyIctZgu7HflHy/ISY5KCVchcDthaRpfCdlRHzQ1jyYw4K/Fk9JGqATsw==
+react-router-dom@6.11.0-pre.1:
+  version "6.11.0-pre.1"
+  resolved "https://registry.npmjs.org/react-router-dom/-/react-router-dom-6.11.0-pre.1.tgz#66e076c2777108b2bac1729e33bde9161a8e83f5"
+  integrity sha512-EEdmUk06pGPrjU87mFxKlQQMc5a/RIMA2gEwnmdAyIHdo/FAWGb917yOEDIh4pnv/wH0eSX0Wgsnuua9/k6X+g==
   dependencies:
-    "@remix-run/router" "0.0.0-experimental-f92aa2e1"
-    react-router "0.0.0-experimental-f92aa2e1"
+    "@remix-run/router" "1.6.0-pre.0"
+    react-router "6.11.0-pre.1"
 
-react-router@0.0.0-experimental-f92aa2e1:
-  version "0.0.0-experimental-f92aa2e1"
-  resolved "https://registry.npmjs.org/react-router/-/react-router-0.0.0-experimental-f92aa2e1.tgz#96d6432c96b6d65a58cb8b19cb15b97c1814745e"
-  integrity sha512-hiMlFq3WChMaMmP5i6IBdmTu10lH+4z5nDdtNpM1wBKFth839hFG5PYGkQRVAT2xwgVIS5DbafUqoXDYvyShaQ==
+react-router@6.11.0-pre.1:
+  version "6.11.0-pre.1"
+  resolved "https://registry.npmjs.org/react-router/-/react-router-6.11.0-pre.1.tgz#cbeade3bec425aab45e0a49060c7735ba98a8bbb"
+  integrity sha512-CBOpqUysQxG598u9I0ngzoXXxMXYDEkBW6sSL9O1xyFJg3dYa0ytaVlKap9QAKOYsYTiMlkMiAGFKbyp81ErHA==
   dependencies:
-    "@remix-run/router" "0.0.0-experimental-f92aa2e1"
+    "@remix-run/router" "1.6.0-pre.0"
 
 react@^18.2.0:
   version "18.2.0"
