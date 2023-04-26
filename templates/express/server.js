@@ -35,7 +35,7 @@ app.listen(port, async () => {
   console.log(`✅ Express server listening on port ${port}`);
 
   if (process.env.NODE_ENV === "development") {
-    const { broadcastDevReady } = await import("@remix-run/node");
-    broadcastDevReady(build);
+    const { devReady } = await import("@remix-run/node");
+    devReady(build);
   }
 });
