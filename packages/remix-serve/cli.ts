@@ -33,7 +33,10 @@ let onListen = () => {
       `Remix App Server started at http://localhost:${port} (http://${address}:${port})`
     );
   }
-  if (process.env.NODE_ENV === "development") {
+  if (
+    build.future?.unstable_dev !== false &&
+    process.env.NODE_ENV === "development"
+  ) {
     devReady(build);
   }
 };
