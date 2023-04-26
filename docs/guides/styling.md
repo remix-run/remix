@@ -52,15 +52,15 @@ export function links() {
 }
 ```
 
+Remix also has built-in support for the following:
+
+- [Tailwind][tailwind-2]
+- [PostCSS][post-css]
+- [CSS Modules][css-modules]
+- [Vanilla Extract][vanilla-extract-3]
+- [CSS side-effect imports][css-side-effect-imports-2]
+
 ## CSS Ecosystem and Performance
-
-<docs-info>We are still researching how best to support, and be supported by, the various styling libraries without sacrificing the user's network tab or creating a maintenance burden for Remix.</docs-info>
-
-In today's ecosystem there are dozens of approaches and frameworks for styling. Remix supports many of them out of the box, but the frameworks that require direct integration with our compiler and expect Remix to automatically inject styles onto the page don't work right now.
-
-We recognize that not being able to use your favorite CSS framework is a bummer. If yours isn't supported right now, we hope you'll find some of the approaches in this document equally as productive. We also recognize that supporting a variety of tools is critical for migration paths to Remix.
-
-Here's some background on where we're at.
 
 In general, stylesheets added to the page with `<link>` tend to provide the best user experience:
 
@@ -71,11 +71,7 @@ In general, stylesheets added to the page with `<link>` tend to provide the best
 - Changes to components don't break the cache for the styles
 - Changes to the styles don't break the cache for the JavaScript
 
-Therefore, CSS support in Remix boils down to one thing: it needs to create a CSS file you can add to the page with `<link rel="stylesheet">`. This seems like a reasonable request of a CSS framework--to generate a CSS file. Remix isn't against the frameworks that can't do this, it's just too early for us to add extension points to the compiler. Additionally, adding support directly inside of Remix is not tenable with the vast number of libraries out there.
-
 Remix also supports "runtime" frameworks like styled components where styles are evaluated at runtime but don't require any kind of bundler integration--though we would prefer your stylesheets had a URL instead of being injected into style tags.
-
-All this is to say that **we're still researching how best to integrate and work with the frameworks that require compiler integration**. With Remix's unique ability to prefetch, add, and remove CSS for partial UI on the page, we anticipate CSS frameworks will have some new ideas on how to support building actual CSS files to better support Remix and the performance of websites using them.
 
 The two most popular approaches in the Remix community are route-based stylesheets and [Tailwind][tailwind]. Both have exceptional performance characteristics. In this document, we'll show how to use these two approaches as well as a few more.
 
@@ -531,7 +527,7 @@ module.exports = (ctx) => {
 
 You can use CSS preprocessors like LESS and SASS. Doing so requires running an additional build process to convert these files to CSS files. This can be done via the command line tools provided by the preprocessor or any equivalent tool.
 
-Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export][route-module-links] function, just like any other CSS file in Remix.
+Once converted to CSS by the preprocessor, the generated CSS files can be imported into your components via the [Route Module `links` export][route-module-links] function, or included via [side-effect imports][css-side-effect-imports] when using [CSS bundling][css-bundling], just like any other CSS file in Remix.
 
 To ease development with CSS preprocessors you can add npm scripts to your `package.json` that generate CSS files from your SASS or LESS files. These scripts can be run in parallel alongside any other npm scripts that you run for developing a Remix application.
 
@@ -814,3 +810,9 @@ module.exports = {
 [sprinkles]: https://vanilla-extract.style/documentation/packages/sprinkles
 [built-in-post-css-support]: #postcss
 [vanilla-extract-2]: #vanilla-extract
+[css-side-effect-imports]: #css-side-effect-imports
+[tailwind-2]: #tailwind
+[post-css]: #postcss
+[css-modules]: #css-modules
+[vanilla-extract-3]: #vanilla-extract
+[css-side-effect-imports-2]: #css-side-effect-imports
