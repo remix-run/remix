@@ -152,7 +152,18 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
       };
     }
 
-    router = createBrowserRouter(routes, { hydrationData });
+    router = createBrowserRouter(routes, {
+      hydrationData,
+      future: {
+        // Pass through the Remix future flag to avoid a v1 breaking change in
+        // useNavigation() - users can control the casing via the flag in v1.
+        // useFetcher still always uppercases in the back-compat layer in v1.
+        // In v2 we can just always pass true here and remove the back-compat
+        // layer
+        v7_normalizeFormMethod:
+          window.__remixContext.future.v2_normalizeFormMethod,
+      },
+    });
   }
 
   // We need to include a wrapper RemixErrorBoundary here in case the root error

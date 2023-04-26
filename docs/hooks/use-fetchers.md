@@ -27,14 +27,14 @@ For example, imagine a UI where the sidebar lists projects, and the main view di
 +-----------------+----------------------------┘
 ```
 
-When the user clicks a checkbox, the submission goes to the action to change the state of the task. Instead of creating a "loading state" we want to create an "optimistic UI" that will **immediately** update the checkbox to appear checked even though the server hasn't processed it yet. In the checkbox component, we can use `fetcher.submission`:
+When the user clicks a checkbox, the submission goes to the action to change the state of the task. Instead of creating a "loading state" we want to create an "optimistic UI" that will **immediately** update the checkbox to appear checked even though the server hasn't processed it yet. In the checkbox component, we can use `fetcher.formData`:
 
 ```tsx
 function Task({ task }) {
   const toggle = useFetcher();
-  const checked = toggle.submission
+  const checked = toggle.formData
     ? // use the optimistic version
-      Boolean(toggle.submission.formData.get("complete"))
+      Boolean(toggle.formData.get("complete"))
     : // use the normal version
       task.complete;
 
@@ -81,12 +81,12 @@ This is where `useFetchers` comes in. Up in the sidebar, we can access all the i
 The strategy has three steps:
 
 1. Find the submissions for tasks in a specific project
-2. Use the `fetcher.submission.formData` to immediately update the count
+2. Use the `fetcher.formData` to immediately update the count
 3. Use the normal task's state if it's not inflight
 
 Here's some sample code:
 
-```js
+```tsx
 function ProjectTaskCount({ project }) {
   const fetchers = useFetchers();
   let completedTasks = 0;
@@ -95,15 +95,15 @@ function ProjectTaskCount({ project }) {
   const myFetchers = new Map();
   for (const f of fetchers) {
     if (
-      f.submission &&
-      f.submission.action.startsWith(
+      f.formAction &&
+      f.formAction.startsWith(
         `/projects/${project.id}/task`
       )
     ) {
-      const taskId = f.submission.formData.get("id");
+      const taskId = f.formData.get("id");
       myFetchers.set(
         parseInt(taskId),
-        f.submission.formData.get("complete") === "on"
+        f.formData.get("complete") === "on"
       );
     }
   }

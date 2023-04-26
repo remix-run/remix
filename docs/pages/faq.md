@@ -68,7 +68,7 @@ export async function loader({ request }: LoaderArgs) {
 
 In HTML, forms can post to any URL with the action prop and the app will navigate there:
 
-```jsx
+```tsx
 <Form action="/some/where" />
 ```
 
@@ -138,7 +138,7 @@ If you're used to doing fetches with a content type of `application/json`, you m
 
 If you're wanting to send structured data simply to post arrays, you can use the same key on multiple inputs:
 
-```jsx
+```tsx
 <Form method="post">
   <p>Select the categories for this video:</p>
   <label>
