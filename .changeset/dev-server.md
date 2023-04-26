@@ -12,8 +12,6 @@ Dev server improvements
 
 # Guide
 
-## 1. Enable new dev server
-
 Enable `unstable_dev` in `remix.config.js`:
 
 ```js
@@ -24,9 +22,10 @@ Enable `unstable_dev` in `remix.config.js`:
 }
 ```
 
-## 2. Update `package.json` scripts
+## Remix App Server
 
-For Remix app server:
+Update `package.json` scripts
+
 
 ```json
 {
@@ -36,7 +35,16 @@ For Remix app server:
 }
 ```
 
-For any other servers, specify the command to run your app server with the `-c`/`--command` flag:
+That's it!
+
+```sh
+npm run dev
+```
+
+## Other app servers
+
+Update `package.json` scripts, specifying the command to run you app server with the `-c`/`--command` flag:
+
 
 ```json
 {
@@ -46,52 +54,35 @@ For any other servers, specify the command to run your app server with the `-c`/
 }
 ```
 
-## 3. Call `devReady` in your app server
+Then, call `devReady` in your server when its up and running.
 
-For example, in an Express server:
+For example, an Express server would call `devReady` at the end of `listen`:
 
 ```js
-// server.mjs
-import path from "node:path";
-
-import express from "express";
-import { createRequestHandler } from "@remix-run/express";
+// <other imports>
 import { devReady } from "@remix-run/node";
 
-let BUILD_DIR = path.join(process.cwd(), "build"); // path to Remix's server build directory (`build/` by default)
+// Path to Remix's server build directory ('build/' by default)
+let BUILD_DIR = path.join(process.cwd(), "build");
 
-let app = express();
-
-app.all(
-  "*",
-  createRequestHandler({
-    build: require(BUILD_DIR),
-    mode: process.env.NODE_ENV,
-  })
-);
+// <code setting up your express server>
 
 app.listen(3000, () => {
   let build = require(BUILD_DIR);
   console.log("Ready: http://localhost:" + port);
 
-  // in development, call `devReady` _after_ your server is ready
+  // in development, call `devReady` _after_ your server is up and running
   if (process.env.NODE_ENV === "development") {
     devReady(build);
   }
-});
+})
 ```
 
-## 4. That's it!
-
-You should now be able to run the Remix Dev server:
+That's it!
 
 ```sh
-$ npm run dev
-# Ready: http://localhost:3000
+npm run dev
 ```
-
-Make sure you navigate to your app server's URL in the browser, not the dev server's URL.
-In this example, that would be `http://localhost:3000`.
 
 # Configuration
 
