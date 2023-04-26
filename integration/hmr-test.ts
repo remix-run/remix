@@ -35,7 +35,7 @@ let fixture = (options: {
       private: true,
       sideEffects: false,
       scripts: {
-        dev: `cross-env NODE_ENV=development node ./node_modules/@remix-run/dev/dist/cli.js dev -c "node ./server.js"`,
+        dev: `node ./node_modules/@remix-run/dev/dist/cli.js dev -c "node ./server.js"`,
       },
       dependencies: {
         "@remix-run/css-bundle": "0.0.0-local-version",
