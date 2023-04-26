@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "remix build",
-    "dev": "cross-env NODE_ENV=development remix dev -c \"node ./server.js\"",
+    "dev": "remix dev -c \"node ./server.js\"",
     "start": "cross-env NODE_ENV=production node ./server.js",
     "typecheck": "tsc"
   },
