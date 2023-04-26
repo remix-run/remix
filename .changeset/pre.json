@@ -21,5 +21,31 @@
     "@remix-run/testing": "1.15.0",
     "@remix-run/vercel": "1.15.0"
   },
-  "changesets": []
+  "changesets": [
+    "absolute-css-urls",
+    "async-load-context",
+    "cjs-esm-warning",
+    "css-bundling",
+    "dev-server",
+    "empty-taxis-call",
+    "express-template-esm",
+    "flat-routes-minimatch",
+    "hdr-revalidate-only-when-needed",
+    "install-globals",
+    "link-meta-short-circuit",
+    "mdx-automatic-jsx-runtime",
+    "mean-deers-wink",
+    "pink-walls-hide",
+    "postcss-option",
+    "remove-use-sync-external-store",
+    "resource-route-boundary",
+    "serialize-from-data-key",
+    "splat-index-matching",
+    "tailwind-option",
+    "testing-helper-context-and-types",
+    "twelve-cheetahs-drive",
+    "two-pumpkins-roll",
+    "unstable-dev-resolve-route-module-imports",
+    "wicked-hairs-tell"
+  ]
 }

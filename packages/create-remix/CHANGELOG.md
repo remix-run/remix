@@ -1,5 +1,14 @@
 # `create-remix`
 
+## 1.16.0-pre.0
+
+### Patch Changes
+
+- update express template to output ESM and use the new dev command ([#6174](https://github.com/remix-run/remix/pull/6174))
+- enable unstable_dev by default in the remix template ([#6180](https://github.com/remix-run/remix/pull/6180))
+- Updated dependencies:
+  - `@remix-run/dev@1.16.0-pre.0`
+
 ## 1.15.0
 
 ### Patch Changes
