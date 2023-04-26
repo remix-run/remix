@@ -26,7 +26,6 @@ Enable `unstable_dev` in `remix.config.js`:
 
 Update `package.json` scripts
 
-
 ```json
 {
   "scripts": {
@@ -44,7 +43,6 @@ npm run dev
 ## Other app servers
 
 Update `package.json` scripts, specifying the command to run you app server with the `-c`/`--command` flag:
-
 
 ```json
 {
@@ -75,7 +73,7 @@ app.listen(3000, () => {
   if (process.env.NODE_ENV === "development") {
     devReady(build);
   }
-})
+});
 ```
 
 That's it!
