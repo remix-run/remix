@@ -118,13 +118,9 @@ The browser started at `/projects/new`, then posted to `/projects` with the form
 
 If you're newer to web development, you may not have ever used a form this way. Lots of folks have always done:
 
-```js
-<form
-  onSubmit={(event) => {
-    event.preventDefault();
-    // good luck!
-  }}
-/>
+```html
+<form onSubmit={(event) => { event.preventDefault(); // good
+luck! }} />
 ```
 
 If this is you, you're going to be delighted when you see just how easy mutations can be when you just use what browsers (and Remix) have built in!

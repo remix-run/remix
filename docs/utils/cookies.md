@@ -18,7 +18,7 @@ Let's say you have a banner on your e-commerce site that prompts users to check 
 
 First, create a cookie:
 
-```js filename=app/cookies.js
+```ts filename=app/cookies.ts
 import { createCookie } from "@remix-run/node"; // or cloudflare/deno
 
 export const userPrefs = createCookie("user-prefs", {
@@ -96,7 +96,7 @@ export default function Home() {
 
 Cookies have [several attributes][cookie-attrs] that control when they expire, how they are accessed, and where they are sent. Any of these attributes may be specified either in `createCookie(name, options)`, or during `serialize()` when the `Set-Cookie` header is generated.
 
-```js
+```ts
 const cookie = createCookie("user-prefs", {
   // These are defaults for this cookie.
   domain: "remix.run",
@@ -123,7 +123,7 @@ It is possible to sign a cookie to automatically verify its contents when it is 
 
 To sign a cookie, provide one or more `secrets` when you first create the cookie:
 
-```js
+```ts
 const cookie = createCookie("user-prefs", {
   secrets: ["s3cret1"],
 });
@@ -208,7 +208,7 @@ The name of the cookie, used in `Cookie` and `Set-Cookie` HTTP headers.
 
 Extracts and returns the value of this cookie in a given `Cookie` header.
 
-```js
+```ts
 const value = await cookie.parse(
   request.headers.get("Cookie")
 );
@@ -218,7 +218,7 @@ const value = await cookie.parse(
 
 Serializes a value and combines it with this cookie's options to create a `Set-Cookie` header, suitable for use in an outgoing `Response`.
 
-```js
+```ts
 new Response("...", {
   headers: {
     "Set-Cookie": await cookie.serialize({
@@ -232,7 +232,7 @@ new Response("...", {
 
 Will be `true` if the cookie uses any `secrets`, `false` otherwise.
 
-```js
+```ts
 let cookie = createCookie("user-prefs");
 console.log(cookie.isSigned); // false
 
@@ -246,7 +246,7 @@ console.log(cookie.isSigned); // true
 
 The `Date` on which this cookie expires. Note that if a cookie has both `maxAge` and `expires`, this value will be the date at the current time plus the `maxAge` value since `Max-Age` takes precedence over `Expires`.
 
-```js
+```ts
 const cookie = createCookie("user-prefs", {
   expires: new Date("2021-01-01"),
 });
