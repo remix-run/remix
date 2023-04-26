@@ -1,5 +1,12 @@
 # `@remix-run/react`
 
+## 1.16.0-pre.1
+
+### Patch Changes
+
+- fix(react,dev): dev chunking and refresh race condition ([#6201](https://github.com/remix-run/remix/pull/6201))
+- rename devReady to broadcastDevReady ([#6194](https://github.com/remix-run/remix/pull/6194))
+
 ## 1.16.0-pre.0
 
 ### Minor Changes
