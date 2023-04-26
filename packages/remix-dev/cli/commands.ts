@@ -227,9 +227,9 @@ export async function dev(
     websocketPort?: number;
   } = {}
 ) {
-  if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
+  if (process.env.NODE_ENV !== "development") {
     console.warn(
-      `Forcing NODE_ENV to be 'development'. Was: ${process.env.NODE_ENV}`
+      `Forcing NODE_ENV to be 'development'. Was: "${process.env.NODE_ENV}"`
     );
   }
   process.env.NODE_ENV = "development";
