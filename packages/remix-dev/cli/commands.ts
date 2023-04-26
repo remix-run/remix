@@ -25,6 +25,7 @@ import { TaskError } from "../codemod/utils/task";
 import { transpile as convertFileToJS } from "./useJavascript";
 import { warnOnce } from "../warnOnce";
 import type { Options } from "../compiler/options";
+import { getAppDependencies } from "../dependencies";
 
 export async function create({
   appTemplate,
@@ -176,7 +177,7 @@ export async function build(
     onWarning: warnOnce,
   };
   if (config.future.unstable_dev) {
-    let dev = await resolveDev(config.future.unstable_dev);
+    let dev = await resolveDev(config);
     options.devHttpOrigin = dev.httpOrigin;
     options.devWebsocketPort = dev.websocketPort;
   }
@@ -237,8 +238,7 @@ export async function dev(
     return await new Promise(() => {});
   }
 
-  let { unstable_dev } = config.future;
-  await devServer_unstable.serve(config, await resolveDev(unstable_dev, flags));
+  await devServer_unstable.serve(config, await resolveDev(config, flags));
 }
 
 export async function codemod(
@@ -468,7 +468,7 @@ let parseMode = (
 let findPort = async () => getPort({ port: makeRange(3001, 3100) });
 
 let resolveDev = async (
-  dev: Exclude<RemixConfig["future"]["unstable_dev"], false>,
+  config: RemixConfig,
   flags: {
     command?: string;
     httpScheme?: string;
@@ -487,15 +487,48 @@ let resolveDev = async (
   restart: boolean;
   websocketPort: number;
 }> => {
-  let command = flags.command ?? (dev === true ? undefined : dev.command);
+  let dev = config.future.unstable_dev;
+  if (dev === false) throw Error("Cannot resolve dev options");
+
+  // prettier-ignore
+  let command =
+    flags.command ??
+    (dev === true ? undefined : dev.command)
+  if (!command) {
+    command = `remix-serve ${path.relative(
+      process.cwd(),
+      config.serverBuildPath
+    )}`;
+
+    let usingRemixAppServer =
+      getAppDependencies(config)["@remix-run/serve"] !== undefined;
+    if (!usingRemixAppServer) {
+      console.error(
+        [
+          `Remix dev server command defaulted to '${command}', but @remix-run/serve is not installed.`,
+          "If you are using another server, specify how to run it with `-c` or `--command` flag.",
+          "For example, `remix dev -c 'node ./server.js'`",
+        ].join("\n")
+      );
+      process.exit(1);
+    }
+  }
+  // prettier-ignore
   let httpScheme =
-    flags.httpScheme ?? (dev === true ? undefined : dev.httpScheme) ?? "http";
+    flags.httpScheme ??
+    (dev === true ? undefined : dev.httpScheme) ??
+    "http";
+  // prettier-ignore
   let httpHost =
-    flags.httpHost ?? (dev === true ? undefined : dev.httpHost) ?? "localhost";
+    flags.httpHost ??
+    (dev === true ? undefined : dev.httpHost) ??
+    "localhost";
+  // prettier-ignore
   let httpPort =
     flags.httpPort ??
     (dev === true ? undefined : dev.httpPort) ??
     (await findPort());
+  // prettier-ignore
   let websocketPort =
     flags.websocketPort ??
     (dev === true ? undefined : dev.websocketPort) ??
