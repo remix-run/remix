@@ -34,6 +34,7 @@
     "hdr-revalidate-only-when-needed",
     "install-globals",
     "link-meta-short-circuit",
+    "log-dev-ready",
     "mdx-automatic-jsx-runtime",
     "mean-deers-wink",
     "modern-ways-eat",
