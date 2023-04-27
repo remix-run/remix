@@ -15,25 +15,25 @@ npx create-remix@latest
 ## Getting Started
 
 <docs-cards>
-  <a href="pages/technical-explanation" aria-label="Technical Explanation">
+  <a href="/docs/en/main/pages/technical-explanation" aria-label="Technical Explanation">
     <docs-card>
       <h4>Technical Explanation</h4>
       <p>If you're wondering what Remix is, this is the page for you. Learn how Remix is four primary things: a compiler, an HTTP handler, a server framework, and a browser framework.</p>
     </docs-card>
   </a>
-  <a href="pages/v2" aria-label="Preparing for v2">
+  <a href="/docs/en/main/pages/v2" aria-label="Preparing for v2">
     <docs-card>
       <h4>Preparing for v2</h4> 
       <p>Remix v2 is coming soon! All of the new APIs and behaviors are available already in v1 behind Future Flags. This doc will help you incrementally adopt each one so that when its time to update to v2, you don't have to change a thing.</p>
     </docs-card>
   </a>
-  <a href="tutorials/blog" aria-label="Developer Blog Tutorial">
+  <a href="/docs/en/main/tutorials/blog" aria-label="Developer Blog Tutorial">
     <docs-card>
       <h4>Blog Tutorial</h4>
       <p>Spend your first few minutes with Remix here and let us introduce some of the core features as quickly as possible. After this you can go explore the docs or dive deeper with the other tutorials. We'll build a little markdown blog with data loading, actions, form validation, redirects, and more.</p>
     </docs-card>
   </a>
-  <a href="tutorials/jokes" aria-label="Jokes App Tutorial">
+  <a href="/docs/en/main/tutorials/jokes" aria-label="Jokes App Tutorial">
     <docs-card>
       <h4>Jokes App Deep Dive</h4> 
       <p>Dive deep into Remix and full stack development with this app. It's backed by a SQL database, user authentication and session, and of course some modern UI finishes. You'll learn about nested routes, sessions, data loading, data mutations, progressive enhancement, and more. Get a feel for what a data-backed web app feels like with Remix.</p>
