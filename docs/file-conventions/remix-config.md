@@ -66,6 +66,10 @@ dotfiles (like `.DS_Store` files) or CSS/test files you wish to colocate.
 The URL prefix of the browser build with a trailing slash. Defaults to
 `"/build/"`. This is the path the browser will use to find assets.
 
+## postcss
+
+Whether to process CSS using [PostCSS][postcss] if `postcss.config.js` is present. Defaults to `false`.
+
 ## routes
 
 A function for defining custom routes, in addition to those already defined
@@ -116,8 +120,7 @@ to `"build/index.js"`.
 
 ## serverBuildTarget
 
-<docs-warning>This option is deprecated and will likely be removed in a future
-stable release. Use a combination of [`publicPath`][public-path],
+<docs-warning>This option is deprecated and will be removed in the next major version release. Use a combination of [`publicPath`][public-path],
 [`serverBuildPath`][server-build-path], [`serverConditions`][server-conditions],
 [`serverDependenciesToBundle`][server-dependencies-to-bundle]
 [`serverMainFields`][server-main-fields], [`serverMinify`][server-minify],
@@ -193,6 +196,10 @@ Defaults to `"cjs"`.
 The platform the server build is targeting, which can either be `"neutral"` or
 `"node"`. Defaults to `"node"`.
 
+## tailwind
+
+Whether to support [Tailwind functions and directives][tailwind-functions-and-directives] in CSS files if `tailwindcss` is installed. Defaults to `false`.
+
 ## watchPaths
 
 An array, string, or async function that defines custom directories, relative to the project root, to watch while running [remix dev][remix-dev]. These directories are in addition to [`appDirectory`][app-directory].
@@ -233,3 +240,5 @@ There are a few conventions that Remix uses you should be aware of.
 [remix-dev]: ../other-api/dev#remix-dev
 [app-directory]: #appDirectory
 [css-side-effect-imports]: ../guides/styling#css-side-effect-imports
+[postcss]: https://postcss.org
+[tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives

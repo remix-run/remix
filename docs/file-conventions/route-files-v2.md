@@ -1,10 +1,11 @@
 ---
 title: Route File Naming (v2)
+new: true
 ---
 
 # Route File Naming (v2)
 
-You can opt-in to the new route file naming convention with a future flag in Remix config. It will be the default behavior in the future when v2 ships. For background on this change, [see the RFC][flatroutes-rfc].
+You can opt-in to the new route file naming convention with a future flag in Remix config.
 
 ```js filename=remix.config.js
 module.exports = {
@@ -13,10 +14,6 @@ module.exports = {
   },
 };
 ```
-
-We encourage you to make this change early so upgrading is easy. We'll be providing a helper function to use the old convention in v2 if you prefer it.
-
----
 
 While you can configure routes in [remix.config.js][remix-config], most routes are created with this file system convention. Add a file, get a route.
 
@@ -288,7 +285,7 @@ Similar to dynamic route parameters, you can access the value of the matched pat
 
 ```tsx filename=app/routes/files.$.tsx
 export function loader({ params }) {
-  let filePath = params["*"];
+  const filePath = params["*"];
   return fake.getFileInfo(filePath);
 }
 ```
@@ -307,7 +304,7 @@ If you want one of the special characters Remix uses for these route conventions
 
 ## Folders for Organization
 
-Routes can also be folders with a conventional node module resolution `index.tsx` file inside defining the route module. The rest of the files in the folder will not become routes. This allows you to organize your code closer to the routes that use them instead of repeating the feature names across other folders.
+Routes can also be folders with a `route.tsx` file inside defining the route module. The rest of the files in the folder will not become routes. This allows you to organize your code closer to the routes that use them instead of repeating the feature names across other folders.
 
 <docs-info>The files inside a folder have no meaning for the route paths, the route path is completely defined by the folder name</docs-info>
 

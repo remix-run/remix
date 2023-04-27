@@ -10,6 +10,9 @@ test.describe("Revalidation", () => {
   test.beforeAll(async () => {
     appFixture = await createAppFixture(
       await createFixture({
+        future: {
+          v2_routeConvention: true,
+        },
         files: {
           "app/root.jsx": js`
             import { Link, Outlet, Scripts, useNavigation } from "@remix-run/react";
@@ -41,6 +44,11 @@ test.describe("Revalidation", () => {
             }
           `,
 
+          "app/routes/_index.jsx": js`
+            export default function Component() {
+              return <h1>Index</h1>;
+            }
+          `,
           "app/routes/parent.jsx": js`
             import { json } from "@remix-run/node";
             import { Outlet, useLoaderData } from "@remix-run/react";
@@ -81,7 +89,7 @@ test.describe("Revalidation", () => {
             }
           `,
 
-          "app/routes/parent/child.jsx": js`
+          "app/routes/parent.child.jsx": js`
             import { json } from "@remix-run/node";
             import { Form, useLoaderData, useRevalidator } from "@remix-run/react";
 

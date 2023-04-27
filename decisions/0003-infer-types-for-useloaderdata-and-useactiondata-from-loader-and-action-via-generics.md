@@ -26,8 +26,8 @@ type MyActionData = {
 };
 
 export default function Route() {
-  let loaderData = useLoaderData<MyLoaderData>();
-  let actionData = useActionData<MyActionData>();
+  const loaderData = useLoaderData<MyLoaderData>();
+  const actionData = useActionData<MyActionData>();
   return <div>{/* ... */}</div>;
 }
 ```
@@ -107,7 +107,7 @@ export const loader: LoaderFunction = () => {
 };
 
 export default function Route() {
-  let { birthday } = useLoaderData<MyLoaderData>();
+  const { birthday } = useLoaderData<MyLoaderData>();
   // ^ `useLoaderData` tricks Typescript into thinking this is a `Date`, when in fact its a `string`!
 }
 ```
@@ -164,7 +164,7 @@ export const loader = async (args: LoaderArgs) => {
 };
 
 export default function Route() {
-  let data = useLoaderData<typeof loader>();
+  const data = useLoaderData<typeof loader>();
   // ...
 }
 ```
@@ -183,7 +183,7 @@ type MyLoaderData = {
 };
 
 export default function Route() {
-  let data = useLoaderData();
+  const data = useLoaderData();
   // ^? unknown
 }
 ```
@@ -201,8 +201,8 @@ type MyLoaderData = {
 };
 
 export default function Route() {
-  let dataGeneric = useLoaderData<MyLoaderData>(); // <-- will be deprecated
-  let dataCast = useLoaderData() as MyLoaderData; // <- use this instead
+  const dataGeneric = useLoaderData<MyLoaderData>(); // <-- will be deprecated
+  const dataCast = useLoaderData() as MyLoaderData; // <- use this instead
 }
 ```
 

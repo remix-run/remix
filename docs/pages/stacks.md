@@ -63,22 +63,24 @@ The [token just needs `repo` access][repo access token].
 
 #### Dependency versions
 
-If you set any dependencies in package.json to `*`, the Remix CLI will change it to a semver caret of the latest released version:
+If you set any dependencies in package.json to `*`, the Remix CLI will change it to a semver caret of the installed Remix version:
 
 ```diff
 -   "remix": "*",
 +   "remix": "^1.2.3",
 ```
 
-This allows you to not have to regularly update your template to the latest version of that specific package. Of course you do not have to put `*` if you'd prefer to manually manage the version for that package.
+This allows you to not have to regularly update your template to the latest version of that specific package. Of course, you do not have to put `*` if you'd prefer to manually manage the version for that package.
 
 #### Customize Initialization
 
-If the template has a `remix.init/index.js` file at the root then that file will be executed after the project has been generated and dependencies have been installed. This gives you a chance to do anything you'd like as part of the initialization of your template. For example, in the blues stack, the `app` property has to be globally unique so we use the `remix.init/index.js` file to change it to the name of the directory that was created for the project + a couple random characters.
+If the template has a `remix.init/index.js` file at the root then that file will be executed after the project has been generated and dependencies have been installed. This gives you a chance to do anything you'd like as part of the initialization of your template. For example, in the blues stack, the `app` property has to be globally unique, so we use the `remix.init/index.js` file to change it to the name of the directory that was created for the project + a couple random characters.
 
-You could even use `remix.init/index.js` to ask further questions of the developer for additional configuration (using something like [inquirer][inquirer]). Of course, sometimes you'll need dependencies installed to do this, but those deps are only useful during initialization. So, you can also create a `remix.init/package.json` with dependencies and the Remix CLI will install those dependencies before running your script.
+You could even use `remix.init/index.js` to ask further questions to the developer for additional configuration (using something like [inquirer][inquirer]). Sometimes, you'll need dependencies installed to do this, but those deps are only useful during initialization. In that case, you can also create a `remix.init/package.json` with dependencies and the Remix CLI will install those before running your script.
 
-After the init script has been run, it is deleted so you don't need to worry about it cluttering up the finished codebase.
+After the init script has been run, the `remix.init` folder gets deleted, so you don't need to worry about it cluttering up the finished codebase.
+
+<docs-warning>Do note however, that opting out of installing dependencies will not run the remix.init setup, to do so manually, run `remix init`.</docs-warning>
 
 #### Remove TypeScript
 
