@@ -14,7 +14,7 @@ import type { AppLoadContext } from "./data";
 import type { ServerBuild } from "./build";
 import type { EntryContext } from "./entry";
 import { createEntryRouteModules } from "./entry";
-import { serializeError, serializeErrors } from "./errors";
+import { sanitizeErrors, serializeError, serializeErrors } from "./errors";
 import { getDocumentHeadersRR } from "./headers";
 import invariant from "./invariant";
 import { ServerMode, isServerMode } from "./mode";
@@ -51,26 +51,6 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   return async function requestHandler(request, loadContext = {}) {
     let url = new URL(request.url);
 
-    // special __REMIX_ASSETS_MANIFEST endpoint for checking if app server serving up-to-date routes and assets
-    let { unstable_dev } = build.future;
-    if (
-      mode === "development" &&
-      unstable_dev !== false &&
-      url.pathname ===
-        (unstable_dev === true
-          ? "/__REMIX_ASSETS_MANIFEST"
-          : (unstable_dev.remixRequestHandlerPath ?? "") +
-            "/__REMIX_ASSETS_MANIFEST")
-    ) {
-      if (request.method !== "GET") {
-        return new Response("Method not allowed", { status: 405 });
-      }
-      return new Response(JSON.stringify(build.assets), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
     let matches = matchServerRoutes(routes, url.pathname);
 
     let response: Response;
@@ -89,7 +69,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
         let match = matches!.find((match) => match.route.id == routeId)!;
         response = await build.entry.module.handleDataRequest(response, {
           context: loadContext,
-          params: match.params,
+          params: match ? match.params : {},
           request,
         });
       }
@@ -159,7 +139,11 @@ async function handleDataRequestRR(
 
     if (DEFERRED_SYMBOL in response) {
       let deferredData = response[DEFERRED_SYMBOL] as DeferredData;
-      let body = createDeferredReadableStream(deferredData, request.signal);
+      let body = createDeferredReadableStream(
+        deferredData,
+        request.signal,
+        serverMode
+      );
       let init = deferredData.init || {};
       let headers = new Headers(init.headers);
       headers.set("Content-Type", "text/remix-deferred");
@@ -174,26 +158,22 @@ async function handleDataRequestRR(
       return error;
     }
 
-    let status = 500;
-    let errorInstance = error;
+    let status = isRouteErrorResponse(error) ? error.status : 500;
+    let errorInstance =
+      isRouteErrorResponse(error) && error.error
+        ? error.error
+        : error instanceof Error
+        ? error
+        : new Error("Unexpected Server Error");
 
-    if (isRouteErrorResponse(error)) {
-      status = error.status;
-      errorInstance = error.error || errorInstance;
-    }
+    logServerErrorIfNotAborted(errorInstance, request, serverMode);
 
-    if (serverMode !== ServerMode.Test && !request.signal.aborted) {
-      console.error(errorInstance);
-    }
-
-    if (
-      serverMode === ServerMode.Development &&
-      errorInstance instanceof Error
-    ) {
-      return errorBoundaryError(errorInstance, status);
-    }
-
-    return errorBoundaryError(new Error("Unexpected Server Error"), status);
+    return json(serializeError(errorInstance, serverMode), {
+      status,
+      headers: {
+        "X-Remix-Error": "yes",
+      },
+    });
   }
 }
 
@@ -259,15 +239,17 @@ async function handleDocumentRequestRR(
       requestContext: loadContext,
     });
   } catch (error: unknown) {
-    if (!request.signal.aborted && serverMode !== ServerMode.Test) {
-      console.error(error);
-    }
-
+    logServerErrorIfNotAborted(error, request, serverMode);
     return new Response(null, { status: 500 });
   }
 
   if (isResponse(context)) {
     return context;
+  }
+
+  // Sanitize errors outside of development environments
+  if (context.errors) {
+    context.errors = sanitizeErrors(context.errors, serverMode);
   }
 
   // Restructure context.errors to the right Catch/Error Boundary
@@ -285,7 +267,7 @@ async function handleDocumentRequestRR(
       state: {
         loaderData: context.loaderData,
         actionData: context.actionData,
-        errors: serializeErrors(context.errors),
+        errors: serializeErrors(context.errors, serverMode),
       },
       future: build.future,
       dev: build.dev,
@@ -299,7 +281,8 @@ async function handleDocumentRequestRR(
       request,
       context.statusCode,
       headers,
-      entryContext
+      entryContext,
+      loadContext
     );
   } catch (error: unknown) {
     // Get a new StaticHandlerContext that contains the error at the right boundary
@@ -308,6 +291,11 @@ async function handleDocumentRequestRR(
       context,
       error
     );
+
+    // Sanitize errors outside of development environments
+    if (context.errors) {
+      context.errors = sanitizeErrors(context.errors, serverMode);
+    }
 
     // Restructure context.errors to the right Catch/Error Boundary
     if (build.future.v2_errorBoundary !== true) {
@@ -322,7 +310,7 @@ async function handleDocumentRequestRR(
         state: {
           loaderData: context.loaderData,
           actionData: context.actionData,
-          errors: serializeErrors(context.errors),
+          errors: serializeErrors(context.errors, serverMode),
         },
         future: build.future,
       }),
@@ -333,9 +321,11 @@ async function handleDocumentRequestRR(
         request,
         context.statusCode,
         headers,
-        entryContext
+        entryContext,
+        loadContext
       );
     } catch (error: any) {
+      logServerErrorIfNotAborted(error, request, serverMode);
       return returnLastResortErrorResponse(error, serverMode);
     }
   }
@@ -369,24 +359,22 @@ async function handleResourceRequestRR(
       error.headers.set("X-Remix-Catch", "yes");
       return error;
     }
+    logServerErrorIfNotAborted(error, request, serverMode);
     return returnLastResortErrorResponse(error, serverMode);
   }
 }
 
-async function errorBoundaryError(error: Error, status: number) {
-  return json(await serializeError(error), {
-    status,
-    headers: {
-      "X-Remix-Error": "yes",
-    },
-  });
+function logServerErrorIfNotAborted(
+  error: unknown,
+  request: Request,
+  serverMode: ServerMode
+) {
+  if (serverMode !== ServerMode.Test && !request.signal.aborted) {
+    console.error(error);
+  }
 }
 
 function returnLastResortErrorResponse(error: any, serverMode?: ServerMode) {
-  if (serverMode !== ServerMode.Test) {
-    console.error(error);
-  }
-
   let message = "Unexpected Server Error";
 
   if (serverMode !== ServerMode.Production) {

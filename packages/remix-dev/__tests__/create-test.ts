@@ -8,6 +8,13 @@ import stripAnsi from "strip-ansi";
 
 import { run } from "../cli/run";
 import { server } from "./msw";
+import {
+  errorBoundaryWarning,
+  flatRoutesWarning,
+  formMethodWarning,
+  metaWarning,
+  serverModuleFormatWarning,
+} from "../config";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterAll(() => server.close());
@@ -347,7 +354,17 @@ describe("the create command", () => {
       "--no-typescript",
     ]);
     expect(output.trim()).toBe(
-      getOptOutOfInstallMessage() +
+      errorBoundaryWarning +
+        "\n" +
+        formMethodWarning +
+        "\n" +
+        metaWarning +
+        "\n" +
+        serverModuleFormatWarning +
+        "\n" +
+        flatRoutesWarning +
+        "\n\n" +
+        getOptOutOfInstallMessage() +
         "\n\n" +
         getSuccessMessage(path.join("<TEMP_DIR>", "template-to-js"))
     );

@@ -1,10 +1,11 @@
 ---
 title: Route File Naming (v2)
+new: true
 ---
 
 # Route File Naming (v2)
 
-You can opt-in to the new route file naming convention with a future flag in Remix config. It will be the default behavior in the future when v2 ships. For background on this change, [see the RFC][flatroutes-rfc].
+You can opt-in to the new route file naming convention with a future flag in Remix config.
 
 ```js filename=remix.config.js
 module.exports = {
@@ -13,10 +14,6 @@ module.exports = {
   },
 };
 ```
-
-We encourage you to make this change early so upgrading is easy. We'll be providing a helper function to use the old convention in v2 if you prefer it.
-
----
 
 While you can configure routes in [remix.config.js][remix-config], most routes are created with this file system convention. Add a file, get a route.
 
@@ -288,7 +285,7 @@ Similar to dynamic route parameters, you can access the value of the matched pat
 
 ```tsx filename=app/routes/files.$.tsx
 export function loader({ params }) {
-  let filePath = params["*"];
+  const filePath = params["*"];
   return fake.getFileInfo(filePath);
 }
 ```
@@ -307,7 +304,7 @@ If you want one of the special characters Remix uses for these route conventions
 
 ## Folders for Organization
 
-Routes can also be folders with a conventional node module resolution `index.tsx` file inside defining the route module. The rest of the files in the folder will not become routes. This allows you to organize your code closer to the routes that use them instead of repeating the feature names across other folders.
+Routes can also be folders with a `route.tsx` file inside defining the route module. The rest of the files in the folder will not become routes. This allows you to organize your code closer to the routes that use them instead of repeating the feature names across other folders.
 
 <docs-info>The files inside a folder have no meaning for the route paths, the route path is completely defined by the folder name</docs-info>
 
@@ -324,7 +321,7 @@ routes/
   app_.projects.$id.roadmap.tsx
 ```
 
-Some, or all of them can be folders holding their own modules inside.
+Some, or all of them can be folders holding their own `route` module inside.
 
 ```
 routes/
@@ -359,7 +356,7 @@ routes/
   contact-us.tsx
 ```
 
-Note that `app/index.tsx` is _not_ the "index route" for `app/`. It is Note's "index module" for the directory `routes/app/`. The index route for `app/` is `app._index/index.tsx`. The only thing that contributes to the route path is the directory name.
+Note that when you turn a route module into a folder, the route module becomes `folder/route.tsx`, all other modules in the folder will not become routes. For example:
 
 ```
 # these are the same route:

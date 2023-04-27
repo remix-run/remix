@@ -161,6 +161,10 @@ export default function Posts() {
 
 Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
 
+<docs-error>
+Whatever you return from your loader will be exposed to the client, even if the component doesn't render it. Treat your loaders with the same care as public API endpoints.
+</docs-error>
+
 💿 Render links to our posts
 
 ```tsx filename=app/routes/posts/index.tsx lines=[2,10-21] nocopy
@@ -202,7 +206,7 @@ A solid practice is to create a module that deals with a particular concern. In 
 touch app/models/post.server.ts
 ```
 
-We're mostly gonna copy/paste stuff from our route:
+We're mostly going to copy/paste stuff from our route:
 
 ```tsx filename=app/models/post.server.ts
 type Post = {
@@ -534,7 +538,7 @@ export default function PostSlug() {
 }
 ```
 
-Holy smokes, you did it. You have a blog. Check it out! Next, we're gonna make it easier to create new blog posts 📝
+Holy smokes, you did it. You have a blog. Check it out! Next, we're going to make it easier to create new blog posts 📝
 
 ## Nested Routing
 
@@ -700,7 +704,7 @@ Now click the link from the index route and watch the `<Outlet/>` automatically 
 
 ## Actions
 
-We're gonna get serious now. Let's build a form to create a new post in our new "new" route.
+We're going to get serious now. Let's build a form to create a new post in our new "new" route.
 
 💿 Add a form to the new route
 

@@ -11,41 +11,56 @@ import {
 
 const TEST_PADDING_VALUE = "20px";
 
-test.describe("Tailwind", () => {
+let extensions = ["mjs", "cjs", "js", "ts"] as const;
+
+function runTests(ext: typeof extensions[number]) {
   let fixture: Fixture;
   let appFixture: AppFixture;
+
+  let tailwindConfigName = `tailwind.config.${ext}`;
+
+  let tailwindConfig = ["mjs", "ts"].includes(ext)
+    ? js`
+      export default {
+        content: ["./app/**/*.{ts,tsx,jsx,js}"],
+        theme: {
+          spacing: {
+            'test': ${JSON.stringify(TEST_PADDING_VALUE)}
+          },
+        },
+      }
+    `
+    : js`
+      module.exports = {
+        content: ["./app/**/*.{ts,tsx,jsx,js}"],
+        theme: {
+          spacing: {
+            'test': ${JSON.stringify(TEST_PADDING_VALUE)}
+          },
+        },
+      }
+    `;
 
   test.beforeAll(async () => {
     fixture = await createFixture({
       files: {
         "remix.config.js": js`
           module.exports = {
+            tailwind: true,
             future: {
-              // Enable all CSS future flags to
-              // ensure features don't clash
-              unstable_cssModules: true,
-              unstable_cssSideEffectImports: true,
-              unstable_postcss: true,
-              unstable_tailwind: true,
-              unstable_vanillaExtract: true,
+              v2_routeConvention: true,
             },
           };
         `,
-        "tailwind.config.js": js`
-          module.exports = {
-            content: ["./app/**/*.{ts,tsx,jsx,js}"],
-            theme: {
-              spacing: {
-                'test': ${JSON.stringify(TEST_PADDING_VALUE)}
-              },
-            },
-          };
-        `,
+
+        [tailwindConfigName]: tailwindConfig,
+
         "app/tailwind.css": css`
           @tailwind base;
           @tailwind components;
           @tailwind utilities;
         `,
+
         "app/root.jsx": js`
           import { Links, Outlet } from "@remix-run/react";
           import { cssBundleHref } from "@remix-run/css-bundle";
@@ -80,9 +95,7 @@ test.describe("Tailwind", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => {
-    await appFixture.close();
-  });
+  test.afterAll(() => appFixture.close());
 
   let basicUsageFixture = () => ({
     "app/routes/basic-usage-test.jsx": js`
@@ -95,10 +108,11 @@ test.describe("Tailwind", () => {
       }
     `,
   });
+
   test("basic usage", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/basic-usage-test");
-    let locator = await page.locator("[data-testid='basic-usage']");
+    let locator = page.getByTestId("basic-usage");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -108,7 +122,7 @@ test.describe("Tailwind", () => {
   let regularStylesSheetsFixture = () => ({
     "app/routes/regular-style-sheets-test.jsx": js`
       import { Test, links as testLinks } from "~/test-components/regular-style-sheets";
-    
+
       export function links() {
         return [...testLinks()];
       }
@@ -117,6 +131,7 @@ test.describe("Tailwind", () => {
         return <Test />;
       }
     `,
+
     "app/test-components/regular-style-sheets/index.jsx": js`
       import stylesHref from "./styles.css";
 
@@ -132,16 +147,18 @@ test.describe("Tailwind", () => {
         );
       }
     `,
+
     "app/test-components/regular-style-sheets/styles.css": css`
       .regular-style-sheets-test {
         @apply p-test;
       }
     `,
   });
+
   test("regular style sheets", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/regular-style-sheets-test");
-    let locator = await page.locator("[data-testid='regular-style-sheets']");
+    let locator = page.getByTestId("regular-style-sheets");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -156,6 +173,7 @@ test.describe("Tailwind", () => {
         return <Test />;
       }
     `,
+
     "app/test-components/css-modules/index.jsx": js`
       import styles from "./styles.module.css";
 
@@ -167,16 +185,18 @@ test.describe("Tailwind", () => {
         );
       }
     `,
+
     "app/test-components/css-modules/styles.module.css": css`
       .root {
         @apply p-test;
       }
     `,
   });
+
   test("CSS Modules", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/css-modules-test");
-    let locator = await page.locator("[data-testid='css-modules']");
+    let locator = page.getByTestId("css-modules");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -191,6 +211,7 @@ test.describe("Tailwind", () => {
         return <Test />;
       }
     `,
+
     "app/test-components/vanilla-extract-class-composition/index.jsx": js`
       import * as styles from "./styles.css";
 
@@ -202,6 +223,7 @@ test.describe("Tailwind", () => {
         );
       }
     `,
+
     "app/test-components/vanilla-extract-class-composition/styles.css.ts": js`
       import { style } from "@vanilla-extract/css";
 
@@ -211,12 +233,11 @@ test.describe("Tailwind", () => {
       ]);
     `,
   });
+
   test("Vanilla Extract class composition", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/vanilla-extract-class-composition-test");
-    let locator = await page.locator(
-      "[data-testid='vanilla-extract-class-composition']"
-    );
+    let locator = page.getByTestId("vanilla-extract-class-composition");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -231,6 +252,7 @@ test.describe("Tailwind", () => {
         return <Test />;
       }
     `,
+
     "app/test-components/vanilla-extract-tailwind-functions/index.jsx": js`
       import * as styles from "./styles.css";
 
@@ -242,6 +264,7 @@ test.describe("Tailwind", () => {
         );
       }
     `,
+
     "app/test-components/vanilla-extract-tailwind-functions/styles.css.ts": js`
       import { style } from "@vanilla-extract/css";
 
@@ -251,12 +274,11 @@ test.describe("Tailwind", () => {
       });
     `,
   });
+
   test("Vanilla Extract Tailwind functions", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/vanilla-extract-tailwind-functions-test");
-    let locator = await page.locator(
-      "[data-testid='vanilla-extract-tailwind-functions']"
-    );
+    let locator = page.getByTestId("vanilla-extract-tailwind-functions");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
@@ -271,6 +293,7 @@ test.describe("Tailwind", () => {
         return <Test />;
       }
     `,
+
     "app/test-components/css-side-effect-imports/index.jsx": js`
       import "./styles.css";
 
@@ -282,19 +305,182 @@ test.describe("Tailwind", () => {
         );
       }
     `,
+
     "app/test-components/css-side-effect-imports/styles.css": css`
       .css-side-effect-imports-test {
         @apply p-test;
       }
     `,
   });
+
   test("CSS side-effect imports", async ({ page }) => {
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/css-side-effect-imports-test");
-    let locator = await page.locator("[data-testid='css-side-effect-imports']");
+    let locator = page.getByTestId("css-side-effect-imports");
     let padding = await locator.evaluate(
       (element) => window.getComputedStyle(element).padding
     );
     expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+}
+
+test.describe("Tailwind enabled", () => {
+  for (let ext of extensions) {
+    test.describe(`tailwind.config.${ext}`, () => {
+      runTests(ext);
+    });
+  }
+});
+
+test.describe("Tailwind enabled via unstable future flag", () => {
+  let fixture: Fixture;
+  let appFixture: AppFixture;
+
+  test.beforeAll(async () => {
+    fixture = await createFixture({
+      future: {
+        unstable_tailwind: true,
+      },
+      files: {
+        "tailwind.config.js": js`
+          module.exports = {
+            content: ["./app/**/*.{ts,tsx,jsx,js}"],
+            theme: {
+              spacing: {
+                'test': ${JSON.stringify(TEST_PADDING_VALUE)}
+              },
+            },
+          }
+        `,
+        "app/tailwind.css": css`
+          @tailwind base;
+          @tailwind components;
+          @tailwind utilities;
+        `,
+        "app/root.jsx": js`
+          import { Links, Outlet } from "@remix-run/react";
+          import { cssBundleHref } from "@remix-run/css-bundle";
+          import tailwindHref from "./tailwind.css"
+          export function links() {
+            return [
+              { rel: "stylesheet", href: tailwindHref },
+              { rel: "stylesheet", href: cssBundleHref }
+            ];
+          }
+          export default function Root() {
+            return (
+              <html>
+                <head>
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                </body>
+              </html>
+            )
+          }
+        `,
+        "app/routes/unstable-future-flag-test.jsx": js`
+          export default function() {
+            return (
+              <div data-testid="unstable-future-flag" className="p-test">
+                Unstable future flag test
+              </div>
+            );
+          }
+        `,
+      },
+    });
+    appFixture = await createAppFixture(fixture);
+  });
+
+  test.afterAll(() => appFixture.close());
+
+  test("uses Tailwind config", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/unstable-future-flag-test");
+    let locator = page.getByTestId("unstable-future-flag");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+});
+
+test.describe("Tailwind disabled", () => {
+  let fixture: Fixture;
+  let appFixture: AppFixture;
+
+  test.beforeAll(async () => {
+    fixture = await createFixture({
+      files: {
+        "remix.config.js": js`
+          module.exports = {
+            tailwind: false,
+          };
+        `,
+
+        "tailwind.config.js": js`
+          module.exports = {
+            content: ["./app/**/*.{ts,tsx,jsx,js}"],
+            theme: {
+              spacing: {
+                'test': ${JSON.stringify(TEST_PADDING_VALUE)}
+              },
+            },
+          };
+        `,
+
+        "app/tailwind.css": css`
+          @tailwind base;
+          @tailwind components;
+          @tailwind utilities;
+        `,
+
+        "app/root.jsx": js`
+          import { Links, Outlet } from "@remix-run/react";
+          import tailwindHref from "./tailwind.css"
+          export function links() {
+            return [
+              { rel: "stylesheet", href: tailwindHref },
+            ];
+          }
+          export default function Root() {
+            return (
+              <html>
+                <head>
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                </body>
+              </html>
+            )
+          }
+        `,
+        "app/routes/tailwind-disabled-test.jsx": js`
+          export default function() {
+            return (
+              <div data-testid="tailwind-disabled" className="p-test">
+                Tailwind disabled test
+              </div>
+            );
+          }
+        `,
+      },
+    });
+    appFixture = await createAppFixture(fixture);
+  });
+
+  test.afterAll(() => appFixture.close());
+
+  test("ignores Tailwind config", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/tailwind-disabled-test");
+    let locator = page.getByTestId("tailwind-disabled");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).not.toBe(TEST_PADDING_VALUE);
   });
 });

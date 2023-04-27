@@ -1,6 +1,5 @@
 ---
 title: useFetcher
-toc: false
 ---
 
 # `useFetcher`
@@ -44,8 +43,10 @@ function SomeComponent() {
 
   // build UI with these
   fetcher.state;
-  fetcher.type;
-  fetcher.submission;
+  fetcher.formMethod;
+  fetcher.formAction;
+  fetcher.formData;
+  fetcher.formEncType;
   fetcher.data;
 }
 ```
@@ -61,7 +62,7 @@ Notes about how it works:
 - Handles uncaught errors by rendering the nearest `ErrorBoundary` (just like a normal navigation from `<Link>` or `<Form>`)
 - Will redirect the app if your action/loader being called returns a redirect (just like a normal navigation from `<Link>` or `<Form>`)
 
-#### `fetcher.state`
+## `fetcher.state`
 
 You can know the state of the fetcher with `fetcher.state`. It will be one of:
 
@@ -69,7 +70,9 @@ You can know the state of the fetcher with `fetcher.state`. It will be one of:
 - **submitting** - A form has been submitted. If the method is GET, then the route loader is being called. If POST, PUT, PATCH, or DELETE, then the route action is being called.
 - **loading** - The loaders for the routes are being reloaded after an action submission.
 
-#### `fetcher.type`
+## `fetcher.type`
+
+<docs-warning>`fetcher.type` will be removed in v2. For instructions on preparing for this change see the [v2 guide][v2guide].</docs-warning>
 
 This is the type of state the fetcher is in. It's like `fetcher.state`, but more granular. Depending on the fetcher's state, the types can be the following:
 
@@ -89,19 +92,21 @@ This is the type of state the fetcher is in. It's like `fetcher.state`, but more
   - **actionRedirect** - The action from an "actionSubmission" returned a redirect and the page is transitioning to the new location.
   - **normalLoad** - A route's loader is being called without a submission (`fetcher.load()`).
 
-#### `fetcher.submission`
+## `fetcher.submission`
+
+<docs-warning>`fetcher.submission` will be flattened into the fetcher object itself in v2. For instructions on preparing for this change see the [v2 guide][v2guide].</docs-warning>
 
 When using `<fetcher.Form>` or `fetcher.submit()`, the form submission is available to build optimistic UI.
 
 It is not available when the fetcher state is "idle" or "loading".
 
-#### `fetcher.data`
+## `fetcher.data`
 
 The returned response data from your loader or action is stored here. Once the data is set, it persists on the fetcher even through reloads and resubmissions (like calling `fetcher.load()` again after having already read the data).
 
-#### `fetcher.Form`
+## `fetcher.Form`
 
-Just like `<Form>` except it doesn't cause a navigation. (You'll get over the dot in JSX, don't worry.)
+Just like `<Form>` except it doesn't cause a navigation.
 
 ```tsx
 function SomeComponent() {
@@ -114,7 +119,7 @@ function SomeComponent() {
 }
 ```
 
-#### `fetcher.submit()`
+## `fetcher.submit()`
 
 Just like `useSubmit` except it doesn't cause a navigation.
 
@@ -144,7 +149,7 @@ See also:
 
 - [`?index` query param][index query param]
 
-#### `fetcher.load()`
+## `fetcher.load()`
 
 Loads data from a route loader.
 
@@ -153,7 +158,7 @@ function SomeComponent() {
   const fetcher = useFetcher();
 
   useEffect(() => {
-    if (fetcher.type === "init") {
+    if (fetcher.state === "idle" && fetcher.data == null) {
       fetcher.load("/some/route");
     }
   }, [fetcher]);
@@ -174,7 +179,7 @@ See also:
 
 - [`?index` query param][index query param]
 
-#### Examples
+## Examples
 
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Single</a>: <a href="https://www.youtube.com/watch?v=jd_bin5HPrw&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Remix Newsletter Signup Form</a></docs-success>
 
@@ -204,7 +209,10 @@ function NewsletterSignup() {
   const ref = useRef();
 
   useEffect(() => {
-    if (newsletter.type === "done" && newsletter.data.ok) {
+    if (
+      newsletter.state === "idle" &&
+      newsletter.data?.ok
+    ) {
       ref.current.reset();
     }
   }, [newsletter]);
@@ -225,7 +233,7 @@ function NewsletterSignup() {
         </button>
       </p>
 
-      {newsletter.type === "done" ? (
+      {newsletter.state === "idle" && newsletter.data ? (
         newsletter.data.ok ? (
           <p>Thanks for subscribing!</p>
         ) : newsletter.data.error ? (
@@ -283,18 +291,12 @@ export function NewsletterSignup() {
       Form={newsletter.Form}
       data={newsletter.data}
       state={newsletter.state}
-      type={newsletter.type}
     />
   );
 }
 
 // used here and in the route
-export function NewsletterForm({
-  Form,
-  data,
-  state,
-  type,
-}) {
+export function NewsletterForm({ Form, data, state }) {
   // refactor a bit in here, just read from props instead of useFetcher
 }
 ```
@@ -309,12 +311,7 @@ import { NewsletterForm } from "~/NewsletterSignup";
 export default function NewsletterSignupRoute() {
   const data = useActionData<typeof action>();
   return (
-    <NewsletterForm
-      Form={Form}
-      data={data}
-      state="idle"
-      type="done"
-    />
+    <NewsletterForm Form={Form} data={data} state="idle" />
   );
 }
 ```
@@ -355,7 +352,11 @@ function UserAvatar({ partialUser }) {
   const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
-    if (showDetails && userDetails.type === "init") {
+    if (
+      showDetails &&
+      userDetails.state === "idle" &&
+      !userDetails.data
+    ) {
       userDetails.load(`/users/${user.id}/details`);
     }
   }, [showDetails, userDetails]);
@@ -367,7 +368,7 @@ function UserAvatar({ partialUser }) {
     >
       <img src={partialUser.profileImageUrl} />
       {showDetails ? (
-        userDetails.type === "done" ? (
+        userDetails.state === "idle" && userDetails.data ? (
           <UserPopup user={userDetails.data} />
         ) : (
           <UserPopupLoading />
@@ -437,3 +438,4 @@ function CitySearchCombobox() {
 [usetransition]: ./use-transition
 [useactiondata]: ./use-action-data
 [useloaderdata]: ./use-loader-data
+[v2guide]: ../pages/v2#usefetcher
