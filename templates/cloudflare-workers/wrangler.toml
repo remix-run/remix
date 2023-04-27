@@ -1,16 +1,14 @@
 name = "remix-cloudflare-workers"
 
 workers_dev = true
-main = "./server.ts"
+main = "./build/index.js"
 # https://developers.cloudflare.com/workers/platform/compatibility-dates
-compatibility_date = "2023-04-20"
+compatibility_date = "2022-04-05"
+compatibility_flags = ["streams_enable_constructors"]
 
 [site]
-bucket = "./public"
+  bucket = "./public"
 
-[define]
-"process.env.NODE_ENV" = "'production'"
+[build]
+  command = "npm run build"
 
-[env.local.define]
-"process.env.NODE_ENV" = "'development'"
-"process.env.REMIX_DEV_SERVER_WS_PORT" = "8002"
