@@ -15,6 +15,7 @@ export { fetch, FormData, Headers, Request, Response } from "./fetch";
 export { installGlobals } from "./globals";
 
 export { createFileSessionStorage } from "./sessions/fileStorage";
+export { createRedisSessionStorage } from "./sessions/redis";
 
 export {
   createFileUploadHandler as unstable_createFileUploadHandler,
@@ -25,7 +26,6 @@ export {
   createCookie,
   createCookieSessionStorage,
   createMemorySessionStorage,
-  createRedisSessionStorage,
   createSessionStorage,
 } from "./implementations";
 

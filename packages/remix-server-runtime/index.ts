@@ -13,7 +13,6 @@ export {
 } from "./sessions";
 export { createCookieSessionStorageFactory } from "./sessions/cookieStorage";
 export { createMemorySessionStorageFactory } from "./sessions/memoryStorage";
-export { createRedisSessionStorageFactory } from "./sessions/redisStorage";
 export { createMemoryUploadHandler as unstable_createMemoryUploadHandler } from "./upload/memoryUploadHandler";
 export { MaxPartSizeExceededError } from "./upload/errors";
 
