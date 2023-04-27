@@ -54,7 +54,7 @@ npx create-remix@latest
   <a href="https://github.com/remix-run/examples" aria-label="Remix Examples">
     <docs-card>
       <h4>Remix Examples</h4>
-      <p>Have a look at the various Remix examples made by the community and carefully reviewed by our team.</p>
+      <p>Have a look at the various Remix examples made by the community.</p>
     </docs-card>
   </a>
   <a href="https://rmx.as/discord" aria-label="Remix Discord">
