@@ -3,6 +3,8 @@ title: "@remix-run/dev (CLI)"
 order: 1
 ---
 
+<docs-warning>The Remix CLI is changing in v2. You can prepare for this change at your convenience with the `v2_dev` future flag. For instructions on making this change see the [v2 guide][v2guide].</docs-warning>
+
 # Remix CLI
 
 The Remix CLI comes from the `@remix-run/dev` package. It also includes the compiler. Make sure it is in your `package.json` `devDependencies` so it doesn't get deployed to your server.
