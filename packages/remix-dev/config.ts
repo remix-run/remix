@@ -493,9 +493,13 @@ export async function readConfig(
 
     if (usedFutureFlags.length > 0) {
       warnOnce(
-        `⚠️ REMIX FUTURE CHANGE: the following Remix future flags can be removed from your remix.config`
+        `⚠️ REMIX FUTURE CHANGE: the following Remix future flags can be removed from your remix.config
+        ${usedFutureFlags.map((f) => `- ${f}`).join("\n")}
+        `
+          .split("\n")
+          .map((line) => line.trim())
+          .join("\n")
       );
-      warnOnce(usedFutureFlags.map((f) => `- ${f}`).join("\n"));
     }
   }
 
