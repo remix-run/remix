@@ -24,6 +24,7 @@
   "changesets": [
     "absolute-css-urls",
     "async-load-context",
+    "bump-router-pre-2",
     "cjs-esm-warning",
     "css-bundling",
     "dev-server",
@@ -44,6 +45,7 @@
     "resource-route-boundary",
     "serialize-from-data-key",
     "soft-laws-cry",
+    "splat-index-matching-revert",
     "splat-index-matching",
     "tailwind-option",
     "testing-helper-context-and-types",
