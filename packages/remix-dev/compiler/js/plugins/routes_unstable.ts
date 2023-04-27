@@ -135,7 +135,7 @@ export function browserRouteModulesPlugin(
           );
           let contents = transform(sourceCode, routeFile);
 
-          if (options.mode === "development" && config.future.unstable_dev) {
+          if (options.mode === "development" && config.future.v2_dev) {
             contents = await applyHMR(
               contents,
               {

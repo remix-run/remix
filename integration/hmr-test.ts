@@ -20,7 +20,7 @@ let fixture = (options: {
         serverModuleFormat: "cjs",
         tailwind: true,
         future: {
-          unstable_dev: {
+          v2_dev: {
             httpPort: ${options.httpPort},
             webSocketPort: ${options.webSocketPort},
           },

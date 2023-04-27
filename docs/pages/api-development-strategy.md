@@ -54,7 +54,7 @@ Here's the current future flags in Remix v1 today:
 
 | Flag                     | Description                                                           |
 | ------------------------ | --------------------------------------------------------------------- |
-| `unstable_dev`           | Enable the new development server (including HMR/HDR support)         |
+| `v2_dev`                 | Enable the new development server (including HMR/HDR support)         |
 | `v2_errorBoundary`       | Combine `ErrorBoundary`/`CatchBoundary` into a single `ErrorBoundary` |
 | `v2_meta`                | Enable the new API for your `meta` functions                          |
 | `v2_normalizeFormMethod` | Normalize `useNavigation().formMethod` to be an uppercase HTTP Method |

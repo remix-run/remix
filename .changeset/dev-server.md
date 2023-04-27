@@ -3,6 +3,8 @@
 "@remix-run/server-runtime": minor
 ---
 
+Stabilize dev server: `unstable_dev` 👉 `v2_dev`
+
 Dev server improvements
 
 - Push-based app server syncing that doesn't rely on polling
@@ -12,12 +14,12 @@ Dev server improvements
 
 # Guide
 
-Enable `unstable_dev` in `remix.config.js`:
+Enable `v2_dev` in `remix.config.js`:
 
 ```js
 {
   future: {
-    "unstable_dev": true
+    "v2_dev": true
   }
 }
 ```
@@ -92,7 +94,7 @@ Most users won't need to configure the dev server, but you might need to if:
 ```js
 {
   future: {
-    unstable_dev: {
+    v2_dev: {
       // Command to run your app server
       command: "wrangler", // default: `remix-serve ./build`
       // HTTP(S) scheme used when sending `broadcastDevReady` messages to the dev server

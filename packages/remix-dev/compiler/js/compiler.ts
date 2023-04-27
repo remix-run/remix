@@ -82,7 +82,7 @@ const createEsbuildConfig = (
   let routeModulePaths = new Map<string, string>();
   for (let id of Object.keys(ctx.config.routes)) {
     entryPoints[id] = ctx.config.routes[id].file;
-    if (ctx.config.future.unstable_dev) {
+    if (ctx.config.future.v2_dev) {
       // In V2 we are doing AST transforms to remove server code, this means we
       // have to re-map all route modules back to the same module in the graph
       // otherwise we will have duplicate modules in the graph. We have to resolve
@@ -106,7 +106,7 @@ const createEsbuildConfig = (
 
   if (
     ctx.options.mode === "development" &&
-    ctx.config.future.unstable_dev !== false
+    ctx.config.future.v2_dev !== false
   ) {
     let defaultsDirectory = path.resolve(
       __dirname,
@@ -141,7 +141,7 @@ const createEsbuildConfig = (
     cssFilePlugin(ctx),
     absoluteCssUrlsPlugin(),
     externalPlugin(/^https?:\/\//, { sideEffects: false }),
-    ctx.config.future.unstable_dev
+    ctx.config.future.v2_dev
       ? browserRouteModulesPlugin_v2(ctx, routeModulePaths, onLoader)
       : browserRouteModulesPlugin(ctx, /\?browser$/),
     mdxPlugin(ctx),
@@ -191,7 +191,7 @@ const createEsbuildConfig = (
     } as esbuild.Plugin,
   ];
 
-  if (ctx.options.mode === "development" && ctx.config.future.unstable_dev) {
+  if (ctx.options.mode === "development" && ctx.config.future.v2_dev) {
     plugins.push(hmrPlugin(ctx));
     plugins.push(cssBundleUpdatePlugin(channels));
   }
@@ -253,7 +253,7 @@ export const create = async (
     let { metafile } = await compiler.rebuild();
 
     let hmr: Manifest["hmr"] | undefined = undefined;
-    if (ctx.options.mode === "development" && ctx.config.future.unstable_dev) {
+    if (ctx.options.mode === "development" && ctx.config.future.v2_dev) {
       let hmrRuntimeOutput = Object.entries(metafile.outputs).find(
         ([_, output]) => output.inputs["hmr-runtime:remix:hmr"]
       )?.[0];

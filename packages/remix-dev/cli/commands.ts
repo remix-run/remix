@@ -176,7 +176,7 @@ export async function build(
     sourcemap,
     onWarning: warnOnce,
   };
-  if (mode === "development" && config.future.unstable_dev) {
+  if (mode === "development" && config.future.v2_dev) {
     let dev = await resolveDevBuild(config);
     options.devHttpOrigin = {
       scheme: dev.httpScheme,
@@ -218,7 +218,7 @@ export async function dev(
     debug?: boolean;
     port?: number; // TODO: remove for v2
 
-    // unstable_dev
+    // v2_dev
     command?: string;
     httpScheme?: string;
     httpHost?: string;
@@ -237,7 +237,7 @@ export async function dev(
 
   let config = await readConfig(remixRoot);
 
-  if (config.future.unstable_dev === false) {
+  if (config.future.v2_dev === false) {
     await devServer.serve(config, flags.port);
     return await new Promise(() => {});
   }
@@ -481,7 +481,7 @@ let resolveDevBuild = async (
   config: RemixConfig,
   flags: Partial<DevBuildFlags> = {}
 ): Promise<DevBuildFlags> => {
-  let dev = config.future.unstable_dev;
+  let dev = config.future.v2_dev;
   if (dev === false) throw Error("This should never happen");
 
   // prettier-ignore
@@ -521,7 +521,7 @@ let resolveDevServe = async (
   config: RemixConfig,
   flags: Partial<DevServeFlags> = {}
 ): Promise<DevServeFlags> => {
-  let dev = config.future.unstable_dev;
+  let dev = config.future.v2_dev;
   if (dev === false) throw Error("Cannot resolve dev options");
 
   let { httpScheme, httpHost, httpPort, websocketPort } = await resolveDevBuild(

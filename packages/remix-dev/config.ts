@@ -49,7 +49,7 @@ type Dev = {
 };
 
 interface FutureConfig {
-  unstable_dev: boolean | Dev;
+  v2_dev: boolean | Dev;
   /** @deprecated Use the `postcss` config option instead */
   unstable_postcss: boolean;
   /** @deprecated Use the `tailwind` config option instead */
@@ -738,7 +738,7 @@ export async function readConfig(
   }
 
   let future: FutureConfig = {
-    unstable_dev: appConfig.future?.unstable_dev ?? false,
+    v2_dev: appConfig.future?.v2_dev ?? false,
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
