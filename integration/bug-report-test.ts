@@ -42,79 +42,34 @@ let appFixture: AppFixture;
 
 test.beforeAll(async () => {
   fixture = await createFixture({
+    future: { v2_routeConvention: true },
     ////////////////////////////////////////////////////////////////////////////
     // 💿 Next, add files to this object, just like files in a real app,
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/index.jsx": js`
-      import {
-        Form,
-        useFetcher,
-        useLoaderData,
-        useNavigation
-      } from "@remix-run/react";
-      import { useState } from "react";
-      
-      export async function loader({ request }) {
-      
-        // 1 second timeout on data
-        const data = await new Promise((resolve) => {
-          setTimeout(() => {
-            resolve({ foo: 'bar' });
-          }, 1000);
-        });
-      
-        return { data };
-      }
-      
-      export default function Index() {
-        const { data } = useLoaderData();
-      
-        const [open, setOpen] = useState(true);
-        const navigation = useNavigation();
-      
-        return (
-          <div>
-              {navigation.state === 'idle' && <div id="idle">Idle</div>}
-              <Form id="main-form">
-                <input id="submit-form" type="submit" />
-              </Form>
+      "app/routes/_index.jsx": js`
+        import { json } from "@remix-run/node";
+        import { useLoaderData, Link } from "@remix-run/react";
 
-              <button id="open" onClick={() => setOpen(true)}>Show async form</button>
-              {open && <Child onClose={() => setOpen(false)} />}
-          </div>
-        );
-      }
-      
-      function Child({ onClose }) {
-        const fetcher = useFetcher();
-      
-        return (
-          <fetcher.Form method="get" action="/api">
-            <button id="submit-fetcher" type="submit">Trigger fetcher (shows a message)</button>
-            <button
-              type="submit"
-              form="main-form"
-              id="submit-and-close"
-              onClick={() => {
-                setTimeout(() => {
-                  onClose();
-                }, 250);
-              }}
-            >
-              Submit main form and close async form
-            </button>
-          </fetcher.Form>
-        );
-      }
-        
+        export function loader() {
+          return json("pizza");
+        }
+
+        export default function Index() {
+          let data = useLoaderData();
+          return (
+            <div>
+              {data}
+              <Link to="/burgers">Other Route</Link>
+            </div>
+          )
+        }
       `,
 
-      "app/routes/api.jsx": js`
-        export async function loader() {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          return {message: 'Hello world!'}
+      "app/routes/burgers.jsx": js`
+        export default function Index() {
+          return <div>cheeseburger</div>;
         }
       `,
     },
@@ -133,20 +88,22 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("Unmounting a fetcher does not cancel the request of an adjacent form", async ({ page }) => {
+test("[description of what you expect it to do]", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
+  // You can test any request your app might get using `fixture`.
+  let response = await fixture.requestDocument("/");
+  expect(await response.text()).toMatch("pizza");
+
   // If you need to test interactivity use the `app`
   await app.goto("/");
-  
-  // Works as expected before the fetcher is loaded
-  await app.clickElement("#submit-and-close"); // submit the main form and unmount the fetcher form
-  await page.waitForSelector("#idle", {timeout: 2000}); // Wait for our navigation state to be "Idle"
+  await app.clickLink("/burgers");
+  expect(await app.getHtml()).toMatch("cheeseburger");
 
-  // Breaks after the fetcher is loaded
-  await app.clickElement("#open"); // re-mount the fetcher form
-  await app.clickElement("#submit-fetcher"); // submit the fetcher form
-  await app.clickElement("#submit-and-close"); // submit the main form and unmount the fetcher form
-  await page.waitForSelector("#idle", {timeout: 2000}); // Wait for navigation state to be "Idle"
+  // If you're not sure what's going on, you can "poke" the app, it'll
+  // automatically open up in your browser for 20 seconds, so be quick!
+  // await app.poke(20);
+
+  // Go check out the other tests to see what else you can do.
 });
 
 ////////////////////////////////////////////////////////////////////////////////
