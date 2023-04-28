@@ -8,7 +8,7 @@
 
 ### Patch Changes
 
-- rename devReady to broadcastDevReady ([#6194](https://github.com/remix-run/remix/pull/6194))
+- rename `devReady` to `broadcastDevReady` ([#6194](https://github.com/remix-run/remix/pull/6194))
 
 ## 1.15.0
 
