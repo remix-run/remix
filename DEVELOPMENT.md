@@ -75,13 +75,13 @@ You may need to make changes to a pre-release prior to publishing a final stable
   - We should remove the changelogs for all pre-releases ahead of publishing the stable version.
   - [TODO: We should automate this]
 - Prepare the github release notes
+  - Copy the relevant changelog entries from all packages into the Release Notes and adjust accordingly, matching the format used by prior releases
 - Merge the PR into the `release-*` branch.
 - Once the PR is merged, the release workflow will publish the updated packages to npm.
 - Once the release is published:
   - merge the `release-*` branch into `main` and push it up to GitHub
   - merge the `release-*` branch into `dev` and push it up to GitHub
   - Convert the `remix@1.x.y` tag to a Release on Github with the name `v1.x.y`
-  - Copy the relevant changelog entries from all packages into the Release Notes and adjust accordingly, matching the format used by prior releases
 
 ### Experimental releases
 
