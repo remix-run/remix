@@ -37,6 +37,7 @@ export function cssFilePlugin({
       build.onLoad({ filter: /\.css$/ }, async (args) => {
         let { metafile, outputFiles, warnings, errors } = await esbuild.build({
           ...buildOps,
+          inject: [],
           minify: options.mode === "production",
           minifySyntax: true,
           metafile: true,
