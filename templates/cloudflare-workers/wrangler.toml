@@ -8,7 +8,3 @@ compatibility_flags = ["streams_enable_constructors"]
 
 [site]
   bucket = "./public"
-
-[build]
-  command = "npm run build"
-
