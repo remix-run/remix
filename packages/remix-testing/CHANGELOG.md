@@ -1,56 +1,6 @@
 # `@remix-run/testing`
 
-## 1.16.0-pre.6
-
-### Patch Changes
-
-- Bump to router [`react-router-dom@6.11.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.11.0)/[`@remix-run/router@1.6.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#160) ([#6233](https://github.com/remix-run/remix/pull/6233))
-- Updated dependencies:
-  - `@remix-run/react@1.16.0-pre.6`
-  - `@remix-run/node@1.16.0-pre.6`
-
-## 1.16.0-pre.5
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@1.16.0-pre.5`
-  - `@remix-run/react@1.16.0-pre.5`
-
-## 1.16.0-pre.4
-
-### Patch Changes
-
-- Bump to React Router `6.11.0-pre.2` ([#6223](https://github.com/remix-run/remix/pull/6223))
-- Updated dependencies:
-  - `@remix-run/react@1.16.0-pre.4`
-  - `@remix-run/node@1.16.0-pre.4`
-
-## 1.16.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@1.16.0-pre.3`
-  - `@remix-run/react@1.16.0-pre.3`
-
-## 1.16.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/node@1.16.0-pre.2`
-  - `@remix-run/react@1.16.0-pre.2`
-
-## 1.16.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/react@1.16.0-pre.1`
-  - `@remix-run/node@1.16.0-pre.1`
-
-## 1.16.0-pre.0
+## 1.16.0
 
 ### Minor Changes
 
@@ -150,10 +100,12 @@
 
 ### Patch Changes
 
+- Bump to React Router `6.11.0-pre.2` ([#6223](https://github.com/remix-run/remix/pull/6223))
+- Bump to router [`react-router-dom@6.11.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.11.0)/[`@remix-run/router@1.6.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#160) ([#6233](https://github.com/remix-run/remix/pull/6233))
 - feat(remix-testing): cast types to use Remix type definitions + allow passing context ([#6065](https://github.com/remix-run/remix/pull/6065))
 - Updated dependencies:
-  - `@remix-run/react@1.16.0-pre.0`
-  - `@remix-run/node@1.16.0-pre.0`
+  - `@remix-run/react@1.16.0`
+  - `@remix-run/node@1.16.0`
 
 ## 1.15.0
 

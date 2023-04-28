@@ -1,31 +1,6 @@
 # `@remix-run/react`
 
-## 1.16.0-pre.6
-
-### Patch Changes
-
-- Bump to router [`react-router-dom@6.11.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.11.0)/[`@remix-run/router@1.6.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#160) ([#6233](https://github.com/remix-run/remix/pull/6233))
-
-## 1.16.0-pre.5
-
-## 1.16.0-pre.4
-
-### Patch Changes
-
-- Bump to React Router `6.11.0-pre.2` ([#6223](https://github.com/remix-run/remix/pull/6223))
-
-## 1.16.0-pre.3
-
-## 1.16.0-pre.2
-
-## 1.16.0-pre.1
-
-### Patch Changes
-
-- fix(react,dev): dev chunking and refresh race condition ([#6201](https://github.com/remix-run/remix/pull/6201))
-- rename devReady to broadcastDevReady ([#6194](https://github.com/remix-run/remix/pull/6194))
-
-## 1.16.0-pre.0
+## 1.16.0
 
 ### Minor Changes
 
@@ -129,29 +104,25 @@
 
   If you followed the original PostCSS setup guide for Remix, you may have a folder structure that looks like this, separating your source files from its processed output:
 
-  ```
-  .
-  ├── app
-  │   └── styles (processed files)
-  │       ├── app.css
-  │       └── routes
-  │           └── index.css
-  └── styles (source files)
-      ├── app.css
-      └── routes
-          └── index.css
-  ```
+      .
+      ├── app
+      │   └── styles (processed files)
+      │       ├── app.css
+      │       └── routes
+      │           └── index.css
+      └── styles (source files)
+          ├── app.css
+          └── routes
+              └── index.css
 
   After you've enabled the new `postcss` option, you can delete the processed files from `app/styles` folder and move your source files from `styles` to `app/styles`:
 
-  ```
-  .
-  ├── app
-  │   └── styles (source files)
-  │       ├── app.css
-  │       └── routes
-  │           └── index.css
-  ```
+      .
+      ├── app
+      │   └── styles (source files)
+      │       ├── app.css
+      │       └── routes
+      │           └── index.css
 
   You should then remove `app/styles` from your `.gitignore` file since it now contains source files rather than processed output.
 
@@ -214,12 +185,16 @@
 
 ### Patch Changes
 
+- Bump to React Router `6.11.0-pre.2` ([#6223](https://github.com/remix-run/remix/pull/6223))
+- fix(react,dev): dev chunking and refresh race condition ([#6201](https://github.com/remix-run/remix/pull/6201))
 - Revalidate loaders only when a change to one is detected. ([#6135](https://github.com/remix-run/remix/pull/6135))
 - short circuit links and meta for routes that are not rendered due to errors ([#6107](https://github.com/remix-run/remix/pull/6107))
 - don't warn about runtime deprecation warnings in production ([#4421](https://github.com/remix-run/remix/pull/4421))
+- rename devReady to broadcastDevReady ([#6194](https://github.com/remix-run/remix/pull/6194))
 - Update Remix for React Router no longer relying on `useSyncExternalStore` ([#6121](https://github.com/remix-run/remix/pull/6121))
 - Fix false-positive resource route identification if a route only exports a boundary ([#6125](https://github.com/remix-run/remix/pull/6125))
 - better type discrimination when unwrapping loader return types ([#5516](https://github.com/remix-run/remix/pull/5516))
+- Bump to router [`react-router-dom@6.11.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.11.0)/[`@remix-run/router@1.6.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#160) ([#6233](https://github.com/remix-run/remix/pull/6233))
 
 ## 1.15.0
 
