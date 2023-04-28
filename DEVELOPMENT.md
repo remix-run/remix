@@ -69,11 +69,12 @@ You may need to make changes to a pre-release prior to publishing a final stable
 ### Publishing the stable release
 
 - Exit Changesets pre-release mode: `yarn changeset pre exit`.
-- Commit the deleted pre-release file along with any unpublished changesets, and push the `release-*` branch to GitHub.
+- Commit the edited `pre.json` file along with any unpublished changesets, and push the `release-*` branch to GitHub.
 - Wait for the release workflow to finish. The Changesets action in the workflow will open a PR that will increment all versions and generate the changelogs for the stable release.
 - Review the updated `CHANGELOG` files and make any adjustments necessary.
   - We should remove the changelogs for all pre-releases ahead of publishing the stable version.
   - [TODO: We should automate this]
+- Prepare the github release notes
 - Merge the PR into the `release-*` branch.
 - Once the PR is merged, the release workflow will publish the updated packages to npm.
 - Once the release is published:

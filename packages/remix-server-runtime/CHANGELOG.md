@@ -199,6 +199,7 @@
 
   ```js
   // server.dev.js
+  // eslint-disable-next-line no-restricted-globals
   const BUILD_PATH = path.resolve(__dirname, "build");
 
   const watcher = chokidar.watch(BUILD_PATH);
