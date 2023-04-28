@@ -8,7 +8,7 @@
 
   These CSS bundling features were previously only available via `future.unstable_cssModules`, `future.unstable_vanillaExtract` and `future.unstable_cssSideEffectImports` options in `remix.config.js`, but they have now been stabilized.
 
-  In order to use these features, check out our guide to [CSS bundling](https://remix.run/docs/en/dev/guides/styling#css-bundling) in your project.
+  In order to use these features, check out our guide to [CSS bundling](https://remix.run/docs/en/1.16.0/guides/styling#css-bundling) in your project.
 
 - Stabilize built-in PostCSS support via the new `postcss` option in `remix.config.js`. As a result, the `future.unstable_postcss` option has also been deprecated. ([#5960](https://github.com/remix-run/remix/pull/5960))
 
@@ -226,8 +226,6 @@
 - Use the "automatic" JSX runtime when processing MDX files. ([#6098](https://github.com/remix-run/remix/pull/6098))
 - rename `devReady` to `broadcastDevReady` ([#6194](https://github.com/remix-run/remix/pull/6194))
 - forcibly kill app server during dev ([#6197](https://github.com/remix-run/remix/pull/6197))
-- Revert "Fix a bug in route matching that was preventing a single splat (`$.jsx`) route from matching a root `/` path" ([#6222](https://github.com/remix-run/remix/pull/6222))
-- Fix a bug in route matching that was preventing a single splat (`$.jsx`) route from matching a root `/` path ([#6130](https://github.com/remix-run/remix/pull/6130))
 - show first compilation error instead of cancelation errors ([#6202](https://github.com/remix-run/remix/pull/6202))
 - Resolve imports from route modules across the graph back to the virtual module created by the v2 routes plugin. This fixes issues where we would duplicate portions of route modules that were imported. ([#6098](https://github.com/remix-run/remix/pull/6098))
 - Updated dependencies:

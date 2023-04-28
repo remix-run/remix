@@ -8,7 +8,7 @@
 
   These CSS bundling features were previously only available via `future.unstable_cssModules`, `future.unstable_vanillaExtract` and `future.unstable_cssSideEffectImports` options in `remix.config.js`, but they have now been stabilized.
 
-  In order to use these features, check out our guide to [CSS bundling](https://remix.run/docs/en/dev/guides/styling#css-bundling) in your project.
+  In order to use these features, check out our guide to [CSS bundling](https://remix.run/docs/en/1.16.0/guides/styling#css-bundling) in your project.
 
 ### Patch Changes
 
