@@ -1,12 +1,11 @@
 {
   "private": true,
   "sideEffects": false,
+  "type": "module",
   "scripts": {
     "build": "remix build",
     "deploy": "deployctl deploy --prod --include=build,public --project=<your deno deploy project> ./build/index.js",
-    "dev": "npm-run-all build --parallel \"dev:*\"",
-    "dev:deno": "cross-env NODE_ENV=development deno run --unstable --watch --allow-net --allow-read --allow-env ./build/index.js",
-    "dev:remix": "remix watch",
+    "dev": "remix dev --no-restart -c \"deno run --unstable --watch --allow-net --allow-read --allow-env ./build/index.js\"",
     "format": "deno fmt --ignore=node_modules,build,public/build",
     "lint": "deno lint --ignore=node_modules,build,public/build",
     "start": "cross-env NODE_ENV=production deno run --unstable --allow-net --allow-read --allow-env ./build/index.js",
@@ -17,6 +16,7 @@
     "@remix-run/deno": "*",
     "@remix-run/react": "*",
     "isbot": "^3.6.8",
+    "mime": "^3.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

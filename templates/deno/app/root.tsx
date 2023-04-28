@@ -1,3 +1,4 @@
+import * as React from "react";
 import {
   Links,
   LiveReload,
@@ -8,7 +9,6 @@ import {
 } from "@remix-run/react";
 import type { LinksFunction } from "@remix-run/deno";
 import { cssBundleHref } from "@remix-run/css-bundle";
-import * as React from "react";
 
 export const links: LinksFunction = () => [
   ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),

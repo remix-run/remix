@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.128.0/http/server.ts";
-import { createRequestHandlerWithStaticFiles } from "@remix-run/deno";
+import {
+  createRequestHandlerWithStaticFiles,
+  logDevReady,
+} from "@remix-run/deno";
 // Import path interpreted by the Remix compiler
 import * as build from "@remix-run/dev/server-build";
 
@@ -12,3 +15,8 @@ const remixHandler = createRequestHandlerWithStaticFiles({
 const port = Number(Deno.env.get("PORT")) || 8000;
 console.log(`Listening on http://localhost:${port}`);
 serve(remixHandler, { port });
+
+// @ts-expect-error this is defined by the remix compiler at build time
+if (process.env.NODE_ENV === "development") {
+  logDevReady(build);
+}

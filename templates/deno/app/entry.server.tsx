@@ -4,6 +4,7 @@
  * For more information, see https://remix.run/docs/en/main/file-conventions/entry.server
  */
 
+import * as React from "react";
 import type { EntryContext } from "@remix-run/deno";
 import { RemixServer } from "@remix-run/react";
 import isbot from "isbot";
