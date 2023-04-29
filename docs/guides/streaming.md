@@ -311,7 +311,7 @@ export default function PackageRoute() {
 If you're not jazzed about bringing back render props, you can use a hook, but you'll have to break things out into another component:
 
 ```tsx lines=[1,18,26-29]
-import type { SerializedFrom } from "@remix-run/node"; // or cloudflare/deno
+import type { SerializeFrom } from "@remix-run/node"; // or cloudflare/deno
 
 export default function PackageRoute() {
   const data = useLoaderData<typeof loader>();
@@ -336,10 +336,7 @@ export default function PackageRoute() {
 }
 
 function PackageLocation() {
-  const packageLocation =
-    useAsyncValue<
-      SerializedFrom<typeof loader>["packageLocation"]
-    >();
+  const packageLocation = useAsyncValue() as SerializeFrom<typeof loader>["packageLocation"];
 
   return (
     <p>
