@@ -336,7 +336,9 @@ export default function PackageRoute() {
 }
 
 function PackageLocation() {
-  const packageLocation = useAsyncValue() as SerializeFrom<typeof loader>["packageLocation"];
+  const packageLocation = useAsyncValue() as SerializeFrom<
+    typeof loader
+  >["packageLocation"];
 
   return (
     <p>
