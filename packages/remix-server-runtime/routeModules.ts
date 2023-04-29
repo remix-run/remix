@@ -72,6 +72,8 @@ export type HeadersFunctionArgs = {
   actionHeaders: Headers;
 };
 
+export type HeadersArgs = HeadersFunctionArgs
+
 /**
  * A function that returns HTTP headers to be used for a route. These headers
  * will be merged with (and take precedence over) headers from parent routes.
