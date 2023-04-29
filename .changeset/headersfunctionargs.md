@@ -12,9 +12,9 @@
 add `HeadersFunctionArgs` type to be consistent with loaders/actions/meta and allows for using `function`
 
 ```tsx
-import type { HeadersFunctionArgs } from '@remix-run/*';
+import type { HeadersArgs } from '@remix-run/node'; // or cloudflare/deno
 
-export function headers({ loaderHeaders }: HeadersFunctionArgs) {
+export function headers({ loaderHeaders }: HeadersArgs) {
   return {
     "x-my-custom-thing": loaderHeaders.get("x-my-custom-thing") || "fallback"
   }
