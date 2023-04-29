@@ -48,6 +48,7 @@ export type {
   FlashSessionData,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
+  HeadersFunctionArgs,
   HeadersFunction,
   HtmlLinkDescriptor,
   HtmlMetaDescriptor,

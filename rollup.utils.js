@@ -348,6 +348,7 @@ function getMagicExports(packageName) {
         "ErrorBoundaryComponent",
         "HandleDataRequestFunction",
         "HandleDocumentRequestFunction",
+        "HeadersFunctionArgs",
         "HeadersFunction",
         "HtmlLinkDescriptor",
         "HtmlMetaDescriptor",
