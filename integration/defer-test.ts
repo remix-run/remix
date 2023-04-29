@@ -552,7 +552,7 @@ test.describe("non-aborted", () => {
       },
     });
 
-    // This creates an interactive app using puppeteer.
+    // This creates an interactive app using playwright.
     appFixture = await createAppFixture(fixture);
   });
 
@@ -1232,7 +1232,7 @@ test.describe("aborted", () => {
       },
     });
 
-    // This creates an interactive app using puppeteer.
+    // This creates an interactive app using playwright.
     appFixture = await createAppFixture(fixture);
   });
 
