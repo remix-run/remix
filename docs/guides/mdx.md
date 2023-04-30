@@ -182,7 +182,7 @@ Clearly this is not a scalable solution for a blog with thousands of posts. Real
 
 If you wish to configure your own remark plugins you can do so through the `remix.config.js`'s `mdx` export:
 
-```js
+```ts
 const {
   remarkMdxFrontmatter,
 } = require("remark-mdx-frontmatter");

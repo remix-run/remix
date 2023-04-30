@@ -133,6 +133,8 @@ let RemixCatchContext = React.createContext<ThrownResponse | undefined>(
 /**
  * Returns the status code and thrown response data.
  *
+ * @deprecated Please enable the v2_errorBoundary flag
+ *
  * @see https://remix.run/route/catch-boundary
  */
 export function useCatch<

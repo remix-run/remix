@@ -1,10 +1,4 @@
-import type { Location, NavigationType as Action } from "react-router-dom";
-
-export interface CatchData<T = any> {
-  status: number;
-  statusText: string;
-  data: T;
-}
+import type { Location } from "react-router-dom";
 
 export interface Submission {
   action: string;
@@ -81,34 +75,15 @@ export type TransitionStates = {
 
 export type Transition = TransitionStates[keyof TransitionStates];
 
-export type Redirects = {
-  Loader: {
-    isRedirect: true;
-    type: "loader";
-    setCookie: boolean;
-  };
-  Action: {
-    isRedirect: true;
-    type: "action";
-    setCookie: boolean;
-  };
-  LoaderSubmission: {
-    isRedirect: true;
-    type: "loaderSubmission";
-    setCookie: boolean;
-  };
-  FetchAction: {
-    isRedirect: true;
-    type: "fetchAction";
-    setCookie: boolean;
-  };
-};
-
 // TODO: keep data around on resubmission?
 export type FetcherStates<TData = any> = {
   Idle: {
     state: "idle";
     type: "init";
+    formMethod: undefined;
+    formAction: undefined;
+    formData: undefined;
+    formEncType: undefined;
     submission: undefined;
     data: undefined;
   };
@@ -155,12 +130,20 @@ export type FetcherStates<TData = any> = {
   Loading: {
     state: "loading";
     type: "normalLoad";
+    formMethod: undefined;
+    formAction: undefined;
+    formData: undefined;
+    formEncType: undefined;
     submission: undefined;
     data: TData | undefined;
   };
   Done: {
     state: "idle";
     type: "done";
+    formMethod: undefined;
+    formAction: undefined;
+    formData: undefined;
+    formEncType: undefined;
     submission: undefined;
     data: TData;
   };
@@ -168,30 +151,6 @@ export type FetcherStates<TData = any> = {
 
 export type Fetcher<TData = any> =
   FetcherStates<TData>[keyof FetcherStates<TData>];
-
-export class CatchValue {
-  constructor(
-    public status: number,
-    public statusText: string,
-    public data: any
-  ) {}
-}
-
-export type NavigationEvent = {
-  type: "navigation";
-  action: Action;
-  location: Location;
-  submission?: Submission;
-};
-
-export type FetcherEvent = {
-  type: "fetcher";
-  key: string;
-  submission?: Submission;
-  href: string;
-};
-
-export type DataEvent = NavigationEvent | FetcherEvent;
 
 export const IDLE_TRANSITION: TransitionStates["Idle"] = {
   state: "idle",
@@ -204,5 +163,9 @@ export const IDLE_FETCHER: FetcherStates["Idle"] = {
   state: "idle",
   type: "init",
   data: undefined,
+  formMethod: undefined,
+  formAction: undefined,
+  formData: undefined,
+  formEncType: undefined,
   submission: undefined,
 };

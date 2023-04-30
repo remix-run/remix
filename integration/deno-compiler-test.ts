@@ -34,6 +34,7 @@ const searchFiles = async (pattern: string | RegExp, files: string[]) => {
 
 test.beforeAll(async () => {
   projectDir = await createFixtureProject({
+    future: { v2_routeConvention: true },
     template: "deno-template",
     files: {
       "package.json": json({
@@ -42,6 +43,7 @@ test.beforeAll(async () => {
         dependencies: {
           "@remix-run/deno": "0.0.0-local-version",
           "@remix-run/react": "0.0.0-local-version",
+          isbot: "0.0.0-local-version",
           react: "0.0.0-local-version",
           "react-dom": "0.0.0-local-version",
           component: "0.0.0-local-version",
@@ -51,7 +53,7 @@ test.beforeAll(async () => {
           "@remix-run/dev": "0.0.0-local-version",
         },
       }),
-      "app/routes/index.jsx": js`
+      "app/routes/_index.jsx": js`
         import fake from "deno-pkg";
         import { urlComponent } from "https://deno.land/x/component.ts";
         import { urlUtil } from "https://deno.land/x/util.ts";

@@ -7,6 +7,7 @@ import {
   createFixture,
   css,
   js,
+  json,
 } from "./helpers/create-fixture";
 
 const TEST_PADDING_VALUE = "20px";
@@ -29,6 +30,7 @@ test.describe("CSS side-effect imports", () => {
               unstable_postcss: true,
               unstable_tailwind: true,
               unstable_vanillaExtract: true,
+              v2_routeConvention: true,
             },
           };
         `,
@@ -62,9 +64,7 @@ test.describe("CSS side-effect imports", () => {
     appFixture = await createAppFixture(fixture);
   });
 
-  test.afterAll(async () => {
-    await appFixture.close();
-  });
+  test.afterAll(() => appFixture.close());
 
   let basicSideEffectFixture = () => ({
     "app/basicSideEffect/styles.css": css`
@@ -75,7 +75,7 @@ test.describe("CSS side-effect imports", () => {
     `,
     "app/routes/basic-side-effect-test.jsx": js`
       import "../basicSideEffect/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="basic-side-effect" className="basicSideEffect">
@@ -104,7 +104,7 @@ test.describe("CSS side-effect imports", () => {
     `,
     "app/routes/root-relative-test.jsx": js`
       import "~/rootRelative/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="root-relative" className="rootRelative">
@@ -139,7 +139,7 @@ test.describe("CSS side-effect imports", () => {
     `,
     "app/routes/image-urls-test.jsx": js`
       import "../imageUrls/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="image-urls" className="imageUrls">
@@ -179,7 +179,7 @@ test.describe("CSS side-effect imports", () => {
     `,
     "app/routes/root-relative-image-urls-test.jsx": js`
       import "../rootRelativeImageUrls/styles.css";
-      
+
       export default function() {
         return (
           <div data-testid="root-relative-image-urls" className="rootRelativeImageUrls">
@@ -252,7 +252,7 @@ test.describe("CSS side-effect imports", () => {
         padding: ${TEST_PADDING_VALUE};
       }
     `,
-    "node_modules/@test-package/esm/index.js": js`
+    "node_modules/@test-package/esm/index.mjs": js`
       import React from 'react';
       import './styles.css';
 
@@ -267,6 +267,9 @@ test.describe("CSS side-effect imports", () => {
         );
       };
     `,
+    "node_modules/@test-package/esm/package.json": json({
+      exports: "./index.mjs",
+    }),
     "app/routes/esm-package-test.jsx": js`
       import { Test } from "@test-package/esm";
       export default function() {

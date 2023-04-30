@@ -34,8 +34,8 @@ In the spirit of `#useThePlatform` we've chosen to leverage the `Promise` API to
 
 In order to initiate a streamed response in your `loader`, you can use the `defer()` utility which accepts a JSON object with `Promise` values from your `loader`.
 
-```js
-async function loader() {
+```tsx
+export async function loader() {
   return defer({
     // Await this, don't stream
     critical: await fetchCriticalData(),
@@ -53,7 +53,7 @@ The name `defer` was settled on as a corollary to `<script defer>` which essenti
 
 We decided _not_ to support naked objects due to the ambiguity that would be introduced:
 
-```js
+```tsx
 // NOT VALID CODE - This is just an example of the ambiguity that would have
 // been introduced had we chosen to support naked objects :)
 
@@ -92,7 +92,7 @@ function exampleLoader3() {
 
 No new APIs are needed for the "Accessing" stage 🎉. Since we've "teleported" these promises over the network, you can access them in your components just as you would with any other data returned from your loader. This value will always be a `Promise`, even after it's been settled.
 
-```js
+```tsx
 function Component() {
   let data = useLoaderData();
   // data.critical is a resolved value
@@ -106,7 +106,7 @@ In order to render your `Promise` values from `useLoaderData()`, Remix provides 
 
 This examples shows the full set of render-time APIs:
 
-```jsx
+```tsx
 function Component() {
   let data = useLoaderData(); // data.lazy is a Promise
 
@@ -134,7 +134,7 @@ Note that `useAsyncValue` and `useAsyncError` only work in the context of an `<A
 
 The `<Await>` name comes from the fact that for these lazily-rendered promises, we're not `await`-ing the promise in our loader, so instead we need to `<Await>` the promise in our render function and provide a fallback UI. The `resolve` prop is intended to mimic how you'd await a resolved value in plain Javascript:
 
-```jsx
+```tsx
 // This JSX:
 <Await resolve={promiseOrValue} />;
 
@@ -144,8 +144,8 @@ let value = await Promise.resolve(promiseOrValue);
 
 Just like `Promise.resolve` can accept a promise or a value, `<Await resolve>` can also accept a promise or a value. This is really useful in case you want to AB test `defer()` responses in the loader - you don't need to change the UI code to render the data.
 
-```jsx
-async function loader({ request }) {
+```tsx
+export async function loader({ request }: LoaderArgs) {
   let shouldAwait = isUserInTestGroup(request);
   return {
     maybeLazy: shouldAwait ? await fetchData() : fetchData(),
@@ -170,7 +170,7 @@ function Component() {
 
 If you prefer the render props pattern, you can bypass `useAsyncValue()` and just grab the value directly:
 
-```jsx
+```tsx
 <Await resolve={data.lazy}>{(value) => <p>Resolved: {value}</p>}</Await>
 ```
 

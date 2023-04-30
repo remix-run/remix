@@ -28,7 +28,7 @@ npm install -D @remix-run/dev
 
 Most React Router apps run primarily in the browser. The server's only job is to send a single static HTML page while React Router manages the route-based views client-side. These apps generally have a browser entrypoint file like a root `index.js` that looks something like this:
 
-```jsx filename=index.js
+```tsx filename=index.ts
 import * as ReactDOM from "react-dom";
 
 import App from "./App";
@@ -40,35 +40,130 @@ Server-rendered React apps are a little different. The browser script is not ren
 
 Let's start by creating two new files:
 
-- `app/entry.server.jsx` (or `entry.server.tsx`)
-- `app/entry.client.jsx` (or `entry.client.tsx`)
+- `app/entry.server.tsx` (or `entry.server.jsx`)
+- `app/entry.client.tsx` (or `entry.client.jsx`)
 
 <docs-info>All of your app code in Remix will live in an `app` directory by convention. If your existing app uses a directory with the same name, rename it to something like `src` or `old-app` to differentiate as we migrate to Remix.</docs-info>
 
-```js filename=entry.server.jsx
+```tsx filename=app/entry.server.tsx
+import { PassThrough } from "stream";
+import type { EntryContext } from "@remix-run/node";
+import { Response } from "@remix-run/node";
 import { RemixServer } from "@remix-run/react";
-import { renderToString } from "react-dom/server";
+import isbot from "isbot";
+import { renderToPipeableStream } from "react-dom/server";
+
+const ABORT_DELAY = 5_000;
 
 export default function handleRequest(
-  request,
-  responseStatusCode,
-  responseHeaders,
-  remixContext
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
 ) {
-  let markup = renderToString(
-    <RemixServer context={remixContext} url={request.url} />
-  );
-  responseHeaders.set("Content-Type", "text/html");
-  return new Response("<!DOCTYPE html>" + markup, {
-    status: responseStatusCode,
-    headers: responseHeaders,
+  return isbot(request.headers.get("user-agent"))
+    ? handleBotRequest(
+        request,
+        responseStatusCode,
+        responseHeaders,
+        remixContext
+      )
+    : handleBrowserRequest(
+        request,
+        responseStatusCode,
+        responseHeaders,
+        remixContext
+      );
+}
+
+function handleBotRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  return new Promise((resolve, reject) => {
+    const { pipe, abort } = renderToPipeableStream(
+      <RemixServer
+        context={remixContext}
+        url={request.url}
+        abortDelay={ABORT_DELAY}
+      />,
+      {
+        onAllReady() {
+          const body = new PassThrough();
+
+          responseHeaders.set("Content-Type", "text/html");
+
+          resolve(
+            new Response(body, {
+              headers: responseHeaders,
+              status: responseStatusCode,
+            })
+          );
+
+          pipe(body);
+        },
+        onShellError(error: unknown) {
+          reject(error);
+        },
+        onError(error: unknown) {
+          responseStatusCode = 500;
+          console.error(error);
+        },
+      }
+    );
+
+    setTimeout(abort, ABORT_DELAY);
+  });
+}
+
+function handleBrowserRequest(
+  request: Request,
+  responseStatusCode: number,
+  responseHeaders: Headers,
+  remixContext: EntryContext
+) {
+  return new Promise((resolve, reject) => {
+    const { pipe, abort } = renderToPipeableStream(
+      <RemixServer
+        context={remixContext}
+        url={request.url}
+        abortDelay={ABORT_DELAY}
+      />,
+      {
+        onShellReady() {
+          const body = new PassThrough();
+
+          responseHeaders.set("Content-Type", "text/html");
+
+          resolve(
+            new Response(body, {
+              headers: responseHeaders,
+              status: responseStatusCode,
+            })
+          );
+
+          pipe(body);
+        },
+        onShellError(error: unknown) {
+          reject(error);
+        },
+        onError(error: unknown) {
+          console.error(error);
+          responseStatusCode = 500;
+        },
+      }
+    );
+
+    setTimeout(abort, ABORT_DELAY);
   });
 }
 ```
 
 If you are using React 17, your client entrypoint will look like this:
 
-```js filename=entry.client.jsx lines=[2,4]
+```tsx filename=app/entry.client.tsx lines=[2,4]
 import { RemixBrowser } from "@remix-run/react";
 import { hydrate } from "react-dom";
 
@@ -77,11 +172,19 @@ hydrate(<RemixBrowser />, document);
 
 In React 18, you'll use `hydrateRoot` instead of `hydrate`.
 
-```js filename=entry.client.jsx lines=[2,4]
+```tsx filename=app/entry.client.tsx
 import { RemixBrowser } from "@remix-run/react";
+import { startTransition, StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 
-hydrateRoot(document, <RemixBrowser />);
+startTransition(() => {
+  hydrateRoot(
+    document,
+    <StrictMode>
+      <RemixBrowser />
+    </StrictMode>
+  );
+});
 ```
 
 ## Creating The `root` route
@@ -125,7 +228,7 @@ Create a new file called `root.jsx` (or `root.tsx`) in your `app` directory. The
 
 In your `root.jsx`, export a component that mirrors its structure:
 
-```js filename=root.jsx
+```tsx filename=app/root.tsx
 import { Outlet } from "@remix-run/react";
 
 export default function Root() {
@@ -180,7 +283,7 @@ To start, create a new directory in `app` called `routes`. In that directory, cr
 
 Inside of your `$.jsx` file, all we need to do is export the code from our old root `App`:
 
-```js filename=$.jsx
+```ts filename=$.tsx
 export { default } from "~/old-app/app";
 ```
 
@@ -195,7 +298,8 @@ In your `package.json` file, update your scripts to use `remix` commands instead
   "scripts": {
     "build": "remix build",
     "dev": "remix dev",
-    "start": "remix-serve build"
+    "start": "remix-serve build",
+    "typecheck": "tsc"
   }
 }
 ```
@@ -208,7 +312,7 @@ Over time you'll want to migrate the routes rendered by React Router's `<Route>`
 
 The default export in your route file is the component rendered in the `<Outlet />`. So if you have a route in your `App` that looks like this:
 
-```jsx filename=app/old-app/app.jsx
+```tsx filename=app/old-app/app.tsx
 function About() {
   return (
     <main>
@@ -229,7 +333,7 @@ function App() {
 
 Your route file should look like this:
 
-```jsx filename=app/routes/about.jsx
+```tsx filename=app/routes/about.tsx
 export default function About() {
   return (
     <main>
@@ -250,7 +354,7 @@ At this point you _might_ be able to say you are done with the initial migration
 
 A common pain-point in migrating a client-rendered codebase to a server-rendered one is that you may have references to browser APIs in code that runs on the server. A common example can be found when initializing values in state:
 
-```jsx
+```tsx
 function Count() {
   let [count, setCount] = React.useState(
     () => localStorage.getItem("count") || 0
@@ -279,7 +383,7 @@ Your go-to solution may be to check for the `window` object and only run the cal
 
 One potential solution here is using a different caching mechanism that can be used on the server and passed to the component via props passed from a route's [loader data][loader-data]. But if it isn't crucial for your app to render the component on the server, a simpler solution may be to skip rendering altogether on the server and wait until hydration is complete to render it in the browser.
 
-```jsx
+```tsx
 // We can safely track hydration in memory state
 // outside of the component because it is only
 // updated once after the version instance of
@@ -395,7 +499,7 @@ Remix does not support most non-standard imports, and we think for good reason. 
 
 Many bundlers use plugins to allow importing various assets like images and fonts. These typically come into your component as string representing the filepath of the asset.
 
-```js
+```tsx
 import logo from "./logo.png";
 
 export function Logo() {
@@ -409,7 +513,7 @@ In Remix, this works basically the same way. For assets like fonts that are load
 
 Create React App and some Webpack plugins allow you to import SVG files as a React component. This is a common use case for SVG files, but it's not supported by default in Remix.
 
-```js bad nocopy
+```tsx bad nocopy
 // This will not work in Remix!
 import MyLogo from "./logo.svg";
 
@@ -426,7 +530,7 @@ If you want to use SVG files as React components, you'll need to first create th
 </svg>
 ```
 
-```jsx filename=icon.jsx good
+```tsx filename=icon.tsx good
 export default function Icon() {
   return (
     <svg
@@ -457,7 +561,7 @@ Let's talk a bit more about styles. Remix does not handle CSS imports the same w
 
 Assume you have a plain CSS import in your `App` component:
 
-```jsx filename=app.jsx lines=[5]
+```tsx filename=app.tsx lines=[5]
 import { Outlet } from "react-router-dom";
 
 import Logo from "./logo";
@@ -502,13 +606,14 @@ In Remix, stylesheets can only be loaded from route component files. Importing t
 
 Let's move our app's stylesheet and a few other assets to the `links` function in our root route:
 
-```jsx filename=root.jsx lines=[1,4,6-15,31]
+```tsx filename=app/root.tsx lines=[2,5,7-16,32]
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 import { Links } from "@remix-run/react";
 
 import App from "./app";
 import stylesheetUrl from "./styles.css";
 
-export function links() {
+export const links: LinksFunction = () => {
   // `links` returns an array of objects whose
   // properties map to the `<link />` component props
   return [
@@ -517,7 +622,7 @@ export function links() {
     { rel: "manifest", href: "/manifest.json" },
     { rel: "stylesheet", href: stylesheetUrl },
   ];
-}
+};
 
 export default function Root() {
   return (
@@ -556,8 +661,10 @@ Similar to `links`, each route can also export a `meta` function that—you gues
 
 The API is slightly different for `meta`. Instead of an array, it returns an object where the keys represent the meta `name` attribute (or `property` in the case of OpenGraph tags) and the value is the `content` attribute. The object can also accept a `title` property that renders a `<title />` component specifically for that route.
 
-```jsx filename=app/routes/about.jsx lines=[1-10]
-export function meta() {
+```tsx filename=app/routes/about.tsx lines=[1,3-12]
+import type { MetaFunction } from "@remix-run/node"; // or cloudflare/deno
+
+export const meta: MetaFunction = () => {
   return {
     title: "About Us",
     "og:title": "About Us",
@@ -566,7 +673,7 @@ export function meta() {
     "og:image:url": "https://remix.run/og-image.png",
     "og:image:alt": "Just doin a bunch of hoodrat stuff",
   };
-}
+};
 
 export default function About() {
   return (
@@ -586,13 +693,13 @@ Remix re-exports everything you get from `react-router-dom` and we recommend tha
 
 **Before:**
 
-```jsx bad nocopy
+```tsx bad nocopy
 import { Link, Outlet } from "react-router-dom";
 ```
 
 **After:**
 
-```jsx good
+```tsx good
 import { Link, Outlet } from "@remix-run/react";
 ```
 

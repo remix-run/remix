@@ -75,6 +75,6 @@ Remix has TypeScript type definitions built-in as well. The starter templates cr
 /// <reference types="@remix-run/node" />
 ```
 
-<docs-info>Note that the types referenced in `remix.env.d.ts` will depend on which environment you're running your app in. For example, there are different globals available in Cloudflare</docs-info>
+<docs-info>Note that the types referenced in `remix.env.d.ts` will depend on which environment you're running your app in. For example, there are different globals available in Cloudflare.</docs-info>
 
 [with-jsx]: https://www.typescriptlang.org/docs/handbook/jsx.html

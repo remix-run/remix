@@ -6,7 +6,7 @@ title: handle
 
 Exporting a handle allows you to create application conventions with the `useMatches()` hook. You can put whatever values you want on it:
 
-```js
+```tsx
 export const handle = {
   its: "all yours",
 };

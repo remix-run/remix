@@ -1,22 +1,20 @@
 ---
 title: Route File Naming (v2)
+new: true
 ---
 
 # Route File Naming (v2)
 
-You can opt-in to the new route file naming convention with a future flag in Remix config. It will be the default behavior in the future when v2 ships. For background on this change, [see the RFC][flatroutes-rfc].
+You can opt-in to the new route file naming convention with a future flag in Remix config.
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
     v2_routeConvention: true,
   },
 };
 ```
-
-We encourage you to make this change early so upgrading is easy. We'll be providing a helper function to use the old convention in v2 if you prefer it.
-
----
 
 While you can configure routes in [remix.config.js][remix-config], most routes are created with this file system convention. Add a file, get a route.
 
@@ -35,7 +33,7 @@ The file in `app/root.tsx` is your root layout, or "root route" (very sorry for 
 
 The root route typically looks something like this. It serves as the root layout of the entire app, all other routes will render inside the `<Outlet />`.
 
-```jsx
+```tsx
 import {
   Links,
   Meta,
@@ -128,8 +126,8 @@ app/
 
 Remix will parse the value from the URL and pass it to various APIs. We call these values "URL Parameters". The most useful places to access the URL params are in [loaders][loader] and [actions][action].
 
-```jsx
-export function loader({ params }) {
+```tsx
+export function loader({ params }: LoaderArgs) {
   return fakeDb.getAllConcertsForCity(params.city);
 }
 ```
@@ -138,8 +136,8 @@ You'll note the property name on the `params` object maps directly to the name o
 
 Routes can have multiple dynamic segments, like `concerts.$city.$date`, both are accessed on the params object by name:
 
-```jsx
-export function loader({ params }) {
+```tsx
+export function loader({ params }: LoaderArgs) {
   return fake.db.getConcerts({
     date: params.date,
     city: params.city,
@@ -307,7 +305,7 @@ If you want one of the special characters Remix uses for these route conventions
 
 ## Folders for Organization
 
-Routes can also be folders with a conventional node module resolution `index.tsx` file inside defining the route module. The rest of the files in the folder will not become routes. This allows you to organize your code closer to the routes that use them instead of repeating the feature names across other folders.
+Routes can also be folders with a `route.tsx` file inside defining the route module. The rest of the files in the folder will not become routes. This allows you to organize your code closer to the routes that use them instead of repeating the feature names across other folders.
 
 <docs-info>The files inside a folder have no meaning for the route paths, the route path is completely defined by the folder name</docs-info>
 

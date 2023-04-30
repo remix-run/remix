@@ -7,7 +7,7 @@ description: When, why, and how to stream with React 18 and Remix's deferred API
 
 Remix supports the [web streaming API][web-streaming-api] as a first-class citizen. Additionally, JavaScript server runtimes have support for streaming responses to the client.
 
-<docs-warning>NOTE: Deferred UX goals rely on streaming responses. Some popular hosts do not support streaming responses. In general, any host built around AWS Lambda does not support streaming and any bare metal / VM provider will. Make sure your hosting platform supports before using this API.</docs-warning>
+<docs-warning>NOTE: Deferred UX goals rely on streaming responses. Some popular hosts do not support streaming responses. In general, any bare metal / VM provider will support streaming. Make sure your hosting platform supports before using this API.</docs-warning>
 
 ## The problem
 
@@ -311,7 +311,7 @@ export default function PackageRoute() {
 If you're not jazzed about bringing back render props, you can use a hook, but you'll have to break things out into another component:
 
 ```tsx lines=[1,18,26-29]
-import type { SerializedFrom } from "@remix-run/node"; // or cloudflare/deno
+import type { SerializeFrom } from "@remix-run/node"; // or cloudflare/deno
 
 export default function PackageRoute() {
   const data = useLoaderData<typeof loader>();
@@ -336,10 +336,9 @@ export default function PackageRoute() {
 }
 
 function PackageLocation() {
-  const packageLocation =
-    useAsyncValue<
-      SerializedFrom<typeof loader>["packageLocation"]
-    >();
+  const packageLocation = useAsyncValue() as SerializeFrom<
+    typeof loader
+  >["packageLocation"];
 
   return (
     <p>

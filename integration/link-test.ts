@@ -32,6 +32,10 @@ test.describe("route module link export", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
+      future: {
+        v2_routeConvention: true,
+        v2_errorBoundary: true,
+      },
       files: {
         "app/favicon.ico": js``,
 
@@ -87,7 +91,8 @@ test.describe("route module link export", () => {
             Meta,
             Outlet,
             Scripts,
-            useCatch,
+            useRouteError,
+            isRouteErrorResponse
           } from "@remix-run/react";
           import resetHref from "./reset.css";
           import stylesHref from "./app.css";
@@ -122,76 +127,76 @@ test.describe("route module link export", () => {
             );
           }
 
-          export function CatchBoundary() {
-            let caught = useCatch();
+          export function ErrorBoundary() {
+            let error = useRouteError();
 
-            switch (caught.status) {
-              case 404:
+            if (isRouteErrorResponse()) {
+              switch (error.status) {
+                case 404:
+                  return (
+                    <html lang="en">
+                      <head>
+                        <meta charSet="utf-8" />
+                        <title>404 Not Found</title>
+                        <Links />
+                      </head>
+                      <body>
+                        <div>
+                          <h1>404 Not Found</h1>
+                        </div>
+                        <Scripts />
+                      </body>
+                    </html>
+                  );
+                default:
+                  console.warn("Unexpected catch", error);
+
+                  return (
+                    <html lang="en">
+                      <head>
+                        <meta charSet="utf-8" />
+                        <title>{error.status} Uh-oh!</title>
+                        <Links />
+                      </head>
+                      <body>
+                        <div>
+                          <h1>
+                            {error.status} {error.statusText}
+                          </h1>
+                          {error.data ? (
+                            <pre>
+                              <code>{JSON.stringify(error.data, null, 2)}</code>
+                            </pre>
+                          ) : null}
+                        </div>
+                        <Scripts />
+                      </body>
+                    </html>
+                  );
+                }
+              } else {
+                console.error(error);
                 return (
                   <html lang="en">
                     <head>
                       <meta charSet="utf-8" />
-                      <title>404 Not Found</title>
+                      <title>Oops!</title>
                       <Links />
                     </head>
                     <body>
                       <div>
-                        <h1>404 Not Found</h1>
+                        <h1>App Error Boundary</h1>
+                        <pre>{error.message}</pre>
                       </div>
                       <Scripts />
                     </body>
                   </html>
                 );
-              default:
-                console.warn("Unexpected catch", caught);
-
-                return (
-                  <html lang="en">
-                    <head>
-                      <meta charSet="utf-8" />
-                      <title>{caught.status} Uh-oh!</title>
-                      <Links />
-                    </head>
-                    <body>
-                      <div>
-                        <h1>
-                          {caught.status} {caught.statusText}
-                        </h1>
-                        {caught.data ? (
-                          <pre>
-                            <code>{JSON.stringify(caught.data, null, 2)}</code>
-                          </pre>
-                        ) : null}
-                      </div>
-                      <Scripts />
-                    </body>
-                  </html>
-                );
-            }
-          }
-
-          export function ErrorBoundary({ error }) {
-            console.error(error);
-            return (
-              <html lang="en">
-                <head>
-                  <meta charSet="utf-8" />
-                  <title>Oops!</title>
-                  <Links />
-                </head>
-                <body>
-                  <div>
-                    <h1>App Error Boundary</h1>
-                    <pre>{error.message}</pre>
-                  </div>
-                  <Scripts />
-                </body>
-              </html>
-            );
+              }
           }
         `,
 
-        "app/routes/index.jsx": js`
+        "app/routes/_index.jsx": js`
           import { useEffect } from "react";
           import { Link } from "@remix-run/react";
 
@@ -355,7 +360,7 @@ test.describe("route module link export", () => {
           }
         `,
 
-        "app/routes/gists/$username.jsx": js`
+        "app/routes/gists.$username.jsx": js`
           import { json, redirect } from "@remix-run/node";
           import { Link, useLoaderData, useParams } from "@remix-run/react";
           export async function loader({ params }) {
@@ -411,7 +416,7 @@ test.describe("route module link export", () => {
           }
         `,
 
-        "app/routes/gists/index.jsx": js`
+        "app/routes/gists._index.jsx": js`
           import { useLoaderData } from "@remix-run/react";
           export async function loader() {
             return ${JSON.stringify(fakeGists)};
@@ -452,7 +457,7 @@ test.describe("route module link export", () => {
           }
         `,
 
-        "app/routes/resources/theme-css.jsx": js`
+        "app/routes/resources.theme-css.jsx": js`
           import { redirect } from "@remix-run/node";
           export async function loader({ request }) {
             return new Response(":root { --nc-tx-1: #ffffff; --nc-tx-2: #eeeeee; }",
@@ -528,6 +533,35 @@ test.describe("route module link export", () => {
       await page.waitForSelector('[data-test-id="/responsive-image-preload"]');
       let locator = page.locator("link[rel=preload][as=image]");
       expect(await locator.getAttribute("imagesizes")).toBe("100vw");
+    });
+  });
+
+  test.describe("script imports", () => {
+    test("are added to the document", async ({ page }) => {
+      let app = new PlaywrightFixture(appFixture, page);
+      await app.goto("/");
+      let scripts = await page.$$("script");
+      expect(scripts.length).toEqual(2);
+      expect(await scripts[0].innerText()).toContain("__remixContext");
+      let moduleScript = scripts[1];
+      expect(await moduleScript.getAttribute("type")).toBe("module");
+      let moduleScriptText = await moduleScript.innerText();
+      expect(
+        Array.from(moduleScriptText.matchAll(/import "\/build\/manifest-/g)),
+        "invalid build manifest"
+      ).toHaveLength(1);
+      expect(
+        Array.from(moduleScriptText.matchAll(/import \* as route0 from "/g)),
+        "invalid route0"
+      ).toHaveLength(1);
+      expect(
+        Array.from(moduleScriptText.matchAll(/import \* as route1 from "/g)),
+        "invalid route1"
+      ).toHaveLength(1);
+      expect(
+        Array.from(moduleScriptText.matchAll(/import \* as route2 from "/g)),
+        "too many routes"
+      ).toHaveLength(0);
     });
   });
 });
