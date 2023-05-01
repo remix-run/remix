@@ -136,7 +136,7 @@ if (import.meta && import.meta.hot) {
           setTimeout(() => {
             Object.assign(window.__remixManifest, assetsManifest);
             window.$RefreshRuntime$.performReactRefresh();
-          }, 0);
+          }, 1);
         }
       });
       router.revalidate();

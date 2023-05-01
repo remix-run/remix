@@ -17,7 +17,7 @@ This hook tells you everything you need to know about a page transition to build
 - Optimistically showing a new record while it's being created on the server
 - Optimistically showing the new state of a record while it's being updated
 
-```js
+```tsx
 import { useTransition } from "@remix-run/react";
 
 function SomeComponent() {

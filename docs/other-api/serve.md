@@ -6,7 +6,7 @@ order: 3
 
 # Remix App Server
 
-While you can bring your own server, Remix ships with a built-in, production-ready application server.
+Remix is designed for you to own your server, but if you don't want to set one up you can use the Remix App Server instead. It's a production-ready, but basic Node.js server built with Express. If you find you want to customize it, use the `@remix-run/express` adapter instead.
 
 ```sh
 remix-serve <server-build-path>

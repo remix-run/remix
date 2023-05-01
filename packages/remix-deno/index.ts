@@ -16,7 +16,8 @@ export {
 export {
   createSession,
   defer,
-  devReady,
+  broadcastDevReady,
+  logDevReady,
   isCookie,
   isSession,
   json,
