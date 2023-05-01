@@ -43,20 +43,20 @@ declare global {
 }
 
 export function installGlobals() {
-  global.atob = atob;
-  global.btoa = btoa;
+  global.atob ||= atob;
+  global.btoa ||= btoa;
 
-  global.Blob = NodeBlob;
-  global.File = NodeFile;
+  global.Blob ||= NodeBlob;
+  global.File ||= NodeFile;
 
-  global.Headers = NodeHeaders as typeof Headers;
-  global.Request = NodeRequest as typeof Request;
-  global.Response = NodeResponse as unknown as typeof Response;
-  global.fetch = nodeFetch as typeof fetch;
-  global.FormData = NodeFormData;
+  global.Headers ||= NodeHeaders as typeof Headers;
+  global.Request ||= NodeRequest as typeof Request;
+  global.Response ||= NodeResponse as unknown as typeof Response;
+  global.fetch ||= nodeFetch as typeof fetch;
+  global.FormData ||= NodeFormData;
 
-  global.ReadableStream = NodeReadableStream;
-  global.WritableStream = NodeWritableStream;
+  global.ReadableStream ||= NodeReadableStream;
+  global.WritableStream ||= NodeWritableStream;
 
   global.AbortController = global.AbortController || NodeAbortController;
 }
