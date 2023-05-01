@@ -498,7 +498,7 @@ Now let's get that markdown parsed and rendered to HTML to the page. There are a
 
 ```sh
 npm add marked
-# if using typescript
+# additionally, if using typescript
 npm add @types/marked -D
 ```
 
