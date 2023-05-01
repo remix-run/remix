@@ -1508,7 +1508,7 @@ npm install --save-dev ts-node tsconfig-paths
 💿 And now we can run our `seed.ts` file with that:
 
 ```sh
-ts-node --require tsconfig-paths/register prisma/seed.ts
+npx ts-node --require tsconfig-paths/register prisma/seed.ts
 ```
 
 Now our database has those jokes in it. No joke!
