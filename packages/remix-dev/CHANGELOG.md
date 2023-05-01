@@ -219,7 +219,6 @@
 - look for @remix-run/serve in `devDependencies` when running remix dev ([#6228](https://github.com/remix-run/remix/pull/6228))
 - add warning for v2 "cjs"->"esm" `serverModuleFormat` default change ([#6154](https://github.com/remix-run/remix/pull/6154))
 - write mjs server output files ([#6225](https://github.com/remix-run/remix/pull/6225))
-- don't forward on injects for CSS compiler as it's never loading any JS code and esbuild seems to have a bug with CSS entries + inject ([#6238](https://github.com/remix-run/remix/pull/6238))
 - fix(react,dev): dev chunking and refresh race condition ([#6201](https://github.com/remix-run/remix/pull/6201))
 - Use correct require context in `bareImports` plugin. ([#6181](https://github.com/remix-run/remix/pull/6181))
 - use minimatch for regex instead of glob-to-regexp ([#6017](https://github.com/remix-run/remix/pull/6017))
