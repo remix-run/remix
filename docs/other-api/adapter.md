@@ -46,11 +46,11 @@ createRequestHandler({ build, getLoadContext });
 
 Here's a full example with express:
 
-```ts lines=[2-4,11-22]
-const express = require("express");
+```ts lines=[1-3,11-22]
 const {
   createRequestHandler,
 } = require("@remix-run/express");
+const express = require("express");
 
 const app = express();
 

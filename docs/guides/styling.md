@@ -206,8 +206,9 @@ And then a `<PrimaryButton>` that extends it:
 }
 ```
 
-```tsx filename=app/components/primary-button/index.js lines=[1,5,12]
+```tsx filename=app/components/primary-button/index.js lines=[1,6,13]
 import { Button, links as buttonLinks } from "../button";
+
 import styles from "./styles.css";
 
 export const links = () => [
@@ -231,12 +232,12 @@ Because these buttons are not routes, and therefore not associated with a URL se
 
 Consider that `routes/index.js` uses the primary button component:
 
-```tsx filename=app/routes/index.js lines=[2-5,9]
-import styles from "~/styles/index.css";
+```tsx filename=app/routes/index.js lines=[1-4,9]
 import {
   PrimaryButton,
   links as primaryButtonLinks,
 } from "~/components/primary-button";
+import styles from "~/styles/index.css";
 
 export function links() {
   return [
@@ -688,9 +689,9 @@ npm install @remix-run/css-bundle
 
 Then, import `cssBundleHref` and add it to a link descriptor—most likely in `root.tsx` so that it applies to your entire application.
 
-```tsx filename=root.tsx lines=[2,6-8]
-import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+```tsx filename=root.tsx lines=[1,6-8]
 import { cssBundleHref } from "@remix-run/css-bundle";
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 export const links: LinksFunction = () => {
   return [
