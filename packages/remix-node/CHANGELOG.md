@@ -6,7 +6,6 @@
 
 - add `@remix-run/node/install` side-effect to allow `node --require @remix-run/node/install` ([#6132](https://github.com/remix-run/remix/pull/6132))
 - add `logDevReady` as replacement for platforms that can't initialize async I/O outside of the request response lifecycle. ([#6204](https://github.com/remix-run/remix/pull/6204))
-- rename `devReady` to `broadcastDevReady` ([#6194](https://github.com/remix-run/remix/pull/6194))
 - add missing files to published package ([#6179](https://github.com/remix-run/remix/pull/6179))
 - Updated dependencies:
   - `@remix-run/server-runtime@1.16.0`

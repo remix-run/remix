@@ -101,7 +101,6 @@
 - Revalidate loaders only when a change to one is detected. ([#6135](https://github.com/remix-run/remix/pull/6135))
 - short circuit links and meta for routes that are not rendered due to errors ([#6107](https://github.com/remix-run/remix/pull/6107))
 - don't warn about runtime deprecation warnings in production ([#4421](https://github.com/remix-run/remix/pull/4421))
-- rename `devReady` to `broadcastDevReady` ([#6194](https://github.com/remix-run/remix/pull/6194))
 - Update Remix for React Router no longer relying on `useSyncExternalStore` ([#6121](https://github.com/remix-run/remix/pull/6121))
 - Fix false-positive resource route identification if a route only exports a boundary ([#6125](https://github.com/remix-run/remix/pull/6125))
 - better type discrimination when unwrapping loader return types ([#5516](https://github.com/remix-run/remix/pull/5516))

@@ -5,7 +5,6 @@
 ### Patch Changes
 
 - add `logDevReady` as replacement for platforms that can't initialize async I/O outside of the request response lifecycle. ([#6204](https://github.com/remix-run/remix/pull/6204))
-- rename `devReady` to `broadcastDevReady` ([#6194](https://github.com/remix-run/remix/pull/6194))
 - Updated dependencies:
   - `@remix-run/server-runtime@1.16.0`
 

@@ -6,10 +6,6 @@
 
 - add deprecation warning to `@remix-run/eslint-config/jest` ESLint config ([#5697](https://github.com/remix-run/remix/pull/5697))
 
-### Patch Changes
-
-- rename `devReady` to `broadcastDevReady` ([#6194](https://github.com/remix-run/remix/pull/6194))
-
 ## 1.15.0
 
 ### Patch Changes

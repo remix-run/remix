@@ -217,7 +217,6 @@
 ### Patch Changes
 
 - add `logDevReady` as replacement for platforms that can't initialize async I/O outside of the request response lifecycle. ([#6204](https://github.com/remix-run/remix/pull/6204))
-- rename `devReady` to `broadcastDevReady` ([#6194](https://github.com/remix-run/remix/pull/6194))
 - better type discrimination when unwrapping loader return types ([#5516](https://github.com/remix-run/remix/pull/5516))
 - pass `AppLoadContext` to `handleRequest` ([#5836](https://github.com/remix-run/remix/pull/5836))
 - Updated dependencies:
