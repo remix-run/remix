@@ -29,6 +29,7 @@
     "cjs-esm-warning",
     "clever-hairs-live",
     "css-bundling",
+    "css-import-non-node-fix",
     "dev-server",
     "dry-buses-care",
     "empty-taxis-call",
