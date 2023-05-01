@@ -130,14 +130,15 @@ This handles errors and properly disables streaming for bots which you typically
 
 ```tsx filename=app/entry.server.tsx
 import { PassThrough } from "stream";
-import { renderToPipeableStream } from "react-dom/server";
-import { RemixServer } from "@remix-run/react";
+
 import { Response } from "@remix-run/node"; // or cloudflare/deno
 import type {
   EntryContext,
   Headers,
 } from "@remix-run/node"; // or cloudflare/deno
+import { RemixServer } from "@remix-run/react";
 import isbot from "isbot";
+import { renderToPipeableStream } from "react-dom/server";
 
 const ABORT_DELAY = 5000;
 

@@ -22,8 +22,8 @@ Consider a route module that exports `loader`, `meta`, and a component:
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import PostsView from "../PostsView";
 import { prisma } from "../db";
+import PostsView from "../PostsView";
 
 export async function loader() {
   return json(await prisma.post.findMany());
@@ -80,8 +80,8 @@ Taking our code from earlier, we saw how the compiler can remove the exports and
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import PostsView from "../PostsView";
 import { prisma } from "../db";
+import PostsView from "../PostsView";
 
 console.log(prisma);
 
@@ -127,8 +127,8 @@ To fix this, remove the side effect by simply moving the code _into the loader_.
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import PostsView from "../PostsView";
 import { prisma } from "../db";
+import PostsView from "../PostsView";
 
 export async function loader() {
   console.log(prisma);
