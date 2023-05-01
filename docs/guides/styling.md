@@ -256,10 +256,10 @@ import type { LoaderArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import { useLoaderData } from "@remix-run/react";
 
-import { TileGrid } from "~/components/tile-grid";
-import { ProductTile } from "~/components/product-tile";
-import { ProductDetails } from "~/components/product-details";
 import { AddFavoriteButton } from "~/components/add-favorite-button";
+import { ProductDetails } from "~/components/product-details";
+import { ProductTile } from "~/components/product-tile";
+import { TileGrid } from "~/components/tile-grid";
 import styles from "~/styles/$category.css";
 
 export function links() {
@@ -293,21 +293,21 @@ The component imports are already there, we just need to surface the assets:
 import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
 
 import {
-  TileGrid,
-  links as tileGridLinks,
-} from "~/components/tile-grid";
-import {
-  ProductTile,
-  links as productTileLinks,
-} from "~/components/product-tile";
+  AddFavoriteButton,
+  links as addFavoriteLinks,
+} from "~/components/add-favorite-button";
 import {
   ProductDetails,
   links as productDetailsLinks,
 } from "~/components/product-details";
 import {
-  AddFavoriteButton,
-  links as addFavoriteLinks,
-} from "~/components/add-favorite-button";
+  ProductTile,
+  links as productTileLinks,
+} from "~/components/product-tile";
+import {
+  TileGrid,
+  links as tileGridLinks,
+} from "~/components/tile-grid";
 import styles from "~/styles/$category.css";
 
 export const links: LinksFunction = () => {
@@ -634,9 +634,9 @@ Here's some sample code to show how you might use Styled Components with Remix (
 2. Your `entry.server.tsx` will look something like this:
 
    ```tsx filename=entry.server.tsx lines=[4,12,15-20,22-23]
-   import { renderToString } from "react-dom/server";
-   import { RemixServer } from "@remix-run/react";
    import type { EntryContext } from "@remix-run/node"; // or cloudflare/deno
+   import { RemixServer } from "@remix-run/react";
+   import { renderToString } from "react-dom/server";
    import { ServerStyleSheet } from "styled-components";
 
    export default function handleRequest(

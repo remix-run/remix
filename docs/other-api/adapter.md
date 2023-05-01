@@ -98,6 +98,7 @@ Here's an example with Netlify:
 
 ```ts
 const path = require("path");
+
 const {
   createRequestHandler,
 } = require("@remix-run/netlify");
