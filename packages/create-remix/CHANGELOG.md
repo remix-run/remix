@@ -1,62 +1,11 @@
 # `create-remix`
 
-## 1.16.0-pre.7
+## 1.16.0
 
 ### Patch Changes
 
 - Updated dependencies:
-  - `@remix-run/dev@1.16.0-pre.7`
-
-## 1.16.0-pre.6
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/dev@1.16.0-pre.6`
-
-## 1.16.0-pre.5
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/dev@1.16.0-pre.5`
-
-## 1.16.0-pre.4
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/dev@1.16.0-pre.4`
-
-## 1.16.0-pre.3
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/dev@1.16.0-pre.3`
-
-## 1.16.0-pre.2
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/dev@1.16.0-pre.2`
-
-## 1.16.0-pre.1
-
-### Patch Changes
-
-- Updated dependencies:
-  - `@remix-run/dev@1.16.0-pre.1`
-
-## 1.16.0-pre.0
-
-### Patch Changes
-
-- update express template to output ESM and use the new dev command ([#6174](https://github.com/remix-run/remix/pull/6174))
-- enable unstable_dev by default in the remix template ([#6180](https://github.com/remix-run/remix/pull/6180))
-- Updated dependencies:
-  - `@remix-run/dev@1.16.0-pre.0`
+  - `@remix-run/dev@1.16.0`
 
 ## 1.15.0
 

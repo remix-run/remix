@@ -1,24 +1,6 @@
 # `@remix-run/eslint-config`
 
-## 1.16.0-pre.7
-
-## 1.16.0-pre.6
-
-## 1.16.0-pre.5
-
-## 1.16.0-pre.4
-
-## 1.16.0-pre.3
-
-## 1.16.0-pre.2
-
-## 1.16.0-pre.1
-
-### Patch Changes
-
-- rename devReady to broadcastDevReady ([#6194](https://github.com/remix-run/remix/pull/6194))
-
-## 1.16.0-pre.0
+## 1.16.0
 
 ### Minor Changes
 
