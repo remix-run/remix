@@ -836,7 +836,7 @@ Here's some sample code to show how you might use Styled Components with Remix (
 
    export const meta: MetaFunction = () => ({
      charset: "utf-8",
-     viewport: "width=device-width,initial-scale=1",
+     viewport: "width=device-width, initial-scale=1",
    });
 
    export default function App() {
