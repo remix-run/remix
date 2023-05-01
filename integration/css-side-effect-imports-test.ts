@@ -7,6 +7,7 @@ import {
   createFixture,
   css,
   js,
+  json,
 } from "./helpers/create-fixture";
 
 const TEST_PADDING_VALUE = "20px";
@@ -22,13 +23,6 @@ test.describe("CSS side-effect imports", () => {
           module.exports = {
             serverDependenciesToBundle: [/@test-package/],
             future: {
-              // Enable all CSS future flags to
-              // ensure features don't clash
-              unstable_cssModules: true,
-              unstable_cssSideEffectImports: true,
-              unstable_postcss: true,
-              unstable_tailwind: true,
-              unstable_vanillaExtract: true,
               v2_routeConvention: true,
             },
           };
@@ -56,6 +50,7 @@ test.describe("CSS side-effect imports", () => {
         ...rootRelativeFixture(),
         ...imageUrlsFixture(),
         ...rootRelativeImageUrlsFixture(),
+        ...absoluteImageUrlsFixture(),
         ...commonJsPackageFixture(),
         ...esmPackageFixture(),
       },
@@ -205,6 +200,46 @@ test.describe("CSS side-effect imports", () => {
     expect(imgStatus).toBe(200);
   });
 
+  let absoluteImageUrlsFixture = () => ({
+    "app/absoluteImageUrls/styles.css": css`
+      .absoluteImageUrls {
+        background-color: peachpuff;
+        background-image: url(/absoluteImageUrls/image.svg);
+        padding: ${TEST_PADDING_VALUE};
+      }
+    `,
+    "public/absoluteImageUrls/image.svg": `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="50" fill="coral" />
+      </svg>
+    `,
+    "app/routes/absolute-image-urls-test.jsx": js`
+      import "../absoluteImageUrls/styles.css";
+
+      export default function() {
+        return (
+          <div data-testid="absolute-image-urls" className="absoluteImageUrls">
+            Absolute image URLs test
+          </div>
+        )
+      }
+    `,
+  });
+  test("absolute image URLs", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let imgStatus: number | null = null;
+    app.page.on("response", (res) => {
+      if (res.url().endsWith(".svg")) imgStatus = res.status();
+    });
+    await app.goto("/absolute-image-urls-test");
+    let locator = await page.locator("[data-testid='absolute-image-urls']");
+    let backgroundImage = await locator.evaluate(
+      (element) => window.getComputedStyle(element).backgroundImage
+    );
+    expect(backgroundImage).toContain(".svg");
+    expect(imgStatus).toBe(200);
+  });
+
   let commonJsPackageFixture = () => ({
     "node_modules/@test-package/commonjs/styles.css": css`
       .commonJsPackage {
@@ -251,7 +286,7 @@ test.describe("CSS side-effect imports", () => {
         padding: ${TEST_PADDING_VALUE};
       }
     `,
-    "node_modules/@test-package/esm/index.js": js`
+    "node_modules/@test-package/esm/index.mjs": js`
       import React from 'react';
       import './styles.css';
 
@@ -266,6 +301,9 @@ test.describe("CSS side-effect imports", () => {
         );
       };
     `,
+    "node_modules/@test-package/esm/package.json": json({
+      exports: "./index.mjs",
+    }),
     "app/routes/esm-package-test.jsx": js`
       import { Test } from "@test-package/esm";
       export default function() {

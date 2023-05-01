@@ -104,6 +104,22 @@ export function createServerRoutes(
   });
 }
 
+export function createClientRoutesWithHMRRevalidationOptOut(
+  needsRevalidation: boolean,
+  manifest: RouteManifest<EntryRoute>,
+  routeModulesCache: RouteModules,
+  future: FutureConfig
+) {
+  return createClientRoutes(
+    manifest,
+    routeModulesCache,
+    future,
+    "",
+    groupRoutesByParentId(manifest),
+    needsRevalidation
+  );
+}
+
 export function createClientRoutes(
   manifest: RouteManifest<EntryRoute>,
   routeModulesCache: RouteModules,
@@ -112,7 +128,8 @@ export function createClientRoutes(
   routesByParentId: Record<
     string,
     Omit<EntryRoute, "children">[]
-  > = groupRoutesByParentId(manifest)
+  > = groupRoutesByParentId(manifest),
+  needsRevalidation: boolean | undefined = undefined
 ): DataRouteObject[] {
   return (routesByParentId[parentId] || []).map((route) => {
     let hasErrorBoundary =
@@ -136,7 +153,11 @@ export function createClientRoutes(
       handle: undefined,
       loader: createDataFunction(route, routeModulesCache, false),
       action: createDataFunction(route, routeModulesCache, true),
-      shouldRevalidate: createShouldRevalidate(route, routeModulesCache),
+      shouldRevalidate: createShouldRevalidate(
+        route,
+        routeModulesCache,
+        needsRevalidation
+      ),
     };
     let children = createClientRoutes(
       manifest,
@@ -151,14 +172,30 @@ export function createClientRoutes(
 
 function createShouldRevalidate(
   route: EntryRoute,
-  routeModules: RouteModules
+  routeModules: RouteModules,
+  needsRevalidation: boolean | undefined
 ): ShouldRevalidateFunction {
+  let handledRevalidation = false;
   return function (arg) {
     let module = routeModules[route.id];
     invariant(module, `Expected route module to be loaded for ${route.id}`);
+
     if (module.shouldRevalidate) {
+      if (typeof needsRevalidation === "boolean" && !handledRevalidation) {
+        handledRevalidation = true;
+        return module.shouldRevalidate({
+          ...arg,
+          defaultShouldRevalidate: needsRevalidation,
+        });
+      }
       return module.shouldRevalidate(arg);
     }
+
+    if (typeof needsRevalidation === "boolean" && !handledRevalidation) {
+      handledRevalidation = true;
+      return needsRevalidation;
+    }
+
     return arg.defaultShouldRevalidate;
   };
 }

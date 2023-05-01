@@ -161,6 +161,10 @@ export default function Posts() {
 
 Loaders are the backend "API" for their component and it's already wired up for you through `useLoaderData`. It's a little wild how blurry the line is between the client and the server in a Remix route. If you have your server and browser consoles both open, you'll note that they both logged our post data. That's because Remix rendered on the server to send a full HTML document like a traditional web framework, but it also hydrated in the client and logged there too.
 
+<docs-error>
+Whatever you return from your loader will be exposed to the client, even if the component doesn't render it. Treat your loaders with the same care as public API endpoints.
+</docs-error>
+
 💿 Render links to our posts
 
 ```tsx filename=app/routes/posts/index.tsx lines=[2,10-21] nocopy

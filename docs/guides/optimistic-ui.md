@@ -11,8 +11,8 @@ Remix can help you build optimistic UI with [`useNavigation`][use-navigation] an
 ## Strategy
 
 1. User submits a form (or you do with [`useSubmit`][use-submit] or [`fetcher.submit`][fetcher-submission]).
-2. Remix makes the submission and its data immediately available to you on [`navigation.formData`][navigation-formdata] or [`fetcher.submission`][fetcher-submission].
-3. App uses [`submission.formData`][form-data] to render an optimistic version of _what it will render_ when the submission completes successfully.
+2. Remix makes the submission and its data immediately available to you on [`navigation.formData`][navigation-formdata] or [`fetcher.formData`][fetcher-submission].
+3. App uses [`formData`][form-data] to render an optimistic version of _what it will render_ when the submission completes successfully.
 4. Remix automatically revalidates all the data.
    - If successful, the user doesn't even notice.
    - If it fails, the page data is automatically in sync with the server so the UI reverts automatically.

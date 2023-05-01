@@ -95,10 +95,6 @@ jobs:
     name: 📝 Comment on related issues and pull requests
     if: github.repository == 'remix-run/remix' && needs.nightly.outputs.NEXT_VERSION
     uses: ./.github/workflows/release-comments.yml
-    with:
-      ref: "refs/tags/v${{ needs.nightly.outputs.NEXT_VERSION }}"
-      package_version_to_follow: "remix"
-      release_branch: "dev"
 
   deployments:
     needs: [nightly]

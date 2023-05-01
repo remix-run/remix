@@ -4,6 +4,8 @@ title: CatchBoundary
 
 # `CatchBoundary`
 
+<docs-warning>The behaviors of `CatchBoundary` and `ErrorBoundary` are changing in v2. You can prepare for this change at your convenience with the `v2_errorBoundary` future flag. For instructions on making this change see the [v2 guide][v2guide].</docs-warning>
+
 A `CatchBoundary` is a React component that renders whenever an action or loader throws a `Response`.
 
 **Note:** We use the word "catch" to represent the codepath taken when a `Response` type is thrown; you thought about bailing from the "happy path". This is different from an uncaught error you did not expect to occur.
@@ -29,3 +31,6 @@ export function CatchBoundary() {
   );
 }
 ```
+
+[error-boundary-v2]: ./error-boundary-v2
+[v2guide]: ../pages/v2#catchboundary-and-errorboundary

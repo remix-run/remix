@@ -7,9 +7,6 @@ module.exports = {
   If live reload seems slow, try to decrease the dev server broadcast delay.
   */
   devServerBroadcastDelay: 300,
-  future: {
-    v2_routeConvention: true,
-  },
   ignoredRouteFiles: ["**/.*"],
   server: "./server.ts",
   serverConditions: ["deno", "worker"],
@@ -21,4 +18,10 @@ module.exports = {
   // assetsBuildDirectory: "public/build",
   // serverBuildPath: "build/index.js",
   // publicPath: "/build/",
+  future: {
+    v2_errorBoundary: true,
+    v2_meta: true,
+    v2_normalizeFormMethod: true,
+    v2_routeConvention: true,
+  },
 };

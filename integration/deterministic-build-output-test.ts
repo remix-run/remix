@@ -3,6 +3,7 @@ import globby from "globby";
 import fs from "fs";
 import path from "path";
 
+import type { FixtureInit } from "./helpers/create-fixture";
 import { createFixtureProject, js, css } from "./helpers/create-fixture";
 
 test("builds deterministically under different paths", async () => {
@@ -24,12 +25,8 @@ test("builds deterministically under different paths", async () => {
   //  * serverEntryModulePlugin (implicitly tested by build)
   //  * serverRouteModulesPlugin (implicitly tested by build)
   //  * vanillaExtractPlugin (via app/routes/foo.tsx' .css.ts file import)
-  let init = {
+  let init: FixtureInit = {
     future: {
-      unstable_cssModules: true,
-      unstable_cssSideEffectImports: true,
-      unstable_postcss: true,
-      unstable_vanillaExtract: true,
       v2_routeConvention: true,
     },
     files: {
@@ -64,7 +61,7 @@ test("builds deterministically under different paths", async () => {
           <circle cx="50" cy="50" r="50" fill="coral" />
         </svg>
       `,
-      "app/styles/vanilla.css.ts": css`
+      "app/styles/vanilla.css.ts": js`
         import { style } from "@vanilla-extract/css";
         import { chocolate } from "./chocolate.css";
         import imageUrl from "~/images/foo.svg";
@@ -79,7 +76,7 @@ test("builds deterministically under different paths", async () => {
           }
         ]);
       `,
-      "app/styles/chocolate.css.ts": css`
+      "app/styles/chocolate.css.ts": js`
         import { style } from "@vanilla-extract/css";
 
         export const chocolate = style({

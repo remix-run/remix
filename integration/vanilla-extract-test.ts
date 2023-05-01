@@ -14,13 +14,6 @@ test.describe("Vanilla Extract", () => {
     fixture = await createFixture({
       future: {
         v2_routeConvention: true,
-        // Enable all CSS future flags to
-        // ensure features don't clash
-        unstable_cssModules: true,
-        unstable_cssSideEffectImports: true,
-        unstable_postcss: true,
-        unstable_tailwind: true,
-        unstable_vanillaExtract: true,
       },
       files: {
         "app/root.jsx": js`
@@ -51,12 +44,11 @@ test.describe("Vanilla Extract", () => {
         ...stableIdentifiersFixture(),
         ...imageUrlsViaCssUrlFixture(),
         ...imageUrlsViaRootRelativeCssUrlFixture(),
+        ...imageUrlsViaAbsoluteCssUrlFixture(),
         ...imageUrlsViaJsImportFixture(),
         ...imageUrlsViaRootRelativeJsImportFixture(),
         ...imageUrlsViaClassCompositionFixture(),
         ...imageUrlsViaJsImportClassCompositionFixture(),
-        ...standardImageUrlsViaJsImportFixture(),
-        ...standardImageUrlsViaRootRelativeJsImportFixture(),
       },
     });
     appFixture = await createAppFixture(fixture);
@@ -276,13 +268,13 @@ test.describe("Vanilla Extract", () => {
       import { style } from "@vanilla-extract/css";
       import { shared } from "./shared.css";
 
-      export const root = style([shared]);
+      export const root = shared;
     `,
     "app/fixtures/stable-identifiers/styles_b.css.ts": js`
       import { style } from "@vanilla-extract/css";
       import { shared } from "./shared.css";
 
-      export const root = style([shared]);
+      export const root = shared;
     `,
     "app/fixtures/stable-identifiers/shared.css.ts": js`
       import { style } from "@vanilla-extract/css";
@@ -401,6 +393,50 @@ test.describe("Vanilla Extract", () => {
     await app.goto("/image-urls-via-root-relative-css-url-test");
     let locator = await page.locator(
       "[data-testid='image-urls-via-root-relative-css-url']"
+    );
+    let backgroundImage = await locator.evaluate(
+      (element) => window.getComputedStyle(element).backgroundImage
+    );
+    expect(backgroundImage).toContain(".svg");
+    expect(imgStatus).toBe(200);
+  });
+
+  let imageUrlsViaAbsoluteCssUrlFixture = () => ({
+    "app/fixtures/imageUrlsViaAbsoluteCssUrl/styles.css.ts": js`
+      import { style } from "@vanilla-extract/css";
+
+      export const root = style({
+        backgroundColor: 'peachpuff',
+        backgroundImage: 'url("/imageUrlsViaAbsoluteCssUrl/image.svg")',
+        padding: ${JSON.stringify(TEST_PADDING_VALUE)}
+      });
+    `,
+    "public/imageUrlsViaAbsoluteCssUrl/image.svg": `
+      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="50" fill="coral" />
+      </svg>
+    `,
+    "app/routes/image-urls-via-absolute-css-url-test.jsx": js`
+      import * as styles from "../fixtures/imageUrlsViaAbsoluteCssUrl/styles.css";
+
+      export default function() {
+        return (
+          <div data-testid="image-urls-via-absolute-css-url" className={styles.root}>
+            Image URLs via absolute CSS URL test
+          </div>
+        )
+      }
+    `,
+  });
+  test("image URLs via absolute CSS URL", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    let imgStatus: number | null = null;
+    app.page.on("response", (res) => {
+      if (res.url().endsWith(".svg")) imgStatus = res.status();
+    });
+    await app.goto("/image-urls-via-absolute-css-url-test");
+    let locator = await page.locator(
+      "[data-testid='image-urls-via-absolute-css-url']"
     );
     let backgroundImage = await locator.evaluate(
       (element) => window.getComputedStyle(element).backgroundImage
@@ -605,100 +641,6 @@ test.describe("Vanilla Extract", () => {
       (element) => window.getComputedStyle(element).backgroundImage
     );
     expect(backgroundImage).toContain(".svg");
-    expect(imgStatus).toBe(200);
-  });
-
-  let standardImageUrlsViaJsImportFixture = () => ({
-    "app/fixtures/standardImageUrlsViaJsImport/styles.css.ts": js`
-      import { style } from "@vanilla-extract/css";
-
-      export { default as src } from "./image.svg";
-
-      export const root = style({
-        width: 200,
-        height: 200,
-      });
-    `,
-    "app/fixtures/standardImageUrlsViaJsImport/image.svg": `
-      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="50" fill="coral" />
-      </svg>
-    `,
-    "app/routes/standard-image-urls-via-js-import-test.jsx": js`
-      import { root, src } from "../fixtures/standardImageUrlsViaJsImport/styles.css";
-
-      export default function() {
-        return (
-          <img
-            data-testid="standard-image-urls-via-js-import"
-            src={src}
-            className={root}
-          />
-        )
-      }
-    `,
-  });
-  test("standard image URLs via JS import", async ({ page }) => {
-    // This ensures that image URLs are fully resolved within the CSS file
-    // rather than using some intermediary format that needs to be resolved
-    // later. This is important to ensure that image import semantics are the
-    // same throughout the app, regardless of whether it's in a JS file or a
-    // Vanilla Extract context, e.g. you might want to export the image URL
-    // from the CSS file and use it for preloading.
-    let app = new PlaywrightFixture(appFixture, page);
-    let imgStatus: number | null = null;
-    app.page.on("response", (res) => {
-      if (res.url().endsWith(".svg")) imgStatus = res.status();
-    });
-    await app.goto("/standard-image-urls-via-js-import-test");
-    let element = await app.getElement(
-      "[data-testid='standard-image-urls-via-js-import']"
-    );
-    expect(element.attr("src")).toContain(".svg");
-    expect(imgStatus).toBe(200);
-  });
-
-  let standardImageUrlsViaRootRelativeJsImportFixture = () => ({
-    "app/fixtures/standardImageUrlsViaRootRelativeJsImport/styles.css.ts": js`
-      import { style } from "@vanilla-extract/css";
-
-      export { default as src } from "~/fixtures/standardImageUrlsViaRootRelativeJsImport/image.svg";
-
-      export const root = style({
-        width: 200,
-        height: 200,
-      });
-    `,
-    "app/fixtures/standardImageUrlsViaRootRelativeJsImport/image.svg": `
-      <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="50" cy="50" r="50" fill="coral" />
-      </svg>
-    `,
-    "app/routes/standard-image-urls-via-root-relative-js-import-test.jsx": js`
-      import { root, src } from "../fixtures/standardImageUrlsViaRootRelativeJsImport/styles.css";
-
-      export default function() {
-        return (
-          <img
-            data-testid="standard-image-urls-via-root-relative-js-import"
-            src={src}
-            className={root}
-          />
-        )
-      }
-    `,
-  });
-  test("standard image URLs via root-relative JS import", async ({ page }) => {
-    let app = new PlaywrightFixture(appFixture, page);
-    let imgStatus: number | null = null;
-    app.page.on("response", (res) => {
-      if (res.url().endsWith(".svg")) imgStatus = res.status();
-    });
-    await app.goto("/standard-image-urls-via-root-relative-js-import-test");
-    let element = await app.getElement(
-      "[data-testid='standard-image-urls-via-root-relative-js-import']"
-    );
-    expect(element.attr("src")).toContain(".svg");
     expect(imgStatus).toBe(200);
   });
 });
