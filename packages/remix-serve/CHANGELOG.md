@@ -5,7 +5,7 @@
 ### Patch Changes
 
 - add `@remix-run/node/install` side-effect to allow `node --require @remix-run/node/install` ([#6132](https://github.com/remix-run/remix/pull/6132))
-- rename devReady to broadcastDevReady ([#6194](https://github.com/remix-run/remix/pull/6194))
+- rename `devReady` to `broadcastDevReady` ([#6194](https://github.com/remix-run/remix/pull/6194))
 - Updated dependencies:
   - `@remix-run/express@1.16.0`
   - `@remix-run/node@1.16.0`

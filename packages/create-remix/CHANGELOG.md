@@ -4,7 +4,6 @@
 
 ### Patch Changes
 
-- enable unstable\_dev by default in the remix template ([#6180](https://github.com/remix-run/remix/pull/6180))
 - Updated dependencies:
   - `@remix-run/dev@1.16.0`
 

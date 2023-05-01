@@ -8,95 +8,7 @@
 
   These CSS bundling features were previously only available via `future.unstable_cssModules`, `future.unstable_vanillaExtract` and `future.unstable_cssSideEffectImports` options in `remix.config.js`, but they have now been stabilized.
 
-  **CSS Bundle Setup**
-
-  In order to use these features, you first need to set up CSS bundling in your project. First install the `@remix-run/css-bundle` package.
-
-  ```sh
-  npm i @remix-run/css-bundle
-  ```
-
-  Then return the exported `cssBundleHref` as a stylesheet link descriptor from the `links` function at the root of your app.
-
-  ```tsx
-  import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
-  import { cssBundleHref } from "@remix-run/css-bundle";
-
-  export const links: LinksFunction = () => {
-    return [
-      ...(cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : []),
-      // ...
-    ];
-  };
-  ```
-
-  **CSS Modules**
-
-  To use [CSS Modules](https://github.com/css-modules/css-modules), you can opt in via the `.module.css` file name convention. For example:
-
-  ```css
-  .root {
-    border: solid 1px;
-    background: white;
-    color: #454545;
-  }
-  ```
-
-  ```tsx
-  import styles from "./styles.module.css";
-
-  export const Button = React.forwardRef(({ children, ...props }, ref) => {
-    return <button {...props} ref={ref} className={styles.root} />;
-  });
-  Button.displayName = "Button";
-  ```
-
-  **Vanilla Extract**
-
-  To use [Vanilla Extract](http://vanilla-extract.style), first install its `css` package as a dev dependency.
-
-  ```sh
-  npm install -D @vanilla-extract/css
-  ```
-
-  You can then opt in via the `.css.ts`/`.css.js` file name convention. For example:
-
-  ```ts
-  import { style } from "@vanilla-extract/css";
-
-  export const root = style({
-    border: "solid 1px",
-    background: "white",
-    color: "#454545",
-  });
-  ```
-
-  ```tsx
-  import * as styles from "./styles.css"; // Note that `.ts` is omitted here
-
-  export const Button = React.forwardRef(({ children, ...props }, ref) => {
-    return <button {...props} ref={ref} className={styles.root} />;
-  });
-  Button.displayName = "Button";
-  ```
-
-  **CSS Side-Effect Imports**
-
-  Any CSS files that are imported as side-effects (e.g. `import "./styles.css"`) will be automatically included in the CSS bundle.
-
-  Since JavaScript runtimes don't support importing CSS in this way, you'll also need to add any packages using CSS side-effect imports to the [`serverDependenciesToBundle`](https://remix.run/docs/en/main/file-conventions/remix-config#serverdependenciestobundle) option in your `remix.config.js` file. This ensures that any CSS imports are compiled out of your code before running it on the server. For example, to use [React Spectrum](https://react-spectrum.adobe.com/react-spectrum/index.html):
-
-  ```js filename=remix.config.js
-  // remix.config.js
-  module.exports = {
-    serverDependenciesToBundle: [
-      /^@adobe\/react-spectrum/,
-      /^@react-spectrum/,
-      /^@spectrum-icons/,
-    ],
-    // ...
-  };
-  ```
+  In order to use these features, check out our guide to [CSS bundling](https://remix.run/docs/en/1.16.0/guides/styling#css-bundling) in your project.
 
 - Stabilize built-in PostCSS support via the new `postcss` option in `remix.config.js`. As a result, the `future.unstable_postcss` option has also been deprecated. ([#5960](https://github.com/remix-run/remix/pull/5960))
 
@@ -185,16 +97,17 @@
 
 ### Patch Changes
 
-- Bump to React Router `6.11.0-pre.2` ([#6223](https://github.com/remix-run/remix/pull/6223))
 - fix(react,dev): dev chunking and refresh race condition ([#6201](https://github.com/remix-run/remix/pull/6201))
 - Revalidate loaders only when a change to one is detected. ([#6135](https://github.com/remix-run/remix/pull/6135))
 - short circuit links and meta for routes that are not rendered due to errors ([#6107](https://github.com/remix-run/remix/pull/6107))
 - don't warn about runtime deprecation warnings in production ([#4421](https://github.com/remix-run/remix/pull/4421))
-- rename devReady to broadcastDevReady ([#6194](https://github.com/remix-run/remix/pull/6194))
+- rename `devReady` to `broadcastDevReady` ([#6194](https://github.com/remix-run/remix/pull/6194))
 - Update Remix for React Router no longer relying on `useSyncExternalStore` ([#6121](https://github.com/remix-run/remix/pull/6121))
 - Fix false-positive resource route identification if a route only exports a boundary ([#6125](https://github.com/remix-run/remix/pull/6125))
 - better type discrimination when unwrapping loader return types ([#5516](https://github.com/remix-run/remix/pull/5516))
-- Bump to router [`react-router-dom@6.11.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.11.0)/[`@remix-run/router@1.6.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#160) ([#6233](https://github.com/remix-run/remix/pull/6233))
+- Updated dependencies:
+  - [`react-router-dom@6.11.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.11.0)
+  - [`@remix-run/router@1.6.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#160)
 
 ## 1.15.0
 
