@@ -10,7 +10,7 @@ export interface RemixContextObject {
   serverHandoffString?: string;
   future: FutureConfig;
   abortDelay?: number;
-  dev?: { liveReloadPort: number };
+  dev?: { websocketPort: number };
 }
 
 // Additional React-Router information needed at runtime, but not hydrated
@@ -26,17 +26,12 @@ type Dev = {
   rebuildPollIntervalMs?: number;
 };
 
-type VanillaExtractOptions = {
-  cache?: boolean;
-};
-
 export interface FutureConfig {
-  unstable_cssModules: boolean;
-  unstable_cssSideEffectImports: boolean;
   unstable_dev: boolean | Dev;
+  /** @deprecated Use the `postcss` config option instead */
   unstable_postcss: boolean;
+  /** @deprecated Use the `tailwind` config option instead */
   unstable_tailwind: boolean;
-  unstable_vanillaExtract: boolean | VanillaExtractOptions;
   v2_errorBoundary: boolean;
   v2_meta: boolean;
   v2_normalizeFormMethod: boolean;

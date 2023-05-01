@@ -94,7 +94,7 @@ For instance, consider an event slug with the id and an human-friendly title:
 
 ```tsx filename=app/routes/events/$slug.tsx
 export async function loader({ params }: LoaderArgs) {
-  let id = params.slug.split("--")[1];
+  const id = params.slug.split("--")[1];
   return loadEvent(id);
 }
 
@@ -103,8 +103,8 @@ export function shouldRevalidate({
   nextParams,
   defaultShouldRevalidate,
 }) {
-  let currentId = currentParams.slug.split("--")[1];
-  let nextID = nextParams.slug.split("--")[1];
+  const currentId = currentParams.slug.split("--")[1];
+  const nextID = nextParams.slug.split("--")[1];
   if (currentId !== nextID) {
     return true;
   }
@@ -213,7 +213,7 @@ In this UI, that's wasted bandwidth for the user, your server, and your database
 
 ```tsx
 export async function loader({ params }: LoaderArgs) {
-  let data = await fakedb.findProject(params.projectId);
+  const data = await fakedb.findProject(params.projectId);
   return json(data);
 }
 ```

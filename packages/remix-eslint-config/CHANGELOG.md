@@ -1,5 +1,11 @@
 # `@remix-run/eslint-config`
 
+## 1.16.0
+
+### Minor Changes
+
+- add deprecation warning to `@remix-run/eslint-config/jest` ESLint config ([#5697](https://github.com/remix-run/remix/pull/5697))
+
 ## 1.15.0
 
 ### Patch Changes

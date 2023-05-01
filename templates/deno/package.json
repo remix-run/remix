@@ -13,6 +13,7 @@
     "typecheck": "deno check"
   },
   "dependencies": {
+    "@remix-run/css-bundle": "*",
     "@remix-run/deno": "*",
     "@remix-run/react": "*",
     "isbot": "^3.6.8",

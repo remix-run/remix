@@ -183,7 +183,7 @@ function serveTheBots(
         // Use onAllReady to wait for the entire document to be ready
         onAllReady() {
           responseHeaders.set("Content-Type", "text/html");
-          let body = new PassThrough();
+          const body = new PassThrough();
           pipe(body);
           resolve(
             new Response(body, {
@@ -219,7 +219,7 @@ function serveBrowsers(
         // use onShellReady to wait until a suspense boundary is triggered
         onShellReady() {
           responseHeaders.set("Content-Type", "text/html");
-          let body = new PassThrough();
+          const body = new PassThrough();
           pipe(body);
           resolve(
             new Response(body, {

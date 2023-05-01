@@ -286,7 +286,7 @@ Similar to dynamic route parameters, you can access the value of the matched pat
 
 ```tsx filename=app/routes/files.$.tsx
 export function loader({ params }) {
-  let filePath = params["*"];
+  const filePath = params["*"];
   return fake.getFileInfo(filePath);
 }
 ```

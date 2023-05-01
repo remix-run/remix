@@ -13,7 +13,7 @@ This hook allows you to revalidate the data for any reason. React Router automat
 import { useRevalidator } from "@remix-run/react";
 
 function WindowFocusRevalidator() {
-  let revalidator = useRevalidator();
+  const revalidator = useRevalidator();
 
   useFakeWindowFocus(() => {
     revalidator.revalidate();

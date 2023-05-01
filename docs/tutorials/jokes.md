@@ -2560,7 +2560,7 @@ function validatePassword(password: string) {
 }
 
 function validateUrl(url: string) {
-  let urls = ["/jokes", "/", "https://remix.run"];
+  const urls = ["/jokes", "/", "https://remix.run"];
   if (urls.includes(url)) {
     return url;
   }
@@ -3753,7 +3753,7 @@ function validatePassword(password: string) {
 }
 
 function validateUrl(url: string) {
-  let urls = ["/jokes", "/", "https://remix.run"];
+  const urls = ["/jokes", "/", "https://remix.run"];
   if (urls.includes(url)) {
     return url;
   }
@@ -5062,7 +5062,7 @@ function validatePassword(password: string) {
 }
 
 function validateUrl(url: string) {
-  let urls = ["/jokes", "/", "https://remix.run"];
+  const urls = ["/jokes", "/", "https://remix.run"];
   if (urls.includes(url)) {
     return url;
   }
@@ -6427,7 +6427,7 @@ function validatePassword(password: string) {
 }
 
 function validateUrl(url: string) {
-  let urls = ["/jokes", "/", "https://remix.run"];
+  const urls = ["/jokes", "/", "https://remix.run"];
   if (urls.includes(url)) {
     return url;
   }

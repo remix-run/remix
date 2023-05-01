@@ -1,5 +1,14 @@
 # `@remix-run/cloudflare`
 
+## 1.16.0
+
+### Patch Changes
+
+- feat: support async `getLoadContext` in all adapters ([#6170](https://github.com/remix-run/remix/pull/6170))
+- add `logDevReady` as replacement for platforms that can't initialize async I/O outside of the request response lifecycle. ([#6204](https://github.com/remix-run/remix/pull/6204))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.16.0`
+
 ## 1.15.0
 
 ### Minor Changes
@@ -28,11 +37,11 @@
       ```tsx
       // before
       export function meta({ matches }) {
-        let rootModule = matches.find((match) => match.route.id === "root");
+        const rootModule = matches.find((match) => match.route.id === "root");
       }
       // after
       export function meta({ matches }) {
-        let rootModule = matches.find((match) => match.id === "root");
+        const rootModule = matches.find((match) => match.id === "root");
       }
       ```
   - Added support for generating `<script type='application/ld+json' />` and meta-related `<link />` tags to document head via the route `meta` function when using the `v2_meta` future flag
