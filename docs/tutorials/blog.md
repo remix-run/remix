@@ -859,7 +859,7 @@ export const action = async ({ request }: ActionArgs) => {
 // ...
 ```
 
-Notice we don't return a redirect this time, we actually return the errors. These errors are available to the component via `useActionData`. It's just like `useLoaderData` but the data comes from the action after a form POST.
+Notice we don't return a redirect if any of the input is empty (so if we have any error), we actually return the errors. These errors are available to the component via `useActionData`. It's just like `useLoaderData` but the data comes from the action after a form POST.
 
 💿 Add validation messages to the UI
 
