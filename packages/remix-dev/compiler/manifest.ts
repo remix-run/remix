@@ -105,9 +105,10 @@ export const write = async (config: RemixConfig, assetsManifest: Manifest) => {
 
   assetsManifest.url = config.publicPath + filename;
 
+  let json = JSON.stringify(JSON.stringify(assetsManifest));
   await writeFileSafe(
     path.join(config.assetsBuildDirectory, filename),
-    `window.__remixManifest=JSON.parse('${JSON.stringify(assetsManifest)}');`
+    `window.__remixManifest=JSON.parse(${json});`
   );
 };
 
