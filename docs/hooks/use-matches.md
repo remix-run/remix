@@ -7,7 +7,7 @@ toc: false
 
 Returns the current route matches on the page. This is useful for creating layout abstractions with your current routes.
 
-```js
+```ts
 function SomeComponent() {
   const matches = useMatches();
 
@@ -17,7 +17,7 @@ function SomeComponent() {
 
 `matches` has the following shape:
 
-```js
+```ts
 [
   { id, pathname, data, params, handle }, // root route
   { id, pathname, data, params, handle }, // layout route

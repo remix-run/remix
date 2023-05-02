@@ -9,11 +9,11 @@ toc: false
 
 This hook allows you to revalidate the data for any reason. React Router automatically revalidates the data after actions are called, but you may want to revalidate for other reasons like when focus returns to the window.
 
-```jsx
+```tsx
 import { useRevalidator } from "@remix-run/react";
 
 function WindowFocusRevalidator() {
-  let revalidator = useRevalidator();
+  const revalidator = useRevalidator();
 
   useFakeWindowFocus(() => {
     revalidator.revalidate();

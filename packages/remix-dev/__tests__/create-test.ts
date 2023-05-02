@@ -8,7 +8,13 @@ import stripAnsi from "strip-ansi";
 
 import { run } from "../cli/run";
 import { server } from "./msw";
-import { errorBoundaryWarning, flatRoutesWarning } from "../config";
+import {
+  errorBoundaryWarning,
+  flatRoutesWarning,
+  formMethodWarning,
+  metaWarning,
+  serverModuleFormatWarning,
+} from "../config";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterAll(() => server.close());
@@ -349,6 +355,12 @@ describe("the create command", () => {
     ]);
     expect(output.trim()).toBe(
       errorBoundaryWarning +
+        "\n" +
+        formMethodWarning +
+        "\n" +
+        metaWarning +
+        "\n" +
+        serverModuleFormatWarning +
         "\n" +
         flatRoutesWarning +
         "\n\n" +

@@ -1,5 +1,64 @@
 # `@remix-run/node`
 
+## 1.16.0
+
+### Patch Changes
+
+- add `@remix-run/node/install` side-effect to allow `node --require @remix-run/node/install` ([#6132](https://github.com/remix-run/remix/pull/6132))
+- add `logDevReady` as replacement for platforms that can't initialize async I/O outside of the request response lifecycle. ([#6204](https://github.com/remix-run/remix/pull/6204))
+- add missing files to published package ([#6179](https://github.com/remix-run/remix/pull/6179))
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.16.0`
+
+## 1.15.0
+
+### Minor Changes
+
+- We have made a few changes to the API for route module `meta` functions when using the `future.v2_meta` flag. **These changes are _only_ breaking for users who have opted in.** ([#5746](https://github.com/remix-run/remix/pull/5746))
+
+  - `V2_HtmlMetaDescriptor` has been renamed to `V2_MetaDescriptor`
+  - The `meta` function's arguments have been simplified
+    - `parentsData` has been removed, as each route's loader data is available on the `data` property of its respective `match` object
+      ```tsx
+      // before
+      export function meta({ parentsData }) {
+        return [{ title: parentsData["routes/some-route"].title }];
+      }
+      // after
+      export function meta({ matches }) {
+        return [
+          {
+            title: matches.find((match) => match.id === "routes/some-route")
+              .data.title,
+          },
+        ];
+      }
+      ```
+    - The `route` property on route matches has been removed, as relevant match data is attached directly to the match object
+      ```tsx
+      // before
+      export function meta({ matches }) {
+        const rootModule = matches.find((match) => match.route.id === "root");
+      }
+      // after
+      export function meta({ matches }) {
+        const rootModule = matches.find((match) => match.id === "root");
+      }
+      ```
+  - Added support for generating `<script type='application/ld+json' />` and meta-related `<link />` tags to document head via the route `meta` function when using the `v2_meta` future flag
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.15.0`
+
+## 1.14.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/server-runtime@1.14.3`
+
 ## 1.14.2
 
 ### Patch Changes
