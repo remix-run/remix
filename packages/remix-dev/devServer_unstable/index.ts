@@ -54,6 +54,7 @@ export let serve = async (
     httpScheme: string;
     httpHost: string;
     httpPort: number;
+    publicDirectory: string;
     websocketPort: number;
     restart: boolean;
   }
@@ -196,7 +197,7 @@ export let serve = async (
         maxAge: "1y",
       })
     )
-    .use(express.static("public", { maxAge: "1h" }))
+    .use(express.static(options.publicDirectory, { maxAge: "1h" }))
 
     // handle `broadcastDevReady` messages
     .use(express.json())
