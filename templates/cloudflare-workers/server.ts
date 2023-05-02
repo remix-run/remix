@@ -2,12 +2,9 @@ import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
 import type { AppLoadContext } from "@remix-run/cloudflare";
 import { createRequestHandler, logDevReady } from "@remix-run/cloudflare";
 import * as build from "@remix-run/dev/server-build";
-import manifestJSON from "__STATIC_CONTENT_MANIFEST";
-
-const assetManifest = JSON.parse(manifestJSON);
 const handleRemixRequest = createRequestHandler(build, process.env.NODE_ENV);
 
-if (process.env.NODE_ENV === "development") {
+if (build.dev) {
   logDevReady(build);
 }
 
@@ -16,10 +13,12 @@ export default {
     request: Request,
     env: {
       __STATIC_CONTENT: Fetcher;
+      __STATIC_CONTENT_MANIFEST: string;
     },
     ctx: ExecutionContext
   ): Promise<Response> {
     try {
+      const assetManifest = JSON.parse(env.__STATIC_CONTENT_MANIFEST);
       const url = new URL(request.url);
       const ttl = url.pathname.startsWith("/build/")
         ? 60 * 60 * 24 * 365 // 1 year
