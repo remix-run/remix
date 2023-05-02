@@ -38,6 +38,7 @@ export function isDeferredResponse(response: any): boolean {
   );
 }
 
+let revalidationTimeout = 0;
 export async function fetchData(
   request: Request,
   routeId: string
@@ -59,7 +60,27 @@ export async function fetchData(
         : await request.formData();
   }
 
-  let response = await fetch(url.href, init);
+  let revalidation = window.__remixRevalidation;
+  if (typeof revalidation === "number") {
+    await new Promise((resolve) => setTimeout(resolve, revalidationTimeout));
+  }
+
+  let start = Date.now();
+  let response = await fetch(url.href, init).catch((error) => {
+    if (
+      typeof revalidation === "number" &&
+      revalidation === window.__remixRevalidation &&
+      error?.name === "TypeError"
+    ) {
+      // TODO: put just a little thought into this and make it adjust up and down
+      revalidationTimeout =
+        (revalidationTimeout + 10 * (Date.now() - start)) / 2;
+      revalidationTimeout =
+        revalidationTimeout > 1000 ? 1000 : revalidationTimeout;
+      return fetch(url.href, init);
+    }
+    throw error;
+  });
 
   if (isErrorResponse(response)) {
     let data = await response.json();
