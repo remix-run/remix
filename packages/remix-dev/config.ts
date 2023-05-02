@@ -394,7 +394,6 @@ export interface RemixConfig {
    * A flag to warn only when adding node builtins modules to projects.
    */
    warnOnFakeBuiltins: boolean;
-
 }
 
 /**
@@ -759,7 +758,7 @@ export async function readConfig(
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
-  let warnOnFakeBuiltins = appConfig.warnOnFakeBuiltins? appConfig.warnOnFakeBuiltins: false
+  let warnOnFakeBuiltins = appConfig.warnOnFakeBuiltins ?? false;
 
   return {
     appDirectory,

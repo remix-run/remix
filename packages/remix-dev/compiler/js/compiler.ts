@@ -60,12 +60,16 @@ const getExternals = (remixConfig: RemixConfig): string[] => {
   let dependencies = Object.keys(getAppDependencies(remixConfig));
   let fakeBuiltins = nodeBuiltins.filter((mod) => dependencies.includes(mod));
 
+  let message = `It appears you're using a module that is built in to node, but you installed it as a dependency which could cause problems. Please remove ${fakeBuiltins.join(
+    ", "
+  )} before continuing.`;
+
   if (fakeBuiltins.length > 0) {
-    throw new Error(
-      `It appears you're using a module that is built in to node, but you installed it as a dependency which could cause problems. Please remove ${fakeBuiltins.join(
-        ", "
-      )} before continuing.`
-    );
+    if (remixConfig.warnOnFakeBuiltins) {
+      console.warn(message);
+    } else {
+      throw new Error(message);
+    }
   }
   return nodeBuiltins.filter((mod) => !dependencies.includes(mod));
 };
