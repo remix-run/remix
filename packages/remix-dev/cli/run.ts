@@ -131,7 +131,7 @@ const templateChoices = [
   { name: "Express Server", value: "express" },
   { name: "Architect (AWS Lambda)", value: "arc" },
   { name: "Fly.io", value: "fly" },
-  { name: "Netlify", value: "netlify" },
+  { name: "Netlify", value: "https://github.com/netlify/remix-template" },
   { name: "Vercel", value: "vercel" },
   { name: "Cloudflare Pages", value: "cloudflare-pages" },
   { name: "Cloudflare Workers", value: "cloudflare-workers" },

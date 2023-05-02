@@ -577,7 +577,6 @@ function isRemixTemplate(input: string) {
     "deno",
     "express",
     "fly",
-    "netlify",
     "remix",
     "vercel",
   ].includes(input);

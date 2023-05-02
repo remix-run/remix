@@ -1,3 +1,6 @@
+> **Note**
+> this template is in maintenance mode in favor of the [official template](https://github.com/netlify/remix-template) built by the Netlify team
+
 # Welcome to Remix!
 
 - [Remix Docs](https://remix.run/docs)
