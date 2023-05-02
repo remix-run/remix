@@ -24,6 +24,8 @@ export function getDocumentHeadersRR(
         ? typeof routeModule.headers === "function"
           ? routeModule.headers({ loaderHeaders, parentHeaders, actionHeaders })
           : routeModule.headers
+        : build.future.v2_headers
+        ? parentHeaders
         : undefined
     );
 
@@ -40,7 +42,10 @@ export function getDocumentHeadersRR(
 function prependCookies(parentHeaders: Headers, childHeaders: Headers): void {
   let parentSetCookieString = parentHeaders.get("Set-Cookie");
 
-  if (parentSetCookieString) {
+  if (
+    parentSetCookieString &&
+    parentSetCookieString !== childHeaders.get("Set-Cookie")
+  ) {
     let cookies = splitCookiesString(parentSetCookieString);
     cookies.forEach((cookie) => {
       childHeaders.append("Set-Cookie", cookie);
