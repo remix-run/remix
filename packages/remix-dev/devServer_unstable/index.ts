@@ -196,6 +196,7 @@ export let serve = async (
         maxAge: "1y",
       })
     )
+    .use(express.static("public", { maxAge: "1h" }))
 
     // handle `broadcastDevReady` messages
     .use(express.json())
