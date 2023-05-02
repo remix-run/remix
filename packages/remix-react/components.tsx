@@ -667,6 +667,7 @@ export function Scripts(props: ScriptProps) {
     let contextScript = staticContext
       ? `window.__remixContext = ${serverHandoffString};`
       : " ";
+      let manifestEntryModule = JSON.stringify(manifest.entry.module);
 
     let activeDeferreds = staticContext?.activeDeferreds;
     // This sets up the __remixContext with utility functions used by the
@@ -786,7 +787,7 @@ window.__remixRouteModules = {${matches
           )
           .join(",")}};
 
-import(${JSON.stringify(manifest.entry.module)});`;
+import(${manifestEntryModule}.startsWith('.') ? new URL(${manifestEntryModule}, document.baseURI).toString() : ${manifestEntryModule});`;
 
     return (
       <>
