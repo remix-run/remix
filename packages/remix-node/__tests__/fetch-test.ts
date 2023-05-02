@@ -103,6 +103,8 @@ describe("Request", () => {
     file = clonedFormData.get("upload_file_1") as File;
     expect(file.name).toBe("1k_b.dat");
     expect(file.size).toBe(1023);
+
+    expect(cloned instanceof Request).toBeTruthy()
   });
 });
 
