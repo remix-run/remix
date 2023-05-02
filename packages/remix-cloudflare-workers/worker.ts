@@ -17,7 +17,9 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cl
  * You can think of this as an escape hatch that allows you to pass
  * environment/platform-specific values through to your loader/action.
  */
-export type GetLoadContextFunction = (event: FetchEvent) => AppLoadContext;
+export type GetLoadContextFunction = (
+  event: FetchEvent
+) => Promise<AppLoadContext> | AppLoadContext;
 
 export type RequestHandler = (event: FetchEvent) => Promise<Response>;
 
@@ -36,8 +38,8 @@ export function createRequestHandler({
 }): RequestHandler {
   let handleRequest = createRemixRequestHandler(build, mode);
 
-  return (event: FetchEvent) => {
-    let loadContext = getLoadContext?.(event);
+  return async (event: FetchEvent) => {
+    let loadContext = await getLoadContext?.(event);
 
     return handleRequest(event.request, loadContext);
   };

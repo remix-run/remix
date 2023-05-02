@@ -30,7 +30,7 @@ import { isBinaryType } from "./binaryTypes";
 export type GetLoadContextFunction = (
   event: HandlerEvent,
   context: HandlerContext
-) => AppLoadContext;
+) => Promise<AppLoadContext> | AppLoadContext;
 
 export type RequestHandler = Handler;
 
@@ -47,7 +47,7 @@ export function createRequestHandler({
 
   return async (event, context) => {
     let request = createRemixRequest(event);
-    let loadContext = getLoadContext?.(event, context);
+    let loadContext = await getLoadContext?.(event, context);
 
     let response = (await handleRequest(request, loadContext)) as NodeResponse;
 
