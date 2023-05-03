@@ -234,13 +234,10 @@ let relativePath = (file: string) => path.relative(process.cwd(), file);
 
 let kill = async (p?: execa.ExecaChildProcess) => {
   if (p === undefined) return;
-  // `execa`'s `kill` is not reliable on windows
-  if (process.platform === "win32") {
-    await execa("taskkill", ["/pid", String(p.pid), "/f", "/t"]);
-    return;
-  }
 
-  // wait one tick of the event loop so that we guarantee app server gets killed before proceeding
-  p.kill("SIGTERM", { forceKillAfterTimeout: 0 });
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  let channel = Channel.create<void>();
+  p.kill("SIGTERM", { forceKillAfterTimeout: 1_000 });
+  p.on("exit", channel.ok);
+
+  await channel.result;
 };
