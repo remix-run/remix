@@ -224,6 +224,7 @@ export async function dev(
     httpHost?: string;
     httpPort?: number;
     restart?: boolean;
+    publicDirectory?: string;
     websocketPort?: number;
   } = {}
 ) {
@@ -515,6 +516,7 @@ let resolveDevBuild = async (
 
 type DevServeFlags = DevBuildFlags & {
   command: string;
+  publicDirectory: string;
   restart: boolean;
 };
 let resolveDevServe = async (
@@ -540,7 +542,7 @@ let resolveDevServe = async (
     )}`;
 
     let usingRemixAppServer =
-      getAppDependencies(config)["@remix-run/serve"] !== undefined;
+      getAppDependencies(config, true)["@remix-run/serve"] !== undefined;
     if (!usingRemixAppServer) {
       console.error(
         [
@@ -552,6 +554,12 @@ let resolveDevServe = async (
       process.exit(1);
     }
   }
+
+  let publicDirectory =
+    flags.publicDirectory ??
+    (dev === true ? undefined : dev.publicDirectory) ??
+    "public";
+
   let restart =
     flags.restart ?? (dev === true ? undefined : dev.restart) ?? true;
 
@@ -560,6 +568,7 @@ let resolveDevServe = async (
     httpScheme,
     httpHost,
     httpPort,
+    publicDirectory,
     websocketPort,
     restart,
   };

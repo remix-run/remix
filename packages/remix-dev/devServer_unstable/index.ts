@@ -1,5 +1,6 @@
+import * as path from "node:path";
+import * as stream from "node:stream";
 import fs from "fs-extra";
-import path from "node:path";
 import prettyMs from "pretty-ms";
 import execa from "execa";
 import express from "express";
@@ -53,6 +54,7 @@ export let serve = async (
     httpScheme: string;
     httpHost: string;
     httpPort: number;
+    publicDirectory: string;
     websocketPort: number;
     restart: boolean;
   }
@@ -66,23 +68,53 @@ export let serve = async (
   };
 
   let state: {
-    latestBuildHash?: string;
-    buildHashChannel?: Channel.Type<void>;
     appServer?: execa.ExecaChildProcess;
+    manifest?: Manifest;
     prevManifest?: Manifest;
+    appReady?: Channel.Type<void>;
   } = {};
 
   let bin = await detectBin();
   let startAppServer = (command: string) => {
     console.log(`> ${command}`);
-    return execa.command(command, {
-      stdio: "inherit",
+    let newAppServer = execa.command(command, {
+      stdio: "pipe",
       env: {
         NODE_ENV: "development",
         PATH: `${bin}:${process.env.PATH}`,
         REMIX_DEV_HTTP_ORIGIN: stringifyOrigin(httpOrigin),
       },
     });
+
+    if (newAppServer.stdin)
+      process.stdin.pipe(newAppServer.stdin, { end: true });
+    if (newAppServer.stderr)
+      newAppServer.stderr.pipe(process.stderr, { end: false });
+    if (newAppServer.stdout) {
+      newAppServer.stdout
+        .pipe(
+          new stream.PassThrough({
+            transform(chunk, _, callback) {
+              let str: string = chunk.toString();
+              let matches =
+                str && str.matchAll(/\[REMIX DEV\] ([A-f0-9]+) ready/g);
+              if (matches) {
+                for (let match of matches) {
+                  let buildHash = match[1];
+                  if (buildHash === state.manifest?.version) {
+                    state.appReady?.ok();
+                  }
+                }
+              }
+
+              callback(null, chunk);
+            },
+          })
+        )
+        .pipe(process.stdout, { end: false });
+    }
+
+    return newAppServer;
   };
 
   let dispose = await Compiler.watch(
@@ -102,24 +134,24 @@ export let serve = async (
         return patchPublicPath(config, httpOrigin);
       },
       onBuildStart: (ctx) => {
-        state.buildHashChannel?.err();
+        state.appReady?.err();
         clean(ctx.config);
         websocket.log(state.prevManifest ? "Rebuilding..." : "Building...");
       },
-      onBuildFinish: async (ctx, durationMs, manifest) => {
-        if (!manifest) return;
+      onBuildManifest: (manifest: Manifest) => {
+        state.manifest = manifest;
+      },
+      onBuildFinish: async (ctx, durationMs, succeeded) => {
+        if (!succeeded) return;
 
         websocket.log(
           (state.prevManifest ? "Rebuilt" : "Built") +
             ` in ${prettyMs(durationMs)}`
         );
-        let prevManifest = state.prevManifest;
-        state.prevManifest = manifest;
-        state.latestBuildHash = manifest.version;
-        state.buildHashChannel = Channel.create();
+        state.appReady = Channel.create();
 
         let start = Date.now();
-        console.log(`Waiting for app server (${state.latestBuildHash})`);
+        console.log(`Waiting for app server (${state.manifest?.version})`);
         if (
           options.command &&
           (state.appServer === undefined || options.restart)
@@ -127,21 +159,27 @@ export let serve = async (
           await kill(state.appServer);
           state.appServer = startAppServer(options.command);
         }
-        let { ok } = await state.buildHashChannel.result;
+        let { ok } = await state.appReady.result;
         // result not ok -> new build started before this one finished. do not process outdated manifest
-        if (!ok) return;
-        console.log(`App server took ${prettyMs(Date.now() - start)}`);
+        if (ok) {
+          console.log(`App server took ${prettyMs(Date.now() - start)}`);
 
-        if (manifest.hmr && prevManifest) {
-          let updates = HMR.updates(ctx.config, manifest, prevManifest);
-          websocket.hmr(manifest, updates);
+          if (state.manifest?.hmr && state.prevManifest) {
+            let updates = HMR.updates(
+              ctx.config,
+              state.manifest,
+              state.prevManifest
+            );
+            websocket.hmr(state.manifest, updates);
 
-          let hdr = updates.some((u) => u.revalidate);
-          console.log("> HMR" + (hdr ? " + HDR" : ""));
-        } else if (prevManifest !== undefined) {
-          websocket.reload();
-          console.log("> Live reload");
+            let hdr = updates.some((u) => u.revalidate);
+            console.log("> HMR" + (hdr ? " + HDR" : ""));
+          } else if (state.prevManifest !== undefined) {
+            websocket.reload();
+            console.log("> Live reload");
+          }
         }
+        state.prevManifest = state.manifest;
       },
       onFileCreated: (file) =>
         websocket.log(`File created: ${relativePath(file)}`),
@@ -165,8 +203,9 @@ export let serve = async (
         maxAge: "1y",
       })
     )
+    .use(express.static(options.publicDirectory, { maxAge: "1h" }))
 
-    // handle `devReady` messages
+    // handle `broadcastDevReady` messages
     .use(express.json())
     .post("/ping", (req, res) => {
       let { buildHash } = req.body;
@@ -174,8 +213,8 @@ export let serve = async (
         console.warn(`Unrecognized payload: ${req.body}`);
         res.sendStatus(400);
       }
-      if (buildHash === state.latestBuildHash) {
-        state.buildHashChannel?.ok();
+      if (buildHash === state.manifest?.version) {
+        state.appReady?.ok();
       }
       res.sendStatus(200);
     })
@@ -201,10 +240,15 @@ let relativePath = (file: string) => path.relative(process.cwd(), file);
 
 let kill = async (p?: execa.ExecaChildProcess) => {
   if (p === undefined) return;
-  // `execa`'s `kill` is not reliable on windows
+  let channel = Channel.create<void>();
+  p.on("exit", channel.ok);
+
+  // https://github.com/nodejs/node/issues/12378
   if (process.platform === "win32") {
     await execa("taskkill", ["/pid", String(p.pid), "/f", "/t"]);
-    return;
+  } else {
+    p.kill("SIGTERM", { forceKillAfterTimeout: 1_000 });
   }
-  p.kill();
+
+  await channel.result;
 };

@@ -45,6 +45,7 @@ type Dev = {
   httpPort?: number;
   websocketPort?: number;
   restart?: boolean;
+  publicDirectory?: string;
 };
 
 interface FutureConfig {
@@ -678,7 +679,7 @@ export async function readConfig(
   }
 
   let routes: RouteManifest = {
-    root: { id: "root", file: rootRouteFile },
+    root: { path: "", id: "root", file: rootRouteFile },
   };
 
   let routesConvention: typeof flatRoutes;

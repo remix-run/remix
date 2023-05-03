@@ -10,7 +10,9 @@ import { create as createManifest, write as writeManifest } from "./manifest";
 import { err, ok } from "../result";
 
 type Compiler = {
-  compile: () => Promise<Manifest>;
+  compile: (options?: {
+    onManifest?: (manifest: Manifest) => void;
+  }) => Promise<Manifest>;
   cancel: () => Promise<void>;
   dispose: () => Promise<void>;
 };
@@ -43,10 +45,16 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     ]);
   };
 
-  let compile = async () => {
-    let errCancel = (error: unknown) => {
+  let compile = async (
+    options: { onManifest?: (manifest: Manifest) => void } = {}
+  ) => {
+    let error: unknown | undefined = undefined;
+    let errCancel = (thrown: unknown) => {
+      if (error === undefined) {
+        error = thrown;
+      }
       cancel();
-      return err(error);
+      return err(thrown);
     };
 
     // reset channels
@@ -69,7 +77,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
 
     // css compilation
     let css = await tasks.css;
-    if (!css.ok) throw css.error;
+    if (!css.ok) throw error ?? css.error;
 
     // css bundle
     let cssBundleHref =
@@ -87,7 +95,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     // js compilation (implicitly writes artifacts/js)
     // TODO: js task should not return metafile, but rather js assets
     let js = await tasks.js;
-    if (!js.ok) throw js.error;
+    if (!js.ok) throw error ?? js.error;
     let { metafile, hmr } = js.value;
 
     // artifacts/manifest
@@ -98,11 +106,12 @@ export let create = async (ctx: Context): Promise<Compiler> => {
       hmr,
     });
     channels.manifest.ok(manifest);
+    options.onManifest?.(manifest);
     writes.manifest = writeManifest(ctx.config, manifest);
 
     // server compilation
     let server = await tasks.server;
-    if (!server.ok) throw server.error;
+    if (!server.ok) throw error ?? server.error;
     // artifacts/server
     writes.server = Server.write(ctx.config, server.value);
 

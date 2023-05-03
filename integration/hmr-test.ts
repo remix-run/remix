@@ -63,7 +63,7 @@ let fixture = (options: {
       let path = require("path");
       let express = require("express");
       let { createRequestHandler } = require("@remix-run/express");
-      let { devReady } = require("@remix-run/node");
+      let { broadcastDevReady } = require("@remix-run/node");
 
       const app = express();
       app.use(express.static("public", { immutable: true, maxAge: "1y" }));
@@ -84,7 +84,7 @@ let fixture = (options: {
         let build = require(BUILD_DIR);
         console.log('✅ app ready: http://localhost:' + port);
         if (process.env.NODE_ENV === 'development') {
-          devReady(build);
+          broadcastDevReady(build);
         }
       });
     `,
@@ -156,7 +156,7 @@ let fixture = (options: {
     "app/routes/_index.tsx": js`
       import { useLoaderData } from "@remix-run/react";
       export function shouldRevalidate(args) {
-        return args.defaultShouldRevalidate;
+        return true;
       }
       export default function Index() {
         const t = useLoaderData();
@@ -286,7 +286,7 @@ test("HMR", async ({ page }) => {
       import { useLoaderData } from "@remix-run/react";
       import styles from "~/styles.module.css";
       export function shouldRevalidate(args) {
-        return args.defaultShouldRevalidate;
+        return true;
       }
       export default function Index() {
         const t = useLoaderData();
@@ -329,7 +329,7 @@ test("HMR", async ({ page }) => {
       export let loader = () => json({ hello: "world" });
 
       export function shouldRevalidate(args) {
-        return args.defaultShouldRevalidate;
+        return true;
       }
       export default function Index() {
         let { hello } = useLoaderData<typeof loader>();
@@ -358,7 +358,7 @@ test("HMR", async ({ page }) => {
       }
 
       export function shouldRevalidate(args) {
-        return args.defaultShouldRevalidate;
+        return true;
       }
       export default function Index() {
         let { hello } = useLoaderData<typeof loader>();

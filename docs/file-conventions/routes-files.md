@@ -304,7 +304,7 @@ Because some characters have special meaning, you must use our escaping syntax i
 [loader]: ../route/loader
 [action]: ../route/action
 [meta]: ../route/meta
-[headers]: ../routes/headers
+[headers]: ../route/headers
 [links]: ../route/links
 [error-boundary]: ../route/error-boundary
 [catch-boundary]: ../route/catch-boundary
