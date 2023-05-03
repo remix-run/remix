@@ -234,10 +234,15 @@ let relativePath = (file: string) => path.relative(process.cwd(), file);
 
 let kill = async (p?: execa.ExecaChildProcess) => {
   if (p === undefined) return;
-
   let channel = Channel.create<void>();
-  p.kill("SIGTERM", { forceKillAfterTimeout: 1_000 });
   p.on("exit", channel.ok);
+
+  // https://github.com/nodejs/node/issues/12378
+  if (process.platform === "win32") {
+    await execa("taskkill", ["/pid", String(p.pid), "/f", "/t"]);
+  } else {
+    p.kill("SIGTERM", { forceKillAfterTimeout: 1_000 });
+  }
 
   await channel.result;
 };
