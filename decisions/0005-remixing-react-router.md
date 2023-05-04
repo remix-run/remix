@@ -152,7 +152,7 @@ We stabilized the API for when a given route loader should re-run, and changed t
 
 Now, if you provide a `shouldRevalidate` method we will call it during all revalidations and provide you a `defaultShouldRevalidate` boolean value. This allows you to opt out of any revalidation, and also code your own logic to fallback on our default choice:
 
-```js
+```tsx
 function shouldRevalidate({ defaultShouldRevalidate }) {
   // Don't revalidate for this case
   if (someEdgeCase()) {
@@ -199,9 +199,9 @@ This has been a long time coming - see https://github.com/remix-run/remix/discus
 
 The differentiation between error and catch proved to be a bit vague over time and a source of confusion for developers. We chose to go with just a single `errorElement` in the router for simplicity. If you throw anything, it ends up in the error boundary (available via `useRouteError`) and propagates accordingly. With this approach we leave the control in the developers hands and it's easy to maintain a similar split if desired:
 
-```jsx
+```tsx
 function NewErrorBoundary() {
-  let error = useRouteError();
+  const error = useRouteError();
 
   if (error instanceof Response) {
     return <MyOldCatchBoudnary error={error} />;
@@ -244,7 +244,7 @@ Initially, we chose to align closely with the existing `react-router` APIs and i
 
 Instead, we lifted the singleton out into user-land, so that they create the router singleton and manage it outside the react tree - which is what react 18 is encouraging with `useSyncExternalStore` anyways! This also means that since users create the router - there's no longer any difference in the rendering aspect for memory/browser/hash routers (which only impacts router/history creation) - so we got rid of those and trimmed to a simple `RouterProvider`:
 
-```jsx
+```tsx
 // Before
 function OldApp() {
   return (
@@ -255,9 +255,11 @@ function OldApp() {
     </DataBrowserRouter>
   );
 }
+```
 
+```tsx
 //After
-let router = createBrowserRouter([
+const router = createBrowserRouter([
   {
     path: "/",
     element: <Layout />,
@@ -277,13 +279,13 @@ function NewApp() {
 
 If folks still prefer the JSX notation, they can leverage `createRoutesFromElements` (aliased from `createRoutesFromChildren` since they are not "children" in this usage):
 
-```jsx
-let routes = createRoutesFromElements(
+```tsx
+const routes = createRoutesFromElements(
   <Route path="/" element={<Layout />}>
     <Route index element={<Home />} />
   </Route>
 );
-let router = createBrowserRouter(routes);
+const router = createBrowserRouter(routes);
 
 function App() {
   return <RouterProvider router={router} />;

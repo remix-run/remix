@@ -1,5 +1,182 @@
 # `@remix-run/react`
 
+## 1.16.0
+
+### Minor Changes
+
+- Enable support for [CSS Modules](https://github.com/css-modules/css-modules), [Vanilla Extract](http://vanilla-extract.style) and CSS side-effect imports ([#6046](https://github.com/remix-run/remix/pull/6046))
+
+  These CSS bundling features were previously only available via `future.unstable_cssModules`, `future.unstable_vanillaExtract` and `future.unstable_cssSideEffectImports` options in `remix.config.js`, but they have now been stabilized.
+
+  In order to use these features, check out our guide to [CSS bundling](https://remix.run/docs/en/1.16.0/guides/styling#css-bundling) in your project.
+
+- Stabilize built-in PostCSS support via the new `postcss` option in `remix.config.js`. As a result, the `future.unstable_postcss` option has also been deprecated. ([#5960](https://github.com/remix-run/remix/pull/5960))
+
+  The `postcss` option is `false` by default, but when set to `true` will enable processing of all CSS files using PostCSS if `postcss.config.js` is present.
+
+  If you followed the original PostCSS setup guide for Remix, you may have a folder structure that looks like this, separating your source files from its processed output:
+
+      .
+      ├── app
+      │   └── styles (processed files)
+      │       ├── app.css
+      │       └── routes
+      │           └── index.css
+      └── styles (source files)
+          ├── app.css
+          └── routes
+              └── index.css
+
+  After you've enabled the new `postcss` option, you can delete the processed files from `app/styles` folder and move your source files from `styles` to `app/styles`:
+
+      .
+      ├── app
+      │   └── styles (source files)
+      │       ├── app.css
+      │       └── routes
+      │           └── index.css
+
+  You should then remove `app/styles` from your `.gitignore` file since it now contains source files rather than processed output.
+
+  You can then update your `package.json` scripts to remove any usage of `postcss` since Remix handles this automatically. For example, if you had followed the original setup guide:
+
+  ```diff
+  {
+    "scripts": {
+  -    "dev:css": "postcss styles --base styles --dir app/styles -w",
+  -    "build:css": "postcss styles --base styles --dir app/styles --env production",
+  -    "dev": "concurrently \"npm run dev:css\" \"remix dev\""
+  +    "dev": "remix dev"
+    }
+  }
+  ```
+
+- Stabilize built-in Tailwind support via the new `tailwind` option in `remix.config.js`. As a result, the `future.unstable_tailwind` option has also been deprecated. ([#5960](https://github.com/remix-run/remix/pull/5960))
+
+  The `tailwind` option is `false` by default, but when set to `true` will enable built-in support for Tailwind functions and directives in your CSS files if `tailwindcss` is installed.
+
+  If you followed the original Tailwind setup guide for Remix and want to make use of this feature, you should first delete the generated `app/tailwind.css`.
+
+  Then, if you have a `styles/tailwind.css` file, you should move it to `app/tailwind.css`.
+
+  ```sh
+  rm app/tailwind.css
+  mv styles/tailwind.css app/tailwind.css
+  ```
+
+  Otherwise, if you don't already have an `app/tailwind.css` file, you should create one with the following contents:
+
+  ```css
+  @tailwind base;
+  @tailwind components;
+  @tailwind utilities;
+  ```
+
+  You should then remove `/app/tailwind.css` from your `.gitignore` file since it now contains source code rather than processed output.
+
+  You can then update your `package.json` scripts to remove any usage of `tailwindcss` since Remix handles this automatically. For example, if you had followed the original setup guide:
+
+  ```diff
+  {
+    // ...
+    "scripts": {
+  -    "build": "run-s \"build:*\"",
+  +    "build": "remix build",
+  -    "build:css": "npm run generate:css -- --minify",
+  -    "build:remix": "remix build",
+  -    "dev": "run-p \"dev:*\"",
+  +    "dev": "remix dev",
+  -    "dev:css": "npm run generate:css -- --watch",
+  -    "dev:remix": "remix dev",
+  -    "generate:css": "npx tailwindcss -o ./app/tailwind.css",
+      "start": "remix-serve build"
+    }
+    // ...
+  }
+  ```
+
+### Patch Changes
+
+- fix(react,dev): dev chunking and refresh race condition ([#6201](https://github.com/remix-run/remix/pull/6201))
+- Revalidate loaders only when a change to one is detected. ([#6135](https://github.com/remix-run/remix/pull/6135))
+- short circuit links and meta for routes that are not rendered due to errors ([#6107](https://github.com/remix-run/remix/pull/6107))
+- don't warn about runtime deprecation warnings in production ([#4421](https://github.com/remix-run/remix/pull/4421))
+- Update Remix for React Router no longer relying on `useSyncExternalStore` ([#6121](https://github.com/remix-run/remix/pull/6121))
+- Fix false-positive resource route identification if a route only exports a boundary ([#6125](https://github.com/remix-run/remix/pull/6125))
+- better type discrimination when unwrapping loader return types ([#5516](https://github.com/remix-run/remix/pull/5516))
+- Updated dependencies:
+  - [`react-router-dom@6.11.0`](https://github.com/remix-run/react-router/releases/tag/react-router%406.11.0)
+  - [`@remix-run/router@1.6.0`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#160)
+
+## 1.15.0
+
+### Minor Changes
+
+- Deprecated `fetcher.type` and `fetcher.submission` for Remix v2 ([#5691](https://github.com/remix-run/remix/pull/5691))
+
+- We have made a few changes to the API for route module `meta` functions when using the `future.v2_meta` flag. **These changes are _only_ breaking for users who have opted in.** ([#5746](https://github.com/remix-run/remix/pull/5746))
+
+  - `V2_HtmlMetaDescriptor` has been renamed to `V2_MetaDescriptor`
+  - The `meta` function's arguments have been simplified
+    - `parentsData` has been removed, as each route's loader data is available on the `data` property of its respective `match` object
+      ```tsx
+      // before
+      export function meta({ parentsData }) {
+        return [{ title: parentsData["routes/some-route"].title }];
+      }
+      // after
+      export function meta({ matches }) {
+        return [
+          {
+            title: matches.find((match) => match.id === "routes/some-route")
+              .data.title,
+          },
+        ];
+      }
+      ```
+    - The `route` property on route matches has been removed, as relevant match data is attached directly to the match object
+      ```tsx
+      // before
+      export function meta({ matches }) {
+        const rootModule = matches.find((match) => match.route.id === "root");
+      }
+      // after
+      export function meta({ matches }) {
+        const rootModule = matches.find((match) => match.id === "root");
+      }
+      ```
+  - Added support for generating `<script type='application/ld+json' />` and meta-related `<link />` tags to document head via the route `meta` function when using the `v2_meta` future flag
+
+- Added deprecation warning for `v2_normalizeFormMethod` ([#5863](https://github.com/remix-run/remix/pull/5863))
+
+- Added a new `future.v2_normalizeFormMethod` flag to normalize the exposed `useNavigation().formMethod` as an uppercase HTTP method to align with the previous `useTransition` behavior as well as the `fetch()` behavior of normalizing to uppercase HTTP methods. ([#5815](https://github.com/remix-run/remix/pull/5815))
+
+  - When `future.v2_normalizeFormMethod === false`,
+    - `useNavigation().formMethod` is lowercase
+    - `useFetcher().formMethod` is uppercase
+  - When `future.v2_normalizeFormMethod === true`:
+    - `useNavigation().formMethod` is uppercase
+    - `useFetcher().formMethod` is uppercase
+
+- Added deprecation warning for normalizing `imagesizes` & `imagesrcset` properties returned from the route `links` function. Both properties should be in camelCase (`imageSizes`/ `imageSrcSet`) to align with their respective JavaScript properties. ([#5706](https://github.com/remix-run/remix/pull/5706))
+
+- Added deprecation warning for `CatchBoundary` in favor of `future.v2_errorBoundary` ([#5718](https://github.com/remix-run/remix/pull/5718))
+
+- Added experimental support for Vanilla Extract caching, which can be enabled by setting `future.unstable_vanillaExtract: { cache: true }` in `remix.config`. This is considered experimental due to the use of a brand new Vanilla Extract compiler under the hood. In order to use this feature, you must be using at least `v1.10.0` of `@vanilla-extract/css`. ([#5735](https://github.com/remix-run/remix/pull/5735))
+
+### Patch Changes
+
+- Bumped React Router dependencies to the latest version. [See the release notes for more details.](https://github.com/remix-run/react-router/releases/tag/react-router%406.10.0) ([`e14699547`](https://github.com/remix-run/remix/commit/e1469954737a2e45636b6aef73dc9ae251fb1b20))
+- Added type deprecations for types now in React Router ([#5679](https://github.com/remix-run/remix/pull/5679))
+
+## 1.14.3
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.14.2) for an overview of all changes in v1.14.3.
+
+## 1.14.2
+
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.14.2) for an overview of all changes in v1.14.2.
+
 ## 1.14.1
 
 ### Patch Changes
@@ -60,6 +237,8 @@
 
 ## 1.11.1
 
+No significant changes to this package were made in this release. [See the releases page on GitHub](https://github.com/remix-run/remix/releases/tag/remix%401.11.1) for an overview of all changes in v1.11.1.
+
 ## 1.11.0
 
 ### Minor Changes
@@ -76,12 +255,12 @@
 
 - Added the `v2_errorBoundary` future flag to opt into the next version of Remix's `ErrorBoundary` behavior. This removes the separate `CatchBoundary` and `ErrorBoundary` and consolidates them into a single `ErrorBoundary`, following the logic used by `errorElement` in React Router. You can then use `isRouteErrorResponse` to differentiate between thrown `Response`/`Error` instances. ([#4918](https://github.com/remix-run/remix/pull/4918))
 
-  ```jsx
+  ```tsx
   // Current (Remix v1 default)
   import { useCatch } from "@remix-run/react";
 
   export function CatchBoundary() {
-    let caught = useCatch();
+    const caught = useCatch();
     return (
       <p>
         {caught.status} {caught.data}
@@ -94,12 +273,12 @@
   }
   ```
 
-  ```jsx
+  ```tsx
   // Using future.v2_errorBoundary
   import { isRouteErrorResponse, useRouteError } from "@remix-run/react";
 
   export function ErrorBoundary() {
-    let error = useRouteError();
+    const error = useRouteError();
 
     return isRouteErrorResponse(error) ? (
       <p>

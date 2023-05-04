@@ -1,6 +1,8 @@
 export type { RemixBrowserProps } from "./browser";
 export { RemixBrowser } from "./browser";
 export type {
+  FormEncType,
+  FormMethod,
   FormProps,
   Location,
   NavigateFunction,
@@ -22,6 +24,7 @@ export {
   useFormAction,
   useHref,
   useLocation,
+  useMatch,
   useNavigate,
   useNavigation,
   useNavigationType,
@@ -63,8 +66,6 @@ export {
   RemixContext as UNSAFE_RemixContext,
 } from "./components";
 
-export type { FormMethod, FormEncType } from "./data";
-
 export type { ThrownResponse } from "./errors";
 export { useCatch } from "./errorBoundaries";
 
@@ -72,6 +73,9 @@ export type { HtmlLinkDescriptor } from "./links";
 export type {
   CatchBoundaryComponent,
   HtmlMetaDescriptor,
+  V2_MetaArgs,
+  V2_MetaDescriptor,
+  V2_MetaFunction,
   RouteModules as UNSAFE_RouteModules,
   ShouldReloadFunction,
 } from "./routeModules";

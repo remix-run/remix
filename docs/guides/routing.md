@@ -91,7 +91,7 @@ Let's consider the URL is `/sales/invoices/102000`. The following routes all mat
 
 When the user visits this page, Remix will render the components in this hierarchy:
 
-```jsx
+```tsx
 <Root>
   <Sales>
     <Invoices>
@@ -116,7 +116,7 @@ app
 
 If the URL is `/accounts`, the UI hierarchy changes to this:
 
-```jsx
+```tsx
 <Root>
   <Accounts />
 </Root>
@@ -124,7 +124,7 @@ If the URL is `/accounts`, the UI hierarchy changes to this:
 
 It's partly your job to make this work. You need to render an `<Outlet/>` to continue the rendering of the route hierarchy from the parent routes. `root.jsx` renders the main layout, sidebar, and then an outlet for the child routes to continue rendering through:
 
-```jsx filename=app/root.jsx lines=[1,7]
+```tsx filename=app/root.tsx lines=[1,7]
 import { Outlet } from "@remix-run/react";
 
 export default function Root() {
@@ -139,7 +139,7 @@ export default function Root() {
 
 Next up is the sales route, which also renders an outlet for its child routes (all of the routes inside of `app/routes/sales/*.jsx`).
 
-```jsx filename=app/routes/sales.jsx lines=[8]
+```tsx filename=app/routes/sales.tsx lines=[8]
 import { Outlet } from "@remix-run/react";
 
 export default function Sales() {
@@ -196,7 +196,7 @@ Sometimes you want to add nesting to the URL (slashes) but you don't want to cre
 
 In other words, we don't want this:
 
-```jsx bad
+```tsx bad
 <Root>
   <Sales>
     <Invoices>
@@ -210,7 +210,7 @@ In other words, we don't want this:
 
 We want this:
 
-```jsx
+```tsx
 <Root>
   <EditInvoice />
 </Root>
@@ -232,7 +232,7 @@ So, if we want a flat UI hierarchy, we create a flat filename--we use `"."` to c
 
 Just for absolute clarity, if the url is "example.com/sales/invoices/2000/edit", we'll get this UI hierarchy that matches the file system hierarchy:
 
-```jsx
+```tsx
 <Root>
   <EditInvoice />
 </Root>
@@ -240,7 +240,7 @@ Just for absolute clarity, if the url is "example.com/sales/invoices/2000/edit",
 
 If we remove "edit" from the URL like this: "example.com/sales/invoices/2000", then we get all of the hierarchy again:
 
-```jsx
+```tsx
 <Root>
   <Sales>
     <Invoices>
@@ -261,7 +261,7 @@ Now for the inverse use case, sometimes you want to share a layout for a set of 
 
 Consider we want to add some authentication routes, with a UI hierarchy like this:
 
-```jsx
+```tsx
 <Root>
   <Auth>
     <Login />
@@ -337,7 +337,7 @@ app
 
 If the URL is `/projects/123/abc` then the params will be as follows:
 
-```jsx
+```tsx
 params.projectId; // "123"
 params.taskId; // "abc"
 ```

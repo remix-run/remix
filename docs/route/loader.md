@@ -16,7 +16,7 @@ export const loader = async () => {
 };
 ```
 
-This function is only ever run on the server. On the initial server render it will provide data to the HTML document, On navigations in the browser, Remix will call the function via [`fetch`][fetch] from the browser.
+This function is only ever run on the server. On the initial server render, it will provide data to the HTML document. On navigations in the browser, Remix will call the function via [`fetch`][fetch] from the browser.
 
 This means you can talk directly to your database, use server-only API secrets, etc. Any code that isn't used to render the UI will be removed from the browser bundle.
 
@@ -45,6 +45,10 @@ export default function Users() {
 
 Because `prisma` is only used in the loader it will be removed from the browser bundle by the compiler, as illustrated by the highlighted lines.
 
+<docs-error>
+Note that whatever you return from your loader will be exposed to the client, even if the component doesn't render it. Treat your loaders with the same care as public API endpoints.
+</docs-error>
+
 ## Type Safety
 
 You can get type safety over the network for your loader and component with `LoaderArgs` and `useLoaderData<typeof loader>`.
@@ -54,7 +58,7 @@ import type { LoaderArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 
-export async function loader(args: LoaderArgs) {
+export async function loader() {
   return json({ name: "Ryan", date: new Date() });
 }
 
@@ -113,7 +117,7 @@ This is the context passed in to your server adapter's `getLoadContext()` functi
 
 Using the express adapter as an example:
 
-```js filename=server.js
+```ts filename=server.ts
 const {
   createRequestHandler,
 } = require("@remix-run/express");

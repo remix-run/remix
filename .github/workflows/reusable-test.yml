@@ -10,6 +10,10 @@ on:
         # so we'll need to manually stringify it for now
         type: string
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CI: true
   CYPRESS_INSTALL_BINARY: 0
@@ -19,9 +23,6 @@ jobs:
     name: ⚙️ Build
     runs-on: ubuntu-latest
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
@@ -30,6 +31,12 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: "yarn"
+
+      - name: Disable GitHub Actions Annotations
+        run: |
+          echo "::remove-matcher owner=tsc::"
+          echo "::remove-matcher owner=eslint-compact::"
+          echo "::remove-matcher owner=eslint-stylish::"
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
@@ -49,9 +56,6 @@ jobs:
         node: ${{ fromJSON(inputs.node_version) }}
     runs-on: ${{ matrix.os }}
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
@@ -60,6 +64,12 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+
+      - name: Disable GitHub Actions Annotations
+        run: |
+          echo "::remove-matcher owner=tsc::"
+          echo "::remove-matcher owner=eslint-compact::"
+          echo "::remove-matcher owner=eslint-stylish::"
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
@@ -81,9 +91,6 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
@@ -92,6 +99,12 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+
+      - name: Disable GitHub Actions Annotations
+        run: |
+          echo "::remove-matcher owner=tsc::"
+          echo "::remove-matcher owner=eslint-compact::"
+          echo "::remove-matcher owner=eslint-stylish::"
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
@@ -112,9 +125,6 @@ jobs:
 
     runs-on: macos-latest
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
@@ -123,6 +133,12 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+
+      - name: Disable GitHub Actions Annotations
+        run: |
+          echo "::remove-matcher owner=tsc::"
+          echo "::remove-matcher owner=eslint-compact::"
+          echo "::remove-matcher owner=eslint-stylish::"
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile
@@ -143,9 +159,6 @@ jobs:
 
     runs-on: windows-latest
     steps:
-      - name: 🛑 Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-
       - name: ⬇️ Checkout repo
         uses: actions/checkout@v3
 
@@ -154,6 +167,12 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: "yarn"
+
+      - name: Disable GitHub Actions Annotations
+        run: |
+          echo "::remove-matcher owner=tsc::"
+          echo "::remove-matcher owner=eslint-compact::"
+          echo "::remove-matcher owner=eslint-stylish::"
 
       - name: 📥 Install deps
         run: yarn --frozen-lockfile

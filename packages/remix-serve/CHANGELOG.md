@@ -1,5 +1,35 @@
 # `@remix-run/serve`
 
+## 1.16.0
+
+### Patch Changes
+
+- add `@remix-run/node/install` side-effect to allow `node --require @remix-run/node/install` ([#6132](https://github.com/remix-run/remix/pull/6132))
+- Updated dependencies:
+  - `@remix-run/express@1.16.0`
+  - `@remix-run/node@1.16.0`
+
+## 1.15.0
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@1.15.0`
+
+## 1.14.3
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@1.14.3`
+
+## 1.14.2
+
+### Patch Changes
+
+- Updated dependencies:
+  - `@remix-run/express@1.14.2`
+
 ## 1.14.1
 
 ### Patch Changes

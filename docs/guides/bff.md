@@ -19,16 +19,16 @@ import { json } from "@remix-run/node"; // or cloudflare/deno
 import escapeHtml from "escape-html";
 
 export async function loader({ request }: LoaderArgs) {
-  let apiUrl = "http://api.example.com/some-data.json";
-  let res = await fetch(apiUrl, {
+  const apiUrl = "http://api.example.com/some-data.json";
+  const res = await fetch(apiUrl, {
     headers: {
       Authorization: `Bearer ${process.env.API_TOKEN}`,
     },
   });
 
-  let data = await res.json();
+  const data = await res.json();
 
-  let prunedData = data.map((record) => {
+  const prunedData = data.map((record) => {
     return {
       id: record.id,
       title: record.title,

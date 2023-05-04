@@ -4,9 +4,7 @@ title: useTransition
 
 # `useTransition`
 
-<docs-error>This API will be removed in v2 in favor of [`useNavigation`][use-navigation]. You can start using the new `useNavigation` hook today to make upgrading in the future easy, but you can keep using `useTransition` until v2.</docs-error>
-
----
+<docs-warning>`useTransition` will be removed in v2 in favor of [`useNavigation`][use-navigation]. You can prepare for this change at your convenience by updating to [`useNavigation`][use-navigation]. For instructions on making this change see the [v2 guide][v2guide]</docs-warning>
 
 <docs-success>Watch the <a href="https://www.youtube.com/playlist?list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">📼 Remix Singles</a>: <a href="https://www.youtube.com/watch?v=y4VLIFjFq8k&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Pending UI</a>, <a href="https://www.youtube.com/watch?v=bMLej7bg5Zo&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Clearing Inputs After Form Submissions</a>, and <a href="https://www.youtube.com/watch?v=EdB_nj01C80&list=PLXoynULbYuEDG2wBFSZ66b85EIspy3fy6">Optimistic UI</a></docs-success>
 
@@ -19,7 +17,7 @@ This hook tells you everything you need to know about a page transition to build
 - Optimistically showing a new record while it's being created on the server
 - Optimistically showing the new state of a record while it's being updated
 
-```js
+```tsx
 import { useTransition } from "@remix-run/react";
 
 function SomeComponent() {
@@ -118,62 +116,9 @@ function SubmitButton() {
 }
 ```
 
-### Moving away from `transition.type`
-
-The `type` field has been removed in the new `useNavigation` hook (which will replace `useTransition` in Remix v2). We've found that `state` is sufficient for almost all use-cases, and when it's not you can derive sub-types via `navigation.state` and other fields. Also note that the `loaderSubmission` type is now represented with `state: "loading"`. Here's a few examples:
-
-```js
-function Component() {
-  let navigation = useNavigation();
-
-  let isActionSubmission =
-    navigation.state === "submitting";
-
-  let isActionReload =
-    navigation.state === "loading" &&
-    navigation.formMethod != null &&
-    navigation.formMethod != "get" &&
-    // We had a submission navigation and are loading the submitted location
-    navigation.formAction === navigation.pathname;
-
-  let isActionRedirect =
-    navigation.state === "loading" &&
-    navigation.formMethod != null &&
-    navigation.formMethod != "get" &&
-    // We had a submission navigation and are now navigating to different location
-    navigation.formAction !== navigation.pathname;
-
-  let isLoaderSubmission =
-    navigation.state === "loading" &&
-    navigation.state.formMethod === "get" &&
-    // We had a loader submission and are navigating to the submitted location
-    navigation.formAction === navigation.pathname;
-
-  let isLoaderSubmissionRedirect =
-    navigation.state === "loading" &&
-    navigation.state.formMethod === "get" &&
-    // We had a loader submission and are navigating to a new location
-    navigation.formAction !== navigation.pathname;
-}
-```
-
 ## `transition.submission`
 
 Any transition that started from a `<Form>` or `useSubmit` will have your form's submission attached to it. This is primarily useful to build "Optimistic UI" with the `submission.formData` [`FormData`][form-data] object.
-
-### Moving away from `transition.submission`
-
-The `submission` field has been removed in the new `useNavigation` hook (which will replace `useTransition` in Remix v2) and the same sub-fields are now exposed directly on the `navigation`:
-
-```js
-function Component() {
-  let navigation = useNavigation();
-  // navigation.formMethod
-  // navigation.formAction
-  // navigation.formData
-  // navigation.formEncType
-}
-```
 
 ## `transition.location`
 
@@ -207,3 +152,4 @@ Note that this link will not appear "pending" if a form is being submitted to th
 [usefetcher]: ./use-fetcher
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [use-navigation]: ./use-navigation
+[v2guide]: ../pages/v2#usetransition
