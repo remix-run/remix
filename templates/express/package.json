@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "remix build",
-    "dev": "remix dev -c \"node server.js\"",
+    "dev": "remix dev --no-restart -c \"node server.js\"",
     "start": "cross-env NODE_ENV=production node ./server.js",
     "typecheck": "tsc"
   },
@@ -29,6 +29,7 @@
     "@types/morgan": "^1.9.4",
     "@types/react": "^18.0.35",
     "@types/react-dom": "^18.0.11",
+    "chokidar": "^3.5.3",
     "eslint": "^8.38.0",
     "typescript": "^5.0.4"
   },
