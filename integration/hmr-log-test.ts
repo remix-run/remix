@@ -125,6 +125,11 @@ let fixture = (options: {
         ...cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : [],
       ];
 
+      // dummy loader to make sure that HDR is granular
+      export const loader = () => {
+        return null;
+      };
+
       export default function Root() {
         return (
           <html lang="en" className="h-full">
@@ -419,9 +424,7 @@ test("HMR", async ({ page }) => {
       `#about-counter:has-text("inc 0")`
     );
 
-    // This should not have triggered any revalidation but our detection is
-    // failing for x-module changes for route module imports
-    // expect(dataRequests).toBe(2);
+    expect(dataRequests).toBe(2);
   } catch (e) {
     console.log("stdout begin -----------------------");
     console.log(devStdout());
