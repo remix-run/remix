@@ -552,6 +552,7 @@ let resolveDevServe = async (
       process.exit(1);
     }
   }
+
   let restart =
     flags.restart ?? (dev === true ? undefined : dev.restart) ?? true;
 
