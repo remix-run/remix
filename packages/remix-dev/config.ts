@@ -190,6 +190,12 @@ export interface AppConfig {
     ? // Partial<FutureConfig> doesn't work when it's empty so just prevent any keys
       { [key: string]: never }
     : Partial<FutureConfig>;
+
+  /**
+   * Custom path for the tsconfig if user doesn't want the default of
+   * `tsconfig.json`
+   */
+  tsconfigPath?: string;
 }
 
 /**
@@ -581,7 +587,8 @@ export async function resolveConfig(
   // When tsconfigPath is undefined, the default "tsconfig.json" is not
   // found in the root directory.
   let tsconfigPath: string | undefined;
-  let rootTsconfig = path.resolve(rootDirectory, "tsconfig.json");
+
+  let rootTsconfig = path.resolve(rootDirectory, appConfig.tsconfigPath || "tsconfig.json");
   let rootJsConfig = path.resolve(rootDirectory, "jsconfig.json");
 
   if (fse.existsSync(rootTsconfig)) {
