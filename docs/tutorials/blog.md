@@ -734,7 +734,9 @@ export default function NewPost() {
         </label>
       </p>
       <p>
-        <label htmlFor="markdown">Markdown:</label>
+        <label htmlFor="markdown">
+          Markdown:{" "}
+        </label>
         <br />
         <textarea
           id="markdown"
