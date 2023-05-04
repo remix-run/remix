@@ -16,12 +16,10 @@ export type Update = {
 export let updates = (
   config: RemixConfig,
   manifest: Manifest,
-  prevManifest: Manifest
+  prevManifest: Manifest,
+  hdr: Record<string, string>,
+  prevHdr?: Record<string, string>
 ): Update[] => {
-  // TODO: probably want another map to correlate every input file to the
-  // routes that consume it
-  // ^check if route chunk hash changes when its dependencies change, even in different chunks
-
   let updates: Update[] = [];
   for (let [routeId, route] of Object.entries(manifest.routes)) {
     let prevRoute = prevManifest.routes[routeId] as typeof route | undefined;
@@ -43,8 +41,8 @@ export let updates = (
     }
 
     // when loaders are diff
-    let loaderHash = manifest.hmr?.routes[moduleId]?.loaderHash;
-    let prevLoaderHash = prevManifest.hmr?.routes[moduleId]?.loaderHash;
+    let loaderHash = hdr[file];
+    let prevLoaderHash = prevHdr?.[file];
     if (loaderHash !== prevLoaderHash) {
       updates.push({
         id: moduleId,
