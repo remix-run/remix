@@ -7,6 +7,7 @@ import { externalPlugin } from "../compiler/plugins/external";
 import { getRouteModuleExports } from "../compiler/utils/routeExports";
 import { createMatchPath } from "../compiler/utils/tsconfig";
 import invariant from "../invariant";
+import { mdxPlugin } from "../compiler/plugins/mdx";
 
 function isBareModuleId(id: string): boolean {
   return !id.startsWith("node:") && !id.startsWith(".") && !path.isAbsolute(id);
@@ -64,6 +65,7 @@ export let detectLoaderChanges = async (ctx: Context) => {
       externalPlugin(/^node:.*/, { sideEffects: false }),
       externalPlugin(/\.css$/, { sideEffects: false }),
       externalPlugin(/^https?:\/\//, { sideEffects: false }),
+      mdxPlugin(ctx),
       emptyModulesPlugin(ctx, /\.client(\.[jt]sx?)?$/),
       {
         name: "hmr-bare-modules",
