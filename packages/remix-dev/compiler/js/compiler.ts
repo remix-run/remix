@@ -266,7 +266,6 @@ export const create = async (
         );
       hmr = {
         runtime: hmrRuntime,
-        routes: hmrRoutes,
         timestamp: Date.now(),
       };
     }

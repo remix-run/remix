@@ -42,12 +42,12 @@ export let serve = async (
     httpScheme: string;
     httpHost: string;
     httpPort: number;
-    websocketPort: number;
+    webSocketPort: number;
     restart: boolean;
   }
 ) => {
   await loadEnv(initialConfig.rootDirectory);
-  let websocket = Socket.serve({ port: options.websocketPort });
+  let websocket = Socket.serve({ port: options.webSocketPort });
   let httpOrigin: Origin = {
     scheme: options.httpScheme,
     host: options.httpHost,
@@ -114,7 +114,7 @@ export let serve = async (
         sourcemap: true,
         onWarning: warnOnce,
         devHttpOrigin: httpOrigin,
-        devWebsocketPort: options.websocketPort,
+        devWebsocketPort: options.webSocketPort,
       },
     },
     {
