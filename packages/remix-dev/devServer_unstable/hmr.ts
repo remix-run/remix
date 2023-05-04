@@ -5,6 +5,7 @@ import { type Manifest } from "../manifest";
 
 export type Update = {
   id: string;
+  routeId: string;
   url: string;
   revalidate: boolean;
   reason: string;
@@ -33,6 +34,7 @@ export let updates = (
     if (!prevRoute) {
       updates.push({
         id: moduleId,
+        routeId: route.id,
         url: route.module,
         revalidate: true,
         reason: "Route added",
@@ -46,6 +48,7 @@ export let updates = (
     if (loaderHash !== prevLoaderHash) {
       updates.push({
         id: moduleId,
+        routeId: route.id,
         url: route.module,
         revalidate: true,
         reason: "Loader changed",
@@ -60,6 +63,7 @@ export let updates = (
     if (diffModule || xorImports.size > 0) {
       updates.push({
         id: moduleId,
+        routeId: route.id,
         url: route.module,
         revalidate: false,
         reason: "Component changed",
