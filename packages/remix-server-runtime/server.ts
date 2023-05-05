@@ -382,7 +382,7 @@ function logServerErrorIfNotAborted(
 function errorResponseToJson(
   errorResponse: ErrorResponse,
   serverMode: ServerMode
-) {
+): Response {
   return json(
     serializeError(
       errorResponse.error || new Error("Unexpected Server Error"),
