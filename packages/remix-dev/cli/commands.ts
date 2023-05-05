@@ -183,7 +183,7 @@ export async function build(
       host: dev.httpHost,
       port: dev.httpPort,
     };
-    options.devWebsocketPort = dev.webSocketPort;
+    options.devWebSocketPort = dev.webSocketPort;
   }
 
   fse.emptyDirSync(config.assetsBuildDirectory);

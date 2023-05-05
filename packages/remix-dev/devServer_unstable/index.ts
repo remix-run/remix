@@ -114,7 +114,7 @@ export let serve = async (
         sourcemap: true,
         onWarning: warnOnce,
         devHttpOrigin: httpOrigin,
-        devWebsocketPort: options.webSocketPort,
+        devWebSocketPort: options.webSocketPort,
       },
     },
     {
