@@ -55,7 +55,7 @@ We can do this on the server using the [strangler pattern][strangler-pattern] so
 
 For example, pseudo code for this might look like the following, where we enable via a flag during local development and potentially unit/integration tests. We can throw exceptions anytime the new static handler results in different SSR data. Once we're confident, we delete the current code and remove the flag conditional.
 
-```js
+```tsx
 // Runtime-agnostic flag to enable behavior, will always be committed as
 // `false` initially, and toggled to true during local dev
 const ENABLE_REMIX_ROUTER = false;

@@ -1,7 +1,6 @@
 import * as path from "path";
 import os from "os";
 import arg from "arg";
-import inspector from "inspector";
 import inquirer from "inquirer";
 import semver from "semver";
 import fse from "fs-extra";
@@ -9,7 +8,7 @@ import fse from "fs-extra";
 import * as colors from "../colors";
 import * as commands from "./commands";
 import { validateNewProjectPath, validateTemplate } from "./create";
-import { getPreferredPackageManager } from "./getPreferredPackageManager";
+import { detectPackageManager } from "./detectPackageManager";
 
 const helpText = `
 ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
@@ -42,6 +41,14 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
   \`dev\` Options:
     --debug             Attach Node.js inspector
     --port, -p          Choose the port from which to run your app
+
+    [unstable_dev]
+    --command, -c       Command used to run your app server
+    --http-scheme       HTTP(S) scheme for the dev server. Default: http
+    --http-host         HTTP(S) host for the dev server. Default: localhost
+    --http-port         HTTP(S) port for the dev server. Default: any open port
+    --no-restart        Do not restart the app server when rebuilds occur.
+    --websocket-port    WebSocket port for the dev server. Default: any open port
   \`init\` Options:
     --no-delete         Skip deleting the \`remix.init\` script
   \`routes\` Options:
@@ -137,20 +144,6 @@ const npxInterop = {
   pnpm: "pnpm exec",
 };
 
-async function dev(
-  projectDir: string,
-  flags: { debug?: boolean; port?: number; appServerPort?: number }
-) {
-  if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
-    console.warn(
-      `NODE_ENV=${process.env.NODE_ENV} overwritten to 'development'`
-    );
-  }
-
-  if (flags.debug) inspector.open();
-  await commands.dev(projectDir, flags);
-}
-
 /**
  * Programmatic interface for running the Remix CLI with the given command line
  * arguments.
@@ -166,7 +159,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
 
   let args = arg(
     {
-      "--app-server-port": Number,
       "--debug": Boolean,
       "--no-delete": Boolean,
       "--dry": Boolean,
@@ -188,6 +180,15 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "--no-typescript": Boolean,
       "--version": Boolean,
       "-v": "--version",
+
+      // dev server
+      "--command": String,
+      "-c": "--command",
+      "--http-scheme": String,
+      "--http-host": String,
+      "--http-port": Number,
+      "--no-restart": Boolean,
+      "--websocket-port": Number,
     },
     {
       argv,
@@ -212,6 +213,23 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     return;
   }
 
+  if (flags["http-scheme"]) {
+    flags.httpScheme = flags["http-scheme"];
+    delete flags["http-scheme"];
+  }
+  if (flags["http-host"]) {
+    flags.httpHost = flags["http-host"];
+    delete flags["http-host"];
+  }
+  if (flags["http-port"]) {
+    flags.httpPort = flags["http-port"];
+    delete flags["http-port"];
+  }
+  if (flags["websocket-port"]) {
+    flags.webSocketPort = flags["websocket-port"];
+    delete flags["websocket-port"];
+  }
+
   if (args["--no-delete"]) {
     flags.delete = false;
   }
@@ -222,6 +240,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
     flags.interactive = false;
   }
   flags.interactive = flags.interactive ?? require.main === module;
+  if (args["--no-restart"]) {
+    flags.restart = false;
+    delete flags["no-restart"];
+  }
   if (args["--no-typescript"]) {
     flags.typescript = false;
   }
@@ -310,7 +332,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
         return;
       }
 
-      let packageManager = getPreferredPackageManager();
+      let packageManager = detectPackageManager() ?? "npm";
       let answers = await inquirer
         .prompt<{
           appType: "template" | "stack";
@@ -498,10 +520,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     }
     case "dev":
-      await dev(input[1], flags);
+      await commands.dev(input[1], flags);
       break;
     default:
       // `remix ./my-project` is shorthand for `remix dev ./my-project`
-      await dev(input[0], flags);
+      await commands.dev(input[0], flags);
   }
 }

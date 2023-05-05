@@ -7,9 +7,12 @@ import * as Server from "./server";
 import * as Channel from "../channel";
 import type { Manifest } from "../manifest";
 import { create as createManifest, write as writeManifest } from "./manifest";
+import { err, ok } from "../result";
 
 type Compiler = {
-  compile: () => Promise<Manifest>;
+  compile: (options?: {
+    onManifest?: (manifest: Manifest) => void;
+  }) => Promise<Manifest>;
   cancel: () => Promise<void>;
   dispose: () => Promise<void>;
 };
@@ -29,29 +32,29 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     js: await JS.createCompiler(ctx, channels),
     server: await Server.createCompiler(ctx, channels),
   };
+  let cancel = async () => {
+    // resolve channels with error so that downstream tasks don't hang waiting for results from upstream tasks
+    channels.cssBundleHref.err();
+    channels.manifest.err();
 
-  let compile = async () => {
-    let hasThrown = false;
-    let cancelAndThrow = async (error: unknown) => {
-      // An earlier error from a failed task has already been thrown; ignore this error.
-      // Safe to cast as `never` here as subsequent errors are only thrown from canceled tasks.
-      if (hasThrown) return undefined as never;
+    // optimization: cancel tasks
+    await Promise.all([
+      subcompiler.css.cancel(),
+      subcompiler.js.cancel(),
+      subcompiler.server.cancel(),
+    ]);
+  };
 
-      // resolve channels with error so that downstream tasks don't hang waiting for results from upstream tasks
-      channels.cssBundleHref.err();
-      channels.manifest.err();
-
-      // optimization: cancel tasks
-      subcompiler.css.cancel();
-      subcompiler.js.cancel();
-      subcompiler.server.cancel();
-
-      // Only throw the first error encountered during compilation
-      // otherwise subsequent errors will be unhandled and will crash the compiler.
-      // `try`/`catch` won't handle subsequent errors either, so that isn't a viable alternative.
-      // `Promise.all` _could_ be used, but the resulting promise chaining is complex and hard to follow.
-      hasThrown = true;
-      throw error;
+  let compile = async (
+    options: { onManifest?: (manifest: Manifest) => void } = {}
+  ) => {
+    let error: unknown | undefined = undefined;
+    let errCancel = (thrown: unknown) => {
+      if (error === undefined) {
+        error = thrown;
+      }
+      cancel();
+      return err(thrown);
     };
 
     // reset channels
@@ -60,9 +63,9 @@ export let create = async (ctx: Context): Promise<Compiler> => {
 
     // kickoff compilations in parallel
     let tasks = {
-      css: subcompiler.css.compile().catch(cancelAndThrow),
-      js: subcompiler.js.compile().catch(cancelAndThrow),
-      server: subcompiler.server.compile().catch(cancelAndThrow),
+      css: subcompiler.css.compile().then(ok, errCancel),
+      js: subcompiler.js.compile().then(ok, errCancel),
+      server: subcompiler.server.compile().then(ok, errCancel),
     };
 
     // keep track of manually written artifacts
@@ -74,23 +77,25 @@ export let create = async (ctx: Context): Promise<Compiler> => {
 
     // css compilation
     let css = await tasks.css;
+    if (!css.ok) throw error ?? css.error;
 
     // css bundle
     let cssBundleHref =
-      css.bundle &&
+      css.value.bundle &&
       ctx.config.publicPath +
         path.relative(
           ctx.config.assetsBuildDirectory,
-          path.resolve(css.bundle.path)
+          path.resolve(css.value.bundle.path)
         );
     channels.cssBundleHref.ok(cssBundleHref);
-    if (css.bundle) {
-      writes.cssBundle = CSS.writeBundle(ctx, css.outputFiles);
+    if (css.value.bundle) {
+      writes.cssBundle = CSS.writeBundle(ctx, css.value.outputFiles);
     }
 
     // js compilation (implicitly writes artifacts/js)
-    // TODO: js task should not return metafile, but rather js assets
-    let { metafile, hmr } = await tasks.js;
+    let js = await tasks.js;
+    if (!js.ok) throw error ?? js.error;
+    let { metafile, hmr } = js.value;
 
     // artifacts/manifest
     let manifest = await createManifest({
@@ -100,21 +105,21 @@ export let create = async (ctx: Context): Promise<Compiler> => {
       hmr,
     });
     channels.manifest.ok(manifest);
+    options.onManifest?.(manifest);
     writes.manifest = writeManifest(ctx.config, manifest);
 
     // server compilation
-    let serverFiles = await tasks.server;
+    let server = await tasks.server;
+    if (!server.ok) throw error ?? server.error;
     // artifacts/server
-    writes.server = Server.write(ctx.config, serverFiles);
+    writes.server = Server.write(ctx.config, server.value);
 
     await Promise.all(Object.values(writes));
     return manifest;
   };
   return {
     compile,
-    cancel: async () => {
-      await Promise.all(Object.values(subcompiler).map((sub) => sub.cancel()));
-    },
+    cancel,
     dispose: async () => {
       await Promise.all(Object.values(subcompiler).map((sub) => sub.dispose()));
     },

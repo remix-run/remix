@@ -98,8 +98,12 @@ const createEsbuildConfig = (
     publicPath: ctx.config.publicPath,
     define: {
       "process.env.NODE_ENV": JSON.stringify(ctx.options.mode),
+      // TODO: remove REMIX_DEV_SERVER_WS_PORT in v2
       "process.env.REMIX_DEV_SERVER_WS_PORT": JSON.stringify(
         ctx.config.devServerPort
+      ),
+      "process.env.REMIX_DEV_HTTP_ORIGIN": JSON.stringify(
+        ctx.options.devHttpOrigin ?? "" // TODO: remove nullish check in v2
       ),
     },
     jsx: "automatic",

@@ -10,7 +10,7 @@ import { createRequestHandler as createRemixRequestHandler } from "@remix-run/cl
  */
 export type GetLoadContextFunction<Env = unknown> = (
   context: Parameters<PagesFunction<Env>>[0]
-) => AppLoadContext;
+) => Promise<AppLoadContext> | AppLoadContext;
 
 export type RequestHandler<Env = any> = PagesFunction<Env>;
 
@@ -27,8 +27,8 @@ export function createRequestHandler<Env = any>({
 }: createPagesFunctionHandlerParams<Env>): RequestHandler<Env> {
   let handleRequest = createRemixRequestHandler(build, mode);
 
-  return (context) => {
-    let loadContext = getLoadContext?.(context);
+  return async (context) => {
+    let loadContext = await getLoadContext?.(context);
 
     return handleRequest(context.request, loadContext);
   };
