@@ -11,13 +11,13 @@ Here's how we like to do it:
 
 Open up each route module you want to include JavaScript for and add a "handle". This is a way for you to provide any kind of meta information about a route to the parent route (as you'll see in a moment).
 
-```js
+```tsx
 export const handle = { hydrate: true };
 ```
 
 Now open `root.tsx`, bring in `useMatches` and add this:
 
-```tsx lines=[6,10,13-15,27]
+```tsx filename=app/root.tsx lines=[6,10,13-15,27]
 import {
   Meta,
   Links,

@@ -8,6 +8,7 @@ new: true
 You can opt-in to the new ErrorBoundary API with a future flag in Remix config.
 
 ```js filename=remix.config.js
+/** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   future: {
     v2_errorBoundary: true,

@@ -14,12 +14,13 @@ export {
 } from "./implementations.ts";
 
 export {
+  broadcastDevReady,
   createSession,
   defer,
-  devReady,
   isCookie,
   isSession,
   json,
+  logDevReady,
   MaxPartSizeExceededError,
   redirect,
   unstable_composeUploadHandlers,
