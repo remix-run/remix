@@ -160,7 +160,7 @@ async function handleDataRequestRR(
     }
 
     if (isRouteErrorResponse(error)) {
-      logServerErrorIfNotAborted(error, request, serverMode);
+      logServerErrorIfNotAborted(error.error || error, request, serverMode);
       return errorResponseToJson(error, serverMode);
     }
 
@@ -359,8 +359,8 @@ async function handleResourceRequestRR(
       return error;
     }
 
-    if (isRouteErrorResponse(error) && error.error) {
-      logServerErrorIfNotAborted(error.error, request, serverMode);
+    if (isRouteErrorResponse(error)) {
+      logServerErrorIfNotAborted(error.error || error, request, serverMode);
       return errorResponseToJson(error, serverMode);
     }
 
