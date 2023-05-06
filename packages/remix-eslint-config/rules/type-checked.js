@@ -8,7 +8,7 @@ module.exports = {
   // Include individual rules from https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/eslint-plugin/src/configs/recommended-requiring-type-checking.ts
   // Requires more memory: NODE_OPTIONS="--max-old-space-size=6144"
 
-  "@typescript-eslint/await-thenable": OFF,
+  "@typescript-eslint/await-thenable": ERROR,
   "@typescript-eslint/no-floating-promises": [
     ERROR,
     { ignoreVoid: true, ignoreIIFE: true },
