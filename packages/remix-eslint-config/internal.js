@@ -91,7 +91,7 @@ module.exports = {
       rules: {
         // turn the original rule off *only* for test files
         "@typescript-eslint/unbound-method": OFF,
-        "jest/unbound-method": OFF,
+        "jest/unbound-method": WARN,
       },
     },
   ],

@@ -1,5 +1,5 @@
 const OFF = 0;
-// const WARN = 1;
+const WARN = 1;
 const ERROR = 2;
 
 module.exports = {
@@ -25,5 +25,5 @@ module.exports = {
   "@typescript-eslint/require-await": OFF,
   "@typescript-eslint/restrict-plus-operands": OFF,
   "@typescript-eslint/restrict-template-expressions": OFF,
-  "@typescript-eslint/unbound-method": OFF,
+  "@typescript-eslint/unbound-method": WARN,
 };
