@@ -174,31 +174,28 @@ export interface SessionStorage<Data = SessionData, FlashData = Data> {
    * Session. If there is no session associated with the cookie, this will
    * return a new Session with no data.
    */
-  getSession(
-    this: void,
+  getSession: (
     cookieHeader?: string | null,
     options?: CookieParseOptions
-  ): Promise<Session<Data, FlashData>>;
+  ) => Promise<Session<Data, FlashData>>;
 
   /**
    * Stores all data in the Session and returns the Set-Cookie header to be
    * used in the HTTP response.
    */
-  commitSession(
-    this: void,
+  commitSession: (
     session: Session<Data, FlashData>,
     options?: CookieSerializeOptions
-  ): Promise<string>;
+  ) => Promise<string>;
 
   /**
    * Deletes all data associated with the Session and returns the Set-Cookie
    * header to be used in the HTTP response.
    */
-  destroySession(
-    this: void,
+  destroySession: (
     session: Session<Data, FlashData>,
     options?: CookieSerializeOptions
-  ): Promise<string>;
+  ) => Promise<string>;
 }
 
 /**
@@ -224,7 +221,6 @@ export interface SessionIdStorageStrategy<
    * Creates a new record with the given data and returns the session id.
    */
   createData: (
-    this: void,
     data: FlashSessionData<Data, FlashData>,
     expires?: Date
   ) => Promise<string>;
@@ -232,16 +228,12 @@ export interface SessionIdStorageStrategy<
   /**
    * Returns data for a given session id, or `null` if there isn't any.
    */
-  readData: (
-    this: void,
-    id: string
-  ) => Promise<FlashSessionData<Data, FlashData> | null>;
+  readData: (id: string) => Promise<FlashSessionData<Data, FlashData> | null>;
 
   /**
    * Updates data for the given session id.
    */
   updateData: (
-    this: void,
     id: string,
     data: FlashSessionData<Data, FlashData>,
     expires?: Date
@@ -250,7 +242,7 @@ export interface SessionIdStorageStrategy<
   /**
    * Deletes data for a given session id from the data store.
    */
-  deleteData: (this: void, id: string) => Promise<void>;
+  deleteData: (id: string) => Promise<void>;
 }
 
 export type CreateSessionStorageFunction = <
