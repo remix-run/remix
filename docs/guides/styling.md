@@ -817,7 +817,7 @@ module.exports = {
 [built-in-post-css-support]: #postcss
 [vanilla-extract-2]: #vanilla-extract
 [css-side-effect-imports]: #css-side-effect-imports
-[tailwind-2]: #tailwind
+[tailwind-2]: #tailwind-css
 [post-css]: #postcss
 [css-modules]: #css-modules
 [vanilla-extract-3]: #vanilla-extract
