@@ -208,7 +208,7 @@ export async function watch(
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
 
-  devServer.liveReload(config);
+  void devServer.liveReload(config);
   return await new Promise(() => {});
 }
 

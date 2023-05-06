@@ -53,7 +53,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
       if (error === undefined) {
         error = thrown;
       }
-      cancel();
+      void cancel();
       return err(thrown);
     };
 

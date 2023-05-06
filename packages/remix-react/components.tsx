@@ -496,7 +496,7 @@ function usePrefetchedStylesheets(matches: AgnosticDataRouteMatch[]) {
   React.useEffect(() => {
     let interrupted: boolean = false;
 
-    getStylesheetPrefetchLinks(matches, manifest, routeModules).then(
+    void getStylesheetPrefetchLinks(matches, manifest, routeModules).then(
       (links) => {
         if (!interrupted) setStyleLinks(links);
       }

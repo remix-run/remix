@@ -58,7 +58,7 @@ export async function watch(
 
   let restart = debounce(async () => {
     let start = Date.now();
-    compiler.dispose();
+    void compiler.dispose();
 
     try {
       ctx.config = await reloadConfig(ctx.config.rootDirectory);
@@ -123,6 +123,6 @@ export async function watch(
 
   return async () => {
     await watcher.close().catch(() => undefined);
-    compiler.dispose();
+    void compiler.dispose();
   };
 }

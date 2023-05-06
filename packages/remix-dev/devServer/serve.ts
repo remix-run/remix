@@ -84,7 +84,7 @@ export async function serve(config: RemixConfig, portPreference?: number) {
       ? app.listen(port, process.env.HOST, onListen)
       : app.listen(port, onListen);
   } catch {
-    dispose();
+    void dispose();
     server?.close();
   }
 }
