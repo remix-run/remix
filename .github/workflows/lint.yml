@@ -36,6 +36,8 @@ jobs:
 
       - name: 🔬 Lint
         run: yarn lint
+        env:
+          NODE_OPTIONS: "--max-old-space-size=6144"
 
       - name: 🦕 Install Deno
         uses: denoland/setup-deno@v1

@@ -1,5 +1,7 @@
 {
   "typescript.tsdk": "node_modules/typescript/lib",
   "deno.enablePaths": ["./packages/remix-deno/"],
-  "deno.importMap": "./.vscode/deno_resolve_npm_imports.json"
+  "deno.importMap": "./.vscode/deno_resolve_npm_imports.json",
+  "eslint.packageManager": "yarn",
+  "eslint.execArgv": ["--max-old-space-size=6144"]
 }

@@ -19,6 +19,7 @@ module.exports = {
   extends: [
     require.resolve("./index.js"),
     require.resolve("./jest-testing-library.js"),
+    require.resolve("./internal-type-checked.js"),
   ],
   env: {
     node: true,
@@ -83,6 +84,14 @@ module.exports = {
       files: ["integration/**/*.*"],
       env: {
         "jest/globals": false,
+      },
+    },
+    {
+      files: ["**/__tests__/**/*", "**/*.{spec,test}.*"],
+      rules: {
+        // turn the original rule off *only* for test files
+        "@typescript-eslint/unbound-method": OFF,
+        "jest/unbound-method": OFF,
       },
     },
   ],

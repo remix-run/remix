@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    // whatever paths need a fallback tsconfig.json that you intend to lint
+    "packages"
+  ],
+  "lib": ["ES2019", "DOM", "DOM.Iterable"],
+  "composite": true,
+  "moduleResolution": "node",
+  "resolveJsonModule": true,
+  "allowSyntheticDefaultImports": true,
+  "strict": true,
+  "skipLibCheck": true,
+}
