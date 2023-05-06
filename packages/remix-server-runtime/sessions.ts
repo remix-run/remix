@@ -175,6 +175,7 @@ export interface SessionStorage<Data = SessionData, FlashData = Data> {
    * return a new Session with no data.
    */
   getSession(
+    this: void,
     cookieHeader?: string | null,
     options?: CookieParseOptions
   ): Promise<Session<Data, FlashData>>;
@@ -184,6 +185,7 @@ export interface SessionStorage<Data = SessionData, FlashData = Data> {
    * used in the HTTP response.
    */
   commitSession(
+    this: void,
     session: Session<Data, FlashData>,
     options?: CookieSerializeOptions
   ): Promise<string>;
@@ -193,6 +195,7 @@ export interface SessionStorage<Data = SessionData, FlashData = Data> {
    * header to be used in the HTTP response.
    */
   destroySession(
+    this: void,
     session: Session<Data, FlashData>,
     options?: CookieSerializeOptions
   ): Promise<string>;
@@ -221,6 +224,7 @@ export interface SessionIdStorageStrategy<
    * Creates a new record with the given data and returns the session id.
    */
   createData: (
+    this: void,
     data: FlashSessionData<Data, FlashData>,
     expires?: Date
   ) => Promise<string>;
@@ -228,12 +232,13 @@ export interface SessionIdStorageStrategy<
   /**
    * Returns data for a given session id, or `null` if there isn't any.
    */
-  readData: (id: string) => Promise<FlashSessionData<Data, FlashData> | null>;
+  readData: (this: void, id: string) => Promise<FlashSessionData<Data, FlashData> | null>;
 
   /**
    * Updates data for the given session id.
    */
   updateData: (
+    this: void,
     id: string,
     data: FlashSessionData<Data, FlashData>,
     expires?: Date
@@ -242,7 +247,7 @@ export interface SessionIdStorageStrategy<
   /**
    * Deletes data for a given session id from the data store.
    */
-  deleteData: (id: string) => Promise<void>;
+  deleteData: (this: void, id: string) => Promise<void>;
 }
 
 export type CreateSessionStorageFunction = <
