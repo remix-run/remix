@@ -9,7 +9,10 @@ module.exports = {
   // Requires more memory: NODE_OPTIONS="--max-old-space-size=6144"
 
   "@typescript-eslint/await-thenable": OFF,
-  "@typescript-eslint/no-floating-promises": OFF,
+  "@typescript-eslint/no-floating-promises": [
+    ERROR,
+    { ignoreVoid: true, ignoreIIFE: true },
+  ],
   "@typescript-eslint/no-for-in-array": ERROR,
   "@typescript-eslint/no-implied-eval": ERROR,
   "@typescript-eslint/no-misused-promises": [
