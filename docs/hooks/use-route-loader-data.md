@@ -23,7 +23,7 @@ Remix creates the route IDs automatically. They are simply the path of the route
 | -------------------------- | -------------------- |
 | `app/root.tsx`             | `"root"`             |
 | `app/routes/teams.tsx`     | `"routes/teams"`     |
-| `app/routes/teams.$id.jsx` | `"routes/teams.$id"` |
+| `app/routes/teams.$id.tsx` | `"routes/teams.$id"` |
 
 <docs-info>For more information and usage, please refer to the [React Router `useRouteLoaderData` docs][rr-userouteloaderdata].</docs-info>
 
