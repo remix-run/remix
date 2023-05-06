@@ -107,6 +107,9 @@ class StreamPump {
       new Stream.Readable().readableHighWaterMark;
     this.accumalatedSize = 0;
     this.stream = stream;
+
+    // see [unbound-method] support binding methods inside constructor
+    // https://github.com/typescript-eslint/typescript-eslint/issues/636
     this.enqueue = this.enqueue.bind(this);
     this.error = this.error.bind(this);
     this.close = this.close.bind(this);
