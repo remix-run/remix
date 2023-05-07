@@ -7,10 +7,10 @@ Dev server improvements
 
 - Push-based app server syncing that doesn't rely on polling
 - App server as a managed subprocess
+- Gracefully handle new files and routes without crashing
+- Statically serve static assets to avoid fetch errors during app server reboots
 
 # Guide
-
-## 1. Enable new dev server
 
 Enable `unstable_dev` in `remix.config.js`:
 
@@ -22,89 +22,87 @@ Enable `unstable_dev` in `remix.config.js`:
 }
 ```
 
-## 2. Update `package.json` scripts
+## Remix App Server
 
-Specify the command to run your app server with the `-c`/`--command` flag:
-
-For Remix app server:
+Update `package.json` scripts
 
 ```json
 {
   "scripts": {
-    "dev": "NODE_ENV=development remix dev -c 'node_modules/.bin/remix-serve build'"
+    "dev": "remix dev"
   }
 }
 ```
 
-For any other servers, specify the command you use to run your production server.
+That's it!
+
+```sh
+npm run dev
+```
+
+## Other app servers
+
+Update `package.json` scripts, specifying the command to run you app server with the `-c`/`--command` flag:
 
 ```json
 {
   "scripts": {
-    "dev": "NODE_ENV=development remix dev -c 'node ./server.js'"
+    "dev": "remix dev -c 'node ./server.js'"
   }
 }
 ```
 
-## 3. Call `devReady` in your app server
+Then, call `devReady` in your server when its up and running.
 
-For example, in an Express server:
+For example, an Express server would call `devReady` at the end of `listen`:
 
 ```js
-// server.mjs
-import path from "node:path";
-
-import express from "express";
-import { createRequestHandler } from "@remix-run/express";
+// <other imports>
 import { devReady } from "@remix-run/node";
 
-let BUILD_DIR = path.join(process.cwd(), "build"); // path to Remix's server build directory (`build/` by default)
+// Path to Remix's server build directory ('build/' by default)
+let BUILD_DIR = path.join(process.cwd(), "build");
 
-let app = express();
-
-app.all(
-  "*",
-  createRequestHandler({
-    build: require(BUILD_DIR),
-    mode: process.env.NODE_ENV,
-  })
-);
+// <code setting up your express server>
 
 app.listen(3000, () => {
   let build = require(BUILD_DIR);
   console.log("Ready: http://localhost:" + port);
 
-  // in development, call `devReady` _after_ your server is ready
+  // in development, call `devReady` _after_ your server is up and running
   if (process.env.NODE_ENV === "development") {
     devReady(build);
   }
 });
 ```
 
-## 4. That's it!
-
-You should now be able to run the Remix Dev server:
+That's it!
 
 ```sh
-$ npm run dev
-# Ready: http://localhost:3000
+npm run dev
 ```
-
-Make sure you navigate to your app server's URL in the browser, in this example `http://localhost:3000`.
-Note: Any ports configured for the dev server are internal only (e.g. `--http-port` and `--websocket-port`)
 
 # Configuration
 
-Example:
+Most users won't need to configure the dev server, but you might need to if:
+
+- You are setting up custom origins for SSL support or for Docker networking
+- You want to handle server updates yourself (e.g. via require cache purging)
 
 ```js
 {
   future: {
     unstable_dev: {
-      // Port internally used by the dev server to receive app server `devReady` messages
-      httpPort: 3001, // by default, Remix chooses an open port in the range 3001-3099
-      // Port internally used by the dev server to send live reload, HMR, and HDR updates to the browser
-      websocketPort: 3002, // by default, Remix chooses an open port in the range 3001-3099
+      // Command to run your app server
+      command: "wrangler", // default: `remix-serve ./build`
+      // HTTP(S) scheme used when sending `devReady` messages to the dev server
+      httpScheme: "https", // default: `"http"`
+      // HTTP(S) host used when sending `devReady` messages to the dev server
+      httpHost: "mycustomhost", // default: `"localhost"`
+      // HTTP(S) port internally used by the dev server to statically serve built assets and to receive app server `devReady` messages
+      httpPort: 8001, // default: Remix chooses an open port in the range 3001-3099
+      // Websocket port internally used by the dev server for sending updates to the browser (Live reload, HMR, HDR)
+      websocketPort: 8002, // default: Remix chooses an open port in the range 3001-3099
       // Whether the app server should be restarted when app is rebuilt
       // See `Advanced > restart` for more
       restart: false, // default: `true`
@@ -113,25 +111,13 @@ Example:
 }
 ```
 
-You can also configure via flags:
+You can also configure via flags. For example:
 
 ```sh
-remix dev -c 'node ./server.mjs' --http-port=3001 --websocket-port=3002 --no-restart
+remix dev -c 'nodemon ./server.mjs' --http-port=3001 --websocket-port=3002 --no-restart
 ```
 
-## Advanced
-
-### Dev server scheme/host/port
-
-If you've customized the dev server's origin (e.g. for Docker or SSL support), you can use the `devReady` options to specify the scheme/host/port for the dev server:
-
-```js
-devReady(build, {
-  scheme: "https", // defaults to http
-  host: "mycustomhost", // defaults to localhost
-  port: 3003, // defaults to REMIX_DEV_HTTP_PORT environment variable
-});
-```
+See `remix dev --help` for more details.
 
 ### restart
 
@@ -151,7 +137,8 @@ So for require cache purging, you'd want to:
 
 ---
 
-The ultimate solution here would be to implement _server-side_ HMR (not to be confused with the more popular client-side HMR).
+The ultimate solution for `--no-restart` would be for you to implement _server-side_ HMR for your app server.
+Note: server-side HMR is not to be confused with the client-side HMR provided by Remix.
 Then your app server could continuously update itself with new build with 0 downtime and without losing in-memory data that wasn't affected by the server changes.
 
-That's left as an exercise to the reader.
+This is left as an exercise to the reader.

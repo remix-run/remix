@@ -25,6 +25,7 @@ import { TaskError } from "../codemod/utils/task";
 import { transpile as convertFileToJS } from "./useJavascript";
 import { warnOnce } from "../warnOnce";
 import type { Options } from "../compiler/options";
+import { getAppDependencies } from "../dependencies";
 
 export async function create({
   appTemplate,
@@ -175,9 +176,13 @@ export async function build(
     sourcemap,
     onWarning: warnOnce,
   };
-  if (config.future.unstable_dev) {
-    let dev = await resolveDev(config.future.unstable_dev);
-    options.devHttpPort = dev.httpPort;
+  if (mode === "development" && config.future.unstable_dev) {
+    let dev = await resolveDevBuild(config);
+    options.devHttpOrigin = {
+      scheme: dev.httpScheme,
+      host: dev.httpHost,
+      port: dev.httpPort,
+    };
     options.devWebsocketPort = dev.websocketPort;
   }
 
@@ -187,7 +192,7 @@ export async function build(
     process.exit(1);
   });
 
-  console.log(`built in ${prettyMs(Date.now() - start)}`);
+  console.log(`Built in ${prettyMs(Date.now() - start)}`);
 }
 
 // TODO: replace watch in v2
@@ -203,10 +208,7 @@ export async function watch(
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
 
-  devServer.liveReload(config, {
-    onInitialBuild: (durationMs) =>
-      console.log(`💿 Built in ${prettyMs(durationMs)}`),
-  });
+  devServer.liveReload(config);
   return await new Promise(() => {});
 }
 
@@ -215,7 +217,11 @@ export async function dev(
   flags: {
     debug?: boolean;
     port?: number; // TODO: remove for v2
+
+    // unstable_dev
     command?: string;
+    httpScheme?: string;
+    httpHost?: string;
     httpPort?: number;
     restart?: boolean;
     websocketPort?: number;
@@ -223,9 +229,10 @@ export async function dev(
 ) {
   if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
     console.warn(
-      `Expected NODE_ENV to be 'development' but got ${process.env.NODE_ENV}`
+      `Forcing NODE_ENV to be 'development'. Was: ${process.env.NODE_ENV}`
     );
   }
+  process.env.NODE_ENV = "development";
   if (flags.debug) inspector.open();
 
   let config = await readConfig(remixRoot);
@@ -235,8 +242,7 @@ export async function dev(
     return await new Promise(() => {});
   }
 
-  let { unstable_dev } = config.future;
-  await devServer_unstable.serve(config, await resolveDev(unstable_dev, flags));
+  await devServer_unstable.serve(config, await resolveDevServe(config, flags));
 }
 
 export async function codemod(
@@ -465,34 +471,94 @@ let parseMode = (
 
 let findPort = async () => getPort({ port: makeRange(3001, 3100) });
 
-let resolveDev = async (
-  dev: Exclude<RemixConfig["future"]["unstable_dev"], false>,
-  flags: {
-    command?: string;
-    httpPort?: number;
-    restart?: boolean;
-    websocketPort?: number;
-  } = {}
-): Promise<{
-  command?: string;
+type DevBuildFlags = {
+  httpScheme: string;
+  httpHost: string;
   httpPort: number;
-  restart: boolean;
   websocketPort: number;
-}> => {
-  let command = flags.command ?? (dev === true ? undefined : dev.command);
+};
+let resolveDevBuild = async (
+  config: RemixConfig,
+  flags: Partial<DevBuildFlags> = {}
+): Promise<DevBuildFlags> => {
+  let dev = config.future.unstable_dev;
+  if (dev === false) throw Error("This should never happen");
+
+  // prettier-ignore
+  let httpScheme =
+    flags.httpScheme ??
+    (dev === true ? undefined : dev.httpScheme) ??
+    "http";
+  // prettier-ignore
+  let httpHost =
+    flags.httpHost ??
+    (dev === true ? undefined : dev.httpHost) ??
+    "localhost";
+  // prettier-ignore
   let httpPort =
     flags.httpPort ??
     (dev === true ? undefined : dev.httpPort) ??
     (await findPort());
+  // prettier-ignore
   let websocketPort =
     flags.websocketPort ??
     (dev === true ? undefined : dev.websocketPort) ??
     (await findPort());
+
+  return {
+    httpScheme,
+    httpHost,
+    httpPort,
+    websocketPort,
+  };
+};
+
+type DevServeFlags = DevBuildFlags & {
+  command: string;
+  restart: boolean;
+};
+let resolveDevServe = async (
+  config: RemixConfig,
+  flags: Partial<DevServeFlags> = {}
+): Promise<DevServeFlags> => {
+  let dev = config.future.unstable_dev;
+  if (dev === false) throw Error("Cannot resolve dev options");
+
+  let { httpScheme, httpHost, httpPort, websocketPort } = await resolveDevBuild(
+    config,
+    flags
+  );
+
+  // prettier-ignore
+  let command =
+    flags.command ??
+    (dev === true ? undefined : dev.command)
+  if (!command) {
+    command = `remix-serve ${path.relative(
+      process.cwd(),
+      config.serverBuildPath
+    )}`;
+
+    let usingRemixAppServer =
+      getAppDependencies(config)["@remix-run/serve"] !== undefined;
+    if (!usingRemixAppServer) {
+      console.error(
+        [
+          `Remix dev server command defaulted to '${command}', but @remix-run/serve is not installed.`,
+          "If you are using another server, specify how to run it with `-c` or `--command` flag.",
+          "For example, `remix dev -c 'node ./server.js'`",
+        ].join("\n")
+      );
+      process.exit(1);
+    }
+  }
   let restart =
     flags.restart ?? (dev === true ? undefined : dev.restart) ?? true;
 
   return {
     command,
+    httpScheme,
+    httpHost,
     httpPort,
     websocketPort,
     restart,

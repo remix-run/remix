@@ -195,6 +195,7 @@ function createShouldRevalidate(
       handledRevalidation = true;
       return needsRevalidation;
     }
+
     return arg.defaultShouldRevalidate;
   };
 }
