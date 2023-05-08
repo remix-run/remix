@@ -76,17 +76,20 @@ export async function processMDX(
       remarkFrontmatter,
       [remarkMdxFrontmatter, { name: "attributes" }],
     ];
+    let providerImportSource: string | undefined = ''
 
     switch (typeof config.mdx) {
       case "object":
         rehypePlugins.push(...(config.mdx.rehypePlugins || []));
         remarkPlugins.push(...(config.mdx.remarkPlugins || []));
+        providerImportSource = config.mdx.providerImportSource
 
         break;
       case "function":
         let mdxConfig = await config.mdx(argsPath);
         rehypePlugins.push(...(mdxConfig?.rehypePlugins || []));
         remarkPlugins.push(...(mdxConfig?.remarkPlugins || []));
+        providerImportSource = mdxConfig?.providerImportSource
         break;
     }
 
@@ -102,6 +105,7 @@ export const handle = typeof attributes !== "undefined" && attributes.handle;
       jsxRuntime: "automatic",
       rehypePlugins,
       remarkPlugins,
+      ...(providerImportSource ? { providerImportSource } : {})
     });
 
     let contents = `

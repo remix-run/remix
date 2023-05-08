@@ -19,6 +19,7 @@ import { warnOnce } from "./warnOnce";
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
   remarkPlugins?: any[];
+  providerImportSource?: string;
 }
 
 export type RemixMdxConfigFunction = (
