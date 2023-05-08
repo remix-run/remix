@@ -468,6 +468,8 @@ Note that if you're also using Remix's [built-in PostCSS support][built-in-post-
 
 If you're using VS Code, it's recommended you install the [Tailwind IntelliSense extension][tailwind-intelli-sense-extension] for the best developer experience.
 
+<docs-warning>It's recommended that you avoid Tailwind's `@import` syntax (e.g. `@import 'tailwindcss/base'`) in favor of Tailwind directives (e.g. `@tailwind base`). Tailwind replaces its import statements with inlined CSS but this can result in the interleaving of styles and import statements. This clashes with the restriction that all import statements must be at the start of the file. Alternatively, you can use [PostCSS][built-in-post-css-support] with the [postcss-import] plugin to process imports before passing them to esbuild.</docs-warning>
+
 ## Remote Stylesheets
 
 You can load stylesheets from any server, here's an example of loading a modern css reset from unpkg.
@@ -822,3 +824,4 @@ module.exports = {
 [css-modules]: #css-modules
 [vanilla-extract-3]: #vanilla-extract
 [css-side-effect-imports-2]: #css-side-effect-imports
+[postcss-import]: https://github.com/postcss/postcss-import
