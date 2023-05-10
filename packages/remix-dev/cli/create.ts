@@ -139,7 +139,9 @@ export async function createApp({
       await downloadAndExtractRepoTarball(
         projectDir,
         getRepoInfo(
-          `https://github.com/remix-run/remix/tree/main/templates/${appTemplate}`
+          'vercel'
+            ? `https://github.com/vercel/vercel/tree/main/examples/remix`
+            : `https://github.com/remix-run/remix/tree/main/templates/${appTemplate}`
         ),
         options
       );

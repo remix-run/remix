@@ -666,6 +666,24 @@ describe("the create command", () => {
     process.env.npm_config_user_agent = originalUserAgent;
   });
 
+  it("selects vercel remote template", async () => {
+    let template = "vercel-template"
+    let projectDir = await getProjectDir(template);
+
+    await run([
+      "create",
+      projectDir,
+      "--template",
+      "vercel"
+    ]);
+
+    expect(output.trim()).toBe(
+      getSuccessMessage(path.join("<TEMP_DIR>", template))
+    );
+    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
+    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+  })
+
   describe("errors", () => {
     it("identifies when a github repo is not accessible (403)", async () => {
       let projectDir = await getProjectDir("repo");
