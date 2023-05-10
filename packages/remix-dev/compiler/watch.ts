@@ -10,11 +10,11 @@ import type { Context } from "./context";
 import { logThrown } from "./utils/log";
 
 function isEntryPoint(config: RemixConfig, file: string): boolean {
-  let appFile = path.relative(config.appDirectory, file);
+  let appFile = path.relative(config.appDirectory, file).replace(/\\/g, '/');
   let entryPoints = [
-    config.entryClientFile,
-    config.entryServerFile,
-    ...Object.values(config.routes).map((route) => route.file),
+    config.entryClientFile.replace(/\\/g,'/'),
+    config.entryServerFile.replace(/\\/g,'/'),
+    ...Object.values(config.routes).map((route) => route.file.replace(/\\/g,'/')),
   ];
   return entryPoints.includes(appFile);
 }
