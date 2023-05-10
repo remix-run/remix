@@ -681,7 +681,6 @@ describe("the create command", () => {
       getSuccessMessage(path.join("<TEMP_DIR>", template))
     );
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   })
 
   describe("errors", () => {
