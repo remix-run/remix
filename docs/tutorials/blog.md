@@ -266,10 +266,10 @@ model Post {
 }
 ```
 
-💿 Let's generate a migration file for our schema changes, which will be required if you deploy your application rather than just running in dev mode locally.  This will also update our local database and TypeScript definitions to match the schema change.
+💿 Let's generate a migration file for our schema changes, which will be required if you deploy your application rather than just running in dev mode locally.  This will also update our local database and TypeScript definitions to match the schema change.  We'll name the migration "create post model".
 
 ```sh
-npx prisma migrate dev
+npx prisma migrate dev --name "create post model"
 ```
 
 💿 Let's seed our database with a couple posts. Open `prisma/seed.ts` and add this to the end of the seed functionality (right before the `console.log`):
@@ -328,8 +328,6 @@ Great, let's get those posts into the database with the seed script:
 ```
 npx prisma db seed
 ```
-
-<docs-warning>You'll get the ability to name the migration name, ideally you can refer back to what the changes you made are, so I'd suggest `create-post-model` for the name.</docs-warning>
 
 💿 Now update the `app/models/post.server.ts` file to read from the SQLite database:
 
