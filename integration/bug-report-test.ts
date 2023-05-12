@@ -48,28 +48,74 @@ test.beforeAll(async () => {
     // `createFixture` will make an app and run your tests against it.
     ////////////////////////////////////////////////////////////////////////////
     files: {
-      "app/routes/_index.jsx": js`
-        import { json } from "@remix-run/node";
-        import { useLoaderData, Link } from "@remix-run/react";
-
-        export function loader() {
-          return json("pizza");
+      "app/routes/deferred.jsx": js`
+        import { defer } from "@remix-run/node";
+        import { Await, Link, Outlet, useLoaderData } from "@remix-run/react";
+        import { Suspense } from "react";
+        
+        export async function loader({ request, params }) {
+          const message = (async () => {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            return "Hello, world";
+          })();
+        
+          return defer({
+            message,
+          });
         }
-
-        export default function Index() {
-          let data = useLoaderData();
+        export default function Deferred() {
+          const { message } = useLoaderData();
           return (
             <div>
-              {data}
-              <Link to="/burgers">Other Route</Link>
+              <h1>Deferred</h1>
+              <ul>
+                <li>
+                  <Link to="/deferred/nested" id="nested-no-param">Go to nested from deferred route</Link>
+                </li>
+                <li>
+                  <Link to="/deferred/nested?a=b" id="nested-param">
+                    Go to nested from deferred route param
+                  </Link>
+                </li>
+              </ul>
+              <Suspense fallback={<div id="loading">Loading</div>}>
+                <Await resolve={message}>{() => <div id="done">Done</div>}</Await>
+              </Suspense>
+              Child:
+              <Outlet />
+              <p>{"A".repeat(1024)}</p>
             </div>
-          )
+          );
         }
       `,
 
-      "app/routes/burgers.jsx": js`
-        export default function Index() {
-          return <div>cheeseburger</div>;
+      "app/routes/deferred.nested.jsx": js`
+        import { defer } from "@remix-run/node";
+        import { Await, useLoaderData } from "@remix-run/react";
+        import { Suspense } from "react";
+        
+        export async function loader({ request, params }) {
+          const message = (async () => {
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+            return "Hello, world";
+          })();
+        
+          return defer({
+            message,
+          });
+        }
+        export default function DeferredNested() {
+          const { message } = useLoaderData();
+          return <div>
+            <h1>Deferred Nested</h1>
+            <Suspense fallback={<div id="loading">Loading</div>}>
+                <Await resolve={message}>
+                    {(message) => <div id="done">Done</div>}
+                </Await>
+            </Suspense>
+        
+            <p>{'A'.repeat(1024)}</p>
+          </div>;
         }
       `,
     },
@@ -88,24 +134,35 @@ test.afterAll(() => {
 // add a good description for what you expect Remix to do 👇🏽
 ////////////////////////////////////////////////////////////////////////////////
 
-test("[description of what you expect it to do]", async ({ page }) => {
+test("Nested client side navigation defers without url param", async ({ page }) => {
   let app = new PlaywrightFixture(appFixture, page);
   // You can test any request your app might get using `fixture`.
-  let response = await fixture.requestDocument("/");
-  expect(await response.text()).toMatch("pizza");
-
+  // let response = await fixture.requestDocument("/");
   // If you need to test interactivity use the `app`
-  await app.goto("/");
-  await app.clickLink("/burgers");
-  expect(await app.getHtml()).toMatch("cheeseburger");
+  await app.goto("/deferred");
+  app.clickElement('#nested-no-param');
+  await page.waitForSelector("#loading", { timeout: 1000 });
 
   // If you're not sure what's going on, you can "poke" the app, it'll
   // automatically open up in your browser for 20 seconds, so be quick!
-  // await app.poke(20);
 
   // Go check out the other tests to see what else you can do.
 });
 
-////////////////////////////////////////////////////////////////////////////////
+
+test("Nested client side navigation defers with a URL param", async ({ page }) => {
+  let app = new PlaywrightFixture(appFixture, page);
+  // You can test any request your app might get using `fixture`.
+  // let response = await fixture.requestDocument("/");
+  // If you need to test interactivity use the `app`
+  await app.goto("/deferred");
+  app.clickElement('#nested-param');
+  await page.waitForSelector("#loading", { timeout: 1000 });
+
+  // If you're not sure what's going on, you can "poke" the app, it'll
+  // automatically open up in your browser for 20 seconds, so be quick!
+
+  // Go check out the other tests to see what else you can do.
+});////////////////////////////////////////////////////////////////////////////////
 // 💿 Finally, push your changes to your fork of Remix and open a pull request!
 ////////////////////////////////////////////////////////////////////////////////
