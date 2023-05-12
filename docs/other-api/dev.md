@@ -1,6 +1,6 @@
 ---
 title: "@remix-run/dev (CLI)"
-order: 1
+order: 2
 ---
 
 # Remix CLI

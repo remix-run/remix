@@ -94,14 +94,17 @@ This may ask you whether you want to install `create-remix@latest`. Enter `y`. I
 
 </docs-info>
 
-Once the setup script has run, it'll ask you a few questions. We'll call our app "remix-jokes", choose "Just the basics", then the "Remix App Server" deploy target, use TypeScript, and have it run the installation for us:
+Once the setup script has run, it'll ask you a few questions. We'll call our app "remix-jokes", select to initialize a Git repository and have it run the installation for us:
 
 ```
-? Where would you like to create your app? remix-jokes
-? What type of app do you want to create? Just the basics
-? Where do you want to deploy? Choose Remix App Server if you're unsure; it's easy to change deployment targets. Remix App Server
-? TypeScript or JavaScript? TypeScript
-? Do you want me to run `npm install`? Yes
+Where should we create your new project?
+remix-jokes
+
+Initialize a new git repository?
+Yes
+
+Install dependencies with npm?
+Yes
 ```
 
 Remix can be deployed in a large and growing list of JavaScript environments. The "Remix App Server" is a full-featured [Node.js][node-js] server based on [Express][express]. It's the simplest option, and it satisfies most people's needs, so that's what we're going with for this tutorial. Feel free to experiment in the future!

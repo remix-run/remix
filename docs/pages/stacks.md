@@ -30,7 +30,7 @@ There will be more stacks available in the future. And you can make your own (an
 
 ## Custom Stacks
 
-The Remix CLI will help you get started with one of these built-in stacks, but if you want, you can create your own stack and the Remix CLI will help you get started with that stack. There are several ways to do this, but the most straightforward is to create a GitHub repo:
+If you want, you can create your own stack and the Remix CLI will help you get started with that stack. There are several ways to do this, but the most straightforward is to create a GitHub repo:
 
 ```
 npx create-remix@latest --template my-username/my-repo
@@ -81,10 +81,6 @@ You could even use `remix.init/index.js` to ask further questions to the develop
 After the init script has been run, the `remix.init` folder gets deleted, so you don't need to worry about it cluttering up the finished codebase.
 
 <docs-warning>Do note however, that opting out of installing dependencies will not run the remix.init setup, to do so manually, run `remix init`.</docs-warning>
-
-#### Remove TypeScript
-
-If there's a `tsconfig.json` file in the root of the project, the Remix CLI will ask whether the user wants the TypeScript automatically removed from the template. We don't recommend this, but some folks just really want to write regular JavaScript.
 
 [repo access token]: https://github.com/settings/tokens/new?description=Remix%20Private%20Stack%20Access&scopes=repo
 [inquirer]: https://npm.im/inquirer
