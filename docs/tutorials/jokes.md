@@ -4816,7 +4816,7 @@ export default function JokeRoute() {
       <p>Here's your hilarious joke:</p>
       <p>{data.joke.content}</p>
       <Link to=".">"{data.joke.name}" Permalink</Link>
-      {data.isOwner ? (
+      {data.isOwner && (
         <form method="post">
           <button
             className="button"
@@ -4827,7 +4827,7 @@ export default function JokeRoute() {
             Delete
           </button>
         </form>
-      ) : null}
+      )}
     </div>
   );
 }
