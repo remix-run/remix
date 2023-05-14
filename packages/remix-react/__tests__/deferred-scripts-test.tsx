@@ -2,7 +2,7 @@ import * as React from "react";
 import { createMemoryRouter } from "react-router-dom";
 import { defer } from "react-router-dom";
 import { StaticRouterProvider } from "react-router-dom/server";
-import { prettyDOM, render } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import type { EntryContext } from "@remix-run/server-runtime";
 
 import { Scripts, RemixContext } from "../components";
