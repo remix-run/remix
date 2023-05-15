@@ -221,7 +221,7 @@ describe("create-remix CLI", () => {
     expect(
       stderr.trim().replace("<TEMP_DIR>\\", "<TEMP_DIR>/") // Normalize Windows path
     ).toMatchInlineSnapshot(
-      `"▲  Oh no! Project directory \\"<TEMP_DIR>/not-empty-dir\\" is not empty"`
+      `"▲  Oh no! Project directory \\"<TEMP_DIR>/non-interactive-not-empty-dir\\" is not empty"`
     );
     expect(status).toBe(1);
     expect(fse.existsSync(path.join(notEmptyDir, "package.json"))).toBeFalsy();
