@@ -209,7 +209,7 @@ describe("create-remix CLI", () => {
   });
 
   it("errors when project directory isn't empty when shell isn't interactive", async () => {
-    let notEmptyDir = getProjectDir("not-empty-dir");
+    let notEmptyDir = getProjectDir("non-interactive-not-empty-dir");
     fse.mkdirSync(notEmptyDir);
     fse.createFileSync(path.join(notEmptyDir, "some-file.txt"));
 
@@ -218,7 +218,9 @@ describe("create-remix CLI", () => {
       interactive: false,
     });
 
-    expect(stderr.trim()).toMatchInlineSnapshot(
+    expect(
+      stderr.trim().replace("<TEMP_DIR>\\", "<TEMP_DIR>/") // Normalize Windows path
+    ).toMatchInlineSnapshot(
       `"▲  Oh no! Project directory \\"<TEMP_DIR>/not-empty-dir\\" is not empty"`
     );
     expect(status).toBe(1);
@@ -228,7 +230,7 @@ describe("create-remix CLI", () => {
 
   // this also tests sub directories
   it("works for examples in the examples repo", async () => {
-    let projectDir = getProjectDir("example");
+    let projectDir = getProjectDir("example-repo");
 
     let { status, stderr } = await runCreateRemix({
       args: [
@@ -462,7 +464,7 @@ describe("create-remix CLI", () => {
   });
 
   it("prompts to run remix.init script when installing dependencies", async () => {
-    let projectDir = getProjectDir("remix-init-auto");
+    let projectDir = getProjectDir("remix-init-prompt");
 
     let { status, stdout, stderr } = await runCreateRemix({
       args: [
@@ -493,7 +495,7 @@ describe("create-remix CLI", () => {
   });
 
   it("doesn't prompt to run remix.init script when not installing dependencies", async () => {
-    let projectDir = getProjectDir("remix-init-auto");
+    let projectDir = getProjectDir("remix-init-skip-on-no-install");
 
     let { status, stdout, stderr } = await runCreateRemix({
       args: [
@@ -524,7 +526,7 @@ describe("create-remix CLI", () => {
   });
 
   it("runs remix.init script when --install and --init-script flags are passed", async () => {
-    let projectDir = getProjectDir("remix-init-auto");
+    let projectDir = getProjectDir("remix-init-prompt-with-flags");
 
     let { status, stdout, stderr } = await runCreateRemix({
       args: [
@@ -550,7 +552,9 @@ describe("create-remix CLI", () => {
   });
 
   it("doesn't run remix.init script when --no-install flag is passed, even when --init-script flag is passed", async () => {
-    let projectDir = getProjectDir("remix-init-auto");
+    let projectDir = getProjectDir(
+      "remix-init-skip-on-no-install-with-init-flag"
+    );
 
     let { status, stdout, stderr } = await runCreateRemix({
       args: [
@@ -577,7 +581,7 @@ describe("create-remix CLI", () => {
   });
 
   it("doesn't run remix.init script when --no-init-script flag is passed", async () => {
-    let projectDir = getProjectDir("remix-init-no-init-flag");
+    let projectDir = getProjectDir("remix-init-skip-on-no-init-flag");
 
     let { status, stdout, stderr } = await runCreateRemix({
       args: [
@@ -632,7 +636,7 @@ describe("create-remix CLI", () => {
     let originalUserAgent = process.env.npm_config_user_agent;
     process.env.npm_config_user_agent = undefined;
 
-    let projectDir = getProjectDir("npm-install");
+    let projectDir = getProjectDir("npm-install-default");
 
     await main([
       projectDir,
@@ -656,7 +660,7 @@ describe("create-remix CLI", () => {
     process.env.npm_config_user_agent =
       "unknown_package_manager/1.0.0 npm/? node/v14.17.0 linux x64";
 
-    let projectDir = getProjectDir("npm-install");
+    let projectDir = getProjectDir("npm-install-on-unknown-package-manager");
 
     await main([
       projectDir,
@@ -680,7 +684,7 @@ describe("create-remix CLI", () => {
     process.env.npm_config_user_agent =
       "npm/8.19.4 npm/? node/v14.17.0 linux x64";
 
-    let projectDir = getProjectDir("yarn-create");
+    let projectDir = getProjectDir("npm-install-from-user-agent");
 
     await main([
       projectDir,
@@ -703,7 +707,7 @@ describe("create-remix CLI", () => {
     process.env.npm_config_user_agent =
       "yarn/1.22.18 npm/? node/v14.17.0 linux x64";
 
-    let projectDir = getProjectDir("yarn-create");
+    let projectDir = getProjectDir("yarn-create-from-user-agent");
 
     await main([
       projectDir,
@@ -726,7 +730,7 @@ describe("create-remix CLI", () => {
     process.env.npm_config_user_agent =
       "pnpm/6.32.3 npm/? node/v14.17.0 linux x64";
 
-    let projectDir = getProjectDir("pnpm-create");
+    let projectDir = getProjectDir("pnpm-create-from-user-agent");
 
     await main([
       projectDir,
@@ -771,7 +775,7 @@ describe("create-remix CLI", () => {
 
   describe("errors", () => {
     it("identifies when a github repo is not accessible (403)", async () => {
-      let projectDir = getProjectDir("repo");
+      let projectDir = getProjectDir("repo-403");
 
       let { status, stderr } = await runCreateRemix({
         args: [
@@ -790,7 +794,7 @@ describe("create-remix CLI", () => {
     });
 
     it("identifies when a github repo does not exist (404)", async () => {
-      let projectDir = getProjectDir("repo");
+      let projectDir = getProjectDir("repo-404");
 
       let { status, stderr } = await runCreateRemix({
         args: [
@@ -809,7 +813,7 @@ describe("create-remix CLI", () => {
     });
 
     it("identifies when something unknown goes wrong with the repo request (4xx)", async () => {
-      let projectDir = getProjectDir("repo");
+      let projectDir = getProjectDir("repo-4xx");
 
       let { status, stderr } = await runCreateRemix({
         args: [
@@ -828,7 +832,7 @@ describe("create-remix CLI", () => {
     });
 
     it("identifies when a remote tarball does not exist (404)", async () => {
-      let projectDir = getProjectDir("remote-tarball");
+      let projectDir = getProjectDir("remote-tarball-404");
 
       let { status, stderr } = await runCreateRemix({
         args: [
@@ -847,7 +851,7 @@ describe("create-remix CLI", () => {
     });
 
     it("identifies when a remote tarball does not exist (4xx)", async () => {
-      let projectDir = getProjectDir("remote-tarball");
+      let projectDir = getProjectDir("remote-tarball-4xx");
 
       let { status, stderr } = await runCreateRemix({
         args: [
@@ -866,7 +870,7 @@ describe("create-remix CLI", () => {
     });
 
     it("doesn't allow creating an app in a dir if it's not empty and then prompts for an empty dir", async () => {
-      let emptyDir = getProjectDir("empty-dir");
+      let emptyDir = getProjectDir("prompt-for-dir-on-non-empty-dir");
 
       let notEmptyDir = getProjectDir("not-empty-dir");
       fse.mkdirSync(notEmptyDir);
@@ -898,7 +902,7 @@ describe("create-remix CLI", () => {
     });
 
     it("allows creating an app in the current dir if it's empty", async () => {
-      let emptyDir = getProjectDir("empty-dir");
+      let emptyDir = getProjectDir("current-dir-if-empty");
       fse.mkdirSync(emptyDir);
       let cwd = process.cwd();
       process.chdir(emptyDir);
@@ -922,7 +926,7 @@ describe("create-remix CLI", () => {
     });
 
     it("doesn't allow creating an app in the current dir if it's not empty", async () => {
-      let emptyDir = getProjectDir("empty-dir");
+      let emptyDir = getProjectDir("prompt-for-dir-if-current-dir-not-empty");
       let cwd = process.cwd();
 
       let notEmptyDir = getProjectDir("not-empty-dir");
