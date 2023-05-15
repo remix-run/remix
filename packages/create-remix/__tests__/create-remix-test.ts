@@ -155,7 +155,7 @@ describe("create-remix CLI", () => {
   it("allows you to go through the prompts", async () => {
     let projectDir = getProjectDir("prompts");
 
-    let { status } = await runCreateRemix({
+    let { status, stderr } = await runCreateRemix({
       args: [],
       interactions: [
         {
@@ -173,6 +173,7 @@ describe("create-remix CLI", () => {
       ],
     });
 
+    expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -182,7 +183,7 @@ describe("create-remix CLI", () => {
     let projectDir = getProjectDir("yes");
 
     let { status, stderr } = await runCreateRemix({
-      args: [projectDir, "--yes", "--no-install"],
+      args: [projectDir, "--yes", "--no-git-init", "--no-install"],
     });
 
     expect(stderr.trim()).toBeFalsy();
@@ -199,10 +200,10 @@ describe("create-remix CLI", () => {
       interactive: false,
     });
 
-    expect(status).toBe(1);
     expect(stderr.trim()).toMatchInlineSnapshot(
       `"▲  Oh no! No project directory provided"`
     );
+    expect(status).toBe(1);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeFalsy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
   });
@@ -217,10 +218,10 @@ describe("create-remix CLI", () => {
       interactive: false,
     });
 
-    expect(status).toBe(1);
     expect(stderr.trim()).toMatchInlineSnapshot(
       `"▲  Oh no! Project directory \\"<TEMP_DIR>/not-empty-dir\\" is not empty"`
     );
+    expect(status).toBe(1);
     expect(fse.existsSync(path.join(notEmptyDir, "package.json"))).toBeFalsy();
     expect(fse.existsSync(path.join(notEmptyDir, "app/root.tsx"))).toBeFalsy();
   });
@@ -229,7 +230,7 @@ describe("create-remix CLI", () => {
   it("works for examples in the examples repo", async () => {
     let projectDir = getProjectDir("example");
 
-    let { status } = await runCreateRemix({
+    let { status, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -239,6 +240,7 @@ describe("create-remix CLI", () => {
       ],
     });
 
+    expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -247,7 +249,7 @@ describe("create-remix CLI", () => {
   it("works for GitHub username/repo combo", async () => {
     let projectDir = getProjectDir("github-username-repo");
 
-    let { status } = await runCreateRemix({
+    let { status, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -257,6 +259,7 @@ describe("create-remix CLI", () => {
       ],
     });
 
+    expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -275,16 +278,16 @@ describe("create-remix CLI", () => {
       ],
     });
 
-    expect(status).toBe(1);
     expect(stderr.trim()).toMatchInlineSnapshot(
       `"▲  Oh no! There was a problem fetching the file from GitHub. The request responded with a 404 status. Please try again later."`
     );
+    expect(status).toBe(1);
   });
 
   it("succeeds for private GitHub username/repo combo with a valid token", async () => {
     let projectDir = getProjectDir("github-username-repo-with-token");
 
-    let { status } = await runCreateRemix({
+    let { status, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -296,6 +299,7 @@ describe("create-remix CLI", () => {
       ],
     });
 
+    expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -304,7 +308,7 @@ describe("create-remix CLI", () => {
   it("works for remote tarballs", async () => {
     let projectDir = getProjectDir("remote-tarball");
 
-    let { status } = await runCreateRemix({
+    let { status, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -314,6 +318,7 @@ describe("create-remix CLI", () => {
       ],
     });
 
+    expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -332,16 +337,16 @@ describe("create-remix CLI", () => {
       ],
     });
 
-    expect(status).toBe(1);
     expect(stderr.trim()).toMatchInlineSnapshot(
       `"▲  Oh no! There was a problem fetching the file from GitHub. The request responded with a 404 status. Please try again later."`
     );
+    expect(status).toBe(1);
   });
 
   it("succeeds for private github release tarballs when including token", async () => {
     let projectDir = getProjectDir("private-release-tarball-with-token");
 
-    let { status } = await runCreateRemix({
+    let { status, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -353,6 +358,7 @@ describe("create-remix CLI", () => {
       ],
     });
 
+    expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -361,7 +367,7 @@ describe("create-remix CLI", () => {
   it("works for different branches", async () => {
     let projectDir = getProjectDir("diff-branch");
 
-    let { status } = await runCreateRemix({
+    let { status, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -371,6 +377,7 @@ describe("create-remix CLI", () => {
       ],
     });
 
+    expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -379,7 +386,7 @@ describe("create-remix CLI", () => {
   it("works for a path to a tarball on disk", async () => {
     let projectDir = getProjectDir("local-tarball");
 
-    let { status } = await runCreateRemix({
+    let { status, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -389,6 +396,7 @@ describe("create-remix CLI", () => {
       ],
     });
 
+    expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -397,7 +405,7 @@ describe("create-remix CLI", () => {
   it("works for a file URL to a tarball on disk", async () => {
     let projectDir = getProjectDir("file-url-tarball");
 
-    let { status } = await runCreateRemix({
+    let { status, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -409,6 +417,7 @@ describe("create-remix CLI", () => {
       ],
     });
 
+    expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -417,7 +426,7 @@ describe("create-remix CLI", () => {
   it("works for a file path to a directory on disk", async () => {
     let projectDir = getProjectDir("local-directory");
 
-    let { status } = await runCreateRemix({
+    let { status, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -427,6 +436,7 @@ describe("create-remix CLI", () => {
       ],
     });
 
+    expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -435,7 +445,7 @@ describe("create-remix CLI", () => {
   it("works for a file URL to a directory on disk", async () => {
     let projectDir = getProjectDir("file-url-directory");
 
-    let { status } = await runCreateRemix({
+    let { status, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -445,6 +455,7 @@ describe("create-remix CLI", () => {
       ],
     });
 
+    expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -453,7 +464,7 @@ describe("create-remix CLI", () => {
   it("prompts to run remix.init script when installing dependencies", async () => {
     let projectDir = getProjectDir("remix-init-auto");
 
-    let { status, stdout } = await runCreateRemix({
+    let { status, stdout, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -472,8 +483,9 @@ describe("create-remix CLI", () => {
       ],
     });
 
-    expect(status).toBe(0);
+    expect(stderr.trim()).toBeFalsy();
     expect(stdout).toContain(`Template's custom remix.init script complete`);
+    expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
@@ -483,7 +495,7 @@ describe("create-remix CLI", () => {
   it("doesn't prompt to run remix.init script when not installing dependencies", async () => {
     let projectDir = getProjectDir("remix-init-auto");
 
-    let { status, stdout } = await runCreateRemix({
+    let { status, stdout, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -498,8 +510,9 @@ describe("create-remix CLI", () => {
       ],
     });
 
-    expect(status).toBe(0);
+    expect(stderr.trim()).toBeFalsy();
     expect(stdout).toContain(`Skipping template's custom remix.init script.`);
+    expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
 
@@ -513,7 +526,7 @@ describe("create-remix CLI", () => {
   it("runs remix.init script when --install and --init-script flags are passed", async () => {
     let projectDir = getProjectDir("remix-init-auto");
 
-    let { status, stdout } = await runCreateRemix({
+    let { status, stdout, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -524,6 +537,7 @@ describe("create-remix CLI", () => {
       ],
     });
 
+    expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
@@ -538,7 +552,7 @@ describe("create-remix CLI", () => {
   it("doesn't run remix.init script when --no-install flag is passed, even when --init-script flag is passed", async () => {
     let projectDir = getProjectDir("remix-init-auto");
 
-    let { status, stdout } = await runCreateRemix({
+    let { status, stdout, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -549,8 +563,9 @@ describe("create-remix CLI", () => {
       ],
     });
 
-    expect(status).toBe(0);
+    expect(stderr.trim()).toBeFalsy();
     expect(stdout).toContain(`Skipping template's custom remix.init script.`);
+    expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
 
@@ -564,7 +579,7 @@ describe("create-remix CLI", () => {
   it("doesn't run remix.init script when --no-init-script flag is passed", async () => {
     let projectDir = getProjectDir("remix-init-no-init-flag");
 
-    let { status, stdout } = await runCreateRemix({
+    let { status, stdout, stderr } = await runCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -575,8 +590,9 @@ describe("create-remix CLI", () => {
       ],
     });
 
-    expect(status).toBe(0);
+    expect(stderr.trim()).toBeFalsy();
     expect(stdout).toContain(`Skipping template's custom remix.init script.`);
+    expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
 
@@ -601,10 +617,10 @@ describe("create-remix CLI", () => {
       ],
     });
 
-    expect(status).toBe(1);
     expect(stderr.trim()).toMatchInlineSnapshot(
       `"▲  Oh no! Template's custom remix.init script failed"`
     );
+    expect(status).toBe(1);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
 
@@ -767,10 +783,10 @@ describe("create-remix CLI", () => {
         ],
       });
 
-      expect(status).toBe(1);
       expect(stderr.trim()).toMatchInlineSnapshot(
         `"▲  Oh no! There was a problem fetching the file from GitHub. The request responded with a 403 status. Please try again later."`
       );
+      expect(status).toBe(1);
     });
 
     it("identifies when a github repo does not exist (404)", async () => {
@@ -786,10 +802,10 @@ describe("create-remix CLI", () => {
         ],
       });
 
-      expect(status).toBe(1);
       expect(stderr.trim()).toMatchInlineSnapshot(
         `"▲  Oh no! There was a problem fetching the file from GitHub. The request responded with a 404 status. Please try again later."`
       );
+      expect(status).toBe(1);
     });
 
     it("identifies when something unknown goes wrong with the repo request (4xx)", async () => {
@@ -805,10 +821,10 @@ describe("create-remix CLI", () => {
         ],
       });
 
-      expect(status).toBe(1);
       expect(stderr.trim()).toMatchInlineSnapshot(
         `"▲  Oh no! There was a problem fetching the file from GitHub. The request responded with a 400 status. Please try again later."`
       );
+      expect(status).toBe(1);
     });
 
     it("identifies when a remote tarball does not exist (404)", async () => {
@@ -824,10 +840,10 @@ describe("create-remix CLI", () => {
         ],
       });
 
-      expect(status).toBe(1);
       expect(stderr.trim()).toMatchInlineSnapshot(
         `"▲  Oh no! There was a problem fetching the file. The request responded with a 404 status. Please try again later."`
       );
+      expect(status).toBe(1);
     });
 
     it("identifies when a remote tarball does not exist (4xx)", async () => {
@@ -843,10 +859,10 @@ describe("create-remix CLI", () => {
         ],
       });
 
-      expect(status).toBe(1);
       expect(stderr.trim()).toMatchInlineSnapshot(
         `"▲  Oh no! There was a problem fetching the file. The request responded with a 400 status. Please try again later."`
       );
+      expect(status).toBe(1);
     });
 
     it("doesn't allow creating an app in a dir if it's not empty and then prompts for an empty dir", async () => {
@@ -856,7 +872,7 @@ describe("create-remix CLI", () => {
       fse.mkdirSync(notEmptyDir);
       fse.createFileSync(path.join(notEmptyDir, "some-file.txt"));
 
-      let { status, stdout } = await runCreateRemix({
+      let { status, stdout, stderr } = await runCreateRemix({
         args: [
           notEmptyDir,
           "--template",
@@ -872,10 +888,11 @@ describe("create-remix CLI", () => {
         ],
       });
 
-      expect(status).toBe(0);
+      expect(stderr.trim()).toBeFalsy();
       expect(stdout).toContain(
         `Hmm... "${maskTempDir(notEmptyDir)}" is not empty!`
       );
+      expect(status).toBe(0);
       expect(fse.existsSync(path.join(emptyDir, "package.json"))).toBeTruthy();
       expect(fse.existsSync(path.join(emptyDir, "app/root.tsx"))).toBeTruthy();
     });
@@ -886,7 +903,7 @@ describe("create-remix CLI", () => {
       let cwd = process.cwd();
       process.chdir(emptyDir);
 
-      let { status } = await runCreateRemix({
+      let { status, stderr } = await runCreateRemix({
         args: [
           ".",
           "--template",
@@ -896,6 +913,7 @@ describe("create-remix CLI", () => {
         ],
       });
 
+      expect(stderr.trim()).toBeFalsy();
       expect(status).toBe(0);
       expect(fse.existsSync(path.join(emptyDir, "package.json"))).toBeTruthy();
       expect(fse.existsSync(path.join(emptyDir, "app/root.tsx"))).toBeTruthy();
@@ -912,7 +930,7 @@ describe("create-remix CLI", () => {
       fse.createFileSync(path.join(notEmptyDir, "some-file.txt"));
       process.chdir(notEmptyDir);
 
-      let { status, stdout } = await runCreateRemix({
+      let { status, stdout, stderr } = await runCreateRemix({
         args: [
           ".",
           "--template",
@@ -928,8 +946,9 @@ describe("create-remix CLI", () => {
         ],
       });
 
-      expect(status).toBe(0);
+      expect(stderr.trim()).toBeFalsy();
       expect(stdout).toContain(`Hmm... "." is not empty!`);
+      expect(status).toBe(0);
       expect(fse.existsSync(path.join(emptyDir, "package.json"))).toBeTruthy();
       expect(fse.existsSync(path.join(emptyDir, "app/root.tsx"))).toBeTruthy();
 
