@@ -13,29 +13,8 @@ import { server } from "./msw";
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterAll(() => server.close());
 
-// this is so we can mock execSync for "npm install" and the like
-jest.mock("child_process", () => {
-  let cp = jest.requireActual("child_process");
-
-  return {
-    ...cp,
-    spawn: jest.fn((...args) => {
-      let [command, params] = args;
-
-      console.log("spawn", command, params);
-
-      // this prevents us from having to run the install process
-      // and keeps our console output clean
-      if (
-        ["npm", "yarn", "pnpm"].includes(command) &&
-        params[0] === "install"
-      ) {
-        return cp.spawn("echo", [`"mock ${command} install"`]);
-      }
-      return cp.spawn(...args);
-    }),
-  };
-});
+// this is so we can mock "npm install" etc. in a cross-platform way
+jest.mock("execa");
 
 const DOWN = "\x1B\x5B\x42";
 const ENTER = "\x0D";
@@ -641,6 +620,9 @@ describe("create-remix CLI", () => {
 
     let projectDir = getProjectDir("npm-install-default");
 
+    let execa = require("execa");
+    execa.mockImplementation(async () => {});
+
     await main([
       projectDir,
       "--template",
@@ -649,7 +631,7 @@ describe("create-remix CLI", () => {
       "--yes",
     ]);
 
-    expect(spawn).toHaveBeenCalledWith(
+    expect(execa).toHaveBeenCalledWith(
       "npm",
       expect.arrayContaining(["install"]),
       expect.anything()
@@ -665,6 +647,9 @@ describe("create-remix CLI", () => {
 
     let projectDir = getProjectDir("npm-install-on-unknown-package-manager");
 
+    let execa = require("execa");
+    execa.mockImplementation(async () => {});
+
     await main([
       projectDir,
       "--template",
@@ -673,7 +658,7 @@ describe("create-remix CLI", () => {
       "--yes",
     ]);
 
-    expect(spawn).toHaveBeenCalledWith(
+    expect(execa).toHaveBeenCalledWith(
       "npm",
       expect.arrayContaining(["install"]),
       expect.anything()
@@ -689,6 +674,9 @@ describe("create-remix CLI", () => {
 
     let projectDir = getProjectDir("npm-install-from-user-agent");
 
+    let execa = require("execa");
+    execa.mockImplementation(async () => {});
+
     await main([
       projectDir,
       "--template",
@@ -697,7 +685,7 @@ describe("create-remix CLI", () => {
       "--yes",
     ]);
 
-    expect(spawn).toHaveBeenCalledWith(
+    expect(execa).toHaveBeenCalledWith(
       "npm",
       expect.arrayContaining(["install"]),
       expect.anything()
@@ -712,6 +700,9 @@ describe("create-remix CLI", () => {
 
     let projectDir = getProjectDir("yarn-create-from-user-agent");
 
+    let execa = require("execa");
+    execa.mockImplementation(async () => {});
+
     await main([
       projectDir,
       "--template",
@@ -720,7 +711,7 @@ describe("create-remix CLI", () => {
       "--yes",
     ]);
 
-    expect(spawn).toHaveBeenCalledWith(
+    expect(execa).toHaveBeenCalledWith(
       "yarn",
       expect.arrayContaining(["install"]),
       expect.anything()
@@ -735,6 +726,9 @@ describe("create-remix CLI", () => {
 
     let projectDir = getProjectDir("pnpm-create-from-user-agent");
 
+    let execa = require("execa");
+    execa.mockImplementation(async () => {});
+
     await main([
       projectDir,
       "--template",
@@ -743,7 +737,7 @@ describe("create-remix CLI", () => {
       "--yes",
     ]);
 
-    expect(spawn).toHaveBeenCalledWith(
+    expect(execa).toHaveBeenCalledWith(
       "pnpm",
       expect.arrayContaining(["install"]),
       expect.anything()
@@ -758,6 +752,9 @@ describe("create-remix CLI", () => {
 
     let projectDir = getProjectDir("pnpm-create-override");
 
+    let execa = require("execa");
+    execa.mockImplementation(async () => {});
+
     await main([
       projectDir,
       "--template",
@@ -768,7 +765,7 @@ describe("create-remix CLI", () => {
       "pnpm",
     ]);
 
-    expect(spawn).toHaveBeenCalledWith(
+    expect(execa).toHaveBeenCalledWith(
       "pnpm",
       expect.arrayContaining(["install"]),
       expect.anything()

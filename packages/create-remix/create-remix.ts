@@ -550,17 +550,15 @@ async function installDependencies({
   cwd: string;
   showInstallOutput: boolean;
 }) {
-  let installExec = execa(pkgManager, ["install"], {
-    cwd,
-    stdio: showInstallOutput ? "inherit" : "ignore",
-  });
-  return new Promise<void>((resolve, reject) => {
-    installExec.on("error", (err) => {
-      error("Oh no!", "Failed to install dependencies.");
-      reject(err);
+  try {
+    await execa(pkgManager, ["install"], {
+      cwd,
+      stdio: showInstallOutput ? "inherit" : "ignore",
     });
-    installExec.on("close", () => resolve());
-  });
+  } catch (err) {
+    error("Oh no!", "Failed to install dependencies.");
+    throw err;
+  }
 }
 
 async function gitInitAndCommit({ cwd }: { cwd: string }) {
