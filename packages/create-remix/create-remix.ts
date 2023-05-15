@@ -410,8 +410,10 @@ async function runInitScriptStep(ctx: Context) {
   }
 
   try {
-    let initModulePath = pathToFileURL(ctx.initScriptPath).href;
-    let initModule = await import(initModulePath);
+    let initScriptFileURL = pathToFileURL(ctx.initScriptPath).href;
+    let initModule = await import(initScriptFileURL).catch(
+      () => ctx.initScriptPath && import(ctx.initScriptPath) // Fall back to regular paths to support Jest etc.
+    );
     let initFn: Function;
     if (typeof initModule === "function") {
       initFn = initModule;
