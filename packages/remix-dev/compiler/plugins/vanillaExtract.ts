@@ -61,7 +61,9 @@ export function vanillaExtractPlugin(
     name: pluginName,
     async setup(build) {
       try {
-        require.resolve("@vanilla-extract/css");
+        require.resolve("@vanilla-extract/css", {
+          paths: [config.rootDirectory],
+        });
       } catch (_) {
         // If Vanilla Extract isn't installed, skip this plugin.
         return;
