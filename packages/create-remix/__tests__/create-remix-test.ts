@@ -185,8 +185,8 @@ describe("create-remix CLI", () => {
       args: [projectDir, "--yes", "--no-install"],
     });
 
-    expect(status).toBe(0);
     expect(stderr.trim()).toBeFalsy();
+    expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
