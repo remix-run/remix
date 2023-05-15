@@ -181,11 +181,12 @@ describe("create-remix CLI", () => {
   it("supports the --yes flag", async () => {
     let projectDir = getProjectDir("yes");
 
-    let { status } = await runCreateRemix({
+    let { status, stderr } = await runCreateRemix({
       args: [projectDir, "--yes", "--no-install"],
     });
 
     expect(status).toBe(0);
+    expect(stderr.trim()).toBeFalsy();
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
