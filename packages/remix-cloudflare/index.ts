@@ -56,7 +56,6 @@ export type {
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
   HeadersArgs,
-  HeadersFunctionArgs,
   HeadersFunction,
   HtmlLinkDescriptor,
   HtmlMetaDescriptor,

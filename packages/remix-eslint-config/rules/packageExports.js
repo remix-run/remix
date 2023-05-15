@@ -36,7 +36,6 @@ const defaultRuntimeExports = {
     "HandleDataRequestFunction",
     "HandleDocumentRequestFunction",
     "HeadersArgs",
-    "HeadersFunctionArgs",
     "HeadersFunction",
     "HtmlLinkDescriptor",
     "HtmlMetaDescriptor",

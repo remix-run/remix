@@ -349,7 +349,6 @@ function getMagicExports(packageName) {
         "HandleDataRequestFunction",
         "HandleDocumentRequestFunction",
         "HeadersArgs",
-        "HeadersFunctionArgs",
         "HeadersFunction",
         "HtmlLinkDescriptor",
         "HtmlMetaDescriptor",

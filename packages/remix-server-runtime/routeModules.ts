@@ -66,20 +66,18 @@ export type ErrorBoundaryComponent = ComponentType<{ error: Error }>;
  */
 export type V2_ErrorBoundaryComponent = ComponentType;
 
-export type HeadersFunctionArgs = {
+export type HeadersArgs = {
   loaderHeaders: Headers;
   parentHeaders: Headers;
   actionHeaders: Headers;
 };
-
-export type HeadersArgs = HeadersFunctionArgs
 
 /**
  * A function that returns HTTP headers to be used for a route. These headers
  * will be merged with (and take precedence over) headers from parent routes.
  */
 export interface HeadersFunction {
-  (args: HeadersFunctionArgs): Headers | HeadersInit;
+  (args: HeadersArgs): Headers | HeadersInit;
 }
 
 /**

@@ -39,7 +39,6 @@ export type {
   DataFunctionArgs,
   ErrorBoundaryComponent,
   HeadersArgs,
-  HeadersFunctionArgs,
   HeadersFunction,
   HtmlMetaDescriptor,
   LinksFunction,
