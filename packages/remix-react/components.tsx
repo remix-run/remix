@@ -1759,12 +1759,12 @@ export const LiveReload =
                       }
                       if (!event.updates || !event.updates.length) return;
                       let updateAccepted = false;
-                      let needsRevalidation = false;
+                      let needsRevalidation = new Set();
                       for (let update of event.updates) {
                         console.log("[HMR] " + update.reason + " [" + update.id +"]")
                         if (update.revalidate) {
-                          needsRevalidation = true;
-                          console.log("[HMR] Revalidating [" + update.id + "]");
+                          needsRevalidation.add(update.routeId);
+                          console.log("[HMR] Revalidating [" + update.routeId + "]");
                         }
                         let imported = await import(update.url +  '?t=' + event.assetsManifest.hmr.timestamp);
                         if (window.__hmr__.contexts[update.id]) {

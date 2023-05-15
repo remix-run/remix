@@ -183,7 +183,7 @@ export async function build(
       host: dev.httpHost,
       port: dev.httpPort,
     };
-    options.devWebsocketPort = dev.websocketPort;
+    options.devWebSocketPort = dev.webSocketPort;
   }
 
   fse.emptyDirSync(config.assetsBuildDirectory);
@@ -224,7 +224,6 @@ export async function dev(
     httpHost?: string;
     httpPort?: number;
     restart?: boolean;
-    publicDirectory?: string;
     websocketPort?: number;
   } = {}
 ) {
@@ -476,7 +475,7 @@ type DevBuildFlags = {
   httpScheme: string;
   httpHost: string;
   httpPort: number;
-  websocketPort: number;
+  webSocketPort: number;
 };
 let resolveDevBuild = async (
   config: RemixConfig,
@@ -501,22 +500,21 @@ let resolveDevBuild = async (
     (dev === true ? undefined : dev.httpPort) ??
     (await findPort());
   // prettier-ignore
-  let websocketPort =
-    flags.websocketPort ??
-    (dev === true ? undefined : dev.websocketPort) ??
+  let webSocketPort =
+    flags.webSocketPort ??
+    (dev === true ? undefined : dev.webSocketPort) ??
     (await findPort());
 
   return {
     httpScheme,
     httpHost,
     httpPort,
-    websocketPort,
+    webSocketPort,
   };
 };
 
 type DevServeFlags = DevBuildFlags & {
   command: string;
-  publicDirectory: string;
   restart: boolean;
 };
 let resolveDevServe = async (
@@ -526,7 +524,7 @@ let resolveDevServe = async (
   let dev = config.future.unstable_dev;
   if (dev === false) throw Error("Cannot resolve dev options");
 
-  let { httpScheme, httpHost, httpPort, websocketPort } = await resolveDevBuild(
+  let { httpScheme, httpHost, httpPort, webSocketPort } = await resolveDevBuild(
     config,
     flags
   );
@@ -555,11 +553,6 @@ let resolveDevServe = async (
     }
   }
 
-  let publicDirectory =
-    flags.publicDirectory ??
-    (dev === true ? undefined : dev.publicDirectory) ??
-    "public";
-
   let restart =
     flags.restart ?? (dev === true ? undefined : dev.restart) ?? true;
 
@@ -568,8 +561,7 @@ let resolveDevServe = async (
     httpScheme,
     httpHost,
     httpPort,
-    publicDirectory,
-    websocketPort,
+    webSocketPort,
     restart,
   };
 };
