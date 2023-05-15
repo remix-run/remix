@@ -22,6 +22,8 @@ jest.mock("child_process", () => {
     spawn: jest.fn((...args) => {
       let [command, params] = args;
 
+      console.log("spawn", command, params);
+
       // this prevents us from having to run the install process
       // and keeps our console output clean
       if (
