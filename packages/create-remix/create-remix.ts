@@ -1,6 +1,7 @@
 import process from "node:process";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import stripAnsi from "strip-ansi";
 import rm from "rimraf";
 import execa from "execa";
@@ -409,7 +410,8 @@ async function runInitScriptStep(ctx: Context) {
   }
 
   try {
-    let initModule = await import(ctx.initScriptPath);
+    let initModulePath = pathToFileURL(ctx.initScriptPath).href;
+    let initModule = await import(initModulePath);
     let initFn: Function;
     if (typeof initModule === "function") {
       initFn = initModule;

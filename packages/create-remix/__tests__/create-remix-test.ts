@@ -518,6 +518,7 @@ describe("create-remix CLI", () => {
         "--no-git-init",
         "--install",
         "--init-script",
+        "--debug",
       ],
     });
 
