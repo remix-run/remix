@@ -474,6 +474,7 @@ describe("create-remix CLI", () => {
         "--template",
         path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
         "--no-git-init",
+        "--debug",
       ],
       interactions: [
         {
