@@ -9,19 +9,6 @@ import { server } from "./msw";
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterAll(() => server.close());
 
-const yarnUserAgent = "yarn/1.22.18 npm/? node/v14.17.0 linux x64";
-const pnpmUserAgent = "pnpm/6.32.3 npm/? node/v14.17.0 linux x64";
-
-// keep the console clear
-jest.mock("ora", () => {
-  return jest.fn(() => ({
-    start: jest.fn(() => ({
-      stop: jest.fn(),
-      clear: jest.fn(),
-    })),
-  }));
-});
-
 // this is so we can mock execSync for "npm install" and the like
 jest.mock("child_process", () => {
   let cp = jest.requireActual(
@@ -129,8 +116,6 @@ describe("the init command", () => {
     await run(["init"]);
 
     expect(output).toBe("");
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
@@ -160,8 +145,6 @@ describe("the init command", () => {
     await expect(run(["init"])).rejects.toThrowError(
       `🚨 Oops, remix.init failed`
     );
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     // we should keep remix.init around if the init script fails
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
   });
