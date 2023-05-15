@@ -113,6 +113,7 @@ async function getContext(argv: string[]): Promise<Context> {
   } = flags;
 
   let cwd = flags["_"][0] as string;
+  console.log("cwd", cwd);
   let latestRemixVersion = await getLatestRemixVersion();
   let interactive = isInteractive();
   let projectName = cwd;
@@ -422,7 +423,8 @@ async function runInitScriptStep(ctx: Context) {
     } else {
       throw new Error("remix.init script doesn't export a function.");
     }
-    await initFn({ isTypeScript, packageManager, rootDirectory: ctx.cwd });
+    let rootDirectory = path.resolve(ctx.cwd);
+    await initFn({ isTypeScript, packageManager, rootDirectory });
   } catch (err) {
     error("Oh no!", "Template's custom remix.init script failed");
     throw err;
