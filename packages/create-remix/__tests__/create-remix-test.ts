@@ -612,6 +612,9 @@ describe("create-remix CLI", () => {
   });
 
   it("runs npm install by default", async () => {
+    let originalUserAgent = process.env.npm_config_user_agent;
+    process.env.npm_config_user_agent = undefined;
+
     let projectDir = getProjectDir("npm-install");
 
     await main([
@@ -627,6 +630,55 @@ describe("create-remix CLI", () => {
       expect.arrayContaining(["install"]),
       expect.anything()
     );
+
+    process.env.npm_config_user_agent = originalUserAgent;
+  });
+
+  it("runs npm install if package manager in user agent string is unknown", async () => {
+    let originalUserAgent = process.env.npm_config_user_agent;
+    process.env.npm_config_user_agent =
+      "unknown_package_manager/1.0.0 npm/? node/v14.17.0 linux x64";
+
+    let projectDir = getProjectDir("npm-install");
+
+    await main([
+      projectDir,
+      "--template",
+      path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+      "--no-git-init",
+      "--yes",
+    ]);
+
+    expect(spawn).toHaveBeenCalledWith(
+      "npm",
+      expect.arrayContaining(["install"]),
+      expect.anything()
+    );
+
+    process.env.npm_config_user_agent = originalUserAgent;
+  });
+
+  it("recognizes when npm was used to run the command", async () => {
+    let originalUserAgent = process.env.npm_config_user_agent;
+    process.env.npm_config_user_agent =
+      "npm/8.19.4 npm/? node/v14.17.0 linux x64";
+
+    let projectDir = getProjectDir("yarn-create");
+
+    await main([
+      projectDir,
+      "--template",
+      path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+      "--no-git-init",
+      "--yes",
+    ]);
+
+    expect(spawn).toHaveBeenCalledWith(
+      "npm",
+      expect.arrayContaining(["install"]),
+      expect.anything()
+    );
+    process.env.npm_config_user_agent = originalUserAgent;
   });
 
   it("recognizes when Yarn was used to run the command", async () => {
