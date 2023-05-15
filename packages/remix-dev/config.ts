@@ -202,6 +202,12 @@ export interface AppConfig {
   tailwind?: boolean;
 
   /**
+   * Whether to process `.css.ts`/`.css.js` files using Vanilla Extract if `@vanilla-extract/css` is installed.
+   * Defaults to `true`.
+   */
+  vanillaExtract?: boolean;
+
+  /**
    * A list of filenames or a glob patterns to match files in the `app/routes`
    * directory that Remix will ignore. Matching files will not be recognized as
    * routes.
@@ -373,6 +379,12 @@ export interface RemixConfig {
   tailwind: boolean;
 
   /**
+   * Whether to process `.css.ts`/`.css.js` files using Vanilla Extract if `@vanilla-extract/css` is installed.
+   * Defaults to `true`.
+   */
+  vanillaExtract: boolean;
+
+  /**
    * A list of directories to watch.
    */
   watchPaths: string[];
@@ -520,6 +532,7 @@ export async function readConfig(
     appConfig.postcss ?? appConfig.future?.unstable_postcss === true;
   let tailwind =
     appConfig.tailwind ?? appConfig.future?.unstable_tailwind === true;
+  let vanillaExtract = appConfig.vanillaExtract ?? true;
 
   let appDirectory = path.resolve(
     rootDirectory,
@@ -771,6 +784,7 @@ export async function readConfig(
     mdx,
     postcss,
     tailwind,
+    vanillaExtract,
     watchPaths,
     tsconfigPath,
     future,

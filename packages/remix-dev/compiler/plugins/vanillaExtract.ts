@@ -60,6 +60,10 @@ export function vanillaExtractPlugin(
   return {
     name: pluginName,
     async setup(build) {
+      if (!config.vanillaExtract) {
+        return;
+      }
+
       try {
         require.resolve("@vanilla-extract/css");
       } catch (_) {

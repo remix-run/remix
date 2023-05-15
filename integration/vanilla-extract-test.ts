@@ -644,3 +644,59 @@ test.describe("Vanilla Extract", () => {
     expect(imgStatus).toBe(200);
   });
 });
+
+test.describe("Vanilla Extract disabled", () => {
+  let fixture: Fixture;
+  let appFixture: AppFixture;
+
+  test.beforeAll(async () => {
+    fixture = await createFixture({
+      files: {
+        "remix.config.js": js`
+          module.exports = {
+            vanillaExtract: false,
+            future: {
+              v2_routeConvention: true,
+            },
+          };
+        `,
+        "app/fixtures/disabled/styles.css.ts": js`
+          // You can't normally export functions from .css.ts files
+          // like this. If Vanilla Extract is enabled, this breaks.
+          export function getStyles() {
+            return {
+              background: 'peachpuff',
+              padding: ${JSON.stringify(TEST_PADDING_VALUE)}
+            };
+          }
+        `,
+        "app/routes/disabled-test.jsx": js`
+          import { getStyles } from "../fixtures/disabled/styles.css";
+
+          export default function() {
+            return (
+              <div data-testid="disabled" style={getStyles()}>
+                Disabled test
+              </div>
+            )
+          }
+        `,
+      },
+    });
+    appFixture = await createAppFixture(fixture);
+  });
+
+  test.afterAll(() => appFixture.close());
+
+  test("Vanilla Extract files aren't processed when disabled", async ({
+    page,
+  }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/disabled-test");
+    let locator = await page.locator("[data-testid='disabled']");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
+  });
+});

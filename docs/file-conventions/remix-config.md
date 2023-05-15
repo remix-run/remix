@@ -200,6 +200,10 @@ The platform the server build is targeting, which can either be `"neutral"` or
 
 Whether to support [Tailwind functions and directives][tailwind-functions-and-directives] in CSS files if `tailwindcss` is installed. Defaults to `false`.
 
+## vanillaExtract
+
+Whether to process `.css.ts`/`.css.js` files using [Vanilla Extract][vanilla-extract] if `@vanilla-extract/css` is installed. Defaults to `true`.
+
 ## watchPaths
 
 An array, string, or async function that defines custom directories, relative to the project root, to watch while running [remix dev][remix-dev]. These directories are in addition to [`appDirectory`][app-directory].
@@ -241,4 +245,5 @@ There are a few conventions that Remix uses you should be aware of.
 [app-directory]: #appDirectory
 [css-side-effect-imports]: ../guides/styling#css-side-effect-imports
 [postcss]: https://postcss.org
+[vanilla-extract]: https://vanilla-extract.style
 [tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives

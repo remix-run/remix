@@ -87,6 +87,7 @@ describe("readConfig", () => {
         "serverPlatform": "node",
         "tailwind": false,
         "tsconfigPath": Any<String>,
+        "vanillaExtract": true,
         "watchPaths": Array [],
       }
     `
