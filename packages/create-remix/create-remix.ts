@@ -113,7 +113,6 @@ async function getContext(argv: string[]): Promise<Context> {
   } = flags;
 
   let cwd = flags["_"][0] as string;
-  console.log("cwd", cwd);
   let latestRemixVersion = await getLatestRemixVersion();
   let interactive = isInteractive();
   let projectName = cwd;
