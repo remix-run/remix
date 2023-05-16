@@ -55,7 +55,7 @@ if (import.meta && import.meta.hot) {
       needsRevalidation,
     }: {
       assetsManifest: EntryContext["manifest"];
-      needsRevalidation: boolean;
+      needsRevalidation: Set<string>;
     }) => {
       let routeIds = [
         ...new Set(
