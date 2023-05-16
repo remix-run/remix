@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import esbuild from "esbuild";
+import * as fs from "node:fs";
 
 import type { Context } from "../compiler/context";
 import { emptyModulesPlugin } from "../compiler/plugins/emptyModules";
@@ -16,10 +17,23 @@ function isBareModuleId(id: string): boolean {
 
 type Route = Context["config"]["routes"][string];
 
+const cache = new Map<string, { hash: string; mtime: Date }>();
+
 export let detectLoaderChanges = async (ctx: Context) => {
   let entryPoints: Record<string, string> = {};
+  let mtimes = new Map<string, Date>();
+
   for (let id of Object.keys(ctx.config.routes)) {
-    entryPoints[id] = ctx.config.routes[id].file + "?loader";
+    let { file } = ctx.config.routes[id];
+
+    // Only add entry points for files that have changed since the last build.
+    // Store the mtime at this point to use when caching the result later.
+    let cached = cache.get(file);
+    let stats = fs.statSync(path.join(ctx.config.appDirectory, file));
+    if (!cached || stats.mtime.getTime() !== cached.mtime.getTime()) {
+      mtimes.set(file, stats.mtime);
+      entryPoints[id] = file + "?loader";
+    }
   }
   let options: esbuild.BuildOptions = {
     bundle: true,
@@ -98,13 +112,28 @@ export let detectLoaderChanges = async (ctx: Context) => {
   };
 
   let { metafile } = await esbuild.build(options);
-  let entries = Object.entries(metafile!.outputs).map(
-    ([hashjs, { entryPoint }]) => {
-      let file = entryPoint
-        ?.replace(/^hmr-loader:/, "")
-        ?.replace(/\?loader$/, "");
-      return [file, hashjs.replace(/\.js$/, "")];
+
+  let result: Record<string, string> = {};
+
+  // Put all cached hashes into the result
+  for (let [file, { hash }] of cache.entries()) {
+    result[file] = hash;
+  }
+
+  // Replace any changed routes with their new entries and cache them
+  Object.entries(metafile!.outputs).forEach(([hashjs, { entryPoint }]) => {
+    let file = entryPoint
+      ?.replace(/^hmr-loader:/, "")
+      ?.replace(/\?loader$/, "");
+    let hash = hashjs.replace(/\.js$/, "");
+    if (file) {
+      cache.set(file, {
+        hash,
+        mtime: mtimes.get(file)!,
+      });
+      result[file] = hash;
     }
-  );
-  return Object.fromEntries(entries);
+  });
+
+  return result;
 };
