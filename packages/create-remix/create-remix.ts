@@ -410,20 +410,11 @@ async function runInitScriptStep(ctx: Context) {
   }
 
   try {
-    let initScriptFileURL = pathToFileURL(ctx.initScriptPath).href;
-    let initModule = await import(initScriptFileURL).catch(
-      () => ctx.initScriptPath && import(ctx.initScriptPath) // Fall back to regular paths to support Jest etc.
-    );
-    let initFn: Function;
-    if (typeof initModule === "function") {
-      initFn = initModule;
-    } else if (
-      initModule &&
-      typeof initModule === "object" &&
-      typeof initModule.default === "function"
-    ) {
-      initFn = initModule.default;
-    } else {
+    let initFn = require(ctx.initScriptPath);
+    if (typeof initFn !== "function" && initFn.default) {
+      initFn = initFn.default;
+    }
+    if (typeof initFn !== "function") {
       throw new Error("remix.init script doesn't export a function.");
     }
     let rootDirectory = path.resolve(ctx.cwd);
