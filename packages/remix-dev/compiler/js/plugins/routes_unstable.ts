@@ -69,8 +69,8 @@ export function browserRouteModulesPlugin(
   return {
     name: "browser-route-modules",
     async setup(build) {
-      let [xdm, { default: remarkFrontmatter }] = await Promise.all([
-        import("xdm"),
+      let [mdx, { default: remarkFrontmatter }] = await Promise.all([
+        import("@mdx-js/mdx"),
         import("remark-frontmatter") as any,
       ]);
 
@@ -100,7 +100,7 @@ export function browserRouteModulesPlugin(
 
           if (/\.mdx?$/.test(file)) {
             let mdxResult = await processMDX(
-              xdm,
+              mdx,
               remarkFrontmatter,
               config,
               args.path,
