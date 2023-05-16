@@ -95,14 +95,12 @@ describe("create-remix CLI", () => {
 
       Remix projects are created from templates. A template can be:
 
-        - a file path to a directory of files
-        - a file path to a tarball
-        - the name of a :username/:repo on GitHub
-        - the URL of a GitHub repository (or directory within it)
-        - the URL of a tarball
+      - the name of a :username/:repo on GitHub
+      - the URL of a GitHub repository (or directory within it)
+      - the URL of a tarball
+      - a file path to a directory of files
+      - a file path to a tarball
 
-      $ create-remix my-app --template /path/to/remix-template
-      $ create-remix my-app --template /path/to/remix-template.tar.gz
       $ create-remix my-app --template remix-run/grunge-stack
       $ create-remix my-app --template :username/:repo
       $ create-remix my-app --template https://github.com/:username/:repo
@@ -110,6 +108,8 @@ describe("create-remix CLI", () => {
       $ create-remix my-app --template https://github.com/:username/:repo/tree/:branch/:directory
       $ create-remix my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
       $ create-remix my-app --template https://example.com/remix-template.tar.gz
+      $ create-remix my-app --template /path/to/remix-template
+      $ create-remix my-app --template /path/to/remix-template.tar.gz
 
       To create a new project from a template in a private GitHub repo,
       pass the \`token\` flag with a personal access token with access
@@ -207,26 +207,6 @@ describe("create-remix CLI", () => {
     expect(status).toBe(1);
     expect(fse.existsSync(path.join(notEmptyDir, "package.json"))).toBeFalsy();
     expect(fse.existsSync(path.join(notEmptyDir, "app/root.tsx"))).toBeFalsy();
-  });
-
-  // this also tests sub directories
-  it("works for examples in the examples repo", async () => {
-    let projectDir = getProjectDir("example-repo");
-
-    let { status, stderr } = await runCreateRemix({
-      args: [
-        projectDir,
-        "--template",
-        "examples/basic",
-        "--no-git-init",
-        "--no-install",
-      ],
-    });
-
-    expect(stderr.trim()).toBeFalsy();
-    expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
 
   it("works for GitHub username/repo combo", async () => {
@@ -966,7 +946,7 @@ describe("create-remix CLI", () => {
         args: [
           projectDir,
           "--template",
-          "grunge-stack",
+          "remix-run/grunge-stack",
           "--no-install",
           "--no-git-init",
           "--debug",

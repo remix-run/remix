@@ -19,19 +19,6 @@ function agent(url: string) {
   return new URL(url).protocol === "https:" ? httpsAgent : defaultAgent;
 }
 
-const REMIX_TEMPLATES = [
-  "arc",
-  "cloudflare-pages",
-  "cloudflare-workers",
-  "deno",
-  "express",
-  "fly",
-  "netlify",
-  "remix",
-  "vercel",
-] as const;
-const REMIX_STACKS = ["blues-stack", "indie-stack", "grunge-stack"] as const;
-
 export async function createTemplate(
   template: string,
   destPath: string,
@@ -41,9 +28,6 @@ export async function createTemplate(
 
   /**
    * Valid templates are:
-   * - template in `remix-run/remix` repo in `templates` directory
-   * - official stack in `remix-run/<stack>` repo
-   * - template in `remix-run/examples` repo
    * - local file or directory on disk
    * - github owner/repo shorthand
    * - full github repo URL
@@ -51,26 +35,6 @@ export async function createTemplate(
    */
 
   try {
-    if (isRemixTemplate(template)) {
-      log(`Using the ${template} template from the "remix-run/remix" repo`);
-      await createTemplateFromRemixTemplate(template, destPath, options);
-      return;
-    }
-
-    if (isRemixStack(template)) {
-      let stack = normalizeRemixStack(template);
-      log(`Using the template from the "remix-run/${stack}" repo`);
-      await createTemplateFromRemixStack(stack, destPath, options);
-      return;
-    }
-
-    if (isRemixExample(template)) {
-      log(`Using the template from the "remix-run/examples" repo`);
-      let exampleName = template.slice("examples/".length);
-      await createTemplateFromRemixExample(exampleName, destPath, options);
-      return;
-    }
-
     if (isLocalFilePath(template)) {
       log(`Using the template from local file at "${template}"`);
       let filepath = template.startsWith("file://")
@@ -113,31 +77,6 @@ interface CreateTemplateOptions {
   token?: string;
   onError(error: unknown): any;
   log?(message: string): any;
-}
-
-export function isRemixTemplate(input: string): input is RemixTemplate {
-  return REMIX_TEMPLATES.includes(input as any);
-}
-
-export function isRemixStack(
-  input: string
-): input is RemixStack | `remix-run/${RemixStack}` {
-  return (
-    REMIX_STACKS.includes(input as any) ||
-    REMIX_STACKS.includes(input.slice("remix-run/".length) as any)
-  );
-}
-
-function normalizeRemixStack(
-  input: RemixStack | `remix-run/${RemixStack}`
-): RemixStack {
-  return (
-    input.startsWith("remix-run/") ? input.slice("remix-run/".length) : input
-  ) as RemixStack;
-}
-
-function isRemixExample(input: string) {
-  return /^examples?\/[\w-]+$/.test(input);
 }
 
 function isLocalFilePath(input: string): boolean {
@@ -184,33 +123,6 @@ async function createTemplateFromGenericUrl(
   options: CreateTemplateOptions
 ) {
   await createTemplateFromRemoteTarball(url, destPath, options);
-}
-
-async function createTemplateFromRemixTemplate(
-  templateName: string,
-  destPath: string,
-  options: CreateTemplateOptions
-) {
-  let repoUrl = `https://github.com/remix-run/remix/tree/main/templates/${templateName}`;
-  await downloadAndExtractRepoTarball(getRepoInfo(repoUrl), destPath, options);
-}
-
-async function createTemplateFromRemixStack(
-  stack: RemixStack,
-  destPath: string,
-  options: CreateTemplateOptions
-) {
-  let repoUrl = `https://github.com/remix-run/${stack}/tree/main`;
-  await downloadAndExtractRepoTarball(getRepoInfo(repoUrl), destPath, options);
-}
-
-async function createTemplateFromRemixExample(
-  exampleName: string,
-  destPath: string,
-  options: CreateTemplateOptions
-) {
-  let repoUrl = `https://github.com/remix-run/examples/tree/main/${exampleName}`;
-  await downloadAndExtractRepoTarball(getRepoInfo(repoUrl), destPath, options);
 }
 
 async function createTemplateFromLocalFilePath(
@@ -523,9 +435,6 @@ export class CreateTemplateError extends Error {
     this.name = "CreateTemplateError";
   }
 }
-
-type RemixTemplate = typeof REMIX_TEMPLATES[number];
-type RemixStack = typeof REMIX_STACKS[number];
 
 interface RepoInfo {
   owner: string;

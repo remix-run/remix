@@ -39,16 +39,13 @@ pnpm create remix@latest <projectDir>
 
 A valid template can be:
 
-- a directory located in the [`templates` folder of the Remix repository][templates-folder-of-the-remix-repository]
+- the name of a `:username/:repo` on GitHub
+- the URL of a GitHub repository (or directory within it)
+- the URL of a remote tarball
 - a local file path to a directory of files
 - a local file path to a tarball
-- the name of a `:username/:repo` on GitHub
-- the URL of a remote tarball
 
 ```sh
-npm create remix@latest ./my-app --template fly
-npm create remix@latest ./my-app --template /path/to/remix-template
-npm create remix@latest ./my-app --template /path/to/remix-template.tar.gz
 npm create remix@latest ./my-app --template remix-run/grunge-stack
 npm create remix@latest ./my-app --template :username/:repo
 npm create remix@latest ./my-app --template https://github.com/:username/:repo
@@ -56,6 +53,8 @@ npm create remix@latest ./my-app --template https://github.com/:username/:repo/t
 npm create remix@latest ./my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
 npm create remix@latest ./my-app --template https://github.com/:username/:repo/releases/latest/download/:tag.tar.gz
 npm create remix@latest ./my-app --template https://example.com/remix-template.tar.gz
+npm create remix@latest ./my-app --template /path/to/remix-template
+npm create remix@latest ./my-app --template /path/to/remix-template.tar.gz
 ```
 
 <aside aria-label="Private GitHub repo templates">
@@ -65,5 +64,3 @@ To create a new project from a template in a private GitHub repo, pass the `--to
 
 </docs-info>
 </aside>
-
-[templates-folder-of-the-remix-repository]: https://github.com/remix-run/remix/tree/main/templates

@@ -1,7 +1,6 @@
 import process from "node:process";
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import stripAnsi from "strip-ansi";
 import rm from "rimraf";
 import execa from "execa";
@@ -277,7 +276,10 @@ async function templateStep(ctx: Context) {
     ]);
   }
 
-  let template = ctx.template ?? "remix";
+  let template =
+    ctx.template ??
+    "https://github.com/remix-run/remix/tree/main/templates/remix";
+
   await loadingIndicator({
     start: "Template copying...",
     end: "Template copied",
@@ -732,21 +734,21 @@ ${color.heading("Creating a new project")}:
 
 Remix projects are created from templates. A template can be:
 
-  - a file path to a directory of files
-  - a file path to a tarball
-  - the name of a :username/:repo on GitHub
-  - the URL of a GitHub repository (or directory within it)
-  - the URL of a tarball
+- the name of a :username/:repo on GitHub
+- the URL of a GitHub repository (or directory within it)
+- the URL of a tarball
+- a file path to a directory of files
+- a file path to a tarball
 ${[
-	"/path/to/remix-template",
-	"/path/to/remix-template.tar.gz",
-	"remix-run/grunge-stack",
+  "remix-run/grunge-stack",
 	":username/:repo",
 	"https://github.com/:username/:repo",
 	"https://github.com/:username/:repo/tree/:branch",
 	"https://github.com/:username/:repo/tree/:branch/:directory",
 	"https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz",
 	"https://example.com/remix-template.tar.gz",
+	"/path/to/remix-template",
+	"/path/to/remix-template.tar.gz",
 ].reduce((str, example) => {
 	return `${str}\n${color.dim("$")} ${color.greenBright("create-remix")} my-app ${color.arg(`--template ${example}`)}`;
 }, "")}
