@@ -393,10 +393,6 @@ export async function readConfig(
   let serverMainFields = appConfig.serverMainFields;
   let serverMinify = appConfig.serverMinify;
 
-  if (!appConfig.serverModuleFormat) {
-    warnOnce(serverModuleFormatWarning, "serverModuleFormatWarning");
-  }
-
   let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
   let serverPlatform = appConfig.serverPlatform || "node";
   serverMainFields ??=
