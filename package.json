@@ -84,7 +84,7 @@
     "@types/retry": "^0.12.0",
     "@types/semver": "^7.3.4",
     "@types/ssri": "^7.1.0",
-    "@vanilla-extract/css": "^1.1.0",
+    "@vanilla-extract/css": "^1.10.0",
     "abort-controller": "^3.0.0",
     "abortcontroller-polyfill": "^1.7.3",
     "babel-jest": "^27.5.1",
