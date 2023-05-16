@@ -21,5 +21,24 @@
     "@remix-run/testing": "1.16.0",
     "@remix-run/vercel": "1.16.0"
   },
-  "changesets": []
+  "changesets": [
+    "afraid-coats-count",
+    "better-opt-out-of-revalidations",
+    "big-carrots-attend",
+    "calm-falcons-boil",
+    "eslint-no-display-name",
+    "export-use-match",
+    "five-poems-stare",
+    "good-laws-marry",
+    "include-css-bundle-in-manifest-hash",
+    "light-bikes-exercise",
+    "polite-garlics-invite",
+    "poor-nails-warn",
+    "slimy-snakes-do",
+    "tsconfig-no-modify",
+    "twenty-toys-laugh",
+    "update-babel",
+    "v2-meta-loader-data-type",
+    "young-dingos-sleep"
+  ]
 }
