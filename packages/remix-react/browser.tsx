@@ -189,6 +189,17 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     });
   }, [location]);
 
+  // Check if __remixRouteModules is missing the module for the current route
+  // and if so, load it.
+  for (let match of router.state.matches) {
+    if (!window.__remixRouteModules[match.route.id]) {
+      window.location.reload();
+      // `reload` executes asynchronously, meaning the error will still flash.
+      // To get around that we return an empty div here.
+      return <div></div>;
+    }
+  }
+
   // We need to include a wrapper RemixErrorBoundary here in case the root error
   // boundary also throws and we need to bubble up outside of the router entirely.
   // Then we need a stateful location here so the user can back-button navigate
