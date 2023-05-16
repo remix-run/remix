@@ -1,173 +1,233 @@
-import exitHook from "exit-hook";
+import * as path from "node:path";
+import * as stream from "node:stream";
 import fs from "fs-extra";
-import getPort, { makeRange } from "get-port";
-import os from "os";
-import path from "node:path";
 import prettyMs from "pretty-ms";
-import fetch from "node-fetch";
+import execa from "execa";
+import express from "express";
 
+import * as Channel from "../channel";
 import { type Manifest } from "../manifest";
 import * as Compiler from "../compiler";
 import { type RemixConfig } from "../config";
 import { loadEnv } from "./env";
-import * as LiveReload from "./liveReload";
+import * as Socket from "./socket";
 import * as HMR from "./hmr";
 import { warnOnce } from "../warnOnce";
+import { detectPackageManager } from "../cli/detectPackageManager";
+import * as HDR from "./hdr";
 
-let info = (message: string) => console.info(`💿 ${message}`);
+type Origin = {
+  scheme: string;
+  host: string;
+  port: number;
+};
 
-let relativePath = (file: string) => path.relative(process.cwd(), file);
+let stringifyOrigin = (o: Origin) => `${o.scheme}://${o.host}:${o.port}`;
 
-let sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+let detectBin = async (): Promise<string> => {
+  let pkgManager = detectPackageManager() ?? "npm";
+  if (pkgManager === "npm") {
+    // npm v9 removed the `bin` command, so have to use `prefix`
+    let { stdout } = await execa(pkgManager, ["prefix"]);
+    return path.join(stdout.trim(), "node_modules", ".bin");
+  }
+  let { stdout } = await execa(pkgManager, ["bin"]);
+  return stdout.trim();
+};
+
+export let serve = async (
+  initialConfig: RemixConfig,
+  options: {
+    command: string;
+    httpScheme: string;
+    httpHost: string;
+    httpPort: number;
+    webSocketPort: number;
+    restart: boolean;
+  }
+) => {
+  await loadEnv(initialConfig.rootDirectory);
+  let websocket = Socket.serve({ port: options.webSocketPort });
+  let httpOrigin: Origin = {
+    scheme: options.httpScheme,
+    host: options.httpHost,
+    port: options.httpPort,
+  };
+
+  let state: {
+    appServer?: execa.ExecaChildProcess;
+    manifest?: Manifest;
+    prevManifest?: Manifest;
+    appReady?: Channel.Type<void>;
+    hdr?: Promise<Record<string, string>>;
+    prevLoaderHashes?: Record<string, string>;
+  } = {};
+
+  let bin = await detectBin();
+  let startAppServer = (command: string) => {
+    console.log(`> ${command}`);
+    let newAppServer = execa.command(command, {
+      stdio: "pipe",
+      env: {
+        NODE_ENV: "development",
+        PATH:
+          bin + (process.platform === "win32" ? ";" : ":") + process.env.PATH,
+        REMIX_DEV_HTTP_ORIGIN: stringifyOrigin(httpOrigin),
+      },
+      // https://github.com/sindresorhus/execa/issues/433
+      windowsHide: false,
+    });
+
+    if (newAppServer.stdin)
+      process.stdin.pipe(newAppServer.stdin, { end: true });
+    if (newAppServer.stderr)
+      newAppServer.stderr.pipe(process.stderr, { end: false });
+    if (newAppServer.stdout) {
+      newAppServer.stdout
+        .pipe(
+          new stream.PassThrough({
+            transform(chunk, _, callback) {
+              let str: string = chunk.toString();
+              let matches =
+                str && str.matchAll(/\[REMIX DEV\] ([A-f0-9]+) ready/g);
+              if (matches) {
+                for (let match of matches) {
+                  let buildHash = match[1];
+                  if (buildHash === state.manifest?.version) {
+                    state.appReady?.ok();
+                  }
+                }
+              }
+
+              callback(null, chunk);
+            },
+          })
+        )
+        .pipe(process.stdout, { end: false });
+    }
+
+    return newAppServer;
+  };
+
+  let dispose = await Compiler.watch(
+    {
+      config: initialConfig,
+      options: {
+        mode: "development",
+        sourcemap: true,
+        onWarning: warnOnce,
+        devHttpOrigin: httpOrigin,
+        devWebSocketPort: options.webSocketPort,
+      },
+    },
+    {
+      onBuildStart: async (ctx) => {
+        state.appReady?.err();
+        clean(ctx.config);
+        websocket.log(state.prevManifest ? "Rebuilding..." : "Building...");
+
+        state.hdr = HDR.detectLoaderChanges(ctx);
+      },
+      onBuildManifest: (manifest: Manifest) => {
+        state.manifest = manifest;
+      },
+      onBuildFinish: async (ctx, durationMs, succeeded) => {
+        if (!succeeded) return;
+
+        websocket.log(
+          (state.prevManifest ? "Rebuilt" : "Built") +
+            ` in ${prettyMs(durationMs)}`
+        );
+        state.appReady = Channel.create();
+
+        let start = Date.now();
+        console.log(`Waiting for app server (${state.manifest?.version})`);
+        if (
+          options.command &&
+          (state.appServer === undefined || options.restart)
+        ) {
+          await kill(state.appServer);
+          state.appServer = startAppServer(options.command);
+        }
+        let { ok } = await state.appReady.result;
+        // result not ok -> new build started before this one finished. do not process outdated manifest
+        let loaderHashes = await state.hdr;
+        if (ok) {
+          console.log(`App server took ${prettyMs(Date.now() - start)}`);
+          if (state.manifest && loaderHashes && state.prevManifest) {
+            let updates = HMR.updates(
+              ctx.config,
+              state.manifest,
+              state.prevManifest,
+              loaderHashes,
+              state.prevLoaderHashes
+            );
+            websocket.hmr(state.manifest, updates);
+
+            let hdr = updates.some((u) => u.revalidate);
+            console.log("> HMR" + (hdr ? " + HDR" : ""));
+          } else if (state.prevManifest !== undefined) {
+            websocket.reload();
+            console.log("> Live reload");
+          }
+        }
+        state.prevManifest = state.manifest;
+        state.prevLoaderHashes = loaderHashes;
+      },
+      onFileCreated: (file) =>
+        websocket.log(`File created: ${relativePath(file)}`),
+      onFileChanged: (file) =>
+        websocket.log(`File changed: ${relativePath(file)}`),
+      onFileDeleted: (file) =>
+        websocket.log(`File deleted: ${relativePath(file)}`),
+    }
+  );
+
+  let httpServer = express()
+    // handle `broadcastDevReady` messages
+    .use(express.json())
+    .post("/ping", (req, res) => {
+      let { buildHash } = req.body;
+      if (typeof buildHash !== "string") {
+        console.warn(`Unrecognized payload: ${req.body}`);
+        res.sendStatus(400);
+      }
+      if (buildHash === state.manifest?.version) {
+        state.appReady?.ok();
+      }
+      res.sendStatus(200);
+    })
+    .listen(httpOrigin.port, () => {
+      console.log("Remix dev server ready");
+    });
+
+  return new Promise(() => {}).finally(async () => {
+    await kill(state.appServer);
+    websocket.close();
+    httpServer.close();
+    await dispose();
+  });
+};
 
 let clean = (config: RemixConfig) => {
   try {
     fs.emptyDirSync(config.relativeAssetsBuildDirectory);
-  } catch {
-    // ignore failed clean up attempts
+  } catch {}
+};
+
+let relativePath = (file: string) => path.relative(process.cwd(), file);
+
+let kill = async (p?: execa.ExecaChildProcess) => {
+  if (p === undefined) return;
+  let channel = Channel.create<void>();
+  p.on("exit", channel.ok);
+
+  // https://github.com/nodejs/node/issues/12378
+  if (process.platform === "win32") {
+    await execa("taskkill", ["/pid", String(p.pid), "/f", "/t"]);
+  } else {
+    p.kill("SIGTERM", { forceKillAfterTimeout: 1_000 });
   }
-};
 
-let getHost = () =>
-  process.env.HOST ??
-  Object.values(os.networkInterfaces())
-    .flat()
-    .find((ip) => String(ip?.family).includes("4") && !ip?.internal)?.address;
-
-let findPort = async (portPreference?: number) =>
-  getPort({
-    port:
-      // prettier-ignore
-      portPreference ? Number(portPreference) :
-        process.env.PORT ? Number(process.env.PORT) :
-          makeRange(3001, 3100),
-  });
-
-let fetchAssetsManifest = async (
-  origin: string,
-  remixRequestHandlerPath: string
-): Promise<Manifest | undefined> => {
-  try {
-    let url = origin + remixRequestHandlerPath + "/__REMIX_ASSETS_MANIFEST";
-    let res = await fetch(url);
-    let assetsManifest = (await res.json()) as Manifest;
-    return assetsManifest;
-  } catch (error) {
-    return undefined;
-  }
-};
-
-let resolveDev = (
-  dev: RemixConfig["future"]["unstable_dev"],
-  flags: { port?: number; appServerPort?: number }
-) => {
-  if (dev === false)
-    throw Error("The new dev server requires 'unstable_dev' to be set");
-
-  let port = flags.port ?? (dev === true ? undefined : dev.port);
-
-  let appServerPort =
-    flags.appServerPort ?? (dev === true || dev.appServerPort == undefined)
-      ? 3000
-      : dev.appServerPort;
-  let remixRequestHandlerPath =
-    dev === true || dev.remixRequestHandlerPath === undefined
-      ? ""
-      : dev.remixRequestHandlerPath;
-  let rebuildPollIntervalMs =
-    dev === true || dev.rebuildPollIntervalMs === undefined
-      ? 50
-      : dev.rebuildPollIntervalMs;
-
-  return {
-    port,
-    appServerPort,
-    remixRequestHandlerPath,
-    rebuildPollIntervalMs,
-  };
-};
-
-export let serve = async (
-  config: RemixConfig,
-  flags: { port?: number; appServerPort?: number } = {}
-) => {
-  clean(config);
-  await loadEnv(config.rootDirectory);
-
-  let dev = resolveDev(config.future.unstable_dev, flags);
-
-  let host = getHost();
-  let appServerOrigin = `http://${host ?? "localhost"}:${dev.appServerPort}`;
-
-  let waitForAppServer = async (buildHash: string) => {
-    while (true) {
-      // TODO AbortController signal to cancel responses?
-      let assetsManifest = await fetchAssetsManifest(
-        appServerOrigin,
-        dev.remixRequestHandlerPath
-      );
-      if (assetsManifest?.version === buildHash) return;
-
-      await sleep(dev.rebuildPollIntervalMs);
-    }
-  };
-
-  // watch and live reload on rebuilds
-  let port = await findPort(dev.port);
-  let socket = LiveReload.serve({ port });
-  let prevManifest: Manifest | undefined = undefined;
-  let dispose = await Compiler.watch(
-    {
-      config,
-      options: {
-        mode: "development",
-        liveReloadPort: port,
-        sourcemap: true,
-        onWarning: warnOnce,
-      },
-    },
-    {
-      onInitialBuild: (durationMs, manifest) => {
-        info(`Built in ${prettyMs(durationMs)}`);
-        prevManifest = manifest;
-      },
-      onRebuildStart: () => {
-        clean(config);
-        socket.log("Rebuilding...");
-      },
-      onRebuildFinish: async (durationMs, manifest) => {
-        if (!manifest) return;
-        socket.log(`Rebuilt in ${prettyMs(durationMs)}`);
-
-        info(`Waiting for ${appServerOrigin}...`);
-        let start = Date.now();
-        await waitForAppServer(manifest.version);
-        info(`${appServerOrigin} ready in ${prettyMs(Date.now() - start)}`);
-        await new Promise((resolve) => {
-          setTimeout(resolve, -1);
-        });
-
-        if (manifest.hmr && prevManifest) {
-          let updates = HMR.updates(config, manifest, prevManifest);
-          socket.hmr(manifest, updates);
-        } else {
-          socket.reload();
-        }
-        prevManifest = manifest;
-      },
-      onFileCreated: (file) =>
-        socket.log(`File created: ${relativePath(file)}`),
-      onFileChanged: (file) =>
-        socket.log(`File changed: ${relativePath(file)}`),
-      onFileDeleted: (file) =>
-        socket.log(`File deleted: ${relativePath(file)}`),
-    }
-  );
-
-  // clean up build directories when dev server exits
-  exitHook(() => clean(config));
-  return async () => {
-    await dispose();
-    socket.close();
-  };
+  await channel.result;
 };

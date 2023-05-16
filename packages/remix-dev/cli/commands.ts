@@ -1,6 +1,8 @@
 import * as path from "path";
 import { execSync } from "child_process";
+import inspector from "inspector";
 import * as fse from "fs-extra";
+import getPort, { makeRange } from "get-port";
 import ora from "ora";
 import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
@@ -15,13 +17,15 @@ import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
 import { formatRoutes, RoutesFormat, isRoutesFormat } from "../config/format";
 import { createApp } from "./create";
-import { getPreferredPackageManager } from "./getPreferredPackageManager";
+import { detectPackageManager } from "./detectPackageManager";
 import { setupRemix, isSetupPlatform, SetupPlatform } from "./setup";
 import runCodemod from "../codemod";
 import { CodemodError } from "../codemod/utils/error";
 import { TaskError } from "../codemod/utils/task";
 import { transpile as convertFileToJS } from "./useJavascript";
 import { warnOnce } from "../warnOnce";
+import type { Options } from "../compiler/options";
+import { getAppDependencies } from "../dependencies";
 
 export async function create({
   appTemplate,
@@ -80,7 +84,7 @@ export async function init(
 
   let initPackageJson = path.resolve(initScriptDir, "package.json");
   let isTypeScript = fse.existsSync(path.join(projectDir, "tsconfig.json"));
-  let packageManager = getPreferredPackageManager();
+  let packageManager = detectPackageManager() ?? "npm";
 
   if (await fse.pathExists(initPackageJson)) {
     execSync(`${packageManager} install`, {
@@ -167,24 +171,31 @@ export async function build(
 
   let start = Date.now();
   let config = await readConfig(remixRoot);
-  fse.emptyDirSync(config.assetsBuildDirectory);
-  await compiler
-    .build({
-      config,
-      options: {
-        mode,
-        sourcemap,
-        onWarning: warnOnce,
-      },
-    })
-    .catch((thrown) => {
-      compiler.logThrown(thrown);
-      process.exit(1);
-    });
+  let options: Options = {
+    mode,
+    sourcemap,
+    onWarning: warnOnce,
+  };
+  if (mode === "development" && config.future.unstable_dev) {
+    let dev = await resolveDevBuild(config);
+    options.devHttpOrigin = {
+      scheme: dev.httpScheme,
+      host: dev.httpHost,
+      port: dev.httpPort,
+    };
+    options.devWebSocketPort = dev.webSocketPort;
+  }
 
-  console.log(`built in ${prettyMs(Date.now() - start)}`);
+  fse.emptyDirSync(config.assetsBuildDirectory);
+  await compiler.build({ config, options }).catch((thrown) => {
+    compiler.logThrown(thrown);
+    process.exit(1);
+  });
+
+  console.log(`Built in ${prettyMs(Date.now() - start)}`);
 }
 
+// TODO: replace watch in v2
 export async function watch(
   remixRootOrConfig: string | RemixConfig,
   modeArg?: string
@@ -197,26 +208,41 @@ export async function watch(
       ? remixRootOrConfig
       : await readConfig(remixRootOrConfig);
 
-  devServer.liveReload(config, {
-    onInitialBuild: (durationMs) =>
-      console.log(`💿 Built in ${prettyMs(durationMs)}`),
-  });
+  devServer.liveReload(config);
   return await new Promise(() => {});
 }
 
 export async function dev(
   remixRoot: string,
-  flags: { port?: number; appServerPort?: number } = {}
+  flags: {
+    debug?: boolean;
+    port?: number; // TODO: remove for v2
+
+    // unstable_dev
+    command?: string;
+    httpScheme?: string;
+    httpHost?: string;
+    httpPort?: number;
+    restart?: boolean;
+    websocketPort?: number;
+  } = {}
 ) {
+  if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
+    console.warn(
+      `Forcing NODE_ENV to be 'development'. Was: ${process.env.NODE_ENV}`
+    );
+  }
+  process.env.NODE_ENV = "development";
+  if (flags.debug) inspector.open();
+
   let config = await readConfig(remixRoot);
 
-  if (config.future.unstable_dev !== false) {
-    await devServer_unstable.serve(config, flags);
+  if (config.future.unstable_dev === false) {
+    await devServer.serve(config, flags.port);
     return await new Promise(() => {});
   }
 
-  await devServer.serve(config, flags.port);
-  return await new Promise(() => {});
+  await devServer_unstable.serve(config, await resolveDevServe(config, flags));
 }
 
 export async function codemod(
@@ -441,4 +467,101 @@ let parseMode = (
   if (mode === "test") return mode;
   console.error(`Unrecognized mode: ${mode}`);
   process.exit(1);
+};
+
+let findPort = async () => getPort({ port: makeRange(3001, 3100) });
+
+type DevBuildFlags = {
+  httpScheme: string;
+  httpHost: string;
+  httpPort: number;
+  webSocketPort: number;
+};
+let resolveDevBuild = async (
+  config: RemixConfig,
+  flags: Partial<DevBuildFlags> = {}
+): Promise<DevBuildFlags> => {
+  let dev = config.future.unstable_dev;
+  if (dev === false) throw Error("This should never happen");
+
+  // prettier-ignore
+  let httpScheme =
+    flags.httpScheme ??
+    (dev === true ? undefined : dev.httpScheme) ??
+    "http";
+  // prettier-ignore
+  let httpHost =
+    flags.httpHost ??
+    (dev === true ? undefined : dev.httpHost) ??
+    "localhost";
+  // prettier-ignore
+  let httpPort =
+    flags.httpPort ??
+    (dev === true ? undefined : dev.httpPort) ??
+    (await findPort());
+  // prettier-ignore
+  let webSocketPort =
+    flags.webSocketPort ??
+    (dev === true ? undefined : dev.webSocketPort) ??
+    (await findPort());
+
+  return {
+    httpScheme,
+    httpHost,
+    httpPort,
+    webSocketPort,
+  };
+};
+
+type DevServeFlags = DevBuildFlags & {
+  command: string;
+  restart: boolean;
+};
+let resolveDevServe = async (
+  config: RemixConfig,
+  flags: Partial<DevServeFlags> = {}
+): Promise<DevServeFlags> => {
+  let dev = config.future.unstable_dev;
+  if (dev === false) throw Error("Cannot resolve dev options");
+
+  let { httpScheme, httpHost, httpPort, webSocketPort } = await resolveDevBuild(
+    config,
+    flags
+  );
+
+  // prettier-ignore
+  let command =
+    flags.command ??
+    (dev === true ? undefined : dev.command)
+  if (!command) {
+    command = `remix-serve ${path.relative(
+      process.cwd(),
+      config.serverBuildPath
+    )}`;
+
+    let usingRemixAppServer =
+      getAppDependencies(config, true)["@remix-run/serve"] !== undefined;
+    if (!usingRemixAppServer) {
+      console.error(
+        [
+          `Remix dev server command defaulted to '${command}', but @remix-run/serve is not installed.`,
+          "If you are using another server, specify how to run it with `-c` or `--command` flag.",
+          "For example, `remix dev -c 'node ./server.js'`",
+        ].join("\n")
+      );
+      process.exit(1);
+    }
+  }
+
+  let restart =
+    flags.restart ?? (dev === true ? undefined : dev.restart) ?? true;
+
+  return {
+    command,
+    httpScheme,
+    httpHost,
+    httpPort,
+    webSocketPort,
+    restart,
+  };
 };
