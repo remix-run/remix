@@ -4,10 +4,6 @@ import * as fse from "fs-extra";
 import stripAnsi from "strip-ansi";
 
 import { run } from "../cli/run";
-import { server } from "./msw";
-
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterAll(() => server.close());
 
 // this is so we can mock execSync for "npm install" and the like
 jest.mock("child_process", () => {

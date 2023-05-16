@@ -32,8 +32,6 @@ async function execRemix(
       [
         "--require",
         require.resolve("esbuild-register"),
-        "--require",
-        path.join(__dirname, "./msw.ts"),
         path.resolve(__dirname, "../cli.ts"),
         ...args,
       ],
@@ -57,8 +55,6 @@ async function execRemix(
       [
         "--require",
         require.resolve("esbuild-register"),
-        "--require",
-        path.join(__dirname, "./msw.ts"),
         path.resolve(__dirname, "../cli.ts"),
         ...args,
       ],
