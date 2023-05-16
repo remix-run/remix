@@ -451,7 +451,7 @@ describe("create-remix CLI", () => {
       args: [
         projectDir,
         "--template",
-        path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+        path.join(__dirname, "fixtures", "successful-remix-init"),
         "--no-git-init",
         "--debug",
       ],
@@ -471,7 +471,6 @@ describe("create-remix CLI", () => {
     expect(stdout).toContain(`Template's custom remix.init script complete`);
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
@@ -483,7 +482,7 @@ describe("create-remix CLI", () => {
       args: [
         projectDir,
         "--template",
-        path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+        path.join(__dirname, "fixtures", "successful-remix-init"),
         "--no-git-init",
       ],
       interactions: [
@@ -498,7 +497,6 @@ describe("create-remix CLI", () => {
     expect(stdout).toContain(`Skipping template's custom remix.init script.`);
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
 
     // Init script hasn't run so file exists
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeFalsy();
@@ -514,7 +512,7 @@ describe("create-remix CLI", () => {
       args: [
         projectDir,
         "--template",
-        path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+        path.join(__dirname, "fixtures", "successful-remix-init"),
         "--no-git-init",
         "--install",
         "--init-script",
@@ -524,12 +522,9 @@ describe("create-remix CLI", () => {
 
     expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
-    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
 
     expect(stdout).toContain(`Template's custom remix.init script complete`);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
   });
@@ -543,7 +538,7 @@ describe("create-remix CLI", () => {
       args: [
         projectDir,
         "--template",
-        path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+        path.join(__dirname, "fixtures", "successful-remix-init"),
         "--no-git-init",
         "--no-install",
         "--init-script",
@@ -554,7 +549,6 @@ describe("create-remix CLI", () => {
     expect(stdout).toContain(`Skipping template's custom remix.init script.`);
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
 
     // Init script hasn't run so file exists
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeFalsy();
@@ -570,7 +564,7 @@ describe("create-remix CLI", () => {
       args: [
         projectDir,
         "--template",
-        path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+        path.join(__dirname, "fixtures", "successful-remix-init"),
         "--no-git-init",
         "--install",
         "--no-init-script",
@@ -581,7 +575,6 @@ describe("create-remix CLI", () => {
     expect(stdout).toContain(`Skipping template's custom remix.init script.`);
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
 
     // Init script hasn't run so file exists
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeFalsy();
@@ -597,7 +590,7 @@ describe("create-remix CLI", () => {
       args: [
         projectDir,
         "--template",
-        path.join(__dirname, "fixtures", "failing-remix-init.tar.gz"),
+        path.join(__dirname, "fixtures", "failing-remix-init"),
         "--no-git-init",
         "--install",
         "--init-script",
@@ -609,8 +602,6 @@ describe("create-remix CLI", () => {
     );
     expect(status).toBe(1);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
-    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
-
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeFalsy();
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeTruthy();
   });
@@ -627,7 +618,7 @@ describe("create-remix CLI", () => {
     await main([
       projectDir,
       "--template",
-      path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+      path.join(__dirname, "fixtures", "successful-remix-init"),
       "--no-git-init",
       "--yes",
     ]);
@@ -654,7 +645,7 @@ describe("create-remix CLI", () => {
     await main([
       projectDir,
       "--template",
-      path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+      path.join(__dirname, "fixtures", "successful-remix-init"),
       "--no-git-init",
       "--yes",
     ]);
@@ -681,7 +672,7 @@ describe("create-remix CLI", () => {
     await main([
       projectDir,
       "--template",
-      path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+      path.join(__dirname, "fixtures", "successful-remix-init"),
       "--no-git-init",
       "--yes",
     ]);
@@ -707,7 +698,7 @@ describe("create-remix CLI", () => {
     await main([
       projectDir,
       "--template",
-      path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+      path.join(__dirname, "fixtures", "successful-remix-init"),
       "--no-git-init",
       "--yes",
     ]);
@@ -733,7 +724,7 @@ describe("create-remix CLI", () => {
     await main([
       projectDir,
       "--template",
-      path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+      path.join(__dirname, "fixtures", "successful-remix-init"),
       "--no-git-init",
       "--yes",
     ]);
@@ -759,7 +750,7 @@ describe("create-remix CLI", () => {
     await main([
       projectDir,
       "--template",
-      path.join(__dirname, "fixtures", "successful-remix-init.tar.gz"),
+      path.join(__dirname, "fixtures", "successful-remix-init"),
       "--no-git-init",
       "--yes",
       "--package-manager",
