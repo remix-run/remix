@@ -78,7 +78,12 @@ const config = {
       },
     },
     {
-      files: ["**/routes/**/*.js?(x)", "**/routes/**/*.tsx"],
+      files: [
+        "**/routes/**/*.js?(x)",
+        "**/routes/**/*.tsx",
+        "app/root.js?(x)",
+        "app/root.tsx",
+      ],
       rules: {
         // Routes may use default exports without a name. At the route level
         // identifying components for debugging purposes is less of an issue, as

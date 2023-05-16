@@ -5,7 +5,7 @@ module.exports = {
   serverMainFields: ["browser", "module", "main"],
   serverModuleFormat: "esm",
   serverPlatform: "neutral",
-  server: "./server.js",
+  server: "./server.ts",
   devServerBroadcastDelay: 1000,
   ignoredRouteFiles: ["**/.*"],
   // appDirectory: "app",

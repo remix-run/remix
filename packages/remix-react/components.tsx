@@ -14,6 +14,7 @@ import {
   Await as AwaitRR,
   Link as RouterLink,
   NavLink as RouterNavLink,
+  Outlet,
   UNSAFE_DataRouterContext as DataRouterContext,
   UNSAFE_DataRouterStateContext as DataRouterStateContext,
   matchRoutes,
@@ -80,7 +81,7 @@ function useRemixContext(): RemixContextObject {
 // RemixRoute
 
 export function RemixRoute({ id }: { id: string }) {
-  let { routeModules } = useRemixContext();
+  let { routeModules, future } = useRemixContext();
 
   invariant(
     routeModules,
@@ -88,7 +89,15 @@ export function RemixRoute({ id }: { id: string }) {
       "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
   );
 
-  let { default: Component } = routeModules[id];
+  let { default: Component, ErrorBoundary, CatchBoundary } = routeModules[id];
+
+  // Default Component to Outlet if we expose boundary UI components
+  if (
+    !Component &&
+    (ErrorBoundary || (!future.v2_errorBoundary && CatchBoundary))
+  ) {
+    Component = Outlet;
+  }
 
   invariant(
     Component,
@@ -291,7 +300,14 @@ export function composeEventHandlers<
  */
 export function Links() {
   let { manifest, routeModules } = useRemixContext();
-  let { matches } = useDataRouterStateContext();
+  let { errors, matches: routerMatches } = useDataRouterStateContext();
+
+  let matches = errors
+    ? routerMatches.slice(
+        0,
+        routerMatches.findIndex((m) => errors![m.route.id]) + 1
+      )
+    : routerMatches;
 
   let links = React.useMemo(
     () => getLinksForMatches(matches, routeModules, manifest),
@@ -465,12 +481,24 @@ function PrefetchPageLinksImpl({
  */
 export function Meta() {
   let { routeModules } = useRemixContext();
-  let { matches: _matches, loaderData } = useDataRouterStateContext();
+  let {
+    errors,
+    matches: routerMatches,
+    loaderData,
+  } = useDataRouterStateContext();
   let location = useLocation();
+
+  let _matches = errors
+    ? routerMatches.slice(
+        0,
+        routerMatches.findIndex((m) => errors![m.route.id]) + 1
+      )
+    : routerMatches;
 
   let meta: MetaDescriptor[] = [];
   let leafMeta: MetaDescriptor[] | null = null;
   let matches: MetaMatches = [];
+
   for (let i = 0; i < _matches.length; i++) {
     let _match = _matches[i];
     let routeId = _match.route.id;
@@ -1031,6 +1059,7 @@ export const LiveReload =
   process.env.NODE_ENV !== "development"
     ? () => null
     : function LiveReload({
+        // TODO: remove REMIX_DEV_SERVER_WS_PORT in v2
         port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
         timeoutMs = 1000,
         nonce = undefined,
@@ -1049,7 +1078,7 @@ export const LiveReload =
                 function remixLiveReloadConnect(config) {
                   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
-                  let port = (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.liveReloadPort) || ${String(
+                  let port = (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.websocketPort) || ${String(
                     port
                   )};
                   let socketPath = protocol + "//" + host + ":" + port + "/socket";
@@ -1071,10 +1100,12 @@ export const LiveReload =
                       }
                       if (!event.updates || !event.updates.length) return;
                       let updateAccepted = false;
+                      let needsRevalidation = new Set();
                       for (let update of event.updates) {
                         console.log("[HMR] " + update.reason + " [" + update.id +"]")
                         if (update.revalidate) {
-                          console.log("[HMR] Revalidating [" + update.id + "]");
+                          needsRevalidation.add(update.routeId);
+                          console.log("[HMR] Revalidating [" + update.routeId + "]");
                         }
                         let imported = await import(update.url +  '?t=' + event.assetsManifest.hmr.timestamp);
                         if (window.__hmr__.contexts[update.id]) {
@@ -1089,7 +1120,7 @@ export const LiveReload =
                       }
                       if (event.assetsManifest && window.__hmr__.contexts["remix:manifest"]) {
                         let accepted = window.__hmr__.contexts["remix:manifest"].emit(
-                          event.assetsManifest
+                          { needsRevalidation, assetsManifest: event.assetsManifest }
                         );
                         if (accepted) {
                           console.log("[HMR] Updated accepted by", "remix:manifest");

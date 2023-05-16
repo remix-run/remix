@@ -50,16 +50,18 @@ export interface ActionFunction {
  */
 export type ErrorBoundaryComponent = ComponentType;
 
+export type HeadersArgs = {
+  loaderHeaders: Headers;
+  parentHeaders: Headers;
+  actionHeaders: Headers;
+};
+
 /**
  * A function that returns HTTP headers to be used for a route. These headers
  * will be merged with (and take precedence over) headers from parent routes.
  */
 export interface HeadersFunction {
-  (args: {
-    loaderHeaders: Headers;
-    parentHeaders: Headers;
-    actionHeaders: Headers;
-  }): Headers | HeadersInit;
+  (args: HeadersArgs): Headers | HeadersInit;
 }
 
 /**
@@ -108,7 +110,9 @@ export interface ServerRuntimeMetaArgs<
   Loader extends LoaderFunction | unknown = unknown,
   MatchLoaders extends Record<string, unknown> = Record<string, unknown>
 > {
-  data: Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData;
+  data:
+    | (Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData)
+    | undefined;
   params: Params;
   location: Location;
   matches: ServerRuntimeMetaMatches<MatchLoaders>;

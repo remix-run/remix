@@ -9,10 +9,10 @@ import { coerce } from "semver";
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
-import { writeConfigDefaults } from "./config/write-tsconfig-defaults";
 import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
-import { getPreferredPackageManager } from "./cli/getPreferredPackageManager";
+import { detectPackageManager } from "./cli/detectPackageManager";
+import { warnOnce } from "./warnOnce";
 
 export interface RemixMdxConfig {
   rehypePlugins?: any[];
@@ -27,10 +27,15 @@ export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
 
 type Dev = {
-  port?: number;
-  appServerPort?: number;
-  remixRequestHandlerPath?: string;
-  rebuildPollIntervalMs?: number;
+  port?: number; // TODO: remove in v2
+
+  command?: string;
+  httpScheme?: string;
+  httpHost?: string;
+  httpPort?: number;
+  webSocketPort?: number;
+  restart?: boolean;
+  publicDirectory?: string;
 };
 
 interface FutureConfig {
@@ -387,6 +392,11 @@ export async function readConfig(
   let serverEntryPoint = appConfig.server;
   let serverMainFields = appConfig.serverMainFields;
   let serverMinify = appConfig.serverMinify;
+
+  if (!appConfig.serverModuleFormat) {
+    warnOnce(serverModuleFormatWarning, "serverModuleFormatWarning");
+  }
+
   let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
   let serverPlatform = appConfig.serverPlatform || "node";
   serverMainFields ??=
@@ -477,7 +487,7 @@ export async function readConfig(
 
       await pkgJson.save();
 
-      let packageManager = getPreferredPackageManager();
+      let packageManager = detectPackageManager() ?? "npm";
 
       execSync(`${packageManager} install`, {
         cwd: remixRoot,
@@ -592,10 +602,6 @@ export async function readConfig(
     tsconfigPath = rootJsConfig;
   }
 
-  if (tsconfigPath) {
-    writeConfigDefaults(tsconfigPath);
-  }
-
   let future: FutureConfig = {
     unstable_dev: appConfig.future?.unstable_dev ?? false,
   };
@@ -700,8 +706,3 @@ let disjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "disjunction",
 });
-export let serverBuildTargetWarning =
-  "⚠️ DEPRECATED: The `serverBuildTarget` config option is deprecated. Use a " +
-  "combination of `publicPath`, `serverBuildPath`, `serverConditions`, " +
-  "`serverDependenciesToBundle`, `serverMainFields`, `serverMinify`, " +
-  "`serverModuleFormat` and/or `serverPlatform` instead.";

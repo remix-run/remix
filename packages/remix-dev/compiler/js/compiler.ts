@@ -21,7 +21,7 @@ import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 import invariant from "../../invariant";
 import { hmrPlugin } from "./plugins/hmr";
 import { createMatchPath } from "../utils/tsconfig";
-import { getPreferredPackageManager } from "../../cli/getPreferredPackageManager";
+import { detectPackageManager } from "../../cli/detectPackageManager";
 import type * as Channel from "../../channel";
 import type { Context } from "../context";
 
@@ -71,7 +71,6 @@ const getExternals = (remixConfig: RemixConfig): string[] => {
 
 const createEsbuildConfig = (
   ctx: Context,
-  onLoader: (filename: string, code: string) => void,
   channels: { cssBundleHref: Channel.Type<string | undefined> }
 ): esbuild.BuildOptions => {
   let entryPoints: Record<string, string> = {
@@ -103,6 +102,23 @@ const createEsbuildConfig = (
     }
   }
 
+  if (
+    ctx.options.mode === "development" &&
+    ctx.config.future.unstable_dev !== false
+  ) {
+    let defaultsDirectory = path.resolve(
+      __dirname,
+      "..",
+      "..",
+      "config",
+      "defaults"
+    );
+    entryPoints["__remix_entry_dev"] = path.join(
+      defaultsDirectory,
+      "entry.dev.ts"
+    );
+  }
+
   let matchPath = ctx.config.tsconfigPath
     ? createMatchPath(ctx.config.tsconfigPath)
     : undefined;
@@ -123,7 +139,7 @@ const createEsbuildConfig = (
     absoluteCssUrlsPlugin(),
     externalPlugin(/^https?:\/\//, { sideEffects: false }),
     ctx.config.future.unstable_dev
-      ? browserRouteModulesPlugin_v2(ctx, routeModulePaths, onLoader)
+      ? browserRouteModulesPlugin_v2(ctx, routeModulePaths)
       : browserRouteModulesPlugin(ctx, /\?browser$/),
     mdxPlugin(ctx),
     emptyModulesPlugin(ctx, /\.server(\.[jt]sx?)?$/),
@@ -143,7 +159,7 @@ const createEsbuildConfig = (
           }
 
           let packageName = getNpmPackageName(args.path);
-          let pkgManager = getPreferredPackageManager();
+          let pkgManager = detectPackageManager() ?? "npm";
           if (
             ctx.options.onWarning &&
             !isNodeBuiltIn(packageName) &&
@@ -173,22 +189,6 @@ const createEsbuildConfig = (
   ];
 
   if (ctx.options.mode === "development" && ctx.config.future.unstable_dev) {
-    // TODO prebundle deps instead of chunking just these ones
-    let isolateChunks = [
-      require.resolve("react"),
-      require.resolve("react/jsx-dev-runtime"),
-      require.resolve("react/jsx-runtime"),
-      require.resolve("react-dom"),
-      require.resolve("react-dom/client"),
-      require.resolve("react-refresh/runtime"),
-      require.resolve("@remix-run/react"),
-      "remix:hmr",
-    ];
-    entryPoints = {
-      ...entryPoints,
-      ...Object.fromEntries(isolateChunks.map((imprt) => [imprt, imprt])),
-    };
-
     plugins.push(hmrPlugin(ctx));
     plugins.push(cssBundleUpdatePlugin(channels));
   }
@@ -234,19 +234,12 @@ export const create = async (
   ctx: Context,
   channels: { cssBundleHref: Channel.Type<string | undefined> }
 ): Promise<Compiler> => {
-  let hmrRoutes: Record<string, { loaderHash: string }> = {};
-  let onLoader = (filename: string, code: string) => {
-    let key = path.relative(ctx.config.rootDirectory, filename);
-    hmrRoutes[key] = { loaderHash: code };
-  };
-
   let compiler = await esbuild.context({
-    ...createEsbuildConfig(ctx, onLoader, channels),
+    ...createEsbuildConfig(ctx, channels),
     metafile: true,
   });
 
   let compile = async () => {
-    hmrRoutes = {};
     let { metafile } = await compiler.rebuild();
 
     let hmr: Manifest["hmr"] | undefined = undefined;
@@ -263,7 +256,6 @@ export const create = async (
         );
       hmr = {
         runtime: hmrRuntime,
-        routes: hmrRoutes,
         timestamp: Date.now(),
       };
     }

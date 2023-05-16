@@ -30,4 +30,4 @@ export function ErrorBoundary() {
 
 <docs-info>If the user visits a route that does not match any routes in the app, Remix itself will throw a 404 response.</docs-info>
 
-[rr-is-route-error-response]: https://reactrouter.com/en/main/utils/is-route-error-response
+[rr-is-route-error-response]: https://reactrouter.com/utils/is-route-error-response

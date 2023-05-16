@@ -7,15 +7,15 @@ new: true
 
 The primary way to style in Remix (and the web) is to add a `<link rel="stylesheet">` to the page. In Remix, you can add these links via the [Route Module `links` export][route-module-links] at route layout boundaries. When the route is active, the stylesheet is added to the page. When the route is no longer active, the stylesheet is removed.
 
-```js
-export function links() {
+```tsx
+export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
       href: "https://unpkg.com/modern-css-reset@1.4.0/dist/reset.min.css",
     },
   ];
-}
+};
 ```
 
 Each nested route's `links` are merged (parents first) and rendered as `<link>` tags by the `<Links/>` you rendered in `app/root.js` in the head of the document.
@@ -288,7 +288,9 @@ export default function Category() {
 
 The component imports are already there, we just need to surface the assets:
 
-```js filename=app/routes/$category.js lines=[3,7,11,15,22-25]
+```tsx filename=app/routes/$category.tsx lines=[5,9,13,17,24-27]
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
 import {
   TileGrid,
   links as tileGridLinks,
@@ -307,7 +309,7 @@ import {
 } from "~/components/add-favorite-button";
 import styles from "~/styles/$category.css";
 
-export function links() {
+export const links: LinksFunction = () => {
   return [
     ...tileGridLinks(),
     ...productTileLinks(),
@@ -315,7 +317,7 @@ export function links() {
     ...addFavoriteLinks(),
     { rel: "stylesheet", href: styles },
   ];
-}
+};
 
 // ...
 ```
@@ -340,10 +342,12 @@ Since these are just `<link>` tags, you can do more than stylesheet links, like 
 }
 ```
 
-```tsx filename=app/components/copy-to-clipboard.jsx lines=[4-9]
+```tsx filename=app/components/copy-to-clipboard.tsx lines=[6-11]
+import type { LinksFunction } from "@remix-run/node"; // or cloudflare/deno
+
 import styles from "./styles.css";
 
-export const links = () => [
+export const links: LinksFunction = () => [
   {
     rel: "preload",
     href: "/icons/clipboard.svg",
@@ -370,7 +374,7 @@ Not only will this make the asset high priority in the network tab, but Remix wi
 Using plain stylesheets and `<link>` tags also opens up the ability to decrease the amount of CSS your user's browser has to process when it paints the screen. Link tags support `media`, so you can do the following:
 
 ```tsx lines=[10,15,20]
-export function links() {
+export const links: LinksFunction = () => {
   return [
     {
       rel: "stylesheet",
@@ -392,7 +396,7 @@ export function links() {
       media: "(prefers-color-scheme: dark)",
     },
   ];
-}
+};
 ```
 
 ## Tailwind CSS
@@ -408,20 +412,21 @@ npm install -D tailwindcss
 Then initialize a config file:
 
 ```sh
-npx tailwindcss init
+npx tailwindcss init --ts
 ```
 
 Now we can tell it which files to generate classes from:
 
-```js filename=tailwind.config.js lines=[3]
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: ["./app/**/*.{ts,tsx,jsx,js}"],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-};
+```ts filename=tailwind.config.ts lines=[4]
+import type { Config } from "tailwindcss";
+
+export default {
+   content: ["./app/**/*.{js,jsx,ts,tsx}"],
+   theme: {
+      extend: {},
+   },
+   plugins: [],
+} satisfies Config;
 ```
 
 Then include the `@tailwind` directives in your CSS. For example, you could create a `tailwind.css` file at the root of your app:
@@ -525,7 +530,7 @@ npm add -D sass
 
 2. Add an npm script to your `package.json`'s `script` section' that uses the installed tool to generate CSS files.
 
-```json filename="package.json"
+```json filename=package.json
 {
   // ...
   "scripts": {

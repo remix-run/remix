@@ -4,10 +4,11 @@ import * as path from "path";
 
 import type { RemixConfig } from "../config";
 import { readConfig } from "../config";
-import { type Manifest } from "../manifest";
 import * as Compiler from "./compiler";
 import type { Context } from "./context";
 import { logThrown } from "./utils/log";
+import { normalizeSlashes } from "../config/routes";
+import type { Manifest } from "../manifest";
 
 function isEntryPoint(config: RemixConfig, file: string): boolean {
   let appFile = path.relative(config.appDirectory, file);
@@ -16,73 +17,76 @@ function isEntryPoint(config: RemixConfig, file: string): boolean {
     config.entryServerFile,
     ...Object.values(config.routes).map((route) => route.file),
   ];
-  return entryPoints.includes(appFile);
+  let normalized = normalizeSlashes(appFile);
+  return entryPoints.includes(normalized);
 }
 
 export type WatchOptions = {
   reloadConfig?(root: string): Promise<RemixConfig>;
-  onRebuildStart?(): void;
-  onRebuildFinish?(durationMs: number, manifest?: Manifest): void;
+  onBuildStart?(ctx: Context): void;
+  onBuildManifest?(manifest: Manifest): void;
+  onBuildFinish?(ctx: Context, durationMs: number, ok: boolean): void;
   onFileCreated?(file: string): void;
   onFileChanged?(file: string): void;
   onFileDeleted?(file: string): void;
-  onInitialBuild?(durationMs: number, manifest?: Manifest): void;
 };
 
 export async function watch(
-  { config, options }: Context,
+  ctx: Context,
   {
     reloadConfig = readConfig,
-    onRebuildStart,
-    onRebuildFinish,
+    onBuildStart,
+    onBuildManifest,
+    onBuildFinish,
     onFileCreated,
     onFileChanged,
     onFileDeleted,
-    onInitialBuild,
   }: WatchOptions = {}
 ): Promise<() => Promise<void>> {
   let start = Date.now();
-  let compiler = await Compiler.create({ config, options });
+  let compiler = await Compiler.create(ctx);
   let compile = () =>
-    compiler.compile().catch((thrown) => {
+    compiler.compile({ onManifest: onBuildManifest }).catch((thrown) => {
       logThrown(thrown);
       return undefined;
     });
 
   // initial build
+  onBuildStart?.(ctx);
   let manifest = await compile();
-  onInitialBuild?.(Date.now() - start, manifest);
+  onBuildFinish?.(ctx, Date.now() - start, manifest !== undefined);
 
   let restart = debounce(async () => {
-    onRebuildStart?.();
     let start = Date.now();
     compiler.dispose();
 
     try {
-      config = await reloadConfig(config.rootDirectory);
+      ctx.config = await reloadConfig(ctx.config.rootDirectory);
     } catch (thrown: unknown) {
       logThrown(thrown);
       return;
     }
+    onBuildStart?.(ctx);
 
-    compiler = await Compiler.create({ config, options });
+    compiler = await Compiler.create(ctx);
     let manifest = await compile();
-    onRebuildFinish?.(Date.now() - start, manifest);
+    onBuildFinish?.(ctx, Date.now() - start, manifest !== undefined);
   }, 500);
 
   let rebuild = debounce(async () => {
-    onRebuildStart?.();
+    await compiler.cancel();
+    onBuildStart?.(ctx);
     let start = Date.now();
     let manifest = await compile();
-    onRebuildFinish?.(Date.now() - start, manifest);
+    onBuildFinish?.(ctx, Date.now() - start, manifest !== undefined);
   }, 100);
 
-  let toWatch = [config.appDirectory];
-  if (config.serverEntryPoint) {
-    toWatch.push(config.serverEntryPoint);
+  let toWatch = [ctx.config.appDirectory];
+  if (ctx.config.serverEntryPoint) {
+    toWatch.push(ctx.config.serverEntryPoint);
   }
 
-  config.watchPaths?.forEach((watchPath) => {
+  ctx.config.watchPaths?.forEach((watchPath) => {
     toWatch.push(watchPath);
   });
 
@@ -104,17 +108,17 @@ export async function watch(
       onFileCreated?.(file);
 
       try {
-        config = await reloadConfig(config.rootDirectory);
+        ctx.config = await reloadConfig(ctx.config.rootDirectory);
       } catch (thrown: unknown) {
         logThrown(thrown);
         return;
       }
 
-      await (isEntryPoint(config, file) ? restart : rebuild)();
+      await (isEntryPoint(ctx.config, file) ? restart : rebuild)();
     })
     .on("unlink", async (file) => {
       onFileDeleted?.(file);
-      await (isEntryPoint(config, file) ? restart : rebuild)();
+      await (isEntryPoint(ctx.config, file) ? restart : rebuild)();
     });
 
   return async () => {

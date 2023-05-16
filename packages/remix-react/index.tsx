@@ -28,6 +28,7 @@ export {
   useFormAction,
   useHref,
   useLocation,
+  useMatch,
   useNavigate,
   useNavigation,
   useNavigationType,
