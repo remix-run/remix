@@ -3157,10 +3157,10 @@
   resolved "https://registry.npmjs.org/@types/mdurl/-/mdurl-1.0.2.tgz"
   integrity sha512-eC4U9MlIcu2q0KQmXszyn5Akca/0jrQmwDRgpAMJai7qBWq4amIQhZyNau4VYGtCeALvW1/NtjzJJ567aZxfKA==
 
-"@types/mdx@^2.0.0":
-  version "2.0.2"
-  resolved "https://registry.yarnpkg.com/@types/mdx/-/mdx-2.0.2.tgz#64be19baddba4323ae7893e077e98759316fe279"
-  integrity sha512-mJGfgj4aWpiKb8C0nnJJchs1sHBHn0HugkVfqqyQi7Wn6mBRksLeQsPOFvih/Pu8L1vlDzfe/LidhVHBeUk3aQ==
+"@types/mdx@^2.0.0", "@types/mdx@^2.0.5":
+  version "2.0.5"
+  resolved "https://registry.npmjs.org/@types/mdx/-/mdx-2.0.5.tgz#9a85a8f70c7c4d9e695a21d5ae5c93645eda64b1"
+  integrity sha512-76CqzuD6Q7LC+AtbPqrvD9AqsN0k8bsYo2bM2J8pmNldP1aIPAbzUQ7QbobyXL4eLr1wK5x8FZFe8eF/ubRuBg==
 
 "@types/mime@^1":
   version "1.3.2"

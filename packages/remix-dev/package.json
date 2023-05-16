@@ -30,6 +30,7 @@
     "@mdx-js/mdx": "^2.3.0",
     "@npmcli/package-json": "^2.0.0",
     "@remix-run/server-runtime": "1.16.1",
+    "@types/mdx": "^2.0.5",
     "@vanilla-extract/integration": "^6.2.0",
     "arg": "^5.0.1",
     "cacache": "^15.0.5",
