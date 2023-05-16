@@ -4,8 +4,6 @@ const babel = require("@rollup/plugin-babel").default;
 const nodeResolve = require("@rollup/plugin-node-resolve").default;
 const copy = require("rollup-plugin-copy");
 
-console.log("json", json);
-
 const {
   createBanner,
   getOutputDir,
