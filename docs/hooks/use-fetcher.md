@@ -138,7 +138,7 @@ Although a URL matches multiple Routes in a remix router hierarchy, a `fetcher.s
 
 If you want to submit to an index route use `?index` in the URL:
 
-```ts
+```tsx
 fetcher.submit(
   { some: "values" },
   { method: "post", action: "/accounts?index" }

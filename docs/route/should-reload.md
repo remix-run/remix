@@ -11,7 +11,7 @@ hidden: true
 
 This function lets apps optimize which routes should be reloaded on some client-side transitions in v1.9.x and lower.
 
-```ts
+```tsx
 import type { ShouldReloadFunction } from "@remix-run/react";
 
 export const unstable_shouldReload: ShouldReloadFunction =

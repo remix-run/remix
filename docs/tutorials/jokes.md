@@ -3851,8 +3851,7 @@ export default function Login() {
             type="hidden"
             name="redirectTo"
             value={
-              (searchParams.get("redirectTo") as string) ??
-              undefined
+              searchParams.get("redirectTo") ?? undefined
             }
           />
           <fieldset>
