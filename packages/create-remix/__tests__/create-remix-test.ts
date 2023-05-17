@@ -86,7 +86,7 @@ describe("create-remix CLI", () => {
       --[no-]install      Whether or not to install dependencies after creation
       --package-manager   The package manager to use
       --show-install-output   Whether to show the output of the install process
-      --[no-]init-script  Whether or not to run the template's custom remix.init script, if present
+      --[no-]init-script  Whether or not to run the template's remix.init script, if present
       --[no-]git-init     Whether or not to initialize a Git repository
       --yes, -y           Skip all option prompts and run setup
       --remix-version, -v     The version of Remix to use
@@ -448,7 +448,7 @@ describe("create-remix CLI", () => {
     });
 
     expect(stderr.trim()).toBeFalsy();
-    expect(stdout).toContain(`Template's custom remix.init script complete`);
+    expect(stdout).toContain(`Template's remix.init script complete`);
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
@@ -474,7 +474,7 @@ describe("create-remix CLI", () => {
     });
 
     expect(stderr.trim()).toBeFalsy();
-    expect(stdout).toContain(`Skipping template's custom remix.init script.`);
+    expect(stdout).toContain(`Skipping template's remix.init script.`);
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
 
@@ -503,7 +503,7 @@ describe("create-remix CLI", () => {
     expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
 
-    expect(stdout).toContain(`Template's custom remix.init script complete`);
+    expect(stdout).toContain(`Template's remit.init script complete`);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
@@ -526,7 +526,7 @@ describe("create-remix CLI", () => {
     });
 
     expect(stderr.trim()).toBeFalsy();
-    expect(stdout).toContain(`Skipping template's custom remix.init script.`);
+    expect(stdout).toContain(`Skipping template's remix.init script.`);
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
 
@@ -552,7 +552,7 @@ describe("create-remix CLI", () => {
     });
 
     expect(stderr.trim()).toBeFalsy();
-    expect(stdout).toContain(`Skipping template's custom remix.init script.`);
+    expect(stdout).toContain(`Skipping template's remix.init script.`);
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
 
@@ -578,7 +578,7 @@ describe("create-remix CLI", () => {
     });
 
     expect(stderr.trim()).toMatchInlineSnapshot(
-      `"▲  Oh no! Template's custom remix.init script failed"`
+      `"▲  Oh no! Template's remix.init script failed"`
     );
     expect(status).toBe(1);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();

@@ -269,11 +269,7 @@ async function projectNameStep(ctx: Context) {
 async function templateStep(ctx: Context) {
   if (ctx.template) {
     log("");
-    info("Template:", [
-      "Using ",
-      color.reset(ctx.template),
-      " as project template",
-    ]);
+    info("Template", ["Using ", color.reset(ctx.template), "..."]);
   }
 
   let template =
@@ -319,7 +315,7 @@ async function runInitScriptQuestionStep(ctx: Context) {
       name: "init",
       type: "confirm",
       label: title("init"),
-      message: `This template includes a custom remix.init script. Do you want to run it during the install process?`,
+      message: `This template has a remix.init script. Do you want to run it?`,
       hint: "recommended",
       initial: true,
     });
@@ -351,7 +347,7 @@ async function installDependenciesStep(ctx: Context) {
 
   if (showInstallOutput) {
     log("");
-    info(`Install:`, `Dependencies installing with ${pkgManager}...`);
+    info(`Install`, `Dependencies installing with ${pkgManager}...`);
     log("");
     await runInstall();
     log("");
@@ -376,7 +372,8 @@ async function runInitScriptStep(ctx: Context) {
 
   if (!ctx.install || !ctx.initScript) {
     await sleep(100);
-    info("Skipping template's custom remix.init script.", [
+    log("");
+    info("Skipping template's remix.init script.", [
       ctx.install
         ? "You can run the script in the "
         : "After installing dependencies, you can run the script in the ",
@@ -388,11 +385,6 @@ async function runInitScriptStep(ctx: Context) {
     return;
   }
 
-  info(
-    "Custom remit.init script:",
-    "Running template's custom remix.init script...\n"
-  );
-
   let initScriptDir = path.dirname(ctx.initScriptPath);
   let initPackageJson = path.resolve(initScriptDir, "package.json");
   let isTypeScript = fs.existsSync(path.join(ctx.cwd, "tsconfig.json"));
@@ -400,16 +392,25 @@ async function runInitScriptStep(ctx: Context) {
 
   try {
     if (await fileExists(initPackageJson)) {
-      await installDependencies({
-        pkgManager: ctx.pkgManager,
-        cwd: initScriptDir,
-        showInstallOutput: ctx.showInstallOutput,
+      await loadingIndicator({
+        start: `Dependencies for remix.init script installing with ${ctx.pkgManager}...`,
+        end: "Dependencies for remix.init script installed",
+        while: () =>
+          installDependencies({
+            pkgManager: ctx.pkgManager,
+            cwd: initScriptDir,
+            showInstallOutput: ctx.showInstallOutput,
+          }),
+        ctx,
       });
     }
   } catch (err) {
     error("Oh no!", "Failed to install dependencies for template init script");
     throw err;
   }
+
+  log("");
+  info("Running template's remix.init script...", "\n");
 
   try {
     let initFn = require(ctx.initScriptPath);
@@ -422,7 +423,7 @@ async function runInitScriptStep(ctx: Context) {
     let rootDirectory = path.resolve(ctx.cwd);
     await initFn({ isTypeScript, packageManager, rootDirectory });
   } catch (err) {
-    error("Oh no!", "Template's custom remix.init script failed");
+    error("Oh no!", "Template's remix.init script failed");
     throw err;
   }
 
@@ -434,7 +435,7 @@ async function runInitScriptStep(ctx: Context) {
   }
 
   log("");
-  success("Template's custom remix.init script complete");
+  success("Template's remix.init script complete");
 }
 
 async function gitInitQuestionStep(ctx: Context) {
@@ -502,7 +503,7 @@ async function doneStep(ctx: Context) {
   );
   await sleep(100);
   log(
-    `\n${prefix}Join the community at ${color.cyan(`https://rmx.as/discord`)}`
+    `\n${prefix}Join the community at ${color.cyan(`https://rmx.as/discord`)}\n`
   );
   await sleep(200);
 }
@@ -725,7 +726,7 @@ ${color.arg("--template <name>")}   ${color.dim(`The project template to use`)}
 ${color.arg("--[no-]install")}      ${color.dim(`Whether or not to install dependencies after creation`)}
 ${color.arg("--package-manager")}   ${color.dim(`The package manager to use`)}
 ${color.arg("--show-install-output")}   ${color.dim(`Whether to show the output of the install process`)}
-${color.arg("--[no-]init-script")}  ${color.dim(`Whether or not to run the template's custom remix.init script, if present`)}
+${color.arg("--[no-]init-script")}  ${color.dim(`Whether or not to run the template's remix.init script, if present`)}
 ${color.arg("--[no-]git-init")}     ${color.dim(`Whether or not to initialize a Git repository`)}
 ${color.arg("--yes, -y")}           ${color.dim(`Skip all option prompts and run setup`)}
 ${color.arg("--remix-version, -v")}     ${color.dim(`The version of Remix to use`)}
