@@ -1686,6 +1686,11 @@
   resolved "https://registry.npmjs.org/@cloudflare/workers-types/-/workers-types-4.20230307.0.tgz#58a20fe167a5c48e20edba8e1fbfe4231bcfa223"
   integrity sha512-Go968aDDcqONHQcUdgIiPRkPdT4QTzD0ecHJsI1u7ZiHPMOoZn+Dy7hYsdUJ5ldX9wTZDrICBM1rDKTRaDUitg==
 
+"@cloudflare/workers-types@^4.20230511.0":
+  version "4.20230511.0"
+  resolved "https://registry.npmjs.org/@cloudflare/workers-types/-/workers-types-4.20230511.0.tgz#48f187b35234b9be7c2c6303718584fce8243278"
+  integrity sha512-Br4i/8+t60HDJIo8o7O9Rrmp03bhdejRW9klb0bK9EfG5Ii7qz5G3PJO12gUz+Vu9m1v9tZ9KOh3Gg8oshXtug==
+
 "@colors/colors@1.5.0":
   version "1.5.0"
   resolved "https://registry.npmjs.org/@colors/colors/-/colors-1.5.0.tgz"
