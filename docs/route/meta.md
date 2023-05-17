@@ -53,7 +53,7 @@ export const meta: MetaFunction = () => ({
 
   // name => content
   description: "Delicious shakes", // <meta name="description" content="Delicious shakes">
-  viewport: "width=device-width,initial-scale=1", // <meta name="viewport" content="width=device-width,initial-scale=1">
+  viewport: "width=device-width, initial-scale=1", // <meta name="viewport" content="width=device-width, initial-scale=1">
 
   // <meta {...value}>
   refresh: {
