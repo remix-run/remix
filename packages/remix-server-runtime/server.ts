@@ -9,6 +9,7 @@ import {
   getStaticContextFromError,
   isRouteErrorResponse,
   createStaticHandler,
+  json as routerJson,
 } from "@remix-run/router";
 
 import type { AppLoadContext } from "./data";
@@ -24,7 +25,6 @@ import type { ServerRouteManifest } from "./routes";
 import { createStaticHandlerDataRoutes, createRoutes } from "./routes";
 import {
   createDeferredReadableStream,
-  json,
   isRedirectResponse,
   isResponse,
 } from "./responses";
@@ -167,7 +167,7 @@ async function handleDataRequestRR(
     let errorInstance =
       error instanceof Error ? error : new Error("Unexpected Server Error");
     logServerErrorIfNotAborted(errorInstance, request, serverMode);
-    return json(serializeError(errorInstance, serverMode), {
+    return routerJson(serializeError(errorInstance, serverMode), {
       status: 500,
       headers: {
         "X-Remix-Error": "yes",
@@ -383,7 +383,7 @@ function errorResponseToJson(
   errorResponse: ErrorResponse,
   serverMode: ServerMode
 ): Response {
-  return json(
+  return routerJson(
     serializeError(
       errorResponse.error || new Error("Unexpected Server Error"),
       serverMode
