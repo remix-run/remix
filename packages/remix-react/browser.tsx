@@ -195,7 +195,7 @@ export function RemixBrowser(_props: RemixBrowserProps): ReactElement {
     if (!window.__remixRouteModules[match.route.id]) {
       window.location.reload();
       // `reload` executes asynchronously, meaning the error will still flash.
-      // To get around that we return an empty div here.
+      // To get around that we return an empty div.
       return <div></div>;
     }
   }

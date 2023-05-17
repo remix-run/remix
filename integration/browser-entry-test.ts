@@ -42,8 +42,7 @@ test.beforeAll(async () => {
 test.afterAll(() => appFixture.close());
 
 // This test generally fails without the corresponding fix in browser.tsx,
-// but sometimes manages to pass.
-// However, it always passes with the redirect fix applied.
+// but sometimes manages to pass. With the fix, it always passes.
 test(`expect to be able to browse backward out of a remix app, 
       then forward in history and have pages render correctly`, async ({
   page,
@@ -68,12 +67,14 @@ test(`expect to be able to browse backward out of a remix app,
 
     await page.waitForSelector("#pizza");
     expect(await app.getHtml()).toContain("pizza");
-    // Takes the browser to an empty state. This doesn't seem to work in headless Firefox
+
+    // Takes the browser to an empty state.
+    // This doesn't seem to work in headless Firefox.
     await page.goBack();
     expect(page.url()).toContain("about:blank");
 
     // This attempts to watch for the request for the entry.client.js chunk
-    // and redirect before it is finished loading. This is the source of the race.
+    // and redirect before it is finished loading.
     let redirectOnEntryChunk = async (request: Request) => {
       if (request.url().includes("entry")) {
         page.off("request", redirectOnEntryChunk);
