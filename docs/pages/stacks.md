@@ -6,11 +6,11 @@ order: 3
 
 # Remix Stacks
 
-Remix Stacks is a feature of the Remix CLI that allows you to generate a Remix project quickly and easily. There are several built-in and official stacks that are full-blown applications. You can also make your own (read more below).
+Remix Stacks are production-grade templates for use with the `create-remix` CLI that allow you to generate a Remix project quickly and easily. There are several official stacks provided but you can also make your own (read more below).
 
 [Read the feature announcement blog post][read-the-feature-announcement-blog-post] and [watch Remix Stacks videos on YouTube][watch-remix-stacks-videos-on-you-tube].
 
-The built-in official stacks come ready with common things you need for a production application including:
+The official stacks come ready with common things you need for a production application including:
 
 - Database
 - Automatic deployment pipelines
@@ -18,7 +18,7 @@ The built-in official stacks come ready with common things you need for a produc
 - Testing
 - Linting/Formatting/TypeScript
 
-What you're left with is everything completely set up for you to just get to work building whatever amazing web experience you want to build with Remix. Here are the built-in official stacks:
+What you're left with is everything completely set up for you to just get to work building whatever amazing web experience you want to build with Remix. Here are the official stacks:
 
 - [The Blues Stack][the-blues-stack]: Deployed to the edge (distributed) with a long-running Node.js server and PostgreSQL database. Intended for large and fast production-grade applications serving millions of users.
 - [The Indie Stack][the-indie-stack]: Deployed to a long-running Node.js server with a persistent SQLite database. This stack is great for websites with dynamic data that you control (blogs, marketing, content sites). It's also a perfect, low-complexity bootstrap for MVPs, prototypes, and proof-of-concepts that can later be updated to the Blues stack easily.
@@ -44,11 +44,11 @@ Custom stacks give an enormous amount of power and flexibility, and we hope you 
 
 The template option can be any of the following values:
 
-- The name of a stack in the remix-run GH org (e.g. `blues-stack`)
-- A GH username/repo combo (e.g. `mcansh/snkrs`)
+- A GitHub username/repo combo (e.g. `remix-run/blues-stack`)
+- The URL of a GitHub repository, or directory within it (e.g. `https://github.com/remix-run/examples/tree/main/basic`)
+- A URL to a tarball (e.g. `https://example.com/remix-stack.tar.gz`)
 - A file path to a directory on disk (e.g. `/my/remix-stack`)
 - A path to a tarball on disk (e.g. `/my/remix-stack.tar.gz`)
-- A URL to a tarball (e.g. `https://example.com/remix-stack.tar.gz`)
 - A file URL (e.g. `file:///Users/michael/remix-stack.tar.gz`)
 
 Additionally, if your stack is in a private GitHub repo, you can pass a GitHub token via the `--token` cli flag:
