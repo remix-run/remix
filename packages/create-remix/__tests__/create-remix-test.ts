@@ -7,7 +7,7 @@ import fse from "fs-extra";
 import semver from "semver";
 
 import { jestTimeout } from "./setupAfterEnv";
-import { main } from "../create-remix";
+import { createRemix } from "../create-remix";
 import { server } from "./msw";
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
@@ -61,7 +61,7 @@ describe("create-remix CLI", () => {
   }
 
   it("supports the --help flag", async () => {
-    let { stdout } = await runCreateRemix({
+    let { stdout } = await execCreateRemix({
       args: ["--help"],
     });
     expect(stdout.trim()).toMatchInlineSnapshot(`
@@ -127,7 +127,7 @@ describe("create-remix CLI", () => {
   });
 
   it("supports the --version flag", async () => {
-    let { stdout } = await runCreateRemix({
+    let { stdout } = await execCreateRemix({
       args: ["--version"],
     });
     expect(!!semver.valid(stdout.trim())).toBe(true);
@@ -136,7 +136,7 @@ describe("create-remix CLI", () => {
   it("allows you to go through the prompts", async () => {
     let projectDir = getProjectDir("prompts");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [],
       interactions: [
         {
@@ -163,7 +163,7 @@ describe("create-remix CLI", () => {
   it("supports the --yes flag", async () => {
     let projectDir = getProjectDir("yes");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [projectDir, "--yes", "--no-git-init", "--no-install"],
     });
 
@@ -176,7 +176,7 @@ describe("create-remix CLI", () => {
   it("errors when project directory isn't provided when shell isn't interactive", async () => {
     let projectDir = getProjectDir("non-interactive-no-project-dir");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: ["--no-install"],
       interactive: false,
     });
@@ -194,7 +194,7 @@ describe("create-remix CLI", () => {
     fse.mkdirSync(notEmptyDir);
     fse.createFileSync(path.join(notEmptyDir, "some-file.txt"));
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [notEmptyDir, "--no-install"],
       interactive: false,
     });
@@ -212,7 +212,7 @@ describe("create-remix CLI", () => {
   it("works for GitHub username/repo combo", async () => {
     let projectDir = getProjectDir("github-username-repo");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -231,7 +231,7 @@ describe("create-remix CLI", () => {
   it("fails for private GitHub username/repo combo without a token", async () => {
     let projectDir = getProjectDir("private-repo-no-token");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -250,7 +250,7 @@ describe("create-remix CLI", () => {
   it("succeeds for private GitHub username/repo combo with a valid token", async () => {
     let projectDir = getProjectDir("github-username-repo-with-token");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -271,7 +271,7 @@ describe("create-remix CLI", () => {
   it("works for remote tarballs", async () => {
     let projectDir = getProjectDir("remote-tarball");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -290,7 +290,7 @@ describe("create-remix CLI", () => {
   it("fails for private github release tarballs", async () => {
     let projectDir = getProjectDir("private-release-tarball-no-token");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -309,7 +309,7 @@ describe("create-remix CLI", () => {
   it("succeeds for private github release tarballs when including token", async () => {
     let projectDir = getProjectDir("private-release-tarball-with-token");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -330,7 +330,7 @@ describe("create-remix CLI", () => {
   it("works for different branches", async () => {
     let projectDir = getProjectDir("diff-branch");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -349,7 +349,7 @@ describe("create-remix CLI", () => {
   it("works for a path to a tarball on disk", async () => {
     let projectDir = getProjectDir("local-tarball");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -368,7 +368,7 @@ describe("create-remix CLI", () => {
   it("works for a file URL to a tarball on disk", async () => {
     let projectDir = getProjectDir("file-url-tarball");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -389,7 +389,7 @@ describe("create-remix CLI", () => {
   it("works for a file path to a directory on disk", async () => {
     let projectDir = getProjectDir("local-directory");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -408,7 +408,7 @@ describe("create-remix CLI", () => {
   it("works for a file URL to a directory on disk", async () => {
     let projectDir = getProjectDir("file-url-directory");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -427,7 +427,7 @@ describe("create-remix CLI", () => {
   it("prompts to run remix.init script when installing dependencies", async () => {
     let projectDir = getProjectDir("remix-init-prompt");
 
-    let { status, stdout, stderr } = await runCreateRemix({
+    let { status, stdout, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -458,7 +458,7 @@ describe("create-remix CLI", () => {
   it("doesn't prompt to run remix.init script when not installing dependencies", async () => {
     let projectDir = getProjectDir("remix-init-skip-on-no-install");
 
-    let { status, stdout, stderr } = await runCreateRemix({
+    let { status, stdout, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -488,7 +488,7 @@ describe("create-remix CLI", () => {
   it("runs remix.init script when --install and --init-script flags are passed", async () => {
     let projectDir = getProjectDir("remix-init-prompt-with-flags");
 
-    let { status, stdout, stderr } = await runCreateRemix({
+    let { status, stdout, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -514,7 +514,7 @@ describe("create-remix CLI", () => {
       "remix-init-skip-on-no-install-with-init-flag"
     );
 
-    let { status, stdout, stderr } = await runCreateRemix({
+    let { status, stdout, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -540,7 +540,7 @@ describe("create-remix CLI", () => {
   it("doesn't run remix.init script when --no-init-script flag is passed", async () => {
     let projectDir = getProjectDir("remix-init-skip-on-no-init-flag");
 
-    let { status, stdout, stderr } = await runCreateRemix({
+    let { status, stdout, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -566,7 +566,7 @@ describe("create-remix CLI", () => {
   it("throws an error when invalid remix.init script when automatically ran", async () => {
     let projectDir = getProjectDir("invalid-remix-init-auto");
 
-    let { status, stderr } = await runCreateRemix({
+    let { status, stderr } = await execCreateRemix({
       args: [
         projectDir,
         "--template",
@@ -595,7 +595,7 @@ describe("create-remix CLI", () => {
     let execa = require("execa");
     execa.mockImplementation(async () => {});
 
-    await main([
+    await createRemix([
       projectDir,
       "--template",
       path.join(__dirname, "fixtures", "successful-remix-init"),
@@ -622,7 +622,7 @@ describe("create-remix CLI", () => {
     let execa = require("execa");
     execa.mockImplementation(async () => {});
 
-    await main([
+    await createRemix([
       projectDir,
       "--template",
       path.join(__dirname, "fixtures", "successful-remix-init"),
@@ -649,7 +649,7 @@ describe("create-remix CLI", () => {
     let execa = require("execa");
     execa.mockImplementation(async () => {});
 
-    await main([
+    await createRemix([
       projectDir,
       "--template",
       path.join(__dirname, "fixtures", "successful-remix-init"),
@@ -675,7 +675,7 @@ describe("create-remix CLI", () => {
     let execa = require("execa");
     execa.mockImplementation(async () => {});
 
-    await main([
+    await createRemix([
       projectDir,
       "--template",
       path.join(__dirname, "fixtures", "successful-remix-init"),
@@ -701,7 +701,7 @@ describe("create-remix CLI", () => {
     let execa = require("execa");
     execa.mockImplementation(async () => {});
 
-    await main([
+    await createRemix([
       projectDir,
       "--template",
       path.join(__dirname, "fixtures", "successful-remix-init"),
@@ -727,7 +727,7 @@ describe("create-remix CLI", () => {
     let execa = require("execa");
     execa.mockImplementation(async () => {});
 
-    await main([
+    await createRemix([
       projectDir,
       "--template",
       path.join(__dirname, "fixtures", "successful-remix-init"),
@@ -749,7 +749,7 @@ describe("create-remix CLI", () => {
     it("identifies when a github repo is not accessible (403)", async () => {
       let projectDir = getProjectDir("repo-403");
 
-      let { status, stderr } = await runCreateRemix({
+      let { status, stderr } = await execCreateRemix({
         args: [
           projectDir,
           "--template",
@@ -768,7 +768,7 @@ describe("create-remix CLI", () => {
     it("identifies when a github repo does not exist (404)", async () => {
       let projectDir = getProjectDir("repo-404");
 
-      let { status, stderr } = await runCreateRemix({
+      let { status, stderr } = await execCreateRemix({
         args: [
           projectDir,
           "--template",
@@ -787,7 +787,7 @@ describe("create-remix CLI", () => {
     it("identifies when something unknown goes wrong with the repo request (4xx)", async () => {
       let projectDir = getProjectDir("repo-4xx");
 
-      let { status, stderr } = await runCreateRemix({
+      let { status, stderr } = await execCreateRemix({
         args: [
           projectDir,
           "--template",
@@ -806,7 +806,7 @@ describe("create-remix CLI", () => {
     it("identifies when a remote tarball does not exist (404)", async () => {
       let projectDir = getProjectDir("remote-tarball-404");
 
-      let { status, stderr } = await runCreateRemix({
+      let { status, stderr } = await execCreateRemix({
         args: [
           projectDir,
           "--template",
@@ -825,7 +825,7 @@ describe("create-remix CLI", () => {
     it("identifies when a remote tarball does not exist (4xx)", async () => {
       let projectDir = getProjectDir("remote-tarball-4xx");
 
-      let { status, stderr } = await runCreateRemix({
+      let { status, stderr } = await execCreateRemix({
         args: [
           projectDir,
           "--template",
@@ -848,7 +848,7 @@ describe("create-remix CLI", () => {
       fse.mkdirSync(notEmptyDir);
       fse.createFileSync(path.join(notEmptyDir, "some-file.txt"));
 
-      let { status, stdout, stderr } = await runCreateRemix({
+      let { status, stdout, stderr } = await execCreateRemix({
         args: [
           notEmptyDir,
           "--template",
@@ -879,7 +879,7 @@ describe("create-remix CLI", () => {
       let cwd = process.cwd();
       process.chdir(emptyDir);
 
-      let { status, stderr } = await runCreateRemix({
+      let { status, stderr } = await execCreateRemix({
         args: [
           ".",
           "--template",
@@ -906,7 +906,7 @@ describe("create-remix CLI", () => {
       fse.createFileSync(path.join(notEmptyDir, "some-file.txt"));
       process.chdir(notEmptyDir);
 
-      let { status, stdout, stderr } = await runCreateRemix({
+      let { status, stdout, stderr } = await execCreateRemix({
         args: [
           ".",
           "--template",
@@ -942,7 +942,7 @@ describe("create-remix CLI", () => {
     it("uses the proxy from env var", async () => {
       let projectDir = await getProjectDir("template");
 
-      let { stderr } = await runCreateRemix({
+      let { stderr } = await execCreateRemix({
         args: [
           projectDir,
           "--template",
@@ -960,7 +960,7 @@ describe("create-remix CLI", () => {
   });
 });
 
-async function runCreateRemix({
+async function execCreateRemix({
   args = [],
   interactions = [],
   interactive = true,

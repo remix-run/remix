@@ -19,10 +19,10 @@ function agent(url: string) {
   return new URL(url).protocol === "https:" ? httpsAgent : defaultAgent;
 }
 
-export async function createTemplate(
+export async function copyTemplate(
   template: string,
   destPath: string,
-  options: CreateTemplateOptions
+  options: CopyTemplateOptions
 ) {
   let { log = () => {} } = options;
 
@@ -40,29 +40,29 @@ export async function createTemplate(
       let filepath = template.startsWith("file://")
         ? url.fileURLToPath(template)
         : template;
-      await createTemplateFromLocalFilePath(filepath, destPath);
+      await copyTemplateFromLocalFilePath(filepath, destPath);
       return;
     }
 
     if (isGithubRepoShorthand(template)) {
       log(`Using the template from the "${template}" repo`);
-      await createTemplateFromGithubRepoShorthand(template, destPath, options);
+      await copyTemplateFromGithubRepoShorthand(template, destPath, options);
       return;
     }
 
     if (isValidGithubRepoUrl(template)) {
       log(`Using the template from "${template}"`);
-      await createTemplateFromGithubRepoUrl(template, destPath, options);
+      await copyTemplateFromGithubRepoUrl(template, destPath, options);
       return;
     }
 
     if (isUrl(template)) {
       log(`Using the template from "${template}"`);
-      await createTemplateFromGenericUrl(template, destPath, options);
+      await copyTemplateFromGenericUrl(template, destPath, options);
       return;
     }
 
-    throw new CreateTemplateError(
+    throw new CopyTemplateError(
       `"${color.bold(template)}" is an invalid template. Run ${color.bold(
         "create-remix --help"
       )} to see supported template formats.`
@@ -72,7 +72,7 @@ export async function createTemplate(
   }
 }
 
-interface CreateTemplateOptions {
+interface CopyTemplateOptions {
   debug?: boolean;
   token?: string;
   onError(error: unknown): any;
@@ -92,40 +92,40 @@ function isLocalFilePath(input: string): boolean {
   }
 }
 
-async function createTemplateFromRemoteTarball(
+async function copyTemplateFromRemoteTarball(
   url: string,
   destPath: string,
-  options: CreateTemplateOptions
+  options: CopyTemplateOptions
 ) {
   return await downloadAndExtractTarball(destPath, url, options);
 }
 
-async function createTemplateFromGithubRepoShorthand(
+async function copyTemplateFromGithubRepoShorthand(
   repo: string,
   destPath: string,
-  options: CreateTemplateOptions
+  options: CopyTemplateOptions
 ) {
   let [owner, name] = repo.split("/");
   await downloadAndExtractRepoTarball({ owner, name }, destPath, options);
 }
 
-async function createTemplateFromGithubRepoUrl(
+async function copyTemplateFromGithubRepoUrl(
   repoUrl: string,
   destPath: string,
-  options: CreateTemplateOptions
+  options: CopyTemplateOptions
 ) {
   await downloadAndExtractRepoTarball(getRepoInfo(repoUrl), destPath, options);
 }
 
-async function createTemplateFromGenericUrl(
+async function copyTemplateFromGenericUrl(
   url: string,
   destPath: string,
-  options: CreateTemplateOptions
+  options: CopyTemplateOptions
 ) {
-  await createTemplateFromRemoteTarball(url, destPath, options);
+  await copyTemplateFromRemoteTarball(url, destPath, options);
 }
 
-async function createTemplateFromLocalFilePath(
+async function copyTemplateFromLocalFilePath(
   filePath: string,
   destPath: string
 ) {
@@ -137,7 +137,7 @@ async function createTemplateFromLocalFilePath(
     await fse.copy(filePath, destPath);
     return;
   }
-  throw new CreateTemplateError(
+  throw new CopyTemplateError(
     "The provided template is not a valid local directory or tarball."
   );
 }
@@ -155,7 +155,7 @@ async function extractLocalTarball(
       tar.extract(destPath, { strip: 1 })
     );
   } catch (error: unknown) {
-    throw new CreateTemplateError(
+    throw new CopyTemplateError(
       "There was a problem extracting the file from the provided template." +
         `  Template filepath: \`${tarballPath}\`` +
         `  Destination directory: \`${destPath}\`` +
@@ -232,7 +232,7 @@ async function downloadAndExtractTarball(
     });
 
     if (response.status !== 200) {
-      throw new CreateTemplateError(
+      throw new CopyTemplateError(
         "There was a problem fetching the file from GitHub. The request " +
           `responded with a ${response.status} status. Please try again later.`
       );
@@ -245,7 +245,7 @@ async function downloadAndExtractTarball(
       !body.assets ||
       !Array.isArray(body.assets)
     ) {
-      throw new CreateTemplateError(
+      throw new CopyTemplateError(
         "There was a problem fetching the file from GitHub. No asset was " +
           "found at that url. Please try again later."
       );
@@ -258,7 +258,7 @@ async function downloadAndExtractTarball(
         : asset?.browser_download_url === tarballUrl;
     })?.id;
     if (assetId == null) {
-      throw new CreateTemplateError(
+      throw new CopyTemplateError(
         "There was a problem fetching the file from GitHub. No asset was " +
           "found at that url. Please try again later."
       );
@@ -273,7 +273,7 @@ async function downloadAndExtractTarball(
 
   if (!response.body || response.status !== 200) {
     if (token) {
-      throw new CreateTemplateError(
+      throw new CopyTemplateError(
         `There was a problem fetching the file${
           isGithubUrl ? " from GitHub" : ""
         }. The request ` +
@@ -281,7 +281,7 @@ async function downloadAndExtractTarball(
           "is expired or invalid."
       );
     }
-    throw new CreateTemplateError(
+    throw new CopyTemplateError(
       `There was a problem fetching the file${
         isGithubUrl ? " from GitHub" : ""
       }. The request ` +
@@ -321,7 +321,7 @@ async function downloadAndExtractTarball(
       })
     );
   } catch (_) {
-    throw new CreateTemplateError(
+    throw new CopyTemplateError(
       "There was a problem extracting the file from the provided template." +
         `  Template URL: \`${tarballUrl}\`` +
         `  Destination directory: \`${downloadPath}\``
@@ -429,10 +429,10 @@ function getRepoInfo(validatedGithubUrl: string): RepoInfo {
   };
 }
 
-export class CreateTemplateError extends Error {
+export class CopyTemplateError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "CreateTemplateError";
+    this.name = "CopyTemplateError";
   }
 }
 

@@ -12,24 +12,24 @@ import { version as thisRemixVersion } from "./package.json";
 import { prompt } from "./prompt";
 import {
   color,
-  isInteractive,
   ensureDirectory,
   error,
   fileExists,
   info,
+  isInteractive,
   isValidJsonObject,
   log,
   pathContains,
   sleep,
   strip,
   success,
+  toValidProjectName,
 } from "./utils";
 import { renderLoadingIndicator } from "./loading-indicator";
-import { createTemplate, CreateTemplateError } from "./create-template";
+import { copyTemplate, CopyTemplateError } from "./copy-template";
 import { getLatestRemixVersion } from "./remix-version";
-import { toValidProjectName } from "./project-name";
 
-async function main(argv: string[]) {
+async function createRemix(argv: string[]) {
   let ctx = await getContext(argv);
   if (ctx.help) {
     printHelp(ctx);
@@ -279,7 +279,54 @@ async function templateStep(ctx: Context) {
   await loadingIndicator({
     start: "Template copying...",
     end: "Template copied",
-    while: () => copyTemplate(template, ctx),
+    while: async () => {
+      let destPath = path.resolve(process.cwd(), ctx.cwd);
+      await ensureDirectory(destPath);
+      await copyTemplate(template, destPath, {
+        debug: ctx.debug,
+        token: ctx.token,
+        async onError(err) {
+          let cwd = process.cwd();
+          let removing = (async () => {
+            if (cwd !== destPath && !pathContains(cwd, destPath)) {
+              try {
+                await rm(destPath);
+              } catch (_) {
+                console.log("failed to remove", destPath);
+              }
+            }
+          })();
+          if (ctx.debug) {
+            try {
+              await removing;
+            } catch (_) {}
+            throw err;
+          }
+
+          await Promise.all([
+            error(
+              "Oh no!",
+              err instanceof CopyTemplateError
+                ? err.message
+                : "Something went wrong. Run `create-remix --debug` to see more info.\n\n" +
+                    "Open an issue to report the problem at " +
+                    "https://github.com/remix-run/remix/issues/new"
+            ),
+            removing,
+          ]);
+
+          throw err;
+        },
+        async log(message) {
+          if (ctx.debug) {
+            info("Nice one!", message);
+            await sleep(500);
+          }
+        },
+      });
+
+      await updatePackageJSON(ctx);
+    },
     ctx,
   });
 
@@ -474,7 +521,18 @@ async function gitInitAndCommitStep(ctx: Context) {
   await loadingIndicator({
     start: "Git initializing...",
     end: "Git initialized",
-    while: () => gitInitAndCommit({ cwd: ctx.cwd }),
+    while: async () => {
+      let options = { cwd: ctx.cwd, stdio: "ignore" } as const;
+      let commitMsg = "Initial commit from create-remix";
+      try {
+        await execa("git", ["init"], options);
+        await execa("git", ["add", "."], options);
+        await execa("git", ["commit", "-m", commitMsg], options);
+      } catch (err) {
+        error("Oh no!", "Failed to initialize git.");
+        throw err;
+      }
+    },
     ctx,
   });
 }
@@ -557,67 +615,6 @@ async function installDependencies({
     error("Oh no!", "Failed to install dependencies.");
     throw err;
   }
-}
-
-async function gitInitAndCommit({ cwd }: { cwd: string }) {
-  let options = { cwd, stdio: "ignore" } as const;
-  let commitMsg = "Initial commit from create-remix";
-  try {
-    await execa("git", ["init"], options);
-    await execa("git", ["add", "."], options);
-    await execa("git", ["commit", "-m", commitMsg], options);
-  } catch (err) {
-    error("Oh no!", "Failed to initialize git.");
-    throw err;
-  }
-}
-
-async function copyTemplate(userInput: string, ctx: Context) {
-  let destPath = path.resolve(process.cwd(), ctx.cwd);
-  await ensureDirectory(destPath);
-  await createTemplate(userInput, destPath, {
-    debug: ctx.debug,
-    token: ctx.token,
-    async onError(err) {
-      let cwd = process.cwd();
-      let removing = (async () => {
-        if (cwd !== destPath && !pathContains(cwd, destPath)) {
-          try {
-            await rm(destPath);
-          } catch (_) {
-            console.log("failed to remove", destPath);
-          }
-        }
-      })();
-      if (ctx.debug) {
-        try {
-          await removing;
-        } catch (_) {}
-        throw err;
-      }
-
-      await Promise.all([
-        error(
-          "Oh no!",
-          err instanceof CreateTemplateError
-            ? err.message
-            : "Something went wrong. Run `create-remix --debug` to see more info.\n\n" +
-                "Open an issue to report the problem at " +
-                "https://github.com/remix-run/remix/issues/new"
-        ),
-        removing,
-      ]);
-
-      throw err;
-    },
-    async log(message) {
-      if (ctx.debug) {
-        info("Nice one!", message);
-        await sleep(500);
-      }
-    },
-  });
-  await updatePackageJSON(ctx);
 }
 
 async function updatePackageJSON(ctx: Context) {
@@ -793,5 +790,5 @@ async function getInitScriptPath(cwd: string) {
   return (await fileExists(initScriptPath)) ? initScriptPath : null;
 }
 
-export { main };
+export { createRemix };
 export type { Context };
