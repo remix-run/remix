@@ -81,7 +81,7 @@ function useRemixContext(): RemixContextObject {
 // RemixRoute
 
 export function RemixRoute({ id }: { id: string }) {
-  let { routeModules, future } = useRemixContext();
+  let { routeModules } = useRemixContext();
 
   invariant(
     routeModules,
@@ -89,13 +89,10 @@ export function RemixRoute({ id }: { id: string }) {
       "Check this link for more details:\nhttps://remix.run/pages/gotchas#server-code-in-client-bundles"
   );
 
-  let { default: Component, ErrorBoundary, CatchBoundary } = routeModules[id];
+  let { default: Component, ErrorBoundary } = routeModules[id];
 
   // Default Component to Outlet if we expose boundary UI components
-  if (
-    !Component &&
-    (ErrorBoundary || (!future.v2_errorBoundary && CatchBoundary))
-  ) {
+  if (!Component && ErrorBoundary) {
     Component = Outlet;
   }
 
