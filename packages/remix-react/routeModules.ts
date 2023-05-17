@@ -117,7 +117,9 @@ export interface V2_MetaArgs<
   Loader extends LoaderFunction | unknown = unknown,
   MatchLoaders extends Record<string, unknown> = Record<string, unknown>
 > {
-  data: Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData;
+  data:
+    | (Loader extends LoaderFunction ? SerializeFrom<Loader> : AppData)
+    | undefined;
   params: Params;
   location: Location;
   matches: V2_MetaMatches<MatchLoaders>;
