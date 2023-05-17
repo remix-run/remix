@@ -19,7 +19,6 @@ test.describe("fetcher states", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
       files: {
         "app/root.jsx": js`
           import { useMemo, useRef } from "react";
@@ -35,16 +34,10 @@ test.describe("fetcher states", () => {
               const savedStates = fetcherRef.current || [];
               savedStates.push({
                 state: fetcher.state,
-                type: fetcher.type,
                 formMethod: fetcher.formMethod,
                 formAction: fetcher.formAction,
                 formData:fetcher.formData ? Object.fromEntries(fetcher.formData.entries()) : undefined,
                 formEncType: fetcher.formEncType,
-                submission: fetcher.submission ? {
-                  ...fetcher.submission,
-                  formData: Object.fromEntries(fetcher.submission.formData.entries()),
-                  key: undefined
-                }: undefined,
                 data: fetcher.data,
               });
               fetcherRef.current = savedStates;
@@ -86,12 +79,11 @@ test.describe("fetcher states", () => {
             const fetcher = useFetcher();
             return (
               <>
-                {fetcher.type === 'init' ?
+                {fetcher.state === 'idle' && fetcher.data == null ?
                   <pre id="initial-state">
                     {
                       JSON.stringify({
                         state: fetcher.state,
-                        type: fetcher.type,
                         formMethod: fetcher.formMethod,
                         formAction: fetcher.formAction,
                         formData: fetcher.formData,
@@ -150,7 +142,11 @@ test.describe("fetcher states", () => {
     let text = (await app.getElement("#initial-state")).text();
     expect(JSON.parse(text)).toEqual({
       state: "idle",
-      type: "init",
+      data: undefined,
+      formData: undefined,
+      formAction: undefined,
+      formMethod: undefined,
+      formEncType: undefined,
     });
   });
 
@@ -163,38 +159,23 @@ test.describe("fetcher states", () => {
     expect(JSON.parse(text)).toEqual([
       {
         state: "submitting",
-        type: "actionSubmission",
         formData: { key: "value" },
         formAction: "/page",
         formMethod: "POST",
         formEncType: "application/x-www-form-urlencoded",
-        submission: {
-          formData: { key: "value" },
-          action: "/page",
-          method: "POST",
-          encType: "application/x-www-form-urlencoded",
-        },
       },
       {
         state: "loading",
-        type: "actionReload",
         formData: { key: "value" },
         formAction: "/page",
         formMethod: "POST",
         formEncType: "application/x-www-form-urlencoded",
-        submission: {
-          formData: { key: "value" },
-          action: "/page",
-          method: "POST",
-          encType: "application/x-www-form-urlencoded",
-        },
         data: {
           from: "action",
         },
       },
       {
         state: "idle",
-        type: "done",
         data: {
           from: "action",
         },
@@ -210,25 +191,14 @@ test.describe("fetcher states", () => {
     let text = (await app.getElement("#states")).text();
     expect(JSON.parse(text)).toEqual([
       {
-        state: "submitting",
-        type: "loaderSubmission",
+        state: "loading",
         formData: { key: "value" },
         formAction: "/page",
         formMethod: "GET",
         formEncType: "application/x-www-form-urlencoded",
-        submission: {
-          formData: { key: "value" },
-          // Note: This is a bug in Remix but we're going to keep it that way
-          // in useTransition (including the back-compat version) and it'll be
-          // fixed with useNavigation
-          action: "/page?key=value",
-          method: "GET",
-          encType: "application/x-www-form-urlencoded",
-        },
       },
       {
         state: "idle",
-        type: "done",
         data: {
           from: "loader",
         },
@@ -245,35 +215,20 @@ test.describe("fetcher states", () => {
     expect(JSON.parse(text)).toEqual([
       {
         state: "submitting",
-        type: "actionSubmission",
         formData: { redirect: "yes" },
         formAction: "/page",
         formMethod: "POST",
         formEncType: "application/x-www-form-urlencoded",
-        submission: {
-          formData: { redirect: "yes" },
-          action: "/page",
-          method: "POST",
-          encType: "application/x-www-form-urlencoded",
-        },
       },
       {
         state: "loading",
-        type: "actionRedirect",
         formData: { redirect: "yes" },
         formAction: "/page",
         formMethod: "POST",
         formEncType: "application/x-www-form-urlencoded",
-        submission: {
-          formData: { redirect: "yes" },
-          action: "/page",
-          method: "POST",
-          encType: "application/x-www-form-urlencoded",
-        },
       },
       {
         state: "idle",
-        type: "done",
       },
     ]);
   });
@@ -287,12 +242,10 @@ test.describe("fetcher states", () => {
     expect(JSON.parse(text)).toEqual([
       {
         state: "loading",
-        type: "normalLoad",
       },
       {
         data: { from: "loader" },
         state: "idle",
-        type: "done",
       },
     ]);
   });

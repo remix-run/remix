@@ -11,7 +11,6 @@ import { browserRouteModulesPlugin } from "./plugins/routes";
 import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "./plugins/routes_unstable";
 import { cssFilePlugin } from "../plugins/cssImports";
 import { absoluteCssUrlsPlugin } from "../plugins/absoluteCssUrlsPlugin";
-import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackage";
 import { emptyModulesPlugin } from "../plugins/emptyModules";
 import { mdxPlugin } from "../plugins/mdx";
 import { externalPlugin } from "../plugins/external";
@@ -133,7 +132,6 @@ const createEsbuildConfig = (
   }
 
   let plugins: esbuild.Plugin[] = [
-    deprecatedRemixPackagePlugin(ctx),
     cssModulesPlugin(ctx, { outputCss: false }),
     vanillaExtractPlugin(ctx, { outputCss: false }),
     cssSideEffectImportsPlugin(ctx),

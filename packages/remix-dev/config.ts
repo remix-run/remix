@@ -8,7 +8,6 @@ import { coerce } from "semver";
 
 import type { RouteManifest, DefineRoutesFunction } from "./config/routes";
 import { defineRoutes } from "./config/routes";
-import { defineConventionalRoutes } from "./config/routesConvention";
 import { ServerMode, isValidServerMode } from "./config/serverModes";
 import { serverBuildVirtualModule } from "./compiler/server/virtualModules";
 import { flatRoutes } from "./config/flat-routes";
@@ -23,15 +22,6 @@ export interface RemixMdxConfig {
 export type RemixMdxConfigFunction = (
   filename: string
 ) => Promise<RemixMdxConfig | undefined> | RemixMdxConfig | undefined;
-
-export type ServerBuildTarget =
-  | "node-cjs"
-  | "arc"
-  | "netlify"
-  | "vercel"
-  | "cloudflare-pages"
-  | "cloudflare-workers"
-  | "deno";
 
 export type ServerModuleFormat = "esm" | "cjs";
 export type ServerPlatform = "node" | "neutral";
@@ -50,14 +40,6 @@ type Dev = {
 
 interface FutureConfig {
   unstable_dev: boolean | Dev;
-  /** @deprecated Use the `postcss` config option instead */
-  unstable_postcss: boolean;
-  /** @deprecated Use the `tailwind` config option instead */
-  unstable_tailwind: boolean;
-  v2_errorBoundary: boolean;
-  v2_meta: boolean;
-  v2_normalizeFormMethod: boolean;
-  v2_routeConvention: boolean;
 }
 
 /**
@@ -65,8 +47,8 @@ interface FutureConfig {
  */
 export interface AppConfig {
   /**
-   * The path to the `app` directory, relative to `remix.config.js`. Defaults
-   * to `"app"`.
+   * The path to the `app` directory, relative to `remix.config.js`. Defaults to
+   * `"app"`.
    */
   appDirectory?: string;
 
@@ -92,14 +74,6 @@ export interface AppConfig {
   assetsBuildDirectory?: string;
 
   /**
-   * The path to the browser build, relative to remix.config.js. Defaults to
-   * "public/build".
-   *
-   * @deprecated Use `{@link AppConfig.assetsBuildDirectory}` instead
-   */
-  browserBuildDirectory?: string;
-
-  /**
    * The URL prefix of the browser build with a trailing slash. Defaults to
    * `"/build/"`. This is the path the browser will use to find assets.
    */
@@ -122,8 +96,8 @@ export interface AppConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
-   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
-   * Defaults to `false`.
+   * Whether or not to process CSS using PostCSS if `postcss.config.js` is
+   * present. Defaults to `true`.
    */
   postcss?: boolean;
 
@@ -136,25 +110,10 @@ export interface AppConfig {
   server?: string;
 
   /**
-   * The path to the server build, relative to `remix.config.js`. Defaults to
-   * "build".
-   *
-   * @deprecated Use {@link AppConfig.serverBuildPath} instead.
-   */
-  serverBuildDirectory?: string;
-
-  /**
    * The path to the server build file, relative to `remix.config.js`. This file
    * should end in a `.js` extension and should be deployed to your server.
    */
   serverBuildPath?: string;
-
-  /**
-   * The target of the server build. Defaults to "node-cjs".
-   *
-   * @deprecated Use a combination of `{@link AppConfig.publicPath}`, `{@link AppConfig.serverBuildPath}`, `{@link AppConfig.serverConditions}`, `{@link AppConfig.serverDependenciesToBundle}`, `{@link AppConfig.serverMainFields}`, `{@link AppConfig.serverMinify}`, `{@link AppConfig.serverModuleFormat}` and/or `{@link AppConfig.serverPlatform}` instead.
-   */
-  serverBuildTarget?: ServerBuildTarget;
 
   /**
    * The order of conditions to use when resolving server dependencies'
@@ -180,8 +139,8 @@ export interface AppConfig {
   serverMainFields?: string[];
 
   /**
-   * Whether to minify the server build in production or not.
-   * Defaults to `false`.
+   * Whether or not to minify the server build in production or not. Defaults to
+   * `false`.
    */
   serverMinify?: boolean;
 
@@ -196,8 +155,8 @@ export interface AppConfig {
   serverPlatform?: ServerPlatform;
 
   /**
-   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
-   * Defaults to `false`.
+   * Whether or not to support Tailwind functions and directives in CSS files if
+   * `tailwindcss` is installed. Defaults to `true`.
    */
   tailwind?: boolean;
 
@@ -209,7 +168,8 @@ export interface AppConfig {
   ignoredRouteFiles?: string[];
 
   /**
-   * A function for defining custom directories to watch while running `remix dev`, in addition to `appDirectory`.
+   * A function for defining custom directories to watch while running `remix
+   * dev`, in addition to `appDirectory`.
    */
   watchPaths?:
     | string
@@ -294,8 +254,8 @@ export interface RemixConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
-   * Whether to process CSS using PostCSS if `postcss.config.js` is present.
-   * Defaults to `false`.
+   * Whether or not to process CSS using PostCSS if `postcss.config.js` is
+   * present. Defaults to `true`.
    */
   postcss: boolean;
 
@@ -303,12 +263,6 @@ export interface RemixConfig {
    * The path to the server build file. This file should end in a `.js`.
    */
   serverBuildPath: string;
-
-  /**
-   * The target of the server build. Defaults to "node-cjs".
-   *
-   * @deprecated Use a combination of `{@link AppConfig.publicPath}`, `{@link AppConfig.serverBuildPath}`, `{@link AppConfig.serverConditions}`, `{@link AppConfig.serverDependenciesToBundle}`, `{@link AppConfig.serverMainFields}`, `{@link AppConfig.serverMinify}`, `{@link AppConfig.serverModuleFormat}` and/or `{@link AppConfig.serverPlatform}` instead.   */
-  serverBuildTarget?: ServerBuildTarget;
 
   /**
    * The default entry module for the server build if a {@see AppConfig.server}
@@ -346,8 +300,8 @@ export interface RemixConfig {
   serverMainFields: string[];
 
   /**
-   * Whether to minify the server build in production or not.
-   * Defaults to `false`.
+   * Whether or not to minify the server build in production or not. Defaults to
+   * `false`.
    */
   serverMinify: boolean;
 
@@ -367,8 +321,8 @@ export interface RemixConfig {
   serverPlatform: ServerPlatform;
 
   /**
-   * Whether to support Tailwind functions and directives in CSS files if `tailwindcss` is installed.
-   * Defaults to `false`.
+   * Whether or not to support Tailwind functions and directives in CSS files if
+   * `tailwindcss` is installed. Defaults to `true`.
    */
   tailwind: boolean;
 
@@ -411,8 +365,8 @@ export async function readConfig(
       // shout out to next
       // https://github.com/vercel/next.js/blob/b15a976e11bf1dc867c241a4c1734757427d609c/packages/next/server/config.ts#L748-L765
       if (process.env.NODE_ENV === "test") {
-        // dynamic import does not currently work inside of vm which
-        // jest relies on so we fall back to require for this case
+        // dynamic import does not currently work inside of vm which jest relies
+        // on so we fall back to require for this case
         // https://github.com/nodejs/node/issues/35889
         appConfigModule = require(configFile);
       } else {
@@ -426,29 +380,10 @@ export async function readConfig(
     }
   }
 
-  if (appConfig.serverBuildTarget) {
-    warnOnce(serverBuildTargetWarning, "v2_serverBuildTarget");
-  }
-
-  if (!appConfig.future?.v2_errorBoundary) {
-    warnOnce(errorBoundaryWarning, "v2_errorBoundary");
-  }
-
-  if (!appConfig.future?.v2_normalizeFormMethod) {
-    warnOnce(formMethodWarning, "v2_normalizeFormMethod");
-  }
-
-  if (!appConfig.future?.v2_meta) {
-    warnOnce(metaWarning, "v2_meta");
-  }
-
-  let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
-    appConfig.serverBuildTarget ?? ""
+  let serverBuildPath = path.resolve(
+    rootDirectory,
+    appConfig.serverBuildPath ?? "build/index.js"
   );
-  let isDenoRuntime = appConfig.serverBuildTarget === "deno";
-
-  let serverBuildPath = resolveServerBuildPath(rootDirectory, appConfig);
-  let serverBuildTarget = appConfig.serverBuildTarget;
   let serverBuildTargetEntryModule = `export * from ${JSON.stringify(
     serverBuildVirtualModule.id
   )};`;
@@ -458,68 +393,15 @@ export async function readConfig(
   let serverMainFields = appConfig.serverMainFields;
   let serverMinify = appConfig.serverMinify;
 
-  if (!appConfig.serverModuleFormat) {
-    warnOnce(serverModuleFormatWarning, "serverModuleFormatWarning");
-  }
-
   let serverModuleFormat = appConfig.serverModuleFormat || "cjs";
   let serverPlatform = appConfig.serverPlatform || "node";
-  if (isCloudflareRuntime) {
-    serverConditions ??= ["worker"];
-    serverDependenciesToBundle = "all";
-    serverMainFields ??= ["browser", "module", "main"];
-    serverMinify ??= true;
-    serverModuleFormat = "esm";
-    serverPlatform = "neutral";
-  }
-  if (isDenoRuntime) {
-    serverConditions ??= ["deno", "worker"];
-    serverDependenciesToBundle = "all";
-    serverMainFields ??= ["module", "main"];
-    serverModuleFormat = "esm";
-    serverPlatform = "neutral";
-  }
   serverMainFields ??=
     serverModuleFormat === "esm" ? ["module", "main"] : ["main", "module"];
   serverMinify ??= false;
 
-  if (appConfig.future) {
-    if ("unstable_cssModules" in appConfig.future) {
-      warnOnce(
-        'The "future.unstable_cssModules" config option has been removed as this feature is now enabled automatically.'
-      );
-    }
-
-    if ("unstable_cssSideEffectImports" in appConfig.future) {
-      warnOnce(
-        'The "future.unstable_cssSideEffectImports" config option has been removed as this feature is now enabled automatically.'
-      );
-    }
-
-    if ("unstable_vanillaExtract" in appConfig.future) {
-      warnOnce(
-        'The "future.unstable_vanillaExtract" config option has been removed as this feature is now enabled automatically.'
-      );
-    }
-
-    if (appConfig.future.unstable_postcss !== undefined) {
-      warnOnce(
-        'The "future.unstable_postcss" config option has been deprecated as this feature is now considered stable. Use the "postcss" config option instead.'
-      );
-    }
-
-    if (appConfig.future.unstable_tailwind !== undefined) {
-      warnOnce(
-        'The "future.unstable_tailwind" config option has been deprecated as this feature is now considered stable. Use the "tailwind" config option instead.'
-      );
-    }
-  }
-
   let mdx = appConfig.mdx;
-  let postcss =
-    appConfig.postcss ?? appConfig.future?.unstable_postcss === true;
-  let tailwind =
-    appConfig.tailwind ?? appConfig.future?.unstable_tailwind === true;
+  let postcss = appConfig.postcss ?? true;
+  let tailwind = appConfig.tailwind ?? true;
 
   let appDirectory = path.resolve(
     rootDirectory,
@@ -648,14 +530,8 @@ export async function readConfig(
     ? path.resolve(appDirectory, userEntryServerFile)
     : path.resolve(defaultsDirectory, entryServerFile);
 
-  if (appConfig.browserBuildDirectory) {
-    warnOnce(browserBuildDirectoryWarning, "browserBuildDirectory");
-  }
-
   let assetsBuildDirectory =
-    appConfig.assetsBuildDirectory ||
-    appConfig.browserBuildDirectory ||
-    path.join("public", "build");
+    appConfig.assetsBuildDirectory || path.join("public", "build");
 
   let absoluteAssetsBuildDirectory = path.resolve(
     rootDirectory,
@@ -669,9 +545,7 @@ export async function readConfig(
   process.env.REMIX_DEV_SERVER_WS_PORT = String(devServerPort);
   let devServerBroadcastDelay = appConfig.devServerBroadcastDelay || 0;
 
-  let defaultPublicPath =
-    appConfig.serverBuildTarget === "arc" ? "/_static/build/" : "/build/";
-  let publicPath = addTrailingSlash(appConfig.publicPath || defaultPublicPath);
+  let publicPath = addTrailingSlash(appConfig.publicPath || "/build/");
 
   let rootRouteFile = findEntry(appDirectory, "root");
   if (!rootRouteFile) {
@@ -682,17 +556,8 @@ export async function readConfig(
     root: { path: "", id: "root", file: rootRouteFile },
   };
 
-  let routesConvention: typeof flatRoutes;
-
-  if (appConfig.future?.v2_routeConvention) {
-    routesConvention = flatRoutes;
-  } else {
-    warnOnce(flatRoutesWarning, "v2_routeConvention");
-    routesConvention = defineConventionalRoutes;
-  }
-
   if (fse.existsSync(path.resolve(appDirectory, "routes"))) {
-    let conventionalRoutes = routesConvention(
+    let conventionalRoutes = flatRoutes(
       appDirectory,
       appConfig.ignoredRouteFiles
     );
@@ -735,12 +600,6 @@ export async function readConfig(
 
   let future: FutureConfig = {
     unstable_dev: appConfig.future?.unstable_dev ?? false,
-    unstable_postcss: appConfig.future?.unstable_postcss === true,
-    unstable_tailwind: appConfig.future?.unstable_tailwind === true,
-    v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
-    v2_meta: appConfig.future?.v2_meta === true,
-    v2_normalizeFormMethod: appConfig.future?.v2_normalizeFormMethod === true,
-    v2_routeConvention: appConfig.future?.v2_routeConvention === true,
   };
 
   return {
@@ -758,7 +617,6 @@ export async function readConfig(
     rootDirectory,
     routes,
     serverBuildPath,
-    serverBuildTarget,
     serverBuildTargetEntryModule,
     serverConditions,
     serverDependenciesToBundle,
@@ -808,41 +666,6 @@ export function findConfig(
   return undefined;
 }
 
-const resolveServerBuildPath = (
-  rootDirectory: string,
-  appConfig: AppConfig
-) => {
-  let serverBuildPath = "build/index.js";
-
-  switch (appConfig.serverBuildTarget) {
-    case "arc":
-      serverBuildPath = "server/index.js";
-      break;
-    case "cloudflare-pages":
-      serverBuildPath = "functions/[[path]].js";
-      break;
-    case "netlify":
-      serverBuildPath = ".netlify/functions-internal/server.js";
-      break;
-    case "vercel":
-      serverBuildPath = "api/index.js";
-      break;
-  }
-
-  // retain deprecated behavior for now
-  if (appConfig.serverBuildDirectory) {
-    warnOnce(serverBuildDirectoryWarning, "serverBuildDirectory");
-
-    serverBuildPath = path.join(appConfig.serverBuildDirectory, "index.js");
-  }
-
-  if (appConfig.serverBuildPath) {
-    serverBuildPath = appConfig.serverBuildPath;
-  }
-
-  return path.resolve(rootDirectory, serverBuildPath);
-};
-
 // adds types for `Intl.ListFormat` to the global namespace
 // we could also update our `tsconfig.json` to include `lib: ["es2021"]`
 declare namespace Intl {
@@ -879,52 +702,3 @@ let disjunctionListFormat = new Intl.ListFormat("en", {
   style: "long",
   type: "disjunction",
 });
-
-export let browserBuildDirectoryWarning =
-  "⚠️ REMIX FUTURE CHANGE: The `browserBuildDirectory` config option will be removed in v2. " +
-  "Use `assetsBuildDirectory` instead. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#browserbuilddirectory";
-
-export let serverBuildDirectoryWarning =
-  "⚠️ REMIX FUTURE CHANGE: The `serverBuildDirectory` config option will be removed in v2. " +
-  "Use `serverBuildPath` instead. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#serverbuilddirectory";
-
-export let serverBuildTargetWarning =
-  "⚠️ REMIX FUTURE CHANGE: The `serverBuildTarget` config option will be removed in v2. " +
-  "Use a combination of server module config values to achieve the same build output. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#serverbuildtarget";
-
-export const serverModuleFormatWarning =
-  "⚠️ REMIX FUTURE CHANGE: The `serverModuleFormat` config default option will be changing in v2 " +
-  "from `cjs` to `esm`. You can prepare for this change by explicitly specifying `serverModuleFormat: 'cjs'`. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.16.0/pages/v2#servermoduleformat";
-
-export let flatRoutesWarning =
-  "⚠️ REMIX FUTURE CHANGE: The route file convention is changing in v2. " +
-  "You can prepare for this change at your convenience with the `v2_routeConvention` future flag. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#file-system-route-convention";
-
-export const errorBoundaryWarning =
-  "⚠️ REMIX FUTURE CHANGE: The behaviors of `CatchBoundary` and `ErrorBoundary` are changing in v2. " +
-  "You can prepare for this change at your convenience with the `v2_errorBoundary` future flag. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#catchboundary-and-errorboundary";
-
-export const formMethodWarning =
-  "⚠️ REMIX FUTURE CHANGE: APIs that provide `formMethod` will be changing in v2. " +
-  "All values will be uppercase (GET, POST, etc.) instead of lowercase (get, post, etc.) " +
-  "You can prepare for this change at your convenience with the `v2_normalizeFormMethod` future flag. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#formMethod";
-
-export const metaWarning =
-  "⚠️ REMIX FUTURE CHANGE: The route `meta` export signature is changing in v2. " +
-  "You can prepare for this change at your convenience with the `v2_meta` future flag. " +
-  "For instructions on making this change see " +
-  "https://remix.run/docs/en/v1.15.0/pages/v2#meta";

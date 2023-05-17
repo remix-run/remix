@@ -7821,7 +7821,7 @@ Phew! And there we have it. If you made it through this whole thing then I'm rea
 [meta]: ../route/meta-v2
 [meta-component]: ../components/meta
 [resource-routes]: ../guides/resource-routes
-[escaping-special-characters-here]: ../file-conventions/routes-files#escaping-special-characters
+[escaping-special-characters-here]: ../file-conventions/route-files#escaping-special-characters
 [xml-document-for-rss-feed]: /jokes-tutorial/img/jokes-rss-feed.png
 [network-tab-indicating-no-java-script-is-loaded]: /jokes-tutorial/img/no-javascript.png
 [scripts-component]: ../components/scripts

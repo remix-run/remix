@@ -18,7 +18,7 @@ TypeError: Cannot read properties of undefined (reading 'root')
 
 For example, you can't import "fs-extra" directly into a route module:
 
-```tsx bad filename=app/routes/index.tsx lines=[2] nocopy
+```tsx bad filename=app/routes/_index.tsx lines=[2] nocopy
 import { json } from "@remix-run/node"; // or cloudflare/deno
 import fs from "fs-extra";
 
@@ -39,7 +39,7 @@ export { default } from "fs-extra";
 
 And then change our import in the route to the new "wrapper" module:
 
-```tsx filename=app/routes/index.tsx lines=[3]
+```tsx filename=app/routes/_index.tsx lines=[3]
 import { json } from "@remix-run/node"; // or cloudflare/deno
 
 import fs from "~/utils/fs-extra.server";

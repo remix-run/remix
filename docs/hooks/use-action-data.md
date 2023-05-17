@@ -159,8 +159,8 @@ If you're using `<Form>` and don't care to support the cases above, you don't ne
 See also:
 
 - [`action`][action]
-- [`useTransition`][usetransition]
+- [`useNavigation`][usenavigation]
 
 [action]: ../route/action
-[usetransition]: ../hooks/use-transition
+[usenavigation]: ../hooks/use-navigation
 [rr-useactiondata]: https://reactrouter.com/hooks/use-action-data

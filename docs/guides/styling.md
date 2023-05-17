@@ -97,7 +97,7 @@ export function links() {
 }
 ```
 
-```tsx filename=app/routes/dashboard/accounts.tsx
+```tsx filename=app/routes/dashboard.accounts.tsx
 import styles from "~/styles/accounts.css";
 
 export function links() {
@@ -105,7 +105,7 @@ export function links() {
 }
 ```
 
-```tsx filename=app/routes/dashboard/sales.tsx
+```tsx filename=app/routes/dashboard.sales.tsx
 import styles from "~/styles/sales.css";
 
 export function links() {
@@ -229,9 +229,9 @@ Note that the primary button's `links` include the base button's links. This way
 
 Because these buttons are not routes, and therefore not associated with a URL segment, Remix doesn't know when to prefetch, load, or unload the styles. We need to "surface" the links up to the routes that use the components.
 
-Consider that `routes/index.js` uses the primary button component:
+Consider that `routes/_index.js` uses the primary button component:
 
-```tsx filename=app/routes/index.js lines=[2-5,9]
+```tsx filename=app/routes/_index.js lines=[2-5,9]
 import styles from "~/styles/index.css";
 import {
   PrimaryButton,
@@ -403,17 +403,7 @@ export const links: LinksFunction = () => {
 
 Perhaps the most popular way to style a Remix application in the community is to use [Tailwind CSS][tailwind]. It has the benefits of inline-style collocation for developer ergonomics and is able to generate a CSS file for Remix to import. The generated CSS file generally caps out around 8-10kb, even for large applications. Load that file into the `root.tsx` links and be done with it. If you don't have any CSS opinions, this is a great approach.
 
-To use the built-in Tailwind support, first enable the `tailwind` option in `remix.config.js`:
-
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  tailwind: true,
-  // ...
-};
-```
-
-Install Tailwind as a dev dependency:
+To use the built-in Tailwind support, first install Tailwind as a dev dependency:
 
 ```sh
 npm install -D tailwindcss
@@ -467,6 +457,8 @@ Note that if you're also using Remix's [built-in PostCSS support][built-in-post-
 
 If you're using VS Code, it's recommended you install the [Tailwind IntelliSense extension][tailwind-intelli-sense-extension] for the best developer experience.
 
+<docs-info>Built-in Tailwind support can be disabled by setting the `tailwind` option to `false` in `remix.config.js`.</docs-info>
+
 ## Remote Stylesheets
 
 You can load stylesheets from any server, here's an example of loading a modern css reset from unpkg.
@@ -488,17 +480,7 @@ export const links: LinksFunction = () => {
 
 [PostCSS][postcss] is a popular tool with a rich plugin ecosystem, commonly used to prefix CSS for older browsers, transpile future CSS syntax, inline images, lint your styles and more. When a PostCSS config is detected, Remix will automatically run PostCSS across all CSS in your project.
 
-For example, to use [Autoprefixer][autoprefixer], first enable the `postcss` option in `remix.config.js`:
-
-```js filename=remix.config.js
-/** @type {import('@remix-run/dev').AppConfig} */
-module.exports = {
-  postcss: true,
-  // ...
-};
-```
-
-Install the PostCSS plugin.
+For example, to use [Autoprefixer][autoprefixer], first install the PostCSS plugin.
 
 ```sh
 npm install -D autoprefixer
@@ -527,6 +509,8 @@ module.exports = (ctx) => {
       };
 };
 ```
+
+<docs-info>Built-in PostCSS support can be disabled by setting the `postcss` option to `false` in `remix.config.js`.</docs-info>
 
 ## CSS Preprocessors
 
@@ -604,15 +588,15 @@ Here's some sample code to show how you might use Styled Components with Remix (
      ScrollRestoration,
    } from "@remix-run/react";
 
-   export const meta: MetaFunction = () => ({
-     charset: "utf-8",
-     viewport: "width=device-width,initial-scale=1",
-   });
-
    export default function App() {
      return (
        <html lang="en">
          <head>
+           <meta charSet="utf-8" />
+           <meta
+             name="viewport"
+             content="width=device-width, initial-scale=1"
+           />
            <Meta />
            <Links />
            {typeof document === "undefined"

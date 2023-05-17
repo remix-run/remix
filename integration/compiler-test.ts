@@ -25,9 +25,7 @@ test.describe("compiler", () => {
         "remix.config.js": js`
           let { getDependenciesToBundle } = require("@remix-run/dev");
           module.exports = {
-            future: {
-              v2_routeConvention: true,
-            },
+
             serverDependenciesToBundle: [
               "esm-only-pkg",
               "esm-only-single-export",
@@ -309,63 +307,6 @@ test.describe("compiler", () => {
     expect(fontFile).toBeTruthy();
   });
 
-  // TODO: remove this when we get rid of that feature.
-  test("magic imports still works", async () => {
-    let magicExportsForNode = [
-      "createCookie",
-      "createCookieSessionStorage",
-      "createFileSessionStorage",
-      "createMemorySessionStorage",
-      "createSessionStorage",
-      "unstable_createFileUploadHandler",
-      "unstable_createMemoryUploadHandler",
-      "unstable_parseMultipartFormData",
-      "createSession",
-      "isCookie",
-      "isSession",
-      "json",
-      "redirect",
-      "Form",
-      "Link",
-      "Links",
-      "LiveReload",
-      "Meta",
-      "NavLink",
-      "Outlet",
-      "PrefetchPageLinks",
-      "RemixBrowser",
-      "RemixServer",
-      "Scripts",
-      "ScrollRestoration",
-      "useActionData",
-      "useBeforeUnload",
-      "useCatch",
-      "useFetcher",
-      "useFetchers",
-      "useFormAction",
-      "useHref",
-      "useLoaderData",
-      "useLocation",
-      "useMatches",
-      "useNavigate",
-      "useNavigationType",
-      "useOutlet",
-      "useOutletContext",
-      "useParams",
-      "useResolvedPath",
-      "useSearchParams",
-      "useSubmit",
-      "useTransition",
-    ];
-    let magicRemix = await fse.readFile(
-      path.resolve(fixture.projectDir, "node_modules/remix/dist/index.js"),
-      "utf8"
-    );
-    for (let name of magicExportsForNode) {
-      expect(magicRemix).toContain(name);
-    }
-  });
-
   test.describe("serverBareModulesPlugin", () => {
     let ogConsole: typeof global.console;
     test.beforeEach(() => {
@@ -386,7 +327,6 @@ test.describe("compiler", () => {
 
       await expect(() =>
         createFixtureProject({
-          future: { v2_routeConvention: true },
           buildStdio,
           files: {
             "app/routes/_index.jsx": js`
@@ -398,6 +338,10 @@ test.describe("compiler", () => {
             export function loader() {
               return json({ main: notInstalledMain(), sub: notInstalledSub() });
             }
+
+            export const meta = () => {
+              return [{ title: "New Remix App" }];
+            };
 
             export default function Index() {
                 let data = useLoaderData();

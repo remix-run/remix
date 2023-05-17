@@ -29,7 +29,7 @@ let detectBin = async (): Promise<string> => {
   if (pkgManager === "npm") {
     // npm v9 removed the `bin` command, so have to use `prefix`
     let { stdout } = await execa(pkgManager, ["prefix"]);
-    return stdout.trim() + "/node_modules/.bin";
+    return path.join(stdout.trim(), "node_modules", ".bin");
   }
   let { stdout } = await execa(pkgManager, ["bin"]);
   return stdout.trim();
@@ -70,9 +70,12 @@ export let serve = async (
       stdio: "pipe",
       env: {
         NODE_ENV: "development",
-        PATH: `${bin}:${process.env.PATH}`,
+        PATH:
+          bin + (process.platform === "win32" ? ";" : ":") + process.env.PATH,
         REMIX_DEV_HTTP_ORIGIN: stringifyOrigin(httpOrigin),
       },
+      // https://github.com/sindresorhus/execa/issues/433
+      windowsHide: false,
     });
 
     if (newAppServer.stdin)

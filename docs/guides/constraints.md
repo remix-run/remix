@@ -30,7 +30,7 @@ export async function loader() {
 }
 
 export function meta() {
-  return { title: "Posts" };
+  return [{ title: "Posts" }];
 }
 
 export default function Posts() {
@@ -55,7 +55,7 @@ import { useLoaderData } from "@remix-run/react";
 import PostsView from "../PostsView";
 
 export function meta() {
-  return { title: "Posts" };
+  return [{ title: "Posts" }];
 }
 
 export default function Posts() {
@@ -90,7 +90,7 @@ export async function loader() {
 }
 
 export function meta() {
-  return { title: "Posts" };
+  return [{ title: "Posts" }];
 }
 
 export default function Posts() {
@@ -110,7 +110,7 @@ import { prisma } from "../db"; //😬
 console.log(prisma); //🥶
 
 export function meta() {
-  return { title: "Posts" };
+  return [{ title: "Posts" }];
 }
 
 export default function Posts() {
@@ -136,7 +136,7 @@ export async function loader() {
 }
 
 export function meta() {
-  return { title: "Posts" };
+  return [{ title: "Posts" }];
 }
 
 export default function Posts() {

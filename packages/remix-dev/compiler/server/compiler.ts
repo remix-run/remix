@@ -8,7 +8,6 @@ import { cssSideEffectImportsPlugin } from "../plugins/cssSideEffectImports";
 import { vanillaExtractPlugin } from "../plugins/vanillaExtract";
 import { cssFilePlugin } from "../plugins/cssImports";
 import { absoluteCssUrlsPlugin } from "../plugins/absoluteCssUrlsPlugin";
-import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackage";
 import { emptyModulesPlugin } from "../plugins/emptyModules";
 import { mdxPlugin } from "../plugins/mdx";
 import { serverAssetsManifestPlugin } from "./plugins/manifest";
@@ -44,7 +43,6 @@ const createEsbuildConfig = (
   }
 
   let plugins: esbuild.Plugin[] = [
-    deprecatedRemixPackagePlugin(ctx),
     cssModulesPlugin(ctx, { outputCss: false }),
     vanillaExtractPlugin(ctx, { outputCss: false }),
     cssSideEffectImportsPlugin(ctx),

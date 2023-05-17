@@ -12,9 +12,6 @@ test.describe("Vanilla Extract", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: {
-        v2_routeConvention: true,
-      },
       files: {
         "app/root.jsx": js`
           import { Links, Outlet } from "@remix-run/react";

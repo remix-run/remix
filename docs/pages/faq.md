@@ -81,7 +81,7 @@ We find option (1) to be the simplest because you don't have to mess around with
 
 HTML buttons can send a value, so it's the easiest way to implement this:
 
-```tsx filename=app/routes/projects/$id.tsx lines=[3-4,33,39]
+```tsx filename=app/routes/projects.$id.tsx lines=[3-4,33,39]
 export async function action({ request }: ActionArgs) {
   const formData = await request.formData();
   const intent = formData.get("intent");
@@ -220,11 +220,4 @@ Again, `formData.getAll()` is often all you need, we encourage you to give it a 
 [form-data]: https://developer.mozilla.org/en-US/docs/Web/API/FormData
 [query-string]: https://www.npmjs.com/package/query-string
 [ramda]: https://www.npmjs.com/package/ramda
-
-## What's the difference between `CatchBoundary` & `ErrorBoundary`?
-
-Error boundaries render when your application throws an error and you had no clue it was going to happen. Most apps just go blank or have spinners spin forever. In remix the error boundary renders and you have granular control over it.
-
-Catch boundaries render when you decide in a loader that you can't proceed down the happy path to render the UI you want (auth required, record not found, etc.), so you throw a response and let some catch boundary up the tree handle it.
-
 [watch-on-you-tube]: https://www.youtube.com/watch?v=w2i-9cYxSdc&ab_channel=Remix

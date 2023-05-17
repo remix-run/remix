@@ -38,18 +38,16 @@ export type {
   ActionFunction,
   DataFunctionArgs,
   ErrorBoundaryComponent,
+  HeadersArgs,
   HeadersFunction,
-  HtmlMetaDescriptor,
   LinksFunction,
   LoaderArgs,
   LoaderFunction,
-  MetaDescriptor,
-  MetaFunction,
   RouteComponent,
   RouteHandle,
-  V2_ServerRuntimeMetaArgs,
-  V2_ServerRuntimeMetaDescriptor,
-  V2_ServerRuntimeMetaFunction,
+  ServerRuntimeMetaArgs,
+  ServerRuntimeMetaDescriptor,
+  ServerRuntimeMetaFunction,
 } from "./routeModules";
 
 export type { SerializeFrom } from "./serialize";

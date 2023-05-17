@@ -92,7 +92,6 @@ function itPrefetchesPageLinks<
           idk: {
             hasLoader: true,
             hasAction: false,
-            hasCatchBoundary: false,
             hasErrorBoundary: false,
             id: "idk",
             module: "idk.js",
@@ -102,7 +101,6 @@ function itPrefetchesPageLinks<
         url: "",
         version: "",
       },
-      future: { v2_meta: false },
     };
 
     beforeEach(() => {

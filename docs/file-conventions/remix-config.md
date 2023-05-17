@@ -68,7 +68,7 @@ The URL prefix of the browser build with a trailing slash. Defaults to
 
 ## postcss
 
-Whether to process CSS using [PostCSS][postcss] if `postcss.config.js` is present. Defaults to `false`.
+Whether or not to process CSS using [PostCSS][postcss] if `postcss.config.js` is present. Defaults to `true`.
 
 ## routes
 
@@ -120,24 +120,24 @@ to `"build/index.js"`.
 
 ## serverBuildTarget
 
-<docs-warning>This option is deprecated and will be removed in the next major version release. Use a combination of [`publicPath`][public-path],
+<docs-warning>This option has been removed in v2. Use a combination of [`publicPath`][public-path],
 [`serverBuildPath`][server-build-path], [`serverConditions`][server-conditions],
 [`serverDependenciesToBundle`][server-dependencies-to-bundle]
 [`serverMainFields`][server-main-fields], [`serverMinify`][server-minify],
 [`serverModuleFormat`][server-module-format] and/or
 [`serverPlatform`][server-platform] instead.</docs-warning>
 
-The target of the server build. Defaults to `"node-cjs"`.
+**Migration Table:**
 
-The `serverBuildTarget` can be one of the following:
-
-- [`"arc"`][arc]
-- [`"cloudflare-pages"`][cloudflare-pages]
-- [`"cloudflare-workers"`][cloudflare-workers]
-- [`"deno"`][deno]
-- [`"netlify"`][netlify]
-- [`"node-cjs"`][node-cjs]
-- [`"vercel"`][vercel]
+| serverBuildTarget    | publicPath         | serverBuildPath                         | serverConditions | serverMainFields        | serverModuleFormat | serverPlatform | serverDependenciesToBundle | serverMinify |
+| -------------------- | ------------------ | --------------------------------------- | ---------------- | ----------------------- | ------------------ | -------------- | -------------------------- | ------------ |
+| `arc`                | `/\_static/build/` | `server/index.js`                       |                  | `main, module`          | `cjs`              | `node`         |                            | `false`      |
+| `cloudflare-pages`   | `/build/`          | `functions/[[path]].js`                 | `worker`         | `browser, module, main` | `esm`              | `neutral`      | `all`                      | `true`       |
+| `cloudflare-workers` | `/build/`          | `build/index.js`                        | `worker`         | `browser, module, main` | `esm`              | `neutral`      | `all`                      | `true`       |
+| `deno`               | `/build/`          | `build/index.js`                        | `deno, worker`   | `module, main`          | `esm`              | `neutral`      | `all`                      | `false`      |
+| `netlify`            | `/build/`          | `.netlify/functions-internal/server.js` |                  | `main, module`          | `cjs`              | `node`         |                            | `false`      |
+| `node-cjs`           | `/build/`          | `build/index.js`                        |                  | `main, module`          | `cjs`              | `node`         |                            | `false`      |
+| `vercel`             | `/build/`          | `api/index.js`                          |                  | `main, module`          | `cjs`              | `node`         |                            | `false`      |
 
 ## serverConditions
 
@@ -184,7 +184,7 @@ The order of main fields to use when resolving server dependencies. Defaults to
 
 ## serverMinify
 
-Whether to minify the server build in production or not. Defaults to `false`.
+Whether or not to minify the server build in production or not. Defaults to `false`.
 
 ## serverModuleFormat
 
@@ -198,7 +198,7 @@ The platform the server build is targeting, which can either be `"neutral"` or
 
 ## tailwind
 
-Whether to support [Tailwind functions and directives][tailwind-functions-and-directives] in CSS files if `tailwindcss` is installed. Defaults to `false`.
+Whether or not to support [Tailwind functions and directives][tailwind-functions-and-directives] in CSS files if `tailwindcss` is installed. Defaults to `true`.
 
 ## watchPaths
 

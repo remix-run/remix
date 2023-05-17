@@ -34,7 +34,6 @@ const searchFiles = async (pattern: string | RegExp, files: string[]) => {
 
 test.beforeAll(async () => {
   projectDir = await createFixtureProject({
-    future: { v2_routeConvention: true },
     template: "deno-template",
     files: {
       "package.json": json({

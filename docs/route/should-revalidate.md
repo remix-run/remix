@@ -92,7 +92,7 @@ For instance, consider an event slug with the id and an human-friendly title:
 - `/events/blink-182-united-center-saint-paul--ae3f9`
 - `/events/blink-182-little-caesars-arena-detroit--e87ad`
 
-```tsx filename=app/routes/events/$slug.tsx
+```tsx filename=app/routes/events.$slug.tsx
 export async function loader({ params }: LoaderArgs) {
   const id = params.slug.split("--")[1];
   return loadEvent(id);

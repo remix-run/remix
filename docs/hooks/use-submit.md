@@ -14,7 +14,7 @@ This is useful whenever you need to programmatically submit a form. For example,
 ```tsx filename=app/routes/prefs.tsx lines=[3,15,19]
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
-import { useSubmit, useTransition } from "@remix-run/react";
+import { useSubmit, useNavigation } from "@remix-run/react";
 
 export async function loader() {
   return json(await getUserPreferences());
@@ -27,7 +27,7 @@ export async function action({ request }: ActionArgs) {
 
 function UserPreferences() {
   const submit = useSubmit();
-  const transition = useTransition();
+  const navigation = useNavigation();
 
   function handleChange(event) {
     submit(event.currentTarget, { replace: true });
@@ -39,7 +39,7 @@ function UserPreferences() {
         <input type="checkbox" name="darkMode" value="on" />{" "}
         Dark Mode
       </label>
-      {transition.state === "submitting" ? (
+      {navigation.state === "submitting" ? (
         <p>Saving...</p>
       ) : null}
     </Form>
@@ -50,7 +50,7 @@ function UserPreferences() {
 This can also be useful if you'd like to automatically sign someone out of your website after a period of inactivity. In this case, we've defined inactivity as the user hasn't navigated to any other pages after 5 minutes.
 
 ```tsx lines=[1,10,15]
-import { useSubmit, useTransition } from "@remix-run/react";
+import { useSubmit, useNavigation } from "@remix-run/react";
 import { useEffect } from "react";
 
 function AdminPage() {
@@ -60,7 +60,7 @@ function AdminPage() {
 
 function useSessionTimeout() {
   const submit = useSubmit();
-  const transition = useTransition();
+  const navigation = useNavigation();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -68,7 +68,7 @@ function useSessionTimeout() {
     }, 5 * 60_000);
 
     return () => clearTimeout(timer);
-  }, [submit, transition]);
+  }, [submit, navigation]);
 }
 ```
 

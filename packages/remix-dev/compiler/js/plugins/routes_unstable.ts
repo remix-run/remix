@@ -3,7 +3,7 @@ import * as path from "node:path";
 import type esbuild from "esbuild";
 import generate from "@babel/generator";
 
-import { routeModuleExts } from "../../../config/routesConvention";
+import { routeModuleExts } from "../../../config/flat-routes";
 import * as Transform from "../../../transform";
 import { getLoaderForFile } from "../../utils/loaders";
 import { applyHMR } from "./hmr";

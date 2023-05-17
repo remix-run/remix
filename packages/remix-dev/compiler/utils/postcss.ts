@@ -77,7 +77,7 @@ export async function getPostcssProcessor({
   config,
   context = defaultContext,
 }: Options): Promise<Processor | null> {
-  if (!isPostcssEnabled(config)) {
+  if (!config.postcss) {
     return null;
   }
 

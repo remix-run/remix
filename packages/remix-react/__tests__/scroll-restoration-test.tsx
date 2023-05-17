@@ -35,7 +35,6 @@ describe("<ScrollRestoration />", () => {
         root: {
           hasLoader: false,
           hasAction: false,
-          hasCatchBoundary: false,
           hasErrorBoundary: false,
           id: "root",
           module: "root.js",
@@ -45,7 +44,6 @@ describe("<ScrollRestoration />", () => {
       url: "",
       version: "",
     },
-    future: { v2_meta: false },
   };
 
   it("should render a <script> tag", () => {

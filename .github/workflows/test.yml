@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev
+      - v2
     paths-ignore:
       - "docs/**"
       - "scripts/**"

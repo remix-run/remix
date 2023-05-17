@@ -22,9 +22,6 @@ test.describe("CSS side-effect imports", () => {
         "remix.config.js": js`
           module.exports = {
             serverDependenciesToBundle: [/@test-package/],
-            future: {
-              v2_routeConvention: true,
-            },
           };
         `,
         "app/root.jsx": js`
@@ -51,6 +48,7 @@ test.describe("CSS side-effect imports", () => {
         ...imageUrlsFixture(),
         ...rootRelativeImageUrlsFixture(),
         ...absoluteImageUrlsFixture(),
+        ...jsxInJsFileFixture(),
         ...commonJsPackageFixture(),
         ...esmPackageFixture(),
       },
@@ -238,6 +236,35 @@ test.describe("CSS side-effect imports", () => {
     );
     expect(backgroundImage).toContain(".svg");
     expect(imgStatus).toBe(200);
+  });
+
+  let jsxInJsFileFixture = () => ({
+    "app/jsxInJsFile/styles.css": css`
+      .jsxInJsFile {
+        background: peachpuff;
+        padding: ${TEST_PADDING_VALUE};
+      }
+    `,
+    "app/routes/jsx-in-js-file-test.js": js`
+      import "../jsxInJsFile/styles.css";
+
+      export default function() {
+        return (
+          <div data-testid="jsx-in-js-file" className="jsxInJsFile">
+            JSX in JS file test
+          </div>
+        )
+      }
+    `,
+  });
+  test("JSX in JS file", async ({ page }) => {
+    let app = new PlaywrightFixture(appFixture, page);
+    await app.goto("/jsx-in-js-file-test");
+    let locator = await page.locator("[data-testid='jsx-in-js-file']");
+    let padding = await locator.evaluate(
+      (element) => window.getComputedStyle(element).padding
+    );
+    expect(padding).toBe(TEST_PADDING_VALUE);
   });
 
   let commonJsPackageFixture = () => ({

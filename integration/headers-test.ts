@@ -13,7 +13,6 @@ test.describe("headers export", () => {
 
   test.beforeAll(async () => {
     appFixture = await createFixture({
-      future: { v2_routeConvention: true },
       files: {
         "app/root.jsx": js`
           import { json } from "@remix-run/node";
@@ -100,7 +99,6 @@ test.describe("headers export", () => {
     let HEADER_VALUE = "SUCCESS";
 
     let fixture = await createFixture({
-      future: { v2_routeConvention: true },
       files: {
         "app/root.jsx": js`
           import { Links, Meta, Outlet, Scripts } from "@remix-run/react";

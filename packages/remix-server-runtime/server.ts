@@ -177,55 +177,6 @@ async function handleDataRequestRR(
   }
 }
 
-function findParentBoundary(
-  routes: ServerRouteManifest,
-  routeId: string,
-  error: any
-): string {
-  // Fall back to the root route if we don't match any routes, since Remix
-  // has default error/catch boundary handling.  This handles the case where
-  // react-router doesn't have a matching "root" route to assign the error to
-  // so it returns context.errors = { __shim-error-route__: ErrorResponse }
-  let route = routes[routeId] || routes["root"];
-  // Router-thrown ErrorResponses will have the error instance.  User-thrown
-  // Responses will not have an error. The one exception here is internal 404s
-  // which we handle the same as user-thrown 404s
-  let isCatch =
-    isRouteErrorResponse(error) && (!error.error || error.status === 404);
-  if (
-    (isCatch && route.module.CatchBoundary) ||
-    (!isCatch && route.module.ErrorBoundary) ||
-    !route.parentId
-  ) {
-    return route.id;
-  }
-
-  return findParentBoundary(routes, route.parentId, error);
-}
-
-// Re-generate a remix-friendly context.errors structure.  The Router only
-// handles generic errors and does not distinguish error versus catch.  We
-// may have a thrown response tagged to a route that only exports an
-// ErrorBoundary or vice versa.  So we adjust here and ensure that
-// data-loading errors are properly associated with routes that have the right
-// type of boundaries.
-export function differentiateCatchVersusErrorBoundaries(
-  build: ServerBuild,
-  context: StaticHandlerContext
-) {
-  if (!context.errors) {
-    return;
-  }
-
-  let errors: Record<string, any> = {};
-  for (let routeId of Object.keys(context.errors)) {
-    let error = context.errors[routeId];
-    let handlingRouteId = findParentBoundary(build.routes, routeId, error);
-    errors[handlingRouteId] = error;
-  }
-  context.errors = errors;
-}
-
 async function handleDocumentRequestRR(
   serverMode: ServerMode,
   build: ServerBuild,
@@ -250,11 +201,6 @@ async function handleDocumentRequestRR(
   // Sanitize errors outside of development environments
   if (context.errors) {
     context.errors = sanitizeErrors(context.errors, serverMode);
-  }
-
-  // Restructure context.errors to the right Catch/Error Boundary
-  if (build.future.v2_errorBoundary !== true) {
-    differentiateCatchVersusErrorBoundaries(build, context);
   }
 
   let headers = getDocumentHeadersRR(build, context);
@@ -295,11 +241,6 @@ async function handleDocumentRequestRR(
     // Sanitize errors outside of development environments
     if (context.errors) {
       context.errors = sanitizeErrors(context.errors, serverMode);
-    }
-
-    // Restructure context.errors to the right Catch/Error Boundary
-    if (build.future.v2_errorBoundary !== true) {
-      differentiateCatchVersusErrorBoundaries(build, context);
     }
 
     // Update entryContext for the second render pass

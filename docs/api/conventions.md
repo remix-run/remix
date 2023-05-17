@@ -158,7 +158,7 @@ title: Conventions
 
 [Moved →][moved-36]
 
-#### `HtmlMetaDescriptor`
+#### `MetaDescriptor`
 
 [Moved →][moved-37]
 
@@ -178,10 +178,6 @@ title: Conventions
 
 [Moved →][moved-41]
 
-### CatchBoundary
-
-[Moved →][moved-42]
-
 ### ErrorBoundary
 
 [Moved →][moved-43]
@@ -190,21 +186,13 @@ title: Conventions
 
 [Moved →][moved-44]
 
-### unstable_shouldReload
+### shouldRevalidate
 
 [Moved →][moved-45]
 
-#### Never reloading the root
-
-[Moved →][moved-46]
-
-#### Ignoring search params
-
-[Moved →][moved-47]
-
 ## Asset URL Imports
 
-[Moved →][moved-48]
+[Moved →][moved-46]
 
 [moved]: ../file-conventions/remix-config
 [moved-2]: ../file-conventions/remix-config#appdirectory
@@ -247,10 +235,7 @@ title: Conventions
 [moved-39]: ../route/links
 [moved-40]: ../route/links#htmllinkdescriptor
 [moved-41]: ../route/links#pagelinkdescriptor
-[moved-42]: ../route/catch-boundary
 [moved-43]: ../route/error-boundary
 [moved-44]: ../route/handle
-[moved-45]: ../route/should-reload
-[moved-46]: ../route/should-reload#never-reloading-the-root
-[moved-47]: ../route/should-reload#ignoring-search-params
-[moved-48]: ../other-api/asset-imports
+[moved-45]: ../route/should-revalidate
+[moved-46]: ../other-api/asset-imports
