@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- don't require display name in root module ([#5450](https://github.com/remix-run/remix/pull/5450))
+- Don't require display name in root module ([#5450](https://github.com/remix-run/remix/pull/5450))
 - Update minimum version of Babel dependencies to avoid errors parsing decorators ([#6390](https://github.com/remix-run/remix/pull/6390))
 
 ## 1.16.0
