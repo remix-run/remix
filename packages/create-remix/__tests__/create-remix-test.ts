@@ -503,7 +503,7 @@ describe("create-remix CLI", () => {
     expect(stderr.trim()).toBeFalsy();
     expect(status).toBe(0);
 
-    expect(stdout).toContain(`Template's remit.init script complete`);
+    expect(stdout).toContain(`Template's remix.init script complete`);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "test.txt"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "remix.init"))).toBeFalsy();
