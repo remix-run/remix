@@ -202,10 +202,6 @@ test.describe("Development server", async () => {
 
     fixture = await createFixture(
       {
-        future: {
-          v2_routeConvention: true,
-          v2_errorBoundary: true,
-        },
         files: {
           "app/routes/_index.jsx": js`
             import { Link } from "@remix-run/react";

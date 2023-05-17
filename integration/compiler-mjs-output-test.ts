@@ -8,7 +8,6 @@ let projectDir: string;
 
 test.beforeAll(async () => {
   projectDir = await createFixtureProject({
-    future: { v2_routeConvention: true },
     files: {
       "package.json": js`
         {
@@ -44,9 +43,6 @@ test.beforeAll(async () => {
         export default {
           serverModuleFormat: "esm",
           serverBuildPath: "build/index.mjs",
-          future: {
-            v2_routeConvention: true,
-          },
         };
       `,
       "app/routes/_index.jsx": js`
