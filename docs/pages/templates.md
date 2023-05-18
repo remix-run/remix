@@ -44,7 +44,7 @@ What you're left with is everything completely set up for you to just get to wor
 
 You can use these stacks by proving the `--template` option when running `create-remix`, for example:
 
-```
+```sh
 npx create-remix@latest --template remix-run/blues-stack
 ```
 
@@ -56,7 +56,7 @@ You can [browse the list of community stacks on GitHub.][remix-stack-topic]
 
 Community stacks can be used by passing the GitHub username/repo combo to the `--template` option when running `create-remix`, for example:
 
-```
+```sh
 npx create-remix@latest --template :username/:repo
 ```
 
@@ -72,7 +72,7 @@ We also provide a [community-driven examples repository,][examples] with each ex
 
 You can use these templates and examples by passing the full GitHub URL to the `--template` option when running `create-remix`, for example:
 
-```
+```sh
 npx create-remix@latest --template https://github.com/remix-run/examples/tree/main/basic
 ```
 
@@ -89,7 +89,7 @@ The template option can be any of the following values:
 
 Additionally, if your stack is in a private GitHub repo, you can pass a GitHub token via the `--token` cli flag:
 
-```
+```sh
 npx create-remix@latest --template your-private/repo --token yourtoken
 ```
 
