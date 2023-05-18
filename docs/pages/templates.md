@@ -76,18 +76,8 @@ You can use these templates and examples by passing the full GitHub URL to the `
 npx create-remix@latest --template https://github.com/remix-run/examples/tree/main/basic
 ```
 
-### `--template`
+Additionally, if your template is in a private GitHub repo, you can pass a GitHub token via the `--token` option:
 
-The template option can be any of the following values:
-
-- A GitHub username/repo combo (e.g. `remix-run/blues-stack`)
-- The URL of a GitHub repository, or directory within it (e.g. `https://github.com/remix-run/examples/tree/main/basic`)
-- A URL to a tarball (e.g. `https://example.com/remix-stack.tar.gz`)
-- A file path to a directory on disk (e.g. `/my/remix-stack`)
-- A path to a tarball on disk (e.g. `/my/remix-stack.tar.gz`)
-- A file URL (e.g. `file:///Users/michael/remix-stack.tar.gz`)
-
-Additionally, if your stack is in a private GitHub repo, you can pass a GitHub token via the `--token` cli flag:
 
 ```sh
 npx create-remix@latest --template your-private/repo --token yourtoken
@@ -95,9 +85,19 @@ npx create-remix@latest --template your-private/repo --token yourtoken
 
 The [token just needs `repo` access][repo access token].
 
+### Local Templates
+
+You can provide a local directory or tarball on disk to the `--template` option, for example:
+
+```sh
+npx create-remix@latest --template /my/remix-stack
+npx create-remix@latest --template /my/remix-stack.tar.gz
+npx create-remix@latest --template file:///Users/michael/my-remix-stack.tar.gz
+```
+
 ### Custom Template Tips
 
-#### Dependency versions
+#### Dependency Versions
 
 If you set any dependencies in package.json to `*`, the Remix CLI will change it to a semver caret of the installed Remix version:
 
