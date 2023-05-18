@@ -7,12 +7,29 @@ export function getDocumentHeadersRR(
   build: ServerBuild,
   context: StaticHandlerContext
 ): Headers {
-  let matches = context.errors
-    ? context.matches.slice(
-        0,
-        context.matches.findIndex((m) => context.errors![m.route.id]) + 1
-      )
-    : context.matches;
+  let matches = context.matches;
+  let errorHeaders: Headers | undefined;
+
+  if (context.errors) {
+    let boundaryIdx =
+      context.matches.findIndex((m) => context.errors![m.route.id]) + 1;
+
+    // Trim to the "Renderable" matches at or above the boundary
+    matches = context.matches.slice(0, boundaryIdx);
+
+    // Look for any errorHeaders from the first encountered throwing route,
+    // which can be identified by the presence of headers but no data
+    let { actionHeaders, actionData, loaderHeaders, loaderData } = context;
+    context.matches.slice(boundaryIdx).some((match) => {
+      let id = match.route.id;
+      if (actionHeaders[id] && actionData && actionData[id] === undefined) {
+        errorHeaders = actionHeaders[id];
+      } else if (loaderHeaders[id] && loaderData[id] === undefined) {
+        errorHeaders = loaderHeaders[id];
+      }
+      return errorHeaders != null;
+    });
+  }
 
   return matches.reduce((parentHeaders, match) => {
     let { id } = match.route;
@@ -22,7 +39,12 @@ export function getDocumentHeadersRR(
     let headers = new Headers(
       routeModule.headers
         ? typeof routeModule.headers === "function"
-          ? routeModule.headers({ loaderHeaders, parentHeaders, actionHeaders })
+          ? routeModule.headers({
+              loaderHeaders,
+              parentHeaders,
+              actionHeaders,
+              errorHeaders,
+            })
           : routeModule.headers
         : undefined
     );
