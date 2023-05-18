@@ -36,7 +36,8 @@ npx create-remix@latest --template remix-run/indie-stack blog-tutorial
 ```
 
 ```
-? Do you want me to run `npm install`? Yes
+Install dependencies with npm?
+Yes
 ```
 
 You can read more about the stacks available in [the stacks docs][the-stacks-docs].

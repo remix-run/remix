@@ -270,6 +270,11 @@ async function templateStep(ctx: Context) {
   if (ctx.template) {
     log("");
     info("Template", ["Using ", color.reset(ctx.template), "..."]);
+  } else {
+    log("");
+    info("Using basic template", [
+      "See https://remix.run/docs/pages/templates for more",
+    ]);
   }
 
   let template =
