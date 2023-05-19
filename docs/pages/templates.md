@@ -16,6 +16,12 @@ If you run `create-remix` without providing the `--template` option, you'll get 
 npx create-remix@latest
 ```
 
+If you are not interested in using TypeScript, you can install the simpler Javascript template instead:
+
+```sh
+npx create-remix --template https://github.com/remix-run/remix/tree/main/templates/remix-javascript
+```
+
 This is a great place to start if you're just looking to try out Remix for the first time. You can always extend this starting point yourself or migrate to a more advanced template later.
 
 ## Stacks
