@@ -72,7 +72,7 @@ npx create-remix@latest --template :username/:repo
 
 For a less opinionated starting point, you can also just use a regular template.
 
-The Remix repo provides a set of [templates for different hosting platforms.][official-templates]
+The Remix repo provides a set of [templates for different environments.][official-templates]
 
 We also provide a [community-driven examples repository,][examples] with each example showcasing different Remix features, patterns, tools, hosting providers, etc.
 
