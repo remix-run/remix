@@ -37,6 +37,8 @@ pnpm create remix@latest <projectDir>
 
 ### `create-remix --template`
 
+For a more comprehensive guide to available templates, see our [templates page.][templates]
+
 A valid template can be:
 
 - the name of a `:username/:repo` on GitHub
@@ -64,3 +66,5 @@ To create a new project from a template in a private GitHub repo, pass the `--to
 
 </docs-info>
 </aside>
+
+[templates]: ../pages/templates
