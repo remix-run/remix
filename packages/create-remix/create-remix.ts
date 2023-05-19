@@ -653,6 +653,7 @@ async function updatePackageJSON(ctx: Context) {
   for (let pkgKey of ["dependencies", "devDependencies"] as const) {
     let dependencies = packageJSON[pkgKey];
     if (!dependencies) continue;
+
     if (!isValidJsonObject(dependencies)) {
       error(
         "Oh no!",
@@ -665,13 +666,10 @@ async function updatePackageJSON(ctx: Context) {
     for (let dependency in dependencies) {
       let version = dependencies[dependency];
       if (version === "*") {
-        // prettier-ignore
-        // @ts-expect-error
-        packageJSON[pkgKey][dependency] =
-					semver.prerelease(ctx.remixVersion)
-					? // Templates created from prereleases should pin to a specific version
-					  ctx.remixVersion
-					: "^" + ctx.remixVersion;
+        dependencies[dependency] = semver.prerelease(ctx.remixVersion)
+          ? // Templates created from prereleases should pin to a specific version
+            ctx.remixVersion
+          : "^" + ctx.remixVersion;
       }
     }
   }
@@ -746,17 +744,17 @@ ${[
   "remix-run/grunge-stack",
   "remix-run/remix/templates/remix",
   "remix-run/examples/basic",
-	":username/:repo",
+  ":username/:repo",
   ":username/:repo/:directory",
-	"https://github.com/:username/:repo",
-	"https://github.com/:username/:repo/tree/:branch",
-	"https://github.com/:username/:repo/tree/:branch/:directory",
-	"https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz",
-	"https://example.com/remix-template.tar.gz",
-	"/path/to/remix-template",
-	"/path/to/remix-template.tar.gz",
+  "https://github.com/:username/:repo",
+  "https://github.com/:username/:repo/tree/:branch",
+  "https://github.com/:username/:repo/tree/:branch/:directory",
+  "https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz",
+  "https://example.com/remix-template.tar.gz",
+  "/path/to/remix-template",
+  "/path/to/remix-template.tar.gz",
 ].reduce((str, example) => {
-	return `${str}\n${color.dim("$")} ${color.greenBright("create-remix")} my-app ${color.arg(`--template ${example}`)}`;
+  return `${str}\n${color.dim("$")} ${color.greenBright("create-remix")} my-app ${color.arg(`--template ${example}`)}`;
 }, "")}
 
 To create a new project from a template in a private GitHub repo,
