@@ -55,6 +55,7 @@ interface FutureConfig {
   /** @deprecated Use the `tailwind` config option instead */
   unstable_tailwind: boolean;
   v2_errorBoundary: boolean;
+  v2_headers: boolean;
   v2_meta: boolean;
   v2_normalizeFormMethod: boolean;
   v2_routeConvention: boolean;
@@ -738,6 +739,7 @@ export async function readConfig(
     unstable_postcss: appConfig.future?.unstable_postcss === true,
     unstable_tailwind: appConfig.future?.unstable_tailwind === true,
     v2_errorBoundary: appConfig.future?.v2_errorBoundary === true,
+    v2_headers: appConfig.future?.v2_headers === true,
     v2_meta: appConfig.future?.v2_meta === true,
     v2_normalizeFormMethod: appConfig.future?.v2_normalizeFormMethod === true,
     v2_routeConvention: appConfig.future?.v2_routeConvention === true,
