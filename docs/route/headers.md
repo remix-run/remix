@@ -61,8 +61,8 @@ If we are looking at `/users/123/profile` then three routes are rendering:
 If all three define `headers`, the deepest module wins, in this case `profile.tsx`. However, if your `profile.tsx` loader threw and bubbled to a boundary in `userId.tsx` - then `userId.tsx`'s `headers` function would be used as it is the leaf rendered route.
 
 <docs-info>
-We realize that it's annoying to have to define `headers` on every possible leaf route so we're chanigng the current behavior slightly in v2 behind the `future.v2_headers` flag
-<docs/info>
+We realize that it can be tedious and error-prone to have to define `headers` on every possible leaf route so we're changing the current behavior in v2 behind the [`future.v2_headers`][v2_headers] flag.
+<docs-info>
 
 We don't want surprise headers in your responses, so it's your job to merge them if you'd like. Remix passes in the `parentHeaders` to your `headers` function. So `users.tsx` headers get passed to `$userId.tsx`, and then `$userId.tsx` headers are passed to `profile.tsx` headers.
 
@@ -127,7 +127,7 @@ export default function handleRequest(
 
 Just keep in mind that doing this will apply to _all_ document requests, but does not apply to `data` requests (for client-side transitions for example). For those, use [`handleDataRequest`][handledatarequest].
 
-## v2_headers future flag
+## v2 Behavior
 
 Since it can be tedious and error-prone to define a `header` function in every single possible leaf route, we're changing the behavior slightly in v2 and you can opt-into the new behavior via the `future.v2_headers` [Future Flag][future-flags] in `remix.config.js`.
 
@@ -147,5 +147,5 @@ If we are looking at `/users/123/profile` and `profile.tsx` does not export a `h
 
 [headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
 [handledatarequest]: ../file-conventions/entry.server
-[v2_headers-future-flag]: #v2_headers-future-flag
+[v2_headers]: #v2-behavior
 [future-flags]: ../pages/api-development-strategy
