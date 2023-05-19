@@ -30,6 +30,7 @@ export async function copyTemplate(
    * Valid templates are:
    * - local file or directory on disk
    * - github owner/repo shorthand
+   * - github owner/repo/directory shorthand
    * - full github repo URL
    * - any tarball URL
    */
