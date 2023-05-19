@@ -133,9 +133,7 @@ test.describe("headers export", () => {
                 headers: { 'X-Child-Loader': 'error' },
               })
             }
-            return new Response(null, {
-              headers: { 'X-Child-Loader': 'success' },
-            })
+            return null
           }
 
           export async function action({ request }) {
@@ -146,9 +144,7 @@ test.describe("headers export", () => {
                 headers: { 'X-Child-Action': 'error' },
               })
             }
-            return new Response(null, {
-              headers: { 'X-Child-Action': 'success' },
-            })
+            return null
           }
 
           export default function Component() { return <div/> }
@@ -160,18 +156,6 @@ test.describe("headers export", () => {
               status: 400,
               headers: { 'X-Child-Grandchild': 'error' },
             })
-          }
-
-          export default function Component() { return <div/> }
-        `,
-
-        "app/routes/parent.child-no-headers.jsx": js`
-          export function loader({ request }) {
-            return null
-          }
-
-          export async function action({ request }) {
-            return null
           }
 
           export default function Component() { return <div/> }
