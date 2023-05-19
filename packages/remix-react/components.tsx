@@ -219,18 +219,36 @@ interface PrefetchHandlers {
   onTouchStart?: TouchEventHandler;
 }
 
-function usePrefetchBehavior(
+function usePrefetchBehavior<T extends HTMLAnchorElement>(
   prefetch: PrefetchBehavior,
   theirElementProps: PrefetchHandlers
-): [boolean, Required<PrefetchHandlers>] {
+): [boolean, React.RefObject<T>, Required<PrefetchHandlers>] {
   let [maybePrefetch, setMaybePrefetch] = React.useState(false);
   let [shouldPrefetch, setShouldPrefetch] = React.useState(false);
   let { onFocus, onBlur, onMouseEnter, onMouseLeave, onTouchStart } =
     theirElementProps;
 
+  let ref = React.useRef<T>(null);
+
   React.useEffect(() => {
     if (prefetch === "render") {
       setShouldPrefetch(true);
+    }
+
+    if (prefetch === "viewport") {
+      let callback: IntersectionObserverCallback = (entries) => {
+        console.log("entries", entries);
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setShouldPrefetch(true);
+        });
+      };
+      let observer = new IntersectionObserver(callback, { threshold: 0.5 });
+      if (ref.current) observer.observe(ref.current);
+      else console.warn("No element to observe");
+
+      return () => {
+        observer.disconnect();
+      };
     }
   }, [prefetch]);
 
@@ -260,6 +278,7 @@ function usePrefetchBehavior(
 
   return [
     shouldPrefetch,
+    ref,
     {
       onFocus: composeEventHandlers(onFocus, setIntent),
       onBlur: composeEventHandlers(onBlur, cancelIntent),
@@ -282,17 +301,18 @@ let NavLink = React.forwardRef<HTMLAnchorElement, RemixNavLinkProps>(
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
     let href = useHref(to);
-    let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
+    let [shouldPrefetch, ref, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
     );
+
     return (
       <>
         <RouterNavLink
-          ref={forwardedRef}
-          to={to}
           {...props}
           {...prefetchHandlers}
+          ref={mergeRefs(forwardedRef, ref)}
+          to={to}
         />
         {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
@@ -314,48 +334,23 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
-    let fallbackRef = React.useRef<HTMLAnchorElement>(null);
-
     let href = useHref(to);
-    let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
+    let [shouldPrefetch, ref, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
     );
 
-    let [shouldActuallyPrefetch, setShouldActuallyPrefetch] =
-      React.useState(shouldPrefetch);
-
-    React.useEffect(() => {
-      if (prefetch === "viewport") {
-        let callback: IntersectionObserverCallback = (entries, observer) => {
-          console.log("entries", entries);
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              setShouldActuallyPrefetch(true);
-            }
-          });
-        };
-        let observer = new IntersectionObserver(callback, { threshold: 0.5 });
-        observer.observe(fallbackRef.current!);
-
-        return () => {
-          observer.disconnect();
-        };
-      }
-    }, [forwardedRef, prefetch]);
+    console.log({ ref: ref.current, forwardedRef });
 
     return (
       <>
         <RouterLink
-          ref={(el) => {
-            forwardedRef = el;
-            fallbackRef.current = el;
-          }}
-          to={to}
           {...props}
           {...prefetchHandlers}
+          ref={mergeRefs(forwardedRef, ref)}
+          to={to}
         />
-        {shouldActuallyPrefetch && !isAbsolute ? (
+        {shouldPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
         ) : null}
       </>
@@ -1832,3 +1827,17 @@ export const LiveReload =
           />
         );
       };
+
+function mergeRefs<T = any>(
+  ...refs: Array<React.MutableRefObject<T> | React.LegacyRef<T>>
+): React.RefCallback<T> {
+  return (value) => {
+    refs.forEach((ref) => {
+      if (typeof ref === "function") {
+        ref(value);
+      } else if (ref != null) {
+        (ref as React.MutableRefObject<T | null>).current = value;
+      }
+    });
+  };
+}
