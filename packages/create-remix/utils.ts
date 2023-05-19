@@ -89,8 +89,8 @@ export function logError(message: string) {
   return stderr.write(message + "\n");
 }
 
-export function info(prefix: string, text: string | string[]) {
-  let textParts = Array.isArray(text) ? text : [text];
+export function info(prefix: string, text?: string | string[]) {
+  let textParts = Array.isArray(text) ? text : [text || ""].filter(Boolean);
   let formattedText = textParts.map((textPart) => color.dim(textPart)).join("");
 
   if (process.stdout.columns < 80) {
@@ -109,8 +109,8 @@ export function success(text: string) {
   log(`${" ".repeat(5)} ${color.green("✔")}  ${color.green(text)}`);
 }
 
-export function error(prefix: string, text: string | string[]) {
-  let textParts = Array.isArray(text) ? text : [text];
+export function error(prefix: string, text?: string | string[]) {
+  let textParts = Array.isArray(text) ? text : [text || ""].filter(Boolean);
   let formattedText = textParts
     .map((textPart) => color.error(textPart))
     .join("");

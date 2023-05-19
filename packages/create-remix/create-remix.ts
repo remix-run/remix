@@ -297,7 +297,7 @@ async function templateStep(ctx: Context) {
               try {
                 await rm(destPath);
               } catch (_) {
-                console.log("failed to remove", destPath);
+                error("Oh no!", ["Failed to remove ", destPath]);
               }
             }
           })();
@@ -324,7 +324,7 @@ async function templateStep(ctx: Context) {
         },
         async log(message) {
           if (ctx.debug) {
-            info("Nice one!", message);
+            info(message);
             await sleep(500);
           }
         },
@@ -554,7 +554,7 @@ async function doneStep(ctx: Context) {
   if (projectDir !== "") {
     let enter = [
       `\n${prefix}Enter your project directory using`,
-      color.cyan(`cd ./${projectDir}`, ""),
+      color.cyan(`cd ./${projectDir}`),
     ];
     let len = enter[0].length + stripAnsi(enter[1]).length;
     log(enter.join(len > max ? "\n" + prefix : " "));
