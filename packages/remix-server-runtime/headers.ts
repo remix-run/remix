@@ -32,7 +32,7 @@ export function getDocumentHeadersRR(
     });
   }
 
-  return matches.reduce((parentHeaders, match) => {
+  return matches.reduce((parentHeaders, match, idx) => {
     let { id } = match.route;
     let routeModule = build.routes[id].module;
     let loaderHeaders = context.loaderHeaders[id] || new Headers();
