@@ -44,7 +44,10 @@ export function getDocumentHeadersRR(
               loaderHeaders,
               parentHeaders,
               actionHeaders,
-              errorHeaders,
+              // Only expose errorHeaders to the leaf headers() function to
+              // avoid duplication via parentHeaders
+              errorHeaders:
+                idx === matches.length - 1 ? errorHeaders : undefined,
             })
           : routeModule.headers
         : undefined
