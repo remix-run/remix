@@ -201,7 +201,7 @@ export function RemixRouteError({ id }: { id: string }) {
  * - "render": Fetched when the link is rendered
  * - "none": Never fetched
  */
-type PrefetchBehavior = "intent" | "render" | "none";
+type PrefetchBehavior = "intent" | "render" | "none" | "viewport";
 
 export interface RemixLinkProps extends LinkProps {
   prefetch?: PrefetchBehavior;
@@ -314,21 +314,48 @@ let Link = React.forwardRef<HTMLAnchorElement, RemixLinkProps>(
   ({ to, prefetch = "none", ...props }, forwardedRef) => {
     let isAbsolute = typeof to === "string" && ABSOLUTE_URL_REGEX.test(to);
 
+    let fallbackRef = React.useRef<HTMLAnchorElement>(null);
+
     let href = useHref(to);
     let [shouldPrefetch, prefetchHandlers] = usePrefetchBehavior(
       prefetch,
       props
     );
 
+    let [shouldActuallyPrefetch, setShouldActuallyPrefetch] =
+      React.useState(shouldPrefetch);
+
+    React.useEffect(() => {
+      if (prefetch === "viewport") {
+        let callback: IntersectionObserverCallback = (entries, observer) => {
+          console.log("entries", entries);
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setShouldActuallyPrefetch(true);
+            }
+          });
+        };
+        let observer = new IntersectionObserver(callback, { threshold: 0.5 });
+        observer.observe(fallbackRef.current!);
+
+        return () => {
+          observer.disconnect();
+        };
+      }
+    }, [forwardedRef, prefetch]);
+
     return (
       <>
         <RouterLink
-          ref={forwardedRef}
+          ref={(el) => {
+            forwardedRef = el;
+            fallbackRef.current = el;
+          }}
           to={to}
           {...props}
           {...prefetchHandlers}
         />
-        {shouldPrefetch && !isAbsolute ? (
+        {shouldActuallyPrefetch && !isAbsolute ? (
           <PrefetchPageLinks page={href} />
         ) : null}
       </>
