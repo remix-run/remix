@@ -76,10 +76,7 @@ export function getDocumentHeadersRR(
 function prependCookies(parentHeaders: Headers, childHeaders: Headers): void {
   let parentSetCookieString = parentHeaders.get("Set-Cookie");
 
-  if (
-    parentSetCookieString &&
-    parentSetCookieString !== childHeaders.get("Set-Cookie")
-  ) {
+  if (parentSetCookieString) {
     let cookies = splitCookiesString(parentSetCookieString);
     cookies.forEach((cookie) => {
       childHeaders.append("Set-Cookie", cookie);
