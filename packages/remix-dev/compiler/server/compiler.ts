@@ -66,7 +66,7 @@ const createEsbuildConfig = (
     externalPlugin(/^node:.*/, { sideEffects: false }),
   ];
 
-  if (ctx.config.serverPlatform !== "node") {
+  if (ctx.config.serverPlatform !== "node" && ctx.config.serverPlatform !== "neutral"  ) {
     plugins.unshift(nodeModulesPolyfillPlugin());
   }
 
