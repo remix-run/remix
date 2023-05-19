@@ -19,7 +19,7 @@ npx create-remix@latest
 If you are not interested in using TypeScript, you can install the simpler Javascript template instead:
 
 ```sh
-npx create-remix --template https://github.com/remix-run/remix/tree/main/templates/remix-javascript
+npx create-remix --template remix-run/remix/templates/remix-javascript
 ```
 
 This is a great place to start if you're just looking to try out Remix for the first time. You can always extend this starting point yourself or migrate to a more advanced template later.
@@ -72,14 +72,14 @@ npx create-remix@latest --template :username/:repo
 
 For a less opinionated starting point, you can also just use a regular template.
 
-The Remix repo provides a set of [templates for different hosting providers.][official-templates]
+The Remix repo provides a set of [templates for different hosting platforms.][official-templates]
 
 We also provide a [community-driven examples repository,][examples] with each example showcasing different Remix features, patterns, tools, hosting providers, etc.
 
-You can use these templates and examples by passing the full GitHub URL to the `--template` option when running `create-remix`, for example:
+You can use these templates and examples by passing a GitHub shorthand to the `--template` option when running `create-remix`, for example:
 
 ```sh
-npx create-remix@latest --template https://github.com/remix-run/examples/tree/main/basic
+npx create-remix@latest --template remix-run/examples/basic
 ```
 
 Additionally, if your template is in a private GitHub repo, you can pass a GitHub token via the `--token` option:

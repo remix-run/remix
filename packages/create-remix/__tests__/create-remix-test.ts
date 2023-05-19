@@ -95,14 +95,17 @@ describe("create-remix CLI", () => {
 
       Remix projects are created from templates. A template can be:
 
-      - the name of a :username/:repo on GitHub
-      - the URL of a GitHub repository (or directory within it)
+      - a GitHub repo shorthand, :username/:repo or :username/:repo/:directory
+      - the URL of a GitHub repo (or directory within it)
       - the URL of a tarball
       - a file path to a directory of files
       - a file path to a tarball
 
       $ create-remix my-app --template remix-run/grunge-stack
+      $ create-remix my-app --template remix-run/remix/templates/remix
+      $ create-remix my-app --template remix-run/examples/basic
       $ create-remix my-app --template :username/:repo
+      $ create-remix my-app --template :username/:repo/:directory
       $ create-remix my-app --template https://github.com/:username/:repo
       $ create-remix my-app --template https://github.com/:username/:repo/tree/:branch
       $ create-remix my-app --template https://github.com/:username/:repo/tree/:branch/:directory
@@ -228,6 +231,46 @@ describe("create-remix CLI", () => {
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
 
+  it("works for GitHub username/repo/path combo", async () => {
+    let projectDir = getProjectDir("github-username-repo-path");
+
+    let { status, stderr } = await execCreateRemix({
+      args: [
+        projectDir,
+        "--template",
+        "fake-remix-tester/nested-dir/stack",
+        "--no-git-init",
+        "--no-install",
+      ],
+    });
+
+    expect(stderr.trim()).toBeFalsy();
+    expect(status).toBe(0);
+    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
+    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+  });
+
+  it("fails for GitHub username/repo/path combo when path doesn't exist", async () => {
+    let projectDir = getProjectDir("github-username-repo-path-missing");
+
+    let { status, stderr } = await execCreateRemix({
+      args: [
+        projectDir,
+        "--template",
+        "fake-remix-tester/nested-dir/this/path/does/not/exist",
+        "--no-git-init",
+        "--no-install",
+      ],
+    });
+
+    expect(stderr.trim()).toMatchInlineSnapshot(
+      `"▲  Oh no! The path \\"this/path/does/not/exist\\" was not found in this GitHub repo."`
+    );
+    expect(status).toBe(1);
+    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeFalsy();
+    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
+  });
+
   it("fails for private GitHub username/repo combo without a token", async () => {
     let projectDir = getProjectDir("private-repo-no-token");
 
@@ -327,7 +370,7 @@ describe("create-remix CLI", () => {
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
   });
 
-  it("works for different branches", async () => {
+  it("works for different branches and nested paths", async () => {
     let projectDir = getProjectDir("diff-branch");
 
     let { status, stderr } = await execCreateRemix({
@@ -344,6 +387,27 @@ describe("create-remix CLI", () => {
     expect(status).toBe(0);
     expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeTruthy();
     expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeTruthy();
+  });
+
+  it("fails for different branches and nested paths when path doesn't exist", async () => {
+    let projectDir = getProjectDir("diff-branch-invalid-path");
+
+    let { status, stderr } = await execCreateRemix({
+      args: [
+        projectDir,
+        "--template",
+        "https://github.com/fake-remix-tester/nested-dir/tree/dev/this/path/does/not/exist",
+        "--no-git-init",
+        "--no-install",
+      ],
+    });
+
+    expect(stderr.trim()).toMatchInlineSnapshot(
+      `"▲  Oh no! The path \\"this/path/does/not/exist\\" was not found in this GitHub repo."`
+    );
+    expect(status).toBe(1);
+    expect(fse.existsSync(path.join(projectDir, "package.json"))).toBeFalsy();
+    expect(fse.existsSync(path.join(projectDir, "app/root.tsx"))).toBeFalsy();
   });
 
   it("works for a path to a tarball on disk", async () => {

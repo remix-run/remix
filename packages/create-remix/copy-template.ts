@@ -101,12 +101,18 @@ async function copyTemplateFromRemoteTarball(
 }
 
 async function copyTemplateFromGithubRepoShorthand(
-  repo: string,
+  repoShorthand: string,
   destPath: string,
   options: CopyTemplateOptions
 ) {
-  let [owner, name] = repo.split("/");
-  await downloadAndExtractRepoTarball({ owner, name }, destPath, options);
+  let [owner, name, ...path] = repoShorthand.split("/");
+  let filePath = path.length ? path.join("/") : null;
+
+  await downloadAndExtractRepoTarball(
+    { owner, name, filePath },
+    destPath,
+    options
+  );
 }
 
 async function copyTemplateFromGithubRepoUrl(
@@ -195,7 +201,7 @@ async function downloadAndExtractRepoTarball(
 
   return await downloadAndExtractTarball(destPath, url, {
     ...options,
-    filePath: null,
+    filePath: repo.filePath ?? null,
   });
 }
 
@@ -294,6 +300,8 @@ async function downloadAndExtractTarball(
     filePath = filePath.split(path.sep).join(path.posix.sep);
   }
 
+  let filePathHasFiles = false;
+
   try {
     await pipeline(
       response.body.pipe(gunzip()),
@@ -304,6 +312,7 @@ async function downloadAndExtractTarball(
 
           if (filePath) {
             if (header.name.startsWith(filePath)) {
+              filePathHasFiles = true;
               header.name = header.name.replace(filePath, "");
             } else {
               header.name = "__IGNORE__";
@@ -325,6 +334,14 @@ async function downloadAndExtractTarball(
       "There was a problem extracting the file from the provided template." +
         `  Template URL: \`${tarballUrl}\`` +
         `  Destination directory: \`${downloadPath}\``
+    );
+  }
+
+  if (filePath && !filePathHasFiles) {
+    throw new CopyTemplateError(
+      `The path "${filePath}" was not found in this ${
+        isGithubUrl ? "GitHub repo." : "tarball."
+      }`
     );
   }
 }
@@ -357,7 +374,10 @@ function isValidGithubRepoUrl(
 }
 
 function isGithubRepoShorthand(value: string) {
-  return /^[\w-]+\/[\w-]+$/.test(value);
+  // This supports :owner/:repo and :owner/:repo/nested/path, e.g.
+  // remix-run/remix
+  // remix-run/remix/templates/express
+  return /^[\w-]+\/[\w-]+(\/[\w-]+)*$/.test(value);
 }
 
 function isGithubReleaseAssetUrl(url: string) {

@@ -737,14 +737,17 @@ ${color.heading("Creating a new project")}:
 
 Remix projects are created from templates. A template can be:
 
-- the name of a :username/:repo on GitHub
-- the URL of a GitHub repository (or directory within it)
+- a GitHub repo shorthand, :username/:repo or :username/:repo/:directory
+- the URL of a GitHub repo (or directory within it)
 - the URL of a tarball
 - a file path to a directory of files
 - a file path to a tarball
 ${[
   "remix-run/grunge-stack",
+  "remix-run/remix/templates/remix",
+  "remix-run/examples/basic",
 	":username/:repo",
+  ":username/:repo/:directory",
 	"https://github.com/:username/:repo",
 	"https://github.com/:username/:repo/tree/:branch",
 	"https://github.com/:username/:repo/tree/:branch/:directory",

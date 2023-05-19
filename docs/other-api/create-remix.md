@@ -41,14 +41,16 @@ For a more comprehensive guide to available templates, see our [templates page.]
 
 A valid template can be:
 
-- the name of a `:username/:repo` on GitHub
-- the URL of a GitHub repository (or directory within it)
+- a GitHub repo shorthand — `:username/:repo` or `:username/:repo/:directory`
+- the URL of a GitHub repo (or directory within it)
 - the URL of a remote tarball
 - a local file path to a directory of files
 - a local file path to a tarball
 
 ```sh
 npm create remix@latest ./my-app --template remix-run/grunge-stack
+npm create remix@latest ./my-app --template remix-run/remix/templates/remix
+npm create remix@latest ./my-app --template remix-run/examples/basic
 npm create remix@latest ./my-app --template :username/:repo
 npm create remix@latest ./my-app --template https://github.com/:username/:repo
 npm create remix@latest ./my-app --template https://github.com/:username/:repo/tree/:branch
