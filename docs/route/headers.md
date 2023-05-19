@@ -62,7 +62,7 @@ If all three define `headers`, the deepest module wins, in this case `profile.ts
 
 <docs-info>
 We realize that it can be tedious and error-prone to have to define `headers` on every possible leaf route so we're changing the current behavior in v2 behind the [`future.v2_headers`][v2_headers] flag.
-<docs-info>
+</docs-info>
 
 We don't want surprise headers in your responses, so it's your job to merge them if you'd like. Remix passes in the `parentHeaders` to your `headers` function. So `users.tsx` headers get passed to `$userId.tsx`, and then `$userId.tsx` headers are passed to `profile.tsx` headers.
 
