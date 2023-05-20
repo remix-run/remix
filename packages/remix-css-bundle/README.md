@@ -6,4 +6,4 @@ This package provides access to the `href` of the generated CSS file when using 
 npm install @remix-run/css-bundle
 ```
 
-For more, see the [Remix docs](https://remix.run/docs/).
+For more, see the [Remix docs](https://remix.run/docs).

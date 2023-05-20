@@ -1508,7 +1508,7 @@ npm install --save-dev ts-node tsconfig-paths
 💿 And now we can run our `seed.ts` file with that:
 
 ```sh
-ts-node --require tsconfig-paths/register prisma/seed.ts
+npx ts-node --require tsconfig-paths/register prisma/seed.ts
 ```
 
 Now our database has those jokes in it. No joke!
@@ -3044,11 +3044,11 @@ So we can now check whether the user is authenticated on the server by reading t
 <summary>app/utils/session.server.ts</summary>
 
 ```ts filename=app/utils/session.server.ts lines=[55-57,59-66,68-81]
-import bcrypt from "bcryptjs";
 import {
   createCookieSessionStorage,
   redirect,
 } from "@remix-run/node";
+import bcrypt from "bcryptjs";
 
 import { db } from "./db.server";
 
