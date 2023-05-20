@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "remix build",
-    "dev": "remix dev --no-restart -c \"wrangler pages dev ./public\"",
-    "start": "wrangler pages dev ./public",
+    "dev": "remix dev --no-restart -c \"npm run start\"",
+    "start": "wrangler pages dev ./public --compatibility-date 2023-05-12",
     "typecheck": "tsc"
   },
   "dependencies": {
@@ -25,7 +25,7 @@
     "@types/react-dom": "^18.0.11",
     "eslint": "^8.38.0",
     "typescript": "^5.0.4",
-    "wrangler": "^2.17.0"
+    "wrangler": "^3.0.0"
   },
   "engines": {
     "node": ">=16.13"
