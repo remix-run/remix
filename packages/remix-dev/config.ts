@@ -92,6 +92,11 @@ export interface AppConfig {
   assetsBuildDirectory?: string;
 
   /**
+   * Whether to support generate browser js metafile for esbuild, default to false.
+   */
+  browserMeta?: boolean;
+
+  /**
    * The path to the browser build, relative to remix.config.js. Defaults to
    * "public/build".
    *
@@ -212,9 +217,9 @@ export interface AppConfig {
    * A function for defining custom directories to watch while running `remix dev`, in addition to `appDirectory`.
    */
   watchPaths?:
-    | string
-    | string[]
-    | (() => Promise<string | string[]> | string | string[]);
+  | string
+  | string[]
+  | (() => Promise<string | string[]> | string | string[]);
 
   future?: Partial<FutureConfig>;
 }
@@ -267,6 +272,12 @@ export interface RemixConfig {
    * The absolute path to the assets build directory.
    */
   assetsBuildDirectory: string;
+
+  /**
+   * Whether to support generate browser js metafile for esbuild, default to false.
+   * When you set it to true, remix-js-metafile.json will be generated in the assetsBuildDirectory directory.
+   */
+  browserMeta?: boolean;
 
   /**
    * the original relative path to the assets build directory
@@ -403,7 +414,6 @@ export async function readConfig(
 
   let rootDirectory = path.resolve(remixRoot);
   let configFile = findConfig(rootDirectory, "remix.config", configExts);
-
   let appConfig: AppConfig = {};
   if (configFile) {
     let appConfigModule: any;
@@ -548,10 +558,10 @@ export async function readConfig(
     let serverRuntime = deps["@remix-run/deno"]
       ? "deno"
       : deps["@remix-run/cloudflare"]
-      ? "cloudflare"
-      : deps["@remix-run/node"]
-      ? "node"
-      : undefined;
+        ? "cloudflare"
+        : deps["@remix-run/node"]
+          ? "node"
+          : undefined;
 
     if (!serverRuntime) {
       let serverRuntimes = [
@@ -647,6 +657,8 @@ export async function readConfig(
   let entryServerFilePath = userEntryServerFile
     ? path.resolve(appDirectory, userEntryServerFile)
     : path.resolve(defaultsDirectory, entryServerFile);
+
+  let browserMeta = !!appConfig.browserMeta
 
   if (appConfig.browserBuildDirectory) {
     warnOnce(browserBuildDirectoryWarning, "browserBuildDirectory");
@@ -750,6 +762,7 @@ export async function readConfig(
     entryClientFilePath,
     entryServerFile,
     entryServerFilePath,
+    browserMeta,
     devServerPort,
     devServerBroadcastDelay,
     assetsBuildDirectory: absoluteAssetsBuildDirectory,
