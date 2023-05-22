@@ -84,7 +84,7 @@ Note that these routes will be rendered in the outlet of `app/root.tsx` because 
 Adding a `.` to a route filename will create a `/` in the URL.
 
 <!-- prettier-ignore -->
-```markdown lines=[4-6]
+```markdown lines=[5-7]
 app/
 ├── routes/
 │   ├── _index.tsx
