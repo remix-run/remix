@@ -443,6 +443,10 @@ export async function readConfig(
     warnOnce(metaWarning, "v2_meta");
   }
 
+  if (!appConfig.future?.v2_headers) {
+    warnOnce(headersWarning, "v2_headers");
+  }
+
   let isCloudflareRuntime = ["cloudflare-pages", "cloudflare-workers"].includes(
     appConfig.serverBuildTarget ?? ""
   );
@@ -930,3 +934,9 @@ export const metaWarning =
   "You can prepare for this change at your convenience with the `v2_meta` future flag. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#meta";
+
+export const headersWarning =
+  "⚠️ REMIX FUTURE CHANGE: The route `headers` export behavior is changing in v2. " +
+  "You can prepare for this change at your convenience with the `v2_headers` future flag. " +
+  "For instructions on making this change see " +
+  "https://remix.run/docs/en/v1.17.0/pages/v2#route-headers";
