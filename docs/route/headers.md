@@ -143,7 +143,7 @@ This means that, re-using the example above:
         └── profile.tsx
 ```
 
-If we are looking at `/users/123/profile` and `profile.tsx` does not export a `headers` function, then we'll use the return value of `usersId.tsx`'s `headers` function. If that file doesn't export one, then w'ell use the result of the one in `users.tsx`, and so on.
+If a user is looking at `/users/123/profile` and `profile.tsx` does not export a `headers` function, then Remix will use the return value of `$userId.tsx`'s `headers` function. If that file doesn't export one, then it will use the result of the one in `users.tsx`, and so on.
 
 [headers]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
 [handledatarequest]: ../file-conventions/entry.server
