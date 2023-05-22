@@ -248,7 +248,10 @@ export function flatRoutesUniversal(
      *   routes/parent._pathless/index.tsx
      *   routes/parent._pathless2/index.tsx
      */
-    let lastRouteSegment = config.id.split(".").pop();
+    let lastRouteSegment = config.id
+      .replace(new RegExp(`^${prefix}/`), "")
+      .split(".")
+      .pop();
     let isPathlessLayoutRoute =
       lastRouteSegment &&
       lastRouteSegment.startsWith("_") &&
