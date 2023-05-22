@@ -245,9 +245,9 @@ import { json } from "@remix-run/node"; // or cloudflare/deno
 import type { ThrownResponse } from "@remix-run/react";
 import { useCatch, useLoaderData } from "@remix-run/react";
 
-import { requireUserSession } from "~/http";
 import { getInvoice } from "~/db";
 import type { InvoiceNotFoundResponse } from "~/db";
+import { requireUserSession } from "~/http";
 
 type InvoiceCatchData = {
   invoiceOwnerEmail: string;
