@@ -214,12 +214,15 @@ test.describe("loader in an app", async () => {
   test("should handle ErrorResponses thrown from resource routes on client submissions", async ({
     page,
   }) => {
+    let logs: string[] = [];
+    page.on("console", (msg) => logs.push(msg.text()));
     let app = new PlaywrightFixture(appFixture, page);
     await app.goto("/");
     await app.clickSubmitButton("/no-action");
     let html = await app.getHtml();
-    expect(html).toMatch(
-      'Error: Route "routes/no-action" does not have an action'
+    expect(html).toMatch("Application Error");
+    expect(logs[0]).toContain(
+      'Route "routes/no-action" does not have an action'
     );
   });
 });
