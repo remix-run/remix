@@ -170,7 +170,7 @@ test.describe("build failures (v1 routes)", () => {
   });
 });
 
-test.describe.only("build failures (v2 routes)", () => {
+test.describe("build failures (v2 routes)", () => {
   let originalConsoleLog = console.log;
   let originalConsoleWarn = console.warn;
   let originalConsoleError = console.error;
