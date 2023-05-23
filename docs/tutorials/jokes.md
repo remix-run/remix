@@ -7656,7 +7656,7 @@ Fly generated a few files for us:
 fly secrets set SESSION_SECRET=your-secret-here
 ```
 
-`your-secret-here` can be whatever you want. It's just a string that's used to encrypt the session cookie. Use a password generator if you like.
+`your-secret-here` can be whatever you want. It's just a string that's used to sign the session cookie. Use a password generator if you like.
 
 One other thing we need to do is get Prisma ready to set up our database for the first time. Now that we're happy with our schema, we can create our first migration.
 
