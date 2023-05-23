@@ -167,7 +167,7 @@ function getPostcssCompiler({
     ignoreInitial: true,
   });
 
-  let cachedCssForEntryPoint = new Map<string, Promise<string>>();
+  let postcssPromiseForEntryPoint = new Map<string, Promise<string>>();
 
   let fileDepsForEntryPoint = new Map<string, Set<string>>();
   let entryPointsForFileDep = new Map<string, Set<string>>();
@@ -181,11 +181,11 @@ function getPostcssCompiler({
 
   function invalidateEntryPoint(invalidatedEntryPoint: string) {
     // If it's not an entry point (or doesn't have a cache entry), bail out
-    if (!cachedCssForEntryPoint.has(invalidatedEntryPoint)) {
+    if (!postcssPromiseForEntryPoint.has(invalidatedEntryPoint)) {
       return;
     }
 
-    cachedCssForEntryPoint.delete(invalidatedEntryPoint);
+    postcssPromiseForEntryPoint.delete(invalidatedEntryPoint);
 
     // Reset tracked deps for entry point. Since we're going to recompile,
     // the entry point will get new deps.
@@ -209,7 +209,7 @@ function getPostcssCompiler({
   }
 
   function invalidatePath(invalidatedPath: string) {
-    console.log("invalidate path", { invalidatedPath });
+    console.log("Invalidate path", { invalidatedPath });
 
     // This might be an entry point so we invalidate it just in case.
     invalidateEntryPoint(invalidatedPath);
@@ -222,6 +222,7 @@ function getPostcssCompiler({
           invalidatedPath,
           entryPoint,
         });
+
         invalidateEntryPoint(entryPoint);
       }
     }
@@ -237,6 +238,7 @@ function getPostcssCompiler({
             invalidatedPath,
             entryPoint,
           });
+
           invalidateEntryPoint(entryPoint);
         }
       }
@@ -253,9 +255,10 @@ function getPostcssCompiler({
 
   let compiler = {
     async processFile(entryPoint: string) {
-      if (cachedCssForEntryPoint.has(entryPoint)) {
+      if (postcssPromiseForEntryPoint.has(entryPoint)) {
         console.log("Cache hit", { entryPoint });
-        return await cachedCssForEntryPoint.get(entryPoint);
+
+        return await postcssPromiseForEntryPoint.get(entryPoint);
       }
 
       console.log("Cache miss", { entryPoint });
@@ -263,40 +266,54 @@ function getPostcssCompiler({
       let postCssPromise = fse
         .readFile(entryPoint, "utf-8")
         .then(async (contents) => {
-          let result = await postcssProcessor.process(contents, {
+          let { css, messages } = await postcssProcessor.process(contents, {
             from: entryPoint,
             to: entryPoint,
             map: sourcemap,
           });
 
-          let newDeps = new Set<string>();
+          let cachedPostCssPromise =
+            postcssPromiseForEntryPoint.get(entryPoint);
+
+          // If there's a cache entry and it's changed since we started
+          // processing, bail out of tracking deps for this compilation
+          if (cachedPostCssPromise && cachedPostCssPromise !== postCssPromise) {
+            console.log("Ignoring deps of stale build", { entryPoint });
+
+            return css;
+          }
+
+          let newFileDeps = new Set<string>();
           let newGlobDeps = new Set<string>();
 
-          for (let msg of result.messages) {
-            if (msg.type === "dependency" && typeof msg.file === "string") {
-              newDeps.add(msg.file);
+          for (let message of messages) {
+            if (
+              message.type === "dependency" &&
+              typeof message.file === "string"
+            ) {
+              newFileDeps.add(message.file);
               continue;
             }
 
             if (
-              msg.type === "dir-dependency" &&
-              typeof msg.dir === "string" &&
-              typeof msg.glob === "string"
+              message.type === "dir-dependency" &&
+              typeof message.dir === "string" &&
+              typeof message.glob === "string"
             ) {
-              newGlobDeps.add(path.join(msg.dir, msg.glob));
+              newGlobDeps.add(path.join(message.dir, message.glob));
               continue;
             }
           }
 
-          fileDepsForEntryPoint.set(entryPoint, newDeps);
+          fileDepsForEntryPoint.set(entryPoint, newFileDeps);
           globDepsForEntryPoint.set(entryPoint, newGlobDeps);
 
           // Track the file dependencies of this entry point
-          for (let newDep of newDeps) {
-            let entryPoints = entryPointsForFileDep.get(newDep);
+          for (let newFileDep of newFileDeps) {
+            let entryPoints = entryPointsForFileDep.get(newFileDep);
             if (!entryPoints) {
               entryPoints = new Set();
-              entryPointsForFileDep.set(newDep, entryPoints);
+              entryPointsForFileDep.set(newFileDep, entryPoints);
             }
             entryPoints.add(entryPoint);
           }
@@ -311,12 +328,12 @@ function getPostcssCompiler({
             entryPoints.add(entryPoint);
           }
 
-          watcher.add([entryPoint, ...newDeps, ...newGlobDeps]);
+          watcher.add([entryPoint, ...newFileDeps, ...newGlobDeps]);
 
-          return result.css;
+          return css;
         });
 
-      cachedCssForEntryPoint.set(entryPoint, postCssPromise);
+      postcssPromiseForEntryPoint.set(entryPoint, postCssPromise);
 
       return await postCssPromise;
     },
