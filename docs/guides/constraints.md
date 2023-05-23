@@ -43,7 +43,7 @@ The server needs everything in this file but the browser only needs the componen
 
 To remove the server code from the browser bundles, the Remix compiler creates a proxy module in front of your route and bundles that instead. The proxy for this route would look like:
 
-```ts
+```tsx
 export { meta, default } from "./routes/posts.tsx";
 ```
 

@@ -6,7 +6,7 @@ title: shouldRevalidate
 
 This function lets apps optimize which routes data should be reloaded after actions and for client-side navigations.
 
-```ts
+```tsx
 import type { ShouldRevalidateFunction } from "@remix-run/react";
 
 export const shouldRevalidate: ShouldRevalidateFunction = ({

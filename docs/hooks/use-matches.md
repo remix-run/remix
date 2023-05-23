@@ -7,7 +7,7 @@ toc: false
 
 Returns the current route matches on the page. This is useful for creating layout abstractions with your current routes.
 
-```ts
+```tsx
 function SomeComponent() {
   const matches = useMatches();
 
@@ -40,8 +40,7 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
 
 1. Add the breadcrumb handle to the parent route
 
-   ```tsx
-   // routes/parent.tsx
+   ```tsx filename=app/routes/parent.tsx
    export const handle = {
      breadcrumb: () => <Link to="/parent">Some Route</Link>,
    };
@@ -49,8 +48,7 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
 
 2. We can do the same for a child route
 
-   ```tsx
-   // routes/parent/child.tsx
+   ```tsx filename=app/routes/parent/child.tsx
    export const handle = {
      breadcrumb: () => (
        <Link to="/parent/child">Child Route</Link>
