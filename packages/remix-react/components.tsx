@@ -1088,13 +1088,8 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   let preloads = isHydrated ? [] : manifest.entry.imports.concat(routePreloads);
 
-  return (
+  return isHydrated ? null : (
     <>
-      <link
-        rel="modulepreload"
-        href={manifest.url}
-        crossOrigin={props.crossOrigin}
-      />
       <link
         rel="modulepreload"
         href={manifest.entry.module}
@@ -1108,8 +1103,8 @@ import(${JSON.stringify(manifest.entry.module)});`;
           crossOrigin={props.crossOrigin}
         />
       ))}
-      {!isHydrated && initialScripts}
-      {!isHydrated && deferredScripts}
+      {initialScripts}
+      {deferredScripts}
     </>
   );
 }
