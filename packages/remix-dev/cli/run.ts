@@ -38,9 +38,11 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     --remix-version     The version of Remix to use
   \`build\` Options:
     --sourcemap         Generate source maps for production
+    --metafile          Generate js metafile for production
   \`dev\` Options:
     --debug             Attach Node.js inspector
     --port, -p          Choose the port from which to run your app
+    --metafile          Generate js metafile
 
     [unstable_dev]
     --command, -c       Command used to run your app server
@@ -174,6 +176,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "-p": "--port",
       "--remix-version": String,
       "--sourcemap": Boolean,
+      "--metafile": Boolean,
       "--template": String,
       "--token": String,
       "--typescript": Boolean,
@@ -291,41 +294,41 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       let projectDir = projectPath
         ? path.resolve(process.cwd(), projectPath)
         : await inquirer
-            .prompt<{ dir: string }>([
-              {
-                type: "input",
-                name: "dir",
-                message: "Where would you like to create your app?",
-                default: "./my-remix-app",
-                async validate(input) {
-                  try {
-                    await validateNewProjectPath(String(input));
-                    return true;
-                  } catch (error: unknown) {
-                    if (error instanceof Error && error.message) {
-                      return error.message;
-                    }
-                    throw error;
+          .prompt<{ dir: string }>([
+            {
+              type: "input",
+              name: "dir",
+              message: "Where would you like to create your app?",
+              default: "./my-remix-app",
+              async validate(input) {
+                try {
+                  await validateNewProjectPath(String(input));
+                  return true;
+                } catch (error: unknown) {
+                  if (error instanceof Error && error.message) {
+                    return error.message;
                   }
-                },
+                  throw error;
+                }
               },
-            ])
-            .then(async (input) => {
-              let inputDir = input.dir.startsWith("~")
-                ? input.dir.replace("~", os.homedir())
-                : input.dir;
-              if (path.isAbsolute(inputDir)) {
-                return inputDir;
-              }
-              return path.resolve(process.cwd(), inputDir);
-            })
-            .catch((error) => {
-              if (error.isTtyError) {
-                console.log(helpText);
-                return;
-              }
-              throw error;
-            });
+            },
+          ])
+          .then(async (input) => {
+            let inputDir = input.dir.startsWith("~")
+              ? input.dir.replace("~", os.homedir())
+              : input.dir;
+            if (path.isAbsolute(inputDir)) {
+              return inputDir;
+            }
+            return path.resolve(process.cwd(), inputDir);
+          })
+          .catch((error) => {
+            if (error.isTtyError) {
+              console.log(helpText);
+              return;
+            }
+            throw error;
+          });
 
       if (!projectDir) {
         console.log(helpText);
@@ -424,10 +427,10 @@ export async function run(argv: string[] = process.argv.slice(2)) {
             console.warn(
               colors.warning(
                 "🚨 Your terminal doesn't support interactivity; using default " +
-                  "configuration.\n\n" +
-                  "If you'd like to use different settings, try passing them " +
-                  `as arguments. Run \`${packageManager} create remix@latest --help\` to see ` +
-                  "available options."
+                "configuration.\n\n" +
+                "If you'd like to use different settings, try passing them " +
+                `as arguments. Run \`${packageManager} create remix@latest --help\` to see ` +
+                "available options."
               )
             );
             return {
@@ -464,9 +467,9 @@ export async function run(argv: string[] = process.argv.slice(2)) {
           console.log(
             colors.warning(
               "💿 You've opted out of installing dependencies so we won't run the " +
-                path.join("remix.init", "index.js") +
-                " script for you just yet. Once you've installed " +
-                `dependencies, you can run it manually with \`${npxInterop[packageManager]} remix init\``
+              path.join("remix.init", "index.js") +
+              " script for you just yet. Once you've installed " +
+              `dependencies, you can run it manually with \`${npxInterop[packageManager]} remix init\``
             )
           );
           console.log();
@@ -501,7 +504,7 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       break;
     case "build":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "production";
-      await commands.build(input[1], process.env.NODE_ENV, flags.sourcemap);
+      await commands.build(input[1], process.env.NODE_ENV, flags.sourcemap, flags.metafile);
       break;
     case "watch":
       if (!process.env.NODE_ENV) process.env.NODE_ENV = "development";

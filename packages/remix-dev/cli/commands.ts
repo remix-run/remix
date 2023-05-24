@@ -105,9 +105,8 @@ export async function init(
     }
   } catch (error: unknown) {
     if (error instanceof Error) {
-      error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${
-        error.message
-      }`;
+      error.message = `${colors.error("🚨 Oops, remix.init failed")}\n\n${error.message
+        }`;
     }
     throw error;
   }
@@ -121,7 +120,7 @@ export async function setup(platformArg?: string) {
   ) {
     console.warn(
       `Using '${platformArg}' as a platform value is deprecated. Use ` +
-        "'cloudflare' instead."
+      "'cloudflare' instead."
     );
     console.log("HINT: check the `postinstall` script in `package.json`");
     platform = SetupPlatform.Cloudflare;
@@ -148,7 +147,8 @@ export async function routes(
 export async function build(
   remixRoot: string,
   modeArg?: string,
-  sourcemap: boolean = false
+  sourcemap: boolean = false,
+  metafile: boolean = false
 ): Promise<void> {
   let mode = parseMode(modeArg) ?? "production";
 
@@ -160,9 +160,9 @@ export async function build(
     );
     console.warn(
       "You have enabled source maps in production. This will make your " +
-        "server-side code visible to the public and is highly discouraged! If " +
-        "you insist, please ensure you are using environment variables for " +
-        "secrets and not hard-coding them into your source!"
+      "server-side code visible to the public and is highly discouraged! If " +
+      "you insist, please ensure you are using environment variables for " +
+      "secrets and not hard-coding them into your source!"
     );
     console.warn(
       "⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️⚠️\n"
@@ -174,6 +174,7 @@ export async function build(
   let options: Options = {
     mode,
     sourcemap,
+    metafile,
     onWarning: warnOnce,
   };
   if (mode === "development" && config.future.unstable_dev) {
@@ -185,7 +186,6 @@ export async function build(
     };
     options.devWebSocketPort = dev.webSocketPort;
   }
-
   fse.emptyDirSync(config.assetsBuildDirectory);
   await compiler.build({ config, options }).catch((thrown) => {
     compiler.logThrown(thrown);
@@ -209,7 +209,7 @@ export async function watch(
       : await readConfig(remixRootOrConfig);
 
   devServer.liveReload(config);
-  return await new Promise(() => {});
+  return await new Promise(() => { });
 }
 
 export async function dev(
@@ -217,6 +217,7 @@ export async function dev(
   flags: {
     debug?: boolean;
     port?: number; // TODO: remove for v2
+    metafile?: boolean
 
     // unstable_dev
     command?: string;
@@ -237,9 +238,11 @@ export async function dev(
 
   let config = await readConfig(remixRoot);
 
+  config.metafile = !!(flags.metafile || config.metafile);
+
   if (config.future.unstable_dev === false) {
     await devServer.serve(config, flags.port);
-    return await new Promise(() => {});
+    return await new Promise(() => { });
   }
 
   await devServer_unstable.serve(config, await resolveDevServe(config, flags));
@@ -254,11 +257,11 @@ export async function codemod(
     console.error(colors.red("Error: Missing codemod name"));
     console.log(
       "Usage: " +
-        colors.gray(
-          `remix codemod <${colors.arg("codemod")}> [${colors.arg(
-            "projectDir"
-          )}]`
-        )
+      colors.gray(
+        `remix codemod <${colors.arg("codemod")}> [${colors.arg(
+          "projectDir"
+        )}]`
+      )
     );
     process.exit(1);
   }
@@ -342,10 +345,10 @@ export async function generateEntry(
   let serverRuntime = deps["@remix-run/deno"]
     ? "deno"
     : deps["@remix-run/cloudflare"]
-    ? "cloudflare"
-    : deps["@remix-run/node"]
-    ? "node"
-    : undefined;
+      ? "cloudflare"
+      : deps["@remix-run/node"]
+        ? "node"
+        : undefined;
 
   if (!serverRuntime) {
     let serverRuntimes = [
@@ -388,15 +391,15 @@ export async function generateEntry(
 
   let contents = isServerEntry
     ? await createServerEntry(
-        config.rootDirectory,
-        config.appDirectory,
-        defaultEntryServer
-      )
+      config.rootDirectory,
+      config.appDirectory,
+      defaultEntryServer
+    )
     : await createClientEntry(
-        config.rootDirectory,
-        config.appDirectory,
-        defaultEntryClient
-      );
+      config.rootDirectory,
+      config.appDirectory,
+      defaultEntryClient
+    );
 
   let outputExtension = useTypeScript ? "tsx" : "jsx";
   let outputEntry = `${entry}.${outputExtension}`;

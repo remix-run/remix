@@ -285,7 +285,7 @@ export interface RemixConfig {
 
   /**
    * Whether to support generate browser js metafile for esbuild, default to false.
-   * When you set it to true, remix-js-metafile.json will be generated in the assetsBuildDirectory directory.
+   * When you set it to true, js.json will be generated in the assetsBuildDirectory directory.
    */
   metafile?: boolean;
 

@@ -44,6 +44,7 @@ export async function liveReload(config: RemixConfig) {
       options: {
         mode: "development",
         sourcemap: true,
+        metafile: config.metafile,
         onWarning: warnOnce,
       },
     },

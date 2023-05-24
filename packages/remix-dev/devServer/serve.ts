@@ -42,8 +42,8 @@ export async function serve(config: RemixConfig, portPreference?: number) {
     port: portPreference
       ? Number(portPreference)
       : process.env.PORT
-      ? Number(process.env.PORT)
-      : makeRange(3000, 3100),
+        ? Number(process.env.PORT)
+        : makeRange(3000, 3100),
   });
 
   let app = express();

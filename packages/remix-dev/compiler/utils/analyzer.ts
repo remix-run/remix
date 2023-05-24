@@ -6,39 +6,35 @@ import type { Context } from "../context";
 import invariant from "../../invariant";
 
 
-const JS_META_FILE_NAME = 'browser-metafile.json';
-
+const genMetaFile = (name: string) => `${name}.json`
 
 const getMetaPath = (target: string, filename: string) => normalize(resolve(target, filename));
+
+
 
 /**
  * Generate metafile for esbuild analyze
  * @returns 
  */
-const createMetaFile = (ctx: Context) => {
-  let {
-    config
-  } = ctx;
-  let {
-    metafile,
-    debugDirectory
-  } = config
-  return {
-    createBrowserMetaFile: (outputMeta?: Metafile) => {
-      if (metafile && outputMeta) {
-        try {
-          let output = getMetaPath(debugDirectory, JS_META_FILE_NAME);
-          if (!fs.existsSync(debugDirectory)) {
-            fs.mkdirSync(debugDirectory)
-          }
-          return fs.writeFile(normalize(output), JSON.stringify(outputMeta));
-        } catch (e) {
-          invariant(e, `Failed to generate ${JS_META_FILE_NAME} in ${debugDirectory}.`);
-        }
+const createBrowserMetaFile = (ctx: Context, name: string, metafile: Metafile) => {
+  let { debugDirectory } = ctx.config
+
+  if (metafile) {
+
+    let metafileName = genMetaFile(name)
+
+    try {
+      let output = getMetaPath(debugDirectory, metafileName);
+      if (!fs.existsSync(debugDirectory)) {
+        fs.mkdirSync(debugDirectory)
       }
+      return fs.writeFile(normalize(output), JSON.stringify(metafile));
+    } catch (e) {
+      invariant(e, `Failed to generate ${metafileName} in ${debugDirectory}.`);
     }
   }
 }
 
-export default createMetaFile
-
+export {
+  createBrowserMetaFile
+}

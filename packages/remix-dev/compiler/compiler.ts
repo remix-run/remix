@@ -8,7 +8,7 @@ import * as Channel from "../channel";
 import type { Manifest } from "../manifest";
 import { create as createManifest, write as writeManifest } from "./manifest";
 import { err, ok } from "../result";
-import createMetaFile from "./utils/analyzer";
+import { createBrowserMetaFile } from "./utils/analyzer";
 
 type Compiler = {
   compile: (options?: {
@@ -28,7 +28,6 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     manifest: undefined as unknown as Channel.Type<Manifest>,
   };
 
-  let { createBrowserMetaFile } = createMetaFile(ctx)
 
   let subcompiler = {
     css: await CSS.createCompiler(ctx),
@@ -100,7 +99,12 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     let js = await tasks.js;
     if (!js.ok) throw error ?? js.error;
     let { metafile, hmr } = js.value;
-    await createBrowserMetaFile(metafile)
+
+    // create browser metafile when ctx.config.metafil is true
+    if (ctx.config.metafile || ctx.options.metafile) {
+      await createBrowserMetaFile(ctx, 'js', metafile)
+    }
+
 
     // artifacts/manifest
     let manifest = await createManifest({
@@ -113,6 +117,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     options.onManifest?.(manifest);
     writes.manifest = writeManifest(ctx.config, manifest);
 
+    // server compilation
     let server = await tasks.server;
     if (!server.ok) throw error ?? server.error;
     // artifacts/server
