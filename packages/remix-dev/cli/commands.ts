@@ -183,7 +183,7 @@ export async function build(
       host: dev.httpHost,
       port: dev.httpPort,
     };
-    options.devWebSocketPort = dev.webSocketPort;
+    options.devWebSocketPort = dev.httpPort;
   }
 
   fse.emptyDirSync(config.assetsBuildDirectory);
@@ -224,7 +224,6 @@ export async function dev(
     httpHost?: string;
     httpPort?: number;
     restart?: boolean;
-    websocketPort?: number;
   } = {}
 ) {
   if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
@@ -477,7 +476,6 @@ type DevBuildFlags = {
   httpScheme: string;
   httpHost: string;
   httpPort: number;
-  webSocketPort: number;
 };
 let resolveDevBuild = async (
   config: RemixConfig,
@@ -501,17 +499,11 @@ let resolveDevBuild = async (
     flags.httpPort ??
     (dev === true ? undefined : dev.httpPort) ??
     (await findPort());
-  // prettier-ignore
-  let webSocketPort =
-    flags.webSocketPort ??
-    (dev === true ? undefined : dev.webSocketPort) ??
-    (await findPort());
 
   return {
     httpScheme,
     httpHost,
     httpPort,
-    webSocketPort,
   };
 };
 
@@ -526,10 +518,7 @@ let resolveDevServe = async (
   let dev = config.future.unstable_dev;
   if (dev === false) throw Error("Cannot resolve dev options");
 
-  let { httpScheme, httpHost, httpPort, webSocketPort } = await resolveDevBuild(
-    config,
-    flags
-  );
+  let { httpScheme, httpHost, httpPort } = await resolveDevBuild(config, flags);
 
   // prettier-ignore
   let command =
@@ -563,7 +552,6 @@ let resolveDevServe = async (
     httpScheme,
     httpHost,
     httpPort,
-    webSocketPort,
     restart,
   };
 };

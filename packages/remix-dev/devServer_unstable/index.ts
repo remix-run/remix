@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import * as stream from "node:stream";
+import * as http from "node:http";
 import fs from "fs-extra";
 import prettyMs from "pretty-ms";
 import execa from "execa";
@@ -44,18 +45,10 @@ export let serve = async (
     httpScheme: string;
     httpHost: string;
     httpPort: number;
-    webSocketPort: number;
     restart: boolean;
   }
 ) => {
   await loadEnv(initialConfig.rootDirectory);
-  let websocket = Socket.serve({ port: options.webSocketPort });
-  let httpOrigin: Origin = {
-    scheme: options.httpScheme,
-    host: options.httpHost,
-    port: options.httpPort,
-  };
-
   let state: {
     appServer?: execa.ExecaChildProcess;
     manifest?: Manifest;
@@ -64,6 +57,30 @@ export let serve = async (
     loaderChanges?: Promise<Result<Record<string, string>>>;
     prevLoaderHashes?: Record<string, string>;
   } = {};
+
+  let app = express()
+    // handle `broadcastDevReady` messages
+    .use(express.json())
+    .post("/ping", (req, res) => {
+      let { buildHash } = req.body;
+      if (typeof buildHash !== "string") {
+        console.warn(`Unrecognized payload: ${req.body}`);
+        res.sendStatus(400);
+      }
+      if (buildHash === state.manifest?.version) {
+        state.appReady?.ok();
+      }
+      res.sendStatus(200);
+    });
+
+  let server = http.createServer(app);
+  let websocket = Socket.serve(server);
+
+  let httpOrigin: Origin = {
+    scheme: options.httpScheme,
+    host: options.httpHost,
+    port: options.httpPort,
+  };
 
   let bin = await detectBin();
   let startAppServer = (command: string) => {
@@ -119,7 +136,7 @@ export let serve = async (
         sourcemap: true,
         onWarning: warnOnce,
         devHttpOrigin: httpOrigin,
-        devWebSocketPort: options.webSocketPort,
+        devWebSocketPort: options.httpPort,
       },
     },
     {
@@ -198,28 +215,14 @@ export let serve = async (
     }
   );
 
-  let httpServer = express()
-    // handle `broadcastDevReady` messages
-    .use(express.json())
-    .post("/ping", (req, res) => {
-      let { buildHash } = req.body;
-      if (typeof buildHash !== "string") {
-        console.warn(`Unrecognized payload: ${req.body}`);
-        res.sendStatus(400);
-      }
-      if (buildHash === state.manifest?.version) {
-        state.appReady?.ok();
-      }
-      res.sendStatus(200);
-    })
-    .listen(httpOrigin.port, () => {
-      console.log("Remix dev server ready");
-    });
+  server.listen(httpOrigin.port, () => {
+    console.log("Remix dev server ready");
+  });
 
   return new Promise(() => {}).finally(async () => {
     await kill(state.appServer);
     websocket.close();
-    httpServer.close();
+    server.close();
     await dispose();
   });
 };

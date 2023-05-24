@@ -9,11 +9,7 @@ import { createFixtureProject, css, js, json } from "./helpers/create-fixture";
 
 test.setTimeout(120_000);
 
-let fixture = (options: {
-  appServerPort: number;
-  httpPort: number;
-  webSocketPort: number;
-}) => ({
+let fixture = (options: { appServerPort: number; httpPort: number }) => ({
   files: {
     "remix.config.js": js`
       module.exports = {
@@ -22,7 +18,6 @@ let fixture = (options: {
         future: {
           unstable_dev: {
             httpPort: ${options.httpPort},
-            webSocketPort: ${options.webSocketPort},
           },
           v2_routeConvention: true,
           v2_errorBoundary: true,
@@ -250,9 +245,8 @@ test("HMR", async ({ page }) => {
   let portRange = makeRange(3080, 3099);
   let appServerPort = await getPort({ port: portRange });
   let httpPort = await getPort({ port: portRange });
-  let webSocketPort = await getPort({ port: portRange });
   let projectDir = await createFixtureProject(
-    fixture({ appServerPort, httpPort, webSocketPort })
+    fixture({ appServerPort, httpPort })
   );
 
   // spin up dev server

@@ -48,7 +48,6 @@ ${colors.logoBlue("R")} ${colors.logoGreen("E")} ${colors.logoYellow(
     --http-host         HTTP(S) host for the dev server. Default: localhost
     --http-port         HTTP(S) port for the dev server. Default: any open port
     --no-restart        Do not restart the app server when rebuilds occur.
-    --websocket-port    WebSocket port for the dev server. Default: any open port
   \`init\` Options:
     --no-delete         Skip deleting the \`remix.init\` script
   \`routes\` Options:
@@ -188,7 +187,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
       "--http-host": String,
       "--http-port": Number,
       "--no-restart": Boolean,
-      "--websocket-port": Number,
     },
     {
       argv,
@@ -224,10 +222,6 @@ export async function run(argv: string[] = process.argv.slice(2)) {
   if (flags["http-port"]) {
     flags.httpPort = flags["http-port"];
     delete flags["http-port"];
-  }
-  if (flags["websocket-port"]) {
-    flags.webSocketPort = flags["websocket-port"];
-    delete flags["websocket-port"];
   }
 
   if (args["--no-delete"]) {
