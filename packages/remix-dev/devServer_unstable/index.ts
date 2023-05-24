@@ -117,6 +117,7 @@ export let serve = async (
       options: {
         mode: "development",
         sourcemap: true,
+        metafile: initialConfig.metafile,
         onWarning: warnOnce,
         devHttpOrigin: httpOrigin,
         devWebSocketPort: options.webSocketPort,
@@ -140,7 +141,7 @@ export let serve = async (
         if (!succeeded) return;
         websocket.log(
           (state.prevManifest ? "Rebuilt" : "Built") +
-            ` in ${prettyMs(durationMs)}`
+          ` in ${prettyMs(durationMs)}`
         );
 
         // accumulate new state, but only update state after updates are processed
@@ -216,7 +217,7 @@ export let serve = async (
       console.log("Remix dev server ready");
     });
 
-  return new Promise(() => {}).finally(async () => {
+  return new Promise(() => { }).finally(async () => {
     await kill(state.appServer);
     websocket.close();
     httpServer.close();
@@ -227,7 +228,7 @@ export let serve = async (
 let clean = (config: RemixConfig) => {
   try {
     fs.emptyDirSync(config.relativeAssetsBuildDirectory);
-  } catch {}
+  } catch { }
 };
 
 let relativePath = (file: string) => path.relative(process.cwd(), file);
