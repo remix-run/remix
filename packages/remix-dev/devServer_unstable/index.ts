@@ -8,6 +8,7 @@ import express from "express";
 import * as Channel from "../channel";
 import { type Manifest } from "../manifest";
 import * as Compiler from "../compiler";
+import { createFileWatchCache } from "../compiler/fileWatchCache";
 import { type RemixConfig } from "../config";
 import { loadEnv } from "./env";
 import * as Socket from "./socket";
@@ -109,6 +110,8 @@ export let serve = async (
     return newAppServer;
   };
 
+  let fileWatchCache = createFileWatchCache();
+
   let dispose = await Compiler.watch(
     {
       config: initialConfig,
@@ -119,6 +122,7 @@ export let serve = async (
         devHttpOrigin: httpOrigin,
         devWebSocketPort: options.webSocketPort,
       },
+      fileWatchCache,
     },
     {
       onBuildStart: async (ctx) => {
@@ -176,10 +180,14 @@ export let serve = async (
       },
       onFileCreated: (file) =>
         websocket.log(`File created: ${relativePath(file)}`),
-      onFileChanged: (file) =>
-        websocket.log(`File changed: ${relativePath(file)}`),
-      onFileDeleted: (file) =>
-        websocket.log(`File deleted: ${relativePath(file)}`),
+      onFileChanged: (file) => {
+        websocket.log(`File changed: ${relativePath(file)}`);
+        fileWatchCache.invalidateFile(file);
+      },
+      onFileDeleted: (file) => {
+        websocket.log(`File deleted: ${relativePath(file)}`);
+        fileWatchCache.invalidateFile(file);
+      },
     }
   );
 
