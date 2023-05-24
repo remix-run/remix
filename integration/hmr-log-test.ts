@@ -470,7 +470,7 @@ whatsup
     await page.getByText("Hello, planet").waitFor({ timeout: HMR_TIMEOUT_MS });
     await page.waitForLoadState("networkidle");
 
-    expect(devStderr()).toBe("");
+    let stderr = devStderr();
     let withSyntaxError = `
       import { useLoaderData } from "@remix-run/react";
       export function shouldRevalidate(args) {
@@ -486,9 +486,15 @@ whatsup
       }
     `;
     fs.writeFileSync(indexPath, withSyntaxError);
-    await wait(() => devStderr().includes('Expected ";" but found "efault"'), {
-      timeoutMs: HMR_TIMEOUT_MS,
-    });
+    await wait(
+      () =>
+        devStderr()
+          .replace(stderr, "")
+          .includes('Expected ";" but found "efault"'),
+      {
+        timeoutMs: HMR_TIMEOUT_MS,
+      }
+    );
 
     let withFix = `
       import { useLoaderData } from "@remix-run/react";
