@@ -44,7 +44,6 @@ type Dev = {
   httpHost?: string;
   httpPort?: number;
   restart?: boolean;
-  publicDirectory?: string;
 };
 
 interface FutureConfig {
