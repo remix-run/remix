@@ -92,9 +92,14 @@ export interface AppConfig {
   assetsBuildDirectory?: string;
 
   /**
+    * The path to the browser metafile build, relative to `remix.config.js`. Defaults  * to "public/.debug".
+  */
+  debugDirectory?: string
+
+  /**
    * Whether to support generate browser js metafile for esbuild, default to false.
    */
-  browserMeta?: boolean;
+  metafile?: boolean;
 
   /**
    * The path to the browser build, relative to remix.config.js. Defaults to
@@ -274,10 +279,15 @@ export interface RemixConfig {
   assetsBuildDirectory: string;
 
   /**
+   * The absolute path to the metafile build directory.
+   */
+  debugDirectory: string
+
+  /**
    * Whether to support generate browser js metafile for esbuild, default to false.
    * When you set it to true, remix-js-metafile.json will be generated in the assetsBuildDirectory directory.
    */
-  browserMeta?: boolean;
+  metafile?: boolean;
 
   /**
    * the original relative path to the assets build directory
@@ -658,8 +668,6 @@ export async function readConfig(
     ? path.resolve(appDirectory, userEntryServerFile)
     : path.resolve(defaultsDirectory, entryServerFile);
 
-  let browserMeta = !!appConfig.browserMeta
-
   if (appConfig.browserBuildDirectory) {
     warnOnce(browserBuildDirectoryWarning, "browserBuildDirectory");
   }
@@ -669,10 +677,19 @@ export async function readConfig(
     appConfig.browserBuildDirectory ||
     path.join("public", "build");
 
+
   let absoluteAssetsBuildDirectory = path.resolve(
     rootDirectory,
     assetsBuildDirectory
   );
+
+  let absoluteDebugDirectory = path.resolve(
+    rootDirectory,
+    appConfig.debugDirectory || path.join("public", ".debugger")
+  );
+
+  let metafile = !!appConfig.metafile
+
 
   let devServerPort =
     Number(process.env.REMIX_DEV_SERVER_WS_PORT) ||
@@ -762,7 +779,8 @@ export async function readConfig(
     entryClientFilePath,
     entryServerFile,
     entryServerFilePath,
-    browserMeta,
+    debugDirectory: absoluteDebugDirectory,
+    metafile,
     devServerPort,
     devServerBroadcastDelay,
     assetsBuildDirectory: absoluteAssetsBuildDirectory,

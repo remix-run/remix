@@ -1,4 +1,4 @@
-import { resolve } from 'path'
+import { resolve, normalize } from 'path'
 import fs from 'fs-extra'
 import type { Metafile } from 'esbuild';
 
@@ -6,10 +6,10 @@ import type { Context } from "../context";
 import invariant from "../../invariant";
 
 
-const JS_META_FILE_NAME = 'remix-js-metafile.json';
+const JS_META_FILE_NAME = 'browser-metafile.json';
 
 
-const getMetaPath = (target: string, filename: string) => resolve(target, filename);
+const getMetaPath = (target: string, filename: string) => normalize(resolve(target, filename));
 
 /**
  * Generate metafile for esbuild analyze
@@ -20,17 +20,20 @@ const createMetaFile = (ctx: Context) => {
     config
   } = ctx;
   let {
-    browserMeta,
-    assetsBuildDirectory
+    metafile,
+    debugDirectory
   } = config
   return {
     createBrowserMetaFile: (outputMeta?: Metafile) => {
-      if (browserMeta && outputMeta) {
+      if (metafile && outputMeta) {
         try {
-          let output = getMetaPath(assetsBuildDirectory, JS_META_FILE_NAME);
-          return fs.writeFile(output, JSON.stringify(outputMeta));
+          let output = getMetaPath(debugDirectory, JS_META_FILE_NAME);
+          if (!fs.existsSync(debugDirectory)) {
+            fs.mkdirSync(debugDirectory)
+          }
+          return fs.writeFile(normalize(output), JSON.stringify(outputMeta));
         } catch (e) {
-          invariant(e, `Failed to generate ${JS_META_FILE_NAME}.`);
+          invariant(e, `Failed to generate ${JS_META_FILE_NAME} in ${debugDirectory}.`);
         }
       }
     }
