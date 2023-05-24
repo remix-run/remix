@@ -13,7 +13,11 @@ test.describe("headers export", () => {
 
   test.beforeAll(async () => {
     appFixture = await createFixture({
-      future: { v2_routeConvention: true, v2_errorBoundary: true },
+      future: {
+        v2_routeConvention: true,
+        v2_errorBoundary: true,
+        v2_headers: true,
+      },
       files: {
         "app/root.jsx": js`
           import { json } from "@remix-run/node";
@@ -122,15 +126,6 @@ test.describe("headers export", () => {
         `,
 
         "app/routes/parent.child.jsx": js`
-          export function headers({ actionHeaders, errorHeaders, loaderHeaders, parentHeaders }) {
-            return new Headers([
-              ...(parentHeaders ? Array.from(parentHeaders.entries()) : []),
-              ...(actionHeaders ? Array.from(actionHeaders.entries()) : []),
-              ...(loaderHeaders ? Array.from(loaderHeaders.entries()) : []),
-              ...(errorHeaders ? Array.from(errorHeaders.entries()) : []),
-            ]);
-          }
-
           export function loader({ request }) {
             if (new URL(request.url).searchParams.get('throw') === "child") {
               throw new Response(null, {
@@ -138,24 +133,18 @@ test.describe("headers export", () => {
                 headers: { 'X-Child-Loader': 'error' },
               })
             }
-            return new Response(null, {
-              headers: { 'X-Child-Loader': 'success' },
-            })
+            return null
           }
 
           export async function action({ request }) {
             let fd = await request.formData();
             if (fd.get('throw') === "child") {
-              console.log('throwing from child action')
               throw new Response(null, {
                 status: 400,
                 headers: { 'X-Child-Action': 'error' },
               })
             }
-            console.log('returning from child action')
-            return new Response(null, {
-              headers: { 'X-Child-Action': 'success' },
-            })
+            return null
           }
 
           export default function Component() { return <div/> }
@@ -170,6 +159,43 @@ test.describe("headers export", () => {
           }
 
           export default function Component() { return <div/> }
+        `,
+
+        "app/routes/cookie.jsx": js`
+          import { json } from "@remix-run/server-runtime";
+          import { Outlet } from "@remix-run/react";
+
+          export function loader({ request }) {
+            if (new URL(request.url).searchParams.has("parent-throw")) {
+              throw json(null, { headers: { "Set-Cookie": "parent-thrown-cookie=true" } });
+            }
+            return null
+          };
+
+          export default function Parent() {
+            return <Outlet />;
+          }
+
+          export function ErrorBoundary() {
+            return <h1>Caught!</h1>;
+          }
+        `,
+
+        "app/routes/cookie.child.jsx": js`
+          import { json } from "@remix-run/node";
+
+          export function loader({ request }) {
+            if (new URL(request.url).searchParams.has("throw")) {
+              throw json(null, { headers: { "Set-Cookie": "thrown-cookie=true" } });
+            }
+            return json(null, {
+              headers: { "Set-Cookie": "normal-cookie=true" },
+            });
+          };
+
+          export default function Child() {
+            return <p>Child</p>;
+          }
         `,
       },
     });
@@ -256,7 +282,6 @@ test.describe("headers export", () => {
     expect(JSON.stringify(Array.from(response.headers.entries()))).toBe(
       JSON.stringify([
         ["content-type", "text/html"],
-        ["x-child-loader", "success"],
         ["x-parent-loader", "success"],
       ])
     );
@@ -284,8 +309,6 @@ test.describe("headers export", () => {
     expect(JSON.stringify(Array.from(response.headers.entries()))).toBe(
       JSON.stringify([
         ["content-type", "text/html"],
-        ["x-child-action", "success"],
-        ["x-child-loader", "success"],
         ["x-parent-loader", "success"],
       ])
     );
@@ -361,6 +384,184 @@ test.describe("headers export", () => {
       JSON.stringify([
         ["content-type", "text/html"],
         ["x-child-action", "error"],
+      ])
+    );
+  });
+
+  test("automatically includes cookie headers from normal responses", async () => {
+    let response = await appFixture.requestDocument("/cookie/child");
+    expect(JSON.stringify(Array.from(response.headers.entries()))).toBe(
+      JSON.stringify([
+        ["content-type", "text/html"],
+        ["set-cookie", "normal-cookie=true"],
+      ])
+    );
+  });
+
+  test("automatically includes cookie headers from thrown responses", async () => {
+    let response = await appFixture.requestDocument("/cookie/child?throw");
+    expect(JSON.stringify(Array.from(response.headers.entries()))).toBe(
+      JSON.stringify([
+        ["content-type", "text/html"],
+        ["set-cookie", "thrown-cookie=true"],
+      ])
+    );
+  });
+
+  test("does not duplicate thrown cookie headers from boundary route", async () => {
+    let response = await appFixture.requestDocument("/cookie?parent-throw");
+    expect(JSON.stringify(Array.from(response.headers.entries()))).toBe(
+      JSON.stringify([
+        ["content-type", "text/html"],
+        ["set-cookie", "parent-thrown-cookie=true"],
+      ])
+    );
+  });
+});
+
+test.describe("v1 behavior (future.v2_headers=false)", () => {
+  let appFixture: Fixture;
+
+  test.beforeAll(async () => {
+    appFixture = await createFixture({
+      future: {
+        v2_routeConvention: true,
+        v2_errorBoundary: true,
+        v2_headers: false,
+      },
+      files: {
+        "app/root.jsx": js`
+          import { json } from "@remix-run/node";
+          import { Links, Meta, Outlet, Scripts } from "@remix-run/react";
+
+          export const loader = () => json({});
+
+          export default function Root() {
+            return (
+              <html lang="en">
+                <head>
+                  <Meta />
+                  <Links />
+                </head>
+                <body>
+                  <Outlet />
+                  <Scripts />
+                </body>
+              </html>
+            );
+          }
+        `,
+
+        "app/routes/parent.jsx": js`
+          export function headers({ actionHeaders, errorHeaders, loaderHeaders, parentHeaders }) {
+            return new Headers([
+              ...(parentHeaders ? Array.from(parentHeaders.entries()) : []),
+              ...(actionHeaders ? Array.from(actionHeaders.entries()) : []),
+              ...(loaderHeaders ? Array.from(loaderHeaders.entries()) : []),
+              ...(errorHeaders ? Array.from(errorHeaders.entries()) : []),
+            ]);
+          }
+
+          export function loader({ request }) {
+            return new Response(null, {
+              headers: { 'X-Parent-Loader': 'success' },
+            })
+          }
+
+          export default function Component() { return <div/> }
+        `,
+
+        "app/routes/parent.child.jsx": js`
+          export async function action({ request }) {
+            return null;
+          }
+
+          export default function Component() { return <div/> }
+        `,
+
+        "app/routes/cookie.jsx": js`
+          import { json } from "@remix-run/server-runtime";
+          import { Outlet } from "@remix-run/react";
+
+          export function loader({ request }) {
+            if (new URL(request.url).searchParams.has("parent-throw")) {
+              throw json(null, { headers: { "Set-Cookie": "parent-thrown-cookie=true" } });
+            }
+            return null
+          };
+
+          export default function Parent() {
+            return <Outlet />;
+          }
+
+          export function ErrorBoundary() {
+            return <h1>Caught!</h1>;
+          }
+        `,
+
+        "app/routes/cookie.child.jsx": js`
+          import { json } from "@remix-run/node";
+
+          export function loader({ request }) {
+            if (new URL(request.url).searchParams.has("throw")) {
+              throw json(null, { headers: { "Set-Cookie": "thrown-cookie=true" } });
+            }
+            return json(null, {
+              headers: { "Set-Cookie": "normal-cookie=true" },
+            });
+          };
+
+          export default function Child() {
+            return <p>Child</p>;
+          }
+        `,
+      },
+    });
+  });
+
+  test("returns no headers when the leaf route doesn't export a header function (GET)", async () => {
+    let response = await appFixture.requestDocument("/parent/child");
+    expect(JSON.stringify(Array.from(response.headers.entries()))).toBe(
+      JSON.stringify([["content-type", "text/html"]])
+    );
+  });
+
+  test("returns no headers when the leaf route doesn't export a header function (POST)", async () => {
+    let response = await appFixture.postDocument(
+      "/parent/child",
+      new URLSearchParams()
+    );
+    expect(JSON.stringify(Array.from(response.headers.entries()))).toBe(
+      JSON.stringify([["content-type", "text/html"]])
+    );
+  });
+
+  test("automatically includes cookie headers from normal responses", async () => {
+    let response = await appFixture.requestDocument("/cookie/child");
+    expect(JSON.stringify(Array.from(response.headers.entries()))).toBe(
+      JSON.stringify([
+        ["content-type", "text/html"],
+        ["set-cookie", "normal-cookie=true"],
+      ])
+    );
+  });
+
+  test("automatically includes cookie headers from thrown responses", async () => {
+    let response = await appFixture.requestDocument("/cookie/child?throw");
+    expect(JSON.stringify(Array.from(response.headers.entries()))).toBe(
+      JSON.stringify([
+        ["content-type", "text/html"],
+        ["set-cookie", "thrown-cookie=true"],
+      ])
+    );
+  });
+
+  test("does not duplicate thrown cookie headers from boundary route", async () => {
+    let response = await appFixture.requestDocument("/cookie?parent-throw");
+    expect(JSON.stringify(Array.from(response.headers.entries()))).toBe(
+      JSON.stringify([
+        ["content-type", "text/html"],
+        ["set-cookie", "parent-thrown-cookie=true"],
       ])
     );
   });
