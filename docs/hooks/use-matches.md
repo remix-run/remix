@@ -58,7 +58,7 @@ You can put whatever you want on a route `handle`. Here we'll use `breadcrumb`. 
 
 3. Now we can put it all together in our root route with `useMatches`.
 
-   ```tsx filename=root.tsx lines=[5,19-30]
+   ```tsx filename=root.tsx lines=[5,9,19-30]
    import {
      Links,
      Scripts,
