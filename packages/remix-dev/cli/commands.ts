@@ -178,7 +178,7 @@ export async function build(
   };
   if (mode === "development" && config.future.unstable_dev) {
     let origin = await resolveDevOrigin(config);
-    options.devHttpOrigin = origin;
+    options.devOrigin = origin;
   }
 
   fse.emptyDirSync(config.assetsBuildDirectory);

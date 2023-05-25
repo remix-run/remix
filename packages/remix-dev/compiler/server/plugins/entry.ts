@@ -51,9 +51,9 @@ ${Object.keys(config.routes)
   export const publicPath = ${JSON.stringify(config.publicPath)};
   export const entry = { module: entryServer };
   ${
-    options.devHttpOrigin
+    options.devOrigin
       ? `export const dev = ${JSON.stringify({
-          port: options.devHttpOrigin.port,
+          port: options.devOrigin.port,
         })}`
       : ""
   }

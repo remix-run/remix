@@ -6,7 +6,7 @@ export type Options = {
   onWarning?: (message: string, key: string) => void;
 
   // TODO: required in v2
-  devHttpOrigin?: {
+  devOrigin?: {
     scheme: string;
     host: string;
     port: number;

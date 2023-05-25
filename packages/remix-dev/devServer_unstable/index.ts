@@ -135,7 +135,7 @@ export let serve = async (
         mode: "development",
         sourcemap: true,
         onWarning: warnOnce,
-        devHttpOrigin: origin,
+        devOrigin: origin,
       },
     },
     {
