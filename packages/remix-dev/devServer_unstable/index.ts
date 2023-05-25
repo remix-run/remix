@@ -42,9 +42,9 @@ export let serve = async (
   initialConfig: RemixConfig,
   options: {
     command: string;
-    httpScheme: string;
-    httpHost: string;
-    httpPort: number;
+    scheme: string;
+    host: string;
+    port: number;
     restart: boolean;
   }
 ) => {
@@ -76,10 +76,10 @@ export let serve = async (
   let server = http.createServer(app);
   let websocket = Socket.serve(server);
 
-  let httpOrigin: Origin = {
-    scheme: options.httpScheme,
-    host: options.httpHost,
-    port: options.httpPort,
+  let origin: Origin = {
+    scheme: options.scheme,
+    host: options.host,
+    port: options.port,
   };
 
   let bin = await detectBin();
@@ -91,7 +91,7 @@ export let serve = async (
         NODE_ENV: "development",
         PATH:
           bin + (process.platform === "win32" ? ";" : ":") + process.env.PATH,
-        REMIX_DEV_HTTP_ORIGIN: stringifyOrigin(httpOrigin),
+        REMIX_DEV_HTTP_ORIGIN: stringifyOrigin(origin),
       },
       // https://github.com/sindresorhus/execa/issues/433
       windowsHide: false,
@@ -135,8 +135,8 @@ export let serve = async (
         mode: "development",
         sourcemap: true,
         onWarning: warnOnce,
-        devHttpOrigin: httpOrigin,
-        devWebSocketPort: options.httpPort,
+        devHttpOrigin: origin,
+        devWebSocketPort: origin.port,
       },
     },
     {
@@ -215,7 +215,7 @@ export let serve = async (
     }
   );
 
-  server.listen(httpOrigin.port, () => {
+  server.listen(origin.port, () => {
     console.log("Remix dev server ready");
   });
 

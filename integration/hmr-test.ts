@@ -9,7 +9,7 @@ import { createFixtureProject, css, js, json } from "./helpers/create-fixture";
 
 test.setTimeout(120_000);
 
-let fixture = (options: { appServerPort: number; httpPort: number }) => ({
+let fixture = (options: { appPort: number; devPort: number }) => ({
   files: {
     "remix.config.js": js`
       module.exports = {
@@ -17,7 +17,7 @@ let fixture = (options: { appServerPort: number; httpPort: number }) => ({
         tailwind: true,
         future: {
           unstable_dev: {
-            httpPort: ${options.httpPort},
+            port: ${options.devPort},
           },
           v2_routeConvention: true,
           v2_errorBoundary: true,
@@ -74,7 +74,7 @@ let fixture = (options: { appServerPort: number; httpPort: number }) => ({
         })
       );
 
-      let port = ${options.appServerPort};
+      let port = ${options.appPort};
       app.listen(port, () => {
         let build = require(BUILD_DIR);
         console.log('✅ app ready: http://localhost:' + port);
@@ -243,11 +243,9 @@ test("HMR", async ({ page }) => {
   });
 
   let portRange = makeRange(3080, 3099);
-  let appServerPort = await getPort({ port: portRange });
-  let httpPort = await getPort({ port: portRange });
-  let projectDir = await createFixtureProject(
-    fixture({ appServerPort, httpPort })
-  );
+  let appPort = await getPort({ port: portRange });
+  let devPort = await getPort({ port: portRange });
+  let projectDir = await createFixtureProject(fixture({ appPort, devPort }));
 
   // spin up dev server
   let dev = execa("npm", ["run", "dev"], { cwd: projectDir });
@@ -262,7 +260,7 @@ test("HMR", async ({ page }) => {
       { timeoutMs: 10_000 }
     );
 
-    await page.goto(`http://localhost:${appServerPort}`, {
+    await page.goto(`http://localhost:${appPort}`, {
       waitUntil: "networkidle",
     });
 
