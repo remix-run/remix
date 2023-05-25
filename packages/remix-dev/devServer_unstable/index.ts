@@ -136,7 +136,6 @@ export let serve = async (
         sourcemap: true,
         onWarning: warnOnce,
         devHttpOrigin: origin,
-        devWebSocketPort: origin.port,
       },
     },
     {

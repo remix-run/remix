@@ -24,7 +24,7 @@ declare global {
     // The number of active deferred keys rendered on the server
     a?: number;
     dev?: {
-      websocketPort?: number;
+      port?: number;
       hmrRuntime?: string;
     };
   };

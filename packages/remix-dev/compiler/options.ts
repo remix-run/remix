@@ -11,5 +11,4 @@ export type Options = {
     host: string;
     port: number;
   };
-  devWebSocketPort?: number;
 };
