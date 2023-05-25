@@ -5,6 +5,7 @@
 built-in tls support
 
 New options:
+
 - `--tls-key` / `tlsKey`: TLS key
 - `--tls-cert` / `tlsCert`: TLS Certificate
 
@@ -46,12 +47,12 @@ or via config:
 ```js
 module.exports = {
   future: {
-    unstable_dev:  {
+    unstable_dev: {
       tlsKey: "key.pem",
       tlsCert: "cert.pem",
-    }
-  }
-}
+    },
+  },
+};
 ```
 
 That's all that's needed to set up the Remix Dev Server with TLS.
@@ -61,22 +62,25 @@ That's all that's needed to set up the Remix Dev Server with TLS.
 For example, with `express`:
 
 ```ts
-import express from 'express'
-import https from 'node:https'
-import fs from 'node:fs'
+import express from "express";
+import https from "node:https";
+import fs from "node:fs";
 
-let app = express()
+let app = express();
 
 // ...code setting up your express app...
 
-let appServer = https.createServer({
-  key: fs.readFileSync("key.pem"),
-  cert: fs.readFileSync("cert.pem"),
-}, app)
+let appServer = https.createServer(
+  {
+    key: fs.readFileSync("key.pem"),
+    cert: fs.readFileSync("cert.pem"),
+  },
+  app
+);
 
 appServer.listen(3000, () => {
-  console.log('Ready on https://localhost:3000')
-})
+  console.log("Ready on https://localhost:3000");
+});
 ```
 
 ## Known limitations
