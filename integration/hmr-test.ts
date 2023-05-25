@@ -508,10 +508,16 @@ whatsup
     page.removeListener("pageerror", logConsoleError);
     let expectedErrorCount = 0;
     let expectDestructureTypeError = expectConsoleError((error) => {
+      let expectedMessage = new Set([
+        // chrome, edge
+        "Cannot destructure property 'hello' of 'useLoaderData(...)' as it is null.",
+        // firefox
+        "(intermediate value)() is null",
+        // webkit
+        "Right side of assignment cannot be destructured"
+      ]);
       let isExpected =
-        error.name === "TypeError" &&
-        error.message ===
-          "Cannot destructure property 'hello' of 'useLoaderData(...)' as it is null.";
+        error.name === "TypeError" && expectedMessage.has(error.message);
       if (isExpected) expectedErrorCount += 1;
       return isExpected;
     });
