@@ -11,13 +11,13 @@ Additionally, scheme/host/port options for the dev server have been renamed.
 
 Available options are:
 
-| Option         | flag               | config           | default                           |
-| -------------- | ------------------ | ---------------- | --------------------------------- |
-| Command        | `-c` / `--command` | `command`        | `remix-serve <server build path>` |
-| Scheme         | `--scheme`         | `scheme`         | `http`                            |
-| Host           | `--host`           | `host`           | `localhost`                       |
-| Port           | `--port`           | `port`           | Dynamically chosen open port      |
-| No restart     | `--no-restart`     | `restart: false` | `restart: true`                   |
+| Option     | flag               | config           | default                           |
+| ---------- | ------------------ | ---------------- | --------------------------------- |
+| Command    | `-c` / `--command` | `command`        | `remix-serve <server build path>` |
+| Scheme     | `--scheme`         | `scheme`         | `http`                            |
+| Host       | `--host`           | `host`           | `localhost`                       |
+| Port       | `--port`           | `port`           | Dynamically chosen open port      |
+| No restart | `--no-restart`     | `restart: false` | `restart: true`                   |
 
 Note that scheme/host/port options are for the _dev server_, not your app server.
 You probably don't need to use scheme/host/port option if you aren't configuring networking (e.g. for Docker or SSL).
