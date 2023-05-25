@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import * as stream from "node:stream";
 import * as http from "node:http";
+import * as https from "node:https";
 import fs from "fs-extra";
 import prettyMs from "pretty-ms";
 import execa from "execa";
@@ -47,6 +48,8 @@ export let serve = async (
     host: string;
     port: number;
     restart: boolean;
+    tlsKey?: string;
+    tlsCert?: string;
   }
 ) => {
   await loadEnv(initialConfig.rootDirectory);
@@ -74,7 +77,16 @@ export let serve = async (
       res.sendStatus(200);
     });
 
-  let server = http.createServer(app);
+  let server =
+    options.tlsKey && options.tlsCert
+      ? https.createServer(
+          {
+            key: fs.readFileSync(options.tlsKey),
+            cert: fs.readFileSync(options.tlsCert),
+          },
+          app
+        )
+      : http.createServer(app);
   let websocket = Socket.serve(server);
 
   let origin: Origin = {
@@ -100,6 +112,7 @@ export let serve = async (
           PATH:
             bin + (process.platform === "win32" ? ";" : ":") + process.env.PATH,
           REMIX_DEV_HTTP_ORIGIN: stringifyOrigin(origin),
+          FORCE_COLOR: process.env.NO_COLOR === undefined ? "1" : "0",
         },
         // https://github.com/sindresorhus/execa/issues/433
         windowsHide: false,

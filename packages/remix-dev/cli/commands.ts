@@ -218,6 +218,8 @@ export async function dev(
     host?: string;
     port?: number;
     restart?: boolean;
+    tlsKey?: string;
+    tlsCert?: string;
   } = {}
 ) {
   if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
@@ -475,7 +477,10 @@ type DevOrigin = {
 };
 let resolveDevOrigin = async (
   config: RemixConfig,
-  flags: Partial<DevOrigin> = {}
+  flags: Partial<DevOrigin> & {
+    tlsKey?: string;
+    tlsCert?: string;
+  } = {}
 ): Promise<DevOrigin> => {
   let dev = config.future.unstable_dev;
   if (dev === false) throw Error("This should never happen");
@@ -484,7 +489,7 @@ let resolveDevOrigin = async (
   let scheme =
     flags.scheme ??
     (dev === true ? undefined : dev.scheme) ??
-    "http";
+    (flags.tlsKey && flags.tlsCert) ? "https": "http";
   // prettier-ignore
   let host =
     flags.host ??
@@ -506,6 +511,8 @@ let resolveDevOrigin = async (
 type DevServeFlags = DevOrigin & {
   command?: string;
   restart: boolean;
+  tlsKey?: string;
+  tlsCert?: string;
 };
 let resolveDevServe = async (
   config: RemixConfig,
@@ -524,9 +531,16 @@ let resolveDevServe = async (
   let restart =
     flags.restart ?? (dev === true ? undefined : dev.restart) ?? true;
 
+  let tlsKey = flags.tlsKey ?? (dev === true ? undefined : dev.tlsKey);
+  if (tlsKey) tlsKey = path.resolve(tlsKey);
+  let tlsCert = flags.tlsCert ?? (dev === true ? undefined : dev.tlsCert);
+  if (tlsCert) tlsCert = path.resolve(tlsCert);
+
   return {
     command,
     ...origin,
     restart,
+    tlsKey,
+    tlsCert,
   };
 };
