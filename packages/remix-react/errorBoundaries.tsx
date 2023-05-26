@@ -83,16 +83,18 @@ export function RemixRootDefaultErrorBoundary({ error }: { error: Error }) {
       <body>
         <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
           <h1 style={{ fontSize: "24px" }}>Application Error</h1>
-          <pre
-            style={{
-              padding: "2rem",
-              background: "hsla(10, 50%, 50%, 0.1)",
-              color: "red",
-              overflow: "auto",
-            }}
-          >
-            {error.stack}
-          </pre>
+          {error.stack ? (
+            <pre
+              style={{
+                padding: "2rem",
+                background: "hsla(10, 50%, 50%, 0.1)",
+                color: "red",
+                overflow: "auto",
+              }}
+            >
+              {error.stack}
+            </pre>
+          ) : null}
         </main>
         <script
           dangerouslySetInnerHTML={{
