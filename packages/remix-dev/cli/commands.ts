@@ -23,8 +23,8 @@ import runCodemod from "../codemod";
 import { CodemodError } from "../codemod/utils/error";
 import { TaskError } from "../codemod/utils/task";
 import { transpile as convertFileToJS } from "./useJavascript";
-import { warnOnce } from "../warnOnce";
 import type { Options } from "../compiler/options";
+import { logger } from "../tux/logger";
 
 export async function create({
   appTemplate,
@@ -173,7 +173,7 @@ export async function build(
   let options: Options = {
     mode,
     sourcemap,
-    onWarning: warnOnce,
+    logger,
   };
   if (mode === "development" && config.future.unstable_dev) {
     let origin = await resolveDevOrigin(config);

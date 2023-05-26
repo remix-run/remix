@@ -147,7 +147,6 @@ const createEsbuildConfig = (
           let packageName = getNpmPackageName(args.path);
           let pkgManager = detectPackageManager() ?? "npm";
           if (
-            ctx.options.onWarning &&
             !isNodeBuiltIn(packageName) &&
             !/\bnode_modules\b/.test(args.importer) &&
             // Silence spurious warnings when using Yarn PnP. Yarn PnP doesn’t use
@@ -159,7 +158,7 @@ const createEsbuildConfig = (
             try {
               require.resolve(args.path);
             } catch (error: unknown) {
-              ctx.options.onWarning(
+              ctx.options.logger.warn(
                 `The path "${args.path}" is imported in ` +
                   `${path.relative(process.cwd(), args.importer)} but ` +
                   `"${args.path}" was not found in your node_modules. ` +

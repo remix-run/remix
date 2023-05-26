@@ -6,7 +6,7 @@ import WebSocket from "ws";
 
 import { watch } from "../compiler";
 import type { RemixConfig } from "../config";
-import { warnOnce } from "../warnOnce";
+import { logger } from "../tux/logger";
 
 const relativePath = (file: string) => path.relative(process.cwd(), file);
 
@@ -44,7 +44,7 @@ export async function liveReload(config: RemixConfig) {
       options: {
         mode: "development",
         sourcemap: true,
-        onWarning: warnOnce,
+        logger,
       },
     },
     {

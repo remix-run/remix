@@ -14,12 +14,12 @@ import { type RemixConfig } from "../config";
 import { loadEnv } from "./env";
 import * as Socket from "./socket";
 import * as HMR from "./hmr";
-import { warnOnce } from "../warnOnce";
 import { detectPackageManager } from "../cli/detectPackageManager";
 import * as HDR from "./hdr";
 import type { Result } from "../result";
 import { err, ok } from "../result";
 import invariant from "../invariant";
+import { logger } from "../tux/logger";
 
 type Origin = {
   scheme: string;
@@ -176,7 +176,7 @@ export let serve = async (
       options: {
         mode: "development",
         sourcemap: true,
-        onWarning: warnOnce,
+        logger,
         devOrigin: origin,
       },
     },

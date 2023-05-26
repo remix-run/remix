@@ -20,7 +20,7 @@ export function deprecatedRemixPackagePlugin(ctx: Context): Plugin {
             `underlying \`@remix-run/*\` package. ` +
             `Run \`npx @remix-run/dev@latest codemod replace-remix-magic-imports\` ` +
             `to automatically migrate your code.`;
-          ctx.options.onWarning?.(warningMessage, importer);
+          ctx.options.logger.warn(warningMessage, importer);
         }
         return undefined;
       });

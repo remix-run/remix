@@ -18,10 +18,10 @@ import type { Context } from "../../context";
  * This includes externalizing for node based platforms, and bundling for single file
  * environments such as cloudflare.
  */
-export function serverBareModulesPlugin({ config, options }: Context): Plugin {
+export function serverBareModulesPlugin(ctx: Context): Plugin {
   // Resolve paths according to tsconfig paths property
-  let matchPath = config.tsconfigPath
-    ? createMatchPath(config.tsconfigPath)
+  let matchPath = ctx.config.tsconfigPath
+    ? createMatchPath(ctx.config.tsconfigPath)
     : undefined;
   function resolvePath(id: string) {
     if (!matchPath) {
@@ -76,7 +76,6 @@ export function serverBareModulesPlugin({ config, options }: Context): Plugin {
 
         // Warn if we can't find an import for a package.
         if (
-          options.onWarning &&
           !isNodeBuiltIn(packageName) &&
           !/\bnode_modules\b/.test(importer) &&
           // Silence spurious warnings when using Yarn PnP. Yarn PnP doesn’t use
@@ -88,7 +87,7 @@ export function serverBareModulesPlugin({ config, options }: Context): Plugin {
           try {
             require.resolve(path, { paths: [importer] });
           } catch (error: unknown) {
-            options.onWarning(
+            ctx.options.logger.warn(
               `The path "${path}" is imported in ` +
                 `${relative(process.cwd(), importer)} but ` +
                 `"${path}" was not found in your node_modules. ` +
@@ -98,11 +97,11 @@ export function serverBareModulesPlugin({ config, options }: Context): Plugin {
           }
         }
 
-        if (config.serverDependenciesToBundle === "all") {
+        if (ctx.config.serverDependenciesToBundle === "all") {
           return undefined;
         }
 
-        for (let pattern of config.serverDependenciesToBundle) {
+        for (let pattern of ctx.config.serverDependenciesToBundle) {
           // bundle it if the path matches the pattern
           if (
             typeof pattern === "string" ? path === pattern : pattern.test(path)
@@ -112,17 +111,11 @@ export function serverBareModulesPlugin({ config, options }: Context): Plugin {
         }
 
         if (
-          options.onWarning &&
           !isNodeBuiltIn(packageName) &&
           kind !== "dynamic-import" &&
-          config.serverPlatform === "node"
+          ctx.config.serverPlatform === "node"
         ) {
-          warnOnceIfEsmOnlyPackage(
-            packageName,
-            path,
-            importer,
-            options.onWarning
-          );
+          warnOnceIfEsmOnlyPackage(ctx, packageName, path, importer);
         }
 
         // Externalize everything else if we've gotten here.
@@ -151,10 +144,10 @@ function isBareModuleId(id: string): boolean {
 }
 
 function warnOnceIfEsmOnlyPackage(
+  ctx: Context,
   packageName: string,
   fullImportPath: string,
-  importer: string,
-  onWarning: (msg: string, key: string) => void
+  importer: string
 ) {
   try {
     let packageDir = resolveModuleBasePath(
@@ -187,7 +180,7 @@ function warnOnceIfEsmOnlyPackage(
       }
 
       if (isEsmOnly) {
-        onWarning(
+        ctx.options.logger.warn(
           `${packageName} is possibly an ESM only package and should be bundled with ` +
             `"serverDependenciesToBundle" in remix.config.js.`,
           packageName + ":esm-only"
