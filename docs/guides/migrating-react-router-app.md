@@ -280,15 +280,19 @@ We also suggest renaming this directory to make it clear that this is your old c
 
 Lastly, in your root `App` component (the one that would have been mounted to the `root` element), remove the `<BrowserRouter>` from React Router. Remix takes care of this for you without needing to render the provider directly.
 
-## Creating a catch-all route
+## Creating an index and a catch-all route
 
 Remix needs routes beyond the root route to know what to render in `<Outlet />`. Fortunately you already render `<Route>` components in your app, and Remix can use those as you migrate to use our [routing conventions][routing-conventions].
 
-To start, create a new directory in `app` called `routes`. In that directory, create a file called `$.tsx`. This is called [a **catch-all route**][a-catch-all-route], and it will be useful to let your old app handle routes that you haven't moved into the `routes` directory yet.
+To start, create a new directory in `app` called `routes`. In that directory, create two files called `_index.tsx` and `$.tsx`. `$.tsx` is called [a **catch-all route**][a-catch-all-route], and it will be useful to let your old app handle routes that you haven't moved into the `routes` directory yet.
 
-Inside your `$.tsx` file, all we need to do is export the code from our old root `App`:
+Inside your `_index.tsx` and `$.tsx` files, all we need to do is export the code from our old root `App`:
 
-```tsx filename=$.tsx
+```tsx filename=app/routes/_index.tsx
+export { default } from "~/old-app/app";
+```
+
+```tsx filename=app/routes/$.tsx
 export { default } from "~/old-app/app";
 ```
 
