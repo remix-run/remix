@@ -25,6 +25,7 @@ import { TaskError } from "../codemod/utils/task";
 import { transpile as convertFileToJS } from "./useJavascript";
 import { warnOnce } from "../warnOnce";
 import type { Options } from "../compiler/options";
+import { createFileWatchCache } from "../compiler/fileWatchCache";
 import { getAppDependencies } from "../dependencies";
 
 export async function create({
@@ -186,8 +187,10 @@ export async function build(
     options.devWebSocketPort = dev.webSocketPort;
   }
 
+  let fileWatchCache = createFileWatchCache();
+
   fse.emptyDirSync(config.assetsBuildDirectory);
-  await compiler.build({ config, options }).catch((thrown) => {
+  await compiler.build({ config, options, fileWatchCache }).catch((thrown) => {
     compiler.logThrown(thrown);
     process.exit(1);
   });

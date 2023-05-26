@@ -5,5 +5,5 @@ import type { Options } from "./options";
 export type Context = {
   config: RemixConfig;
   options: Options;
-  fileWatchCache?: FileWatchCache;
+  fileWatchCache: FileWatchCache;
 };

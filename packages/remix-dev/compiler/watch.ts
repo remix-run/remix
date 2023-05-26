@@ -87,7 +87,10 @@ export async function watch(
   }
 
   ctx.config.watchPaths?.forEach((watchPath) => {
-    toWatch.push(watchPath);
+    // We need to ensure that the path is absolute, otherwise chokidar
+    // will give us relative paths in the change events. This is consistent
+    // with how we handle appDirectory and serverEntryPoint.
+    toWatch.push(path.resolve(ctx.config.rootDirectory, watchPath));
   });
 
   let watcher = chokidar

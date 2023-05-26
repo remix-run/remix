@@ -148,7 +148,7 @@ function postcssPlugin({
   postcssProcessor,
   options,
 }: {
-  fileWatchCache?: Context["fileWatchCache"];
+  fileWatchCache: Context["fileWatchCache"];
   postcssProcessor: Processor;
   options: Context["options"];
 }): esbuild.Plugin {
@@ -158,64 +158,46 @@ function postcssPlugin({
       build.onLoad({ filter: /\.css$/, namespace: "file" }, async (args) => {
         let cacheKey = `postcss-plugin?sourcemap=${options.sourcemap}&path=${args.path}`;
 
-        let cacheEntry = fileWatchCache?.get(cacheKey);
-
-        if (cacheEntry) {
-          console.log("Cache hit", { cacheKey });
-
-          return {
-            contents: (await cacheEntry).value,
-            loader: "css",
-          };
-        }
-
-        console.log("Cache miss", { cacheKey });
-
-        let postcssPromise = fse
-          .readFile(args.path, "utf-8")
-          .then(async (contents) => {
-            let { css, messages } = await postcssProcessor.process(contents, {
-              from: args.path,
-              to: args.path,
-              map: options.sourcemap,
-            });
-
-            // Include the PostCSS entry point itself as a dependency of this cache entry
-            let fileDependencies = new Set<string>([args.path]);
-            let globDependencies = new Set<string>();
-
-            for (let message of messages) {
-              if (
-                message.type === "dependency" &&
-                typeof message.file === "string"
-              ) {
-                fileDependencies.add(message.file);
-                continue;
-              }
-
-              if (
-                message.type === "dir-dependency" &&
-                typeof message.dir === "string" &&
-                typeof message.glob === "string"
-              ) {
-                globDependencies.add(path.join(message.dir, message.glob));
-                continue;
-              }
-            }
-
-            return {
-              value: css,
-              fileDependencies,
-              globDependencies,
-            };
+        let { value } = await fileWatchCache.getOrSet(cacheKey, async () => {
+          let contents = await fse.readFile(args.path, "utf-8");
+          let { css, messages } = await postcssProcessor.process(contents, {
+            from: args.path,
+            to: args.path,
+            map: options.sourcemap,
           });
 
-        fileWatchCache?.set(cacheKey, postcssPromise);
+          // Include the PostCSS entry point itself as a dependency of this cache entry
+          let fileDependencies = new Set<string>([args.path]);
+          let globDependencies = new Set<string>();
 
-        let contents = (await postcssPromise).value;
+          for (let message of messages) {
+            if (
+              message.type === "dependency" &&
+              typeof message.file === "string"
+            ) {
+              fileDependencies.add(message.file);
+              continue;
+            }
+
+            if (
+              message.type === "dir-dependency" &&
+              typeof message.dir === "string" &&
+              typeof message.glob === "string"
+            ) {
+              globDependencies.add(path.join(message.dir, message.glob));
+              continue;
+            }
+          }
+
+          return {
+            value: css,
+            fileDependencies,
+            globDependencies,
+          };
+        });
 
         return {
-          contents,
+          contents: value,
           loader: "css",
         };
       });
