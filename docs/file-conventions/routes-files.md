@@ -118,7 +118,6 @@ app/
 │   ├── ($lang)/
 │   │   ├── $pid.tsx
 │   │   ├── categories.tsx
-│   │   └── index.tsx
 │   └── index.tsx
 └── root.tsx
 ```

@@ -1,5 +1,17 @@
 # `@remix-run/react`
 
+## 1.16.1
+
+### Patch Changes
+
+- Cross-module `loader` change detection for HDR ([#6299](https://github.com/remix-run/remix/pull/6299))
+- Better opt-out of `loader` revalidation on UI only changes ([#6278](https://github.com/remix-run/remix/pull/6278))
+- Add `useMatch` re-export from `react-router-dom` ([#5257](https://github.com/remix-run/remix/pull/5257))
+- Fix `data` parameter typing on `V2_MetaFunction` to include `undefined` for scenarios in which the `loader` threw to it's own boundary. ([#6231](https://github.com/remix-run/remix/pull/6231))
+- Updated dependencies:
+  - [`react-router-dom@6.11.2`](https://github.com/remix-run/react-router/releases/tag/react-router%406.11.2)
+  - [`@remix-run/router@1.6.2`](https://github.com/remix-run/react-router/blob/main/packages/router/CHANGELOG.md#162)
+
 ## 1.16.0
 
 ### Minor Changes

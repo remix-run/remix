@@ -9,6 +9,9 @@ module.exports = {
     "plugin:markdown/recommended",
   ],
   plugins: ["markdown"],
+  settings: {
+    "import/internal-regex": "^~/",
+  },
   overrides: [
     {
       files: ["**/*.md/**"],
@@ -28,10 +31,29 @@ module.exports = {
       },
     },
     {
-      files: ["templates/**/*.*"],
+      files: [
+        "**/*.md/*.js?(x)",
+        "**/*.md/*.ts?(x)",
+        "integration/helpers/cf-template/**/*.*",
+        "integration/helpers/deno-template/**/*.*",
+        "integration/helpers/node-template/**/*.*",
+        "packages/remix-dev/config/defaults/**/*.*",
+        "templates/**/*.*",
+      ],
       rules: {
         "prefer-let/prefer-let": OFF,
         "prefer-const": WARN,
+
+        "import/order": [
+          WARN,
+          {
+            alphabetize: { caseInsensitive: true, order: "asc" },
+            groups: ["builtin", "external", "internal", "parent", "sibling"],
+            "newlines-between": "always",
+          },
+        ],
+
+        "react/jsx-no-leaked-render": [WARN, { validStrategies: ["ternary"] }],
       },
     },
   ],

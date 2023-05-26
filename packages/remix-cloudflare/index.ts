@@ -55,6 +55,7 @@ export type {
   ErrorBoundaryComponent,
   HandleDataRequestFunction,
   HandleDocumentRequestFunction,
+  HeadersArgs,
   HeadersFunction,
   HtmlLinkDescriptor,
   HtmlMetaDescriptor,
