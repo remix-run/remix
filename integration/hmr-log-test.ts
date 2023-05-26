@@ -9,11 +9,7 @@ import { createFixtureProject, css, js, json } from "./helpers/create-fixture";
 
 test.setTimeout(120_000);
 
-let fixture = (options: {
-  appServerPort: number;
-  httpPort: number;
-  webSocketPort: number;
-}) => ({
+let fixture = (options: { appPort: number; devPort: number }) => ({
   files: {
     "remix.config.js": js`
       module.exports = {
@@ -21,8 +17,7 @@ let fixture = (options: {
         tailwind: true,
         future: {
           unstable_dev: {
-            httpPort: ${options.httpPort},
-            webSocketPort: ${options.webSocketPort},
+            port: ${options.devPort},
           },
           v2_routeConvention: true,
           v2_errorBoundary: true,
@@ -80,7 +75,7 @@ let fixture = (options: {
         })
       );
 
-      let port = ${options.appServerPort};
+      let port = ${options.appPort};
       app.listen(port, () => {
         let build = require(BUILD_DIR);
         console.log('✅ app ready: http://localhost:' + port);
@@ -235,12 +230,28 @@ let bufferize = (stream: Readable): (() => string) => {
   return () => buffer;
 };
 
+let logConsoleError = (error: Error) => {
+  console.error(`[console] ${error.name}: ${error.message}`);
+};
+
+let expectConsoleError = (
+  isExpected: (error: Error) => boolean,
+  unexpected = logConsoleError
+) => {
+  return (error: Error) => {
+    if (isExpected(error)) {
+      return;
+    }
+    unexpected(error);
+  };
+};
+
 let HMR_TIMEOUT_MS = 10_000;
 
 test("HMR", async ({ page }) => {
   // uncomment for debugging
   // page.on("console", (msg) => console.log(msg.text()));
-  page.on("pageerror", (err) => console.log(err.message));
+  page.on("pageerror", logConsoleError);
   let dataRequests = 0;
   page.on("request", (request) => {
     let url = new URL(request.url());
@@ -250,12 +261,9 @@ test("HMR", async ({ page }) => {
   });
 
   let portRange = makeRange(4080, 4099);
-  let appServerPort = await getPort({ port: portRange });
-  let httpPort = await getPort({ port: portRange });
-  let webSocketPort = await getPort({ port: portRange });
-  let projectDir = await createFixtureProject(
-    fixture({ appServerPort, httpPort, webSocketPort })
-  );
+  let appPort = await getPort({ port: portRange });
+  let devPort = await getPort({ port: portRange });
+  let projectDir = await createFixtureProject(fixture({ appPort, devPort }));
 
   // spin up dev server
   let dev = execa("npm", ["run", "dev"], { cwd: projectDir });
@@ -270,7 +278,7 @@ test("HMR", async ({ page }) => {
       { timeoutMs: 10_000 }
     );
 
-    await page.goto(`http://localhost:${appServerPort}`, {
+    await page.goto(`http://localhost:${appPort}`, {
       waitUntil: "networkidle",
     });
 
@@ -470,7 +478,7 @@ whatsup
     await page.getByText("Hello, planet").waitFor({ timeout: HMR_TIMEOUT_MS });
     await page.waitForLoadState("networkidle");
 
-    expect(devStderr()).toBe("");
+    let stderr = devStderr();
     let withSyntaxError = `
       import { useLoaderData } from "@remix-run/react";
       export function shouldRevalidate(args) {
@@ -486,9 +494,36 @@ whatsup
       }
     `;
     fs.writeFileSync(indexPath, withSyntaxError);
-    await wait(() => devStderr().includes('Expected ";" but found "efault"'), {
-      timeoutMs: HMR_TIMEOUT_MS,
+    await wait(
+      () =>
+        devStderr()
+          .replace(stderr, "")
+          .includes('Expected ";" but found "efault"'),
+      {
+        timeoutMs: HMR_TIMEOUT_MS,
+      }
+    );
+
+    // React Router integration w/ React Refresh has a bug where sometimes rerenders happen with old UI and new data
+    // in this case causing `TypeError: Cannot destructure property`.
+    // Need to fix that bug, but it only shows a harmless console error in the browser in dev
+    page.removeListener("pageerror", logConsoleError);
+    let expectedErrorCount = 0;
+    let expectDestructureTypeError = expectConsoleError((error) => {
+      let expectedMessage = new Set([
+        // chrome, edge
+        "Cannot destructure property 'hello' of 'useLoaderData(...)' as it is null.",
+        // firefox
+        "(intermediate value)() is null",
+        // webkit
+        "Right side of assignment cannot be destructured",
+      ]);
+      let isExpected =
+        error.name === "TypeError" && expectedMessage.has(error.message);
+      if (isExpected) expectedErrorCount += 1;
+      return isExpected;
     });
+    page.on("pageerror", expectDestructureTypeError);
 
     let withFix = `
       import { useLoaderData } from "@remix-run/react";
@@ -507,6 +542,11 @@ whatsup
     fs.writeFileSync(indexPath, withFix);
     await page.waitForLoadState("networkidle");
     await page.getByText("With Fix").waitFor({ timeout: HMR_TIMEOUT_MS });
+
+    // Restore normal console error handling
+    page.removeListener("pageerror", expectDestructureTypeError);
+    expect(expectedErrorCount).toBe(2);
+    page.addListener("pageerror", logConsoleError);
   } catch (e) {
     console.log("stdout begin -----------------------");
     console.log(devStdout());
