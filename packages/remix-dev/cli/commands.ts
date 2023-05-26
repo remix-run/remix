@@ -8,6 +8,7 @@ import prettyMs from "pretty-ms";
 import * as esbuild from "esbuild";
 import NPMCliPackageJson from "@npmcli/package-json";
 import { coerce } from "semver";
+import pc from "picocolors";
 
 import * as colors from "../colors";
 import * as compiler from "../compiler";
@@ -221,11 +222,13 @@ export async function dev(
     tlsCert?: string;
   } = {}
 ) {
+  // clear screen
+  process.stdout.write("\x1Bc");
+
   if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
-    console.warn(
-      `Forcing NODE_ENV to be 'development'. Was: ${JSON.stringify(
-        process.env.NODE_ENV
-      )}`
+    logger.warn(
+      "forcing `NODE_ENV=development`" +
+        pc.gray(` (was ${JSON.stringify(process.env.NODE_ENV)})`)
     );
   }
   process.env.NODE_ENV = "development";

@@ -5,6 +5,7 @@ import os from "os";
 import { loadEnv } from "../devServer_unstable/env";
 import { liveReload } from "./liveReload";
 import type { RemixConfig } from "../config";
+import { logger } from "../tux/logger";
 
 function purgeAppRequireCache(buildPath: string) {
   for (let key in require.cache) {
@@ -36,7 +37,7 @@ export async function serve(config: RemixConfig, portPreference?: number) {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
   let express = tryImport("express") as typeof import("express");
 
-  await loadEnv(config.rootDirectory);
+  await loadEnv(config.rootDirectory, { logger });
 
   let port = await getPort({
     port: portPreference
