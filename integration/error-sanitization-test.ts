@@ -128,10 +128,12 @@ const routeFiles = {
 test.describe("Error Sanitization", () => {
   let fixture: Fixture;
   let oldConsoleError: () => void;
+  let errorLogs: any[] = [];
 
   test.beforeEach(() => {
     oldConsoleError = console.error;
-    console.error = () => {};
+    errorLogs = [];
+    console.error = (...args) => errorLogs.push(args);
   });
 
   test.afterEach(() => {
@@ -167,6 +169,9 @@ test.describe("Error Sanitization", () => {
         '{"routes/index":{"message":"Unexpected Server Error","__type":"Error"}}'
       );
       expect(html).not.toMatch(/stack/i);
+      expect(errorLogs.length).toBe(1);
+      expect(errorLogs[0][0].message).toMatch("Loader Error");
+      expect(errorLogs[0][0].stack).toMatch(" at ");
     });
 
     test("sanitizes render errors in document requests", async () => {
@@ -178,6 +183,9 @@ test.describe("Error Sanitization", () => {
         '{"routes/index":{"message":"Unexpected Server Error","__type":"Error"}}'
       );
       expect(html).not.toMatch(/stack/i);
+      expect(errorLogs.length).toBe(1);
+      expect(errorLogs[0][0].message).toMatch("Render Error");
+      expect(errorLogs[0][0].stack).toMatch(" at ");
     });
 
     test("renders deferred document without errors", async () => {
@@ -200,6 +208,9 @@ test.describe("Error Sanitization", () => {
       // Defer errors are not not part of the JSON blob but rather rejected
       // against a pending promise and therefore are inlined JS.
       expect(html).toMatch("x.stack=undefined;");
+      // defer errors are not logged to the server console since the request
+      // has "succeeded"
+      expect(errorLogs.length).toBe(0);
     });
 
     test("returns data without errors", async () => {
@@ -214,6 +225,9 @@ test.describe("Error Sanitization", () => {
       let response = await fixture.requestData("/?loader", "routes/index");
       let text = await response.text();
       expect(text).toBe('{"message":"Unexpected Server Error"}');
+      expect(errorLogs.length).toBe(1);
+      expect(errorLogs[0][0].message).toMatch("Loader Error");
+      expect(errorLogs[0][0].stack).toMatch(" at ");
     });
 
     test("returns deferred data without errors", async () => {
@@ -231,6 +245,9 @@ test.describe("Error Sanitization", () => {
         '{"lazy":"__deferred_promise:lazy"}\n\n' +
           'error:{"lazy":{"message":"Unexpected Server Error"}}\n\n'
       );
+      // defer errors are not logged to the server console since the request
+      // has "succeeded"
+      expect(errorLogs.length).toBe(0);
     });
 
     test("sanitizes loader errors in resource requests", async () => {
@@ -240,12 +257,20 @@ test.describe("Error Sanitization", () => {
       );
       let text = await response.text();
       expect(text).toBe('{"message":"Unexpected Server Error"}');
+      expect(errorLogs.length).toBe(1);
+      expect(errorLogs[0][0].message).toMatch("Loader Error");
+      expect(errorLogs[0][0].stack).toMatch(" at ");
     });
 
     test("sanitizes mismatched route errors in data requests", async () => {
       let response = await fixture.requestData("/", "not-a-route");
       let text = await response.text();
       expect(text).toBe('{"message":"Unexpected Server Error"}');
+      expect(errorLogs.length).toBe(1);
+      expect(errorLogs[0][0].message).toMatch(
+        'Route "not-a-route" does not match URL "/"'
+      );
+      expect(errorLogs[0][0].stack).toMatch(" at ");
     });
   });
 
@@ -286,6 +311,9 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch(
         'errors":{"routes/index":{"message":"Loader Error","stack":"Error: Loader Error\\n'
       );
+      expect(errorLogs.length).toBe(1);
+      expect(errorLogs[0][0].message).toMatch("Loader Error");
+      expect(errorLogs[0][0].stack).toMatch(" at ");
     });
 
     test("does not sanitize render errors in document requests", async () => {
@@ -297,6 +325,9 @@ test.describe("Error Sanitization", () => {
       expect(html).toMatch(
         'errors":{"routes/index":{"message":"Render Error","stack":"Error: Render Error\\n'
       );
+      expect(errorLogs.length).toBe(1);
+      expect(errorLogs[0][0].message).toMatch("Render Error");
+      expect(errorLogs[0][0].stack).toMatch(" at ");
     });
 
     test("renders deferred document without errors", async () => {
@@ -316,6 +347,9 @@ test.describe("Error Sanitization", () => {
       // Defer errors are not not part of the JSON blob but rather rejected
       // against a pending promise and therefore are inlined JS.
       expect(html).toMatch("x.stack=e.stack;");
+      // defer errors are not logged to the server console since the request
+      // has "succeeded"
+      expect(errorLogs.length).toBe(0);
     });
 
     test("returns data without errors", async () => {
@@ -332,6 +366,9 @@ test.describe("Error Sanitization", () => {
       expect(text).toMatch(
         '{"message":"Loader Error","stack":"Error: Loader Error'
       );
+      expect(errorLogs.length).toBe(1);
+      expect(errorLogs[0][0].message).toMatch("Loader Error");
+      expect(errorLogs[0][0].stack).toMatch(" at ");
     });
 
     test("returns deferred data without errors", async () => {
@@ -348,6 +385,9 @@ test.describe("Error Sanitization", () => {
       expect(text).toMatch(
         'error:{"lazy":{"message":"REJECTED","stack":"Error: REJECTED'
       );
+      // defer errors are not logged to the server console since the request
+      // has "succeeded"
+      expect(errorLogs.length).toBe(0);
     });
 
     test("does not sanitize loader errors in resource requests", async () => {
@@ -359,6 +399,9 @@ test.describe("Error Sanitization", () => {
       expect(text).toMatch(
         '{"message":"Loader Error","stack":"Error: Loader Error'
       );
+      expect(errorLogs.length).toBe(1);
+      expect(errorLogs[0][0].message).toMatch("Loader Error");
+      expect(errorLogs[0][0].stack).toMatch(" at ");
     });
 
     test("sanitizes mismatched route errors in data requests", async () => {
@@ -367,6 +410,11 @@ test.describe("Error Sanitization", () => {
       expect(text).toMatch(
         '{"message":"Route \\"not-a-route\\" does not match URL \\"/\\"","stack":"Error: Route \\"not-a-route\\" does not match URL \\"/\\"'
       );
+      expect(errorLogs.length).toBe(1);
+      expect(errorLogs[0][0].message).toMatch(
+        'Route "not-a-route" does not match URL "/"'
+      );
+      expect(errorLogs[0][0].stack).toMatch(" at ");
     });
   });
 });

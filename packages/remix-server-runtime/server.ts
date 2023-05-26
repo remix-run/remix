@@ -248,6 +248,9 @@ async function handleDocumentRequestRR(
 
   // Sanitize errors outside of development environments
   if (context.errors) {
+    Object.values(context.errors).forEach((err) =>
+      logServerErrorIfNotAborted(err, request, serverMode)
+    );
     context.errors = sanitizeErrors(context.errors, serverMode);
   }
 
@@ -284,6 +287,8 @@ async function handleDocumentRequestRR(
       loadContext
     );
   } catch (error: unknown) {
+    logServerErrorIfNotAborted(error, request, serverMode);
+
     // Get a new StaticHandlerContext that contains the error at the right boundary
     context = getStaticContextFromError(
       staticHandler.dataRoutes,
