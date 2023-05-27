@@ -3395,15 +3395,16 @@ export async function getUser(request: Request) {
     return null;
   }
 
-  try {
-    const user = await db.user.findUnique({
-      select: { id: true, username: true },
-      where: { id: userId },
-    });
-    return user;
-  } catch {
+  const user = await db.user.findUnique({
+    select: { id: true, username: true },
+    where: { id: userId },
+  });
+
+  if (!user) {
     throw logout(request);
   }
+
+return user;
 }
 
 export async function logout(request: Request) {
