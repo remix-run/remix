@@ -3305,7 +3305,7 @@ We should probably give people the ability to see that they're logged in and a w
 
 <summary>app/utils/session.server.ts</summary>
 
-```ts filename=app/utils/session.server.ts lines=[84-99,101-108]
+```ts filename=app/utils/session.server.ts lines=[84-100,102-109]
 import {
   createCookieSessionStorage,
   redirect,
@@ -3404,7 +3404,7 @@ export async function getUser(request: Request) {
     throw logout(request);
   }
 
-return user;
+  return user;
 }
 
 export async function logout(request: Request) {
@@ -3677,15 +3677,16 @@ export async function getUser(request: Request) {
     return null;
   }
 
-  try {
-    const user = await db.user.findUnique({
-      select: { id: true, username: true },
-      where: { id: userId },
-    });
-    return user;
-  } catch {
+  const user = await db.user.findUnique({
+    select: { id: true, username: true },
+    where: { id: userId },
+  });
+
+  if (!user) {
     throw logout(request);
   }
+
+  return user;
 }
 
 export async function logout(request: Request) {
