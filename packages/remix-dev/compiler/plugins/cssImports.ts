@@ -82,7 +82,13 @@ export function cssFilePlugin({
           plugins: [
             absoluteCssUrlsPlugin(),
             ...(postcssProcessor
-              ? [postcssPlugin({ fileWatchCache, postcssProcessor, options })]
+              ? [
+                  postcssPlugin({
+                    fileWatchCache,
+                    postcssProcessor,
+                    options,
+                  }),
+                ]
               : []),
           ],
         });
@@ -158,46 +164,62 @@ function postcssPlugin({
       build.onLoad({ filter: /\.css$/, namespace: "file" }, async (args) => {
         let cacheKey = `postcss-plugin?sourcemap=${options.sourcemap}&path=${args.path}`;
 
-        let { value } = await fileWatchCache.getOrSet(cacheKey, async () => {
-          let contents = await fse.readFile(args.path, "utf-8");
-          let { css, messages } = await postcssProcessor.process(contents, {
-            from: args.path,
-            to: args.path,
-            map: options.sourcemap,
-          });
+        let { cacheValue } = await fileWatchCache.getOrSet(
+          cacheKey,
+          async () => {
+            let contents = await fse.readFile(args.path, "utf-8");
 
-          // Include the PostCSS entry point itself as a dependency of this cache entry
-          let fileDependencies = new Set<string>([args.path]);
-          let globDependencies = new Set<string>();
+            let { css, messages } = await postcssProcessor.process(contents, {
+              from: args.path,
+              to: args.path,
+              map: options.sourcemap,
+            });
 
-          for (let message of messages) {
-            if (
-              message.type === "dependency" &&
-              typeof message.file === "string"
-            ) {
-              fileDependencies.add(message.file);
-              continue;
+            let fileDependencies = new Set<string>();
+            let globDependencies = new Set<string>();
+
+            // Ensure the CSS file being passed to PostCSS is tracked as a
+            // dependency of this cache key since a change to this file should
+            // invalidate the cache, not just its sub-dependencies.
+            fileDependencies.add(args.path);
+
+            // PostCSS plugin result objects can contain arbitrary messages returned
+            // from plugins. Here we look for messages that indicate a dependency
+            // on another file or glob. Here we target the generic dependency messages
+            // returned from 'postcss-import' and 'tailwindcss' plugins, but we may
+            // need to add more in the future depending on what other plugins do.
+            // More info:
+            // - https://postcss.org/api/#result
+            // - https://postcss.org/api/#message
+            for (let message of messages) {
+              if (
+                message.type === "dependency" &&
+                typeof message.file === "string"
+              ) {
+                fileDependencies.add(message.file);
+                continue;
+              }
+
+              if (
+                message.type === "dir-dependency" &&
+                typeof message.dir === "string" &&
+                typeof message.glob === "string"
+              ) {
+                globDependencies.add(path.join(message.dir, message.glob));
+                continue;
+              }
             }
 
-            if (
-              message.type === "dir-dependency" &&
-              typeof message.dir === "string" &&
-              typeof message.glob === "string"
-            ) {
-              globDependencies.add(path.join(message.dir, message.glob));
-              continue;
-            }
+            return {
+              cacheValue: css,
+              fileDependencies,
+              globDependencies,
+            };
           }
-
-          return {
-            value: css,
-            fileDependencies,
-            globDependencies,
-          };
-        });
+        );
 
         return {
-          contents: value,
+          contents: cacheValue,
           loader: "css",
         };
       });
