@@ -29,7 +29,7 @@ function getGlobMatcher(glob: string) {
 
   if (!matcher) {
     matcher = picomatch(normalizeSlashes(glob));
-    globMatchers.set(glob, picomatch(glob));
+    globMatchers.set(glob, matcher);
   }
 
   return matcher;
