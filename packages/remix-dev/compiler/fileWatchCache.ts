@@ -81,17 +81,10 @@ export function createFileWatchCache(): FileWatchCache {
   }
 
   function invalidateFile(invalidatedFile: string): void {
-    console.log("Invalidate file", { invalidatedFile });
-
     // Invalidate all cache entries that depend on the file.
     let cacheKeys = cacheKeysForFileDep.get(invalidatedFile);
     if (cacheKeys) {
       for (let cacheKey of cacheKeys) {
-        console.log("Invalidate cache key for file dep", {
-          invalidatedFile,
-          cacheKey,
-        });
-
         invalidateCacheKey(cacheKey);
       }
     }
@@ -102,12 +95,6 @@ export function createFileWatchCache(): FileWatchCache {
       let match = getGlobMatcher(glob);
       if (match && match(normalizeSlashes(invalidatedFile))) {
         for (let cacheKey of cacheKeys) {
-          console.log("Invalidate cache key for glob match", {
-            glob,
-            invalidatedFile,
-            cacheKey,
-          });
-
           invalidateCacheKey(cacheKey);
         }
       }
@@ -115,10 +102,6 @@ export function createFileWatchCache(): FileWatchCache {
   }
 
   function get(key: string): Promise<CacheValue> | undefined {
-    console.log("Getting cache entry", {
-      key,
-      hasCacheEntry: promiseForCacheKey.has(key),
-    });
     return promiseForCacheKey.get(key);
   }
 
@@ -171,12 +154,6 @@ export function createFileWatchCache(): FileWatchCache {
           cacheKeys.add(key);
         }
       }
-
-      console.log("Setting cache entry", {
-        key,
-        fileDependencies: [...(fileDependencies || [])],
-        globDependencies: [...(globDependencies || [])],
-      });
     });
 
     return promise;
