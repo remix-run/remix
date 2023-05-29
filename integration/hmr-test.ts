@@ -88,7 +88,7 @@ let fixture = (options: { appPort: number; devPort: number }) => ({
     "postcss.config.js": js`
       module.exports = {
         plugins: {
-          "postcss-import": {},
+          "postcss-import": {}, // Testing PostCSS cache invalidation
           tailwindcss: {},
         }
       };
@@ -105,7 +105,7 @@ let fixture = (options: { appPort: number; devPort: number }) => ({
       };
     `,
 
-    "app/styles.css": css`
+    "app/tailwind.css": css`
       @tailwind base;
       @tailwind components;
       @tailwind utilities;
@@ -133,11 +133,11 @@ let fixture = (options: { appPort: number; devPort: number }) => ({
       import { cssBundleHref } from "@remix-run/css-bundle";
 
       import Counter from "./components/counter";
-      import styles from "./styles.css";
+      import tailwindStyles from "./tailwind.css";
       import stylesWithImport from "./stylesWithImport.css";
 
       export const links: LinksFunction = () => [
-        { rel: "stylesheet", href: styles },
+        { rel: "stylesheet", href: tailwindStyles },
         { rel: "stylesheet", href: stylesWithImport },
         ...cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : [],
       ];
@@ -317,8 +317,8 @@ test("HMR", async ({ page }) => {
     let originalIndex = fs.readFileSync(indexPath, "utf8");
     let counterPath = path.join(projectDir, "app", "components", "counter.tsx");
     let originalCounter = fs.readFileSync(counterPath, "utf8");
-    let importedStylesPath = path.join(projectDir, "app", "importedStyle.css");
-    let originalImportedStyles = fs.readFileSync(importedStylesPath, "utf8");
+    let importedStylePath = path.join(projectDir, "app", "importedStyle.css");
+    let originalImportedStyle = fs.readFileSync(importedStylePath, "utf8");
     let cssModulePath = path.join(projectDir, "app", "styles.module.css");
     let originalCssModule = fs.readFileSync(cssModulePath, "utf8");
     let mdxPath = path.join(projectDir, "app", "routes", "mdx.mdx");
@@ -334,19 +334,19 @@ test("HMR", async ({ page }) => {
     fs.writeFileSync(cssModulePath, newCssModule);
 
     // make changes to imported styles
-    let newImportedStyles = `
+    let newImportedStyle = `
       .importedStyle {
         font-weight: 800;
       }
     `;
-    fs.writeFileSync(importedStylesPath, newImportedStyles);
+    fs.writeFileSync(importedStylePath, newImportedStyle);
 
-    // change text, add updated styles, add new Tailwind class
+    // change text, add updated styles, add new Tailwind class ("italic")
     let newIndex = `
       import { useLoaderData } from "@remix-run/react";
       import styles from "~/styles.module.css";
       export function shouldRevalidate(args) {
-        return true;  
+        return true;
       }
       export default function Index() {
         const t = useLoaderData();
@@ -375,7 +375,7 @@ test("HMR", async ({ page }) => {
 
     // undo change
     fs.writeFileSync(indexPath, originalIndex);
-    fs.writeFileSync(importedStylesPath, originalImportedStyles);
+    fs.writeFileSync(importedStylePath, originalImportedStyle);
     fs.writeFileSync(cssModulePath, originalCssModule);
     await page.getByText("Index Title").waitFor({ timeout: HMR_TIMEOUT_MS });
     expect(await page.getByLabel("Root Input").inputValue()).toBe("asdfasdf");
