@@ -166,6 +166,12 @@ export function createFileWatchCache(): FileWatchCache {
           cacheKeys.add(key);
         }
       }
+
+      console.log("Setting cache entry", {
+        key,
+        fileDependencies: [...(fileDependencies || [])],
+        globDependencies: [...(globDependencies || [])],
+      });
     });
 
     return promise;
