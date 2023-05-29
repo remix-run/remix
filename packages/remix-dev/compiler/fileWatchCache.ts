@@ -1,4 +1,5 @@
 import picomatch from "picomatch";
+import path from "path";
 
 type CacheValue = {
   cacheValue: string;
@@ -27,7 +28,7 @@ function getGlobMatcher(glob: string) {
   let matcher = globMatchers.get(glob);
 
   if (!matcher) {
-    matcher = picomatch(glob);
+    matcher = picomatch(normalizeSlashes(glob));
     globMatchers.set(glob, picomatch(glob));
   }
 
@@ -99,7 +100,7 @@ export function createFileWatchCache(): FileWatchCache {
     // Any glob could match the file, so we have to check all globs.
     for (let [glob, cacheKeys] of cacheKeysForGlobDep) {
       let match = getGlobMatcher(glob);
-      if (match && match(invalidatedFile)) {
+      if (match && match(normalizeSlashes(invalidatedFile))) {
         for (let cacheKey of cacheKeys) {
           console.log("Invalidate cache key for glob match", {
             glob,
@@ -194,4 +195,8 @@ export function createFileWatchCache(): FileWatchCache {
     getOrSet,
     invalidateFile,
   };
+}
+
+function normalizeSlashes(file: string) {
+  return file.split(path.win32.sep).join("/");
 }
