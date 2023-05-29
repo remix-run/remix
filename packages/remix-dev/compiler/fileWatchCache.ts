@@ -1,18 +1,24 @@
 import picomatch from "picomatch";
 
-interface CacheValue {
-  value: string;
-  fileDependencies: Set<string>;
-  globDependencies: Set<string>;
-}
+type CacheValue = {
+  cacheValue: string;
+} & (
+  | { fileDependencies?: Set<string>; globDependencies: Set<string> }
+  | { fileDependencies: Set<string>; globDependencies?: Set<string> }
+);
 
 export interface FileWatchCache {
   get(key: string): Promise<CacheValue> | undefined;
+  set(key: string, promise: Promise<CacheValue>): Promise<CacheValue>;
+  /**
+   * #description Get a cache value, or lazily set the value if it doesn't exist
+   * and then return the new cache value. This lets you interact with the cache
+   * in a single expression.
+   */
   getOrSet(
     key: string,
     lazySetter: () => Promise<CacheValue>
   ): Promise<CacheValue>;
-  set(key: string, promise: Promise<CacheValue>): Promise<CacheValue>;
   invalidateFile(path: string): void;
 }
 
@@ -37,8 +43,8 @@ export function createFileWatchCache(): FileWatchCache {
   // Glob dependencies are primarily here to support Tailwind.
   // Tailwind directives like `@tailwind utilities` output a bunch of
   // CSS that changes based on the usage of class names in any file matching
-  // the glob specified in the `content` array in the Tailwind config, so those
-  // globs becomes a dependency of any CSS file using these directives.
+  // the globs specified in the `content` array in the Tailwind config, so
+  // those globs become a dependency of any CSS file using these directives.
   let globDepsForCacheKey = new Map<string, Set<string>>();
   let cacheKeysForGlobDep = new Map<string, Set<string>>();
 
@@ -50,8 +56,9 @@ export function createFileWatchCache(): FileWatchCache {
 
     promiseForCacheKey.delete(invalidatedCacheKey);
 
-    // Reset tracked deps for entry point. Since we're going to recompile,
-    // the cache key will get new deps.
+    // Since we keep track of the mapping between cache key and file
+    // dependencies, we clear all references to the invalidated cache key.
+    // These will be repopulated when "set" or "getOrSet" are called.
     let fileDeps = fileDepsForCacheKey.get(invalidatedCacheKey);
     if (fileDeps) {
       for (let fileDep of fileDeps) {
@@ -60,8 +67,9 @@ export function createFileWatchCache(): FileWatchCache {
       fileDepsForCacheKey.delete(invalidatedCacheKey);
     }
 
-    // Reset tracked glob dependencies for entry point. Since we're going to
-    // recompile, the cache key will get new glob dependencies.
+    // Since we keep track of the mapping between cache key and glob
+    // dependencies, we clear all references to the invalidated cache key.
+    // These will be repopulated when "set" or "getOrSet" are called.
     let globDeps = globDepsForCacheKey.get(invalidatedCacheKey);
     if (globDeps) {
       for (let glob of globDeps) {
@@ -109,6 +117,60 @@ export function createFileWatchCache(): FileWatchCache {
     return promiseForCacheKey.get(key);
   }
 
+  function set(key: string, promise: Promise<CacheValue>): Promise<CacheValue> {
+    promiseForCacheKey.set(key, promise);
+
+    promise.then(({ fileDependencies, globDependencies }) => {
+      if (promiseForCacheKey.get(key) !== promise) {
+        // This cache key was invalidated before the promise resolved
+        // so we don't want to track the dependencies.
+        return;
+      }
+
+      // Track all file dependencies for this entry point so we can invalidate
+      // all cache entries that depend on a file that was invalidated.
+      if (fileDependencies) {
+        let fileDeps = fileDepsForCacheKey.get(key);
+        if (!fileDeps) {
+          fileDeps = new Set();
+          fileDepsForCacheKey.set(key, fileDeps);
+        }
+        for (let fileDep of fileDependencies) {
+          fileDeps.add(fileDep);
+
+          let cacheKeys = cacheKeysForFileDep.get(fileDep);
+          if (!cacheKeys) {
+            cacheKeys = new Set();
+            cacheKeysForFileDep.set(fileDep, cacheKeys);
+          }
+          cacheKeys.add(key);
+        }
+      }
+
+      // Track all glob dependencies for this entry point so we can invalidate
+      // all cache entries that depend on a glob that matches the invalided file.
+      if (globDependencies) {
+        let globDeps = globDepsForCacheKey.get(key);
+        if (!globDeps) {
+          globDeps = new Set();
+          globDepsForCacheKey.set(key, globDeps);
+        }
+        for (let glob of globDependencies) {
+          globDeps.add(glob);
+
+          let cacheKeys = cacheKeysForGlobDep.get(glob);
+          if (!cacheKeys) {
+            cacheKeys = new Set();
+            cacheKeysForGlobDep.set(glob, cacheKeys);
+          }
+          cacheKeys.add(key);
+        }
+      }
+    });
+
+    return promise;
+  }
+
   function getOrSet(
     key: string,
     lazySetter: () => Promise<CacheValue>
@@ -116,57 +178,10 @@ export function createFileWatchCache(): FileWatchCache {
     return promiseForCacheKey.get(key) || set(key, lazySetter());
   }
 
-  function set(key: string, promise: Promise<CacheValue>): Promise<CacheValue> {
-    promiseForCacheKey.set(key, promise);
-
-    promise.then(({ fileDependencies, globDependencies }) => {
-      if (promiseForCacheKey.get(key) !== promise) {
-        // This cache key was invalidated before the promise resolved.
-        return;
-      }
-
-      // Track file dependencies for this entry point.
-      let fileDeps = fileDepsForCacheKey.get(key);
-      if (!fileDeps) {
-        fileDeps = new Set();
-        fileDepsForCacheKey.set(key, fileDeps);
-      }
-      for (let fileDep of fileDependencies) {
-        fileDeps.add(fileDep);
-
-        let cacheKeys = cacheKeysForFileDep.get(fileDep);
-        if (!cacheKeys) {
-          cacheKeys = new Set();
-          cacheKeysForFileDep.set(fileDep, cacheKeys);
-        }
-        cacheKeys.add(key);
-      }
-
-      // Track glob dependencies for this entry point.
-      let globDeps = globDepsForCacheKey.get(key);
-      if (!globDeps) {
-        globDeps = new Set();
-        globDepsForCacheKey.set(key, globDeps);
-      }
-      for (let glob of globDependencies) {
-        globDeps.add(glob);
-
-        let cacheKeys = cacheKeysForGlobDep.get(glob);
-        if (!cacheKeys) {
-          cacheKeys = new Set();
-          cacheKeysForGlobDep.set(glob, cacheKeys);
-        }
-        cacheKeys.add(key);
-      }
-    });
-
-    return promise;
-  }
-
   return {
     get,
-    getOrSet,
     set,
+    getOrSet,
     invalidateFile,
   };
 }
