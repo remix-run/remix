@@ -114,6 +114,10 @@ export function createFileWatchCache(): FileWatchCache {
   }
 
   function get(key: string): Promise<CacheValue> | undefined {
+    console.log("Getting cache entry", {
+      key,
+      hasCacheEntry: promiseForCacheKey.has(key),
+    });
     return promiseForCacheKey.get(key);
   }
 
