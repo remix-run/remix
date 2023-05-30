@@ -17,7 +17,7 @@ test.beforeAll(async () => {
       // Ensure the config is valid ESM
       "remix.config.js": js`
         export default {
-          ...global.INJECTED_FIXTURE_REMIX_CONFIG;
+          ...global.INJECTED_FIXTURE_REMIX_CONFIG
         };
       `,
       "package.json": js`
