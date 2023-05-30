@@ -32,14 +32,12 @@ test.describe("compiler", () => {
         "remix.config.js": js`
           let { getDependenciesToBundle } = require("@remix-run/dev");
           module.exports = {
+            ...global.INJECTED_FIXTURE_REMIX_CONFIG,
             serverDependenciesToBundle: [
               "esm-only-pkg",
               "esm-only-single-export",
               ...getDependenciesToBundle("esm-only-exports-pkg"),
             ],
-
-            // Inject the serialized config from the fixture object
-            ...{},
           };
         `,
         "app/fake.server.js": js`

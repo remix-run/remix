@@ -189,14 +189,14 @@ export async function createFixtureProject(
     path.join(projectDir, "remix.config.js"),
     "utf-8"
   );
-  if (!contents.includes("...{}")) {
+  if (!contents.includes("global.INJECTED_FIXTURE_REMIX_CONFIG")) {
     throw new Error(
-      "Invalid formatted remix.config.js in template. The config object must contain `...{},` as a placeholder for fixture config values to be injected."
+      "Invalid formatted remix.config.js in template. The config object must contain the string `global.INJECTED_FIXTURE_REMIX_CONFIG` as a placeholder for fixture config values to be injected."
     );
   }
   contents = contents.replace(
-    "...{},",
-    `...${serializeJavaScript(init.config ?? {})},`
+    "global.INJECTED_FIXTURE_REMIX_CONFIG",
+    `${serializeJavaScript(init.config ?? {}, { unsafe: true })}`
   );
   fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);
 

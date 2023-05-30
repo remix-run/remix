@@ -14,6 +14,12 @@ test.beforeAll(async () => {
       future: { v2_routeConvention: true },
     },
     files: {
+      // Ensure the config is valid ESM
+      "remix.config.js": js`
+        export default {
+          ...global.INJECTED_FIXTURE_REMIX_CONFIG;
+        };
+      `,
       "package.json": js`
         {
           "name": "remix-template-remix",
