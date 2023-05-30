@@ -11,7 +11,6 @@ const REPO_ROOT_DIR = __dirname;
 let activeOutputDir = "build";
 if (process.env.REMIX_LOCAL_BUILD_DIRECTORY) {
   let appDir = path.resolve(
-    process.cwd(),
     process.env.REMIX_LOCAL_BUILD_DIRECTORY
   );
   try {
