@@ -364,19 +364,19 @@ export function composeEventHandlers<
 
 let linksWarning =
   "⚠️ REMIX FUTURE CHANGE: The behavior of links `imagesizes` and `imagesrcset` will be changing in v2. " +
-  "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`." +
+  "Only the React camel case versions will be valid. Please change to `imageSizes` and `imageSrcSet`. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#links-imagesizes-and-imagesrcset";
 
 let useTransitionWarning =
   "⚠️ REMIX FUTURE CHANGE: `useTransition` will be removed in v2 in favor of `useNavigation`. " +
-  "You can prepare for this change at your convenience by updating to `useNavigation`." +
+  "You can prepare for this change at your convenience by updating to `useNavigation`. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#usetransition";
 
 let fetcherTypeWarning =
   "⚠️ REMIX FUTURE CHANGE: `fetcher.type` will be removed in v2. " +
-  "Please use `fetcher.state`, `fetcher.formData`, and `fetcher.data` to achieve the same UX." +
+  "Please use `fetcher.state`, `fetcher.formData`, and `fetcher.data` to achieve the same UX. " +
   "For instructions on making this change see " +
   "https://remix.run/docs/en/v1.15.0/pages/v2#usefetcher";
 
@@ -1087,13 +1087,8 @@ import(${JSON.stringify(manifest.entry.module)});`;
 
   let preloads = isHydrated ? [] : manifest.entry.imports.concat(routePreloads);
 
-  return (
+  return isHydrated ? null : (
     <>
-      <link
-        rel="modulepreload"
-        href={manifest.url}
-        crossOrigin={props.crossOrigin}
-      />
       <link
         rel="modulepreload"
         href={manifest.entry.module}
@@ -1107,8 +1102,8 @@ import(${JSON.stringify(manifest.entry.module)});`;
           crossOrigin={props.crossOrigin}
         />
       ))}
-      {!isHydrated && initialScripts}
-      {!isHydrated && deferredScripts}
+      {initialScripts}
+      {deferredScripts}
     </>
   );
 }
@@ -1719,7 +1714,7 @@ export const LiveReload =
     ? () => null
     : function LiveReload({
         // TODO: remove REMIX_DEV_SERVER_WS_PORT in v2
-        port = Number(process.env.REMIX_DEV_SERVER_WS_PORT || 8002),
+        port,
         timeoutMs = 1000,
         nonce = undefined,
       }: {
@@ -1737,9 +1732,9 @@ export const LiveReload =
                 function remixLiveReloadConnect(config) {
                   let protocol = location.protocol === "https:" ? "wss:" : "ws:";
                   let host = location.hostname;
-                  let port = (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.websocketPort) || ${String(
-                    port
-                  )};
+                  let port = ${port} || (window.__remixContext && window.__remixContext.dev && window.__remixContext.dev.port) || ${Number(
+                process.env.REMIX_DEV_SERVER_WS_PORT || 8002
+              )};
                   let socketPath = protocol + "//" + host + ":" + port + "/socket";
                   let ws = new WebSocket(socketPath);
                   ws.onmessage = async (message) => {
@@ -1759,12 +1754,12 @@ export const LiveReload =
                       }
                       if (!event.updates || !event.updates.length) return;
                       let updateAccepted = false;
-                      let needsRevalidation = false;
+                      let needsRevalidation = new Set();
                       for (let update of event.updates) {
                         console.log("[HMR] " + update.reason + " [" + update.id +"]")
                         if (update.revalidate) {
-                          needsRevalidation = true;
-                          console.log("[HMR] Revalidating [" + update.id + "]");
+                          needsRevalidation.add(update.routeId);
+                          console.log("[HMR] Revalidating [" + update.routeId + "]");
                         }
                         let imported = await import(update.url +  '?t=' + event.assetsManifest.hmr.timestamp);
                         if (window.__hmr__.contexts[update.id]) {

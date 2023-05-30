@@ -9,11 +9,7 @@ import { createFixtureProject, css, js, json } from "./helpers/create-fixture";
 
 test.setTimeout(120_000);
 
-let fixture = (options: {
-  appServerPort: number;
-  httpPort: number;
-  webSocketPort: number;
-}) => ({
+let fixture = (options: { appPort: number; devPort: number }) => ({
   files: {
     "remix.config.js": js`
       module.exports = {
@@ -21,13 +17,13 @@ let fixture = (options: {
         tailwind: true,
         future: {
           unstable_dev: {
-            httpPort: ${options.httpPort},
-            webSocketPort: ${options.webSocketPort},
+            port: ${options.devPort},
           },
           v2_routeConvention: true,
           v2_errorBoundary: true,
           v2_normalizeFormMethod: true,
           v2_meta: true,
+          v2_headers: true,
         },
       };
     `,
@@ -68,18 +64,17 @@ let fixture = (options: {
       const app = express();
       app.use(express.static("public", { immutable: true, maxAge: "1y" }));
 
-      const MODE = process.env.NODE_ENV;
       const BUILD_DIR = path.join(process.cwd(), "build");
 
       app.all(
         "*",
         createRequestHandler({
           build: require(BUILD_DIR),
-          mode: MODE,
+          mode: process.env.NODE_ENV,
         })
       );
 
-      let port = ${options.appServerPort};
+      let port = ${options.appPort};
       app.listen(port, () => {
         let build = require(BUILD_DIR);
         console.log('✅ app ready: http://localhost:' + port);
@@ -125,6 +120,11 @@ let fixture = (options: {
         ...cssBundleHref ? [{ rel: "stylesheet", href: cssBundleHref }] : [],
       ];
 
+      // dummy loader to make sure that HDR is granular
+      export const loader = () => {
+        return null;
+      };
+
       export default function Root() {
         return (
           <html lang="en" className="h-full">
@@ -141,6 +141,7 @@ let fixture = (options: {
                   <ul>
                     <li><Link to="/">Home</Link></li>
                     <li><Link to="/about">About</Link></li>
+                    <li><Link to="/mdx">MDX</Link></li>
                   </ul>
                 </nav>
               </header>
@@ -179,7 +180,18 @@ let fixture = (options: {
         )
       }
     `,
+    "app/routes/mdx.mdx": `import { useLoaderData } from '@remix-run/react'
+export const loader = () => "crazy"
+export const Component = () => {
+  const data = useLoaderData()
+  return <h1 id={data}>{data}</h1>
+}
 
+# heyo
+whatsup
+
+<Component/>
+`,
     "app/components/counter.tsx": js`
       import * as React from "react";
       export default function Counter({ id }) {
@@ -216,12 +228,28 @@ let bufferize = (stream: Readable): (() => string) => {
   return () => buffer;
 };
 
+let logConsoleError = (error: Error) => {
+  console.error(`[console] ${error.name}: ${error.message}`);
+};
+
+let expectConsoleError = (
+  isExpected: (error: Error) => boolean,
+  unexpected = logConsoleError
+) => {
+  return (error: Error) => {
+    if (isExpected(error)) {
+      return;
+    }
+    unexpected(error);
+  };
+};
+
 let HMR_TIMEOUT_MS = 10_000;
 
 test("HMR", async ({ page }) => {
   // uncomment for debugging
   // page.on("console", (msg) => console.log(msg.text()));
-  page.on("pageerror", (err) => console.log(err.message));
+  page.on("pageerror", logConsoleError);
   let dataRequests = 0;
   page.on("request", (request) => {
     let url = new URL(request.url());
@@ -231,12 +259,9 @@ test("HMR", async ({ page }) => {
   });
 
   let portRange = makeRange(3080, 3099);
-  let appServerPort = await getPort({ port: portRange });
-  let httpPort = await getPort({ port: portRange });
-  let webSocketPort = await getPort({ port: portRange });
-  let projectDir = await createFixtureProject(
-    fixture({ appServerPort, httpPort, webSocketPort })
-  );
+  let appPort = await getPort({ port: portRange });
+  let devPort = await getPort({ port: portRange });
+  let projectDir = await createFixtureProject(fixture({ appPort, devPort }));
 
   // spin up dev server
   let dev = execa("npm", ["run", "dev"], { cwd: projectDir });
@@ -251,7 +276,7 @@ test("HMR", async ({ page }) => {
       { timeoutMs: 10_000 }
     );
 
-    await page.goto(`http://localhost:${appServerPort}`, {
+    await page.goto(`http://localhost:${appPort}`, {
       waitUntil: "networkidle",
     });
 
@@ -272,6 +297,8 @@ test("HMR", async ({ page }) => {
     let originalCounter = fs.readFileSync(counterPath, "utf8");
     let cssModulePath = path.join(projectDir, "app", "styles.module.css");
     let originalCssModule = fs.readFileSync(cssModulePath, "utf8");
+    let mdxPath = path.join(projectDir, "app", "routes", "mdx.mdx");
+    let originalMdx = fs.readFileSync(mdxPath, "utf8");
 
     // make content and style changed to index route
     let newCssModule = `
@@ -419,9 +446,105 @@ test("HMR", async ({ page }) => {
       `#about-counter:has-text("inc 0")`
     );
 
-    // This should not have triggered any revalidation but our detection is
-    // failing for x-module changes for route module imports
-    // expect(dataRequests).toBe(2);
+    expect(dataRequests).toBe(2);
+
+    // mdx
+    await page.click(`a[href="/mdx"]`);
+    await page.waitForSelector(`#crazy`);
+    let mdx = `import { useLoaderData } from '@remix-run/react'
+export const loader = () => "hot"
+export const Component = () => {
+  const data = useLoaderData()
+  return <h1 id={data}>{data}</h1>
+}
+
+# heyo
+whatsup
+
+<Component/>
+`;
+    fs.writeFileSync(mdxPath, mdx);
+    await page.waitForSelector(`#hot`);
+    expect(dataRequests).toBe(4);
+
+    fs.writeFileSync(mdxPath, originalMdx);
+    await page.waitForSelector(`#crazy`);
+    expect(dataRequests).toBe(5);
+
+    // dev server doesn't crash when rebuild fails
+    await page.click(`a[href="/"]`);
+    await page.getByText("Hello, planet").waitFor({ timeout: HMR_TIMEOUT_MS });
+    await page.waitForLoadState("networkidle");
+
+    let stderr = devStderr();
+    let withSyntaxError = `
+      import { useLoaderData } from "@remix-run/react";
+      export function shouldRevalidate(args) {
+        return true;
+      }
+      eport efault functio Index() {
+        const t = useLoaderData();
+        return (
+          <mai>
+            <h1>With Syntax Error</h1>
+          </main>
+        )
+      }
+    `;
+    fs.writeFileSync(indexPath, withSyntaxError);
+    await wait(
+      () =>
+        devStderr()
+          .replace(stderr, "")
+          .includes('Expected ";" but found "efault"'),
+      {
+        timeoutMs: HMR_TIMEOUT_MS,
+      }
+    );
+
+    // React Router integration w/ React Refresh has a bug where sometimes rerenders happen with old UI and new data
+    // in this case causing `TypeError: Cannot destructure property`.
+    // Need to fix that bug, but it only shows a harmless console error in the browser in dev
+    page.removeListener("pageerror", logConsoleError);
+    let expectedErrorCount = 0;
+    let expectDestructureTypeError = expectConsoleError((error) => {
+      let expectedMessage = new Set([
+        // chrome, edge
+        "Cannot destructure property 'hello' of 'useLoaderData(...)' as it is null.",
+        // firefox
+        "(intermediate value)() is null",
+        // webkit
+        "Right side of assignment cannot be destructured",
+      ]);
+      let isExpected =
+        error.name === "TypeError" && expectedMessage.has(error.message);
+      if (isExpected) expectedErrorCount += 1;
+      return isExpected;
+    });
+    page.on("pageerror", expectDestructureTypeError);
+
+    let withFix = `
+      import { useLoaderData } from "@remix-run/react";
+      export function shouldRevalidate(args) {
+        return true;
+      }
+      export default function Index() {
+        // const t = useLoaderData();
+        return (
+          <main>
+            <h1>With Fix</h1>
+          </main>
+        )
+      }
+    `;
+    fs.writeFileSync(indexPath, withFix);
+    await page.waitForLoadState("networkidle");
+    await page.getByText("With Fix").waitFor({ timeout: HMR_TIMEOUT_MS });
+
+    // Restore normal console error handling
+    page.removeListener("pageerror", expectDestructureTypeError);
+    expect(expectedErrorCount).toBe(2);
+    page.addListener("pageerror", logConsoleError);
   } catch (e) {
     console.log("stdout begin -----------------------");
     console.log(devStdout());

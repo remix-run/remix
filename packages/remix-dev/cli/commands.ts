@@ -25,7 +25,6 @@ import { TaskError } from "../codemod/utils/task";
 import { transpile as convertFileToJS } from "./useJavascript";
 import { warnOnce } from "../warnOnce";
 import type { Options } from "../compiler/options";
-import { getAppDependencies } from "../dependencies";
 
 export async function create({
   appTemplate,
@@ -177,13 +176,8 @@ export async function build(
     onWarning: warnOnce,
   };
   if (mode === "development" && config.future.unstable_dev) {
-    let dev = await resolveDevBuild(config);
-    options.devHttpOrigin = {
-      scheme: dev.httpScheme,
-      host: dev.httpHost,
-      port: dev.httpPort,
-    };
-    options.devWebsocketPort = dev.websocketPort;
+    let origin = await resolveDevOrigin(config);
+    options.devOrigin = origin;
   }
 
   fse.emptyDirSync(config.assetsBuildDirectory);
@@ -216,21 +210,22 @@ export async function dev(
   remixRoot: string,
   flags: {
     debug?: boolean;
-    port?: number; // TODO: remove for v2
 
     // unstable_dev
     command?: string;
-    httpScheme?: string;
-    httpHost?: string;
-    httpPort?: number;
+    scheme?: string;
+    host?: string;
+    port?: number;
     restart?: boolean;
-    publicDirectory?: string;
-    websocketPort?: number;
+    tlsKey?: string;
+    tlsCert?: string;
   } = {}
 ) {
   if (process.env.NODE_ENV && process.env.NODE_ENV !== "development") {
     console.warn(
-      `Forcing NODE_ENV to be 'development'. Was: ${process.env.NODE_ENV}`
+      `Forcing NODE_ENV to be 'development'. Was: ${JSON.stringify(
+        process.env.NODE_ENV
+      )}`
     );
   }
   process.env.NODE_ENV = "development";
@@ -472,52 +467,49 @@ let parseMode = (
 
 let findPort = async () => getPort({ port: makeRange(3001, 3100) });
 
-type DevBuildFlags = {
-  httpScheme: string;
-  httpHost: string;
-  httpPort: number;
-  websocketPort: number;
+type DevOrigin = {
+  scheme: string;
+  host: string;
+  port: number;
 };
-let resolveDevBuild = async (
+let resolveDevOrigin = async (
   config: RemixConfig,
-  flags: Partial<DevBuildFlags> = {}
-): Promise<DevBuildFlags> => {
+  flags: Partial<DevOrigin> & {
+    tlsKey?: string;
+    tlsCert?: string;
+  } = {}
+): Promise<DevOrigin> => {
   let dev = config.future.unstable_dev;
   if (dev === false) throw Error("This should never happen");
 
   // prettier-ignore
-  let httpScheme =
-    flags.httpScheme ??
-    (dev === true ? undefined : dev.httpScheme) ??
-    "http";
+  let scheme =
+    flags.scheme ??
+    (dev === true ? undefined : dev.scheme) ??
+    (flags.tlsKey && flags.tlsCert) ? "https": "http";
   // prettier-ignore
-  let httpHost =
-    flags.httpHost ??
-    (dev === true ? undefined : dev.httpHost) ??
+  let host =
+    flags.host ??
+    (dev === true ? undefined : dev.host) ??
     "localhost";
   // prettier-ignore
-  let httpPort =
-    flags.httpPort ??
-    (dev === true ? undefined : dev.httpPort) ??
-    (await findPort());
-  // prettier-ignore
-  let websocketPort =
-    flags.websocketPort ??
-    (dev === true ? undefined : dev.websocketPort) ??
+  let port =
+    flags.port ??
+    (dev === true ? undefined : dev.port) ??
     (await findPort());
 
   return {
-    httpScheme,
-    httpHost,
-    httpPort,
-    websocketPort,
+    scheme,
+    host,
+    port,
   };
 };
 
-type DevServeFlags = DevBuildFlags & {
-  command: string;
-  publicDirectory: string;
+type DevServeFlags = DevOrigin & {
+  command?: string;
   restart: boolean;
+  tlsKey?: string;
+  tlsCert?: string;
 };
 let resolveDevServe = async (
   config: RemixConfig,
@@ -526,50 +518,26 @@ let resolveDevServe = async (
   let dev = config.future.unstable_dev;
   if (dev === false) throw Error("Cannot resolve dev options");
 
-  let { httpScheme, httpHost, httpPort, websocketPort } = await resolveDevBuild(
-    config,
-    flags
-  );
+  let origin = await resolveDevOrigin(config, flags);
 
   // prettier-ignore
   let command =
     flags.command ??
     (dev === true ? undefined : dev.command)
-  if (!command) {
-    command = `remix-serve ${path.relative(
-      process.cwd(),
-      config.serverBuildPath
-    )}`;
-
-    let usingRemixAppServer =
-      getAppDependencies(config, true)["@remix-run/serve"] !== undefined;
-    if (!usingRemixAppServer) {
-      console.error(
-        [
-          `Remix dev server command defaulted to '${command}', but @remix-run/serve is not installed.`,
-          "If you are using another server, specify how to run it with `-c` or `--command` flag.",
-          "For example, `remix dev -c 'node ./server.js'`",
-        ].join("\n")
-      );
-      process.exit(1);
-    }
-  }
-
-  let publicDirectory =
-    flags.publicDirectory ??
-    (dev === true ? undefined : dev.publicDirectory) ??
-    "public";
 
   let restart =
     flags.restart ?? (dev === true ? undefined : dev.restart) ?? true;
 
+  let tlsKey = flags.tlsKey ?? (dev === true ? undefined : dev.tlsKey);
+  if (tlsKey) tlsKey = path.resolve(tlsKey);
+  let tlsCert = flags.tlsCert ?? (dev === true ? undefined : dev.tlsCert);
+  if (tlsCert) tlsCert = path.resolve(tlsCert);
+
   return {
     command,
-    httpScheme,
-    httpHost,
-    httpPort,
-    publicDirectory,
-    websocketPort,
+    ...origin,
     restart,
+    tlsKey,
+    tlsCert,
   };
 };
