@@ -74,6 +74,7 @@
     "@testing-library/react": "^13.3.0",
     "@types/cheerio": "^0.22.22",
     "@types/cross-spawn": "^6.0.2",
+    "@types/dedent": "^0.7.0",
     "@types/glob": "7.2.0",
     "@types/jest": "^27.4.1",
     "@types/jsonfile": "^6.1.0",
