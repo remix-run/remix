@@ -3,6 +3,7 @@ import path from "node:path";
 import fse from "fs-extra";
 import express from "express";
 import getPort from "get-port";
+import dedent from "dedent";
 import stripIndent from "strip-indent";
 import serializeJavaScript from "serialize-javascript";
 import { sync as spawnSync } from "cross-spawn";
@@ -190,13 +191,17 @@ export async function createFixtureProject(
     "utf-8"
   );
   if (!contents.includes("global.INJECTED_FIXTURE_REMIX_CONFIG")) {
-    throw new Error(
-      "Invalid formatted remix.config.js in template. The config object must contain the string `global.INJECTED_FIXTURE_REMIX_CONFIG` as a placeholder for fixture config values to be injected."
-    );
+    throw new Error(dedent`
+      Invalid remix.config.js file. The file must contain a reference to
+      to \`global.INJECTED_FIXTURE_REMIX_CONFIG\`, ideally spread into
+      the end of the exported config object 
+      (e.g. \`module.exports = { ...global.INJECTED_FIXTURE_REMIX_CONFIG }\`) 
+      as a placeholder where the fixture Remix config values will be injected.
+    `);
   }
   contents = contents.replace(
     "global.INJECTED_FIXTURE_REMIX_CONFIG",
-    `${serializeJavaScript(init.config ?? {}, { unsafe: true })}`
+    `${serializeJavaScript(init.config ?? {})}`
   );
   fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);
 
