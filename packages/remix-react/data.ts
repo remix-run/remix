@@ -17,7 +17,7 @@ export function isCatchResponse(response: any): boolean {
   );
 }
 
-export function isErrorResponse(response: any): boolean {
+export function isErrorResponse(response: any): response is Response {
   return (
     response instanceof Response &&
     response.headers.get("X-Remix-Error") != null
@@ -38,10 +38,10 @@ export function isDeferredResponse(response: any): boolean {
   );
 }
 
-let revalidationTimeout = 0;
 export async function fetchData(
   request: Request,
-  routeId: string
+  routeId: string,
+  retry = 0
 ): Promise<Response | Error> {
   let url = new URL(request.url);
   url.searchParams.set("_data", routeId);
@@ -60,24 +60,21 @@ export async function fetchData(
         : await request.formData();
   }
 
-  let revalidation = window.__remixRevalidation;
-  if (typeof revalidation === "number") {
-    await new Promise((resolve) => setTimeout(resolve, revalidationTimeout));
+  if (retry > 0) {
+    // Retry up to seven times waiting 20, 40, 80, 160, 320, 640, and 1280 ms
+    // between retries for a total of 2540 ms before giving up.
+    await new Promise((resolve) => setTimeout(resolve, 2 ** retry * 10));
   }
 
-  let start = Date.now();
+  let revalidation = window.__remixRevalidation;
   let response = await fetch(url.href, init).catch((error) => {
     if (
       typeof revalidation === "number" &&
       revalidation === window.__remixRevalidation &&
-      error?.name === "TypeError"
+      error?.name === "TypeError" &&
+      retry <= 7
     ) {
-      // TODO: put just a little thought into this and make it adjust up and down
-      revalidationTimeout =
-        (revalidationTimeout + 10 * (Date.now() - start)) / 2;
-      revalidationTimeout =
-        revalidationTimeout > 1000 ? 1000 : revalidationTimeout;
-      return fetch(url.href, init);
+      return fetchData(request, routeId, retry + 1);
     }
     throw error;
   });
