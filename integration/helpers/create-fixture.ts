@@ -4,10 +4,11 @@ import fse from "fs-extra";
 import express from "express";
 import getPort from "get-port";
 import stripIndent from "strip-indent";
+import serializeJavaScript from "serialize-javascript";
 import { sync as spawnSync } from "cross-spawn";
 import type { JsonObject } from "type-fest";
+import type { AppConfig } from "@remix-run/dev";
 import { ServerMode } from "@remix-run/server-runtime/mode";
-import type { FutureConfig } from "@remix-run/server-runtime/entry";
 
 import type { ServerBuild } from "../../build/node_modules/@remix-run/server-runtime";
 import { createRequestHandler } from "../../build/node_modules/@remix-run/server-runtime";
@@ -21,7 +22,7 @@ export interface FixtureInit {
   files?: { [filename: string]: string };
   template?: "cf-template" | "deno-template" | "node-template";
   setup?: "node" | "cloudflare";
-  future?: Partial<FutureConfig>;
+  config?: Partial<AppConfig>;
 }
 
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
@@ -178,22 +179,27 @@ export async function createFixtureProject(
     }
   }
 
-  if (init.future) {
-    let contents = fse.readFileSync(
-      path.join(projectDir, "remix.config.js"),
-      "utf-8"
-    );
-    if (!contents.includes("future: {},")) {
-      throw new Error("Invalid formatted remix.config.js in template");
-    }
-    contents = contents.replace(
-      "future: {},",
-      "future: " + JSON.stringify(init.future) + ","
-    );
-    fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);
-  }
-
   await writeTestFiles(init, projectDir);
+
+  // We update the config file *after* writing test files so that tests can provide a custom
+  // `remix.config.js` file while still supporting the type-checked `config`
+  // property on the fixture object. This is useful for config values that can't
+  // be serialized, e.g. usage of imported functions within `remix.config.js`.
+  let contents = fse.readFileSync(
+    path.join(projectDir, "remix.config.js"),
+    "utf-8"
+  );
+  if (!contents.includes("...{}")) {
+    throw new Error(
+      "Invalid formatted remix.config.js in template. The config object must contain `...{},` as a placeholder for fixture config values to be injected."
+    );
+  }
+  contents = contents.replace(
+    "...{},",
+    `...${serializeJavaScript(init.config ?? {})},`
+  );
+  fse.writeFileSync(path.join(projectDir, "remix.config.js"), contents);
+
   build(projectDir, init.buildStdio, init.sourcemap, mode);
 
   return projectDir;

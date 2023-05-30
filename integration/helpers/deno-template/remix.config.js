@@ -21,5 +21,5 @@ module.exports = {
 
   // !!! Don't adust this without changing the code that overwrites this
   // in createFixtureProject()
-  future: {},
+  ...{},
 };

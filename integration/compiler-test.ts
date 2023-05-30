@@ -21,18 +21,25 @@ test.describe("compiler", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       setup: "node",
+      config: {
+        future: {
+          v2_routeConvention: true,
+        },
+      },
       files: {
+        // We need a custom config file here to test usage of `getDependenciesToBundle`
+        // since this can't be serialized from the fixture object.
         "remix.config.js": js`
           let { getDependenciesToBundle } = require("@remix-run/dev");
           module.exports = {
-            future: {
-              v2_routeConvention: true,
-            },
             serverDependenciesToBundle: [
               "esm-only-pkg",
               "esm-only-single-export",
               ...getDependenciesToBundle("esm-only-exports-pkg"),
             ],
+
+            // Inject the serialized config from the fixture object
+            ...{},
           };
         `,
         "app/fake.server.js": js`
@@ -386,7 +393,9 @@ test.describe("compiler", () => {
 
       await expect(() =>
         createFixtureProject({
-          future: { v2_routeConvention: true },
+          config: {
+            future: { v2_routeConvention: true },
+          },
           buildStdio,
           files: {
             "app/routes/_index.jsx": js`
