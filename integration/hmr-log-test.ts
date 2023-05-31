@@ -13,6 +13,7 @@ test.setTimeout(120_000);
 let fixture = (options: { appPort: number; devPort: number }): FixtureInit => ({
   config: {
     serverModuleFormat: "cjs",
+    cssBundle: true,
     tailwind: true,
     future: {
       unstable_dev: {
