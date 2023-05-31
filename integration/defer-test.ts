@@ -33,10 +33,12 @@ test.describe("non-aborted", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: {
-        v2_routeConvention: true,
-        v2_errorBoundary: true,
-        v2_normalizeFormMethod: true,
+      config: {
+        future: {
+          v2_routeConvention: true,
+          v2_errorBoundary: true,
+          v2_normalizeFormMethod: true,
+        },
       },
       files: {
         "app/components/counter.tsx": js`
@@ -76,7 +78,7 @@ test.describe("non-aborted", () => {
           export const meta: MetaFunction = () => ({
             charset: "utf-8",
             title: "New Remix App",
-            viewport: "width=device-width,initial-scale=1",
+            viewport: "width=device-width, initial-scale=1",
           });
 
           export const loader = () => defer({
@@ -941,7 +943,9 @@ test.describe("aborted", () => {
 
   test.beforeAll(async () => {
     fixture = await createFixture({
-      future: { v2_routeConvention: true },
+      config: {
+        future: { v2_routeConvention: true },
+      },
       ////////////////////////////////////////////////////////////////////////////
       // 💿 Next, add files to this object, just like files in a real app,
       // `createFixture` will make an app and run your tests against it.
@@ -1105,7 +1109,7 @@ test.describe("aborted", () => {
           export const meta: MetaFunction = () => ({
             charset: "utf-8",
             title: "New Remix App",
-            viewport: "width=device-width,initial-scale=1",
+            viewport: "width=device-width, initial-scale=1",
           });
 
           export const loader = () => defer({

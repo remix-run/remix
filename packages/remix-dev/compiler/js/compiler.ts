@@ -8,7 +8,6 @@ import { type Manifest } from "../../manifest";
 import { getAppDependencies } from "../../dependencies";
 import { loaders } from "../utils/loaders";
 import { browserRouteModulesPlugin } from "./plugins/routes";
-import { browserRouteModulesPlugin as browserRouteModulesPlugin_v2 } from "./plugins/routes_unstable";
 import { cssFilePlugin } from "../plugins/cssImports";
 import { absoluteCssUrlsPlugin } from "../plugins/absoluteCssUrlsPlugin";
 import { deprecatedRemixPackagePlugin } from "../plugins/deprecatedRemixPackage";
@@ -72,36 +71,18 @@ const getExternals = (remixConfig: RemixConfig): string[] => {
 
 const createEsbuildConfig = (
   ctx: Context,
-  onLoader: (filename: string, code: string) => void,
   channels: { cssBundleHref: Channel.Type<string | undefined> }
 ): esbuild.BuildOptions => {
   let entryPoints: Record<string, string> = {
     "entry.client": ctx.config.entryClientFilePath,
   };
 
-  let routeModulePaths = new Map<string, string>();
   for (let id of Object.keys(ctx.config.routes)) {
     entryPoints[id] = ctx.config.routes[id].file;
-    if (ctx.config.future.unstable_dev) {
-      // In V2 we are doing AST transforms to remove server code, this means we
-      // have to re-map all route modules back to the same module in the graph
-      // otherwise we will have duplicate modules in the graph. We have to resolve
-      // the path as we get the relative for the entrypoint and absolute for imports
-      // from other modules.
-      routeModulePaths.set(
-        ctx.config.routes[id].file,
-        ctx.config.routes[id].file
-      );
-      routeModulePaths.set(
-        path.resolve(ctx.config.appDirectory, ctx.config.routes[id].file),
-        ctx.config.routes[id].file
-      );
-    } else {
-      // All route entry points are virtual modules that will be loaded by the
-      // browserEntryPointsPlugin. This allows us to tree-shake server-only code
-      // that we don't want to run in the browser (i.e. action & loader).
-      entryPoints[id] += "?browser";
-    }
+    // All route entry points are virtual modules that will be loaded by the
+    // browserEntryPointsPlugin. This allows us to tree-shake server-only code
+    // that we don't want to run in the browser (i.e. action & loader).
+    entryPoints[id] += "?browser";
   }
 
   if (
@@ -134,16 +115,18 @@ const createEsbuildConfig = (
   }
 
   let plugins: esbuild.Plugin[] = [
+    browserRouteModulesPlugin(ctx, /\?browser$/),
     deprecatedRemixPackagePlugin(ctx),
     cssModulesPlugin(ctx, { outputCss: false }),
     vanillaExtractPlugin(ctx, { outputCss: false }),
-    cssSideEffectImportsPlugin(ctx),
+    cssSideEffectImportsPlugin(ctx, {
+      hmr:
+        ctx.options.mode === "development" &&
+        ctx.config.future.unstable_dev !== false,
+    }),
     cssFilePlugin(ctx),
     absoluteCssUrlsPlugin(),
     externalPlugin(/^https?:\/\//, { sideEffects: false }),
-    ctx.config.future.unstable_dev
-      ? browserRouteModulesPlugin_v2(ctx, routeModulePaths, onLoader)
-      : browserRouteModulesPlugin(ctx, /\?browser$/),
     mdxPlugin(ctx),
     emptyModulesPlugin(ctx, /\.server(\.[jt]sx?)?$/),
     NodeModulesPolyfillPlugin(),
@@ -237,19 +220,12 @@ export const create = async (
   ctx: Context,
   channels: { cssBundleHref: Channel.Type<string | undefined> }
 ): Promise<Compiler> => {
-  let hmrRoutes: Record<string, { loaderHash: string }> = {};
-  let onLoader = (filename: string, code: string) => {
-    let key = path.relative(ctx.config.rootDirectory, filename);
-    hmrRoutes[key] = { loaderHash: code };
-  };
-
   let compiler = await esbuild.context({
-    ...createEsbuildConfig(ctx, onLoader, channels),
+    ...createEsbuildConfig(ctx, channels),
     metafile: true,
   });
 
   let compile = async () => {
-    hmrRoutes = {};
     let { metafile } = await compiler.rebuild();
 
     let hmr: Manifest["hmr"] | undefined = undefined;
@@ -266,7 +242,6 @@ export const create = async (
         );
       hmr = {
         runtime: hmrRuntime,
-        routes: hmrRoutes,
         timestamp: Date.now(),
       };
     }

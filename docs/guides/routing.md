@@ -59,6 +59,29 @@ The primary way to define a route is to create a new file in `app/routes/*`. The
 app
 ├── root.jsx
 └── routes
+    ├── _index.jsx
+    ├── accounts.jsx
+    ├── dashboard.jsx
+    ├── expenses.jsx
+    ├── reports.jsx
+    ├── sales._index.jsx
+    ├── sales.customers.jsx
+    ├── sales.deposits.jsx
+    ├── sales.invoices.$invoiceId._index.jsx
+    ├── sales.invoices.$invoiceId.jsx
+    ├── sales.invoices.jsx
+    ├── sales.subscriptions.jsx
+    └── sales.jsx
+```
+
+<details>
+
+<summary>Or if using the v1 routing convention:</summary>
+
+```
+app
+├── root.jsx
+└── routes
     ├── accounts.jsx
     ├── dashboard.jsx
     ├── expenses.jsx
@@ -76,9 +99,11 @@ app
     └── sales.jsx
 ```
 
+</details>
+
 - `root.jsx` is the "root route" that serves as the layout for the entire application. Every route will render inside of its `<Outlet/>`.
-- Note that there are files that match the same name as a folder, this indicates a component layout hierarchy. For example, `sales.jsx` is the **parent route** for all of the **child routes** inside of `app/routes/sales/*`. When a route inside of the sales directory matches, it will render inside of the `sales.jsx` route's `<Outlet>`
-- The `index.jsx` routes will render inside of the parent `<Outlet>` when the url is only as deep as the parent's path (like `example.com/sales` instead of `example.com/sales/customers`)
+- Note that there are files with `.` delimiters. The `.` creates a `/` in the URL for that route, as well as layout nesting with another route that matches the segments before the `.`. For example, `sales.jsx` is the **parent route** for all of the **child routes** that look like `sales.[the nested path].jsx`. The `<Outlet />` in `sales.jsx` will render the matching child route.
+- The `_index.jsx` routes will render inside of the parent `<Outlet>` when the url is only as deep as the parent's path (like `example.com/sales` instead of `example.com/sales/customers`)
 
 ## Rendering Route Layout Hierarchies
 
@@ -86,8 +111,8 @@ Let's consider the URL is `/sales/invoices/102000`. The following routes all mat
 
 - `root.jsx`
 - `routes/sales.jsx`
-- `routes/sales/invoices.jsx`
-- `routes/sales/invoices/$invoiceId.jsx`
+- `routes/sales.invoices.jsx`
+- `routes/sales.invoices.$invoiceId.jsx`
 
 When the user visits this page, Remix will render the components in this hierarchy:
 
@@ -107,10 +132,8 @@ You'll note that the component hierarchy is perfectly mapped to the file system 
 app
 ├── root.jsx
 └── routes
-    ├── sales
-    │   ├── invoices
-    │   │   └── $invoiceId.jsx
-    │   └── invoices.jsx
+    ├── sales.invoices.$invoiceId.jsx
+    ├── sales.invoices.jsx
     └── sales.jsx
 ```
 
@@ -137,7 +160,7 @@ export default function Root() {
 }
 ```
 
-Next up is the sales route, which also renders an outlet for its child routes (all of the routes inside of `app/routes/sales/*.jsx`).
+Next up is the sales route, which also renders an outlet for its child routes (all of the routes matching `app/routes/sales.*.jsx`).
 
 ```tsx filename=app/routes/sales.tsx lines=[8]
 import { Outlet } from "@remix-run/react";
@@ -159,7 +182,7 @@ And so on down the route tree. This is a powerful abstraction that makes somethi
 
 Index routes are often difficult to understand at first. It's easiest to think of them as _the default child route_ for a parent route. When there is no child route to render, we render the index route.
 
-Consider the URL `example.com/sales`. If our app didn't have an index route at `app/routes/sales/index.jsx` the UI would look like this!
+Consider the URL `example.com/sales`. If our app didn't have an index route at `app/routes/sales._index.jsx` the UI would look like this!
 
 <iframe src="/_docs/routing-index" class="w-full aspect-[4/3] rounded-lg overflow-hidden mb-4"></iframe>
 
@@ -169,20 +192,18 @@ And index is the thing you render to fill in that empty space when none of the c
 
 Index routes are "leaf routes". They're the end of the line. If you think you need to add child routes to an index route, that usually means your layout code (like a shared nav) needs to move out of the index route and into the parent route.
 
-This usually comes up when folks are just getting started with Remix and put their global nav in `app/routes/index.jsx`. Move that global nav up into `app/root.jsx`. Everything inside of `app/routes/*` is already a child of `root.tsx`.
+This usually comes up when folks are just getting started with Remix and put their global nav in `app/routes/_index.jsx`. Move that global nav up into `app/root.jsx`. Everything inside of `app/routes/*` is already a child of `root.tsx`.
 
 ### What is the `?index` query param?
 
-You may notice an `?index` query parameter showing up on your URLs from time to time, particularly when you are submitting a `<Form>` from an index route. This is required to differentiate index routes from their parent layout routes. Consider the following structure, where a URL such as `/sales/invoices` would be ambiguous. Is that referring to the `routes/sales/invoices.jsx` file? Or is it referring to the `routes/sales/invoices/index.jsx` file? In order to avoid this ambiguity, Remix uses the `?index` parameter to indicate when a URL refers to the index route instead of the layout route.
+You may notice an `?index` query parameter showing up on your URLs from time to time, particularly when you are submitting a `<Form>` from an index route. This is required to differentiate index routes from their parent layout routes. Consider the following structure, where a URL such as `/sales/invoices` would be ambiguous. Is that referring to the `routes/sales.invoices.jsx` file? Or is it referring to the `routes/sales.invoices._index.jsx` file? In order to avoid this ambiguity, Remix uses the `?index` parameter to indicate when a URL refers to the index route instead of the layout route.
 
 ```
 └── app
     ├── root.jsx
     └── routes
-        ├── sales
-        │   ├── invoices
-        │   │   └── index.jsx   <-- /sales/invoices?index
-        │   └── invoices.jsx    <-- /sales/invoices
+        ├── sales.invoices._index.jsx   <-- /sales/invoices?index
+        ├── sales.invoices.invoices.jsx <-- /sales/invoices
 ```
 
 This is handled automatically for you when you submit from a `<Form>` contained within either the layout route or the index route. But if you are submitting forms to different routes, or using `fetcher.submit`/`fetcher.load` you may need to be aware of this URL pattern so you can target the correct route.
@@ -216,21 +237,19 @@ We want this:
 </Root>
 ```
 
-So, if we want a flat UI hierarchy, we create a flat filename--we use `"."` to create segments instead of folders. This defines URL nesting _without creating component nesting_.
+So, if we want a flat UI hierarchy, we use a `trailing_` underscore to opt-out of layout nesting. This defines URL nesting _without creating component nesting_.
 
 ```
 └── app
     ├── root.jsx
     └── routes
-        ├── sales
-        │   ├── invoices
-        │   │   └── $invoiceId.jsx
-        │   └── invoices.jsx
-        ├── sales.invoices.$invoiceId.edit.jsx 👈 not nested
+        ├── sales.invoices.$invoiceId.jsx
+        ├── sales.invoices.jsx
+        ├── sales_.invoices.$invoiceId.edit.jsx 👈 not nested
         └── sales.jsx
 ```
 
-Just for absolute clarity, if the url is "example.com/sales/invoices/2000/edit", we'll get this UI hierarchy that matches the file system hierarchy:
+So if the url is "example.com/sales/invoices/2000/edit", we'll get this UI hierarchy that matches the file system hierarchy:
 
 ```tsx
 <Root>
@@ -250,10 +269,10 @@ If we remove "edit" from the URL like this: "example.com/sales/invoices/2000", t
 </Root>
 ```
 
-- Nested files: layout nesting + nested urls
-- Flat files: no layout nesting + nested urls
+- Layout Nesting + Nested URLs: happens automatically with `.` delimiters that match parent route names.
+- `trailing_` underscore on the segment matching the parent route opts-out of layout nesting.
 
-You can introduce nesting or non-nesting at any level of your routes, like `app/routes/invoices/$id.edit.js`, which matches the URL `/invoices/123/edit` but does not create nesting inside of `$id.js`.
+You can introduce nesting or non-nesting at any level of your routes, like `app/routes/invoices.$id_.edit.js`, which matches the URL `/invoices/123/edit` but does not create nesting inside of `$id.js`, it would nest with `routes/invoices.jsx` instead.
 
 ## Pathless Layout Routes
 
@@ -275,29 +294,34 @@ At first, you might think to just create an `auth` parent route and put the chil
 app
 ├── root.jsx
 └── routes
-    ├── auth
-    │   ├── login.jsx
-    │   ├── logout.jsx
-    │   └── signup.jsx
+    ├── auth.login.jsx
+    ├── auth.logout.jsx
+    ├── auth.signup.jsx
     └── auth.jsx
 ```
 
 We have the right UI hierarchy, but we probably don't actually want each of the URLs to be prefixed with `/auth` like `/auth/login`. We just want `/login`.
 
-You can remove the URL nesting, but keep the UI nesting, by adding two underscores to the route and folder name:
+You can remove the URL nesting, but keep the UI nesting, by adding an underscore to the auth route segment:
 
 ```
 app
 ├── root.jsx
 └── routes
-    ├── __auth
-    │   ├── login.jsx
-    │   ├── logout.jsx
-    │   └── signup.jsx
-    └── __auth.jsx
+    ├── _auth.login.jsx
+    ├── _auth.logout.jsx
+    ├── _auth.signup.jsx
+    └── _auth.jsx
 ```
 
-And that's it! When the URL matches `/login` the UI hierarchy will be same as before.
+Now when the URL matches `/login` the UI hierarchy will be same as before.
+
+<docs-info>
+
+- `_leading` underscore opts-out of URL nesting
+- `trailing_` underscore opts-out of layout nesting
+
+</docs-info>
 
 ## Dynamic Segments
 
@@ -328,10 +352,8 @@ Route can have multiple params, and params can be folders as well.
 app
 ├── root.jsx
 └── routes
-    ├── projects
-    │   ├── $projectId
-    │   │   └── $taskId.jsx
-    │   └── $projectId.jsx
+    ├── projects.$projectId.jsx
+    ├── projects.$projectId.$taskId.jsx
     └── projects.jsx
 ```
 
@@ -352,10 +374,9 @@ Consider the following routes:
 app
 ├── root.jsx
 └── routes
-    ├── files
-    │   ├── $.jsx
-    │   ├── mine.jsx
-    │   └── recent.jsx
+    ├── files.$.jsx
+    ├── files.mine.jsx
+    ├── files.recent.jsx
     └── files.jsx
 ```
 
@@ -369,7 +390,7 @@ export async function loader({ params }: LoaderArgs) {
 
 You can add splats at any level of your route hierarchy. Any sibling routes will match first (like `/files/mine`).
 
-It's common to add a `routes/$.jsx` file build custom 404 pages with data from a loader (without it, Remix renders your root `CatchBoundary` with no ability to load data for the page when the URL doesn't match any routes).
+It's common to add a `routes/$.jsx` file build custom 404 pages with data from a loader (without it, Remix renders your root `ErrorBoundary` with no ability to load data for the page when the URL doesn't match any routes).
 
 ## Conclusion
 

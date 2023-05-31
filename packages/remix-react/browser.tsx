@@ -24,7 +24,7 @@ declare global {
     // The number of active deferred keys rendered on the server
     a?: number;
     dev?: {
-      websocketPort?: number;
+      port?: number;
       hmrRuntime?: string;
     };
   };
@@ -55,7 +55,7 @@ if (import.meta && import.meta.hot) {
       needsRevalidation,
     }: {
       assetsManifest: EntryContext["manifest"];
-      needsRevalidation: boolean;
+      needsRevalidation: Set<string>;
     }) => {
       let routeIds = [
         ...new Set(

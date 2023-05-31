@@ -124,9 +124,10 @@ export const action = async ({ request }: ActionArgs) => {
 Resource routes can be used to handle webhooks. For example, you can create a webhook that receives notifications from GitHub when a new commit is pushed to a repository:
 
 ```tsx
+import crypto from "crypto";
+
 import type { ActionArgs } from "@remix-run/node"; // or cloudflare/deno
 import { json } from "@remix-run/node"; // or cloudflare/deno
-import crypto from "crypto";
 
 export const action = async ({ request }: ActionArgs) => {
   if (request.method !== "POST") {
