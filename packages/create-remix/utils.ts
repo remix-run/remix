@@ -64,7 +64,7 @@ export const shouldUseAscii = () => !unicode.enabled;
 export function isInteractive() {
   // Support explicit override for testing purposes
   if ("CREATE_REMIX_FORCE_INTERACTIVE" in process.env) {
-    return process.env.CREATE_REMIX_FORCE_INTERACTIVE === "true";
+    return true;
   }
 
   // Adapted from https://github.com/sindresorhus/is-interactive
