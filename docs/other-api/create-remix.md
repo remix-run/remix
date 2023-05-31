@@ -42,7 +42,7 @@ For a more comprehensive guide to available templates, see our [templates page.]
 A valid template can be:
 
 - a GitHub repo shorthand — `:username/:repo` or `:username/:repo/:directory`
-- the URL of a GitHub repo (or directory within it)
+- the URL of a GitHub repo (or directory within it) - `https://github.com/:username/:repo` or `https://github.com/:username/:repo/tree/:branch/:directory`
 - the URL of a remote tarball
 - a local file path to a directory of files
 - a local file path to a tarball
