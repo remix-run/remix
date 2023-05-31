@@ -42,23 +42,25 @@ For a more comprehensive guide to available templates, see our [templates page.]
 A valid template can be:
 
 - a GitHub repo shorthand — `:username/:repo` or `:username/:repo/:directory`
-- the URL of a GitHub repo (or directory within it) - `https://github.com/:username/:repo` or `https://github.com/:username/:repo/tree/:branch/:directory`
-- the URL of a remote tarball - `https://example.com/remix-template.tgz`
-- a local file path to a directory of files - `./path/to/remix-template`
-- a local file path to a tarball
+- the URL of a GitHub repo (or directory within it) — `https://github.com/:username/:repo` or `https://github.com/:username/:repo/tree/:branch/:directory`
+- the URL of a remote tarball — `https://example.com/remix-template.tar.gz`
+- a local file path to a directory of files — `./path/to/remix-template`
+- a local file path to a tarball — `./path/to/remix-template.tar.gz`
 
 ```sh
-npm create remix@latest ./my-app --template remix-run/grunge-stack
-npm create remix@latest ./my-app --template remix-run/remix/templates/remix
-npm create remix@latest ./my-app --template remix-run/examples/basic
-npm create remix@latest ./my-app --template :username/:repo
-npm create remix@latest ./my-app --template https://github.com/:username/:repo
-npm create remix@latest ./my-app --template https://github.com/:username/:repo/tree/:branch
-npm create remix@latest ./my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
-npm create remix@latest ./my-app --template https://github.com/:username/:repo/releases/latest/download/:tag.tar.gz
-npm create remix@latest ./my-app --template https://example.com/remix-template.tar.gz
-npm create remix@latest ./my-app --template /path/to/remix-template
-npm create remix@latest ./my-app --template /path/to/remix-template.tar.gz
+npx create-remix@latest ./my-app --template remix-run/grunge-stack
+npx create-remix@latest ./my-app --template remix-run/remix/templates/remix
+npx create-remix@latest ./my-app --template remix-run/examples/basic
+npx create-remix@latest ./my-app --template :username/:repo
+npx create-remix@latest ./my-app --template :username/:repo/:directory
+npx create-remix@latest ./my-app --template https://github.com/:username/:repo
+npx create-remix@latest ./my-app --template https://github.com/:username/:repo/tree/:branch
+npx create-remix@latest ./my-app --template https://github.com/:username/:repo/tree/:branch/:directory
+npx create-remix@latest ./my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
+npx create-remix@latest ./my-app --template https://github.com/:username/:repo/releases/latest/download/:tag.tar.gz
+npx create-remix@latest ./my-app --template https://example.com/remix-template.tar.gz
+npx create-remix@latest ./my-app --template ./path/to/remix-template
+npx create-remix@latest ./my-app --template ./path/to/remix-template.tar.gz
 ```
 
 <aside aria-label="Private GitHub repo templates">
