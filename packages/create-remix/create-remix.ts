@@ -542,22 +542,22 @@ async function runInitScriptStep(ctx: Context) {
   success("Template's remix.init script complete");
 
   if (ctx.git) {
-  await loadingIndicator({
+    await loadingIndicator({
       start: "Committing changes from remix.init script...",
       end: "Committed changes from remix.init script",
-    while: async () => {
-      let options = { cwd: ctx.cwd, stdio: "ignore" } as const;
+      while: async () => {
+        let options = { cwd: ctx.cwd, stdio: "ignore" } as const;
         let commitMsg = "Initialize project with remix.init script";
-      try {
-        await execa("git", ["add", "."], options);
-        await execa("git", ["commit", "-m", commitMsg], options);
-      } catch (err) {
+        try {
+          await execa("git", ["add", "."], options);
+          await execa("git", ["commit", "-m", commitMsg], options);
+        } catch (err) {
           error("Oh no!", "Failed to commit changes from remix.init script.");
-        throw err;
-      }
-    },
-    ctx,
-  });
+          throw err;
+        }
+      },
+      ctx,
+    });
   }
 }
 
@@ -770,8 +770,8 @@ ${[
   "https://github.com/:username/:repo/tree/:branch/:directory",
   "https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz",
   "https://example.com/remix-template.tar.gz",
-  "/path/to/remix-template",
-  "/path/to/remix-template.tar.gz",
+  "./path/to/remix-template",
+  "./path/to/remix-template.tar.gz",
 ].reduce((str, example) => {
   return `${str}\n${color.dim("$")} ${color.greenBright("create-remix")} my-app ${color.arg(`--template ${example}`)}`;
 }, "")}

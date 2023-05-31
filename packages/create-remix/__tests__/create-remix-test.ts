@@ -111,8 +111,8 @@ describe("create-remix CLI", () => {
       $ create-remix my-app --template https://github.com/:username/:repo/tree/:branch/:directory
       $ create-remix my-app --template https://github.com/:username/:repo/archive/refs/tags/:tag.tar.gz
       $ create-remix my-app --template https://example.com/remix-template.tar.gz
-      $ create-remix my-app --template /path/to/remix-template
-      $ create-remix my-app --template /path/to/remix-template.tar.gz
+      $ create-remix my-app --template ./path/to/remix-template
+      $ create-remix my-app --template ./path/to/remix-template.tar.gz
 
       To create a new project from a template in a private GitHub repo,
       pass the \`token\` flag with a personal access token with access
