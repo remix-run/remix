@@ -10,32 +10,20 @@ import {
  */
 export type AppData = any;
 
-export function isCatchResponse(response: any): boolean {
-  return (
-    response instanceof Response &&
-    response.headers.get("X-Remix-Catch") != null
-  );
+export function isCatchResponse(response: Response): boolean {
+  return response.headers.get("X-Remix-Catch") != null;
 }
 
-export function isErrorResponse(response: any): boolean {
-  return (
-    response instanceof Response &&
-    response.headers.get("X-Remix-Error") != null
-  );
+export function isErrorResponse(response: Response): boolean {
+  return response.headers.get("X-Remix-Error") != null;
 }
 
-export function isRedirectResponse(response: any): boolean {
-  return (
-    response instanceof Response &&
-    response.headers.get("X-Remix-Redirect") != null
-  );
+export function isRedirectResponse(response: Response): boolean {
+  return response.headers.get("X-Remix-Redirect") != null;
 }
 
-export function isDeferredResponse(response: any): boolean {
-  return (
-    response instanceof Response &&
-    !!response.headers.get("Content-Type")?.match(/text\/remix-deferred/)
-  );
+export function isDeferredResponse(response: Response): boolean {
+  return !!response.headers.get("Content-Type")?.match(/text\/remix-deferred/);
 }
 
 export async function fetchData(
@@ -106,7 +94,7 @@ export async function parseDeferredReadableStream(
 
         deferredData = deferredData || {};
 
-        deferredData[eventKey] = new Promise<any>((resolve, reject) => {
+        deferredData[eventKey] = new Promise((resolve, reject) => {
           deferredResolvers[eventKey] = {
             resolve: (value: unknown) => {
               resolve(value);

@@ -10,7 +10,7 @@ export interface RemixContextObject {
   serverHandoffString?: string;
   future: FutureConfig;
   abortDelay?: number;
-  dev?: { websocketPort: number };
+  dev?: { port: number };
 }
 
 // Additional React-Router information needed at runtime, but not hydrated
@@ -33,6 +33,7 @@ export interface FutureConfig {
   /** @deprecated Use the `tailwind` config option instead */
   unstable_tailwind: boolean;
   v2_errorBoundary: boolean;
+  v2_headers: boolean;
   v2_meta: boolean;
   v2_normalizeFormMethod: boolean;
   v2_routeConvention: boolean;
