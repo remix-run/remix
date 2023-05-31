@@ -539,7 +539,7 @@ export async function readConfig(
     cssBundle = appConfig.cssBundle;
   } else {
     // css-bundle detection
-    console.log("resolving css-bundle from rootDirectory", rootDirectory);
+    console.log("resolving css-bundle from rootDirectory: " + rootDirectory);
     try {
       require.resolve("@remix-run/css-bundle", {
         paths: [rootDirectory],
