@@ -38,6 +38,8 @@ async function copyBuildToDist() {
     };
   });
 
+  console.log("copyBuildToDist packages: " + JSON.stringify(packages));
+
   // Write an export shim for @remix-run/node/globals types
   let dest = path.join(
     ".",
