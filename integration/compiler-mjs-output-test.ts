@@ -8,11 +8,6 @@ let projectDir: string;
 
 test.beforeAll(async () => {
   projectDir = await createFixtureProject({
-    config: {
-      serverModuleFormat: "esm",
-      serverBuildPath: "build/index.mjs",
-      future: { v2_routeConvention: true },
-    },
     files: {
       // Ensure the config is valid ESM
       "remix.config.js": js`
