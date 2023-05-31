@@ -50,7 +50,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
   let staticHandler = createStaticHandler(dataRoutes);
 
   let errorHandler =
-    build.entry.module.handleError ||
+    build.entry.module.onUnhandledError ||
     ((error, { request }) => {
       if (serverMode !== ServerMode.Test && !request.signal.aborted) {
         console.error(error);
@@ -130,7 +130,7 @@ async function handleDataRequestRR(
   routeId: string,
   request: Request,
   loadContext: AppLoadContext,
-  handleError: (err: unknown) => void
+  handleError: (err: Error | unknown) => void
 ) {
   try {
     let response = await staticHandler.queryRoute(request, {
@@ -178,7 +178,9 @@ async function handleDataRequestRR(
     }
 
     if (isRouteErrorResponse(error)) {
-      handleError(error.error || error);
+      if (error.error) {
+        handleError(error.error);
+      }
       return errorResponseToJson(error, serverMode);
     }
 
@@ -267,7 +269,11 @@ async function handleDocumentRequestRR(
 
   // Sanitize errors outside of development environments
   if (context.errors) {
-    Object.values(context.errors).forEach((err) => handleError(err));
+    Object.values(context.errors).forEach((err) => {
+      if (!isRouteErrorResponse(err) || err.error) {
+        handleError(err);
+      }
+    });
     context.errors = sanitizeErrors(context.errors, serverMode);
   }
 
@@ -383,7 +389,9 @@ async function handleResourceRequestRR(
     }
 
     if (isRouteErrorResponse(error)) {
-      handleError(error.error || error);
+      if (error.error) {
+        handleError(error.error);
+      }
       return errorResponseToJson(error, serverMode);
     }
 

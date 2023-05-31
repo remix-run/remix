@@ -32,10 +32,8 @@ export interface HandleDataRequestFunction {
   (response: Response, args: DataFunctionArgs): Promise<Response> | Response;
 }
 
-// TODO: Should we make this async?  If we do, do we need to use .catch()
-// to avoid dangling promises?  I'd rather leave that in user land...
-export interface HandleErrorFunction {
-  (error: unknown, args: DataFunctionArgs): void;
+export interface OnUnhandledErrorFunction {
+  (error: Error | unknown, args: DataFunctionArgs): void;
 }
 
 /**
@@ -45,5 +43,5 @@ export interface HandleErrorFunction {
 export interface ServerEntryModule {
   default: HandleDocumentRequestFunction;
   handleDataRequest?: HandleDataRequestFunction;
-  handleError?: HandleErrorFunction;
+  onUnhandledError?: OnUnhandledErrorFunction;
 }

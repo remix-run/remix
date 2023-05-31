@@ -27,7 +27,7 @@ const routeFiles = {
   `,
 
   "app/routes/index.jsx": js`
-    import { useLoaderData, useLocation } from "@remix-run/react";
+    import { useLoaderData, useLocation, useRouteError } from "@remix-run/react";
 
     export function loader({ request }) {
       if (new URL(request.url).searchParams.has('loader')) {
@@ -52,7 +52,8 @@ const routeFiles = {
       );
     }
 
-    export function ErrorBoundary({ error }) {
+    export function ErrorBoundary() {
+      let error = useRouteError();
       return (
         <>
           <h1>Index Error</h1>
@@ -66,7 +67,7 @@ const routeFiles = {
   "app/routes/defer.jsx": js`
     import * as React from 'react';
     import { defer } from "@remix-run/server-runtime";
-    import { Await, useLoaderData, useRouteError } from "@remix-run/react";
+    import { Await, useAsyncError, useLoaderData, useRouteError  } from "@remix-run/react";
 
     export function loader({ request }) {
       if (new URL(request.url).searchParams.has('loader')) {
@@ -95,19 +96,20 @@ const routeFiles = {
     }
 
     function AwaitError() {
-      let error = useRouteError();
+      let error = useAsyncError();
       return (
         <>
           <h2>Defer Error</h2>
-          <p>{error}</p>
+          <p>{error.message}</p>
         </>
       );
     }
 
-    export function ErrorBoundary({ error }) {
+    export function ErrorBoundary() {
+      let error = useRouteError();
       return (
         <>
-          <h1>Index Error</h1>
+          <h1>Defer Error</h1>
           <p>{"MESSAGE:" + error.message}</p>
           {error.stack ? <p>{"STACK:" + error.stack}</p> : null}
         </>
@@ -144,6 +146,11 @@ test.describe("Error Sanitization", () => {
     test.beforeAll(async () => {
       fixture = await createFixture(
         {
+          config: {
+            future: {
+              v2_errorBoundary: true,
+            },
+          },
           files: routeFiles,
         },
         ServerMode.Production
@@ -278,6 +285,11 @@ test.describe("Error Sanitization", () => {
     test.beforeAll(async () => {
       fixture = await createFixture(
         {
+          config: {
+            future: {
+              v2_errorBoundary: true,
+            },
+          },
           files: routeFiles,
         },
         ServerMode.Development
@@ -418,10 +430,15 @@ test.describe("Error Sanitization", () => {
     });
   });
 
-  test.describe("serverMode=production (user-provided handleError)", () => {
+  test.describe("serverMode=production (user-provided onUnhandledError)", () => {
     test.beforeAll(async () => {
       fixture = await createFixture(
         {
+          config: {
+            future: {
+              v2_errorBoundary: true,
+            },
+          },
           files: {
             "app/entry.server.tsx": js`
               import type { EntryContext } from "@remix-run/node";
@@ -446,13 +463,13 @@ test.describe("Error Sanitization", () => {
                 });
               }
 
-              export function handleError(error: unknown, { request }: { request: Request }) {
+              export function onUnhandledError(
+                error: Error | unknown,
+                { request }: { request: Request },
+              ) {
                 console.error("App Specific Error Logging:");
                 console.error("  Request: " + request.method + " " + request.url);
-                let msg;
-                if (isRouteErrorResponse(error)) {
-                  console.error("  Error: " + error.status + " " + error.statusText);
-                } else if (error instanceof Error) {
+                if (error instanceof Error) {
                   console.error("  Error: " + error.message);
                   console.error("  Stack: " + error.stack);
                 } else {
