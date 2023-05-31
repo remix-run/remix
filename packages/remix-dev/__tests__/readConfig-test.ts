@@ -45,6 +45,7 @@ describe("readConfig", () => {
         "appDirectory": Any<String>,
         "assetsBuildDirectory": Any<String>,
         "cacheDirectory": Any<String>,
+        "cssBundle": true,
         "devServerBroadcastDelay": 0,
         "devServerPort": Any<Number>,
         "entryClientFile": "entry.client.tsx",
