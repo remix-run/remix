@@ -14,6 +14,7 @@ module.exports = {
   serverMainFields: ["module", "main"],
   serverModuleFormat: "esm",
   serverPlatform: "neutral",
+  cssBundle: false,
   // appDirectory: "app",
   // assetsBuildDirectory: "public/build",
   // serverBuildPath: "build/index.js",

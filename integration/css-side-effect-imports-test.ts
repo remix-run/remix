@@ -19,6 +19,7 @@ test.describe("CSS side-effect imports", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       config: {
+        cssBundle: true,
         serverDependenciesToBundle: [/@test-package/],
         future: {
           v2_routeConvention: true,

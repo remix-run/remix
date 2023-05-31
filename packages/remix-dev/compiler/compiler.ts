@@ -28,7 +28,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
   };
 
   let subcompiler = {
-    css: await CSS.createCompiler(ctx),
+    css: ctx.config.cssBundle ? await CSS.createCompiler(ctx) : null,
     js: await JS.createCompiler(ctx, channels),
     server: await Server.createCompiler(ctx, channels),
   };
@@ -39,7 +39,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
 
     // optimization: cancel tasks
     await Promise.all([
-      subcompiler.css.cancel(),
+      subcompiler.css?.cancel(),
       subcompiler.js.cancel(),
       subcompiler.server.cancel(),
     ]);
@@ -63,7 +63,7 @@ export let create = async (ctx: Context): Promise<Compiler> => {
 
     // kickoff compilations in parallel
     let tasks = {
-      css: subcompiler.css.compile().then(ok, errCancel),
+      css: subcompiler.css?.compile().then(ok, errCancel),
       js: subcompiler.js.compile().then(ok, errCancel),
       server: subcompiler.server.compile().then(ok, errCancel),
     };
@@ -75,21 +75,26 @@ export let create = async (ctx: Context): Promise<Compiler> => {
       server?: Promise<void>;
     } = {};
 
-    // css compilation
-    let css = await tasks.css;
-    if (!css.ok) throw error ?? css.error;
+    // css-bundle compilation, if applicable
+    let cssBundleHref: string | undefined = undefined;
+    if (tasks.css) {
+      let css = await tasks.css;
+      if (!css.ok) throw error ?? css.error;
 
-    // css bundle
-    let cssBundleHref =
-      css.value.bundle &&
-      ctx.config.publicPath +
-        path.relative(
-          ctx.config.assetsBuildDirectory,
-          path.resolve(css.value.bundle.path)
-        );
-    channels.cssBundleHref.ok(cssBundleHref);
-    if (css.value.bundle) {
-      writes.cssBundle = CSS.writeBundle(ctx, css.value.outputFiles);
+      // css bundle
+      cssBundleHref =
+        css.value.bundle &&
+        ctx.config.publicPath +
+          path.relative(
+            ctx.config.assetsBuildDirectory,
+            path.resolve(css.value.bundle.path)
+          );
+      channels.cssBundleHref.ok(cssBundleHref);
+      if (css.value.bundle) {
+        writes.cssBundle = CSS.writeBundle(ctx, css.value.outputFiles);
+      }
+    } else {
+      channels.cssBundleHref.ok(undefined);
     }
 
     // js compilation (implicitly writes artifacts/js)
@@ -121,7 +126,9 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     compile,
     cancel,
     dispose: async () => {
-      await Promise.all(Object.values(subcompiler).map((sub) => sub.dispose()));
+      await Promise.all(
+        Object.values(subcompiler).map((sub) => sub?.dispose())
+      );
     },
   };
 };

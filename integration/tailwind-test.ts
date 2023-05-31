@@ -44,6 +44,7 @@ function runTests(ext: typeof extensions[number]) {
   test.beforeAll(async () => {
     fixture = await createFixture({
       config: {
+        cssBundle: true,
         tailwind: true,
         future: {
           v2_routeConvention: true,
@@ -358,12 +359,10 @@ test.describe("Tailwind enabled via unstable future flag", () => {
         `,
         "app/root.jsx": js`
           import { Links, Outlet } from "@remix-run/react";
-          import { cssBundleHref } from "@remix-run/css-bundle";
           import tailwindHref from "./tailwind.css"
           export function links() {
             return [
               { rel: "stylesheet", href: tailwindHref },
-              { rel: "stylesheet", href: cssBundleHref }
             ];
           }
           export default function Root() {

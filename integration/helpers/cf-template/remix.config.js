@@ -9,6 +9,7 @@ module.exports = {
   serverMinify: true,
   serverModuleFormat: "esm",
   serverPlatform: "neutral",
+  cssBundle: false,
   // appDirectory: "app",
   // assetsBuildDirectory: "public/build",
   // serverBuildPath: "build/index.js",

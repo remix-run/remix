@@ -121,6 +121,13 @@ export interface AppConfig {
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
 
   /**
+   * Whether to enable CSS bundling features
+   * (CSS Modules, CSS side-effect imports, Vanilla Extract)
+   * Defaults to `true` if `@remix-run/css-bundle` is installed.
+   */
+  cssBundle?: boolean;
+
+  /**
    * Whether to process CSS using PostCSS if `postcss.config.js` is present.
    * Defaults to `false`.
    */
@@ -291,6 +298,13 @@ export interface RemixConfig {
    * Additional MDX remark / rehype plugins.
    */
   mdx?: RemixMdxConfig | RemixMdxConfigFunction;
+
+  /**
+   * Whether to enable CSS bundling features
+   * (CSS Modules, CSS side-effect imports, Vanilla Extract)
+   * Defaults to `true` if `@remix-run/css-bundle` is installed.
+   */
+  cssBundle: boolean;
 
   /**
    * Whether to process CSS using PostCSS if `postcss.config.js` is present.
@@ -519,6 +533,22 @@ export async function readConfig(
   }
 
   let mdx = appConfig.mdx;
+
+  let cssBundle: boolean;
+  if (appConfig.cssBundle !== undefined) {
+    cssBundle = appConfig.cssBundle;
+  } else {
+    // css-bundle detection
+    try {
+      require.resolve("@remix-run/css-bundle", {
+        paths: [rootDirectory],
+      });
+      cssBundle = true;
+    } catch (_error) {
+      cssBundle = false;
+    }
+  }
+
   let postcss =
     appConfig.postcss ?? appConfig.future?.unstable_postcss === true;
   let tailwind =
@@ -773,6 +803,7 @@ export async function readConfig(
     serverModuleFormat,
     serverPlatform,
     mdx,
+    cssBundle,
     postcss,
     tailwind,
     watchPaths,

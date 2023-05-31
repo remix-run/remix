@@ -34,6 +34,7 @@ test.describe("PostCSS enabled", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       config: {
+        cssBundle: true,
         postcss: true,
         tailwind: true,
         future: {

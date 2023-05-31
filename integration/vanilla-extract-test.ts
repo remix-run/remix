@@ -13,6 +13,7 @@ test.describe("Vanilla Extract", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       config: {
+        cssBundle: true,
         future: {
           v2_routeConvention: true,
         },
