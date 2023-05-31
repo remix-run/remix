@@ -72,6 +72,7 @@
     "xdm": "^2.0.0"
   },
   "devDependencies": {
+    "@remix-run/css-bundle": "1.16.1",
     "@remix-run/serve": "1.16.1",
     "@types/cacache": "^15.0.0",
     "@types/gunzip-maybe": "^1.4.0",
