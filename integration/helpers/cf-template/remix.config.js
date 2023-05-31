@@ -9,7 +9,10 @@ module.exports = {
   serverMinify: true,
   serverModuleFormat: "esm",
   serverPlatform: "neutral",
+
+  // Ensure tests need to explicitly opt-in to compiling the CSS bundle
   cssBundle: false,
+
   // appDirectory: "app",
   // assetsBuildDirectory: "public/build",
   // serverBuildPath: "build/index.js",

@@ -1,7 +1,10 @@
 /** @type {import('@remix-run/dev').AppConfig} */
 module.exports = {
   ignoredRouteFiles: ["**/.*"],
+
+  // Ensure tests need to explicitly opt-in to compiling the CSS bundle
   cssBundle: false,
+
   // appDirectory: "app",
   // assetsBuildDirectory: "public/build",
   // serverBuildPath: "build/index.js",
