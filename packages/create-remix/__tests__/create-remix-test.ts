@@ -1053,7 +1053,7 @@ async function execCreateRemix({
       env: {
         ...process.env,
         ...env,
-        CREATE_REMIX_FORCE_INTERACTIVE: String(interactive),
+        ...(interactive ? { CREATE_REMIX_FORCE_INTERACTIVE: "true" } : {}),
       },
     }
   );
