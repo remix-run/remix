@@ -48,8 +48,8 @@ async function createRemix(argv: string[]) {
     installDependenciesQuestionStep,
     runInitScriptQuestionStep,
     installDependenciesStep,
+    gitInitStep,
     runInitScriptStep,
-    gitInitAndCommitStep,
     doneStep,
   ];
 
@@ -415,6 +415,58 @@ async function installDependenciesStep(ctx: Context) {
   });
 }
 
+async function gitInitQuestionStep(ctx: Context) {
+  if (fs.existsSync(path.join(ctx.cwd, ".git"))) {
+    info("Nice!", `Git has already been initialized`);
+    return;
+  }
+
+  let git = ctx.git;
+  if (ctx.git === undefined) {
+    ({ git } = await ctx.prompt({
+      name: "git",
+      type: "confirm",
+      label: title("git"),
+      message: `Initialize a new git repository?`,
+      hint: "recommended",
+      initial: true,
+    }));
+  }
+
+  ctx.git = git ?? false;
+}
+
+async function gitInitStep(ctx: Context) {
+  if (!ctx.git) {
+    return;
+  }
+
+  if (fs.existsSync(path.join(ctx.cwd, ".git"))) {
+    log("");
+    info("Nice!", `Git has already been initialized`);
+    return;
+  }
+
+  log("");
+  await loadingIndicator({
+    start: "Git initializing...",
+    end: "Git initialized",
+    while: async () => {
+      let options = { cwd: ctx.cwd, stdio: "ignore" } as const;
+      let commitMsg = "Initial commit from create-remix";
+      try {
+        await execa("git", ["init"], options);
+        await execa("git", ["add", "."], options);
+        await execa("git", ["commit", "-m", commitMsg], options);
+      } catch (err) {
+        error("Oh no!", "Failed to initialize git.");
+        throw err;
+      }
+    },
+    ctx,
+  });
+}
+
 async function runInitScriptStep(ctx: Context) {
   if (!ctx.initScriptPath) {
     return;
@@ -488,58 +540,25 @@ async function runInitScriptStep(ctx: Context) {
 
   log("");
   success("Template's remix.init script complete");
-}
 
-async function gitInitQuestionStep(ctx: Context) {
-  if (fs.existsSync(path.join(ctx.cwd, ".git"))) {
-    info("Nice!", `Git has already been initialized`);
-    return;
-  }
-
-  let git = ctx.git;
-  if (ctx.git === undefined) {
-    ({ git } = await ctx.prompt({
-      name: "git",
-      type: "confirm",
-      label: title("git"),
-      message: `Initialize a new git repository?`,
-      hint: "recommended",
-      initial: true,
-    }));
-  }
-
-  ctx.git = git ?? false;
-}
-
-async function gitInitAndCommitStep(ctx: Context) {
-  if (!ctx.git) {
-    return;
-  }
-
-  if (fs.existsSync(path.join(ctx.cwd, ".git"))) {
-    log("");
-    info("Nice!", `Git has already been initialized`);
-    return;
-  }
-
-  log("");
+  if (ctx.git) {
   await loadingIndicator({
-    start: "Git initializing...",
-    end: "Git initialized",
+      start: "Committing changes from remix.init script...",
+      end: "Committed changes from remix.init script",
     while: async () => {
       let options = { cwd: ctx.cwd, stdio: "ignore" } as const;
-      let commitMsg = "Initial commit from create-remix";
+        let commitMsg = "Initialize project with remix.init script";
       try {
-        await execa("git", ["init"], options);
         await execa("git", ["add", "."], options);
         await execa("git", ["commit", "-m", commitMsg], options);
       } catch (err) {
-        error("Oh no!", "Failed to initialize git.");
+          error("Oh no!", "Failed to commit changes from remix.init script.");
         throw err;
       }
     },
     ctx,
   });
+  }
 }
 
 async function doneStep(ctx: Context) {
