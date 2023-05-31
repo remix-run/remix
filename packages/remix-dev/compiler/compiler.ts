@@ -81,7 +81,6 @@ export let create = async (ctx: Context): Promise<Compiler> => {
       let css = await tasks.css;
       if (!css.ok) throw error ?? css.error;
 
-      // css bundle
       cssBundleHref =
         css.value.bundle &&
         ctx.config.publicPath +
