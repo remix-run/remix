@@ -17,7 +17,9 @@ test.beforeAll(async () => {
       // Ensure the config is valid ESM
       "remix.config.js": js`
         export default {
-          ...global.INJECTED_FIXTURE_REMIX_CONFIG
+          serverModuleFormat: "esm",
+          serverBuildPath: "build/index.mjs",
+          future: { v2_routeConvention: true },
         };
       `,
       "package.json": js`

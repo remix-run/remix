@@ -26,6 +26,17 @@ export interface FixtureInit {
   config?: Partial<AppConfig>;
 }
 
+type MyObject = {
+  [key: string]: any;
+};
+
+type MyObjectWithoutExcludedKey<T> = {
+  [K in keyof T]: K extends "keyToExclude" ? never : T[K];
+};
+
+const foo: MyObjectWithoutExcludedKey<MyObject> = { keyToExclude: 123 };
+console.log(foo);
+
 export type Fixture = Awaited<ReturnType<typeof createFixture>>;
 export type AppFixture = Awaited<ReturnType<typeof createAppFixture>>;
 
@@ -190,13 +201,17 @@ export async function createFixtureProject(
     path.join(projectDir, "remix.config.js"),
     "utf-8"
   );
-  if (!contents.includes("global.INJECTED_FIXTURE_REMIX_CONFIG")) {
+  if (
+    init.config &&
+    !contents.includes("global.INJECTED_FIXTURE_REMIX_CONFIG")
+  ) {
     throw new Error(dedent`
-      Invalid remix.config.js file. The file must contain a reference to
-      to \`global.INJECTED_FIXTURE_REMIX_CONFIG\`, ideally spread into
-      the end of the exported config object 
-      (e.g. \`module.exports = { ...global.INJECTED_FIXTURE_REMIX_CONFIG }\`) 
-      as a placeholder where the fixture Remix config values will be injected.
+      Cannot provide a \`config\` fixture option and a \`remix.config.js\` file
+      at the same time, unless the \`remix.config.js\` file contains a reference
+      to the \`global.INJECTED_FIXTURE_REMIX_CONFIG\` placeholder so it can
+      accept the injected config values. Either move all config values into
+      \`remix.config.js\` file, or spread the  injected config, 
+      e.g. \`module.exports = { ...global.INJECTED_FIXTURE_REMIX_CONFIG }\`.
     `);
   }
   contents = contents.replace(

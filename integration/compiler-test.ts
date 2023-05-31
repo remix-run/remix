@@ -21,18 +21,15 @@ test.describe("compiler", () => {
   test.beforeAll(async () => {
     fixture = await createFixture({
       setup: "node",
-      config: {
-        future: {
-          v2_routeConvention: true,
-        },
-      },
       files: {
         // We need a custom config file here to test usage of `getDependenciesToBundle`
         // since this can't be serialized from the fixture object.
         "remix.config.js": js`
           let { getDependenciesToBundle } = require("@remix-run/dev");
           module.exports = {
-            ...global.INJECTED_FIXTURE_REMIX_CONFIG,
+            future: {
+              v2_routeConvention: true,
+            },
             serverDependenciesToBundle: [
               "esm-only-pkg",
               "esm-only-single-export",
