@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import * as stream from "node:stream";
 import * as http from "node:http";
+import * as https from "node:https";
 import fs from "fs-extra";
 import prettyMs from "pretty-ms";
 import execa from "execa";
@@ -18,6 +19,7 @@ import { detectPackageManager } from "../cli/detectPackageManager";
 import * as HDR from "./hdr";
 import type { Result } from "../result";
 import { err, ok } from "../result";
+import invariant from "../invariant";
 
 type Origin = {
   scheme: string;
@@ -41,11 +43,13 @@ let detectBin = async (): Promise<string> => {
 export let serve = async (
   initialConfig: RemixConfig,
   options: {
-    command: string;
+    command?: string;
     scheme: string;
     host: string;
     port: number;
     restart: boolean;
+    tlsKey?: string;
+    tlsCert?: string;
   }
 ) => {
   await loadEnv(initialConfig.rootDirectory);
@@ -73,7 +77,16 @@ export let serve = async (
       res.sendStatus(200);
     });
 
-  let server = http.createServer(app);
+  let server =
+    options.tlsKey && options.tlsCert
+      ? https.createServer(
+          {
+            key: fs.readFileSync(options.tlsKey),
+            cert: fs.readFileSync(options.tlsCert),
+          },
+          app
+        )
+      : http.createServer(app);
   let websocket = Socket.serve(server);
 
   let origin: Origin = {
@@ -83,19 +96,48 @@ export let serve = async (
   };
 
   let bin = await detectBin();
-  let startAppServer = (command: string) => {
-    console.log(`> ${command}`);
-    let newAppServer = execa.command(command, {
-      stdio: "pipe",
-      env: {
-        NODE_ENV: "development",
-        PATH:
-          bin + (process.platform === "win32" ? ";" : ":") + process.env.PATH,
-        REMIX_DEV_HTTP_ORIGIN: stringifyOrigin(origin),
-      },
-      // https://github.com/sindresorhus/execa/issues/433
-      windowsHide: false,
-    });
+  let startAppServer = (command?: string) => {
+    let cmd =
+      command ??
+      `remix-serve ${path.relative(
+        process.cwd(),
+        initialConfig.serverBuildPath
+      )}`;
+    console.log(`> ${cmd}`);
+    let newAppServer = execa
+      .command(cmd, {
+        stdio: "pipe",
+        env: {
+          NODE_ENV: "development",
+          PATH:
+            bin + (process.platform === "win32" ? ";" : ":") + process.env.PATH,
+          REMIX_DEV_HTTP_ORIGIN: stringifyOrigin(origin),
+          FORCE_COLOR: process.env.NO_COLOR === undefined ? "1" : "0",
+        },
+        // https://github.com/sindresorhus/execa/issues/433
+        windowsHide: false,
+      })
+      .on("error", (e) => {
+        // patch execa error types
+        invariant("errno" in e && typeof e.errno === "number", "errno missing");
+        invariant("code" in e && typeof e.code === "string", "code missing");
+        invariant("path" in e && typeof e.path === "string", "path missing");
+
+        if (command === undefined) {
+          console.error(
+            [
+              "",
+              `┏ [error] command not found: ${e.path}`,
+              `┃ \`remix dev\` did not receive \`--command\` nor \`-c\`, defaulting to \`${cmd}\`.`,
+              "┃ You probably meant to use `-c` for your app server command.",
+              "┗ For example: `remix dev -c 'node ./server.js'`",
+              "",
+            ].join("\n")
+          );
+          process.exit(1);
+        }
+        throw e;
+      });
 
     if (newAppServer.stdin)
       process.stdin.pipe(newAppServer.stdin, { end: true });
@@ -164,10 +206,7 @@ export let serve = async (
         try {
           console.log(`Waiting for app server (${state.manifest?.version})`);
           let start = Date.now();
-          if (
-            options.command &&
-            (state.appServer === undefined || options.restart)
-          ) {
+          if (state.appServer === undefined || options.restart) {
             await kill(state.appServer);
             state.appServer = startAppServer(options.command);
           }
