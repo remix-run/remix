@@ -76,8 +76,12 @@ export let create = async (ctx: Context): Promise<Compiler> => {
     } = {};
 
     // css-bundle compilation, if applicable
-    let cssBundleHref: string | undefined = undefined;
-    if (tasks.css) {
+    let cssBundleHref: string | undefined;
+    if (!tasks.css) {
+      // If we don't have a CSS task to run, we don't have a CSS bundle
+      cssBundleHref = undefined;
+      channels.cssBundleHref.ok(cssBundleHref);
+    } else {
       let css = await tasks.css;
       if (!css.ok) throw error ?? css.error;
 
@@ -92,8 +96,6 @@ export let create = async (ctx: Context): Promise<Compiler> => {
       if (css.value.bundle) {
         writes.cssBundle = CSS.writeBundle(ctx, css.value.outputFiles);
       }
-    } else {
-      channels.cssBundleHref.ok(undefined);
     }
 
     // js compilation (implicitly writes artifacts/js)
