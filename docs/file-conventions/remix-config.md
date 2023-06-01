@@ -43,7 +43,11 @@ The path to the browser build, relative to remix.config.js. Defaults to
 ## cacheDirectory
 
 The path to a directory Remix can use for caching things in development,
-relative to `remix.config.js`. Defaults to `".cache"`.
+relative to `remix.config.js`. Defaults to `".cache"`.## postcss
+
+## cssBundle
+
+Whether to support [CSS bundling features][css-bundling]. Defaults to `true` if `@remix-run/css-bundle` is installed.
 
 ## devServerBroadcastDelay
 
@@ -242,3 +246,4 @@ There are a few conventions that Remix uses you should be aware of.
 [css-side-effect-imports]: ../guides/styling#css-side-effect-imports
 [postcss]: https://postcss.org
 [tailwind-functions-and-directives]: https://tailwindcss.com/docs/functions-and-directives
+[css-bundling]: ../guides/styling#css-bundling
