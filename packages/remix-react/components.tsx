@@ -7,7 +7,6 @@ import * as React from "react";
 import type {
   AgnosticDataRouteMatch,
   UNSAFE_DeferredData as DeferredData,
-  ErrorResponse,
   Navigation,
   TrackedPromise,
 } from "@remix-run/router";
@@ -174,23 +173,14 @@ export function RemixRouteError({ id }: { id: string }) {
   }
 
   if (isRouteErrorResponse(error)) {
-    let tError = error as any;
-    if (
-      tError?.error instanceof Error &&
-      tError.status !== 404 &&
-      ErrorBoundary
-    ) {
+    let tError = error;
+    if (!!tError?.error && tError.status !== 404 && ErrorBoundary) {
       // Internal framework-thrown ErrorResponses
       return <ErrorBoundary error={tError.error} />;
     }
     if (CatchBoundary) {
       // User-thrown ErrorResponses
-      return (
-        <RemixCatchBoundary
-          component={CatchBoundary!}
-          catch={error as ErrorResponse}
-        />
-      );
+      return <RemixCatchBoundary catch={error} component={CatchBoundary} />;
     }
   }
 
@@ -222,11 +212,11 @@ export interface RemixNavLinkProps extends NavLinkProps {
 }
 
 interface PrefetchHandlers {
-  onFocus?: FocusEventHandler<Element>;
-  onBlur?: FocusEventHandler<Element>;
-  onMouseEnter?: MouseEventHandler<Element>;
-  onMouseLeave?: MouseEventHandler<Element>;
-  onTouchStart?: TouchEventHandler<Element>;
+  onFocus?: FocusEventHandler;
+  onBlur?: FocusEventHandler;
+  onMouseEnter?: MouseEventHandler;
+  onMouseLeave?: MouseEventHandler;
+  onTouchStart?: TouchEventHandler;
 }
 
 function usePrefetchBehavior(
