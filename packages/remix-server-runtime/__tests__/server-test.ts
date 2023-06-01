@@ -26,7 +26,7 @@ describe("server", () => {
     entry: {
       module: {
         default: async (request) => {
-          return new Response(`${request.method}, ${request.url}`);
+          return new Response(`${request.method}, ${request.url} COMPONENT`);
         },
       },
     },
@@ -35,8 +35,10 @@ describe("server", () => {
         id: routeId,
         path: "",
         module: {
-          action: () => "ACTION",
-          loader: () => "LOADER",
+          action: ({ request }) =>
+            new Response(`${request.method} ${request.url} ACTION`),
+          loader: ({ request }) =>
+            new Response(`${request.method} ${request.url} LOADER`),
           default: () => "COMPONENT",
         },
       },
@@ -57,20 +59,27 @@ describe("server", () => {
   } as unknown as ServerBuild;
 
   describe("createRequestHandler", () => {
+    let spy = spyConsole();
+
+    beforeEach(() => {
+      spy.console.mockClear();
+    });
+
     let allowThrough = [
       ["GET", "/"],
-      ["GET", "/_data=root"],
+      ["GET", "/?_data=root"],
       ["POST", "/"],
-      ["POST", "/_data=root"],
+      ["POST", "/?_data=root"],
       ["PUT", "/"],
-      ["PUT", "/_data=root"],
+      ["PUT", "/?_data=root"],
       ["DELETE", "/"],
-      ["DELETE", "/_data=root"],
+      ["DELETE", "/?_data=root"],
       ["PATCH", "/"],
-      ["PATCH", "/_data=root"],
+      ["PATCH", "/?_data=root"],
     ];
-    for (let [method, to] of allowThrough) {
-      it(`allows through ${method} request to ${to}`, async () => {
+    it.each(allowThrough)(
+      `allows through %s request to %s`,
+      async (method, to) => {
         let handler = createRequestHandler(build);
         let response = await handler(
           new Request(`http://localhost:3000${to}`, {
@@ -78,9 +87,18 @@ describe("server", () => {
           })
         );
 
-        expect(await response.text()).toContain(method);
-      });
-    }
+        expect(response.status).toBe(200);
+        let text = await response.text();
+        expect(text).toContain(method);
+        let expected = !to.includes("?_data=root")
+          ? "COMPONENT"
+          : method === "GET"
+          ? "LOADER"
+          : "ACTION";
+        expect(text).toContain(expected);
+        expect(spy.console).not.toHaveBeenCalled();
+      }
+    );
 
     it("strips body for HEAD requests", async () => {
       let handler = createRequestHandler(build);
