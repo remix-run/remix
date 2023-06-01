@@ -7,7 +7,7 @@ Add optional `onUnhandledError` export for custom server-side error processing. 
 ```ts
 // entry.server.tsx
 export function onUnhandledError(
-  error: Error | unknown,
+  error: unknown,
   { request, params, context }: DataFunctionArgs
 ): void {
   if (error instanceof Error) {

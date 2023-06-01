@@ -130,7 +130,7 @@ async function handleDataRequestRR(
   routeId: string,
   request: Request,
   loadContext: AppLoadContext,
-  handleError: (err: Error | unknown) => void
+  handleError: (err: unknown) => void
 ) {
   try {
     let response = await staticHandler.queryRoute(request, {

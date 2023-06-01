@@ -29,7 +29,7 @@ By default, Remix will log encountered server-side errors to the console. If you
 
 ```tsx
 export function onUnhandledError(
-  error: Error | unknown,
+  error: unknown,
   { request, params, context }: DataFunctionArgs
 ) {
   sendErrorToErrorReportingService(error);

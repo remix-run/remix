@@ -464,7 +464,7 @@ test.describe("Error Sanitization", () => {
               }
 
               export function onUnhandledError(
-                error: Error | unknown,
+                error: unknown,
                 { request }: { request: Request },
               ) {
                 console.error("App Specific Error Logging:");

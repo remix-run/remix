@@ -33,7 +33,7 @@ export interface HandleDataRequestFunction {
 }
 
 export interface OnUnhandledErrorFunction {
-  (error: Error | unknown, args: DataFunctionArgs): void;
+  (error: unknown, args: DataFunctionArgs): void;
 }
 
 /**
