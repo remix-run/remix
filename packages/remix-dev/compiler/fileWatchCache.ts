@@ -110,7 +110,12 @@ export function createFileWatchCache(): FileWatchCache {
 
     promise
       .catch(() => {
-        // Swallow errors here so the build doesn't crash
+        // Swallow errors to prevent the build from crashing and remove the
+        // rejected promise from the cache so consumers can retry
+        if (promiseForCacheKey.get(key) === promise) {
+          promiseForCacheKey.delete(key);
+        }
+
         return null;
       })
       .then((promiseValue) => {
