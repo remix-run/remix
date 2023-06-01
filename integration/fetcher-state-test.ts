@@ -51,10 +51,11 @@ test.describe("fetcher states", () => {
               });
               fetcherRef.current = savedStates;
               return savedStates;
-            }, [fetcher]);
+            }, [fetcher?.state]);
 
             return (
               <html lang="en">
+                <head><title>Test</title></head>
                 <body>
                   <Outlet />
                     {fetcher && fetcher.state != "idle" && (
@@ -130,7 +131,6 @@ test.describe("fetcher states", () => {
           }
         `,
         "app/routes/redirect.jsx": js`
-          import { useFetcher } from "@remix-run/react";
           export function loader() {
             return { from: 'redirect loader' }
           }
