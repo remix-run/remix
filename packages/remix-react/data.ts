@@ -61,9 +61,9 @@ export async function fetchData(
   }
 
   if (retry > 0) {
-    // Retry up to seven times waiting 20, 40, 80, 160, 320, 640, and 1280 ms
-    // between retries for a total of 2540 ms before giving up.
-    await new Promise((resolve) => setTimeout(resolve, 2 ** retry * 10));
+    // Retry up to 3 times waiting 50, 250, 1250 ms
+    // between retries for a total of 1550 ms before giving up.
+    await new Promise((resolve) => setTimeout(resolve, 5 ** retry * 10));
   }
 
   let revalidation = window.__remixRevalidation;
@@ -72,7 +72,7 @@ export async function fetchData(
       typeof revalidation === "number" &&
       revalidation === window.__remixRevalidation &&
       error?.name === "TypeError" &&
-      retry <= 7
+      retry < 3
     ) {
       return fetchData(request, routeId, retry + 1);
     }
