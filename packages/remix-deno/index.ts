@@ -56,7 +56,7 @@ export type {
   MemoryUploadHandlerOptions,
   MetaDescriptor,
   MetaFunction,
-  OnUnhandledErrorFunction,
+  HandleErrorFunction,
   PageLinkDescriptor,
   RequestHandler,
   RouteComponent,

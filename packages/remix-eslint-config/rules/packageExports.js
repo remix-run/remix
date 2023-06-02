@@ -46,7 +46,7 @@ const defaultRuntimeExports = {
     "MemoryUploadHandlerOptions",
     "MetaDescriptor",
     "MetaFunction",
-    "OnUnhandledErrorFunction",
+    "HandleErrorFunction",
     "PageLinkDescriptor",
     "RequestHandler",
     "RouteComponent",
