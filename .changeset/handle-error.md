@@ -2,11 +2,11 @@
 "@remix-run/server-runtime": minor
 ---
 
-Add optional `onUnhandledError` export for custom server-side error processing. This is a new optional export from your `entry.server.tsx` that will be called with any encountered error on the Remix server (loader, action, or render error):
+Add optional `handleError` export for custom server-side error processing. This is a new optional export from your `entry.server.tsx` that will be called with any encountered error on the Remix server (loader, action, or render error):
 
 ```ts
 // entry.server.tsx
-export function onUnhandledError(
+export function handleError(
   error: unknown,
   { request, params, context }: DataFunctionArgs
 ): void {

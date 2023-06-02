@@ -23,12 +23,12 @@ export function handleDataRequest(
 }
 ```
 
-## `onUnhandledError`
+## `handleError`
 
-By default, Remix will log encountered server-side errors to the console. If you'd like more control over the logging, or would like to also report these errors to an external service, then you can export an optional `onUnhandledError` function which will give you control (and will disable the built-in error logging).
+By default, Remix will log encountered server-side errors to the console. If you'd like more control over the logging, or would like to also report these errors to an external service, then you can export an optional `handleError` function which will give you control (and will disable the built-in error logging).
 
 ```tsx
-export function onUnhandledError(
+export function handleError(
   error: unknown,
   { request, params, context }: DataFunctionArgs
 ) {
@@ -39,7 +39,7 @@ export function onUnhandledError(
 
 ### Streaming Rendering Errors
 
-When you are streaming your HTML responses via [`renderToPipeableStream`][rendertopipeablestream] or [`renderToReadableStream`][rendertoreadablestream], your own `onUnhandledError` implementation will only handle errors encountered uring the initial shell render. If you encounter a rendering error during subsequent streamed rendering you will need handle these errors manually since the Remix server has already sent the Response by that point.
+When you are streaming your HTML responses via [`renderToPipeableStream`][rendertopipeablestream] or [`renderToReadableStream`][rendertoreadablestream], your own `handleError` implementation will only handle errors encountered uring the initial shell render. If you encounter a rendering error during subsequent streamed rendering you will need handle these errors manually since the Remix server has already sent the Response by that point.
 
 - For `renderToPipeableStream`, you can handle these errors in the `onError` callback function. You will need to toggle a boolean when the in `onShellReady` so you know if the error was a shell rendering error (and can be ignored) or an async rendering error (and must be handled).
   - For an exmaple, please see the default [`entry.server.tsx`][node-streaming-entry-server] for Node.
