@@ -21,5 +21,26 @@
     "@remix-run/testing": "1.16.1",
     "@remix-run/vercel": "1.16.1"
   },
-  "changesets": []
+  "changesets": [
+    "bubbled-response-cookies",
+    "css-import-warnings-unstable-dev",
+    "error-response-resource-route",
+    "expose-error-headers",
+    "gorgeous-fireants-fry",
+    "great-geese-compare",
+    "handle-error",
+    "hdr-revalidation-retry",
+    "headers-args-type",
+    "lemon-beers-fetch",
+    "log-server-errors",
+    "ninety-hornets-brake",
+    "postcss-cache-regular-stylesheets",
+    "req-clone-instanceof",
+    "rude-geese-remain",
+    "serious-wolves-attend",
+    "stale-spoons-tie",
+    "strong-dolphins-tell",
+    "v2-headers",
+    "wicked-pandas-give"
+  ]
 }
