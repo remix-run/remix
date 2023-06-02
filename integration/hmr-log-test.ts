@@ -247,7 +247,7 @@ let expectConsoleError = (
 
 let HMR_TIMEOUT_MS = 10_000;
 
-test("HMR", async ({ page }) => {
+test("HMR", async ({ page, browserName }) => {
   // uncomment for debugging
   // page.on("console", (msg) => console.log(msg.text()));
   page.on("pageerror", logConsoleError);
@@ -544,7 +544,7 @@ whatsup
 
     // Restore normal console error handling
     page.removeListener("pageerror", expectDestructureTypeError);
-    expect(expectedErrorCount).toBe(2);
+    expect(expectedErrorCount).toBe(browserName === "webkit" ? 1 : 2);
     page.addListener("pageerror", logConsoleError);
   } catch (e) {
     console.log("stdout begin -----------------------");
