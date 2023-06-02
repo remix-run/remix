@@ -10,37 +10,26 @@ import {
  */
 export type AppData = any;
 
-export function isCatchResponse(response: any): boolean {
-  return (
-    response instanceof Response &&
-    response.headers.get("X-Remix-Catch") != null
-  );
+export function isCatchResponse(response: Response): boolean {
+  return response.headers.get("X-Remix-Catch") != null;
 }
 
-export function isErrorResponse(response: any): boolean {
-  return (
-    response instanceof Response &&
-    response.headers.get("X-Remix-Error") != null
-  );
+export function isErrorResponse(response: any): response is Response {
+  return response.headers.get("X-Remix-Error") != null;
 }
 
-export function isRedirectResponse(response: any): boolean {
-  return (
-    response instanceof Response &&
-    response.headers.get("X-Remix-Redirect") != null
-  );
+export function isRedirectResponse(response: Response): boolean {
+  return response.headers.get("X-Remix-Redirect") != null;
 }
 
-export function isDeferredResponse(response: any): boolean {
-  return (
-    response instanceof Response &&
-    !!response.headers.get("Content-Type")?.match(/text\/remix-deferred/)
-  );
+export function isDeferredResponse(response: Response): boolean {
+  return !!response.headers.get("Content-Type")?.match(/text\/remix-deferred/);
 }
 
 export async function fetchData(
   request: Request,
-  routeId: string
+  routeId: string,
+  retry = 0
 ): Promise<Response | Error> {
   let url = new URL(request.url);
   url.searchParams.set("_data", routeId);
@@ -59,7 +48,24 @@ export async function fetchData(
         : await request.formData();
   }
 
-  let response = await fetch(url.href, init);
+  if (retry > 0) {
+    // Retry up to 3 times waiting 50, 250, 1250 ms
+    // between retries for a total of 1550 ms before giving up.
+    await new Promise((resolve) => setTimeout(resolve, 5 ** retry * 10));
+  }
+
+  let revalidation = window.__remixRevalidation;
+  let response = await fetch(url.href, init).catch((error) => {
+    if (
+      typeof revalidation === "number" &&
+      revalidation === window.__remixRevalidation &&
+      error?.name === "TypeError" &&
+      retry < 3
+    ) {
+      return fetchData(request, routeId, retry + 1);
+    }
+    throw error;
+  });
 
   if (isErrorResponse(response)) {
     let data = await response.json();
@@ -106,7 +112,7 @@ export async function parseDeferredReadableStream(
 
         deferredData = deferredData || {};
 
-        deferredData[eventKey] = new Promise<any>((resolve, reject) => {
+        deferredData[eventKey] = new Promise((resolve, reject) => {
           deferredResolvers[eventKey] = {
             resolve: (value: unknown) => {
               resolve(value);
