@@ -12,14 +12,7 @@
     "directory": "packages/remix-css-bundle"
   },
   "license": "MIT",
-  "main": "./dist/server.js",
-  "module": "./dist/esm/server.js",
-  "typings": "./dist/server.d.ts",
-  "browser": {
-    "./dist/server.js": "./dist/browser.js",
-    "./dist/esm/server.js": "./dist/esm/browser.js"
-  },
-  "dependencies": {
-    "@remix-run/dev": "1.16.1"
-  }
+  "main": "./dist/index.js",
+  "module": "./dist/esm/index.js",
+  "typings": "./dist/index.d.ts"
 }
